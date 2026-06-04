@@ -21,6 +21,13 @@ pub use edit::edit_file;
 pub use glob::glob;
 pub use grep::grep;
 pub use isolated::{enter_isolated_workspace, exit_isolated_workspace};
-pub use plugin::{plugin_dispatch, plugin_ensure, PluginDispatchRequest, PluginEnsureRequest};
+pub(crate) use plugin::plugin_ensure_payload;
+pub use plugin::{
+    ensure_plugin_package, plugin_dispatch, plugin_ensure, PluginDependencyScope,
+    PluginDispatchRequest, PluginEnsureRequest, PluginManifestDescriptor,
+    PluginOperationDescriptor, PluginPackageContract, PluginPackageDescriptor,
+    PluginPackageEnsureRequest, PluginPackageFile, PluginPackageTree, PluginRefreshStrategy,
+    PluginServiceDescriptor, PluginServiceMode, PluginSetupDescriptor,
+};
 pub use read::read_file;
 pub use write::write_file;

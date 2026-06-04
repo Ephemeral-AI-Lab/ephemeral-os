@@ -11,6 +11,7 @@ use eos_types::{JsonObject, SandboxId};
 
 use crate::error::SandboxApiError;
 use crate::ops::DaemonOp;
+use crate::tool_api::{plugin_ensure_payload, PluginPackageEnsureRequest};
 
 /// One sandbox RPC boundary. Implemented in `eos-sandbox-host` by the daemon
 /// client and (in tests) by an in-memory mock.
@@ -45,6 +46,21 @@ pub trait SandboxTransport: Send + Sync {
             None,
             format!("dynamic sandbox op {op:?} is not supported by this transport"),
         ))
+    }
+
+    /// Ensure a plugin package is available before plugin operation dispatch.
+    ///
+    /// The default implementation performs the daemon warm ensure. Host-backed
+    /// transports override this to keep package upload private to the cold path.
+    async fn ensure_plugin_package(
+        &self,
+        sandbox_id: &SandboxId,
+        request: PluginPackageEnsureRequest,
+    ) -> Result<JsonObject, SandboxApiError> {
+        let timeout_s = request.timeout_s;
+        let payload = plugin_ensure_payload(request.into_plugin_ensure_request(None))?;
+        self.call(sandbox_id, DaemonOp::PluginEnsure, payload, timeout_s)
+            .await
     }
 }
 

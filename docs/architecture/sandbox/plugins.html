@@ -42,15 +42,15 @@
   <span class="nav-pair"><a href="provider.html">← 7. Provider</a><a href="plugin-setup.html">Plugin Setup →</a></span>
 </div>
 <section id="plugins"
-  data-last-reviewed-commit="local-phase3-20260604"
-  data-evidence-paths="sandbox/crates/eos-plugin/src/manifest.rs sandbox/crates/eos-plugin/src/service.rs sandbox/crates/eos-daemon/src/plugin/ensure_args.rs sandbox/crates/eos-daemon/src/plugin/mod.rs sandbox/crates/eos-daemon/src/plugin/process.rs sandbox/crates/eos-daemon/tests/plugin/support.rs">
+  data-last-reviewed-commit="local-phase7-20260604"
+  data-evidence-paths="agent-core/crates/eos-plugin-catalog/src/package.rs agent-core/crates/eos-plugin-catalog/lsp/plugin.md agent-core/crates/eos-plugin-catalog/lsp/setup.sh agent-core/crates/eos-plugin-catalog/lsp/runtime/ppc_service.py agent-core/crates/eos-sandbox-api/src/tool_api/plugin.rs agent-core/crates/eos-sandbox-host/src/plugin_package.rs agent-core/crates/eos-runtime/src/plugin_tools.rs sandbox/crates/eos-plugin/src/manifest.rs sandbox/crates/eos-plugin/src/service.rs sandbox/crates/eos-daemon/src/plugin/ensure_args.rs sandbox/crates/eos-daemon/src/plugin/package.rs sandbox/crates/eos-daemon/src/plugin/service.rs sandbox/crates/eos-daemon/src/plugin/mod.rs sandbox/crates/eos-daemon/src/plugin/process.rs sandbox/crates/eos-daemon/tests/plugin/mod.rs sandbox/crates/eos-e2e-test/tests/plugin_packages.rs sandbox/crates/eos-e2e-test/tests/plugin_lsp.rs">
 <h2>8. Plugin in ephemeral_workspace <a class="anchor" href="#plugins">§</a></h2>
 <nav class="page-toc" aria-labelledby="page-toc-heading">
   <h3 id="page-toc-heading">Contents</h3>
   <ol>
     <li><a href="#plugin-host-daemon-flow"><span>8.1</span> Host and Daemon Flow</a></li>
     <li><a href="#plugin-operation-classes"><span>8.2</span> Operation Classes</a></li>
-    <li><a href="#plugin-refresh-detail"><span>8.3</span> Projection Refresh and LSP Writes</a></li>
+    <li><a href="#plugin-refresh-detail"><span>8.3</span> Workspace Refresh and Service Writes</a></li>
     <li><a href="#plugin-evidence-refresh"><span>8.4</span> Evidence and Refresh</a></li>
   </ol>
 </nav>
@@ -58,8 +58,10 @@
 <div class="summary">
   <ul>
     <li>Plugins need current workspace state without bypassing LayerStack/OCC ownership.</li>
+    <li>Agent-core bridges catalog plugins through a neutral package descriptor: catalog owns source metadata and model tool specs, sandbox-api owns the DTO, sandbox-host owns package setup, and runtime ensures the package before dispatch.</li>
+    <li>LSP is a normal catalog package example: the catalog package tree supplies metadata, setup, and service code; the daemon installs it under digest-scoped package/dependency roots and starts it through generic PPC service lifecycle.</li>
     <li>The Rust plugin path is manifest driven: package metadata, optional setup, services, operations, refresh policy, and PPC routing are declared in <code>eos-plugin</code>.</li>
-    <li>The daemon parses <code>api.plugin.ensure</code>, registers public <code>plugin.&lt;plugin_id&gt;.&lt;op_name&gt;</code> routes, manages service status, and dispatches through PPC or overlay/OCC paths.</li>
+    <li>The daemon parses <code>api.plugin.ensure</code>, probes and publishes package digests, records setup markers/failures, registers public <code>plugin.&lt;plugin_id&gt;.&lt;op_name&gt;</code> routes after setup success, manages service status, and dispatches through PPC or overlay/OCC paths.</li>
     <li>Plugins are daemon-managed extensions that consume the same snapshot/overlay/OCC pipeline as tools.</li>
   </ul>
 </div>
@@ -71,15 +73,21 @@
 </div>
 </section>
 <section id="plugin-host-daemon-flow"
-  data-last-reviewed-commit="local-phase3-20260604"
-  data-evidence-paths="sandbox/crates/eos-plugin/src/manifest.rs sandbox/crates/eos-daemon/src/plugin/ensure_args.rs sandbox/crates/eos-daemon/src/plugin/mod.rs sandbox/crates/eos-daemon/src/plugin/process.rs sandbox/crates/eos-daemon/tests/plugin/support.rs">
+  data-last-reviewed-commit="local-phase7-20260604"
+  data-evidence-paths="agent-core/crates/eos-plugin-catalog/src/package.rs agent-core/crates/eos-plugin-catalog/lsp/plugin.md agent-core/crates/eos-plugin-catalog/lsp/setup.sh agent-core/crates/eos-plugin-catalog/lsp/runtime/ppc_service.py agent-core/crates/eos-sandbox-api/src/tool_api/plugin.rs agent-core/crates/eos-sandbox-host/src/plugin_package.rs agent-core/crates/eos-runtime/src/plugin_tools.rs sandbox/crates/eos-plugin/src/manifest.rs sandbox/crates/eos-daemon/src/plugin/ensure_args.rs sandbox/crates/eos-daemon/src/plugin/package.rs sandbox/crates/eos-daemon/src/plugin/service.rs sandbox/crates/eos-daemon/src/plugin/mod.rs sandbox/crates/eos-daemon/src/plugin/process.rs sandbox/crates/eos-daemon/tests/plugin/mod.rs sandbox/crates/eos-e2e-test/tests/plugin_packages.rs sandbox/crates/eos-e2e-test/tests/plugin_lsp.rs">
 <h3>8.1 Host and Daemon Flow <a class="anchor" href="#plugin-host-daemon-flow">§</a></h3>
-<p>The host-side package setup API is expected to stage package content under <code>/eos</code> and call daemon <code>api.plugin.ensure</code> with a neutral <code>PluginManifest</code>. In Phase 3 the manifest contract is Rust-owned by <code>eos-plugin</code>: it includes package metadata, optional setup, service declarations, operation declarations, refresh strategy, and digest markers <span class="file-ref">sandbox/crates/eos-plugin/src/manifest.rs</span>.</p>
+<p>Agent-core catalog code builds a neutral <code>PluginPackageDescriptor</code> from package source metadata and model-facing tool specs <span class="file-ref">agent-core/crates/eos-plugin-catalog/src/package.rs</span>. The descriptor uses the <code>eos-sandbox-api</code> DTO, so sandbox-host consumes package content without depending on catalog internals <span class="file-ref">agent-core/crates/eos-sandbox-api/src/tool_api/plugin.rs</span>. Runtime registers model tools, calls <code>ensure_plugin_package(...)</code>, and dispatches <code>plugin.&lt;plugin_id&gt;.&lt;op_name&gt;</code> only after setup succeeds <span class="file-ref">agent-core/crates/eos-runtime/src/plugin_tools.rs</span>.</p>
+<p>For the built-in LSP plugin, the catalog package tree is file-backed by <code>agent-core/crates/eos-plugin-catalog/lsp</code>. Its setup script writes <code>node22</code>, <code>pyright</code>, and <code>npm-cache</code> below <code>/eos/runtime/packages/lsp/&lt;digest&gt;</code>; the service computes the absolute Pyright argv from <code>EOS_PLUGIN_DEPENDENCY_ROOT</code> and connects to the daemon PPC socket like any other service <span class="file-ref">agent-core/crates/eos-plugin-catalog/lsp/setup.sh</span>, <span class="file-ref">agent-core/crates/eos-plugin-catalog/lsp/runtime/ppc_service.py</span>.</p>
 
-<p>Inside the daemon, <code>ParsedEnsure</code> decodes that manifest, validates it, builds service keys and process specs, and registers public operation routes such as <code>plugin.generic.hover</code> <span class="file-ref">sandbox/crates/eos-daemon/src/plugin/ensure_args.rs</span>. The daemon state then owns loaded plugin digest, registered operation routes, service statuses, service processes, PPC routing, refresh, and isolated-workspace blocking <span class="file-ref">sandbox/crates/eos-daemon/src/plugin/mod.rs</span>.</p>
+<p>The host-side package setup API stages package content under <code>/eos/scratch/uploads/plugins/&lt;plugin-id&gt;/&lt;plugin-digest&gt;/...</code> only after a warm daemon probe returns <code>needs_upload</code>, then calls daemon <code>api.plugin.ensure</code> with <code>staged_package_root</code> <span class="file-ref">agent-core/crates/eos-sandbox-host/src/plugin_package.rs</span>. The daemon manifest contract is Rust-owned by <code>eos-plugin</code>: it includes package metadata, optional setup, service declarations, operation declarations, refresh strategy, and digest markers <span class="file-ref">sandbox/crates/eos-plugin/src/manifest.rs</span>.</p>
+
+<p>Inside the daemon, package ensure first checks installed marker state. Warm ensure returns <code>needs_upload</code> when <code>.package-sha256</code> or <code>.setup-sha256</code> is missing or stale; cold ensure validates the staged package root, publishes into <code>/eos/runtime/plugins/catalog/&lt;plugin-id&gt;/&lt;plugin-digest&gt;</code>, runs setup with dependency output under <code>/eos/runtime/packages/&lt;plugin-id&gt;/&lt;plugin-digest&gt;</code>, and records setup failures in status <span class="file-ref">sandbox/crates/eos-daemon/src/plugin/package.rs</span>, <span class="file-ref">sandbox/crates/eos-daemon/src/plugin/mod.rs</span>.</p>
+
+<p>After package/setup success, <code>ParsedEnsure</code> decodes the manifest, builds service keys and process specs, and registers public operation routes such as <code>plugin.generic.hover</code> <span class="file-ref">sandbox/crates/eos-daemon/src/plugin/ensure_args.rs</span>. The daemon state then owns loaded plugin digest, registered operation routes, service statuses, service processes, PPC routing, refresh, setup failure reporting, and isolated-workspace blocking <span class="file-ref">sandbox/crates/eos-daemon/src/plugin/mod.rs</span>.</p>
 
 <div class="edge-list">
   <div><b>registers</b><span><code>api.plugin.ensure</code> registers routes from manifest operations and stores route metadata in daemon plugin state.</span></div>
+  <div><b>installs</b><span><code>eos-daemon</code> validates staged package roots, publishes digest directories, runs setup, and writes package/setup marker files.</span></div>
   <div><b>owns-state</b><span><code>eos-daemon</code> owns loaded plugin digest state, operation routes, service statuses, service processes, and connected PPC routes.</span></div>
   <div><b>calls</b><span>Read-only operations route to connected services; write-capable operations route through daemon-owned oneshot overlay or self-managed service callbacks.</span></div>
   <div><b>guards</b><span>The daemon blocks plugin-family operations while the calling agent has an open isolated workspace.</span></div>
@@ -108,9 +116,10 @@
 
 <div class="sequence" aria-label="Plugin host daemon workflow">
   <ol>
-    <li><span>Host code resolves sandbox id, layer-stack root, workspace root, caller identity, plugin identity, and package digest.</span></li>
-    <li><span>The host package setup API stages package content under <code>/eos</code> and calls <code>api.plugin.ensure</code>.</span></li>
-    <li><span>The daemon validates the manifest, builds service keys, registers public operation routes, and records service status.</span></li>
+    <li><span>Agent-core catalog code resolves plugin identity, model-facing tool specs, the neutral package descriptor, and package tree.</span></li>
+    <li><span>Runtime calls <code>ensure_plugin_package(...)</code> through the sandbox transport before calling <code>plugin_dispatch</code>.</span></li>
+    <li><span>The host package setup API performs warm ensure, stages package content under <code>/eos/scratch/uploads</code> only when needed, and calls cold <code>api.plugin.ensure</code>.</span></li>
+    <li><span>The daemon validates the staged package, publishes the digest directory, runs setup when the setup marker is stale, then builds service keys, registers public operation routes, and records service status.</span></li>
     <li><span>The host sends <code>plugin.&lt;plugin_id&gt;.&lt;op_name&gt;</code> through the same daemon transport as built-in tools.</span></li>
     <li><span>The daemon dispatches through connected PPC services, daemon-owned oneshot overlay, or self-managed callback routes depending on the manifest.</span></li>
   </ol>
@@ -118,120 +127,125 @@
 
 </section>
 <section id="plugin-operation-classes"
-  data-last-reviewed-commit="2a3e6cc7c"
-  data-evidence-paths="backend/src/sandbox/ephemeral_workspace/plugin/op_registry.py backend/src/sandbox/ephemeral_workspace/plugin/overlay_dispatch.py backend/src/plugins/catalog/lsp/runtime/server.py backend/src/plugins/catalog/lsp/runtime/session_manager.py backend/src/plugins/catalog/lsp/runtime/pyright_session.py">
+  data-last-reviewed-commit="local-phase7-20260604"
+  data-evidence-paths="sandbox/crates/eos-plugin/src/manifest.rs sandbox/crates/eos-plugin/src/service.rs sandbox/crates/eos-daemon/src/plugin/ensure_args.rs sandbox/crates/eos-daemon/src/plugin/mod.rs sandbox/crates/eos-daemon/src/plugin/overlay.rs sandbox/crates/eos-daemon/src/plugin/occ_callbacks.rs sandbox/crates/eos-daemon/tests/plugin/mod.rs sandbox/crates/eos-e2e-test/tests/plugin_packages.rs sandbox/crates/eos-e2e-test/tests/plugin_lsp.rs">
 <h3>8.2 Operation Classes <a class="anchor" href="#plugin-operation-classes">§</a></h3>
 <div class="diagram" aria-label="Plugin operation flow">
   <div class="flow-row">
-    <div class="node"><strong>READ_ONLY plugin</strong><small>in daemon process, no per-call overlay</small></div>
+    <div class="node"><strong>READ_ONLY plugin</strong><small>connected PPC service</small></div>
     <div class="arrow">&rarr;</div>
-    <div class="node"><strong>Projection/LSP service</strong><small>leases or refreshes as needed</small></div>
+    <div class="node"><strong>workspace snapshot refresh</strong><small>manifest-key freshness gate</small></div>
   </div>
   <div class="flow-row">
-    <div class="node warn"><strong>WRITE_ALLOWED plugin</strong><small>private operation overlay</small></div>
+    <div class="node warn"><strong>WRITE_ALLOWED plugin</strong><small>oneshot overlay or self-managed PPC callbacks</small></div>
     <div class="arrow">&rarr;</div>
-    <div class="node"><strong>child namespace</strong><small>workspace_root replaced by overlay</small></div>
+    <div class="node"><strong>daemon-owned OCC path</strong><small>validated callback or overlay capture</small></div>
     <div class="arrow">&rarr;</div>
-    <div class="node good"><strong>publish_cycle</strong><small>upperdir capture through OCC</small></div>
+    <div class="node good"><strong>LayerStack publish</strong><small>same writer as tools</small></div>
   </div>
 </div>
 
-<p>The op registry makes this generic. <code>READ_ONLY</code> handlers run in-process and should query a long-lived service. <code>WRITE_ALLOWED</code> handlers default to the overlay+OCC publish path. <code>LIFECYCLE</code> is rejected for plugins <span class="file-ref">backend/src/sandbox/ephemeral_workspace/plugin/op_registry.py:15-24</span>. The write wrapper acquires an operation overlay, runs the plugin child, publishes the upperdir, and destroys/releases the handle <span class="file-ref">backend/src/sandbox/ephemeral_workspace/plugin/overlay_dispatch.py:29-90</span>.</p>
+<p>The Rust manifest contract makes operation classes generic. <code>read_only</code> operations must reference a service and route to a connected PPC client after the daemon proves the service is ready on the active manifest key. <code>write_allowed</code> operations either use an <code>oneshot_overlay</code> service with daemon-owned overlay capture, or set <code>auto_workspace_overlay: false</code> and publish through validated daemon callbacks. <code>Lifecycle</code> intent is rejected for plugins in manifest validation <span class="file-ref">sandbox/crates/eos-plugin/src/manifest.rs</span>, <span class="file-ref">sandbox/crates/eos-daemon/src/plugin/mod.rs</span>.</p>
 
-<p>Pyright is the concrete stateful plugin example. LSP ops register read-only operations and write operations; write operations such as rename/format/apply opt out of the generic wrapper because the LSP runtime manages its own overlay/OCC path <span class="file-ref">backend/src/plugins/catalog/lsp/runtime/server.py:47-138</span>. <code>session_manager.get_session()</code> reconciles a cached Pyright session to the active manifest key, acquires an overlay handle through <code>ctx.overlay.acquire_operation_overlay</code> or projection fallback, subscribes to workspace change events, and refreshes/remounts when the manifest changes <span class="file-ref">backend/src/plugins/catalog/lsp/runtime/session_manager.py:34-98</span>, <span class="file-ref">backend/src/plugins/catalog/lsp/runtime/session_manager.py:176-221</span>, <span class="file-ref">backend/src/plugins/catalog/lsp/runtime/session_manager.py:294-360</span>.</p>
+<p>Read-only PPC dispatch is multiplexed by message id and bounded by the plugin response size limit. A failed PPC round trip tears down the connected route and marks the service stopped; a later dispatch can restart the declared service. Self-managed write callbacks are checked against the expected LayerStack root before OCC apply, and oneshot overlay workers run through the daemon overlay path <span class="file-ref">sandbox/crates/eos-daemon/src/plugin/ppc_router.rs</span>, <span class="file-ref">sandbox/crates/eos-daemon/src/plugin/occ_callbacks.rs</span>, <span class="file-ref">sandbox/crates/eos-daemon/src/plugin/overlay.rs</span>.</p>
 
-<p><code>PyrightSession</code> starts as a long-lived session rooted at a leased overlay handle <span class="file-ref">backend/src/plugins/catalog/lsp/runtime/pyright_session.py:54-87</span>. It starts Pyright inside a private overlay namespace when layer paths are available <span class="file-ref">backend/src/plugins/catalog/lsp/runtime/pyright_session.py:526-567</span>. On refresh, it can remount the running Pyright namespace with fresh layer paths via <code>nsenter</code> and <code>namespace_remount</code> <span class="file-ref">backend/src/plugins/catalog/lsp/runtime/pyright_session.py:583-650</span>. It also sends <code>workspace/didChangeWatchedFiles</code>, closes missing open documents, and syncs changed open documents <span class="file-ref">backend/src/plugins/catalog/lsp/runtime/pyright_session.py:374-415</span>. For file text/existence checks, it reads directly from the current overlay layer paths and layer index cache <span class="file-ref">backend/src/plugins/catalog/lsp/runtime/pyright_session.py:730-794</span>.</p>
+<p>The live generic package fixture is intentionally non-LSP-shaped: it starts a small PPC service from package content, dispatches <code>plugin.generic.query</code>, verifies package/dependency roots in the service environment, and proves the same operation family is rejected while isolated workspace mode is active <span class="file-ref">sandbox/crates/eos-e2e-test/tests/plugin_packages.rs</span>.</p>
+<p>The live LSP fixture uses the same operation class: it installs the LSP package through <code>api.plugin.ensure</code>, starts the <code>pyright</code> service through daemon process supervision, then dispatches <code>plugin.lsp.query_symbols</code> against a small workspace file <span class="file-ref">sandbox/crates/eos-e2e-test/tests/plugin_lsp.rs</span>.</p>
 
 </section>
 <section id="plugin-refresh-detail"
-  data-last-reviewed-commit="2a3e6cc7c"
-  data-evidence-paths="backend/src/sandbox/ephemeral_workspace/plugin/projection.py backend/src/sandbox/ephemeral_workspace/pipeline.py backend/src/sandbox/ephemeral_workspace/events.py backend/src/plugins/catalog/lsp/runtime/session_manager.py backend/src/plugins/catalog/lsp/runtime/pyright_session.py backend/src/plugins/catalog/lsp/runtime/apply.py backend/src/sandbox/daemon/rpc/dispatcher.py">
-<h3>8.3 Projection Refresh and LSP Writes <a class="anchor" href="#plugin-refresh-detail">§</a></h3>
+  data-last-reviewed-commit="local-phase5-20260604"
+  data-evidence-paths="sandbox/crates/eos-plugin/src/refresh.rs sandbox/crates/eos-daemon/src/plugin/service.rs sandbox/crates/eos-daemon/src/plugin/process.rs sandbox/crates/eos-daemon/src/plugin/mod.rs sandbox/crates/eos-daemon/tests/plugin/mod.rs sandbox/crates/eos-e2e-test/tests/plugin_packages.rs">
+<h3>8.3 Workspace Refresh and Service Writes <a class="anchor" href="#plugin-refresh-detail">§</a></h3>
 
 <pre class="diagram" aria-label="Plugin projection refresh and write branches">
-[plugin write result]
+[plugin operation dispatch]
         |
         v
-[collect touched paths]
+[resolve route and service key]
         |
         v
-[refresh latest projection for plugin view]
+[compare service manifest key to active LayerStack manifest]
         |
-        +--&gt; [projection changed during run]
-        |       -&gt; [conflict / retry decision]
+        +--&gt; [current]
+        |       -&gt; [send PPC operation]
         |
-        +--&gt; [projection still compatible]
+        +--&gt; [stale]
                 |
                 v
-        [changeset prepared]
-                |
-                v
-        [OCC commit -&gt; LayerStack publish]
+        [refresh or restart service, then send PPC operation]
 </pre>
 
 <div class="sequence" aria-label="Plugin projection refresh workflow">
   <ol>
-    <li><span>The daemon runtime caches <code>WorkspaceProjection</code> by layer-stack root using the daemon-owned LayerStack manager.</span></li>
-    <li><span>A read-only LSP op asks <code>session_manager.get_session()</code> for a session keyed by active manifest identity.</span></li>
-    <li><span>If the key changed, the session manager acquires a fresh overlay/projection handle or remounts an existing Pyright namespace.</span></li>
-    <li><span>The ephemeral pipeline emits workspace-change events after publishes, and the LSP session pump forwards them to Pyright.</span></li>
-    <li><span>Pyright receives file-watch notifications and refreshes open-document text so diagnostics/hover/rename see the latest projection.</span></li>
+    <li><span>Service start acquires a LayerStack snapshot lease and records the manifest key in service status.</span></li>
+    <li><span>Before dispatch, the daemon compares that service manifest key with the active LayerStack manifest key.</span></li>
+    <li><span>If stale, the daemon singleflights refresh for that service, acquires a new snapshot, and sends PPC refresh frames.</span></li>
+    <li><span>For remount strategies, the daemon remounts the service workspace view through the service process namespace; for restart strategy, it tears down and starts a fresh service.</span></li>
+    <li><span>Only after refresh health succeeds does the daemon send the original plugin operation over PPC.</span></li>
   </ol>
 </div>
 
 <table>
-  <thead><tr><th>Plugin operation class</th><th>Workspace access model</th><th>Mutation path</th><th>Evidence</th></tr></thead>
+  <thead><tr><th>Refresh step</th><th>Daemon behavior</th><th>Service expectation</th><th>Evidence</th></tr></thead>
   <tbody>
-    <tr><td>Generic <code>READ_ONLY</code></td><td>Daemon process context with <code>WorkspaceProjection</code> and service handles.</td><td>None; should query projection/service state.</td><td><span class="file-ref">backend/src/sandbox/ephemeral_workspace/plugin/op_registry.py:15-24</span>, <span class="file-ref">backend/src/sandbox/ephemeral_workspace/plugin/projection.py:51-104</span></td></tr>
-    <tr><td>Generic <code>WRITE_ALLOWED</code></td><td>Parent daemon acquires private operation overlay; child runs inside fresh namespace.</td><td>Parent captures upperdir and publishes through <code>publish_cycle()</code>.</td><td><span class="file-ref">backend/src/sandbox/ephemeral_workspace/plugin/overlay_dispatch.py:29-173</span></td></tr>
-    <tr><td>LSP read operations</td><td>Long-lived Pyright session backed by overlay/projection and refreshed by manifest key.</td><td>None; LSP requests query Pyright.</td><td><span class="file-ref">backend/src/plugins/catalog/lsp/runtime/session_manager.py:34-98</span>, <span class="file-ref">backend/src/plugins/catalog/lsp/runtime/pyright_session.py:54-87</span></td></tr>
-    <tr><td>LSP apply/write operations</td><td>Own operation overlay, expected manifest-key check, child process applies edit inside overlay.</td><td>Publish through <code>publish_cycle()</code> after child exits.</td><td><span class="file-ref">backend/src/plugins/catalog/lsp/runtime/apply.py:21-100</span>, <span class="file-ref">backend/src/plugins/catalog/lsp/runtime/apply.py:103-148</span></td></tr>
+    <tr><td>Prepare/quiesce</td><td>Send target manifest key and request a quiet point.</td><td>Reply with an accepted refresh ack for the target manifest key.</td><td><span class="file-ref">sandbox/crates/eos-plugin/src/refresh.rs</span>, <span class="file-ref">sandbox/crates/eos-daemon/src/plugin/mod.rs</span></td></tr>
+    <tr><td>Swap/remount</td><td>Acquire a new snapshot lease, remount the service workspace namespace when available, then send <code>swap_workspace</code>.</td><td>Use <code>EOS_PLUGIN_WORKSPACE_ROOT</code> for workspace reads after remount.</td><td><span class="file-ref">sandbox/crates/eos-daemon/src/plugin/service.rs</span>, <span class="file-ref">sandbox/crates/eos-daemon/src/plugin/process.rs</span></td></tr>
+    <tr><td>Notify/resume/health</td><td>Optionally notify full resync, resume, then require a health ack for the new manifest key.</td><td>Reject or wrong-key ack fails closed and marks the service stale/stopped.</td><td><span class="file-ref">sandbox/crates/eos-daemon/tests/plugin/mod.rs</span></td></tr>
+    <tr><td>Operation dispatch</td><td>Send the original plugin op only after freshness is established.</td><td>Return a bounded JSON object over the same PPC framing.</td><td><span class="file-ref">sandbox/crates/eos-e2e-test/tests/plugin_packages.rs</span></td></tr>
   </tbody>
 </table>
 
-<p>The workspace-change event bus is generic, not Pyright-specific. The ephemeral pipeline exposes subscribe/unsubscribe methods and emits a bounded event queue; if a subscriber queue overflows, it sends a full-resync marker instead of losing correctness silently <span class="file-ref">backend/src/sandbox/ephemeral_workspace/pipeline.py:284-315</span>, <span class="file-ref">backend/src/sandbox/ephemeral_workspace/events.py:51-101</span>. LSP uses that generic stream to drive Pyright refresh, but another plugin could consume the same projection and event model.</p>
+<p>The live refresh test writes a file through the normal workspace write API, dispatches a generic read-only plugin op, and requires both a service refresh count and the updated file content through <code>EOS_PLUGIN_WORKSPACE_ROOT</code>. This proves the refresh path is generic service lifecycle, not an LSP-specific session shortcut <span class="file-ref">sandbox/crates/eos-e2e-test/tests/plugin_packages.rs</span>.</p>
 
 <div class="callout">
   <span class="label">Daemon change for plugins</span>
-  Plugin ops are registered into the same daemon <code>OP_TABLE</code>, but the dispatcher blocks plugin access while the caller has an open isolated workspace <span class="file-ref">backend/src/sandbox/daemon/rpc/dispatcher.py:216-235</span>. That avoids a plugin reading/publishing through the shared ephemeral projection while the agent is intentionally inside private isolated scratch.
+  Plugin ops are registered into the same daemon <code>OP_TABLE</code>, but the daemon blocks plugin access while the caller has an open isolated workspace <span class="file-ref">sandbox/crates/eos-daemon/src/plugin/mod.rs</span>. That avoids a plugin reading/publishing through the shared ephemeral projection while the agent is intentionally inside private isolated scratch.
 </div>
 </section>
 <section id="plugin-evidence-refresh"
-  data-last-reviewed-commit="2a3e6cc7c"
-  data-evidence-paths="backend/src/sandbox/ephemeral_workspace/plugin/host_dispatch.py backend/src/sandbox/ephemeral_workspace/plugin/runtime_api.py backend/src/sandbox/ephemeral_workspace/plugin/op_registry.py backend/src/plugins/catalog/lsp/runtime/session_manager.py backend/src/test_runner/tests/mock/sandbox/plugin/test_plugin_write_allowed_apply_workspace_edit_publishes.py backend/src/test_runner/tests/mock/sandbox/plugin/test_plugin_read_only_lsp_refresh_without_publish.py backend/src/test_runner/tests/mock/sandbox/plugin/test_plugin_blocked_in_open_isolated_workspace.py backend/src/test_runner/tests/mock/sandbox/plugin/test_plugin_intent_mislabel_fails_fast.py">
+  data-last-reviewed-commit="local-phase7-20260604"
+  data-evidence-paths="agent-core/crates/eos-plugin-catalog/src/package.rs agent-core/crates/eos-plugin-catalog/lsp/plugin.md agent-core/crates/eos-plugin-catalog/lsp/setup.sh agent-core/crates/eos-plugin-catalog/lsp/runtime/ppc_service.py agent-core/crates/eos-sandbox-api/src/tool_api/plugin.rs agent-core/crates/eos-sandbox-host/src/plugin_package.rs agent-core/crates/eos-runtime/src/plugin_tools.rs sandbox/crates/eos-plugin/src/manifest.rs sandbox/crates/eos-plugin/src/service.rs sandbox/crates/eos-plugin/src/refresh.rs sandbox/crates/eos-daemon/src/plugin/ensure_args.rs sandbox/crates/eos-daemon/src/plugin/package.rs sandbox/crates/eos-daemon/src/plugin/service.rs sandbox/crates/eos-daemon/src/plugin/mod.rs sandbox/crates/eos-daemon/src/plugin/process.rs sandbox/crates/eos-daemon/tests/plugin/mod.rs sandbox/crates/eos-e2e-test/tests/plugin_packages.rs sandbox/crates/eos-e2e-test/tests/plugin_lsp.rs">
 <h3>8.4 Evidence and Refresh <a class="anchor" href="#plugin-evidence-refresh">§</a></h3>
 <div class="evidence-grid">
   <div class="evidence-card">
     <h4>Source files</h4>
     <ul>
-      <li><span class="file-ref">backend/src/sandbox/ephemeral_workspace/plugin/host_dispatch.py</span> host install/ensure/dispatch.</li>
-      <li><span class="file-ref">backend/src/sandbox/ephemeral_workspace/plugin/runtime_api.py</span> daemon ensure/status/context.</li>
-      <li><span class="file-ref">backend/src/sandbox/ephemeral_workspace/plugin/op_registry.py</span> plugin operation classes and wrappers.</li>
-      <li><span class="file-ref">backend/src/plugins/catalog/lsp/runtime/session_manager.py</span> Pyright session refresh.</li>
+      <li><span class="file-ref">sandbox/crates/eos-plugin/src/manifest.rs</span> neutral package/setup/service/operation manifest contract.</li>
+      <li><span class="file-ref">agent-core/crates/eos-plugin-catalog/src/package.rs</span> catalog-owned package descriptor and digest source.</li>
+      <li><span class="file-ref">agent-core/crates/eos-plugin-catalog/lsp/plugin.md</span>, <span class="file-ref">agent-core/crates/eos-plugin-catalog/lsp/setup.sh</span>, and <span class="file-ref">agent-core/crates/eos-plugin-catalog/lsp/runtime/ppc_service.py</span> LSP package metadata, setup, and service source.</li>
+      <li><span class="file-ref">agent-core/crates/eos-sandbox-api/src/tool_api/plugin.rs</span> neutral descriptor, package ensure request, and plugin dispatch DTOs.</li>
+      <li><span class="file-ref">agent-core/crates/eos-sandbox-host/src/plugin_package.rs</span> host warm/cold package setup and private upload path.</li>
+      <li><span class="file-ref">agent-core/crates/eos-runtime/src/plugin_tools.rs</span> runtime tool registration, package ensure, and plugin dispatch ordering.</li>
+      <li><span class="file-ref">sandbox/crates/eos-plugin/src/refresh.rs</span> daemon-to-service refresh request and acknowledgement protocol.</li>
+      <li><span class="file-ref">sandbox/crates/eos-daemon/src/plugin/package.rs</span> warm probe, staged publish, setup execution, setup marker checks, and dependency/setup roots.</li>
+      <li><span class="file-ref">sandbox/crates/eos-daemon/src/plugin/ensure_args.rs</span> manifest parsing into daemon routes and service process specs.</li>
+      <li><span class="file-ref">sandbox/crates/eos-daemon/src/plugin/service.rs</span> snapshot leases, service status transitions, refresh state, restart, and teardown helpers.</li>
+      <li><span class="file-ref">sandbox/crates/eos-daemon/src/plugin/mod.rs</span> plugin ensure/status, setup failure reporting, route registration, dispatch, refresh, and isolated-workspace blocking.</li>
+      <li><span class="file-ref">sandbox/crates/eos-daemon/src/plugin/process.rs</span> service process launch and PPC socket environment.</li>
     </ul>
   </div>
   <div class="evidence-card">
     <h4>Tests</h4>
     <ul>
-      <li><span class="file-ref">backend/src/test_runner/tests/mock/sandbox/plugin/test_plugin_write_allowed_apply_workspace_edit_publishes.py</span></li>
-      <li><span class="file-ref">backend/src/test_runner/tests/mock/sandbox/plugin/test_plugin_read_only_lsp_refresh_without_publish.py</span></li>
-      <li><span class="file-ref">backend/src/test_runner/tests/mock/sandbox/plugin/test_plugin_blocked_in_open_isolated_workspace.py</span></li>
-      <li><span class="file-ref">backend/src/test_runner/tests/mock/sandbox/plugin/test_plugin_intent_mislabel_fails_fast.py</span></li>
+      <li><span class="file-ref">sandbox/crates/eos-daemon/tests/plugin/mod.rs</span> daemon package publish/setup/idempotency/status, PPC dispatch, refresh, crash, and isolation coverage.</li>
+      <li><span class="file-ref">sandbox/crates/eos-e2e-test/tests/plugin_packages.rs</span> live generic package install/setup/re-ensure/dispatch/refresh/isolation coverage through <code>eos-protocol</code>.</li>
+      <li><span class="file-ref">sandbox/crates/eos-e2e-test/tests/plugin_lsp.rs</span> live LSP package install/setup/service/dispatch coverage through <code>eos-protocol</code>.</li>
     </ul>
   </div>
   <div class="evidence-card">
     <h4>Refresh triggers</h4>
-    <p>Plugin op-class changes, LSP session ownership changes, dispatcher plugin gates, or projection cache changes should update this page plus Daemon operation surface and Workflow Cookbook.</p>
+    <p>Plugin manifest fields, package setup, service process env, PPC frame shape, refresh protocol, daemon callback publishing, isolated-workspace plugin gates, or LSP package behavior should update this page plus Plugin Setup and Workflow Cookbook.</p>
   </div>
 </div>
 <div class="maintenance-note">
   Backlinks: <a class="wiki-link" href="daemon.html#operation-surface">Operation Surface</a> owns daemon op registration, <a class="wiki-link" href="plugin-setup.html">Plugin Setup</a> explains deployment, <a class="wiki-link" href="workspaces.html#ephemeral-workspace">ephemeral_workspace</a> owns the overlay facade, and <a class="wiki-link" href="workspaces.html#isolated-workspace">isolated_workspace</a> explains why plugin access is blocked during private scratch.
 </div>
 </section>
-<div class="page-baseline" data-page-baseline-commit="2a3e6cc7c">
+<div class="page-baseline" data-page-baseline-commit="local-phase7-20260604">
   <strong>Maintenance baseline</strong>
-  <span>Local section metadata reviewed at <code>2a3e6cc7c</code>.</span>
-  <code>git diff 2a3e6cc7c..HEAD -- &lt;section data-evidence-paths&gt;</code>
+  <span>Local section metadata reviewed for Phase 7 LSP package at <code>local-phase7-20260604</code>.</span>
+  <code>git diff HEAD -- &lt;section data-evidence-paths&gt;</code>
 </div>
 <div class="page-footer-nav"><span><a href="provider.html">← 7. Provider</a></span><span><a href="plugin-setup.html">Plugin Setup →</a></span></div>
 </main>

@@ -9,7 +9,7 @@ use thiserror::Error;
 #[derive(Debug, Error)]
 #[non_exhaustive]
 pub enum OverlayError {
-    /// The canonical writable root (`/eos/mount`)
+    /// The canonical writable root (`/eos/scratch/overlay`)
     /// is missing and could not be created. There is intentionally no fallback.
     #[error("overlay writable root is missing: {0}")]
     WritableRootUnavailable(String),

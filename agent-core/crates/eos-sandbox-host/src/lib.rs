@@ -28,6 +28,7 @@ mod daemon_client;
 mod docker;
 mod error;
 mod lifecycle;
+mod plugin_package;
 mod provider;
 mod provisioning;
 mod registry;
@@ -43,6 +44,7 @@ pub use daemon_client::{
 pub use docker::DockerProviderAdapter;
 pub use error::SandboxHostError;
 pub use lifecycle::SandboxLifecycle;
+pub use plugin_package::ensure_plugin_package;
 pub use provider::{
     ContextPreparer, CreateSandboxSpec, DaemonTcpEndpoint, DockerContextPreparer, ExecOpts, Labels,
     PreviewUrl, ProviderAdapter, ProviderHealth, ProviderKind, RawExecResult, SandboxInfo,

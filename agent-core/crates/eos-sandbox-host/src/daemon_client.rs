@@ -13,7 +13,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use async_trait::async_trait;
-use eos_sandbox_api::{DaemonOp, SandboxApiError, SandboxTransport};
+use eos_sandbox_api::{DaemonOp, PluginPackageEnsureRequest, SandboxApiError, SandboxTransport};
 use eos_types::{JsonObject, SandboxId};
 use parking_lot::RwLock;
 use serde_json::Value;
@@ -58,15 +58,15 @@ const CONNECT_RETRY_DELAYS: [Duration; 4] = [
 
 // --- resolved container-side paths (from sandbox/daemon/paths.py) -------------
 
-pub(crate) const BUNDLE_REMOTE_DIR: &str = "/eos/daemon";
+pub(crate) const BUNDLE_REMOTE_DIR: &str = "/eos/runtime/daemon";
 /// Default `LayerStack` root injected into every envelope's `args.layer_stack_root`.
-pub const DEFAULT_LAYER_STACK_ROOT: &str = "/eos/layer-stack";
-const DAEMON_SOCKET_PATH: &str = "/eos/daemon/runtime.sock";
-const DAEMON_PID_PATH: &str = "/eos/daemon/runtime.pid";
-const DAEMON_LOG_PATH: &str = "/eos/daemon/runtime.log";
-const DAEMON_ENV_SIGNATURE_PATH: &str = "/eos/daemon/runtime.env";
-pub(crate) const EOSD_REMOTE_PATH: &str = "/eos/daemon/eosd";
-pub(crate) const EOSD_SHA_MARKER: &str = "/eos/daemon/.eosd-sha256";
+pub const DEFAULT_LAYER_STACK_ROOT: &str = "/eos/state/layer-stack";
+const DAEMON_SOCKET_PATH: &str = "/eos/runtime/daemon/runtime.sock";
+const DAEMON_PID_PATH: &str = "/eos/runtime/daemon/runtime.pid";
+const DAEMON_LOG_PATH: &str = "/eos/runtime/daemon/runtime.log";
+const DAEMON_ENV_SIGNATURE_PATH: &str = "/eos/runtime/daemon/runtime.env";
+pub(crate) const EOSD_REMOTE_PATH: &str = "/eos/runtime/daemon/eosd";
+pub(crate) const EOSD_SHA_MARKER: &str = "/eos/runtime/daemon/.eosd-sha256";
 
 // --- public helpers -----------------------------------------------------------
 
@@ -495,11 +495,19 @@ impl SandboxTransport for DaemonClient {
             .await
             .map_err(map_host_error_to_api_error)
     }
+
+    async fn ensure_plugin_package(
+        &self,
+        sandbox_id: &SandboxId,
+        request: PluginPackageEnsureRequest,
+    ) -> Result<JsonObject, SandboxApiError> {
+        crate::plugin_package::ensure_plugin_package_inner(self, sandbox_id, request).await
+    }
 }
 
 // --- free helpers (pub(crate) for tests; private otherwise) -------------------
 
-fn map_host_error_to_api_error(err: SandboxHostError) -> SandboxApiError {
+pub(crate) fn map_host_error_to_api_error(err: SandboxHostError) -> SandboxApiError {
     match err {
         SandboxHostError::DaemonDispatch { kind, message, .. } => {
             SandboxApiError::transport(Some(kind), message)
@@ -1026,7 +1034,7 @@ mod tests {
                 "api.v1.read_file",
                 JsonObject::new(),
                 60,
-                "/eos/layer-stack",
+                "/eos/state/layer-stack",
             )
             .await
             .unwrap();
@@ -1035,7 +1043,7 @@ mod tests {
         assert_eq!(env["op"], serde_json::json!("api.v1.read_file"));
         assert_eq!(
             env["args"]["layer_stack_root"],
-            serde_json::json!("/eos/layer-stack")
+            serde_json::json!("/eos/state/layer-stack")
         );
         let inv = env["invocation_id"].as_str().unwrap();
         assert_eq!(inv.len(), 32, "uuid4().hex is 32 hex chars (no dashes)");
@@ -1050,7 +1058,7 @@ mod tests {
                 "api.v1.cancel",
                 JsonObject::new(),
                 15,
-                "/eos/layer-stack",
+                "/eos/state/layer-stack",
             )
             .await
             .unwrap();
@@ -1104,7 +1112,7 @@ mod tests {
                 "api.v1.read_file",
                 JsonObject::new(),
                 60,
-                "/eos/layer-stack",
+                "/eos/state/layer-stack",
             )
             .await
             .unwrap();
@@ -1129,7 +1137,7 @@ mod tests {
                 "api.v1.write_file",
                 JsonObject::new(),
                 60,
-                "/eos/layer-stack",
+                "/eos/state/layer-stack",
             )
             .await
             .unwrap_err();
@@ -1154,7 +1162,13 @@ mod tests {
         args.insert("chars".to_owned(), Value::String("payload".to_owned()));
 
         let err = client
-            .call_daemon_api(&sid(), "api.v1.write_stdin", args, 60, "/eos/layer-stack")
+            .call_daemon_api(
+                &sid(),
+                "api.v1.write_stdin",
+                args,
+                60,
+                "/eos/state/layer-stack",
+            )
             .await
             .unwrap_err();
 

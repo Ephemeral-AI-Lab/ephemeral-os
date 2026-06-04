@@ -213,11 +213,7 @@ fn isolated_workspace_lifecycle_ops_open_status_list_and_exit_when_enabled() -> 
         handle_id.len() >= 6 && handle_id.bytes().all(|byte| byte.is_ascii_hexdigit()),
         "workspace handle id should be a hex filesystem component: {handle_id}"
     );
-    let handle_scratch = env
-        .scratch
-        .join("runtime")
-        .join("isolated-workspace")
-        .join(handle_id);
+    let handle_scratch = env.scratch.join(handle_id);
     let private_file = handle_scratch.join("upper").join("private.txt");
     std::fs::write(&private_file, "private scratch\n")?;
 

@@ -11,7 +11,7 @@ use std::path::{Path, PathBuf};
 use crate::error::{OverlayError, Result};
 
 /// Canonical filesystem for overlay `upperdir`/`workdir`.
-pub const OVERLAY_WRITABLE_ROOT: &str = "/eos/mount";
+pub const OVERLAY_WRITABLE_ROOT: &str = "/eos/scratch/overlay";
 
 /// Per-overlay writable directories created beside each other under one run dir.
 #[derive(Debug, Clone, PartialEq, Eq)]

@@ -381,11 +381,11 @@ fn scratch_root() -> PathBuf {
             return PathBuf::from(root);
         }
     }
-    PathBuf::from(eos_overlay::OVERLAY_WRITABLE_ROOT)
+    PathBuf::from(eos_isolated_workspace::DEFAULT_ISOLATED_SCRATCH_ROOT)
 }
 
 fn reset_test_manager_file() {
-    let session_root = scratch_root().join("runtime").join("isolated-workspace");
+    let session_root = scratch_root();
     let _ = std::fs::remove_dir_all(&session_root);
     if std::fs::create_dir_all(&session_root).is_err() {
         return;
@@ -510,7 +510,7 @@ mod tests {
             std::process::id()
         ));
         let scratch = root.join("scratch");
-        let manager_root = scratch.join("runtime").join("isolated-workspace");
+        let manager_root = scratch.clone();
         let _ = std::fs::remove_dir_all(&root);
         std::fs::create_dir_all(&manager_root)?;
         std::fs::write(

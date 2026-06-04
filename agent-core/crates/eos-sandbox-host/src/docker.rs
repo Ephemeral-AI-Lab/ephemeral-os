@@ -886,7 +886,7 @@ mod tests {
     #[test]
     fn eos_tmpfs_upload_destinations_use_exec_tar_route() {
         assert!(is_eos_tmpfs_destination("/eos"));
-        assert!(is_eos_tmpfs_destination("/eos/daemon"));
+        assert!(is_eos_tmpfs_destination("/eos/runtime/daemon"));
         assert!(is_eos_tmpfs_destination("/eos/scratch/uploads/u1"));
         assert!(!is_eos_tmpfs_destination("/eos-other"));
         assert!(!is_eos_tmpfs_destination("/tmp"));

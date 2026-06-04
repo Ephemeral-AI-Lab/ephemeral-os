@@ -1,4 +1,5 @@
 use std::collections::BTreeMap;
+use std::path::{Path, PathBuf};
 
 use eos_plugin::{
     public_op_name, PluginError, PluginManifest, PluginServiceKey, PluginServiceKeyParts,
@@ -7,6 +8,7 @@ use eos_plugin::{
 use serde_json::Value;
 
 use super::{
+    package::{self, PackageRoots},
     process, LoadedPluginRuntime, PluginOperationRoute, PluginProcessSpec,
     MAX_PLUGIN_CALLER_FIELD_CHARS,
 };
@@ -114,6 +116,7 @@ impl ParsedEnsure {
     fn from_manifest(args: &Value, manifest: PluginManifest) -> Result<Self, DaemonError> {
         let manifest_for_package = manifest.clone();
         let ppc_socket_root = ppc_socket_root(args);
+        let package_roots = package::package_roots(args, &manifest)?;
         let layer_stack_root = args
             .get("layer_stack_root")
             .and_then(Value::as_str)
@@ -121,11 +124,20 @@ impl ParsedEnsure {
             .filter(|root| !root.is_empty())
             .map(str::to_owned);
         let service_keys = service_keys_for_manifest(args, &manifest)?;
-        let operation_routes =
-            operation_routes_for_manifest(&manifest, &service_keys, layer_stack_root.as_deref());
+        let operation_routes = operation_routes_for_manifest(
+            &manifest,
+            &service_keys,
+            layer_stack_root.as_deref(),
+            &package_roots,
+        );
         let registered_ops = operation_routes.keys().cloned().collect::<Vec<_>>();
-        let (services, service_processes) =
-            services_for_manifest(&manifest, &service_keys, &registered_ops, &ppc_socket_root)?;
+        let (services, service_processes) = services_for_manifest(
+            &manifest,
+            &service_keys,
+            &registered_ops,
+            &ppc_socket_root,
+            &package_roots,
+        )?;
         Ok(Self {
             plugin_id: manifest.plugin_id,
             plugin_digest: manifest.plugin_digest,
@@ -143,6 +155,7 @@ fn operation_routes_for_manifest(
     manifest: &PluginManifest,
     service_keys: &BTreeMap<String, PluginServiceKey>,
     layer_stack_root: Option<&str>,
+    package_roots: &PackageRoots,
 ) -> BTreeMap<String, PluginOperationRoute> {
     manifest
         .operations
@@ -176,7 +189,7 @@ fn operation_routes_for_manifest(
                     service_key,
                     service_mode: service.map(|service| service.service_mode),
                     service_command: service
-                        .map(|service| service.command.clone())
+                        .map(|service| resolved_service_command(service, package_roots))
                         .unwrap_or_default(),
                     service_ppc_protocol_version: service
                         .map(|service| service.ppc_protocol_version),
@@ -192,6 +205,7 @@ fn services_for_manifest(
     service_keys: &BTreeMap<String, PluginServiceKey>,
     registered_ops: &[String],
     ppc_socket_root: &str,
+    package_roots: &PackageRoots,
 ) -> Result<(Vec<PluginServiceStatus>, Vec<PluginProcessSpec>), PluginError> {
     if manifest.services.is_empty() {
         return Ok((Vec::new(), Vec::new()));
@@ -217,7 +231,7 @@ fn services_for_manifest(
             if service.service_mode == ServiceMode::WorkspaceSnapshotRefresh
                 && !service.command.is_empty()
             {
-                process_specs.push(process_spec(&key, service, ppc_socket_root)?);
+                process_specs.push(process_spec(&key, service, ppc_socket_root, package_roots)?);
             }
             Ok(status)
         })
@@ -239,20 +253,60 @@ fn process_spec(
     key: &PluginServiceKey,
     service: &PluginServiceManifest,
     ppc_socket_root: &str,
+    package_roots: &PackageRoots,
 ) -> Result<PluginProcessSpec, PluginError> {
-    if ppc_socket_root == process::PLUGIN_PPC_ROOT {
-        return PluginProcessSpec::new(
-            key.clone(),
-            service.command.clone(),
-            service.ppc_protocol_version,
-        );
-    }
-    PluginProcessSpec::new_with_socket_root(
+    let working_dir = service_working_dir(service, package_roots);
+    PluginProcessSpec::new_with_package_paths(
         key.clone(),
-        service.command.clone(),
+        resolved_service_command(service, package_roots),
+        package_roots.package_root.clone(),
+        package_roots.dependency_root.clone(),
+        working_dir,
         service.ppc_protocol_version,
         ppc_socket_root,
     )
+}
+
+fn resolved_service_command(
+    service: &PluginServiceManifest,
+    package_roots: &PackageRoots,
+) -> Vec<String> {
+    let mut command = service.command.clone();
+    if let Some(program) = command.first_mut() {
+        if let Some(path) = resolve_package_relative_executable(
+            program,
+            &service_working_dir(service, package_roots),
+        ) {
+            *program = path.to_string_lossy().into_owned();
+        }
+    }
+    command
+}
+
+fn service_working_dir(service: &PluginServiceManifest, package_roots: &PackageRoots) -> PathBuf {
+    match service.working_dir.as_deref() {
+        None | Some(".") => package_roots.package_root.clone(),
+        Some(working_dir) => package_roots.package_root.join(working_dir),
+    }
+}
+
+fn resolve_package_relative_executable(program: &str, working_dir: &Path) -> Option<PathBuf> {
+    let path = Path::new(program);
+    if path.is_absolute() {
+        None
+    } else if program.contains('/') {
+        let mut resolved = working_dir.to_path_buf();
+        for component in path.components() {
+            match component {
+                std::path::Component::CurDir => {}
+                std::path::Component::Normal(part) => resolved.push(part),
+                _ => return None,
+            }
+        }
+        Some(resolved)
+    } else {
+        None
+    }
 }
 
 fn service_keys_for_manifest(

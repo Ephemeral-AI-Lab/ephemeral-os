@@ -5,7 +5,8 @@
 //! `plugin.md` frontmatter into a [`PluginManifest`], discovers all manifests
 //! under one configured catalog root as an immutable [`PluginCatalog`], supplies
 //! the catalog-native model-facing [`PluginToolSpec`] sources (today the 10 LSP
-//! specs).
+//! specs), and returns neutral plugin package descriptors consumed by sandbox
+//! setup APIs.
 //!
 //! It deliberately does **not** import or execute plugin tool modules (no
 //! `importlib`/`BaseTool` binding — GC-plugin-catalog-01), own
@@ -22,10 +23,12 @@ mod error;
 mod frontmatter;
 mod manifest;
 mod names;
+mod package;
 mod tool_specs;
 
 pub use discovery::PluginCatalog;
 pub use error::PluginCatalogError;
 pub use manifest::{PluginKind, PluginManifest, ToolEntry};
 pub use names::{PluginName, PluginResolvedPath, PluginToolName};
+pub use package::{lsp_plugin_package_descriptor, plugin_package_descriptor};
 pub use tool_specs::{plugin_tool_specs, PluginToolSpec};

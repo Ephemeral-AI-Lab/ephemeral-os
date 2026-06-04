@@ -1,6 +1,6 @@
 # Unified Sandbox Upload And Generic Plugin Runtime Plan
 
-**Status:** in progress
+**Status:** complete
 **Owner:** TBD
 **Last updated:** 2026-06-04
 **Scope:** Rust sandbox upload, bootstrap artifacts, generic sandbox plugin package
@@ -439,12 +439,12 @@ flowchart LR
 | 1. Bootstrap artifact split | Complete | Remove plugin logic from bootstrap upload | Accepted 2026-06-04; static greps, sandbox-host cargo check, and all Phase 1 live Docker E2E gates passed. |
 | 2. Unified `/eos` upload primitive | Complete | Rust upload transport | Accepted 2026-06-04; upload unit tests, sandbox-host cargo check, static daemon publish scan, and Phase 2 live E2E gates passed. |
 | 3. Generic plugin package contract | Complete | Protocol and manifest types | Accepted 2026-06-04; generic manifest/package/setup validation, digest marker coverage, daemon plugin tests, grep gate, and architecture docs passed. |
-| 4. Package install and setup | In progress | Daemon registry and setup runner | Generic package installs, sets up, and re-ensures idempotently; architecture docs updated. |
-| 5. Plugin server lifecycle | Not started | Start/status/refresh/stop/PPC | Non-LSP plugin service passes live dispatch and refresh tests; architecture docs updated. |
-| 6. Agent-core catalog bridge | Not started | Catalog to sandbox interface | Agent-core sends neutral descriptors; sandbox stays decoupled. |
-| 7. LSP example package | Not started | LSP package proves generic path | LSP live E2E passes with package-version-scoped absolute Node path. |
-| 8. Filesystem consolidation | Not started | `/eos` layout cleanup | Managed sandbox files match the final structure; architecture docs updated. |
-| 9. Final verification and cleanup | Not started | Broad checks and doc closure | All gates pass; stale Python-era plan language is gone. |
+| 4. Package install and setup | Complete | Daemon registry and setup runner | Accepted 2026-06-04; daemon package publish/setup/idempotency/status tests, generic package live E2E gates, rebuilt live daemon artifact, and architecture docs passed. |
+| 5. Plugin server lifecycle | Complete | Start/status/refresh/stop/PPC | Accepted 2026-06-04; single-threaded daemon plugin suite, generic live dispatch/refresh/isolation gates, isolated workspace live target, service package-root env contract, and architecture docs passed. |
+| 6. Agent-core catalog bridge | Complete | Catalog to sandbox interface | Accepted 2026-06-04; `eos-plugin-catalog` returns neutral package descriptors, `eos-sandbox-api` owns the DTO/API, `eos-sandbox-host` owns private warm/cold `ensure_plugin_package(...)`, runtime ensures before dispatch, architecture docs updated, and agent-core catalog/runtime/check gates passed. |
+| 7. LSP example package | Complete | LSP package proves generic path | Accepted 2026-06-04; catalog-owned LSP package material, package-scoped setup/service paths, exact retired-path scan, catalog/runtime checks, rebuilt daemon artifact, live `plugin_lsp` E2E, and architecture docs passed. |
+| 8. Filesystem consolidation | Complete | `/eos` layout cleanup | Accepted 2026-06-04; daemon/runtime paths moved to `/eos/runtime/daemon`, LayerStack/E2E state moved under `/eos/state`, overlay/command/isolated/plugin scratch moved under `/eos/scratch`, source stale-path scans passed, live Phase 8 E2E gates passed, and architecture docs were updated. |
+| 9. Final verification and cleanup | Complete | Broad checks and doc closure | Accepted 2026-06-04; focused Rust checks, live protocol/package/workspace gates, formatting/static guards, stale-path scans, cleanup criteria, and progress documentation passed. |
 
 Each phase below is written as a spec. The implementation MUST NOT proceed to
 the next phase until the listed acceptance criteria pass.

@@ -5,47 +5,46 @@
 //! for built-in plugin runtimes and then dispatch dynamic `plugin.<plugin>.<op>`
 //! daemon operations.
 
-use std::sync::{Arc, LazyLock};
+use std::sync::Arc;
 
 use async_trait::async_trait;
 use eos_llm_client::ToolSpec;
-use eos_plugin_catalog::{plugin_tool_specs, PluginToolSpec};
-use eos_sandbox_api::{Intent, PluginDispatchRequest, PluginEnsureRequest, SandboxRequestBase};
+use eos_plugin_catalog::{plugin_package_descriptor, plugin_tool_specs, PluginToolSpec};
+use eos_sandbox_api::{
+    Intent, PluginDispatchRequest, PluginPackageDescriptor, PluginPackageEnsureRequest,
+    SandboxRequestBase,
+};
 use eos_tools::{
     ExecutionMetadata, OutputShape, RegisteredTool, ToolError, ToolExecutor, ToolIntent, ToolKey,
     ToolRegistry, ToolResult,
 };
 use eos_types::JsonObject;
-use serde_json::{json, Value};
+use serde_json::Value;
 
-const LSP_PLUGIN_ID: &str = "lsp";
-const LSP_PLUGIN_VERSION: &str = "0.1.0";
-const LSP_PLUGIN_DIGEST: &str = "builtin-lsp-pyright-v2";
-const LSP_SERVICE_ID: &str = "pyright";
-const LSP_SERVICE_PROFILE_DIGEST: &str = "builtin-lsp-pyright-service-v2";
-const LSP_PPC_SERVICE_PATH: &str = "/eos/daemon/plugins/catalog/lsp/runtime/ppc_service.sh";
 const PLUGIN_DISPATCH_TIMEOUT_S: u32 = 150;
 const PLUGIN_ENSURE_TIMEOUT_S: u32 = 150;
-const PLUGIN_OP_TIMEOUT_MS: u64 = (PLUGIN_DISPATCH_TIMEOUT_S as u64) * 1_000;
-
-static LSP_MANIFEST: LazyLock<JsonObject> = LazyLock::new(lsp_manifest);
 
 /// Register every built-in plugin catalog tool into `registry`.
 pub(crate) fn register_plugin_tools(registry: &mut ToolRegistry) {
     for spec in plugin_tool_specs() {
-        registry.register(registered_plugin_tool(spec));
+        if let Some(tool) = registered_plugin_tool(spec) {
+            registry.register(tool);
+        }
     }
 }
 
-fn registered_plugin_tool(spec: PluginToolSpec) -> RegisteredTool {
+fn registered_plugin_tool(spec: PluginToolSpec) -> Option<RegisteredTool> {
     let name = spec.name.as_str().to_owned();
     let parsed_name = split_plugin_tool_name(&name);
+    let package = parsed_name
+        .as_ref()
+        .and_then(|(plugin_id, _)| plugin_package_descriptor(plugin_id))?;
     let input_schema = match serde_json::to_value(spec.input_schema) {
         Ok(Value::Object(map)) => map,
         _ => JsonObject::new(),
     };
     let tool_spec = ToolSpec::new(name.clone(), spec.description, input_schema, None);
-    RegisteredTool::new(
+    Some(RegisteredTool::new(
         ToolKey::dynamic(name),
         ToolIntent::from(spec.intent),
         false,
@@ -54,8 +53,9 @@ fn registered_plugin_tool(spec: PluginToolSpec) -> RegisteredTool {
         Arc::new(PluginToolExecutor {
             parsed_name,
             intent: spec.intent,
+            package,
         }),
-    )
+    ))
 }
 
 fn split_plugin_tool_name(name: &str) -> Option<(String, String)> {
@@ -72,6 +72,7 @@ fn split_plugin_tool_name_parts(name: &str) -> Option<(&str, &str)> {
 struct PluginToolExecutor {
     parsed_name: Option<(String, String)>,
     intent: Intent,
+    package: PluginPackageDescriptor,
 }
 
 #[async_trait]
@@ -92,7 +93,7 @@ impl ToolExecutor for PluginToolExecutor {
             description: format!("plugin {plugin_id}.{op_name}"),
             invocation_id: ctx.sandbox_invocation_id.clone(),
         };
-        ensure_plugin_runtime(plugin_id, &base, ctx).await?;
+        ensure_plugin_runtime(&self.package, &base, ctx).await?;
         let response = eos_sandbox_api::plugin_dispatch(
             &*ctx.transport,
             sandbox_id,
@@ -112,21 +113,18 @@ impl ToolExecutor for PluginToolExecutor {
 }
 
 async fn ensure_plugin_runtime(
-    plugin_id: &str,
+    package: &PluginPackageDescriptor,
     base: &SandboxRequestBase,
     ctx: &ExecutionMetadata,
 ) -> Result<(), ToolError> {
-    if plugin_id != LSP_PLUGIN_ID {
-        return Ok(());
-    }
     let sandbox_id = ctx.require_sandbox_id()?;
-    eos_sandbox_api::plugin_ensure(
+    eos_sandbox_api::ensure_plugin_package(
         &*ctx.transport,
         sandbox_id,
-        PluginEnsureRequest {
+        PluginPackageEnsureRequest {
             base: base.clone(),
             workspace_root: ctx.repo_root.clone(),
-            manifest: LSP_MANIFEST.clone(),
+            package: package.clone(),
             start_services: true,
             timeout_s: PLUGIN_ENSURE_TIMEOUT_S,
         },
@@ -135,51 +133,7 @@ async fn ensure_plugin_runtime(
     Ok(())
 }
 
-fn lsp_manifest() -> JsonObject {
-    json_object(json!({
-        "plugin_id": LSP_PLUGIN_ID,
-        "plugin_version": LSP_PLUGIN_VERSION,
-        "plugin_digest": LSP_PLUGIN_DIGEST,
-        "services": [{
-            "service_id": LSP_SERVICE_ID,
-            "service_profile_digest": LSP_SERVICE_PROFILE_DIGEST,
-            "service_mode": "workspace_snapshot_refresh",
-            "refresh_strategy": "remount_workspace_and_notify",
-            "command": [LSP_PPC_SERVICE_PATH],
-            "ppc_protocol_version": 1
-        }],
-        "operations": lsp_manifest_operations()
-    }))
-}
-
-fn lsp_manifest_operations() -> Vec<Value> {
-    plugin_tool_specs()
-        .into_iter()
-        .filter_map(|spec| {
-            let (plugin_id, op_name) = split_plugin_tool_name_parts(spec.name.as_str())?;
-            (plugin_id == LSP_PLUGIN_ID).then(|| lsp_operation(op_name, spec.intent))
-        })
-        .collect()
-}
-
-fn lsp_operation(op_name: &str, intent: Intent) -> Value {
-    let mut operation = JsonObject::new();
-    operation.insert("op_name".to_owned(), Value::String(op_name.to_owned()));
-    operation.insert(
-        "intent".to_owned(),
-        Value::String(intent.as_wire().to_owned()),
-    );
-    operation.insert(
-        "service_id".to_owned(),
-        Value::String(LSP_SERVICE_ID.to_owned()),
-    );
-    operation.insert("timeout_ms".to_owned(), Value::from(PLUGIN_OP_TIMEOUT_MS));
-    if intent == Intent::WriteAllowed {
-        operation.insert("auto_workspace_overlay".to_owned(), Value::Bool(false));
-    }
-    Value::Object(operation)
-}
-
+#[cfg(test)]
 fn json_object(value: Value) -> JsonObject {
     match value {
         Value::Object(object) => object,
@@ -211,6 +165,7 @@ mod tests {
         TaskStatus, TaskStore,
     };
     use eos_types::{RequestId, SandboxId, TaskId};
+    use serde_json::json;
 
     #[test]
     fn registers_lsp_plugin_tools() {
@@ -224,12 +179,14 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn lsp_executor_ensures_manifest_before_dispatch() {
+    async fn lsp_executor_ensures_package_before_dispatch() {
         let transport = Arc::new(RecordingTransport::default());
         let ctx = metadata_with(transport.clone());
+        let package = plugin_package_descriptor("lsp").expect("lsp package");
         let executor = PluginToolExecutor {
-            parsed_name: Some((LSP_PLUGIN_ID.to_owned(), "hover".to_owned())),
+            parsed_name: Some(("lsp".to_owned(), "hover".to_owned())),
             intent: Intent::ReadOnly,
+            package: package.clone(),
         };
         let input = json_object(json!({
             "file_path": "src/main.py",
@@ -251,19 +208,25 @@ mod tests {
         assert_eq!(calls[0].payload.get("invocation_id"), Some(&json!("inv-1")));
 
         let manifest = calls[0].payload.get("manifest").expect("manifest");
-        assert_eq!(manifest.get("plugin_id"), Some(&json!(LSP_PLUGIN_ID)));
+        assert_eq!(
+            manifest.get("plugin_id"),
+            Some(&json!(package.manifest.plugin_id))
+        );
         assert_eq!(
             manifest.get("plugin_digest"),
-            Some(&json!(LSP_PLUGIN_DIGEST))
+            Some(&json!(package.manifest.plugin_digest))
         );
-        assert_eq!(
-            manifest
-                .get("services")
-                .and_then(Value::as_array)
-                .and_then(|services| services.first())
-                .and_then(|service| service.get("command")),
-            Some(&json!([LSP_PPC_SERVICE_PATH]))
-        );
+        let command = manifest
+            .get("services")
+            .and_then(Value::as_array)
+            .and_then(|services| services.first())
+            .and_then(|service| service.get("command"))
+            .and_then(Value::as_array)
+            .expect("service command");
+        assert_eq!(command, &vec![json!("./ppc_service.py")]);
+        assert!(command
+            .iter()
+            .all(|part| !part.as_str().unwrap_or_default().starts_with("/eos/")));
         let operations = manifest
             .get("operations")
             .and_then(Value::as_array)
@@ -272,14 +235,14 @@ mod tests {
             .into_iter()
             .filter(|spec| {
                 split_plugin_tool_name_parts(spec.name.as_str())
-                    .is_some_and(|(plugin_id, _)| plugin_id == LSP_PLUGIN_ID)
+                    .is_some_and(|(plugin_id, _)| plugin_id == "lsp")
             })
             .count();
         assert_eq!(operations.len(), catalog_lsp_tool_count);
         assert!(operations.iter().any(|operation| {
             operation.get("op_name") == Some(&json!("rename"))
                 && operation.get("intent") == Some(&json!("write_allowed"))
-                && operation.get("service_id") == Some(&json!(LSP_SERVICE_ID))
+                && operation.get("service_id") == Some(&json!("pyright"))
                 && operation.get("auto_workspace_overlay") == Some(&json!(false))
         }));
 

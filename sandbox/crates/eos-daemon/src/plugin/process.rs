@@ -29,6 +29,8 @@ pub(super) const PLUGIN_PPC_ROOT: &str = "/eos/plugin/ppc";
 pub(super) const ENV_PLUGIN_PPC_SOCKET: &str = "EOS_PLUGIN_PPC_SOCKET";
 pub(super) const ENV_PLUGIN_LAYER_STACK_ROOT: &str = "EOS_PLUGIN_LAYER_STACK_ROOT";
 pub(super) const ENV_PLUGIN_WORKSPACE_ROOT: &str = "EOS_PLUGIN_WORKSPACE_ROOT";
+pub(super) const ENV_PLUGIN_PACKAGE_ROOT: &str = "EOS_PLUGIN_PACKAGE_ROOT";
+pub(super) const ENV_PLUGIN_DEPENDENCY_ROOT: &str = "EOS_PLUGIN_DEPENDENCY_ROOT";
 pub(super) const ENV_PLUGIN_ID: &str = "EOS_PLUGIN_ID";
 pub(super) const ENV_PLUGIN_DIGEST: &str = "EOS_PLUGIN_DIGEST";
 pub(super) const ENV_PLUGIN_SERVICE_ID: &str = "EOS_PLUGIN_SERVICE_ID";
@@ -48,22 +50,59 @@ pub(super) struct PluginServiceOverlay {
 pub(super) struct PluginProcessSpec {
     key: PluginServiceKey,
     command: Vec<String>,
+    package_root: PathBuf,
+    dependency_root: PathBuf,
+    working_dir: PathBuf,
     ppc_protocol_version: u32,
     socket_path: PathBuf,
 }
 
 impl PluginProcessSpec {
+    #[cfg(test)]
     pub(crate) fn new(
         key: PluginServiceKey,
         command: Vec<String>,
         ppc_protocol_version: u32,
     ) -> Result<Self, PluginError> {
-        Self::new_with_socket_root(key, command, ppc_protocol_version, PLUGIN_PPC_ROOT)
+        let package_root = default_package_root(&key);
+        let dependency_root = default_dependency_root(&key);
+        Self::new_with_package_paths(
+            key,
+            command,
+            package_root.clone(),
+            dependency_root,
+            PathBuf::from("."),
+            ppc_protocol_version,
+            PLUGIN_PPC_ROOT,
+        )
     }
 
+    #[cfg(test)]
     pub(crate) fn new_with_socket_root(
         key: PluginServiceKey,
         command: Vec<String>,
+        ppc_protocol_version: u32,
+        socket_root: impl AsRef<Path>,
+    ) -> Result<Self, PluginError> {
+        let package_root = default_package_root(&key);
+        let dependency_root = default_dependency_root(&key);
+        Self::new_with_package_paths(
+            key,
+            command,
+            package_root.clone(),
+            dependency_root,
+            PathBuf::from("."),
+            ppc_protocol_version,
+            socket_root,
+        )
+    }
+
+    pub(crate) fn new_with_package_paths(
+        key: PluginServiceKey,
+        command: Vec<String>,
+        package_root: PathBuf,
+        dependency_root: PathBuf,
+        working_dir: PathBuf,
         ppc_protocol_version: u32,
         socket_root: impl AsRef<Path>,
     ) -> Result<Self, PluginError> {
@@ -82,6 +121,9 @@ impl PluginProcessSpec {
         Ok(Self {
             key,
             command,
+            package_root,
+            dependency_root,
+            working_dir,
             ppc_protocol_version,
             socket_path,
         })
@@ -98,6 +140,14 @@ impl PluginProcessSpec {
                 self.key.layer_stack_root.clone(),
             ),
             (ENV_PLUGIN_WORKSPACE_ROOT, self.key.workspace_root.clone()),
+            (
+                ENV_PLUGIN_PACKAGE_ROOT,
+                self.package_root.to_string_lossy().into_owned(),
+            ),
+            (
+                ENV_PLUGIN_DEPENDENCY_ROOT,
+                self.dependency_root.to_string_lossy().into_owned(),
+            ),
             (ENV_PLUGIN_ID, self.key.plugin_id.clone()),
             (ENV_PLUGIN_DIGEST, self.key.plugin_digest.clone()),
             (ENV_PLUGIN_SERVICE_ID, self.key.service_id.clone()),
@@ -133,8 +183,11 @@ impl PluginProcessSpec {
         env: BTreeMap<&'static str, String>,
     ) -> Result<PluginServiceProcess, DaemonError> {
         let mut command = Command::new(&argv[0]);
+        command.args(&argv[1..]);
+        if self.working_dir.is_dir() {
+            command.current_dir(&self.working_dir);
+        }
         command
-            .args(&argv[1..])
             .envs(env)
             .stdin(Stdio::null())
             .stdout(Stdio::null())
@@ -257,12 +310,29 @@ impl PluginProcessSpec {
             "service_id": self.key.service_id,
             "service_instance_id": self.key.service_instance_id(),
             "command": self.command,
+            "package_root": self.package_root,
+            "dependency_root": self.dependency_root,
+            "working_dir": self.working_dir,
             "socket_path": self.socket_path,
             "env": self.environment(),
             "ppc_protocol_version": self.ppc_protocol_version,
             "process_started": false,
         })
     }
+}
+
+#[cfg(test)]
+fn default_package_root(key: &PluginServiceKey) -> PathBuf {
+    PathBuf::from("/eos/runtime/plugins/catalog")
+        .join(&key.plugin_id)
+        .join(&key.plugin_digest)
+}
+
+#[cfg(test)]
+fn default_dependency_root(key: &PluginServiceKey) -> PathBuf {
+    PathBuf::from("/eos/runtime/packages")
+        .join(&key.plugin_id)
+        .join(&key.plugin_digest)
 }
 
 #[derive(Debug)]
@@ -541,6 +611,14 @@ mod tests {
             .is_some_and(|ext| ext.eq_ignore_ascii_case("sock")));
         assert_eq!(env[ENV_PLUGIN_LAYER_STACK_ROOT], "/eos/plugin/layer-stack");
         assert_eq!(env[ENV_PLUGIN_WORKSPACE_ROOT], "/eos/plugin/workspace");
+        assert_eq!(
+            env[ENV_PLUGIN_PACKAGE_ROOT],
+            "/eos/runtime/plugins/catalog/demo/digest-a"
+        );
+        assert_eq!(
+            env[ENV_PLUGIN_DEPENDENCY_ROOT],
+            "/eos/runtime/packages/demo/digest-a"
+        );
         assert_eq!(env[ENV_PLUGIN_ID], "demo");
         assert_eq!(env[ENV_PLUGIN_SERVICE_ID], "indexer");
         assert_eq!(env[ENV_PLUGIN_PPC_PROTOCOL_VERSION], "1");

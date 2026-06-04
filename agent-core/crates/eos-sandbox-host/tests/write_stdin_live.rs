@@ -17,7 +17,7 @@ set -eu
 if [ "${1:-}" = "daemon" ] && [ "${2:-}" = "--spawn" ]; then
   n="$(cat /tmp/eos-spawn-calls 2>/dev/null || echo 0)"
   echo "$((n + 1))" > /tmp/eos-spawn-calls
-  exec /eos/daemon/eosd.real "$@"
+  exec /eos/runtime/daemon/eosd.real "$@"
 fi
 
 if [ "${1:-}" = "daemon" ] && [ "${2:-}" = "--client" ]; then
@@ -28,7 +28,7 @@ if [ "${1:-}" = "daemon" ] && [ "${2:-}" = "--client" ]; then
       n="$((n + 1))"
       echo "$n" > /tmp/eos-write-stdin-client-calls
       if [ "$n" = "1" ]; then
-        /eos/daemon/eosd.real "$@" >/tmp/eos-first-write-stdout 2>/tmp/eos-first-write-stderr || true
+        /eos/runtime/daemon/eosd.real "$@" >/tmp/eos-first-write-stdout 2>/tmp/eos-first-write-stderr || true
         printf '%s\n' 'no response from daemon' >&2
         exit 98
       fi
@@ -36,7 +36,7 @@ if [ "${1:-}" = "daemon" ] && [ "${2:-}" = "--client" ]; then
   esac
 fi
 
-exec /eos/daemon/eosd.real "$@"
+exec /eos/runtime/daemon/eosd.real "$@"
 "#;
 
 #[tokio::test]
@@ -156,7 +156,12 @@ async fn install_wrapped_eosd(
     adapter: &Arc<dyn ProviderAdapter>,
     sandbox_id: &SandboxId,
 ) -> Result<(), Box<dyn Error>> {
-    exec(adapter, sandbox_id, "mkdir -p /eos/daemon /testbed /tmp").await?;
+    exec(
+        adapter,
+        sandbox_id,
+        "mkdir -p /eos/runtime/daemon /testbed /tmp",
+    )
+    .await?;
     let artifact = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .join("../../../sandbox/dist/eosd-linux-amd64")
         .canonicalize()?;
@@ -176,9 +181,9 @@ async fn install_wrapped_eosd(
     }
 
     let script = format!(
-        "cp /tmp/eosd.real /eos/daemon/eosd.real\n\
-         cat > /eos/daemon/eosd <<'EOS_WRAPPER'\n{WRAPPER}\nEOS_WRAPPER\n\
-         chmod 755 /eos/daemon/eosd /eos/daemon/eosd.real\n\
+        "cp /tmp/eosd.real /eos/runtime/daemon/eosd.real\n\
+         cat > /eos/runtime/daemon/eosd <<'EOS_WRAPPER'\n{WRAPPER}\nEOS_WRAPPER\n\
+         chmod 755 /eos/runtime/daemon/eosd /eos/runtime/daemon/eosd.real\n\
          rm -f /tmp/eos-spawn-calls /tmp/eos-write-stdin-client-calls \
          /tmp/eos-stdin-payloads /tmp/eos-first-write-stdout /tmp/eos-first-write-stderr"
     );

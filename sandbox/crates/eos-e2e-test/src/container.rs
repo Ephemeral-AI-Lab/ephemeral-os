@@ -25,11 +25,11 @@ use crate::config::{Config, NodeMode};
 use crate::unique_suffix;
 
 /// Daemon runtime dir under the EphemeralOS-owned root.
-const DAEMON_DIR: &str = "/eos/daemon";
+const DAEMON_DIR: &str = "/eos/runtime/daemon";
 /// Remote daemon executable path. Keep this aligned with host runtime paths.
-const EOSD_REMOTE_PATH: &str = "/eos/daemon/eosd";
+const EOSD_REMOTE_PATH: &str = "/eos/runtime/daemon/eosd";
 /// Root under which the pool mints per-test `layer_stack_root`s.
-pub const E2E_ROOT_DIR: &str = "/eos/e2e";
+pub const E2E_ROOT_DIR: &str = "/eos/state/e2e";
 /// A non-kept container self-removes after this long (`--rm` + `timeout`), so an
 /// aborted run cannot strand privileged containers even if teardown never runs.
 const CONTAINER_TTL_SECONDS: u64 = 1800;
@@ -683,7 +683,10 @@ mod tests {
             docker_http_status("HTTP/1.1 200 OK\r\n\r\n").expect("status"),
             200
         );
-        assert_eq!(percent_encode("/eos/daemon"), "%2Feos%2Fdaemon");
+        assert_eq!(
+            percent_encode("/eos/runtime/daemon"),
+            "%2Feos%2Fruntime%2Fdaemon"
+        );
         assert_eq!(
             docker_unix_socket_from_host("unix:///var/run/docker.sock").expect("socket"),
             PathBuf::from("/var/run/docker.sock")
@@ -697,8 +700,16 @@ mod tests {
             vec!["exec", "-w", "/", "box", "mkdir", "-p", "/testbed"]
         );
         assert_eq!(
-            docker_exec_args("box", &["-d", "/eos/daemon/eosd", "daemon"]),
-            vec!["exec", "-d", "-w", "/", "box", "/eos/daemon/eosd", "daemon"]
+            docker_exec_args("box", &["-d", "/eos/runtime/daemon/eosd", "daemon"]),
+            vec![
+                "exec",
+                "-d",
+                "-w",
+                "/",
+                "box",
+                "/eos/runtime/daemon/eosd",
+                "daemon"
+            ]
         );
     }
 }

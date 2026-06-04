@@ -21,6 +21,9 @@ use serde_json::{json, Value};
 
 use self::support::{directory_file_bytes, monotonic_seconds, next_handle_id};
 
+/// Canonical scratch root for isolated workspace manager state and private dirs.
+pub const DEFAULT_ISOLATED_SCRATCH_ROOT: &str = "/eos/scratch/isolated";
+
 mod capacity;
 mod gc;
 mod lifecycle;
@@ -244,13 +247,13 @@ where
             layer_stack,
             runtime,
             audit,
-            PathBuf::from(eos_overlay::OVERLAY_WRITABLE_ROOT),
+            PathBuf::from(DEFAULT_ISOLATED_SCRATCH_ROOT),
         )
     }
 
     /// Construct a session with an explicit scratch root.
     ///
-    /// The daemon uses the canonical `/eos/mount` root in Docker. Focused
+    /// The daemon uses the canonical `/eos/scratch/isolated` root in Docker. Focused
     /// unit tests inject a temporary scratch root through this constructor so
     /// lifecycle behavior can be verified without depending on host `/eos`.
     #[must_use]

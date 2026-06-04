@@ -251,8 +251,8 @@ impl TmpfsCfg {
 
 fn default_tmpfs() -> Vec<String> {
     vec![
-        "/eos/e2e:rw,exec,size=2g,mode=1777".to_owned(),
-        "/eos/mount:rw,exec,size=2g,mode=1777".to_owned(),
+        "/eos/state:rw,exec,size=2g,mode=1777".to_owned(),
+        "/eos/scratch:rw,exec,size=2g,mode=1777".to_owned(),
     ]
 }
 

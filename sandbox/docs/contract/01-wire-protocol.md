@@ -31,8 +31,8 @@ binds both via one `serve()` (`daemon/rpc/server.py:167-209`).
 | **AF_UNIX** (local fallback / Daytona) | `asyncio.start_unix_server(..., path=<socket>, limit=MAX_REQUEST_BYTES)` | none (`auth_token=None`) | `server.py:183-187` |
 | **127.0.0.1 TCP** (Docker host-forwarded) | `asyncio.start_server(..., host=tcp_host, port=tcp_port, limit=MAX_REQUEST_BYTES)`, only when `tcp_host and tcp_port` | `auth_token` enforced if non-None | `server.py:192-202` |
 
-**Socket path:** `/eos/daemon/runtime.sock` (`daemon/paths.py:11`,
-`DAEMON_SOCKET_PATH`). PID file: `/eos/daemon/runtime.pid` (`paths.py:12`).
+**Socket path:** `/eos/runtime/daemon/runtime.sock`. PID file:
+`/eos/runtime/daemon/runtime.pid`.
 Socket parent dir is chmod `0o700`; socket inode forced to `0o600` after bind
 (`server.py:151,181,190`).
 

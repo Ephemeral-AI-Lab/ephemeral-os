@@ -1,0 +1,6 @@
+{
+  "plugin_id": "lsp",
+  "plugin_version": "0.1.0",
+  "service": "pyright",
+  "entrypoint": "runtime/ppc_service.py"
+}

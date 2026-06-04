@@ -14,7 +14,7 @@ where
     A: AuditSink,
 {
     pub(super) fn session_scratch_root(&self) -> PathBuf {
-        self.scratch_root.join("runtime").join("isolated-workspace")
+        self.scratch_root.clone()
     }
 
     fn persisted_handles_path(&self) -> PathBuf {

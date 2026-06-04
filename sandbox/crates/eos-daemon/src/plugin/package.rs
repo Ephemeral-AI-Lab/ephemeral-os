@@ -1,6 +1,7 @@
 //! Daemon-owned plugin package publish and setup helpers.
 
 use std::fs;
+use std::io::ErrorKind;
 use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
@@ -19,6 +20,23 @@ pub(super) struct PackageEnsureReport {
     pub(super) dependency_root: Option<PathBuf>,
     pub(super) package_published: bool,
     pub(super) setup_ran: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(super) struct PackageRoots {
+    pub(super) package_root: PathBuf,
+    pub(super) dependency_root: PathBuf,
+}
+
+pub(super) fn package_roots(
+    args: &Value,
+    manifest: &PluginManifest,
+) -> Result<PackageRoots, DaemonError> {
+    let paths = PackagePaths::new(args, manifest)?;
+    Ok(PackageRoots {
+        package_root: paths.package_root,
+        dependency_root: paths.dependency_root,
+    })
 }
 
 pub(super) fn package_contract_active(args: &Value) -> bool {
@@ -228,8 +246,78 @@ fn publish_package(staged_package_root: &Path, paths: &PackagePaths) -> Result<b
     if paths.package_root.exists() {
         fs::remove_dir_all(&paths.package_root)?;
     }
-    fs::rename(staged_package_root, &paths.package_root)?;
+    match fs::rename(staged_package_root, &paths.package_root) {
+        Ok(()) => {}
+        Err(err) if err.kind() == ErrorKind::CrossesDevices => {
+            publish_package_across_filesystems(staged_package_root, &paths.package_root)?;
+        }
+        Err(err) => return Err(err.into()),
+    }
     Ok(true)
+}
+
+fn publish_package_across_filesystems(
+    staged_package_root: &Path,
+    package_root: &Path,
+) -> Result<(), DaemonError> {
+    let parent = package_root.parent().ok_or_else(|| {
+        PluginError::Ensure(format!(
+            "package root has no parent: {}",
+            package_root.display()
+        ))
+    })?;
+    let temp_root = parent.join(format!(
+        ".{}.publish-{}",
+        package_root
+            .file_name()
+            .and_then(|name| name.to_str())
+            .unwrap_or("package"),
+        std::process::id()
+    ));
+    let _ = fs::remove_dir_all(&temp_root);
+    copy_package_tree(staged_package_root, &temp_root)?;
+    fs::rename(&temp_root, package_root).inspect_err(|_| {
+        let _ = fs::remove_dir_all(&temp_root);
+    })?;
+    Ok(())
+}
+
+fn copy_package_tree(source_root: &Path, target_root: &Path) -> Result<(), DaemonError> {
+    fs::create_dir_all(target_root)?;
+    copy_package_dir(source_root, source_root, target_root)
+}
+
+fn copy_package_dir(
+    source_root: &Path,
+    source_dir: &Path,
+    target_root: &Path,
+) -> Result<(), DaemonError> {
+    for entry in fs::read_dir(source_dir)? {
+        let entry = entry?;
+        let source_path = entry.path();
+        let metadata = entry.metadata()?;
+        let relative = source_path
+            .strip_prefix(source_root)
+            .map_err(|err| PluginError::Ensure(err.to_string()))?;
+        let target_path = target_root.join(relative);
+        if metadata.is_dir() {
+            fs::create_dir_all(&target_path)?;
+            copy_package_dir(source_root, &source_path, target_root)?;
+        } else if metadata.is_file() {
+            if let Some(parent) = target_path.parent() {
+                fs::create_dir_all(parent)?;
+            }
+            fs::copy(&source_path, &target_path)?;
+            fs::set_permissions(&target_path, metadata.permissions())?;
+        } else {
+            return Err(PluginError::Ensure(format!(
+                "staged package path {} must be a regular file or directory",
+                source_path.display()
+            ))
+            .into());
+        }
+    }
+    Ok(())
 }
 
 fn ensure_setup(manifest: &PluginManifest, paths: &PackagePaths) -> Result<bool, DaemonError> {
@@ -240,12 +328,12 @@ fn ensure_setup(manifest: &PluginManifest, paths: &PackagePaths) -> Result<bool,
     if marker_matches(&setup_marker, &setup.setup_marker_digest) {
         return Ok(false);
     }
-    reject_forbidden_setup_roots(&setup.command)?;
     fs::create_dir_all(&paths.dependency_root)?;
     fs::create_dir_all(paths.dependency_root.join("cache"))?;
     fs::create_dir_all(paths.dependency_root.join("archives"))?;
     fs::create_dir_all(paths.setup_tmp_root.join("tmp"))?;
     let cwd = paths.package_root.join(&setup.working_dir);
+    reject_forbidden_setup_roots(&setup.command, &cwd)?;
     let output = Command::new(&setup.command[0])
         .args(&setup.command[1..])
         .current_dir(&cwd)
@@ -271,12 +359,39 @@ fn ensure_setup(manifest: &PluginManifest, paths: &PackagePaths) -> Result<bool,
     Ok(true)
 }
 
-fn reject_forbidden_setup_roots(command: &[String]) -> Result<(), DaemonError> {
+fn reject_forbidden_setup_roots(command: &[String], cwd: &Path) -> Result<(), DaemonError> {
     let joined = command.join("\0");
+    reject_forbidden_text("plugin setup command", &joined)?;
+    for arg in command {
+        if let Some(script) = setup_script_path(arg, cwd) {
+            if script.is_file() {
+                let script_text = fs::read_to_string(&script)?;
+                reject_forbidden_text(
+                    &format!("plugin setup script {}", script.display()),
+                    &script_text,
+                )?;
+            }
+        }
+    }
+    Ok(())
+}
+
+fn setup_script_path(arg: &str, cwd: &Path) -> Option<PathBuf> {
+    let path = Path::new(arg);
+    if path.is_absolute() {
+        path.starts_with(cwd).then(|| path.to_path_buf())
+    } else if arg.contains('/') {
+        Some(cwd.join(path))
+    } else {
+        None
+    }
+}
+
+fn reject_forbidden_text(context: &str, text: &str) -> Result<(), DaemonError> {
     for forbidden in ["/root", "/var"] {
-        if joined.contains(forbidden) {
+        if text.contains(forbidden) {
             return Err(PluginError::Ensure(format!(
-                "plugin setup command references forbidden managed root {forbidden}"
+                "{context} references forbidden managed root {forbidden}"
             ))
             .into());
         }
@@ -356,4 +471,50 @@ fn collect_files(
         }
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use std::time::{SystemTime, UNIX_EPOCH};
+
+    use super::*;
+
+    type TestResult = Result<(), Box<dyn std::error::Error + Send + Sync>>;
+
+    #[test]
+    fn copy_package_tree_preserves_nested_files_and_modes() -> TestResult {
+        let root = unique_temp_dir("copy-package-tree");
+        let staged = root.join("staged");
+        let target = root.join("target");
+        fs::create_dir_all(staged.join("runtime"))?;
+        fs::write(staged.join("sandbox-plugin.json"), "{}")?;
+        fs::write(staged.join("runtime/server.py"), "#!/usr/bin/env python3\n")?;
+        fs::set_permissions(
+            staged.join("runtime/server.py"),
+            fs::Permissions::from_mode(0o755),
+        )?;
+
+        copy_package_tree(&staged, &target)?;
+
+        assert_eq!(
+            fs::read_to_string(target.join("sandbox-plugin.json"))?,
+            "{}"
+        );
+        assert_eq!(
+            fs::metadata(target.join("runtime/server.py"))?
+                .permissions()
+                .mode()
+                & 0o777,
+            0o755
+        );
+        let _ = fs::remove_dir_all(&root);
+        Ok(())
+    }
+
+    fn unique_temp_dir(label: &str) -> PathBuf {
+        let nanos = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .map_or(0, |duration| duration.as_nanos());
+        std::env::temp_dir().join(format!("{label}-{}-{nanos}", std::process::id()))
+    }
 }

@@ -14,7 +14,7 @@ use serde_json::Value;
 use crate::error::IsolatedError;
 
 /// Default JSONL path when `EOS_ISOLATED_WORKSPACE_AUDIT_PATH` is unset.
-pub const DEFAULT_AUDIT_JSONL_PATH: &str = "/tmp/sandbox_isolated_workspace_events.jsonl";
+pub const DEFAULT_AUDIT_JSONL_PATH: &str = "/eos/scratch/isolated/audit.jsonl";
 
 /// Environment variable selecting the audit JSONL path.
 pub const AUDIT_PATH_ENV: &str = "EOS_ISOLATED_WORKSPACE_AUDIT_PATH";

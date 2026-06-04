@@ -40,7 +40,7 @@ use eos_ephemeral_workspace::{
 #[cfg(target_os = "linux")]
 use eos_layerstack::{require_workspace_binding, LayerStack, Lease, WorkspaceBinding};
 #[cfg(target_os = "linux")]
-use eos_overlay::{capture_upperdir, overlay_writable_root};
+use eos_overlay::capture_upperdir;
 #[cfg(target_os = "linux")]
 use eos_protocol::Intent;
 #[cfg(target_os = "linux")]
@@ -63,6 +63,9 @@ use crate::overlay_runner::{
     changeset_from_publish_outcome, ephemeral_daemon_error, overlay_daemon_error, overlay_run_dirs,
     path_changes_to_wire, DaemonPublisherPort, RunDirCleanup,
 };
+
+#[cfg(target_os = "linux")]
+const COMMAND_SESSION_SCRATCH_ROOT: &str = "/eos/scratch/command-sessions";
 use crate::response_timings::u64_to_f64_saturating;
 #[cfg(target_os = "linux")]
 use crate::response_timings::{
@@ -490,12 +493,10 @@ fn prepare_command_session(
     lease: &Lease,
     spec: &CommandSessionStartSpec,
 ) -> Result<Arc<CommandSession>, DaemonError> {
-    let runtime_root = overlay_writable_root()
-        .map_err(|err| overlay_daemon_error("overlay writable root", &err))?
-        .join("runtime");
+    let session_root = command_session_scratch_root();
     let mut dirs = overlay_run_dirs("sandbox-overlay", &spec.invocation_id)?;
     let mut run_dir_cleanup = RunDirCleanup::new(dirs.run_dir.clone());
-    let session_dir = runtime_root.join("command-sessions").join(&spec.id);
+    let session_dir = session_root.join(&spec.id);
     std::fs::create_dir_all(&session_dir)?;
     let transcript_path = session_dir.join("transcript.log");
     let final_path = session_dir.join("final.json");
@@ -1037,10 +1038,7 @@ pub fn command_session_reaper_sweep() {
 /// own runner timeout reclaims them; lease cleanup is left to LayerStack GC.
 #[cfg(target_os = "linux")]
 pub fn recover_orphaned_command_sessions() {
-    let Ok(runtime_root) = overlay_writable_root() else {
-        return;
-    };
-    let dir = runtime_root.join("runtime").join("command-sessions");
+    let dir = command_session_scratch_root();
     let Ok(entries) = std::fs::read_dir(&dir) else {
         return;
     };
@@ -1083,6 +1081,11 @@ pub fn recover_orphaned_command_sessions() {
         }
         let _ = std::fs::remove_dir_all(&path);
     }
+}
+
+#[cfg(target_os = "linux")]
+fn command_session_scratch_root() -> PathBuf {
+    PathBuf::from(COMMAND_SESSION_SCRATCH_ROOT)
 }
 
 #[cfg(not(target_os = "linux"))]
