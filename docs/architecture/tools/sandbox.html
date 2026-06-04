@@ -135,6 +135,7 @@
   </ol>
 </div>
 <p>The daemon operation table is deliberately generic: the handler does not know whether a request will use layer-stack/OCC or overlay. It only establishes the verb, intent, in-flight lifecycle, and error envelope. The workspace dispatcher owns routing.</p>
+<p>The Rust grep/glob wire contract is pinned by typed request DTOs and schema snapshots: <code>GlobRequest</code> carries <code>pattern</code> plus optional <code>path</code>, while <code>GrepRequest</code> carries <code>pattern</code>, optional <code>path</code>/<code>glob_filter</code>/<code>head_limit</code>, <code>output_mode</code>, <code>offset</code>, <code>case_insensitive</code>, <code>line_numbers</code>, and <code>multiline</code>. The snapshots live in <code>agent-core/crates/eos-sandbox-api/tests/schema_snapshot.rs</code>, so field-name, optionality, and default drift is reviewed rather than inferred from stale Python glue.</p>
 </section>
 
 <section id="shared-routing"

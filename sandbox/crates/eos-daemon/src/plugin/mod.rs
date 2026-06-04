@@ -2306,6 +2306,43 @@ mod tests {
     }
 
     #[test]
+    fn plugin_response_payload_rejects_over_8_mib_body() {
+        let reply = PpcEnvelope {
+            message_id: "plugin-large-reply".to_owned(),
+            direction: PpcDirection::Reply,
+            op: "reply".to_owned(),
+            body: "x".repeat(MAX_PLUGIN_RESPONSE_BYTES + 1),
+        };
+
+        assert!(matches!(
+            response_payload_from_reply(&reply),
+            Err(DaemonError::Plugin(PluginError::Ppc(message)))
+                if message.contains("plugin response exceeds")
+        ));
+    }
+
+    #[test]
+    fn plugin_caller_fields_reject_nul_long_and_non_string_values() {
+        assert!(matches!(
+            validate_plugin_caller_fields(&json!({"agent_id": "agent\0plugin"})),
+            Err(DaemonError::Plugin(PluginError::Ppc(message)))
+                if message.contains("contains NUL")
+        ));
+
+        assert!(matches!(
+            validate_plugin_caller_fields(&json!({"caller": {"task_id": "x".repeat(MAX_PLUGIN_CALLER_FIELD_CHARS + 1)}})),
+            Err(DaemonError::Plugin(PluginError::Ppc(message)))
+                if message.contains("exceeds")
+        ));
+
+        assert!(matches!(
+            validate_plugin_caller_fields(&json!({"caller": {"request_id": 42}})),
+            Err(DaemonError::Plugin(PluginError::Ppc(message)))
+                if message.contains("must be a string")
+        ));
+    }
+
+    #[test]
     fn status_probe_services_sends_health_request() -> TestResult {
         let _guard = PluginTestGuard::new()?;
         let table = OpTable::with_builtins();

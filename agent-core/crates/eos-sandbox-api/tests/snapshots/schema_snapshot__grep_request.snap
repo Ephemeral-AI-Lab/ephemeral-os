@@ -73,7 +73,11 @@ expression: schema
     "output_mode": {
       "description": "Output mode (defaults to `files_with_matches`).",
       "default": "files_with_matches",
-      "type": "string"
+      "allOf": [
+        {
+          "$ref": "#/definitions/GrepOutputMode"
+        }
+      ]
     },
     "path": {
       "description": "Optional root path to scope the search.",
@@ -88,6 +92,32 @@ expression: schema
     }
   },
   "definitions": {
+    "GrepOutputMode": {
+      "description": "`grep.output_mode` wire values.",
+      "oneOf": [
+        {
+          "description": "Return matching file paths and rendered matching lines.",
+          "type": "string",
+          "enum": [
+            "content"
+          ]
+        },
+        {
+          "description": "Return only matching file paths.",
+          "type": "string",
+          "enum": [
+            "files_with_matches"
+          ]
+        },
+        {
+          "description": "Return per-file match counts.",
+          "type": "string",
+          "enum": [
+            "count"
+          ]
+        }
+      ]
+    },
     "SandboxCaller": {
       "description": "Caller identity threaded onto every audit-aware request.\n\nThe four required ids (`agent_id`, `run_id`, `agent_run_id`, `task_id`) are always present even when empty; the rest are optional. `tool_id` is the only id stored already-typed (it is `Option`, omitted when unset). The Python `tool_name` field is removed (GC-sandbox-api-01): it was empty in production and the audit fallback uses the operation name.",
       "type": "object",

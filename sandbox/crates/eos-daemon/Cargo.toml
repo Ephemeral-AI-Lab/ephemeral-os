@@ -21,6 +21,7 @@ ignore.workspace = true
 tokio.workspace = true
 tokio-util.workspace = true
 thiserror.workspace = true
+uuid.workspace = true
 
 [target.'cfg(target_os = "linux")'.dependencies]
 nix = { workspace = true, features = ["fs", "process", "signal"] }

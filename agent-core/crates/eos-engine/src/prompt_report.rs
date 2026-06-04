@@ -89,9 +89,8 @@ impl PromptReportRecorder {
     /// Return the next turn sequence number.
     pub async fn next_seq(&self) -> u64 {
         let mut state = self.state.lock().await;
-        let seq = state.next_seq;
         state.next_seq = state.next_seq.saturating_add(1);
-        seq
+        state.next_seq
     }
 
     fn base(&self) -> BaseEvent<'_> {
@@ -216,9 +215,14 @@ mod tests {
             .expect("request report");
         let assistant = Message {
             role: MessageRole::Assistant,
-            content: vec![ContentBlock::Text {
-                text: "ok".to_owned(),
-            }],
+            content: vec![
+                ContentBlock::Reasoning {
+                    text: "hmm".to_owned(),
+                },
+                ContentBlock::Text {
+                    text: "ok".to_owned(),
+                },
+            ],
         };
         recorder
             .record_assistant(
@@ -245,9 +249,14 @@ mod tests {
         assert_eq!(lines[0]["event"], json!("llm_request"));
         assert_eq!(lines[1]["event"], json!("assistant"));
         assert_eq!(lines[2]["event"], json!("tool_results"));
-        assert_eq!(lines[0]["seq"], json!(0));
-        assert_eq!(lines[1]["seq"], json!(0));
-        assert_eq!(lines[2]["seq"], json!(0));
+        assert_eq!(lines[0]["seq"], json!(1));
+        assert_eq!(lines[1]["seq"], json!(1));
+        assert_eq!(lines[2]["seq"], json!(1));
+        assert_eq!(
+            lines[1]["message"]["content"][0]["type"],
+            json!("reasoning")
+        );
+        assert_eq!(lines[1]["message"]["content"][0]["text"], json!("hmm"));
         assert_eq!(lines[0]["system_prompt"], json!("system text"));
         assert!(lines[0]["messages"]
             .as_array()

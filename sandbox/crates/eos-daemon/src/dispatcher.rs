@@ -15,7 +15,7 @@
 
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
-use std::time::Instant;
+use std::time::{Duration, Instant};
 
 use serde_json::{json, Value};
 
@@ -65,6 +65,7 @@ type Handler = for<'ctx> fn(&Value, DispatchContext<'ctx>) -> Result<Value, Daem
 #[derive(Clone, Copy, Default)]
 pub struct DispatchContext<'ctx> {
     invocation_registry: Option<&'ctx InFlightRegistry>,
+    read_request_s: Option<f64>,
 }
 
 impl<'ctx> DispatchContext<'ctx> {
@@ -73,6 +74,7 @@ impl<'ctx> DispatchContext<'ctx> {
     pub const fn empty() -> Self {
         Self {
             invocation_registry: None,
+            read_request_s: None,
         }
     }
 
@@ -81,6 +83,20 @@ impl<'ctx> DispatchContext<'ctx> {
     pub const fn with_invocation_registry(invocation_registry: &'ctx InFlightRegistry) -> Self {
         Self {
             invocation_registry: Some(invocation_registry),
+            read_request_s: None,
+        }
+    }
+
+    /// Context carrying the server's invocation registry and measured request
+    /// read duration.
+    #[must_use]
+    pub const fn with_invocation_registry_and_read_timing(
+        invocation_registry: &'ctx InFlightRegistry,
+        read_request_s: f64,
+    ) -> Self {
+        Self {
+            invocation_registry: Some(invocation_registry),
+            read_request_s: Some(read_request_s),
         }
     }
 }
@@ -182,15 +198,31 @@ impl OpTable {
     #[must_use]
     pub fn dispatch_with_context(&self, request: &Request, context: DispatchContext<'_>) -> Value {
         let dispatch_start = Instant::now();
+        let boot_to_dispatch_s = daemon_uptime_s();
         if request.op.trim().is_empty() {
-            return error_envelope(ErrorKind::InvalidEnvelope, "op is required", json!({}));
+            let mut response =
+                error_envelope(ErrorKind::InvalidEnvelope, "op is required", json!({}));
+            attach_runtime_timings(
+                &mut response,
+                boot_to_dispatch_s,
+                dispatch_start.elapsed().as_secs_f64(),
+                context.read_request_s.unwrap_or(0.0),
+            );
+            return response;
         }
         if !request.args.is_object() {
-            return error_envelope(
+            let mut response = error_envelope(
                 ErrorKind::InvalidEnvelope,
                 "args must be an object",
                 json!({}),
             );
+            attach_runtime_timings(
+                &mut response,
+                boot_to_dispatch_s,
+                dispatch_start.elapsed().as_secs_f64(),
+                context.read_request_s.unwrap_or(0.0),
+            );
+            return response;
         }
         let Some(handler) = self.handlers.get(&request.op) else {
             if let Some(response) = crate::plugin::dispatch_registered_op(
@@ -199,29 +231,42 @@ impl OpTable {
                 &request.args,
                 context,
             ) {
-                let response = match response {
-                    Ok(mut response) => {
-                        attach_runtime_timings(&mut response);
-                        response
-                    }
+                let mut response = match response {
+                    Ok(response) => response,
                     Err(err) => error_envelope(err.wire_kind(), &err.to_string(), json!({})),
                 };
+                attach_runtime_timings(
+                    &mut response,
+                    boot_to_dispatch_s,
+                    dispatch_start.elapsed().as_secs_f64(),
+                    context.read_request_s.unwrap_or(0.0),
+                );
                 emit_dispatch_audit(request, &response, dispatch_start.elapsed().as_secs_f64());
                 return response;
             }
-            return error_envelope(
+            let mut response = error_envelope(
                 ErrorKind::UnknownOp,
                 &format!("unknown op: {}", request.op),
                 json!({"op": request.op}),
             );
+            attach_runtime_timings(
+                &mut response,
+                boot_to_dispatch_s,
+                dispatch_start.elapsed().as_secs_f64(),
+                context.read_request_s.unwrap_or(0.0),
+            );
+            return response;
         };
-        let response = match handler(&request.args, context) {
-            Ok(mut response) => {
-                attach_runtime_timings(&mut response);
-                response
-            }
+        let mut response = match handler(&request.args, context) {
+            Ok(response) => response,
             Err(err) => error_envelope(err.wire_kind(), &err.to_string(), json!({})),
         };
+        attach_runtime_timings(
+            &mut response,
+            boot_to_dispatch_s,
+            dispatch_start.elapsed().as_secs_f64(),
+            context.read_request_s.unwrap_or(0.0),
+        );
         emit_dispatch_audit(request, &response, dispatch_start.elapsed().as_secs_f64());
         response
     }
@@ -229,11 +274,14 @@ impl OpTable {
 
 /// Build the structured wire error envelope.
 ///
-/// `warnings`/`timings` are always `[]`/`{}` at the builder; `details` defaults
-/// to `{}`.
+/// `warnings`/`timings` are always `[]`/`{}` at the builder. `details`
+/// defaults to `{}` and `internal_error` responses receive a generated
+/// `details.error_id` when the caller did not provide one.
 #[must_use]
 pub fn error_envelope(kind: ErrorKind, message: &str, details: Value) -> Value {
+    let is_internal_error = kind == ErrorKind::InternalError;
     let kind_str = serde_json::to_value(kind).unwrap_or(Value::Null);
+    let details = error_details(is_internal_error, details);
     json!({
         "success": false,
         "warnings": [],
@@ -241,9 +289,36 @@ pub fn error_envelope(kind: ErrorKind, message: &str, details: Value) -> Value {
         "error": {
             "kind": kind_str,
             "message": message,
-            "details": if details.is_null() { json!({}) } else { details },
+            "details": details,
         },
     })
+}
+
+fn error_details(is_internal_error: bool, details: Value) -> Value {
+    if !is_internal_error {
+        return if details.is_null() {
+            json!({})
+        } else {
+            details
+        };
+    }
+    let mut details = match details {
+        Value::Null => serde_json::Map::new(),
+        Value::Object(details) => details,
+        other => {
+            let mut object = serde_json::Map::new();
+            object.insert("value".to_owned(), other);
+            object
+        }
+    };
+    details
+        .entry("error_id")
+        .or_insert_with(|| Value::String(new_error_id()));
+    Value::Object(details)
+}
+
+fn new_error_id() -> String {
+    uuid::Uuid::new_v4().simple().to_string()
 }
 
 /// `api.runtime.ready` — binary readiness plus the three plane probes
@@ -285,15 +360,20 @@ fn op_cancel(args: &Value, context: DispatchContext<'_>) -> Result<Value, Daemon
         .unwrap_or_default()
         .trim()
         .to_owned();
-    let cancelled = context
+    let (cancelled, cleanup_done) = context
         .invocation_registry
-        .is_some_and(|registry| registry.cancel(&invocation_id));
+        .map_or((false, true), |registry| {
+            let cancelled = registry.cancel(&invocation_id);
+            let cleanup_done =
+                !cancelled || registry.wait_for_cleanup(&invocation_id, Duration::from_secs(5));
+            (cancelled, cleanup_done)
+        });
     Ok(json!({
         "success": true,
         "invocation_id": invocation_id,
         "cancelled": cancelled,
         "already_done": !cancelled,
-        "cleanup_done": !cancelled,
+        "cleanup_done": cleanup_done,
     }))
 }
 
@@ -525,7 +605,12 @@ fn storage_bytes(path: &Path) -> Result<u64, DaemonError> {
     Ok(total)
 }
 
-fn attach_runtime_timings(response: &mut Value) {
+fn attach_runtime_timings(
+    response: &mut Value,
+    boot_to_dispatch_s: f64,
+    dispatch_s: f64,
+    read_request_s: f64,
+) {
     let Some(obj) = response.as_object_mut() else {
         return;
     };
@@ -533,15 +618,12 @@ fn attach_runtime_timings(response: &mut Value) {
         .entry("timings")
         .or_insert_with(|| Value::Object(serde_json::Map::new()));
     if let Value::Object(timings) = timings {
-        timings
-            .entry("runtime.boot_to_dispatch_s")
-            .or_insert_with(|| json!(0.0));
-        timings
-            .entry("runtime.dispatch_s")
-            .or_insert_with(|| json!(0.0));
-        timings
-            .entry("runtime.read_request_s")
-            .or_insert_with(|| json!(0.0));
+        timings.insert(
+            "runtime.boot_to_dispatch_s".to_owned(),
+            json!(boot_to_dispatch_s),
+        );
+        timings.insert("runtime.dispatch_s".to_owned(), json!(dispatch_s));
+        timings.insert("runtime.read_request_s".to_owned(), json!(read_request_s));
     }
 }
 
@@ -566,10 +648,13 @@ const fn error_type(err: &DaemonError) -> &'static str {
 
 #[cfg(test)]
 mod tests {
+    use std::future;
     use std::sync::{
         atomic::{AtomicU64, Ordering},
         Arc,
     };
+    use std::thread;
+    use std::time::Duration;
 
     use eos_protocol::audit::Lane;
     use serde_json::json;
@@ -659,6 +744,112 @@ mod tests {
             .as_str()
             .unwrap_or_default()
             .contains("layer_stack_root is required"));
+    }
+
+    #[test]
+    fn dispatch_attaches_real_runtime_timings() {
+        #[expect(
+            clippy::unnecessary_wraps,
+            reason = "test handlers must match the dispatcher handler ABI"
+        )]
+        fn slow_handler(
+            _args: &Value,
+            _context: DispatchContext<'_>,
+        ) -> Result<Value, DaemonError> {
+            std::thread::sleep(std::time::Duration::from_millis(2));
+            Ok(json!({"success": true}))
+        }
+
+        let mut table = OpTable::default();
+        assert!(table.register("api.test.slow", slow_handler));
+
+        let response = table.dispatch_with_context(
+            &Request {
+                op: "api.test.slow".to_owned(),
+                invocation_id: "timings-test".to_owned(),
+                args: json!({}),
+            },
+            DispatchContext {
+                invocation_registry: None,
+                read_request_s: Some(0.125),
+            },
+        );
+
+        assert_eq!(response["success"], json!(true));
+        assert!(
+            response["timings"]["runtime.boot_to_dispatch_s"]
+                .as_f64()
+                .unwrap_or_default()
+                >= 0.0
+        );
+        assert!(
+            response["timings"]["runtime.dispatch_s"]
+                .as_f64()
+                .unwrap_or_default()
+                > 0.0
+        );
+        assert_eq!(response["timings"]["runtime.read_request_s"], json!(0.125));
+    }
+
+    #[tokio::test]
+    async fn cancel_waits_for_bounded_cleanup() -> TestResult {
+        let registry = Arc::new(InFlightRegistry::new(300.0, 30.0));
+        let task = tokio::spawn(future::pending::<()>());
+        registry.register(
+            "cancel-target",
+            task.abort_handle(),
+            "agent-a",
+            "api.v1.exec_command",
+            true,
+        );
+        let cleanup_registry = Arc::clone(&registry);
+        let cleanup_thread = thread::spawn(move || {
+            thread::sleep(Duration::from_millis(20));
+            cleanup_registry.deregister("cancel-target");
+        });
+
+        let response = OpTable::with_builtins().dispatch_with_context(
+            &Request {
+                op: "api.v1.cancel".to_owned(),
+                invocation_id: "cancel-request".to_owned(),
+                args: json!({"invocation_id": "cancel-target"}),
+            },
+            DispatchContext::with_invocation_registry(&registry),
+        );
+
+        cleanup_thread
+            .join()
+            .map_err(|_| "cleanup helper panicked")?;
+        assert_eq!(response["cancelled"], json!(true));
+        assert_eq!(response["already_done"], json!(false));
+        assert_eq!(response["cleanup_done"], json!(true));
+        match task.await {
+            Ok(()) => Err("expected cancelled task".into()),
+            Err(error) if error.is_cancelled() => Ok(()),
+            Err(error) => Err(format!("expected cancellation, got {error}").into()),
+        }
+    }
+
+    #[test]
+    fn internal_error_envelope_adds_error_id() {
+        let response = error_envelope(
+            ErrorKind::InternalError,
+            "daemon invocation failed",
+            json!({"op": "api.test.failure"}),
+        );
+
+        assert_eq!(response["error"]["kind"], json!("internal_error"));
+        assert_eq!(
+            response["error"]["details"]["op"],
+            json!("api.test.failure")
+        );
+        let Some(error_id) = response["error"]["details"]["error_id"].as_str() else {
+            panic!("internal errors carry details.error_id");
+        };
+        assert_eq!(error_id.len(), 32);
+        assert!(error_id.bytes().all(|byte| byte.is_ascii_hexdigit()));
+        assert_eq!(error_id.as_bytes()[12], b'4');
+        assert!(matches!(error_id.as_bytes()[16], b'8' | b'9' | b'a' | b'b'));
     }
 
     #[test]

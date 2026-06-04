@@ -246,9 +246,11 @@ impl DaemonServer {
         S: AsyncRead + AsyncWrite + Unpin,
     {
         let (mut reader, mut writer) = tokio::io::split(stream);
+        let read_start = Instant::now();
         let bytes = read_request_line(&mut reader).await;
+        let read_request_s = read_start.elapsed().as_secs_f64();
         let response = match bytes {
-            Ok(bytes) => self.dispatch_bytes(bytes, is_tcp).await,
+            Ok(bytes) => self.dispatch_bytes(bytes, is_tcp, read_request_s).await,
             Err(err @ DaemonError::RequestTooLarge { .. }) => crate::dispatcher::error_envelope(
                 err.wire_kind(),
                 &format!("daemon request exceeds {MAX_REQUEST_BYTES} byte limit"),
@@ -266,7 +268,12 @@ impl DaemonServer {
         Ok(())
     }
 
-    async fn dispatch_bytes(&self, bytes: Vec<u8>, is_tcp: bool) -> serde_json::Value {
+    async fn dispatch_bytes(
+        &self,
+        bytes: Vec<u8>,
+        is_tcp: bool,
+        read_request_s: f64,
+    ) -> serde_json::Value {
         let bytes = if is_tcp {
             match self.strip_tcp_auth(&bytes) {
                 Ok(bytes) => bytes,
@@ -282,7 +289,7 @@ impl DaemonServer {
             bytes
         };
         match decode(&bytes) {
-            Ok(Envelope::Request(request)) => self.dispatch_request(request).await,
+            Ok(Envelope::Request(request)) => self.dispatch_request(request, read_request_s).await,
             Ok(_) => crate::dispatcher::error_envelope(
                 ErrorKind::InvalidEnvelope,
                 "request envelope must include op, invocation_id, and args",
@@ -296,7 +303,7 @@ impl DaemonServer {
         }
     }
 
-    async fn dispatch_request(&self, request: Request) -> serde_json::Value {
+    async fn dispatch_request(&self, request: Request, read_request_s: f64) -> serde_json::Value {
         let invocation_id = request.invocation_id.clone();
         let agent_id = agent_id_from_args(&request.args);
         let background = request
@@ -327,7 +334,10 @@ impl DaemonServer {
             let _active_call = task_registry.enter_call(&task_invocation_id);
             table.dispatch_with_context(
                 &request,
-                DispatchContext::with_invocation_registry(&task_registry),
+                DispatchContext::with_invocation_registry_and_read_timing(
+                    &task_registry,
+                    read_request_s,
+                ),
             )
         });
         registry.register(

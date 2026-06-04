@@ -6,6 +6,8 @@ Rust under audit:
 - `sandbox/crates/eos-plugin/src/` (contract crate: manifest, ppc, refresh, registry, service, service_registry)
 - `sandbox/crates/eos-daemon/src/plugin/` (live daemon: mod.rs, occ_callbacks.rs, ppc_router.rs, process.rs)
 - `agent-core/crates/eos-plugin-catalog/src/` (host-side static catalog: manifest, names, discovery, tool_specs)
+- `agent-core/crates/eos-runtime/src/plugin_tools.rs` (model-facing `lsp.*` facade)
+- `agent-core/crates/eos-sandbox-host/src/runtime_artifact.rs` (trusted staged LSP PPC runtime)
 
 ## Ground truth
 
@@ -27,25 +29,26 @@ The Rust split is intentional and matches the contract-crate docstring (`eos-plu
 
 | Python concept | Rust anchor |
 |---|---|
-| host `call_plugin` 5-step flow | **ABSENT** (see Disparity D1) — no non-test caller of `api.plugin.ensure`; only the daemon registers it (`dispatcher.rs:135`) |
-| `install.py` (bundle upload, setup.sh, marker, node/pyright) | **ABSENT** (Disparity D1); catalog only *parses+validates* `setup`/`runtime` paths, never uploads/executes (`eos-plugin-catalog/src/lib.rs:13-17`, `manifest.rs:278-292`) |
+| host `call_plugin` 5-step flow | `plugin_tools.rs` ensures the built-in LSP manifest before each `lsp.*` dispatch and then calls `plugin.<plugin>.<op>` through the daemon. Unknown-op cache-bust retry is not ported; the built-in route is source-covered, live proof pending. |
+| `install.py` (bundle upload, setup.sh, marker, node/pyright) | Replaced for the built-in LSP plugin by trusted runtime-artifact staging: `runtime_artifact.rs::ensure_builtin_lsp_plugin_runtime_uploaded` uploads a fixed sandbox-Python PPC bridge to `/eos/daemon`, writes `.builtin-lsp-runtime-sha256`, and points the manifest command at `/eos/daemon/plugins/catalog/lsp/runtime/ppc_service.sh`. No catalog `setup.sh` is executed. |
 | `plugin_ensure` import + flush + record | `op_ensure` (mod.rs:120-204), `ParsedEnsure::from_manifest` (mod.rs:390-413) — manifest-driven, NOT importlib |
 | `register_plugin_op` / `flush_plugin_registrations` | `OpRegistry` (registry.rs:108-173), `public_op_name` (registry.rs:28-30) |
-| `_PLUGIN_NAME_RE` | `registry.rs:94 is_valid_plugin_name` (faithful); `names.rs:117` (stricter); `service.rs:127 validate_identifier` (looser — Disparity D6) |
+| `_PLUGIN_NAME_RE` | `eos-plugin` manifest/service validation uses the Python name rule for daemon manifests; `op_name` is only non-empty at the manifest boundary. `eos-plugin-catalog` remains a stricter host catalog contract for bundled plugin ids. |
 | PPC frame `{op,invocation_id,args:{direction,body}}` | `PpcEnvelope` (ppc.rs:43-137); transport `PpcClient` (ppc_router.rs) |
 | `publish_mounted_workspace_changes` → `daemon.occ.apply_changeset` | self-managed callback `occ_callbacks.rs:21-97`; routed by `dispatch_connected_self_managed_route` (mod.rs:1477-1514) |
 | WRITE_ALLOWED overlay + `publish_cycle` | `dispatch_oneshot_overlay_route` (mod.rs:1408-1475) → `run_plugin_overlay_command`/`run_plugin_overlay_once` (dispatcher.rs:884-954) |
 | `WorkspaceProjection` / `build_manifest_key` | `PluginServiceSnapshot` + `manifest_key` (mod.rs:736-744, 812-814); `PluginServiceKey` (service.rs) |
 | `ack_refresh` single op | 7-step `send_refresh_sequence` (mod.rs:1270-1321) — redesign (Disparity D5) |
 | `_MAX_FRAME_BYTES = 16 MiB` | `MAX_PPC_FRAME_BYTES = MAX_REQUEST_BYTES = 16 * 1024 * 1024` (ppc_router.rs:27, version.rs:34) — MATCH |
-| `_MAX_RESPONSE_BYTES = 8 MiB` | **ABSENT** (Disparity D7) |
+| `_MAX_RESPONSE_BYTES = 8 MiB` | `MAX_PLUGIN_RESPONSE_BYTES = 8 * 1024 * 1024`; `response_payload_from_reply` rejects larger bodies before JSON parse. |
+| audit/caller field caps | daemon plugin boundary validates `agent_id`, `request_id`, `task_id`, `workflow_id`, and nested `caller.*` as strings with no NUL and <=256 chars. |
 | isolated-mode blocks plugin ops | `ensure_plugin_family_allowed` (mod.rs:325-337) |
 
 ## Invariant table
 
 | # | invariant | status | severity | python file:line | rust file:line | note |
 |---|---|---|---|---|---|---|
-| 1 | Plugin install/setup flow (manifest parse, bundle upload, setup.sh, marker) | **partial** | high | install.py:155-194, 425-468; host_dispatch.py:77-225 | manifest parse: `eos-plugin-catalog/manifest.rs:135-207` ✓; install/upload/setup.sh/marker: ABSENT (grep across `agent-core`+`sandbox` for `.installed-`/`setup.sh` exec/`EOS_PLUGIN_TRUSTED_SETUP_ROOTS`/`node-v22` → none outside tests) | Manifest *parsing* ported faithfully. The whole install pipeline + setup-trust gate + node/pyright provisioning is unported. See D1. |
+| 1 | Plugin install/setup flow (manifest parse, bundle upload, setup.sh, marker) | **source-covered; live pending** | high | install.py:155-194, 425-468; host_dispatch.py:77-225 | `plugin_tools.rs` manifest ensure + `runtime_artifact.rs::ensure_builtin_lsp_plugin_runtime_uploaded` + `BUILTIN_LSP_PPC_SERVICE_PATH` | The built-in LSP plugin deliberately does not port Python `install.py` or execute catalog `setup.sh`; it stages trusted runtime files beside `eosd` and relies on an image-provided `pyright-langserver` or trusted `/eos/plugin-packages/lsp/{node.tar.xz,pyright.tgz}` archives. Source tests cover the staging/manifest path; existing Docker plugin benchmark proof is still pending. See D1. |
 | 2 | PPC routing preserved | **match** | medium | ppc_service.py:45-208, 186-207 | ppc.rs:43-137 (framing), ppc_router.rs:37-409 (transport, multiplex by message_id, callback routing by `parent_message_id`) | Wire shape `{op,invocation_id,args:{direction,body}}` preserved; bidirectional + out-of-order multiplexing tested (ppc_router.rs:487-557). |
 | 3 | Op registry + host dispatch preserved | **partial** | medium | op_registry.py:81-237 | registry.rs:49-173 | Registry semantics (public op name, idempotent re-reg, conflict, lifecycle reject, flush) match. BUT registry is a standalone pure type with **no caller-namespace frame walk** (`_validate_plugin_caller`, op_registry.py:263-284) and is not wired into the daemon ensure path (daemon parses a manifest instead). See D2/D3. |
 | 4 | OCC callbacks publish through OCC-gated path | **match** | high | ppc_service.py:290-327 | occ_callbacks.rs:37-97 → `apply_occ_changeset` (dispatcher.rs:1761-1776) → `occ_service_for_root` (same per-root writer) | Callback validates `layer_stack_root == service root` (occ_callbacks.rs:43-51) and routes through the shared OCC writer, never a second writer. MF-1 honored (lib.rs:16-28). |
@@ -54,13 +57,14 @@ The Rust split is intentional and matches the contract-crate docstring (`eos-plu
 
 ## Disparities
 
-### D1 — Host-side `call_plugin` orchestration + `install.py` are entirely unported (status: missing, severity: high)
+### D1 — Built-in LSP plugin runtime/ensure path is source-covered; live proof pending (status: partial, severity: high)
 
 - **Python**: host_dispatch.py:77-225 is the single entrypoint; install.py:155-468 performs idempotent bundle upload, `setup.sh` execution gated by `_TRUSTED_SETUP_ROOTS` (install.py:425-434), `.installed-<digest>` marker (install.py:463-468), a 600-iteration `mkdir` lock + `_DEFAULT_SETUP_TIMEOUT = 600`, and host-side Node 22.13.1 / pyright 1.1.409 download for `lsp` (install.py:571-612).
-- **Rust**: No non-test caller of `api.plugin.ensure` exists (`grep "api.plugin.ensure"` across `agent-core` + `sandbox` returns only the daemon `register_builtin` at dispatcher.rs:135 + doc/test strings). No `.installed-` marker, no `setup.sh` execution, no `EOS_PLUGIN_TRUSTED_SETUP_ROOTS`, no node/pyright provisioning anywhere. The `eos-plugin-catalog` crate explicitly does **not** run setup/runtime (lib.rs:13-17, GC-plugin-catalog-05), and `eos-plugin/src/lib.rs:29-34` states the runtime payload (Node + pyright) is "a RUNTIME artifact, not a core dependency" provisioned via `put_archive`.
-- **Why it matters**: With no host orchestration, the daemon `op_ensure` is reachable only by an explicit `api.plugin.ensure` call with a fully-formed manifest in `args`. The agent-facing flow that *triggers* install→ensure→dispatch — including the digest cache, the unknown-op retry (host_dispatch.py:197-215), and the **`setup.sh` trust allowlist** (a real security gate, install.py review §C1) — has no Rust equivalent in the audited tree. The setup-trust gate in particular is a deliberate sandbox-escape mitigation; its absence is the highest-value finding here.
-- **Classification**: This is plausibly *intentional migration deferral* (the eosd binary + `put_archive` runtime-artifact model replaces in-sandbox Python bundle upload — runtime_artifact.rs:1-9 confirms a parallel "runtime bundle" rewrite, and the bench scripts reference `plugin.install`). But the trust gate / marker idempotency / 8 MiB cap / unknown-op retry are *behavioral* details that the runtime-artifact rewrite does not obviously cover. **Treat as MISSING pending evidence that an equivalent host orchestration + setup-trust gate exists outside the audited crates.**
-- **Suggested fix**: Locate or implement the host-side plugin dispatch facade (the `call_plugin` analogue) and confirm where `setup.sh` trust enforcement now lives. If install is genuinely handled by the runtime-artifact/eosd path, add a `// PORT install.py:425-434` anchor at the new trust-gate site so the audit can verify it; otherwise port the trust allowlist and marker idempotency.
+- **Rust update**: `agent-core/crates/eos-runtime/src/plugin_tools.rs` now registers `lsp.*` tools from the catalog, sends a manifest ensure through `SandboxTransport::plugin_ensure`, and dispatches the dynamic daemon op. The manifest service command is `BUILTIN_LSP_PPC_SERVICE_PATH`, exported by `eos-sandbox-host`.
+- **Runtime artifact update**: `runtime_artifact.rs::ensure_builtin_lsp_plugin_runtime_uploaded` stages a trusted sandbox-Python PPC bridge/runtime under `/eos/daemon`, writes `/eos/daemon/.builtin-lsp-runtime-sha256`, and validates the wrapper path. The wrapper runs `python3 -m plugins.runtime_bridge.ppc_service` from `/eos/daemon` with no `PYTHONPATH`. It uses an image-provided `pyright-langserver` or the pre-existing trusted artifact contract `/eos/plugin-packages/lsp/{node.tar.xz,pyright.tgz}`.
+- **Trust decision**: Rust does **not** execute catalog `setup.sh`, so the Python path-based `setup.sh` trust allowlist is replaced by a smaller trusted-runtime staging path for the built-in LSP plugin. This avoids porting Python `install.py` wholesale and keeps untrusted setup scripts out of the production path.
+- **What remains**: Source proof exists; live proof does not. The existing Docker plugin benchmark still needs to run through the repo's normal Docker Python environment with `EOS_LIVE_E2E_IMAGE=sweevo-dask__dask-10042`.
+- **Verification**: `cargo test -p eos-sandbox-host runtime_artifact`, `cargo test -p eos-runtime lsp_executor_ensures_manifest_before_dispatch`, and Python compile for the staged bridge modules.
 
 ### D2 — Daemon ensure is manifest-driven, not importlib runtime-load (status: divergent, severity: medium — likely intentional)
 
@@ -90,37 +94,29 @@ The Rust split is intentional and matches the contract-crate docstring (`eos-plu
 - **Why it matters**: The Rust handshake is more elaborate and well-tested (mod.rs:2366-2697), and the **singleflight refresh + multiplexed dispatch** invariant (refresh mutates the namespace, ops stay concurrent after the gate) is exactly the right shape. But it cannot be validated against ground truth because the authoritative Python refresh code was deleted/not materialized. The `manifest_key` format also diverges (`version:root_hash`, mod.rs:812 vs Python `root_hash@version`, projection.py:23) — internally consistent within Rust (daemon + harness both use the Rust format) so harmless, but it confirms this is a fresh design, not a port.
 - **Suggested fix**: Re-materialize `pyright_session.py`/`session_manager.py` for a focused refresh-parity pass; until then treat #6 as divergent-by-design.
 
-### D6 — Manifest identifier validator diverges from Python `_PLUGIN_NAME_RE` on both sides (status: bug, severity: medium)
+### D6 — Manifest identifier validator now matches the daemon-side Python rule (status: closed)
 
-Two different Rust validators, neither matching Python's plugin/op rules at the manifest boundary:
+- **Original gap**: `PluginManifest::validate` used the looser service identifier rule for `plugin_id` and required identifier shape for `op_name`, accepting names Python rejected and rejecting op names Python accepted.
+- **Fix**: daemon manifests now validate `plugin_id` with the faithful Python plugin-name rule (`^[A-Za-z_][A-Za-z0-9_]*$`), and `op_name` is only required to be non-empty at the manifest boundary.
+- **Scope note**: `eos-plugin-catalog` still enforces its stricter host catalog naming contract for bundled plugin ids. The closed parity gap is the daemon manifest path that `api.plugin.ensure` actually consumes.
+- **Verification**: `cargo test -p eos-plugin`, including `plugin_id_matches_python_name_rule`, `op_name_is_only_non_empty_at_manifest_boundary`, and `plugin_id_uses_python_name_rule`.
 
-- **Daemon `eos-plugin` (the one `op_ensure` actually uses)**: `PluginManifest::validate` → `validate_identifier` for `plugin_id` and `op_name` (manifest.rs:32, 119; service.rs:127-148). `validate_identifier` permits `-`, `.`, and `_` after the first char (service.rs:141) and **requires identifier shape on `op_name`**.
-  - Python `_PLUGIN_NAME_RE = ^[A-Za-z_][A-Za-z0-9_]*$` for plugin name (op_registry.py:78) → Rust **accepts `my-plugin` / `my.plugin` that Python rejects**.
-  - Python op_name only requires non-empty (op_registry.py:109) → Rust **rejects op_names Python accepts** (e.g. anything with a space, or starting with a digit). Note Python public ops can carry dots (`_split_public_op` joins `parts[2:]`, ppc_service.py:170-174), but a multi-segment op like `apply.code_action` would be a single `op_name` containing `.` — Rust's `validate_identifier` *allows* `.` so that case is fine, but it still rejects e.g. a leading digit that Python permits.
-- **Host `eos-plugin-catalog`**: `PluginName::parse` uses `^[a-z][a-z0-9_]*$` (names.rs:117) — **stricter** than Python (rejects uppercase and leading `_` that Python's `[A-Za-z_]` accepts).
-- **The faithful one is unused at the manifest boundary**: `registry.rs:94 is_valid_plugin_name` exactly matches `_PLUGIN_NAME_RE`, but `PluginManifest::validate` does not call it.
-- **Why it matters**: A manifest carrying `plugin_id: "my-plugin"` passes Rust daemon validation but would be rejected by Python `register_plugin_op`/`ensure_installed` (`_validate_plugin_name`, install.py:150-152). Conversely a plugin whose Python op name has a non-identifier char is rejected by Rust. This is precisely the "wrong validator / dropped check" class: the manifest path silently accepts/rejects a different name set than ground truth.
-- **Suggested fix**: In `eos-plugin`, validate `plugin_id` with the `^[A-Za-z_][A-Za-z0-9_]*$` rule (reuse `registry::is_valid_plugin_name`) and relax `op_name` to non-empty (matching Python), or document the intentional tightening if the new manifest contract deliberately forbids spaces in op names.
-
-### D7 — 8 MiB plugin response cap dropped; caller-field caps dropped (status: missing, severity: low)
+### D7 — 8 MiB plugin response cap and caller-field caps restored (status: closed)
 
 - **Python**: host `_wrap_response` rejects a serialized plugin response over `_MAX_RESPONSE_BYTES = 8 MiB` (host_dispatch.py:60, 394-400). Daemon `_audit_field` rejects NUL bytes and caps caller fields at `_MAX_AUDIT_FIELD_CHARS = 256` (runtime_api.py:352-360).
-- **Rust**: `response_payload_from_reply` (mod.rs:1516-1527) parses the reply body with no size cap (the only cap is the 16 MiB *frame* limit in `read_frame`, ppc_router.rs:402-407). No caller-field NUL/length validation is applied in `op_ensure`/dispatch — `args` (including `caller`/`agent_id`) is forwarded verbatim into the PPC body (mod.rs:1116, 1500).
-- **Why it matters**: Low severity (the 16 MiB frame cap bounds the worst case, 2× the Python response cap), but the 8 MiB response policy and the 256-char/NUL caller-field hardening are dropped. The caller-field cap mattered in Python because caller metadata was interpolated into audit fields; confirm the Rust audit path validates caller fields elsewhere.
-- **Suggested fix**: Add an 8 MiB response cap in `response_payload_from_reply`, and validate caller/audit fields (NUL + length) at the daemon plugin boundary if not enforced upstream.
+- **Rust fix**: `MAX_PLUGIN_RESPONSE_BYTES` rejects PPC reply bodies above 8 MiB before JSON parse; the daemon plugin boundary validates `agent_id`, `request_id`, `task_id`, `workflow_id`, and nested `caller.*` fields as strings, NUL-free, and <=256 chars.
+- **Verification**: `cargo test -p eos-daemon plugin`, including `plugin_response_payload_rejects_over_8_mib_body` and `plugin_caller_fields_reject_nul_long_and_non_string_values`.
 
 ## Extra findings
 
 - **Manifest-key format divergence (low)**: Rust `manifest_key = "{version}:{root_hash}"` (mod.rs:812) vs Python `build_manifest_key = "{root_hash}@{version}"` (projection.py:21-23). Harmless because the key is produced and consumed entirely within the Rust daemon+harness (mod.rs:740, 804-810; `RefreshAck::require_manifest` compares Rust-format keys), never crossing to a Python peer. Stated explicitly so a future reader does not "fix" one side into incompatibility.
 - **`runtime_warmed` always false (low)**: Rust `op_ensure` hardcodes `"runtime_warmed": false` (mod.rs:193). Python's warm hook (`warm_plugin_runtime`, runtime_api.py:185-209) ran an optional plugin-defined warm and surfaced `warm_result`. No Rust plugin warm mechanism exists — consistent with the no-importlib redesign, but any Python plugin relying on a warm hook (e.g. pre-spawning a session) loses it.
 - **OCC callback adds `OpaqueDir` change kind (info)**: `CallbackLayerChange` includes an `OpaqueDir` variant (occ_callbacks.rs:133-135) that Python's `_change_for_path` never emits (it only produces write/delete/symlink). Additive; not a regression.
-- **`OneshotOverlay` is the only WRITE projection path (info)**: The generic WRITE_ALLOWED overlay+OCC path (`dispatch_oneshot_overlay_route`) requires `service_mode == OneshotOverlay` (mod.rs:1413). The manifest validator requires READ_ONLY ops to reference a service (manifest.rs:125-130) but does **not** require WRITE_ALLOWED+auto_overlay ops to declare a `OneshotOverlay` service — such an op falls through to `dispatch_deferred_route` (mod.rs:1093), returning `{"success": false, "status": "deferred"}` rather than executing. Confirm the host always wires a `OneshotOverlay` service for generic write ops, or the write path silently no-ops.
+- **`OneshotOverlay` is the only WRITE projection path (closed misconfiguration risk)**: The generic WRITE_ALLOWED overlay+OCC path still requires `service_mode == OneshotOverlay`, but the manifest validator now rejects `WRITE_ALLOWED + auto_workspace_overlay=true` unless the referenced service is `OneshotOverlay`. LSP write ops remain self-managed with `auto_workspace_overlay=false`.
 - **Strong PPC concurrency tests (positive)**: ppc_router.rs has thorough tests for out-of-order replies (487-557), multiple callbacks (617-685), and concurrent callbacks routed by `parent_message_id` (687-787). The callback routing has a legacy `prefix:suffix` message-id fallback (ppc_router.rs:282-288) plus a single-in-flight fallback (299-310) — robust and beyond what the materialized Python provides.
 
 ## Open questions
 
-1. Where does the host-side plugin dispatch facade live in Rust (the `call_plugin` analogue that triggers install→ensure→dispatch)? Is install handled by the `eosd`/runtime-artifact path, and if so where is the `setup.sh` **trust allowlist** (`EOS_PLUGIN_TRUSTED_SETUP_ROOTS`) enforced? (D1 hinges on this.)
-2. Is the `.installed-<digest>` marker idempotency + per-`(sandbox,plugin)` lock replaced by an equivalent in the runtime-artifact upload, or genuinely dropped?
-3. Is the Python LSP refresh code (`session_manager.py`, `pyright_session.py`) intended to be re-materialized for a refresh-parity pass, or is the Rust 7-step handshake the new authoritative design? (D5.)
-4. Does any Rust path validate caller/audit fields (NUL + 256-char cap) before they reach audit, or is the Python `_audit_field` hardening dropped? (D7.)
-5. Is the manifest identifier tightening/loosening in `eos-plugin::validate_identifier` intentional, or should `plugin_id`/`op_name` validation match `_PLUGIN_NAME_RE` + non-empty exactly? (D6.)
+1. Can the existing Docker plugin benchmark run through the repo's normal Docker Python environment and prove the staged LSP/Pyright runtime path live? (D1 live gate.)
+2. Is the Python LSP refresh code (`session_manager.py`, `pyright_session.py`) intended to be re-materialized for a refresh-parity pass, or is the Rust 7-step handshake the new authoritative design? (D5.)
+3. Should unknown-op cache-bust retry be reintroduced for non-built-in dynamic plugins, or is manifest digest re-ensure before dispatch the accepted Rust contract?

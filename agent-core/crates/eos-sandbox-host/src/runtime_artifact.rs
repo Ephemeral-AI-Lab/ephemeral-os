@@ -1,6 +1,6 @@
-//! Pinned `eosd` runtime-artifact upload: arch probe, sha256 verify against the
-//! pin, idempotent remote-marker skip, Docker `put_archive` fast path, and a
-//! `printf marker && eosd --version` readiness check.
+//! Pinned runtime-artifact upload: arch probe, sha256 verify against the `eosd`
+//! pin, idempotent remote-marker skip, Docker `put_archive` fast paths, and
+//! readiness checks.
 //!
 //! GC-01: the Python module-tarball builder (LayerStack/OCC/overlay/plugin/audit
 //! vendoring) is **dropped** — the Rust daemon is a single static `eosd` binary,
@@ -8,7 +8,7 @@
 //! (`chunked_upload.py`) is also dropped (Docker always has `put_archive`). The
 //! `compat_python_bundle` migration tarball is intentionally not implemented.
 
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use sha2::{Digest, Sha256};
 
@@ -27,6 +27,9 @@ pub const EOSD_VERSION: &str = "0.1.0-local.20260602";
 /// crate the artifact itself is built from). Lockstep with
 /// [`crate::daemon_client::DAEMON_PROTOCOL_VERSION`].
 pub const PROTOCOL_VERSION: u32 = eos_protocol::DAEMON_PROTOCOL_VERSION as u32;
+/// Sandbox path for the built-in LSP PPC service wrapper.
+pub const BUILTIN_LSP_PPC_SERVICE_PATH: &str =
+    "/eos/daemon/plugins/catalog/lsp/runtime/ppc_service.sh";
 
 // AC-eos-sandbox-host-08: the host and the pinned artifact must agree on the wire
 // protocol version. A drift fails the build.
@@ -58,6 +61,139 @@ static EOSD_SHA256: &[(&str, &str)] = &[
         "e07a59546cecf931922386a91bf08a8ee5e1fa08747cbc45ee56462eeac4417b",
     ),
 ];
+
+const BUILTIN_LSP_RUNTIME_MARKER: &str = "/eos/daemon/.builtin-lsp-runtime-sha256";
+const LSP_PACKAGE_REMOTE_DIR: &str = "/eos/plugin-packages/lsp";
+const LSP_NODE_ARCHIVE: &str = "node.tar.xz";
+const LSP_PYRIGHT_PACKAGE: &str = "pyright.tgz";
+
+struct RuntimeFile {
+    remote_path: &'static str,
+    payload: &'static [u8],
+    mode: u32,
+}
+
+static BUILTIN_LSP_RUNTIME_FILES: &[RuntimeFile] = &[
+    RuntimeFile {
+        remote_path: "plugins/__init__.py",
+        payload: include_bytes!("../../../../backend/src/plugins/__init__.py"),
+        mode: 0o644,
+    },
+    RuntimeFile {
+        remote_path: "plugins/catalog/__init__.py",
+        payload: b"",
+        mode: 0o644,
+    },
+    RuntimeFile {
+        remote_path: "plugins/catalog/lsp/__init__.py",
+        payload: b"",
+        mode: 0o644,
+    },
+    RuntimeFile {
+        remote_path: "plugins/catalog/lsp/runtime/__init__.py",
+        payload: include_bytes!("../../../../backend/src/plugins/catalog/lsp/runtime/__init__.py"),
+        mode: 0o644,
+    },
+    RuntimeFile {
+        remote_path: "plugins/catalog/lsp/runtime/apply.py",
+        payload: include_bytes!("../../../../backend/src/plugins/catalog/lsp/runtime/apply.py"),
+        mode: 0o644,
+    },
+    RuntimeFile {
+        remote_path: "plugins/catalog/lsp/runtime/lsp_jsonrpc.py",
+        payload: include_bytes!(
+            "../../../../backend/src/plugins/catalog/lsp/runtime/lsp_jsonrpc.py"
+        ),
+        mode: 0o644,
+    },
+    RuntimeFile {
+        remote_path: "plugins/catalog/lsp/runtime/pyright_session.py",
+        payload: include_bytes!(
+            "../../../../backend/src/plugins/catalog/lsp/runtime/pyright_session.py"
+        ),
+        mode: 0o644,
+    },
+    RuntimeFile {
+        remote_path: "plugins/catalog/lsp/runtime/server.py",
+        payload: include_bytes!("../../../../backend/src/plugins/catalog/lsp/runtime/server.py"),
+        mode: 0o644,
+    },
+    RuntimeFile {
+        remote_path: "plugins/catalog/lsp/runtime/session_manager.py",
+        payload: include_bytes!(
+            "../../../../backend/src/plugins/catalog/lsp/runtime/session_manager.py"
+        ),
+        mode: 0o644,
+    },
+    RuntimeFile {
+        remote_path: "plugins/catalog/lsp/runtime/ppc_service.sh",
+        payload: LSP_PPC_SERVICE_WRAPPER.as_bytes(),
+        mode: 0o755,
+    },
+    RuntimeFile {
+        remote_path: "plugins/runtime_bridge/__init__.py",
+        payload: include_bytes!("../../../../backend/src/plugins/runtime_bridge/__init__.py"),
+        mode: 0o644,
+    },
+    RuntimeFile {
+        remote_path: "plugins/runtime_bridge/op_context.py",
+        payload: include_bytes!("../../../../backend/src/plugins/runtime_bridge/op_context.py"),
+        mode: 0o644,
+    },
+    RuntimeFile {
+        remote_path: "plugins/runtime_bridge/op_registry.py",
+        payload: include_bytes!("../../../../backend/src/plugins/runtime_bridge/op_registry.py"),
+        mode: 0o644,
+    },
+    RuntimeFile {
+        remote_path: "plugins/runtime_bridge/ppc_service.py",
+        payload: include_bytes!("../../../../backend/src/plugins/runtime_bridge/ppc_service.py"),
+        mode: 0o644,
+    },
+    RuntimeFile {
+        remote_path: "sandbox/__init__.py",
+        payload: include_bytes!("../../../../backend/src/sandbox/__init__.py"),
+        mode: 0o644,
+    },
+    RuntimeFile {
+        remote_path: "sandbox/_shared/__init__.py",
+        payload: include_bytes!("../../../../backend/src/sandbox/_shared/__init__.py"),
+        mode: 0o644,
+    },
+    RuntimeFile {
+        remote_path: "sandbox/_shared/models.py",
+        payload: include_bytes!("../../../../backend/src/sandbox/_shared/models.py"),
+        mode: 0o644,
+    },
+];
+
+const LSP_PPC_SERVICE_WRAPPER: &str = r#"#!/usr/bin/env sh
+set -eu
+
+PACKAGE_DIR="${EOS_PLUGIN_PACKAGE_DIR:-/eos/plugin-packages/lsp}"
+NODE_HOME="${EOS_NODE_HOME:-$PACKAGE_DIR/node}"
+export PATH="$NODE_HOME/bin:$PATH"
+
+if ! command -v pyright-langserver >/dev/null 2>&1; then
+    if [ -s "$PACKAGE_DIR/node.tar.xz" ] && [ -s "$PACKAGE_DIR/pyright.tgz" ]; then
+        mkdir -p "$NODE_HOME"
+        if [ ! -x "$NODE_HOME/bin/node" ]; then
+            tar -xJf "$PACKAGE_DIR/node.tar.xz" -C "$NODE_HOME" --strip-components=1
+        fi
+        export PATH="$NODE_HOME/bin:$PATH"
+        npm config set prefix "$NODE_HOME"
+        npm install -g --offline --cache "$PACKAGE_DIR/npm-cache" --omit=optional "$PACKAGE_DIR/pyright.tgz"
+    fi
+fi
+
+if ! command -v pyright-langserver >/dev/null 2>&1; then
+    echo "pyright-langserver unavailable; provide /eos/plugin-packages/lsp/node.tar.xz and pyright.tgz or use an image with pyright" >&2
+    exit 36
+fi
+
+cd /eos/daemon
+exec python3 -m plugins.runtime_bridge.ppc_service
+"#;
 
 fn expected_sha(arch: &str) -> Option<&'static str> {
     EOSD_SHA256
@@ -100,6 +236,23 @@ fn sha256_hex(payload: &[u8]) -> String {
     let mut hasher = Sha256::new();
     hasher.update(payload);
     format!("{:x}", hasher.finalize())
+}
+
+fn update_digest(hasher: &mut Sha256, path: &str, payload: &[u8]) {
+    hasher.update(path.as_bytes());
+    hasher.update([0]);
+    hasher.update((payload.len() as u64).to_be_bytes());
+    hasher.update([0]);
+    hasher.update(payload);
+    hasher.update([0xff]);
+}
+
+async fn optional_file(path: PathBuf) -> Result<Option<Vec<u8>>, SandboxHostError> {
+    match tokio::fs::read(&path).await {
+        Ok(payload) => Ok(Some(payload)),
+        Err(err) if err.kind() == std::io::ErrorKind::NotFound => Ok(None),
+        Err(err) => Err(err.into()),
+    }
 }
 
 fn probe_opts(timeout_s: u32) -> ExecOpts {
@@ -253,6 +406,99 @@ pub(crate) async fn ensure_eosd_uploaded(
     Ok(())
 }
 
+/// Upload the built-in LSP plugin runtime used by the Rust plugin facade.
+///
+/// This stages a trusted, minimal sandbox-Python PPC bridge plus LSP runtime
+/// modules into `/eos/daemon`. It does not run catalog `setup.sh`; the wrapper
+/// uses sandbox `python3` and either an image-provided `pyright-langserver` or
+/// trusted offline Node/Pyright archives staged under `/eos/plugin-packages/lsp`.
+pub(crate) async fn ensure_builtin_lsp_plugin_runtime_uploaded(
+    adapter: &dyn ProviderAdapter,
+    id: &eos_types::SandboxId,
+    artifact_dir: &Path,
+) -> Result<(), SandboxHostError> {
+    let node_archive_path = artifact_dir
+        .join("plugin-packages/lsp")
+        .join(LSP_NODE_ARCHIVE);
+    let pyright_package_path = artifact_dir
+        .join("plugin-packages/lsp")
+        .join(LSP_PYRIGHT_PACKAGE);
+    let node_archive = optional_file(node_archive_path).await?;
+    let pyright_package = optional_file(pyright_package_path).await?;
+
+    let digest = builtin_lsp_runtime_digest(node_archive.as_deref(), pyright_package.as_deref());
+    let marker = posix_quote(BUILTIN_LSP_RUNTIME_MARKER);
+    let skip_check = adapter
+        .exec(
+            id,
+            &format!("test -f {marker} && cat {marker}"),
+            &probe_opts(15),
+        )
+        .await?;
+    if marker_indicates_skip(&skip_check, &digest) {
+        return Ok(());
+    }
+
+    check_exec(
+        adapter,
+        id,
+        "mkdir -p /eos/daemon/plugins/catalog/lsp/runtime /eos/daemon/plugins/runtime_bridge /eos/daemon/sandbox/_shared /eos/plugin-packages/lsp",
+        30,
+        "builtin lsp runtime directory setup failed",
+    )
+    .await?;
+
+    for file in BUILTIN_LSP_RUNTIME_FILES {
+        let tar_stream = tar_file_at_path(file.remote_path, file.payload, file.mode)?;
+        adapter
+            .put_archive(id, &tar_stream, BUNDLE_REMOTE_DIR)
+            .await?;
+    }
+    if let Some(payload) = node_archive {
+        let tar_stream = tar_file_at_path(LSP_NODE_ARCHIVE, &payload, 0o644)?;
+        adapter
+            .put_archive(id, &tar_stream, LSP_PACKAGE_REMOTE_DIR)
+            .await?;
+    }
+    if let Some(payload) = pyright_package {
+        let tar_stream = tar_file_at_path(LSP_PYRIGHT_PACKAGE, &payload, 0o644)?;
+        adapter
+            .put_archive(id, &tar_stream, LSP_PACKAGE_REMOTE_DIR)
+            .await?;
+    }
+
+    check_exec(
+        adapter,
+        id,
+        &format!(
+            "test -x {} && test -f {} && command -v python3 >/dev/null && printf %s {} > {marker}",
+            posix_quote(BUILTIN_LSP_PPC_SERVICE_PATH),
+            posix_quote("/eos/daemon/plugins/runtime_bridge/ppc_service.py"),
+            posix_quote(&digest)
+        ),
+        30,
+        "builtin lsp runtime upload verification failed",
+    )
+    .await
+}
+
+fn builtin_lsp_runtime_digest(
+    node_archive: Option<&[u8]>,
+    pyright_package: Option<&[u8]>,
+) -> String {
+    let mut hasher = Sha256::new();
+    for file in BUILTIN_LSP_RUNTIME_FILES {
+        update_digest(&mut hasher, file.remote_path, file.payload);
+    }
+    if let Some(payload) = node_archive {
+        update_digest(&mut hasher, LSP_NODE_ARCHIVE, payload);
+    }
+    if let Some(payload) = pyright_package {
+        update_digest(&mut hasher, LSP_PYRIGHT_PACKAGE, payload);
+    }
+    format!("{:x}", hasher.finalize())
+}
+
 #[cfg(test)]
 mod tests {
     #![allow(clippy::unwrap_used)]
@@ -315,6 +561,29 @@ mod tests {
         entry.read_to_end(&mut content).unwrap();
         assert_eq!(content, payload);
         assert!(entries.next().is_none(), "exactly one entry");
+    }
+
+    #[test]
+    fn builtin_lsp_runtime_wrapper_uses_sandbox_python() {
+        assert!(
+            LSP_PPC_SERVICE_WRAPPER.contains("exec python3 -m plugins.runtime_bridge.ppc_service")
+        );
+        assert!(!LSP_PPC_SERVICE_WRAPPER.contains("PYTHONPATH"));
+        assert!(BUILTIN_LSP_RUNTIME_FILES
+            .iter()
+            .any(|file| file.remote_path == "plugins/runtime_bridge/ppc_service.py"));
+        assert!(BUILTIN_LSP_RUNTIME_FILES
+            .iter()
+            .any(|file| file.remote_path == "sandbox/_shared/models.py"));
+    }
+
+    #[test]
+    fn builtin_lsp_runtime_digest_tracks_optional_packages() {
+        let base = builtin_lsp_runtime_digest(None, None);
+        let with_node = builtin_lsp_runtime_digest(Some(b"node"), None);
+        let with_both = builtin_lsp_runtime_digest(Some(b"node"), Some(b"pyright"));
+        assert_ne!(base, with_node);
+        assert_ne!(with_node, with_both);
     }
 
     #[test]

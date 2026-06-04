@@ -16,6 +16,8 @@
 
 use std::collections::HashMap;
 use std::sync::{Mutex, MutexGuard, OnceLock, PoisonError};
+use std::thread;
+use std::time::Duration;
 use std::time::Instant;
 
 #[cfg(target_os = "linux")]
@@ -158,6 +160,11 @@ impl InFlightRegistry {
         self.lock_state().by_invocation.remove(invocation_id);
     }
 
+    /// Return whether `invocation_id` is still tracked.
+    pub fn contains(&self, invocation_id: &str) -> bool {
+        self.lock_state().by_invocation.contains_key(invocation_id)
+    }
+
     /// Cancel the task for `invocation_id`; returns whether an entry existed.
     pub fn cancel(&self, invocation_id: &str) -> bool {
         let Some((abort, process_group_id)) = ({
@@ -173,6 +180,18 @@ impl InFlightRegistry {
         };
         terminate_process_group(process_group_id);
         abort.abort();
+        true
+    }
+
+    /// Wait briefly for the dispatch finally path to deregister `invocation_id`.
+    pub fn wait_for_cleanup(&self, invocation_id: &str, timeout: Duration) -> bool {
+        let deadline = Instant::now() + timeout;
+        while self.contains(invocation_id) {
+            if Instant::now() >= deadline {
+                return false;
+            }
+            thread::sleep(Duration::from_millis(5));
+        }
         true
     }
 

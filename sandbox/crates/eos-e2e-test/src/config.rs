@@ -132,7 +132,10 @@ impl Config {
         let run = file.run.unwrap_or_default();
         let profile = select_profile(file.profile.as_ref());
 
+        // `EOS_LIVE_E2E_IMAGE` is the shared live-e2e convention (also read by the
+        // Python provider harness); `EOS_E2E_IMAGE` is the crate-specific override.
         let image = env_str("EOS_E2E_IMAGE")
+            .or_else(|| env_str("EOS_LIVE_E2E_IMAGE"))
             .or(docker.image)
             .unwrap_or_else(|| "sweevo-dask__dask-10042:latest".to_owned());
         let platform = env_str("EOS_E2E_PLATFORM").or(docker.platform);

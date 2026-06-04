@@ -1,3 +1,6 @@
+use std::thread;
+use std::time::{Duration, Instant};
+
 use anyhow::{bail, Context, Result};
 use eos_e2e_test::{live_pool, NodePool};
 use eos_protocol::ops;
@@ -30,6 +33,20 @@ fn as_str<'a>(value: &'a Value, key: &str) -> Result<&'a str> {
         .get(key)
         .and_then(Value::as_str)
         .with_context(|| format!("{key} missing or not string in {value}"))
+}
+
+fn wait_for_active_leases(lease: &eos_e2e_test::NodeLease<'_>, expected: i64) -> Result<Value> {
+    let deadline = Instant::now() + Duration::from_secs(3);
+    loop {
+        let metrics = lease.call_ok(ops::API_LAYER_METRICS, json!({}))?;
+        if as_i64(&metrics, "active_leases")? == expected {
+            return Ok(metrics);
+        }
+        if Instant::now() >= deadline {
+            bail!("active_leases did not reach {expected}: {metrics}");
+        }
+        thread::sleep(Duration::from_millis(50));
+    }
 }
 
 #[test]
@@ -130,6 +147,11 @@ fn command_sessions_accept_stdin_and_release_on_cancel() -> Result<()> {
             .contains("ready"),
         "expected initial stdout to contain readiness marker: {started}"
     );
+    let leased = lease.call_ok(ops::API_LAYER_METRICS, json!({}))?;
+    assert!(
+        as_i64(&leased, "active_leases")? >= 1,
+        "running command should hold a layer lease: {leased}"
+    );
 
     let stdin = lease.call_ok(
         ops::API_V1_WRITE_STDIN,
@@ -162,6 +184,12 @@ fn command_sessions_accept_stdin_and_release_on_cancel() -> Result<()> {
 
     let count = lease.call_ok(ops::API_V1_COMMAND_SESSION_COUNT, json!({}))?;
     assert_eq!(as_i64(&count, "count")?, 0);
+    let released = wait_for_active_leases(&lease, 0)?;
+    assert_eq!(
+        as_i64(&released, "active_leases")?,
+        0,
+        "cancelled command should release its layer lease: {released}"
+    );
     Ok(())
 }
 

@@ -17,7 +17,7 @@ use serde_json::Value;
 use crate::daemon_client::{DaemonClient, DEFAULT_LAYER_STACK_ROOT};
 use crate::error::SandboxHostError;
 use crate::provider::{CreateSandboxSpec, ExecOpts, Labels, SandboxInfo};
-use crate::runtime_artifact::ensure_eosd_uploaded;
+use crate::runtime_artifact::{ensure_builtin_lsp_plugin_runtime_uploaded, ensure_eosd_uploaded};
 
 const BUNDLE_UPLOAD_JOIN_TIMEOUT: Duration = Duration::from_secs(60);
 const WORKSPACE_BINDING_MISMATCH: &str = "workspace binding points at a different workspace";
@@ -205,7 +205,8 @@ impl SandboxLifecycle {
             return Ok(());
         }
         let adapter = self.daemon.registry().adapter(id)?;
-        ensure_eosd_uploaded(&*adapter, id, &self.artifact_dir).await
+        ensure_eosd_uploaded(&*adapter, id, &self.artifact_dir).await?;
+        ensure_builtin_lsp_plugin_runtime_uploaded(&*adapter, id, &self.artifact_dir).await
     }
 
     /// (E) Bind the workspace base and gate on runtime readiness.

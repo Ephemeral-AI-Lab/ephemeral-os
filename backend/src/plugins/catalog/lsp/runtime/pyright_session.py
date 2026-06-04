@@ -549,7 +549,7 @@ class PyrightSession:
                 stdin=asyncio.subprocess.PIPE,
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.DEVNULL,
-                env=_runtime_subprocess_env(),
+                env=os.environ.copy(),
                 cwd=_runtime_subprocess_cwd(),
             )
         except FileNotFoundError as exc:
@@ -708,19 +708,6 @@ class PyrightSession:
 
 def _text_hash(text: str) -> str:
     return hashlib.sha256(text.encode("utf-8")).hexdigest()
-
-
-def _runtime_subprocess_env() -> dict[str, str]:
-    env = os.environ.copy()
-    existing = env.get("PYTHONPATH", "")
-    parts = [_RUNTIME_BUNDLE_ROOT]
-    parts.extend(
-        part
-        for part in existing.split(os.pathsep)
-        if part and part != _RUNTIME_BUNDLE_ROOT
-    )
-    env["PYTHONPATH"] = os.pathsep.join(parts)
-    return env
 
 
 def _runtime_subprocess_cwd() -> str | None:

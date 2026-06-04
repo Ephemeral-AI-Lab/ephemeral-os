@@ -11,6 +11,7 @@ use async_trait::async_trait;
 use eos_llm_client::ToolSpec;
 use eos_plugin_catalog::{plugin_tool_specs, PluginToolSpec};
 use eos_sandbox_api::{Intent, PluginDispatchRequest, PluginEnsureRequest, SandboxRequestBase};
+use eos_sandbox_host::BUILTIN_LSP_PPC_SERVICE_PATH;
 use eos_tools::{
     ExecutionMetadata, OutputShape, RegisteredTool, ToolError, ToolExecutor, ToolIntent, ToolKey,
     ToolRegistry, ToolResult,
@@ -20,9 +21,9 @@ use serde_json::{json, Value};
 
 const LSP_PLUGIN_ID: &str = "lsp";
 const LSP_PLUGIN_VERSION: &str = "0.1.0";
-const LSP_PLUGIN_DIGEST: &str = "builtin-lsp-pyright-v1";
+const LSP_PLUGIN_DIGEST: &str = "builtin-lsp-pyright-v2";
 const LSP_SERVICE_ID: &str = "pyright";
-const LSP_SERVICE_PROFILE_DIGEST: &str = "builtin-lsp-pyright-service-v1";
+const LSP_SERVICE_PROFILE_DIGEST: &str = "builtin-lsp-pyright-service-v2";
 const PLUGIN_DISPATCH_TIMEOUT_S: u32 = 150;
 const PLUGIN_ENSURE_TIMEOUT_S: u32 = 150;
 const PLUGIN_OP_TIMEOUT_MS: u64 = (PLUGIN_DISPATCH_TIMEOUT_S as u64) * 1_000;
@@ -144,7 +145,7 @@ fn lsp_manifest() -> JsonObject {
             "service_profile_digest": LSP_SERVICE_PROFILE_DIGEST,
             "service_mode": "workspace_snapshot_refresh",
             "refresh_strategy": "remount_workspace_and_notify",
-            "command": ["pyright-langserver", "--stdio"],
+            "command": [BUILTIN_LSP_PPC_SERVICE_PATH],
             "ppc_protocol_version": 1
         }],
         "operations": lsp_manifest_operations()
@@ -261,7 +262,7 @@ mod tests {
                 .and_then(Value::as_array)
                 .and_then(|services| services.first())
                 .and_then(|service| service.get("command")),
-            Some(&json!(["pyright-langserver", "--stdio"]))
+            Some(&json!([BUILTIN_LSP_PPC_SERVICE_PATH]))
         );
         let operations = manifest
             .get("operations")

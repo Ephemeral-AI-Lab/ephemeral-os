@@ -1212,6 +1212,7 @@ fn finalize_isolated_command_workspace(
     stdout: &str,
     include_session_id: bool,
 ) -> Result<Value, DaemonError> {
+    let total_s = session.started_at.elapsed().as_secs_f64();
     let capture_start = Instant::now();
     let changes = capture_upperdir(&workspace.handle.upperdir)
         .map_err(|err| overlay_daemon_error("capture isolated upperdir", &err))?;
@@ -1236,6 +1237,11 @@ fn finalize_isolated_command_workspace(
         json!(capture_s),
     );
     timings.insert("command_exec.occ_apply_s".to_owned(), json!(0.0));
+    timings.insert("command_exec.total_s".to_owned(), json!(total_s));
+    timings.insert(
+        "api.exec_command.dispatch_total_s".to_owned(),
+        json!(total_s),
+    );
     let changed_paths: Vec<String> = path_kinds.iter().map(|(path, _)| path.clone()).collect();
     let changed_path_kinds = Value::Object(
         path_kinds
@@ -1310,6 +1316,7 @@ fn finalize_command_workspace(
     stdout: &str,
     include_session_id: bool,
 ) -> Result<Value, DaemonError> {
+    let total_s = session.started_at.elapsed().as_secs_f64();
     let upperdir_stats = TreeResourceStats::collect(&workspace.upperdir);
     let capture_start = Instant::now();
     let changes = capture_upperdir(&workspace.upperdir)
@@ -1359,6 +1366,8 @@ fn finalize_command_workspace(
     );
     response["timings"]["command_exec.capture_upperdir_s"] = json!(capture_s);
     response["timings"]["command_exec.occ_apply_s"] = json!(occ_s);
+    response["timings"]["command_exec.total_s"] = json!(total_s);
+    response["timings"]["api.exec_command.dispatch_total_s"] = json!(total_s);
     response["spool_truncated"] = json!(session.output.spool_truncated());
     if include_session_id {
         response["command_session_id"] = json!(session.id);
