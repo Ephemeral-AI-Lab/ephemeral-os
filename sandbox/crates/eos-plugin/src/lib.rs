@@ -29,9 +29,9 @@
 //!
 //! # Runtime payload (NOT a Cargo dependency)
 //!
-//! The plugin payload runtime is Node 22.13.1 + Pyright, provisioned into the
-//! daemon-managed service process via `put_archive` — it is a RUNTIME artifact,
-//! not a core dependency of this crate.
+//! Plugin payload runtimes are package content provisioned into daemon-managed
+//! service processes. They are runtime artifacts, not core dependencies of this
+//! crate.
 #![forbid(unsafe_code)]
 
 pub mod error;
@@ -43,7 +43,10 @@ pub mod service;
 pub mod service_registry;
 
 pub use error::{PluginError, Result};
-pub use manifest::{PluginManifest, PluginOperationManifest, PluginServiceManifest};
+pub use manifest::{
+    PluginDependencyScope, PluginManifest, PluginOperationManifest, PluginPackageManifest,
+    PluginServiceManifest, PluginSetupManifest, PACKAGE_SHA256_MARKER, SETUP_SHA256_MARKER,
+};
 pub use ppc::{PpcDirection, PpcEnvelope};
 pub use refresh::{RefreshAck, RefreshRequest};
 pub use registry::{

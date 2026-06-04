@@ -25,7 +25,6 @@ mod capacity;
 mod gc;
 mod lifecycle;
 mod persistence;
-#[path = "../tests/session/support.rs"]
 mod support;
 #[cfg(test)]
 #[path = "../tests/session/mod.rs"]

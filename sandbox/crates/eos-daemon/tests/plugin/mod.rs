@@ -18,20 +18,20 @@ fn ensure_records_manifest_services_and_status_lists_them() -> TestResult {
     let _guard = PluginTestGuard::new()?;
     let response = op_ensure(
         &json!({
-            "manifest": lsp_manifest("digest-a", "hover"),
+            "manifest": generic_service_manifest("digest-a", "hover"),
             "layer_stack_root": "/eos/plugin/layer-stack",
             "workspace_root": "/eos/plugin/workspace"
         }),
         DispatchContext::empty(),
     )?;
     assert_eq!(response["success"], true);
-    assert_eq!(response["registered_ops"], json!(["plugin.lsp.hover"]));
+    assert_eq!(response["registered_ops"], json!(["plugin.generic.hover"]));
     assert_eq!(
         response["operation_routes"][0]["dispatch_mode"],
         "read_only_service"
     );
     assert_eq!(response["services"][0]["state"], "stopped");
-    assert_eq!(response["service_processes"][0]["service_id"], "pyright");
+    assert_eq!(response["service_processes"][0]["service_id"], "worker");
     assert!(value_str(
         &response["service_processes"][0]["socket_path"],
         "socket path must be a string"
@@ -39,7 +39,7 @@ fn ensure_records_manifest_services_and_status_lists_them() -> TestResult {
     .starts_with("/eos/plugin/ppc/"));
 
     let status = op_status(&json!({}), DispatchContext::empty())?;
-    assert_eq!(status["loaded_plugins"][0]["name"], "lsp");
+    assert_eq!(status["loaded_plugins"][0]["name"], "generic");
     Ok(())
 }
 
@@ -64,7 +64,7 @@ fn ensure_reloads_same_digest_when_workspace_root_changes() -> TestResult {
     let _guard = PluginTestGuard::new()?;
     let first = op_ensure(
         &json!({
-            "manifest": lsp_manifest("digest-a", "hover"),
+            "manifest": generic_service_manifest("digest-a", "hover"),
             "layer_stack_root": "/eos/plugin/layer-stack",
             "workspace_root": "/testbed"
         }),
@@ -72,7 +72,7 @@ fn ensure_reloads_same_digest_when_workspace_root_changes() -> TestResult {
     )?;
     let second = op_ensure(
         &json!({
-            "manifest": lsp_manifest("digest-a", "hover"),
+            "manifest": generic_service_manifest("digest-a", "hover"),
             "layer_stack_root": "/eos/plugin/layer-stack",
             "workspace_root": "/ephemeral-os"
         }),
@@ -101,13 +101,13 @@ fn build_workspace_base_reset_stops_plugin_service_snapshots_for_layer_root() ->
         op: "api.plugin.ensure".to_owned(),
         invocation_id: "plugin-ensure-reset-service".to_owned(),
         args: json!({
-            "manifest": lsp_manifest("digest-a", "hover"),
+            "manifest": generic_service_manifest("digest-a", "hover"),
             "layer_stack_root": layer_stack_root.to_string_lossy().into_owned(),
             "workspace_root": workspace_root.to_string_lossy().into_owned()
         }),
     });
     assert_eq!(ensure["success"], true);
-    let _ = attach_service_snapshot_for_tests("plugin.lsp.hover")?;
+    let _ = attach_service_snapshot_for_tests("plugin.generic.hover")?;
     assert_eq!(
         LayerStack::open(layer_stack_root.clone())?.active_lease_count(),
         1
@@ -171,7 +171,7 @@ fn registered_plugin_op_routes_to_deferred_dispatch_not_unknown_op() -> TestResu
         op: "api.plugin.ensure".to_owned(),
         invocation_id: "plugin-ensure-test".to_owned(),
         args: json!({
-            "manifest": lsp_manifest("digest-a", "hover"),
+            "manifest": generic_service_manifest("digest-a", "hover"),
             "layer_stack_root": "/eos/plugin/layer-stack",
             "workspace_root": "/eos/plugin/workspace"
         }),
@@ -179,7 +179,7 @@ fn registered_plugin_op_routes_to_deferred_dispatch_not_unknown_op() -> TestResu
     assert_eq!(ensure["success"], true);
 
     let routed = table.dispatch(&Request {
-        op: "plugin.lsp.hover".to_owned(),
+        op: "plugin.generic.hover".to_owned(),
         invocation_id: "plugin-hover-test".to_owned(),
         args: json!({"agent_id": "agent-plugin"}),
     });
@@ -189,7 +189,7 @@ fn registered_plugin_op_routes_to_deferred_dispatch_not_unknown_op() -> TestResu
     assert_eq!(routed["dispatch_mode"], "read_only_service");
 
     let missing = table.dispatch(&Request {
-        op: "plugin.lsp.missing".to_owned(),
+        op: "plugin.generic.missing".to_owned(),
         invocation_id: "plugin-missing-test".to_owned(),
         args: json!({}),
     });
@@ -230,7 +230,7 @@ fn dynamic_plugin_op_is_blocked_in_isolated_workspace_before_route_lookup() -> T
     assert_eq!(entered["success"], true);
 
     let blocked = table.dispatch(&Request {
-        op: "plugin.lsp.not_loaded_yet".to_owned(),
+        op: "plugin.generic.not_loaded_yet".to_owned(),
         invocation_id: "plugin-dynamic-iws-block".to_owned(),
         args: json!({"agent_id": "agent-plugin"}),
     });
@@ -260,7 +260,7 @@ fn exited_service_process_fails_closed_before_dispatch() -> TestResult {
         op: "api.plugin.ensure".to_owned(),
         invocation_id: "plugin-ensure-exited-service".to_owned(),
         args: json!({
-            "manifest": lsp_manifest_with_command(
+            "manifest": generic_service_manifest_with_command(
                 "digest-a",
                 "hover",
                 vec!["/bin/sh", "-c", "true"]
@@ -296,7 +296,7 @@ fn exited_service_process_fails_closed_before_dispatch() -> TestResult {
     }
 
     let routed = table.dispatch(&Request {
-        op: "plugin.lsp.hover".to_owned(),
+        op: "plugin.generic.hover".to_owned(),
         invocation_id: "plugin-hover-exited-service".to_owned(),
         args: json!({"agent_id": "agent-plugin"}),
     });
@@ -366,33 +366,36 @@ fn digest_reload_replaces_dynamic_plugin_routes() -> TestResult {
         op: "api.plugin.ensure".to_owned(),
         invocation_id: "plugin-ensure-a".to_owned(),
         args: json!({
-            "manifest": lsp_manifest("digest-a", "hover"),
+            "manifest": generic_service_manifest("digest-a", "hover"),
             "layer_stack_root": "/eos/plugin/layer-stack",
             "workspace_root": "/eos/plugin/workspace"
         }),
     });
-    assert_eq!(first["registered_ops"], json!(["plugin.lsp.hover"]));
+    assert_eq!(first["registered_ops"], json!(["plugin.generic.hover"]));
 
     let second = table.dispatch(&Request {
         op: "api.plugin.ensure".to_owned(),
         invocation_id: "plugin-ensure-b".to_owned(),
         args: json!({
-            "manifest": lsp_manifest("digest-b", "diagnostics"),
+            "manifest": generic_service_manifest("digest-b", "diagnostics"),
             "layer_stack_root": "/eos/plugin/layer-stack",
             "workspace_root": "/eos/plugin/workspace"
         }),
     });
-    assert_eq!(second["registered_ops"], json!(["plugin.lsp.diagnostics"]));
+    assert_eq!(
+        second["registered_ops"],
+        json!(["plugin.generic.diagnostics"])
+    );
 
     let old = table.dispatch(&Request {
-        op: "plugin.lsp.hover".to_owned(),
+        op: "plugin.generic.hover".to_owned(),
         invocation_id: "plugin-hover-old".to_owned(),
         args: json!({}),
     });
     assert_eq!(old["error"]["kind"], "unknown_op");
 
     let current = table.dispatch(&Request {
-        op: "plugin.lsp.diagnostics".to_owned(),
+        op: "plugin.generic.diagnostics".to_owned(),
         invocation_id: "plugin-diagnostics-current".to_owned(),
         args: json!({}),
     });
@@ -446,7 +449,7 @@ fn read_only_service_refreshes_after_peer_publish_before_request() -> TestResult
         op: "api.plugin.ensure".to_owned(),
         invocation_id: "plugin-ensure-test".to_owned(),
         args: json!({
-            "manifest": lsp_manifest("digest-a", "hover"),
+            "manifest": generic_service_manifest("digest-a", "hover"),
             "layer_stack_root": layer_stack_root.to_string_lossy().into_owned(),
             "workspace_root": workspace_root.to_string_lossy().into_owned()
         }),
@@ -454,7 +457,7 @@ fn read_only_service_refreshes_after_peer_publish_before_request() -> TestResult
     assert_eq!(ensure["success"], true);
 
     let (client_stream, mut server_stream) = ppc_stream_pair()?;
-    register_ppc_client_for_tests("plugin.lsp.hover", client_stream)?;
+    register_ppc_client_for_tests("plugin.generic.hover", client_stream)?;
 
     let write = table.dispatch(&Request {
         op: "api.v1.write_file".to_owned(),
@@ -496,7 +499,7 @@ fn read_only_service_refreshes_after_peer_publish_before_request() -> TestResult
             }
 
             assert_eq!(request.message_id, "plugin-hover-after-peer-write");
-            assert_eq!(request.op, "plugin.lsp.hover");
+            assert_eq!(request.op, "plugin.generic.hover");
             assert!(refresh_types.contains(&"prepare_refresh".to_owned()));
             assert!(refresh_types.contains(&"swap_workspace".to_owned()));
             assert!(refresh_types.contains(&"health".to_owned()));
@@ -510,7 +513,7 @@ fn read_only_service_refreshes_after_peer_publish_before_request() -> TestResult
     });
 
     let routed = table.dispatch(&Request {
-        op: "plugin.lsp.hover".to_owned(),
+        op: "plugin.generic.hover".to_owned(),
         invocation_id: "plugin-hover-after-peer-write".to_owned(),
         args: json!({"agent_id": "agent-plugin"}),
     });
@@ -542,7 +545,7 @@ fn concurrent_read_only_refresh_is_singleflight_before_requests() -> TestResult 
         op: "api.plugin.ensure".to_owned(),
         invocation_id: "plugin-ensure-test".to_owned(),
         args: json!({
-            "manifest": lsp_manifest("digest-a", "hover"),
+            "manifest": generic_service_manifest("digest-a", "hover"),
             "layer_stack_root": layer_stack_root.to_string_lossy().into_owned(),
             "workspace_root": workspace_root.to_string_lossy().into_owned()
         }),
@@ -550,7 +553,7 @@ fn concurrent_read_only_refresh_is_singleflight_before_requests() -> TestResult 
     assert_eq!(ensure["success"], true);
 
     let (client_stream, mut server_stream) = ppc_stream_pair()?;
-    register_ppc_client_for_tests("plugin.lsp.hover", client_stream)?;
+    register_ppc_client_for_tests("plugin.generic.hover", client_stream)?;
 
     let write = table.dispatch(&Request {
         op: "api.v1.write_file".to_owned(),
@@ -617,8 +620,8 @@ fn concurrent_read_only_refresh_is_singleflight_before_requests() -> TestResult 
                 "plugin-hover-concurrent-refresh-b".to_owned(),
             ]
         );
-        assert_eq!(first_op.op, "plugin.lsp.hover");
-        assert_eq!(second_op.op, "plugin.lsp.hover");
+        assert_eq!(first_op.op, "plugin.generic.hover");
+        assert_eq!(second_op.op, "plugin.generic.hover");
         write_ppc_reply_result(
             &mut server_stream,
             second_op.message_id,
@@ -635,7 +638,7 @@ fn concurrent_read_only_refresh_is_singleflight_before_requests() -> TestResult 
     let first_table = Arc::clone(&table);
     let first = std::thread::spawn(move || -> Result<Value, TestError> {
         Ok(first_table.dispatch(&Request {
-            op: "plugin.lsp.hover".to_owned(),
+            op: "plugin.generic.hover".to_owned(),
             invocation_id: "plugin-hover-concurrent-refresh-a".to_owned(),
             args: json!({"agent_id": "agent-plugin", "request": "a"}),
         }))
@@ -647,7 +650,7 @@ fn concurrent_read_only_refresh_is_singleflight_before_requests() -> TestResult 
     let second = std::thread::spawn(move || -> Result<Value, TestError> {
         second_started_tx.send(())?;
         Ok(second_table.dispatch(&Request {
-            op: "plugin.lsp.hover".to_owned(),
+            op: "plugin.generic.hover".to_owned(),
             invocation_id: "plugin-hover-concurrent-refresh-b".to_owned(),
             args: json!({"agent_id": "agent-plugin", "request": "b"}),
         }))
@@ -690,13 +693,13 @@ fn restart_service_strategy_restarts_after_peer_publish_before_request() -> Test
     let command = vec![
         "/bin/sh",
         "-c",
-        "test \"$EOS_PLUGIN_SERVICE_ID\" = pyright && sleep 30",
+        "test \"$EOS_PLUGIN_SERVICE_ID\" = worker && sleep 30",
     ];
     let ensure = table.dispatch(&Request {
         op: "api.plugin.ensure".to_owned(),
         invocation_id: "plugin-ensure-restart-service".to_owned(),
         args: json!({
-            "manifest": lsp_restart_manifest("digest-a", "hover", command),
+            "manifest": generic_restart_manifest("digest-a", "hover", command),
             "layer_stack_root": layer_stack_root.to_string_lossy().into_owned(),
             "workspace_root": workspace_root.to_string_lossy().into_owned(),
             "ppc_socket_root": socket_root.to_string_lossy().into_owned(),
@@ -734,7 +737,7 @@ fn restart_service_strategy_restarts_after_peer_publish_before_request() -> Test
     allow_reconnect_tx.send(())?;
 
     let routed = table.dispatch(&Request {
-        op: "plugin.lsp.hover".to_owned(),
+        op: "plugin.generic.hover".to_owned(),
         invocation_id: "plugin-hover-after-restart".to_owned(),
         args: json!({"agent_id": "agent-plugin"}),
     });
@@ -773,7 +776,7 @@ fn connected_self_managed_plugin_op_services_occ_callback() -> TestResult {
         op: "api.plugin.ensure".to_owned(),
         invocation_id: "plugin-ensure-test".to_owned(),
         args: json!({
-            "manifest": lsp_self_managed_manifest("digest-a", "apply"),
+            "manifest": generic_self_managed_manifest("digest-a", "apply"),
             "layer_stack_root": layer_stack_root.to_string_lossy().into_owned(),
             "workspace_root": "/eos/plugin/workspace"
         }),
@@ -785,12 +788,12 @@ fn connected_self_managed_plugin_op_services_occ_callback() -> TestResult {
     );
 
     let (client_stream, mut server_stream) = ppc_stream_pair()?;
-    register_ppc_client_for_tests("plugin.lsp.apply", client_stream)?;
+    register_ppc_client_for_tests("plugin.generic.apply", client_stream)?;
     let callback_root = layer_stack_root.clone();
     let server = std::thread::spawn(move || -> TestResult {
         let request = read_ppc_request(&mut server_stream, "read ppc request")?;
         assert_eq!(request.message_id, "plugin-apply-test");
-        assert_eq!(request.op, "plugin.lsp.apply");
+        assert_eq!(request.op, "plugin.generic.apply");
 
         let callback = PpcEnvelope {
             message_id: "plugin-apply-callback".to_owned(),
@@ -821,7 +824,7 @@ fn connected_self_managed_plugin_op_services_occ_callback() -> TestResult {
     });
 
     let routed = table.dispatch(&Request {
-        op: "plugin.lsp.apply".to_owned(),
+        op: "plugin.generic.apply".to_owned(),
         invocation_id: "plugin-apply-test".to_owned(),
         args: json!({"agent_id": "agent-plugin"}),
     });
@@ -846,7 +849,7 @@ fn self_managed_service_refreshes_after_peer_publish_before_request() -> TestRes
         op: "api.plugin.ensure".to_owned(),
         invocation_id: "plugin-ensure-test".to_owned(),
         args: json!({
-            "manifest": lsp_self_managed_manifest("digest-a", "apply"),
+            "manifest": generic_self_managed_manifest("digest-a", "apply"),
             "layer_stack_root": layer_stack_root.to_string_lossy().into_owned(),
             "workspace_root": workspace_root.to_string_lossy().into_owned()
         }),
@@ -854,7 +857,7 @@ fn self_managed_service_refreshes_after_peer_publish_before_request() -> TestRes
     assert_eq!(ensure["success"], true);
 
     let (client_stream, mut server_stream) = ppc_stream_pair()?;
-    register_ppc_client_for_tests("plugin.lsp.apply", client_stream)?;
+    register_ppc_client_for_tests("plugin.generic.apply", client_stream)?;
 
     let write = table.dispatch(&Request {
         op: "api.v1.write_file".to_owned(),
@@ -896,7 +899,7 @@ fn self_managed_service_refreshes_after_peer_publish_before_request() -> TestRes
             }
 
             assert_eq!(request.message_id, "plugin-apply-after-peer-write");
-            assert_eq!(request.op, "plugin.lsp.apply");
+            assert_eq!(request.op, "plugin.generic.apply");
             assert!(refresh_types.contains(&"prepare_refresh".to_owned()));
             assert!(refresh_types.contains(&"swap_workspace".to_owned()));
             assert!(refresh_types.contains(&"health".to_owned()));
@@ -910,7 +913,7 @@ fn self_managed_service_refreshes_after_peer_publish_before_request() -> TestRes
     });
 
     let routed = table.dispatch(&Request {
-        op: "plugin.lsp.apply".to_owned(),
+        op: "plugin.generic.apply".to_owned(),
         invocation_id: "plugin-apply-after-peer-write".to_owned(),
         args: json!({"agent_id": "agent-plugin"}),
     });
@@ -944,11 +947,11 @@ fn ensure_can_start_and_status_reports_service_process() -> TestResult {
     let command = vec![
         "/bin/sh",
         "-c",
-        "test \"$EOS_PLUGIN_SERVICE_ID\" = pyright && sleep 30",
+        "test \"$EOS_PLUGIN_SERVICE_ID\" = worker && sleep 30",
     ];
     let response = op_ensure(
         &json!({
-            "manifest": lsp_manifest_with_command("digest-a", "hover", command),
+            "manifest": generic_service_manifest_with_command("digest-a", "hover", command),
             "layer_stack_root": layer_stack_root.to_string_lossy().into_owned(),
             "workspace_root": workspace_root.to_string_lossy().into_owned(),
             "ppc_socket_root": socket_root.to_string_lossy().into_owned(),
@@ -961,20 +964,20 @@ fn ensure_can_start_and_status_reports_service_process() -> TestResult {
     assert_eq!(response["service_processes_started"], true);
     assert_eq!(
         response["running_service_processes"][0]["service_id"],
-        "pyright"
+        "worker"
     );
     assert_eq!(response["running_service_processes"][0]["running"], true);
 
     let status = op_status(&json!({}), DispatchContext::empty())?;
     assert_eq!(
         status["running_service_processes"][0]["service_id"],
-        "pyright"
+        "worker"
     );
     assert_eq!(status["running_service_processes"][0]["running"], true);
 
     let table = OpTable::with_builtins();
     let routed = table.dispatch(&Request {
-        op: "plugin.lsp.hover".to_owned(),
+        op: "plugin.generic.hover".to_owned(),
         invocation_id: "plugin-hover-started-service".to_owned(),
         args: json!({"agent_id": "agent-plugin"}),
     });

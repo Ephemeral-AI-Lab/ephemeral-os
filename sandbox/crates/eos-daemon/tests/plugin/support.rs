@@ -142,42 +142,46 @@ pub(super) fn join_value_thread(
     handle.join().map_err(|_| std::io::Error::other(context))?
 }
 
-pub(super) fn lsp_manifest(digest: &str, op_name: &str) -> Value {
+pub(super) fn generic_service_manifest(digest: &str, op_name: &str) -> Value {
     json!({
-        "plugin_id": "lsp",
+        "plugin_id": "generic",
         "plugin_version": "0.1.0",
         "plugin_digest": digest,
         "services": [{
-            "service_id": "pyright",
+            "service_id": "worker",
             "service_profile_digest": format!("profile-{digest}"),
             "service_mode": "workspace_snapshot_refresh",
             "refresh_strategy": "remount_workspace_and_notify",
-            "command": ["pyright-langserver", "--stdio"],
+            "command": ["generic-service", "--stdio"],
             "ppc_protocol_version": 1
         }],
         "operations": [{
             "op_name": op_name,
             "intent": "read_only",
-            "service_id": "pyright"
+            "service_id": "worker"
         }]
     })
 }
 
-pub(super) fn lsp_manifest_with_command(digest: &str, op_name: &str, command: Vec<&str>) -> Value {
-    let mut manifest = lsp_manifest(digest, op_name);
+pub(super) fn generic_service_manifest_with_command(
+    digest: &str,
+    op_name: &str,
+    command: Vec<&str>,
+) -> Value {
+    let mut manifest = generic_service_manifest(digest, op_name);
     manifest["services"][0]["command"] =
         Value::Array(command.into_iter().map(|item| json!(item)).collect());
     manifest
 }
 
-pub(super) fn lsp_restart_manifest(digest: &str, op_name: &str, command: Vec<&str>) -> Value {
-    let mut manifest = lsp_manifest_with_command(digest, op_name, command);
+pub(super) fn generic_restart_manifest(digest: &str, op_name: &str, command: Vec<&str>) -> Value {
+    let mut manifest = generic_service_manifest_with_command(digest, op_name, command);
     manifest["services"][0]["refresh_strategy"] = json!("restart_service");
     manifest
 }
 
-pub(super) fn lsp_self_managed_manifest(digest: &str, op_name: &str) -> Value {
-    let mut manifest = lsp_manifest(digest, op_name);
+pub(super) fn generic_self_managed_manifest(digest: &str, op_name: &str) -> Value {
+    let mut manifest = generic_service_manifest(digest, op_name);
     manifest["operations"][0]["intent"] = json!("write_allowed");
     manifest["operations"][0]["auto_workspace_overlay"] = json!(false);
     manifest
@@ -290,7 +294,7 @@ pub(super) fn spawn_restart_connector(
 
         let mut stream = connect_ppc_socket(&socket_root)?;
         let request = read_ppc_request(&mut stream, "read restarted ppc request")?;
-        assert_eq!(request.op, "plugin.lsp.hover");
+        assert_eq!(request.op, "plugin.generic.hover");
         write_ppc_reply_result(&mut stream, request.message_id, reply_body)?;
         Ok(())
     })

@@ -14,7 +14,7 @@ fn status_probe_services_sends_health_request() -> TestResult {
         op: "api.plugin.ensure".to_owned(),
         invocation_id: "plugin-ensure-health-ok".to_owned(),
         args: json!({
-            "manifest": lsp_manifest("digest-a", "hover"),
+            "manifest": generic_service_manifest("digest-a", "hover"),
             "layer_stack_root": layer_stack_root.to_string_lossy().into_owned(),
             "workspace_root": workspace_root.to_string_lossy().into_owned()
         }),
@@ -22,9 +22,9 @@ fn status_probe_services_sends_health_request() -> TestResult {
     assert_eq!(ensure["success"], true);
 
     let (client_stream, mut server_stream) = ppc_stream_pair()?;
-    register_ppc_client_for_tests("plugin.lsp.hover", client_stream)?;
+    register_ppc_client_for_tests("plugin.generic.hover", client_stream)?;
     let (_service_instance_id, manifest_key) =
-        attach_service_snapshot_for_tests("plugin.lsp.hover")?;
+        attach_service_snapshot_for_tests("plugin.generic.hover")?;
     let expected_manifest_key = manifest_key.clone();
     let server = std::thread::spawn(move || -> TestResult {
         let request = read_ppc_request(&mut server_stream, "read health request")?;
@@ -47,10 +47,13 @@ fn status_probe_services_sends_health_request() -> TestResult {
     });
     assert_eq!(status["success"], true);
     assert_eq!(status["service_health"][0]["success"], true);
-    assert_eq!(status["service_health"][0]["service_id"], "pyright");
+    assert_eq!(status["service_health"][0]["service_id"], "worker");
     assert_eq!(status["service_health"][0]["manifest_key"], manifest_key);
     assert_eq!(status["loaded_plugins"][0]["services"][0]["state"], "ready");
-    assert_eq!(status["connected_ppc_routes"], json!(["plugin.lsp.hover"]));
+    assert_eq!(
+        status["connected_ppc_routes"],
+        json!(["plugin.generic.hover"])
+    );
     join_test_thread(server, "server thread panicked")?;
     remove_test_tree(&layer_stack_root)?;
     Ok(())
@@ -65,7 +68,7 @@ fn status_probe_failure_drops_connected_service() -> TestResult {
         op: "api.plugin.ensure".to_owned(),
         invocation_id: "plugin-ensure-health-fail".to_owned(),
         args: json!({
-            "manifest": lsp_manifest("digest-a", "hover"),
+            "manifest": generic_service_manifest("digest-a", "hover"),
             "layer_stack_root": layer_stack_root.to_string_lossy().into_owned(),
             "workspace_root": workspace_root.to_string_lossy().into_owned()
         }),
@@ -73,9 +76,9 @@ fn status_probe_failure_drops_connected_service() -> TestResult {
     assert_eq!(ensure["success"], true);
 
     let (client_stream, mut server_stream) = ppc_stream_pair()?;
-    register_ppc_client_for_tests("plugin.lsp.hover", client_stream)?;
+    register_ppc_client_for_tests("plugin.generic.hover", client_stream)?;
     let (service_instance_id, manifest_key) =
-        attach_service_snapshot_for_tests("plugin.lsp.hover")?;
+        attach_service_snapshot_for_tests("plugin.generic.hover")?;
     let server = std::thread::spawn(move || -> TestResult {
         let request = read_ppc_request(&mut server_stream, "read health request")?;
         assert_eq!(request.op, WORKSPACE_SNAPSHOT_REFRESH_OP);

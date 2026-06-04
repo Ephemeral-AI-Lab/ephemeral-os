@@ -436,10 +436,10 @@ flowchart LR
 | Phase | Status | Scope | Gate before next phase |
 | --- | --- | --- | --- |
 | 0. Spec baseline | Complete | Plan, contracts, progress tracker | Accepted 2026-06-04; Phase 0 acceptance criteria verified against this document. |
-| 1. Bootstrap artifact split | In progress | Remove plugin logic from bootstrap upload | Source/doc/static gates are green; live Docker E2E gate has not passed yet. |
-| 2. Unified `/eos` upload primitive | Not started | Rust upload transport | Fast upload works and rejects managed non-`/eos` writes. |
-| 3. Generic plugin package contract | Not started | Protocol and manifest types | Package/manifest model has no LSP-only fields; architecture docs updated. |
-| 4. Package install and setup | Not started | Daemon registry and setup runner | Generic package installs, sets up, and re-ensures idempotently; architecture docs updated. |
+| 1. Bootstrap artifact split | Complete | Remove plugin logic from bootstrap upload | Accepted 2026-06-04; static greps, sandbox-host cargo check, and all Phase 1 live Docker E2E gates passed. |
+| 2. Unified `/eos` upload primitive | Complete | Rust upload transport | Accepted 2026-06-04; upload unit tests, sandbox-host cargo check, static daemon publish scan, and Phase 2 live E2E gates passed. |
+| 3. Generic plugin package contract | Complete | Protocol and manifest types | Accepted 2026-06-04; generic manifest/package/setup validation, digest marker coverage, daemon plugin tests, grep gate, and architecture docs passed. |
+| 4. Package install and setup | In progress | Daemon registry and setup runner | Generic package installs, sets up, and re-ensures idempotently; architecture docs updated. |
 | 5. Plugin server lifecycle | Not started | Start/status/refresh/stop/PPC | Non-LSP plugin service passes live dispatch and refresh tests; architecture docs updated. |
 | 6. Agent-core catalog bridge | Not started | Catalog to sandbox interface | Agent-core sends neutral descriptors; sandbox stays decoupled. |
 | 7. LSP example package | Not started | LSP package proves generic path | LSP live E2E passes with package-version-scoped absolute Node path. |

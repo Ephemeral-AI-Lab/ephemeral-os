@@ -84,7 +84,7 @@ mod tests {
         assert!(!run_dir.exists());
         assert_eq!(
             snapshots.released.borrow().as_slice(),
-            [snapshot.lease_id.clone()]
+            std::slice::from_ref(&snapshot.lease_id)
         );
         Ok(())
     }

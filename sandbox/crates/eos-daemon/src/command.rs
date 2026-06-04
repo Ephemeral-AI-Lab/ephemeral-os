@@ -34,9 +34,8 @@ use serde_json::{json, Value};
 
 #[cfg(target_os = "linux")]
 use eos_ephemeral_workspace::{
-    finalize_publishable_workspace, EphemeralCommandFinalizeSpec, EphemeralRunDirs,
-    EphemeralSnapshot, EphemeralWorkspace, FinalizeRequest,
-    WorkspaceRoot as EphemeralWorkspaceRoot,
+    finalize_publishable_workspace, EphemeralRunDirs, EphemeralSnapshot, EphemeralWorkspace,
+    FinalizeRequest, WorkspaceRoot as EphemeralWorkspaceRoot,
 };
 #[cfg(target_os = "linux")]
 use eos_layerstack::{require_workspace_binding, LayerStack, Lease, WorkspaceBinding};
@@ -798,14 +797,7 @@ fn finalize_command_workspace(
                 },
                 dirs: workspace.dirs.clone(),
             },
-            command: Some(EphemeralCommandFinalizeSpec {
-                status: status.to_owned(),
-                exit_code,
-                stdout: stdout.to_owned(),
-                include_session_id,
-                command_session_id: Some(session.id.clone()),
-                started_at: session.started_at,
-            }),
+            command_started_at: Some(session.started_at),
         },
     )
     .map_err(ephemeral_daemon_error)?;

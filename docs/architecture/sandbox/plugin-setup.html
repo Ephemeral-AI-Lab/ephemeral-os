@@ -42,8 +42,8 @@
   <span class="nav-pair"><a href="plugins.html">&larr; 8. Plugin in ephemeral_workspace</a><a href="space-model.html">9. Space Model &rarr;</a></span>
 </div>
 <section id="plugin-setup"
-  data-last-reviewed-commit="d52a5616d"
-  data-evidence-paths="agent-core/crates/eos-sandbox-host/src/bootstrap_artifact.rs agent-core/crates/eos-sandbox-host/src/lifecycle.rs agent-core/crates/eos-runtime/src/plugin_tools.rs sandbox/crates/eos-plugin/src/manifest.rs sandbox/crates/eos-plugin/src/service.rs sandbox/crates/eos-daemon/src/plugin/mod.rs sandbox/crates/eos-daemon/src/plugin/process.rs backend/src/sandbox/ephemeral_workspace/plugin/ppc_service.py backend/scripts/bench_rust_daemon_plugin.py backend/tests/live_e2e_test/sandbox/plugin/test_plugin_refresh_strategies.py">
+  data-last-reviewed-commit="local-phase3-20260604"
+  data-evidence-paths="sandbox/crates/eos-plugin/src/manifest.rs sandbox/crates/eos-plugin/src/service.rs sandbox/crates/eos-daemon/src/plugin/ensure_args.rs sandbox/crates/eos-daemon/src/plugin/mod.rs sandbox/crates/eos-daemon/src/plugin/process.rs sandbox/crates/eos-daemon/tests/plugin/support.rs agent-core/crates/eos-sandbox-host/src/bootstrap_artifact.rs">
 <h2>Plugin Setup <a class="anchor" href="#plugin-setup">§</a></h2>
 <nav class="page-toc" aria-labelledby="page-toc-heading">
   <h3 id="page-toc-heading">Contents</h3>
@@ -60,9 +60,9 @@
 
 <div class="summary">
   <ul>
-    <li>The daemon-managed plugin path is manifest driven: stage the payload under <code>/eos</code>, call <code>api.plugin.ensure</code>, then dispatch <code>plugin.&lt;plugin_id&gt;.&lt;op_name&gt;</code>.</li>
+    <li>The daemon-managed plugin path is manifest driven: package identity, setup, services, operations, refresh policy, and PPC routing are declared by a neutral <code>PluginManifest</code>.</li>
     <li>The sandbox daemon owns workspace freshness, PPC routing, process lifecycle, OCC publish, cleanup, and isolated-workspace blocking.</li>
-    <li>The sandbox host lifecycle bootstraps <code>eosd</code> only; it does not upload plugin packages, runtime bridges, Node, Pyright, or catalog files.</li>
+    <li>The sandbox host lifecycle bootstraps <code>eosd</code> only; it does not upload plugin packages, runtime bridges, dependency runtimes, or catalog files.</li>
     <li>The easiest new plugin is a <code>workspace_snapshot_refresh</code> read-only service that answers PPC requests from the current mounted workspace.</li>
     <li>Write plugins choose either daemon-owned <code>oneshot_overlay</code> execution or a self-managed long-lived service that publishes through daemon callbacks.</li>
   </ul>
@@ -76,16 +76,16 @@
 </section>
 
 <section id="setup-entrypoints"
-  data-last-reviewed-commit="d52a5616d"
-  data-evidence-paths="agent-core/crates/eos-sandbox-host/src/bootstrap_artifact.rs agent-core/crates/eos-sandbox-host/src/lifecycle.rs agent-core/crates/eos-runtime/src/plugin_tools.rs sandbox/crates/eos-daemon/src/plugin/mod.rs sandbox/crates/eos-plugin/src/manifest.rs backend/scripts/bench_rust_daemon_plugin.py">
+  data-last-reviewed-commit="local-phase3-20260604"
+  data-evidence-paths="agent-core/crates/eos-sandbox-host/src/bootstrap_artifact.rs agent-core/crates/eos-sandbox-host/src/lifecycle.rs sandbox/crates/eos-plugin/src/manifest.rs sandbox/crates/eos-daemon/src/plugin/ensure_args.rs sandbox/crates/eos-daemon/src/plugin/mod.rs">
 <h3>Setup Entrypoints <a class="anchor" href="#setup-entrypoints">§</a></h3>
-<p>The Rust host lifecycle has one bootstrap responsibility: upload and verify the pinned <code>eosd</code> daemon artifact, then bind the workspace and wait for runtime readiness. It is not a plugin package setup entrypoint and must not create catalog, runtime bridge, Node, Pyright, or package dependency files. Plugin setup enters the daemon through <code>api.plugin.ensure</code> with a manifest and an already staged payload.</p>
+<p>The Rust host lifecycle has one bootstrap responsibility: upload and verify the pinned <code>eosd</code> daemon artifact, then bind the workspace and wait for runtime readiness. It is not a plugin package setup entrypoint and must not create catalog, runtime bridge, dependency runtime, or package dependency files. Plugin setup enters the daemon through <code>api.plugin.ensure</code> with the neutral manifest contract defined in <code>eos-plugin</code>; staged package publish and setup execution are daemon-owned follow-up phases.</p>
 
 <table>
   <thead><tr><th>Path</th><th>Use when</th><th>Who installs payload?</th><th>Who registers ops?</th></tr></thead>
   <tbody>
     <tr><td>Daemon bootstrap</td><td>Container create/start needs the resident Rust daemon.</td><td><code>SandboxLifecycle</code> calls the bootstrap artifact helper, which uploads only <code>eosd</code> and its SHA marker <span class="file-ref">agent-core/crates/eos-sandbox-host/src/lifecycle.rs:195-209</span>, <span class="file-ref">agent-core/crates/eos-sandbox-host/src/bootstrap_artifact.rs:157-238</span>.</td><td>None. Bootstrap does not register plugin operations.</td></tr>
-    <tr><td>Daemon-managed service manifest</td><td>The plugin service should be launched by the Rust daemon with a declared PPC process, refresh strategy, and operation table.</td><td>The caller or package setup API stages the service binary/script under <code>/eos</code>; host daemon bootstrap is not involved. The live harness still stages files directly for daemon protocol coverage <span class="file-ref">backend/scripts/bench_rust_daemon_plugin.py:6341-6465</span>.</td><td><code>api.plugin.ensure</code> parses the manifest and registers <code>plugin.&lt;plugin_id&gt;.&lt;op_name&gt;</code> routes <span class="file-ref">sandbox/crates/eos-daemon/src/plugin/mod.rs:349-405</span>.</td></tr>
+    <tr><td>Daemon-managed package manifest</td><td>The plugin package declares package-relative runtime paths, optional setup, services, refresh strategy, and operation table.</td><td>The package setup API stages the package under <code>/eos</code>; host daemon bootstrap is not involved. The manifest does not choose absolute sandbox publish roots <span class="file-ref">sandbox/crates/eos-plugin/src/manifest.rs</span>.</td><td><code>api.plugin.ensure</code> parses the manifest and registers <code>plugin.&lt;plugin_id&gt;.&lt;op_name&gt;</code> routes through daemon-owned state <span class="file-ref">sandbox/crates/eos-daemon/src/plugin/ensure_args.rs</span>.</td></tr>
   </tbody>
 </table>
 
@@ -96,22 +96,33 @@
 </section>
 
 <section id="manifest-contract"
-  data-last-reviewed-commit="d52a5616d"
-  data-evidence-paths="sandbox/crates/eos-plugin/src/manifest.rs sandbox/crates/eos-plugin/src/service.rs backend/scripts/bench_rust_daemon_plugin.py">
+  data-last-reviewed-commit="local-phase3-20260604"
+  data-evidence-paths="sandbox/crates/eos-plugin/src/manifest.rs sandbox/crates/eos-plugin/src/service.rs sandbox/crates/eos-daemon/src/plugin/ensure_args.rs sandbox/crates/eos-daemon/tests/plugin/support.rs">
 <h3>Manifest Contract <a class="anchor" href="#manifest-contract">§</a></h3>
-<p><code>PluginManifest</code> is the daemon input contract: identity fields plus service declarations and public operation declarations <span class="file-ref">sandbox/crates/eos-plugin/src/manifest.rs:11-21</span>. Validation rejects malformed identifiers, duplicate services or operations, operations referencing unknown services, plugin lifecycle intents, read-only operations without a service, and zero timeouts <span class="file-ref">sandbox/crates/eos-plugin/src/manifest.rs:31-57</span>, <span class="file-ref">sandbox/crates/eos-plugin/src/manifest.rs:117-147</span>.</p>
+<p><code>PluginManifest</code> is the daemon input contract: identity fields, package metadata, optional setup, service declarations, and public operation declarations. Validation rejects malformed identifiers, package or setup paths that are absolute or contain <code>..</code>, duplicate services or operations, operations referencing unknown services, plugin lifecycle intents, read-only operations without a service, and zero timeouts <span class="file-ref">sandbox/crates/eos-plugin/src/manifest.rs</span>.</p>
 
 <pre><code>{
   "plugin_id": "my_plugin",
   "plugin_version": "0.1.0",
   "plugin_digest": "my-plugin-digest-v1",
+  "package": {
+    "runtime_dir": "runtime",
+    "dependency_scope": "package_digest"
+  },
+  "setup": {
+    "command": ["./setup.sh"],
+    "working_dir": "runtime",
+    "setup_marker_digest": "setup-v1",
+    "timeout_ms": 30000
+  },
   "services": [
     {
       "service_id": "main",
       "service_profile_digest": "main-profile-v1",
       "service_mode": "workspace_snapshot_refresh",
       "refresh_strategy": "remount_workspace_and_notify",
-      "command": ["python3", "/eos/plugin/my_plugin/service.py"],
+      "command": ["runtime/service"],
+      "working_dir": "runtime",
       "ppc_protocol_version": 1
     }
   ],
@@ -127,7 +138,9 @@
 
 <div class="inline-kv">
   <div><code>plugin_id</code></div><div>Identifier used in public op names: <code>plugin.my_plugin.query</code>.</div>
-  <div><code>plugin_digest</code></div><div>Part of service identity. Change it when the deployed payload changes.</div>
+  <div><code>plugin_digest</code></div><div>Canonical package tree identity and the value recorded in <code>.package-sha256</code>.</div>
+  <div><code>setup_marker_digest</code></div><div>Setup idempotency identity and the value recorded in <code>.setup-sha256</code> after setup succeeds.</div>
+  <div><code>runtime_dir</code> / <code>working_dir</code></div><div>Package-relative paths only. The daemon derives absolute <code>/eos</code> roots from plugin id and digest.</div>
   <div><code>service_profile_digest</code></div><div>Part of the service key so two different service profiles do not accidentally share one process.</div>
   <div><code>service_mode</code></div><div><code>workspace_snapshot_refresh</code> for long-lived services, <code>oneshot_overlay</code> for per-operation write workers <span class="file-ref">sandbox/crates/eos-plugin/src/service.rs:11-21</span>.</div>
   <div><code>refresh_strategy</code></div><div><code>remount_workspace_and_notify</code>, <code>remount_workspace</code>, or <code>restart_service</code> when a long-lived service is stale <span class="file-ref">sandbox/crates/eos-plugin/src/service.rs:23-36</span>.</div>
@@ -145,6 +158,8 @@
   <div><code>EOS_PLUGIN_PPC_SOCKET</code></div><div>AF_UNIX socket path the service must connect to.</div>
   <div><code>EOS_PLUGIN_LAYER_STACK_ROOT</code></div><div>LayerStack root backing the service workspace.</div>
   <div><code>EOS_PLUGIN_WORKSPACE_ROOT</code></div><div>Path the service should treat as the mounted workspace root.</div>
+  <div><code>EOS_PLUGIN_PACKAGE_ROOT</code></div><div>Resolved package root derived from plugin id plus digest.</div>
+  <div><code>EOS_PLUGIN_DEPENDENCY_ROOT</code></div><div>Package-version-scoped dependency root under <code>/eos/runtime/packages</code>.</div>
   <div><code>EOS_PLUGIN_ID</code> / <code>EOS_PLUGIN_DIGEST</code></div><div>Manifest identity for the running payload.</div>
   <div><code>EOS_PLUGIN_SERVICE_ID</code></div><div>Service id from the manifest.</div>
   <div><code>EOS_PLUGIN_WORKSPACE_MOUNTED</code></div><div>Starts as <code>0</code>; long-lived Linux services are launched in a private overlay namespace and then see a mounted workspace.</div>
@@ -255,13 +270,13 @@ EOS_SANDBOX_PROVIDER=docker EOS_LIVE_E2E_IMAGE=&lt;image&gt; uv run pytest -q -x
       <li><span class="file-ref">sandbox/crates/eos-plugin/src/service.rs</span> service mode, refresh strategy, and service key contract.</li>
       <li><span class="file-ref">sandbox/crates/eos-daemon/src/plugin/mod.rs</span> ensure/status parsing and route dispatch.</li>
       <li><span class="file-ref">sandbox/crates/eos-daemon/src/plugin/process.rs</span> service process launch and environment.</li>
-      <li><span class="file-ref">backend/src/sandbox/ephemeral_workspace/plugin/install.py</span> host/catalog bundle upload path.</li>
-      <li><span class="file-ref">backend/src/sandbox/ephemeral_workspace/plugin/ppc_service.py</span> reusable Python PPC bridge.</li>
+      <li><span class="file-ref">sandbox/crates/eos-daemon/src/plugin/ensure_args.rs</span> manifest parsing into daemon routes and service specs.</li>
+      <li><span class="file-ref">sandbox/crates/eos-daemon/tests/plugin/support.rs</span> generic plugin manifest fixtures.</li>
     </ul>
   </div>
   <div class="evidence-card">
     <h4>Live reference</h4>
-    <p><span class="file-ref">backend/scripts/bench_rust_daemon_plugin.py</span> is the most complete setup example: payload staging, manifest construction, ensure/status calls, route dispatch, freshness gates, write paths, crash/timeout recovery, and cleanup checks.</p>
+    <p>The current Phase 3 reference is the Rust test pair <span class="file-ref">sandbox/crates/eos-plugin/src/manifest.rs</span> and <span class="file-ref">sandbox/crates/eos-daemon/tests/plugin/support.rs</span>, which covers the generic package/setup manifest and daemon route parsing.</p>
   </div>
   <div class="evidence-card">
     <h4>Refresh triggers</h4>

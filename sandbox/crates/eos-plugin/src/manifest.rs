@@ -10,6 +10,12 @@ use crate::service::{
     require_non_empty, validate_identifier, validate_plugin_id, RefreshStrategy, ServiceMode,
 };
 
+/// Digest marker written after a package tree is accepted.
+pub const PACKAGE_SHA256_MARKER: &str = ".package-sha256";
+
+/// Digest marker written after setup completes successfully.
+pub const SETUP_SHA256_MARKER: &str = ".setup-sha256";
+
 /// Top-level plugin manifest consumed by `api.plugin.ensure`.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -17,6 +23,10 @@ pub struct PluginManifest {
     pub plugin_id: String,
     pub plugin_version: String,
     pub plugin_digest: String,
+    #[serde(default)]
+    pub package: PluginPackageManifest,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub setup: Option<PluginSetupManifest>,
     #[serde(default)]
     pub services: Vec<PluginServiceManifest>,
     #[serde(default)]
@@ -35,6 +45,10 @@ impl PluginManifest {
         validate_plugin_id("plugin_id", &self.plugin_id)?;
         require_non_empty("plugin_version", &self.plugin_version)?;
         require_non_empty("plugin_digest", &self.plugin_digest)?;
+        self.package.validate()?;
+        if let Some(setup) = &self.setup {
+            setup.validate()?;
+        }
 
         let mut service_ids = BTreeSet::new();
         let mut service_modes = BTreeMap::new();
@@ -61,6 +75,83 @@ impl PluginManifest {
         }
         Ok(())
     }
+
+    /// Digest recorded in [`PACKAGE_SHA256_MARKER`] for package idempotency.
+    #[must_use]
+    pub fn package_marker_digest(&self) -> &str {
+        &self.plugin_digest
+    }
+
+    /// Digest recorded in [`SETUP_SHA256_MARKER`] after setup succeeds.
+    #[must_use]
+    pub fn setup_marker_digest(&self) -> Option<&str> {
+        self.setup
+            .as_ref()
+            .map(|setup| setup.setup_marker_digest.as_str())
+    }
+}
+
+/// Package-root contract for an installed plugin payload.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct PluginPackageManifest {
+    #[serde(default = "default_runtime_dir")]
+    pub runtime_dir: String,
+    #[serde(default)]
+    pub dependency_scope: PluginDependencyScope,
+}
+
+impl Default for PluginPackageManifest {
+    fn default() -> Self {
+        Self {
+            runtime_dir: default_runtime_dir(),
+            dependency_scope: PluginDependencyScope::PackageDigest,
+        }
+    }
+}
+
+impl PluginPackageManifest {
+    fn validate(&self) -> Result<()> {
+        validate_relative_package_path("package.runtime_dir", &self.runtime_dir)
+    }
+}
+
+/// Dependency isolation scope for package-managed runtime dependencies.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+#[non_exhaustive]
+pub enum PluginDependencyScope {
+    /// Dependencies live under `/eos/runtime/packages/<plugin>/<digest>/`.
+    #[default]
+    PackageDigest,
+}
+
+/// Optional setup command executed by the daemon after package publish.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct PluginSetupManifest {
+    pub command: Vec<String>,
+    pub working_dir: String,
+    pub setup_marker_digest: String,
+    pub timeout_ms: u64,
+}
+
+impl PluginSetupManifest {
+    fn validate(&self) -> Result<()> {
+        if self.command.is_empty() {
+            return Err(PluginError::Manifest(
+                "setup.command must not be empty".to_owned(),
+            ));
+        }
+        validate_relative_package_path("setup.working_dir", &self.working_dir)?;
+        require_non_empty("setup_marker_digest", &self.setup_marker_digest)?;
+        if self.timeout_ms == 0 {
+            return Err(PluginError::Manifest(
+                "setup.timeout_ms must be positive".to_owned(),
+            ));
+        }
+        Ok(())
+    }
 }
 
 /// One service declared by a plugin payload.
@@ -73,6 +164,8 @@ pub struct PluginServiceManifest {
     pub refresh_strategy: RefreshStrategy,
     #[serde(default)]
     pub command: Vec<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub working_dir: Option<String>,
     #[serde(default = "default_ppc_protocol")]
     pub ppc_protocol_version: u32,
 }
@@ -92,6 +185,9 @@ impl PluginServiceManifest {
             return Err(PluginError::Manifest(
                 "ppc_protocol_version must be positive".to_owned(),
             ));
+        }
+        if let Some(working_dir) = &self.working_dir {
+            validate_relative_package_path("service.working_dir", working_dir)?;
         }
         if matches!(
             self.service_mode,
@@ -176,6 +272,29 @@ const fn default_auto_workspace_overlay() -> bool {
     true
 }
 
+fn default_runtime_dir() -> String {
+    "runtime".to_owned()
+}
+
+fn validate_relative_package_path(field: &str, value: &str) -> Result<()> {
+    require_non_empty(field, value)?;
+    if value.starts_with('/') {
+        return Err(PluginError::Manifest(format!("{field} must be relative")));
+    }
+    for component in value.split('/') {
+        match component {
+            "" | "." => {}
+            ".." => {
+                return Err(PluginError::Manifest(format!(
+                    "{field} must not contain path traversal"
+                )));
+            }
+            _ => {}
+        }
+    }
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -184,22 +303,30 @@ mod tests {
 
     fn manifest() -> PluginManifest {
         PluginManifest {
-            plugin_id: "lsp".to_owned(),
+            plugin_id: "generic".to_owned(),
             plugin_version: "0.1.0".to_owned(),
             plugin_digest: "digest-a".to_owned(),
+            package: PluginPackageManifest::default(),
+            setup: Some(PluginSetupManifest {
+                command: vec!["./setup.sh".to_owned()],
+                working_dir: "runtime".to_owned(),
+                setup_marker_digest: "setup-a".to_owned(),
+                timeout_ms: 30_000,
+            }),
             services: vec![PluginServiceManifest {
-                service_id: "pyright".to_owned(),
+                service_id: "worker".to_owned(),
                 service_profile_digest: "profile-a".to_owned(),
                 service_mode: ServiceMode::WorkspaceSnapshotRefresh,
                 refresh_strategy: RefreshStrategy::RemountWorkspaceAndNotify,
-                command: vec!["pyright-langserver".to_owned(), "--stdio".to_owned()],
+                command: vec!["generic-service".to_owned(), "--stdio".to_owned()],
+                working_dir: Some("runtime".to_owned()),
                 ppc_protocol_version: 1,
             }],
             operations: vec![PluginOperationManifest {
                 op_name: "hover".to_owned(),
                 intent: Intent::ReadOnly,
                 auto_workspace_overlay: true,
-                service_id: Some("pyright".to_owned()),
+                service_id: Some("worker".to_owned()),
                 timeout_ms: Some(5_000),
             }],
         }
@@ -237,7 +364,7 @@ mod tests {
         valid_manifest.plugin_id = "_Lsp9".to_owned();
         assert!(valid_manifest.validate().is_ok());
 
-        for invalid in ["my-plugin", "my.plugin", "9lsp", ""] {
+        for invalid in ["my-plugin", "my.plugin", "9plugin", ""] {
             let mut manifest = manifest();
             manifest.plugin_id = invalid.to_owned();
             assert!(matches!(
@@ -262,16 +389,96 @@ mod tests {
     }
 
     #[test]
-    fn rejects_unknown_setup_field() {
+    fn accepts_package_and_setup_contract() -> TestResult {
+        let manifest = manifest();
+        manifest.validate()?;
+        assert_eq!(manifest.package.runtime_dir, "runtime");
+        assert_eq!(manifest.package_marker_digest(), "digest-a");
+        assert_eq!(manifest.setup_marker_digest(), Some("setup-a"));
+        assert_eq!(PACKAGE_SHA256_MARKER, ".package-sha256");
+        assert_eq!(SETUP_SHA256_MARKER, ".setup-sha256");
+        Ok(())
+    }
+
+    #[test]
+    fn rejects_unknown_manifest_field() {
         let value = serde_json::json!({
-            "plugin_id": "lsp",
+            "plugin_id": "generic",
             "plugin_version": "0.1.0",
             "plugin_digest": "digest-a",
-            "setup": "setup.sh",
+            "unexpected": true,
             "services": [],
             "operations": []
         });
         assert!(serde_json::from_value::<PluginManifest>(value).is_err());
+    }
+
+    #[test]
+    fn rejects_package_and_setup_paths_outside_package_tree() {
+        let mut absolute_package = manifest();
+        absolute_package.package.runtime_dir = "/runtime".to_owned();
+        assert!(matches!(
+            absolute_package.validate(),
+            Err(PluginError::Manifest(message)) if message.contains("package.runtime_dir")
+        ));
+
+        let mut traversing_package = manifest();
+        traversing_package.package.runtime_dir = "../runtime".to_owned();
+        assert!(matches!(
+            traversing_package.validate(),
+            Err(PluginError::Manifest(message)) if message.contains("path traversal")
+        ));
+
+        let mut traversing_setup = manifest();
+        traversing_setup
+            .setup
+            .as_mut()
+            .expect("test fixture includes setup")
+            .working_dir = "runtime/../escape".to_owned();
+        assert!(matches!(
+            traversing_setup.validate(),
+            Err(PluginError::Manifest(message)) if message.contains("setup.working_dir")
+        ));
+    }
+
+    #[test]
+    fn rejects_service_working_dir_outside_package_tree() {
+        let mut manifest = manifest();
+        manifest.services[0].working_dir = Some("/runtime".to_owned());
+        assert!(matches!(
+            manifest.validate(),
+            Err(PluginError::Manifest(message)) if message.contains("service.working_dir")
+        ));
+    }
+
+    #[test]
+    fn digest_fields_drive_marker_and_service_identity() -> TestResult {
+        let base = manifest();
+        let mut package_changed = base.clone();
+        package_changed.plugin_digest = "digest-b".to_owned();
+        assert_ne!(
+            base.package_marker_digest(),
+            package_changed.package_marker_digest()
+        );
+
+        let mut setup_changed = base.clone();
+        setup_changed
+            .setup
+            .as_mut()
+            .expect("test fixture includes setup")
+            .setup_marker_digest = "setup-b".to_owned();
+        assert_ne!(
+            base.setup_marker_digest(),
+            setup_changed.setup_marker_digest()
+        );
+
+        let mut service_changed = base.clone();
+        service_changed.services[0].service_profile_digest = "profile-b".to_owned();
+        assert_ne!(
+            base.services[0].service_profile_digest,
+            service_changed.services[0].service_profile_digest
+        );
+        Ok(())
     }
 
     #[test]

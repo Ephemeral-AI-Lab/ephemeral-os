@@ -28,7 +28,6 @@ pub use read_tool::{run_read_tool, ReadToolOutcome, ReadToolRequest};
 pub use runner::{run_fresh_namespace, FreshRunRequestBuilder};
 pub use timings::{EphemeralTimings, TreeResourceStats};
 pub use types::{
-    AgentId, EphemeralCommandFinalizeSpec, EphemeralRunDirs, EphemeralRunOutcome,
-    EphemeralSnapshot, EphemeralToolSpec, EphemeralWorkspace, InvocationId, PathChange,
-    PathChangeKind, PublishOutcome, PublishStatus, WorkspaceRoot,
+    AgentId, EphemeralRunDirs, EphemeralSnapshot, EphemeralToolSpec, EphemeralWorkspace,
+    InvocationId, PathChange, PathChangeKind, PublishOutcome, PublishStatus, WorkspaceRoot,
 };

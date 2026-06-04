@@ -187,7 +187,7 @@ fn ppc_client_services_callback_before_final_reply() -> TestResult {
         &PpcEnvelope {
             message_id: "msg-1".to_owned(),
             direction: PpcDirection::Request,
-            op: "plugin.lsp.apply".to_owned(),
+            op: "plugin.generic.apply".to_owned(),
             body: r#"{"path":"main.py"}"#.to_owned(),
         },
         Duration::from_secs(1),
@@ -251,7 +251,7 @@ fn ppc_client_services_multiple_callbacks_before_final_reply() -> TestResult {
         &PpcEnvelope {
             message_id: "msg-1".to_owned(),
             direction: PpcDirection::Request,
-            op: "plugin.lsp.apply_multi".to_owned(),
+            op: "plugin.generic.apply_multi".to_owned(),
             body: r#"{"paths":["file-0.txt","file-1.txt"]}"#.to_owned(),
         },
         Duration::from_secs(1),
@@ -330,7 +330,7 @@ fn ppc_client_routes_concurrent_callbacks_by_parent_message_id() -> TestResult {
             &PpcEnvelope {
                 message_id: "op-1".to_owned(),
                 direction: PpcDirection::Request,
-                op: "plugin.lsp.apply".to_owned(),
+                op: "plugin.generic.apply".to_owned(),
                 body: r#"{"path":"a.txt"}"#.to_owned(),
             },
             Duration::from_secs(1),
@@ -352,7 +352,7 @@ fn ppc_client_routes_concurrent_callbacks_by_parent_message_id() -> TestResult {
             &PpcEnvelope {
                 message_id: "op-2".to_owned(),
                 direction: PpcDirection::Request,
-                op: "plugin.lsp.apply".to_owned(),
+                op: "plugin.generic.apply".to_owned(),
                 body: r#"{"path":"b.txt"}"#.to_owned(),
             },
             Duration::from_secs(1),
@@ -402,7 +402,7 @@ fn ppc_client_rejects_bad_callback_reply_message_id() -> TestResult {
         &PpcEnvelope {
             message_id: "msg-1".to_owned(),
             direction: PpcDirection::Request,
-            op: "plugin.lsp.apply".to_owned(),
+            op: "plugin.generic.apply".to_owned(),
             body: "{}".to_owned(),
         },
         Duration::from_secs(1),

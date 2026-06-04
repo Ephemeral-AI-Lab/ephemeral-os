@@ -8,6 +8,7 @@
 mod ensure_args;
 mod occ_callbacks;
 mod overlay;
+mod package;
 mod ppc_router;
 mod process;
 mod service;
@@ -18,8 +19,8 @@ use std::sync::{Arc, Mutex, MutexGuard, OnceLock};
 use std::time::{Duration, Instant};
 
 use eos_plugin::{
-    PluginError, PluginServiceKey, PluginServiceState, PluginServiceStatus, PpcDirection,
-    PpcEnvelope, RefreshAck, RefreshRequest, RefreshStrategy, ServiceMode,
+    PluginError, PluginManifest, PluginServiceKey, PluginServiceState, PluginServiceStatus,
+    PpcDirection, PpcEnvelope, RefreshAck, RefreshRequest, RefreshStrategy, ServiceMode,
 };
 use eos_protocol::Intent;
 use serde_json::{json, Value};
@@ -29,6 +30,7 @@ use crate::error::DaemonError;
 use crate::response_timings::u64_to_f64_saturating;
 use ensure_args::{loaded_matches_parsed, validate_plugin_caller_fields, ParsedEnsure};
 use overlay::PluginOverlayCommand;
+use package::{ensure_package, needs_upload_response, PackageEnsureReport};
 use process::PluginProcessSpec;
 use service::{
     acquire_service_snapshot, active_manifest_key, insert_started_service_processes,
@@ -107,6 +109,7 @@ struct DaemonPluginState {
     service_processes: BTreeMap<String, process::PluginServiceProcess>,
     service_snapshots: BTreeMap<String, PluginServiceSnapshot>,
     service_refresh_locks: BTreeMap<String, Arc<Mutex<()>>>,
+    setup_failures: BTreeMap<String, Value>,
 }
 
 fn state_cell() -> &'static Mutex<DaemonPluginState> {
@@ -128,8 +131,28 @@ pub fn op_ensure(args: &Value, _context: DispatchContext<'_>) -> Result<Value, D
         .get("start_services")
         .and_then(Value::as_bool)
         .unwrap_or(false);
+    let package_report = match ensure_package(args, parsed.manifest.as_ref()) {
+        Ok(report) => report,
+        Err(err) => {
+            record_setup_failure(parsed.manifest.as_ref(), &err);
+            return Err(err);
+        }
+    };
+    if package_report.needs_upload {
+        let manifest = parsed.manifest.as_ref().ok_or_else(|| {
+            DaemonError::Plugin(PluginError::Ensure(
+                "package ensure requested upload without manifest".to_owned(),
+            ))
+        })?;
+        return Ok(needs_upload_response(manifest, &package_report));
+    }
     let (already_loaded, specs_to_start) = {
         let mut state = lock_state()?;
+        if package_report.active {
+            state
+                .setup_failures
+                .remove(&setup_failure_key(&parsed.plugin_id, &parsed.plugin_digest));
+        }
         let already_loaded = state
             .loaded
             .get(&parsed.plugin_id)
@@ -203,6 +226,7 @@ pub fn op_ensure(args: &Value, _context: DispatchContext<'_>) -> Result<Value, D
         "running_service_processes": running_service_processes,
         "connected_ppc_routes": connected_ppc_routes,
         "connected_ppc_services": connected_ppc_services,
+        "package": package_report_value(&package_report),
     }))
 }
 
@@ -232,6 +256,7 @@ pub fn op_status(args: &Value, _context: DispatchContext<'_>) -> Result<Value, D
     let loaded_plugins = loaded_plugin_values(&state);
     let connected_ppc_routes = connected_ppc_routes(&state);
     let connected_ppc_services = connected_ppc_services(&state);
+    let setup_failures = setup_failure_values(&state);
     drop(state);
     Ok(json!({
         "success": true,
@@ -239,6 +264,7 @@ pub fn op_status(args: &Value, _context: DispatchContext<'_>) -> Result<Value, D
         "running_service_processes": running_service_processes,
         "connected_ppc_routes": connected_ppc_routes,
         "connected_ppc_services": connected_ppc_services,
+        "setup_failures": setup_failures,
         "service_health": service_health,
         "pending": [],
     }))
@@ -277,6 +303,7 @@ fn reset_for_tests() {
         state.service_processes.clear();
         state.service_snapshots.clear();
         state.service_refresh_locks.clear();
+        state.setup_failures.clear();
         drop(state);
         for snapshot in snapshots {
             release_service_snapshot(&snapshot);
@@ -367,6 +394,43 @@ fn connected_ppc_routes(state: &DaemonPluginState) -> Vec<String> {
 
 fn connected_ppc_services(state: &DaemonPluginState) -> Vec<String> {
     state.service_ppc_clients.keys().cloned().collect()
+}
+
+fn package_report_value(report: &PackageEnsureReport) -> Value {
+    if !report.active {
+        return Value::Null;
+    }
+    json!({
+        "needs_upload": report.needs_upload,
+        "package_root": report.package_root.as_ref().map(|path| path.to_string_lossy().into_owned()),
+        "dependency_root": report.dependency_root.as_ref().map(|path| path.to_string_lossy().into_owned()),
+        "package_published": report.package_published,
+        "setup_ran": report.setup_ran,
+    })
+}
+
+fn setup_failure_key(plugin_id: &str, plugin_digest: &str) -> String {
+    format!("{plugin_id}:{plugin_digest}")
+}
+
+fn record_setup_failure(manifest: Option<&PluginManifest>, err: &DaemonError) {
+    let Some(manifest) = manifest else {
+        return;
+    };
+    if let Ok(mut state) = lock_state() {
+        state.setup_failures.insert(
+            setup_failure_key(&manifest.plugin_id, &manifest.plugin_digest),
+            json!({
+                "plugin": manifest.plugin_id,
+                "digest": manifest.plugin_digest,
+                "error": err.to_string(),
+            }),
+        );
+    }
+}
+
+fn setup_failure_values(state: &DaemonPluginState) -> Vec<Value> {
+    state.setup_failures.values().cloned().collect()
 }
 
 pub(crate) fn stop_services_for_layer_stack_root(

@@ -61,6 +61,7 @@ fn validate_plugin_audit_field(field: &str, value: Option<&Value>) -> Result<(),
 pub(super) struct ParsedEnsure {
     pub(super) plugin_id: String,
     pub(super) plugin_digest: String,
+    pub(super) manifest: Option<PluginManifest>,
     pub(super) registered_ops: Vec<String>,
     pub(super) operation_routes: BTreeMap<String, PluginOperationRoute>,
     pub(super) services: Vec<PluginServiceStatus>,
@@ -101,6 +102,7 @@ impl ParsedEnsure {
         Ok(Self {
             plugin_id,
             plugin_digest,
+            manifest: None,
             registered_ops: Vec::new(),
             operation_routes: BTreeMap::new(),
             services: Vec::new(),
@@ -110,6 +112,7 @@ impl ParsedEnsure {
     }
 
     fn from_manifest(args: &Value, manifest: PluginManifest) -> Result<Self, DaemonError> {
+        let manifest_for_package = manifest.clone();
         let ppc_socket_root = ppc_socket_root(args);
         let layer_stack_root = args
             .get("layer_stack_root")
@@ -126,6 +129,7 @@ impl ParsedEnsure {
         Ok(Self {
             plugin_id: manifest.plugin_id,
             plugin_digest: manifest.plugin_digest,
+            manifest: Some(manifest_for_package),
             registered_ops,
             operation_routes,
             services,

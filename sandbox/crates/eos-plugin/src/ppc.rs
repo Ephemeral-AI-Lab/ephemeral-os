@@ -146,7 +146,7 @@ mod tests {
         let envelope = PpcEnvelope {
             message_id: "msg-1".to_owned(),
             direction: PpcDirection::Request,
-            op: "plugin.lsp.hover".to_owned(),
+            op: "plugin.generic.hover".to_owned(),
             body: r#"{"path":"main.py"}"#.to_owned(),
         };
 
@@ -172,7 +172,7 @@ mod tests {
     #[test]
     fn ppc_decode_rejects_unknown_direction() -> TestResult {
         let encoded = encode(&Envelope::Request(Request {
-            op: "plugin.lsp.hover".to_owned(),
+            op: "plugin.generic.hover".to_owned(),
             invocation_id: "msg-1".to_owned(),
             args: json!({"direction": "sideways", "body": "{}"}),
         }))?;

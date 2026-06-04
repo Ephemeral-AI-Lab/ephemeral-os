@@ -18,7 +18,7 @@ fn connected_read_only_plugin_op_round_trips_over_ppc() -> TestResult {
         op: "api.plugin.ensure".to_owned(),
         invocation_id: "plugin-ensure-test".to_owned(),
         args: json!({
-            "manifest": lsp_manifest("digest-a", "hover"),
+            "manifest": generic_service_manifest("digest-a", "hover"),
             "layer_stack_root": layer_stack_root.to_string_lossy().into_owned(),
             "workspace_root": workspace_root.to_string_lossy().into_owned()
         }),
@@ -26,11 +26,11 @@ fn connected_read_only_plugin_op_round_trips_over_ppc() -> TestResult {
     assert_eq!(ensure["success"], true);
 
     let (client_stream, mut server_stream) = ppc_stream_pair()?;
-    register_ppc_client_for_tests("plugin.lsp.hover", client_stream)?;
+    register_ppc_client_for_tests("plugin.generic.hover", client_stream)?;
     let server = std::thread::spawn(move || -> TestResult {
         let request = read_ppc_request(&mut server_stream, "read ppc request")?;
         assert_eq!(request.message_id, "plugin-hover-test");
-        assert_eq!(request.op, "plugin.lsp.hover");
+        assert_eq!(request.op, "plugin.generic.hover");
         assert!(request.body.contains("agent-plugin"));
         let reply = PpcEnvelope {
             message_id: request.message_id,
@@ -43,7 +43,7 @@ fn connected_read_only_plugin_op_round_trips_over_ppc() -> TestResult {
     });
 
     let routed = table.dispatch(&Request {
-        op: "plugin.lsp.hover".to_owned(),
+        op: "plugin.generic.hover".to_owned(),
         invocation_id: "plugin-hover-test".to_owned(),
         args: json!({"agent_id": "agent-plugin"}),
     });
@@ -63,7 +63,7 @@ fn concurrent_read_only_plugin_ops_share_one_ppc_client() -> TestResult {
         op: "api.plugin.ensure".to_owned(),
         invocation_id: "plugin-ensure-test".to_owned(),
         args: json!({
-            "manifest": lsp_manifest("digest-a", "hover"),
+            "manifest": generic_service_manifest("digest-a", "hover"),
             "layer_stack_root": layer_stack_root.to_string_lossy().into_owned(),
             "workspace_root": workspace_root.to_string_lossy().into_owned()
         }),
@@ -71,7 +71,7 @@ fn concurrent_read_only_plugin_ops_share_one_ppc_client() -> TestResult {
     assert_eq!(ensure["success"], true);
 
     let (client_stream, mut server_stream) = ppc_stream_pair()?;
-    register_ppc_client_for_tests("plugin.lsp.hover", client_stream)?;
+    register_ppc_client_for_tests("plugin.generic.hover", client_stream)?;
     let (first_seen_tx, first_seen_rx) = mpsc::channel();
     let (second_seen_tx, second_seen_rx) = mpsc::channel();
     let (reply_first_tx, reply_first_rx) = mpsc::channel();
@@ -97,7 +97,7 @@ fn concurrent_read_only_plugin_ops_share_one_ppc_client() -> TestResult {
     let first_table = Arc::clone(&table);
     let first = std::thread::spawn(move || -> Result<Value, TestError> {
         Ok(first_table.dispatch(&Request {
-            op: "plugin.lsp.hover".to_owned(),
+            op: "plugin.generic.hover".to_owned(),
             invocation_id: "plugin-hover-concurrent-a".to_owned(),
             args: json!({"agent_id": "agent-plugin", "request": "a"}),
         }))
@@ -112,7 +112,7 @@ fn concurrent_read_only_plugin_ops_share_one_ppc_client() -> TestResult {
     let second = std::thread::spawn(move || -> Result<Value, TestError> {
         second_started_tx.send(())?;
         Ok(second_table.dispatch(&Request {
-            op: "plugin.lsp.hover".to_owned(),
+            op: "plugin.generic.hover".to_owned(),
             invocation_id: "plugin-hover-concurrent-b".to_owned(),
             args: json!({"agent_id": "agent-plugin", "request": "b"}),
         }))
@@ -145,7 +145,7 @@ fn concurrent_read_only_plugin_ops_match_out_of_order_replies() -> TestResult {
         op: "api.plugin.ensure".to_owned(),
         invocation_id: "plugin-ensure-test".to_owned(),
         args: json!({
-            "manifest": lsp_manifest("digest-a", "hover"),
+            "manifest": generic_service_manifest("digest-a", "hover"),
             "layer_stack_root": layer_stack_root.to_string_lossy().into_owned(),
             "workspace_root": workspace_root.to_string_lossy().into_owned()
         }),
@@ -153,7 +153,7 @@ fn concurrent_read_only_plugin_ops_match_out_of_order_replies() -> TestResult {
     assert_eq!(ensure["success"], true);
 
     let (client_stream, mut server_stream) = ppc_stream_pair()?;
-    register_ppc_client_for_tests("plugin.lsp.hover", client_stream)?;
+    register_ppc_client_for_tests("plugin.generic.hover", client_stream)?;
     let (both_seen_tx, both_seen_rx) = mpsc::channel();
     let server = std::thread::spawn(move || -> TestResult {
         let first = read_ppc_request(&mut server_stream, "read first ppc request")?;
@@ -185,7 +185,7 @@ fn concurrent_read_only_plugin_ops_match_out_of_order_replies() -> TestResult {
     let first_table = Arc::clone(&table);
     let first = std::thread::spawn(move || -> Result<Value, TestError> {
         Ok(first_table.dispatch(&Request {
-            op: "plugin.lsp.hover".to_owned(),
+            op: "plugin.generic.hover".to_owned(),
             invocation_id: "plugin-hover-concurrent-a".to_owned(),
             args: json!({"agent_id": "agent-plugin", "request": "a"}),
         }))
@@ -193,7 +193,7 @@ fn concurrent_read_only_plugin_ops_match_out_of_order_replies() -> TestResult {
     let second_table = Arc::clone(&table);
     let second = std::thread::spawn(move || -> Result<Value, TestError> {
         Ok(second_table.dispatch(&Request {
-            op: "plugin.lsp.hover".to_owned(),
+            op: "plugin.generic.hover".to_owned(),
             invocation_id: "plugin-hover-concurrent-b".to_owned(),
             args: json!({"agent_id": "agent-plugin", "request": "b"}),
         }))
@@ -227,7 +227,7 @@ fn read_only_ppc_failure_drops_connected_route() -> TestResult {
         op: "api.plugin.ensure".to_owned(),
         invocation_id: "plugin-ensure-test".to_owned(),
         args: json!({
-            "manifest": lsp_manifest("digest-a", "hover"),
+            "manifest": generic_service_manifest("digest-a", "hover"),
             "layer_stack_root": layer_stack_root.to_string_lossy().into_owned(),
             "workspace_root": workspace_root.to_string_lossy().into_owned()
         }),
@@ -235,11 +235,11 @@ fn read_only_ppc_failure_drops_connected_route() -> TestResult {
     assert_eq!(ensure["success"], true);
 
     let (client_stream, server_stream) = ppc_stream_pair()?;
-    register_ppc_client_for_tests("plugin.lsp.hover", client_stream)?;
+    register_ppc_client_for_tests("plugin.generic.hover", client_stream)?;
     drop(server_stream);
 
     let routed = table.dispatch(&Request {
-        op: "plugin.lsp.hover".to_owned(),
+        op: "plugin.generic.hover".to_owned(),
         invocation_id: "plugin-hover-broken-ppc".to_owned(),
         args: json!({"agent_id": "agent-plugin"}),
     });
@@ -265,13 +265,13 @@ fn read_only_service_recovers_on_next_dispatch_after_ppc_failure() -> TestResult
     let command = vec![
         "/bin/sh",
         "-c",
-        "test \"$EOS_PLUGIN_SERVICE_ID\" = pyright && sleep 30",
+        "test \"$EOS_PLUGIN_SERVICE_ID\" = worker && sleep 30",
     ];
     let ensure = table.dispatch(&Request {
         op: "api.plugin.ensure".to_owned(),
         invocation_id: "plugin-ensure-recover-after-ppc-failure".to_owned(),
         args: json!({
-            "manifest": lsp_manifest_with_command("digest-a", "hover", command),
+            "manifest": generic_service_manifest_with_command("digest-a", "hover", command),
             "layer_stack_root": layer_stack_root.to_string_lossy().into_owned(),
             "workspace_root": workspace_root.to_string_lossy().into_owned(),
             "ppc_socket_root": socket_root.to_string_lossy().into_owned()
@@ -280,12 +280,12 @@ fn read_only_service_recovers_on_next_dispatch_after_ppc_failure() -> TestResult
     assert_eq!(ensure["success"], true);
 
     let (client_stream, server_stream) = ppc_stream_pair()?;
-    register_ppc_client_for_tests("plugin.lsp.hover", client_stream)?;
-    attach_service_snapshot_for_tests("plugin.lsp.hover")?;
+    register_ppc_client_for_tests("plugin.generic.hover", client_stream)?;
+    attach_service_snapshot_for_tests("plugin.generic.hover")?;
     drop(server_stream);
 
     let failed = table.dispatch(&Request {
-        op: "plugin.lsp.hover".to_owned(),
+        op: "plugin.generic.hover".to_owned(),
         invocation_id: "plugin-hover-broken-before-recovery".to_owned(),
         args: json!({"agent_id": "agent-plugin"}),
     });
@@ -307,7 +307,7 @@ fn read_only_service_recovers_on_next_dispatch_after_ppc_failure() -> TestResult
         r#"{"success":true,"from_recovered_service":true}"#,
     );
     let recovered = table.dispatch(&Request {
-        op: "plugin.lsp.hover".to_owned(),
+        op: "plugin.generic.hover".to_owned(),
         invocation_id: "plugin-hover-after-recovery".to_owned(),
         args: json!({"agent_id": "agent-plugin"}),
     });
@@ -325,7 +325,10 @@ fn read_only_service_recovers_on_next_dispatch_after_ppc_failure() -> TestResult
     let service = &status["loaded_plugins"][0]["services"][0];
     assert_eq!(service["state"], "ready");
     assert_eq!(service["restart_count"], 1);
-    assert_eq!(status["connected_ppc_routes"], json!(["plugin.lsp.hover"]));
+    assert_eq!(
+        status["connected_ppc_routes"],
+        json!(["plugin.generic.hover"])
+    );
 
     join_test_thread(connector, "connector thread panicked")?;
     let _ = std::fs::remove_dir_all(socket_root);

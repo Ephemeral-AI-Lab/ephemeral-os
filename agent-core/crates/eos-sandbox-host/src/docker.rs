@@ -45,6 +45,13 @@ const DOCKER_INIT_ENABLED_LABEL: &str = "eos.docker.init.enabled";
 const EOS_RUNTIME_TMPFS_TARGET: &str = "/eos";
 const DEFAULT_OVERLAY_WRITABLE_TMPFS_OPTIONS: &str = "rw,exec,size=2g,mode=1777";
 
+fn is_eos_tmpfs_destination(dest_dir: &str) -> bool {
+    dest_dir == EOS_RUNTIME_TMPFS_TARGET
+        || dest_dir
+            .strip_prefix(EOS_RUNTIME_TMPFS_TARGET)
+            .is_some_and(|suffix| suffix.starts_with('/'))
+}
+
 /// The Docker-backed provider adapter. Holds a cheap-to-clone, pooled
 /// `bollard::Docker` (no lazy `Option`/`to_thread` artifacts — bollard is async).
 #[derive(Debug, Clone)]
@@ -353,9 +360,7 @@ impl ProviderAdapter for DockerProviderAdapter {
         tar_stream: &[u8],
         dest_dir: &str,
     ) -> Result<(), SandboxHostError> {
-        if dest_dir == EOS_RUNTIME_TMPFS_TARGET
-            || dest_dir.starts_with(&format!("{EOS_RUNTIME_TMPFS_TARGET}/"))
-        {
+        if is_eos_tmpfs_destination(dest_dir) {
             return self
                 .put_archive_into_eos_tmpfs(id, tar_stream, dest_dir)
                 .await;
@@ -864,7 +869,7 @@ mod tests {
     // `DockerProviderAdapter::put_archive` forwards verbatim.
     #[test]
     fn put_archive_fast_path() {
-        let stream = crate::bootstrap_artifact::tar_file_at_path("eosd", b"binary", 0o755).unwrap();
+        let stream = crate::sandbox_upload::tar_file_at_path("eosd", b"binary", 0o755).unwrap();
         assert_ne!(
             &stream[..2],
             &[0x1f, 0x8b],
@@ -876,6 +881,15 @@ mod tests {
             1,
             "single-file fast-path tar stream"
         );
+    }
+
+    #[test]
+    fn eos_tmpfs_upload_destinations_use_exec_tar_route() {
+        assert!(is_eos_tmpfs_destination("/eos"));
+        assert!(is_eos_tmpfs_destination("/eos/daemon"));
+        assert!(is_eos_tmpfs_destination("/eos/scratch/uploads/u1"));
+        assert!(!is_eos_tmpfs_destination("/eos-other"));
+        assert!(!is_eos_tmpfs_destination("/tmp"));
     }
 
     #[test]

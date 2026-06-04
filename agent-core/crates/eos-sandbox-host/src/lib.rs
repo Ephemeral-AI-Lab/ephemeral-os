@@ -31,6 +31,7 @@ mod lifecycle;
 mod provider;
 mod provisioning;
 mod registry;
+mod sandbox_upload;
 
 #[cfg(test)]
 mod testutil;

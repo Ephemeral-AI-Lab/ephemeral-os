@@ -4,13 +4,13 @@ use crate::capture::{capture_for_publish, CapturedUpperdir};
 use crate::error::EphemeralWorkspaceError;
 use crate::ports::WorkspacePublisherPort;
 use crate::timings::EphemeralTimings;
-use crate::types::{EphemeralCommandFinalizeSpec, EphemeralWorkspace, PublishOutcome};
+use crate::types::{EphemeralWorkspace, PublishOutcome};
 
 /// Request to finalize a publishable ephemeral workspace.
 #[derive(Debug, Clone)]
 pub struct FinalizeRequest {
     pub workspace: EphemeralWorkspace,
-    pub command: Option<EphemeralCommandFinalizeSpec>,
+    pub command_started_at: Option<Instant>,
 }
 
 /// Capture and publish result for one ephemeral workspace.
@@ -46,10 +46,10 @@ where
     let mut timings = EphemeralTimings::new(total_start.elapsed().as_secs_f64());
     timings.capture_s = Some(capture.capture_s);
     timings.publish_s = Some(publish_start.elapsed().as_secs_f64());
-    if let Some(command) = request.command {
+    if let Some(started_at) = request.command_started_at {
         timings.insert_extra(
             "command.elapsed_s",
-            serde_json::json!(command.started_at.elapsed().as_secs_f64()),
+            serde_json::json!(started_at.elapsed().as_secs_f64()),
         );
     }
 

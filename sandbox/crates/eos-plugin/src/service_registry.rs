@@ -165,9 +165,9 @@ mod tests {
         PluginServiceKey::new(PluginServiceKeyParts {
             layer_stack_root: "/eos/plugin/layer-stack".to_owned(),
             workspace_root: "/eos/plugin/workspace".to_owned(),
-            plugin_id: "lsp".to_owned(),
+            plugin_id: "generic".to_owned(),
             plugin_digest: "digest-a".to_owned(),
-            service_id: "pyright".to_owned(),
+            service_id: "worker".to_owned(),
             service_profile_digest: profile.to_owned(),
             service_mode: ServiceMode::WorkspaceSnapshotRefresh,
             refresh_strategy: RefreshStrategy::RemountWorkspaceAndNotify,

@@ -15,6 +15,7 @@ use sha2::{Digest, Sha256};
 use crate::daemon_client::{posix_quote, BUNDLE_REMOTE_DIR, EOSD_REMOTE_PATH, EOSD_SHA_MARKER};
 use crate::error::SandboxHostError;
 use crate::provider::{ExecOpts, ProviderAdapter};
+use crate::sandbox_upload::upload_file_into_eos;
 
 /// The `eosd` artifact this host is pinned to (bumped on a coordinated release).
 pub const EOSD_VERSION: &str = "0.1.0-local.20260602";
@@ -75,25 +76,6 @@ pub(crate) fn artifact_arch(machine: &str) -> Result<&'static str, SandboxHostEr
     }
 }
 
-/// Build the uncompressed single-file tar stream the Docker `put_archive` fast
-/// path expects (deterministic: mtime/uid/gid 0, empty uname/gname).
-pub(crate) fn tar_file_at_path(
-    name: &str,
-    payload: &[u8],
-    mode: u32,
-) -> Result<Vec<u8>, SandboxHostError> {
-    let mut builder = tar::Builder::new(Vec::new());
-    let mut header = tar::Header::new_gnu();
-    header.set_size(payload.len() as u64);
-    header.set_mtime(0);
-    header.set_uid(0);
-    header.set_gid(0);
-    header.set_mode(mode);
-    header.set_cksum();
-    builder.append_data(&mut header, name.trim_matches('/'), payload)?;
-    Ok(builder.into_inner()?)
-}
-
 fn sha256_hex(payload: &[u8]) -> String {
     let mut hasher = Sha256::new();
     hasher.update(payload);
@@ -138,6 +120,16 @@ async fn check_exec(
         });
     }
     Ok(())
+}
+
+async fn cleanup_staging_dir(adapter: &dyn ProviderAdapter, id: &eos_types::SandboxId, path: &str) {
+    let _ = adapter
+        .exec(
+            id,
+            &format!("rm -rf {}", posix_quote(path)),
+            &probe_opts(15),
+        )
+        .await;
 }
 
 /// Whether the remote marker-check result indicates the pinned binary is already
@@ -209,7 +201,7 @@ pub(crate) async fn ensure_daemon_bootstrap(
     )
     .await?;
 
-    // 7. upload via the put_archive fast path through a random staging dir.
+    // 7. upload through the typed `/eos` fast path into a random staging dir.
     let staging_dir = format!(
         "{BUNDLE_REMOTE_DIR}/.eosd-upload-{}",
         uuid::Uuid::new_v4().simple()
@@ -223,20 +215,27 @@ pub(crate) async fn ensure_daemon_bootstrap(
         "eosd staging directory setup failed",
     )
     .await?;
-    let tar_stream = tar_file_at_path("eosd", &payload, 0o755)?;
-    adapter.put_archive(id, &tar_stream, &staging_dir).await?;
-    check_exec(
+    if let Err(err) = upload_file_into_eos(adapter, id, &staging_dir, "eosd", &payload, 0o755).await
+    {
+        cleanup_staging_dir(adapter, id, &staging_dir).await;
+        return Err(err);
+    }
+    if let Err(err) = check_exec(
         adapter,
         id,
         &format!(
-            "cat {} > {remote} && chmod 755 {remote} && rm -rf {}",
+            "mv -f {} {remote} && chmod 755 {remote} && rm -rf {}",
             posix_quote(&staging_file),
             posix_quote(&staging_dir)
         ),
         30,
         "eosd finalize failed",
     )
-    .await?;
+    .await
+    {
+        cleanup_staging_dir(adapter, id, &staging_dir).await;
+        return Err(err);
+    }
 
     // 8. write marker + readiness verify (marker written before the version
     // check, in one `&&` chain — ported verbatim, not reordered).
@@ -305,7 +304,7 @@ mod tests {
     #[test]
     fn tar_stream_is_deterministic_single_file() {
         let payload = b"#!/bin/true\n";
-        let stream = tar_file_at_path("eosd", payload, 0o755).unwrap();
+        let stream = crate::sandbox_upload::tar_file_at_path("eosd", payload, 0o755).unwrap();
         let mut archive = tar::Archive::new(&stream[..]);
         let mut entries = archive.entries().unwrap();
         let mut entry = entries.next().unwrap().unwrap();

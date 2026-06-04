@@ -612,15 +612,6 @@ pub struct EphemeralToolSpec {
     pub timeout_seconds: Option<f64>,
 }
 
-pub struct EphemeralCommandFinalizeSpec {
-    pub status: String,
-    pub exit_code: i64,
-    pub stdout: String,
-    pub include_session_id: bool,
-    pub command_session_id: Option<String>,
-    pub started_at: std::time::Instant,
-}
-
 pub struct PathChange {
     pub path: String,
     pub kind: PathChangeKind,
@@ -631,13 +622,6 @@ pub enum PathChangeKind {
     Delete,
     Symlink,
     OpaqueDir,
-}
-
-pub struct EphemeralRunOutcome {
-    pub runner: eos_runner::RunResult,
-    pub capture: Option<CapturedUpperdir>,
-    pub publish: Option<PublishOutcome>,
-    pub timings: EphemeralTimings,
 }
 
 pub struct PublishOutcome {
@@ -864,7 +848,7 @@ Types and fields:
 ```rust
 pub struct FinalizeRequest {
     pub workspace: EphemeralWorkspace,
-    pub command: Option<EphemeralCommandFinalizeSpec>,
+    pub command_started_at: Option<std::time::Instant>,
 }
 
 pub struct FinalizeOutcome {
@@ -1065,7 +1049,7 @@ Enforcement rules:
 | Phase 2: Add empty ephemeral crate | Complete | Added `eos-ephemeral-workspace` with only the section 6.2 modules, allowed dependencies, real `eos_runner` / `eos_protocol` DTO references, and exactly the three Phase 2 ports; passed `cargo fmt -p eos-ephemeral-workspace`, `cargo check -p eos-ephemeral-workspace --all-targets`, `cargo test -p eos-ephemeral-workspace`, dependency/source guards, and `git diff --check`. |
 | Phase 3: Move fresh overlay helpers | Complete | Fresh run-dir allocation is wrapped through `EphemeralDirAllocator`; `glob`/`grep` read-only overlay runs use `run_read_tool`; command and plugin overlay publish paths use `capture_for_publish` plus extracted path-kind/resource stats; daemon process registry, command-session state, plugin parsing, and direct workspace ops remain in `eos-daemon`. Passed `cargo check -p eos-ephemeral-workspace --all-targets`, `cargo test -p eos-ephemeral-workspace`, `cargo check -p eos-daemon --all-targets`, `cargo test -p eos-e2e-test --test overlay -- --list`, and `git diff --check`. `EOS_LIVE_E2E_IMAGE` was unset, so the conditional live overlay run was not available. |
 | Phase 4: Move ephemeral finalization policy | Complete | `finalize_publishable_workspace` is used by ephemeral command finalization and plugin overlay after daemon-side plugin result parsing. The daemon-owned `DaemonPublisherPort` wraps the neutral `occ_writer`; command registry, stdin/cancel/output cursors, plugin parsing, and generic publisher state remain in `eos-daemon`. Passed `cargo check -p eos-ephemeral-workspace --all-targets`, `cargo test -p eos-ephemeral-workspace`, `cargo check -p eos-daemon --all-targets`, `cargo test -p eos-e2e-test --test command_sessions -- --list`, extra `cargo test -p eos-daemon`, and `git diff --check`. `EOS_LIVE_E2E_IMAGE` was unset, so the conditional live command-session run was not available. |
-| Phase 5: Tighten tests and architecture docs | In Progress | Started after Phase 4 completion. |
+| Phase 5: Tighten tests and architecture docs | Complete | Architecture pages already reference `eos-isolated-workspace` and distinguish fresh ephemeral overlays from shared direct file ops. Focused tests cover isolated no-publish/discard and ephemeral cleanup success/failure paths. Passed static dependency/source guards, `cargo check -p eos-isolated-workspace --all-targets`, `cargo test -p eos-isolated-workspace`, `cargo check -p eos-ephemeral-workspace --all-targets`, `cargo test -p eos-ephemeral-workspace`, `cargo check -p eos-daemon --all-targets`, `cargo test -p eos-e2e-test -- --list`, live Docker `cargo test -p eos-e2e-test --features e2e --test overlay`, `isolated_workspace`, `occ`, and `command_sessions` with `EOS_LIVE_E2E_IMAGE=sweevo-dask__dask-10042:latest`, and `git diff --check`. |
 
 ### 12.3 Phase 0 Checklist: Spec Review Gate
 
@@ -1157,17 +1141,17 @@ Enforcement rules:
 
 ### 12.8 Phase 5 Checklist: Tests and Architecture Docs
 
-- [ ] `docs/architecture/sandbox/workspaces.html` uses
+- [x] `docs/architecture/sandbox/workspaces.html` uses
   `eos-isolated-workspace`.
-- [ ] `docs/architecture/tools/isolated-workspace.html` uses
+- [x] `docs/architecture/tools/isolated-workspace.html` uses
   `eos-isolated-workspace`.
-- [ ] Architecture docs distinguish fresh ephemeral overlays from shared direct
+- [x] Architecture docs distinguish fresh ephemeral overlays from shared direct
   workspace ops.
-- [ ] Focused unit tests cover isolated no-publish and ephemeral cleanup paths.
-- [ ] `cargo test -p eos-e2e-test -- --list` shows grouped module targets.
-- [ ] If `EOS_LIVE_E2E_IMAGE` is available, all targeted live checks in section
+- [x] Focused unit tests cover isolated no-publish and ephemeral cleanup paths.
+- [x] `cargo test -p eos-e2e-test -- --list` shows grouped module targets.
+- [x] If `EOS_LIVE_E2E_IMAGE` is available, all targeted live checks in section
   14.5 pass.
-- [ ] `git diff --check` passes.
+- [x] `git diff --check` passes.
 
 ---
 

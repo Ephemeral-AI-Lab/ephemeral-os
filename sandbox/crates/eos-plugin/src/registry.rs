@@ -169,14 +169,14 @@ mod tests {
 
     #[test]
     fn public_op_name_format() {
-        assert_eq!(public_op_name("lsp", "hover"), "plugin.lsp.hover");
+        assert_eq!(public_op_name("generic", "hover"), "plugin.generic.hover");
     }
 
     #[test]
     fn plugin_name_validation() {
-        assert!(is_valid_plugin_name("lsp"));
+        assert!(is_valid_plugin_name("generic"));
         assert!(is_valid_plugin_name("_x9"));
-        assert!(!is_valid_plugin_name("9lsp"));
+        assert!(!is_valid_plugin_name("9plugin"));
         assert!(!is_valid_plugin_name(""));
         assert!(!is_valid_plugin_name("ls-p"));
     }
@@ -184,21 +184,21 @@ mod tests {
     #[test]
     fn lifecycle_intent_rejected_at_registration() {
         assert!(matches!(
-            PluginOpRegistration::new("lsp", "hover", Intent::Lifecycle, true),
+            PluginOpRegistration::new("generic", "hover", Intent::Lifecycle, true),
             Err(PluginError::Registration(_))
         ));
-        assert!(PluginOpRegistration::new("lsp", "hover", Intent::ReadOnly, true).is_ok());
+        assert!(PluginOpRegistration::new("generic", "hover", Intent::ReadOnly, true).is_ok());
     }
 
     #[test]
     fn conflicting_handler_errors_idempotent_is_noop() -> TestResult {
         let mut reg = OpRegistry::new();
-        let a = PluginOpRegistration::new("lsp", "hover", Intent::ReadOnly, true)?;
+        let a = PluginOpRegistration::new("generic", "hover", Intent::ReadOnly, true)?;
         reg.register(a.clone())?;
         // identical re-registration is a no-op
         reg.register(a)?;
         // different intent for the same (plugin, op) conflicts
-        let b = PluginOpRegistration::new("lsp", "hover", Intent::WriteAllowed, true)?;
+        let b = PluginOpRegistration::new("generic", "hover", Intent::WriteAllowed, true)?;
         assert!(matches!(reg.register(b), Err(PluginError::Conflict(_))));
         Ok(())
     }
@@ -207,7 +207,7 @@ mod tests {
     fn flush_drains_only_the_named_plugin() -> TestResult {
         let mut reg = OpRegistry::new();
         reg.register(PluginOpRegistration::new(
-            "lsp",
+            "generic",
             "hover",
             Intent::ReadOnly,
             true,
@@ -218,8 +218,8 @@ mod tests {
             Intent::WriteAllowed,
             true,
         )?)?;
-        let flushed = reg.flush("lsp");
-        assert_eq!(flushed, vec!["plugin.lsp.hover".to_owned()]);
+        let flushed = reg.flush("generic");
+        assert_eq!(flushed, vec!["plugin.generic.hover".to_owned()]);
         assert_eq!(reg.pending(None).len(), 1);
         Ok(())
     }

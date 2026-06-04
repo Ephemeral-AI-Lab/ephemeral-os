@@ -1,13 +1,9 @@
 use std::collections::BTreeMap;
 use std::path::PathBuf;
-use std::time::Instant;
 
 use eos_protocol::Intent;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-
-use crate::capture::CapturedUpperdir;
-use crate::timings::EphemeralTimings;
 
 /// Agent identity supplied by the daemon for one fresh operation.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
@@ -63,17 +59,6 @@ pub struct EphemeralToolSpec {
     pub timeout_seconds: Option<f64>,
 }
 
-/// Command-session metadata needed by daemon response shaping after finalize.
-#[derive(Debug, Clone)]
-pub struct EphemeralCommandFinalizeSpec {
-    pub status: String,
-    pub exit_code: i64,
-    pub stdout: String,
-    pub include_session_id: bool,
-    pub command_session_id: Option<String>,
-    pub started_at: Instant,
-}
-
 /// Local path-kind classification for captured upperdir changes.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct PathChange {
@@ -89,15 +74,6 @@ pub enum PathChangeKind {
     Delete,
     Symlink,
     OpaqueDir,
-}
-
-/// Combined result of a fresh run and optional publish step.
-#[derive(Debug, Clone, PartialEq)]
-pub struct EphemeralRunOutcome {
-    pub runner: eos_runner::RunResult,
-    pub capture: Option<CapturedUpperdir>,
-    pub publish: Option<PublishOutcome>,
-    pub timings: EphemeralTimings,
 }
 
 /// Publisher response normalized away from daemon-specific OCC result types.
