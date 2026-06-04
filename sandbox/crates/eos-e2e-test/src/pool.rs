@@ -6,7 +6,6 @@
 //! daemon) is reused across leases until `recycle_after` checkouts bound scratch
 //! growth, then torn down.
 
-use std::process::Command;
 use std::sync::{Condvar, Mutex, MutexGuard, PoisonError};
 
 use anyhow::{bail, Result};
@@ -16,7 +15,7 @@ use serde_json::{json, Map, Value};
 use crate::audit::AuditTap;
 use crate::client::{error_kind, is_success, ProtocolClient};
 use crate::config::{Config, NodeMode};
-use crate::container::{DaemonContainer, E2E_ROOT_DIR};
+use crate::container::{reap_e2e_containers, DaemonContainer, E2E_ROOT_DIR};
 use crate::{next_invocation_id, unique_suffix};
 
 struct Node {
@@ -267,20 +266,5 @@ impl Drop for NodeLease<'_> {
 
 /// Remove stale `eos-e2e-*` containers left by prior runs (best effort).
 fn reap_stale_containers() {
-    let Ok(out) = Command::new("docker")
-        .args(["ps", "-aq", "--filter", "name=eos-e2e-"])
-        .output()
-    else {
-        return;
-    };
-    let ids: Vec<&str> = std::str::from_utf8(&out.stdout)
-        .unwrap_or("")
-        .split_whitespace()
-        .collect();
-    if ids.is_empty() {
-        return;
-    }
-    let mut argv = vec!["rm", "-f"];
-    argv.extend(ids);
-    let _ = Command::new("docker").args(&argv).output();
+    let _ = reap_e2e_containers();
 }

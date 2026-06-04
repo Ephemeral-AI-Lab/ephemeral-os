@@ -46,7 +46,7 @@ use crate::occ_writer::{
     occ_route_metrics,
 };
 #[cfg(target_os = "linux")]
-use crate::overlay_runner::{overlay_daemon_error, overlay_run_dirs};
+use crate::overlay_runner::{overlay_daemon_error, overlay_run_dirs, RunDirCleanup};
 use crate::response_timings::u64_to_f64_saturating;
 #[cfg(target_os = "linux")]
 use crate::response_timings::{
@@ -974,7 +974,7 @@ fn prepare_isolated_command_session(
         tool_call: ToolCall {
             invocation_id: spec.invocation_id.clone(),
             agent_id: handle.agent_id.clone(),
-            verb: "exec_command".to_owned(),
+            verb: "exec_command".into(),
             intent: Intent::WriteAllowed,
             args: json!({
                 "command": spec.command,
@@ -1010,6 +1010,7 @@ fn prepare_command_session(
         .map_err(|err| overlay_daemon_error("overlay writable root", &err))?
         .join("runtime");
     let dirs = overlay_run_dirs("sandbox-overlay", &spec.invocation_id)?;
+    let run_dir_cleanup = RunDirCleanup::new(dirs.run_dir.clone());
     let session_dir = runtime_root.join("command-sessions").join(&spec.id);
     std::fs::create_dir_all(&session_dir)?;
     let transcript_path = session_dir.join("transcript.log");
@@ -1032,7 +1033,7 @@ fn prepare_command_session(
         tool_call: ToolCall {
             invocation_id: spec.invocation_id.clone(),
             agent_id: spec.agent_id.clone(),
-            verb: "exec_command".to_owned(),
+            verb: "exec_command".into(),
             intent: Intent::WriteAllowed,
             args: json!({
                 "command": spec.command,
@@ -1059,7 +1060,11 @@ fn prepare_command_session(
         output_path,
         final_path,
     });
-    spawn_command_runner_session(spec, &request_path, transcript_path, workspace)
+    let session = spawn_command_runner_session(spec, &request_path, transcript_path, workspace);
+    if session.is_ok() {
+        run_dir_cleanup.disarm();
+    }
+    session
 }
 
 #[cfg(target_os = "linux")]

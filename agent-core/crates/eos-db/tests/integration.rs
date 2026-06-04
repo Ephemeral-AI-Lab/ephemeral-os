@@ -8,6 +8,7 @@ use eos_state::{
     IterationCreationReason, IterationStatus, JsonObject, RequestId, RequestStatus, Task, TaskId,
     TaskRole, TaskStatus, UtcDateTime, WorkflowStatus,
 };
+use sqlx::Row;
 
 async fn open_temp() -> (tempfile::TempDir, Database) {
     let dir = tempfile::tempdir().expect("tempdir");
@@ -16,6 +17,38 @@ async fn open_temp() -> (tempfile::TempDir, Database) {
     cfg.url = DatabaseUrl::parse(format!("sqlite://{}", path.display())).expect("url");
     let db = Database::open(&cfg).await.expect("open");
     (dir, db)
+}
+
+#[derive(Debug, PartialEq, Eq)]
+struct ColumnInfo {
+    name: String,
+    type_name: String,
+    default_value: Option<String>,
+    primary_key: i64,
+}
+
+async fn table_columns(db: &Database, table: &str) -> Vec<ColumnInfo> {
+    sqlx::query(&format!("PRAGMA table_info({table})"))
+        .fetch_all(db.pool())
+        .await
+        .expect("table_info")
+        .into_iter()
+        .map(|row| ColumnInfo {
+            name: row.get("name"),
+            type_name: row.get("type"),
+            default_value: row.get("dflt_value"),
+            primary_key: row.get("pk"),
+        })
+        .collect()
+}
+
+fn col(name: &str, type_name: &str, default_value: Option<&str>, primary_key: i64) -> ColumnInfo {
+    ColumnInfo {
+        name: name.to_owned(),
+        type_name: type_name.to_owned(),
+        default_value: default_value.map(ToOwned::to_owned),
+        primary_key,
+    }
 }
 
 fn rid(s: &str) -> RequestId {
@@ -406,6 +439,121 @@ async fn migrations_create_schema() {
         .await
         .expect("pragma fk");
     assert_eq!(fk, 1);
+
+    assert_eq!(
+        table_columns(&db, "requests").await,
+        vec![
+            col("id", "TEXT", None, 1),
+            col("cwd", "TEXT", None, 0),
+            col("sandbox_id", "TEXT", None, 0),
+            col("request_prompt", "TEXT", None, 0),
+            col("root_task_id", "TEXT", None, 0),
+            col("status", "TEXT", Some("'running'"), 0),
+            col("created_at", "TEXT", None, 0),
+            col("updated_at", "TEXT", None, 0),
+            col("finished_at", "TEXT", None, 0),
+        ]
+    );
+    assert_eq!(
+        table_columns(&db, "tasks").await,
+        vec![
+            col("id", "TEXT", None, 1),
+            col("request_id", "TEXT", None, 0),
+            col("role", "TEXT", None, 0),
+            col("instruction", "TEXT", None, 0),
+            col("status", "TEXT", None, 0),
+            col("workflow_id", "TEXT", None, 0),
+            col("iteration_id", "TEXT", None, 0),
+            col("attempt_id", "TEXT", None, 0),
+            col("agent_name", "TEXT", None, 0),
+            col("needs", "TEXT", Some("'[]'"), 0),
+            col("outcomes", "TEXT", Some("'[]'"), 0),
+            col("terminal_tool_result", "TEXT", None, 0),
+            col("created_at", "TEXT", None, 0),
+            col("updated_at", "TEXT", None, 0),
+        ]
+    );
+    assert_eq!(
+        table_columns(&db, "workflows").await,
+        vec![
+            col("id", "TEXT", None, 1),
+            col("request_id", "TEXT", None, 0),
+            col("parent_task_id", "TEXT", None, 0),
+            col("goal", "TEXT", None, 0),
+            col("status", "TEXT", None, 0),
+            col("iteration_ids", "TEXT", Some("'[]'"), 0),
+            col("outcomes", "TEXT", None, 0),
+            col("created_at", "TEXT", None, 0),
+            col("updated_at", "TEXT", None, 0),
+            col("closed_at", "TEXT", None, 0),
+        ]
+    );
+    assert_eq!(
+        table_columns(&db, "iterations").await,
+        vec![
+            col("id", "TEXT", None, 1),
+            col("workflow_id", "TEXT", None, 0),
+            col("sequence_no", "INTEGER", None, 0),
+            col("creation_reason", "TEXT", None, 0),
+            col("goal", "TEXT", None, 0),
+            col("attempt_budget", "INTEGER", None, 0),
+            col("status", "TEXT", None, 0),
+            col("attempt_ids", "TEXT", Some("'[]'"), 0),
+            col("deferred_goal", "TEXT", None, 0),
+            col("created_at", "TEXT", None, 0),
+            col("updated_at", "TEXT", None, 0),
+            col("closed_at", "TEXT", None, 0),
+            col("outcomes", "TEXT", None, 0),
+        ]
+    );
+    assert_eq!(
+        table_columns(&db, "attempts").await,
+        vec![
+            col("id", "TEXT", None, 1),
+            col("iteration_id", "TEXT", None, 0),
+            col("workflow_id", "TEXT", None, 0),
+            col("attempt_sequence_no", "INTEGER", None, 0),
+            col("stage", "TEXT", None, 0),
+            col("status", "TEXT", None, 0),
+            col("planner_task_id", "TEXT", None, 0),
+            col("generator_task_ids", "TEXT", Some("'[]'"), 0),
+            col("reducer_task_ids", "TEXT", Some("'[]'"), 0),
+            col("outcomes", "TEXT", Some("'[]'"), 0),
+            col("deferred_goal", "TEXT", None, 0),
+            col("fail_reason", "TEXT", None, 0),
+            col("created_at", "TEXT", None, 0),
+            col("updated_at", "TEXT", None, 0),
+            col("closed_at", "TEXT", None, 0),
+        ]
+    );
+    assert_eq!(
+        table_columns(&db, "agent_runs").await,
+        vec![
+            col("id", "TEXT", None, 1),
+            col("task_id", "TEXT", None, 0),
+            col("initial_messages", "TEXT", None, 0),
+            col("agent_name", "TEXT", None, 0),
+            col("message_history", "TEXT", None, 0),
+            col("terminal_tool_result", "TEXT", None, 0),
+            col("token_count", "INTEGER", Some("0"), 0),
+            col("error", "TEXT", None, 0),
+            col("created_at", "TEXT", None, 0),
+            col("finished_at", "TEXT", None, 0),
+        ]
+    );
+    assert_eq!(
+        table_columns(&db, "model_registrations").await,
+        vec![
+            col("id", "INTEGER", None, 1),
+            col("key", "TEXT", None, 0),
+            col("label", "TEXT", None, 0),
+            col("class_path", "TEXT", None, 0),
+            col("kwargs_json", "TEXT", Some("'{}'"), 0),
+            col("is_active", "INTEGER", Some("0"), 0),
+            col("created_at", "TEXT", None, 0),
+            col("updated_at", "TEXT", None, 0),
+        ]
+    );
 }
 
 // AC-eos-db-08: composition root yields working stores; deleting a request

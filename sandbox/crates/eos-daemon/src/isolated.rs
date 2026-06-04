@@ -232,7 +232,7 @@ impl NamespaceRuntimePort for DaemonNamespaceRuntime {
                 tool_call: ToolCall {
                     invocation_id: format!("isolated-mount-{}", handle.workspace_handle_id.0),
                     agent_id: handle.agent_id.0.clone(),
-                    verb: "setns_overlay_mount".to_owned(),
+                    verb: "setns_overlay_mount".into(),
                     intent: Intent::WriteAllowed,
                     args: json!({}),
                     background: false,
@@ -273,7 +273,7 @@ impl NamespaceRuntimePort for DaemonNamespaceRuntime {
                         handle.workspace_handle_id.0
                     ),
                     agent_id: handle.agent_id.0.clone(),
-                    verb: "configure_dns".to_owned(),
+                    verb: "configure_dns".into(),
                     intent: Intent::ReadOnly,
                     args: json!({"fallback_dns": fallback_dns}),
                     background: false,

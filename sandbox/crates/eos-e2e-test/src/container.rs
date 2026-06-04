@@ -58,6 +58,14 @@ impl DaemonContainer {
         if !config.keep_container {
             run.push("--rm".to_owned());
         }
+        // The isolated-workspace tier creates a per-workspace cgroup under
+        // /sys/fs/cgroup, which Docker mounts read-only under plain --cap-add
+        // (EROFS, e.g. on Docker Desktop). --privileged makes cgroup2 writable so
+        // the real ns-holder/veth/cgroup path runs. The harness is test-only and
+        // already requires SYS_ADMIN/NET_ADMIN + unconfined seccomp/apparmor, so
+        // this is an acceptable superset; the explicit caps below remain for
+        // documentation and hosts where privileged is unavailable.
+        run.push("--privileged".to_owned());
         if let Some(platform) = &config.platform {
             run.push("--platform".to_owned());
             run.push(platform.clone());
@@ -69,6 +77,24 @@ impl DaemonContainer {
         for opt in &config.security_opt {
             run.push("--security-opt".to_owned());
             run.push(opt.clone());
+        }
+        // Enable the isolated-workspace feature for the daemon (the
+        // `docker exec`-spawned eosd inherits the container env). Harmless for
+        // non-isolated tiers. The upperdir cap is lowered and the MemAvailable
+        // fraction raised so the host-RAM admission gate fits inside a
+        // memory-modest Docker VM (the default 1 GiB reservation would be
+        // refused); the real namespace/veth/cgroup path is otherwise unchanged.
+        let isolated_upperdir = format!(
+            "EOS_ISOLATED_WORKSPACE_UPPERDIR_BYTES={}",
+            config.isolated_upperdir_bytes
+        );
+        for env_kv in [
+            "EOS_ISOLATED_WORKSPACE_ENABLED=true",
+            isolated_upperdir.as_str(),
+            "EOS_ISOLATED_WORKSPACE_MEMAVAIL_FRACTION=0.9",
+        ] {
+            run.push("-e".to_owned());
+            run.push(env_kv.to_owned());
         }
         run.push("--tmpfs".to_owned());
         run.push(config.tmpfs.clone());
@@ -118,6 +144,12 @@ impl DaemonContainer {
     fn bringup(&self, config: &Config, token: &str) -> Result<ProtocolClient> {
         self.exec(&["mkdir", "-p", DAEMON_DIR, E2E_ROOT_DIR])
             .context("mkdir daemon dirs")?;
+        self.exec(&[
+            "sh",
+            "-lc",
+            "mount -o remount,rw /sys/fs/cgroup 2>/dev/null || true; test -w /sys/fs/cgroup",
+        ])
+        .context("make cgroup v2 writable for isolated-workspace tests")?;
         docker(&[
             "cp".to_owned(),
             config.eosd_path.to_string_lossy().into_owned(),
@@ -297,4 +329,45 @@ pub fn docker_available() -> bool {
         .output()
         .map(|out| out.status.success())
         .unwrap_or(false)
+}
+
+/// Remove all `eos-e2e-*` containers left by prior harness runs.
+///
+/// # Errors
+/// Returns an error if Docker is reachable but listing or removing containers
+/// fails.
+pub fn reap_e2e_containers() -> Result<usize> {
+    let out = Command::new("docker")
+        .args(["ps", "-aq", "--filter", "name=eos-e2e-"])
+        .output()
+        .context("list eos-e2e containers")?;
+    if !out.status.success() {
+        bail!(
+            "docker ps for eos-e2e containers failed ({}): {}",
+            out.status,
+            String::from_utf8_lossy(&out.stderr).trim()
+        );
+    }
+    let ids: Vec<&str> = std::str::from_utf8(&out.stdout)
+        .unwrap_or("")
+        .split_whitespace()
+        .collect();
+    if ids.is_empty() {
+        return Ok(0);
+    }
+    let mut argv = vec!["rm", "-f"];
+    argv.extend(ids.iter().copied());
+    let output = Command::new("docker")
+        .args(&argv)
+        .output()
+        .context("remove eos-e2e containers")?;
+    if !output.status.success() {
+        bail!(
+            "docker {} failed ({}): {}",
+            argv.join(" "),
+            output.status,
+            String::from_utf8_lossy(&output.stderr).trim()
+        );
+    }
+    Ok(ids.len())
 }

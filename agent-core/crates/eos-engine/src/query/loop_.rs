@@ -10,7 +10,7 @@ use eos_types::{JsonObject, ToolUseId};
 use futures::{Stream, StreamExt};
 
 use crate::events::{stamp_identity, StreamEvent};
-use crate::notifications::enqueue_notification_rules;
+use crate::notifications::{budget_figures, enqueue_notification_rules};
 use crate::query::{build_query_run_request, QueryContext, QueryExitReason};
 use crate::tool_call::{dispatch_assistant_tools, ToolUseRequest};
 use crate::EngineError;
@@ -30,10 +30,10 @@ pub fn terminal_submission_failed(ctx: &QueryContext) -> bool {
 }
 
 fn terminal_not_submitted_message(ctx: &QueryContext) -> String {
+    let (_used, limit, ceiling, _turns_remaining) = budget_figures(ctx);
     format!(
-        "The agent used {} tool calls/text-only turns without submitting a terminal tool. Submit one of the terminal tools to finish the run.",
-        ctx.tool_calls_used
-            .saturating_add(ctx.text_only_no_terminal_turns)
+        "Agent stopped: terminal tool not submitted. tool_calls_used={}, text_only_no_terminal_turns={}, tool_call_limit={}, hard_ceiling={}",
+        ctx.tool_calls_used, ctx.text_only_no_terminal_turns, limit, ceiling
     )
 }
 
@@ -350,9 +350,10 @@ mod tests {
             }
         }
         drop(stream);
-        assert!(failure
-            .expect("failure event")
-            .contains("without submitting a terminal tool"));
+        assert_eq!(
+            failure.expect("failure event"),
+            "Agent stopped: terminal tool not submitted. tool_calls_used=0, text_only_no_terminal_turns=3, tool_call_limit=2, hard_ceiling=3"
+        );
         assert_eq!(ctx.exit_reason, Some(QueryExitReason::TerminalNotSubmitted));
     }
 

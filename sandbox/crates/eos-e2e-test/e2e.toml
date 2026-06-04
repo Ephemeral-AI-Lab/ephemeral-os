@@ -32,6 +32,9 @@ base_build = 180
 keep_container   = false # skip teardown for inspection  [env EOS_E2E_KEEP_CONTAINER]
 audit_pull_limit = 2000
 
+[isolated]
+upperdir_bytes = 67108864 # daemon IWS cap inside Docker [env EOS_E2E_ISOLATED_UPPERDIR_BYTES]
+
 # Profiles override the tables above; select with EOS_E2E_PROFILE.
 [profile.laptop]
 sandboxes = 1

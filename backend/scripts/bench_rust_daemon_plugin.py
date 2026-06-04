@@ -6530,6 +6530,7 @@ async def configure_isolated_gate_environment(bench: DockerBench) -> dict[str, A
         "EOS_ISOLATED_WORKSPACE_SETUP_TIMEOUT_S": "30",
         "EOS_ISOLATED_WORKSPACE_EXIT_GRACE_S": "0.25",
         "EOS_ISOLATED_WORKSPACE_UPPERDIR_BYTES": str(64 * 1024 * 1024),
+        "EOS_ISOLATED_WORKSPACE_MEMAVAIL_FRACTION": "0.9",
     }
     script = ["set -e"]
     for key, value in values.items():

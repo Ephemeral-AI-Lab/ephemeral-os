@@ -88,7 +88,7 @@ fn run_plugin_overlay_once(
     lease: &Lease,
 ) -> Result<PluginOverlayRunOutcome, DaemonError> {
     let dirs = plugin_overlay_dirs(&spec.invocation_id)?;
-    let _cleanup = RunDirCleanup(dirs.run_dir.clone());
+    let _cleanup = RunDirCleanup::new(dirs.run_dir.clone());
     let request_path = dirs.run_dir.join("plugin-overlay-request.json");
     let result_path = dirs.run_dir.join("plugin-overlay-result.json");
     write_plugin_overlay_request(spec, args, binding, lease, &request_path, &result_path)?;

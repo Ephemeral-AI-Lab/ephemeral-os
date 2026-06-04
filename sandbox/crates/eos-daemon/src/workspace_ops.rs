@@ -420,7 +420,7 @@ fn run_overlay_read_tool(args: &Value, verb: &str) -> Result<Value, DaemonError>
     let lease_acquire_s = acquire_start.elapsed().as_secs_f64();
     let run_result: Result<RunResult, DaemonError> = (|| {
         let dirs = overlay_run_dirs("sandbox-overlay", &invocation_id)?;
-        let _cleanup = RunDirCleanup(dirs.run_dir.clone());
+        let _cleanup = RunDirCleanup::new(dirs.run_dir.clone());
         let request = RunRequest {
             mode: RunMode::FreshNs,
             tool_call: ToolCall {
@@ -489,7 +489,7 @@ fn run_isolated_read_tool(
         tool_call: ToolCall {
             invocation_id,
             agent_id: handle.agent_id.clone(),
-            verb: verb.to_owned(),
+            verb: verb.into(),
             intent: Intent::ReadOnly,
             args: args.clone(),
             background: false,

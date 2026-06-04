@@ -75,6 +75,8 @@ pub(crate) fn emit_dispatch_audit(request: &Request, response: &Value, dispatch_
     );
 
     emit_os_resource_audit(request, response);
+    emit_workspace_base_audit(request, response);
+    emit_commit_audit(request, response);
     emit_occ_audit(request, response);
     emit_auto_squash_audit(request, response);
     emit_workspace_lifecycle_audit(request, response, total_ms);
@@ -207,6 +209,59 @@ fn emit_workspace_lifecycle_audit(request: &Request, response: &Value, total_ms:
     );
 }
 
+fn emit_workspace_base_audit(request: &Request, response: &Value) {
+    let Some(total_ms) = timing_ms(response, "api.workspace_base.total_s") else {
+        return;
+    };
+    let event_type = match request.op.as_str() {
+        "api.ensure_workspace_base" => "workspace_base.ensured",
+        "api.build_workspace_base" => "workspace_base.built",
+        _ => return,
+    };
+    let manifest_version = response
+        .get("binding")
+        .and_then(|binding| binding.get("active_manifest_version"))
+        .and_then(Value::as_i64);
+    let active = active_manifest_stats(request, manifest_version);
+    emit_section(
+        event_type,
+        "layer_stack",
+        &LayerStackSection {
+            operation_id: Some(request.invocation_id.clone()),
+            manifest_version,
+            manifest_root_hash: active.as_ref().map(|stats| stats.root_hash.clone()),
+            layer_count: active.map(|stats| stats.depth),
+            total_ms: Some(total_ms),
+            ..LayerStackSection::default()
+        },
+        Lane::Normal,
+    );
+}
+
+fn emit_commit_audit(request: &Request, response: &Value) {
+    let Some(total_ms) = timing_ms(response, "api.commit_to_workspace.total_s") else {
+        return;
+    };
+    if request.op != "api.commit_to_workspace" {
+        return;
+    }
+    let manifest_version = response.get("manifest_version").and_then(Value::as_i64);
+    let active = active_manifest_stats(request, manifest_version);
+    emit_section(
+        "layer_stack.commit_completed",
+        "layer_stack",
+        &LayerStackSection {
+            operation_id: Some(request.invocation_id.clone()),
+            manifest_version,
+            manifest_root_hash: active.as_ref().map(|stats| stats.root_hash.clone()),
+            layer_count: active.map(|stats| stats.depth),
+            total_ms: Some(total_ms),
+            ..LayerStackSection::default()
+        },
+        Lane::Normal,
+    );
+}
+
 pub(crate) fn emit_auto_squash_audit(request: &Request, response: &Value) {
     let Some(input_layers) = timing_i64(response, "layer_stack.auto_squash.depth_before") else {
         return;
@@ -263,6 +318,18 @@ pub(crate) fn emit_auto_squash_audit(request: &Request, response: &Value) {
 }
 
 fn active_manifest_root_hash(request: &Request, expected_version: Option<i64>) -> Option<String> {
+    active_manifest_stats(request, expected_version).map(|stats| stats.root_hash)
+}
+
+struct ActiveManifestStats {
+    root_hash: String,
+    depth: i64,
+}
+
+fn active_manifest_stats(
+    request: &Request,
+    expected_version: Option<i64>,
+) -> Option<ActiveManifestStats> {
     let expected_version = expected_version?;
     let root = request
         .args
@@ -272,7 +339,10 @@ fn active_manifest_root_hash(request: &Request, expected_version: Option<i64>) -
         .ok()?
         .read_active_manifest()
         .ok()?;
-    (manifest.version == expected_version).then(|| manifest_root_hash(&manifest))
+    (manifest.version == expected_version).then(|| ActiveManifestStats {
+        root_hash: manifest_root_hash(&manifest),
+        depth: usize_to_i64_saturating(manifest.depth()),
+    })
 }
 
 fn emit_background_audit(request: &Request, response: &Value, total_ms: f64) {
@@ -529,6 +599,82 @@ mod tests {
                 .unwrap_or(-1.0)
                 >= 0.0
         );
+        Ok(())
+    }
+
+    #[test]
+    fn dispatch_audit_emits_workspace_base_events() -> TestResult {
+        let suffix = unique_suffix();
+        let request = Request {
+            op: "api.ensure_workspace_base".to_owned(),
+            invocation_id: format!("workspace-base-{suffix}"),
+            args: json!({"layer_stack_root": "/missing/eos-e2e-root"}),
+        };
+        let response = json!({
+            "success": true,
+            "binding": {
+                "active_manifest_version": 1
+            },
+            "timings": {
+                "api.workspace_base.total_s": 0.012
+            }
+        });
+        let after_seq = audit_after_seq()?;
+
+        emit_dispatch_audit(&request, &response, 0.001);
+
+        let events = events_after(after_seq)?;
+        let event = events
+            .iter()
+            .find(|event| {
+                event["type"].as_str() == Some("workspace_base.ensured")
+                    && event["payload"]["layer_stack"]["operation_id"].as_str()
+                        == Some(request.invocation_id.as_str())
+            })
+            .ok_or("workspace_base.ensured event")?;
+        assert_eq!(event["lane"], json!("normal"));
+        assert_eq!(
+            event["payload"]["layer_stack"]["manifest_version"],
+            json!(1)
+        );
+        assert_eq!(event["payload"]["layer_stack"]["total_ms"], json!(12.0));
+        Ok(())
+    }
+
+    #[test]
+    fn dispatch_audit_emits_commit_completed() -> TestResult {
+        let suffix = unique_suffix();
+        let request = Request {
+            op: "api.commit_to_workspace".to_owned(),
+            invocation_id: format!("commit-{suffix}"),
+            args: json!({"layer_stack_root": "/missing/eos-e2e-root"}),
+        };
+        let response = json!({
+            "success": true,
+            "manifest_version": 3,
+            "timings": {
+                "api.commit_to_workspace.total_s": 0.034
+            }
+        });
+        let after_seq = audit_after_seq()?;
+
+        emit_dispatch_audit(&request, &response, 0.001);
+
+        let events = events_after(after_seq)?;
+        let event = events
+            .iter()
+            .find(|event| {
+                event["type"].as_str() == Some("layer_stack.commit_completed")
+                    && event["payload"]["layer_stack"]["operation_id"].as_str()
+                        == Some(request.invocation_id.as_str())
+            })
+            .ok_or("layer_stack.commit_completed event")?;
+        assert_eq!(event["lane"], json!("normal"));
+        assert_eq!(
+            event["payload"]["layer_stack"]["manifest_version"],
+            json!(3)
+        );
+        assert_eq!(event["payload"]["layer_stack"]["total_ms"], json!(34.0));
         Ok(())
     }
 

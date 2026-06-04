@@ -12,11 +12,24 @@ use eos_runner::{RunRequest, RunResult};
 use crate::error::DaemonError;
 use crate::invocation_registry::InFlightRegistry;
 
-pub(crate) struct RunDirCleanup(pub(crate) PathBuf);
+pub(crate) struct RunDirCleanup(Option<PathBuf>);
+
+impl RunDirCleanup {
+    pub(crate) fn new(path: PathBuf) -> Self {
+        Self(Some(path))
+    }
+
+    #[cfg_attr(not(target_os = "linux"), allow(dead_code))]
+    pub(crate) fn disarm(mut self) {
+        self.0 = None;
+    }
+}
 
 impl Drop for RunDirCleanup {
     fn drop(&mut self) {
-        let _ = std::fs::remove_dir_all(&self.0);
+        if let Some(path) = self.0.take() {
+            let _ = std::fs::remove_dir_all(path);
+        }
     }
 }
 

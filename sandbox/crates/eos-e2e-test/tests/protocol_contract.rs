@@ -4,13 +4,15 @@
 //! unknown op, malformed frame, oversized request, and TCP auth. All four are
 //! observed as structured error envelopes (`success:false` + `error.kind`).
 
+use std::sync::Arc;
+
 use anyhow::{Context, Result};
 use eos_e2e_test::client::error_kind;
 use eos_e2e_test::{live_pool, NodePool};
 use eos_protocol::{ops, MAX_REQUEST_BYTES};
 use serde_json::json;
 
-fn live_pool_or_skip() -> Result<Option<NodePool>> {
+fn live_pool_or_skip() -> Result<Option<Arc<NodePool>>> {
     let Some(pool) = live_pool()? else {
         eprintln!("skipping live eos-e2e-test; enable with `--features e2e`");
         return Ok(None);
@@ -80,7 +82,9 @@ fn unauthorized_tcp_rejected() -> Result<()> {
     };
     let lease = pool.acquire()?;
 
-    let wrong = lease.client().with_token(Some("definitely-wrong-token".to_owned()));
+    let wrong = lease
+        .client()
+        .with_token(Some("definitely-wrong-token".to_owned()));
     let resp = wrong
         .request(ops::API_V1_HEARTBEAT, "contract-bad-auth", &json!({}))
         .context("heartbeat with wrong token")?;
@@ -98,6 +102,32 @@ fn unauthorized_tcp_rejected() -> Result<()> {
         error_kind(&resp),
         Some("unauthorized"),
         "a missing auth token must surface Unauthorized: {resp}"
+    );
+    Ok(())
+}
+
+#[test]
+fn forbidden_in_isolated_workspace_rejected() -> Result<()> {
+    let Some(pool) = live_pool_or_skip()? else {
+        return Ok(());
+    };
+    let lease = pool.acquire()?;
+
+    let entered = lease.call(ops::API_ISOLATED_WORKSPACE_ENTER, json!({}))?;
+    assert!(
+        eos_e2e_test::client::is_success(&entered),
+        "isolated enter must succeed before checking plugin isolation gate: {entered}"
+    );
+
+    let blocked = lease.call("plugin.lsp.not_loaded_yet", json!({}))?;
+    let _ = lease.call(
+        ops::API_ISOLATED_WORKSPACE_EXIT,
+        json!({"force_cancel": true}),
+    );
+    assert_eq!(
+        error_kind(&blocked),
+        Some("forbidden_in_isolated_workspace"),
+        "plugin-family ops must be blocked while isolated mode is active: {blocked}"
     );
     Ok(())
 }

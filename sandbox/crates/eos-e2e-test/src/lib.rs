@@ -5,6 +5,7 @@
 //! `eos-protocol` over the live daemon wire.
 
 use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use anyhow::Result;
@@ -46,7 +47,34 @@ pub fn next_invocation_id() -> String {
 /// Returns an error when live execution is requested but the environment cannot
 /// start Docker containers or locate the configured `eosd` binary.
 #[cfg(feature = "e2e")]
-pub fn live_pool() -> Result<Option<NodePool>> {
+pub fn live_pool() -> Result<Option<Arc<NodePool>>> {
+    use std::sync::OnceLock;
+
+    static POOL: OnceLock<Result<Arc<NodePool>, String>> = OnceLock::new();
+    match POOL.get_or_init(load_live_pool) {
+        Ok(pool) => Ok(Some(Arc::clone(pool))),
+        Err(err) => anyhow::bail!("{err}"),
+    }
+}
+
+/// Return no live pool unless the `e2e` feature is enabled.
+///
+/// # Errors
+/// This non-live path does not fail.
+#[cfg(not(feature = "e2e"))]
+pub fn live_pool() -> Result<Option<Arc<NodePool>>> {
+    Ok(None)
+}
+
+#[cfg(feature = "e2e")]
+fn load_live_pool() -> Result<Arc<NodePool>, String> {
+    try_load_live_pool()
+        .map(Arc::new)
+        .map_err(|err| format!("{err:#}"))
+}
+
+#[cfg(feature = "e2e")]
+fn try_load_live_pool() -> Result<NodePool> {
     let config = config::Config::load()?;
     if !container::docker_available() {
         anyhow::bail!("docker is required for eos-e2e-test --features e2e");
@@ -57,14 +85,5 @@ pub fn live_pool() -> Result<Option<NodePool>> {
             config.eosd_path.display()
         );
     }
-    Ok(Some(NodePool::new(config)))
-}
-
-/// Return no live pool unless the `e2e` feature is enabled.
-///
-/// # Errors
-/// This non-live path does not fail.
-#[cfg(not(feature = "e2e"))]
-pub fn live_pool() -> Result<Option<NodePool>> {
-    Ok(None)
+    Ok(NodePool::new(config))
 }

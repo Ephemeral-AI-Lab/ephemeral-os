@@ -69,6 +69,8 @@ pub struct Config {
     pub keep_container: bool,
     /// `limit` passed to `api.audit.pull`.
     pub audit_pull_limit: u64,
+    /// `EOS_ISOLATED_WORKSPACE_UPPERDIR_BYTES` passed into the daemon container.
+    pub isolated_upperdir_bytes: u64,
 }
 
 #[derive(Debug, Default, Deserialize)]
@@ -77,6 +79,7 @@ struct FileConfig {
     concurrency: Option<ConcurrencyCfg>,
     timeouts: Option<TimeoutsCfg>,
     run: Option<RunCfg>,
+    isolated: Option<IsolatedCfg>,
     profile: Option<BTreeMap<String, ProfileCfg>>,
 }
 
@@ -112,6 +115,11 @@ struct RunCfg {
 }
 
 #[derive(Debug, Default, Deserialize)]
+struct IsolatedCfg {
+    upperdir_bytes: Option<u64>,
+}
+
+#[derive(Debug, Default, Deserialize)]
 struct ProfileCfg {
     sandboxes: Option<usize>,
     mode: Option<String>,
@@ -130,6 +138,7 @@ impl Config {
         let concurrency = file.concurrency.unwrap_or_default();
         let timeouts = file.timeouts.unwrap_or_default();
         let run = file.run.unwrap_or_default();
+        let isolated = file.isolated.unwrap_or_default();
         let profile = select_profile(file.profile.as_ref());
 
         // `EOS_LIVE_E2E_IMAGE` is the shared live-e2e convention (also read by the
@@ -186,6 +195,9 @@ impl Config {
                 .or(run.keep_container)
                 .unwrap_or(false),
             audit_pull_limit: run.audit_pull_limit.unwrap_or(2000),
+            isolated_upperdir_bytes: env_parse_u64("EOS_E2E_ISOLATED_UPPERDIR_BYTES")?
+                .or(isolated.upperdir_bytes)
+                .unwrap_or(64 * 1024 * 1024),
         })
     }
 }
@@ -238,6 +250,16 @@ fn env_parse(key: &str) -> Result<Option<usize>> {
     match env_str(key) {
         Some(value) => value
             .parse::<usize>()
+            .map(Some)
+            .with_context(|| format!("{key} must be a positive integer, got {value:?}")),
+        None => Ok(None),
+    }
+}
+
+fn env_parse_u64(key: &str) -> Result<Option<u64>> {
+    match env_str(key) {
+        Some(value) => value
+            .parse::<u64>()
             .map(Some)
             .with_context(|| format!("{key} must be a positive integer, got {value:?}")),
         None => Ok(None),

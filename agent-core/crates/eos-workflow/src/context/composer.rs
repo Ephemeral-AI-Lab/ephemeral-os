@@ -2,7 +2,7 @@ use std::fs;
 use std::sync::Arc;
 
 use eos_agent_def::{AgentDefinition, AgentName, AgentRegistry};
-use eos_tools::{descriptor, TerminalTool, ToolName};
+use eos_tools::{render_tool_instruction, ToolInstructions, ToolName};
 
 use crate::{Result, WorkflowError};
 
@@ -160,27 +160,61 @@ fn strip_frontmatter(raw: &str) -> &str {
 }
 
 fn terminal_selection_block(agent_def: &AgentDefinition) -> Option<String> {
-    let mut rows = Vec::new();
+    let mut terminals = Vec::new();
     for terminal in &agent_def.terminals {
         let Ok(name) = terminal.parse::<ToolName>() else {
             continue;
         };
-        let Some(term) = TerminalTool::from_tool_name(name) else {
-            continue;
-        };
-        let desc = descriptor(term);
-        rows.push(format!(
-            "- {}: {}",
-            desc.name.as_str(),
-            desc.selection_guidance
-        ));
+        terminals.push(name);
     }
-    if rows.is_empty() {
+    if terminals.is_empty() {
         None
     } else {
+        let catalog = render_tool_instruction(&terminals, ToolInstructions::SelectionGuidance);
         Some(format!(
-            "<terminal_tool_selection>\nPick exactly one based on outcome:\n\n{}\n</terminal_tool_selection>",
-            rows.join("\n")
+            "<terminal_tool_selection>\n{catalog}\n</terminal_tool_selection>"
         ))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::num::NonZeroU32;
+
+    use eos_agent_def::{AgentName, AgentRole, AgentType};
+
+    use super::*;
+
+    fn agent_def(terminals: Vec<&str>) -> AgentDefinition {
+        AgentDefinition {
+            name: AgentName::new("coder").expect("agent name"),
+            description: "coder".to_owned(),
+            system_prompt: None,
+            model: None,
+            tool_call_limit: NonZeroU32::new(8).expect("nonzero"),
+            role: AgentRole::Generator,
+            agent_type: AgentType::Agent,
+            allowed_tools: Vec::new(),
+            terminals: terminals.into_iter().map(ToOwned::to_owned).collect(),
+            notification_triggers: Vec::new(),
+            skill: None,
+            context_recipe: Some("generator".to_owned()),
+        }
+    }
+
+    #[test]
+    fn terminal_selection_uses_terminal_catalog_format() {
+        let terminal = ToolName::SubmitGeneratorOutcome;
+        let expected_catalog =
+            render_tool_instruction(&[terminal], ToolInstructions::SelectionGuidance);
+
+        let block =
+            terminal_selection_block(&agent_def(vec![terminal.as_str()])).expect("terminal block");
+
+        assert_eq!(
+            block,
+            format!("<terminal_tool_selection>\n{expected_catalog}\n</terminal_tool_selection>")
+        );
+        assert!(!block.contains("Pick exactly one"));
     }
 }
