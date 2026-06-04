@@ -30,6 +30,9 @@ use rustix::mount::{
 
 use crate::error::{OverlayError, Result};
 
+#[cfg(target_os = "linux")]
+const MAX_UNMOUNT_PEELS: usize = 64;
+
 /// The inputs for one overlay mount.
 ///
 /// `layer_paths` is the leased lower stack in NEWEST-FIRST order (element 0 =
@@ -66,20 +69,9 @@ impl OverlayMount {
 
 impl Drop for OverlayMount {
     fn drop(&mut self) {
-        // Best-effort: peel every stacked mount at `workspace_root`. A Drop impl
-        // cannot return an error, so failures are swallowed (matching the Python
-        // non-raising default).
+        // Best-effort cleanup; Drop cannot report cleanup errors.
         #[cfg(target_os = "linux")]
-        {
-            for _ in 0..64 {
-                if !is_mountpoint(&self.workspace_root) {
-                    return;
-                }
-                if unmount(&self.workspace_root, UnmountFlags::empty()).is_err() {
-                    return;
-                }
-            }
-        }
+        let _ = peel_unmounts(&self.workspace_root, false);
     }
 }
 
@@ -131,24 +123,20 @@ pub fn mount_overlay(workspace_root: &Path, handle: &OverlayHandle) -> Result<Ov
     })
 }
 
-/// Unmount the current overlay at `workspace_root`.
+/// Unmount every overlay stacked at `workspace_root`.
 ///
-/// `lazy=true` maps to `MNT_DETACH`, matching the Python LSP remount helper.
-/// This is required for long-lived services whose process may keep its cwd or
-/// open descriptors under the old mount while future absolute path lookups
-/// should resolve through a freshly mounted snapshot.
+/// A single `umount` peels only the top mount. This helper mirrors Python's
+/// teardown contract by looping until `workspace_root` is no longer a
+/// mountpoint. If a normal unmount fails, it falls back to `MNT_DETACH` so
+/// long-lived services with open descriptors can be refreshed safely.
 ///
 /// # Errors
 ///
-/// Returns [`OverlayError::MountSyscall`] when `umount(2)` fails.
+/// Returns [`OverlayError::MountSyscall`] when the mountpoint cannot be
+/// detached.
 #[cfg(target_os = "linux")]
-pub fn unmount_overlay(workspace_root: &Path, lazy: bool) -> Result<()> {
-    let flags = if lazy {
-        UnmountFlags::DETACH
-    } else {
-        UnmountFlags::empty()
-    };
-    unmount(workspace_root, flags).map_mount_syscall("umount workspace_root")
+pub fn unmount_overlay(workspace_root: &Path) -> Result<()> {
+    peel_unmounts(workspace_root, true)
 }
 
 /// Non-Linux unsupported path: overlayfs unmount syscalls do not exist off Linux.
@@ -157,7 +145,7 @@ pub fn unmount_overlay(workspace_root: &Path, lazy: bool) -> Result<()> {
 ///
 /// Always returns [`OverlayError::Unsupported`].
 #[cfg(not(target_os = "linux"))]
-pub const fn unmount_overlay(_workspace_root: &Path, _lazy: bool) -> Result<()> {
+pub const fn unmount_overlay(_workspace_root: &Path) -> Result<()> {
     Err(OverlayError::Unsupported)
 }
 
@@ -276,6 +264,36 @@ fn open_dir_no_follow(path: &Path) -> Result<File> {
 #[cfg(target_os = "linux")]
 fn fd_path(file: &File) -> PathBuf {
     PathBuf::from(format!("/proc/self/fd/{}", file.as_raw_fd()))
+}
+
+#[cfg(target_os = "linux")]
+fn peel_unmounts(workspace_root: &Path, allow_lazy_fallback: bool) -> Result<()> {
+    for _ in 0..MAX_UNMOUNT_PEELS {
+        if !is_mountpoint(workspace_root) {
+            return Ok(());
+        }
+        if let Err(err) = unmount(workspace_root, UnmountFlags::empty()) {
+            if allow_lazy_fallback {
+                unmount(workspace_root, UnmountFlags::DETACH)
+                    .map_mount_syscall("lazy umount workspace_root")?;
+                continue;
+            }
+            return Err(OverlayError::MountSyscall {
+                context: "umount workspace_root",
+                source: std::io::Error::from(err),
+            });
+        }
+    }
+    if is_mountpoint(workspace_root) {
+        return Err(OverlayError::MountSyscall {
+            context: "umount workspace_root",
+            source: std::io::Error::other(format!(
+                "workspace root is still mounted after {MAX_UNMOUNT_PEELS} unmount attempts: {}",
+                workspace_root.display()
+            )),
+        });
+    }
+    Ok(())
 }
 
 #[cfg(target_os = "linux")]

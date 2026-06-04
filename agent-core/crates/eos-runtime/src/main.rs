@@ -36,6 +36,10 @@ fn main() -> anyhow::Result<()> {
 /// Python backend.
 const DEFAULT_AGENTS_DIR: &str = ".eos-agents/profile";
 
+/// Repo-relative externalized tool-config tree (`.eos-agents/tools/*.md`), the
+/// default source for the shipped binary. `EOS_TOOLS_DIR` overrides it.
+const DEFAULT_TOOLS_DIR: &str = ".eos-agents/tools";
+
 /// Build the application state, seeding the agent registry so `root` resolves
 /// (`request_completion` NF1 — the binary otherwise ships with an empty registry
 /// and fails every request at root resolution).
@@ -56,5 +60,10 @@ async fn build_app_state() -> anyhow::Result<AppState> {
             .agents_dir(DEFAULT_AGENTS_DIR)
             .compatibility_mode(true);
     }
+    // The tool config is mandatory (the registry needs every tool). `EOS_TOOLS_DIR`
+    // overrides; otherwise use the repo-relative bundled tree (resolves when run
+    // from the repo root). A missing/invalid tree fails the build loudly.
+    let tools_dir = std::env::var("EOS_TOOLS_DIR").unwrap_or_else(|_| DEFAULT_TOOLS_DIR.to_owned());
+    builder = builder.tools_root(tools_dir);
     builder.build().await
 }

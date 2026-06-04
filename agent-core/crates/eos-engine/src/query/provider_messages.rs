@@ -36,14 +36,7 @@ fn message_tool_result_ids(message: &Message) -> BTreeSet<ToolUseId> {
         .collect()
 }
 
-fn remove_tool_uses_from_message(
-    messages: &mut [Message],
-    message_index: Option<usize>,
-    tool_use_ids: &BTreeSet<ToolUseId>,
-) {
-    let Some(message) = message_index.and_then(|index| messages.get_mut(index)) else {
-        return;
-    };
+fn remove_tool_uses(message: &mut Message, tool_use_ids: &BTreeSet<ToolUseId>) {
     if tool_use_ids.is_empty() {
         return;
     }
@@ -74,9 +67,7 @@ fn drop_unmatched_tool_blocks(messages: &mut [Message]) {
 
         if !pending_tool_use_ids.is_empty() {
             let current_message_matches = messages[message_index].role == MessageRole::User
-                && pending_tool_use_ids
-                    .iter()
-                    .all(|tool_use_id| tool_result_ids.contains(tool_use_id));
+                && pending_tool_use_ids.is_subset(&tool_result_ids);
 
             if current_message_matches {
                 let unmatched_result_ids = tool_result_ids
@@ -86,14 +77,11 @@ fn drop_unmatched_tool_blocks(messages: &mut [Message]) {
                 remove_tool_results(&mut messages[message_index], &unmatched_result_ids);
                 pending_tool_use_ids.clear();
                 pending_message_index = None;
-                tool_result_ids = message_tool_result_ids(&messages[message_index]);
                 matched_pending_tool_uses = true;
             } else {
-                remove_tool_uses_from_message(
-                    messages,
-                    pending_message_index,
-                    &pending_tool_use_ids,
-                );
+                if let Some(index) = pending_message_index {
+                    remove_tool_uses(&mut messages[index], &pending_tool_use_ids);
+                }
                 pending_tool_use_ids.clear();
                 pending_message_index = None;
                 tool_result_ids = message_tool_result_ids(&messages[message_index]);
@@ -114,7 +102,9 @@ fn drop_unmatched_tool_blocks(messages: &mut [Message]) {
     }
 
     if !pending_tool_use_ids.is_empty() {
-        remove_tool_uses_from_message(messages, pending_message_index, &pending_tool_use_ids);
+        if let Some(index) = pending_message_index {
+            remove_tool_uses(&mut messages[index], &pending_tool_use_ids);
+        }
     }
 }
 

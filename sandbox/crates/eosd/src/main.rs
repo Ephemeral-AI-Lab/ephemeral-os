@@ -490,7 +490,7 @@ fn remount_overlay_from_request(request: &eos_runner::RunRequest) -> Result<()> 
         workdir,
         layer_paths: request.layer_paths.clone(),
     };
-    eos_overlay::unmount_overlay(&request.workspace_root.0, true)
+    eos_overlay::unmount_overlay(&request.workspace_root.0)
         .context("failed to unmount old workspace overlay")?;
     let mount = eos_overlay::mount_overlay(&request.workspace_root.0, &handle)
         .context("failed to mount refreshed workspace overlay")?;

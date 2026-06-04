@@ -789,6 +789,13 @@ pub(crate) mod test_seams {
     /// Build a fully-wired test `AppState` over a temp `SQLite` db, a fake
     /// provisioner, the given agent registry, and an optional event-source
     /// factory. Returns the state and the owning temp dir (keep it alive).
+    /// The repo's `.eos-agents/tools` tree, resolved relative to this crate's
+    /// manifest so the (mandatory) tool-config build path has a real source in
+    /// tests without depending on the process working directory.
+    pub(crate) fn test_tools_root() -> std::path::PathBuf {
+        std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../.eos-agents/tools")
+    }
+
     pub(crate) async fn build_test_state(
         factory: Option<EventSourceFactory>,
         agents: Vec<AgentDefinition>,
@@ -801,6 +808,7 @@ pub(crate) mod test_seams {
         let mut builder = super::AppState::builder()
             .database_url(url)
             .cwd(dir.path().display().to_string())
+            .tools_root(test_tools_root())
             .provisioner(Arc::new(FakeProvisioner {
                 id: "sb-test".to_owned(),
             }))

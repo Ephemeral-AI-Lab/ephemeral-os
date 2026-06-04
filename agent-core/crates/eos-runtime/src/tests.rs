@@ -15,7 +15,7 @@ use serde_json::json;
 
 use crate::app_state::test_seams::{
     agent_def, build_test_state, factory_by_agent, factory_from, factory_root_blocks_after,
-    tool_use_turn, BlockingSource,
+    test_tools_root, tool_use_turn, BlockingSource,
 };
 use crate::app_state::EventSourceFactory;
 use crate::{start_request, AppState};
@@ -73,6 +73,7 @@ async fn builder_constructs_all_stores_and_seams() {
 async fn network_database_url_fails_fast() {
     let result = AppState::builder()
         .database_url("postgres://localhost/db")
+        .tools_root(test_tools_root())
         .build()
         .await;
     assert!(result.is_err(), "a network db url must fail fast");
@@ -85,6 +86,7 @@ async fn missing_model_registry_does_not_fail_startup() {
     let dir = tempfile::tempdir().unwrap();
     let state = AppState::builder()
         .database_url(sqlite_url(dir.path()))
+        .tools_root(test_tools_root())
         .model_registry_path(dir.path().join("does-not-exist.json"))
         .build()
         .await;
@@ -109,6 +111,7 @@ async fn unknown_profile_tool_fails_startup() {
     let registry: AgentRegistry = vec![bad.clone()].into_iter().collect();
     let result = AppState::builder()
         .database_url(sqlite_url(dir.path()))
+        .tools_root(test_tools_root())
         .agent_registry(Arc::new(registry))
         .build()
         .await;
@@ -117,6 +120,7 @@ async fn unknown_profile_tool_fails_startup() {
     let registry: AgentRegistry = vec![bad].into_iter().collect();
     let ok = AppState::builder()
         .database_url(sqlite_url(dir.path()))
+        .tools_root(test_tools_root())
         .agent_registry(Arc::new(registry))
         .compatibility_mode(true)
         .build()
@@ -148,6 +152,7 @@ async fn agents_dir_seeds_registry_so_root_resolves() {
 
     let state = AppState::builder()
         .database_url(sqlite_url(dir.path()))
+        .tools_root(test_tools_root())
         .agents_dir(profiles)
         .build()
         .await
@@ -923,6 +928,7 @@ mod command_session_delivery {
         let state = AppState::builder()
             .database_url(url)
             .cwd(dir.path().display().to_string())
+            .tools_root(crate::app_state::test_seams::test_tools_root())
             .provisioner(Arc::new(FakeProvisioner {
                 id: "sb-test".to_owned(),
             }))
