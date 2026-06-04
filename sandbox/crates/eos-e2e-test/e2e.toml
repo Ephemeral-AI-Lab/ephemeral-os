@@ -1,0 +1,42 @@
+# eos-e2e-test topology / environment config (source of truth).
+#
+# Loaded by src/config.rs at harness startup, located via CARGO_MANIFEST_DIR or
+# the EOS_E2E_CONFIG env var. EVERY field is overridable by an EOS_E2E_* env var.
+# Precedence: env > selected [profile.*] > [default tables below] > built-in.
+#
+# Provider is docker-only. Default image is the dask SWE image; it is x86_64, so
+# on an arm64 host it runs under emulation (namespace/overlay syscalls still hit
+# the real container kernel) and `platform` pins linux/amd64 to match the eosd
+# binary arch.
+
+[docker]
+image        = "sweevo-dask__dask-10042:latest" # testing image  [env EOS_E2E_IMAGE]
+platform     = "linux/amd64"                    # match eosd arch [env EOS_E2E_PLATFORM]
+eosd         = "dist/eosd-linux-amd64"          # host binary to docker cp [env EOS_E2E_EOSD]
+cap_add      = ["SYS_ADMIN", "NET_ADMIN"]
+security_opt = ["seccomp=unconfined", "apparmor=unconfined"]
+tmpfs        = "/eos:rw,exec,size=2g,mode=1777" # overlay upper/work scratch
+tcp_port     = 37657                            # daemon TCP port inside container
+
+[concurrency]
+sandboxes     = 2        # concurrent sandboxes (node-pool cap)  [env EOS_E2E_SANDBOXES]
+mode          = "pool"   # shared | pool | per-file | per-test   [env EOS_E2E_NODE_MODE]
+recycle_after = 50       # recycle a node after K checkouts (bound scratch growth)
+
+[timeouts]               # seconds
+ready      = 60
+request    = 30
+base_build = 180
+
+[run]
+keep_container   = false # skip teardown for inspection  [env EOS_E2E_KEEP_CONTAINER]
+audit_pull_limit = 2000
+
+# Profiles override the tables above; select with EOS_E2E_PROFILE.
+[profile.laptop]
+sandboxes = 1
+mode      = "shared"
+
+[profile.ci]
+sandboxes = 8
+mode      = "pool"

@@ -18,7 +18,7 @@ use eos_llm_client::{Auth, LlmClient, LlmRequest, LlmStream, ProviderError};
 use eos_sandbox_api::SandboxTransport;
 use eos_sandbox_host::{
     resolve_provider_kind, DaemonClient, DockerProviderAdapter, ProviderRegistry,
-    RequestSandboxBinding, RequestSandboxProvisioner, SandboxLifecycle, DEFAULT_LAYER_STACK_ROOT,
+    RequestSandboxBinding, RequestSandboxProvisioner, SandboxLifecycle,
 };
 use eos_skills::{load_skill_registry, SkillRegistry};
 use eos_state::{
@@ -416,12 +416,10 @@ impl AppStateBuilder {
         let daemon_client = Arc::new(DaemonClient::new(provider_registry));
         let transport: Arc<dyn SandboxTransport> =
             self.transport.unwrap_or_else(|| daemon_client.clone());
+        let eosd_artifact_dir = default_eosd_artifact_dir(&repo_root);
 
         let provisioner: Arc<dyn RequestProvisioner> = self.provisioner.unwrap_or_else(|| {
-            let lifecycle = SandboxLifecycle::new(
-                daemon_client.clone(),
-                PathBuf::from(DEFAULT_LAYER_STACK_ROOT),
-            );
+            let lifecycle = SandboxLifecycle::new(daemon_client.clone(), eosd_artifact_dir);
             Arc::new(HostProvisioner {
                 inner: Arc::new(RequestSandboxProvisioner::with_default_snapshot(
                     Arc::new(lifecycle),
@@ -492,6 +490,10 @@ fn seed_default_sandbox_provider(
     Ok(())
 }
 
+fn default_eosd_artifact_dir(repo_root: &str) -> PathBuf {
+    PathBuf::from(repo_root).join("sandbox").join("dist")
+}
+
 fn build_agent_registry(dir: Option<&std::path::Path>) -> Result<AgentRegistry> {
     let Some(dir) = dir else {
         return Ok(AgentRegistryBuilder::new().build());
@@ -558,6 +560,14 @@ pub(crate) mod test_seams {
     use eos_types::{JsonObject, RequestId, SandboxId};
 
     use super::{EventSourceFactory, RequestProvisioner};
+
+    #[test]
+    fn eosd_artifact_dir_is_repo_sandbox_dist() {
+        assert_eq!(
+            super::default_eosd_artifact_dir("/repo"),
+            std::path::PathBuf::from("/repo/sandbox/dist")
+        );
+    }
 
     /// A sandbox transport that returns an empty payload for every op (so
     /// `command_session_count` resolves to 0) — keeps the no-inflight hook happy

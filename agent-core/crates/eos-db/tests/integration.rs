@@ -5,8 +5,8 @@ use eos_config::{DatabaseConfig, DatabaseUrl};
 use eos_db::Database;
 use eos_state::{
     AttemptFailReason, AttemptStage, AttemptStatus, ExecutionRole, ExecutionTaskOutcome,
-    IterationCreationReason, IterationStatus, JsonObject, RequestId, Task, TaskId, TaskRole,
-    TaskStatus, UtcDateTime, WorkflowStatus,
+    IterationCreationReason, IterationStatus, JsonObject, RequestId, RequestStatus, Task, TaskId,
+    TaskRole, TaskStatus, UtcDateTime, WorkflowStatus,
 };
 
 async fn open_temp() -> (tempfile::TempDir, Database) {
@@ -65,7 +65,7 @@ async fn request_task_roundtrip() {
     let got = requests.get(&id).await.expect("get").expect("present");
     assert_eq!(got.cwd, "/work");
     assert_eq!(got.request_prompt, "build the thing");
-    assert_eq!(got.status, "running");
+    assert_eq!(got.status, RequestStatus::Running);
 
     let with_root = requests
         .set_root_task_id(&id, &tid("root-1"))
@@ -74,19 +74,19 @@ async fn request_task_roundtrip() {
     assert_eq!(with_root.root_task_id, Some(tid("root-1")));
 
     let done = requests
-        .finish_request(&id, "done")
+        .finish_request(&id, RequestStatus::Done)
         .await
         .expect("finish")
         .expect("some");
-    assert_eq!(done.status, "done");
+    assert_eq!(done.status, RequestStatus::Done);
     assert!(done.finished_at.is_some());
     // Terminal no-op: a second finish leaves the request unchanged.
     let again = requests
-        .finish_request(&id, "failed")
+        .finish_request(&id, RequestStatus::Failed)
         .await
         .expect("finish2")
         .expect("some");
-    assert_eq!(again.status, "done");
+    assert_eq!(again.status, RequestStatus::Done);
 
     // upsert insert then full-field update.
     let t = sample_task("t-1", &id, "first");

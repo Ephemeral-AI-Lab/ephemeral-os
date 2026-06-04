@@ -5,6 +5,26 @@ use serde::{Deserialize, Serialize};
 
 use eos_types::{RequestId, SandboxId, TaskId, UtcDateTime};
 
+/// Lifecycle status of a top-level request.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum RequestStatus {
+    /// Root task is still running.
+    Running,
+    /// Root task completed successfully.
+    Done,
+    /// Root task failed or exhausted.
+    Failed,
+}
+
+impl RequestStatus {
+    /// Whether this request status is terminal.
+    #[must_use]
+    pub const fn is_terminal(self) -> bool {
+        matches!(self, Self::Done | Self::Failed)
+    }
+}
+
 /// Immutable view of a persisted request row (Python `RequestRecord`).
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 pub struct Request {
@@ -18,9 +38,8 @@ pub struct Request {
     pub request_prompt: String,
     /// The root `Task(role=root, workflow_id=None)`, once minted.
     pub root_task_id: Option<TaskId>,
-    /// Free-form request status (`running` / finished). Broader than
-    /// `TaskStatus`; set via `RequestStore::finish_request`.
-    pub status: String,
+    /// Request lifecycle status; set via `RequestStore::finish_request`.
+    pub status: RequestStatus,
     /// Creation timestamp.
     pub created_at: UtcDateTime,
     /// Last-update timestamp.

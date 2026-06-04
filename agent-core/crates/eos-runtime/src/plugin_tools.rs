@@ -206,8 +206,8 @@ mod tests {
     use eos_sandbox_api::{DaemonOp, SandboxApiError, SandboxCaller, SandboxTransport};
     use eos_skills::SkillRegistry;
     use eos_state::{
-        ExecutionTaskOutcome, Request, RequestStore, Sealed, StoreError, Task, TaskStatus,
-        TaskStore,
+        ExecutionTaskOutcome, Request, RequestStatus, RequestStore, Sealed, StoreError, Task,
+        TaskStatus, TaskStore,
     };
     use eos_types::{RequestId, SandboxId, TaskId};
 
@@ -446,7 +446,7 @@ mod tests {
         async fn finish_request(
             &self,
             _id: &RequestId,
-            _status: &str,
+            _status: RequestStatus,
         ) -> Result<Option<Request>, StoreError> {
             unreachable!("plugin tools do not touch request state")
         }

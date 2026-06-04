@@ -43,7 +43,10 @@ BACKEND_SRC = Path(__file__).resolve().parents[1] / "src"
 if str(BACKEND_SRC) not in sys.path:
     sys.path.insert(0, str(BACKEND_SRC))
 
-DEFAULT_DOCKER_IMAGE = "sweevo-dask__dask-10042"
+FALLBACK_DOCKER_IMAGE = "sweevo-dask__dask-10042"
+DEFAULT_DOCKER_IMAGE = (
+    os.environ.get("EOS_LIVE_E2E_IMAGE", "").strip() or FALLBACK_DOCKER_IMAGE
+)
 DEFAULT_PAYLOAD_MIB = (1.5, 3.0)
 
 

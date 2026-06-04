@@ -10,6 +10,7 @@ mod control;
 mod edit;
 mod glob;
 mod grep;
+mod isolated;
 mod plugin;
 mod read;
 mod write;
@@ -19,6 +20,7 @@ pub use control::{cancel, command_session_count, heartbeat, inflight_count, isol
 pub use edit::edit_file;
 pub use glob::glob;
 pub use grep::grep;
+pub use isolated::{enter_isolated_workspace, exit_isolated_workspace};
 pub use plugin::{plugin_dispatch, plugin_ensure, PluginDispatchRequest, PluginEnsureRequest};
 pub use read::read_file;
 pub use write::write_file;

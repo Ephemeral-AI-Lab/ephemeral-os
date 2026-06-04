@@ -4,7 +4,10 @@ use eos_obs_contract::{ObsEnvelope, OS_RESOURCE_SAMPLED, TOOL_CALL_COMPLETED};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-use crate::{SandboxAuditLoss, SandboxPullBatch};
+use crate::{
+    normalize_agent_core_jsonl_line, normalize_sandbox_pull_response, ObsCollectorError,
+    SandboxAuditLoss, SandboxPullBatch,
+};
 
 const RESOURCE_METRIC_KEYS: &[&str] = &[
     "rss_bytes",
@@ -142,6 +145,21 @@ pub struct RunnerGateBatchInput<'a> {
     pub settings: RunnerGateSettings,
 }
 
+/// Source-level input for the runner audit/observability gates.
+#[derive(Debug, Clone, Copy)]
+pub struct RunnerGateSourceInput<'a> {
+    /// Agent-core `ObsEnvelope` JSONL contents.
+    pub agent_core_jsonl: &'a str,
+    /// Raw sandbox `api.audit.pull` / `api.audit.snapshot` response values.
+    pub sandbox_pull_responses: &'a [Value],
+    /// Tool-use records the Rust state/transcript says must be observed.
+    pub expected_tool_uses: &'a [ExpectedToolUse],
+    /// State/transcript correctness checks already performed by the runner.
+    pub correctness: RunnerCorrectnessEvidence,
+    /// Gate settings for this runner invocation.
+    pub settings: RunnerGateSettings,
+}
+
 /// Aggregate metrics collected while evaluating runner gates.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct RunnerGateMetrics {
@@ -233,11 +251,24 @@ pub fn evaluate_runner_gates(input: RunnerGateInput<'_>) -> RunnerGateReport {
             RunnerGateFailureKind::ToolCorrectnessNotVerified,
             "state/transcript tool correctness evidence was not supplied",
         ));
+    } else if input.correctness.tool_use_checked_count < metrics.expected_tool_use_count {
+        failures.push(failure(
+            RunnerGateFailureKind::ToolCorrectnessNotVerified,
+            format!(
+                "state/transcript tool checks covered {} expected tool uses, expected {}",
+                input.correctness.tool_use_checked_count, metrics.expected_tool_use_count
+            ),
+        ));
     }
     if !input.correctness.has_message_correctness_evidence() {
         failures.push(failure(
             RunnerGateFailureKind::MessageCorrectnessNotVerified,
             "state/transcript message correctness evidence was not supplied",
+        ));
+    } else if input.correctness.message_checked_count == 0 {
+        failures.push(failure(
+            RunnerGateFailureKind::MessageCorrectnessNotVerified,
+            "state/transcript message correctness evidence had zero checked assertions",
         ));
     }
 
@@ -340,6 +371,39 @@ pub fn evaluate_runner_gate_batches(input: RunnerGateBatchInput<'_>) -> RunnerGa
     })
 }
 
+/// Parse source artifacts, normalize them, and evaluate runner gates.
+///
+/// This is the narrow handoff a Rust runner can call after it has collected the
+/// authoritative state/transcript expectations.
+///
+/// # Errors
+///
+/// Returns an error when any agent-core JSONL row or sandbox pull response is
+/// invalid.
+pub fn evaluate_runner_gate_sources(
+    input: RunnerGateSourceInput<'_>,
+) -> Result<RunnerGateReport, ObsCollectorError> {
+    let agent_core_rows = input
+        .agent_core_jsonl
+        .lines()
+        .filter(|line| !line.trim().is_empty())
+        .map(normalize_agent_core_jsonl_line)
+        .collect::<Result<Vec<_>, _>>()?;
+    let sandbox_batches = input
+        .sandbox_pull_responses
+        .iter()
+        .map(normalize_sandbox_pull_response)
+        .collect::<Result<Vec<_>, _>>()?;
+
+    Ok(evaluate_runner_gate_batches(RunnerGateBatchInput {
+        agent_core_rows: &agent_core_rows,
+        sandbox_batches: &sandbox_batches,
+        expected_tool_uses: input.expected_tool_uses,
+        correctness: input.correctness,
+        settings: input.settings,
+    }))
+}
+
 fn unique_tool_use_ids(ids: &[ExpectedToolUse]) -> BTreeSet<&str> {
     ids.iter()
         .map(|expected| expected.tool_use_id.as_str())
@@ -407,6 +471,7 @@ fn failure(kind: RunnerGateFailureKind, detail: impl Into<String>) -> RunnerGate
 
 #[cfg(test)]
 mod tests {
+    use eos_obs_contract::to_jsonl_line;
     use eos_obs_contract::{JsonObject, ObsIds, ObsSource};
     use serde_json::json;
 
@@ -500,6 +565,39 @@ mod tests {
             sandbox_loss: None,
             expected_tool_uses: &expected_tool_uses,
             correctness: RunnerCorrectnessEvidence::default(),
+            settings: RunnerGateSettings::default(),
+        });
+
+        assert!(!report.passed);
+        assert_failure(&report, RunnerGateFailureKind::ToolCorrectnessNotVerified);
+        assert_failure(
+            &report,
+            RunnerGateFailureKind::MessageCorrectnessNotVerified,
+        );
+    }
+
+    #[test]
+    fn runner_gates_fail_when_correctness_counts_do_not_cover_expectations() {
+        let expected_tool_uses = vec![
+            ExpectedToolUse::new("toolu-1"),
+            ExpectedToolUse::new("toolu-2"),
+        ];
+        let rows = vec![
+            tool_row("toolu-1", json!({"duration_ms": 12.0, "status": "ok"})),
+            tool_row("toolu-2", json!({"duration_ms": 13.0, "status": "ok"})),
+            resource_row(json!({"sampled_at_monotonic_s": 1.0, "rss_bytes": 1024})),
+        ];
+
+        let report = evaluate_runner_gates(RunnerGateInput {
+            rows: &rows,
+            sandbox_loss: None,
+            expected_tool_uses: &expected_tool_uses,
+            correctness: RunnerCorrectnessEvidence {
+                tool_use_verified: true,
+                tool_use_checked_count: 1,
+                message_correctness_verified: true,
+                message_checked_count: 0,
+            },
             settings: RunnerGateSettings::default(),
         });
 
@@ -634,6 +732,54 @@ mod tests {
                 cursor_after_seq: Some(14),
                 lost_before_seq: Some(7),
                 dropped_event_count: Some(3),
+            })
+        );
+    }
+
+    #[test]
+    fn runner_gate_sources_parse_jsonl_and_sandbox_pull_responses() {
+        let expected_tool_uses = vec![ExpectedToolUse::new("toolu-1")];
+        let agent_core_jsonl = to_jsonl_line(&tool_row(
+            "toolu-1",
+            json!({"duration_ms": 12.0, "status": "ok"}),
+        ))
+        .expect("serialize obs row");
+        let sandbox_pulls = vec![json!({
+            "schema": eos_protocol::audit::SCHEMA_VERSION,
+            "cursor": {"after_seq": 4},
+            "buffer": {"dropped_event_count": 0},
+            "events": [{
+                "seq": 4,
+                "lane": "sample",
+                "type": "os_resource.sampled",
+                "payload": {
+                    "os_resource": {
+                        "tool_use_id": "toolu-1",
+                        "sampled_at_monotonic_s": 1.0,
+                        "rss_bytes": 1024
+                    }
+                }
+            }]
+        })];
+
+        let report = evaluate_runner_gate_sources(RunnerGateSourceInput {
+            agent_core_jsonl: &agent_core_jsonl,
+            sandbox_pull_responses: &sandbox_pulls,
+            expected_tool_uses: &expected_tool_uses,
+            correctness: verified_correctness(),
+            settings: RunnerGateSettings::default(),
+        })
+        .expect("evaluate source artifacts");
+
+        assert!(report.passed);
+        assert_eq!(report.metrics.tool_call_completed_count, 1);
+        assert_eq!(report.metrics.resource_sample_count, 1);
+        assert_eq!(
+            report.sandbox_loss,
+            Some(SandboxAuditLoss {
+                cursor_after_seq: Some(4),
+                lost_before_seq: None,
+                dropped_event_count: Some(0),
             })
         );
     }

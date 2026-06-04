@@ -31,7 +31,7 @@ pub use outcomes::{
     project_attempt_outcomes, project_iteration_outcomes, ExecutionRole, ExecutionTaskOutcome,
     TaskOutcomeStatus,
 };
-pub use request::Request;
+pub use request::{Request, RequestStatus};
 pub use store::{
     AgentRunStore, AttemptStore, IterationStore, ModelStore, RequestStore, Sealed, StoreError,
     TaskStore, WorkflowStore,
@@ -81,6 +81,9 @@ mod tests {
     fn serde_wire_values_match_python() {
         assert_eq!(json!(TaskStatus::Pending), json!("pending"));
         assert_eq!(json!(TaskStatus::Blocked), json!("blocked"));
+        assert_eq!(json!(RequestStatus::Running), json!("running"));
+        assert_eq!(json!(RequestStatus::Done), json!("done"));
+        assert_eq!(json!(RequestStatus::Failed), json!("failed"));
         assert_eq!(json!(TaskRole::Root), json!("root"));
         assert_eq!(json!(TaskRole::Generator), json!("generator"));
         assert_eq!(json!(WorkflowStatus::Open), json!("open"));

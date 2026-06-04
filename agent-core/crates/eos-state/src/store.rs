@@ -22,7 +22,7 @@ use crate::attempt::{Attempt, AttemptFailReason, AttemptStage, AttemptStatus};
 use crate::iteration::{Iteration, IterationCreationReason, IterationStatus};
 use crate::model::ModelRegistration;
 use crate::outcomes::ExecutionTaskOutcome;
-use crate::request::Request;
+use crate::request::{Request, RequestStatus};
 use crate::task::{Task, TaskStatus};
 use crate::workflow::{Workflow, WorkflowStatus};
 
@@ -255,7 +255,7 @@ pub trait RequestStore: Sealed + Send + Sync {
     async fn finish_request(
         &self,
         id: &RequestId,
-        status: &str,
+        status: RequestStatus,
     ) -> Result<Option<Request>, CoreError>;
 }
 

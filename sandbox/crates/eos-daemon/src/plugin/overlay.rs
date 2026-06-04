@@ -284,7 +284,7 @@ fn plugin_overlay_run_request(
         tool_call: ToolCall {
             invocation_id: spec.invocation_id.clone(),
             agent_id: spec.agent_id.clone(),
-            verb: "plugin_service".to_owned(),
+            verb: "plugin_service".into(),
             intent: Intent::WriteAllowed,
             args: json!({
                 "command": spec.command.clone(),

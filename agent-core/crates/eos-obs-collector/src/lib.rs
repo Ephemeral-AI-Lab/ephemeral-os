@@ -14,9 +14,10 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 pub use gates::{
-    evaluate_runner_gate_batches, evaluate_runner_gates, ExpectedToolUse,
-    RunnerCorrectnessEvidence, RunnerGateBatchInput, RunnerGateFailure, RunnerGateFailureKind,
-    RunnerGateInput, RunnerGateMetrics, RunnerGateReport, RunnerGateSettings,
+    evaluate_runner_gate_batches, evaluate_runner_gate_sources, evaluate_runner_gates,
+    ExpectedToolUse, RunnerCorrectnessEvidence, RunnerGateBatchInput, RunnerGateFailure,
+    RunnerGateFailureKind, RunnerGateInput, RunnerGateMetrics, RunnerGateReport,
+    RunnerGateSettings, RunnerGateSourceInput,
 };
 
 /// A sandbox pull response normalized for runner consumption.

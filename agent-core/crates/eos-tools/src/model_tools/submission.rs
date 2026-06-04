@@ -14,7 +14,8 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use eos_state::{
-    GeneratorSubmission, PlannerKind, ReducerSubmission, TaskOutcomeStatus, TaskRole, TaskStatus,
+    GeneratorSubmission, PlannerKind, ReducerSubmission, RequestStatus, TaskOutcomeStatus,
+    TaskRole, TaskStatus,
 };
 use eos_types::JsonObject;
 use schemars::{schema_for, JsonSchema};
@@ -145,11 +146,9 @@ impl ToolExecutor for SubmitRootOutcome {
             SubmissionStatus::Success => TaskStatus::Done,
             SubmissionStatus::Failed => TaskStatus::Failed,
         };
-        let request_status = parsed.status.as_str(); // "success"/"failed" → "done"/"failed"
-        let request_status = if parsed.status == SubmissionStatus::Success {
-            "done"
-        } else {
-            request_status
+        let request_status = match parsed.status {
+            SubmissionStatus::Success => RequestStatus::Done,
+            SubmissionStatus::Failed => RequestStatus::Failed,
         };
         // The root outcome is recorded in terminal_tool_result (and status); the
         // typed `outcomes` column is left unchanged because root is not an
@@ -715,7 +714,7 @@ mod tests {
         assert_eq!(res.metadata["submission_kind"], json!("root_success"));
         assert_eq!(
             request_store.finished(),
-            vec![(request_id.as_str().to_owned(), "done".to_owned())]
+            vec![(request_id.as_str().to_owned(), RequestStatus::Done)]
         );
 
         // Blank outcome → rejected (AC-10 blank-outcome).

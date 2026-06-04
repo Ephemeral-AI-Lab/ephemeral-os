@@ -426,7 +426,7 @@ fn run_overlay_read_tool(args: &Value, verb: &str) -> Result<Value, DaemonError>
             tool_call: ToolCall {
                 invocation_id: invocation_id.clone(),
                 agent_id,
-                verb: verb.to_owned(),
+                verb: verb.into(),
                 intent: Intent::ReadOnly,
                 args: args.clone(),
                 background: false,

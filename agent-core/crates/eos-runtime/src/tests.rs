@@ -11,7 +11,7 @@ use std::time::Duration;
 use eos_agent_def::{AgentDefinition, AgentRegistry, AgentRole};
 use eos_engine::{EngineError, EngineStream, EventSource, StreamEvent};
 use eos_llm_client::{ContentBlock, LlmRequest};
-use eos_state::{TaskRole, TaskStatus, WorkflowStatus};
+use eos_state::{RequestStatus, TaskRole, TaskStatus, WorkflowStatus};
 use eos_tools::StartedWorkflow;
 use serde_json::json;
 
@@ -330,7 +330,7 @@ async fn successful_root_keeps_engine_terminal() {
     );
 
     let request = state.request_store.get(&request_id).await.unwrap().unwrap();
-    assert_eq!(request.status, "done");
+    assert_eq!(request.status, RequestStatus::Done);
 }
 
 // --- Root is advisor-gated: with no prior `ask_advisor` exchange in the
@@ -369,7 +369,7 @@ async fn root_terminal_blocked_without_advisor_approval() {
     );
 
     let request = state.request_store.get(&request_id).await.unwrap().unwrap();
-    assert_eq!(request.status, "failed");
+    assert_eq!(request.status, RequestStatus::Failed);
 }
 
 // --- AC-eos-runtime-03: an unfinished root fails cleanly with run_exhausted.
@@ -396,7 +396,7 @@ async fn unfinished_root_sets_run_exhausted() {
     );
 
     let request = state.request_store.get(&request_id).await.unwrap().unwrap();
-    assert_eq!(request.status, "failed");
+    assert_eq!(request.status, RequestStatus::Failed);
 }
 
 // --- AC-eos-runtime-03b: a join error persists a root failure.
@@ -424,7 +424,7 @@ async fn join_error_marks_unfinished_root_failed() {
     let task = state.task_store.get(&root_task_id).await.unwrap().unwrap();
     assert_eq!(task.status, TaskStatus::Failed);
     let request = state.request_store.get(&request_id).await.unwrap().unwrap();
-    assert_eq!(request.status, "failed");
+    assert_eq!(request.status, RequestStatus::Failed);
 }
 
 // --- AC-eos-runtime-05: delegation creates workflow state, parent stays running.
@@ -857,7 +857,7 @@ async fn root_delegates_waits_and_submits_terminal() {
         "root must submit its terminal after delegated workflow success"
     );
     let request = state.request_store.get(&request_id).await.unwrap().unwrap();
-    assert_eq!(request.status, "done");
+    assert_eq!(request.status, RequestStatus::Done);
 }
 
 // --- AC-eos-runtime-07: provisioning binds the request sandbox.
@@ -933,7 +933,7 @@ async fn shutdown_cancels_background_and_fails_running_root() {
     let task = state.task_store.get(&root_task_id).await.unwrap().unwrap();
     assert_eq!(task.status, TaskStatus::Failed);
     let request = state.request_store.get(&request_id).await.unwrap().unwrap();
-    assert_eq!(request.status, "failed");
+    assert_eq!(request.status, RequestStatus::Failed);
 }
 
 #[tokio::test]
@@ -987,7 +987,7 @@ async fn dropped_handle_cancels_background_and_fails_running_root() {
         "drop cleanup cancels supervisor-tracked background handles"
     );
     let request = state.request_store.get(&request_id).await.unwrap().unwrap();
-    assert_eq!(request.status, "failed");
+    assert_eq!(request.status, RequestStatus::Failed);
 }
 
 // --- Slice 1 instance identity (anchor §7): a backgrounded command-session

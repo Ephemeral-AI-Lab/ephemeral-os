@@ -8,7 +8,7 @@ use std::sync::Arc;
 use eos_agent_def::AgentName;
 use eos_engine::{run_ephemeral_agent, EphemeralRunInput, NotificationService};
 use eos_llm_client::Message;
-use eos_state::TaskStatus;
+use eos_state::{RequestStatus, TaskStatus};
 use eos_tools::{
     BackgroundSupervisorPort, CommandSessionSupervisorPort, NotificationSink, WorkflowControlPort,
 };
@@ -136,7 +136,7 @@ pub(crate) async fn fail_unfinished_root(
         Ok(Some(_)) => {
             if let Err(err) = state
                 .request_store
-                .finish_request(request_id, "failed")
+                .finish_request(request_id, RequestStatus::Failed)
                 .await
             {
                 tracing::warn!(error = %err, "finish_request(failed) failed for unfinished root");

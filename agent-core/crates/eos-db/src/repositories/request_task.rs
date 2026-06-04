@@ -6,12 +6,13 @@ use time::OffsetDateTime;
 
 use eos_state::{
     AttemptId, CoreError, ExecutionTaskOutcome, IterationId, JsonObject, Request, RequestId,
-    RequestStore, SandboxId, Sealed, Task, TaskId, TaskStatus, TaskStore, WorkflowId,
+    RequestStatus, RequestStore, SandboxId, Sealed, Task, TaskId, TaskStatus, TaskStore,
+    WorkflowId,
 };
 
 use crate::error::DbError;
 use crate::json_col;
-use crate::rows::{enum_to_db, row_to_request, row_to_task, RequestRow, TaskRow};
+use crate::rows::{enum_to_db, parse_enum, row_to_request, row_to_task, RequestRow, TaskRow};
 
 /// Shared UPDATE for both task-status setters. `COALESCE` keeps the existing
 /// column when the caller passes a NULL `outcomes`/`terminal_tool_result` bind.
@@ -47,12 +48,13 @@ impl RequestStore for SqlRequestTaskStore {
         sqlx::query(
             "INSERT INTO requests \
              (id, cwd, sandbox_id, request_prompt, root_task_id, status, created_at, updated_at, finished_at) \
-             VALUES (?, ?, ?, ?, NULL, 'running', ?, ?, NULL)",
+             VALUES (?, ?, ?, ?, NULL, ?, ?, ?, NULL)",
         )
         .bind(request_id.as_str())
         .bind(cwd)
         .bind(sandbox_id.map(SandboxId::as_str))
         .bind(request_prompt)
+        .bind(enum_to_db(&RequestStatus::Running))
         .bind(now)
         .bind(now)
         .execute(&self.pool)
@@ -95,7 +97,7 @@ impl RequestStore for SqlRequestTaskStore {
     async fn finish_request(
         &self,
         id: &RequestId,
-        status: &str,
+        status: RequestStatus,
     ) -> Result<Option<Request>, CoreError> {
         let mut tx = self.pool.begin().await.map_err(DbError::from)?;
         let existing = sqlx::query_as::<Sqlite, RequestRow>("SELECT * FROM requests WHERE id = ?")
@@ -107,14 +109,14 @@ impl RequestStore for SqlRequestTaskStore {
             return Ok(None);
         };
         // Idempotent on a terminal request: return it unchanged (task_store.py:142).
-        if row.status == "done" || row.status == "failed" {
+        if parse_enum::<RequestStatus>("requests.status", &row.status)?.is_terminal() {
             return Ok(Some(row_to_request(row)?));
         }
         let now = OffsetDateTime::now_utc();
         let updated = sqlx::query_as::<Sqlite, RequestRow>(
             "UPDATE requests SET status = ?, finished_at = ?, updated_at = ? WHERE id = ? RETURNING *",
         )
-        .bind(status)
+        .bind(enum_to_db(&status))
         .bind(now)
         .bind(now)
         .bind(id.as_str())

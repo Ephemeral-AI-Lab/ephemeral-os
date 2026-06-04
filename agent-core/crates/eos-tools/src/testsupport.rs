@@ -10,7 +10,9 @@ use std::sync::{Arc, Mutex};
 use async_trait::async_trait;
 use eos_sandbox_api::{DaemonOp, SandboxApiError, SandboxCaller, SandboxTransport};
 use eos_skills::SkillRegistry;
-use eos_state::{ExecutionTaskOutcome, Request, RequestStore, Sealed, Task, TaskStatus, TaskStore};
+use eos_state::{
+    ExecutionTaskOutcome, Request, RequestStatus, RequestStore, Sealed, Task, TaskStatus, TaskStore,
+};
 use eos_types::{CoreError, JsonObject, RequestId, SandboxId, TaskId, UtcDateTime};
 
 use crate::error::ToolError;
@@ -137,7 +139,7 @@ impl TaskStore for FakeTaskStore {
 /// An in-memory `RequestStore` that records `finish_request` calls.
 #[derive(Default)]
 pub(crate) struct FakeRequestStore {
-    finished: Mutex<Vec<(String, String)>>,
+    finished: Mutex<Vec<(String, RequestStatus)>>,
 }
 
 impl FakeRequestStore {
@@ -145,14 +147,14 @@ impl FakeRequestStore {
         Self::default()
     }
 
-    pub(crate) fn finished(&self) -> Vec<(String, String)> {
+    pub(crate) fn finished(&self) -> Vec<(String, RequestStatus)> {
         self.finished.lock().unwrap().clone()
     }
 }
 
 impl Sealed for FakeRequestStore {}
 
-fn synthetic_request(id: &RequestId, status: &str) -> Request {
+fn synthetic_request(id: &RequestId, status: RequestStatus) -> Request {
     let now = UtcDateTime::now();
     Request {
         id: id.clone(),
@@ -160,7 +162,7 @@ fn synthetic_request(id: &RequestId, status: &str) -> Request {
         sandbox_id: None,
         request_prompt: String::new(),
         root_task_id: None,
-        status: status.to_owned(),
+        status,
         created_at: now,
         updated_at: now,
         finished_at: Some(now),
@@ -180,7 +182,7 @@ impl RequestStore for FakeRequestStore {
     }
 
     async fn get(&self, id: &RequestId) -> Result<Option<Request>, CoreError> {
-        Ok(Some(synthetic_request(id, "running")))
+        Ok(Some(synthetic_request(id, RequestStatus::Running)))
     }
 
     async fn set_root_task_id(
@@ -188,18 +190,18 @@ impl RequestStore for FakeRequestStore {
         id: &RequestId,
         _root_task_id: &TaskId,
     ) -> Result<Request, CoreError> {
-        Ok(synthetic_request(id, "running"))
+        Ok(synthetic_request(id, RequestStatus::Running))
     }
 
     async fn finish_request(
         &self,
         id: &RequestId,
-        status: &str,
+        status: RequestStatus,
     ) -> Result<Option<Request>, CoreError> {
         self.finished
             .lock()
             .unwrap()
-            .push((id.as_str().to_owned(), status.to_owned()));
+            .push((id.as_str().to_owned(), status));
         Ok(Some(synthetic_request(id, status)))
     }
 }

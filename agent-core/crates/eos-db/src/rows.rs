@@ -11,8 +11,8 @@ use time::OffsetDateTime;
 
 use eos_state::{
     present_status, AgentRun, Attempt, AttemptFailReason, AttemptStage, AttemptStatus, CoreError,
-    ExecutionRole, ExecutionTaskOutcome, Iteration, Request, Task, TaskOutcomeStatus, UtcDateTime,
-    Workflow,
+    ExecutionRole, ExecutionTaskOutcome, Iteration, Request, RequestStatus, Task,
+    TaskOutcomeStatus, UtcDateTime, Workflow,
 };
 
 use crate::error::DbError;
@@ -134,7 +134,7 @@ where
     raw.map(|s| parse_id(field, s)).transpose()
 }
 
-fn parse_enum<T: serde::de::DeserializeOwned>(
+pub(crate) fn parse_enum<T: serde::de::DeserializeOwned>(
     field: &'static str,
     raw: &str,
 ) -> Result<T, DbError> {
@@ -257,7 +257,7 @@ pub(crate) fn row_to_request(r: RequestRow) -> Result<Request, DbError> {
         sandbox_id: opt_id("requests.sandbox_id", r.sandbox_id.as_deref())?,
         request_prompt: r.request_prompt,
         root_task_id: opt_id("requests.root_task_id", r.root_task_id.as_deref())?,
-        status: r.status,
+        status: parse_enum::<RequestStatus>("requests.status", &r.status)?,
         created_at: UtcDateTime::from_offset(r.created_at),
         updated_at: UtcDateTime::from_offset(r.updated_at),
         finished_at: r.finished_at.map(UtcDateTime::from_offset),

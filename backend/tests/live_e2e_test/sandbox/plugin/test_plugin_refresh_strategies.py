@@ -27,6 +27,65 @@ ROOT = Path(__file__).resolve().parents[5]
 REFRESH_BENCH = ROOT / "backend" / "scripts" / "bench_plugin_refresh_strategies.py"
 RUST_PLUGIN_BENCH = ROOT / "backend" / "scripts" / "bench_rust_daemon_plugin.py"
 
+EXPECTED_CONNECTED_ROUTES_AFTER_ENSURE = {
+    "plugin.generic.adapter_query",
+    "plugin.generic.apply",
+    "plugin.generic.apply_multi",
+    "plugin.generic.crash_probe",
+    "plugin.generic.crash_recover_ping",
+    "plugin.generic.hang_probe",
+    "plugin.generic.hang_recover_ping",
+    "plugin.generic.health_fail_ping",
+    "plugin.generic.health_fail_recover_ping",
+    "plugin.generic.lsp_apply_code_action",
+    "plugin.generic.lsp_apply_workspace_edit",
+    "plugin.generic.lsp_bridge_apply_code_action",
+    "plugin.generic.lsp_bridge_apply_workspace_edit",
+    "plugin.generic.lsp_bridge_code_actions",
+    "plugin.generic.lsp_bridge_diagnostics",
+    "plugin.generic.lsp_bridge_document_highlight",
+    "plugin.generic.lsp_bridge_execute_command",
+    "plugin.generic.lsp_bridge_find_definitions",
+    "plugin.generic.lsp_bridge_find_references",
+    "plugin.generic.lsp_bridge_format_document",
+    "plugin.generic.lsp_bridge_hover",
+    "plugin.generic.lsp_bridge_query_symbols",
+    "plugin.generic.lsp_bridge_rename",
+    "plugin.generic.lsp_bridge_signature_help",
+    "plugin.generic.lsp_execute_command",
+    "plugin.generic.lsp_format_document",
+    "plugin.generic.ping",
+    "plugin.generic.pyright_call_hierarchy",
+    "plugin.generic.pyright_capabilities",
+    "plugin.generic.pyright_code_actions",
+    "plugin.generic.pyright_completion",
+    "plugin.generic.pyright_completion_resolve",
+    "plugin.generic.pyright_declaration",
+    "plugin.generic.pyright_definition",
+    "plugin.generic.pyright_diagnostics",
+    "plugin.generic.pyright_document_formatting",
+    "plugin.generic.pyright_document_highlight",
+    "plugin.generic.pyright_execute_command",
+    "plugin.generic.pyright_hover",
+    "plugin.generic.pyright_prepare_rename",
+    "plugin.generic.pyright_references",
+    "plugin.generic.pyright_rename",
+    "plugin.generic.pyright_signature_help",
+    "plugin.generic.pyright_symbols",
+    "plugin.generic.pyright_type_definition",
+    "plugin.generic.pyright_workspace_symbols",
+    "plugin.generic.recover_probe",
+    "plugin.generic.restart_ping",
+    "plugin.generic.runtime_bridge_apply",
+    "plugin.generic.runtime_bridge_delay_ping",
+    "plugin.generic.runtime_bridge_ping",
+}
+EXPECTED_DISCONNECTED_ROUTES_AFTER_ENSURE = {"plugin.generic.oneshot_write"}
+HEALTH_FAIL_ROUTES = {
+    "plugin.generic.health_fail_ping",
+    "plugin.generic.health_fail_recover_ping",
+}
+
 
 async def test_plugin_workspace_snapshot_refresh_strategy(
     integrated_sandbox: SandboxHandle,
@@ -92,198 +151,13 @@ async def test_plugin_workspace_snapshot_refresh_strategy(
     rust_payload = json.loads(rust_report.read_text(encoding="utf-8"))
     assert rust_payload["gate_pass"] is True
     assert rust_payload["ensure"]["service_processes_started"] is True
-    assert "plugin.generic.ping" in rust_payload["status_after_ensure"]["connected_ppc_routes"]
-    assert (
-        "plugin.generic.restart_ping"
-        in rust_payload["status_after_ensure"]["connected_ppc_routes"]
+    _assert_routes_present(
+        rust_payload["status_after_ensure"],
+        EXPECTED_CONNECTED_ROUTES_AFTER_ENSURE,
     )
-    assert (
-        "plugin.generic.adapter_query"
-        in rust_payload["status_after_ensure"]["connected_ppc_routes"]
-    )
-    assert (
-        "plugin.generic.runtime_bridge_ping"
-        in rust_payload["status_after_ensure"]["connected_ppc_routes"]
-    )
-    assert (
-        "plugin.generic.runtime_bridge_apply"
-        in rust_payload["status_after_ensure"]["connected_ppc_routes"]
-    )
-    assert (
-        "plugin.generic.runtime_bridge_delay_ping"
-        in rust_payload["status_after_ensure"]["connected_ppc_routes"]
-    )
-    assert (
-        "plugin.generic.lsp_bridge_query_symbols"
-        in rust_payload["status_after_ensure"]["connected_ppc_routes"]
-    )
-    assert (
-        "plugin.generic.lsp_bridge_find_definitions"
-        in rust_payload["status_after_ensure"]["connected_ppc_routes"]
-    )
-    assert (
-        "plugin.generic.lsp_bridge_find_references"
-        in rust_payload["status_after_ensure"]["connected_ppc_routes"]
-    )
-    assert (
-        "plugin.generic.lsp_bridge_signature_help"
-        in rust_payload["status_after_ensure"]["connected_ppc_routes"]
-    )
-    assert (
-        "plugin.generic.lsp_bridge_document_highlight"
-        in rust_payload["status_after_ensure"]["connected_ppc_routes"]
-    )
-    assert (
-        "plugin.generic.lsp_bridge_diagnostics"
-        in rust_payload["status_after_ensure"]["connected_ppc_routes"]
-    )
-    assert (
-        "plugin.generic.lsp_bridge_code_actions"
-        in rust_payload["status_after_ensure"]["connected_ppc_routes"]
-    )
-    assert (
-        "plugin.generic.lsp_bridge_hover"
-        in rust_payload["status_after_ensure"]["connected_ppc_routes"]
-    )
-    assert (
-        "plugin.generic.lsp_bridge_rename"
-        in rust_payload["status_after_ensure"]["connected_ppc_routes"]
-    )
-    assert (
-        "plugin.generic.lsp_bridge_apply_workspace_edit"
-        in rust_payload["status_after_ensure"]["connected_ppc_routes"]
-    )
-    assert (
-        "plugin.generic.lsp_bridge_apply_code_action"
-        in rust_payload["status_after_ensure"]["connected_ppc_routes"]
-    )
-    assert (
-        "plugin.generic.lsp_bridge_format_document"
-        in rust_payload["status_after_ensure"]["connected_ppc_routes"]
-    )
-    assert (
-        "plugin.generic.lsp_bridge_execute_command"
-        in rust_payload["status_after_ensure"]["connected_ppc_routes"]
-    )
-    assert (
-        "plugin.generic.pyright_symbols"
-        in rust_payload["status_after_ensure"]["connected_ppc_routes"]
-    )
-    assert (
-        "plugin.generic.pyright_workspace_symbols"
-        in rust_payload["status_after_ensure"]["connected_ppc_routes"]
-    )
-    assert (
-        "plugin.generic.pyright_capabilities"
-        in rust_payload["status_after_ensure"]["connected_ppc_routes"]
-    )
-    assert (
-        "plugin.generic.pyright_document_formatting"
-        in rust_payload["status_after_ensure"]["connected_ppc_routes"]
-    )
-    assert (
-        "plugin.generic.pyright_execute_command"
-        in rust_payload["status_after_ensure"]["connected_ppc_routes"]
-    )
-    assert (
-        "plugin.generic.pyright_completion"
-        in rust_payload["status_after_ensure"]["connected_ppc_routes"]
-    )
-    assert (
-        "plugin.generic.pyright_completion_resolve"
-        in rust_payload["status_after_ensure"]["connected_ppc_routes"]
-    )
-    assert (
-        "plugin.generic.pyright_diagnostics"
-        in rust_payload["status_after_ensure"]["connected_ppc_routes"]
-    )
-    assert (
-        "plugin.generic.pyright_code_actions"
-        in rust_payload["status_after_ensure"]["connected_ppc_routes"]
-    )
-    assert (
-        "plugin.generic.pyright_signature_help"
-        in rust_payload["status_after_ensure"]["connected_ppc_routes"]
-    )
-    assert (
-        "plugin.generic.pyright_hover"
-        in rust_payload["status_after_ensure"]["connected_ppc_routes"]
-    )
-    assert (
-        "plugin.generic.pyright_type_definition"
-        in rust_payload["status_after_ensure"]["connected_ppc_routes"]
-    )
-    assert (
-        "plugin.generic.pyright_declaration"
-        in rust_payload["status_after_ensure"]["connected_ppc_routes"]
-    )
-    assert (
-        "plugin.generic.pyright_call_hierarchy"
-        in rust_payload["status_after_ensure"]["connected_ppc_routes"]
-    )
-    assert (
-        "plugin.generic.pyright_document_highlight"
-        in rust_payload["status_after_ensure"]["connected_ppc_routes"]
-    )
-    assert (
-        "plugin.generic.pyright_prepare_rename"
-        in rust_payload["status_after_ensure"]["connected_ppc_routes"]
-    )
-    assert (
-        "plugin.generic.pyright_definition"
-        in rust_payload["status_after_ensure"]["connected_ppc_routes"]
-    )
-    assert (
-        "plugin.generic.pyright_references"
-        in rust_payload["status_after_ensure"]["connected_ppc_routes"]
-    )
-    assert (
-        "plugin.generic.pyright_rename"
-        in rust_payload["status_after_ensure"]["connected_ppc_routes"]
-    )
-    assert (
-        "plugin.generic.lsp_apply_workspace_edit"
-        in rust_payload["status_after_ensure"]["connected_ppc_routes"]
-    )
-    assert (
-        "plugin.generic.lsp_apply_code_action"
-        in rust_payload["status_after_ensure"]["connected_ppc_routes"]
-    )
-    assert (
-        "plugin.generic.lsp_format_document"
-        in rust_payload["status_after_ensure"]["connected_ppc_routes"]
-    )
-    assert (
-        "plugin.generic.lsp_execute_command"
-        in rust_payload["status_after_ensure"]["connected_ppc_routes"]
-    )
-    assert (
-        "plugin.generic.crash_probe"
-        in rust_payload["status_after_ensure"]["connected_ppc_routes"]
-    )
-    assert (
-        "plugin.generic.crash_recover_ping"
-        in rust_payload["status_after_ensure"]["connected_ppc_routes"]
-    )
-    assert (
-        "plugin.generic.hang_probe"
-        in rust_payload["status_after_ensure"]["connected_ppc_routes"]
-    )
-    assert (
-        "plugin.generic.hang_recover_ping"
-        in rust_payload["status_after_ensure"]["connected_ppc_routes"]
-    )
-    assert (
-        "plugin.generic.recover_probe"
-        in rust_payload["status_after_ensure"]["connected_ppc_routes"]
-    )
-    assert (
-        "plugin.generic.health_fail_ping"
-        in rust_payload["status_after_ensure"]["connected_ppc_routes"]
-    )
-    assert (
-        "plugin.generic.health_fail_recover_ping"
-        in rust_payload["status_after_ensure"]["connected_ppc_routes"]
+    _assert_routes_absent(
+        rust_payload["status_after_ensure"],
+        EXPECTED_DISCONNECTED_ROUTES_AFTER_ENSURE,
     )
     service_health = {
         item["service_id"]: item
@@ -305,14 +179,7 @@ async def test_plugin_workspace_snapshot_refresh_strategy(
         "intentional health failure"
         in service_health["health_fail_harness"]["error"]
     )
-    assert (
-        "plugin.generic.health_fail_ping"
-        not in rust_payload["status_after_health_probe"]["connected_ppc_routes"]
-    )
-    assert (
-        "plugin.generic.health_fail_recover_ping"
-        not in rust_payload["status_after_health_probe"]["connected_ppc_routes"]
-    )
+    _assert_routes_absent(rust_payload["status_after_health_probe"], HEALTH_FAIL_ROUTES)
     health_fail_status = _service_status(
         rust_payload["status_after_health_probe"], "health_fail_harness"
     )
@@ -335,15 +202,6 @@ async def test_plugin_workspace_snapshot_refresh_strategy(
     )
     assert health_fail_recover_status["state"] == "ready"
     assert health_fail_recover_status["restart_count"] >= 1
-    assert "plugin.generic.apply" in rust_payload["status_after_ensure"]["connected_ppc_routes"]
-    assert (
-        "plugin.generic.apply_multi"
-        in rust_payload["status_after_ensure"]["connected_ppc_routes"]
-    )
-    assert (
-        "plugin.generic.oneshot_write"
-        not in rust_payload["status_after_ensure"]["connected_ppc_routes"]
-    )
     assert rust_payload["ping"]["from_ppc"] is True
     assert rust_payload["ping"]["workspace_mounted"] is True
     concurrent_ping = rust_payload["concurrent_ping"]
@@ -1329,6 +1187,24 @@ async def test_plugin_workspace_snapshot_refresh_strategy(
     assert rust_payload["status_after_cleanup"]["connected_ppc_routes"] == []
     assert rust_payload["status_after_cleanup"]["connected_ppc_services"] == []
     assert rust_payload["status_after_cleanup"]["running_service_processes"] == []
+
+
+def _connected_routes(status_payload: dict[str, Any]) -> set[str]:
+    return {
+        route
+        for route in status_payload.get("connected_ppc_routes", [])
+        if isinstance(route, str)
+    }
+
+
+def _assert_routes_present(status_payload: dict[str, Any], expected: set[str]) -> None:
+    missing = sorted(expected - _connected_routes(status_payload))
+    assert not missing, f"missing connected plugin routes: {missing}"
+
+
+def _assert_routes_absent(status_payload: dict[str, Any], forbidden: set[str]) -> None:
+    present = sorted(forbidden & _connected_routes(status_payload))
+    assert not present, f"unexpected connected plugin routes: {present}"
 
 
 def _service_status(status_payload: dict[str, Any], service_id: str) -> dict[str, Any]:

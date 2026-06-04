@@ -333,36 +333,60 @@ in the current checkout:
 | 4 | implemented for the named shadows | `workflow.task.*` and agent-core `background_tool.*` are tracing diagnostics; `eos-workflow` has no audit dependency |
 | 5 | first daemon dispatch slice implemented | `sandbox/crates/eos-daemon/src/audit_events.rs` emits typed `eos-protocol::audit::*Section` payloads and sample-lane `os_resource.sampled` rows |
 | 6 | implemented for normalizer | `agent-core/crates/eos-obs-collector` parses agent-core JSONL, normalizes sandbox pull events to `ObsEnvelope`, canonicalizes aliases, extracts join ids, and reports pull loss metadata |
-| 7 | first gate API implemented | `eos-obs-collector::evaluate_runner_gates` accepts normalized rows, sandbox loss metadata, typed `ExpectedToolUse` records, typed external state/transcript correctness evidence, and strict/resource gate settings; `evaluate_runner_gate_batches` flattens agent-core rows plus normalized sandbox batches and merges sandbox loss; `RunnerGateReport` serializes as a self-contained Rust JSON artifact with pass/fail, failures, metrics, expected tool uses, settings, correctness evidence, and sandbox loss |
+| 7 | first source/gate API implemented | `eos-obs-collector::evaluate_runner_gate_sources` accepts agent-core JSONL text, raw sandbox pull/snapshot response values, typed `ExpectedToolUse` records, typed external state/transcript correctness evidence, and strict/resource gate settings; the collector parses, normalizes, merges sandbox loss, and returns a self-contained Rust `RunnerGateReport` JSON artifact with pass/fail, failures, metrics, expected tool uses, settings, correctness evidence, and sandbox loss |
+
+### Verification sweep (2026-06-04)
+
+The claimed status above was re-verified green in the current churned checkout:
+
+- Stage 0: `cargo test --manifest-path base/Cargo.toml -p eos-obs-contract` (3 pass) and its clippy gate are clean.
+- Stage 1: the Rust-only doc guard matches only the boundary section and explicit non-goals.
+- Stage 2: `cargo test -p eos-audit` passes `eos_audit_internal_deps_are_base_contracts_only`, and the `workspace-guard` `dependency_dag` test confirms the expected edge set; `eos-audit` depends only on `eos-obs-contract` + `eos-types`.
+- Stage 3: `cargo test -p eos-engine` (43 pass) covers the `tool_call.completed` emission; `eos-engine` emits `agent_run.completed` / `os_resource.sampled` from `agent_loop.rs` and `tool_call.completed` from `tool_call/dispatch.rs`; `eos-runtime` builds.
+- Stage 4: `eos-workflow` has zero `eos-audit` references.
+- Stage 5: `cargo test -p eos-daemon audit` (7 pass, incl. `dispatch_audit_emits_typed_tool_call_and_resource_sample` and `audit_pull_reads_shared_daemon_ring`) and `cargo test -p eos-protocol audit` (4 pass).
+- Stages 6–7: `cargo test -p eos-obs-collector` (14 pass) and its clippy gate are clean.
+
+Coherence note (outside the obs/audit scope): `sandbox/crates/eos-daemon` did not compile in this checkout because the parallel `RunnerVerb` enum migration (commit `d65517f7f`, `eos-runner::request`) left three call sites passing raw `String`/`&str` verbs — `plugin/overlay.rs:287`, `workspace_ops.rs:429`, `workspace_ops.rs:492`. These were unblocked in the working tree with `.into()` (the existing `From<&str>`/`From<String>` impls map known verbs to typed variants; the compiler's `Unknown(...)` suggestion would mislabel `plugin_service`). This belongs to the `RunnerVerb` refactor owner, not the obs/audit work, and is intentionally not folded into any obs commit.
 
 ## Next Rust Implementation Step
 
-The first Stage 7 API lives in `agent-core/crates/eos-obs-collector/src/gates.rs`.
-It returns a typed `RunnerGateReport` with pass/fail, failure kinds, and basic
-metrics. `RunnerGateReport`, `RunnerGateFailure`, `RunnerGateMetrics`,
+The Stage 7 source and gate APIs live in
+`agent-core/crates/eos-obs-collector/src/gates.rs`. The narrow runner handoff is
+`evaluate_runner_gate_sources`: a future runner supplies agent-core JSONL text,
+raw sandbox pull/snapshot response values, typed `ExpectedToolUse` records,
+typed `RunnerCorrectnessEvidence`, and gate settings. The collector parses and
+normalizes the source artifacts, merges sandbox loss metadata, and returns a
+typed `RunnerGateReport` with pass/fail, failure kinds, and basic metrics.
+
+`RunnerGateReport`, `RunnerGateFailure`, `RunnerGateMetrics`,
 `RunnerGateSettings`, `RunnerCorrectnessEvidence`, `ExpectedToolUse`,
-`SandboxPullBatch`, and `SandboxAuditLoss` are serializable Rust artifact types.
-They intentionally do not ingest tracing, call Python, render a Python-shaped
-report, or invent audit rows for state facts that are already authoritative.
+`RunnerGateSourceInput`, `SandboxPullBatch`, and `SandboxAuditLoss` are Rust
+artifact types. They intentionally do not ingest tracing, call Python, render a
+Python-shaped report, or invent audit rows for state facts that are already
+authoritative.
 
 The report artifact carries enough context to explain a gate result without
 replaying the evaluator: gate settings, supplied state/transcript correctness
 evidence, optional sandbox loss metadata, aggregate metrics, and typed failure
 kinds are serialized together. `RunnerCorrectnessEvidence` records both the
 boolean gate evidence and the checked counts for tool-use and message/transcript
+assertions; the gate fails when tool-use evidence covers fewer checks than the
+expected tool-use set or when message correctness evidence reports zero checked
 assertions.
 
-For the future runner's normal input shape, `evaluate_runner_gate_batches`
-accepts agent-core rows plus one or more `SandboxPullBatch` values, flattens all
-normalized rows, merges sandbox loss with `SandboxAuditLoss::merge`, and then
-uses the same gate evaluator. This keeps batch handling in the collector instead
-of making every runner duplicate row-flattening and loss-summary logic.
+For callers that already normalized sources, `evaluate_runner_gate_batches`
+still accepts agent-core rows plus one or more `SandboxPullBatch` values,
+flattens all normalized rows, merges sandbox loss with
+`SandboxAuditLoss::merge`, and then uses the same gate evaluator. This keeps
+row parsing, row flattening, and loss-summary logic in the collector instead of
+making every runner duplicate it.
 
-Remaining Stage 7 integration work is to wire the future Rust test runner so it
-supplies:
+Remaining Stage 7 integration work is to wire the future runner so it supplies:
 
-- normalized obs rows from `eos-obs-collector`
-- sandbox loss metadata from `SandboxAuditLoss`
+- agent-core obs JSONL source text
+- sandbox pull/snapshot response values from `api.audit.pull` /
+  `api.audit.snapshot`
 - typed `ExpectedToolUse` records from Rust state/transcript
 - typed evidence that Rust state/transcript checks already verified tool
   correctness and message correctness, including checked counts
@@ -397,8 +421,12 @@ Current resource sampling cadence:
     kinds, expected tool uses, settings, correctness evidence, metrics, and
     sandbox loss metadata
   - correctness evidence round-trips with tool/message checked counts
+  - correctness count coverage is enforced for expected tool uses and message
+    assertions
   - sandbox pull losses merge across multiple batches before strict loss gates
   - batch evaluator flattens agent-core rows plus sandbox batch rows
+  - source evaluator parses agent-core JSONL plus sandbox pull responses before
+    running the same gates
 
 ## Open Decisions
 
@@ -408,8 +436,12 @@ Current resource sampling cadence:
   agent-run-completion and audited-dispatch samples.
 - Whether isolated-workspace JSONL remains a separate sandbox source or is
   mirrored into the daemon audit ring.
-- Where the future Rust test runner crate should live and how it supplies
-  state/transcript correctness evidence to `evaluate_runner_gates`.
+- Where the future full Rust test runner crate should live. The audit/obs source
+  and gate helper stays in `eos-obs-collector`; a future harness should call
+  `evaluate_runner_gate_sources` rather than owning a separate audit report
+  shape.
+- How the future runner derives state/transcript correctness evidence and
+  checked counts from Rust stores without relying on audit rows.
 
 ## Risks
 

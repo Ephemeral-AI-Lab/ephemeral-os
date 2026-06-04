@@ -12,6 +12,7 @@ members = [
     "crates/eos-isolated",
     "crates/eos-plugin",
     "crates/eos-terminal-pair",
+    "crates/eos-e2e-test",
     "xtask",
 ]
 
@@ -40,6 +41,8 @@ base64 = "0.22"
 futures-util = "0.3"
 rtnetlink = "0.21"
 netlink-sys = "0.8"
+# Test-support only (eos-e2e-test): parse the committed e2e.toml topology config.
+toml = "0.8"
 
 # Internal crates — path deps (the edges below ARE the architecture).
 eos-protocol = { path = "crates/eos-protocol" }
@@ -53,6 +56,7 @@ eos-runner = { path = "crates/eos-runner" }
 eos-ns-holder = { path = "crates/eos-ns-holder" }
 eos-daemon = { path = "crates/eos-daemon" }
 eosd = { path = "crates/eosd" }
+eos-e2e-test = { path = "crates/eos-e2e-test" }
 xtask = { path = "xtask" }
 
 [workspace.lints.clippy]
