@@ -1,0 +1,17 @@
+[package]
+name = "eos-ephemeral-workspace"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[dependencies]
+eos-overlay.workspace = true
+eos-protocol.workspace = true
+eos-runner.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+
+[lints]
+workspace = true

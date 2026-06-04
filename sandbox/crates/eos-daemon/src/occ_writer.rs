@@ -17,7 +17,7 @@ use crate::error::DaemonError;
 pub(crate) use publish::LayerStackCommitTransaction;
 #[cfg(test)]
 pub(crate) use route::LayerStackRouteProvider;
-pub(crate) use route::{insert_occ_route_timings, occ_route_metrics, OccRouteMetrics};
+pub(crate) use route::{insert_occ_route_timings, occ_route_metrics};
 pub(crate) use service_cache::occ_service_cache_snapshot;
 #[cfg(test)]
 pub(crate) use service_cache::{normalize_root_key, OccServiceCache, OCC_SERVICE_CACHE_MAX};

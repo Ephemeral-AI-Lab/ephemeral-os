@@ -1,11 +1,11 @@
 //! Daemon-owned isolated-workspace lifecycle state.
 //!
 //! This module is the first Rust lifecycle slice behind
-//! `api.isolated_workspace.*`: it owns one daemon-local `eos-isolated`
+//! `api.isolated_workspace.*`: it owns one daemon-local `eos-isolated-workspace`
 //! session, keeps the public routing key as `agent_id`, and exposes cloned
 //! command handles to the command-session dispatcher. The session holds only the
 //! snapshot/lease hinge and scratch upperdir; no OCC publish path is linked
-//! through `eos-isolated`.
+//! through `eos-isolated-workspace`.
 
 mod runtime;
 
@@ -13,7 +13,9 @@ use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex, MutexGuard, OnceLock, PoisonError};
 
-use eos_isolated::{AgentId, IsolatedError, IsolatedSession, JsonlAuditSink, ResourceCaps};
+use eos_isolated_workspace::{
+    AgentId, IsolatedError, IsolatedSession, JsonlAuditSink, ResourceCaps,
+};
 use eos_layerstack::{read_workspace_binding, LayerStack};
 use serde_json::{json, Value};
 

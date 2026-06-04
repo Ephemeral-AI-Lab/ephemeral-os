@@ -145,7 +145,8 @@ dependencies = [
 name = "eos-daemon"
 version = "0.1.0"
 dependencies = [
- "eos-isolated",
+ "eos-ephemeral-workspace",
+ "eos-isolated-workspace",
  "eos-layerstack",
  "eos-occ",
  "eos-overlay",
@@ -176,7 +177,19 @@ dependencies = [
 ]
 
 [[package]]
-name = "eos-isolated"
+name = "eos-ephemeral-workspace"
+version = "0.1.0"
+dependencies = [
+ "eos-overlay",
+ "eos-protocol",
+ "eos-runner",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.18",
+]
+
+[[package]]
+name = "eos-isolated-workspace"
 version = "0.1.0"
 dependencies = [
  "eos-overlay",

@@ -33,6 +33,12 @@ use nix::unistd::Pid;
 use serde_json::{json, Value};
 
 #[cfg(target_os = "linux")]
+use eos_ephemeral_workspace::{
+    finalize_publishable_workspace, EphemeralCommandFinalizeSpec, EphemeralRunDirs,
+    EphemeralSnapshot, EphemeralWorkspace, FinalizeRequest,
+    WorkspaceRoot as EphemeralWorkspaceRoot,
+};
+#[cfg(target_os = "linux")]
 use eos_layerstack::{require_workspace_binding, LayerStack, Lease, WorkspaceBinding};
 #[cfg(target_os = "linux")]
 use eos_overlay::{capture_upperdir, overlay_writable_root};
@@ -54,12 +60,10 @@ use session::{
 use crate::dispatcher::DispatchContext;
 use crate::error::DaemonError;
 #[cfg(target_os = "linux")]
-use crate::occ_writer::{
-    apply_occ_changeset, base_hashes_for_snapshot, insert_occ_route_timings, manifest_version_u64,
-    occ_route_metrics,
+use crate::overlay_runner::{
+    changeset_from_publish_outcome, ephemeral_daemon_error, overlay_daemon_error, overlay_run_dirs,
+    path_changes_to_wire, DaemonPublisherPort, RunDirCleanup,
 };
-#[cfg(target_os = "linux")]
-use crate::overlay_runner::{overlay_daemon_error, overlay_run_dirs, RunDirCleanup};
 use crate::response_timings::u64_to_f64_saturating;
 #[cfg(target_os = "linux")]
 use crate::response_timings::{
@@ -272,10 +276,10 @@ struct EphemeralCommandWorkspace {
     lease_id: String,
     manifest: eos_layerstack::Manifest,
     manifest_version: i64,
-    upperdir: PathBuf,
-    run_dir: PathBuf,
-    output_path: PathBuf,
-    final_path: PathBuf,
+    manifest_root_hash: String,
+    layer_paths: Vec<PathBuf>,
+    workspace_root: PathBuf,
+    dirs: EphemeralRunDirs,
 }
 
 #[cfg(target_os = "linux")]
@@ -302,7 +306,7 @@ impl CommandWorkspaceKind {
     /// The runner `--output` result file path (used by `try_finalize`).
     fn output_path(&self) -> &Path {
         match self {
-            Self::Ephemeral(workspace) => &workspace.output_path,
+            Self::Ephemeral(workspace) => &workspace.dirs.output_path,
             Self::Isolated(workspace) => &workspace.output_path,
         }
     }
@@ -490,8 +494,8 @@ fn prepare_command_session(
     let runtime_root = overlay_writable_root()
         .map_err(|err| overlay_daemon_error("overlay writable root", &err))?
         .join("runtime");
-    let dirs = overlay_run_dirs("sandbox-overlay", &spec.invocation_id)?;
-    let run_dir_cleanup = RunDirCleanup::new(dirs.run_dir.clone());
+    let mut dirs = overlay_run_dirs("sandbox-overlay", &spec.invocation_id)?;
+    let mut run_dir_cleanup = RunDirCleanup::new(dirs.run_dir.clone());
     let session_dir = runtime_root.join("command-sessions").join(&spec.id);
     std::fs::create_dir_all(&session_dir)?;
     let transcript_path = session_dir.join("transcript.log");
@@ -507,8 +511,10 @@ fn prepare_command_session(
         }))
         .map_err(|err| DaemonError::InvalidEnvelope(err.to_string()))?,
     )?;
-    let output_path = dirs.run_dir.join("command-runner-result.json");
+    dirs.output_path = dirs.run_dir.join("command-runner-result.json");
     let request_path = dirs.run_dir.join("command-runner-request.json");
+    dirs.request_path = Some(request_path.clone());
+    dirs.final_path = final_path.clone();
     let request = RunRequest {
         mode: RunMode::FreshNs,
         tool_call: ToolCall {
@@ -536,10 +542,10 @@ fn prepare_command_session(
         lease_id: lease.lease_id.clone(),
         manifest: lease.manifest.clone(),
         manifest_version: lease.manifest_version,
-        upperdir: dirs.upperdir,
-        run_dir: dirs.run_dir,
-        output_path,
-        final_path,
+        manifest_root_hash: lease.root_hash.clone(),
+        layer_paths: lease.layer_paths.iter().map(PathBuf::from).collect(),
+        workspace_root: PathBuf::from(&binding.workspace_root),
+        dirs,
     });
     let session = spawn_command_runner_session(spec, &request_path, transcript_path, workspace);
     if session.is_ok() {
@@ -776,32 +782,43 @@ fn finalize_command_workspace(
     include_session_id: bool,
 ) -> Result<Value, DaemonError> {
     let total_s = session.started_at.elapsed().as_secs_f64();
-    let upperdir_stats = TreeResourceStats::collect(&workspace.upperdir);
-    let capture_start = Instant::now();
-    let changes = capture_upperdir(&workspace.upperdir)
-        .map_err(|err| overlay_daemon_error("capture upperdir", &err))?;
-    let capture_s = capture_start.elapsed().as_secs_f64();
-    let path_kinds: Vec<(String, String)> = changes
-        .iter()
-        .map(|change| {
-            (
-                change.path().as_str().to_owned(),
-                layer_change_kind(change).to_owned(),
-            )
-        })
-        .collect();
-    let route_start = Instant::now();
-    let route_metrics = occ_route_metrics(&workspace.root, &changes)?;
-    let route_s = route_start.elapsed().as_secs_f64();
-    let base_hashes = base_hashes_for_snapshot(&workspace.root, &workspace.manifest, &changes)?;
-    let occ_start = Instant::now();
-    let changeset = apply_occ_changeset(
-        &workspace.root,
-        Some(manifest_version_u64(workspace.manifest_version)?),
-        &changes,
-        &base_hashes,
-    )?;
-    let occ_s = occ_start.elapsed().as_secs_f64();
+    let finalize = finalize_publishable_workspace(
+        &DaemonPublisherPort::new(&workspace.root, &workspace.manifest),
+        FinalizeRequest {
+            workspace: EphemeralWorkspace {
+                layer_stack_root: EphemeralWorkspaceRoot(workspace.root.clone()),
+                workspace_root: workspace.workspace_root.clone(),
+                agent_id: eos_ephemeral_workspace::AgentId(session.agent_id.clone()),
+                invocation_id: eos_ephemeral_workspace::InvocationId(session.id.clone()),
+                snapshot: EphemeralSnapshot {
+                    lease_id: workspace.lease_id.clone(),
+                    manifest_version: workspace.manifest_version,
+                    manifest_root_hash: workspace.manifest_root_hash.clone(),
+                    layer_paths: workspace.layer_paths.clone(),
+                },
+                dirs: workspace.dirs.clone(),
+            },
+            command: Some(EphemeralCommandFinalizeSpec {
+                status: status.to_owned(),
+                exit_code,
+                stdout: stdout.to_owned(),
+                include_session_id,
+                command_session_id: Some(session.id.clone()),
+                started_at: session.started_at,
+            }),
+        },
+    )
+    .map_err(ephemeral_daemon_error)?;
+    let changeset = changeset_from_publish_outcome(&finalize.publish)?;
+    let upperdir_stats = TreeResourceStats::from_ephemeral(&finalize.capture.stats);
+    let capture_s = finalize.capture.capture_s;
+    let path_kinds = path_changes_to_wire(&finalize.capture.path_kinds);
+    let occ_s = changeset
+        .timings
+        .get("occ.commit.total_s")
+        .copied()
+        .or(finalize.timings.publish_s)
+        .unwrap_or_default();
     let manifest = LayerStack::open(workspace.root.clone())?.read_active_manifest()?;
     let mut timings = resource_timings(&manifest, path_kinds.len());
     insert_tree_resource_timings(
@@ -809,7 +826,6 @@ fn finalize_command_workspace(
         "resource.command_exec.upperdir",
         &upperdir_stats,
     );
-    insert_occ_route_timings(&mut timings, route_metrics, route_s, occ_s);
     let mut response =
         guarded_changeset_response("exec_command", &changeset, timings, Instant::now(), None);
     response["status"] = json!(status);
@@ -832,7 +848,7 @@ fn finalize_command_workspace(
         response["command_session_id"] = json!(session.id);
     }
     std::fs::write(
-        &workspace.final_path,
+        &workspace.dirs.final_path,
         serde_json::to_vec_pretty(&response)
             .map_err(|err| DaemonError::InvalidEnvelope(err.to_string()))?,
     )?;

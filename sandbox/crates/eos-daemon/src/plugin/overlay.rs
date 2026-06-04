@@ -8,24 +8,23 @@ use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 use std::time::Instant;
 
+use eos_ephemeral_workspace::{
+    finalize_publishable_workspace, AgentId, EphemeralRunDirs, EphemeralSnapshot,
+    EphemeralWorkspace, FinalizeRequest, InvocationId, WorkspaceRoot as EphemeralWorkspaceRoot,
+};
 use eos_layerstack::{require_workspace_binding, LayerStack, Lease, WorkspaceBinding};
-use eos_overlay::{capture_upperdir, OverlayWritableDirs};
-use eos_protocol::{Intent, LayerChange};
+use eos_protocol::Intent;
 use eos_runner::{RunMode, RunRequest, RunResult, ToolCall, WorkspaceRoot};
 use serde_json::{json, Value};
 
 use crate::error::DaemonError;
-use crate::occ_writer::{
-    apply_occ_changeset, base_hashes_for_snapshot, insert_occ_route_timings, manifest_version_u64,
-    occ_route_metrics, OccRouteMetrics,
-};
 use crate::overlay_runner::{
-    overlay_daemon_error, overlay_run_dirs, run_ns_runner_child, RunDirCleanup,
+    changeset_from_publish_outcome, ephemeral_daemon_error, overlay_run_dirs, path_changes_to_wire,
+    run_ns_runner_child, DaemonPublisherPort, RunDirCleanup,
 };
 use crate::response_timings::{
     attach_runner_shell_fields, guarded_changeset_response, insert_tree_resource_timings,
-    layer_change_kind, merge_runner_timings, published_file_count, resource_timings,
-    TreeResourceStats,
+    merge_runner_timings, published_file_count, resource_timings, TreeResourceStats,
 };
 
 pub(crate) struct PluginOverlayCommand {
@@ -45,8 +44,6 @@ struct PluginOverlayRunOutcome {
     changeset: eos_occ::ChangesetResult,
     plugin_result: Option<Value>,
     path_kinds: Vec<(String, String)>,
-    route_metrics: OccRouteMetrics,
-    route_s: f64,
     capture_s: f64,
     occ_s: f64,
     upperdir_stats: TreeResourceStats,
@@ -97,27 +94,41 @@ fn run_plugin_overlay_once(
         plugin_overlay_run_request(spec, binding, lease, &dirs, &request_path, &result_path);
     let runner = run_ns_runner_child(&request, None)?;
     let plugin_result = read_plugin_overlay_result(&result_path)?;
-    let (changes, path_kinds, capture_s) = capture_upperdir_for_occ(&dirs.upperdir)?;
-    let upperdir_stats = TreeResourceStats::collect(&dirs.upperdir);
-    let route_start = Instant::now();
-    let route_metrics = occ_route_metrics(&spec.layer_stack_root, &changes)?;
-    let route_s = route_start.elapsed().as_secs_f64();
-    let base_hashes = base_hashes_for_snapshot(&spec.layer_stack_root, &lease.manifest, &changes)?;
-    let occ_start = Instant::now();
-    let changeset = apply_occ_changeset(
-        &spec.layer_stack_root,
-        Some(manifest_version_u64(lease.manifest_version)?),
-        &changes,
-        &base_hashes,
-    )?;
-    let occ_s = occ_start.elapsed().as_secs_f64();
+    let finalize = finalize_publishable_workspace(
+        &DaemonPublisherPort::new(&spec.layer_stack_root, &lease.manifest),
+        FinalizeRequest {
+            workspace: EphemeralWorkspace {
+                layer_stack_root: EphemeralWorkspaceRoot(spec.layer_stack_root.clone()),
+                workspace_root: PathBuf::from(&binding.workspace_root),
+                agent_id: AgentId(spec.agent_id.clone()),
+                invocation_id: InvocationId(spec.invocation_id.clone()),
+                snapshot: EphemeralSnapshot {
+                    lease_id: lease.lease_id.clone(),
+                    manifest_version: lease.manifest_version,
+                    manifest_root_hash: lease.root_hash.clone(),
+                    layer_paths: lease.layer_paths.iter().map(PathBuf::from).collect(),
+                },
+                dirs: dirs.clone(),
+            },
+            command: None,
+        },
+    )
+    .map_err(ephemeral_daemon_error)?;
+    let changeset = changeset_from_publish_outcome(&finalize.publish)?;
+    let path_kinds = path_changes_to_wire(&finalize.capture.path_kinds);
+    let upperdir_stats = TreeResourceStats::from_ephemeral(&finalize.capture.stats);
+    let capture_s = finalize.capture.capture_s;
+    let occ_s = changeset
+        .timings
+        .get("occ.commit.total_s")
+        .copied()
+        .or(finalize.timings.publish_s)
+        .unwrap_or_default();
     Ok(PluginOverlayRunOutcome {
         runner,
         changeset,
         plugin_result,
         path_kinds,
-        route_metrics,
-        route_s,
         capture_s,
         occ_s,
         upperdir_stats,
@@ -150,12 +161,6 @@ fn plugin_overlay_response(
     timings.insert(
         "command_exec.total_s".to_owned(),
         json!(total_start.elapsed().as_secs_f64()),
-    );
-    insert_occ_route_timings(
-        &mut timings,
-        outcome.route_metrics,
-        outcome.route_s,
-        outcome.occ_s,
     );
     let mut response = guarded_changeset_response(
         "plugin_overlay",
@@ -224,7 +229,7 @@ fn apply_plugin_overlay_status(
     }
 }
 
-fn plugin_overlay_dirs(invocation_id: &str) -> Result<OverlayWritableDirs, DaemonError> {
+fn plugin_overlay_dirs(invocation_id: &str) -> Result<EphemeralRunDirs, DaemonError> {
     overlay_run_dirs("plugin-overlay", invocation_id)
 }
 
@@ -260,7 +265,7 @@ fn plugin_overlay_run_request(
     spec: &PluginOverlayCommand,
     binding: &WorkspaceBinding,
     lease: &Lease,
-    dirs: &OverlayWritableDirs,
+    dirs: &EphemeralRunDirs,
     request_path: &Path,
     result_path: &Path,
 ) -> RunRequest {
@@ -301,25 +306,6 @@ fn plugin_overlay_run_request(
         cgroup_path: None,
         timeout_seconds: spec.timeout_seconds,
     }
-}
-
-type CapturedOverlayChanges = (Vec<LayerChange>, Vec<(String, String)>, f64);
-
-fn capture_upperdir_for_occ(upperdir: &Path) -> Result<CapturedOverlayChanges, DaemonError> {
-    let capture_start = Instant::now();
-    let changes =
-        capture_upperdir(upperdir).map_err(|err| overlay_daemon_error("capture upperdir", &err))?;
-    let capture_s = capture_start.elapsed().as_secs_f64();
-    let path_kinds = changes
-        .iter()
-        .map(|change| {
-            (
-                change.path().as_str().to_owned(),
-                layer_change_kind(change).to_owned(),
-            )
-        })
-        .collect();
-    Ok((changes, path_kinds, capture_s))
 }
 
 fn read_plugin_overlay_result(path: &Path) -> Result<Option<Value>, DaemonError> {

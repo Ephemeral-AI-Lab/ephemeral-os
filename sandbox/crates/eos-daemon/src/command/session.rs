@@ -181,7 +181,7 @@ impl CommandSession {
         // leaks. Isolated teardown is deferred to `exit_isolated_workspace`.
         match &self.workspace {
             CommandWorkspaceKind::Ephemeral(workspace) => {
-                let _ = std::fs::remove_dir_all(&workspace.run_dir);
+                let _ = std::fs::remove_dir_all(&workspace.dirs.run_dir);
                 let _ = LayerStack::open(workspace.root.clone())
                     .and_then(|mut stack| stack.release_lease(&workspace.lease_id));
             }

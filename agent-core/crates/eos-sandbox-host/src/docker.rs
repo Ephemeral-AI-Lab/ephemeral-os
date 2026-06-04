@@ -864,7 +864,7 @@ mod tests {
     // `DockerProviderAdapter::put_archive` forwards verbatim.
     #[test]
     fn put_archive_fast_path() {
-        let stream = crate::runtime_artifact::tar_file_at_path("eosd", b"binary", 0o755).unwrap();
+        let stream = crate::bootstrap_artifact::tar_file_at_path("eosd", b"binary", 0o755).unwrap();
         assert_ne!(
             &stream[..2],
             &[0x1f, 0x8b],

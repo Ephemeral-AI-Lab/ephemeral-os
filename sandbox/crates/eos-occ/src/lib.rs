@@ -12,7 +12,7 @@
 //!
 //! Build-time edges: the `occ -> overlay` edge is ONE-WAY and exists solely for
 //! [`overlay_path_changes_to_occ_changes`] (overlay never links occ).
-//! eos-isolated and eos-plugin do NOT link this crate — that omission is the
+//! eos-isolated-workspace and eos-plugin do NOT link this crate — that omission is the
 //! build-time no-publish guarantee, made possible because the snapshot/lease
 //! HINGE lives in eos-layerstack, not here.
 

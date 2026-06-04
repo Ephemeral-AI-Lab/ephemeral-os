@@ -1,16 +1,12 @@
 //! Shared daemon response shaping and resource timing helpers.
 
-use std::collections::{BTreeMap, VecDeque};
-use std::fs;
-use std::path::Path;
+use std::collections::BTreeMap;
 use std::time::Instant;
 
 use eos_occ::{ChangesetResult, FileResult, OccStatus};
 use eos_protocol::{LayerChange, Manifest};
 use eos_runner::RunResult;
 use serde_json::{json, Value};
-
-const TREE_RESOURCE_ENTRY_LIMIT: usize = 2_000;
 
 #[derive(Clone, Copy, Debug)]
 pub(crate) struct TreeResourceStats {
@@ -23,66 +19,17 @@ pub(crate) struct TreeResourceStats {
 }
 
 impl TreeResourceStats {
-    fn missing() -> Self {
+    pub(crate) fn from_ephemeral(stats: &eos_ephemeral_workspace::TreeResourceStats) -> Self {
+        let file_entries = stats.files.saturating_add(stats.symlinks);
+        let entry_count = file_entries.saturating_add(stats.dirs);
         Self {
-            exists: 0.0,
-            bytes: 0.0,
-            file_count: 0.0,
-            dir_count: 0.0,
-            entry_count: 0.0,
+            exists: if entry_count > 0 { 1.0 } else { 0.0 },
+            bytes: u64_to_f64_saturating(stats.bytes),
+            file_count: u64_to_f64_saturating(file_entries),
+            dir_count: u64_to_f64_saturating(stats.dirs),
+            entry_count: u64_to_f64_saturating(entry_count),
             truncated: 0.0,
         }
-    }
-
-    pub(crate) fn collect(path: &Path) -> Self {
-        let Ok(root_metadata) = fs::symlink_metadata(path) else {
-            return Self::missing();
-        };
-        let root_is_dir = root_metadata.is_dir();
-        let mut stats = Self {
-            exists: 1.0,
-            bytes: allocated_bytes(&root_metadata),
-            file_count: if root_is_dir { 0.0 } else { 1.0 },
-            dir_count: if root_is_dir { 1.0 } else { 0.0 },
-            entry_count: 1.0,
-            truncated: 0.0,
-        };
-        if !root_is_dir {
-            return stats;
-        }
-
-        let mut queue = VecDeque::from([path.to_path_buf()]);
-        while let Some(current) = queue.pop_front() {
-            let Ok(entries) = fs::read_dir(current) else {
-                continue;
-            };
-            for entry in entries.flatten() {
-                if stats.entry_count >= usize_to_f64_saturating(TREE_RESOURCE_ENTRY_LIMIT) {
-                    stats.truncated = 1.0;
-                    break;
-                }
-                let entry_path = entry.path();
-                let Ok(metadata) = fs::symlink_metadata(&entry_path) else {
-                    continue;
-                };
-                let is_dir = metadata.is_dir();
-                stats.entry_count += 1.0;
-                stats.bytes += allocated_bytes(&metadata);
-                if is_dir {
-                    stats.dir_count += 1.0;
-                    queue.push_back(entry_path);
-                } else {
-                    stats.file_count += 1.0;
-                }
-            }
-            if stats.truncated > 0.0 {
-                break;
-            }
-        }
-        if !queue.is_empty() {
-            stats.truncated = 1.0;
-        }
-        stats
     }
 }
 
@@ -130,6 +77,7 @@ pub(crate) fn merge_runner_timings(
     }
 }
 
+#[cfg_attr(not(target_os = "linux"), allow(dead_code))]
 pub(crate) const fn layer_change_kind(change: &LayerChange) -> &'static str {
     match change {
         LayerChange::Write { .. } => "write",
@@ -306,24 +254,6 @@ pub(crate) fn insert_tree_resource_timings(
         json!(stats.entry_count),
     );
     timings.insert(format!("{prefix}_tree_truncated"), json!(stats.truncated));
-}
-
-fn allocated_bytes(metadata: &fs::Metadata) -> f64 {
-    #[cfg(unix)]
-    {
-        use std::os::unix::fs::MetadataExt;
-
-        let allocated = metadata.blocks().saturating_mul(512);
-        u64_to_f64_saturating(if allocated > 0 {
-            allocated
-        } else {
-            metadata.len()
-        })
-    }
-    #[cfg(not(unix))]
-    {
-        u64_to_f64_saturating(metadata.len())
-    }
 }
 
 fn insert_cgroup_resource_timings(timings: &mut serde_json::Map<String, Value>) {

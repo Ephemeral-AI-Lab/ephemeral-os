@@ -3,19 +3,24 @@
 use std::path::{Path, PathBuf};
 use std::time::Instant;
 
+use eos_ephemeral_workspace::{
+    run_read_tool, AgentId as EphemeralAgentId, InvocationId as EphemeralInvocationId,
+    ReadToolRequest, WorkspaceRoot as EphemeralWorkspaceRoot,
+};
 use eos_layerstack::{require_workspace_binding, LayerStack};
 use eos_protocol::{
     apply_search_replace,
     models::{SearchReplaceEdit, MAX_FILE_BYTES, MAX_READ_BYTES},
-    Intent, LayerChange, LayerPath, SearchReplaceError,
+    LayerChange, LayerPath, SearchReplaceError,
 };
-use eos_runner::{RunMode, RunRequest, RunResult, ToolCall, WorkspaceRoot};
 use serde_json::{json, Value};
 
 use crate::dispatcher::DispatchContext;
 use crate::error::DaemonError;
 use crate::occ_writer::{apply_occ_changeset, hash_current, manifest_version_u64};
-use crate::overlay_runner::{overlay_run_dirs, run_ns_runner_child, RunDirCleanup};
+use crate::overlay_runner::{
+    ephemeral_daemon_error, ephemeral_dir_allocator, DaemonFreshNamespaceRunner, DaemonSnapshotPort,
+};
 use crate::request_args::{require_raw_string, require_string};
 use crate::response_timings::{
     guarded_changeset_response, guarded_conflict_response, merge_runner_timings,
@@ -282,44 +287,27 @@ fn run_overlay_read_tool(args: &Value, verb: &str) -> Result<Value, DaemonError>
         .to_owned();
     let binding = require_workspace_binding(&root)?;
 
-    let mut stack = LayerStack::open(root.clone())?;
-    let acquire_start = Instant::now();
-    let lease = stack.acquire_snapshot(&format!("overlay:{agent_id}:{invocation_id}"))?;
-    let lease_acquire_s = acquire_start.elapsed().as_secs_f64();
-    let run_result: Result<RunResult, DaemonError> = (|| {
-        let dirs = overlay_run_dirs("sandbox-overlay", &invocation_id)?;
-        let _cleanup = RunDirCleanup::new(dirs.run_dir.clone());
-        let request = RunRequest {
-            mode: RunMode::FreshNs,
-            tool_call: ToolCall {
-                invocation_id: invocation_id.clone(),
-                agent_id,
-                verb: verb.into(),
-                intent: Intent::ReadOnly,
-                args: args.clone(),
-                background: false,
-            },
-            workspace_root: WorkspaceRoot(PathBuf::from(&binding.workspace_root)),
-            layer_paths: lease.layer_paths.iter().map(PathBuf::from).collect(),
-            upperdir: Some(dirs.upperdir),
-            workdir: Some(dirs.workdir),
-            ns_fds: None,
-            cgroup_path: None,
-            timeout_seconds: args.get("timeout_seconds").and_then(Value::as_f64),
-        };
-        run_ns_runner_child(&request, None)
-    })();
-    let _ = stack.release_lease(&lease.lease_id);
-
-    let runner = run_result?;
+    let request = ReadToolRequest {
+        layer_stack_root: EphemeralWorkspaceRoot(root.clone()),
+        workspace_root: PathBuf::from(&binding.workspace_root),
+        agent_id: EphemeralAgentId(agent_id),
+        invocation_id: EphemeralInvocationId(invocation_id),
+        verb: verb.to_owned(),
+        args: args.clone(),
+        timeout_seconds: args.get("timeout_seconds").and_then(Value::as_f64),
+    };
+    let dirs = ephemeral_dir_allocator()?;
+    let runner = DaemonFreshNamespaceRunner::new(None);
+    let outcome = run_read_tool(&DaemonSnapshotPort, &runner, &dirs, request)
+        .map_err(ephemeral_daemon_error)?;
     let manifest = LayerStack::open(root)?.read_active_manifest()?;
     let mut timings = resource_timings(&manifest, 0);
-    merge_runner_timings(&mut timings, &runner);
+    merge_runner_timings(&mut timings, &outcome.runner);
     timings.insert(
         "layer_stack.acquire_snapshot.total_s".to_owned(),
-        json!(lease_acquire_s),
+        json!(outcome.lease_acquire_s),
     );
-    let mut response = runner.tool_result;
+    let mut response = outcome.runner.tool_result;
     timings
         .entry("command_exec.capture_upperdir_s".to_owned())
         .or_insert_with(|| json!(0.0));

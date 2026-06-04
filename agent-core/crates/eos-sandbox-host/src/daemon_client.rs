@@ -20,10 +20,10 @@ use serde_json::Value;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpStream;
 
+use crate::bootstrap_artifact::EOSD_VERSION;
 use crate::error::SandboxHostError;
 use crate::provider::{DaemonTcpEndpoint, ExecOpts, ProviderAdapter};
 use crate::registry::ProviderRegistry;
-use crate::runtime_artifact::EOSD_VERSION;
 
 // --- wire protocol constants --------------------------------------------------
 //
@@ -33,7 +33,7 @@ use crate::runtime_artifact::EOSD_VERSION;
 // silently drift the host. Host-only operational knobs stay local.
 
 /// The wire protocol version the host speaks (from `eos_protocol`). Lockstep
-/// with [`crate::runtime_artifact::PROTOCOL_VERSION`].
+/// with [`crate::bootstrap_artifact::PROTOCOL_VERSION`].
 pub const DAEMON_PROTOCOL_VERSION: u32 = eos_protocol::DAEMON_PROTOCOL_VERSION as u32;
 const DAEMON_PROTOCOL_FIELD: &str = eos_protocol::DAEMON_PROTOCOL_FIELD;
 const DAEMON_AUTH_FIELD: &str = eos_protocol::DAEMON_AUTH_FIELD;

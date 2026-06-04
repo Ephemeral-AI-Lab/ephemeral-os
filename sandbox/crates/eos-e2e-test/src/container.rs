@@ -318,19 +318,7 @@ impl DaemonContainer {
         // `exec` argv may start with docker flags like `-d`; the container name
         // goes after them and before the command. Everything after the command
         // token is passed through verbatim.
-        let mut rebuilt: Vec<String> = vec!["exec".to_owned()];
-        let mut rest = argv.iter();
-        for token in rest.by_ref() {
-            if token.starts_with('-') {
-                rebuilt.push((*token).to_owned());
-            } else {
-                rebuilt.push(self.name.clone());
-                rebuilt.push((*token).to_owned());
-                break;
-            }
-        }
-        rebuilt.extend(rest.map(|s| (*s).to_owned()));
-        docker(&rebuilt)
+        docker(&docker_exec_args(&self.name, argv))
     }
 
     /// Best-effort tail of the daemon log for diagnostics (not an oracle).
@@ -359,6 +347,22 @@ impl Drop for DaemonContainer {
 /// Run `docker <args...>`, returning trimmed stdout. Errors include stderr.
 fn docker(args: &[String]) -> Result<String> {
     docker_str(&args.iter().map(String::as_str).collect::<Vec<_>>())
+}
+
+fn docker_exec_args(container: &str, argv: &[&str]) -> Vec<String> {
+    let mut rebuilt: Vec<String> = vec!["exec".to_owned()];
+    let mut rest = argv.iter();
+    for token in rest.by_ref() {
+        if token.starts_with('-') {
+            rebuilt.push((*token).to_owned());
+        } else {
+            rebuilt.extend(["-w".to_owned(), "/".to_owned(), container.to_owned()]);
+            rebuilt.push((*token).to_owned());
+            break;
+        }
+    }
+    rebuilt.extend(rest.map(|s| (*s).to_owned()));
+    rebuilt
 }
 
 fn docker_str(args: &[&str]) -> Result<String> {
@@ -658,7 +662,8 @@ mod tests {
     use std::path::PathBuf;
 
     use super::{
-        docker_http_status, docker_unix_socket_from_host, percent_encode, tar_single_file,
+        docker_exec_args, docker_http_status, docker_unix_socket_from_host, percent_encode,
+        tar_single_file,
     };
 
     #[test]
@@ -682,6 +687,18 @@ mod tests {
         assert_eq!(
             docker_unix_socket_from_host("unix:///var/run/docker.sock").expect("socket"),
             PathBuf::from("/var/run/docker.sock")
+        );
+    }
+
+    #[test]
+    fn docker_exec_args_runs_from_root_after_leading_flags() {
+        assert_eq!(
+            docker_exec_args("box", &["mkdir", "-p", "/testbed"]),
+            vec!["exec", "-w", "/", "box", "mkdir", "-p", "/testbed"]
+        );
+        assert_eq!(
+            docker_exec_args("box", &["-d", "/eos/daemon/eosd", "daemon"]),
+            vec!["exec", "-d", "-w", "/", "box", "/eos/daemon/eosd", "daemon"]
         );
     }
 }

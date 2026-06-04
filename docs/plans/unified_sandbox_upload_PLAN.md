@@ -1,6 +1,6 @@
 # Unified Sandbox Upload And Generic Plugin Runtime Plan
 
-**Status:** proposed
+**Status:** in progress
 **Owner:** TBD
 **Last updated:** 2026-06-04
 **Scope:** Rust sandbox upload, bootstrap artifacts, generic sandbox plugin package
@@ -29,9 +29,9 @@ The terms MUST, MUST NOT, SHOULD, and MAY are used as implementation contracts.
    lifecycle, workspace refresh, PPC routing, status, and teardown.
 6. Bootstrap artifact code MUST own only daemon bootstrap artifacts, such as
    `eosd`, daemon version/protocol constants, and daemon upload markers.
-7. Plugin dependencies MUST be package-scoped under
-   `/eos/runtime/packages/<plugin>/`.
-8. Plugin runtimes SHOULD use absolute dependency paths. They SHOULD NOT rely on
+7. Plugin dependencies MUST be package-version-scoped under
+   `/eos/runtime/packages/<plugin>/<plugin-digest>/`.
+8. Plugin runtimes MUST use absolute dependency paths. They MUST NOT rely on
    global aliases such as `NODE_HOME` or on PATH mutation.
 9. Acceptance criteria for each phase MUST pass before implementation moves to
    the next phase.
@@ -45,6 +45,13 @@ The terms MUST, MUST NOT, SHOULD, and MAY are used as implementation contracts.
     `ensure_daemon_bootstrap(...)`; plugin setup uses
     `ensure_plugin_package(...)`. Raw upload and staged package references are
     internal implementation details, not the normal caller workflow.
+13. LSP live E2E is mandatory for this migration. LSP is only an example plugin,
+    but it is the regression package that proves Node/Pyright packaging no longer
+    leaks into bootstrap or global sandbox environments.
+14. Architecture documentation updates are phase gates. Any phase that changes
+    plugin setup, plugin lifecycle, upload, `/eos` layout, or isolated/plugin
+    interaction MUST update the smallest affected page under `docs/architecture`
+    before that phase can close.
 
 Non-`/eos` paths that cannot be migrated are limited to kernel or namespace
 control surfaces, such as `/proc`, cgroups, mount namespace state, netlink/nft,
@@ -105,8 +112,9 @@ transport. The migration MUST optimize around this path:
 | `BootstrapArtifact` | `agent-core/crates/eos-sandbox-host` | Upload/start daemon bootstrap artifacts only. |
 | `SandboxUpload` | `agent-core/crates/eos-sandbox-host` | Fast, `/eos`-only upload primitive over exec+tar. |
 | `DaemonBootstrapApi` | `agent-core/crates/eos-sandbox-host` | Purpose-specific daemon setup API that uses private upload helpers internally. |
-| `PluginPackageSetupApi` | `agent-core/crates/eos-sandbox-host` | Purpose-specific plugin setup API: probe, cold-path upload, daemon ensure, setup, and service start. |
-| `PluginPackageDescriptor` | `agent-core/crates/eos-plugin-catalog` | Catalog-owned package source, digest, setup, services, operations, and tool metadata. |
+| `PluginPackageSetupApi` | `agent-core/crates/eos-sandbox-host` | Purpose-specific plugin setup API: warm probe, private cold-path upload, and daemon ensure call. It does not run setup or start services directly. |
+| `CatalogPluginPackageSource` | `agent-core/crates/eos-plugin-catalog` | Catalog-owned package source, digest inputs, setup script, service declarations, operations, and model tool metadata. |
+| `NeutralPluginPackageDescriptor` | `agent-core/crates/eos-sandbox-api` or `sandbox/crates/eos-protocol` | Sandbox-bound package descriptor consumed by host/daemon APIs. It contains no model tool specs and is not an `eos-plugin-catalog` type. |
 | `SandboxPluginManifest` | `sandbox/crates/eos-plugin` | Neutral sandbox contract for package, services, operations, setup, and refresh strategy. |
 | `PluginRegistry` | `sandbox/crates/eos-daemon` | In-memory loaded plugin state plus digest-marker checks; no persistent registry file for this migration. |
 | `SetupRunner` | `sandbox/crates/eos-daemon` | Runs plugin setup scripts under `/eos`, records setup digest, reports failures. |
@@ -132,37 +140,39 @@ package/setup/upload pieces and rename LSP-shaped fixtures.
 
 ```mermaid
 flowchart TD
-    A["agent-core plugin catalog"] --> B["PluginPackageDescriptor"]
+    A["agent-core plugin catalog"] --> B["CatalogPluginPackageSource"]
     B --> C["model-facing ToolSpec registration"]
-    B --> D["ensure_plugin_package(...)"]
-    D --> E["daemon api.plugin.ensure without staged package"]
-    E --> F{"package/setup markers current?"}
-    F -- yes --> G["start or reuse services"]
-    F -- no --> H["private SandboxUpload cold path"]
-    H --> I["/eos/scratch/uploads/plugins/<plugin>/<digest>/<upload-id>/package"]
-    I --> J["daemon api.plugin.ensure with staged package"]
-    J --> K["validate digest and publish package"]
-    K --> L["run setup if marker stale"]
-    L --> G
-    G --> M["PPC socket bridge"]
-    M --> N["plugin_dispatch(...)"]
-    N --> O["workspace overlay, refresh, OCC"]
-    O --> N
+    B --> D["NeutralPluginPackageDescriptor"]
+    D --> E["ensure_plugin_package(...)"]
+    E --> F["daemon api.plugin.ensure without staged package"]
+    F --> G{"package/setup markers current?"}
+    G -- yes --> H["daemon starts or reuses services"]
+    G -- no --> I["private SandboxUpload cold path"]
+    I --> J["/eos/scratch/uploads/plugins/<plugin>/<digest>/<upload-id>/package"]
+    J --> K["daemon api.plugin.ensure with staged package"]
+    K --> L["validate digest and publish package"]
+    L --> M["daemon runs setup if marker stale"]
+    M --> H
+    H --> N["PPC socket"]
+    N --> O["plugin_dispatch(...)"]
+    O --> P["workspace overlay, refresh, OCC"]
+    P --> O
 ```
 
 ### 5.1 High-Level Plugin Package Ensure
 
 1. Agent-core resolves the plugin from the catalog.
 2. Agent-core registers the model-facing tool specs.
-3. Runtime calls `ensure_plugin_package(sandbox_id, catalog_package,
-   start_services)` with a generic descriptor:
+3. Runtime calls `ensure_plugin_package(sandbox_id, package_descriptor,
+   start_services)` with a neutral descriptor built from catalog-owned package
+   source:
    - plugin identity and digest;
    - canonical package tree or package source metadata;
    - setup command;
    - service specs;
    - operation routes;
    - refresh strategy;
-   - package-scoped dependency paths.
+   - package-version-scoped dependency policy.
 4. `ensure_plugin_package` first calls daemon `api.plugin.ensure` without a
    staged package root.
 5. If the daemon has a matching package digest and setup marker, it loads the
@@ -262,7 +272,7 @@ The upload transport is shared, but the public APIs are purpose-specific:
 ```text
 public host APIs:
   ensure_daemon_bootstrap(sandbox_id)
-  ensure_plugin_package(sandbox_id, catalog_package, start_services)
+  ensure_plugin_package(sandbox_id, package_descriptor, start_services)
 
 public daemon/model operation API:
   plugin_dispatch(plugin_id, op_name, args)
@@ -290,10 +300,51 @@ Live E2E tests MUST prove the same package contract used by production:
   under `/eos/scratch/uploads/plugins/<plugin-id>/<plugin-digest>/...`, and
   calls daemon `api.plugin.ensure` in cold mode;
 - generic plugin package E2E is mandatory and MUST NOT be LSP-shaped;
-- optional LSP E2E packages LSP through the same package contract and then calls
-  the same setup/ensure path;
+- mandatory LSP E2E packages LSP through the same package contract and then
+  calls the same setup/ensure path;
 - E2E tests MUST cover warm re-ensure with no package upload after the first
   successful setup.
+
+### 5.7 Architecture Documentation Gate
+
+Each implementation phase that changes an architecture-owned behavior MUST update
+the smallest affected architecture page and cite the Rust-owned evidence path.
+At minimum:
+
+- plugin contract, package setup, service lifecycle, and LSP package phases update
+  `docs/architecture/sandbox/plugin-setup.html` and
+  `docs/architecture/sandbox/plugins.html`;
+- isolated/plugin blocking changes update
+  `docs/architecture/tools/isolated-workspace.html`;
+- `/eos` layout changes update `docs/architecture/sandbox/workspaces.html` or the
+  narrower sandbox page that owns the stale path claim.
+
+### 5.8 Adversarial Fix Ledger
+
+The review fixes collapse into one ownership flow:
+
+```mermaid
+flowchart LR
+    A["catalog package source\nagent-core"] --> B["neutral package descriptor\napi/protocol"]
+    B --> C["host ensure_plugin_package\nprobe + private upload"]
+    C --> D["daemon plugin.ensure\nvalidate + publish"]
+    D --> E["daemon setup runner\nsetup.sh under /eos"]
+    E --> F["daemon service lifecycle\nrefresh + PPC + OCC"]
+    F --> G["mandatory generic + LSP live E2E"]
+    G --> H["phase-gated architecture docs"]
+```
+
+| Review issue | Fix | Gate |
+| --- | --- | --- |
+| Host API claimed setup/service ownership. | `PluginPackageSetupApi` only probes, uploads privately, and calls daemon ensure; daemon owns setup and service lifecycle. | Role table, Phase 4, Phase 5. |
+| Public host API used a catalog-shaped argument. | `ensure_plugin_package` takes a neutral package descriptor; catalog converts its package source into that descriptor. | Phase 6 dependency and DTO acceptance criteria. |
+| Manifest let catalog choose absolute sandbox roots. | Manifest uses relative package paths and daemon-derived `/eos` roots from plugin id plus digest. | Phase 3 validation and Phase 4 publish tests. |
+| Live E2E could bypass the public plugin setup API. | Add a host/agent-core E2E that fabricates a generic package and calls `ensure_plugin_package`; daemon-only staging remains protocol coverage. | Phase 4 live E2E gate. |
+| Global runtime env prohibition was weak. | Absolute dependency paths are mandatory; `NODE_HOME`, global PATH mutation, and `/eos/env` are forbidden target-runtime matches. | Phase 1, Phase 7, Phase 8 scans. |
+| Shared plugin bridge path was undefined. | No shared plugin bridge is installed by bootstrap; bridge/runtime helpers are plugin package content unless a later daemon-owned generic bridge requirement is accepted. | Phase 1 bootstrap split and Phase 8 path scan. |
+| Plugin dependency path could collide across digests. | Dependencies live under `/eos/runtime/packages/<plugin-id>/<plugin-digest>/`, so old and new package services cannot mutate the same dependency root. | Phase 4 idempotency and Phase 5 service lifecycle tests. |
+| LSP live E2E was optional. | LSP live E2E is mandatory for Phase 7. | Phase 7 acceptance criteria. |
+| Architecture docs were final cleanup only. | Relevant architecture pages are phase gates, not a final-only cleanup task. | Section 5.7 and per-phase acceptance criteria. |
 
 ---
 
@@ -310,7 +361,6 @@ Live E2E tests MUST prove the same package contract used by production:
 │   │   ├── runtime.env
 │   │   └── .eosd-sha256
 │   ├── plugins/
-│   │   ├── bridge/
 │   │   └── catalog/
 │   │       └── <plugin-id>/
 │   │           └── <plugin-digest>/
@@ -321,9 +371,10 @@ Live E2E tests MUST prove the same package contract used by production:
 │   │               └── runtime/
 │   └── packages/
 │       └── <plugin-id>/
-│           ├── archives/
-│           ├── cache/
-│           └── <installed-dependency>/
+│           └── <plugin-digest>/
+│               ├── archives/
+│               ├── cache/
+│               └── <installed-dependency>/
 ├── state/
 │   ├── layer-stack/
 │   │   ├── manifest.json
@@ -369,8 +420,12 @@ Live E2E tests MUST prove the same package contract used by production:
   invocations, or service lifecycles end.
 - Plugin package directories are keyed by `<plugin-id>/<plugin-digest>` so
   upgrades and rollbacks do not overwrite a live package in place.
-- Plugin dependency installs are keyed by `<plugin-id>` because dependencies are
-  package-owned and must not leak into a global environment.
+- Plugin dependency installs are keyed by `<plugin-id>/<plugin-digest>` because
+  dependencies are package-version-owned and must not leak into a global
+  environment or collide across live package versions.
+- Shared plugin bridge/runtime files are not installed by bootstrap. Bridge
+  helpers are plugin package content unless a later daemon-owned generic bridge
+  requirement is accepted.
 - Plugin install idempotency is marker-driven. `.package-sha256` records the
   canonical package digest, and `.setup-sha256` records the setup marker digest.
 
@@ -380,15 +435,15 @@ Live E2E tests MUST prove the same package contract used by production:
 
 | Phase | Status | Scope | Gate before next phase |
 | --- | --- | --- | --- |
-| 0. Spec baseline | Proposed | Plan, contracts, progress tracker | This document is accepted as the source plan. |
-| 1. Bootstrap artifact split | Not started | Remove plugin logic from bootstrap upload | Sandbox-host has no LSP/plugin bootstrap coupling. |
+| 0. Spec baseline | Complete | Plan, contracts, progress tracker | Accepted 2026-06-04; Phase 0 acceptance criteria verified against this document. |
+| 1. Bootstrap artifact split | In progress | Remove plugin logic from bootstrap upload | Source/doc/static gates are green; live Docker E2E gate has not passed yet. |
 | 2. Unified `/eos` upload primitive | Not started | Rust upload transport | Fast upload works and rejects managed non-`/eos` writes. |
-| 3. Generic plugin package contract | Not started | Protocol and manifest types | Package/manifest model has no LSP-only fields. |
-| 4. Package install and setup | Not started | Daemon registry and setup runner | Generic package installs, sets up, and re-ensures idempotently. |
-| 5. Plugin server lifecycle | Not started | Start/status/refresh/stop/PPC | Non-LSP plugin service passes live dispatch and refresh tests. |
-| 6. Agent-core catalog bridge | Not started | Catalog to sandbox interface | Agent-core sends generic descriptors; sandbox stays decoupled. |
-| 7. LSP example package | Not started | LSP package proves generic path | LSP works with package-scoped absolute Node path. |
-| 8. Filesystem consolidation | Not started | `/eos` layout cleanup | Managed sandbox files match the final structure. |
+| 3. Generic plugin package contract | Not started | Protocol and manifest types | Package/manifest model has no LSP-only fields; architecture docs updated. |
+| 4. Package install and setup | Not started | Daemon registry and setup runner | Generic package installs, sets up, and re-ensures idempotently; architecture docs updated. |
+| 5. Plugin server lifecycle | Not started | Start/status/refresh/stop/PPC | Non-LSP plugin service passes live dispatch and refresh tests; architecture docs updated. |
+| 6. Agent-core catalog bridge | Not started | Catalog to sandbox interface | Agent-core sends neutral descriptors; sandbox stays decoupled. |
+| 7. LSP example package | Not started | LSP package proves generic path | LSP live E2E passes with package-version-scoped absolute Node path. |
+| 8. Filesystem consolidation | Not started | `/eos` layout cleanup | Managed sandbox files match the final structure; architecture docs updated. |
 | 9. Final verification and cleanup | Not started | Broad checks and doc closure | All gates pass; stale Python-era plan language is gone. |
 
 Each phase below is written as a spec. The implementation MUST NOT proceed to
@@ -473,14 +528,16 @@ flowchart TD
 
 ### 9.5 Acceptance Criteria
 
-- `rg "BUILTIN_LSP|ensure_builtin_lsp|plugin-packages/lsp|eos-node22" agent-core/crates/eos-sandbox-host/src` returns no matches.
+- `rg "BUILTIN_LSP|ensure_builtin_lsp|plugin-packages/lsp|eos-node22|NODE_HOME|runtime_bridge|plugins/catalog" agent-core/crates/eos-sandbox-host/src` returns no matches.
 - `rg "runtime_artifact" agent-core/crates/eos-sandbox-host/src` returns no stale references.
 - Daemon setup API has no plugin package parameters and uploads no plugin files.
+- `docs/architecture/sandbox/plugin-setup.html` no longer describes bootstrap
+  or runtime artifacts as the owner of plugin package installation.
 - `cd agent-core && cargo check -p eos-sandbox-host --all-targets` passes.
 - Live E2E gate passes:
-  - `cd sandbox && cargo test -p eos-e2e-test --features e2e --test setup runtime_ready_handshake`
-  - `cd sandbox && cargo test -p eos-e2e-test --features e2e --test setup workspace_binding_roundtrip`
-  - `cd sandbox && cargo test -p eos-e2e-test --features e2e --test protocol_smoke`
+  - `cd sandbox && cargo test -p eos-e2e-test --features e2e --test protocol setup::runtime_ready_handshake`
+  - `cd sandbox && cargo test -p eos-e2e-test --features e2e --test protocol setup::workspace_binding_roundtrip`
+  - `cd sandbox && cargo test -p eos-e2e-test --features e2e --test protocol smoke::setup_readiness_metrics_and_audit_are_protocol_visible`
 
 ### 9.6 Filesystem Result
 
@@ -605,14 +662,13 @@ SandboxPluginManifest {
 }
 
 PluginPackageSpec {
-  package_root: AbsoluteEosPath,
-  dependency_root: AbsoluteEosPath,
-  runtime_root: AbsoluteEosPath,
+  runtime_dir: RelativePackagePath,
+  dependency_scope: package_digest,
 }
 
 PluginSetupSpec {
   command: Vec<String>,
-  working_dir: AbsoluteEosPath,
+  working_dir: RelativePackagePath,
   marker_digest: Sha256Digest,
   timeout_ms: u64,
 }
@@ -621,7 +677,7 @@ PluginServiceSpec {
   service_id: ServiceId,
   service_profile_digest: Sha256Digest,
   command: Vec<String>,
-  working_dir: AbsoluteEosPath,
+  working_dir: RelativePackagePath,
   service_mode: persistent | oneshot_overlay,
   refresh_strategy: RefreshStrategy,
   ppc_protocol_version: u32,
@@ -637,6 +693,10 @@ PluginOperationSpec {
 ```
 
 The exact Rust type names may differ, but the ownership boundary MUST remain.
+The manifest does not choose final absolute publish, dependency, or runtime
+roots. The daemon derives those roots from `plugin_id` and `plugin_digest`, then
+passes the resolved absolute paths to setup and service processes through
+sandbox-owned `EOS_PLUGIN_*` environment variables.
 
 ### 11.3 Digest Semantics
 
@@ -687,15 +747,19 @@ validation. The catalog owns source discovery and model tool specs.
 
 - `rg -n "lsp|pyright|node" sandbox/crates/eos-plugin sandbox/crates/eos-daemon/tests/plugin/support.rs` has no generic fixture dependency except explicitly named LSP example tests.
 - Manifest validation rejects:
-  - package roots outside `/eos`;
-  - setup working directories outside `/eos`;
-  - service working directories outside `/eos`;
+  - relative package paths with absolute prefixes;
+  - relative package paths containing `..`;
+  - setup working directories outside the package tree after daemon resolution;
+  - service working directories outside the package tree after daemon resolution;
   - duplicate operation routes;
   - invalid service references.
 - Tests cover `plugin_digest`, `.package-sha256`, `setup_marker_digest`, and
   `service_profile_digest` change behavior.
 - There is one neutral ensure DTO owner; catalog code does not define a
   duplicate sandbox wire shape.
+- `docs/architecture/sandbox/plugin-setup.html` and
+  `docs/architecture/sandbox/plugins.html` are updated with the generic
+  package/setup contract and Rust evidence paths before Phase 3 closes.
 - `cd sandbox && cargo test -p eos-plugin --all-targets` passes.
 - `cd sandbox && cargo test -p eos-daemon plugin --all-targets` passes.
 
@@ -760,10 +824,11 @@ Setup execution MUST:
 
 - run from the package-declared working directory;
 - inherit only sandbox-approved environment variables;
-- receive package-scoped dependency paths;
+- receive package-version-scoped dependency paths;
 - write managed outputs only under `/eos`;
-- write caches under `/eos/runtime/packages/<plugin-id>/cache` or another
-  package-owned `/eos/runtime/packages/<plugin-id>/...` path;
+- write caches under `/eos/runtime/packages/<plugin-id>/<plugin-digest>/cache`
+  or another package-version-owned
+  `/eos/runtime/packages/<plugin-id>/<plugin-digest>/...` path;
 - record setup success by digest;
 - report setup failure through plugin status;
 - not start services if setup fails.
@@ -797,7 +862,7 @@ Setup enforcement MUST be implemented, not left to convention:
 
 - Generic package install writes only under:
   - `/eos/runtime/plugins/catalog/<plugin-id>/<plugin-digest>`;
-  - `/eos/runtime/packages/<plugin-id>`;
+  - `/eos/runtime/packages/<plugin-id>/<plugin-digest>`;
   - `/eos/scratch/uploads`;
   - `/eos/scratch/setup`.
 - Re-ensuring the same digest skips setup.
@@ -813,12 +878,16 @@ Setup enforcement MUST be implemented, not left to convention:
   `/eos/state/plugins/registry.json` is required.
 - `cd sandbox && cargo test -p eos-daemon plugin --all-targets` passes.
 - Live E2E gate passes:
+  - `cd sandbox && cargo test -p eos-e2e-test --features e2e --test plugin_packages host_ensure_plugin_package_installs_generic_package`
   - `cd sandbox && cargo test -p eos-e2e-test --features e2e --test plugin_packages generic_package_installs_and_sets_up`
   - `cd sandbox && cargo test -p eos-e2e-test --features e2e --test plugin_packages generic_package_reensure_is_idempotent`
 - The live generic package fixture is a canonical package tree staged under
   `/eos/scratch/uploads/plugins/...`, not a special in-daemon test shortcut.
 - The live re-ensure case proves no package upload is required after the first
   successful install/setup.
+- `docs/architecture/sandbox/plugin-setup.html` and
+  `docs/architecture/sandbox/plugins.html` are updated with package publish,
+  setup marker, and host/daemon API ownership before Phase 4 closes.
 
 ### 12.6 Filesystem Result
 
@@ -830,7 +899,7 @@ Setup enforcement MUST be implemented, not left to convention:
 ├── .setup-sha256
 └── runtime/server.sh
 
-/eos/runtime/packages/echo/
+/eos/runtime/packages/echo/<digest>/
 ├── archives/
 └── cache/
 ```
@@ -962,7 +1031,8 @@ CatalogPlugin {
 The runtime bridge SHOULD:
 
 - register tool specs from the catalog;
-- call `ensure_plugin_package(...)` with the catalog package descriptor;
+- convert catalog package source into the neutral package descriptor;
+- call `ensure_plugin_package(...)` with the neutral package descriptor;
 - keep package upload and daemon `api.plugin.ensure` calls hidden inside
   `ensure_plugin_package(...)`;
 - call `plugin_dispatch` for operation execution;
@@ -1008,6 +1078,9 @@ with daemon operation dispatch; it only reduces caller boilerplate.
   succeeded, directly or through `call_plugin_operation`.
 - The public agent-core setup API is `ensure_plugin_package(...)`; there is no
   normal public `upload_plugin_package(...)` workflow.
+- `docs/architecture/sandbox/plugin-setup.html` and
+  `docs/architecture/sandbox/plugins.html` describe the catalog-to-neutral-DTO
+  bridge before Phase 6 closes.
 - `cd agent-core && cargo test -p eos-plugin-catalog --all-targets` passes.
 - `cd agent-core && cargo test -p eos-runtime plugin --all-targets` passes, or
   the closest focused plugin runtime tests pass if the full package selector is
@@ -1031,19 +1104,19 @@ sandbox bootstrap feature.
 ### 15.2 LSP Package Spec
 
 The LSP package MAY install Node and Pyright, but the install paths MUST be
-package-owned:
+package-version-owned:
 
 ```text
-/eos/runtime/packages/lsp/node22/
-/eos/runtime/packages/lsp/pyright/
-/eos/runtime/packages/lsp/npm-cache/
+/eos/runtime/packages/lsp/<digest>/node22/
+/eos/runtime/packages/lsp/<digest>/pyright/
+/eos/runtime/packages/lsp/<digest>/npm-cache/
 ```
 
 Pyright launch SHOULD use absolute Node:
 
 ```text
-/eos/runtime/packages/lsp/node22/bin/node \
-  /eos/runtime/packages/lsp/node22/lib/node_modules/pyright/langserver.index.js \
+/eos/runtime/packages/lsp/<digest>/node22/bin/node \
+  /eos/runtime/packages/lsp/<digest>/node22/lib/node_modules/pyright/langserver.index.js \
   --stdio
 ```
 
@@ -1059,7 +1132,8 @@ PATH containing node22/bin
 
 - Move or recreate LSP package material under
   `agent-core/crates/eos-plugin-catalog/lsp`.
-- Convert setup script paths from global env paths to package-scoped paths.
+- Convert setup script paths from global env paths to package-version-scoped
+  paths.
 - Convert Pyright runtime launch to absolute Node path.
 - Register LSP tools through the catalog bridge.
 - Ensure LSP uses generic package install, setup, service start, refresh, and
@@ -1070,10 +1144,10 @@ PATH containing node22/bin
 | File | Change |
 | --- | --- |
 | `agent-core/crates/eos-plugin-catalog/lsp/plugin.md` | LSP package metadata and model tool listing. |
-| `agent-core/crates/eos-plugin-catalog/lsp/setup.sh` | Install Node/Pyright under `/eos/runtime/packages/lsp`. |
+| `agent-core/crates/eos-plugin-catalog/lsp/setup.sh` | Install Node/Pyright under `/eos/runtime/packages/lsp/<digest>`. |
 | `agent-core/crates/eos-plugin-catalog/lsp/runtime/*` | Launch Pyright with absolute Node. |
 | `agent-core/crates/eos-plugin-catalog/src/tool_specs.rs` | Keep LSP tool specs catalog-owned. |
-| `sandbox/crates/eos-e2e-test/tests/plugin_lsp.rs` | Optional live LSP E2E if package size and image constraints allow it. |
+| `sandbox/crates/eos-e2e-test/tests/plugin_lsp.rs` | Mandatory live LSP E2E through the generic package upload/setup API. |
 
 ### 15.5 Acceptance Criteria
 
@@ -1083,11 +1157,11 @@ PATH containing node22/bin
 - LSP service starts through generic service lifecycle.
 - At least one LSP operation succeeds against a small workspace file.
 - `cd agent-core && cargo test -p eos-plugin-catalog lsp --all-targets` passes, or the closest focused catalog tests pass.
-- Live E2E gate passes when LSP package test is added:
+- Live E2E gate passes:
   - `cd sandbox && cargo test -p eos-e2e-test --features e2e --test plugin_lsp`
-- If LSP live test is deferred due package size or image constraints, the phase
-  MUST still pass the generic plugin E2E gate from Phase 5 and record the LSP
-  live-test deferral as an explicit follow-up.
+- `docs/architecture/sandbox/plugin-setup.html` and
+  `docs/architecture/sandbox/plugins.html` describe LSP as a normal package
+  example and do not describe it as bootstrap/runtime-artifact behavior.
 
 ### 15.6 Filesystem Result
 
@@ -1099,7 +1173,7 @@ PATH containing node22/bin
 ├── .setup-sha256
 └── runtime/
 
-/eos/runtime/packages/lsp/
+/eos/runtime/packages/lsp/<digest>/
 ├── archives/
 ├── node22/
 ├── pyright/
@@ -1123,8 +1197,8 @@ Remove or migrate:
 | --- | --- |
 | `/eos/daemon` | `/eos/runtime/daemon` |
 | `/eos/daemon/plugins` | `/eos/runtime/plugins` |
-| `/eos/plugin-packages/<plugin>` | `/eos/runtime/packages/<plugin>` |
-| `/eos/env/eos-node22` | `/eos/runtime/packages/lsp/node22` |
+| `/eos/plugin-packages/<plugin>` | `/eos/runtime/packages/<plugin>/<plugin-digest>` |
+| `/eos/env/eos-node22` | `/eos/runtime/packages/lsp/<digest>/node22` |
 | `/eos/plugin-archives` | `/eos/scratch/uploads` |
 | ad hoc isolated scratch paths | `/eos/scratch/isolated` |
 | ad hoc overlay scratch paths | `/eos/scratch/overlay` |
@@ -1135,7 +1209,7 @@ Remove or migrate:
 | --- | --- |
 | sandbox daemon path constants | Centralize final `/eos` paths. |
 | sandbox host path constants | Use final daemon/upload paths. |
-| plugin package setup | Use `/eos/runtime/packages/<plugin>`. |
+| plugin package setup | Use `/eos/runtime/packages/<plugin>/<plugin-digest>`. |
 | isolated workspace paths | Use `/eos/scratch/isolated`. |
 | command session paths | Use `/eos/scratch/command-sessions`. |
 | docs and tests | Remove stale path assertions. |
@@ -1144,6 +1218,9 @@ Remove or migrate:
 
 - `rg "/eos/daemon|/eos/plugin-packages|/eos/env|/eos/plugin-archives" agent-core sandbox docs/plans` returns only documented historical references or no matches.
 - Managed writes outside `/eos` are rejected or absent.
+- `docs/architecture/sandbox/workspaces.html` or the narrower stale-path owner
+  page is updated with the final `/eos/runtime`, `/eos/state`, and
+  `/eos/scratch` layout before Phase 8 closes.
 - Live E2E gate passes:
   - `cd sandbox && cargo test -p eos-e2e-test --features e2e --test setup`
   - `cd sandbox && cargo test -p eos-e2e-test --features e2e --test command_sessions`
@@ -1173,9 +1250,11 @@ path scans, and documentation updates all pass.
 | sandbox plugin contract | `cd sandbox && cargo test -p eos-plugin --all-targets` |
 | daemon plugin lifecycle | `cd sandbox && cargo test -p eos-daemon plugin --all-targets -- --test-threads=1` |
 | agent catalog/runtime bridge | `cd agent-core && cargo test -p eos-plugin-catalog --all-targets`; focused runtime plugin tests |
-| live setup/protocol | `cd sandbox && cargo test -p eos-e2e-test --features e2e --test setup`; `--test protocol_smoke`; `--test protocol_contract` |
+| live setup/protocol | `cd sandbox && cargo test -p eos-e2e-test --features e2e --test protocol setup::`; `--test protocol smoke::`; `--test protocol contract::` |
 | live plugin package | `cd sandbox && cargo test -p eos-e2e-test --features e2e --test plugin_packages` |
+| live LSP package | `cd sandbox && cargo test -p eos-e2e-test --features e2e --test plugin_lsp` |
 | live workspace/isolated | `cd sandbox && cargo test -p eos-e2e-test --features e2e --test tool_calls`; `--test isolated_workspace`; `--test overlay_isolated` |
+| architecture docs | Affected pages under `docs/architecture` were updated in the phase that changed the behavior, not deferred to final cleanup. |
 | formatting/static guard | `git diff --check`; scoped `cargo fmt --check` where code was touched |
 
 Live E2E commands require a usable Docker image. The existing test harness reads
@@ -1189,6 +1268,8 @@ Live E2E commands require a usable Docker image. The existing test harness reads
 - No managed path outside `/eos` remains.
 - No persistent plugin registry files are introduced unless a later durable-status
   requirement is accepted; package install state is marker-driven.
+- Mandatory LSP live E2E has passed through the same generic package API as the
+  non-LSP fixture.
 - This plan's progress tracker is updated with completed status and evidence.
 
 ---
@@ -1199,14 +1280,15 @@ Live E2E commands require a usable Docker image. The existing test harness reads
 | --- | --- | --- |
 | Bootstrap module | `runtime_artifact.rs` includes daemon plus builtin LSP runtime | `bootstrap_artifact.rs` contains daemon bootstrap only |
 | `/eos` upload | Docker adapter has tmpfs-safe exec+tar branch, but callers still have bespoke logic | Shared Rust upload primitive validates `/eos` and batches tar extraction |
-| Plugin package source | LSP package behavior is wired through sandbox-host/bootstrap paths | Agent-core catalog supplies generic package descriptor |
+| Plugin package source | LSP package behavior is wired through sandbox-host/bootstrap paths | Agent-core catalog supplies package source and converts it to a neutral package descriptor |
 | Plugin setup API | Runtime manually calls daemon `plugin_ensure`; package upload is not represented cleanly | Runtime calls high-level `ensure_plugin_package(...)`; private cold path uploads, daemon validates/publishes/setup/starts |
 | Plugin setup | LSP setup is special and uses global `/eos/env` | Daemon runs generic setup under package root |
 | Plugin service command | Runtime hardcodes LSP PPC command path | Catalog descriptor provides service command; daemon starts it generically |
-| Plugin dependency path | `/eos/plugin-packages/lsp`, `/eos/env/eos-node22` | `/eos/runtime/packages/<plugin>/...` |
+| Plugin dependency path | `/eos/plugin-packages/lsp`, `/eos/env/eos-node22` | `/eos/runtime/packages/<plugin>/<plugin-digest>/...` |
 | Workspace refresh | Existing daemon plugin refresh code is generic but tested through LSP-shaped fixtures | Generic fixture tests plus LSP example coverage |
-| Live E2E | Existing setup/workspace tests, no generic plugin package E2E | Add `plugin_packages.rs`; optional `plugin_lsp.rs` |
+| Live E2E | Existing setup/workspace tests, no generic plugin package E2E | Add `plugin_packages.rs`; require `plugin_lsp.rs` |
 | Filesystem layout | Mixed `/eos/daemon`, `/eos/plugin-packages`, `/eos/env` | Consolidated `/eos/runtime`, `/eos/state`, `/eos/scratch` |
+| Architecture docs | Plugin/upload changes can drift until final cleanup | Affected `docs/architecture` pages are updated before each phase closes |
 
 ---
 
@@ -1236,11 +1318,15 @@ Resolved:
 5. `plugin_dispatch(...)` remains the operation execution API. It is separate
    from package setup, though model-tool code may use a helper that calls ensure
    then dispatch.
+6. LSP live E2E is mandatory in Phase 7. Generic plugin E2E proves genericity;
+   LSP E2E proves the concrete Node/Pyright regression is fixed through the same
+   package path.
+7. Architecture documentation is phase-gated. The relevant
+   `docs/architecture` page must be refreshed in the phase that changes the
+   behavior.
 
 Open:
 
-1. Whether LSP live E2E should be required in Phase 7 or deferred behind image
-   size/package availability. Generic plugin E2E is mandatory either way.
-2. Whether the upload primitive should expose one enum-based API or two
+1. Whether the upload primitive should expose one enum-based API or two
    convenience helpers, `upload_file_into_eos` and `upload_tree_into_eos`. The
    contract is the same: validated `/eos`, exec+tar, caller-managed publish.

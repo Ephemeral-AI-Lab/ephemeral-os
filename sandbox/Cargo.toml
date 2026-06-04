@@ -9,7 +9,8 @@ members = [
     "crates/eos-layerstack",
     "crates/eos-overlay",
     "crates/eos-occ",
-    "crates/eos-isolated",
+    "crates/eos-isolated-workspace",
+    "crates/eos-ephemeral-workspace",
     "crates/eos-plugin",
     "crates/eos-e2e-test",
     "xtask",
@@ -49,7 +50,8 @@ eos-protocol = { path = "crates/eos-protocol" }
 eos-layerstack = { path = "crates/eos-layerstack" }
 eos-overlay = { path = "crates/eos-overlay" }
 eos-occ = { path = "crates/eos-occ" }
-eos-isolated = { path = "crates/eos-isolated" }
+eos-isolated-workspace = { path = "crates/eos-isolated-workspace" }
+eos-ephemeral-workspace = { path = "crates/eos-ephemeral-workspace" }
 eos-plugin = { path = "crates/eos-plugin" }
 eos-runner = { path = "crates/eos-runner" }
 eos-ns-holder = { path = "crates/eos-ns-holder" }

@@ -3,14 +3,12 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use eos_layerstack::{manifest_root_hash, LayerStack, Lease};
-#[cfg(all(target_os = "linux", not(test)))]
-use eos_overlay::{allocate_overlay_writable_dirs, overlay_writable_root};
 use eos_plugin::{PluginError, PluginServiceKey, PluginServiceState, PluginServiceStatus};
 use serde_json::Value;
 
 use crate::error::DaemonError;
 #[cfg(all(target_os = "linux", not(test)))]
-use crate::overlay_runner::overlay_daemon_error;
+use crate::overlay_runner::overlay_run_dirs;
 
 use super::process::{PluginProcessSpec, PluginServiceOverlay};
 use super::{ppc_router, DaemonPluginState, SharedPpcClient};
@@ -276,18 +274,10 @@ fn service_overlay_for_snapshot(
     key: &PluginServiceKey,
     snapshot: &PluginServiceSnapshot,
 ) -> Result<Option<PluginServiceOverlay>, DaemonError> {
-    let run_dir = overlay_writable_root()
-        .map_err(|err| overlay_daemon_error("overlay writable root", &err))?
-        .join("runtime")
-        .join("plugin-service")
-        .join(format!(
-            "{}-{}-{}",
-            std::process::id(),
-            sanitize_path_component(&key.service_id),
-            sanitize_path_component(&snapshot.manifest_key)
-        ));
-    let dirs = allocate_overlay_writable_dirs(&run_dir)
-        .map_err(|err| overlay_daemon_error("allocate overlay dirs", &err))?;
+    let dirs = overlay_run_dirs(
+        "plugin-service",
+        &format!("{}-{}", key.service_id, snapshot.manifest_key),
+    )?;
     Ok(Some(PluginServiceOverlay {
         run_dir: dirs.run_dir,
         layer_paths: snapshot.layer_paths.iter().map(PathBuf::from).collect(),
@@ -308,25 +298,6 @@ const fn service_overlay_for_snapshot(
     _snapshot: &PluginServiceSnapshot,
 ) -> Result<Option<PluginServiceOverlay>, DaemonError> {
     Ok(None)
-}
-
-#[cfg(all(target_os = "linux", not(test)))]
-fn sanitize_path_component(value: &str) -> String {
-    let cleaned: String = value
-        .chars()
-        .map(|ch| {
-            if ch.is_ascii_alphanumeric() || matches!(ch, '-' | '_' | '.') {
-                ch
-            } else {
-                '_'
-            }
-        })
-        .collect();
-    if cleaned.is_empty() {
-        "service".to_owned()
-    } else {
-        cleaned
-    }
 }
 
 fn manifest_key(version: i64, root_hash: &str) -> String {

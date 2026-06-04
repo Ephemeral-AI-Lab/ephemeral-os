@@ -43,7 +43,7 @@
 </div>
 <section id="plugin-setup"
   data-last-reviewed-commit="d52a5616d"
-  data-evidence-paths="sandbox/crates/eos-plugin/src/manifest.rs sandbox/crates/eos-plugin/src/service.rs sandbox/crates/eos-daemon/src/plugin/mod.rs sandbox/crates/eos-daemon/src/plugin/process.rs backend/src/sandbox/ephemeral_workspace/plugin/host_dispatch.py backend/src/sandbox/ephemeral_workspace/plugin/install.py backend/src/sandbox/ephemeral_workspace/plugin/ppc_service.py backend/scripts/bench_rust_daemon_plugin.py backend/tests/live_e2e_test/sandbox/plugin/test_plugin_refresh_strategies.py">
+  data-evidence-paths="agent-core/crates/eos-sandbox-host/src/bootstrap_artifact.rs agent-core/crates/eos-sandbox-host/src/lifecycle.rs agent-core/crates/eos-runtime/src/plugin_tools.rs sandbox/crates/eos-plugin/src/manifest.rs sandbox/crates/eos-plugin/src/service.rs sandbox/crates/eos-daemon/src/plugin/mod.rs sandbox/crates/eos-daemon/src/plugin/process.rs backend/src/sandbox/ephemeral_workspace/plugin/ppc_service.py backend/scripts/bench_rust_daemon_plugin.py backend/tests/live_e2e_test/sandbox/plugin/test_plugin_refresh_strategies.py">
 <h2>Plugin Setup <a class="anchor" href="#plugin-setup">§</a></h2>
 <nav class="page-toc" aria-labelledby="page-toc-heading">
   <h3 id="page-toc-heading">Contents</h3>
@@ -60,8 +60,9 @@
 
 <div class="summary">
   <ul>
-    <li>The daemon-managed plugin path is manifest driven: install the payload, call <code>api.plugin.ensure</code>, then dispatch <code>plugin.&lt;plugin_id&gt;.&lt;op_name&gt;</code>.</li>
+    <li>The daemon-managed plugin path is manifest driven: stage the payload under <code>/eos</code>, call <code>api.plugin.ensure</code>, then dispatch <code>plugin.&lt;plugin_id&gt;.&lt;op_name&gt;</code>.</li>
     <li>The sandbox daemon owns workspace freshness, PPC routing, process lifecycle, OCC publish, cleanup, and isolated-workspace blocking.</li>
+    <li>The sandbox host lifecycle bootstraps <code>eosd</code> only; it does not upload plugin packages, runtime bridges, Node, Pyright, or catalog files.</li>
     <li>The easiest new plugin is a <code>workspace_snapshot_refresh</code> read-only service that answers PPC requests from the current mounted workspace.</li>
     <li>Write plugins choose either daemon-owned <code>oneshot_overlay</code> execution or a self-managed long-lived service that publishes through daemon callbacks.</li>
   </ul>
@@ -76,21 +77,21 @@
 
 <section id="setup-entrypoints"
   data-last-reviewed-commit="d52a5616d"
-  data-evidence-paths="backend/src/sandbox/ephemeral_workspace/plugin/host_dispatch.py backend/src/sandbox/ephemeral_workspace/plugin/install.py sandbox/crates/eos-daemon/src/plugin/mod.rs backend/scripts/bench_rust_daemon_plugin.py">
+  data-evidence-paths="agent-core/crates/eos-sandbox-host/src/bootstrap_artifact.rs agent-core/crates/eos-sandbox-host/src/lifecycle.rs agent-core/crates/eos-runtime/src/plugin_tools.rs sandbox/crates/eos-daemon/src/plugin/mod.rs sandbox/crates/eos-plugin/src/manifest.rs backend/scripts/bench_rust_daemon_plugin.py">
 <h3>Setup Entrypoints <a class="anchor" href="#setup-entrypoints">§</a></h3>
-<p>There are two setup entrypoints in the current checkout. The older host/catalog path is best when the plugin is part of <code>backend/src/plugins/catalog/&lt;name&gt;</code> and exposes Python tools that call <code>call_plugin</code>. The newer daemon-managed service path is best when the plugin should be launched as a sandbox service from an explicit manifest.</p>
+<p>The Rust host lifecycle has one bootstrap responsibility: upload and verify the pinned <code>eosd</code> daemon artifact, then bind the workspace and wait for runtime readiness. It is not a plugin package setup entrypoint and must not create catalog, runtime bridge, Node, Pyright, or package dependency files. Plugin setup enters the daemon through <code>api.plugin.ensure</code> with a manifest and an already staged payload.</p>
 
 <table>
   <thead><tr><th>Path</th><th>Use when</th><th>Who installs payload?</th><th>Who registers ops?</th></tr></thead>
   <tbody>
-    <tr><td>Host/catalog plugin</td><td>The plugin is a bundled Python catalog plugin with <code>plugin.md</code>, <code>tools/</code>, optional <code>runtime/</code>, and optional <code>setup.sh</code>.</td><td><code>ensure_installed()</code> uploads the bundle to <code>/eos/daemon/plugins/catalog/&lt;name&gt;/</code> and writes an install marker <span class="file-ref">backend/src/sandbox/ephemeral_workspace/plugin/install.py:1-12</span>, <span class="file-ref">backend/src/sandbox/ephemeral_workspace/plugin/install.py:145-169</span>.</td><td><code>call_plugin()</code> calls <code>api.plugin.ensure</code>, then dispatches <code>plugin.&lt;name&gt;.&lt;op&gt;</code> <span class="file-ref">backend/src/sandbox/ephemeral_workspace/plugin/host_dispatch.py:76-185</span>.</td></tr>
-    <tr><td>Daemon-managed service manifest</td><td>The plugin service should be launched by the Rust daemon with a declared PPC process, refresh strategy, and operation table.</td><td>The caller copies the service binary/script into the sandbox, as the live harness does with <code>put_archive</code> plus final install into <code>/eos/plugin</code> and <code>/eos/daemon</code> paths <span class="file-ref">backend/scripts/bench_rust_daemon_plugin.py:6341-6465</span>.</td><td><code>api.plugin.ensure</code> parses the manifest and registers <code>plugin.&lt;plugin_id&gt;.&lt;op_name&gt;</code> routes <span class="file-ref">sandbox/crates/eos-daemon/src/plugin/mod.rs:349-405</span>.</td></tr>
+    <tr><td>Daemon bootstrap</td><td>Container create/start needs the resident Rust daemon.</td><td><code>SandboxLifecycle</code> calls the bootstrap artifact helper, which uploads only <code>eosd</code> and its SHA marker <span class="file-ref">agent-core/crates/eos-sandbox-host/src/lifecycle.rs:195-209</span>, <span class="file-ref">agent-core/crates/eos-sandbox-host/src/bootstrap_artifact.rs:157-238</span>.</td><td>None. Bootstrap does not register plugin operations.</td></tr>
+    <tr><td>Daemon-managed service manifest</td><td>The plugin service should be launched by the Rust daemon with a declared PPC process, refresh strategy, and operation table.</td><td>The caller or package setup API stages the service binary/script under <code>/eos</code>; host daemon bootstrap is not involved. The live harness still stages files directly for daemon protocol coverage <span class="file-ref">backend/scripts/bench_rust_daemon_plugin.py:6341-6465</span>.</td><td><code>api.plugin.ensure</code> parses the manifest and registers <code>plugin.&lt;plugin_id&gt;.&lt;op_name&gt;</code> routes <span class="file-ref">sandbox/crates/eos-daemon/src/plugin/mod.rs:349-405</span>.</td></tr>
   </tbody>
 </table>
 
 <div class="callout">
   <span class="label">Practical default</span>
-  For a new sandbox service today, start with the daemon-managed service manifest. It is the path covered by the live Rust plugin E2E, and it makes service mode, refresh strategy, operation intent, and timeout explicit.
+  For a new sandbox service today, start with the daemon-managed service manifest. It is the path covered by the live Rust plugin E2E, and it keeps service mode, refresh strategy, operation intent, and timeout explicit without coupling plugin payloads to daemon bootstrap.
 </div>
 </section>
 
@@ -174,7 +175,7 @@
 <h3>Deployment Flow <a class="anchor" href="#deployment-flow">§</a></h3>
 <div class="sequence" aria-label="Plugin deployment workflow">
   <ol>
-    <li><span><strong>Package the payload.</strong> Copy the service script/binary and any bridge/runtime files into the sandbox filesystem. The live harness stages files with <code>put_archive</code>, then installs executable scripts and runtime bridge files into stable <code>/eos/plugin</code> and <code>/eos/daemon</code> locations <span class="file-ref">backend/scripts/bench_rust_daemon_plugin.py:6341-6465</span>.</span></li>
+    <li><span><strong>Package the payload.</strong> Copy the service script/binary and helper files into sandbox-managed <code>/eos</code> locations before ensure. The live harness still stages files directly for daemon protocol coverage; daemon bootstrap is not part of that payload path <span class="file-ref">backend/scripts/bench_rust_daemon_plugin.py:6341-6465</span>.</span></li>
     <li><span><strong>Build the manifest.</strong> Declare services, service modes, refresh strategies, commands, and operations. The live manifest is a broad reference example <span class="file-ref">backend/scripts/bench_rust_daemon_plugin.py:5924-6338</span>.</span></li>
     <li><span><strong>Ensure the plugin.</strong> Call <code>api.plugin.ensure</code> with <code>workspace_root</code>, <code>layer_stack_root</code>, <code>start_services: true</code>, and the manifest <span class="file-ref">backend/scripts/bench_rust_daemon_plugin.py:4208-4220</span>.</span></li>
     <li><span><strong>Probe status.</strong> Call <code>api.plugin.status</code>, optionally with service probes, to confirm connected PPC routes and service health. The daemon registers <code>api.plugin.ensure</code> and <code>api.plugin.status</code> in the main op table <span class="file-ref">backend/src/sandbox/daemon/rpc/dispatcher.py:420-435</span>.</span></li>

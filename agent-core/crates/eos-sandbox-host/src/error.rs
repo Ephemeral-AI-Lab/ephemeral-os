@@ -59,7 +59,7 @@ pub enum SandboxHostError {
         arch: String,
         /// The hash computed over the on-disk artifact.
         got: String,
-        /// The hash pinned in [`crate::runtime_artifact`].
+        /// The hash pinned in [`crate::bootstrap_artifact`].
         expected: String,
     },
     /// No pinned `eosd` artifact exists for the resolved architecture.

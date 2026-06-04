@@ -1,5 +1,5 @@
 [package]
-name = "eos-isolated"
+name = "eos-isolated-workspace"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -7,7 +7,7 @@ license.workspace = true
 
 [dependencies]
 eos-overlay.workspace = true
-# External deps the crate map assigns to eos-isolated (06-crate-map §A). NOT
+# External deps the crate map assigns to eos-isolated-workspace (06-crate-map §A). NOT
 # eos-occ — that edge is the build-time no-publish guard and must stay absent.
 serde_json.workspace = true
 thiserror.workspace = true

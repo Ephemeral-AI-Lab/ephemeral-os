@@ -22,10 +22,11 @@ fn upperdir_tree_resource_timings_capture_bounded_payload() -> TestResult {
 
     let manifest = LayerStack::open(fixture.root.clone())?.read_active_manifest()?;
     let mut timings = resource_timings(&manifest, 1);
+    let upperdir_stats = eos_ephemeral_workspace::TreeResourceStats::collect(&upperdir);
     insert_tree_resource_timings(
         &mut timings,
         "resource.command_exec.upperdir",
-        &TreeResourceStats::collect(&upperdir),
+        &TreeResourceStats::from_ephemeral(&upperdir_stats),
     );
 
     assert_eq!(

@@ -5,7 +5,7 @@ use std::sync::atomic::{AtomicU64, Ordering};
 // when the test only drives public daemon APIs. These imports keep
 // `unused_crate_dependencies` meaningful without suppressing it crate-wide.
 use eos_daemon::OpTable;
-use eos_isolated as _;
+use eos_isolated_workspace as _;
 use eos_layerstack as _;
 use eos_occ as _;
 use eos_overlay as _;

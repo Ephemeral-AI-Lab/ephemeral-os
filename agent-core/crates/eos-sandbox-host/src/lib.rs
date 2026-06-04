@@ -4,7 +4,7 @@
 //! [`ProviderRegistry`] as explicit application state, runs container lifecycle
 //! with post-lifecycle setup, transports JSON envelopes to the resident
 //! in-sandbox daemon with spawn/connect recovery and typed error decoding, and
-//! uploads + verifies the pinned `eosd` runtime artifact. See
+//! uploads + verifies the pinned `eosd` bootstrap artifact. See
 //! `docs/plans/backend_agent_core_rust_migration/impl-eos-sandbox-host.md`.
 //!
 //! AC-eos-sandbox-host-10 — the [`ProviderAdapter`] trait is **sealed**: its
@@ -23,6 +23,7 @@
 #![forbid(unsafe_code)]
 #![warn(missing_docs)]
 
+mod bootstrap_artifact;
 mod daemon_client;
 mod docker;
 mod error;
@@ -30,11 +31,11 @@ mod lifecycle;
 mod provider;
 mod provisioning;
 mod registry;
-mod runtime_artifact;
 
 #[cfg(test)]
 mod testutil;
 
+pub use bootstrap_artifact::{EOSD_VERSION, PROTOCOL_VERSION};
 pub use daemon_client::{
     with_daemon_protocol_version, DaemonClient, DAEMON_PROTOCOL_VERSION, DEFAULT_LAYER_STACK_ROOT,
 };
@@ -48,4 +49,3 @@ pub use provider::{
 };
 pub use provisioning::{RequestSandboxBinding, RequestSandboxProvisioner};
 pub use registry::{resolve_provider_kind, ProviderRegistry};
-pub use runtime_artifact::{BUILTIN_LSP_PPC_SERVICE_PATH, EOSD_VERSION, PROTOCOL_VERSION};

@@ -240,6 +240,10 @@ cross-module map now lives under `docs/architecture`.
   workspace (`cargo check`, `cargo test -p <crate>`, targeted tests, then
   clippy when risk warrants it). Run Python checks only for legacy Python,
   parity, or migration-glue changes.
+- For default live E2E sandbox testing, use Docker with platform `linux/amd64`
+  and image `sweevo-dask__dask-10042:latest` unless the task explicitly names a
+  different image or architecture. Set the harness image variable, such as
+  `EOS_LIVE_E2E_IMAGE`, to that image when a test entry point requires it.
 - Use a concrete Cargo check ladder for Rust changes: `cargo check -p <crate>
   --all-targets` for syntax/type sanity, `cargo test -p <crate> <targeted_test>`
   or `cargo test -p <crate>` for behavior, and `cargo clippy -p <crate>

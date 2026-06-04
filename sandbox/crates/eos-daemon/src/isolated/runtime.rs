@@ -16,7 +16,7 @@ use std::thread;
 #[cfg(target_os = "linux")]
 use std::time::{Duration, Instant};
 
-use eos_isolated::{
+use eos_isolated_workspace::{
     IsolatedError, LayerStackSnapshotPort, NamespaceRuntimePort, SnapshotLease, WorkspaceHandle,
 };
 use eos_layerstack::LayerStack;
@@ -279,8 +279,8 @@ impl NamespaceRuntimePort for DaemonNamespaceRuntime {
                         "net-ready {} {} {} {}\n",
                         veth.ns_name,
                         veth.ns_ip,
-                        eos_isolated::BRIDGE_PREFIX_LEN,
-                        eos_isolated::GATEWAY
+                        eos_isolated_workspace::BRIDGE_PREFIX_LEN,
+                        eos_isolated_workspace::GATEWAY
                     )
                 },
             );
@@ -294,9 +294,9 @@ impl NamespaceRuntimePort for DaemonNamespaceRuntime {
         if test_runtime_stub_enabled() {
             return Ok(PathBuf::new());
         }
-        let path = PathBuf::from(eos_isolated::CGROUP_ROOT).join(format!(
+        let path = PathBuf::from(eos_isolated_workspace::CGROUP_ROOT).join(format!(
             "{}{}",
-            eos_isolated::HANDLE_PREFIX,
+            eos_isolated_workspace::HANDLE_PREFIX,
             handle.workspace_handle_id.0
         ));
         std::fs::create_dir_all(&path).map_err(setup_error)?;
