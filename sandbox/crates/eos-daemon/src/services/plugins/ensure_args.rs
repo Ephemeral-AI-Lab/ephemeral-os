@@ -16,24 +16,14 @@ use super::{
 use crate::error::DaemonError;
 
 pub(super) fn validate_plugin_caller_fields(args: &Value) -> Result<(), DaemonError> {
-    const TOP_LEVEL_FIELDS: &[&str] = &["agent_id", "invocation_id"];
-    const CALLER_FIELDS: &[&str] = &[
-        "agent_id",
-        "run_id",
-        "agent_run_id",
-        "task_id",
-        "request_id",
-        "attempt_id",
-        "workflow_id",
-        "tool_id",
-    ];
+    const TOP_LEVEL_FIELDS: &[&str] = &["caller_id", "invocation_id"];
 
     for field in TOP_LEVEL_FIELDS {
         validate_plugin_audit_field(field, args.get(*field))?;
     }
     if let Some(caller) = args.get("caller").and_then(Value::as_object) {
-        for field in CALLER_FIELDS {
-            validate_plugin_audit_field(field, caller.get(*field))?;
+        for (field, value) in caller {
+            validate_plugin_audit_field(field, Some(value))?;
         }
     }
     Ok(())

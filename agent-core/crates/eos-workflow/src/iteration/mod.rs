@@ -13,7 +13,7 @@ use crate::{Result, WorkflowError};
 
 /// Iteration close signal.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct IterationClosed {
+pub(crate) struct IterationClosed {
     /// Iteration id.
     pub iteration_id: IterationId,
     /// Typed iteration outcome.
@@ -21,11 +21,11 @@ pub struct IterationClosed {
 }
 
 /// Async callback invoked when an iteration closes.
-pub type IterationClosedCallback =
+pub(crate) type IterationClosedCallback =
     Arc<dyn Fn(IterationClosed) -> Pin<Box<dyn Future<Output = Result<()>> + Send>> + Send + Sync>;
 
 /// Coordinates attempts for one open iteration.
-pub struct IterationAttemptCoordinator {
+pub(crate) struct IterationAttemptCoordinator {
     iteration_id: IterationId,
     deps: AttemptDeps,
     on_iteration_closed: IterationClosedCallback,
@@ -42,7 +42,7 @@ impl std::fmt::Debug for IterationAttemptCoordinator {
 impl IterationAttemptCoordinator {
     /// Create a coordinator.
     #[must_use]
-    pub fn new(
+    pub(crate) fn new(
         iteration_id: IterationId,
         deps: AttemptDeps,
         on_iteration_closed: IterationClosedCallback,
@@ -56,12 +56,12 @@ impl IterationAttemptCoordinator {
 
     /// Iteration id.
     #[must_use]
-    pub fn iteration_id(&self) -> &IterationId {
+    pub(crate) fn iteration_id(&self) -> &IterationId {
         &self.iteration_id
     }
 
     /// Create an attempt.
-    pub async fn create_attempt(
+    pub(crate) async fn create_attempt(
         &self,
         previous_attempt_id: Option<&AttemptId>,
         start: bool,
@@ -113,12 +113,12 @@ impl IterationAttemptCoordinator {
     }
 
     /// Create and start the first attempt.
-    pub async fn create_and_start_first_attempt(&self) -> Result<Attempt> {
+    pub(crate) async fn create_and_start_first_attempt(&self) -> Result<Attempt> {
         self.create_attempt(None, true).await
     }
 
     /// Start an existing attempt.
-    pub async fn start_attempt(&self, attempt: &Attempt) -> Result<()> {
+    pub(crate) async fn start_attempt(&self, attempt: &Attempt) -> Result<()> {
         let iteration = self.current_iteration_snapshot().await?;
         if !iteration.is_open() {
             return Err(WorkflowError::invariant(format!(
@@ -142,7 +142,7 @@ impl IterationAttemptCoordinator {
     }
 
     /// Handle a closed attempt.
-    pub async fn handle_attempt_closed(&self, attempt_id: &AttemptId) -> Result<()> {
+    pub(crate) async fn handle_attempt_closed(&self, attempt_id: &AttemptId) -> Result<()> {
         let attempt = self
             .deps
             .attempt_store
@@ -328,7 +328,7 @@ impl OpenIterationCoordinatorRegistry {
     }
 
     /// Register a coordinator.
-    pub fn register(&self, coordinator: Arc<IterationAttemptCoordinator>) -> Result<()> {
+    pub(crate) fn register(&self, coordinator: Arc<IterationAttemptCoordinator>) -> Result<()> {
         let mut guard = self.by_iteration_id.lock();
         if guard.contains_key(coordinator.iteration_id()) {
             return Err(WorkflowError::invariant(format!(
@@ -342,12 +342,15 @@ impl OpenIterationCoordinatorRegistry {
 
     /// Look up a coordinator.
     #[must_use]
-    pub fn get(&self, iteration_id: &IterationId) -> Option<Arc<IterationAttemptCoordinator>> {
+    pub(crate) fn get(
+        &self,
+        iteration_id: &IterationId,
+    ) -> Option<Arc<IterationAttemptCoordinator>> {
         self.by_iteration_id.lock().get(iteration_id).cloned()
     }
 
     /// Deregister a coordinator.
-    pub fn deregister(&self, iteration_id: &IterationId) {
+    pub(crate) fn deregister(&self, iteration_id: &IterationId) {
         self.by_iteration_id.lock().remove(iteration_id);
     }
 }

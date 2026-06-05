@@ -17,7 +17,7 @@
 - **`eos-isolated/src/caps.rs`** — `Rfc1918Egress`, `ResourceCaps`
 - **`eos-isolated/src/error.rs`** — `IsolatedError`
 - **`eos-isolated/src/network.rs`** — `VethAllocation`, `BridgeAddressPool`, `IsolatedNetwork`
-- **`eos-isolated/src/session.rs`** — `AgentId`, `WorkspaceHandleId`, `SnapshotLease`, `WorkspaceHandle`, `LayerStackSnapshotPort`, `NamespaceRuntimePort`, `IsolatedSession`
+- **`eos-isolated/src/session.rs`** — `CallerId`, `WorkspaceHandleId`, `SnapshotLease`, `WorkspaceHandle`, `LayerStackSnapshotPort`, `NamespaceRuntimePort`, `IsolatedSession`
 
 ---
 
@@ -154,9 +154,9 @@ Owns the `eos-shared0` bridge + static nft rules + per-workspace veth wiring, dr
 
 ## `eos-isolated/src/session.rs`
 
-#### `AgentId`  ·  _struct_  ·  derives: `Debug, Clone, PartialEq, Eq, Hash`  ·  [L31]
+#### `CallerId`  ·  _struct_  ·  derives: `Debug, Clone, PartialEq, Eq, Hash`  ·  [L31]
 
-Newtype for an agent identity (the enter/exit key).
+Newtype for an caller identity (the enter/exit key).
 
 **Fields**
 
@@ -196,7 +196,7 @@ Per-workspace state. Not a subclass of any overlay handle (C1).
 | name | type | vis |
 |------|------|-----|
 | `workspace_handle_id` | `WorkspaceHandleId` | `pub` |
-| `agent_id` | `AgentId` | `pub` |
+| `caller_id` | `CallerId` | `pub` |
 | `lease_id` | `String` | `pub` |
 | `manifest_version` | `i64` | `pub` |
 | `manifest_root_hash` | `String` | `pub` |
@@ -249,7 +249,7 @@ Owns the isolated-workspace lifecycle, namespace runtime, capacity, TTL, and GC;
 | `network` | `IsolatedNetwork` |  |
 | `scratch_root` | `PathBuf` |  |
 | `handles` | `HashMap<WorkspaceHandleId, WorkspaceHandle>` |  |
-| `by_agent` | `HashMap<AgentId, WorkspaceHandleId>` |  |
+| `by_caller` | `HashMap<CallerId, WorkspaceHandleId>` |  |
 
 <details><summary>Methods (29)</summary>
 

@@ -15,7 +15,7 @@ use crate::core::error::ToolError;
 use crate::core::metadata::ExecutionMetadata;
 use crate::core::name::ToolName;
 
-use super::{HookDenial, HookOutcome};
+use super::{deferred_goal, HookDenial, HookOutcome};
 
 /// Whether this protected tool **cancels** the agent's in-flight subagents (the
 /// four terminals + `exit_isolated_workspace`) vs only inspects them
@@ -35,10 +35,7 @@ fn cancels_inflight_subagents(tool: ToolName) -> bool {
 /// (Python `_is_bailout_submission`).
 fn is_bailout_submission(tool: ToolName, raw_input: &JsonObject) -> bool {
     match tool {
-        ToolName::SubmitPlannerOutcome => raw_input
-            .get("deferred_goal_for_next_iteration")
-            .and_then(Value::as_str)
-            .is_some_and(|s| !s.trim().is_empty()),
+        ToolName::SubmitPlannerOutcome => deferred_goal(raw_input).is_some(),
         ToolName::SubmitGeneratorOutcome | ToolName::SubmitReducerOutcome => raw_input
             .get("status")
             .and_then(Value::as_str)

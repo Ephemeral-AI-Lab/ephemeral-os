@@ -13,7 +13,7 @@ use eos_sandbox_api::{
 use eos_sandbox_host::DEFAULT_LAYER_STACK_ROOT;
 use eos_tools::ports::Sealed;
 use eos_tools::{IsolatedWorkspacePort, ToolError, ToolResult};
-use eos_types::SandboxId;
+use eos_types::{AgentRunId, SandboxId};
 use serde_json::{json, Value};
 
 /// Runtime bridge from `eos-tools` lifecycle calls to the sandbox daemon API.
@@ -41,12 +41,12 @@ impl Sealed for RuntimeIsolatedWorkspace {}
 impl IsolatedWorkspacePort for RuntimeIsolatedWorkspace {
     async fn enter(
         &self,
-        agent_id: &str,
+        agent_run_id: &AgentRunId,
         sandbox_id: &SandboxId,
         layer_stack_root: &str,
     ) -> Result<ToolResult, ToolError> {
         let request = EnterIsolatedWorkspaceRequest {
-            base: request_base(agent_id, "enter isolated workspace"),
+            base: request_base(agent_run_id, "enter isolated workspace"),
             layer_stack_root: effective_layer_stack_root(layer_stack_root),
         };
         let result = match enter_isolated_workspace(&*self.transport, sandbox_id, &request).await {
@@ -58,12 +58,12 @@ impl IsolatedWorkspacePort for RuntimeIsolatedWorkspace {
 
     async fn exit(
         &self,
-        agent_id: &str,
+        agent_run_id: &AgentRunId,
         sandbox_id: &SandboxId,
         grace_s: f64,
     ) -> Result<ToolResult, ToolError> {
         let request = ExitIsolatedWorkspaceRequest {
-            base: request_base(agent_id, "exit isolated workspace"),
+            base: request_base(agent_run_id, "exit isolated workspace"),
             grace_s,
         };
         let result = match exit_isolated_workspace(&*self.transport, sandbox_id, &request).await {
@@ -74,12 +74,13 @@ impl IsolatedWorkspacePort for RuntimeIsolatedWorkspace {
     }
 }
 
-fn request_base(agent_id: &str, description: &str) -> SandboxRequestBase {
+fn request_base(agent_run_id: &AgentRunId, description: &str) -> SandboxRequestBase {
+    let agent_run_id = agent_run_id.as_str().to_owned();
     SandboxRequestBase {
         caller: eos_sandbox_api::SandboxCaller {
-            agent_id: agent_id.to_owned(),
-            run_id: String::new(),
-            agent_run_id: String::new(),
+            caller_id: agent_run_id.clone(),
+            run_id: agent_run_id.clone(),
+            agent_run_id,
             task_id: String::new(),
             request_id: String::new(),
             attempt_id: String::new(),
@@ -231,10 +232,11 @@ mod tests {
             "manifest_root_hash": "hash-1"
         })));
         let adapter = RuntimeIsolatedWorkspace::new(transport.clone());
+        let agent_run_id: AgentRunId = "agent-run-1".parse().expect("agent run id");
         let sandbox_id: SandboxId = "sandbox-1".parse().expect("sandbox id");
 
         let result = adapter
-            .enter("agent-1", &sandbox_id, "")
+            .enter(&agent_run_id, &sandbox_id, "")
             .await
             .expect("enter");
 
@@ -245,7 +247,12 @@ mod tests {
         assert_eq!(output["error"], Value::Null);
         let calls = transport.calls.lock().expect("calls lock");
         assert_eq!(calls[0].0, DaemonOp::IsolatedWorkspaceEnter);
-        assert_eq!(calls[0].1["agent_id"], json!("agent-1"));
+        assert_eq!(calls[0].1["caller_id"], json!("agent-run-1"));
+        assert_eq!(calls[0].1["caller"]["run_id"], json!("agent-run-1"));
+        assert_eq!(
+            calls[0].1["caller"]["agent_run_id"],
+            json!("agent-run-1")
+        );
         assert_eq!(
             calls[0].1["layer_stack_root"],
             json!(DEFAULT_LAYER_STACK_ROOT)
@@ -258,14 +265,15 @@ mod tests {
             "error": {
                 "kind": "not_active",
                 "message": "isolated workspace is not active",
-                "details": {"agent_id": "agent-1"}
+                "details": {"caller_id": "agent-1"}
             }
         })));
         let adapter = RuntimeIsolatedWorkspace::new(transport.clone());
+        let agent_run_id: AgentRunId = "agent-run-1".parse().expect("agent run id");
         let sandbox_id: SandboxId = "sandbox-1".parse().expect("sandbox id");
 
         let result = adapter
-            .exit("agent-1", &sandbox_id, 0.5)
+            .exit(&agent_run_id, &sandbox_id, 0.5)
             .await
             .expect("exit");
 
@@ -275,7 +283,12 @@ mod tests {
         assert_eq!(output["error"]["kind"], json!("not_active"));
         let calls = transport.calls.lock().expect("calls lock");
         assert_eq!(calls[0].0, DaemonOp::IsolatedWorkspaceExit);
-        assert_eq!(calls[0].1["agent_id"], json!("agent-1"));
+        assert_eq!(calls[0].1["caller_id"], json!("agent-run-1"));
+        assert_eq!(calls[0].1["caller"]["run_id"], json!("agent-run-1"));
+        assert_eq!(
+            calls[0].1["caller"]["agent_run_id"],
+            json!("agent-run-1")
+        );
         assert_eq!(calls[0].1["grace_s"], json!(0.5));
     }
 

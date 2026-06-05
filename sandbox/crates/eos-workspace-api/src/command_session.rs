@@ -9,7 +9,7 @@ use crate::response::{ChangedPathKinds, WorkspaceApiError, WorkspaceConflict, Wo
 /// Input needed for a workspace-mode crate to prepare command execution.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct PrepareCommandRequest {
-    pub agent_id: String,
+    pub caller_id: String,
     pub command_session_id: String,
     pub invocation_id: String,
     pub cmd: String,
@@ -95,3 +95,7 @@ pub trait CommandWorkspacePolicy: Send + Sync {
         request: FinalizeCommandRequest,
     ) -> Result<WorkspaceCommandOutcome, WorkspaceApiError>;
 }
+
+const _: fn(&dyn CommandWorkspacePolicy) = _assert_command_workspace_policy_object_safe;
+
+fn _assert_command_workspace_policy_object_safe(_: &dyn CommandWorkspacePolicy) {}

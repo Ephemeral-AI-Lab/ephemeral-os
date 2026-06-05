@@ -1,11 +1,11 @@
 //! The persistent private session: enter/exit lifecycle and control-plane ports.
 //!
-//! `IsolatedSession` owns the per-agent persistent workspace. `enter` acquires a
+//! `IsolatedSession` owns the per-caller persistent workspace. `enter` acquires a
 //! layer-stack snapshot/lease, allocates scratch (upper/work), wires the
 //! namespace (ns-holder spawn -> ns FDs -> overlay mount -> DNS -> net-ready),
 //! and persists the handle. `exit` tears down the namespace + network + cgroup,
 //! releases the lease, and DISCARDS the upperdir (writes are captured for audit
-//! only, never published). The agent-facing background-session guard lives in
+//! only, never published). The model-facing background-session guard lives in
 //! `eos-tools`; daemon enter/exit callers may still run command-session cleanup
 //! before mutating lifecycle state.
 
@@ -35,13 +35,13 @@ mod tests;
 mod types;
 
 pub use ports::{LayerStackSnapshotPort, NamespaceRuntimePort};
-pub use types::{AgentId, SnapshotLease, WorkspaceHandle, WorkspaceHandleId};
+pub use types::{CallerId, SnapshotLease, WorkspaceHandle, WorkspaceHandleId};
 
 /// Owns the isolated-workspace lifecycle, namespace runtime, capacity, TTL, GC.
 ///
 /// Generic over the injected snapshot/lease + namespace ports and audit sink so
 /// `eos-daemon` wires the kernel-backed implementations and tests inject
-/// doubles. Holds the per-agent / per-handle maps and the shared network state.
+/// doubles. Holds the per-caller / per-handle maps and the shared network state.
 pub struct IsolatedSession<S, R, A>
 where
     S: LayerStackSnapshotPort,
@@ -55,7 +55,7 @@ where
     network: IsolatedNetwork,
     scratch_root: PathBuf,
     handles: HashMap<WorkspaceHandleId, WorkspaceHandle>,
-    by_agent: HashMap<AgentId, WorkspaceHandleId>,
+    by_caller: HashMap<CallerId, WorkspaceHandleId>,
 }
 
 impl<S, R, A> IsolatedSession<S, R, A>
@@ -98,7 +98,7 @@ where
             network,
             scratch_root,
             handles: HashMap::new(),
-            by_agent: HashMap::new(),
+            by_caller: HashMap::new(),
         }
     }
 
@@ -122,22 +122,22 @@ where
         Ok(())
     }
 
-    /// Return a copy of the active handle for `agent_id`, if any.
-    pub fn get_handle(&self, agent_id: &AgentId) -> Option<WorkspaceHandle> {
-        self.by_agent
-            .get(agent_id)
+    /// Return a copy of the active handle for `caller_id`, if any.
+    pub fn get_handle(&self, caller_id: &CallerId) -> Option<WorkspaceHandle> {
+        self.by_caller
+            .get(caller_id)
             .and_then(|handle_id| self.handles.get(handle_id))
             .cloned()
     }
 
-    /// Return every agent with an open handle.
-    pub fn list_open_agents(&self) -> Vec<String> {
-        self.by_agent.keys().map(|agent| agent.0.clone()).collect()
+    /// Return every caller with an open handle.
+    pub fn list_open_callers(&self) -> Vec<String> {
+        self.by_caller.keys().map(|caller| caller.0.clone()).collect()
     }
 
     /// Emit an isolated tool-call audit event for an active handle.
-    pub fn record_tool_call(&mut self, agent_id: &AgentId, mut payload: Value) {
-        let Some(handle_id) = self.by_agent.get(agent_id).cloned() else {
+    pub fn record_tool_call(&mut self, caller_id: &CallerId, mut payload: Value) {
+        let Some(handle_id) = self.by_caller.get(caller_id).cloned() else {
             return;
         };
         let Some(handle) = self.handles.get_mut(&handle_id) else {
@@ -149,7 +149,7 @@ where
                 "workspace_handle_id".to_owned(),
                 json!(handle.workspace_handle_id.0),
             );
-            object.insert("agent_id".to_owned(), json!(agent_id.0));
+            object.insert("caller_id".to_owned(), json!(caller_id.0));
         }
         let _ = self
             .audit

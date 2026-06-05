@@ -84,22 +84,16 @@ impl BackgroundTaskSupervisor {
     /// Idempotent: an existing record (already terminal or running) is kept.
     pub fn register_command_session(
         &mut self,
-        command_session_id: &str,
-        sandbox_id: &str,
+        command_session_id: &CommandSessionId,
+        sandbox_id: &SandboxId,
         agent_id: &str,
         command: &str,
     ) {
-        let Ok(command_session_id): Result<CommandSessionId, _> = command_session_id.parse() else {
-            return;
-        };
-        let Ok(sandbox_id): Result<SandboxId, _> = sandbox_id.parse() else {
-            return;
-        };
         self.commands
             .entry(command_session_id.clone())
             .or_insert_with(|| CommandSessionRecord {
-                command_session_id,
-                sandbox_id,
+                command_session_id: command_session_id.clone(),
+                sandbox_id: sandbox_id.clone(),
                 agent_id: agent_id.to_owned(),
                 command: command.to_owned(),
                 status: BackgroundTaskStatus::Running,
@@ -153,9 +147,8 @@ impl BackgroundTaskSupervisor {
     /// The stored terminal result for a session that is no longer running (the
     /// recover race), else `None`.
     #[must_use]
-    pub fn command_session_result(&self, command_session_id: &str) -> Option<Value> {
-        let command_session_id: CommandSessionId = command_session_id.parse().ok()?;
-        let record = self.commands.get(&command_session_id)?;
+    pub fn command_session_result(&self, command_session_id: &CommandSessionId) -> Option<Value> {
+        let record = self.commands.get(command_session_id)?;
         if matches!(record.status, BackgroundTaskStatus::Running) {
             return None;
         }
@@ -164,11 +157,12 @@ impl BackgroundTaskSupervisor {
 
     /// Latch a session to `Delivered` with the terminal `result` a control tool
     /// observed inline, so the heartbeat does not re-deliver it.
-    pub fn mark_command_session_reported(&mut self, command_session_id: &str, result: Value) {
-        let Ok(command_session_id) = command_session_id.parse() else {
-            return;
-        };
-        if let Some(record) = self.commands.get_mut(&command_session_id) {
+    pub fn mark_command_session_reported(
+        &mut self,
+        command_session_id: &CommandSessionId,
+        result: Value,
+    ) {
+        if let Some(record) = self.commands.get_mut(command_session_id) {
             record.status = BackgroundTaskStatus::Delivered;
             record.result = Some(result);
         }
@@ -178,12 +172,9 @@ impl BackgroundTaskSupervisor {
     /// (the heartbeat latched it `Delivered`), so a late `write_stdin` poll can
     /// answer with a terse already-reported note instead of the full payload.
     #[must_use]
-    pub fn command_session_already_reported(&self, command_session_id: &str) -> bool {
-        let Ok(command_session_id) = command_session_id.parse() else {
-            return false;
-        };
+    pub fn command_session_already_reported(&self, command_session_id: &CommandSessionId) -> bool {
         self.commands
-            .get(&command_session_id)
+            .get(command_session_id)
             .is_some_and(|record| matches!(record.status, BackgroundTaskStatus::Delivered))
     }
 
@@ -227,8 +218,8 @@ impl BackgroundTaskSupervisor {
 impl CommandSessionSupervisorPort for BackgroundSupervisorHandle {
     async fn register(
         &self,
-        command_session_id: &str,
-        sandbox_id: &str,
+        command_session_id: &CommandSessionId,
+        sandbox_id: &SandboxId,
         agent_id: &str,
         command: &str,
     ) {
@@ -240,21 +231,25 @@ impl CommandSessionSupervisorPort for BackgroundSupervisorHandle {
         );
     }
 
-    async fn command_session_result(&self, command_session_id: &str) -> Option<Value> {
+    async fn command_session_result(&self, command_session_id: &CommandSessionId) -> Option<Value> {
         self.inner()
             .lock()
             .await
             .command_session_result(command_session_id)
     }
 
-    async fn mark_command_session_reported(&self, command_session_id: &str, result: Value) {
+    async fn mark_command_session_reported(
+        &self,
+        command_session_id: &CommandSessionId,
+        result: Value,
+    ) {
         self.inner()
             .lock()
             .await
             .mark_command_session_reported(command_session_id, result);
     }
 
-    async fn command_session_already_reported(&self, command_session_id: &str) -> bool {
+    async fn command_session_already_reported(&self, command_session_id: &CommandSessionId) -> bool {
         self.inner()
             .lock()
             .await
@@ -281,10 +276,18 @@ mod tests {
         })
     }
 
+    fn csid(id: &str) -> CommandSessionId {
+        id.parse().expect("valid command session id")
+    }
+
+    fn sbid(id: &str) -> SandboxId {
+        id.parse().expect("valid sandbox id")
+    }
+
     #[test]
     fn register_pull_completed_flips_count_and_renders_once() {
         let mut supervisor = BackgroundTaskSupervisor::new();
-        supervisor.register_command_session("cmd_1", "sb", "agent-a", "pytest -q");
+        supervisor.register_command_session(&csid("cmd_1"), &sbid("sb"), "agent-a", "pytest -q");
         assert_eq!(supervisor.count_commands_by_agent("agent-a"), 1);
 
         supervisor.ingest_completion(&completion("cmd_1", "agent-a", "ok", "3 passed"));
@@ -305,32 +308,32 @@ mod tests {
     #[test]
     fn recover_race_returns_stored_terminal_and_marks_reported() {
         let mut supervisor = BackgroundTaskSupervisor::new();
-        supervisor.register_command_session("cmd_2", "sb", "agent-a", "make");
+        supervisor.register_command_session(&csid("cmd_2"), &sbid("sb"), "agent-a", "make");
         // Still running → no recoverable result yet, not reported.
-        assert!(supervisor.command_session_result("cmd_2").is_none());
-        assert!(!supervisor.command_session_already_reported("cmd_2"));
+        assert!(supervisor.command_session_result(&csid("cmd_2")).is_none());
+        assert!(!supervisor.command_session_already_reported(&csid("cmd_2")));
 
         supervisor.ingest_completion(&completion("cmd_2", "agent-a", "error", "boom"));
         // Terminal (Failed) → recover returns the stored result; not yet reported.
         let recovered = supervisor
-            .command_session_result("cmd_2")
+            .command_session_result(&csid("cmd_2"))
             .expect("stored terminal");
         assert_eq!(recovered["status"], "error");
-        assert!(!supervisor.command_session_already_reported("cmd_2"));
+        assert!(!supervisor.command_session_already_reported(&csid("cmd_2")));
 
         // The control tool latches it Delivered → heartbeat drain stays empty and
         // a late write_stdin poll sees it already-reported (the terse §8/D8 path).
-        supervisor.mark_command_session_reported("cmd_2", recovered);
+        supervisor.mark_command_session_reported(&csid("cmd_2"), recovered);
         assert!(supervisor.drain_command_session_notifications().is_empty());
-        assert!(supervisor.command_session_already_reported("cmd_2"));
+        assert!(supervisor.command_session_already_reported(&csid("cmd_2")));
     }
 
     #[test]
     fn running_ids_group_by_sandbox_and_agent() {
         let mut supervisor = BackgroundTaskSupervisor::new();
-        supervisor.register_command_session("cmd_a", "sb1", "agent-a", "a");
-        supervisor.register_command_session("cmd_b", "sb1", "agent-a", "b");
-        supervisor.register_command_session("cmd_c", "sb2", "agent-b", "c");
+        supervisor.register_command_session(&csid("cmd_a"), &sbid("sb1"), "agent-a", "a");
+        supervisor.register_command_session(&csid("cmd_b"), &sbid("sb1"), "agent-a", "b");
+        supervisor.register_command_session(&csid("cmd_c"), &sbid("sb2"), "agent-b", "c");
         let groups = supervisor.running_command_session_ids_by_sandbox_agent();
         assert_eq!(groups.len(), 2);
         let agent_a = groups

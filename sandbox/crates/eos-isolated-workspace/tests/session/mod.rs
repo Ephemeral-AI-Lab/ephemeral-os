@@ -10,7 +10,7 @@ use super::capacity::{
 };
 use super::support::next_handle_id;
 use super::{
-    AgentId, IsolatedError, IsolatedSession, LayerStackSnapshotPort, NamespaceRuntimePort,
+    CallerId, IsolatedError, IsolatedSession, LayerStackSnapshotPort, NamespaceRuntimePort,
     SnapshotLease, WorkspaceHandle,
 };
 use crate::audit::AuditSink;
@@ -78,7 +78,7 @@ fn isolated_exit_discards_upperdir_and_exposes_no_publish_path(
     let audit = RecordingAudit::default();
     let mut session =
         IsolatedSession::with_scratch_root(caps, layer_stack, runtime, audit, scratch_root.clone());
-    let agent = AgentId("agent-1".to_owned());
+    let agent = CallerId("caller-1".to_owned());
 
     let handle = session.enter(&agent)?;
     let upperdir = handle.upperdir.clone();
@@ -91,7 +91,7 @@ fn isolated_exit_discards_upperdir_and_exposes_no_publish_path(
         session.layer_stack.released.borrow().as_slice(),
         ["lease-1".to_owned()]
     );
-    assert!(session.by_agent.is_empty());
+    assert!(session.by_caller.is_empty());
     assert!(session.handles.is_empty());
     assert_eq!(exit["evicted_upperdir_bytes"], serde_json::json!(13));
     let events = session.audit.events.borrow();

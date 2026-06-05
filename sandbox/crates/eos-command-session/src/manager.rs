@@ -5,6 +5,7 @@ use eos_workspace_api::CommandWorkspacePolicy;
 
 use crate::event::{CommandSessionFinished, CommandSessionStarted};
 use crate::registry::CommandSessionCompletion;
+use crate::session::CommandSessionSpec;
 use crate::{
     CancelCommandSession, CollectCompleted, CollectCompletedResponse, CommandResponse,
     CommandSession, CommandSessionConfig, CommandSessionError, CommandSessionEventSink,
@@ -69,18 +70,20 @@ impl CommandSessionManager {
         let id = self.registry.next_id();
         let prepared = policy.prepare_command_workspace(request.prepare_request(id.clone()))?;
         let session = Arc::new(CommandSession::new(
-            id.clone(),
-            request.agent_id,
-            request.cmd,
-            prepared.mode,
-            request.timeout_seconds,
+            CommandSessionSpec {
+                id: id.clone(),
+                caller_id: request.caller_id,
+                command: request.cmd,
+                workspace_mode: prepared.mode,
+                timeout_seconds: request.timeout_seconds,
+                finalize_context: prepared.finalize_context,
+            },
             policy,
-            prepared.finalize_context,
             &self.config,
         ));
         self.events.session_started(CommandSessionStarted {
             command_session_id: id.clone(),
-            agent_id: session.agent_id().to_owned(),
+            caller_id: session.caller_id().to_owned(),
             workspace_mode: session.workspace_mode(),
         });
         self.registry.insert(Arc::clone(&session));
@@ -95,7 +98,7 @@ impl CommandSessionManager {
             return self
                 .registry
                 .take_completed_result(&request.command_session_id)
-                .ok_or_else(|| CommandSessionError::NotFound(request.command_session_id));
+                .ok_or(CommandSessionError::NotFound(request.command_session_id));
         };
         if !request.chars.is_empty() {
             session.append_output(request.chars);
@@ -117,15 +120,15 @@ impl CommandSessionManager {
             return self
                 .registry
                 .take_completed_result(&request.command_session_id)
-                .ok_or_else(|| CommandSessionError::NotFound(request.command_session_id));
+                .ok_or(CommandSessionError::NotFound(request.command_session_id));
         };
         let _ = request.max_output_tokens;
         self.finish_session(session, "cancelled", Some(130), true)
     }
 
     #[must_use]
-    pub fn count_by_agent(&self, agent_id: Option<&str>) -> usize {
-        self.registry.count_by_agent(agent_id)
+    pub fn count_by_caller(&self, caller_id: Option<&str>) -> usize {
+        self.registry.count_by_caller(caller_id)
     }
 
     #[must_use]
@@ -159,19 +162,19 @@ impl CommandSessionManager {
             .clone()
             .with_stdout(session.read_notification_output(None));
         let command_session_id = session.id().to_owned();
-        let agent_id = session.agent_id().to_owned();
+        let caller_id = session.caller_id().to_owned();
         let command = session.command().to_owned();
         let workspace_mode = session.workspace_mode();
         self.registry.remove(&command_session_id);
         self.events.session_finished(CommandSessionFinished {
             command_session_id: command_session_id.clone(),
-            agent_id: agent_id.clone(),
+            caller_id: caller_id.clone(),
             workspace_mode,
             status: result.status.clone(),
         });
         self.registry.push_completed(CommandSessionCompletion {
             command_session_id,
-            agent_id,
+            caller_id,
             command,
             result: result.clone(),
             notification_result,
@@ -255,7 +258,7 @@ mod tests {
             .start(
                 StartCommandSession {
                     invocation_id: "inv".to_owned(),
-                    agent_id: "agent".to_owned(),
+                    caller_id: "caller".to_owned(),
                     cmd: "sleep 1".to_owned(),
                     timeout_seconds: Some(0.001),
                     yield_time_ms: 1000,
@@ -272,7 +275,7 @@ mod tests {
             .get(&id)
             .unwrap_or_else(|| panic!("registered session"));
 
-        assert_eq!(manager.count_by_agent(Some("agent")), 1);
+        assert_eq!(manager.count_by_caller(Some("caller")), 1);
 
         let report = manager.sweep_expired(session.started_at() + Duration::from_millis(2));
 

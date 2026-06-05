@@ -147,7 +147,7 @@ impl RequestStore for FakeRequestStore {
 
 fn caller() -> SandboxCaller {
     SandboxCaller {
-        agent_id: String::new(),
+        caller_id: String::new(),
         run_id: String::new(),
         agent_run_id: String::new(),
         task_id: String::new(),

@@ -169,7 +169,7 @@ fn parse_tool_config(name: ToolName, content: &str) -> Result<ToolConfig, ToolCo
         .get("intent")
         .and_then(Value::as_str)
         .ok_or(ToolConfigError::MissingIntent(name))?;
-    let intent = parse_intent(intent_str).ok_or_else(|| ToolConfigError::UnknownIntent {
+    let intent = ToolIntent::from_wire(intent_str).ok_or_else(|| ToolConfigError::UnknownIntent {
         tool: name,
         value: intent_str.to_owned(),
     })?;
@@ -194,18 +194,6 @@ fn parse_tool_config(name: ToolName, content: &str) -> Result<ToolConfig, ToolCo
         terminal: expected_terminal,
         hooks,
     })
-}
-
-/// Resolve an `intent` string to a [`ToolIntent`], reusing [`ToolIntent::as_str`]
-/// as the single source of the wire spelling.
-fn parse_intent(value: &str) -> Option<ToolIntent> {
-    [
-        ToolIntent::ReadOnly,
-        ToolIntent::WriteAllowed,
-        ToolIntent::Lifecycle,
-    ]
-    .into_iter()
-    .find(|intent| intent.as_str() == value)
 }
 
 /// Parse the `hooks` list (absent ⇒ empty) into ordered [`Hook`]s.

@@ -36,6 +36,18 @@ pub enum AttemptStatus {
     Failed,
 }
 
+impl AttemptStatus {
+    /// The canonical `snake_case` token (matches the `serde` wire form).
+    #[must_use]
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Running => "running",
+            Self::Passed => "passed",
+            Self::Failed => "failed",
+        }
+    }
+}
+
 /// Why an attempt failed (Python `AttemptFailReason`). Distinct from
 /// `PlannerFailReason` (spec §6.10).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, JsonSchema)]

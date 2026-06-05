@@ -295,13 +295,13 @@ fn register_ppc_client_for_tests(
 
 fn ensure_plugin_family_allowed(args: &Value) -> Result<(), DaemonError> {
     validate_plugin_caller_fields(args)?;
-    let agent_id = args
-        .get("agent_id")
+    let caller_id = args
+        .get("caller_id")
         .and_then(Value::as_str)
         .unwrap_or_default()
         .trim();
-    if !agent_id.is_empty()
-        && crate::services::isolated_workspace::agent_has_active_handle(agent_id)
+    if !caller_id.is_empty()
+        && crate::services::isolated_workspace::caller_has_active_handle(caller_id)
     {
         return Err(DaemonError::Plugin(
             PluginError::ForbiddenInIsolatedWorkspace,

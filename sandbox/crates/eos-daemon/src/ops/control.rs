@@ -108,16 +108,16 @@ pub(crate) fn op_inflight_count(
     args: &Value,
     context: DispatchContext<'_>,
 ) -> Result<Value, DaemonError> {
-    let agent_id = args
-        .get("agent_id")
+    let caller_id = args
+        .get("caller_id")
         .and_then(Value::as_str)
         .unwrap_or_default()
         .trim()
         .to_owned();
     let count = context
         .invocation_registry()
-        .map_or(0, |registry| registry.count_by_agent(&agent_id));
-    Ok(json!({"success": true, "agent_id": agent_id, "count": count}))
+        .map_or(0, |registry| registry.count_by_caller(&caller_id));
+    Ok(json!({"success": true, "caller_id": caller_id, "count": count}))
 }
 
 fn run_probe<F>(name: &str, probe: F, timings: &mut serde_json::Map<String, Value>) -> Value

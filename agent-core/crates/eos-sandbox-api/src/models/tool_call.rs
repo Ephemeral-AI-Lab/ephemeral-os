@@ -14,8 +14,8 @@ use super::common::Intent;
 pub struct ToolCallRequest {
     /// Correlation id for this invocation.
     pub invocation_id: InvocationId,
-    /// Calling agent id.
-    pub agent_id: String,
+    /// Calling sandbox principal id.
+    pub caller_id: String,
     /// Tool verb (e.g. `read_file`).
     pub verb: String,
     /// Execution intent.
@@ -36,7 +36,7 @@ impl ToolCallRequest {
             "invocation_id".to_owned(),
             Value::String(self.invocation_id.to_string()),
         );
-        payload.insert("agent_id".to_owned(), Value::String(self.agent_id.clone()));
+        payload.insert("caller_id".to_owned(), Value::String(self.caller_id.clone()));
         payload.insert("verb".to_owned(), Value::String(self.verb.clone()));
         payload.insert(
             "intent".to_owned(),
@@ -79,8 +79,8 @@ impl ToolCallRequest {
         };
         Ok(Self {
             invocation_id,
-            agent_id: payload
-                .get("agent_id")
+            caller_id: payload
+                .get("caller_id")
                 .and_then(Value::as_str)
                 .unwrap_or("")
                 .to_owned(),
@@ -113,7 +113,7 @@ mod tests {
         args.insert("path".to_owned(), Value::String("a.txt".to_owned()));
         let request = ToolCallRequest {
             invocation_id: "inv-1".parse().expect("non-empty"),
-            agent_id: "agent-1".to_owned(),
+            caller_id: "caller-1".to_owned(),
             verb: "read_file".to_owned(),
             intent: Intent::WriteAllowed,
             args,

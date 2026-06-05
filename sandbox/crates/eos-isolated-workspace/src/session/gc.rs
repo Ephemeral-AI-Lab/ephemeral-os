@@ -19,7 +19,7 @@ where
     pub(super) fn reap_startup_orphans(&mut self) -> Result<(), IsolatedError> {
         let rows = self.read_persisted_handle_rows();
         self.handles.clear();
-        self.by_agent.clear();
+        self.by_caller.clear();
         for row in &rows {
             if let Some(ns_ip) = persisted_ipv4(row, "ns_ip") {
                 let _ = self.network.reserve_persisted_ip(ns_ip);

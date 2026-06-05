@@ -36,11 +36,11 @@ impl ToolExecutor for EnterIsolatedWorkspace {
             match parse_input(ToolName::EnterIsolatedWorkspace, input) {
                 Ok(v) => v,
                 Err(err) => return Ok(err),
-            };
+        };
         let sandbox_id = ctx.require_sandbox_id()?;
-        let agent_id = ctx.agent_id();
+        let agent_run_id = ctx.require_agent_run_id()?;
         ctx.require_isolated_workspace()?
-            .enter(&agent_id, sandbox_id, &parsed.layer_stack_root)
+            .enter(agent_run_id, sandbox_id, &parsed.layer_stack_root)
             .await
     }
 }

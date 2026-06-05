@@ -13,11 +13,10 @@ on-disk manifest read path.
   so a future version can branch.
 - Source of truth (Python): `backend/src/sandbox/host/daemon_client.py:46-47`.
 - Source of truth (Rust): `sandbox/crates/eos-protocol/src/version.rs`
-  (`DAEMON_PROTOCOL_VERSION`). The Rust host
-  (`agent-core/crates/eos-sandbox-host`) **derives** its copy from that crate via
-  a unilateral path dependency (`agent-core → sandbox/crates/eos-protocol`), so
-  host↔daemon protocol lockstep is compiler-enforced on the Rust side rather than
-  hand-maintained.
+  (`DAEMON_PROTOCOL_VERSION`). Host-side daemon clients **derive** their copy from
+  that crate via a unilateral path dependency into `sandbox/crates/eos-protocol`,
+  so host↔daemon protocol lockstep is compiler-enforced on the Rust side rather
+  than hand-maintained.
 
 ## 2. On-disk manifest schema version
 

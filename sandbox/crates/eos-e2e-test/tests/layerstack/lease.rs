@@ -66,7 +66,7 @@ fn lease_pins_layers_vs_squash() -> Result<()> {
             &next_invocation_id(),
             &json!({
                 "layer_stack_root": root,
-                "agent_id": "lease-public-writer",
+                "caller_id": "lease-public-writer",
                 "path": "lease/pinned.txt",
                 "content": format!("public-{version}\n"),
                 "overwrite": true

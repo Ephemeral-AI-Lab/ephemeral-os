@@ -51,7 +51,7 @@ where
     let status = request.status;
     let command_session_id = request.command_session_id;
     let audit_command_session_id = command_session_id.clone().unwrap_or_default();
-    let agent_id = context.agent_id;
+    let caller_id = context.caller_id;
     let workspace_handle_id = context.workspace_handle_id;
     let manifest_version = context.manifest_version;
     let manifest_root_hash = context.manifest_root_hash;
@@ -71,7 +71,7 @@ where
         timings,
         metadata: json!({
             "isolated_workspace": {
-                "agent_id": agent_id,
+                "caller_id": caller_id,
                 "workspace_handle_id": workspace_handle_id.clone(),
                 "manifest_version": manifest_version,
                 "manifest_root_hash": manifest_root_hash,
@@ -186,7 +186,7 @@ mod tests {
         std::fs::write(upperdir.join("private.txt"), b"private")?;
         let ops = IsolatedWorkspaceOps::new(FakePort {
             context: IsolatedCommandFinalizeContext {
-                agent_id: "agent-1".to_owned(),
+                caller_id: "caller-1".to_owned(),
                 workspace_handle_id: "iws-1".to_owned(),
                 manifest_version: 7,
                 manifest_root_hash: "hash".to_owned(),

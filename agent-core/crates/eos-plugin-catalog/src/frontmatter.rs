@@ -3,8 +3,19 @@
 //! Ports `plugins/core/manifest.py`'s `_FRONTMATTER_RE` without a `regex`
 //! dependency: a line-based scan equivalent to the anchored
 //! `\A---\s*\n(frontmatter)\n---\s*(?:\n(body))?\Z` pattern for the manifests
-//! this crate parses. This split is also needed by `eos-skills`; per the §3 DRY
-//! note it is duplicated crate-locally until a third consumer appears.
+//! this crate parses.
+//!
+//! This split is deliberately kept crate-local rather than shared with
+//! `eos_config::parse_markdown_frontmatter`. The contracts differ on purpose:
+//! this port anchors the opening fence with `trim_end` (a leading-indented
+//! `---` does NOT match, matching the regex), returns the *raw* frontmatter
+//! string, and returns `None` on a missing/unterminated block so the caller can
+//! raise a hard error. The `eos-config` helper instead trims both fences,
+//! returns a parsed `serde_yaml::Mapping`, and *swallows* a missing/malformed
+//! block into an empty mapping. `eos-skills` reuses the `eos-config` helper and
+//! `eos-agent-def` keeps its own `trim`-based raw variant, so consolidating the
+//! three would change parse/error behavior (and force an `eos-config` edge onto
+//! the deliberately dependency-free `eos-agent-def`).
 
 /// Split `plugin.md` text into `(frontmatter_yaml, body)`.
 ///

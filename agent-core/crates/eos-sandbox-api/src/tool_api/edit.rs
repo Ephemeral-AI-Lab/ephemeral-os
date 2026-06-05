@@ -93,7 +93,7 @@ mod tests {
         EditFileRequest {
             base: SandboxRequestBase {
                 caller: SandboxCaller {
-                    agent_id: "agent-1".to_owned(),
+                    caller_id: "agent-1".to_owned(),
                     run_id: String::new(),
                     agent_run_id: String::new(),
                     task_id: String::new(),

@@ -360,6 +360,17 @@ fn shell_command(raw_input: &JsonObject) -> Option<&str> {
     }
 }
 
+/// `args.deferred_goal_for_next_iteration`, trimmed; `None` if missing or blank.
+/// One source of the wire key and the nonblank rule for every hook that reads
+/// it (the bailout discriminator and the nested-planner depth gate).
+fn deferred_goal(raw_input: &JsonObject) -> Option<&str> {
+    raw_input
+        .get("deferred_goal_for_next_iteration")
+        .and_then(Value::as_str)
+        .map(str::trim)
+        .filter(|goal| !goal.is_empty())
+}
+
 /// Faithful port of `_split_git_args`. Python prefers `shlex.split` (falling
 /// back to `str.split`); this uses whitespace splitting (the fallback path) —
 /// quote handling is best-effort and the prehook is explicitly not the

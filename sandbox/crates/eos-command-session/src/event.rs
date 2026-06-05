@@ -1,14 +1,14 @@
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CommandSessionStarted {
     pub command_session_id: String,
-    pub agent_id: String,
+    pub caller_id: String,
     pub workspace_mode: eos_workspace_api::WorkspaceMode,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CommandSessionFinished {
     pub command_session_id: String,
-    pub agent_id: String,
+    pub caller_id: String,
     pub workspace_mode: eos_workspace_api::WorkspaceMode,
     pub status: String,
 }

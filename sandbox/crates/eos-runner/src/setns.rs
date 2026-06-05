@@ -396,7 +396,7 @@ mod tests {
             mode: RunMode::SetNs,
             tool_call: ToolCall {
                 invocation_id: "test".to_owned(),
-                agent_id: "agent".to_owned(),
+                caller_id: "caller".to_owned(),
                 verb: RunnerVerb::ExecCommand,
                 intent: Intent::WriteAllowed,
                 args: serde_json::json!({"command": "true"}),

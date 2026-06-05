@@ -14,7 +14,7 @@ fn dispatch_audit_emits_typed_tool_call_and_resource_sample() -> TestResult {
     let request = Request {
         op: "api.v1.read_file".to_owned(),
         invocation_id: invocation_id.clone(),
-        args: json!({"invocation_id": &tool_use_id, "agent_id": "agent-1"}),
+        args: json!({"invocation_id": &tool_use_id, "caller_id": "caller-1"}),
     };
     let response = json!({
         "status": "ok",
@@ -70,8 +70,8 @@ fn dispatch_audit_emits_typed_tool_call_and_resource_sample() -> TestResult {
         json!(invocation_id)
     );
     assert_eq!(
-        resource_event["payload"]["os_resource"]["agent_id"],
-        json!("agent-1")
+        resource_event["payload"]["os_resource"]["caller_id"],
+        json!("caller-1")
     );
     assert_eq!(
         resource_event["payload"]["os_resource"]["cpu_user_s"],

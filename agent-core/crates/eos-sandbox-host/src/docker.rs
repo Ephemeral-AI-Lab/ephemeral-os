@@ -20,6 +20,7 @@ use bollard::models::{
     PortBinding,
 };
 use bollard::Docker;
+use eos_config::DockerConfig;
 use eos_types::SandboxId;
 use futures::StreamExt;
 use tokio::io::AsyncWriteExt;
@@ -53,23 +54,35 @@ fn is_eos_tmpfs_destination(dest_dir: &str) -> bool {
 }
 
 /// The Docker-backed provider adapter. Holds a cheap-to-clone, pooled
-/// `bollard::Docker` (no lazy `Option`/`to_thread` artifacts — bollard is async).
+/// `bollard::Docker` (no lazy `Option`/`to_thread` artifacts — bollard is async)
+/// plus the create-time knobs read once from the typed, validated
+/// [`DockerConfig`] instead of re-parsing `EOS_DOCKER_*` env per `create`.
 #[derive(Debug, Clone)]
 pub struct DockerProviderAdapter {
     docker: Docker,
+    daemon_tcp: bool,
+    privileged: bool,
+    no_privilege: bool,
 }
 
 impl DockerProviderAdapter {
-    /// Connect to the local Docker daemon (env / default socket).
-    pub fn connect() -> Result<Self, SandboxHostError> {
+    /// Connect to the local Docker daemon (env / default socket), taking the
+    /// create-time knobs from the typed config (`privileged`/`no_privilege` are
+    /// already validated as non-contradictory at config load).
+    pub fn connect(config: &DockerConfig) -> Result<Self, SandboxHostError> {
         let docker = Docker::connect_with_local_defaults().map_err(SandboxHostError::Docker)?;
-        Ok(Self { docker })
+        Ok(Self::from_client(docker, config))
     }
 
-    /// Wrap an existing `bollard::Docker` handle.
+    /// Wrap an existing `bollard::Docker` handle with the typed config knobs.
     #[must_use]
-    pub fn from_client(docker: Docker) -> Self {
-        Self { docker }
+    pub fn from_client(docker: Docker, config: &DockerConfig) -> Self {
+        Self {
+            docker,
+            daemon_tcp: config.daemon_tcp,
+            privileged: config.privileged,
+            no_privilege: config.no_privilege,
+        }
     }
 }
 
@@ -151,8 +164,8 @@ impl ProviderAdapter for DockerProviderAdapter {
         labels.insert(DOCKER_INIT_ENABLED_LABEL.to_owned(), "1".to_owned());
 
         let mut environment = normalize_string_map(&spec.env_vars);
-        let mut host_config = host_config_kwargs();
-        if docker_daemon_tcp_enabled() {
+        let mut host_config = host_config_kwargs(self.privileged, self.no_privilege);
+        if self.daemon_tcp {
             environment.insert(DAEMON_TCP_ENV_HOST.to_owned(), "0.0.0.0".to_owned());
             environment.insert(
                 DAEMON_TCP_ENV_PORT.to_owned(),
@@ -328,7 +341,7 @@ impl ProviderAdapter for DockerProviderAdapter {
         &self,
         id: &SandboxId,
     ) -> Result<Option<DaemonTcpEndpoint>, SandboxHostError> {
-        if !docker_daemon_tcp_enabled() {
+        if !self.daemon_tcp {
             return Ok(None);
         }
         let inspect = self.inspect(id.as_str()).await?;
@@ -559,14 +572,6 @@ fn normalize_string_map(map: &Labels) -> Labels {
         .collect()
 }
 
-fn docker_daemon_tcp_enabled() -> bool {
-    let raw = std::env::var("EOS_DOCKER_DAEMON_TCP").unwrap_or_else(|_| "1".to_owned());
-    !matches!(
-        raw.trim().to_ascii_lowercase().as_str(),
-        "0" | "false" | "no" | "off"
-    )
-}
-
 fn env_is_one(name: &str) -> bool {
     std::env::var(name).map(|v| v == "1").unwrap_or(false)
 }
@@ -582,9 +587,7 @@ fn generate_auth_token() -> String {
     )
 }
 
-fn host_config_kwargs() -> HostConfig {
-    let privileged = env_is_one("EOS_DOCKER_PRIVILEGED");
-    let no_privilege = env_is_one("EOS_DOCKER_NO_PRIVILEGE");
+fn host_config_kwargs(privileged: bool, no_privilege: bool) -> HostConfig {
     let mut host_config = HostConfig {
         init: Some(true),
         ..Default::default()

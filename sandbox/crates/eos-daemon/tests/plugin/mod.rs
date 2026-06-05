@@ -424,7 +424,7 @@ fn registered_plugin_op_routes_to_deferred_dispatch_not_unknown_op() -> TestResu
     let routed = table.dispatch(&Request {
         op: "plugin.generic.hover".to_owned(),
         invocation_id: "plugin-hover-test".to_owned(),
-        args: json!({"agent_id": "agent-plugin"}),
+        args: json!({"caller_id": "caller-plugin"}),
     });
     assert_eq!(routed["success"], false);
     assert_eq!(routed["status"], "deferred");
@@ -462,7 +462,7 @@ fn dynamic_plugin_op_is_blocked_in_isolated_workspace_before_route_lookup() -> T
         op: "api.isolated_workspace.enter".to_owned(),
         invocation_id: "iws-enter-before-plugin-block".to_owned(),
         args: json!({
-            "agent_id": "agent-plugin",
+            "caller_id": "caller-plugin",
             "layer_stack_root": layer_stack_root.to_string_lossy(),
         }),
     });
@@ -471,14 +471,14 @@ fn dynamic_plugin_op_is_blocked_in_isolated_workspace_before_route_lookup() -> T
     let blocked = table.dispatch(&Request {
         op: "plugin.generic.not_loaded_yet".to_owned(),
         invocation_id: "plugin-dynamic-iws-block".to_owned(),
-        args: json!({"agent_id": "agent-plugin"}),
+        args: json!({"caller_id": "caller-plugin"}),
     });
     assert_eq!(blocked["error"]["kind"], "forbidden_in_isolated_workspace");
 
     let exited = table.dispatch(&Request {
         op: "api.isolated_workspace.exit".to_owned(),
         invocation_id: "iws-exit-after-plugin-block".to_owned(),
-        args: json!({"agent_id": "agent-plugin"}),
+        args: json!({"caller_id": "caller-plugin"}),
     });
     assert_eq!(exited["success"], true);
     let _ = table.dispatch(&Request {
@@ -619,7 +619,7 @@ fn exited_service_process_fails_closed_before_dispatch() -> TestResult {
     let routed = table.dispatch(&Request {
         op: "plugin.generic.hover".to_owned(),
         invocation_id: "plugin-hover-exited-service".to_owned(),
-        args: json!({"agent_id": "agent-plugin"}),
+        args: json!({"caller_id": "caller-plugin"}),
     });
     assert_eq!(routed["success"], false);
     assert!(
@@ -744,13 +744,13 @@ fn plugin_response_payload_rejects_over_8_mib_body() {
 #[test]
 fn plugin_caller_fields_reject_nul_long_and_non_string_values() {
     assert!(matches!(
-        validate_plugin_caller_fields(&json!({"agent_id": "agent\0plugin"})),
+        validate_plugin_caller_fields(&json!({"caller_id": "agent\0plugin"})),
         Err(DaemonError::Plugin(PluginError::Ppc(message)))
             if message.contains("contains NUL")
     ));
 
     assert!(matches!(
-        validate_plugin_caller_fields(&json!({"caller": {"task_id": "x".repeat(MAX_PLUGIN_CALLER_FIELD_CHARS + 1)}})),
+        validate_plugin_caller_fields(&json!({"caller": {"source_id": "x".repeat(MAX_PLUGIN_CALLER_FIELD_CHARS + 1)}})),
         Err(DaemonError::Plugin(PluginError::Ppc(message)))
             if message.contains("exceeds")
     ));
@@ -837,7 +837,7 @@ fn read_only_service_refreshes_after_peer_publish_before_request() -> TestResult
     let routed = table.dispatch(&Request {
         op: "plugin.generic.hover".to_owned(),
         invocation_id: "plugin-hover-after-peer-write".to_owned(),
-        args: json!({"agent_id": "agent-plugin"}),
+        args: json!({"caller_id": "caller-plugin"}),
     });
     assert_eq!(routed["success"], true, "routed response: {routed:?}");
     assert_eq!(routed["after_refresh"], true);
@@ -962,7 +962,7 @@ fn concurrent_read_only_refresh_is_singleflight_before_requests() -> TestResult 
         Ok(first_table.dispatch(&Request {
             op: "plugin.generic.hover".to_owned(),
             invocation_id: "plugin-hover-concurrent-refresh-a".to_owned(),
-            args: json!({"agent_id": "agent-plugin", "request": "a"}),
+            args: json!({"caller_id": "caller-plugin", "request": "a"}),
         }))
     });
     refresh_started_rx.recv_timeout(Duration::from_secs(1))?;
@@ -974,7 +974,7 @@ fn concurrent_read_only_refresh_is_singleflight_before_requests() -> TestResult 
         Ok(second_table.dispatch(&Request {
             op: "plugin.generic.hover".to_owned(),
             invocation_id: "plugin-hover-concurrent-refresh-b".to_owned(),
-            args: json!({"agent_id": "agent-plugin", "request": "b"}),
+            args: json!({"caller_id": "caller-plugin", "request": "b"}),
         }))
     });
     second_started_rx.recv_timeout(Duration::from_secs(1))?;
@@ -1061,7 +1061,7 @@ fn restart_service_strategy_restarts_after_peer_publish_before_request() -> Test
     let routed = table.dispatch(&Request {
         op: "plugin.generic.hover".to_owned(),
         invocation_id: "plugin-hover-after-restart".to_owned(),
-        args: json!({"agent_id": "agent-plugin"}),
+        args: json!({"caller_id": "caller-plugin"}),
     });
     assert_eq!(routed["success"], true, "routed response: {routed:?}");
     assert_eq!(routed["from_restart_service"], true);
@@ -1148,7 +1148,7 @@ fn connected_self_managed_plugin_op_services_occ_callback() -> TestResult {
     let routed = table.dispatch(&Request {
         op: "plugin.generic.apply".to_owned(),
         invocation_id: "plugin-apply-test".to_owned(),
-        args: json!({"agent_id": "agent-plugin"}),
+        args: json!({"caller_id": "caller-plugin"}),
     });
     assert_eq!(routed["success"], true, "routed response: {routed:?}");
     assert_eq!(routed["from_self_managed"], true);
@@ -1237,7 +1237,7 @@ fn self_managed_service_refreshes_after_peer_publish_before_request() -> TestRes
     let routed = table.dispatch(&Request {
         op: "plugin.generic.apply".to_owned(),
         invocation_id: "plugin-apply-after-peer-write".to_owned(),
-        args: json!({"agent_id": "agent-plugin"}),
+        args: json!({"caller_id": "caller-plugin"}),
     });
     assert_eq!(routed["success"], true, "routed response: {routed:?}");
     assert_eq!(routed["self_managed_after_refresh"], true);
@@ -1301,7 +1301,7 @@ fn ensure_can_start_and_status_reports_service_process() -> TestResult {
     let routed = table.dispatch(&Request {
         op: "plugin.generic.hover".to_owned(),
         invocation_id: "plugin-hover-started-service".to_owned(),
-        args: json!({"agent_id": "agent-plugin"}),
+        args: json!({"caller_id": "caller-plugin"}),
     });
     assert_eq!(routed["success"], true, "routed response: {routed:?}");
     assert_eq!(routed["from_started_service"], true);

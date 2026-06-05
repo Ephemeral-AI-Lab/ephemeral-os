@@ -4,9 +4,9 @@ use std::path::PathBuf;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-/// Agent identity supplied by the daemon for one fresh operation.
+/// Caller identity supplied by the daemon for one fresh operation.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
-pub struct AgentId(pub String);
+pub struct CallerId(pub String);
 
 /// Tool invocation identity supplied by the daemon for one fresh operation.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
@@ -42,7 +42,7 @@ pub struct EphemeralRunDirs {
 pub struct EphemeralWorkspace {
     pub layer_stack_root: WorkspaceRoot,
     pub workspace_root: PathBuf,
-    pub agent_id: AgentId,
+    pub caller_id: CallerId,
     pub invocation_id: InvocationId,
     pub snapshot: EphemeralSnapshot,
     pub dirs: EphemeralRunDirs,

@@ -10,5 +10,4 @@ pub use launch::{
 };
 pub use orchestrator::AttemptOrchestrator;
 pub use orchestrator_registry::AttemptOrchestratorRegistry;
-pub use plan_dag::{ready_pending_plan_ids, DagResolution};
 pub use run_stage::AttemptStageAdvancer;

@@ -75,33 +75,23 @@ is `apply_search_replace` in `backend/src/sandbox/shared/edit_apply.py` (§5), s
 Serialized as its string `.value` (NOT via `asdict`) inside `ToolCallRequest.to_payload`.
 Ground truth: `[('READ_ONLY','read_only'),('WRITE_ALLOWED','write_allowed'),('LIFECYCLE','lifecycle')]`.
 
-### `SandboxCaller` — `models.py:23-48`
-`@dataclass(frozen=True, kw_only=True)`. Caller identity threaded onto every audit-aware
-request. All fields `str`.
+### Sandbox caller identity
+Every audit-aware daemon request carries a top-level `caller_id`. The sandbox treats
+that value as an opaque caller key; host-side concepts can be mapped to it before
+crossing the daemon boundary.
 
 | field | type | default |
 |-------|------|---------|
-| `agent_id` | `str` | (required) |
-| `run_id` | `str` | `""` |
-| `agent_run_id` | `str` | `""` |
-| `task_id` | `str` | `""` |
-| `task_center_run_id` | `str` | `""` |
-| `task_center_task_id` | `str` | `""` |
-| `task_center_attempt_id` | `str` | `""` |
-| `task_center_workflow_id` | `str` | `""` |
-| `task_center_request_id` | `str` | `""` |
-| `tool_name` | `str` | `""` |
-| `tool_id` | `str` | `""` |
+| `caller_id` | `str` | (required) |
 
-`audit_fields()` (`models.py:39-48`) returns the daemon-facing envelope: it ALWAYS includes
-the four required keys `{agent_id, run_id, agent_run_id, task_id}` (even when empty) and
-includes any other field only if truthy. Ground truth:
+Optional host metadata may be supplied in a nested `caller` object for audit
+correlation. The sandbox validates only that the supplied caller fields are
+strings of bounded length; it does not define or route on those field names.
+Ground truth:
 
 ```json
-// SandboxCaller(agent_id="a1").audit_fields()
-{"agent_id": "a1", "run_id": "", "agent_run_id": "", "task_id": ""}
-// SandboxCaller(agent_id="a1", run_id="r", tool_name="read_file", tool_id="t1").audit_fields()
-{"agent_id": "a1", "run_id": "r", "agent_run_id": "", "task_id": "", "tool_name": "read_file", "tool_id": "t1"}
+{"caller_id": "caller-1"}
+{"caller_id": "caller-1", "caller": {"tool_id": "tool-1"}}
 ```
 
 ### `SandboxRequestBase` — `models.py:51-60`
@@ -169,7 +159,7 @@ the routed-invocation envelope inside the overlay/namespace pipeline.
 | field | type | default |
 |-------|------|---------|
 | `invocation_id` | `str` | (required) |
-| `agent_id` | `str` | (required) |
+| `caller_id` | `str` | (required) |
 | `verb` | `str` | (required) |
 | `intent` | `Intent` | (required) |
 | `args` | `Mapping[str, object]` | (required) |
@@ -177,7 +167,7 @@ the routed-invocation envelope inside the overlay/namespace pipeline.
 
 `to_payload()` emits (Intent as `.value`, args copied to a plain dict):
 ```json
-{"invocation_id":"i1","agent_id":"a1","verb":"read_file","intent":"read_only","args":{"path":"/w/f.txt"},"background":false}
+{"invocation_id":"i1","caller_id":"a1","verb":"read_file","intent":"read_only","args":{"path":"/w/f.txt"},"background":false}
 ```
 `from_payload(payload)` is total: missing scalars → `""`, missing `intent` → `"read_only"`,
 missing `args` → `{}`, missing `background` → `false`; non-Mapping `args` raises
@@ -199,7 +189,7 @@ One-shot raw provider exec (not a public verb, but in the model). Adds:
 ### Identity-envelope wire helper — `api/tool/_daemon_response_parsing.py:23-30`
 `daemon_request_identity_fields(request)` prepends to **every** verb's wire `args`:
 ```json
-{"agent_id": "<caller.agent_id>", "caller": { ...audit_fields()... }}
+{"caller_id": "<caller.caller_id>", "caller": { ...audit_fields()... }}
 ```
 plus `"invocation_id": "<...>"` ONLY when `request.invocation_id` is truthy. Each per-verb
 wrapper then merges its own keys on top (`identity | {verb-specific}`).
@@ -216,7 +206,7 @@ wrapper then merges its own keys on top (`identity | {verb-specific}`).
 
 | wire arg | type | required | notes |
 |----------|------|----------|-------|
-| `agent_id` + `caller` (+ `invocation_id`) | identity envelope | yes | §1 |
+| `caller_id` + `caller` (+ `invocation_id`) | identity envelope | yes | §1 |
 | `path` | `str` | yes | required, non-empty |
 
 ### Response — `ReadFileResult(SandboxResultBase)` — `models.py:162-166`

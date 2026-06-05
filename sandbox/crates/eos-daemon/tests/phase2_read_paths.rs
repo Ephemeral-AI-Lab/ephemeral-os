@@ -153,7 +153,7 @@ fn isolated_workspace_ops_are_registered_and_disabled_by_default() -> TestResult
         op: "api.isolated_workspace.enter".to_owned(),
         invocation_id: "iws-enter".to_owned(),
         args: json!({
-            "agent_id": "agent-a",
+            "caller_id": "caller-a",
             "layer_stack_root": "/tmp/layer-stack",
         }),
     });
@@ -166,7 +166,7 @@ fn isolated_workspace_ops_are_registered_and_disabled_by_default() -> TestResult
     let status = table.dispatch(&Request {
         op: "api.isolated_workspace.status".to_owned(),
         invocation_id: "iws-status".to_owned(),
-        args: json!({"agent_id": "agent-a"}),
+        args: json!({"caller_id": "caller-a"}),
     });
     assert_eq!(status["success"], Value::Bool(false));
     assert_eq!(
@@ -180,7 +180,7 @@ fn isolated_workspace_ops_are_registered_and_disabled_by_default() -> TestResult
         args: json!({}),
     });
     assert_eq!(open["success"], Value::Bool(true));
-    assert_eq!(open["open_agent_ids"], json!([]));
+    assert_eq!(open["open_caller_ids"], json!([]));
     Ok(())
 }
 
@@ -198,7 +198,7 @@ fn isolated_workspace_lifecycle_ops_open_status_list_and_exit_when_enabled() -> 
         "api.isolated_workspace.enter",
         "iws-enter",
         json!({
-            "agent_id": "agent-enabled",
+            "caller_id": "caller-enabled",
             "layer_stack_root": &env.root,
         }),
     );
@@ -221,7 +221,7 @@ fn isolated_workspace_lifecycle_ops_open_status_list_and_exit_when_enabled() -> 
         &table,
         "api.isolated_workspace.exit",
         "iws-exit",
-        json!({"agent_id": "agent-enabled"}),
+        json!({"caller_id": "caller-enabled"}),
     );
     assert_isolated_exit(&exit, &handle_scratch, &env.audit_path)?;
     assert_isolated_status_closed(&table);
@@ -248,7 +248,7 @@ fn isolated_workspace_ops_validate_required_arguments() -> TestResult {
     );
     assert_eq!(
         response["error"]["details"]["key"],
-        Value::String("agent_id".to_owned())
+        Value::String("caller_id".to_owned())
     );
     Ok(())
 }
@@ -261,7 +261,7 @@ async fn control_ops_use_inflight_registry() -> TestResult {
     registry.register(
         "bg-shell",
         task.abort_handle(),
-        "agent-a",
+        "caller-a",
         "api.v1.exec_command",
         true,
     );
@@ -271,7 +271,7 @@ async fn control_ops_use_inflight_registry() -> TestResult {
         &Request {
             op: "api.v1.inflight_count".to_owned(),
             invocation_id: "count".to_owned(),
-            args: json!({"agent_id": "agent-a"}),
+            args: json!({"caller_id": "caller-a"}),
         },
         context,
     );
@@ -282,7 +282,7 @@ async fn control_ops_use_inflight_registry() -> TestResult {
         &Request {
             op: "api.v1.command_session_count".to_owned(),
             invocation_id: "command-session-count".to_owned(),
-            args: json!({"agent_id": "agent-a"}),
+            args: json!({"caller_id": "caller-a"}),
         },
         context,
     );
@@ -321,7 +321,7 @@ async fn control_ops_use_inflight_registry() -> TestResult {
         &Request {
             op: "api.v1.inflight_count".to_owned(),
             invocation_id: "count-after".to_owned(),
-            args: json!({"agent_id": "agent-a"}),
+            args: json!({"caller_id": "caller-a"}),
         },
         context,
     );
@@ -628,7 +628,7 @@ fn assert_isolated_open_state(table: &OpTable, root: &Path) {
         table,
         "api.isolated_workspace.status",
         "iws-status",
-        json!({"agent_id": "agent-enabled"}),
+        json!({"caller_id": "caller-enabled"}),
     );
     assert_eq!(status["success"], Value::Bool(true));
     assert_eq!(status["open"], Value::Bool(true));
@@ -639,7 +639,7 @@ fn assert_isolated_open_state(table: &OpTable, root: &Path) {
         "api.isolated_workspace.enter",
         "iws-enter-again",
         json!({
-            "agent_id": "agent-enabled",
+            "caller_id": "caller-enabled",
             "layer_stack_root": root,
         }),
     );
@@ -653,7 +653,7 @@ fn assert_isolated_open_state(table: &OpTable, root: &Path) {
         json!({}),
     );
     assert_eq!(open["success"], Value::Bool(true));
-    assert_eq!(open["open_agent_ids"], json!(["agent-enabled"]));
+    assert_eq!(open["open_caller_ids"], json!(["caller-enabled"]));
 }
 
 fn assert_isolated_exit(exit: &Value, handle_scratch: &Path, audit_path: &Path) -> TestResult {
@@ -706,7 +706,7 @@ fn assert_isolated_status_closed(table: &OpTable) {
         table,
         "api.isolated_workspace.status",
         "iws-status-closed",
-        json!({"agent_id": "agent-enabled"}),
+        json!({"caller_id": "caller-enabled"}),
     );
     assert_eq!(status["success"], Value::Bool(true));
     assert_eq!(status["open"], Value::Bool(false));

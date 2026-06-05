@@ -167,6 +167,7 @@ dependencies = [
 name = "eos-daemon"
 version = "0.1.0"
 dependencies = [
+ "eos-command-session",
  "eos-config",
  "eos-ephemeral-workspace",
  "eos-isolated-workspace",
@@ -179,7 +180,6 @@ dependencies = [
  "eos-workspace-api",
  "ignore",
  "nix 0.29.0",
- "rustix 0.38.44",
  "serde",
  "serde_json",
  "sha2",

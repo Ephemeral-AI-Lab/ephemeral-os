@@ -342,7 +342,7 @@ impl DaemonServer {
 
     async fn dispatch_request(&self, request: Request, read_request_s: f64) -> serde_json::Value {
         let invocation_id = request.invocation_id.clone();
-        let agent_id = agent_id_from_args(&request.args);
+        let caller_id = caller_id_from_args(&request.args);
         let background = request
             .args
             .get("background")
@@ -356,7 +356,7 @@ impl DaemonServer {
                 "tool_call.started",
                 &invocation_id,
                 &op,
-                &agent_id,
+                &caller_id,
                 None,
                 None,
             );
@@ -378,7 +378,7 @@ impl DaemonServer {
         registry.register(
             &invocation_id,
             task.abort_handle(),
-            &agent_id,
+            &caller_id,
             &op,
             background,
         );
@@ -402,7 +402,7 @@ impl DaemonServer {
                 "tool_call.completed",
                 &invocation_id,
                 &op,
-                &agent_id,
+                &caller_id,
                 Some(started.elapsed().as_secs_f64() * 1000.0),
                 response_status(&response),
             );
@@ -456,14 +456,14 @@ fn emit_tool_call_event(
     event_type: &str,
     invocation_id: &str,
     op: &str,
-    agent_id: &str,
+    caller_id: &str,
     total_ms: Option<f64>,
     exit_status: Option<String>,
 ) {
     let section = ToolCallSection {
         tool_use_id: invocation_id.to_owned(),
         tool_name: op.to_owned(),
-        agent_id: (!agent_id.is_empty()).then(|| agent_id.to_owned()),
+        caller_id: (!caller_id.is_empty()).then(|| caller_id.to_owned()),
         workspace_mode: None,
         workspace_handle_id: None,
         phase: None,
@@ -492,8 +492,8 @@ fn response_status(response: &serde_json::Value) -> Option<String> {
         .or_else(|| Some("ok".to_owned()))
 }
 
-fn agent_id_from_args(args: &serde_json::Value) -> String {
-    args.get("agent_id")
+fn caller_id_from_args(args: &serde_json::Value) -> String {
+    args.get("caller_id")
         .and_then(serde_json::Value::as_str)
         .unwrap_or_default()
         .trim()

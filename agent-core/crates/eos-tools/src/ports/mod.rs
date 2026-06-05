@@ -18,7 +18,10 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use eos_state::{GeneratorSubmission, PlanDisposition, PlanNodeId, ReducerSubmission};
-use eos_types::{SandboxId, SubagentSessionId, TaskId, WorkflowId, WorkflowSessionId};
+use eos_types::{
+    AgentRunId, CommandSessionId, SandboxId, SubagentSessionId, TaskId, WorkflowId,
+    WorkflowSessionId,
+};
 use serde::Serialize;
 use serde_json::Value;
 
@@ -318,8 +321,8 @@ pub trait CommandSessionSupervisorPort: Sealed + Send + Sync {
     /// `command_session_id` is the daemon-minted `cmd_<n>` correlation key.
     async fn register(
         &self,
-        command_session_id: &str,
-        sandbox_id: &str,
+        command_session_id: &CommandSessionId,
+        sandbox_id: &SandboxId,
         agent_id: &str,
         command: &str,
     );
@@ -327,16 +330,21 @@ pub trait CommandSessionSupervisorPort: Sealed + Send + Sync {
     /// The stored terminal result for a session whose live daemon session is
     /// already gone (the recover race), or `None` when it is still running or
     /// untracked.
-    async fn command_session_result(&self, command_session_id: &str) -> Option<Value>;
+    async fn command_session_result(&self, command_session_id: &CommandSessionId) -> Option<Value>;
 
     /// Mark a session reported (delivered) with the terminal `result` a control
     /// tool observed inline, so the heartbeat does not re-deliver it.
-    async fn mark_command_session_reported(&self, command_session_id: &str, result: Value);
+    async fn mark_command_session_reported(
+        &self,
+        command_session_id: &CommandSessionId,
+        result: Value,
+    );
 
     /// Whether a session's completion was already delivered to the model (via the
     /// heartbeat). A late `write_stdin` poll uses this to return a terse
     /// already-reported note instead of re-dumping the completion (anchor §8/D8).
-    async fn command_session_already_reported(&self, command_session_id: &str) -> bool;
+    async fn command_session_already_reported(&self, command_session_id: &CommandSessionId)
+        -> bool;
 }
 
 // ---------------------------------------------------------------------------
@@ -354,7 +362,7 @@ pub trait IsolatedWorkspacePort: Sealed + Send + Sync {
     /// in-band result.
     async fn enter(
         &self,
-        agent_id: &str,
+        agent_run_id: &AgentRunId,
         sandbox_id: &SandboxId,
         layer_stack_root: &str,
     ) -> Result<ToolResult, ToolError>;
@@ -363,7 +371,7 @@ pub trait IsolatedWorkspacePort: Sealed + Send + Sync {
     /// model-facing in-band result.
     async fn exit(
         &self,
-        agent_id: &str,
+        agent_run_id: &AgentRunId,
         sandbox_id: &SandboxId,
         grace_s: f64,
     ) -> Result<ToolResult, ToolError>;

@@ -7,8 +7,8 @@
 //! requests remain direct root tasks.
 #![forbid(unsafe_code)]
 
-pub mod attempt;
-pub mod context;
+mod attempt;
+mod context;
 mod error;
 mod ids;
 mod iteration;
@@ -21,9 +21,8 @@ mod util;
 mod testsupport;
 
 pub use attempt::{
-    ready_pending_plan_ids, AgentLaunch, AgentLaunchFactory, AgentRunReport, AgentRunner,
-    AttemptDeps, AttemptOrchestrator, AttemptOrchestratorRegistry, AttemptStageAdvancer,
-    DagResolution, ExecutionLaunch, PlannerLaunch,
+    AgentLaunch, AgentRunReport, AgentRunner, AttemptDeps, AttemptOrchestratorRegistry,
+    ExecutionLaunch, PlannerLaunch,
 };
 pub use context::{
     render_context_xml, render_task_guidance, AgentContext, AgentEntryComposer, AgentEntryMessages,
@@ -31,10 +30,6 @@ pub use context::{
 };
 pub use error::{Result, WorkflowError};
 pub use ids::{generator_task_id, planner_task_id, reducer_task_id, WorkflowLifecycleConfig};
-pub use iteration::{
-    IterationAttemptCoordinator, IterationClosed, IterationClosedCallback,
-    OpenIterationCoordinatorRegistry,
-};
-pub use lifecycle::WorkflowLifecycle;
+pub use iteration::OpenIterationCoordinatorRegistry;
 pub use ports::{PlanSubmissionAdapter, WorkflowControlAdapter};
 pub use starter::{StartedWorkflow, WorkflowStarter};

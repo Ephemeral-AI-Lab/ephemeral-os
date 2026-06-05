@@ -5,18 +5,14 @@ use serde_json::Value;
 
 /// Caller identity threaded onto every audit-aware request.
 ///
-/// The four required ids (`agent_id`, `run_id`, `agent_run_id`, `task_id`) are
-/// always present even when empty; the rest are optional. `tool_id` is the only
-/// id stored already-typed (it is `Option`, omitted when unset). The Python
-/// `tool_name` field is removed (GC-sandbox-api-01): it was empty in production
-/// and the audit fallback uses the operation name.
+/// `caller_id` is the daemon-facing sandbox identity. Agent/workflow/task
+/// metadata stays in this host-side typed API and is projected only where a
+/// higher-level audit consumer needs it.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 pub struct SandboxCaller {
-    /// Resolved agent identity. In production it is derived from `agent_run_id`
-    /// (`agent_run_id.strip() or agent_name`, eos-tools source), so it frequently
-    /// equals `agent_run_id` while staying a distinct field. eos-types owns no
-    /// `AgentId` newtype, so this stays a raw `String`.
-    pub agent_id: String,
+    /// Neutral sandbox caller identity. In agent-core it is derived from the
+    /// current agent identity, but the daemon contract does not name agents.
+    pub caller_id: String,
     /// Run id (required-empty compatibility field).
     #[serde(default)]
     pub run_id: String,
@@ -47,11 +43,14 @@ impl SandboxCaller {
     ///
     /// The four required ids are always present (even empty); optional ids are
     /// omitted when empty. This is only the nested block — the full envelope
-    /// identity (top-level `agent_id` + this block + optional `invocation_id`) is
+    /// identity (top-level `caller_id` + this block + optional `invocation_id`) is
     /// built by `tool_api::parse::daemon_request_identity_fields`.
     pub(crate) fn identity_block(&self) -> JsonObject {
         let mut block = JsonObject::new();
-        block.insert("agent_id".to_owned(), Value::String(self.agent_id.clone()));
+        block.insert(
+            "caller_id".to_owned(),
+            Value::String(self.caller_id.clone()),
+        );
         block.insert("run_id".to_owned(), Value::String(self.run_id.clone()));
         block.insert(
             "agent_run_id".to_owned(),
@@ -117,9 +116,9 @@ impl SandboxCaller {
 mod tests {
     use super::*;
 
-    fn caller(agent_id: &str) -> SandboxCaller {
+    fn caller(caller_id: &str) -> SandboxCaller {
         SandboxCaller {
-            agent_id: agent_id.to_owned(),
+            caller_id: caller_id.to_owned(),
             run_id: String::new(),
             agent_run_id: String::new(),
             task_id: String::new(),
@@ -155,18 +154,18 @@ mod tests {
 
     // AC-sandbox-api-04 (identity-block portion): the nested `caller` block
     // always carries the four required ids (even empty) and omits empty optional
-    // ids. The fixture uses agent_id == agent_run_id (production shape) to catch
+    // ids. The fixture uses caller_id == agent_run_id (production shape) to catch
     // accidental newtype coupling while keeping the fields distinct.
     #[test]
     fn identity_block_required_empty_and_optional_omitted() {
         let mut c = caller("agent-run-7");
-        c.agent_run_id = "agent-run-7".to_owned(); // equal to agent_id, distinct field
+        c.agent_run_id = "agent-run-7".to_owned(); // equal to caller_id, distinct field
         let block = c.identity_block();
 
-        for required in ["agent_id", "run_id", "agent_run_id", "task_id"] {
+        for required in ["caller_id", "run_id", "agent_run_id", "task_id"] {
             assert!(block.contains_key(required), "required key {required}");
         }
-        assert_eq!(block["agent_id"], serde_json::json!("agent-run-7"));
+        assert_eq!(block["caller_id"], serde_json::json!("agent-run-7"));
         assert_eq!(block["agent_run_id"], serde_json::json!("agent-run-7"));
         assert_eq!(block["run_id"], serde_json::json!(""));
         assert_eq!(block["task_id"], serde_json::json!(""));

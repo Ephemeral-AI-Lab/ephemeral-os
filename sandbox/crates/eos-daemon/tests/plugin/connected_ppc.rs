@@ -31,7 +31,7 @@ fn connected_read_only_plugin_op_round_trips_over_ppc() -> TestResult {
         let request = read_ppc_request(&mut server_stream, "read ppc request")?;
         assert_eq!(request.message_id, "plugin-hover-test");
         assert_eq!(request.op, "plugin.generic.hover");
-        assert!(request.body.contains("agent-plugin"));
+        assert!(request.body.contains("caller-plugin"));
         let reply = PpcEnvelope {
             message_id: request.message_id,
             direction: PpcDirection::Reply,
@@ -45,7 +45,7 @@ fn connected_read_only_plugin_op_round_trips_over_ppc() -> TestResult {
     let routed = table.dispatch(&Request {
         op: "plugin.generic.hover".to_owned(),
         invocation_id: "plugin-hover-test".to_owned(),
-        args: json!({"agent_id": "agent-plugin"}),
+        args: json!({"caller_id": "caller-plugin"}),
     });
     assert_eq!(routed["success"], true);
     assert_eq!(routed["from_ppc"], true);
@@ -99,7 +99,7 @@ fn concurrent_read_only_plugin_ops_share_one_ppc_client() -> TestResult {
         Ok(first_table.dispatch(&Request {
             op: "plugin.generic.hover".to_owned(),
             invocation_id: "plugin-hover-concurrent-a".to_owned(),
-            args: json!({"agent_id": "agent-plugin", "request": "a"}),
+            args: json!({"caller_id": "caller-plugin", "request": "a"}),
         }))
     });
     assert_eq!(
@@ -114,7 +114,7 @@ fn concurrent_read_only_plugin_ops_share_one_ppc_client() -> TestResult {
         Ok(second_table.dispatch(&Request {
             op: "plugin.generic.hover".to_owned(),
             invocation_id: "plugin-hover-concurrent-b".to_owned(),
-            args: json!({"agent_id": "agent-plugin", "request": "b"}),
+            args: json!({"caller_id": "caller-plugin", "request": "b"}),
         }))
     });
     second_started_rx.recv_timeout(Duration::from_secs(1))?;
@@ -187,7 +187,7 @@ fn concurrent_read_only_plugin_ops_match_out_of_order_replies() -> TestResult {
         Ok(first_table.dispatch(&Request {
             op: "plugin.generic.hover".to_owned(),
             invocation_id: "plugin-hover-concurrent-a".to_owned(),
-            args: json!({"agent_id": "agent-plugin", "request": "a"}),
+            args: json!({"caller_id": "caller-plugin", "request": "a"}),
         }))
     });
     let second_table = Arc::clone(&table);
@@ -195,7 +195,7 @@ fn concurrent_read_only_plugin_ops_match_out_of_order_replies() -> TestResult {
         Ok(second_table.dispatch(&Request {
             op: "plugin.generic.hover".to_owned(),
             invocation_id: "plugin-hover-concurrent-b".to_owned(),
-            args: json!({"agent_id": "agent-plugin", "request": "b"}),
+            args: json!({"caller_id": "caller-plugin", "request": "b"}),
         }))
     });
 
@@ -241,7 +241,7 @@ fn read_only_ppc_failure_drops_connected_route() -> TestResult {
     let routed = table.dispatch(&Request {
         op: "plugin.generic.hover".to_owned(),
         invocation_id: "plugin-hover-broken-ppc".to_owned(),
-        args: json!({"agent_id": "agent-plugin"}),
+        args: json!({"caller_id": "caller-plugin"}),
     });
     assert_eq!(routed["error"]["kind"], "internal_error");
 
@@ -287,7 +287,7 @@ fn read_only_service_recovers_on_next_dispatch_after_ppc_failure() -> TestResult
     let failed = table.dispatch(&Request {
         op: "plugin.generic.hover".to_owned(),
         invocation_id: "plugin-hover-broken-before-recovery".to_owned(),
-        args: json!({"agent_id": "agent-plugin"}),
+        args: json!({"caller_id": "caller-plugin"}),
     });
     assert_eq!(failed["error"]["kind"], "internal_error");
 
@@ -309,7 +309,7 @@ fn read_only_service_recovers_on_next_dispatch_after_ppc_failure() -> TestResult
     let recovered = table.dispatch(&Request {
         op: "plugin.generic.hover".to_owned(),
         invocation_id: "plugin-hover-after-recovery".to_owned(),
-        args: json!({"agent_id": "agent-plugin"}),
+        args: json!({"caller_id": "caller-plugin"}),
     });
     assert_eq!(
         recovered["success"], true,

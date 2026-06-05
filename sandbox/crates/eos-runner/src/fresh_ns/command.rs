@@ -242,7 +242,7 @@ mod tests {
             mode: RunMode::FreshNs,
             tool_call: ToolCall {
                 invocation_id: "test".to_owned(),
-                agent_id: "agent".to_owned(),
+                caller_id: "caller".to_owned(),
                 verb: RunnerVerb::from(verb),
                 intent: Intent::WriteAllowed,
                 args,

@@ -25,7 +25,7 @@ type IterationCoordinatorFuture<'a> = Pin<
 
 /// Workflow-level lifecycle coordinator.
 #[derive(Clone)]
-pub struct WorkflowLifecycle {
+pub(crate) struct WorkflowLifecycle {
     deps: AttemptDeps,
     iteration_coordinators: Arc<OpenIterationCoordinatorRegistry>,
     config: WorkflowLifecycleConfig,
@@ -42,7 +42,7 @@ impl std::fmt::Debug for WorkflowLifecycle {
 impl WorkflowLifecycle {
     /// Create a lifecycle coordinator.
     #[must_use]
-    pub fn new(
+    pub(crate) fn new(
         deps: AttemptDeps,
         iteration_coordinators: Arc<OpenIterationCoordinatorRegistry>,
     ) -> Self {
@@ -54,7 +54,7 @@ impl WorkflowLifecycle {
     }
 
     /// Insert a workflow row.
-    pub async fn create_workflow(
+    pub(crate) async fn create_workflow(
         &self,
         request_id: &eos_state::RequestId,
         parent_task_id: &eos_state::TaskId,
@@ -68,7 +68,7 @@ impl WorkflowLifecycle {
     }
 
     /// Create the next iteration and register its coordinator.
-    pub fn create_iteration_with_coordinator<'a>(
+    pub(crate) fn create_iteration_with_coordinator<'a>(
         &'a self,
         workflow_id: &'a WorkflowId,
     ) -> IterationCoordinatorFuture<'a> {
@@ -159,7 +159,7 @@ impl WorkflowLifecycle {
     }
 
     /// React to a closed iteration.
-    pub async fn handle_iteration_closed(&self, closed: IterationClosed) -> Result<()> {
+    pub(crate) async fn handle_iteration_closed(&self, closed: IterationClosed) -> Result<()> {
         let iteration = self
             .deps
             .iteration_store

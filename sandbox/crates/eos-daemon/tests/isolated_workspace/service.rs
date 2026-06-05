@@ -22,14 +22,14 @@ fn active_command_session_records_do_not_guard_exit() -> TestResult {
     )?;
 
     let entered = op_enter(
-        &json!({"agent_id": "agent-command-session", "layer_stack_root": root}),
+        &json!({"caller_id": "caller-command-session", "layer_stack_root": root}),
         DispatchContext::empty(),
     )?;
     assert_eq!(entered["success"], true);
-    register_command_session("agent-command-session", "cmd-block");
+    register_command_session("caller-command-session", "cmd-block");
 
     let exited = op_exit(
-        &json!({"agent_id": "agent-command-session"}),
+        &json!({"caller_id": "caller-command-session"}),
         DispatchContext::empty(),
     )?;
     assert_eq!(exited["success"], true);
@@ -63,7 +63,7 @@ fn enter_uses_workspace_binding_over_configured_workspace_root() -> TestResult {
     let _ = op_test_reset(&json!({}), DispatchContext::empty());
 
     let entered = op_enter(
-        &json!({"agent_id": "agent-bound-root", "layer_stack_root": stack_root}),
+        &json!({"caller_id": "caller-bound-root", "layer_stack_root": stack_root}),
         DispatchContext::empty(),
     )?;
 
@@ -74,7 +74,7 @@ fn enter_uses_workspace_binding_over_configured_workspace_root() -> TestResult {
         json!(expected_workspace_root.clone())
     );
     let status = op_status(
-        &json!({"agent_id": "agent-bound-root"}),
+        &json!({"caller_id": "caller-bound-root"}),
         DispatchContext::empty(),
     )?;
     assert_eq!(status["success"], true);
@@ -85,7 +85,7 @@ fn enter_uses_workspace_binding_over_configured_workspace_root() -> TestResult {
     );
 
     let exited = op_exit(
-        &json!({"agent_id": "agent-bound-root"}),
+        &json!({"caller_id": "caller-bound-root"}),
         DispatchContext::empty(),
     )?;
     assert_eq!(exited["success"], true);

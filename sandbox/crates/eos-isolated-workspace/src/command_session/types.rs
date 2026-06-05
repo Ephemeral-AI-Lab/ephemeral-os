@@ -21,7 +21,7 @@ pub struct IsolatedCommandPrepareContext {
 /// Daemon-supplied facts needed to finalize an isolated command workspace.
 #[derive(Debug, Clone, PartialEq)]
 pub struct IsolatedCommandFinalizeContext {
-    pub agent_id: String,
+    pub caller_id: String,
     pub workspace_handle_id: String,
     pub manifest_version: i64,
     pub manifest_root_hash: String,

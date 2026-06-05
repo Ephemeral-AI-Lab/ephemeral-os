@@ -106,7 +106,7 @@ impl BackgroundSupervisorHandle {
         let request = CommandSessionCancelRequest {
             base: SandboxRequestBase {
                 caller: SandboxCaller {
-                    agent_id: command.agent_id.clone(),
+                    caller_id: command.agent_id.clone(),
                     run_id: command.agent_id.clone(),
                     agent_run_id: command.agent_id.clone(),
                     task_id: String::new(),

@@ -56,45 +56,45 @@ pub async fn heartbeat(
         .await
 }
 
-/// Daemon-visible in-flight invocation count for one agent (defaults to `0`).
+/// Daemon-visible in-flight invocation count for one caller (defaults to `0`).
 pub async fn inflight_count(
     transport: &dyn SandboxTransport,
     sandbox_id: &SandboxId,
-    agent_id: &str,
+    caller_id: &str,
 ) -> Result<u32, SandboxApiError> {
     let response =
-        call_with_agent(transport, sandbox_id, DaemonOp::InflightCount, agent_id).await?;
+        call_with_caller(transport, sandbox_id, DaemonOp::InflightCount, caller_id).await?;
     Ok(count_field(&response))
 }
 
-/// Daemon-visible live command-session count for one agent (defaults to `0`).
+/// Daemon-visible live command-session count for one caller (defaults to `0`).
 pub async fn command_session_count(
     transport: &dyn SandboxTransport,
     sandbox_id: &SandboxId,
-    agent_id: &str,
+    caller_id: &str,
 ) -> Result<u32, SandboxApiError> {
-    let response = call_with_agent(
+    let response = call_with_caller(
         transport,
         sandbox_id,
         DaemonOp::CommandSessionCount,
-        agent_id,
+        caller_id,
     )
     .await?;
     Ok(count_field(&response))
 }
 
-/// Whether the agent has an open isolated workspace (daemon truth). A response
+/// Whether the caller has an open isolated workspace (daemon truth). A response
 /// without an `open` key (e.g. the no-pipeline error payload) is `false`.
 pub async fn isolated_active(
     transport: &dyn SandboxTransport,
     sandbox_id: &SandboxId,
-    agent_id: &str,
+    caller_id: &str,
 ) -> Result<bool, SandboxApiError> {
-    let response = call_with_agent(
+    let response = call_with_caller(
         transport,
         sandbox_id,
         DaemonOp::IsolatedWorkspaceStatus,
-        agent_id,
+        caller_id,
     )
     .await?;
     Ok(response
@@ -103,14 +103,14 @@ pub async fn isolated_active(
         .unwrap_or(false))
 }
 
-async fn call_with_agent(
+async fn call_with_caller(
     transport: &dyn SandboxTransport,
     sandbox_id: &SandboxId,
     op: DaemonOp,
-    agent_id: &str,
+    caller_id: &str,
 ) -> Result<JsonObject, SandboxApiError> {
     let mut payload = JsonObject::new();
-    payload.insert("agent_id".to_owned(), Value::String(agent_id.to_owned()));
+    payload.insert("caller_id".to_owned(), Value::String(caller_id.to_owned()));
     transport
         .call(sandbox_id, op, payload, CONTROL_TIMEOUT_S)
         .await

@@ -12,8 +12,8 @@ serde_json.workspace = true
 thiserror.workspace = true
 
 [target.'cfg(target_os = "linux")'.dependencies]
-nix.workspace = true
-rustix.workspace = true
+nix = { workspace = true, features = ["process", "signal"] }
+rustix = { workspace = true, features = ["pty"] }
 
 [lints]
 workspace = true

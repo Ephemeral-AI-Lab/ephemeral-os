@@ -1,17 +1,11 @@
 #[cfg(target_os = "linux")]
 use std::collections::{HashMap, HashSet};
 #[cfg(target_os = "linux")]
-use std::fs::File;
-#[cfg(target_os = "linux")]
 use std::os::unix::process::ExitStatusExt;
-#[cfg(target_os = "linux")]
-use std::process::Child;
 #[cfg(target_os = "linux")]
 use std::sync::atomic::{AtomicU64, Ordering};
 #[cfg(target_os = "linux")]
-use std::sync::{mpsc as std_mpsc, Arc, Mutex, MutexGuard, OnceLock};
-#[cfg(target_os = "linux")]
-use std::thread;
+use std::sync::{Arc, Mutex, MutexGuard, OnceLock};
 #[cfg(target_os = "linux")]
 use std::time::{Duration, Instant};
 
@@ -23,12 +17,16 @@ use eos_runner::RunResult;
 use serde_json::{json, Value};
 
 #[cfg(target_os = "linux")]
-use super::output::{CommandSessionOutput, CommandSessionOutputCursor};
-#[cfg(target_os = "linux")]
 use super::{
     command_result, command_session_config, finalize_command_workspace,
-    finalize_isolated_command_workspace, response_with_stdout, terminate_command_process_group,
+    finalize_isolated_command_workspace, response_with_stdout, runtime_command_session_config,
     CommandWorkspaceKind,
+};
+#[cfg(target_os = "linux")]
+use eos_command_session::{
+    wait_for_yield as runtime_wait_for_yield, CommandSessionOutput, CommandSessionOutputCursor,
+    CommandSessionProcess, CommandSessionWaitTarget, ProcessReap,
+    WaitOutcome as RuntimeWaitOutcome,
 };
 
 #[cfg(any(target_os = "linux", test))]
@@ -48,22 +46,20 @@ pub(super) fn lock_command_session_state<T>(mutex: &Mutex<T>) -> MutexGuard<'_, 
 }
 
 #[cfg(target_os = "linux")]
+pub(super) type WaitOutcome = RuntimeWaitOutcome<Value>;
+
+#[cfg(target_os = "linux")]
 pub(super) struct CommandSession {
     pub(super) id: String,
-    pub(super) agent_id: String,
+    pub(super) caller_id: String,
     pub(super) command: String,
     pub(super) started_at: Instant,
-    pub(super) pgid: i32,
-    pub(super) writer: Mutex<File>,
+    pub(super) process: CommandSessionProcess,
     pub(super) output: Arc<CommandSessionOutput>,
-    pub(super) reader_done: Mutex<Option<std_mpsc::Receiver<()>>>,
     pub(super) cancelled: Mutex<bool>,
     pub(super) interrupted: Mutex<bool>,
     pub(super) model_cursor: Mutex<CommandSessionOutputCursor>,
     pub(super) notification_cursor: Mutex<CommandSessionOutputCursor>,
-    // sense-2: the child lives in the session (was moved into a per-session
-    // detached finalizer thread). One idempotent `try_finalize` reaps it.
-    pub(super) child: Mutex<Option<Child>>,
     pub(super) workspace: CommandWorkspaceKind,
     pub(super) finalized: Mutex<Option<Value>>,
     pub(super) timeout_deadline: Option<Instant>,
@@ -97,26 +93,11 @@ impl CommandSession {
             return Some(cached.clone());
         }
         // Reap the child without blocking; bail while it is still running.
-        let exit_status = {
-            let mut child = lock_command_session_state(&self.child);
-            match child.as_mut() {
-                Some(handle) => match handle.try_wait() {
-                    Ok(Some(status)) => {
-                        let _ = child.take();
-                        Some(status)
-                    }
-                    Ok(None) => return None,
-                    // A wait error means the child is unwaitable; finalize anyway.
-                    Err(_) => {
-                        let _ = child.take();
-                        None
-                    }
-                },
-                // No child handle (already reaped) — finalize with the runner file.
-                None => None,
-            }
+        let exit_status = match self.process.try_reap() {
+            ProcessReap::Running => return None,
+            ProcessReap::Exited(status) => status,
         };
-        terminate_command_process_group(self.pgid);
+        self.process.terminate();
         let runner = std::fs::read(self.workspace.output_path())
             .ok()
             .and_then(|bytes| serde_json::from_slice::<RunResult>(&bytes).ok());
@@ -188,14 +169,14 @@ impl CommandSession {
         let owned_live_session = command_session_registry().remove(&self.id).is_some();
         if let CommandWorkspaceKind::Isolated(_) = &self.workspace {
             crate::services::isolated_workspace::unregister_command_session(
-                &self.agent_id,
+                &self.caller_id,
                 &self.id,
             );
         }
         if should_publish_command_session_completion(publish, cancelled, owned_live_session) {
             command_session_registry().push_completed(json!({
                 "command_session_id": self.id,
-                "agent_id": self.agent_id,
+                "caller_id": self.caller_id,
                 "command": self.command,
                 "result": response_with_stdout(response.clone(), self.read_model_output(None)),
                 "notification_result": response_with_stdout(
@@ -209,13 +190,19 @@ impl CommandSession {
     }
 }
 
-/// Whether `wait_for_yield` finalized the session inline or it is still running.
 #[cfg(target_os = "linux")]
-pub(super) enum WaitOutcome {
-    /// The child exited; the terminal result is ready to return.
-    Completed(Value),
-    /// Still running; the model-facing output captured so far.
-    Running(String),
+impl CommandSessionWaitTarget<Value> for CommandSession {
+    fn try_finalize(&self, publish_completion: bool) -> Option<Value> {
+        Self::try_finalize(self, publish_completion)
+    }
+
+    fn next_output_byte_offset(&self) -> u64 {
+        self.output.next_byte_offset()
+    }
+
+    fn read_model_output(&self, max_tokens: Option<u64>) -> String {
+        Self::read_model_output(self, max_tokens)
+    }
 }
 
 /// Sense-2 unified wait shared by `exec_command` and `write_stdin`: early-return
@@ -227,28 +214,12 @@ pub(super) fn wait_for_yield(
     yield_time_ms: u64,
     max_tokens: Option<u64>,
 ) -> WaitOutcome {
-    let deadline = Instant::now() + Duration::from_millis(yield_time_ms);
-    let start_off = session.output.next_byte_offset();
-    let (mut last_off, mut last_change) = (start_off, Instant::now());
-    loop {
-        if let Some(result) = session.try_finalize(false) {
-            return WaitOutcome::Completed(result);
-        }
-        let off = session.output.next_byte_offset();
-        if off != last_off {
-            last_off = off;
-            last_change = Instant::now();
-        }
-        if off > start_off
-            && last_change.elapsed() >= Duration::from_millis(command_session_config().quiet_ms)
-        {
-            return WaitOutcome::Running(session.read_model_output(max_tokens));
-        }
-        if Instant::now() >= deadline {
-            return WaitOutcome::Running(session.read_model_output(max_tokens));
-        }
-        thread::sleep(Duration::from_millis(5));
-    }
+    runtime_wait_for_yield(
+        session.as_ref(),
+        &runtime_command_session_config(),
+        yield_time_ms,
+        max_tokens,
+    )
 }
 
 #[cfg(target_os = "linux")]
@@ -288,10 +259,10 @@ impl CommandSessionRegistry {
         lock_command_session_state(&self.sessions).remove(id)
     }
 
-    pub(super) fn count_by_agent(&self, agent_id: &str) -> usize {
+    pub(super) fn count_by_caller(&self, caller_id: &str) -> usize {
         lock_command_session_state(&self.sessions)
             .values()
-            .filter(|session| agent_id.is_empty() || session.agent_id == agent_id)
+            .filter(|session| caller_id.is_empty() || session.caller_id == caller_id)
             .count()
     }
 
@@ -324,7 +295,7 @@ impl CommandSessionRegistry {
     /// Collect (and **remove**, so the map stays bounded) the parked completions
     /// matching the requested ids/agent. Removal on delivery is the exactly-once
     /// gate: a later `write_stdin` poll finds the entry gone and recovers the
-    /// terse already-reported result from the agent-core supervisor (§8/D8).
+    /// terse already-reported result from the host supervisor (§8/D8).
     pub(super) fn collect_completed(&self, args: &Value) -> Value {
         let wanted: Option<HashSet<String>> = args
             .get("command_session_ids")
@@ -335,8 +306,8 @@ impl CommandSessionRegistry {
                     .map(str::to_owned)
                     .collect()
             });
-        let agent_id = args
-            .get("agent_id")
+        let caller_id = args
+            .get("caller_id")
             .and_then(Value::as_str)
             .unwrap_or_default()
             .to_owned();
@@ -344,13 +315,13 @@ impl CommandSessionRegistry {
         let matched: Vec<String> = completed
             .iter()
             .filter(|(id, completion)| {
-                let item_agent = completion
-                    .get("agent_id")
+                let item_caller = completion
+                    .get("caller_id")
                     .and_then(Value::as_str)
                     .unwrap_or_default();
                 let id_matches = wanted.as_ref().is_none_or(|ids| ids.contains(*id));
-                let agent_matches = agent_id.is_empty() || agent_id == item_agent;
-                id_matches && agent_matches
+                let caller_matches = caller_id.is_empty() || caller_id == item_caller;
+                id_matches && caller_matches
             })
             .map(|(id, _)| id.clone())
             .collect();
@@ -377,11 +348,8 @@ pub(super) fn command_session_registry() -> &'static CommandSessionRegistry {
 
 #[cfg(target_os = "linux")]
 fn completed_session_stdout(session: &CommandSession) -> String {
-    let reader_done = lock_command_session_state(&session.reader_done).take();
-    if let Some(reader_done) = reader_done {
-        let _ = reader_done.recv_timeout(Duration::from_millis(
-            command_session_config().output_drain_grace_ms,
-        ));
-    }
+    session.process.wait_for_reader_done(Duration::from_millis(
+        command_session_config().output_drain_grace_ms,
+    ));
     session.output.all_recent(None)
 }

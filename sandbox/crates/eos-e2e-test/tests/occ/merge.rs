@@ -20,7 +20,7 @@ fn concurrent_conflicting_writes() -> Result<()> {
         .map(|label| {
             let client = lease.client().clone();
             let root = lease.root().to_owned();
-            let agent_id = lease.agent_id().to_owned();
+            let caller_id = lease.caller_id().to_owned();
             let barrier = Arc::clone(&barrier);
             thread::spawn(move || {
                 barrier.wait();
@@ -29,7 +29,7 @@ fn concurrent_conflicting_writes() -> Result<()> {
                     &next_invocation_id(),
                     &json!({
                         "layer_stack_root": root,
-                        "agent_id": agent_id,
+                        "caller_id": caller_id,
                         "path": "occ/conflict.txt",
                         "content": format!("{label}\n"),
                         "overwrite": true
@@ -73,7 +73,7 @@ fn concurrent_disjoint_writes() -> Result<()> {
         .map(|index| {
             let client = lease.client().clone();
             let root = lease.root().to_owned();
-            let agent_id = lease.agent_id().to_owned();
+            let caller_id = lease.caller_id().to_owned();
             let barrier = Arc::clone(&barrier);
             thread::spawn(move || {
                 barrier.wait();
@@ -82,7 +82,7 @@ fn concurrent_disjoint_writes() -> Result<()> {
                     &next_invocation_id(),
                     &json!({
                         "layer_stack_root": root,
-                        "agent_id": agent_id,
+                        "caller_id": caller_id,
                         "path": format!("occ/disjoint-{index}.txt"),
                         "content": format!("{index}\n"),
                         "overwrite": true
@@ -144,7 +144,7 @@ fn retry_budget_3x_surfaces_coherent_result() -> Result<()> {
         .map(|index| {
             let client = lease.client().clone();
             let root = lease.root().to_owned();
-            let agent_id = lease.agent_id().to_owned();
+            let caller_id = lease.caller_id().to_owned();
             let barrier = Arc::clone(&barrier);
             thread::spawn(move || {
                 barrier.wait();
@@ -153,7 +153,7 @@ fn retry_budget_3x_surfaces_coherent_result() -> Result<()> {
                     &next_invocation_id(),
                     &json!({
                         "layer_stack_root": root,
-                        "agent_id": agent_id,
+                        "caller_id": caller_id,
                         "path": "occ/retry-budget.txt",
                         "content": format!("{index}\n"),
                         "overwrite": true

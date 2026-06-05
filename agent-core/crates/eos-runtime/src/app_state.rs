@@ -48,7 +48,7 @@ use crate::plugin_tools::register_plugin_tools;
 /// of it, so this narrow runtime seam exists purely for testability: production
 /// wraps the host provisioner; tests inject a fake.
 #[async_trait]
-pub trait RequestProvisioner: Send + Sync + std::fmt::Debug {
+pub(crate) trait RequestProvisioner: Send + Sync + std::fmt::Debug {
     /// Resolve the sandbox binding for one request (start an explicit id, or
     /// create a fresh `request-<hex8>` sandbox labelled `origin=workflow`).
     async fn prepare_for_run(
@@ -299,7 +299,8 @@ impl AppStateBuilder {
     }
 
     /// Inject a request provisioner (a host-backed provisioner by default).
-    pub fn provisioner(mut self, provisioner: Arc<dyn RequestProvisioner>) -> Self {
+    #[cfg(test)]
+    pub(crate) fn provisioner(mut self, provisioner: Arc<dyn RequestProvisioner>) -> Self {
         self.provisioner = Some(provisioner);
         self
     }
@@ -489,7 +490,8 @@ fn seed_default_sandbox_provider(
     let provider_kind = resolve_provider_kind(env_override.as_deref(), &config.sandbox)
         .context("resolving sandbox provider")?;
 
-    let docker = DockerProviderAdapter::connect().context("connecting docker sandbox provider")?;
+    let docker = DockerProviderAdapter::connect(&config.sandbox.docker)
+        .context("connecting docker sandbox provider")?;
     registry.set_default(Arc::new(docker));
     tracing::info!(
         sandbox_provider = provider_kind.as_str(),

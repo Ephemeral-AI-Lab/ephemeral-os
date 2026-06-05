@@ -34,9 +34,7 @@ mod tool_context;
 #[path = "../tests/unit/mod.rs"]
 mod tests;
 
-pub use app_state::{
-    AppState, AppStateBuilder, EventCallback, EventSourceFactory, RequestProvisioner,
-};
+pub use app_state::{AppState, AppStateBuilder, EventCallback, EventSourceFactory};
 pub use entry::{start_request, RequestEntryHandle};
 
 // Re-export the sandbox binding value object owned upstream by `eos-sandbox-host`

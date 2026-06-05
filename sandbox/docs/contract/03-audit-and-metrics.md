@@ -150,7 +150,7 @@ float→number, str→string, bool→bool, dict→object.
 | operation_id | str \| None | None |
 | workspace_mode | str | `"isolated"` (always emitted) |
 | workspace_handle_id | str \| None | None |
-| agent_id | str \| None | None |
+| caller_id | str \| None | None |
 | holder_pid | int \| None | None |
 | holder_pid_alive | bool \| None | None |
 | cgroup_id | str \| None | None |
@@ -200,17 +200,17 @@ float→number, str→string, bool→bool, dict→object.
 | error_kind | str \| None | None |
 | message_hash | str \| None | None |
 | workspace_handle_id | str \| None | None |
-| agent_id | str \| None | None |
+| caller_id | str \| None | None |
 | peak_resident_bytes | int \| None | None |
 
 **`BackgroundToolSection`** (`:203-220`, key `background_tool`) —
-required=`("background_task_id",)`:
+required=`("background_work_id",)`:
 | field | type | default |
 |---|---|---|
-| background_task_id | str | **required (no default)** |
-| task_kind | str \| None | None |
+| background_work_id | str | **required (no default)** |
+| work_kind | str \| None | None |
 | tool_name | str \| None | None |
-| agent_id | str \| None | None |
+| caller_id | str \| None | None |
 | uptime_ms | float \| None | None |
 | status | str \| None | None |
 | exit_code | int \| None | None |
@@ -225,7 +225,7 @@ required=`("tool_use_id","tool_name")`:
 |---|---|---|
 | tool_use_id | str | **required (no default)** |
 | tool_name | str | **required (no default)** |
-| agent_id | str \| None | None |
+| caller_id | str \| None | None |
 | workspace_mode | str \| None | None |
 | workspace_handle_id | str \| None | None |
 | phase | str \| None | None |
@@ -577,7 +577,7 @@ These payloads are ad-hoc dicts built at each emit site, NOT the typed
 | key | type | source |
 |---|---|---|
 | workspace_handle_id | str | handle id |
-| agent_id | str | agent id |
+| caller_id | str | caller id |
 | manifest_version | int | `handle.manifest_version` |
 | manifest_root_hash | str | `handle.manifest_root_hash` |
 | ns_ip | str \| null | `str(handle.veth.ns_ip)` if veth else `None` |

@@ -336,7 +336,7 @@ mod tests {
 
     fn caller() -> SandboxCaller {
         SandboxCaller {
-            agent_id: "agent-1".to_owned(),
+            caller_id: "caller-1".to_owned(),
             run_id: String::new(),
             agent_run_id: String::new(),
             task_id: String::new(),

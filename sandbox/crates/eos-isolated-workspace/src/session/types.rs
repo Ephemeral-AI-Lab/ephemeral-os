@@ -3,9 +3,9 @@ use std::path::PathBuf;
 
 use crate::network::VethAllocation;
 
-/// Newtype for an agent identity (the enter/exit key).
+/// Newtype for a caller identity (the enter/exit key).
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct AgentId(pub String);
+pub struct CallerId(pub String);
 
 /// Newtype for a per-workspace handle id.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -33,8 +33,8 @@ pub struct SnapshotLease {
 pub struct WorkspaceHandle {
     /// Stable handle id (also the scratch dir / veth-name seed).
     pub workspace_handle_id: WorkspaceHandleId,
-    /// Owning agent.
-    pub agent_id: AgentId,
+    /// Owning caller.
+    pub caller_id: CallerId,
     /// Snapshot lease borrowed from the layer stack.
     pub lease_id: String,
     /// Manifest version captured at acquire time.

@@ -163,6 +163,16 @@ impl ExecutionMetadata {
             .ok_or(ToolError::MissingContext("request_id"))
     }
 
+    /// Require the current agent-run id, else a framework fault.
+    ///
+    /// # Errors
+    /// [`ToolError::MissingContext`] when no agent-run id is set.
+    pub fn require_agent_run_id(&self) -> Result<&AgentRunId, ToolError> {
+        self.agent_run_id
+            .as_ref()
+            .ok_or(ToolError::MissingContext("agent_run_id"))
+    }
+
     /// Require the owning attempt id, else a framework fault.
     ///
     /// # Errors

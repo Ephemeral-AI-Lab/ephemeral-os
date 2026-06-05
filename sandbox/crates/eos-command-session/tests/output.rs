@@ -20,6 +20,19 @@ fn utf8_carry_over_excludes_split_multibyte_tail() {
 }
 
 #[test]
+fn utf8_consumable_prefix_consumes_invalid_bytes_so_the_buffer_never_wedges() {
+    let invalid = [b'a', 0xFF, b'b'];
+    assert_eq!(utf8_consumable_prefix_len(&invalid), 3);
+    assert_eq!(String::from_utf8_lossy(&invalid), "a\u{FFFD}b");
+
+    let mut mixed = vec![0xFF];
+    mixed.extend_from_slice(&[0xE2]);
+    assert_eq!(utf8_consumable_prefix_len(&mixed), 1);
+
+    assert_eq!(utf8_consumable_prefix_len(&[0x80]), 1);
+}
+
+#[test]
 fn output_cursor_reads_incrementally_without_consuming_other_cursors() {
     let output = CommandSessionOutput::new(&CommandSessionConfig::default());
     let mut model_cursor = CommandSessionOutputCursor::default();

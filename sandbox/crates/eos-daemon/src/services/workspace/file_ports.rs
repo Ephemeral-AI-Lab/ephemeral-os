@@ -365,7 +365,7 @@ fn record_isolated_tool_call(
 ) {
     let duration_s = total_start.elapsed().as_secs_f64();
     crate::services::isolated_workspace::record_tool_call(
-        &handle.agent_id,
+        &handle.caller_id,
         json!({
             "tool_name": tool_name,
             "workspace_handle_id": handle.workspace_handle_id,

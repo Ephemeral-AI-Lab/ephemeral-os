@@ -40,7 +40,7 @@ use super::{setup_error, test_runtime_stub_enabled};
 #[cfg(target_os = "linux")]
 #[derive(Debug, Clone)]
 pub struct CommandHandle {
-    pub agent_id: String,
+    pub caller_id: String,
     pub workspace_handle_id: String,
     pub layer_stack_root: PathBuf,
     pub manifest_version: i64,
@@ -199,7 +199,7 @@ impl NamespaceRuntimePort for DaemonNamespaceRuntime {
                 mode: RunMode::SetNs,
                 tool_call: ToolCall {
                     invocation_id: format!("isolated-mount-{}", handle.workspace_handle_id.0),
-                    agent_id: handle.agent_id.0.clone(),
+                    caller_id: handle.caller_id.0.clone(),
                     verb: "setns_overlay_mount".into(),
                     intent: Intent::WriteAllowed,
                     args: json!({}),
@@ -240,7 +240,7 @@ impl NamespaceRuntimePort for DaemonNamespaceRuntime {
                         "isolated-configure-dns-{}",
                         handle.workspace_handle_id.0
                     ),
-                    agent_id: handle.agent_id.0.clone(),
+                    caller_id: handle.caller_id.0.clone(),
                     verb: "configure_dns".into(),
                     intent: Intent::ReadOnly,
                     args: json!({"fallback_dns": fallback_dns}),
@@ -340,7 +340,7 @@ pub(super) fn command_handle_from(
     handle: WorkspaceHandle,
 ) -> CommandHandle {
     CommandHandle {
-        agent_id: handle.agent_id.0,
+        caller_id: handle.caller_id.0,
         workspace_handle_id: handle.workspace_handle_id.0,
         layer_stack_root: layer_stack_root.to_path_buf(),
         manifest_version: handle.manifest_version,

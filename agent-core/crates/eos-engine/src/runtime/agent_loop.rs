@@ -131,7 +131,7 @@ fn parent_exit_agent_ids(metadata: &ExecutionMetadata) -> Vec<String> {
     if !resolved.trim().is_empty() {
         ids.push(resolved);
     }
-    let caller = metadata.caller.agent_id.trim();
+    let caller = metadata.caller.caller_id.trim();
     if !caller.is_empty() && !ids.iter().any(|id| id == caller) {
         ids.push(caller.to_owned());
     }

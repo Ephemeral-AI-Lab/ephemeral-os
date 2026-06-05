@@ -15,14 +15,8 @@ pub(crate) fn render_task_outcome(outcome: &ExecutionTaskOutcome) -> ContextSect
     ContextSection::new("task")
         .with_attrs(vec![
             ("task_id".to_owned(), outcome.task_id.as_str().to_owned()),
-            (
-                "role".to_owned(),
-                format!("{:?}", outcome.role).to_lowercase(),
-            ),
-            (
-                "status".to_owned(),
-                format!("{:?}", outcome.status).to_lowercase(),
-            ),
+            ("role".to_owned(), outcome.role.as_str().to_owned()),
+            ("status".to_owned(), outcome.status.as_str().to_owned()),
         ])
         .with_text(outcome.outcome.clone())
 }

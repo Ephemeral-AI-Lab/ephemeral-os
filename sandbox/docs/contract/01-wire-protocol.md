@@ -110,7 +110,7 @@ def with_daemon_protocol_version(payload):
 So a fully-built read_file request envelope is:
 
 ```json
-{"op":"api.v1.read_file","invocation_id":"...","args":{"layer_stack_root":"/eos/layer-stack","_eos_daemon_protocol_version":1,"path":"...","agent_id":"...","invocation_id":"..."}}
+{"op":"api.v1.read_file","invocation_id":"...","args":{"layer_stack_root":"/eos/layer-stack","_eos_daemon_protocol_version":1,"path":"...","caller_id":"...","invocation_id":"..."}}
 ```
 
 | Constant | Value | Source |
@@ -132,7 +132,7 @@ Python-emitted fixtures at the canonicalized-equal bar.
 
 Op `api.v1.read_file` (alias of verb `read_file`, `builtin_operations.py:61`).
 Relevant args: `path` (string, required — `require_single_file_path` enforced in
-`dispatch.py:239-240`), `agent_id` (string, optional), plus the standard members above.
+`dispatch.py:239-240`), `caller_id` (string, optional), plus the standard members above.
 Fixture: `read_file_request.json`.
 
 ---

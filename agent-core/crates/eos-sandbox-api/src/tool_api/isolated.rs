@@ -227,7 +227,7 @@ mod tests {
         assert_eq!(result.manifest_root_hash, "h1");
         let calls = transport.calls.lock().expect("calls lock");
         assert_eq!(calls[0].0, DaemonOp::IsolatedWorkspaceEnter);
-        assert_eq!(calls[0].1["agent_id"], json!("agent-1"));
+        assert_eq!(calls[0].1["caller_id"], json!("agent-1"));
         assert_eq!(calls[0].1["layer_stack_root"], json!("/eos/layer-stack"));
         assert_eq!(calls[0].2, ISOLATED_WORKSPACE_TIMEOUT_S);
     }
@@ -252,7 +252,7 @@ mod tests {
         assert_eq!(result.phases_ms["teardown"], 1.25);
         let calls = transport.calls.lock().expect("calls lock");
         assert_eq!(calls[0].0, DaemonOp::IsolatedWorkspaceExit);
-        assert_eq!(calls[0].1["agent_id"], json!("agent-1"));
+        assert_eq!(calls[0].1["caller_id"], json!("agent-1"));
         assert_eq!(calls[0].1["grace_s"], json!(0.25));
     }
 
@@ -262,7 +262,7 @@ mod tests {
             "error": {
                 "kind": "already_active",
                 "message": "isolated workspace already active",
-                "details": {"agent_id": "agent-1"}
+                "details": {"caller_id": "agent-1"}
             }
         })));
 
@@ -276,7 +276,7 @@ mod tests {
     fn base() -> SandboxRequestBase {
         SandboxRequestBase {
             caller: SandboxCaller {
-                agent_id: "agent-1".to_owned(),
+                caller_id: "agent-1".to_owned(),
                 run_id: String::new(),
                 agent_run_id: String::new(),
                 task_id: String::new(),

@@ -1,19 +1,13 @@
 //! Linux command-session finalize, teardown, and stdin/cancel handling.
 
-use std::io::Write;
-use std::thread;
-use std::time::Duration;
-
-use nix::sys::signal::{killpg, Signal};
-use nix::unistd::Pid;
 use serde_json::{json, Value};
 
 use eos_ephemeral_workspace::command_session::types::{
     EphemeralCommandFinalizeContext, EphemeralCommandSessionPort,
 };
 use eos_ephemeral_workspace::{
-    AgentId, EphemeralSnapshot, EphemeralWorkspace, EphemeralWorkspaceError, EphemeralWorkspaceOps,
-    InvocationId, PathChange, PublishOutcome, WorkspacePublisherPort,
+    CallerId, EphemeralSnapshot, EphemeralWorkspace, EphemeralWorkspaceError,
+    EphemeralWorkspaceOps, InvocationId, PathChange, PublishOutcome, WorkspacePublisherPort,
     WorkspaceRoot as EphemeralWorkspaceRoot,
 };
 use eos_isolated_workspace::command_session::types::{
@@ -121,7 +115,7 @@ impl IsolatedCommandSessionPort for IsolatedCommandFinalizePort<'_> {
             .and_then(|stack| stack.read_active_manifest())
             .map_err(workspace_api_error)?;
         Ok(IsolatedCommandFinalizeContext {
-            agent_id: self.workspace.handle.agent_id.clone(),
+            caller_id: self.workspace.handle.caller_id.clone(),
             workspace_handle_id: self.workspace.handle.workspace_handle_id.clone(),
             manifest_version: self.workspace.handle.manifest_version,
             manifest_root_hash: self.workspace.handle.manifest_root_hash.clone(),
@@ -145,7 +139,7 @@ impl EphemeralCommandSessionPort for EphemeralCommandFinalizePort<'_> {
             workspace: EphemeralWorkspace {
                 layer_stack_root: EphemeralWorkspaceRoot(self.workspace.root.clone()),
                 workspace_root: self.workspace.workspace_root.clone(),
-                agent_id: AgentId(self.session.agent_id.clone()),
+                caller_id: CallerId(self.session.caller_id.clone()),
                 invocation_id: InvocationId(self.session.id.clone()),
                 snapshot: EphemeralSnapshot {
                     lease_id: self.workspace.lease_id.clone(),
@@ -201,7 +195,7 @@ pub(super) fn finalize_isolated_command_workspace(
     let response = command_outcome_response(outcome);
     write_final_response(&workspace.final_path, &response)?;
     crate::services::isolated_workspace::record_tool_call(
-        &workspace.handle.agent_id,
+        &workspace.handle.caller_id,
         merge_audit_changed_paths(audit, response["changed_paths"].clone()),
     );
     Ok(response)
@@ -250,13 +244,6 @@ pub(crate) fn response_with_stdout(mut response: Value, stdout: String) -> Value
     response
 }
 
-pub(crate) fn terminate_command_process_group(pgid: i32) {
-    if killpg(Pid::from_raw(pgid), Signal::SIGTERM).is_ok() {
-        thread::sleep(Duration::from_millis(50));
-        let _ = killpg(Pid::from_raw(pgid), Signal::SIGKILL);
-    }
-}
-
 pub(crate) fn command_session_write_stdin(args: &Value) -> Result<Value, DaemonError> {
     let id = require_string(args, "command_session_id")?;
     let chars = args
@@ -281,21 +268,18 @@ pub(crate) fn command_session_write_stdin(args: &Value) -> Result<Value, DaemonE
         }
         return Ok(command_session_not_found());
     };
-    {
-        let mut writer = lock_command_session_state(&session.writer);
-        writer.write_all(chars.as_bytes())?;
-    }
+    session.process.write_stdin(chars.as_bytes())?;
     // `\x03` interrupts the foreground program (SIGINT) only — teardown is a
     // separate concern (sense-2 D7).
     if chars.contains('\u{3}') {
         *lock_command_session_state(&session.interrupted) = true;
-        let _ = killpg(Pid::from_raw(session.pgid), Signal::SIGINT);
+        session.process.interrupt();
     }
     // `terminate: true` tears the session down (SIGTERM→SIGKILL); `wait_for_yield`
     // then finalizes it inline with a `cancelled` status.
     if terminate {
         *lock_command_session_state(&session.cancelled) = true;
-        terminate_command_process_group(session.pgid);
+        session.process.terminate();
     }
     // Unified wait: early-return on completion (inline finalize) or
     // quiet-after-output, capped at `yield_time_ms` (sense-2 §2.3).
@@ -315,7 +299,7 @@ pub(crate) fn command_session_cancel(args: &Value) -> Result<Value, DaemonError>
         return Ok(command_session_not_found());
     };
     *lock_command_session_state(&session.cancelled) = true;
-    terminate_command_process_group(session.pgid);
+    session.process.terminate();
     // Finalize inline so the lease/scratch is reclaimed and the cancelled status
     // is stamped; if the child is somehow still alive, the reaper finalizes it.
     match wait_for_yield(

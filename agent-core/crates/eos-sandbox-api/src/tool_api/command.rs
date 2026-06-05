@@ -103,16 +103,16 @@ pub async fn cancel_command_session(
     parse_exec_command_result(&response)
 }
 
-/// Collect completed background command sessions for one agent. Returns the raw
+/// Collect completed background command sessions for one caller. Returns the raw
 /// completion maps (objects only; non-object entries are dropped).
 pub async fn collect_command_completions(
     transport: &dyn SandboxTransport,
     sandbox_id: &SandboxId,
-    agent_id: &str,
+    caller_id: &str,
     command_session_ids: &[String],
 ) -> Result<Vec<JsonObject>, SandboxApiError> {
     let mut payload = JsonObject::new();
-    payload.insert("agent_id".to_owned(), Value::String(agent_id.to_owned()));
+    payload.insert("caller_id".to_owned(), Value::String(caller_id.to_owned()));
     payload.insert(
         "command_session_ids".to_owned(),
         Value::Array(

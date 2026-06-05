@@ -23,26 +23,26 @@ fn n_concurrent_mixed_ops() -> Result<()> {
         .map(|index| {
             let client = lease.client().clone();
             let root = lease.root().to_owned();
-            let agent_id = lease.agent_id().to_owned();
+            let caller_id = lease.caller_id().to_owned();
             let barrier = Arc::clone(&barrier);
             thread::spawn(move || {
                 barrier.wait();
                 let args = match index % 3 {
                     0 => json!({
                         "layer_stack_root": root,
-                        "agent_id": agent_id,
+                        "caller_id": caller_id,
                         "path": format!("pressure/mixed-{index}.txt"),
                         "content": format!("mixed-{index}\n"),
                         "overwrite": true
                     }),
                     1 => json!({
                         "layer_stack_root": root,
-                        "agent_id": agent_id,
+                        "caller_id": caller_id,
                         "path": "pressure/mixed-seed.txt"
                     }),
                     _ => json!({
                         "layer_stack_root": root,
-                        "agent_id": agent_id,
+                        "caller_id": caller_id,
                         "cmd": "printf pressure",
                         "yield_time_ms": 1000,
                         "timeout_seconds": 10

@@ -8,17 +8,13 @@ expression: schema
   "description": "One tool invocation routed through a workspace pipeline.\n\n`invocation_id` is the typed [`InvocationId`]; [`Self::from_payload`] parses it at the boundary and is fallible (a spec-sanctioned tightening of the Python path, which tolerated an empty id string).",
   "type": "object",
   "required": [
-    "agent_id",
     "args",
+    "caller_id",
     "intent",
     "invocation_id",
     "verb"
   ],
   "properties": {
-    "agent_id": {
-      "description": "Calling agent id.",
-      "type": "string"
-    },
     "args": {
       "description": "Untyped tool arguments.",
       "type": "object",
@@ -28,6 +24,10 @@ expression: schema
       "description": "Whether the invocation runs in the background.",
       "default": false,
       "type": "boolean"
+    },
+    "caller_id": {
+      "description": "Calling sandbox principal id.",
+      "type": "string"
     },
     "intent": {
       "description": "Execution intent.",

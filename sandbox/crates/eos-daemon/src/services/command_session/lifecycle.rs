@@ -1,14 +1,12 @@
 //! Linux command-session build & spawn lifecycle.
 
-use std::fs::{File, OpenOptions};
-use std::io::{Read, Write};
-use std::os::unix::process::CommandExt;
 use std::path::{Path, PathBuf};
-use std::process::{Command, Stdio};
-use std::sync::{mpsc as std_mpsc, Arc, Mutex};
-use std::thread;
+use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
+use eos_command_session::{
+    process::spawn_current_exe_ns_runner, CommandSessionOutput, CommandSessionOutputCursor,
+};
 use serde_json::{json, Value};
 
 use eos_ephemeral_workspace::command_session::types::{
@@ -25,11 +23,8 @@ use eos_layerstack::{require_workspace_binding, LayerStack, WorkspaceBinding};
 use eos_workspace_api::{CommandWorkspacePolicy, PrepareCommandRequest, WorkspaceApiError};
 
 use super::finalize::strip_session_id;
-use super::output;
-use super::output::{CommandSessionOutput, CommandSessionOutputCursor};
-use super::pty::open_pty_pair;
 use super::session::{command_session_registry, wait_for_yield, CommandSession, WaitOutcome};
-use super::{command_result, command_session_config, optional_u64};
+use super::{command_result, command_session_config, optional_u64, runtime_command_session_config};
 use crate::error::DaemonError;
 use crate::services::overlay::{ephemeral_dir_allocator, RunDirCleanup};
 
@@ -73,7 +68,7 @@ impl CommandWorkspaceKind {
 struct CommandSessionStartSpec {
     id: String,
     invocation_id: String,
-    agent_id: String,
+    caller_id: String,
     command: String,
     timeout_seconds: Option<f64>,
 }
@@ -106,14 +101,14 @@ pub(crate) fn start_isolated_command_session(
     let spec = CommandSessionStartSpec {
         id: command_session_registry().next_id(),
         invocation_id,
-        agent_id: handle.agent_id.clone(),
+        caller_id: handle.caller_id.clone(),
         command: cmd.to_owned(),
         timeout_seconds,
     };
     let id = spec.id.clone();
     let session = prepare_isolated_command_session(&spec, handle)?;
     command_session_registry().insert(Arc::clone(&session));
-    crate::services::isolated_workspace::register_command_session(&session.agent_id, &session.id);
+    crate::services::isolated_workspace::register_command_session(&session.caller_id, &session.id);
     match wait_for_yield(
         &session,
         yield_time_ms,
@@ -126,7 +121,7 @@ pub(crate) fn start_isolated_command_session(
 
 fn prepare_request(spec: &CommandSessionStartSpec) -> PrepareCommandRequest {
     PrepareCommandRequest {
-        agent_id: spec.agent_id.clone(),
+        caller_id: spec.caller_id.clone(),
         command_session_id: spec.id.clone(),
         invocation_id: spec.invocation_id.clone(),
         cmd: spec.command.clone(),
@@ -222,8 +217,8 @@ pub(crate) fn start_command_session(
         .and_then(Value::as_str)
         .unwrap_or("exec_command")
         .to_owned();
-    let agent_id = args
-        .get("agent_id")
+    let caller_id = args
+        .get("caller_id")
         .and_then(Value::as_str)
         .unwrap_or("default")
         .to_owned();
@@ -231,7 +226,7 @@ pub(crate) fn start_command_session(
     let spec = CommandSessionStartSpec {
         id: command_session_registry().next_id(),
         invocation_id,
-        agent_id,
+        caller_id,
         command: cmd.to_owned(),
         timeout_seconds,
     };
@@ -276,7 +271,7 @@ fn prepare_isolated_command_session(
         session_dir.join("metadata.json"),
         serde_json::to_vec_pretty(&json!({
             "command_session_id": spec.id,
-            "agent_id": handle.agent_id,
+            "caller_id": handle.caller_id,
             "invocation_id": spec.invocation_id,
             "workspace": "isolated",
             "workspace_handle_id": handle.workspace_handle_id,
@@ -308,7 +303,7 @@ fn prepare_command_session(
         session_dir.join("metadata.json"),
         serde_json::to_vec_pretty(&json!({
             "command_session_id": spec.id,
-            "agent_id": spec.agent_id,
+            "caller_id": spec.caller_id,
             "invocation_id": spec.invocation_id,
             "command": spec.command,
             "status": "running",
@@ -401,100 +396,34 @@ fn spawn_command_runner_session(
     transcript_path: PathBuf,
     workspace: CommandWorkspaceKind,
 ) -> Result<Arc<CommandSession>, DaemonError> {
-    let (master, slave) = open_pty_pair()
-        .map_err(|err| DaemonError::OverlayPipeline(format!("open pty pair: {err}")))?;
-    let mut child_command = Command::new(std::env::current_exe()?);
-    child_command
-        .arg("ns-runner")
-        .arg("--request")
-        .arg(request_path)
-        .arg("--output")
-        .arg(workspace.output_path())
-        .stdin(Stdio::from(slave.try_clone()?))
-        .stdout(Stdio::from(slave.try_clone()?))
-        .stderr(Stdio::from(slave))
-        .process_group(0);
-    let child = child_command.spawn()?;
-    let pgid = i32::try_from(child.id()).map_err(|_| {
-        std::io::Error::new(
-            std::io::ErrorKind::InvalidData,
-            format!("child pid does not fit i32: {}", child.id()),
-        )
-    })?;
-    let output = Arc::new(CommandSessionOutput::new());
-    let writer = master.try_clone()?;
-    let reader_done = spawn_command_output_reader(master, Arc::clone(&output), transcript_path);
+    let output = Arc::new(CommandSessionOutput::new(&runtime_command_session_config()));
+    let process = spawn_current_exe_ns_runner(
+        request_path,
+        workspace.output_path(),
+        transcript_path,
+        Arc::clone(&output),
+    )
+    .map_err(|err| DaemonError::OverlayPipeline(format!("spawn command session process: {err}")))?;
     let started_at = Instant::now();
     let timeout_deadline = spec
         .timeout_seconds
         .map(|seconds| started_at + Duration::from_secs_f64(seconds));
     let session = Arc::new(CommandSession {
         id: spec.id.clone(),
-        agent_id: spec.agent_id.clone(),
+        caller_id: spec.caller_id.clone(),
         command: spec.command.clone(),
         started_at,
-        pgid,
-        writer: Mutex::new(writer),
+        process,
         output: Arc::clone(&output),
-        reader_done: Mutex::new(Some(reader_done)),
         cancelled: Mutex::new(false),
         interrupted: Mutex::new(false),
         model_cursor: Mutex::new(CommandSessionOutputCursor::default()),
         notification_cursor: Mutex::new(CommandSessionOutputCursor::default()),
-        child: Mutex::new(Some(child)),
         workspace,
         finalized: Mutex::new(None),
         timeout_deadline,
     });
     Ok(session)
-}
-
-fn spawn_command_output_reader(
-    mut master: File,
-    output: Arc<CommandSessionOutput>,
-    transcript_path: PathBuf,
-) -> std_mpsc::Receiver<()> {
-    let (done_tx, done_rx) = std_mpsc::channel();
-    thread::spawn(move || {
-        let mut transcript = OpenOptions::new()
-            .create(true)
-            .append(true)
-            .open(transcript_path)
-            .ok();
-        let mut buf = [0_u8; 8192];
-        // Carry-over buffer: holds an incomplete trailing multibyte sequence
-        // until the next read completes it (§2.6).
-        let mut carry: Vec<u8> = Vec::new();
-        loop {
-            match master.read(&mut buf) {
-                Ok(0) => break,
-                Ok(n) => {
-                    // Transcript: byte-exact raw stream (decode-independent).
-                    if output.note_spooled(u64::try_from(n).unwrap_or(u64::MAX)) {
-                        if let Some(file) = transcript.as_mut() {
-                            let _ = file.write_all(&buf[..n]);
-                        }
-                    }
-                    // Model output: decode the consumable prefix, retain only an
-                    // incomplete trailing multibyte tail.
-                    carry.extend_from_slice(&buf[..n]);
-                    let consume = output::utf8_consumable_prefix_len(&carry);
-                    if consume > 0 {
-                        output.append(String::from_utf8_lossy(&carry[..consume]).into_owned());
-                        carry.drain(..consume);
-                    }
-                }
-                Err(err) if err.kind() == std::io::ErrorKind::Interrupted => {}
-                Err(_) => break,
-            }
-        }
-        // EOF: flush any remaining (truly incomplete) bytes lossily.
-        if !carry.is_empty() {
-            output.append(String::from_utf8_lossy(&carry).into_owned());
-        }
-        let _ = done_tx.send(());
-    });
-    done_rx
 }
 
 pub(crate) fn command_session_scratch_root() -> PathBuf {

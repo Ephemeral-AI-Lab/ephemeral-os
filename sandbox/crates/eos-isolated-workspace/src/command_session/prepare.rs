@@ -23,7 +23,7 @@ where
     };
     let ns_fds = ns_fds_value(&context.ns_fds);
     let PrepareCommandRequest {
-        agent_id,
+        caller_id,
         command_session_id,
         invocation_id,
         cmd,
@@ -50,7 +50,7 @@ where
         "mode": mode,
         "tool_call": {
             "invocation_id": invocation_id,
-            "agent_id": agent_id,
+            "caller_id": caller_id,
             "verb": "exec_command",
             "intent": "write_allowed",
             "args": {
@@ -150,7 +150,7 @@ mod tests {
         });
 
         let prepared = ops.prepare_command_workspace(PrepareCommandRequest {
-            agent_id: "agent-1".to_owned(),
+            caller_id: "caller-1".to_owned(),
             command_session_id: "cmd-1".to_owned(),
             invocation_id: "inv-1".to_owned(),
             cmd: "pwd".to_owned(),

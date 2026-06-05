@@ -14,7 +14,6 @@ use eos_tools::{
 };
 use eos_types::WorkflowSessionId;
 use parking_lot::Mutex;
-use serde_json::json;
 
 use crate::attempt::AttemptOrchestratorRegistry;
 use crate::util::json_object;
@@ -270,13 +269,14 @@ impl WorkflowControlAdapter {
         } else {
             reason
         };
-        let outcomes = json!([{
-            "status": "failed",
-            "role": "workflow",
-            "task_id": workflow.id.as_str(),
-            "outcome": outcome_text,
-        }])
-        .to_string();
+        // The per-task cancellation evidence (with `outcome_text`) is recorded on
+        // each task row by `cancel_active_task`; the reason is also returned to the
+        // caller by `cancel`. The iteration/workflow `outcomes` columns are read
+        // back strictly as `Vec<ExecutionTaskOutcome>` by `ContextEngine`
+        // (`parse_outcomes_record`), so the workflow-level summary is the empty
+        // typed projection rather than a hand-built record with an off-vocabulary
+        // role that the strict reader would reject.
+        const EMPTY_OUTCOMES: &str = "[]";
 
         for iteration in self.iteration_store.list_for_workflow(&workflow.id).await? {
             if !iteration.is_open() {
@@ -312,7 +312,7 @@ impl WorkflowControlAdapter {
                     &iteration.id,
                     IterationStatus::Cancelled,
                     Some(now),
-                    Some(&outcomes),
+                    Some(EMPTY_OUTCOMES),
                 )
                 .await?;
         }
@@ -321,7 +321,7 @@ impl WorkflowControlAdapter {
                 &workflow.id,
                 WorkflowStatus::Cancelled,
                 Some(now),
-                Some(&outcomes),
+                Some(EMPTY_OUTCOMES),
             )
             .await?;
         Ok(())

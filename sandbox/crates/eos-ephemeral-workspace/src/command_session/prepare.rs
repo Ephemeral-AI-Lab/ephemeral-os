@@ -15,14 +15,14 @@ where
     P: EphemeralCommandSessionPort,
 {
     let PrepareCommandRequest {
-        agent_id,
+        caller_id,
         command_session_id: _,
         invocation_id,
         cmd,
         timeout_seconds,
     } = request;
     let context = port.prepare_context()?;
-    let snapshot_request_id = format!("command_session:{agent_id}:{invocation_id}");
+    let snapshot_request_id = format!("command_session:{caller_id}:{invocation_id}");
     let snapshot = port
         .acquire_snapshot(&snapshot_request_id)
         .map_err(prepare_error)?;
@@ -44,7 +44,7 @@ where
         "mode": "fresh_ns",
         "tool_call": {
             "invocation_id": invocation_id,
-            "agent_id": agent_id,
+            "caller_id": caller_id,
             "verb": "exec_command",
             "intent": "write_allowed",
             "args": {
@@ -107,7 +107,7 @@ mod tests {
             &self,
             request_id: &str,
         ) -> Result<EphemeralSnapshot, EphemeralWorkspaceError> {
-            assert_eq!(request_id, "command_session:agent-1:inv-1");
+            assert_eq!(request_id, "command_session:caller-1:inv-1");
             Ok(EphemeralSnapshot {
                 lease_id: "lease-1".to_owned(),
                 manifest_version: 7,
@@ -137,7 +137,7 @@ mod tests {
         });
 
         let prepared = ops.prepare_command_workspace(PrepareCommandRequest {
-            agent_id: "agent-1".to_owned(),
+            caller_id: "caller-1".to_owned(),
             command_session_id: "cmd-1".to_owned(),
             invocation_id: "inv-1".to_owned(),
             cmd: "printf ok".to_owned(),

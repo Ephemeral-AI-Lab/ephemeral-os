@@ -287,7 +287,7 @@ impl PluginProcessSpec {
             mode: RunMode::FreshNs,
             tool_call: ToolCall {
                 invocation_id: format!("plugin-service:{}", self.key.service_instance_id()),
-                agent_id: "plugin-service".to_owned(),
+                caller_id: "plugin-service".to_owned(),
                 verb: "plugin_service".into(),
                 intent: Intent::ReadOnly,
                 args: json!({
@@ -389,7 +389,7 @@ pub(super) fn remount_workspace_overlay(
         mode: RunMode::FreshNs,
         tool_call: ToolCall {
             invocation_id: format!("plugin-service-remount:{target_pid}"),
-            agent_id: "plugin-service".to_owned(),
+            caller_id: "plugin-service".to_owned(),
             verb: "remount_overlay".into(),
             intent: Intent::ReadOnly,
             args: json!({}),

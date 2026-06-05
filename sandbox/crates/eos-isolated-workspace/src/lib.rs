@@ -49,6 +49,6 @@ pub use network::{
 };
 pub use ops::IsolatedWorkspaceOps;
 pub use session::{
-    AgentId, IsolatedSession, LayerStackSnapshotPort, NamespaceRuntimePort, SnapshotLease,
+    CallerId, IsolatedSession, LayerStackSnapshotPort, NamespaceRuntimePort, SnapshotLease,
     WorkspaceHandle, WorkspaceHandleId, DEFAULT_ISOLATED_SCRATCH_ROOT,
 };

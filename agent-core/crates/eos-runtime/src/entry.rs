@@ -227,19 +227,19 @@ pub async fn start_request(
         command_session_port.clone(),
         notifier.clone(),
     ));
-    let attempt_deps = AttemptDeps {
-        workflow_store: state.workflow_store.clone(),
-        iteration_store: state.iteration_store.clone(),
-        attempt_store: state.attempt_store.clone(),
-        task_store: state.task_store.clone(),
-        agent_registry: state.agent_registry.clone(),
-        orchestrator_registry,
-        iteration_coordinators: Some(iteration_coordinators),
-        lifecycle_config: WorkflowLifecycleConfig::default(),
-        composer: Some(composer),
+    let attempt_deps = AttemptDeps::new(
+        state.workflow_store.clone(),
+        state.iteration_store.clone(),
+        state.attempt_store.clone(),
+        state.task_store.clone(),
+        state.agent_registry.clone(),
         runner,
-        max_concurrent_task_runs: state.config.attempt.max_concurrent_task_runs,
-    };
+    )
+    .with_orchestrator_registry(orchestrator_registry)
+    .with_iteration_coordinators(iteration_coordinators)
+    .with_lifecycle_config(WorkflowLifecycleConfig::default())
+    .with_composer(composer)
+    .with_max_concurrent_task_runs(state.config.attempt.max_concurrent_task_runs);
     let starter = WorkflowStarter::new(attempt_deps.clone());
     let workflow_control: Arc<dyn WorkflowControlPort> = Arc::new(WorkflowControlAdapter::new(
         starter,

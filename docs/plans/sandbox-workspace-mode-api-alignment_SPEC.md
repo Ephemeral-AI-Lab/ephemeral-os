@@ -56,7 +56,7 @@ sandbox/crates/eos-workspace-api/src/
   lib.rs
   mode.rs                       # WorkspaceMode and mode metadata
   file_ops.rs                   # WorkspaceFileOps trait + file DTOs
-  command_session.rs            # CommandWorkspaceOps trait + command DTOs
+  command_session.rs            # CommandWorkspacePolicy trait + command DTOs
   read_view.rs                  # WorkspaceReadView trait
   mutation.rs                   # WorkspaceMutationSink trait
   response.rs                   # shared outcomes/conflicts/timing DTOs
@@ -172,12 +172,12 @@ pub trait WorkspaceFileOps {
 semantics. `IsolatedWorkspaceOps` implements it with upperdir-first reads,
 private upperdir writes, and audit-only metadata.
 
-### 4.2 `CommandWorkspaceOps`
+### 4.2 `CommandWorkspacePolicy`
 
 Use this trait for mode-specific command workspace policy:
 
 ```rust
-pub trait CommandWorkspaceOps {
+pub trait CommandWorkspacePolicy: Send + Sync {
     fn prepare_command_workspace(
         &self,
         request: PrepareCommandRequest,
@@ -243,7 +243,7 @@ no-publish guarantee is lost.
 | Candidate | Plan | Why |
 |---|---|---|
 | `WorkspaceFileOps` | Yes | Direct file APIs are symmetric public capabilities |
-| `CommandWorkspaceOps` | Yes | Command prepare/finalize are symmetric mode-policy hooks |
+| `CommandWorkspacePolicy` | Yes | Command prepare/finalize are symmetric mode-policy hooks |
 | `WorkspaceReadView` | Yes | Both modes need path resolution and bytes reads with different backing stores |
 | `WorkspaceMutationSink` | Yes | Both modes produce mutation outcomes with different persistence semantics |
 | Response builders | DTO first, optional trait later | Shared typed outcomes reduce JSON drift before adding polymorphism |
@@ -286,7 +286,7 @@ search/replace logic, isolated upperdir logic, or response builders.
 | Isolated command workspace prepare/finalize policy | `eos-isolated-workspace` |
 | Concrete OCC publish adapter | `eos-daemon` |
 
-The workspace crates expose the shared `CommandWorkspaceOps` mode-policy
+The workspace crates expose the shared `CommandWorkspacePolicy` mode-policy
 interface. The daemon owns the long-running session control plane.
 
 ### 6.1 `command_session/prepare.rs`
@@ -399,7 +399,7 @@ Responsibilities specific to `eos-isolated-workspace`:
 | Read view | LayerStack-backed `WorkspaceReadView` | Upperdir + snapshot `WorkspaceReadView` | Same path/read contract |
 | Mutation sink | Publish-capable `WorkspaceMutationSink` | Audit-only `WorkspaceMutationSink` | Same mutation outcome contract |
 | Command module | `command_session/` | `command_session/` | Same root-level folder |
-| Command trait | `CommandWorkspaceOps` impl | `CommandWorkspaceOps` impl | Same command policy API |
+| Command trait | `CommandWorkspacePolicy` impl | `CommandWorkspacePolicy` impl | Same command policy API |
 | Command prep | Fresh overlay workspace | Existing isolated handle workspace | `prepare_command_workspace(...)` in trait |
 | Command finalize | Capture + publish | Capture + audit-only | `finalize_command_workspace(...)` in trait |
 | Public daemon ops | Shared | Shared | One wire/API surface |
@@ -410,10 +410,10 @@ Target internal signatures:
 
 ```rust
 impl<P> WorkspaceFileOps for EphemeralWorkspaceOps<P> { ... }
-impl<P> CommandWorkspaceOps for EphemeralWorkspaceOps<P> { ... }
+impl<P> CommandWorkspacePolicy for EphemeralWorkspaceOps<P> { ... }
 
 impl<P> WorkspaceFileOps for IsolatedWorkspaceOps<P> { ... }
-impl<P> CommandWorkspaceOps for IsolatedWorkspaceOps<P> { ... }
+impl<P> CommandWorkspacePolicy for IsolatedWorkspaceOps<P> { ... }
 ```
 
 Exact argument structs should be typed DTOs, not ad hoc JSON bags, once moved
@@ -484,7 +484,7 @@ publish-capable dependencies.
 | Surface | Decision |
 |---|---|
 | `read_file` / `write_file` / `edit_file` | Symmetric public ops through `WorkspaceFileOps`; mode-specific implementation in workspace crates |
-| `exec_command` | Symmetric public op; daemon session control, mode-specific `CommandWorkspaceOps` prepare/finalize |
+| `exec_command` | Symmetric public op; daemon session control, mode-specific `CommandWorkspacePolicy` prepare/finalize |
 | `write_stdin` / cancel / collect / count | Daemon-owned command-session control |
 | Path/read backing | Trait-shaped through `WorkspaceReadView` |
 | Mutation persistence | Trait-shaped through `WorkspaceMutationSink`; publish vs audit differs by mode |
@@ -512,7 +512,7 @@ Implementation should add or preserve focused coverage for:
    mode is active.
 7. `eos-isolated-workspace` still has no `eos-occ` dependency.
 8. `eos-ephemeral-workspace` and `eos-isolated-workspace` both compile against
-   `WorkspaceFileOps` and `CommandWorkspaceOps`.
+   `WorkspaceFileOps` and `CommandWorkspacePolicy`.
 9. `WorkspaceReadView` tests cover LayerStack-backed reads and isolated
    upperdir-first reads through the same request DTOs.
 10. `WorkspaceMutationSink` tests prove ephemeral publishes while isolated

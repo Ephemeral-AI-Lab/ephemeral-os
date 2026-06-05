@@ -32,7 +32,7 @@ where
             .map(|handle| {
                 json!({
                     "workspace_handle_id": handle.workspace_handle_id.0,
-                    "agent_id": handle.agent_id.0,
+                    "caller_id": handle.caller_id.0,
                     "lease_id": handle.lease_id,
                     "manifest_version": handle.manifest_version,
                     "manifest_root_hash": handle.manifest_root_hash,

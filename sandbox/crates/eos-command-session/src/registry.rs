@@ -9,7 +9,7 @@ use crate::{CollectCompleted, CollectCompletedResponse, CommandResponse, Command
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct CommandSessionCompletion {
     pub command_session_id: String,
-    pub agent_id: String,
+    pub caller_id: String,
     pub command: String,
     pub result: CommandResponse,
     pub notification_result: CommandResponse,
@@ -51,10 +51,10 @@ impl CommandSessionRegistry {
     }
 
     #[must_use]
-    pub fn count_by_agent(&self, agent_id: Option<&str>) -> usize {
+    pub fn count_by_caller(&self, caller_id: Option<&str>) -> usize {
         lock(&self.sessions)
             .values()
-            .filter(|session| agent_id.is_none_or(|agent_id| session.agent_id() == agent_id))
+            .filter(|session| caller_id.is_none_or(|caller_id| session.caller_id() == caller_id))
             .count()
     }
 
@@ -79,14 +79,15 @@ impl CommandSessionRegistry {
             .command_session_ids
             .as_ref()
             .map(|ids| ids.iter().cloned().collect());
-        let agent_id = request.agent_id.as_deref();
+        let caller_id = request.caller_id.as_deref();
         let mut completed = lock(&self.completed);
         let matched: Vec<String> = completed
             .iter()
             .filter(|(id, completion)| {
                 let id_matches = wanted.as_ref().is_none_or(|ids| ids.contains(*id));
-                let agent_matches = agent_id.is_none_or(|agent_id| completion.agent_id == agent_id);
-                id_matches && agent_matches
+                let caller_matches =
+                    caller_id.is_none_or(|caller_id| completion.caller_id == caller_id);
+                id_matches && caller_matches
             })
             .map(|(id, _)| id.clone())
             .collect();

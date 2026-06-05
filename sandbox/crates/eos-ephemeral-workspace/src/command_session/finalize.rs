@@ -261,7 +261,7 @@ mod tests {
     use super::*;
     use crate::command_session::types::EphemeralCommandFinalizeContext;
     use crate::{
-        AgentId, EphemeralRunDirs, EphemeralSnapshot, EphemeralWorkspace, EphemeralWorkspaceOps,
+        CallerId, EphemeralRunDirs, EphemeralSnapshot, EphemeralWorkspace, EphemeralWorkspaceOps,
         InvocationId, PublishStatus, WorkspaceRoot,
     };
 
@@ -321,7 +321,7 @@ mod tests {
                 workspace: EphemeralWorkspace {
                     layer_stack_root: WorkspaceRoot(PathBuf::from("/layers")),
                     workspace_root: PathBuf::from("/workspace"),
-                    agent_id: AgentId("agent-1".to_owned()),
+                    caller_id: CallerId("caller-1".to_owned()),
                     invocation_id: InvocationId("cmd-1".to_owned()),
                     snapshot: EphemeralSnapshot {
                         lease_id: "lease-1".to_owned(),

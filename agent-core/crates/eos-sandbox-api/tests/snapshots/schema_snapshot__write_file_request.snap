@@ -49,16 +49,12 @@ expression: schema
   },
   "definitions": {
     "SandboxCaller": {
-      "description": "Caller identity threaded onto every audit-aware request.\n\nThe four required ids (`agent_id`, `run_id`, `agent_run_id`, `task_id`) are always present even when empty; the rest are optional. `tool_id` is the only id stored already-typed (it is `Option`, omitted when unset). The Python `tool_name` field is removed (GC-sandbox-api-01): it was empty in production and the audit fallback uses the operation name.",
+      "description": "Caller identity threaded onto every audit-aware request.\n\n`caller_id` is the daemon-facing sandbox identity. Agent/workflow/task metadata stays in this host-side typed API and is projected only where a higher-level audit consumer needs it.",
       "type": "object",
       "required": [
-        "agent_id"
+        "caller_id"
       ],
       "properties": {
-        "agent_id": {
-          "description": "Resolved agent identity. In production it is derived from `agent_run_id` (`agent_run_id.strip() or agent_name`, eos-tools source), so it frequently equals `agent_run_id` while staying a distinct field. eos-types owns no `AgentId` newtype, so this stays a raw `String`.",
-          "type": "string"
-        },
         "agent_run_id": {
           "description": "Agent-run id as a raw wire field (required-empty). Use [`Self::agent_run`] for the validated typed form.",
           "default": "",
@@ -67,6 +63,10 @@ expression: schema
         "attempt_id": {
           "description": "Attempt id as a raw wire field (optional-empty). Use [`Self::attempt`].",
           "default": "",
+          "type": "string"
+        },
+        "caller_id": {
+          "description": "Neutral sandbox caller identity. In agent-core it is derived from the current agent identity, but the daemon contract does not name agents.",
           "type": "string"
         },
         "request_id": {

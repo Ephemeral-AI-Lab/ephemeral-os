@@ -4,6 +4,7 @@ use std::process::Command;
 use std::sync::Arc;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
+use eos_config::DockerConfig;
 use eos_sandbox_host::{
     CreateSandboxSpec, DaemonClient, DockerProviderAdapter, ExecOpts, Labels, ProviderAdapter,
     ProviderRegistry, SandboxHostError, DEFAULT_LAYER_STACK_ROOT,
@@ -46,9 +47,10 @@ async fn write_stdin_empty_response_from_real_eosd_is_not_replayed() -> Result<(
         eprintln!("skipping: EOS_LIVE_E2E_IMAGE is not set");
         return Ok(());
     };
-    std::env::set_var("EOS_DOCKER_DAEMON_TCP", "0");
-
-    let adapter: Arc<dyn ProviderAdapter> = Arc::new(DockerProviderAdapter::connect()?);
+    let mut docker_config = DockerConfig::default();
+    docker_config.daemon_tcp = false;
+    let adapter: Arc<dyn ProviderAdapter> =
+        Arc::new(DockerProviderAdapter::connect(&docker_config)?);
     let registry = Arc::new(ProviderRegistry::new());
     registry.set_default(Arc::clone(&adapter));
     let daemon = DaemonClient::new(Arc::clone(&registry));

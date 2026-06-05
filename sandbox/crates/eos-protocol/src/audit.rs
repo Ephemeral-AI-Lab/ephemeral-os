@@ -154,7 +154,7 @@ pub struct IsolatedWorkspaceSection {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub workspace_handle_id: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub agent_id: Option<String>,
+    pub caller_id: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub holder_pid: Option<i64>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -188,7 +188,7 @@ impl Default for IsolatedWorkspaceSection {
             operation_id: None,
             workspace_mode: "isolated".to_owned(),
             workspace_handle_id: None,
-            agent_id: None,
+            caller_id: None,
             holder_pid: None,
             holder_pid_alive: None,
             cgroup_id: None,
@@ -268,21 +268,21 @@ pub struct PluginSection {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub workspace_handle_id: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub agent_id: Option<String>,
+    pub caller_id: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub peak_resident_bytes: Option<i64>,
 }
 
-/// `background_tool` section. `background_task_id` required.
+/// `background_tool` section. `background_work_id` required.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct BackgroundToolSection {
-    pub background_task_id: String,
+    pub background_work_id: String,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub task_kind: Option<String>,
+    pub work_kind: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub tool_name: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub agent_id: Option<String>,
+    pub caller_id: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub uptime_ms: Option<f64>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -305,7 +305,7 @@ pub struct ToolCallSection {
     pub tool_use_id: String,
     pub tool_name: String,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub agent_id: Option<String>,
+    pub caller_id: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub workspace_mode: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -334,7 +334,7 @@ pub struct OsResourceSection {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub tool_use_id: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub agent_id: Option<String>,
+    pub caller_id: Option<String>,
     pub sampled_at_monotonic_s: f64,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub rss_bytes: Option<i64>,
@@ -425,7 +425,7 @@ mod tests {
             serde_json::to_value(ToolCallSection {
                 tool_use_id: "t".to_owned(),
                 tool_name: "read_file".to_owned(),
-                agent_id: None,
+                caller_id: None,
                 workspace_mode: None,
                 workspace_handle_id: None,
                 phase: None,

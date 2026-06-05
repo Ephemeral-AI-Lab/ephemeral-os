@@ -126,7 +126,7 @@ impl<'de> Deserialize<'de> for RunnerVerb {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ToolCall {
     pub invocation_id: String,
-    pub agent_id: String,
+    pub caller_id: String,
     pub verb: RunnerVerb,
     pub intent: Intent,
     pub args: Value,

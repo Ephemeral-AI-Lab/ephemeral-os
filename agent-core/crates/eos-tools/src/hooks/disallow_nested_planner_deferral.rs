@@ -10,12 +10,11 @@
 //! too-deep planner cannot extend its iteration chain, bounding nesting.
 
 use eos_types::JsonObject;
-use serde_json::Value;
 
 use crate::core::error::ToolError;
 use crate::core::metadata::ExecutionMetadata;
 
-use super::{HookDenial, HookOutcome};
+use super::{deferred_goal, HookDenial, HookOutcome};
 
 const NESTED_PLANNER_DEFERRAL_MESSAGE: &str = "BLOCKED: nested workflow planners cannot set deferred_goal_for_next_iteration. Submit a plan that covers all current child-workflow goal items and leaves no remaining items.";
 
@@ -28,12 +27,7 @@ pub(crate) async fn run_disallow_nested_planner_deferral(
     raw_input: &JsonObject,
     ctx: &ExecutionMetadata,
 ) -> Result<HookOutcome, ToolError> {
-    let deferred = raw_input
-        .get("deferred_goal_for_next_iteration")
-        .and_then(Value::as_str)
-        .map(str::trim)
-        .filter(|s| !s.is_empty());
-    if deferred.is_none() {
+    if deferred_goal(raw_input).is_none() {
         return Ok(HookOutcome::pass());
     }
     let (Some(workflow_id), Some(control)) = (&ctx.workflow_id, &ctx.workflow_control) else {

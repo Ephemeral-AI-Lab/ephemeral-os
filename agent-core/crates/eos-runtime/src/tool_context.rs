@@ -42,10 +42,11 @@ pub(crate) struct MetadataParams {
 /// per-call by the engine dispatch before any hook reads it (advisor remediation
 /// plan §2b).
 pub(crate) fn build_metadata(state: &AppState, params: MetadataParams) -> ExecutionMetadata {
+    let agent_run_id = params.agent_run_id.as_str().to_owned();
     let caller = SandboxCaller {
-        agent_id: params.agent_name.clone(),
-        run_id: params.agent_run_id.as_str().to_owned(),
-        agent_run_id: params.agent_run_id.as_str().to_owned(),
+        caller_id: agent_run_id.clone(),
+        run_id: agent_run_id.clone(),
+        agent_run_id,
         task_id: params
             .task_id
             .as_ref()

@@ -82,14 +82,14 @@ fn occ_merges_concurrent_disjoint_protocol_writes() -> Result<()> {
     let lease = pool.acquire()?;
     let client = lease.client().clone();
     let root = lease.root().to_owned();
-    let agent_id = lease.agent_id().to_owned();
+    let caller_id = lease.caller_id().to_owned();
     let barrier = Arc::new(Barrier::new(8));
 
     let handles: Vec<_> = (0..8)
         .map(|index| {
             let client = client.clone();
             let root = root.clone();
-            let agent_id = agent_id.clone();
+            let caller_id = caller_id.clone();
             let barrier = Arc::clone(&barrier);
             thread::spawn(move || -> Result<Value> {
                 barrier.wait();
@@ -98,7 +98,7 @@ fn occ_merges_concurrent_disjoint_protocol_writes() -> Result<()> {
                     &format!("occ-merge-{index}"),
                     &json!({
                         "layer_stack_root": root,
-                        "agent_id": agent_id,
+                        "caller_id": caller_id,
                         "path": format!("e2e_occ/file-{index}.txt"),
                         "content": format!("merge-{index}\n"),
                         "overwrite": true

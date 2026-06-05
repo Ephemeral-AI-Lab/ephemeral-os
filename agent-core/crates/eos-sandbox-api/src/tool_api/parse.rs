@@ -23,14 +23,14 @@ use crate::models::{
 // Outbound identity payload
 // ---------------------------------------------------------------------------
 
-/// Build the full daemon-envelope identity: a top-level `agent_id`, the nested
+/// Build the full daemon-envelope identity: a top-level `caller_id`, the nested
 /// `caller` block, and (only when present) a top-level `invocation_id`. Mirrors
 /// `daemon_request_identity_fields`.
 pub(crate) fn daemon_request_identity_fields(base: &SandboxRequestBase) -> JsonObject {
     let mut payload = JsonObject::new();
     payload.insert(
-        "agent_id".to_owned(),
-        Value::String(base.caller.agent_id.clone()),
+        "caller_id".to_owned(),
+        Value::String(base.caller.caller_id.clone()),
     );
     payload.insert(
         "caller".to_owned(),
@@ -435,9 +435,9 @@ mod tests {
 
     fn caller() -> SandboxCaller {
         SandboxCaller {
-            agent_id: "agent-1".to_owned(),
+            caller_id: "caller-1".to_owned(),
             run_id: String::new(),
-            agent_run_id: "agent-1".to_owned(),
+            agent_run_id: "caller-1".to_owned(),
             task_id: String::new(),
             request_id: String::new(),
             attempt_id: String::new(),
@@ -447,21 +447,21 @@ mod tests {
     }
 
     // AC-sandbox-api-04 (envelope portion): the full identity emits a top-level
-    // agent_id, the nested caller block, and a top-level invocation_id only when
-    // present. The fixture uses agent_id == agent_run_id.
+    // caller_id, the nested caller block, and a top-level invocation_id only when
+    // present. The fixture uses caller_id == agent_run_id.
     #[test]
-    fn identity_envelope_has_top_level_agent_and_optional_invocation() {
+    fn identity_envelope_has_top_level_caller_and_optional_invocation() {
         let base = SandboxRequestBase {
             caller: caller(),
             description: String::new(),
             invocation_id: None,
         };
         let payload = daemon_request_identity_fields(&base);
-        assert_eq!(payload["agent_id"], serde_json::json!("agent-1"));
+        assert_eq!(payload["caller_id"], serde_json::json!("caller-1"));
         assert!(payload["caller"].is_object());
         assert_eq!(
             payload["caller"]["agent_run_id"],
-            serde_json::json!("agent-1")
+            serde_json::json!("caller-1")
         );
         assert!(!payload.contains_key("invocation_id"));
 

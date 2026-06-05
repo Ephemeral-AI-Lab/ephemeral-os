@@ -146,7 +146,7 @@ A live command session: its pty writer, output ring, reader-done channel, and ca
 | name | type | vis |
 |------|------|-----|
 | `id` | `String` |  |
-| `agent_id` | `String` |  |
+| `caller_id` | `String` |  |
 | `command` | `String` |  |
 | `started_at` | `Instant` |  |
 | `pgid` | `i32` |  |
@@ -178,7 +178,7 @@ Process-global registry of live + completed command sessions, keyed by session i
 
 <details><summary>Methods (9)</summary>
 
-`new`, `next_id`, `insert`, `get`, `remove`, `count_by_agent`, `push_completed`, `take_completed_result`, `collect_completed`
+`new`, `next_id`, `insert`, `get`, `remove`, `count_by_caller`, `push_completed`, `take_completed_result`, `collect_completed`
 
 </details>
 
@@ -232,7 +232,7 @@ The start-time identity + timeout for a command session, shared by the shared an
 |------|------|-----|
 | `id` | `String` |  |
 | `invocation_id` | `String` |  |
-| `agent_id` | `String` |  |
+| `caller_id` | `String` |  |
 | `command` | `String` |  |
 | `timeout_seconds` | `Option<f64>` |  |
 
@@ -318,7 +318,7 @@ The spec for one oneshot plugin-overlay ns-runner command (command + env + works
 |------|------|-----|
 | `layer_stack_root` | `PathBuf` | `pub(crate)` |
 | `invocation_id` | `String` | `pub(crate)` |
-| `agent_id` | `String` | `pub(crate)` |
+| `caller_id` | `String` | `pub(crate)` |
 | `public_op` | `String` | `pub(crate)` |
 | `plugin_id` | `String` | `pub(crate)` |
 | `op_name` | `String` | `pub(crate)` |
@@ -525,7 +525,7 @@ One tracked daemon-side invocation (abort handle, owning agent, heartbeat, backg
 |------|------|-----|
 | `invocation_id` | `String` | `pub` |
 | `abort` | `AbortHandle` | `pub` |
-| `agent_id` | `String` | `pub` |
+| `caller_id` | `String` | `pub` |
 | `op` | `String` | `pub` |
 | `last_seen` | `f64` | `pub` |
 | `background` | `bool` | `pub` |
@@ -547,7 +547,7 @@ Tracks daemon-side tasks by invocation id for cancellation + TTL cleanup.
 
 <details><summary>Methods (14)</summary>
 
-`new`, `from_env`, `reaper_interval_s`, `lock_state`, `register`, `register_process_group`, `clear_process_group`, `deregister`, `cancel`, `heartbeat`, `count_by_agent`, `enter_call`, `ttl_sweep`, `metrics`
+`new`, `from_env`, `reaper_interval_s`, `lock_state`, `register`, `register_process_group`, `clear_process_group`, `deregister`, `cancel`, `heartbeat`, `count_by_caller`, `enter_call`, `ttl_sweep`, `metrics`
 
 </details>
 
@@ -591,7 +591,7 @@ A cloned, daemon-local view of an isolated workspace handle (namespace FDs, over
 
 | name | type | vis |
 |------|------|-----|
-| `agent_id` | `String` | `pub` |
+| `caller_id` | `String` | `pub` |
 | `workspace_handle_id` | `String` | `pub` |
 | `layer_stack_root` | `PathBuf` | `pub` |
 | `manifest_version` | `i64` | `pub` |

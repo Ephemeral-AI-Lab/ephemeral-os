@@ -127,7 +127,7 @@
     <tr><td>Direct file fast paths bypass safety.</td><td>No. They bypass mount/capture cost but still publish through OCC for writes/edits.</td><td><a class="wiki-link" href="workspaces.html#ephemeral-fast-paths">Fast-path Technical Workflows</a></td></tr>
     <tr><td>Manifest depth is free.</td><td>No. Lowerdir byte cost is O(1), but mount argument/path count grows with manifest depth; the runtime auto-squashes once depth exceeds the configured max because util-linux <code>mount(8)</code> rejects deep stacks (~16 layers) and overlay read amplification grows with depth.</td><td><a class="wiki-link" href="layerstack.html#layerstack-publish">Publish</a>, <a class="wiki-link" href="workflow-cookbook.html#cookbook-ephemeral-shell">Ephemeral Shell</a></td></tr>
     <tr><td>Container layers (Docker/OCI) already give this property.</td><td>Partial. Container layers share lowerdirs across containers but have no commit-back protocol: a container's upperdir dies with the container. EphemeralOS adds OCC so upperdir captures become new shared lowerdirs.</td><td><a class="wiki-link" href="occ.html">OCC</a>, <a class="wiki-link" href="layerstack.html#layerstack-publish">Publish</a></td></tr>
-    <tr><td>Git worktrees give the same per-agent cost.</td><td>No. A worktree is a full checkout of tracked files (<code>O(N &times; repo)</code> on disk for N agents) and worktrees do not see gitignored deps such as <code>node_modules</code>, <code>.venv</code>, or <code>target/</code>. OverlayFS lowerdirs include the full provisioned tree including those paths.</td><td><a class="wiki-link" href="overlay.html#overlay-handle">Overlay Handle</a></td></tr>
+    <tr><td>Git worktrees give the same per-caller cost.</td><td>No. A worktree is a full checkout of tracked files (<code>O(N &times; repo)</code> on disk for N agents) and worktrees do not see gitignored deps such as <code>node_modules</code>, <code>.venv</code>, or <code>target/</code>. OverlayFS lowerdirs include the full provisioned tree including those paths.</td><td><a class="wiki-link" href="overlay.html#overlay-handle">Overlay Handle</a></td></tr>
     <tr><td>Per-agent container or microVM is equivalent.</td><td>No. Per-agent VMs/containers cost <code>O(N &times; image)</code> and isolate agents from each other &mdash; agent B cannot see agent A's write until merge time. EphemeralOS publishes A's write into shared LayerStack so B reads it on its next snapshot. Different coordination model.</td><td><a class="wiki-link" href="overview.html#overview">Design Philosophy</a></td></tr>
   </tbody>
 </table>
@@ -139,7 +139,7 @@
   <li>A 2&nbsp;GB monorepo with 50 agents costs ~2&nbsp;GB on disk plus the sum of per-op changed bytes &mdash; not 100&nbsp;GB.</li>
   <li>Every published layer becomes the next snapshot's lowerdir, so agent B's next read includes agent A's write without any A2A messaging.</li>
   <li>Disjoint file-API writes from N agents batch into one OCC publish, so the manifest CAS happens once per drain window regardless of fanout (see <a class="wiki-link" href="occ.html#occ-throughput">OCC Throughput Model</a>).</li>
-  <li>Isolated upperdirs are per-agent and bounded by <code>EOS_ISOLATED_WORKSPACE_UPPERDIR_BYTES</code>; they are the only mode where space scales linearly with agent count, by design.</li>
+  <li>Isolated upperdirs are per-caller and bounded by <code>EOS_ISOLATED_WORKSPACE_UPPERDIR_BYTES</code>; they are the only mode where space scales linearly with agent count, by design.</li>
 </ul>
 </section>
 

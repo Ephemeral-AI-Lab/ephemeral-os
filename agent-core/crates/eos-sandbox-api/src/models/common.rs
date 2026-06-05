@@ -139,9 +139,9 @@ impl ConflictInfo {
 mod tests {
     use super::*;
 
-    fn caller(agent_id: &str) -> SandboxCaller {
+    fn caller(caller_id: &str) -> SandboxCaller {
         SandboxCaller {
-            agent_id: agent_id.to_owned(),
+            caller_id: caller_id.to_owned(),
             run_id: String::new(),
             agent_run_id: String::new(),
             task_id: String::new(),

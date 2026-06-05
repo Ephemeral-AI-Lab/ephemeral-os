@@ -7,7 +7,7 @@ pub enum WorkspaceMode {
     /// Shared publish-capable workspace path.
     #[default]
     Ephemeral,
-    /// Agent-private no-publish workspace path.
+    /// Caller-private no-publish workspace path.
     Isolated,
 }
 

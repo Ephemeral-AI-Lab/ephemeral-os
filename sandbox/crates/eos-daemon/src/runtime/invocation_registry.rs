@@ -2,7 +2,7 @@
 //!
 //! This is the INVOCATION-keyed registry: id -> task handle, heartbeat ->
 //! `last_seen`, cancel-by-id, and the TTL reaper loop. It is DISTINCT from the
-//! per-agent isolated-workspace lifecycle state and active command-session records — do not
+//! per-caller isolated-workspace lifecycle state and active command-session records — do not
 //! fuse those with this invocation-keyed background-control registry.
 //!
 use std::collections::HashMap;
@@ -30,8 +30,8 @@ pub struct InFlightInvocation {
     pub invocation_id: String,
     /// Abort handle to the running task (cancel target).
     pub abort: AbortHandle,
-    /// Agent that owns this invocation (for per-agent counts).
-    pub agent_id: String,
+    /// Caller that owns this invocation (for per-caller counts).
+    pub caller_id: String,
     /// The op name (for diagnostics).
     pub op: String,
     /// Monotonic seconds of the last heartbeat / registration.
@@ -92,7 +92,7 @@ impl InFlightRegistry {
         &self,
         invocation_id: &str,
         abort: AbortHandle,
-        agent_id: &str,
+        caller_id: &str,
         op: &str,
         background: bool,
     ) {
@@ -105,7 +105,7 @@ impl InFlightRegistry {
             InFlightInvocation {
                 invocation_id: invocation_id.to_owned(),
                 abort,
-                agent_id: agent_id.to_owned(),
+                caller_id: caller_id.to_owned(),
                 op: op.to_owned(),
                 last_seen: monotonic_seconds(),
                 background,
@@ -185,15 +185,15 @@ impl InFlightRegistry {
         touched
     }
 
-    /// Count live background invocations for `agent_id`. Backs
+    /// Count live background invocations for `caller_id`. Backs
     /// `api.v1.inflight_count`.
-    pub fn count_by_agent(&self, agent_id: &str) -> usize {
+    pub fn count_by_caller(&self, caller_id: &str) -> usize {
         self.lock_state()
             .by_invocation
             .values()
             .filter(|entry| {
                 entry.background
-                    && entry.agent_id == agent_id
+                    && entry.caller_id == caller_id
                     && !entry.ttl_reaped
                     && !entry.abort.is_finished()
             })
@@ -308,19 +308,19 @@ mod tests {
         registry.register(
             "bg-1",
             task.abort_handle(),
-            "agent-a",
+            "caller-a",
             "api.v1.exec_command",
             true,
         );
 
-        assert_eq!(registry.count_by_agent("agent-a"), 1);
+        assert_eq!(registry.count_by_caller("caller-a"), 1);
         assert_eq!(
             registry.heartbeat(&["bg-1".to_owned(), "missing".to_owned()]),
             1
         );
         assert!(registry.cancel("bg-1"));
         assert_task_cancelled(task).await?;
-        assert_eq!(registry.count_by_agent("agent-a"), 0);
+        assert_eq!(registry.count_by_caller("caller-a"), 0);
 
         registry.deregister("bg-1");
         assert_eq!(registry.metrics(), (0, 0));
@@ -347,12 +347,12 @@ mod tests {
         registry.register(
             "bg-poisoned",
             task.abort_handle(),
-            "agent-a",
+            "caller-a",
             "api.v1.exec_command",
             true,
         );
 
-        assert_eq!(registry.count_by_agent("agent-a"), 1);
+        assert_eq!(registry.count_by_caller("caller-a"), 1);
         assert_eq!(registry.heartbeat(&["bg-poisoned".to_owned()]), 1);
         {
             let _guard = registry.enter_call("bg-poisoned");
@@ -372,7 +372,7 @@ mod tests {
         registry.register(
             "bg-ttl",
             task.abort_handle(),
-            "agent-a",
+            "caller-a",
             "api.v1.exec_command",
             true,
         );
@@ -382,11 +382,11 @@ mod tests {
             thread::sleep(Duration::from_millis(3));
             registry.ttl_sweep();
             assert_eq!(registry.metrics(), (1, 1));
-            assert_eq!(registry.count_by_agent("agent-a"), 0);
+            assert_eq!(registry.count_by_caller("caller-a"), 0);
         }
 
         assert_task_cancelled(task).await?;
-        assert_eq!(registry.count_by_agent("agent-a"), 0);
+        assert_eq!(registry.count_by_caller("caller-a"), 0);
         Ok(())
     }
 

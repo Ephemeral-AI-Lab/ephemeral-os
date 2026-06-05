@@ -245,10 +245,7 @@ impl ContextEngine {
                             "sequence".to_owned(),
                             attempt.attempt_sequence_no.to_string(),
                         ),
-                        (
-                            "status".to_owned(),
-                            format!("{:?}", attempt.status()).to_lowercase(),
-                        ),
+                        ("status".to_owned(), attempt.status().as_str().to_owned()),
                     ])
                     .with_children(outcomes.iter().map(render_task_outcome).collect()),
             );

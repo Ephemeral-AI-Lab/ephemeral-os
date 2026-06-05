@@ -29,6 +29,16 @@ pub enum ToolIntent {
 }
 
 impl ToolIntent {
+    /// Every intent, in a stable order — the canonical iteration order, mirrored
+    /// from [`ToolName::ALL`](crate::ToolName) for totality and [`from_wire`].
+    ///
+    /// [`from_wire`]: ToolIntent::from_wire
+    pub const ALL: [ToolIntent; 3] = [
+        ToolIntent::ReadOnly,
+        ToolIntent::WriteAllowed,
+        ToolIntent::Lifecycle,
+    ];
+
     /// The wire string for this intent (the serde `snake_case` form).
     #[must_use]
     pub const fn as_str(self) -> &'static str {
@@ -37,6 +47,13 @@ impl ToolIntent {
             ToolIntent::WriteAllowed => "write_allowed",
             ToolIntent::Lifecycle => "lifecycle",
         }
+    }
+
+    /// Parse a wire string into a [`ToolIntent`], or `None` when unknown,
+    /// reusing [`as_str`](ToolIntent::as_str) as the single source of spelling.
+    #[must_use]
+    pub fn from_wire(value: &str) -> Option<Self> {
+        Self::ALL.into_iter().find(|intent| intent.as_str() == value)
     }
 }
 
@@ -76,6 +93,14 @@ mod tests {
             assert_eq!(ToolIntent::from(sandbox), intent);
             assert_eq!(intent.as_str(), sandbox.as_wire());
         }
+    }
+
+    #[test]
+    fn from_wire_round_trips_and_rejects_unknown() {
+        for intent in ToolIntent::ALL {
+            assert_eq!(ToolIntent::from_wire(intent.as_str()), Some(intent));
+        }
+        assert_eq!(ToolIntent::from_wire("nope"), None);
     }
 
     #[test]

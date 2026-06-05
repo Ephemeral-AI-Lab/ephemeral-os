@@ -37,7 +37,7 @@ pub(crate) fn emit_dispatch_audit(request: &Request, response: &Value, dispatch_
         .get("invocation_id")
         .and_then(Value::as_str)
         .unwrap_or(&request.invocation_id);
-    let agent_id = request.args.get("agent_id").and_then(Value::as_str);
+    let caller_id = request.args.get("caller_id").and_then(Value::as_str);
     let workspace_mode = response
         .get("workspace_mode")
         .or_else(|| response.get("workspace"))
@@ -59,7 +59,7 @@ pub(crate) fn emit_dispatch_audit(request: &Request, response: &Value, dispatch_
         &ToolCallSection {
             tool_use_id: invocation_id.to_owned(),
             tool_name: request.op.clone(),
-            agent_id: agent_id.map(str::to_owned),
+            caller_id: caller_id.map(str::to_owned),
             workspace_mode,
             workspace_handle_id: string_field(response, "workspace_handle_id")
                 .or_else(|| string_arg(request, "workspace_handle_id")),
@@ -346,7 +346,7 @@ fn active_manifest_stats(
 }
 
 fn emit_background_audit(request: &Request, response: &Value, total_ms: f64) {
-    let Some((event_type, task_kind)) = background_event_kind(request, response) else {
+    let Some((event_type, work_kind)) = background_event_kind(request, response) else {
         return;
     };
     let command_session_id = request
@@ -359,10 +359,10 @@ fn emit_background_audit(request: &Request, response: &Value, total_ms: f64) {
         event_type,
         "background_tool",
         &BackgroundToolSection {
-            background_task_id: command_session_id.to_owned(),
-            task_kind: Some(task_kind.to_owned()),
+            background_work_id: command_session_id.to_owned(),
+            work_kind: Some(work_kind.to_owned()),
             tool_name: Some(request.op.clone()),
-            agent_id: string_arg(request, "agent_id"),
+            caller_id: string_arg(request, "caller_id"),
             uptime_ms: None,
             status: string_field(response, "status"),
             exit_code: response.get("exit_code").and_then(Value::as_i64),
@@ -426,7 +426,7 @@ fn emit_os_resource_audit(request: &Request, response: &Value) {
     let section = OsResourceSection {
         operation_id: Some(request.invocation_id.clone()),
         tool_use_id: Some(invocation_id),
-        agent_id: string_arg(request, "agent_id"),
+        caller_id: string_arg(request, "caller_id"),
         sampled_at_monotonic_s: audit_monotonic_s(),
         rss_bytes: None,
         cpu_user_s: timing_f64(response, "resource.cgroup.cpu_user_usec").map(usec_to_seconds),

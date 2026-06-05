@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 use eos_sandbox_api::ExecCommandRequest;
-use eos_types::{InvocationId, JsonObject};
+use eos_types::{CommandSessionId, InvocationId, JsonObject};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
@@ -78,19 +78,16 @@ impl ToolExecutor for ExecCommand {
             };
         // Register a backgrounded session with the supervisor so the heartbeat
         // pulls its completion. The daemon scopes the session under the RPC's
-        // top-level `agent_id` (== `caller.agent_id`), so register under the same
-        // id or the heartbeat's `collect_completed` filter would never match.
+        // top-level `caller_id`, so register under the same id or the
+        // heartbeat's `collect_completed` filter would never match.
         if let (Some(port), Some(session_id)) =
             (&ctx.command_session_supervisor, &result.command_session_id)
         {
             if result.is_running() {
-                port.register(
-                    session_id,
-                    sandbox_id.as_str(),
-                    &ctx.caller.agent_id,
-                    &command,
-                )
-                .await;
+                if let Ok(session_id) = session_id.parse::<CommandSessionId>() {
+                    port.register(&session_id, sandbox_id, &ctx.caller.caller_id, &command)
+                        .await;
+                }
             }
         }
         Ok(command_tool_result(&result))

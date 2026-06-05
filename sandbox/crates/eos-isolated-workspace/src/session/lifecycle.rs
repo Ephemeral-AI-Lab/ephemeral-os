@@ -10,7 +10,7 @@ use super::support::{
     mountinfo_reference_count, next_handle_id,
 };
 use super::{
-    AgentId, IsolatedSession, LayerStackSnapshotPort, NamespaceRuntimePort, WorkspaceHandle,
+    CallerId, IsolatedSession, LayerStackSnapshotPort, NamespaceRuntimePort, WorkspaceHandle,
     WorkspaceHandleId,
 };
 
@@ -148,9 +148,9 @@ where
         let cgroup_exists_after = handle.cgroup_path.as_ref().map(|path| path.exists());
         let inspection = json!({
             "handle_registered_after": self.handles.contains_key(&handle.workspace_handle_id),
-            "agent_registered_after": self.by_agent.contains_key(&handle.agent_id),
+            "agent_registered_after": self.by_caller.contains_key(&handle.caller_id),
             "open_handle_count_after": self.handles.len(),
-            "open_agent_count_after": self.by_agent.len(),
+            "open_agent_count_after": self.by_caller.len(),
             "lease_released": lease_released,
             "active_leases_after": self.layer_stack.active_lease_count().ok().flatten(),
             "holder_pid": handle.holder_pid,
@@ -178,7 +178,7 @@ where
         (inspection, phases_ms)
     }
 
-    /// Enter (or reject) the isolated workspace for `agent_id`.
+    /// Enter (or reject) the isolated workspace for `caller_id`.
     ///
     /// Acquires the snapshot/lease, allocates scratch, wires the namespace, and
     /// registers the handle. Rolls back partial state (and releases the lease)
@@ -186,23 +186,23 @@ where
     ///
     /// # Errors
     ///
-    /// Returns [`IsolatedError`] when the feature is disabled, `agent_id` is
+    /// Returns [`IsolatedError`] when the feature is disabled, `caller_id` is
     /// invalid, capacity is exhausted, snapshot acquisition fails, or namespace
     /// wiring fails.
-    pub fn enter(&mut self, agent_id: &AgentId) -> Result<WorkspaceHandle, IsolatedError> {
+    pub fn enter(&mut self, caller_id: &CallerId) -> Result<WorkspaceHandle, IsolatedError> {
         if !self.caps.enabled {
             return Err(IsolatedError::FeatureDisabled);
         }
-        if agent_id.0.trim().is_empty() {
+        if caller_id.0.trim().is_empty() {
             return Err(IsolatedError::InvalidArgument(
-                "agent_id is required".to_owned(),
+                "caller_id is required".to_owned(),
             ));
         }
         let workspace_root = self.validated_workspace_root()?;
-        if self.by_agent.contains_key(agent_id) {
+        if self.by_caller.contains_key(caller_id) {
             let existing = self
-                .by_agent
-                .get(agent_id)
+                .by_caller
+                .get(caller_id)
                 .and_then(|handle_id| self.handles.get(handle_id))
                 .ok_or_else(|| IsolatedError::SetupFailed {
                     step: "agent handle index is inconsistent".to_owned(),
@@ -237,7 +237,7 @@ where
         let now = monotonic_seconds();
         let mut handle = WorkspaceHandle {
             workspace_handle_id: workspace_handle_id.clone(),
-            agent_id: agent_id.clone(),
+            caller_id: caller_id.clone(),
             lease_id: snapshot.lease_id.clone(),
             manifest_version: snapshot.manifest_version,
             manifest_root_hash: snapshot.root_hash.clone(),
@@ -267,8 +267,8 @@ where
         };
         let total_ms = enter_timer.elapsed().as_secs_f64() * 1000.0;
 
-        self.by_agent
-            .insert(agent_id.clone(), workspace_handle_id.clone());
+        self.by_caller
+            .insert(caller_id.clone(), workspace_handle_id.clone());
         self.handles
             .insert(workspace_handle_id.clone(), handle.clone());
         let _ = self.persist_handles();
@@ -276,7 +276,7 @@ where
             "sandbox_isolated_workspace_enter",
             json!({
                 "workspace_handle_id": workspace_handle_id.0,
-                "agent_id": agent_id.0,
+                "caller_id": caller_id.0,
                 "manifest_version": handle.manifest_version,
                 "manifest_root_hash": handle.manifest_root_hash,
                 "lease_id": handle.lease_id,
@@ -310,26 +310,26 @@ where
         Ok(workspace_root.to_owned())
     }
 
-    /// Exit the isolated workspace for `agent_id`.
+    /// Exit the isolated workspace for `caller_id`.
     ///
     /// Tears down namespace/network/cgroup, releases the lease, and DISCARDS
     /// the upperdir (no publish).
     ///
     /// # Errors
     ///
-    /// Returns [`IsolatedError`] when `agent_id` is invalid or no isolated
+    /// Returns [`IsolatedError`] when `caller_id` is invalid or no isolated
     /// workspace is open for the agent.
     pub fn exit(
         &mut self,
-        agent_id: &AgentId,
+        caller_id: &CallerId,
         grace_s: Option<f64>,
     ) -> Result<Value, IsolatedError> {
-        if agent_id.0.trim().is_empty() {
+        if caller_id.0.trim().is_empty() {
             return Err(IsolatedError::InvalidArgument(
-                "agent_id is required".to_owned(),
+                "caller_id is required".to_owned(),
             ));
         }
-        let Some(handle_id) = self.by_agent.remove(agent_id) else {
+        let Some(handle_id) = self.by_caller.remove(caller_id) else {
             return Err(IsolatedError::NotOpen);
         };
         let Some(handle) = self.handles.remove(&handle_id) else {
@@ -346,7 +346,7 @@ where
             "sandbox_isolated_workspace_exit",
             json!({
                 "workspace_handle_id": handle.workspace_handle_id.0,
-                "agent_id": agent_id.0,
+                "caller_id": caller_id.0,
                 "reason": "explicit",
                 "lifetime_s": lifetime_s,
                 "upperdir_bytes_discarded": upperdir_bytes,
@@ -368,9 +368,9 @@ where
 
     /// Evict idle handles whose last activity exceeds the configured TTL.
     ///
-    /// Agents listed in `active_agents` are skipped because the daemon still
+    /// Callers listed in `active_callers` are skipped because the daemon still
     /// owns at least one live command session for them.
-    pub fn ttl_sweep(&mut self, active_agents: &HashSet<String>) -> usize {
+    pub fn ttl_sweep(&mut self, active_callers: &HashSet<String>) -> usize {
         if self.caps.ttl_s <= 0.0 {
             return 0;
         }
@@ -379,12 +379,12 @@ where
             .handles
             .values()
             .filter(|handle| now - handle.last_activity > self.caps.ttl_s)
-            .filter(|handle| !active_agents.contains(&handle.agent_id.0))
+            .filter(|handle| !active_callers.contains(&handle.caller_id.0))
             .cloned()
             .collect::<Vec<_>>();
         let mut evicted = 0;
         for handle in stale {
-            let Ok(stats) = self.exit(&handle.agent_id, None) else {
+            let Ok(stats) = self.exit(&handle.caller_id, None) else {
                 continue;
             };
             let upperdir_bytes = stats
@@ -401,7 +401,7 @@ where
                 "sandbox_isolated_workspace_evicted",
                 json!({
                     "workspace_handle_id": handle.workspace_handle_id.0,
-                    "agent_id": handle.agent_id.0,
+                    "caller_id": handle.caller_id.0,
                     "reason": "ttl",
                     "lifetime_s": lifetime_s,
                     "upperdir_bytes_discarded": upperdir_bytes,

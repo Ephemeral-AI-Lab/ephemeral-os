@@ -5,10 +5,6 @@ mod finalize;
 #[cfg(target_os = "linux")]
 mod lifecycle;
 #[cfg(any(target_os = "linux", test))]
-mod output;
-#[cfg(target_os = "linux")]
-mod pty;
-#[cfg(any(target_os = "linux", test))]
 mod session;
 
 #[cfg(target_os = "linux")]
@@ -32,8 +28,10 @@ use std::sync::Mutex;
 
 use serde_json::{json, Value};
 
+#[cfg(target_os = "linux")]
+use eos_command_session::CommandSessionConfig as RuntimeCommandSessionConfig;
 #[cfg(all(test, target_os = "linux"))]
-use output::{CommandSessionOutput, CommandSessionOutputCursor};
+use eos_command_session::{CommandSessionOutput, CommandSessionOutputCursor};
 #[cfg(target_os = "linux")]
 use session::{command_session_registry, lock_command_session_state, CommandSession};
 
@@ -66,6 +64,21 @@ pub(super) fn command_session_config() -> CommandSessionConfig {
         .clone()
 }
 
+#[cfg(target_os = "linux")]
+pub(super) fn runtime_command_session_config() -> RuntimeCommandSessionConfig {
+    let config = command_session_config();
+    RuntimeCommandSessionConfig {
+        scratch_root: config.scratch_root,
+        default_yield_time_ms: config.default_yield_time_ms,
+        quiet_ms: config.quiet_ms,
+        cancel_wait_ms: config.cancel_wait_ms,
+        output_drain_grace_ms: config.output_drain_grace_ms,
+        max_session_s: config.max_session_s,
+        output_ring_max_bytes: config.output_ring_max_bytes,
+        output_spool_max_bytes: config.output_spool_max_bytes,
+    }
+}
+
 fn command_session_config_cell() -> &'static RwLock<CommandSessionConfig> {
     static CONFIG: OnceLock<RwLock<CommandSessionConfig>> = OnceLock::new();
     CONFIG.get_or_init(|| RwLock::new(default_command_session_config()))
@@ -95,7 +108,7 @@ pub fn op_exec_command(args: &Value, _context: DispatchContext<'_>) -> Result<Va
         .or_else(|| optional_u64(args, "timeout_seconds"))
         .map(u64_to_f64_saturating);
     #[cfg(not(target_os = "linux"))]
-    if crate::services::isolated_workspace::agent_has_active_handle(agent_id_arg(args)) {
+    if crate::services::isolated_workspace::caller_has_active_handle(caller_id_arg(args)) {
         return Ok(command_result(
             "error",
             None,
@@ -203,20 +216,20 @@ pub fn op_command_session_count(
     args: &Value,
     _context: DispatchContext<'_>,
 ) -> Result<Value, DaemonError> {
-    let agent_id = args
-        .get("agent_id")
+    let caller_id = args
+        .get("caller_id")
         .and_then(Value::as_str)
         .unwrap_or_default()
         .trim()
         .to_owned();
     #[cfg(target_os = "linux")]
     {
-        let count = command_session_registry().count_by_agent(&agent_id);
-        Ok(json!({"success": true, "agent_id": agent_id, "count": count}))
+        let count = command_session_registry().count_by_caller(&caller_id);
+        Ok(json!({"success": true, "caller_id": caller_id, "count": count}))
     }
     #[cfg(not(target_os = "linux"))]
     {
-        Ok(json!({"success": true, "agent_id": agent_id, "count": 0}))
+        Ok(json!({"success": true, "caller_id": caller_id, "count": 0}))
     }
 }
 
@@ -234,8 +247,8 @@ fn require_command_string(args: &Value, key: &str) -> Result<String, DaemonError
 }
 
 #[cfg(not(target_os = "linux"))]
-fn agent_id_arg(args: &Value) -> &str {
-    args.get("agent_id")
+fn caller_id_arg(args: &Value) -> &str {
+    args.get("caller_id")
         .and_then(Value::as_str)
         .unwrap_or("default")
 }
@@ -276,22 +289,22 @@ fn command_session_not_found() -> Value {
 #[cfg(target_os = "linux")]
 /// Best-effort lifecycle backstop for callers that bypass the model-facing
 /// `RequireNoBackgroundSessions` hook.
-pub fn cleanup_command_sessions_for_agent(agent_id: &str, grace_s: Option<f64>) -> usize {
-    let agent_id = agent_id.trim();
-    if agent_id.is_empty() {
+pub fn cleanup_command_sessions_for_caller(caller_id: &str, grace_s: Option<f64>) -> usize {
+    let caller_id = caller_id.trim();
+    if caller_id.is_empty() {
         return 0;
     }
     let sessions: Vec<Arc<CommandSession>> = command_session_registry()
         .live()
         .into_iter()
-        .filter(|session| session.agent_id == agent_id)
+        .filter(|session| session.caller_id == caller_id)
         .collect();
     if sessions.is_empty() {
         return 0;
     }
     for session in &sessions {
         *lock_command_session_state(&session.cancelled) = true;
-        terminate_command_process_group(session.pgid);
+        session.process.terminate();
     }
 
     let cancel_wait_s = command_session_config().cancel_wait_ms as f64 / 1000.0;
@@ -312,7 +325,7 @@ pub fn cleanup_command_sessions_for_agent(agent_id: &str, grace_s: Option<f64>) 
 }
 
 #[cfg(not(target_os = "linux"))]
-pub const fn cleanup_command_sessions_for_agent(_agent_id: &str, _grace_s: Option<f64>) -> usize {
+pub const fn cleanup_command_sessions_for_caller(_caller_id: &str, _grace_s: Option<f64>) -> usize {
     0
 }
 
@@ -331,7 +344,7 @@ pub fn command_session_reaper_sweep() {
             session.started_at + Duration::from_secs(command_session_config().max_session_s)
         });
         if now > deadline {
-            terminate_command_process_group(session.pgid);
+            session.process.terminate();
         }
         let _ = session.try_finalize(true);
     }
@@ -362,8 +375,8 @@ pub fn recover_orphaned_command_sessions() {
                     .and_then(Value::as_str)
                     .unwrap_or_default();
                 if !id.is_empty() {
-                    let agent_id = meta
-                        .get("agent_id")
+                    let caller_id = meta
+                        .get("caller_id")
                         .and_then(Value::as_str)
                         .unwrap_or_default();
                     let command = meta
@@ -379,7 +392,7 @@ pub fn recover_orphaned_command_sessions() {
                     );
                     command_session_registry().push_completed(json!({
                         "command_session_id": id,
-                        "agent_id": agent_id,
+                        "caller_id": caller_id,
                         "command": command,
                         "result": result.clone(),
                         "notification_result": result,

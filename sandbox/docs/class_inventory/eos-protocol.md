@@ -111,7 +111,7 @@ Audit lane; storage order is `_LANES`, eviction tries `sample` first and `critic
 | `operation_id` | `Option<String>` | `pub` |
 | `workspace_mode` | `String` | `pub` |
 | `workspace_handle_id` | `Option<String>` | `pub` |
-| `agent_id` | `Option<String>` | `pub` |
+| `caller_id` | `Option<String>` | `pub` |
 | `holder_pid` | `Option<i64>` | `pub` |
 | `holder_pid_alive` | `Option<bool>` | `pub` |
 | `cgroup_id` | `Option<String>` | `pub` |
@@ -177,21 +177,21 @@ Audit lane; storage order is `_LANES`, eviction tries `sample` first and `critic
 | `error_kind` | `Option<String>` | `pub` |
 | `message_hash` | `Option<String>` | `pub` |
 | `workspace_handle_id` | `Option<String>` | `pub` |
-| `agent_id` | `Option<String>` | `pub` |
+| `caller_id` | `Option<String>` | `pub` |
 | `peak_resident_bytes` | `Option<i64>` | `pub` |
 
 #### `BackgroundToolSection`  ·  _struct_  ·  derives: `Debug, Clone, PartialEq, Serialize, Deserialize`  ·  [L283]
 
-`background_tool` audit section; `background_task_id` required.
+`background_tool` audit section; `background_work_id` required.
 
 **Fields**
 
 | name | type | vis |
 |------|------|-----|
-| `background_task_id` | `String` | `pub` |
-| `task_kind` | `Option<String>` | `pub` |
+| `background_work_id` | `String` | `pub` |
+| `work_kind` | `Option<String>` | `pub` |
 | `tool_name` | `Option<String>` | `pub` |
-| `agent_id` | `Option<String>` | `pub` |
+| `caller_id` | `Option<String>` | `pub` |
 | `uptime_ms` | `Option<f64>` | `pub` |
 | `status` | `Option<String>` | `pub` |
 | `exit_code` | `Option<i64>` | `pub` |
@@ -210,7 +210,7 @@ Audit lane; storage order is `_LANES`, eviction tries `sample` first and `critic
 |------|------|-----|
 | `tool_use_id` | `String` | `pub` |
 | `tool_name` | `String` | `pub` |
-| `agent_id` | `Option<String>` | `pub` |
+| `caller_id` | `Option<String>` | `pub` |
 | `workspace_mode` | `Option<String>` | `pub` |
 | `workspace_handle_id` | `Option<String>` | `pub` |
 | `phase` | `Option<String>` | `pub` |

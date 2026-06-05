@@ -12,7 +12,7 @@ use crate::{
 
 pub struct CommandSession {
     id: String,
-    agent_id: String,
+    caller_id: String,
     command: String,
     workspace_mode: WorkspaceMode,
     output: Arc<CommandSessionOutput>,
@@ -25,31 +25,35 @@ pub struct CommandSession {
     timeout: Option<Duration>,
 }
 
+pub(crate) struct CommandSessionSpec {
+    pub id: String,
+    pub caller_id: String,
+    pub command: String,
+    pub workspace_mode: WorkspaceMode,
+    pub timeout_seconds: Option<f64>,
+    pub finalize_context: Value,
+}
+
 impl CommandSession {
     #[must_use]
-    pub fn new(
-        id: String,
-        agent_id: String,
-        command: String,
-        workspace_mode: WorkspaceMode,
-        timeout_seconds: Option<f64>,
+    pub(crate) fn new(
+        spec: CommandSessionSpec,
         policy: DynCommandWorkspacePolicy,
-        finalize_context: Value,
         config: &CommandSessionConfig,
     ) -> Self {
         Self {
-            id,
-            agent_id,
-            command,
-            workspace_mode,
+            id: spec.id,
+            caller_id: spec.caller_id,
+            command: spec.command,
+            workspace_mode: spec.workspace_mode,
             output: Arc::new(CommandSessionOutput::new(config)),
             model_cursor: Mutex::new(CommandSessionOutputCursor::default()),
             notification_cursor: Mutex::new(CommandSessionOutputCursor::default()),
             policy: Mutex::new(Some(policy)),
-            finalize_context,
+            finalize_context: spec.finalize_context,
             finalized: Mutex::new(None),
             started_at: Instant::now(),
-            timeout: timeout_seconds.and_then(duration_from_secs_f64),
+            timeout: spec.timeout_seconds.and_then(duration_from_secs_f64),
         }
     }
 
@@ -59,8 +63,8 @@ impl CommandSession {
     }
 
     #[must_use]
-    pub fn agent_id(&self) -> &str {
-        &self.agent_id
+    pub fn caller_id(&self) -> &str {
+        &self.caller_id
     }
 
     #[must_use]
@@ -186,18 +190,20 @@ mod tests {
     fn session_exposes_identity_and_expiry() {
         let config = CommandSessionConfig::default();
         let session = CommandSession::new(
-            "cmd_1".to_owned(),
-            "agent".to_owned(),
-            "echo ok".to_owned(),
-            WorkspaceMode::default(),
-            Some(0.001),
+            CommandSessionSpec {
+                id: "cmd_1".to_owned(),
+                caller_id: "caller".to_owned(),
+                command: "echo ok".to_owned(),
+                workspace_mode: WorkspaceMode::default(),
+                timeout_seconds: Some(0.001),
+                finalize_context: Value::Null,
+            },
             Box::new(NoopPolicy),
-            Value::Null,
             &config,
         );
 
         assert_eq!(session.id(), "cmd_1");
-        assert_eq!(session.agent_id(), "agent");
+        assert_eq!(session.caller_id(), "caller");
         assert_eq!(session.command(), "echo ok");
         assert_eq!(session.workspace_mode(), WorkspaceMode::default());
         assert!(session.is_expired(session.started_at() + Duration::from_millis(2)));

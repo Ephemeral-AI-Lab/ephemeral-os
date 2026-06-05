@@ -30,6 +30,18 @@ pub enum TaskOutcomeStatus {
     Failed,
 }
 
+impl TaskOutcomeStatus {
+    /// The canonical `snake_case` token (matches the `serde` wire form), so
+    /// prompt-facing rendering shares one source of truth with serialization.
+    #[must_use]
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Success => "success",
+            Self::Failed => "failed",
+        }
+    }
+}
+
 /// The execution role an outcome belongs to (Python `ExecutionRole`). Only
 /// `generator`/`reducer` execution evidence ever appears in outcomes.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, JsonSchema)]
@@ -39,6 +51,17 @@ pub enum ExecutionRole {
     Generator,
     /// A reducer task (the attempt's exit gate).
     Reducer,
+}
+
+impl ExecutionRole {
+    /// The canonical `snake_case` token (matches the `serde` wire form).
+    #[must_use]
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Generator => "generator",
+            Self::Reducer => "reducer",
+        }
+    }
 }
 
 /// One generator/reducer task's terminal execution evidence

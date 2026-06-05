@@ -9,7 +9,7 @@ use std::path::{Path, PathBuf};
 use std::time::Instant;
 
 use eos_ephemeral_workspace::{
-    finalize_publishable_workspace, AgentId, EphemeralRunDirs, EphemeralSnapshot,
+    finalize_publishable_workspace, CallerId, EphemeralRunDirs, EphemeralSnapshot,
     EphemeralWorkspace, FinalizeRequest, InvocationId, WorkspaceRoot as EphemeralWorkspaceRoot,
 };
 use eos_layerstack::{require_workspace_binding, LayerStack, Lease, WorkspaceBinding};
@@ -33,7 +33,7 @@ use super::state::PluginOperationRoute;
 pub(crate) struct PluginOverlayCommand {
     pub(crate) layer_stack_root: PathBuf,
     pub(crate) invocation_id: String,
-    pub(crate) agent_id: String,
+    pub(crate) caller_id: String,
     pub(crate) public_op: String,
     pub(crate) plugin_id: String,
     pub(crate) op_name: String,
@@ -59,8 +59,8 @@ pub(super) fn dispatch_oneshot_overlay_route(
     if route.service_command.is_empty() {
         return Ok(None);
     }
-    let agent_id = args
-        .get("agent_id")
+    let caller_id = args
+        .get("caller_id")
         .and_then(Value::as_str)
         .unwrap_or("default")
         .to_owned();
@@ -96,7 +96,7 @@ pub(super) fn dispatch_oneshot_overlay_route(
     let overlay_command = PluginOverlayCommand {
         layer_stack_root: PathBuf::from(layer_stack_root),
         invocation_id: invocation_id.to_owned(),
-        agent_id,
+        caller_id,
         public_op: route.public_op.clone(),
         plugin_id: route.plugin_id.clone(),
         op_name: route.op_name.clone(),
@@ -136,7 +136,7 @@ pub(crate) fn run_plugin_overlay_command(
     let acquire_start = Instant::now();
     let lease = stack.acquire_snapshot(&format!(
         "plugin-overlay:{}:{}",
-        spec.agent_id, spec.invocation_id
+        spec.caller_id, spec.invocation_id
     ))?;
     let lease_acquire_s = acquire_start.elapsed().as_secs_f64();
     let run_result = run_plugin_overlay_once(spec, args, &binding, &lease);
@@ -172,7 +172,7 @@ fn run_plugin_overlay_once(
             workspace: EphemeralWorkspace {
                 layer_stack_root: EphemeralWorkspaceRoot(spec.layer_stack_root.clone()),
                 workspace_root: PathBuf::from(&binding.workspace_root),
-                agent_id: AgentId(spec.agent_id.clone()),
+                caller_id: CallerId(spec.caller_id.clone()),
                 invocation_id: InvocationId(spec.invocation_id.clone()),
                 snapshot: EphemeralSnapshot {
                     lease_id: lease.lease_id.clone(),
@@ -360,7 +360,7 @@ fn plugin_overlay_run_request(
         mode: RunMode::FreshNs,
         tool_call: ToolCall {
             invocation_id: spec.invocation_id.clone(),
-            agent_id: spec.agent_id.clone(),
+            caller_id: spec.caller_id.clone(),
             verb: "plugin_service".into(),
             intent: Intent::WriteAllowed,
             args: json!({

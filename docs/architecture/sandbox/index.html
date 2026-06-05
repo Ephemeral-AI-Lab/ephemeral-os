@@ -70,7 +70,7 @@
   <div><b>registers</b><span><code>eos-daemon/src/dispatcher.rs</code> registers built-in workspace ops, command-session ops, isolated lifecycle ops, daemon control ops, and plugin runtime ops.</span></div>
   <div><b>calls</b><span>Daemon workspace routing chooses isolated handles first, then direct file fast paths, then overlay-backed execution. Durable mutations still publish through OCC.</span></div>
   <div><b>owns-state</b><span><code>eos-layerstack</code> owns active manifests, immutable layer directories, leases, merged reads, publish transactions, squash, and flush.</span></div>
-  <div><b>owns-state</b><span><code>eos-isolated</code> and daemon isolated handlers own per-agent private handle maps, namespace holders, veth resources, TTL, persisted handle state, and audit events.</span></div>
+  <div><b>owns-state</b><span><code>eos-isolated</code> and daemon isolated handlers own per-caller private handle maps, namespace holders, veth resources, TTL, persisted handle state, and audit events.</span></div>
   <div><b>tested-by</b><span>Live and mock suites cover workspace base, LayerStack/OCC/overlay, background tools, plugins, and isolated workspace behavior under <span class="file-ref">backend/tests/live_e2e_test/sandbox</span> and <span class="file-ref">backend/src/test_runner/tests/mock/sandbox</span>.</span></div>
 </div>
 </section>

@@ -157,7 +157,7 @@ async fn cancel_waits_for_bounded_cleanup() -> TestResult {
     registry.register(
         "cancel-target",
         task.abort_handle(),
-        "agent-a",
+        "caller-a",
         "api.v1.exec_command",
         true,
     );
@@ -238,7 +238,7 @@ fn command_collect_completed_is_background_only_not_overlay_lifecycle() {
     let request = Request {
         op: "api.v1.command.collect_completed".to_owned(),
         invocation_id: "collect-completed".to_owned(),
-        args: json!({"command_session_id": "cmd-1", "agent_id": "agent-1"}),
+        args: json!({"command_session_id": "cmd-1", "caller_id": "caller-1"}),
     };
 
     assert_eq!(

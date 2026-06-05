@@ -65,14 +65,14 @@ impl ToolExecutor for WriteStdin {
                 "command_session_id must be non-empty",
             ));
         }
-        let command_session_id = parsed.command_session_id.into_inner();
+        let command_session_id = &parsed.command_session_id;
         let sandbox_id = ctx.require_sandbox_id()?;
         // Ctrl-C decoupling (sense-2 D7): `\x03` rides through as ordinary stdin
         // and the daemon raises SIGINT; teardown is the explicit `terminate`
         // flag, so the tool no longer escalates to a cancel RPC.
         let write_request = ExecStdinRequest {
             base: request_base(ctx, "write_stdin"),
-            command_session_id: command_session_id.clone(),
+            command_session_id: command_session_id.as_str().to_owned(),
             chars: parsed.chars.clone(),
             yield_time_ms: Some(parsed.yield_time_ms),
             max_output_tokens: parsed.max_output_tokens,
@@ -89,7 +89,7 @@ impl ToolExecutor for WriteStdin {
         if let Some(port) = &ctx.command_session_supervisor {
             if is_command_session_not_found(&result) {
                 if port
-                    .command_session_already_reported(&command_session_id)
+                    .command_session_already_reported(command_session_id)
                     .await
                 {
                     return Ok(ToolResult::ok(format!(
@@ -97,14 +97,14 @@ impl ToolExecutor for WriteStdin {
                          its result was already reported."
                     )));
                 }
-                if let Some(stored) = port.command_session_result(&command_session_id).await {
-                    port.mark_command_session_reported(&command_session_id, stored.clone())
+                if let Some(stored) = port.command_session_result(command_session_id).await {
+                    port.mark_command_session_reported(command_session_id, stored.clone())
                         .await;
                     return Ok(command_tool_result_from_value(&stored));
                 }
             } else if !result.is_running() {
                 port.mark_command_session_reported(
-                    &command_session_id,
+                    command_session_id,
                     command_result_value(&result),
                 )
                 .await;

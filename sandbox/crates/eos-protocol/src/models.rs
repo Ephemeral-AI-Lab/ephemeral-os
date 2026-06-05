@@ -58,7 +58,7 @@ impl ConflictInfo {
 // Verb request-args models (the WIRE `args` shape, NOT the Python dataclass).
 //
 // These carry only the verb-specific keys the daemon primitive reads out of
-// `args`; the identity envelope (`agent_id`/`caller`/`invocation_id`) and the
+// `args`; the identity envelope (`caller_id`/`caller`/`invocation_id`) and the
 // standard members (`layer_stack_root`, protocol version) are injected at the
 // envelope layer (see `docs/contract/04-shared-models.md` §0/§1, the
 // three-layer trap). Optional keys use `skip_serializing_if` so the wire form

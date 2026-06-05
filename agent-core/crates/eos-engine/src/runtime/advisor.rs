@@ -174,7 +174,7 @@ fn advisor_metadata(ctx: &ExecutionMetadata, agent_run_id: &AgentRunId) -> Execu
     meta.isolated_workspace = None;
     meta.notifications = None;
     meta.conversation = Arc::from(Vec::new());
-    meta.caller.agent_id = "advisor".to_owned();
+    meta.caller.caller_id = agent_run_id.as_str().to_owned();
     meta.caller.run_id = agent_run_id.as_str().to_owned();
     meta.caller.agent_run_id = agent_run_id.as_str().to_owned();
     meta

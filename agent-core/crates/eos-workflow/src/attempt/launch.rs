@@ -215,27 +215,27 @@ impl AgentLaunch {
 #[derive(Clone)]
 pub struct AttemptDeps {
     /// Workflow store.
-    pub workflow_store: Arc<dyn WorkflowStore>,
+    pub(crate) workflow_store: Arc<dyn WorkflowStore>,
     /// Iteration store.
-    pub iteration_store: Arc<dyn IterationStore>,
+    pub(crate) iteration_store: Arc<dyn IterationStore>,
     /// Attempt store.
-    pub attempt_store: Arc<dyn AttemptStore>,
+    pub(crate) attempt_store: Arc<dyn AttemptStore>,
     /// Task store.
-    pub task_store: Arc<dyn TaskStore>,
+    pub(crate) task_store: Arc<dyn TaskStore>,
     /// Agent registry.
-    pub agent_registry: Arc<AgentRegistry>,
+    pub(crate) agent_registry: Arc<AgentRegistry>,
     /// Active orchestrator registry.
-    pub orchestrator_registry: Arc<AttemptOrchestratorRegistry>,
+    pub(crate) orchestrator_registry: Arc<AttemptOrchestratorRegistry>,
     /// Open iteration coordinator registry.
-    pub iteration_coordinators: Option<Arc<OpenIterationCoordinatorRegistry>>,
+    pub(crate) iteration_coordinators: Option<Arc<OpenIterationCoordinatorRegistry>>,
     /// Lifecycle knobs.
-    pub lifecycle_config: WorkflowLifecycleConfig,
+    pub(crate) lifecycle_config: WorkflowLifecycleConfig,
     /// Optional composer.
-    pub composer: Option<Arc<AgentEntryComposer>>,
+    pub(crate) composer: Option<Arc<AgentEntryComposer>>,
     /// Agent runner seam.
-    pub runner: Arc<dyn AgentRunner>,
+    pub(crate) runner: Arc<dyn AgentRunner>,
     /// Per-attempt run cap.
-    pub max_concurrent_task_runs: usize,
+    pub(crate) max_concurrent_task_runs: usize,
 }
 
 impl std::fmt::Debug for AttemptDeps {
@@ -275,6 +275,47 @@ impl AttemptDeps {
             composer: None,
             max_concurrent_task_runs: 8,
         }
+    }
+
+    /// Use a caller-owned orchestrator registry.
+    #[must_use]
+    pub fn with_orchestrator_registry(
+        mut self,
+        registry: Arc<AttemptOrchestratorRegistry>,
+    ) -> Self {
+        self.orchestrator_registry = registry;
+        self
+    }
+
+    /// Use a caller-owned open-iteration coordinator registry.
+    #[must_use]
+    pub fn with_iteration_coordinators(
+        mut self,
+        registry: Arc<OpenIterationCoordinatorRegistry>,
+    ) -> Self {
+        self.iteration_coordinators = Some(registry);
+        self
+    }
+
+    /// Use caller-supplied lifecycle knobs.
+    #[must_use]
+    pub fn with_lifecycle_config(mut self, config: WorkflowLifecycleConfig) -> Self {
+        self.lifecycle_config = config;
+        self
+    }
+
+    /// Use a caller-supplied entry composer.
+    #[must_use]
+    pub fn with_composer(mut self, composer: Arc<AgentEntryComposer>) -> Self {
+        self.composer = Some(composer);
+        self
+    }
+
+    /// Use a caller-supplied per-attempt task-run concurrency cap.
+    #[must_use]
+    pub fn with_max_concurrent_task_runs(mut self, max: usize) -> Self {
+        self.max_concurrent_task_runs = max;
+        self
     }
 
     pub(crate) async fn request_id_for_attempt(&self, attempt: &Attempt) -> Result<RequestId> {

@@ -94,7 +94,7 @@ One tool invocation, the runner's view of `ToolCallRequest`; `args` is the opaqu
 | name | type | vis |
 |------|------|-----|
 | `invocation_id` | `String` | `pub` |
-| `agent_id` | `String` | `pub` |
+| `caller_id` | `String` | `pub` |
 | `verb` | `String` | `pub` |
 | `intent` | `Intent` | `pub` |
 | `args` | `Value` | `pub` |

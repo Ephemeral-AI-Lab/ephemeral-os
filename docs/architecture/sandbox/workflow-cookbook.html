@@ -204,7 +204,7 @@
 [create isolated namespace / pipeline]
         |
         v
-[foreground tools route by active agent_id handle]
+[foreground tools route by active caller_id handle]
         |
         v
 [exit_isolated_workspace]
@@ -223,7 +223,7 @@
     <li><span>The first daemon enter lazily constructs the resident <code>IsolatedPipeline</code>: it binds the LayerStack client from the requested root, uses the overlay writable root for scratch, installs the JSONL audit sink, publishes the singleton, then runs pipeline initialization.</span></li>
     <li><span>Pipeline enter prepares one LayerStack snapshot lease, allocates scratch <code>upper</code>/<code>work</code>, builds the handle, wires the namespace holder, namespace fds, veth, overlay mount, DNS, and cgroup, then persists the handle map and emits an enter audit event.</span></li>
     <li><span>The overlay mount reuses the shared kernel mount path: <code>namespace_runtime.mount_overlay()</code> passes user and mount namespace fds to the setns helper, and the helper enters those namespaces before calling <code>sandbox.overlay.kernel_mount.validate_mount_inputs()</code> and <code>mount_overlay()</code>.</span></li>
-    <li><span>Subsequent foreground tool calls reuse the open handle. Python <code>run_tool_call()</code> wraps the handle as an <code>OverlayHandle</code>; Rust <code>workspace_ops</code> and <code>command.rs</code> route by the active <code>agent_id</code> handle, mark <code>workspace=isolated</code>, and record changed paths for audit only.</span></li>
+    <li><span>Subsequent foreground tool calls reuse the open handle. Python <code>run_tool_call()</code> wraps the handle as an <code>OverlayHandle</code>; Rust <code>workspace_ops</code> and <code>command.rs</code> route by the active <code>caller_id</code> handle, mark <code>workspace=isolated</code>, and record changed paths for audit only.</span></li>
     <li><span>No isolated write publishes through OCC. Rust model-facing exit first requires zero background sessions, then daemon exit removes the handle, measures discarded upperdir bytes, kills the holder, tears down veth, closes fds, releases the lease, removes cgroup/scratch, and emits an exit audit event.</span></li>
   </ol>
 </div>

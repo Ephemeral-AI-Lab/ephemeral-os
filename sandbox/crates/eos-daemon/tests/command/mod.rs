@@ -86,33 +86,29 @@ fn command_session_completion_result_can_be_claimed_by_control_tool() -> TestRes
 }
 
 /// A minimal live `CommandSession` for registry/count tests. The workspace is
-/// an empty isolated stub (never finalized here), so only `id`/`agent_id`
+/// an empty isolated stub (never finalized here), so only `id`/`caller_id`
 /// matter. One constructor keeps the 16-field literal in a single place.
 #[cfg(target_os = "linux")]
-fn test_command_session(id: &str, agent_id: &str) -> TestResult<CommandSession> {
-    let writer = Mutex::new(
-        OpenOptions::new()
-            .read(true)
-            .write(true)
-            .open("/dev/null")?,
-    );
+fn test_command_session(id: &str, caller_id: &str) -> TestResult<CommandSession> {
     Ok(CommandSession {
         id: id.to_owned(),
-        agent_id: agent_id.to_owned(),
+        caller_id: caller_id.to_owned(),
         command: "test".to_owned(),
         started_at: Instant::now(),
-        pgid: 0,
-        writer,
-        output: Arc::new(CommandSessionOutput::new()),
-        reader_done: Mutex::new(None),
+        process: CommandSessionProcess::inactive(
+            OpenOptions::new()
+                .read(true)
+                .write(true)
+                .open("/dev/null")?,
+        ),
+        output: Arc::new(CommandSessionOutput::new(&runtime_command_session_config())),
         cancelled: Mutex::new(false),
         interrupted: Mutex::new(false),
         model_cursor: Mutex::new(CommandSessionOutputCursor::default()),
         notification_cursor: Mutex::new(CommandSessionOutputCursor::default()),
-        child: Mutex::new(None),
         workspace: CommandWorkspaceKind::Isolated(IsolatedCommandWorkspace {
             handle: crate::services::isolated_workspace::CommandHandle {
-                agent_id: String::new(),
+                caller_id: String::new(),
                 workspace_handle_id: String::new(),
                 layer_stack_root: PathBuf::new(),
                 manifest_version: 0,
@@ -135,14 +131,14 @@ fn test_command_session(id: &str, agent_id: &str) -> TestResult<CommandSession> 
 
 #[test]
 #[cfg(target_os = "linux")]
-fn command_session_count_counts_live_sessions_by_agent() -> TestResult {
+fn command_session_count_counts_live_sessions_by_caller() -> TestResult {
     let registry = CommandSessionRegistry::new();
-    registry.insert(Arc::new(test_command_session("cmd_a", "agent-a")?));
-    registry.insert(Arc::new(test_command_session("cmd_b", "agent-b")?));
+    registry.insert(Arc::new(test_command_session("cmd_a", "caller-a")?));
+    registry.insert(Arc::new(test_command_session("cmd_b", "caller-b")?));
 
-    assert_eq!(registry.count_by_agent("agent-a"), 1);
-    assert_eq!(registry.count_by_agent("agent-b"), 1);
-    assert_eq!(registry.count_by_agent(""), 2);
+    assert_eq!(registry.count_by_caller("caller-a"), 1);
+    assert_eq!(registry.count_by_caller("caller-b"), 1);
+    assert_eq!(registry.count_by_caller(""), 2);
     Ok(())
 }
 

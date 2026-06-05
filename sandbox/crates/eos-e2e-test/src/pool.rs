@@ -141,13 +141,13 @@ impl NodePool {
     }
 }
 
-/// A checked-out node: one daemon, one fresh `layer_stack_root`, one agent id.
+/// A checked-out node: one daemon, one fresh `layer_stack_root`, one caller id.
 pub struct NodeLease<'p> {
     pool: &'p NodePool,
     node: Option<Node>,
     stack_root: String,
     workspace_root: String,
-    agent_id: String,
+    caller_id: String,
 }
 
 impl<'p> NodeLease<'p> {
@@ -157,7 +157,7 @@ impl<'p> NodeLease<'p> {
         let base = format!("{}/{id}", pool.config.root_dir.to_string_lossy());
         let stack_root = format!("{base}/stack");
         let workspace_root = pool.config.workspace_root.clone();
-        let agent_id = format!("agent-{id}");
+        let caller_id = format!("caller-{id}");
 
         if let Err(err) = node
             .container
@@ -180,7 +180,7 @@ impl<'p> NodeLease<'p> {
             &json!({
                 "layer_stack_root": stack_root,
                 "workspace_root": workspace_root,
-                "agent_id": agent_id,
+                "caller_id": caller_id,
             }),
         );
         match ensure {
@@ -189,7 +189,7 @@ impl<'p> NodeLease<'p> {
                 node: Some(node),
                 stack_root,
                 workspace_root,
-                agent_id,
+                caller_id,
             }),
             Ok(resp) => Err(Box::new((
                 node,
@@ -227,13 +227,13 @@ impl<'p> NodeLease<'p> {
         &self.workspace_root
     }
 
-    /// This lease's unique agent id (auto-injected into [`Self::call`]).
+    /// This lease's unique caller id (auto-injected into [`Self::call`]).
     #[must_use]
-    pub fn agent_id(&self) -> &str {
-        &self.agent_id
+    pub fn caller_id(&self) -> &str {
+        &self.caller_id
     }
 
-    /// Invoke `op` with `args`, auto-injecting `layer_stack_root` and `agent_id`
+    /// Invoke `op` with `args`, auto-injecting `layer_stack_root` and `caller_id`
     /// (unless the caller already set them) plus a fresh invocation id.
     ///
     /// Returns the decoded response (success payload OR daemon error envelope).
@@ -250,8 +250,8 @@ impl<'p> NodeLease<'p> {
         };
         obj.entry("layer_stack_root".to_owned())
             .or_insert_with(|| json!(self.stack_root));
-        obj.entry("agent_id".to_owned())
-            .or_insert_with(|| json!(self.agent_id));
+        obj.entry("caller_id".to_owned())
+            .or_insert_with(|| json!(self.caller_id));
         let iid = next_invocation_id();
         self.client().request(op, &iid, &Value::Object(obj))
     }
