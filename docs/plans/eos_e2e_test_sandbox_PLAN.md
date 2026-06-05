@@ -38,7 +38,7 @@ In scope
 Out of scope
 - Anything that needs an agent loop / LLM provider / engine / workflow (those tests stay
   in `backend/tests` or move to agent-core test surfaces, not here).
-- Daytona or any non-Docker provider (Rust sandbox config is Docker-only).
+- Any non-Docker provider (Rust sandbox config is Docker-only).
 - Plugin/PPC/LSP correctness as a *primary* target (the dispatcher exposes
   `api.plugin.ensure/status`; treat plugin coverage as a later, optional tier).
 

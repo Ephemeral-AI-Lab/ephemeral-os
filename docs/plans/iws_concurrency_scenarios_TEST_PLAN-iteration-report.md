@@ -38,7 +38,7 @@
 - Pass/fail/skip status: in progress.
 - Findings summary: The skip was caused by using the live-e2e fixture without explicitly bridging the Dask SWE-EVO default image into `EOS_LIVE_E2E_IMAGE`. The task-center-runner fixture defaults `EOS_SWEEVO_INSTANCE` to Dask, but the provider-backed live-e2e fixture does not read that default when `EOS_SANDBOX_PROVIDER=docker`.
 - Issues found: Harness image-resolution mismatch between task-center-runner SWE-EVO tests and provider-backed live-e2e tests.
-- Why it failed: The live-e2e `_resolve_live_image()` requires `EOS_LIVE_E2E_IMAGE` for Docker; it only falls back to central `daytona.default_image` for Daytona. The local Dask image exists as `xingyaoww/sweb.eval.x86_64.dask_s_dask-10042`.
+- Why it failed: The live-e2e `_resolve_live_image()` requires `EOS_LIVE_E2E_IMAGE` for Docker. The local Dask image exists as `xingyaoww/sweb.eval.x86_64.dask_s_dask-10042`.
 - Fix applied: none in code; rerun will pass the image explicitly in the environment.
 - Verification result after the fix: pending.
 - Remaining risk or next iteration target: Run the 8 previously skipped tests and inspect their artifacts/metrics.

@@ -95,6 +95,6 @@ mod tests {
             serde_yaml::from_str::<SandboxProvider>("docker").unwrap(),
             SandboxProvider::Docker
         );
-        assert!(serde_yaml::from_str::<SandboxProvider>("daytona").is_err());
+        assert!(serde_yaml::from_str::<SandboxProvider>("podman").is_err());
     }
 }

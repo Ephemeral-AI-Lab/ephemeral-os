@@ -182,7 +182,7 @@
   <ul>
     <li>The benchmark CLI lives at <code>python -m test_runner.benchmarks.sweevo</code>. Older docs may reference a top-level <code>benchmark_sweevo</code> module — that has been relocated under <code>test_runner.benchmarks.sweevo</code> per commit <code>f915434df</code>.</li>
     <li>The legacy <code>provisioner.py</code> (verify-only) and <code>agent_runner.py</code> (triple-factory) were folded into <code>benchmarks/sweevo/run.py</code> during the migration; <code>SweevoProvisioner</code> and <code>build_agent_delegate</code> are the current names.</li>
-    <li>Daytona-specific lifecycle vocabulary (<code>state</code>) does not apply to the SWE-EVO sandbox model. The benchmark is docker-first; sandbox <em>status</em> uses Docker's <code>status</code> key, never Daytona's <code>state</code>.</li>
+    <li>The benchmark is docker-first; sandbox <em>status</em> uses Docker's <code>status</code> key.</li>
     <li><code>RunReport</code> carries mock-only fields (<code>launches</code>, <code>tool_calls</code>, <code>prompt_inspections</code>, <code>sandbox_checks</code>). Those are not on <code>PipelineReport</code>; they travel through <code>MOCK_*</code> audit events and are rebuilt by <code>ScenarioLifecycle</code>.</li>
   </ul>
 </div>

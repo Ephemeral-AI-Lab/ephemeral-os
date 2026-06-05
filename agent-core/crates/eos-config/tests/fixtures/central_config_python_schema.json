@@ -73,58 +73,6 @@
       "title": "DatabaseConfig",
       "type": "object"
     },
-    "DaytonaConfig": {
-      "additionalProperties": false,
-      "description": "Daytona-provider settings and env-sourced credentials.",
-      "properties": {
-        "api_key": {
-          "default": "",
-          "title": "Api Key",
-          "type": "string"
-        },
-        "api_url": {
-          "default": "",
-          "title": "Api Url",
-          "type": "string"
-        },
-        "target": {
-          "default": "",
-          "title": "Target",
-          "type": "string"
-        },
-        "tcp_host": {
-          "default": "",
-          "title": "Tcp Host",
-          "type": "string"
-        },
-        "tcp_port": {
-          "anyOf": [
-            {
-              "maximum": 65535,
-              "minimum": 1,
-              "type": "integer"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Tcp Port"
-        },
-        "default_image": {
-          "default": "",
-          "title": "Default Image",
-          "type": "string"
-        },
-        "default_snapshot": {
-          "default": "",
-          "title": "Default Snapshot",
-          "type": "string"
-        }
-      },
-      "title": "DaytonaConfig",
-      "type": "object"
-    },
     "DockerConfig": {
       "additionalProperties": false,
       "description": "Docker-provider settings.",
@@ -314,8 +262,7 @@
         "default_provider": {
           "default": "docker",
           "enum": [
-            "docker",
-            "daytona"
+            "docker"
           ],
           "title": "Default Provider",
           "type": "string"
@@ -334,9 +281,6 @@
         },
         "docker": {
           "$ref": "#/$defs/DockerConfig"
-        },
-        "daytona": {
-          "$ref": "#/$defs/DaytonaConfig"
         }
       },
       "title": "SandboxConfig",

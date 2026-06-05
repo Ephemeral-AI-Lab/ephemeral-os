@@ -93,7 +93,7 @@ cross-module map now lives under `docs/architecture`.
   `agent-core/crates/eos-sandbox-host`; the daemon and wire protocol live in
   `sandbox/crates/eos-daemon`, `sandbox/crates/eosd`, and
   `sandbox/crates/eos-protocol`. Rust sandbox config is Docker-only today; do
-  not reintroduce Daytona or non-Docker provider branches.
+  not reintroduce non-Docker provider branches.
 - Workspace routing in Rust lives in `sandbox/crates/eos-daemon/src/dispatcher.rs`
   and the daemon command/plugin/isolated modules. Shared workspace `read_file`,
   `write_file`, and `edit_file` use daemon-owned LayerStack/OCC fast paths when

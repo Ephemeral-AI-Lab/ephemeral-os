@@ -112,7 +112,7 @@ uv run pytest backend/src/task_center_runner/tests/mock -n "${EOS_SWEEVO_XDIST_N
    could trip the 360s setup timeout. Default `n` to a host-appropriate value; consider snapshot pre-bake.
 4. **Image pull race on cold cache** — pre-pull the sweevo image once before the parallel run.
 5. **Tiny subsets amortize poorly** — every worker pays full provision; for a few tests use small `n`.
-6. Docker Desktop CPU/RAM cap bounds real parallelism; raise it or lower `n`. Daytona provider out of scope.
+6. Docker Desktop CPU/RAM cap bounds real parallelism; raise it or lower `n`. Non-Docker providers out of scope.
 
 **Verification:** the `-n 2` two-container smoke; then run the 11 already-green §A scenarios under
 `-n 5` and confirm same pass + wall-clock drop.

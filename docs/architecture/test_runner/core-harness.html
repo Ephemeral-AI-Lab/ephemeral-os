@@ -64,7 +64,7 @@
 <h2>Scope <a class="anchor" href="#scope">#</a></h2>
 <div class="summary">
   <ul>
-    <li><code>core/engine.py::run_pipeline</code> is the single entrypoint. It knows nothing about concrete mock-runner state, Daytona, or sweevo symbols; <code>tests/unit_test/test_test_runner/test_no_core_imports.py</code> pins that.</li>
+    <li><code>core/engine.py::run_pipeline</code> is the single entrypoint. It knows nothing about concrete mock-runner state or sweevo symbols; <code>tests/unit_test/test_test_runner/test_no_core_imports.py</code> pins that.</li>
     <li><code>core/runner.py::run_scenario</code> is a thin shim that builds the mock-mode <code>RunConfig</code>, calls <code>run_pipeline</code>, and rebuilds the mock-rich <code>RunReport</code>.</li>
     <li><code>core/bootstrap.py</code> seeds production runtime state for the real-LLM path only — markdown agent registry, runtime stores, sandbox provider. Mock runs never call it.</li>
     <li>Everything else in <code>core/</code> is a typed protocol or dataclass — <code>RunConfig</code>, <code>RunContext</code>, <code>PipelineReport</code>, <code>LifecycleHooks</code>, <code>SandboxProvisioner</code>, <code>WorkflowStoreBundle</code>.</li>

@@ -44,8 +44,8 @@ mod schema_parity {
     //!
     //! Scope note (loud, per review): this is a **field-name** cross-check, not a
     //! full type-level Pydantic comparator. The Rust schema intentionally drops
-    //! sections/fields (`runner`/`engine`, `pool_pre_ping`/`max_overflow`,
-    //! `daytona`) and adds Rust-only ones (`attempt`, the sqlite controls); a
+    //! sections/fields (`runner`/`engine`, `pool_pre_ping`/`max_overflow`) and
+    //! adds Rust-only ones (`attempt`, the sqlite controls); a
     //! type-level parity comparator over the surviving subset is deferred to the
     //! Phase-7 cutover parity harness (matching the Phase-0 corpus deferrals).
     #![allow(clippy::unwrap_used)]
@@ -114,7 +114,7 @@ mod schema_parity {
                 &["pool_pre_ping", "max_overflow"],
                 &["busy_timeout_ms", "wal", "foreign_keys"],
             ),
-            ("SandboxConfig", &["daytona"], &[]),
+            ("SandboxConfig", &[], &[]),
             ("DockerConfig", &[], &[]),
             ("ProvidersConfig", &[], &[]),
             ("RetryConfig", &[], &[]),

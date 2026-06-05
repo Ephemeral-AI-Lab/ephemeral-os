@@ -11,7 +11,7 @@ use anyhow::{Context, Result};
 use eos_protocol::ops;
 use serde_json::{json, Value};
 
-use crate::support::{as_str, live_pool_or_skip, stdout};
+use crate::support::{as_str, live_pool_or_skip, reset_isolated_workspaces, stdout};
 
 fn start_server(lease: &eos_e2e_test::NodeLease<'_>, caller_id: Option<&str>, port: u16) -> Result<Value> {
     let cmd = format!(
@@ -43,6 +43,7 @@ fn cross_mode_same_port_no_conflict() -> Result<()> {
         return Ok(());
     };
     let lease = pool.acquire()?;
+    reset_isolated_workspaces(&lease);
     let port = 39011;
     let caller_b = format!("iws-net-b-{}", eos_e2e_test::unique_suffix());
 
@@ -134,6 +135,7 @@ fn isolated_exit_reports_dedicated_netns() -> Result<()> {
         return Ok(());
     };
     let lease = pool.acquire()?;
+    reset_isolated_workspaces(&lease);
     lease.call_ok(ops::API_ISOLATED_WORKSPACE_ENTER, json!({}))?;
     let exit = lease.call_ok(ops::API_ISOLATED_WORKSPACE_EXIT, json!({}))?;
     let inspection = exit.get("inspection").context("exit inspection")?;

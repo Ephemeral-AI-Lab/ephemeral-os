@@ -515,3 +515,10 @@ Consequences that supersede §15/§14.4/§7 prose:
 - Engine's `ScriptedSource`-driven tests (the relocated `hard_ceiling_*`) become
   an **integration target** (`eos-engine/tests/terminal`), the one place engine
   is external and can consume the shared `ScriptedSource`.
+- **AC7 (full-stack = wiring only):** the existing
+  `delegated_workflow_drives_to_succeeded_via_real_runner` asserting
+  `attempts[0].status()==Passed` / `iterations[0].status==Succeeded` is
+  AC7-compliant — §14.1 scopes full-stack to "wiring **+ persisted state**", and
+  attempt/iteration status *is* persisted state. It verifies the integrated
+  end-state, not the gate *mechanism* that the Layer-B `reducer_is_exit_gate`
+  test owns — distinct propositions, so no behavior is asserted at two layers.

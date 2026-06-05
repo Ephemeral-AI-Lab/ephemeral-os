@@ -55,7 +55,7 @@
 <p class="lead">This page follows one sandbox-backed tool call from an agent-facing wrapper through <code>sandbox.api</code>, the host daemon client, provider exec or daemon TCP, the in-sandbox daemon, and the workspace execution path. Current verdict: sandbox providers own containers and primitive exec; sandbox runtime owns workspace semantics, direct file fast paths, overlay publish, isolated scratch, and daemon in-flight control. For LLM model providers under <code>agent-core/crates/eos-llm-client/src</code>, use <a class="wiki-link" href="model-provider.html">Model Provider Runtime</a>.</p>
 <div class="summary">
   <ul>
-    <li>Provider bootstrap picks Docker or Daytona once per process, then the registry supplies the default adapter and per-sandbox bindings.</li>
+    <li>Provider bootstrap picks Docker once per process, then the registry supplies the default adapter and per-sandbox bindings.</li>
     <li><code>raw_exec</code> calls provider <code>exec</code> directly; guarded workspace operations call the resident daemon through <code>call_daemon_api()</code>.</li>
     <li>Daemon transport prefers a Docker TCP endpoint when exposed and falls back to provider exec plus the AF_UNIX thin client.</li>
     <li>Daemon workspace routing tries active isolated workspace first, then direct LayerStack/OCC for single-file verbs, then ephemeral overlay execution.</li>
@@ -85,7 +85,7 @@
 
 <section id="provider-selection" data-last-reviewed-commit="e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa" data-evidence-paths="">
 <h2>Provider Selection <a class="anchor" href="#provider-selection">#</a></h2>
-<p><code>bootstrap_sandbox_provider()</code> resolves <code>EOS_SANDBOX_PROVIDER</code> first, then central <code>sandbox.default_provider</code>. Valid values are <code>docker</code> and <code>daytona</code>. A process-level sentinel makes the first resolved provider sticky; later calls with the same value are no-ops, and later calls with a different value warn and return.</p>
+<p><code>bootstrap_sandbox_provider()</code> resolves <code>EOS_SANDBOX_PROVIDER</code> first, then central <code>sandbox.default_provider</code>. The only valid value is <code>docker</code>. A process-level sentinel makes the first resolved provider sticky; later calls with the same value are no-ops, and later calls with a different value warn and return.</p>
 <p><code>ProviderAdapter</code> is the common protocol: health, snapshots, create/get/list/start/stop/delete/set-labels, preview and build-log URLs, async <code>exec</code>, and <code>context_preparer()</code>. Provider lifecycle orchestration is outside the provider package: <code>sandbox.host.lifecycle.create_sandbox()</code> uses the default adapter, registers the minted sandbox id, then runs post-create setup; start runs post-start setup; delete forgets plugin state and disposes the adapter binding.</p>
 <div class="trace-grid">
   <div>Default provider</div><div><code>set_default_provider()</code> and <code>get_default_provider()</code> handle create/list/health paths before a sandbox id exists.</div>
@@ -95,7 +95,6 @@
 </div>
 <div class="edge-list">
   <div><b>implements</b><span><code>DockerProviderAdapter</code> creates long-running containers, may expose daemon TCP on loopback, and implements exec with <code>container.exec_run()</code>.</span></div>
-  <div><b>implements</b><span><code>DaytonaProviderAdapter</code> creates SDK sandboxes, wraps bash commands, exposes preview/log methods, and implements exec through <code>sandbox.process.exec()</code>.</span></div>
   <div><b>tests</b><span><code>test_provider_parity.py</code> checks adapter exec signature parity; Docker post-lifecycle integration is gated to Linux plus Docker.</span></div>
 </div>
 </section>

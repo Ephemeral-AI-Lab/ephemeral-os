@@ -1,4 +1,7 @@
-use anyhow::{Context, Result};
+use std::thread;
+use std::time::{Duration, Instant};
+
+use anyhow::{bail, Context, Result};
 use eos_e2e_test::unique_suffix;
 use eos_protocol::ops;
 use serde_json::{json, Value};
@@ -163,6 +166,111 @@ fn generic_plugin_refreshes_after_workspace_edit() -> Result<()> {
     Ok(())
 }
 
+#[test]
+fn service_health_probe_reports_connected_service() -> Result<()> {
+    let Some(pool) = live_pool_or_skip()? else {
+        return Ok(());
+    };
+    let lease = pool.acquire()?;
+    let digest = format!("digest-{}", unique_suffix().replace('-', "_"));
+    let setup_digest = format!("setup-{digest}");
+    ensure_generic_service_package(&lease, &digest, &setup_digest)?;
+
+    // probe_services drives a live PPC health round-trip to the worker, which the
+    // generic server already answers; the success path is otherwise untested.
+    let status = lease.call_ok(
+        ops::API_PLUGIN_STATUS,
+        json!({"probe_services": true, "probe_timeout_ms": 5000}),
+    )?;
+    let health = status
+        .get("service_health")
+        .and_then(Value::as_array)
+        .context("status.service_health array")?;
+    assert!(
+        !health.is_empty(),
+        "probe_services must populate service_health: {status}"
+    );
+    assert_eq!(
+        health[0]["success"], json!(true),
+        "the service health probe must succeed: {status}"
+    );
+    assert_eq!(
+        health[0]["accepted"], json!(true),
+        "the worker must accept the health probe: {status}"
+    );
+    Ok(())
+}
+
+#[test]
+fn restart_service_strategy_restarts_on_workspace_edit() -> Result<()> {
+    let Some(pool) = live_pool_or_skip()? else {
+        return Ok(());
+    };
+    let lease = pool.acquire()?;
+    let digest = format!("digest-{}", unique_suffix().replace('-', "_"));
+    let setup_digest = format!("setup-{digest}");
+
+    // A different update policy than the covered remount_workspace_and_notify:
+    // a workspace edit restarts (kills + respawns) the service process.
+    let warm = lease.call_ok(
+        ops::API_PLUGIN_ENSURE,
+        json!({
+            "workspace_root": lease.workspace_root(),
+            "manifest": service_manifest_with_strategy(&digest, &setup_digest, "restart_service"),
+            "start_services": true,
+        }),
+    )?;
+    assert_eq!(warm["needs_upload"], json!(true), "{warm}");
+    let staged = stage_generic_service_package(&lease, &digest)?;
+    let cold = lease.call_ok(
+        ops::API_PLUGIN_ENSURE,
+        json!({
+            "workspace_root": lease.workspace_root(),
+            "manifest": service_manifest_with_strategy(&digest, &setup_digest, "restart_service"),
+            "staged_package_root": staged,
+            "start_services": true,
+        }),
+    )?;
+    assert_eq!(cold["service_processes_started"], json!(true), "{cold}");
+    assert_eq!(restart_count(&lease.call_ok(ops::API_PLUGIN_STATUS, json!({}))?), 0);
+
+    // Advance the workspace manifest, then a dispatch forces the refresh, which
+    // for restart_service is a process restart (used only to trigger; may defer).
+    lease.call_ok(
+        ops::API_V1_WRITE_FILE,
+        json!({"path": "restart/edit.txt", "content": "after-restart\n", "overwrite": true}),
+    )?;
+    let _ = lease.call("plugin.generic.query", json!({"path": "restart/edit.txt"}));
+
+    let deadline = Instant::now() + Duration::from_secs(8);
+    loop {
+        let status = lease.call_ok(ops::API_PLUGIN_STATUS, json!({}))?;
+        if restart_count(&status) >= 1 {
+            // A restart bumps restart_count, NOT refresh_count (that is the remount
+            // policy's signal) — the discriminating observable between policies.
+            assert_eq!(
+                status["loaded_plugins"][0]["services"][0]["refresh_count"]
+                    .as_i64()
+                    .unwrap_or(-1),
+                0,
+                "restart_service must restart, not remount: {status}"
+            );
+            return Ok(());
+        }
+        if Instant::now() >= deadline {
+            bail!("restart_service did not restart the worker after a workspace edit");
+        }
+        let _ = lease.call("plugin.generic.query", json!({"path": "restart/edit.txt"}));
+        thread::sleep(Duration::from_millis(150));
+    }
+}
+
+fn restart_count(status: &Value) -> i64 {
+    status["loaded_plugins"][0]["services"][0]["restart_count"]
+        .as_i64()
+        .unwrap_or(-1)
+}
+
 fn manifest(digest: &str, setup_digest: &str) -> Value {
     json!({
         "plugin_id": "generic",
@@ -184,6 +292,14 @@ fn manifest(digest: &str, setup_digest: &str) -> Value {
 }
 
 fn service_manifest(digest: &str, setup_digest: &str) -> Value {
+    service_manifest_with_strategy(digest, setup_digest, "remount_workspace_and_notify")
+}
+
+fn service_manifest_with_strategy(
+    digest: &str,
+    setup_digest: &str,
+    refresh_strategy: &str,
+) -> Value {
     json!({
         "plugin_id": "generic",
         "plugin_version": "0.1.0",
@@ -202,7 +318,7 @@ fn service_manifest(digest: &str, setup_digest: &str) -> Value {
             "service_id": "worker",
             "service_profile_digest": format!("profile-{digest}"),
             "service_mode": "workspace_snapshot_refresh",
-            "refresh_strategy": "remount_workspace_and_notify",
+            "refresh_strategy": refresh_strategy,
             "command": ["./server.py"],
             "working_dir": "runtime",
             "ppc_protocol_version": 1

@@ -4,6 +4,7 @@ use serde_json::json;
 
 use crate::support::{
     array, as_bool, as_i64, as_str, conflict_message, conflict_reason, live_pool_or_skip,
+    reset_isolated_workspaces,
 };
 
 #[test]
@@ -12,6 +13,7 @@ fn isolated_write_does_not_publish_or_release_lease() -> Result<()> {
         return Ok(());
     };
     let lease = pool.acquire()?;
+    reset_isolated_workspaces(&lease);
     lease.call_ok(ops::API_ISOLATED_WORKSPACE_ENTER, json!({}))?;
     // Baseline AFTER enter so enter's own lease_acquired is excluded; the isolated
     // write must not release a public lease (it writes the private upperdir only).
@@ -43,6 +45,7 @@ fn isolated_read_after_exit_routes_ephemeral() -> Result<()> {
         return Ok(());
     };
     let lease = pool.acquire()?;
+    reset_isolated_workspaces(&lease);
     lease.call_ok(ops::API_ISOLATED_WORKSPACE_ENTER, json!({}))?;
     let path = "iso/private-only.txt";
     let result = (|| -> Result<()> {

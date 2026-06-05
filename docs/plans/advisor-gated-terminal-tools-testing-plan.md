@@ -41,7 +41,7 @@ production paths.
 - One end-to-end run of `test_correctness_testing_via_live_e2e` (the
   generic-runner variant at
   `backend/src/task_center_runner/tests/mock/task_center/test_correctness_via_live_e2e.py`)
-  against a live Daytona sandbox via `run_tiered.py --tier 7` (the
+  against a live sandbox via `run_tiered.py --tier 7` (the
   existing tier-7 entry-point), with the hook enabled.
 - A tier-7 production path test that exercises the real `ask_advisor`
   tool (no mock squad) for one terminal — proves the production
@@ -235,7 +235,7 @@ approve` for the planner to clear the gate.
 - Add a thin scenario under
   `backend/tests/live_e2e_test/.../test_advisor_gate_live.py` (peer to
   existing `live_e2e_test` files) that:
-  1. Boots a Daytona sandbox.
+  1. Boots a live sandbox.
   2. Launches a planner with a trivial goal whose only valid terminal
      is `submit_plan_closes_goal`.
   3. Asserts the planner's transcript contains exactly one
@@ -246,7 +246,7 @@ approve` for the planner to clear the gate.
      by-construction: the terminal would not have submitted without an
      approval).
 
-- Skip when no live Daytona credentials are available, mirroring
+- Skip when no live sandbox is available, mirroring
   `test_correctness_testing_via_live_e2e`'s skip pattern.
 
 #### 3.4.3 Pass criteria
@@ -264,7 +264,7 @@ approve` for the planner to clear the gate.
 
 - Tier-7 currently runs one comprehensive `correctness_testing`
   scenario. Adding a second long-running live scenario doubles
-  Daytona cost on each tier-7 invocation. Decision required: include
+  live-sandbox cost on each tier-7 invocation. Decision required: include
   in tier-7 default suite, or behind a separate
   `--tier 7-advisor-gate` opt-in. Recommendation: opt-in initially,
   promote to default after one successful run.
@@ -307,7 +307,7 @@ approve` for the planner to clear the gate.
 # Mock-squad live e2e (after §3.3 work)
 .venv/bin/pytest -m task_center_integration backend/src/task_center_runner/tests/mock
 
-# Tier-7 (real Daytona)
+# Tier-7 (real live sandbox)
 uv run python backend/src/task_center_runner/scripts/run_tiered.py --tier 7
 ```
 

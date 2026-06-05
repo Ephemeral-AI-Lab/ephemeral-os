@@ -119,7 +119,7 @@
       <td>Sandbox public API and host lifecycle</td>
       <td><span class="file-ref">agent-core/crates/eos-sandbox-api</span>, <span class="file-ref">agent-core/crates/eos-sandbox-host</span></td>
       <td><span class="file-ref">agent-core/crates/eos-sandbox-api</span>, <span class="file-ref">agent-core/crates/eos-sandbox-host</span></td>
-      <td>Parity: typed read/write/edit/command/plugin/control/isolation requests still cross a host-to-daemon boundary. Optimization: Rust host is Docker-only; Daytona and Python module-tarball/chunked upload branches are not part of the active Rust path.</td>
+      <td>Parity: typed read/write/edit/command/plugin/control/isolation requests still cross a host-to-daemon boundary. Optimization: Rust host is Docker-only; Python module-tarball/chunked upload branches are not part of the active Rust path.</td>
     </tr>
     <tr>
       <td>Daemon dispatch and protocol</td>
@@ -225,7 +225,7 @@
 <div class="refresh-list">
   <div><strong>Page still cites a Python path</strong><span>The <code>backend/</code> tree no longer exists, so any <code>backend/src/*</code> path is stale. Replace it with the matching Rust crate path using the matrix above; never leave a deleted Python path as a current owner.</span></div>
   <div><strong>Runner claim</strong><span>The runner is unbuilt. If a claim is validation glue, keep it under <code>test_runner</code> and tie it to <code>integration-test/SPEC.md</code>; if it is runtime policy, move the claim to Workflow, Agent Loops, Tools, or Sandbox and cite Rust code.</span></div>
-  <div><strong>Provider branch mentions Daytona</strong><span>Mark it historical/legacy unless the current Rust code has reintroduced a non-Docker provider branch. Rust sandbox host config is Docker-only today.</span></div>
+  <div><strong>Provider branch mentions a non-Docker provider</strong><span>Mark it historical/legacy unless the current Rust code has reintroduced a non-Docker provider branch. Rust sandbox host config is Docker-only today.</span></div>
   <div><strong>Performance claim changes</strong><span>Refresh benchmark script names, live E2E artifacts, and resource caps in the same patch; avoid copying older plan placeholders.</span></div>
   <div><strong>Search or navigation changes</strong><span>Update <code>docs/architecture/assets/search-index.js</code> and <code>docs/architecture/assets/nav.js</code> with the page edit.</span></div>
 </div>

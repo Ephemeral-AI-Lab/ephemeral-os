@@ -66,7 +66,7 @@
 <div class="summary">
   <ul>
     <li>The benchmark adapter lives under <code>backend/src/test_runner/benchmarks/sweevo/</code>. Three stages are owned by three files: <code>setup.py</code>, <code>run.py</code>, <code>eval.py</code>. <code>pipeline.py</code> wires them.</li>
-    <li>The sandbox model is <em>docker-first and persistent per instance</em>. Daytona's lifecycle vocabulary does not apply; sandbox status uses Docker's <code>status</code> key.</li>
+    <li>The sandbox model is <em>docker-first and persistent per instance</em>. Sandbox status uses Docker's <code>status</code> key.</li>
     <li>The adapter never touches the agent loop directly. It assembles a <code>RunConfig</code> and hands it to <code>core/engine.py::run_pipeline</code>; the runner delegate wraps <code>engine.api.run_ephemeral_agent</code>.</li>
     <li>Grading is done by <code>SweevoLifecycle.after_run</code> against the real pytest invocation inside the container; the lifecycle materializes the active overlay onto <code>/testbed</code> before evaluating.</li>
   </ul>
@@ -169,7 +169,7 @@ format_verdict(report) -&gt; one-line stdout + exit code (0 resolved, 1 else)
   <div><b>dataset loader</b><span><code>load_sweevo_dataset</code> reads from a Parquet path, a cached HF Arrow file under <code>HF_DATASETS_CACHE</code>, or falls back to <code>datasets.load_dataset</code>. <code>functools.lru_cache</code> keeps the call cheap inside a session.</span></div>
   <div><b>PR description loader</b><span><code>load_pr_description(instance_id, csv_path)</code> is strict — missing CSV, missing row, and empty value all raise. The default CSV was the removed Python <code>sweevo_gpt5_2025_08_07_pr_descriptions.csv</code> fixture; <code>SWEEVO_PR_DESCRIPTIONS_CSV</code> overrides.</span></div>
   <div><b>prompt builder</b><span><code>build_sweevo_user_prompt</code> wraps the PR description in the canonical SWE-EVO <code>&lt;Workspace Root&gt;</code> / <code>&lt;pr_description&gt;</code> envelope plus an explicit instruction not to touch test files. Mocked-agent tests reuse this builder via <code>environments/sweevo_image/fixtures.py</code>.</span></div>
-  <div><b>provider bootstrap</b><span><code>bootstrap_sandbox_provider()</code> respects <code>EOS_SANDBOX_PROVIDER</code> + central config. Docker is default; Daytona is selected by env var.</span></div>
+  <div><b>provider bootstrap</b><span><code>bootstrap_sandbox_provider()</code> respects <code>EOS_SANDBOX_PROVIDER</code> + central config. Docker is the provider.</span></div>
   <div><b>snapshot verify</b><span><code>verify_sweevo_snapshot_exists(instance)</code> raises <code>SnapshotNotRegisteredError</code> when the snapshot is missing. Pre-register via <code>test_runner.benchmarks.sweevo._snapshot.register_sweevo_snapshot(instance)</code> before invoking the CLI — fails fast instead of after a 30-minute LLM run.</span></div>
   <div><b>provision</b><span><code>provision_sandbox</code> creates or resumes the container. Docker name uniqueness rejects parallel duplicates. Resume branches: <code>running</code> reuses, <code>exited|created|paused</code> starts via <code>start_sandbox</code>, anything else deletes and recreates.</span></div>
   <div><b>setup_sweevo_sandbox</b><span>Six exec-ready attempts, then git reset / clean / checkout to <code>instance.base_commit</code>, <code>pip install -e .</code>, daemon-side <code>api.build_workspace_base</code> with <code>reset=true</code>, optional LSP plugin install via <code>ensure_installed</code> + <code>api.plugin.ensure</code>.</span></div>
@@ -204,7 +204,7 @@ format_verdict(report) -&gt; one-line stdout + exit code (0 resolved, 1 else)
 <p>The image-backed environment is shared by mocked-agent and real-agent tests. It exposes three pytest fixtures and one helper.</p>
 <div class="edge-list" aria-label="environments/sweevo_image surfaces">
   <div><b>sweevo_image_instance (session)</b><span>Resolves <code>EOS_SWEEVO_INSTANCE</code> (default <code>dask__dask_2023.3.2_2023.4.0</code>) and selects the matching <code>SWEEvoInstance</code> via <code>select_sweevo_instance</code>.</span></div>
-  <div><b>sweevo_image_sandbox (session, async)</b><span>Provisions the persistent sweevo container under a host-side file lock (<code>.sweevo_runs/locks/sweevo-&lt;slug&gt;.lock</code>) so parallel pytest sessions cannot rebind the same workspace mid-test. Calls <code>require_sweevo_image_provider_healthy</code> first — Docker uses the SWE-EVO image directly, Daytona uses the tier-0 probe; failures skip cleanly.</span></div>
+  <div><b>sweevo_image_sandbox (session, async)</b><span>Provisions the persistent sweevo container under a host-side file lock (<code>.sweevo_runs/locks/sweevo-&lt;slug&gt;.lock</code>) so parallel pytest sessions cannot rebind the same workspace mid-test. Calls <code>require_sweevo_image_provider_healthy</code> first — Docker uses the SWE-EVO image directly; failures skip cleanly.</span></div>
   <div><b>workspace (function-scoped)</b><span>Returns the session-shared sandbox after running <code>reset_sweevo_workspace(sandbox_id, install_lsp=True)</code> on subsequent uses so each test sees a fresh checkout of <code>/testbed</code>.</span></div>
   <div><b>run_scenario_on_sweevo_image</b><span>Helper that builds the SWE-EVO user prompt with <code>build_sweevo_user_prompt(instance, repo_dir)</code> and forwards to <code>core/runner.py::run_scenario</code>. Same call shape as the generic runner but pre-fills <code>repo_dir</code> and <code>instance_id</code>.</span></div>
 </div>
@@ -223,7 +223,7 @@ format_verdict(report) -&gt; one-line stdout + exit code (0 resolved, 1 else)
     <li>Naming is deterministic: <code>_sweevo_sandbox_name(instance) = sweevo-&lt;instance_id&gt;</code>, truncated to 63 characters with an 8-char suffix preserved so two long-prefix instances do not collide.</li>
     <li>Back-to-back runs reuse the same container: provision sees an <code>existing</code> match by name, calls <code>_resume_sandbox</code>, which starts the container if needed and skips creation.</li>
     <li>The CLI does NOT destroy the container on exit. Reclaim disk with <code>docker container prune</code> or selectively: <code>docker ps -a --filter 'name=sweevo-' --format '{{.Names}}' | xargs -r docker rm -f</code>.</li>
-    <li>Sandbox status uses Docker's <code>status</code> key, not Daytona's <code>state</code>. "Dead", "removing", and "restarting" containers are detected and recreated.</li>
+    <li>Sandbox status uses Docker's <code>status</code> key. "Dead", "removing", and "restarting" containers are detected and recreated.</li>
     <li>Labels carry <code>purpose=sweevo-test</code>, <code>project_dir</code>, <code>sweevo_instance</code>, and <code>sweevo_repo</code> so <code>reset_sweevo_workspace</code> can resume a reused sandbox without an explicit instance argument.</li>
   </ul>
 </div>

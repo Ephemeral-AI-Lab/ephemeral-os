@@ -113,7 +113,7 @@
 </table>
 
 <div class="trace-grid">
-  <div>Related page</div><div><a href="provider.html">Provider</a> owns Docker/Daytona container lifecycle and exec primitives.</div>
+  <div>Related page</div><div><a href="provider.html">Provider</a> owns Docker container lifecycle and exec primitives.</div>
   <div>Related page</div><div><a href="workspaces.html">Workspace Modes</a> explains why daemon routing chooses isolated, direct LayerStack, or ephemeral overlay execution.</div>
   <div>Related page</div><div><a href="plugins.html">Plugin in ephemeral_workspace</a> covers plugin operations that register through the same daemon operation table.</div>
   <div>Related page</div><div><a href="workflow-cookbook.html">Workflow Cookbook</a> gives end-to-end traces once the pieces here are familiar.</div>
@@ -164,7 +164,7 @@
   <thead><tr><th>Transport path</th><th>When used</th><th>Failure signal</th><th>Recovery path</th></tr></thead>
   <tbody>
     <tr><td>TCP daemon endpoint</td><td>Adapter exposes host/port/auth data, primarily for Docker-style local sandboxes.</td><td><code>EOS_DAEMON_CONNECT_FAILED</code>, selected <code>EOS_DAEMON_IO_FAILED</code> empty responses, timeout, or unauthenticated server response.</td><td>Invalidate cached endpoint, try spawn/readiness, then retry the original envelope when the op is safe to replay.</td></tr>
-    <tr><td>AF_UNIX thin client</td><td>Provider only supports exec into the sandbox, including Daytona-style constraints.</td><td>Thin-client exit code <code>97</code> for connect failure or <code>98</code> for I/O failure.</td><td>Run launch script, verify readiness, then run the thin client again.</td></tr>
+    <tr><td>AF_UNIX thin client</td><td>Provider only supports exec into the sandbox.</td><td>Thin-client exit code <code>97</code> for connect failure or <code>98</code> for I/O failure.</td><td>Run launch script, verify readiness, then run the thin client again.</td></tr>
     <tr><td>Daemon server</td><td>Always resident inside the sandbox after successful launch.</td><td>Structured daemon errors such as <code>bad_json</code>, <code>invalid_envelope</code>, <code>request_too_large</code>, or <code>unauthorized</code>.</td><td>Caller receives a structured error; no workspace handler runs.</td></tr>
   </tbody>
 </table>

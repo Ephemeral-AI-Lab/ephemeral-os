@@ -76,7 +76,7 @@ loop consumes `Arc<dyn EventSource>`; concrete clients are built only in
 - No port of the over-engineered Python scenarios as-is (`full_stack_adversarial`,
   `full_system_capacity_matrix`, `pack_catalog`, the ~120-file
   `isolated_workspace` explosion). Port **invariant categories**, not file count.
-- No Daytona/Minimax client wiring.
+- No Minimax client wiring.
 - **[rev]** No shared audit-contract crate; no second mock surface; no changes to
   production `CentralConfig` or `eos-runtime::main`.
 

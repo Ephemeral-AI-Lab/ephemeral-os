@@ -152,10 +152,10 @@ mod tests {
             ProviderKind::Docker
         );
         // a non-Docker env value fails fast.
-        let err = resolve_provider_kind(Some("daytona"), &config).unwrap_err();
+        let err = resolve_provider_kind(Some("podman"), &config).unwrap_err();
         assert!(matches!(
             err,
-            SandboxHostError::UnknownProviderKind(k) if k == "daytona"
+            SandboxHostError::UnknownProviderKind(k) if k == "podman"
         ));
     }
 

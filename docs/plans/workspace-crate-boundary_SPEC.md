@@ -1280,7 +1280,7 @@ cargo test -p eos-e2e-test --features e2e --test command_sessions
 ```
 
 The live target image should continue to be provided through the existing
-`EOS_LIVE_E2E_IMAGE` path. No Daytona/non-Docker provider branch is part of this
+`EOS_LIVE_E2E_IMAGE` path. No non-Docker provider branch is part of this
 spec.
 
 ### 14.6 Documentation checks

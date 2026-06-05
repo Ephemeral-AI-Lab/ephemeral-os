@@ -38,6 +38,14 @@ pub fn wait_for_active_leases(lease: &NodeLease<'_>, expected: i64) -> Result<Va
     }
 }
 
+/// Tear down every open isolated workspace on this lease's daemon (test-only
+/// hook). Used at the start of tests that enter isolated sessions so leaked or
+/// still-draining sessions from a prior checkout on a recycled container do not
+/// push past the global isolated-workspace cap. Best-effort: errors are ignored.
+pub fn reset_isolated_workspaces(lease: &NodeLease<'_>) {
+    let _ = lease.call(ops::API_ISOLATED_WORKSPACE_TEST_RESET, json!({}));
+}
+
 /// Poll `api.v1.command_session_count` until `count` settles at `expected`.
 ///
 /// # Errors

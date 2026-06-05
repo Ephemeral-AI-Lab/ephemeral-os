@@ -87,7 +87,7 @@
     <tr><td>Docker adapter</td><td>Creates long-running containers, injects daemon TCP env/auth labels when enabled, exposes the daemon TCP endpoint, runs raw commands, uploads tar archives, and prepares provider context.</td><td><span class="file-ref">agent-core/crates/eos-sandbox-host/src/docker.rs:115-212</span>, <span class="file-ref">agent-core/crates/eos-sandbox-host/src/docker.rs:319-370</span>, <span class="file-ref">agent-core/crates/eos-sandbox-host/src/docker.rs:399-459</span></td></tr>
     <tr><td>Lifecycle</td><td>Registers created containers, starts/stops/deletes through the adapter, and treats post-create and post-start setup as the host-side readiness gate.</td><td><span class="file-ref">agent-core/crates/eos-sandbox-host/src/lifecycle.rs:60-100</span>, <span class="file-ref">agent-core/crates/eos-sandbox-host/src/lifecycle.rs:150-170</span>, <span class="file-ref">agent-core/crates/eos-sandbox-host/src/lifecycle.rs:211-273</span></td></tr>
     <tr><td>Bootstrap artifact</td><td>Uploads one pinned static <code>eosd</code> binary per container architecture under <code>/eos/runtime/daemon</code>, verifies sha256 and <code>eosd --version</code>, and keeps plugin packages out of daemon bootstrap.</td><td><span class="file-ref">agent-core/crates/eos-sandbox-host/src/bootstrap_artifact.rs:1-8</span>, <span class="file-ref">agent-core/crates/eos-sandbox-host/src/bootstrap_artifact.rs:141-250</span>, <span class="file-ref">agent-core/crates/eos-sandbox-host/src/sandbox_upload.rs:1-81</span></td></tr>
-    <tr><td>Python parity / historical</td><td>The legacy Python provider stack had Docker and Daytona adapters. In the Rust architecture, Daytona is comparison material only and must not be presented as an active provider branch.</td><td><span class="file-ref">agent-core/crates/eos-sandbox-host/src/registry.rs:128-148</span>, <span class="file-ref">agent-core/crates/eos-sandbox-host/src/error.rs:20-23</span></td></tr>
+    <tr><td>Python parity / historical</td><td>The legacy Python provider stack had a Docker adapter. The Rust architecture keeps Docker as the only active provider branch.</td><td><span class="file-ref">agent-core/crates/eos-sandbox-host/src/registry.rs:128-148</span>, <span class="file-ref">agent-core/crates/eos-sandbox-host/src/error.rs:20-23</span></td></tr>
   </tbody>
 </table>
 
@@ -121,7 +121,7 @@
 </pre>
 <div class="sequence" aria-label="Provider bootstrap workflow">
   <ol>
-    <li><span>Runtime composition resolves provider config to Docker; <code>daytona</code> or any other value is rejected before lifecycle work begins.</span></li>
+    <li><span>Runtime composition resolves provider config to Docker; any other value is rejected before lifecycle work begins.</span></li>
     <li><span>The Docker adapter creates or starts a long-running container with the runtime tmpfs, capability/security settings, daemon TCP labels, and raw exec/put-archive primitives <span class="file-ref">agent-core/crates/eos-sandbox-host/src/docker.rs:145-181</span>, <span class="file-ref">agent-core/crates/eos-sandbox-host/src/docker.rs:478-529</span>.</span></li>
     <li><span>Post-lifecycle setup overlaps a best-effort background <code>eosd</code> upload with git bootstrap, then performs the authoritative upload and gates on workspace-base readiness <span class="file-ref">agent-core/crates/eos-sandbox-host/src/lifecycle.rs:150-170</span>, <span class="file-ref">agent-core/crates/eos-sandbox-host/src/lifecycle.rs:319-383</span>.</span></li>
     <li><span>The uploaded <code>eosd</code> binary routes <code>daemon</code>, <code>ns-runner</code>, and <code>ns-holder</code> subcommands; the daemon listens on AF_UNIX and optional loopback TCP <span class="file-ref">sandbox/crates/eosd/src/main.rs:1-15</span>, <span class="file-ref">sandbox/crates/eos-daemon/src/server.rs:1-24</span>.</span></li>
@@ -165,7 +165,6 @@
     <h4>Historical comparison</h4>
     <ul>
       <li>Legacy Python provider files may still be useful for parity archaeology, but they are not active Rust evidence.</li>
-      <li>Do not describe Daytona as a Rust provider unless a future Rust implementation and config path land in <code>agent-core</code>.</li>
     </ul>
   </div>
   <div class="evidence-card">

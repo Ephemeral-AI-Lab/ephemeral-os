@@ -248,7 +248,7 @@ mod tests {
 
         let rejected = ConfigLoader::new()
             .yaml_path(no_yaml())
-            .env(env(&[("EOS__SANDBOX__PROVIDER", "daytona")]))
+            .env(env(&[("EOS__SANDBOX__PROVIDER", "podman")]))
             .load();
         assert!(matches!(rejected, Err(ConfigError::ParseYaml(_))));
     }

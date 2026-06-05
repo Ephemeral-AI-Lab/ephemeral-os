@@ -156,7 +156,7 @@
     <tr><td>Execution scratch is private.</td><td>Shell/search/plugin work runs with per-operation <code>upper</code>/<code>work</code> dirs unless the operation can use a direct file fast path.</td><td><a class="wiki-link" href="overlay.html">Overlay</a></td></tr>
     <tr><td>Publication is serialized and checked.</td><td>Accepted writes become new layers through OCC prepare, queue, transaction, and publisher steps.</td><td><a class="wiki-link" href="occ.html">OCC</a></td></tr>
     <tr><td>Private scratch is opt-in.</td><td>Isolated mode is an explicit tool lifecycle for low-confidence experiments; default collaboration remains shared/OCC-backed.</td><td><a class="wiki-link" href="workspaces.html#isolated-workspace">isolated_workspace</a></td></tr>
-    <tr><td>Provider details stop at the boundary.</td><td>Docker/Daytona create containers and execute commands, but workspace semantics stay inside sandbox runtime packages.</td><td><a class="wiki-link" href="provider.html">Provider</a></td></tr>
+    <tr><td>Provider details stop at the boundary.</td><td>Docker creates containers and executes commands, but workspace semantics stay inside sandbox runtime packages.</td><td><a class="wiki-link" href="provider.html">Provider</a></td></tr>
   </tbody>
 </table>
 

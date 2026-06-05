@@ -911,7 +911,7 @@ Sandbox audit/stat performance standards:
 
 `resource.cgroup.*` values are **monotonic cumulative counters** maintained by
 the Linux kernel against the sandbox cgroup. In `sandbox_reuse_mode: reuse`,
-the same Daytona sandbox is shared across many test sessions, so the raw
+the same sandbox is shared across many test sessions, so the raw
 value at any sample point is **sandbox lifetime since cgroup creation**, not
 this test's contribution. Always read the run delta first; only consult the
 lifetime value when watching for hard limits (memory.max, disk quota).
