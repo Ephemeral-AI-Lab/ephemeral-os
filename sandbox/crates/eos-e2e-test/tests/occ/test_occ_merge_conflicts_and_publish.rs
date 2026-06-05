@@ -1,12 +1,16 @@
 use std::sync::{Arc, Barrier};
 use std::thread;
+use std::time::{Duration, Instant};
 
-use anyhow::Result;
+use anyhow::{bail, Context, Result};
 use eos_e2e_test::{next_invocation_id, unique_suffix};
 use eos_protocol::ops;
 use serde_json::{json, Value};
 
-use crate::support::{array, as_bool, as_i64, as_str, conflict_reason, live_pool_or_skip};
+use crate::support::{
+    array, as_bool, as_i64, as_str, conflict_reason, live_pool_or_skip, stdout,
+    wait_for_session_count,
+};
 
 #[test]
 fn concurrent_conflicting_writes() -> Result<()> {
@@ -229,6 +233,83 @@ fn retry_budget_3x_surfaces_coherent_result() -> Result<()> {
 }
 
 #[test]
+fn atomic_overlay_changeset_drops_all_paths_on_stale_conflict() -> Result<()> {
+    let Some(pool) = live_pool_or_skip()? else {
+        return Ok(());
+    };
+    let lease = pool.acquire()?;
+    let dir = format!("occ-atomic-{}", unique_suffix());
+    let conflicted = format!("{dir}/conflicted.txt");
+    let sibling = format!("{dir}/sibling.txt");
+    lease.call_ok(
+        ops::API_V1_WRITE_FILE,
+        json!({"path": &conflicted, "content": "base\n", "overwrite": true}),
+    )?;
+
+    let exec = lease.call_ok(
+        ops::API_V1_EXEC_COMMAND,
+        json!({
+            "cmd": format!("bash -lc 'printf SNAPSHOT_READY; sleep 2; mkdir -p {dir}; printf stale > {conflicted}; printf sibling > {sibling}'"),
+            "yield_time_ms": 500,
+            "timeout_seconds": 30,
+            "max_output_tokens": 1000
+        }),
+    )?;
+    assert_eq!(as_str(&exec, "status")?, "running", "{exec}");
+    assert!(stdout(&exec).contains("SNAPSHOT_READY"), "{exec}");
+    let session_id = as_str(&exec, "command_session_id")?.to_owned();
+
+    let body = (|| -> Result<()> {
+        lease.call_ok(
+            ops::API_V1_WRITE_FILE,
+            json!({"path": &conflicted, "content": "newer\n", "overwrite": true}),
+        )?;
+        let result = wait_for_completion(&lease, &session_id)?;
+        assert_eq!(
+            as_str(&result, "status")?,
+            "ok",
+            "the command process itself should finish normally: {result}"
+        );
+        assert!(
+            !as_bool(&result, "success")?,
+            "stale changeset must not report a successful workspace mutation: {result}"
+        );
+        assert_eq!(
+            conflict_reason(&result),
+            "aborted_version",
+            "stale conflict should reject the atomic changeset: {result}"
+        );
+        assert!(
+            array(&result, "changed_paths")?.is_empty(),
+            "atomic stale conflict must not publish any changed paths: {result}"
+        );
+        wait_for_session_count(&lease, 0)?;
+
+        let conflicted_read = lease.call_ok(ops::API_V1_READ_FILE, json!({"path": &conflicted}))?;
+        assert_eq!(
+            as_str(&conflicted_read, "content")?,
+            "newer\n",
+            "newer direct content must win: {conflicted_read}"
+        );
+        let sibling_read = lease.call_ok(ops::API_V1_READ_FILE, json!({"path": &sibling}))?;
+        assert!(
+            !as_bool(&sibling_read, "exists")?,
+            "non-conflicting sibling from the same atomic changeset must not publish: {sibling_read}"
+        );
+        Ok(())
+    })();
+
+    if body.is_err() {
+        let _ = lease.call(
+            ops::API_V1_COMMAND_CANCEL,
+            json!({"command_session_id": session_id, "max_output_tokens": 1000}),
+        );
+        let _ = wait_for_session_count(&lease, 0);
+    }
+    body
+}
+
+#[test]
 fn publish_accounting() -> Result<()> {
     let Some(pool) = live_pool_or_skip()? else {
         return Ok(());
@@ -247,6 +328,26 @@ fn publish_accounting() -> Result<()> {
         audit.events()
     );
     Ok(())
+}
+
+fn wait_for_completion(lease: &eos_e2e_test::NodeLease<'_>, session_id: &str) -> Result<Value> {
+    let deadline = Instant::now() + Duration::from_secs(8);
+    loop {
+        let collected = lease.call_ok(
+            ops::API_V1_COMMAND_COLLECT_COMPLETED,
+            json!({"command_session_ids": [session_id]}),
+        )?;
+        if let Some(completion) = array(&collected, "completions")?.first() {
+            return completion
+                .get("result")
+                .cloned()
+                .context("completion missing result");
+        }
+        if Instant::now() >= deadline {
+            bail!("session {session_id} never completed");
+        }
+        thread::sleep(Duration::from_millis(100));
+    }
 }
 
 #[test]

@@ -138,6 +138,46 @@ fn bind_probe_command(port: u16, success_marker: &str) -> String {
     )
 }
 
+fn loopback_server_command(port: u16, marker: &str) -> String {
+    format!(
+        r#"python3 -u - <<'PY'
+import socket
+import time
+s = socket.socket()
+s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+s.bind(("127.0.0.1", {port}))
+s.listen(5)
+print("SERVER_READY", flush=True)
+deadline = time.time() + 20
+while time.time() < deadline:
+    s.settimeout(1)
+    try:
+        conn, _ = s.accept()
+    except TimeoutError:
+        continue
+    with conn:
+        conn.sendall({marker:?}.encode())
+PY"#
+    )
+}
+
+fn loopback_probe_command(port: u16, success_marker: &str) -> String {
+    format!(
+        r#"python3 - <<'PY'
+import socket
+s = socket.socket()
+s.settimeout(1)
+try:
+    s.connect(("127.0.0.1", {port}))
+    data = s.recv(128).decode("utf-8", "replace")
+except OSError:
+    print("PEER_BLOCKED", flush=True)
+else:
+    print(data or "{success_marker}", flush=True)
+PY"#
+    )
+}
+
 #[test]
 fn cross_mode_same_port_no_conflict() -> Result<()> {
     let Some(pool) = live_pool_or_skip()? else {
@@ -237,6 +277,97 @@ fn same_mode_same_port_conflicts() -> Result<()> {
     if let Some(id) = id.as_deref() {
         cancel(&lease, None, id);
     }
+    body
+}
+
+#[test]
+fn isolated_loopback_service_is_not_reachable_from_peer_session() -> Result<()> {
+    let Some(pool) = live_pool_or_skip()? else {
+        return Ok(());
+    };
+    let lease = pool.acquire()?;
+    reset_isolated_workspaces(&lease);
+    let port = unique_port();
+    let caller_a = format!("iws-loopback-a-{}", eos_e2e_test::unique_suffix());
+    let caller_b = format!("iws-loopback-b-{}", eos_e2e_test::unique_suffix());
+    let marker = format!("A_ONLY_{}", eos_e2e_test::unique_suffix().replace('-', "_"));
+
+    lease.call_ok(
+        ops::API_ISOLATED_WORKSPACE_ENTER,
+        json!({"caller_id": caller_a}),
+    )?;
+    lease.call_ok(
+        ops::API_ISOLATED_WORKSPACE_ENTER,
+        json!({"caller_id": caller_b}),
+    )?;
+
+    let mut sessions: Vec<(String, String)> = Vec::new();
+    let body = (|| -> Result<()> {
+        let server_a = lease.call_ok(
+            ops::API_V1_EXEC_COMMAND,
+            json!({
+                "caller_id": caller_a,
+                "cmd": loopback_server_command(port, &marker),
+                "yield_time_ms": 600,
+                "timeout_seconds": 60,
+                "max_output_tokens": 1000
+            }),
+        )?;
+        ensure!(
+            as_str(&server_a, "status")? == "running",
+            "caller A loopback server must stay running: {server_a}"
+        );
+        wait_for_output(&lease, Some(&caller_a), &server_a, "SERVER_READY")?;
+        sessions.push((
+            caller_a.clone(),
+            as_str(&server_a, "command_session_id")?.to_owned(),
+        ));
+
+        let own_probe = lease.call_ok(
+            ops::API_V1_EXEC_COMMAND,
+            json!({
+                "caller_id": caller_a,
+                "cmd": loopback_probe_command(port, &marker),
+                "yield_time_ms": 2000,
+                "timeout_seconds": 10,
+                "max_output_tokens": 1000
+            }),
+        )?;
+        wait_for_output(&lease, Some(&caller_a), &own_probe, &marker).with_context(|| {
+            format!("caller A should reach its own loopback service: {own_probe}")
+        })?;
+
+        let peer_probe = lease.call_ok(
+            ops::API_V1_EXEC_COMMAND,
+            json!({
+                "caller_id": caller_b,
+                "cmd": loopback_probe_command(port, &marker),
+                "yield_time_ms": 2000,
+                "timeout_seconds": 10,
+                "max_output_tokens": 1000
+            }),
+        )?;
+        wait_for_output(&lease, Some(&caller_b), &peer_probe, "PEER_BLOCKED").with_context(
+            || format!("caller B must not reach caller A's loopback service: {peer_probe}"),
+        )?;
+        ensure!(
+            !stdout(&peer_probe).contains(&marker),
+            "peer session must not receive caller A's loopback marker: {peer_probe}"
+        );
+        Ok(())
+    })();
+
+    for (caller_id, session_id) in &sessions {
+        cancel(&lease, Some(caller_id), session_id);
+    }
+    let _ = lease.call(
+        ops::API_ISOLATED_WORKSPACE_EXIT,
+        json!({"caller_id": caller_b, "grace_s": 0.1}),
+    );
+    let _ = lease.call(
+        ops::API_ISOLATED_WORKSPACE_EXIT,
+        json!({"caller_id": caller_a, "grace_s": 0.1}),
+    );
     body
 }
 

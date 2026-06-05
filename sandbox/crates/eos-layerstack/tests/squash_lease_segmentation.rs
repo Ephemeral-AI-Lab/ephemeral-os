@@ -65,11 +65,7 @@ fn squash_keeps_each_lease_head_and_folds_every_gap() -> TestResult {
         .collect();
     assert_eq!(
         folded,
-        vec![
-            vec!["L0", "L1", "L2"],
-            vec!["L4", "L5"],
-            vec!["L7", "L8"],
-        ],
+        vec![vec!["L0", "L1", "L2"], vec!["L4", "L5"], vec!["L7", "L8"],],
         "exactly the three unleased gap runs fold into checkpoints"
     );
     Ok(())
@@ -101,9 +97,7 @@ fn squash_keeps_an_adjacent_lease_pair_without_folding_between_them() -> TestRes
     let lease_heads = vec![layers[4].clone(), layers[5].clone()];
 
     let squasher = LayerCheckpointSquasher::new(PathBuf::from("/squash-plan-only"));
-    let plan = squasher
-        .plan(&manifest, 5, &lease_heads, 1)?
-        .expect("plan");
+    let plan = squasher.plan(&manifest, 5, &lease_heads, 1)?.expect("plan");
 
     assert_eq!(plan.entries.len(), 4, "2 adjacent leases + 2 outer gaps");
     assert_eq!(kept_ids(&plan.entries), ["L4", "L5"]);

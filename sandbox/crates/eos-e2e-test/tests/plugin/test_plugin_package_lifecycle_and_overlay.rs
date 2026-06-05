@@ -103,6 +103,88 @@ fn generic_package_reensure_is_idempotent() -> Result<()> {
 }
 
 #[test]
+fn plugin_setup_and_manifest_failures_are_structured() -> Result<()> {
+    let Some(pool) = live_pool_or_skip()? else {
+        return Ok(());
+    };
+    let lease = pool.acquire()?;
+
+    let malformed_digest = format!("digest-{}", unique_suffix().replace('-', "_"));
+    let mut malformed = service_manifest(&malformed_digest, &format!("setup-{malformed_digest}"));
+    malformed["operations"][0]
+        .as_object_mut()
+        .context("operation manifest object")?
+        .remove("intent");
+    let manifest_error = lease.call(
+        ops::API_PLUGIN_ENSURE,
+        json!({
+            "workspace_root": lease.workspace_root(),
+            "manifest": malformed,
+            "start_services": true,
+        }),
+    )?;
+    assert_eq!(
+        manifest_error.get("success").and_then(Value::as_bool),
+        Some(false),
+        "invalid manifest must return a structured error envelope: {manifest_error}"
+    );
+    assert!(
+        manifest_error
+            .get("error")
+            .and_then(|error| error.get("kind"))
+            .and_then(Value::as_str)
+            .is_some(),
+        "manifest error must carry a stable error kind: {manifest_error}"
+    );
+    assert!(
+        manifest_error
+            .get("error")
+            .and_then(|error| error.get("message"))
+            .and_then(Value::as_str)
+            .unwrap_or_default()
+            .contains("intent"),
+        "manifest error should identify the missing intent: {manifest_error}"
+    );
+
+    let digest = format!("digest-{}", unique_suffix().replace('-', "_"));
+    let setup_digest = format!("setup-{digest}");
+    let staged = stage_generic_package(&lease, &digest)?;
+    let mut setup_manifest = manifest(&digest, &setup_digest);
+    setup_manifest["setup"]["command"] = json!(["./missing-setup.sh"]);
+    let setup_error = lease.call(
+        ops::API_PLUGIN_ENSURE,
+        json!({
+            "workspace_root": lease.workspace_root(),
+            "manifest": setup_manifest,
+            "staged_package_root": staged,
+        }),
+    )?;
+    assert_eq!(
+        setup_error.get("success").and_then(Value::as_bool),
+        Some(false),
+        "setup failure must return a structured error envelope: {setup_error}"
+    );
+    assert!(
+        setup_error
+            .get("error")
+            .and_then(|error| error.get("kind"))
+            .and_then(Value::as_str)
+            .is_some(),
+        "setup failure must carry a stable error kind: {setup_error}"
+    );
+    assert!(
+        setup_error
+            .get("error")
+            .and_then(|error| error.get("message"))
+            .and_then(Value::as_str)
+            .unwrap_or_default()
+            .contains("missing-setup"),
+        "setup failure should identify the failing setup command: {setup_error}"
+    );
+    Ok(())
+}
+
+#[test]
 fn generic_plugin_dispatch_roundtrip() -> Result<()> {
     let Some(pool) = live_pool_or_skip()? else {
         return Ok(());

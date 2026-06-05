@@ -65,10 +65,7 @@ fn live_cancel_of_inflight_sets_cancelled() -> Result<()> {
         std::thread::sleep(Duration::from_millis(50));
     }
 
-    let cancel = lease.call_ok(
-        ops::API_V1_CANCEL,
-        json!({"invocation_id": invocation_id}),
-    )?;
+    let cancel = lease.call_ok(ops::API_V1_CANCEL, json!({"invocation_id": invocation_id}))?;
     let cancelled = as_bool(&cancel, "cancelled")?;
     // Join before the lease drops so the background request never outlives the node.
     let _ = handle.join();

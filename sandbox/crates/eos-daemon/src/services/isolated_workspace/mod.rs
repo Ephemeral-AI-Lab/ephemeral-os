@@ -65,7 +65,14 @@ pub fn op_enter(args: &Value, _context: DispatchContext<'_>) -> Result<Value, Da
         Ok(root) => PathBuf::from(root),
         Err(error) => return Ok(error),
     };
-    command_session::cleanup_command_sessions_for_caller(&caller_id, None);
+    let active_command_sessions = command_session::active_command_sessions_for_caller(&caller_id);
+    if active_command_sessions > 0 {
+        return Ok(error_json(
+            "active_background_work",
+            "cannot enter isolated workspace while command sessions are active",
+            json!({"active_command_sessions": active_command_sessions}),
+        ));
+    }
     match ensure_state(&root)
         .and_then(|()| with_state(|state| state.session.enter(&CallerId(caller_id))))
     {

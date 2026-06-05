@@ -19,6 +19,65 @@ fn timing_f64(value: &Value, key: &str) -> Option<f64> {
         .and_then(Value::as_f64)
 }
 
+fn has_timing(value: &Value, key: &str) -> bool {
+    timing_f64(value, key).is_some_and(|timing| timing >= 0.0)
+}
+
+#[test]
+fn exec_multi_path_route_timings_and_read_intent_no_publish() -> Result<()> {
+    let Some(pool) = live_pool_or_skip()? else {
+        return Ok(());
+    };
+    let lease = pool.acquire()?;
+    let dir = format!("route-edges-{}", eos_e2e_test::unique_suffix());
+    let first = format!("{dir}/first.txt");
+    let second = format!("{dir}/nested/second.txt");
+
+    let exec = lease.call_ok(
+        ops::API_V1_EXEC_COMMAND,
+        json!({
+            "cmd": format!("mkdir -p {dir}/nested && printf first > {first} && printf second > {second}"),
+            "yield_time_ms": 1000,
+            "timeout_seconds": 10,
+            "max_output_tokens": 1000
+        }),
+    )?;
+    assert_eq!(as_str(&exec, "status")?, "ok", "{exec}");
+    let changed = array(&exec, "changed_paths")?;
+    for expected in [&first, &second] {
+        assert!(
+            changed.iter().any(|path| path.as_str() == Some(expected)),
+            "multi-path shell write must publish {expected}: {exec}"
+        );
+    }
+    assert!(
+        has_timing(&exec, "command_exec.total_s")
+            || has_timing(&exec, "api.exec_command.dispatch_total_s"),
+        "exec response must expose command dispatch timing: {exec}"
+    );
+    assert!(
+        has_timing(&exec, "occ.commit.total_s"),
+        "exec response must expose OCC publish timing: {exec}"
+    );
+
+    let read_only = lease.call_ok(
+        ops::API_V1_EXEC_COMMAND,
+        json!({
+            "cmd": format!("cat {first} {second}"),
+            "yield_time_ms": 1000,
+            "timeout_seconds": 10,
+            "max_output_tokens": 1000
+        }),
+    )?;
+    assert_eq!(as_str(&read_only, "status")?, "ok", "{read_only}");
+    assert_eq!(stdout(&read_only), "firstsecond", "{read_only}");
+    assert!(
+        array(&read_only, "changed_paths")?.is_empty(),
+        "read-intent exec must not publish changed paths: {read_only}"
+    );
+    Ok(())
+}
+
 #[test]
 fn exec_write_outside_workspace_is_not_captured() -> Result<()> {
     let Some(pool) = live_pool_or_skip()? else {
@@ -104,6 +163,89 @@ fn foreground_exec_recycles_overlay_scratch() -> Result<()> {
 }
 
 #[test]
+fn overlay_delete_replacement_write_and_foreign_publish_are_readable() -> Result<()> {
+    let Some(pool) = live_pool_or_skip()? else {
+        return Ok(());
+    };
+    let lease = pool.acquire()?;
+    let dir = format!("whiteout-resync-{}", eos_e2e_test::unique_suffix());
+    let deleted = format!("{dir}/delete-me.txt");
+    let replaced = format!("{dir}/replace");
+    let old = format!("{replaced}/old.txt");
+    let replacement = format!("{replaced}/new.txt");
+    let foreign = format!("{dir}/foreign.txt");
+
+    lease.call_ok(
+        ops::API_V1_WRITE_FILE,
+        json!({"path": &deleted, "content": "delete me\n", "overwrite": true}),
+    )?;
+    lease.call_ok(
+        ops::API_V1_WRITE_FILE,
+        json!({"path": &old, "content": "old\n", "overwrite": true}),
+    )?;
+
+    let overlay = lease.call_ok(
+        ops::API_V1_EXEC_COMMAND,
+        json!({
+            "cmd": format!("rm -f {deleted} {old} && mkdir -p {replaced} && printf new > {replacement}"),
+            "yield_time_ms": 1000,
+            "timeout_seconds": 10,
+            "max_output_tokens": 1000
+        }),
+    )?;
+    assert_eq!(as_str(&overlay, "status")?, "ok", "{overlay}");
+    let changed = array(&overlay, "changed_paths")?;
+    assert!(
+        changed
+            .iter()
+            .any(|path| path.as_str() == Some(deleted.as_str())),
+        "delete whiteout should be reported as a changed path: {overlay}"
+    );
+    assert!(
+        changed
+            .iter()
+            .any(|path| path.as_str() == Some(replacement.as_str())),
+        "replacement write should publish the new file: {overlay}"
+    );
+
+    let deleted_read = lease.call_ok(ops::API_V1_READ_FILE, json!({"path": &deleted}))?;
+    assert!(
+        !as_bool(&deleted_read, "exists")?,
+        "deleted file must stay masked after overlay publish: {deleted_read}"
+    );
+    let replacement_read = lease.call_ok(ops::API_V1_READ_FILE, json!({"path": &replacement}))?;
+    assert_eq!(
+        as_str(&replacement_read, "content")?,
+        "new",
+        "{replacement_read}"
+    );
+    let old_read = lease.call_ok(ops::API_V1_READ_FILE, json!({"path": &old}))?;
+    assert!(
+        !as_bool(&old_read, "exists")?,
+        "old replaced file must stay masked after overlay publish: {old_read}"
+    );
+
+    lease.client().request(
+        ops::API_V1_WRITE_FILE,
+        &eos_e2e_test::next_invocation_id(),
+        &json!({
+            "layer_stack_root": lease.root(),
+            "caller_id": format!("foreign-{}", eos_e2e_test::unique_suffix()),
+            "path": &foreign,
+            "content": "foreign publish\n",
+            "overwrite": true
+        }),
+    )?;
+    let foreign_read = lease.call_ok(ops::API_V1_READ_FILE, json!({"path": &foreign}))?;
+    assert_eq!(
+        as_str(&foreign_read, "content")?,
+        "foreign publish\n",
+        "later reads must observe foreign-published workspace state: {foreign_read}"
+    );
+    Ok(())
+}
+
+#[test]
 fn exec_upperdir_captures_only_the_delta() -> Result<()> {
     let Some(pool) = live_pool_or_skip()? else {
         return Ok(());
@@ -137,6 +279,44 @@ fn exec_upperdir_captures_only_the_delta() -> Result<()> {
             .iter()
             .any(|path| path.as_str() == Some("perf/delta.txt")),
         "delta write must be captured: {exec}"
+    );
+    Ok(())
+}
+
+#[test]
+fn cancelled_background_exec_does_not_publish_partial_workspace_mutation() -> Result<()> {
+    let Some(pool) = live_pool_or_skip()? else {
+        return Ok(());
+    };
+    let lease = pool.acquire()?;
+    let path = format!("cancel-no-partial/{}.txt", eos_e2e_test::unique_suffix());
+    let exec = lease.call_ok(
+        ops::API_V1_EXEC_COMMAND,
+        json!({
+            "cmd": format!("bash -lc 'printf READY; sleep 30; mkdir -p cancel-no-partial; printf partial > {path}'"),
+            "yield_time_ms": 500,
+            "timeout_seconds": 60,
+            "max_output_tokens": 1000
+        }),
+    )?;
+    assert_eq!(as_str(&exec, "status")?, "running", "{exec}");
+    assert!(
+        stdout(&exec).contains("READY"),
+        "background command must reach the pre-write point before cancel: {exec}"
+    );
+    let session_id = as_str(&exec, "command_session_id")?.to_owned();
+    lease.call_ok(
+        ops::API_V1_COMMAND_CANCEL,
+        json!({"command_session_id": session_id, "max_output_tokens": 1000}),
+    )?;
+    wait_for_session_count(&lease, 0)?;
+    let metrics = wait_for_active_leases(&lease, 0)?;
+    assert_eq!(as_i64(&metrics, "active_leases")?, 0, "{metrics}");
+
+    let read = lease.call_ok(ops::API_V1_READ_FILE, json!({"path": path}))?;
+    assert!(
+        !as_bool(&read, "exists")?,
+        "cancelled background exec must not publish the later workspace write: {read}"
     );
     Ok(())
 }

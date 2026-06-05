@@ -3,9 +3,9 @@ mod support;
 
 const E2E_CONFIG: &str = "crates/eos-e2e-test/tests/pressure/config/default.test.yml";
 
-mod test_pressure_file_ops_concurrency;
+mod helpers;
 mod test_pressure_cross_subsystem_ladders;
 mod test_pressure_failure_recovery;
-mod helpers;
+mod test_pressure_file_ops_concurrency;
 mod test_pressure_plugin_refresh_and_isolated_cap;
 mod test_pressure_resource_report;

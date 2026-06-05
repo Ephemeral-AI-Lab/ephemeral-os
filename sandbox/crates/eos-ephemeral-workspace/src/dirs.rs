@@ -69,7 +69,6 @@ impl RunDirCleanup {
     pub fn new(path: PathBuf) -> Self {
         Self { path: Some(path) }
     }
-
 }
 
 impl Drop for RunDirCleanup {

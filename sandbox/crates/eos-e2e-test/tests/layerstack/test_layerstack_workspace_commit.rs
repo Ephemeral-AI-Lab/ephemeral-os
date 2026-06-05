@@ -129,6 +129,72 @@ fn commit_emits_audit() -> Result<()> {
 }
 
 #[test]
+fn commit_projects_delete_symlink_and_replacement_write() -> Result<()> {
+    let Some(pool) = live_pool_or_skip()? else {
+        return Ok(());
+    };
+    let lease = pool.acquire()?;
+    let dir = format!("commit-projection-{}", eos_e2e_test::unique_suffix());
+    let deleted = format!("{dir}/delete-me.txt");
+    let old = format!("{dir}/replace/old.txt");
+    let new = format!("{dir}/replace/new.txt");
+    let target = format!("{dir}/target.txt");
+    let link = format!("{dir}/link.txt");
+
+    for (path, content) in [
+        (&deleted, "delete me\n"),
+        (&old, "old\n"),
+        (&target, "target\n"),
+    ] {
+        lease.call_ok(
+            ops::API_V1_WRITE_FILE,
+            json!({"path": path, "content": content, "overwrite": true}),
+        )?;
+    }
+    let overlay = lease.call_ok(
+        ops::API_V1_EXEC_COMMAND,
+        json!({
+            "cmd": format!("rm -f {deleted} {old} && mkdir -p {dir}/replace && printf new > {new} && ln -s target.txt {link}"),
+            "yield_time_ms": 1000,
+            "timeout_seconds": 10,
+            "max_output_tokens": 1000
+        }),
+    )?;
+    assert_eq!(as_str(&overlay, "status")?, "ok", "{overlay}");
+
+    let commit = lease.call_ok(
+        ops::API_COMMIT_TO_WORKSPACE,
+        json!({"workspace_root": lease.workspace_root()}),
+    )?;
+    assert!(as_bool(&commit, "success")?, "{commit}");
+    for key in [
+        "layer_stack.commit_to_workspace.project_s",
+        "layer_stack.commit_to_workspace.replace_workspace_s",
+        "layer_stack.commit_to_workspace.rebuild_base_s",
+    ] {
+        assert_timing_present(&commit, key)?;
+    }
+
+    let check = lease.call_ok(
+        ops::API_V1_EXEC_COMMAND,
+        json!({
+            "cmd": format!(
+                "test ! -e {deleted} && test ! -e {old} && test -f {new} && test -L {link} && test \"$(readlink {link})\" = target.txt"
+            ),
+            "yield_time_ms": 1000,
+            "timeout_seconds": 10,
+            "max_output_tokens": 1000
+        }),
+    )?;
+    assert_eq!(
+        as_str(&check, "status")?,
+        "ok",
+        "projected workspace should preserve delete masking, replacement writes, and symlink target: {check}"
+    );
+    Ok(())
+}
+
+#[test]
 fn workspace_base_rebuild_idempotent_metrics() -> Result<()> {
     let Some(pool) = live_pool_or_skip()? else {
         return Ok(());

@@ -39,7 +39,10 @@ fn repeated_overwrite_keeps_storage_bounded() -> Result<()> {
         return Ok(());
     };
     let lease = pool.acquire()?;
-    let baseline = as_i64(&lease.call_ok(ops::API_LAYER_METRICS, json!({}))?, "storage_bytes")?;
+    let baseline = as_i64(
+        &lease.call_ok(ops::API_LAYER_METRICS, json!({}))?,
+        "storage_bytes",
+    )?;
     for version in 0..60 {
         lease.call_ok(
             ops::API_V1_WRITE_FILE,

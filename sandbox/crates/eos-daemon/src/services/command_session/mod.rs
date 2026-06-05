@@ -280,6 +280,21 @@ pub(crate) fn command_session_write_stdin(args: &Value) -> Result<Value, DaemonE
 }
 
 #[cfg(target_os = "linux")]
+#[must_use]
+pub fn active_command_sessions_for_caller(caller_id: &str) -> usize {
+    let caller_id = caller_id.trim();
+    if caller_id.is_empty() {
+        return 0;
+    }
+    command_session_manager().count_by_caller(Some(caller_id))
+}
+
+#[cfg(not(target_os = "linux"))]
+pub const fn active_command_sessions_for_caller(_caller_id: &str) -> usize {
+    0
+}
+
+#[cfg(target_os = "linux")]
 pub(crate) fn command_session_cancel(args: &Value) -> Result<Value, DaemonError> {
     let request = CancelCommandSession {
         command_session_id: require_command_string(args, "command_session_id")?,

@@ -7,7 +7,9 @@ use eos_protocol::ops;
 use serde_json::{json, Value};
 
 use crate::helpers::{pressure_levels, request_with_identity};
-use crate::support::{as_bool, as_str, live_pool_or_skip, reset_isolated_workspaces};
+use crate::support::{
+    as_bool, as_i64, as_str, live_pool_or_skip, reset_isolated_workspaces, wait_for_active_leases,
+};
 
 #[test]
 fn plugin_refresh_ladder_1_3_6_12() -> Result<()> {
@@ -143,6 +145,132 @@ fn isolated_handle_cap_ladder() -> Result<()> {
         exit_isolated_callers(&lease, &opened);
         reset_isolated_workspaces(&lease);
     }
+    Ok(())
+}
+
+#[test]
+fn protocol_only_bundled_sandbox_capstone() -> Result<()> {
+    let Some(pool) = live_pool_or_skip()? else {
+        return Ok(());
+    };
+    let lease = pool.acquire()?;
+    reset_isolated_workspaces(&lease);
+    let suffix = eos_e2e_test::unique_suffix();
+    let digest = format!("digest-{}", suffix.replace('-', "_"));
+    let setup_digest = format!("setup-{digest}");
+    ensure_generic_service_package(&lease, &digest, &setup_digest)?;
+
+    lease.call_ok(
+        ops::API_V1_WRITE_FILE,
+        json!({"path": "capstone/scaffold.txt", "content": "scaffold\n", "overwrite": true}),
+    )?;
+    let exec = lease.call_ok(
+        ops::API_V1_EXEC_COMMAND,
+        json!({
+            "cmd": "mkdir -p capstone && printf exec > capstone/exec.txt",
+            "yield_time_ms": 1000,
+            "timeout_seconds": 10,
+            "max_output_tokens": 1000
+        }),
+    )?;
+    assert_eq!(as_str(&exec, "status")?, "ok", "{exec}");
+
+    let conflict_path = "capstone/conflict.txt";
+    let barrier = Arc::new(Barrier::new(2));
+    let handles: Vec<_> = ["left", "right"]
+        .into_iter()
+        .map(|label| {
+            let client = lease.client().clone();
+            let root = lease.root().to_owned();
+            let caller_id = lease.caller_id().to_owned();
+            let barrier = Arc::clone(&barrier);
+            thread::spawn(move || {
+                barrier.wait();
+                request_with_identity(
+                    &client,
+                    ops::API_V1_WRITE_FILE,
+                    &root,
+                    &caller_id,
+                    json!({
+                        "path": conflict_path,
+                        "content": format!("{label}\n"),
+                        "overwrite": true
+                    }),
+                )
+            })
+        })
+        .collect();
+    let conflict_responses = handles
+        .into_iter()
+        .map(|handle| handle.join().expect("capstone conflict writer panicked"))
+        .collect::<Result<Vec<_>>>()?;
+    assert!(
+        conflict_responses.iter().any(|response| {
+            response.get("status").and_then(Value::as_str) == Some("committed")
+                || as_bool(response, "success").unwrap_or(false)
+        }),
+        "capstone same-path pressure should commit at least one writer: {conflict_responses:?}"
+    );
+
+    for version in 0..12 {
+        lease.call_ok(
+            ops::API_V1_WRITE_FILE,
+            json!({
+                "path": "capstone/squash.txt",
+                "content": format!("squash-{version}\n"),
+                "overwrite": true
+            }),
+        )?;
+    }
+
+    let plugin = lease.call_ok(
+        "plugin.generic.query",
+        json!({"path": "capstone/scaffold.txt", "request": "capstone"}),
+    )?;
+    assert_eq!(plugin["success"], true, "{plugin}");
+    assert_eq!(plugin["content"], "scaffold\n", "{plugin}");
+
+    let isolated_caller = format!("capstone-iws-{suffix}");
+    lease.call_ok(
+        ops::API_ISOLATED_WORKSPACE_ENTER,
+        json!({"caller_id": isolated_caller}),
+    )?;
+    lease.call_ok(
+        ops::API_V1_WRITE_FILE,
+        json!({
+            "caller_id": isolated_caller,
+            "path": "capstone/private.txt",
+            "content": "private\n",
+            "overwrite": true
+        }),
+    )?;
+    lease.call_ok(
+        ops::API_ISOLATED_WORKSPACE_EXIT,
+        json!({"caller_id": isolated_caller, "grace_s": 0.1}),
+    )?;
+    let private_read = lease.call_ok(
+        ops::API_V1_READ_FILE,
+        json!({"path": "capstone/private.txt"}),
+    )?;
+    assert!(
+        !as_bool(&private_read, "exists")?,
+        "isolated capstone write must be private after exit: {private_read}"
+    );
+
+    let commit = lease.call_ok(
+        ops::API_COMMIT_TO_WORKSPACE,
+        json!({"workspace_root": lease.workspace_root()}),
+    )?;
+    assert!(as_bool(&commit, "success")?, "{commit}");
+    let metrics = wait_for_active_leases(&lease, 0)?;
+    assert_eq!(as_i64(&metrics, "active_leases")?, 0, "{metrics}");
+    let scaffold = lease.call_ok(
+        ops::API_V1_READ_FILE,
+        json!({"path": "capstone/scaffold.txt"}),
+    )?;
+    assert_eq!(as_str(&scaffold, "content")?, "scaffold\n", "{scaffold}");
+    let exec_read = lease.call_ok(ops::API_V1_READ_FILE, json!({"path": "capstone/exec.txt"}))?;
+    assert_eq!(as_str(&exec_read, "content")?, "exec", "{exec_read}");
     Ok(())
 }
 
