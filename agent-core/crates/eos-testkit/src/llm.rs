@@ -3,7 +3,7 @@
 //! `tool_use_turn` / `text_turn` helpers that fabricate one model turn.
 //!
 //! This is the single definition of `ScriptedSource` in the workspace
-//! (TESTING_SPEC AC3); the prior `eos-engine` and `eos-runtime` copies are gone.
+//! (`TESTING_SPEC` AC3); the prior `eos-engine` and `eos-runtime` copies are gone.
 
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -60,19 +60,6 @@ impl EventSource for ScriptedSource {
         }
         let events = turns.remove(0);
         Ok(Box::pin(futures::stream::iter(events.into_iter().map(Ok))))
-    }
-}
-
-/// An event source whose `stream()` never resolves; holds an agent open so a
-/// test can park and abort the spawned run.
-#[derive(Debug)]
-pub struct BlockingSource;
-
-#[async_trait]
-impl EventSource for BlockingSource {
-    async fn stream(&self, _request: &LlmRequest) -> Result<EngineStream, EngineError> {
-        std::future::pending::<()>().await;
-        unreachable!("pending future never resolves")
     }
 }
 

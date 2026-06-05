@@ -4,9 +4,7 @@ use eos_e2e_test::unique_suffix;
 use eos_protocol::ops;
 use serde_json::{json, Value};
 
-use crate::support::{
-    array, as_bool, as_i64, as_str, live_pool_or_skip, stdout, wait_for_active_leases,
-};
+use crate::support::{array, as_i64, as_str, live_pool_or_skip, stdout, wait_for_active_leases};
 
 /// Read a nested `timings.<key>` number from a response.
 fn timing_f64(value: &Value, key: &str) -> Option<f64> {

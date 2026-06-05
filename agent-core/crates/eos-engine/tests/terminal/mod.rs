@@ -1,4 +1,4 @@
-//! Terminal-enforcement tests (TESTING_SPEC §5.2 "terminal enforcement",
+//! Terminal-enforcement tests (`TESTING_SPEC` §5.2 "terminal enforcement",
 //! checkpoint: targeted drop at the synthetic-failure event).
 //!
 //! An **integration** target: it drives the real `run_query` loop with
@@ -7,7 +7,7 @@
 //! dev-dep two-instance rule). Both tests pull the stream to the synthetic
 //! ceiling-failure event, then `drop(stream)` and inspect `ctx` **without
 //! reaching a terminal/`ToolStop`** — the Layer-A non-closure checkpoint
-//! (TESTING_SPEC §4 / AC6).
+//! (`TESTING_SPEC` §4 / AC6).
 #![allow(clippy::expect_used)]
 
 use std::collections::BTreeSet;
@@ -71,7 +71,7 @@ async fn hard_ceiling_exit_terminal_not_submitted() {
 
     let mut stream = run_query(&mut ctx, &mut messages);
     // Pull to the synthetic ceiling-failure event, then drop the stream — the
-    // non-closure checkpoint (TESTING_SPEC §4): no `ToolStop`, just the guard.
+    // non-closure checkpoint (`TESTING_SPEC` §4): no `ToolStop`, just the guard.
     let events = run_until(&mut stream, is_ceiling_failure).await;
     drop(stream);
 

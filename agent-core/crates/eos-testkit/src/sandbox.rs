@@ -1,7 +1,7 @@
 //! Fake daemon transport: every op resolves to an empty payload, so
 //! `command_session_count` is 0 and the no-inflight terminal hook stays happy
 //! without a live daemon. The single canonical `FakeTransport` in the workspace
-//! (TESTING_SPEC §7 — the `eos-engine` duplicate is deleted).
+//! (`TESTING_SPEC` §7 — the `eos-engine` duplicate is deleted).
 
 use async_trait::async_trait;
 use eos_sandbox_api::{DaemonOp, SandboxApiError, SandboxTransport};

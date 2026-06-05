@@ -548,7 +548,7 @@ fn validate_agent_tools(agents: &AgentRegistry, registry: &ToolRegistry) -> Resu
 // Crate-local Layer-A fixtures (`build_test_state` + `FakeProvisioner`). They
 // reference `eos-runtime` types, so the dev-dep two-instance rule bars consuming
 // them from an external `eos-testkit` in this crate's own in-crate tests
-// (TESTING_SPEC §14.2); the cross-crate-safe doubles still come from
+// (`TESTING_SPEC` §14.2); the cross-crate-safe doubles still come from
 // `eos-testkit`. Declared here (not under `tests`) so they can reach the
 // `pub(crate)` provisioner seam via `super::`.
 #[cfg(test)]
@@ -559,7 +559,7 @@ pub(crate) mod support;
 mod tests {
     // Pure-logic unit test for a module-private fn (no reusable doubles defined,
     // so I2-permitted inline). The shared Layer-A doubles moved to `eos-testkit`
-    // (TESTING_SPEC §7); the behavior tests live in `tests/unit/mod.rs` and pull
+    // (`TESTING_SPEC` §7); the behavior tests live in `tests/unit/mod.rs` and pull
     // those doubles from the `eos-testkit` dev-dep plus the local `support`
     // module.
     #[test]

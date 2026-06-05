@@ -2,15 +2,15 @@
 //!
 //! The single home for the doubles per-crate mock tests substitute at the LLM
 //! and daemon-RPC edges: the scripted [`EventSource`](eos_engine::EventSource)
-//! ([`ScriptedSource`] — the only definition in the workspace, TESTING_SPEC AC3),
+//! ([`ScriptedSource`] — the only definition in the workspace, `TESTING_SPEC` AC3),
 //! the fake [`SandboxTransport`](eos_sandbox_api::SandboxTransport)
 //! ([`FakeTransport`]), agent-definition builders, the `run_until` stream
 //! stepper, and the [`ExecutionMetadata`](eos_tools::ExecutionMetadata) fixture
 //! ([`metadata`]). Consumed as a `[dev-dependencies]` crate, so its `src/` *is*
 //! test infrastructure and no production crate carries test-support code in its
-//! own `src/` (TESTING_SPEC I2).
+//! own `src/` (`TESTING_SPEC` I2).
 //!
-//! Scope note (TESTING_SPEC §14.2 / §15): this crate deliberately does **not**
+//! Scope note (`TESTING_SPEC` §14.2 / §15): this crate deliberately does **not**
 //! hold `build_test_state`/`FakeProvisioner` (single-consumer `eos-runtime`
 //! types) or the Layer-B workflow runner/store doubles (single-consumer
 //! `eos-workflow` types). A dev-dependency double is only consumable by crate
@@ -29,7 +29,7 @@ pub use agents::{agent_def, test_tools_root};
 pub use engine::run_until;
 pub use llm::{
     factory_by_agent, factory_from, factory_root_blocks_after, text_turn, tool_use_turn,
-    BlockingSource, ScriptedSource,
+    ScriptedSource,
 };
 pub use meta::metadata;
 pub use sandbox::FakeTransport;

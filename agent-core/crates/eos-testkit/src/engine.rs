@@ -1,6 +1,6 @@
 //! Layer-A stepping: pull a live [`QueryStream`] to a chosen checkpoint, then
 //! return so the caller can `drop` the stream (releasing the `&mut QueryContext`
-//! borrow) and inspect the context — no final closure required (TESTING_SPEC §4,
+//! borrow) and inspect the context — no final closure required (`TESTING_SPEC` §4,
 //! the `hard_ceiling_exit_*` seam).
 
 use eos_engine::{QueryStream, StreamEvent};

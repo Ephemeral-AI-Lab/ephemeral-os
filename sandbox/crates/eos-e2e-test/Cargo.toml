@@ -28,6 +28,10 @@ name = "core"
 path = "tests/core/mod.rs"
 
 [[test]]
+name = "daemon"
+path = "tests/daemon/mod.rs"
+
+[[test]]
 name = "ephemeral_workspace"
 path = "tests/ephemeral_workspace/mod.rs"
 

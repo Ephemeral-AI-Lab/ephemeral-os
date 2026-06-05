@@ -5,5 +5,6 @@ const E2E_CONFIG: &str = "crates/eos-e2e-test/tests/isolated_workspace/config/de
 
 mod command_sessions;
 mod lifecycle;
+mod network;
 mod no_publish;
 mod tool_routing;

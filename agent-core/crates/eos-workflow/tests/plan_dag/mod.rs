@@ -1,5 +1,5 @@
 //! Plan-DAG materialization + PLAN->RUN stage advance, asserted at a **non-closure
-//! park** (TESTING_SPEC §5.2 `plan_dag` rows; the Layer-B half of AC6).
+//! park** (`TESTING_SPEC` §5.2 `plan_dag` rows; the Layer-B half of AC6).
 //!
 //! Layer B: the whole agent run is mocked as a unit by the `QueueRunner` gate
 //! (no engine loop, LLM, tools, or sandbox). We push only the planner's plan,

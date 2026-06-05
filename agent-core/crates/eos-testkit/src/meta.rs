@@ -1,6 +1,6 @@
 //! The tool [`ExecutionMetadata`] fixture and the in-memory store fakes it binds.
 //!
-//! Relocated from `eos-engine/src/support/test_support.rs` (TESTING_SPEC §7).
+//! Relocated from `eos-engine/src/support/test_support.rs` (`TESTING_SPEC` §7).
 //! Every type here is owned by `eos-state` / `eos-tools` / `eos-skills` /
 //! `eos-sandbox-api` — all external to `eos-engine` — so engine **in-crate**
 //! tests can consume `metadata()` despite the dev-dep cycle (no `eos-engine`

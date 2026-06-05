@@ -69,6 +69,23 @@ fn expected_edges() -> Edges {
                 "eos-audit",
             ],
         ),
+        // Dev-only shared test doubles (TESTING_SPEC). Its reverse edges
+        // (eos-engine/eos-runtime -> eos-testkit) are `[dev-dependencies]`, so
+        // they are filtered out of this DAG (line ~112) and introduce no cycle;
+        // only eos-testkit's own normal deps appear here.
+        (
+            "eos-testkit",
+            &[
+                "eos-types",
+                "eos-agent-def",
+                "eos-engine",
+                "eos-llm-client",
+                "eos-sandbox-api",
+                "eos-tools",
+                "eos-state",
+                "eos-skills",
+            ],
+        ),
     ];
     rows.iter()
         .map(|(name, deps)| {

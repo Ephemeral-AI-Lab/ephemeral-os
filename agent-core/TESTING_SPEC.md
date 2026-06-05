@@ -479,3 +479,39 @@ discoverable test-kit crate; the costs below are accepted as part of the plan:
 Even under Broad, the §14.1 altitude correction stands: Layer B doubles live in
 `eos-testkit` but are still only *reachable* by constructing `AttemptDeps`
 directly in `eos-workflow/tests/`; they cannot be injected through `AppState`.
+
+### 15.1 CORRECTION (as implemented) — Broad is partly infeasible; scope = LLM-only
+
+The Broad decision rested on a false premise: that the dev-dep cycle being
+*Cargo-legal* meant the doubles were *usable*. They are not. Rust compiles a
+crate-under-test as a **separate instance** from the normal lib that the dev-dep
+`eos-testkit` links against, so a testkit double whose types the consuming crate
+**owns** cannot be used by that crate's own in-crate `#[cfg(test)]` tests.
+Empirically: moving `build_test_state` to `eos-testkit` and consuming it from
+`eos-runtime/tests/unit/mod.rs` fails with *"multiple different versions of crate
+`eos_runtime`"* + *"field `task_store` is private"*.
+
+Rule: a testkit double is in-crate-usable by crate `X` **iff none of its
+types/traits are owned by `X`**. Therefore the realized split is:
+
+| Double | Owned types | Home (as built) |
+|---|---|---|
+| `ScriptedSource`, factories, `tool_use_turn`, `text_turn`, `FakeTransport`, `agent_def`, `run_until`, `metadata`(+store fakes) | engine / sandbox-api / tools — none owned by a *consumer* | **`eos-testkit`** (LLM-only layer) |
+| `build_test_state`, `FakeProvisioner` | `eos-runtime` | **`eos-runtime/tests/unit/support.rs`** (`#[path]`, single-consumer per §14.2) |
+| `MemoryStores`, `QueueRunner`, `ScriptedRunner`, `wait_until` | `eos-workflow` | **`eos-workflow/tests/support/` `#[path]`** (single-consumer per §14.2) |
+
+Consequences that supersede §15/§14.4/§7 prose:
+- **§14.4 exposures REVERTED.** With `build_test_state` back in-crate it reaches
+  the `pub(crate)` `RequestProvisioner`/`.provisioner()` directly, so no
+  public-API widening is needed (and none is kept).
+- **`eos-testkit` depends only on crates at/below `eos-engine`** (no
+  `eos-runtime`/`eos-workflow` dep), so the only dev-dep cycles are
+  `eos-engine[dev] → eos-testkit → eos-engine` and `eos-runtime[dev] →
+  eos-testkit → eos-runtime` — both carrying no owned type across the boundary.
+- **`MemoryStores::deps()` keeps its direct field writes** (it stays in-crate;
+  no `with_*` rewrite needed).
+- **AC2's grep is the binding test and passes**: every relocated `#[path]`
+  module is named `support` (none matches `testsupport|test_support|testutil|fakes`).
+- Engine's `ScriptedSource`-driven tests (the relocated `hard_ceiling_*`) become
+  an **integration target** (`eos-engine/tests/terminal`), the one place engine
+  is external and can consume the shared `ScriptedSource`.

@@ -101,7 +101,7 @@
 
 <section id="api-daemon-hop"
   data-last-reviewed-commit="569f12c3f39471dbaa643906856a8daf81a21a2d"
-  data-evidence-paths="agent-core/crates/eos-sandbox-api/src/tool_api sandbox/crates/eos-protocol/src/ops.rs sandbox/crates/eos-daemon/src/dispatcher.rs sandbox/crates/eos-runner/src/request.rs">
+  data-evidence-paths="agent-core/crates/eos-sandbox-api/src/tool_api sandbox/crates/eos-protocol/src/ops.rs sandbox/crates/eos-daemon/src/dispatch/dispatcher.rs sandbox/crates/eos-runner/src/request.rs">
 <h2>API and Daemon Hop</h2>
 <p><code>sandbox.api.tool</code> is the public facade between tools and the in-sandbox daemon. Each verb builds a JSON-safe daemon payload from the typed request identity fields, calls the transport operation, parses the daemon response back into a typed result, and wraps the call in audited operation metadata.</p>
 <pre class="diagram" aria-label="Sandbox tool dispatch ASCII workflow">

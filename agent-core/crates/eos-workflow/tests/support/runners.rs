@@ -387,7 +387,7 @@ pub(crate) fn one_step_plan(started: &crate::StartedWorkflow) -> PlannerPlan {
 }
 
 /// Spin the test runtime until `predicate` holds, or panic. The single waiter
-/// (TESTING_SPEC §4.4 / AC3): every mid-flight checkpoint predicate — a launched
+/// (`TESTING_SPEC` §4.4 / AC3): every mid-flight checkpoint predicate — a launched
 /// role, an attempt stage, a workflow status — funnels through here, so there is
 /// no parallel waiter.
 pub(crate) async fn wait_until<F: FnMut() -> bool>(mut predicate: F) {
