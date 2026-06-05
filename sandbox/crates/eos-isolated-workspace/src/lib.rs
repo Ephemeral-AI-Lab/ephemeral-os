@@ -32,9 +32,8 @@ pub mod caps;
 pub mod command_session;
 pub mod config;
 pub mod error;
-pub mod file_ops;
 pub mod network;
-pub mod ops;
+mod ops;
 pub mod session;
 
 pub use audit::{AuditSink, JsonlAuditSink, DEFAULT_AUDIT_JSONL_PATH};
