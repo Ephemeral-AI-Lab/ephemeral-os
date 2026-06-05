@@ -1,7 +1,6 @@
 use std::collections::BTreeMap;
 use std::path::PathBuf;
 
-use eos_protocol::Intent;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
@@ -47,16 +46,6 @@ pub struct EphemeralWorkspace {
     pub invocation_id: InvocationId,
     pub snapshot: EphemeralSnapshot,
     pub dirs: EphemeralRunDirs,
-}
-
-/// Runner-facing tool specification for a fresh namespace call.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct EphemeralToolSpec {
-    pub verb: String,
-    pub intent: Intent,
-    pub args: Value,
-    pub background: bool,
-    pub timeout_seconds: Option<f64>,
 }
 
 /// Local path-kind classification for captured upperdir changes.

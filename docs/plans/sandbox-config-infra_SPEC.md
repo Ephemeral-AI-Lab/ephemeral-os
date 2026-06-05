@@ -29,7 +29,7 @@ the previous phase's acceptance criteria have passed.
 |---|---|---|
 | Phase 0: Spec and inventory | Complete | Planning artifact updated with parent-only config ownership; spec diff check passed before Phase 1 edits. |
 | Phase 1: Add config file layout | Complete | Added `sandbox/config/prd.yml` and README only; config-selection scan recorded below. |
-| Phase 2: Add `eos-config` loader crate | Not started | Generic YAML load, merge, and section deserialize. |
+| Phase 2: Add `eos-config` loader crate | Complete | Added generic loader crate; `cargo test -p eos-config` and `cargo check -p eos-config --all-targets` passed. |
 | Phase 3: Add typed runtime schemas | Not started | Crate-root config modules define typed schemas and validation. |
 | Phase 4: Wire production loading | Not started | Replace scattered env/default reads with injected config. |
 | Phase 5: Wire E2E test local overrides | Not started | Test modules load hardcoded local `*.test.yml`. |

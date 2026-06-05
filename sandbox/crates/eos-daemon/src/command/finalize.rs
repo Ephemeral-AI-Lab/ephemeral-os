@@ -17,9 +17,7 @@ use eos_layerstack::LayerStack;
 use eos_overlay::capture_upperdir;
 use eos_runner::RunResult;
 
-use super::lifecycle::{
-    require_string, EphemeralCommandWorkspace, IsolatedCommandWorkspace,
-};
+use super::lifecycle::{require_string, EphemeralCommandWorkspace, IsolatedCommandWorkspace};
 use super::session::{
     command_session_registry, lock_command_session_state, wait_for_yield, CommandSession,
     WaitOutcome,
@@ -35,7 +33,7 @@ use crate::response_timings::{
     merge_runner_timings, resource_timings, TreeResourceStats,
 };
 
-pub(crate) fn finalize_isolated_command_workspace(
+pub(super) fn finalize_isolated_command_workspace(
     session: &CommandSession,
     workspace: &IsolatedCommandWorkspace,
     runner: Option<&RunResult>,
@@ -139,7 +137,7 @@ pub(crate) fn finalize_isolated_command_workspace(
     Ok(response)
 }
 
-pub(crate) fn finalize_command_workspace(
+pub(super) fn finalize_command_workspace(
     session: &CommandSession,
     workspace: &EphemeralCommandWorkspace,
     status: &str,

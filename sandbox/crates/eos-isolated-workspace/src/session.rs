@@ -29,10 +29,10 @@ mod lifecycle;
 mod persistence;
 mod ports;
 mod support;
-mod types;
 #[cfg(test)]
 #[path = "../tests/session/mod.rs"]
 mod tests;
+mod types;
 
 pub use ports::{LayerStackSnapshotPort, NamespaceRuntimePort};
 pub use types::{AgentId, SnapshotLease, WorkspaceHandle, WorkspaceHandleId};

@@ -14,16 +14,15 @@
 //! port time through the same routing.
 
 use std::collections::HashMap;
-use std::path::{Path, PathBuf};
-use std::time::{Duration, Instant};
+#[cfg(test)]
+use std::path::PathBuf;
+use std::time::Instant;
 
 use serde_json::{json, Value};
 
-use eos_layerstack::{
-    build_workspace_base, ensure_workspace_base, read_workspace_binding, require_workspace_binding,
-    LayerStack,
-};
-use eos_protocol::{ErrorKind, Request};
+#[cfg(test)]
+use eos_layerstack::LayerStack;
+use eos_protocol::{ops as protocol_ops, ErrorKind, Request};
 #[cfg(test)]
 use eos_protocol::{LayerChange, LayerPath};
 
@@ -34,13 +33,12 @@ use crate::audit_events::{background_event_kind, emit_auto_squash_audit, uses_ov
 use crate::audit_ops::{op_audit_pull, op_audit_snapshot};
 use crate::error::DaemonError;
 use crate::invocation_registry::InFlightRegistry;
-use crate::occ_writer::occ_service_cache_snapshot;
 #[cfg(test)]
 use crate::occ_writer::{
     base_hashes_for_snapshot, hash_bytes, normalize_root_key, occ_route_metrics,
     LayerStackCommitTransaction, LayerStackRouteProvider, OccServiceCache, OCC_SERVICE_CACHE_MAX,
 };
-use crate::request_args::{binding_to_value, require_string, timings_to_value_map};
+use crate::ops::{runtime, workspace_base};
 #[cfg(test)]
 use crate::response_timings::{
     i64_to_f64_saturating, insert_tree_resource_timings, resource_timings, TreeResourceStats,
@@ -99,6 +97,10 @@ impl<'ctx> DispatchContext<'ctx> {
             read_request_s: Some(read_request_s),
         }
     }
+
+    pub(crate) const fn invocation_registry(&self) -> Option<&'ctx InFlightRegistry> {
+        self.invocation_registry
+    }
 }
 
 /// The op routing table.
@@ -118,46 +120,85 @@ impl OpTable {
         // The real registration also folds in plugin ops and the full
         // isolated-workspace implementation; this table pins public daemon op
         // names as they are ported so callers never see unknown_op drift.
-        table.register_builtin("api.runtime.ready", op_runtime_ready);
-        table.register_builtin("api.v1.cancel", op_cancel);
-        table.register_builtin("api.v1.heartbeat", op_heartbeat);
-        table.register_builtin("api.v1.inflight_count", op_inflight_count);
-        table.register_builtin("api.layer_metrics", op_layer_metrics);
-        table.register_builtin("api.ensure_workspace_base", op_ensure_workspace_base);
-        table.register_builtin("api.build_workspace_base", op_build_workspace_base);
-        table.register_builtin("api.commit_to_workspace", op_commit_to_workspace);
-        table.register_builtin("api.workspace_binding", op_workspace_binding);
-        table.register_builtin("api.audit.pull", crate::audit_ops::op_audit_pull);
-        table.register_builtin("api.audit.snapshot", crate::audit_ops::op_audit_snapshot);
+        table.register_builtin(protocol_ops::API_RUNTIME_READY, runtime::op_runtime_ready);
+        table.register_builtin(protocol_ops::API_V1_CANCEL, runtime::op_cancel);
+        table.register_builtin(protocol_ops::API_V1_HEARTBEAT, runtime::op_heartbeat);
         table.register_builtin(
-            "api.audit.reset_floor",
+            protocol_ops::API_V1_INFLIGHT_COUNT,
+            runtime::op_inflight_count,
+        );
+        table.register_builtin(protocol_ops::API_LAYER_METRICS, workspace_base::op_layer_metrics);
+        table.register_builtin(
+            protocol_ops::API_ENSURE_WORKSPACE_BASE,
+            workspace_base::op_ensure_workspace_base,
+        );
+        table.register_builtin(
+            protocol_ops::API_BUILD_WORKSPACE_BASE,
+            workspace_base::op_build_workspace_base,
+        );
+        table.register_builtin(
+            protocol_ops::API_COMMIT_TO_WORKSPACE,
+            workspace_base::op_commit_to_workspace,
+        );
+        table.register_builtin(
+            protocol_ops::API_WORKSPACE_BINDING,
+            workspace_base::op_workspace_binding,
+        );
+        table.register_builtin(protocol_ops::API_AUDIT_PULL, crate::audit_ops::op_audit_pull);
+        table.register_builtin(
+            protocol_ops::API_AUDIT_SNAPSHOT,
+            crate::audit_ops::op_audit_snapshot,
+        );
+        table.register_builtin(
+            protocol_ops::API_AUDIT_RESET_FLOOR,
             crate::audit_ops::op_audit_reset_floor,
         );
-        table.register_builtin("api.v1.read_file", crate::workspace_ops::op_read_file);
-        table.register_builtin("api.v1.write_file", crate::workspace_ops::op_write_file);
-        table.register_builtin("api.v1.edit_file", crate::workspace_ops::op_edit_file);
-        table.register_builtin("api.plugin.ensure", crate::plugin::op_ensure);
-        table.register_builtin("api.plugin.status", crate::plugin::op_status);
-        table.register_builtin("api.isolated_workspace.enter", crate::isolated::op_enter);
-        table.register_builtin("api.isolated_workspace.exit", crate::isolated::op_exit);
-        table.register_builtin("api.isolated_workspace.status", crate::isolated::op_status);
+        table.register_builtin(protocol_ops::API_V1_READ_FILE, crate::workspace_ops::op_read_file);
         table.register_builtin(
-            "api.isolated_workspace.list_open",
+            protocol_ops::API_V1_WRITE_FILE,
+            crate::workspace_ops::op_write_file,
+        );
+        table.register_builtin(protocol_ops::API_V1_EDIT_FILE, crate::workspace_ops::op_edit_file);
+        table.register_builtin(protocol_ops::API_PLUGIN_ENSURE, crate::plugin::op_ensure);
+        table.register_builtin(protocol_ops::API_PLUGIN_STATUS, crate::plugin::op_status);
+        table.register_builtin(
+            protocol_ops::API_ISOLATED_WORKSPACE_ENTER,
+            crate::isolated::op_enter,
+        );
+        table.register_builtin(
+            protocol_ops::API_ISOLATED_WORKSPACE_EXIT,
+            crate::isolated::op_exit,
+        );
+        table.register_builtin(
+            protocol_ops::API_ISOLATED_WORKSPACE_STATUS,
+            crate::isolated::op_status,
+        );
+        table.register_builtin(
+            protocol_ops::API_ISOLATED_WORKSPACE_LIST_OPEN,
             crate::isolated::op_list_open,
         );
         table.register_builtin(
-            "api.isolated_workspace.test_reset",
+            protocol_ops::API_ISOLATED_WORKSPACE_TEST_RESET,
             crate::isolated::op_test_reset,
         );
-        table.register_builtin("api.v1.exec_command", crate::command::op_exec_command);
-        table.register_builtin("api.v1.write_stdin", crate::command::op_command_write_stdin);
-        table.register_builtin("api.v1.command.cancel", crate::command::op_command_cancel);
         table.register_builtin(
-            "api.v1.command.collect_completed",
+            protocol_ops::API_V1_EXEC_COMMAND,
+            crate::command::op_exec_command,
+        );
+        table.register_builtin(
+            protocol_ops::API_V1_WRITE_STDIN,
+            crate::command::op_command_write_stdin,
+        );
+        table.register_builtin(
+            protocol_ops::API_V1_COMMAND_CANCEL,
+            crate::command::op_command_cancel,
+        );
+        table.register_builtin(
+            protocol_ops::API_V1_COMMAND_COLLECT_COMPLETED,
             crate::command::op_command_collect_completed,
         );
         table.register_builtin(
-            "api.v1.command_session_count",
+            protocol_ops::API_V1_COMMAND_SESSION_COUNT,
             crate::command::op_command_session_count,
         );
         table
@@ -625,23 +666,9 @@ fn attach_runtime_timings(
     }
 }
 
-fn daemon_uptime_s() -> f64 {
+pub(crate) fn daemon_uptime_s() -> f64 {
     static START: std::sync::OnceLock<Instant> = std::sync::OnceLock::new();
     START.get_or_init(Instant::now).elapsed().as_secs_f64()
-}
-
-const fn error_type(err: &DaemonError) -> &'static str {
-    match err {
-        DaemonError::LayerStack(eos_layerstack::LayerStackError::WorkspaceBinding(_)) => {
-            "WorkspaceBindingError"
-        }
-        DaemonError::LayerStack(eos_layerstack::LayerStackError::Manifest(_)) => {
-            "ManifestConflictError"
-        }
-        DaemonError::Io(_) => "OSError",
-        DaemonError::InvalidEnvelope(_) => "ValueError",
-        _ => "RuntimeError",
-    }
 }
 
 #[cfg(test)]

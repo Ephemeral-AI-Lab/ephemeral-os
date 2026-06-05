@@ -26,7 +26,8 @@ pub const EOS_WORKSPACE_ROOT_ENV: &str = "EOS_WORKSPACE_ROOT";
 ///
 /// `allow` (default) leaves private-network egress open; `deny` installs the
 /// RFC1918 drop rules.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub enum Rfc1918Egress {
     /// Private-network egress permitted (default).
     Allow,

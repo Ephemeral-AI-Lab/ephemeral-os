@@ -9,6 +9,7 @@ license.workspace = true
 eos-overlay.workspace = true
 # External deps the crate map assigns to eos-isolated-workspace (06-crate-map §A). NOT
 # eos-occ — that edge is the build-time no-publish guard and must stay absent.
+serde.workspace = true
 serde_json.workspace = true
 thiserror.workspace = true
 nix.workspace = true
@@ -22,3 +23,6 @@ tokio.workspace = true
 
 [lints]
 workspace = true
+
+[dev-dependencies]
+eos-config.workspace = true

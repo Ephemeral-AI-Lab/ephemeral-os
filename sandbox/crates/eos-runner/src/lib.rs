@@ -41,6 +41,7 @@
 //! (`kernel_mount`, consumed through the local [`mount::KernelMountPort`] port).
 #![deny(unsafe_op_in_unsafe_fn)]
 
+pub mod config;
 pub mod error;
 pub mod fresh_ns;
 pub mod mount;

@@ -20,9 +20,7 @@ use super::finalize::strip_session_id;
 use super::output;
 use super::output::{CommandSessionOutput, CommandSessionOutputCursor};
 use super::pty::open_pty_pair;
-use super::session::{
-    command_session_registry, wait_for_yield, CommandSession, WaitOutcome,
-};
+use super::session::{command_session_registry, wait_for_yield, CommandSession, WaitOutcome};
 use super::{command_result, optional_u64};
 use crate::error::DaemonError;
 use crate::overlay_runner::{overlay_run_dirs, RunDirCleanup};

@@ -18,7 +18,7 @@ The Python per-call lifecycle is `EphemeralPipeline.run_tool_call` (`/tmp/oldpy/
 
 Dispatch routing (`/tmp/oldpy/backend/src/sandbox/daemon/workspace_tool/dispatch.py`):
 - `read_file`/`write_file`/`edit_file` first try the **direct LayerStack/OCC fast path** when a workspace binding exists (`dispatch.py:239-299`, `_LAYER_STACK_FILE_VERBS = {"edit_file","read_file","write_file"}` `dispatch.py:40`). Direct write/edit call `services.occ_service.apply_changeset([...])` with `options=None` → `CommitOptions` default **`atomic=True`** (`/tmp/oldpy/backend/src/sandbox/occ/changeset.py:206-216`).
-- shell/search (`exec_command`/`grep`/`glob`) and the fallback for unbound file ops go through `pipeline.run_tool_call` (overlay capture, OCC-gated publish) (`dispatch.py:220-257`).
+- shell (`exec_command`) and the fallback for unbound file ops go through `pipeline.run_tool_call` (overlay capture, OCC-gated publish) (`dispatch.py:220-257`). The legacy Python search facade is historical; Rust raw grep/glob ops are deleted.
 
 The persistent-mount machinery (`EphemeralPipeline.start`, `_watch_foreign_publishes`, `WorkspaceChangeEventBus`, `publish_pending_changes`) is **dormant on the tool-call path**: dispatch calls `get_ephemeral_pipeline(..., start=False)` (`dispatch.py:226-230`); `start()` only runs when `start=True` (`pipeline_registry.py:75-77`), used by the plugin runtime API, not by `dispatch_workspace_tool_call`. Confirms arch doc `docs/architecture/sandbox/workspaces.html` §5.3 ("start=False ... without starting a persistent workspace mount").
 
@@ -36,8 +36,8 @@ The Rust daemon (`eosd`) replaces the in-process Python daemon with a **purely p
 
 - `exec_command` (non-isolated): `op_exec_command` → `start_command_session` → `prepare_command_session` → (foreground/background) `CommandSessionFinalizer::finish` → `finalize_command_workspace`.
   - `sandbox/crates/eos-daemon/src/command.rs:52-91, 718-790, 852-924, 1020-1106, 1295-1363`.
-- shell/search read (`grep`/`glob`): `run_overlay_read_tool` (`sandbox/crates/eos-daemon/src/dispatcher.rs:1188-1264`).
-- plugin overlay (write): `run_plugin_overlay_command` → `run_plugin_overlay_once` → `plugin_overlay_response` (`dispatcher.rs:884-1026`).
+- raw search read (`grep`/`glob`): deleted from Rust; no dedicated raw search overlay path remains.
+- plugin overlay (write): `run_plugin_overlay_command` → `run_plugin_overlay_once` → `plugin_overlay_response` (`sandbox/crates/eos-daemon/src/plugin/overlay.rs`).
 - direct file fast paths: `op_read_file`/`op_write_file`/`op_edit_file` (`dispatcher.rs:519-870`).
 - OCC apply: `apply_occ_changeset` (`dispatcher.rs:1761-1776`) → `apply_changeset_with_base_hashes` (`sandbox/crates/eos-occ/src/service.rs:181-195`); merge/validate/publish in `LayerStackCommitTransaction::revalidate_and_publish` (`dispatcher.rs:1467-1543`).
 - `agent-core/crates/eos-sandbox-host/src/daemon_client.rs` is **pure transport** (serialize one JSON envelope, ship to in-sandbox `eosd`); it implements no overlay lifecycle, as expected.
@@ -52,7 +52,7 @@ The Rust daemon (`eosd`) replaces the in-process Python daemon with a **purely p
 | 2 | Writes land in the overlay upperdir | match | none | pipeline.py:146 (`run_in_namespace`); lifecycle.py:84-86 | command.rs:901-902 (`upperdir: Some(dirs.upperdir)`, `workdir: Some(dirs.workdir)`); ns-runner mounts `layer_paths` as lowerdirs | — |
 | 3 | On success, upperdir changes sent to OCC for MERGE into shared workspace | partial | high | pipeline.py:147-163; workspace_publish.py:198-221 | command.rs:1306-1329 (`capture_upperdir` → `apply_occ_changeset`) | Capture+publish happens, BUT (a) OCC `atomic` flag is hardcoded `true` instead of `len(distinct_paths) > 1` (see D1 — silent-success bug on single-path conflict), and (b) "on success" is a checklist wording mismatch: both sides publish regardless of command exit code (gated only on write intent). |
 | 4 | Ephemeral overlay/lease released and overlay DISCARDED after the call | partial | medium | pipeline.py:201-202; lifecycle.py:111-141 (LeaseGuard + release_overlay rmtree) | command.rs:1079-1081 (`remove_dir_all(run_dir)` + `release_lease` in finalizer) | Success path discards. BUT `prepare_command_session` has no RAII run-dir cleanup; the prepare-error branch (command.rs:785-788) releases the lease but leaks the upperdir/workdir (see D2). |
-| 5 | File APIs use LayerStack/OCC fast path when bound; shell/search/plugin use overlay pipeline publishing through OCC-gated paths | match | none | dispatch.py:40, 239-299 (fast path); dispatch.py:220-257 (overlay) | read/write/edit: dispatcher.rs:519-870 (direct `read_bytes`/`apply_occ_changeset`, no overlay); grep/glob: dispatcher.rs:1170-1264 (overlay ns-runner); plugin: dispatcher.rs:884-1026 | Routing and OCC-gating preserved. Direct write/edit use `atomic=true`, which MATCHES Python's `CommitOptions` default `atomic=True` for the fast path. |
+| 5 | File APIs use LayerStack/OCC fast path when bound; shell/plugin use overlay pipeline publishing through OCC-gated paths | match | none | dispatch.py:40, 239-299 (fast path); dispatch.py:220-257 (overlay) | read/write/edit: `workspace_ops.rs` (direct `read_bytes`/`apply_occ_changeset`, no overlay); command: `command.rs`; plugin: `plugin/overlay.rs`; raw grep/glob: deleted | Routing and OCC-gating preserved for remaining Rust overlay paths. Direct write/edit use `atomic=true`, which MATCHES Python's `CommitOptions` default `atomic=True` for the fast path. |
 
 Constant comparison:
 

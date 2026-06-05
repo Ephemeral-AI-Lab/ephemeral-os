@@ -1,0 +1,54 @@
+use std::path::PathBuf;
+
+use thiserror::Error;
+
+use crate::merge::MergeConflict;
+
+/// Errors produced by sandbox config loading and section deserialization.
+#[derive(Debug, Error)]
+#[non_exhaustive]
+pub enum ConfigError {
+    /// The sandbox workspace root could not be resolved from the crate layout.
+    #[error("failed to resolve sandbox workspace root from {manifest_dir}")]
+    WorkspaceRoot { manifest_dir: PathBuf },
+
+    /// A production or test config file could not be read.
+    #[error("failed to read config file {path}: {source}")]
+    Read {
+        path: PathBuf,
+        #[source]
+        source: std::io::Error,
+    },
+
+    /// A config file contained invalid YAML.
+    #[error("failed to parse YAML config file {path}: {source}")]
+    Parse {
+        path: PathBuf,
+        #[source]
+        source: serde_yaml::Error,
+    },
+
+    /// A test override path violated the sandbox config path policy.
+    #[error("invalid test override path {path}: {reason}")]
+    InvalidOverridePath { path: PathBuf, reason: String },
+
+    /// A top-level config section was requested but not present.
+    #[error("missing config section {section}")]
+    MissingSection { section: String },
+
+    /// The YAML document root must be an object.
+    #[error("config document root must be a YAML mapping")]
+    InvalidDocumentRoot,
+
+    /// Deep merge failed.
+    #[error(transparent)]
+    Merge(#[from] MergeConflict),
+
+    /// A top-level section failed typed deserialization.
+    #[error("failed to deserialize config section {section}: {source}")]
+    DeserializeSection {
+        section: String,
+        #[source]
+        source: serde_path_to_error::Error<serde_yaml::Error>,
+    },
+}

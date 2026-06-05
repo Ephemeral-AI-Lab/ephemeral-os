@@ -21,8 +21,8 @@ Python ground truth (authoritative for dynamics/constants/ordering):
 
 Architecture corroboration:
 - `docs/architecture/tools/sandbox.html`: Rust registry returns `read_file, write_file, edit_file,
-  multi_edit, exec_command, write_stdin`; raw daemon `api.v1.glob`/`api.v1.grep` primitives are
-  intentionally deleted from the Rust daemon/protocol/runner surface.
+  multi_edit, exec_command, write_stdin`; raw daemon search primitives are intentionally deleted
+  from the Rust daemon/protocol/runner surface.
 - `docs/architecture/tools/terminals.html`: terminal-tool exclusivity (sandbox tools are ordinary
   framework tools, not terminal).
 

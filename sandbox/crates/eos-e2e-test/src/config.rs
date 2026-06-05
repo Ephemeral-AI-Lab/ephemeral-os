@@ -8,7 +8,8 @@ use std::collections::BTreeMap;
 use std::path::PathBuf;
 use std::time::Duration;
 
-use anyhow::{Context, Result};
+use anyhow::{bail, Context, Result};
+use eos_config::ConfigDocument;
 use serde::Deserialize;
 
 const DEFAULT_EOS_WORKSPACE_ROOT: &str = "/testbed";
@@ -75,6 +76,161 @@ pub struct Config {
     pub audit_pull_limit: u64,
     /// `EOS_ISOLATED_WORKSPACE_UPPERDIR_BYTES` passed into the daemon container.
     pub isolated_upperdir_bytes: u64,
+}
+
+/// Typed `eos_e2e_test` section from `sandbox/config/prd.yml`.
+#[derive(Debug, Clone, PartialEq, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct EosE2eTestConfig {
+    pub docker: E2eDockerConfig,
+    pub pool: E2ePoolConfig,
+    pub timeouts: E2eTimeoutConfig,
+    pub audit: E2eAuditConfig,
+    pub isolated_workspace_overrides: Option<E2eIsolatedWorkspaceOverrides>,
+}
+
+/// Docker/container defaults for the E2E harness.
+#[derive(Debug, Clone, PartialEq, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct E2eDockerConfig {
+    pub image: String,
+    pub platform: Option<String>,
+    pub eosd_path: PathBuf,
+    pub remote_daemon_dir: PathBuf,
+    pub remote_eosd_path: PathBuf,
+    pub root_dir: PathBuf,
+    pub cap_add: Vec<String>,
+    pub security_opt: Vec<String>,
+    pub tmpfs: Vec<String>,
+    pub tcp_port: u16,
+    pub non_kept_container_ttl_s: u64,
+}
+
+/// Node-pool defaults for the E2E harness.
+#[derive(Debug, Clone, PartialEq, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct E2ePoolConfig {
+    pub mode: E2eNodeMode,
+    pub sandboxes: usize,
+    pub recycle_after: usize,
+    pub keep_container: bool,
+}
+
+/// How E2E nodes map to tests in the future YAML-backed loader.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum E2eNodeMode {
+    Shared,
+    Pool,
+    PerFile,
+    PerTest,
+}
+
+/// E2E harness timeout defaults.
+#[derive(Debug, Clone, PartialEq, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct E2eTimeoutConfig {
+    pub ready_s: u64,
+    pub request_s: u64,
+    pub base_build_s: u64,
+}
+
+/// E2E audit query defaults.
+#[derive(Debug, Clone, PartialEq, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct E2eAuditConfig {
+    pub pull_limit: u64,
+}
+
+/// Harness-owned isolated-workspace runtime overrides for live Docker tests.
+#[derive(Debug, Clone, PartialEq, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct E2eIsolatedWorkspaceOverrides {
+    pub enabled: Option<bool>,
+    pub upperdir_bytes: Option<u64>,
+    pub memavail_fraction: Option<f64>,
+}
+
+impl EosE2eTestConfig {
+    /// Deserialize the `eos_e2e_test` section from a generic config document.
+    ///
+    /// # Errors
+    /// Returns an error if the section is missing, malformed, or semantically
+    /// invalid.
+    pub fn from_document(doc: &ConfigDocument) -> Result<Self> {
+        let config = doc
+            .section::<Self>("eos_e2e_test")
+            .context("deserialize eos_e2e_test config section")?;
+        config.validate()?;
+        Ok(config)
+    }
+
+    /// Validate semantic constraints that YAML deserialization cannot express.
+    ///
+    /// # Errors
+    /// Returns an error when a field violates E2E harness policy.
+    pub fn validate(&self) -> Result<()> {
+        require_non_empty(&self.docker.image, "eos_e2e_test.docker.image")?;
+        if let Some(platform) = &self.docker.platform {
+            require_non_empty(platform, "eos_e2e_test.docker.platform")?;
+        }
+        require_non_empty_path(&self.docker.eosd_path, "eos_e2e_test.docker.eosd_path")?;
+        require_absolute(
+            &self.docker.remote_daemon_dir,
+            "eos_e2e_test.docker.remote_daemon_dir",
+        )?;
+        require_absolute(
+            &self.docker.remote_eosd_path,
+            "eos_e2e_test.docker.remote_eosd_path",
+        )?;
+        require_absolute(&self.docker.root_dir, "eos_e2e_test.docker.root_dir")?;
+        require_non_empty_items(&self.docker.cap_add, "eos_e2e_test.docker.cap_add")?;
+        require_non_empty_items(
+            &self.docker.security_opt,
+            "eos_e2e_test.docker.security_opt",
+        )?;
+        require_non_empty_items(&self.docker.tmpfs, "eos_e2e_test.docker.tmpfs")?;
+        require_u16_nonzero(self.docker.tcp_port, "eos_e2e_test.docker.tcp_port")?;
+        require_u64_at_least(
+            self.docker.non_kept_container_ttl_s,
+            1,
+            "eos_e2e_test.docker.non_kept_container_ttl_s",
+        )?;
+        require_usize_at_least(self.pool.sandboxes, 1, "eos_e2e_test.pool.sandboxes")?;
+        require_usize_at_least(
+            self.pool.recycle_after,
+            1,
+            "eos_e2e_test.pool.recycle_after",
+        )?;
+        require_u64_at_least(self.timeouts.ready_s, 1, "eos_e2e_test.timeouts.ready_s")?;
+        require_u64_at_least(
+            self.timeouts.request_s,
+            1,
+            "eos_e2e_test.timeouts.request_s",
+        )?;
+        require_u64_at_least(
+            self.timeouts.base_build_s,
+            1,
+            "eos_e2e_test.timeouts.base_build_s",
+        )?;
+        require_u64_at_least(self.audit.pull_limit, 1, "eos_e2e_test.audit.pull_limit")?;
+        if let Some(overrides) = &self.isolated_workspace_overrides {
+            if let Some(upperdir_bytes) = overrides.upperdir_bytes {
+                require_u64_at_least(
+                    upperdir_bytes,
+                    1,
+                    "eos_e2e_test.isolated_workspace_overrides.upperdir_bytes",
+                )?;
+            }
+            if let Some(memavail_fraction) = overrides.memavail_fraction {
+                require_ratio(
+                    memavail_fraction,
+                    "eos_e2e_test.isolated_workspace_overrides.memavail_fraction",
+                )?;
+            }
+        }
+        Ok(())
+    }
 }
 
 #[derive(Debug, Default, Deserialize)]
@@ -307,4 +463,115 @@ fn env_parse_u64(key: &str) -> Result<Option<u64>> {
 
 fn env_bool(key: &str) -> Option<bool> {
     env_str(key).map(|value| matches!(value.as_str(), "1" | "true" | "yes"))
+}
+
+fn require_non_empty(value: &str, field: &str) -> Result<()> {
+    if value.trim().is_empty() {
+        bail!("{field}: must be non-empty");
+    }
+    Ok(())
+}
+
+fn require_non_empty_path(path: &std::path::Path, field: &str) -> Result<()> {
+    if path.as_os_str().is_empty() {
+        bail!("{field}: must be non-empty");
+    }
+    Ok(())
+}
+
+fn require_absolute(path: &std::path::Path, field: &str) -> Result<()> {
+    if !path.is_absolute() {
+        bail!("{field}: must be an absolute path");
+    }
+    Ok(())
+}
+
+fn require_non_empty_items(values: &[String], field: &str) -> Result<()> {
+    if values.iter().any(|value| value.trim().is_empty()) {
+        bail!("{field}: must not contain empty strings");
+    }
+    Ok(())
+}
+
+fn require_u16_nonzero(value: u16, field: &str) -> Result<()> {
+    if value == 0 {
+        bail!("{field}: must be non-zero");
+    }
+    Ok(())
+}
+
+fn require_u64_at_least(value: u64, minimum: u64, field: &str) -> Result<()> {
+    if value < minimum {
+        bail!("{field}: must be at least {minimum}");
+    }
+    Ok(())
+}
+
+fn require_usize_at_least(value: usize, minimum: usize, field: &str) -> Result<()> {
+    if value < minimum {
+        bail!("{field}: must be at least {minimum}");
+    }
+    Ok(())
+}
+
+fn require_ratio(value: f64, field: &str) -> Result<()> {
+    if !(value.is_finite() && value > 0.0 && value <= 1.0) {
+        bail!("{field}: must be greater than 0.0 and at most 1.0");
+    }
+    Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn prd_e2e_section_deserializes_and_validates() {
+        let doc = eos_config::load_prd().expect("prd config loads");
+        EosE2eTestConfig::from_document(&doc).expect("prd eos_e2e_test config is valid");
+    }
+
+    #[test]
+    fn validation_rejects_invalid_e2e_values() {
+        let mut cfg = prd_config();
+        cfg.docker.image.clear();
+        assert_invalid(cfg, "eos_e2e_test.docker.image");
+
+        let mut cfg = prd_config();
+        cfg.docker.remote_eosd_path = PathBuf::from("relative");
+        assert_invalid(cfg, "eos_e2e_test.docker.remote_eosd_path");
+
+        let mut cfg = prd_config();
+        cfg.docker.tcp_port = 0;
+        assert_invalid(cfg, "eos_e2e_test.docker.tcp_port");
+
+        let mut cfg = prd_config();
+        cfg.pool.sandboxes = 0;
+        assert_invalid(cfg, "eos_e2e_test.pool.sandboxes");
+
+        let mut cfg = prd_config();
+        cfg.timeouts.ready_s = 0;
+        assert_invalid(cfg, "eos_e2e_test.timeouts.ready_s");
+
+        let mut cfg = prd_config();
+        cfg.isolated_workspace_overrides
+            .as_mut()
+            .expect("prd has isolated overrides")
+            .memavail_fraction = Some(2.0);
+        assert_invalid(
+            cfg,
+            "eos_e2e_test.isolated_workspace_overrides.memavail_fraction",
+        );
+    }
+
+    fn prd_config() -> EosE2eTestConfig {
+        let doc = eos_config::load_prd().expect("prd config loads");
+        EosE2eTestConfig::from_document(&doc).expect("eos_e2e_test section deserializes")
+    }
+
+    fn assert_invalid(config: EosE2eTestConfig, field: &str) {
+        let err = config.validate().expect_err("config should be invalid");
+        let message = err.to_string();
+        assert!(message.contains(field), "{message}");
+    }
 }

@@ -2,6 +2,7 @@
 resolver = "2"
 members = [
     "crates/eos-protocol",
+    "crates/eos-config",
     "crates/eosd",
     "crates/eos-daemon",
     "crates/eos-runner",
@@ -26,6 +27,8 @@ license = "MIT"
 # External crates — declared ONCE, consumed via `dep.workspace = true`.
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
+serde_path_to_error = "0.1"
+serde_yaml = "0.9"
 sha2 = "0.10"
 regex = "1"
 ignore = "0.4"
@@ -47,6 +50,7 @@ toml = "0.8"
 
 # Internal crates — path deps (the edges below ARE the architecture).
 eos-protocol = { path = "crates/eos-protocol" }
+eos-config = { path = "crates/eos-config" }
 eos-layerstack = { path = "crates/eos-layerstack" }
 eos-overlay = { path = "crates/eos-overlay" }
 eos-occ = { path = "crates/eos-occ" }

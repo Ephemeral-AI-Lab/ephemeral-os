@@ -237,6 +237,13 @@ cross-module map now lives under `docs/architecture`.
 - Every changed line should have a clear reason tied to the task, a test fix, or
   compatibility with parallel work.
 
+## Demonstration Guidance
+
+- When explaining or demonstrating architecture, workflows, contracts, or
+  migration plans, prefer a workflow diagram plus a comparison or grouping table
+  over pure prose. Use prose to call out key caveats and evidence, not to replace
+  the structured view.
+
 ## Verification
 
 - Convert the request into concrete success criteria before or while

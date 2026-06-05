@@ -29,3 +29,6 @@ rustix = { workspace = true, features = ["pty"] }
 
 [lints]
 workspace = true
+
+[dev-dependencies]
+eos-config.workspace = true

@@ -1,15 +1,14 @@
 [package]
-name = "eos-ephemeral-workspace"
+name = "eos-config"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 
 [dependencies]
-eos-overlay.workspace = true
-eos-protocol.workspace = true
 serde.workspace = true
-serde_json.workspace = true
+serde_path_to_error.workspace = true
+serde_yaml.workspace = true
 thiserror.workspace = true
 
 [lints]

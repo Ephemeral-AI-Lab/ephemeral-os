@@ -41,7 +41,7 @@ use crate::error::DaemonError;
 use crate::response_timings::u64_to_f64_saturating;
 
 #[cfg(target_os = "linux")]
-pub(crate) use finalize::*;
+use finalize::*;
 #[cfg(target_os = "linux")]
 pub(crate) use lifecycle::*;
 
