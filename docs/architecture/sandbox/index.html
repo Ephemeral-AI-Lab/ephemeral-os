@@ -61,7 +61,7 @@
   <div>Schema</div><div>Every page separates durable invariants, current workflow, ownership boundary, code evidence, refresh triggers, and related pages. Search index entries should be updated when a new section becomes a useful query target.</div>
   <div>Maintenance loop</div><div>When code changes, update the smallest affected node, then update nearby backlinks and the search catalog. Do not bury contradictions: link the newer evidence and explain the mismatch.</div>
 </div>
-<section id="source-graph" data-last-reviewed-commit="HEAD-plus-worktree" data-evidence-paths="agent-core/crates/eos-sandbox-api/src/tool_api agent-core/crates/eos-sandbox-host/src sandbox/crates/eos-daemon/src/dispatcher.rs sandbox/crates/eos-daemon/src/workspace_ops.rs sandbox/crates/eos-daemon/src/services/command_session/mod.rs sandbox/crates/eos-command-session/src/manager.rs sandbox/crates/eos-layerstack sandbox/crates/eos-occ sandbox/crates/eos-overlay sandbox/crates/eos-isolated sandbox/crates/eos-plugin backend/tests/live_e2e_test/sandbox backend/src/test_runner/tests/mock/sandbox">
+<section id="source-graph" data-last-reviewed-commit="HEAD-plus-worktree" data-evidence-paths="agent-core/crates/eos-sandbox-api/src/tool_api agent-core/crates/eos-sandbox-host/src sandbox/crates/eos-daemon/src/dispatcher.rs sandbox/crates/eos-daemon/src/workspace_ops.rs sandbox/crates/eos-daemon/src/services/command_session/mod.rs sandbox/crates/eos-command-session/src/manager.rs sandbox/crates/eos-layerstack sandbox/crates/eos-occ sandbox/crates/eos-overlay sandbox/crates/eos-isolated sandbox/crates/eos-plugin">
 <h2>Source Graph <a class="anchor" href="#source-graph">§</a></h2>
 <p>The current sandbox workspace runtime is best read as a graph of ownership boundaries rather than a stack of folders. The daemon receives tool/API envelopes, routes work into direct LayerStack/OCC paths, per-operation overlay paths, or isolated private scratch, and every durable mutation converges on OCC before LayerStack publishes a new manifest.</p>
 <div class="edge-list">
@@ -71,7 +71,7 @@
   <div><b>calls</b><span>Daemon workspace routing chooses isolated handles first, then direct file fast paths, then overlay-backed execution. Durable mutations still publish through OCC.</span></div>
   <div><b>owns-state</b><span><code>eos-layerstack</code> owns active manifests, immutable layer directories, leases, merged reads, publish transactions, squash, and flush.</span></div>
   <div><b>owns-state</b><span><code>eos-isolated</code> and daemon isolated handlers own per-caller private handle maps, namespace holders, veth resources, TTL, persisted handle state, and audit events.</span></div>
-  <div><b>tested-by</b><span>Live and mock suites cover workspace base, LayerStack/OCC/overlay, background tools, plugins, and isolated workspace behavior under <span class="file-ref">backend/tests/live_e2e_test/sandbox</span> and <span class="file-ref">backend/src/test_runner/tests/mock/sandbox</span>.</span></div>
+  <div><b>tested-by</b><span>Live and mock suites cover workspace base, LayerStack/OCC/overlay, background tools, plugins, and isolated workspace behavior under <span class="file-ref">sandbox/crates/eos-e2e-test/tests</span> and <span class="file-ref">integration-test/SPEC.md</span>.</span></div>
 </div>
 </section>
 

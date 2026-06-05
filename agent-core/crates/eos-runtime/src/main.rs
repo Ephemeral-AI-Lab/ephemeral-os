@@ -36,8 +36,7 @@ fn main() -> anyhow::Result<()> {
 
 /// Repo-relative agent-profile tree used as the default registry source for the
 /// shipped binary. The canonical bundle lives at `.eos-agents/` (profiles under
-/// `profile/`, their coupled skills under `skills/`), relocated off the retiring
-/// Python backend.
+/// `profile/`, their coupled skills under `skills/`).
 const DEFAULT_AGENTS_DIR: &str = ".eos-agents/profile";
 
 /// Repo-relative externalized tool-config tree (`.eos-agents/tools/*.md`), the

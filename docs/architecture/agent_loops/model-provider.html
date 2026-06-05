@@ -51,9 +51,9 @@
   </ol>
 </nav>
 
-<p class="lead">This page covers the model-provider package used by the agent query loop. In the current checkout the source package is <code>backend/src/providers</code>, not a singular <code>backend/src/provider</code>. It is separate from <code>backend/src/sandbox/provider</code>, which owns Docker/Daytona sandbox lifecycle.</p>
+<p class="lead">This page covers the model-provider package used by the agent query loop. The source package is <code>agent-core/crates/eos-llm-client/src</code>. It is separate from <code>agent-core/crates/eos-sandbox-host/src/provider.rs</code>, which owns Docker sandbox lifecycle.</p>
 
-<section id="package-boundary" data-last-reviewed-commit="e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa" data-evidence-paths="backend/src/providers/__init__.py backend/src/providers/provider.py backend/src/providers/types.py backend/src/providers/errors.py backend/src/engine/agent/factory.py backend/src/engine/query/context.py backend/src/engine/query/loop.py backend/src/engine/query/request.py">
+<section id="package-boundary" data-last-reviewed-commit="e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa" data-evidence-paths="">
 <h2>Package Boundary <a class="anchor" href="#package-boundary">#</a></h2>
 <div class="summary">
   <ul>
@@ -73,7 +73,7 @@
 </div>
 </section>
 
-<section id="active-model-resolution" data-last-reviewed-commit="e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa" data-evidence-paths="backend/src/config/model_config.py backend/src/db/models/model_registration.py backend/src/db/stores/model_store.py backend/src/providers/provider.py backend/tests/unit_test/test_config/test_model_store.py backend/tests/unit_test/test_config/test_model_config_class_path_thread.py backend/tests/unit_test/test_providers/test_provider_routing.py backend/tests/unit_test/test_providers/test_class_path_dispatch.py">
+<section id="active-model-resolution" data-last-reviewed-commit="e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa" data-evidence-paths="">
 <h2>Active Model Resolution <a class="anchor" href="#active-model-resolution">#</a></h2>
 <p>The active LLM model is DB-backed. <code>ModelRegistrationRecord</code> stores <code>key</code>, <code>label</code>, <code>class_path</code>, JSON kwargs, active flag, and timestamps. <code>ModelStore</code> handles CRUD, active selection, environment-placeholder resolution, secret redaction, and registry seeding.</p>
 <pre class="diagram" aria-label="Active model resolution sequence">
@@ -107,7 +107,7 @@
 </div>
 </section>
 
-<section id="request-stream-contract" data-last-reviewed-commit="e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa" data-evidence-paths="backend/src/providers/types.py backend/src/engine/query/request.py backend/src/engine/query/loop.py backend/src/message/message.py backend/src/message/events.py backend/tests/unit_test/test_providers/test_anthropic_client.py backend/tests/unit_test/test_providers/test_codex_event_translation.py">
+<section id="request-stream-contract" data-last-reviewed-commit="e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa" data-evidence-paths="">
 <h2>Request And Stream Contract <a class="anchor" href="#request-stream-contract">#</a></h2>
 <p><code>MessageRequest</code> is the engine-to-provider boundary. It carries the model id, provider-safe conversation messages, system prompt, max tokens, tool schemas, and optional tool choice. The provider client yields <code>StreamEvent</code> values back to the query loop.</p>
 <div class="trace-grid">
@@ -118,7 +118,7 @@
 </div>
 </section>
 
-<section id="anthropic-native" data-last-reviewed-commit="e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa" data-evidence-paths="backend/src/providers/clients/anthropic_native.py backend/src/providers/auth_strategy.py backend/src/message/message.py backend/tests/unit_test/test_providers/test_anthropic_client.py backend/tests/unit_test/test_providers/test_anthropic_refresh_replay.py backend/tests/unit_test/test_providers/test_anthropic_plan_mode_error_log.py">
+<section id="anthropic-native" data-last-reviewed-commit="e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa" data-evidence-paths="">
 <h2>Anthropic Native Client <a class="anchor" href="#anthropic-native">#</a></h2>
 <p><code>AnthropicClient</code> uses the official async Anthropic SDK. Its main architecture role is translating Anthropic content-block streams into the provider-neutral events above.</p>
 <div class="edge-list">
@@ -129,7 +129,7 @@
 </div>
 </section>
 
-<section id="coding-plan-clients" data-last-reviewed-commit="e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa" data-evidence-paths="backend/src/providers/clients/coding_plan/anthropic.py backend/src/providers/clients/coding_plan/codex.py backend/src/providers/auth_strategy.py backend/tests/unit_test/test_providers/test_anthropic_plan_client.py backend/tests/unit_test/test_providers/test_codex_event_translation.py backend/tests/unit_test/test_providers/test_codex_request_headers.py backend/tests/unit_test/test_providers/test_codex_jwt_decode.py backend/tests/unit_test/test_providers/test_codex_refresh_replay.py">
+<section id="coding-plan-clients" data-last-reviewed-commit="e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa" data-evidence-paths="">
 <h2>Coding Plan Clients <a class="anchor" href="#coding-plan-clients">#</a></h2>
 <p>Coding-plan mode is selected by DB <code>class_path</code>, not by the query loop. The package currently contains two plan-mode clients.</p>
 <div class="evidence-grid">
@@ -148,7 +148,7 @@
 </div>
 </section>
 
-<section id="errors-retry-auth" data-last-reviewed-commit="e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa" data-evidence-paths="backend/src/providers/errors.py backend/src/providers/auth_strategy.py backend/src/providers/clients/anthropic_native.py backend/src/providers/clients/coding_plan/codex.py backend/src/config/sections/providers.py backend/tests/unit_test/test_providers/test_anthropic_plan_mode_error_log.py backend/tests/unit_test/test_providers/test_codex_plan_mode_error_log.py backend/tests/unit_test/test_providers/test_anthropic_refresh_replay.py backend/tests/unit_test/test_providers/test_codex_refresh_replay.py">
+<section id="errors-retry-auth" data-last-reviewed-commit="e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa" data-evidence-paths="">
 <h2>Errors Retry And Auth <a class="anchor" href="#errors-retry-auth">#</a></h2>
 <div class="edge-list">
   <div><b>typed failures</b><span><code>AuthenticationFailure</code>, <code>RateLimitFailure</code>, and <code>RequestFailure</code> share <code>EphemeralOSApiError</code> with optional <code>status_code</code> and <code>request_id</code>.</span></div>
@@ -159,12 +159,12 @@
 </div>
 </section>
 
-<section id="tests-and-failures" data-last-reviewed-commit="e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa" data-evidence-paths="backend/src/providers backend/src/config/model_config.py backend/src/db/stores/model_store.py backend/tests/unit_test/test_providers backend/tests/unit_test/test_config/test_model_store.py backend/tests/unit_test/test_config/test_model_config_class_path_thread.py backend/tests/unit_test/test_engine/test_provider_history.py">
+<section id="tests-and-failures" data-last-reviewed-commit="e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa" data-evidence-paths="">
 <h2>Tests And Failures <a class="anchor" href="#tests-and-failures">#</a></h2>
 <div class="evidence-grid">
   <div class="evidence-card">
     <h4>Provider client tests</h4>
-    <p><code>backend/tests/unit_test/test_providers</code> covers routing, class-path dispatch, Anthropic streaming, Anthropic plan mode, Codex request headers/body, Codex event translation, JWT account extraction, credential refresh, and plan-mode error logs.</p>
+    <p><code>agent-core/crates/eos-llm-client/tests</code> covers routing, class-path dispatch, Anthropic streaming, Anthropic plan mode, Codex request headers/body, Codex event translation, JWT account extraction, credential refresh, and plan-mode error logs.</p>
   </div>
   <div class="evidence-card">
     <h4>Config tests</h4>

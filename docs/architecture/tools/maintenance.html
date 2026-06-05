@@ -55,7 +55,7 @@
         </p>
       </header>
 
-      <section id="subagent-delegation" data-last-reviewed-commit="569f12c3f39471dbaa643906856a8daf81a21a2d" data-evidence-paths=".agents/skills/codebase-wiki-builder/SKILL.md;.agents/skills/codebase-wiki-builder/agents/graph_explorer.md;.agents/skills/codebase-wiki-builder/agents/wiki_builder.md;backend/src/tools">
+      <section id="subagent-delegation" data-last-reviewed-commit="569f12c3f39471dbaa643906856a8daf81a21a2d" data-evidence-paths=".agents/skills/codebase-wiki-builder/SKILL.md;.agents/skills/codebase-wiki-builder/agents/graph_explorer.md;.agents/skills/codebase-wiki-builder/agents/wiki_builder.md;agent-core/crates/eos-tools/src">
         <h3>Subagent Delegation Used</h3>
         <div class="table-wrap">
           <table>
@@ -118,7 +118,7 @@ rg -n "data-last-reviewed-commit=\"\"" docs/architecture/tools/*.html</pre>
         </p>
       </section>
 
-      <section id="baseline-refresh" data-last-reviewed-commit="569f12c3f39471dbaa643906856a8daf81a21a2d" data-evidence-paths="backend/src/tools;backend/src/engine/query;backend/src/engine/tool_call;backend/src/engine/background;backend/src/sandbox;backend/src/workflow;docs/architecture/tools">
+      <section id="baseline-refresh" data-last-reviewed-commit="569f12c3f39471dbaa643906856a8daf81a21a2d" data-evidence-paths="">
         <h3>Baseline Refresh Rule</h3>
         <ol>
           <li>Run <code>git diff &lt;baseline&gt;..HEAD -- &lt;evidence paths&gt;</code> before changing a page claim.</li>
@@ -128,13 +128,13 @@ rg -n "data-last-reviewed-commit=\"\"" docs/architecture/tools/*.html</pre>
         </ol>
       </section>
 
-      <section id="no-refactoring-findings" data-last-reviewed-commit="569f12c3f39471dbaa643906856a8daf81a21a2d" data-evidence-paths="backend/src/tools;docs/architecture/tools">
+      <section id="no-refactoring-findings" data-last-reviewed-commit="569f12c3f39471dbaa643906856a8daf81a21a2d" data-evidence-paths="">
         <h3>No Refactoring Findings Filed</h3>
         <div class="callout ok">
           <p>
             This pass intentionally created documentation only. Explorer shards noted a few adjacent stale
             documentation claims in existing docs, but no runtime refactoring point was filed or implemented
-            in <code>backend/src/tools</code>.
+            in <code>agent-core/crates/eos-tools/src</code>.
           </p>
         </div>
       </section>

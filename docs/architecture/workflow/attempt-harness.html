@@ -54,7 +54,7 @@
 
 <p class="lead">The attempt harness is the Attempt layer of <code>Workflow -> Iteration -> Attempt</code>: planner submission, a persisted plan DAG of generator and reducer tasks, then a single <code>RUN</code> stage that schedules that DAG to quiescence and closes the Attempt. It owns one Attempt, not the whole Workflow or a global agent orchestration layer. There is no separate evaluator stage; judging is a reducer task inside the plan.</p>
 
-<section id="attempt-state-machine" data-last-reviewed-commit="d32994314" data-evidence-paths="backend/src/workflow/_core/state.py backend/src/workflow/attempt/orchestrator.py backend/src/workflow/attempt/run_stage.py backend/src/workflow/attempt/orchestrator_registry.py backend/src/task/task.py backend/src/workflow/submissions.py backend/src/workflow/_core/invariants.py backend/tests/unit_test/test_workflow/test_lifecycle/test_phase03_submission_integration.py">
+<section id="attempt-state-machine" data-last-reviewed-commit="d32994314" data-evidence-paths="">
 <h2>Attempt State Machine <a class="anchor" href="#attempt-state-machine">#</a></h2>
 <div class="summary">
   <ul>
@@ -96,7 +96,7 @@
 </div>
 </section>
 
-<section id="planner-dag-persistence" data-last-reviewed-commit="d32994314" data-evidence-paths="backend/src/workflow/attempt/orchestrator.py backend/src/workflow/attempt/plan_dag.py backend/src/task/task.py backend/src/workflow/submissions.py backend/src/workflow/_core/primitives.py backend/tests/unit_test/test_workflow/test_lifecycle/test_phase03_submission_integration.py backend/tests/unit_test/test_workflow/test_lifecycle/test_phase03_submission_integration.py">
+<section id="planner-dag-persistence" data-last-reviewed-commit="d32994314" data-evidence-paths="">
 <h2>Planner And Plan-DAG Persistence <a class="anchor" href="#planner-dag-persistence">#</a></h2>
 <p>A planner submission is accepted only for the current attempt planner task while the attempt is in <code>PLAN</code>. The plan is two tuples: <code>tasks</code> (generators, each with an <code>agent_name</code> and <code>task_spec</code>) and <code>reducers</code> (each with a <code>prompt</code>, no agent name — reducers always run the <code>reducer</code> profile). Both use <code>needs</code> (not <code>deps</code>). Full (<code>completes</code>) plans cannot set <code>deferred_goal_for_next_iteration</code>; deferring (<code>defers</code>) plans must set it. There is no <code>plan_spec</code> and no <code>evaluation_criteria</code>. After validation, the orchestrator marks the planner task done, persists generator rows then reducer rows, records both id tuples on the attempt, moves the attempt to <code>RUN</code>, and advances ready work.</p>
 <div class="edge-list">
@@ -115,7 +115,7 @@
 </div>
 </section>
 
-<section id="generator-waves-quiescence" data-last-reviewed-commit="d32994314" data-evidence-paths="backend/src/workflow/attempt/run_stage.py backend/src/workflow/attempt/plan_dag.py backend/src/workflow/attempt/orchestrator.py backend/src/task/task.py backend/src/workflow/submissions.py backend/tests/unit_test/test_workflow/test_lifecycle/test_phase03_submission_integration.py backend/tests/unit_test/test_workflow/test_lifecycle/test_phase03_submission_integration.py">
+<section id="generator-waves-quiescence" data-last-reviewed-commit="d32994314" data-evidence-paths="">
 <h2>Plan-DAG Waves And Quiescence <a class="anchor" href="#generator-waves-quiescence">#</a></h2>
 <p><code>AttemptStageAdvancer</code> (in <code>attempt/run_stage.py</code>, class name unchanged) is store-driven and owns the single <code>RUN</code> stage. On every generator or reducer submission, or launch failure, it lists the attempt's persisted plan tasks — the union of <code>generator_task_ids</code> and <code>reducer_task_ids</code> — launches every pending task whose <code>needs</code> are done, and otherwise summarizes whether the DAG is still active, failed, blocked, or fully done. Generators and reducers are one DAG: a reducer simply has generators in its <code>needs</code>.</p>
 <pre class="diagram" aria-label="RUN-stage advancement workflow diagram">
@@ -150,7 +150,7 @@
 </div>
 </section>
 
-<section id="evaluator-closure" data-last-reviewed-commit="d32994314" data-evidence-paths="backend/src/workflow/attempt/run_stage.py backend/src/workflow/attempt/orchestrator.py backend/src/workflow/attempt/plan_dag.py backend/src/workflow/iteration/attempt_coordinator.py backend/src/workflow/_core/outcomes.py backend/src/workflow/_core/state.py backend/tests/unit_test/test_workflow/test_lifecycle/test_phase03_submission_integration.py backend/tests/unit_test/test_workflow/test_lifecycle/test_iteration_attempt_coordinator.py">
+<section id="evaluator-closure" data-last-reviewed-commit="d32994314" data-evidence-paths="">
 <h2>RUN-Stage Closure <a class="anchor" href="#evaluator-closure">#</a></h2>
 <p>There is no evaluator stage and no separately spawned judging task. Judging is one or more reducer tasks inside the plan DAG, scheduled by the same RUN stage as generators. Closure is purely a function of plan-task quiescence: when no plan task is still ready or running, <code>dag_status()</code> decides the verdict, and <code>_close_attempt()</code> applies it.</p>
 <div class="edge-list">
@@ -166,7 +166,7 @@
 </div>
 </section>
 
-<section id="launcher-failures-exhaustion" data-last-reviewed-commit="d32994314" data-evidence-paths="backend/src/workflow/attempt/launch.py backend/src/workflow/attempt/run_stage.py backend/src/workflow/attempt/orchestrator.py backend/src/workflow/attempt/orchestrator_registry.py backend/src/workflow/iteration/attempt_coordinator.py backend/tests/unit_test/test_workflow/test_agent_launch/test_attempt_launcher_retry.py backend/tests/unit_test/test_workflow/test_lifecycle/test_phase03_submission_integration.py backend/tests/unit_test/test_workflow/test_lifecycle/test_launcher_exhaustion_parametrized.py">
+<section id="launcher-failures-exhaustion" data-last-reviewed-commit="d32994314" data-evidence-paths="">
 <h2>Launcher Failures And Exhaustion <a class="anchor" href="#launcher-failures-exhaustion">#</a></h2>
 <p><code>EphemeralAttemptAgentLauncher</code> schedules role-specific agent runs. Terminal submission tools are expected to move the task out of <code>RUNNING</code> during the run. If the runner returns, crashes, returns <code>None</code>, or exits without a terminal submission while the task remains running, the launcher reports role-specific exhaustion back into the same orchestrator API.</p>
 <pre class="diagram" aria-label="Launcher exhaustion workflow diagram">
@@ -204,7 +204,7 @@
 </div>
 </section>
 
-<section id="audit-events" data-last-reviewed-commit="d32994314" data-evidence-paths="backend/src/workflow/_core/audit.py backend/src/workflow/attempt/run_stage.py backend/src/workflow/attempt/launch.py backend/tests/unit_test/test_workflow/test_audit/test_emitter.py backend/tests/unit_test/test_workflow/test_audit/test_emission_shape.py">
+<section id="audit-events" data-last-reviewed-commit="d32994314" data-evidence-paths="">
 <h2>Audit Events <a class="anchor" href="#audit-events">#</a></h2>
 <p>Workflow attempt advancement emits a small set of audit events through <code>WorkflowAuditEmitter</code>. The emitter is a write-only facade over the shared audit sink; it shapes node identity and payload fields so stage advancement does not repeat audit plumbing.</p>
 <div class="edge-list">
@@ -215,7 +215,7 @@
 </div>
 </section>
 
-<section id="evidence-refresh" data-last-reviewed-commit="d32994314" data-evidence-paths="backend/src/workflow/attempt/orchestrator.py backend/src/workflow/attempt/run_stage.py backend/src/workflow/attempt/plan_dag.py backend/src/workflow/attempt/launch.py backend/src/workflow/attempt/orchestrator_registry.py backend/src/workflow/_core/state.py backend/src/workflow/_core/outcomes.py backend/src/task/task.py backend/src/workflow/submissions.py backend/src/workflow/_core/invariants.py backend/src/workflow/_core/audit.py backend/tests/unit_test/test_workflow/test_lifecycle/test_phase03_submission_integration.py backend/tests/unit_test/test_workflow/test_lifecycle/test_orchestrator_composer.py backend/tests/unit_test/test_workflow/test_agent_launch/test_attempt_launcher_retry.py backend/tests/unit_test/test_workflow/test_lifecycle/test_launcher_exhaustion_parametrized.py">
+<section id="evidence-refresh" data-last-reviewed-commit="d32994314" data-evidence-paths="">
 <h2>Evidence And Refresh <a class="anchor" href="#evidence-refresh">#</a></h2>
 <div class="evidence-grid">
   <div class="evidence-card">
@@ -233,8 +233,8 @@
 </div>
 <div class="summary">
   <ul>
-    <li>Refresh command shape: <code>git diff d32994314..HEAD -- backend/src/workflow/attempt backend/src/workflow/_core backend/src/workflow/submissions.py backend/tests/unit_test/test_workflow/test_lifecycle backend/tests/unit_test/test_workflow/test_agent_launch</code></li>
-    <li>Focused verification: <code>uv run pytest backend/tests/unit_test/test_workflow/test_lifecycle/test_phase03_submission_integration.py backend/tests/unit_test/test_workflow/test_lifecycle/test_orchestrator_composer.py backend/tests/unit_test/test_workflow/test_agent_launch/test_attempt_launcher_retry.py backend/tests/unit_test/test_workflow/test_lifecycle/test_launcher_exhaustion_parametrized.py -q</code></li>
+    <li>Refresh command shape: <code>git diff d32994314..HEAD -- agent-core/crates/eos-workflow/src/attempt agent-core/crates/eos-state agent-core/crates/eos-workflow/tests/attempt</code></li>
+    <li>Focused verification: <code>cargo test -p eos-workflow</code></li>
     <li>Refresh this page when planner submission schemas, the plan-DAG gate rules, generator/reducer status semantics, launch row mapping, audit event payloads, or the registry lifetime changes.</li>
   </ul>
 </div>

@@ -38,7 +38,7 @@
   <span class="nav-pair"><a href="../tools/terminals.html">Tools Terminals</a><a href="../workflow/context-engine.html">Workflow Context Engine</a></span>
 </div>
 
-<section id="prompt-context" data-last-reviewed-commit="HEAD" data-evidence-paths="backend/src/prompt/runtime_prompt.py backend/src/engine/agent/factory.py backend/src/agents/definition/loader.py backend/src/agents/profile/main backend/src/workflow/agent_launch/composer.py backend/src/workflow/agent_launch/entry_messages.py backend/src/workflow/context_engine backend/src/workflow/attempt/launch.py backend/tests/unit_test/test_workflow/test_agent_launch backend/tests/unit_test/test_workflow/test_context_engine">
+<section id="prompt-context" data-last-reviewed-commit="HEAD" data-evidence-paths="">
 <h1>Agent Prompt Assembly <a class="anchor" href="#prompt-context">#</a></h1>
 <nav class="page-toc" aria-labelledby="page-toc-heading">
   <h3 id="page-toc-heading">Contents</h3>
@@ -69,7 +69,7 @@
 </div>
 </section>
 
-<section id="runtime-and-profiles" data-last-reviewed-commit="HEAD" data-evidence-paths="backend/src/prompt/runtime_prompt.py backend/src/engine/agent/factory.py backend/src/agents/definition/loader.py backend/src/agents/definition/model.py backend/src/agents/profile/main backend/tests/unit_test/test_engine/test_agent_system_prompt.py backend/tests/unit_test/test_prompt/test_runtime_prompt.py backend/tests/unit_test/test_agents">
+<section id="runtime-and-profiles" data-last-reviewed-commit="HEAD" data-evidence-paths="">
 <h2>Runtime And Profiles <a class="anchor" href="#runtime-and-profiles">#</a></h2>
 <p><code>build_runtime_system_prompt()</code> reads settings and returns the base runtime instruction text, including fast-mode guidance when configured. <code>engine.agent.factory._build_agent_system_prompt()</code> appends the loaded <code>AgentDefinition.system_prompt</code> and the terminal warning section derived from the actual tool registry.</p>
 <p>Main profile loading is file-backed. <code>load_agents_tree()</code> parses Markdown frontmatter, defaults the name from the filename, validates relative skill paths, and prepends <code>_main_role_contract.md</code> to the main-role profiles. The profile body remains the system-prompt body; launch-specific context is not injected here.</p>
@@ -80,7 +80,7 @@
 </div>
 </section>
 
-<section id="composer-rows" data-last-reviewed-commit="HEAD-plus-worktree" data-evidence-paths="backend/src/workflow/agent_launch/composer.py backend/src/workflow/agent_launch/entry_messages.py backend/src/workflow/context_engine/skill_message.py backend/src/workflow/context_engine/task_guidance.py backend/src/workflow/attempt/launch.py backend/src/tools/_terminals/registry.py backend/src/tools/submission/notification_triggers backend/tests/unit_test/test_workflow/test_agent_launch/test_composer.py backend/tests/unit_test/test_workflow/test_lifecycle/test_planner_capability_fork.py">
+<section id="composer-rows" data-last-reviewed-commit="HEAD-plus-worktree" data-evidence-paths="">
 <h2>Composer Rows <a class="anchor" href="#composer-rows">#</a></h2>
 <p><code>AgentEntryComposer.compose()</code> is the Workflow launch seam. It uses the profile terminal set directly, asks <code>ContextEngine</code> for an <code>AgentContext</code>, renders context XML, renders task guidance from the same context object, and appends the optional skill row.</p>
 <table>
@@ -96,7 +96,7 @@
 <div class="callout warn"><span class="label">Nested workflow policy</span> Planner and executor frontmatter stays broad. Nested planners are reminded that <code>deferred_goal_for_next_iteration</code> is disallowed; generators delegate with non-terminal workflow tools and later submit their own terminal outcome.</div>
 </section>
 
-<section id="context-engine" data-last-reviewed-commit="HEAD" data-evidence-paths="backend/src/workflow/context_engine/context.py backend/src/workflow/context_engine/engine.py backend/src/workflow/context_engine/scope.py backend/src/workflow/context_engine/xml.py backend/src/workflow/context_engine/task_guidance.py backend/tests/unit_test/test_workflow/test_context_engine/test_agent_context.py">
+<section id="context-engine" data-last-reviewed-commit="HEAD" data-evidence-paths="">
 <h2>Context Engine <a class="anchor" href="#context-engine">#</a></h2>
 <p><code>ContextScope</code> carries launch identity: role, workflow id, iteration id, attempt id, and task id when needed. <code>ContextEngineDeps</code> carries workflow, iteration, attempt, and task stores. <code>ContextEngine.build()</code> dispatches by <code>scope.role</code> and returns <code>AgentContext</code>.</p>
 <div class="edge-list">
@@ -107,7 +107,7 @@
 </div>
 </section>
 
-<section id="role-shapes" data-last-reviewed-commit="HEAD" data-evidence-paths="backend/src/workflow/context_engine/engine.py backend/src/workflow/context_engine/xml.py backend/src/workflow/context_engine/task_guidance.py backend/src/workflow/_core/outcomes.py backend/tests/unit_test/test_workflow/test_context_engine/test_agent_context.py">
+<section id="role-shapes" data-last-reviewed-commit="HEAD" data-evidence-paths="">
 <h2>Role Shapes And Guidance <a class="anchor" href="#role-shapes">#</a></h2>
 <div class="table-wrap">
   <table>
@@ -122,7 +122,7 @@
 <p>Only execution evidence is rendered as task outcomes. Planner task outcomes are UI metadata on the planner task and are excluded from attempt, iteration, workflow, and planner-history projections.</p>
 </section>
 
-<section id="boundaries" data-last-reviewed-commit="HEAD" data-evidence-paths="backend/src/workflow/attempt/orchestrator.py backend/src/workflow/iteration/attempt_coordinator.py backend/src/workflow/lifecycle.py backend/src/workflow/_core/outcomes.py backend/src/tools/submission backend/src/agents/profile/main">
+<section id="boundaries" data-last-reviewed-commit="HEAD" data-evidence-paths="">
 <h2>Boundaries <a class="anchor" href="#boundaries">#</a></h2>
 <div class="edge-list">
   <div><b>Submission owns mutation</b><span>Planner, generator, and reducer terminals mutate Workflow state through submission contexts and orchestrators. The root terminal mutates the root Task and request; workflow delegation tools are non-terminal.</span></div>
@@ -131,7 +131,7 @@
 </div>
 </section>
 
-<section id="evidence-refresh" data-last-reviewed-commit="HEAD" data-evidence-paths="backend/src/prompt backend/src/agents/definition backend/src/agents/profile/main backend/src/workflow/context_engine backend/src/workflow/agent_launch backend/src/workflow/attempt backend/src/workflow/_core backend/tests/unit_test/test_prompt backend/tests/unit_test/test_engine/test_agent_system_prompt.py backend/tests/unit_test/test_agents backend/tests/unit_test/test_workflow/test_agent_launch backend/tests/unit_test/test_workflow/test_context_engine backend/tests/unit_test/test_workflow/test_lifecycle">
+<section id="evidence-refresh" data-last-reviewed-commit="HEAD" data-evidence-paths="">
 <h2>Evidence And Refresh <a class="anchor" href="#evidence-refresh">#</a></h2>
 <div class="evidence-grid">
   <div class="evidence-card">
@@ -146,10 +146,10 @@
   <div class="evidence-card">
     <h3>Verification Anchors</h3>
     <ul>
-      <li><span class="file-ref">backend/tests/unit_test/test_workflow/test_context_engine/test_agent_context.py</span></li>
-      <li><span class="file-ref">backend/tests/unit_test/test_workflow/test_agent_launch/test_composer.py</span></li>
-      <li><span class="file-ref">backend/tests/unit_test/test_workflow/test_agent_launch/test_terminal_tool_router.py</span></li>
-      <li><span class="file-ref">backend/tests/unit_test/test_agents</span></li>
+      <li><span class="file-ref">agent-core/crates/eos-workflow/tests/context</span></li>
+      <li><span class="file-ref">agent-core/crates/eos-workflow/tests/context</span></li>
+      <li><span class="file-ref">agent-core/crates/eos-workflow/tests/attempt</span></li>
+      <li><span class="file-ref">agent-core/crates/eos-agent-def/tests</span></li>
     </ul>
   </div>
 </div>

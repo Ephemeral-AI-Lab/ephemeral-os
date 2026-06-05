@@ -52,11 +52,16 @@
 
 <p class="lead">All pages in this module share one baseline commit: <code>d32994314</code>. Refreshing the wiki is a delta-first task: <code>git diff</code> the baseline against <code>HEAD</code> for each page's evidence paths, then update only the sections whose claims drifted.</p>
 
-<section id="refresh-plan" data-last-reviewed-commit="d32994314" data-evidence-paths="docs/architecture/test_runner backend/src/test_runner">
+<div class="callout warn">
+  <span class="label">REMOVED</span>
+  ⚠️ The Python <code>backend/src/test_runner</code> documented here has been removed. The Rust replacement is specified in <code>integration-test/SPEC.md</code> (see also <code>docs/plans/test_runner_rust_SPEC.md</code>) but is not yet implemented; the evidence paths below describe the removed Python design for historical reference.
+</div>
+
+<section id="refresh-plan" data-last-reviewed-commit="d32994314" data-evidence-paths="docs/architecture/test_runner">
 <h2>Refresh Plan <a class="anchor" href="#refresh-plan">#</a></h2>
 <div class="summary">
   <ul>
-    <li>Run <code>git log --oneline d32994314..HEAD -- backend/src/test_runner</code> first. If there are no commits, the wiki is current; skip.</li>
+    <li>Run <code>git log --oneline d32994314..HEAD -- integration-test/SPEC.md docs/architecture/test_runner</code> first. If there are no commits, the wiki is current; skip.</li>
     <li>For each changed file, find the matching page via the <em>evidence paths</em> in section metadata. Use <code>git diff</code> on those exact paths to scope the section refresh.</li>
     <li>Update <code>data-last-reviewed-commit</code> on the section AND the page-level <code>data-page-baseline-commit</code> after refreshing claims. They should match unless the page intentionally mixes commits.</li>
     <li>Validate with <code>check_html_wiki.py</code> on every touched page before committing.</li>
@@ -71,13 +76,14 @@
 
 <section id="baselines" data-last-reviewed-commit="d32994314" data-evidence-paths="docs/architecture/test_runner">
 <h2>Per-Page Baselines <a class="anchor" href="#baselines">#</a></h2>
-<div class="edge-list" aria-label="Page-to-evidence map">
-  <div><b><a href="index.html">Overview</a></b><span>Evidence: <code>backend/src/test_runner/__init__.py</code>, <code>core/runner.py</code>, <code>core/engine.py</code>, <code>core/config.py</code>, <code>scenarios/__init__.py</code>, <code>benchmarks/sweevo/pipeline.py</code>.</span></div>
-  <div><b><a href="core-harness.html">Core Harness</a></b><span>Evidence: <code>backend/src/test_runner/core/</code>, <code>backend/src/test_runner/audit/</code>.</span></div>
-  <div><b><a href="scenarios.html">Scenarios</a></b><span>Evidence: <code>backend/src/test_runner/scenarios/</code>.</span></div>
-  <div><b><a href="mocked-agents.html">Mocked Agents</a></b><span>Evidence: <code>backend/src/test_runner/agent/mock/</code>.</span></div>
-  <div><b><a href="benchmark-sweevo.html">SWE-EVO Benchmark</a></b><span>Evidence: <code>backend/src/test_runner/benchmarks/sweevo/</code>, <code>backend/src/test_runner/environments/sweevo_image/</code>.</span></div>
-  <div><b><a href="tests-layout.html">Test Suites</a></b><span>Evidence: <code>backend/src/test_runner/tests/</code>, <code>backend/src/test_runner/environments/sweevo_image/</code>.</span></div>
+<p>The per-page evidence below references the removed Python <code>test_runner</code> layout and is retained for historical mapping only. Current refresh evidence is <code>integration-test/SPEC.md</code> (canonical Rust spec), <code>docs/plans/test_runner_rust_SPEC.md</code>, and <code>docs/architecture/test_runner</code>.</p>
+<div class="edge-list" aria-label="Page-to-evidence map (removed Python)">
+  <div><b><a href="index.html">Overview</a></b><span>Removed Python evidence: <code>__init__.py</code>, <code>core/runner.py</code>, <code>core/engine.py</code>, <code>core/config.py</code>, <code>scenarios/__init__.py</code>, <code>benchmarks/sweevo/pipeline.py</code>.</span></div>
+  <div><b><a href="core-harness.html">Core Harness</a></b><span>Removed Python evidence: <code>core/</code>, <code>audit/</code>.</span></div>
+  <div><b><a href="scenarios.html">Scenarios</a></b><span>Removed Python evidence: <code>scenarios/</code>.</span></div>
+  <div><b><a href="mocked-agents.html">Mocked Agents</a></b><span>Removed Python evidence: <code>agent/mock/</code>.</span></div>
+  <div><b><a href="benchmark-sweevo.html">SWE-EVO Benchmark</a></b><span>Removed Python evidence: <code>benchmarks/sweevo/</code>, <code>environments/sweevo_image/</code>.</span></div>
+  <div><b><a href="tests-layout.html">Test Suites</a></b><span>Removed Python evidence: <code>tests/</code>, <code>environments/sweevo_image/</code>.</span></div>
 </div>
 </section>
 
@@ -85,26 +91,15 @@
 <h2>Delta Commands <a class="anchor" href="#delta-commands">#</a></h2>
 <pre class="diagram" aria-label="Refresh command set">
 # 1. has anything changed since baseline?
+# (Python backend/src/test_runner is removed; track the Rust spec + these docs)
 git log --oneline d32994314..HEAD \
-    -- backend/src/test_runner
+    -- integration-test/SPEC.md docs/architecture/test_runner
 
-# 2. per-page deltas (skip ones with no log entries)
+# 2. module delta against the canonical Rust spec and the architecture pages
 git diff d32994314..HEAD \
-    -- backend/src/test_runner/core \
-       backend/src/test_runner/audit
-
-git diff d32994314..HEAD \
-    -- backend/src/test_runner/scenarios
-
-git diff d32994314..HEAD \
-    -- backend/src/test_runner/agent/mock
-
-git diff d32994314..HEAD \
-    -- backend/src/test_runner/benchmarks/sweevo \
-       backend/src/test_runner/environments/sweevo_image
-
-git diff d32994314..HEAD \
-    -- backend/src/test_runner/tests
+    -- integration-test/SPEC.md \
+       docs/plans/test_runner_rust_SPEC.md \
+       docs/architecture/test_runner
 
 # 3. verify baseline commit is still in the tree
 git cat-file -e d32994314^{commit}
@@ -134,7 +129,7 @@ rg -n 'double-open-bracket|double-close-bracket' docs/architecture/test_runner
 </pre>
 </section>
 
-<section id="stale-claim-watch" data-last-reviewed-commit="d32994314" data-evidence-paths="backend/src/test_runner/benchmarks/sweevo backend/src/test_runner/agent/mock backend/src/test_runner/core docs/plans/sweevo_layerstack_migration_REPORT.md">
+<section id="stale-claim-watch" data-last-reviewed-commit="d32994314" data-evidence-paths="docs/plans/sweevo_layerstack_migration_REPORT.md">
 <h2>Stale-Claim Watch <a class="anchor" href="#stale-claim-watch">#</a></h2>
 <p>Areas that historically drift between code and docs. Audit these first on any refresh pass.</p>
 <div class="edge-list" aria-label="Stale-claim areas">
@@ -151,7 +146,7 @@ rg -n 'double-open-bracket|double-close-bracket' docs/architecture/test_runner
 <div class="page-baseline" data-page-baseline-commit="d32994314">
   <strong>Maintenance baseline</strong>
   <span>Maintenance page reviewed against <code>d32994314</code>.</span>
-  <code>git diff d32994314..HEAD -- backend/src/test_runner docs/architecture/test_runner</code>
+  <code>git diff d32994314..HEAD -- integration-test/SPEC.md docs/architecture/test_runner</code>
 </div>
 <div class="page-footer-nav"><span><a href="tests-layout.html">Test Suites</a></span><span><a href="index.html">Overview</a></span></div>
 </main>

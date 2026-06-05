@@ -38,7 +38,7 @@
   <span class="nav-pair"><a href="prompt-context.html">Agent Prompt Assembly</a><a href="../sandbox/daemon.html">Sandbox Daemon</a></span>
 </div>
 
-<section id="provider-sandbox-bridge" data-last-reviewed-commit="e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa" data-evidence-paths="backend/src/sandbox/provider backend/src/sandbox/api backend/src/sandbox/host backend/src/sandbox/daemon backend/src/sandbox/ephemeral_workspace backend/src/sandbox/occ backend/src/tools/sandbox backend/src/engine/background">
+<section id="provider-sandbox-bridge" data-last-reviewed-commit="e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa" data-evidence-paths="">
 <h1>Sandbox Tool Dispatch Path <a class="anchor" href="#provider-sandbox-bridge">#</a></h1>
 <nav class="page-toc" aria-labelledby="page-toc-heading">
   <h3 id="page-toc-heading">Contents</h3>
@@ -52,7 +52,7 @@
   </ol>
 </nav>
 
-<p class="lead">This page follows one sandbox-backed tool call from an agent-facing wrapper through <code>sandbox.api</code>, the host daemon client, provider exec or daemon TCP, the in-sandbox daemon, and the workspace execution path. Current verdict: sandbox providers own containers and primitive exec; sandbox runtime owns workspace semantics, direct file fast paths, overlay publish, isolated scratch, and daemon in-flight control. For LLM model providers under <code>backend/src/providers</code>, use <a class="wiki-link" href="model-provider.html">Model Provider Runtime</a>.</p>
+<p class="lead">This page follows one sandbox-backed tool call from an agent-facing wrapper through <code>sandbox.api</code>, the host daemon client, provider exec or daemon TCP, the in-sandbox daemon, and the workspace execution path. Current verdict: sandbox providers own containers and primitive exec; sandbox runtime owns workspace semantics, direct file fast paths, overlay publish, isolated scratch, and daemon in-flight control. For LLM model providers under <code>agent-core/crates/eos-llm-client/src</code>, use <a class="wiki-link" href="model-provider.html">Model Provider Runtime</a>.</p>
 <div class="summary">
   <ul>
     <li>Provider bootstrap picks Docker or Daytona once per process, then the registry supplies the default adapter and per-sandbox bindings.</li>
@@ -83,7 +83,7 @@
 </div>
 </section>
 
-<section id="provider-selection" data-last-reviewed-commit="e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa" data-evidence-paths="backend/src/sandbox/provider/protocol.py backend/src/sandbox/provider/bootstrap.py backend/src/sandbox/provider/registry.py backend/src/sandbox/provider/docker/bootstrap.py backend/src/sandbox/provider/daytona/bootstrap.py backend/src/sandbox/provider/docker/adapter.py backend/src/sandbox/provider/daytona/adapter.py backend/src/sandbox/host/lifecycle.py backend/src/sandbox/api/provider_control.py backend/tests/integration_test/test_sandbox/test_provider_parity.py backend/tests/integration_test/test_sandbox/test_docker_post_lifecycle.py">
+<section id="provider-selection" data-last-reviewed-commit="e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa" data-evidence-paths="">
 <h2>Provider Selection <a class="anchor" href="#provider-selection">#</a></h2>
 <p><code>bootstrap_sandbox_provider()</code> resolves <code>EOS_SANDBOX_PROVIDER</code> first, then central <code>sandbox.default_provider</code>. Valid values are <code>docker</code> and <code>daytona</code>. A process-level sentinel makes the first resolved provider sticky; later calls with the same value are no-ops, and later calls with a different value warn and return.</p>
 <p><code>ProviderAdapter</code> is the common protocol: health, snapshots, create/get/list/start/stop/delete/set-labels, preview and build-log URLs, async <code>exec</code>, and <code>context_preparer()</code>. Provider lifecycle orchestration is outside the provider package: <code>sandbox.host.lifecycle.create_sandbox()</code> uses the default adapter, registers the minted sandbox id, then runs post-create setup; start runs post-start setup; delete forgets plugin state and disposes the adapter binding.</p>
@@ -100,7 +100,7 @@
 </div>
 </section>
 
-<section id="exec-transports" data-last-reviewed-commit="e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa" data-evidence-paths="backend/src/sandbox/api/raw_exec.py backend/src/sandbox/api/transport.py backend/src/sandbox/api/daemon_invocations.py backend/src/sandbox/host/daemon_client.py backend/src/sandbox/daemon/rpc/server.py backend/src/sandbox/daemon/__main__.py backend/src/sandbox/provider/docker/adapter.py backend/src/sandbox/provider/daytona/adapter.py backend/tests/unit_test/test_sandbox/test_api/test_raw_exec.py backend/tests/unit_test/test_sandbox/test_api/test_transport_protocol.py backend/tests/unit_test/test_sandbox/test_daemon/test_daemon_transport.py backend/tests/unit_test/test_sandbox/test_daemon/test_server_hardening.py">
+<section id="exec-transports" data-last-reviewed-commit="e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa" data-evidence-paths="">
 <h2>Exec Transports <a class="anchor" href="#exec-transports">#</a></h2>
 <p>There are two execution surfaces. <code>sandbox.api.raw_exec()</code> is the unguarded provider primitive: it gets the registered adapter and calls <code>adapter.exec(sandbox_id, command, cwd, timeout)</code>. Workspace tools do not use this path directly; they use the daemon transport so workspace binding, OCC, overlay, in-flight cancellation, and typed response parsing all stay inside the sandbox runtime.</p>
 <p><code>call_daemon_api()</code> builds daemon args with <code>layer_stack_root</code>, resolves the adapter, optionally resolves a Docker daemon TCP endpoint, and sends one JSON envelope. If TCP is unavailable or stale, it falls back to provider exec of the bundled thin client, which talks to the daemon's AF_UNIX socket inside the sandbox. The daemon can be relaunched on connect failure, then <code>api.runtime.ready</code> probes control plane, data plane, and mutation gate before retrying the original request.</p>
@@ -137,7 +137,7 @@
 </div>
 </section>
 
-<section id="tool-api-daemon-path" data-last-reviewed-commit="e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa" data-evidence-paths="backend/src/tools/sandbox/_lib/tool_context.py backend/src/tools/sandbox/_lib/registry.py backend/src/tools/sandbox/read_file/read_file.py backend/src/tools/sandbox/write_file/write_file.py backend/src/tools/sandbox/edit_file/edit_file.py backend/src/tools/sandbox/exec_command/exec_command.py backend/src/sandbox/api/tool/_daemon_request_payloads.py backend/src/sandbox/api/tool/_daemon_response_parsing.py backend/src/sandbox/api/tool/read.py backend/src/sandbox/api/tool/write.py backend/src/sandbox/api/tool/edit.py backend/src/sandbox/api/tool/command.py backend/src/sandbox/api/tool/glob.py backend/src/sandbox/api/tool/grep.py backend/src/sandbox/daemon/rpc/dispatcher.py backend/src/sandbox/daemon/builtin_operations.py backend/tests/unit_test/test_sandbox/test_api backend/tests/unit_test/test_sandbox/test_daemon/test_routing_invariants.py">
+<section id="tool-api-daemon-path" data-last-reviewed-commit="e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa" data-evidence-paths="">
 <h2>Tool To Daemon Path <a class="anchor" href="#tool-api-daemon-path">#</a></h2>
 <p>Agent-facing sandbox tools are thin wrappers around typed public API calls. <code>tools.sandbox._lib.registry</code> marks each sandbox tool with <code>SANDBOX_CONTEXT</code>, allowing the engine to inject provider context and allowing background launch code to recognize sandbox-bound work. The wrapper resolves repo-relative paths, builds <code>SandboxCaller</code> identity from tool metadata, and calls <code>sandbox.api</code>.</p>
 <div class="flow">
@@ -161,7 +161,7 @@
 <p>The daemon still has command-execution operations, but the model-facing public command tool is <code>exec_command</code>. Command sessions use <code>exec_command</code> plus typed command-session controls; engine background dispatch is restricted by <code>engine.background.policy</code>.</p>
 </section>
 
-<section id="workspace-routing" data-last-reviewed-commit="e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa" data-evidence-paths="backend/src/sandbox/daemon/workspace_tool_dispatch.py backend/src/sandbox/daemon/workspace_tool_payloads.py backend/src/sandbox/daemon/builtin_operations.py backend/src/sandbox/ephemeral_workspace/pipeline.py backend/src/sandbox/ephemeral_workspace/operation_overlay.py backend/src/sandbox/ephemeral_workspace/workspace_publish.py backend/src/sandbox/ephemeral_workspace/overlay_registry.py backend/src/sandbox/occ/service.py backend/src/sandbox/occ/changeset_preparation.py backend/src/sandbox/occ/client.py backend/src/sandbox/host/isolated_workspace_lifecycle.py backend/src/sandbox/daemon/rpc/dispatcher.py backend/tests/unit_test/test_sandbox/test_daemon/test_file_dispatch.py backend/tests/unit_test/test_sandbox/test_daemon/test_routing_invariants.py backend/tests/unit_test/test_sandbox/test_occ backend/tests/unit_test/test_sandbox/test_isolated_workspace_no_publish.py backend/tests/live_e2e_test/sandbox/layer_stack_overlay_occ">
+<section id="workspace-routing" data-last-reviewed-commit="e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa" data-evidence-paths="">
 <h2>Workspace Routing <a class="anchor" href="#workspace-routing">#</a></h2>
 <p>The first workspace decision point is <code>dispatch_workspace_tool_call()</code>. It normalizes the request into <code>ToolCallRequest</code>, identifies the agent, checks active isolated workspace state, and then applies the routing order below. This order matters because isolated mode is explicit private scratch, direct file fast paths avoid overlay cost for normal file APIs, and shell/search need a real filesystem view.</p>
 <pre class="diagram" aria-label="Daemon workspace routing order">
@@ -198,7 +198,7 @@
 <p><code>OccService</code> prepares changesets lock-free, infers base hashes against the chosen snapshot, then serializes commit through <code>CommitQueue</code> and <code>CommitTransaction</code>. The transaction revalidates against the live active manifest, so a stale prepared changeset receives normal OCC rejection instead of silently overwriting concurrent work.</p>
 </section>
 
-<section id="background-control" data-last-reviewed-commit="HEAD-plus-worktree" data-evidence-paths="backend/src/engine/background/dispatch.py backend/src/engine/background/task_supervisor.py backend/src/sandbox/api/daemon_invocations.py backend/src/sandbox/api/transport.py backend/src/sandbox/daemon/rpc/dispatcher.py backend/src/sandbox/daemon/rpc/in_flight.py backend/src/sandbox/daemon/builtin_operations.py backend/src/sandbox/host/isolated_workspace_lifecycle.py backend/src/tools/sandbox/exec_command/exec_command.py backend/src/tools/sandbox/write_stdin/write_stdin.py backend/src/sandbox/api/tool/command.py sandbox/crates/eos-daemon/src/services/command_session/mod.rs sandbox/crates/eos-command-session/src/manager.rs backend/tests/unit_test/test_engine/test_background_tasks.py backend/tests/unit_test/test_engine/test_background_task_emitters.py backend/tests/unit_test/test_sandbox/test_daemon/test_in_flight_registry.py backend/tests/unit_test/test_sandbox/test_isolated_workspace_lifecycle_background.py">
+<section id="background-control" data-last-reviewed-commit="HEAD-plus-worktree" data-evidence-paths="sandbox/crates/eos-daemon/src/services/command_session/mod.rs sandbox/crates/eos-command-session/src/manager.rs">
 <h2>Background Control <a class="anchor" href="#background-control">#</a></h2>
 <p>Background sandbox control is split by typed surface. <code>launch_background_tool()</code> is subagent-only. <code>exec_command</code> creates an <code>eos-command-session</code> runtime session through the daemon adapter, registers its <code>command_session_id</code> with the engine supervisor, and exposes typed command-session progress, stdin, cancel, and completion delivery.</p>
 <div class="edge-list">
@@ -211,24 +211,24 @@
 <p>The daemon exposes <code>api.v1.cancel</code>, <code>api.v1.heartbeat</code>, and <code>api.v1.inflight_count</code> for invocation registry control, while <code>api.v1.command_session_count</code> reads the <code>eos-command-session</code> runtime registry through the daemon adapter. Foreground requests do not block isolated entry through the invocation registry path; live command sessions are counted through the command-session-specific path.</p>
 </section>
 
-<section id="tests-failures" data-last-reviewed-commit="e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa" data-evidence-paths="backend/tests/unit_test/test_sandbox/test_api/test_raw_exec.py backend/tests/unit_test/test_sandbox/test_api/test_transport_protocol.py backend/tests/unit_test/test_sandbox/test_daemon/test_file_dispatch.py backend/tests/unit_test/test_sandbox/test_daemon/test_routing_invariants.py backend/tests/unit_test/test_sandbox/test_daemon/test_in_flight_registry.py backend/tests/unit_test/test_sandbox/test_isolated_workspace_lifecycle_background.py backend/tests/unit_test/test_engine/test_background_tasks.py backend/tests/integration_test/test_sandbox/test_provider_parity.py backend/tests/integration_test/test_sandbox/test_docker_post_lifecycle.py backend/tests/live_e2e_test/sandbox/layer_stack_overlay_occ backend/tests/live_e2e_test/sandbox/phase-05-public-file-ops-report.md">
+<section id="tests-failures" data-last-reviewed-commit="e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa" data-evidence-paths="">
 <h2>Tests And Failures <a class="anchor" href="#tests-failures">#</a></h2>
 <div class="evidence-grid">
   <div class="evidence-card">
     <h3>Focused tests</h3>
     <ul>
-      <li><span class="file-ref">backend/tests/unit_test/test_sandbox/test_api/test_raw_exec.py</span> provider raw exec delegation.</li>
-      <li><span class="file-ref">backend/tests/unit_test/test_sandbox/test_daemon/test_file_dispatch.py</span> direct file fast path and overlay fallback.</li>
-      <li><span class="file-ref">backend/tests/unit_test/test_sandbox/test_daemon/test_in_flight_registry.py</span> cancel, heartbeat, count, TTL reaper.</li>
-      <li><span class="file-ref">backend/tests/unit_test/test_engine/test_background_tasks.py</span> engine-side sandbox cancel ordering and agent-scoped cancellation.</li>
+      <li><span class="file-ref">agent-core/crates/eos-sandbox-api/tests</span> provider raw exec delegation.</li>
+      <li><span class="file-ref">sandbox/crates/eos-daemon/tests/dispatcher</span> direct file fast path and overlay fallback.</li>
+      <li><span class="file-ref">sandbox/crates/eos-daemon/tests/command</span> cancel, heartbeat, count, TTL reaper.</li>
+      <li><span class="file-ref">agent-core/crates/eos-engine/tests</span> engine-side sandbox cancel ordering and agent-scoped cancellation.</li>
     </ul>
   </div>
   <div class="evidence-card">
     <h3>Live coverage</h3>
     <ul>
-      <li><span class="file-ref">backend/tests/live_e2e_test/sandbox/layer_stack_overlay_occ</span> LayerStack/OCC/overlay correctness and load families.</li>
-      <li><span class="file-ref">backend/tests/live_e2e_test/sandbox/phase-05-public-file-ops-report.md</span> public file operation report anchor.</li>
-      <li><span class="file-ref">backend/tests/integration_test/test_sandbox/test_provider_parity.py</span> provider signature parity smoke.</li>
+      <li><span class="file-ref">sandbox/crates/eos-e2e-test/tests/layerstack</span> LayerStack/OCC/overlay correctness and load families.</li>
+      <li><span class="file-ref">sandbox/crates/eos-e2e-test/tests/core</span> public file operation report anchor.</li>
+      <li><span class="file-ref">sandbox/crates/eos-e2e-test/tests/core</span> provider signature parity smoke.</li>
     </ul>
   </div>
   <div class="evidence-card">

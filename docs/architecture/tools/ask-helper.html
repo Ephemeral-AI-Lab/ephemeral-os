@@ -53,9 +53,9 @@
 </nav>
 
 <p class="lead"><code>ask_advisor</code> synchronously launches a helper agent and returns its terminal output to the caller.</p>
-<section id="tool-shape" data-last-reviewed-commit="422aa57100f55131995ca73977c22ea0f9402a09" data-evidence-paths="backend/src/tools/ask_helper/__init__.py backend/src/tools/ask_helper/ask_advisor/ask_advisor.py backend/src/tools/_framework/factory.py backend/tests/unit_test/test_tools/test_ask_advisor_retry.py">
+<section id="tool-shape" data-last-reviewed-commit="422aa57100f55131995ca73977c22ea0f9402a09" data-evidence-paths="">
 <h2>Tool Shape <a class="anchor" href="#tool-shape">#</a></h2>
-<p><code>backend/src/tools/ask_helper</code> exposes <code>ask_advisor</code>. It is a blocking helper launch, not a background task: it is not listed in <code>engine.background.policy</code>, and it awaits <code>run_ephemeral_agent()</code> directly inside its tool body.</p>
+<p><code>agent-core/crates/eos-tools/src/tools/ask_helper</code> exposes <code>ask_advisor</code>. It is a blocking helper launch, not a background task: it is not listed in <code>engine.background.policy</code>, and it awaits <code>run_ephemeral_agent()</code> directly inside its tool body.</p>
 <table>
   <thead><tr><th>Tool</th><th>Intent</th><th>Helper terminal</th><th>Use case</th></tr></thead>
   <tbody>
@@ -66,7 +66,7 @@
 <p><strong>Rust port divergence:</strong> in the Rust engine, <code>ask_advisor</code> execution is engine-driven — <code>dispatch_assistant_tools</code> intercepts <code>ToolName::AskAdvisor</code> and runs <code>run_ephemeral_agent</code> directly (no <code>AdvisorPort</code> seam), and the advisor approval pre-hook is a stateless transcript scan that additionally gates <code>submit_root_outcome</code> (Python leaves root purely advisory). See <code>docs/reviews/rust_parity/advisor-remediation-PLAN.md</code>.</p>
 </section>
 
-<section id="message-composition" data-last-reviewed-commit="422aa57100f55131995ca73977c22ea0f9402a09" data-evidence-paths="backend/src/tools/ask_helper/_lib/_compose.py backend/src/tools/ask_helper/_lib/_transcript.py backend/src/tools/ask_helper/ask_advisor/ask_advisor.py backend/src/message/message.py backend/tests/unit_test/test_tools/test_submission_helper_tools.py">
+<section id="message-composition" data-last-reviewed-commit="422aa57100f55131995ca73977c22ea0f9402a09" data-evidence-paths="">
 <h2>Message Composition <a class="anchor" href="#message-composition">#</a></h2>
 <div class="diagram" aria-label="Ask helper message workflow">
   <div class="flow-row">
@@ -86,7 +86,7 @@
 <p>If the runtime config, helper agent definition, or parent transcript shape is missing, the tool returns an explicit error <code>ToolResult</code> rather than launching a weakly grounded helper.</p>
 </section>
 
-<section id="advisor-flow" data-last-reviewed-commit="422aa57100f55131995ca73977c22ea0f9402a09" data-evidence-paths="backend/src/tools/ask_helper/ask_advisor/ask_advisor.py backend/src/tools/ask_helper/ask_advisor/prompt.py backend/src/tools/_terminals/registry.py backend/src/tools/submission/advisor/submit_advisor_feedback/submit_advisor_feedback.py backend/tests/unit_test/test_tools/test_ask_advisor_retry.py backend/tests/unit_test/test_tools/test_terminals/test_descriptor_registry.py">
+<section id="advisor-flow" data-last-reviewed-commit="422aa57100f55131995ca73977c22ea0f9402a09" data-evidence-paths="">
 <h2>Advisor Flow <a class="anchor" href="#advisor-flow">#</a></h2>
 <ol>
   <li>The parent supplies the terminal tool it intends to call and the exact payload it intends to submit.</li>
@@ -98,7 +98,7 @@
 <p>The advisor sees verifier/evaluator inline <code>edit_file</code> / <code>write_file</code> tool inputs verbatim in the parent transcript — Claude Code's literal <code>Edit</code> / <code>Write</code> / <code>NotebookEdit</code> names are stripped, but EphemeralOS's lowercase tool names are not. That visibility is how the advisor catches inline edits that exceed the typo / single-line scope.</p>
 </section>
 
-<section id="connections" data-last-reviewed-commit="422aa57100f55131995ca73977c22ea0f9402a09" data-evidence-paths="backend/src/tools/ask_helper backend/src/engine/api.py backend/src/engine/agent/lifecycle.py backend/src/tools/_terminals/registry.py backend/src/tools/submission backend/src/workflow/context_engine backend/src/sandbox/daemon/workspace_tool_dispatch.py">
+<section id="connections" data-last-reviewed-commit="422aa57100f55131995ca73977c22ea0f9402a09" data-evidence-paths="">
 <h2>Connections <a class="anchor" href="#connections">#</a></h2>
 <div class="edge-list">
   <div><b>engine</b><span>The helper launches through <code>engine.api.run_ephemeral_agent</code> and blocks until the helper run returns.</span></div>
@@ -109,7 +109,7 @@
 </div>
 </section>
 
-<section id="verification" data-last-reviewed-commit="422aa57100f55131995ca73977c22ea0f9402a09" data-evidence-paths="backend/tests/unit_test/test_tools/test_ask_advisor_retry.py backend/tests/unit_test/test_tools/test_submission_helper_tools.py backend/tests/unit_test/test_tools/test_terminals/test_descriptor_registry.py backend/tests/unit_test/test_tools/test_submission_tool_registration.py backend/tests/unit_test/test_tools/test_ask_helper/_lib/test_transcript_block.py">
+<section id="verification" data-last-reviewed-commit="422aa57100f55131995ca73977c22ea0f9402a09" data-evidence-paths="">
 <h2>Verification <a class="anchor" href="#verification">#</a></h2>
 <p>Tests cover helper retry behavior through <code>run_ephemeral_agent</code>, missing terminal-result errors, transcript/message composition, terminal catalog rendering, and advisor submission metadata. The strip-set freeze test (<code>test_advisor_strip_set_is_frozen_to_claude_code_literal_names</code>) protects the verifier/evaluator inline-edit visibility invariant. Refresh this page when helper prompts, transcript filtering, helper terminal contracts, or direct-launch runtime metadata change.</p>
 </section>

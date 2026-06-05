@@ -53,13 +53,18 @@
 
 <p class="lead">The test suites that exercise the harness live alongside the runner under <code>backend/src/test_runner/tests/</code>. They split into mocked-agent tests (fast, deterministic, hit the real sandbox surface) and real-agent tests (slow, drive a live LLM through the same harness). Both lanes share a SWE-EVO image-backed workspace fixture.</p>
 
-<section id="scope" data-last-reviewed-commit="d32994314" data-evidence-paths="backend/src/test_runner/tests backend/src/test_runner/tests/__init__.py backend/src/test_runner/tests/conftest.py">
+<div class="callout warn">
+  <span class="label">REMOVED</span>
+  ⚠️ The Python <code>backend/src/test_runner</code> documented here has been removed. The Rust replacement is specified in <code>integration-test/SPEC.md</code> (see also <code>docs/plans/test_runner_rust_SPEC.md</code>) but is not yet implemented; the evidence paths below describe the removed Python design for historical reference.
+</div>
+
+<section id="scope" data-last-reviewed-commit="d32994314" data-evidence-paths="">
 <h2>Scope <a class="anchor" href="#scope">#</a></h2>
 <div class="summary">
   <ul>
     <li>The shared <code>conftest.py</code> at <code>tests/</code> only re-exports fixtures via <code>pytest_plugins = ["test_runner.core.fixtures"]</code>. Suite-specific behavior lives in sub-conftests.</li>
     <li>Live tests intentionally do not load the repo's <code>.env</code>. Defaults come from <code>ephemeralos.yaml</code>; overrides must be process env vars.</li>
-    <li>Out-of-tree consumers exist too — <code>backend/tests/unit_test/test_test_runner/</code> and <code>backend/tests/unit_test/test_benchmarks/</code> import the harness for narrow unit-test coverage.</li>
+    <li>Out-of-tree consumers existed too — the removed Python <code>test_test_runner</code> and <code>test_benchmarks</code> unit suites imported the harness for narrow unit-test coverage.</li>
   </ul>
 </div>
 <div class="wiki-links" aria-label="Test Suites related pages">
@@ -70,7 +75,7 @@
 </div>
 </section>
 
-<section id="layout" data-last-reviewed-commit="d32994314" data-evidence-paths="backend/src/test_runner/tests backend/src/test_runner/tests/mock backend/src/test_runner/tests/real_agent">
+<section id="layout" data-last-reviewed-commit="d32994314" data-evidence-paths="">
 <h2>Suite Layout <a class="anchor" href="#layout">#</a></h2>
 <pre class="diagram" aria-label="tests/ layout">
 backend/src/test_runner/tests/
@@ -95,11 +100,11 @@ backend/src/test_runner/tests/
 <div class="edge-list" aria-label="Suite split">
   <div><b>tests/mock</b><span>Drives <code>run_scenario_on_sweevo_image</code> or <code>run_scenario</code> against the persistent SWE-EVO container. Scenarios + probes emit deterministic turns through <code>ScenarioLoopRunner</code>, and the real query loop executes the tool calls.</span></div>
   <div><b>tests/real_agent</b><span>Drives the production agent loop through the SWE-EVO image and the central-config-selected model. Used for full e2e validation including coding-plan mode.</span></div>
-  <div><b>Out-of-tree unit tests</b><span><code>backend/tests/unit_test/test_test_runner/</code> has <code>test_no_core_imports.py</code> (the runner-agnostic guarantee on <code>core/engine.py</code>) and lifecycle aggregates. <code>backend/tests/unit_test/test_benchmarks/</code> covers the sweevo evaluation and snapshot verifier logic in isolation.</span></div>
+  <div><b>Out-of-tree unit tests</b><span>The removed Python <code>test_test_runner</code> suite had <code>test_no_core_imports.py</code> (the runner-agnostic guarantee on <code>core/engine.py</code>) and lifecycle aggregates. The removed <code>test_benchmarks</code> suite covered the sweevo evaluation and snapshot verifier logic in isolation.</span></div>
 </div>
 </section>
 
-<section id="markers" data-last-reviewed-commit="d32994314" data-evidence-paths="backend/src/test_runner/tests/mock/conftest.py backend/src/test_runner/tests/real_agent/conftest.py">
+<section id="markers" data-last-reviewed-commit="d32994314" data-evidence-paths="">
 <h2>Markers And Conftest Wiring <a class="anchor" href="#markers">#</a></h2>
 <div class="edge-list" aria-label="Marker assignment rules">
   <div><b>mock</b><span>Every item resolved under <code>tests/mock/</code> gets <code>pytest.mark.mock</code> via the suite conftest's <code>pytest_collection_modifyitems</code>.</span></div>
@@ -116,7 +121,7 @@ backend/src/test_runner/tests/
 </div>
 </section>
 
-<section id="fixtures" data-last-reviewed-commit="d32994314" data-evidence-paths="backend/src/test_runner/environments/sweevo_image/fixtures.py backend/src/test_runner/environments/sweevo_image/health.py backend/src/test_runner/core/fixtures.py">
+<section id="fixtures" data-last-reviewed-commit="d32994314" data-evidence-paths="">
 <h2>Workspace And Sandbox Fixtures <a class="anchor" href="#fixtures">#</a></h2>
 <pre class="diagram" aria-label="Fixture chain">
 sweevo_image_instance (session)
@@ -146,7 +151,7 @@ workspace            (function-scoped)
 </div>
 </section>
 
-<section id="contracts" data-last-reviewed-commit="d32994314" data-evidence-paths="backend/src/test_runner/tests/mock/_project_build_contracts.py backend/src/test_runner/tests/mock/_focused_scenario_contracts.py backend/src/test_runner/tests/mock/_layer_stack_occ_overlay_assertions.py">
+<section id="contracts" data-last-reviewed-commit="d32994314" data-evidence-paths="">
 <h2>Contract Helpers <a class="anchor" href="#contracts">#</a></h2>
 <p>Module-private helpers (underscored) carry assertion vocabulary shared across many test files. They consume the rich <code>RunReport</code> built by <code>ScenarioLifecycle</code>.</p>
 <div class="edge-list" aria-label="Contract helper roles">
@@ -171,7 +176,7 @@ async def test_some_pipeline_path(workspace):
 </pre>
 </section>
 
-<section id="gates" data-last-reviewed-commit="d32994314" data-evidence-paths="backend/src/test_runner/tests/_live_config.py">
+<section id="gates" data-last-reviewed-commit="d32994314" data-evidence-paths="">
 <h2>Live-Config Gates <a class="anchor" href="#gates">#</a></h2>
 <div class="edge-list" aria-label="Central-config helpers">
   <div><b>database_configured()</b><span><code>bool(get_central_config().database.url)</code> — fixture-level prerequisite for tests that need the per-test store bundle.</span></div>
@@ -186,7 +191,7 @@ async def test_some_pipeline_path(workspace):
 <div class="page-baseline" data-page-baseline-commit="d32994314">
   <strong>Maintenance baseline</strong>
   <span>Test Suites page reviewed against <code>d32994314</code>.</span>
-  <code>git diff d32994314..HEAD -- backend/src/test_runner/tests backend/src/test_runner/environments/sweevo_image</code>
+  <code>git diff d32994314..HEAD -- integration-test/SPEC.md docs/architecture/test_runner</code>
 </div>
 <div class="page-footer-nav"><span><a href="benchmark-sweevo.html">SWE-EVO Benchmark</a></span><span><a href="maintenance.html">Maintenance</a></span></div>
 </main>

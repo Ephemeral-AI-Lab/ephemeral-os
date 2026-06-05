@@ -57,7 +57,7 @@
   <p>The current shape is intentionally layered: descriptors tell agents when to choose each terminal, submission tools validate and project role payloads, the framework validates output and stamps <code>is_terminal</code>, and the engine owns terminal exclusivity. The advisor helper uses the same terminal contract for its own child run, but its result returns to the caller instead of mutating the parent attempt directly.</p>
 </div>
 
-<section id="terminal-contract-map" data-last-reviewed-commit="d32994314" data-evidence-paths="backend/src/tools/submission/_factory.py backend/src/tools/_terminals/registry.py backend/src/tools/_framework/execution/tool_call.py backend/src/tools/_framework/core/validation.py backend/src/engine/tool_call/dispatch.py backend/src/engine/query/loop.py docs/architecture/tools/submission.html docs/architecture/tools/terminals.html">
+<section id="terminal-contract-map" data-last-reviewed-commit="d32994314" data-evidence-paths="docs/architecture/tools/submission.html docs/architecture/tools/terminals.html">
 <h2>Terminal Contract Map <a class="anchor" href="#terminal-contract-map">#</a></h2>
 <div class="diagram" aria-label="Terminal submission contract">
   <div class="flow-row">
@@ -102,7 +102,7 @@
 </div>
 </section>
 
-<section id="descriptor-registry" data-last-reviewed-commit="HEAD-plus-worktree" data-evidence-paths="backend/src/tools/_terminals/registry.py backend/src/workflow/context_engine/skill_message.py backend/src/workflow/attempt/launch.py backend/tests/unit_test/test_tools/test_terminals/test_descriptor_registry.py backend/src/test_runner/tests/mock/workflow/test_initial_messages_capture.py">
+<section id="descriptor-registry" data-last-reviewed-commit="HEAD-plus-worktree" data-evidence-paths="">
 <h2>Descriptor Registry <a class="anchor" href="#descriptor-registry">#</a></h2>
 <p><code>TERMINAL_DESCRIPTORS</code> is the shared terminal prose registry. Each <code>TerminalToolDescriptor</code> has a parent-facing <code>selection_guidance</code> field and an advisor-facing <code>advisor_review_focus</code> field; <code>render_terminal_catalog()</code> renders either view for a selected terminal list.</p>
 <div class="edge-list">
@@ -114,7 +114,7 @@
 </div>
 </section>
 
-<section id="role-submission-terminals" data-last-reviewed-commit="HEAD-plus-worktree" data-evidence-paths="backend/src/tools/submission/_factory.py backend/src/tools/submission/context/attempt.py backend/src/tools/submission/context/generator.py backend/src/tools/submission/root backend/src/tools/submission/planner backend/src/tools/submission/generator backend/src/tools/submission/reducer backend/src/tools/workflow backend/src/workflow/attempt/orchestrator.py backend/src/workflow/starter.py backend/tests/unit_test/test_tools/test_submission_tool_registration.py backend/tests/unit_test/test_tools/test_submission_planner_tools.py backend/tests/unit_test/test_tools/test_submission_main_role_terminals.py">
+<section id="role-submission-terminals" data-last-reviewed-commit="HEAD-plus-worktree" data-evidence-paths="">
 <h2>Role Submission Terminals <a class="anchor" href="#role-submission-terminals">#</a></h2>
 <p>The role submission terminals are adapters over Task and Workflow state owners. They do not coordinate peer agents directly; they resolve the current task, build typed submissions, and call either the root-task request finisher or the Workflow -> Iteration -> Attempt owner for the current attempt.</p>
 <div class="evidence-grid">
@@ -163,7 +163,7 @@
 </div>
 </section>
 
-<section id="validation-and-stop" data-last-reviewed-commit="d32994314" data-evidence-paths="backend/src/tools/_framework/core/validation.py backend/src/tools/_framework/execution/tool_call.py backend/src/tools/_framework/core/runtime.py backend/src/engine/tool_call/dispatch.py backend/src/engine/query/loop.py backend/src/engine/query/context.py backend/tests/unit_test/test_tools/test_tool_execution.py backend/tests/unit_test/test_engine/test_loop_resource_limit_transcript.py">
+<section id="validation-and-stop" data-last-reviewed-commit="d32994314" data-evidence-paths="">
 <h2>Validation And Stop Path <a class="anchor" href="#validation-and-stop">#</a></h2>
 <p>Terminal tools terminate only after the normal tool validation pipeline succeeds. A pydantic input failure, a prehook failure, a body exception, an invalid output shape, or a posthook failure returns an error <code>ToolResult</code>; error results are deliberately not stamped as terminal.</p>
 <div class="trace-grid">
@@ -180,7 +180,7 @@
 </div>
 </section>
 
-<section id="advisor-before-terminal" data-last-reviewed-commit="d32994314" data-evidence-paths="backend/src/tools/ask_helper/ask_advisor/ask_advisor.py backend/src/tools/ask_helper/_lib/_compose.py backend/src/tools/ask_helper/_lib/_transcript.py backend/src/tools/submission/advisor/submit_advisor_feedback/submit_advisor_feedback.py backend/src/tools/_terminals/registry.py backend/tests/unit_test/test_tools/test_submission_helper_tools.py backend/tests/unit_test/test_tools/test_ask_advisor_retry.py docs/architecture/tools/ask-helper.html">
+<section id="advisor-before-terminal" data-last-reviewed-commit="d32994314" data-evidence-paths="docs/architecture/tools/ask-helper.html">
 <h2>Advisor Before Terminal <a class="anchor" href="#advisor-before-terminal">#</a></h2>
 <p><code>ask_advisor</code> is the read-only validation pattern for terminal outputs before the parent makes its own terminal submission. The parent sends the intended terminal name and payload; the helper receives the parent's original context, original task, filtered transcript, terminal catalog rendered with advisor review focus, and the pending submission JSON.</p>
 <div class="diagram" aria-label="Advisor-before-terminal workflow">
@@ -200,7 +200,7 @@
 </div>
 </section>
 
-<section id="helper-results-notifications" data-last-reviewed-commit="HEAD-plus-worktree" data-evidence-paths="backend/src/tools/submission/explorer/submit_exploration_result/submit_exploration_result.py backend/src/tools/submission/notification_triggers/nested_planner_deferral_disabled.py backend/tests/unit_test/test_tools/test_submission_helper_tools.py backend/tests/unit_test/test_tools/test_submission_soft_reminders.py docs/architecture/tools/ask-helper.html">
+<section id="helper-results-notifications" data-last-reviewed-commit="HEAD-plus-worktree" data-evidence-paths="docs/architecture/tools/ask-helper.html">
 <h2>Helper Results And Notifications <a class="anchor" href="#helper-results-notifications">#</a></h2>
 <p>Helper terminal outputs are terminal inside the helper run, then ordinary tool results for the parent. This lets helpers use the same engine stop contract while keeping parent Workflow state under the parent submission tools and orchestrator.</p>
 <div class="evidence-grid">
@@ -222,7 +222,7 @@
 </div>
 </section>
 
-<section id="tests-maintenance" data-last-reviewed-commit="HEAD-plus-worktree" data-evidence-paths="backend/tests/unit_test/test_tools/test_submission_tool_registration.py backend/tests/unit_test/test_tools/test_submission_planner_tools.py backend/tests/unit_test/test_tools/test_submission_main_role_terminals.py backend/tests/unit_test/test_tools/test_submission_helper_tools.py backend/tests/unit_test/test_tools/test_tool_execution.py backend/tests/unit_test/test_tools/test_terminals/test_descriptor_registry.py docs/architecture/tools/submission.html docs/architecture/tools/terminals.html docs/architecture/tools/ask-helper.html">
+<section id="tests-maintenance" data-last-reviewed-commit="HEAD-plus-worktree" data-evidence-paths="docs/architecture/tools/submission.html docs/architecture/tools/terminals.html docs/architecture/tools/ask-helper.html">
 <h2>Tests And Maintenance <a class="anchor" href="#tests-maintenance">#</a></h2>
 <div class="evidence-grid">
   <div class="evidence-card">

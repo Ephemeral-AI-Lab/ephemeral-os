@@ -43,7 +43,7 @@
 </div>
 <section id="layerstack"
   data-last-reviewed-commit="2a3e6cc7c"
-  data-evidence-paths="backend/src/sandbox/layer_stack backend/src/sandbox/daemon/layer_stack_runtime.py backend/src/sandbox/occ">
+  data-evidence-paths="">
 <h2>2. LayerStack <a class="anchor" href="#layerstack">§</a></h2>
 <nav class="page-toc" aria-labelledby="page-toc-heading">
   <h3 id="page-toc-heading">Contents</h3>
@@ -77,7 +77,7 @@
 </section>
 <section id="layerstack-storage"
   data-last-reviewed-commit="2a3e6cc7c"
-  data-evidence-paths="backend/src/sandbox/daemon/paths.py backend/src/sandbox/layer_stack/workspace_binding.py backend/src/sandbox/layer_stack/workspace_base.py">
+  data-evidence-paths="">
 <h3>2.1 Storage <a class="anchor" href="#layerstack-storage">§</a></h3>
 <div class="summary">
   <ul>
@@ -99,14 +99,14 @@
     occ-commit-.../                       OCC content staging
   .layer-metadata/                        layer digest sidecars</code></pre>
 
-<p>The default layer stack root is <code>/eos/layer-stack</code> <span class="file-ref">backend/src/sandbox/daemon/paths.py:5-16</span>. Actual calls may pass another <code>layer_stack_root</code>. A <code>WorkspaceBinding</code> records the bound <code>workspace_root</code>, stack root, active version, and root hashes <span class="file-ref">backend/src/sandbox/layer_stack/workspace_binding.py:21-28</span>. The binding validator requires both roots to be absolute and requires the layer stack to live outside the workspace <span class="file-ref">backend/src/sandbox/layer_stack/workspace_binding.py:110-130</span>.</p>
+<p>The default layer stack root is <code>/eos/layer-stack</code> <span class="file-ref">sandbox/crates/eos-protocol/src/models.rs</span>. Actual calls may pass another <code>layer_stack_root</code>. A <code>WorkspaceBinding</code> records the bound <code>workspace_root</code>, stack root, active version, and root hashes <span class="file-ref">sandbox/crates/eos-layerstack/src/workspace_binding.rs</span>. The binding validator requires both roots to be absolute and requires the layer stack to live outside the workspace <span class="file-ref">sandbox/crates/eos-layerstack/src/workspace_binding.rs</span>.</p>
 
-<p>The base layer is built once as <code>B000001-base</code> <span class="file-ref">backend/src/sandbox/layer_stack/workspace_base.py:32</span>. The base builder walks the workspace, rejects special or unstable files, writes the layer, writes manifest version 1, then writes <code>workspace.json</code> <span class="file-ref">backend/src/sandbox/layer_stack/workspace_base.py:82-141</span>.</p>
+<p>The base layer is built once as <code>B000001-base</code> <span class="file-ref">sandbox/crates/eos-layerstack/src/workspace_base.rs</span>. The base builder walks the workspace, rejects special or unstable files, writes the layer, writes manifest version 1, then writes <code>workspace.json</code> <span class="file-ref">sandbox/crates/eos-layerstack/src/workspace_base.rs</span>.</p>
 
 </section>
 <section id="layerstack-data-model"
   data-last-reviewed-commit="ab32582f7"
-  data-evidence-paths="backend/src/sandbox/layer_stack/manifest.py backend/src/sandbox/layer_stack/lease.py backend/src/sandbox/layer_stack/view.py backend/src/sandbox/layer_stack/transaction.py">
+  data-evidence-paths="">
 <h3>2.2 Data Model <a class="anchor" href="#layerstack-data-model">§</a></h3>
 <table>
   <thead><tr><th>Object</th><th>Role</th><th>Lifetime</th><th>Cross-links</th></tr></thead>
@@ -123,7 +123,7 @@
 </section>
 <section id="layerstack-projection"
   data-last-reviewed-commit="ab32582f7"
-  data-evidence-paths="backend/src/sandbox/layer_stack/stack.py backend/src/sandbox/layer_stack/view.py backend/src/sandbox/ephemeral_workspace/pipeline.py backend/src/sandbox/isolated_workspace/pipeline.py">
+  data-evidence-paths="">
 <h3>2.3 Projection <a class="anchor" href="#layerstack-projection">§</a></h3>
 <div class="summary">
   <ul>
@@ -134,7 +134,7 @@
   </ul>
 </div>
 
-<p><strong>A snapshot is O(1): a lease plus a list of existing layer paths, not a rendered tree.</strong> <code>LayerStack.acquire_snapshot()</code> reads the manifest, acquires a lease, and returns <code>layer_paths</code> copied from the manifest. It does not project a transient lowerdir for normal operations <span class="file-ref">backend/src/sandbox/layer_stack/stack.py:105-129</span>. The result object contains <code>lease_id</code>, <code>manifest_version</code>, <code>root_hash</code>, <code>manifest</code>, timings, and optional <code>layer_paths</code> <span class="file-ref">backend/src/sandbox/layer_stack/stack.py:43-62</span>. This is what makes N concurrent agents cheap: every snapshot is constant-cost regardless of repository size.</p>
+<p><strong>A snapshot is O(1): a lease plus a list of existing layer paths, not a rendered tree.</strong> <code>LayerStack.acquire_snapshot()</code> reads the manifest, acquires a lease, and returns <code>layer_paths</code> copied from the manifest. It does not project a transient lowerdir for normal operations <span class="file-ref">sandbox/crates/eos-layerstack/src/stack.rs</span>. The result object contains <code>lease_id</code>, <code>manifest_version</code>, <code>root_hash</code>, <code>manifest</code>, timings, and optional <code>layer_paths</code> <span class="file-ref">sandbox/crates/eos-layerstack/src/stack.rs</span>. This is what makes N concurrent agents cheap: every snapshot is constant-cost regardless of repository size.</p>
 
 <div class="stack-viz" aria-label="LayerStack projection">
   <div class="layer lower"><strong>L000005-...</strong><div class="desc">newest layer, highest priority lowerdir</div></div>
@@ -143,12 +143,12 @@
   <div class="layer merged"><strong>Projection handle</strong><div class="desc">lease_id + layer_paths + manifest_key, no full tree copy</div></div>
 </div>
 
-<p><code>MergedView</code> still exists for direct logical reads and projection. It reads newest-first, honors whiteouts and opaque directories, and can list directories or iterate paths <span class="file-ref">backend/src/sandbox/layer_stack/view.py:60-193</span>. Its <code>project()</code> method applies layers oldest-first into a fresh destination <span class="file-ref">backend/src/sandbox/layer_stack/view.py:195-219</span>. That rendered tree is used by commit-to-workspace, squash checkpoint builds, and special-path maintenance — not by normal per-tool overlay lowerdirs.</p>
+<p><code>MergedView</code> still exists for direct logical reads and projection. It reads newest-first, honors whiteouts and opaque directories, and can list directories or iterate paths <span class="file-ref">sandbox/crates/eos-layerstack/src/stack/projection.rs</span>. Its <code>project()</code> method applies layers oldest-first into a fresh destination <span class="file-ref">sandbox/crates/eos-layerstack/src/stack/projection.rs</span>. That rendered tree is used by commit-to-workspace, squash checkpoint builds, and special-path maintenance — not by normal per-tool overlay lowerdirs.</p>
 
 </section>
 <section id="layerstack-publish"
   data-last-reviewed-commit="ab32582f7"
-  data-evidence-paths="backend/src/sandbox/layer_stack/publisher.py backend/src/sandbox/layer_stack/changes.py backend/src/sandbox/layer_stack/lease.py backend/src/sandbox/layer_stack/squash.py backend/src/sandbox/layer_stack/stack.py backend/src/sandbox/layer_stack/workspace_commit.py">
+  data-evidence-paths="">
 <h3>2.4 Publish <a class="anchor" href="#layerstack-publish">§</a></h3>
 <div class="summary">
   <ul>
@@ -161,7 +161,7 @@
 
 <p>This is the <strong>atomic-pointer-swap commit pattern</strong> used by Git (HEAD updates), Apache Iceberg (metadata.json swap), Delta Lake, and Hudi: a single mutable pointer over a tree of immutable content-addressed objects, swapped via CAS. The active <code>manifest.json</code> is the single linearization point; everything else is append-only.</p>
 
-<p>The publisher performs a CAS check before writing, writes changes into a staging layer, moves it into <code>layers/</code>, then re-checks the manifest before writing the new active manifest <span class="file-ref">backend/src/sandbox/layer_stack/publisher.py:49-132</span>. Delete and opaque directory semantics use overlay-style marker files <span class="file-ref">backend/src/sandbox/layer_stack/changes.py:123-142</span>. Leases refcount every layer in the captured manifest for GC retention (<code>leased_layers()</code>) and expose each lease's head layer as the set of positions squash must keep (<code>lease_head_layers()</code>) <span class="file-ref">backend/src/sandbox/layer_stack/lease.py:38-86</span>.</p>
+<p>The publisher performs a CAS check before writing, writes changes into a staging layer, moves it into <code>layers/</code>, then re-checks the manifest before writing the new active manifest <span class="file-ref">sandbox/crates/eos-layerstack/src/stack.rs</span>. Delete and opaque directory semantics use overlay-style marker files <span class="file-ref">sandbox/crates/eos-layerstack/src/stack/whiteout.rs</span>. Leases refcount every layer in the captured manifest for GC retention (<code>leased_layers()</code>) and expose each lease's head layer as the set of positions squash must keep (<code>lease_head_layers()</code>) <span class="file-ref">sandbox/crates/eos-layerstack/src/lease.rs</span>.</p>
 
 <div class="callout">
   <span class="label">Why auto-squash exists</span>
@@ -202,11 +202,11 @@
 <table>
   <thead><tr><th>LayerStack operation</th><th>Technical behavior</th><th>Evidence</th></tr></thead>
   <tbody>
-    <tr><td>Initialization</td><td>Creates root, writer lock, <code>layers/</code>, <code>staging/</code>, manifest store, lease registry, merged view, publisher, and squash service.</td><td><span class="file-ref">backend/src/sandbox/layer_stack/stack.py:65-94</span></td></tr>
-    <tr><td>Snapshot release</td><td>Releases the lease, checks current manifest reachability, removes unreferenced layer candidates, removes digest sidecars, and evicts view indexes.</td><td><span class="file-ref">backend/src/sandbox/layer_stack/stack.py:135-147</span>, <span class="file-ref">backend/src/sandbox/layer_stack/stack.py:322-338</span></td></tr>
-    <tr><td>Squash planning</td><td>Segments runs around each lease's head layer so the snapshot cut stays visible in active; older leased layers below the head are foldable. No-op or tiny compactions are refused.</td><td><span class="file-ref">backend/src/sandbox/layer_stack/squash.py:69-101</span>, <span class="file-ref">backend/src/sandbox/layer_stack/squash.py:150-184</span></td></tr>
-    <tr><td>Checkpoint build</td><td>Projects a segment into a checkpoint layer and moves it into <code>layers/</code>.</td><td><span class="file-ref">backend/src/sandbox/layer_stack/squash.py:103-121</span></td></tr>
-    <tr><td>Workspace commit</td><td>Projects the active manifest back into the bound workspace, resets storage, and rebuilds a base layer.</td><td><span class="file-ref">backend/src/sandbox/layer_stack/stack.py:287-312</span>, <span class="file-ref">backend/src/sandbox/layer_stack/workspace_commit.py</span></td></tr>
+    <tr><td>Initialization</td><td>Creates root, writer lock, <code>layers/</code>, <code>staging/</code>, manifest store, lease registry, merged view, publisher, and squash service.</td><td><span class="file-ref">sandbox/crates/eos-layerstack/src/stack.rs</span></td></tr>
+    <tr><td>Snapshot release</td><td>Releases the lease, checks current manifest reachability, removes unreferenced layer candidates, removes digest sidecars, and evicts view indexes.</td><td><span class="file-ref">sandbox/crates/eos-layerstack/src/stack.rs</span>, <span class="file-ref">sandbox/crates/eos-layerstack/src/stack.rs</span></td></tr>
+    <tr><td>Squash planning</td><td>Segments runs around each lease's head layer so the snapshot cut stays visible in active; older leased layers below the head are foldable. No-op or tiny compactions are refused.</td><td><span class="file-ref">sandbox/crates/eos-layerstack/src/squash.rs</span>, <span class="file-ref">sandbox/crates/eos-layerstack/src/squash.rs</span></td></tr>
+    <tr><td>Checkpoint build</td><td>Projects a segment into a checkpoint layer and moves it into <code>layers/</code>.</td><td><span class="file-ref">sandbox/crates/eos-layerstack/src/squash.rs</span></td></tr>
+    <tr><td>Workspace commit</td><td>Projects the active manifest back into the bound workspace, resets storage, and rebuilds a base layer.</td><td><span class="file-ref">sandbox/crates/eos-layerstack/src/stack.rs</span>, <span class="file-ref">sandbox/crates/eos-layerstack/src/stack.rs</span></td></tr>
   </tbody>
 </table>
 
@@ -218,7 +218,7 @@
 </section>
 <section id="layerstack-squash-gc"
   data-last-reviewed-commit="b1f90277d"
-  data-evidence-paths="backend/src/sandbox/layer_stack/squash.py backend/src/sandbox/layer_stack/stack.py backend/src/sandbox/layer_stack/lease.py backend/src/sandbox/occ/maintenance.py backend/src/sandbox/daemon/occ_runtime_services.py backend/tests/live_e2e_test/sandbox/workspace_base/test_squash_deferred_gc_scenarios.py backend/tests/live_e2e_test/sandbox/layer_stack_overlay_occ/test_auto_squash_edge_cases.py">
+  data-evidence-paths="">
 <h3>2.5 Squash and Deferred GC <a class="anchor" href="#layerstack-squash-gc">§</a></h3>
 <div class="summary">
   <ul>
@@ -236,10 +236,10 @@
 
 <div class="callout">
   <span class="label">Depth math: heads plus runs</span>
-  A <strong>run</strong> is a contiguous sequence of active-manifest layers that is not a lease-head barrier. Squash walks the active manifest newest-first, flushes the current run whenever it reaches a lease head, keeps that head as a passthrough layer, and then starts the next run. The resulting depth is therefore <code>distinct lease heads + emitted runs</code>, not just the number of leases plus one. Four distinct lease heads yield depth 5 only when there is a single foldable non-head run; if the heads are spread through the stack with one run above, three runs between heads, and one run below, the post-squash depth is <code>4 + 5 = 9</code>. The workspace-base live scenario <code>s7_four_lease_heads_create_nine_entry_squash</code> fixes this case: pre-squash depth 14, four distinct lease heads, five non-head runs, post-squash depth 9, and a later no-lease squash back to depth 1 <span class="file-ref">backend/tests/live_e2e_test/sandbox/workspace_base/test_squash_deferred_gc_scenarios.py</span>.
+  A <strong>run</strong> is a contiguous sequence of active-manifest layers that is not a lease-head barrier. Squash walks the active manifest newest-first, flushes the current run whenever it reaches a lease head, keeps that head as a passthrough layer, and then starts the next run. The resulting depth is therefore <code>distinct lease heads + emitted runs</code>, not just the number of leases plus one. Four distinct lease heads yield depth 5 only when there is a single foldable non-head run; if the heads are spread through the stack with one run above, three runs between heads, and one run below, the post-squash depth is <code>4 + 5 = 9</code>. The workspace-base live scenario <code>s7_four_lease_heads_create_nine_entry_squash</code> fixes this case: pre-squash depth 14, four distinct lease heads, five non-head runs, post-squash depth 9, and a later no-lease squash back to depth 1 <span class="file-ref">sandbox/crates/eos-e2e-test/tests/layerstack</span>.
 </div>
 
-<p><strong>Algorithm.</strong> <code>LayerStack.squash(max_depth=...)</code> takes the storage-writer guard, reads the active manifest under the lock, asks the squasher for a plan using <code>lease_head_layers=self._leases.lease_head_layers()</code>, and refuses if the plan is <code>None</code> <span class="file-ref">backend/src/sandbox/layer_stack/stack.py:231-293</span>. Plan acceptance criteria <span class="file-ref">backend/src/sandbox/layer_stack/squash.py:61-93</span>:</p>
+<p><strong>Algorithm.</strong> <code>LayerStack.squash(max_depth=...)</code> takes the storage-writer guard, reads the active manifest under the lock, asks the squasher for a plan using <code>lease_head_layers=self._leases.lease_head_layers()</code>, and refuses if the plan is <code>None</code> <span class="file-ref">sandbox/crates/eos-layerstack/src/stack.rs</span>. Plan acceptance criteria <span class="file-ref">sandbox/crates/eos-layerstack/src/squash.rs</span>:</p>
 
 <ol>
   <li>Active depth must exceed <code>max_depth</code>.</li>
@@ -249,7 +249,7 @@
   <li>If post-segmentation entry count still exceeds <code>max_depth</code> and no single segment is larger than <code>max_depth</code>, the plan is rejected — squashing wouldn't reach the cap.</li>
 </ol>
 
-<p>When accepted, squash acquires a synthetic lease against the active manifest (prevents GC racing the checkpoint build), then calls <code>build_checkpoint</code> per segment: allocate a <code>B{v+1:06d}-...</code> staging dir, <code>MergedView.project(staging, Manifest(segment.layers))</code>, and <code>os.replace</code> into <code>layers/</code>. Under the lock again, it verifies the active manifest's prefix is still compatible (<code>manifest_prefix_before_plan</code>), assembles <code>new_layers = live_prefix + [checkpoint | lease-head-passthrough]</code>, bumps the version, and writes the manifest atomically. If any check fails, partial checkpoints are discarded via <code>discard_checkpoint</code>. On success, the synthetic squash lease is released, which triggers <code>_unreferenced_layers</code> and removes any layer no longer referenced by the active manifest or any other lease <span class="file-ref">backend/src/sandbox/layer_stack/stack.py:138-150</span>, <span class="file-ref">backend/src/sandbox/layer_stack/stack.py:333-346</span>.</p>
+<p>When accepted, squash acquires a synthetic lease against the active manifest (prevents GC racing the checkpoint build), then calls <code>build_checkpoint</code> per segment: allocate a <code>B{v+1:06d}-...</code> staging dir, <code>MergedView.project(staging, Manifest(segment.layers))</code>, and <code>os.replace</code> into <code>layers/</code>. Under the lock again, it verifies the active manifest's prefix is still compatible (<code>manifest_prefix_before_plan</code>), assembles <code>new_layers = live_prefix + [checkpoint | lease-head-passthrough]</code>, bumps the version, and writes the manifest atomically. If any check fails, partial checkpoints are discarded via <code>discard_checkpoint</code>. On success, the synthetic squash lease is released, which triggers <code>_unreferenced_layers</code> and removes any layer no longer referenced by the active manifest or any other lease <span class="file-ref">sandbox/crates/eos-layerstack/src/stack.rs</span>, <span class="file-ref">sandbox/crates/eos-layerstack/src/stack.rs</span>.</p>
 
 <div class="callout">
   <span class="label">Worked example</span>
@@ -310,28 +310,28 @@ _unreferenced_layers(squash_lease.manifest.layers,
 _remove_layers(removable): rm -rf layer dirs + digest sidecars + evict view cache
 </pre>
 
-<p><strong>Why leases hold the full manifest, not just the head.</strong> Reads through a snapshot lease walk <em>its</em> frozen manifest newest-first <span class="file-ref">backend/src/sandbox/layer_stack/view.py:60-118</span>. The bytes answering <code>read_bytes("foo.py")</code> can live in any layer of the chain; a single head ref does not contain a lower layer's contents. Snapshot-by-reference (cheap O(1) acquire + GC-retain the chain) is the design trade vs. snapshot-by-copy (expensive O(workspace) acquire, head ref only).</p>
+<p><strong>Why leases hold the full manifest, not just the head.</strong> Reads through a snapshot lease walk <em>its</em> frozen manifest newest-first <span class="file-ref">sandbox/crates/eos-layerstack/src/stack/projection.rs</span>. The bytes answering <code>read_bytes("foo.py")</code> can live in any layer of the chain; a single head ref does not contain a lower layer's contents. Snapshot-by-reference (cheap O(1) acquire + GC-retain the chain) is the design trade vs. snapshot-by-copy (expensive O(workspace) acquire, head ref only).</p>
 
-<p><strong>Concurrency invariants.</strong> Storage-writer exclusive guard held end-to-end; manifest-version compare between plan and publish via <code>manifest_prefix_before_plan</code> makes squash OCC-safe against concurrent <code>LayerPublisher.publish_layer</code>; synthetic squash lease prevents <code>_unreferenced_layers</code> from racing the checkpoint build window <span class="file-ref">backend/src/sandbox/layer_stack/stack.py:242-293</span>.</p>
+<p><strong>Concurrency invariants.</strong> Storage-writer exclusive guard held end-to-end; manifest-version compare between plan and publish via <code>manifest_prefix_before_plan</code> makes squash OCC-safe against concurrent <code>LayerPublisher.publish_layer</code>; synthetic squash lease prevents <code>_unreferenced_layers</code> from racing the checkpoint build window <span class="file-ref">sandbox/crates/eos-layerstack/src/stack.rs</span>.</p>
 
-<p><strong>Autosquash audit.</strong> OCC post-publish maintenance runs through <code>AutoSquashMaintenancePolicy</code>, which serializes autosquash attempts with a policy-local lock so at most one squash worker enters <code>LayerStack.squash()</code> at a time. The daemon runtime passes <code>emit_squash_event</code> into that policy, so every actual autosquash attempt emits focused critical-lane audit events: <code>layer_stack.squash_triggered</code> with <code>squash_trigger_reason=post_publish_depth</code> and input depth, then <code>layer_stack.squash_completed</code> with input depth, result depth, and manifest root hash, or <code>layer_stack.squash_failed</code> for a raced/aborted plan <span class="file-ref">backend/src/sandbox/occ/maintenance.py</span>, <span class="file-ref">backend/src/sandbox/daemon/occ_runtime_services.py</span>. The public edge-case suite asserts these audit events together with <code>layer_stack.auto_squash.*</code> timings, post-squash depth, and orphan/missing layer counters under complex-project, background-shell-lease, and isolated-workspace-lease conditions <span class="file-ref">backend/tests/live_e2e_test/sandbox/layer_stack_overlay_occ/test_auto_squash_edge_cases.py</span>.</p>
+<p><strong>Autosquash audit.</strong> OCC post-publish maintenance runs through <code>AutoSquashMaintenancePolicy</code>, which serializes autosquash attempts with a policy-local lock so at most one squash worker enters <code>LayerStack.squash()</code> at a time. The daemon runtime passes <code>emit_squash_event</code> into that policy, so every actual autosquash attempt emits focused critical-lane audit events: <code>layer_stack.squash_triggered</code> with <code>squash_trigger_reason=post_publish_depth</code> and input depth, then <code>layer_stack.squash_completed</code> with input depth, result depth, and manifest root hash, or <code>layer_stack.squash_failed</code> for a raced/aborted plan <span class="file-ref">sandbox/crates/eos-layerstack/src/squash.rs</span>, <span class="file-ref">sandbox/crates/eos-daemon/src/services/occ/mod.rs</span>. The public edge-case suite asserts these audit events together with <code>layer_stack.auto_squash.*</code> timings, post-squash depth, and orphan/missing layer counters under complex-project, background-shell-lease, and isolated-workspace-lease conditions <span class="file-ref">sandbox/crates/eos-e2e-test/tests/layerstack</span>.</p>
 
 </section>
 <section id="layerstack-evidence-refresh"
   data-last-reviewed-commit="2a3e6cc7c"
-  data-evidence-paths="backend/src/sandbox/layer_stack backend/tests/live_e2e_test/sandbox/layer_stack backend/tests/live_e2e_test/sandbox/workspace_base backend/tests/live_e2e_test/sandbox/layer_stack_overlay_occ">
+  data-evidence-paths="">
 <h3>2.6 Evidence and Refresh <a class="anchor" href="#layerstack-evidence-refresh">§</a></h3>
 <div class="evidence-grid">
   <div class="evidence-card">
     <h4>Source files</h4>
     <ul>
-      <li><span class="file-ref">backend/src/sandbox/layer_stack/stack.py</span> public facade, leases, snapshots, squash, commit_to_workspace.</li>
-      <li><span class="file-ref">backend/src/sandbox/layer_stack/publisher.py</span> staged layer publish and manifest CAS.</li>
-      <li><span class="file-ref">backend/src/sandbox/layer_stack/view.py</span> newest-first logical reads and manifest projection.</li>
-      <li><span class="file-ref">backend/src/sandbox/layer_stack/squash.py</span> checkpoint segmentation, projection, and atomic manifest rewrite.</li>
-      <li><span class="file-ref">backend/src/sandbox/layer_stack/workspace_commit.py</span> projection + workspace swap + base rebuild.</li>
-      <li><span class="file-ref">backend/src/sandbox/layer_stack/lease.py</span> <code>leased_layers()</code> retention set and <code>lease_head_layers()</code> squash-keep set.</li>
-      <li><span class="file-ref">backend/src/sandbox/layer_stack/workspace_base.py</span> base import and workspace binding write.</li>
+      <li><span class="file-ref">sandbox/crates/eos-layerstack/src/stack.rs</span> public facade, leases, snapshots, squash, commit_to_workspace.</li>
+      <li><span class="file-ref">sandbox/crates/eos-layerstack/src/stack.rs</span> staged layer publish and manifest CAS.</li>
+      <li><span class="file-ref">sandbox/crates/eos-layerstack/src/stack/projection.rs</span> newest-first logical reads and manifest projection.</li>
+      <li><span class="file-ref">sandbox/crates/eos-layerstack/src/squash.rs</span> checkpoint segmentation, projection, and atomic manifest rewrite.</li>
+      <li><span class="file-ref">sandbox/crates/eos-layerstack/src/stack.rs</span> projection + workspace swap + base rebuild.</li>
+      <li><span class="file-ref">sandbox/crates/eos-layerstack/src/lease.rs</span> <code>leased_layers()</code> retention set and <code>lease_head_layers()</code> squash-keep set.</li>
+      <li><span class="file-ref">sandbox/crates/eos-layerstack/src/workspace_base.rs</span> base import and workspace binding write.</li>
     </ul>
   </div>
   <div class="evidence-card">
@@ -345,15 +345,15 @@ _remove_layers(removable): rm -rf layer dirs + digest sidecars + evict view cach
   <div class="evidence-card">
     <h4>Tests</h4>
     <ul>
-      <li><span class="file-ref">backend/tests/live_e2e_test/sandbox/layer_stack/test_merged_view.py</span></li>
-      <li><span class="file-ref">backend/tests/live_e2e_test/sandbox/layer_stack/test_squash.py</span></li>
-      <li><span class="file-ref">backend/tests/live_e2e_test/sandbox/workspace_base/test_squash_with_base_and_leases.py</span></li>
-      <li><span class="file-ref">backend/tests/live_e2e_test/sandbox/layer_stack_overlay_occ/test_workspace_base_public_api_conflicts.py</span></li>
+      <li><span class="file-ref">sandbox/crates/eos-e2e-test/tests/layerstack</span></li>
+      <li><span class="file-ref">sandbox/crates/eos-e2e-test/tests/layerstack/squash.rs</span></li>
+      <li><span class="file-ref">sandbox/crates/eos-e2e-test/tests/layerstack</span></li>
+      <li><span class="file-ref">sandbox/crates/eos-e2e-test/tests/layerstack</span></li>
     </ul>
   </div>
   <div class="evidence-card">
     <h4>Artifacts</h4>
-    <p>Live-suite reports under <span class="file-ref">backend/tests/live_e2e_test/sandbox/phase-01-workspace-base-report.md</span> and <span class="file-ref">backend/tests/live_e2e_test/sandbox/phase-02-p0-finish-report.md</span> record workspace-base and layer-stack coverage.</p>
+    <p>Live-suite reports under <span class="file-ref">sandbox/crates/eos-e2e-test/tests/layerstack</span> and <span class="file-ref">sandbox/crates/eos-e2e-test/tests/layerstack</span> record workspace-base and layer-stack coverage.</p>
   </div>
 </div>
 <div class="refresh-list">

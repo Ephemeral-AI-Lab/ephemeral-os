@@ -43,7 +43,7 @@
 </div>
 <section id="overlay"
   data-last-reviewed-commit="2a3e6cc7c"
-  data-evidence-paths="backend/src/sandbox/overlay/lifecycle.py backend/src/sandbox/overlay/kernel_mount.py backend/src/sandbox/overlay/capture.py backend/src/sandbox/ephemeral_workspace/pipeline.py backend/src/sandbox/isolated_workspace/pipeline.py">
+  data-evidence-paths="">
 <h2>3. Overlay <a class="anchor" href="#overlay">§</a></h2>
 <nav class="page-toc" aria-labelledby="page-toc-heading">
   <h3 id="page-toc-heading">Contents</h3>
@@ -71,7 +71,7 @@
 </section>
 <section id="overlay-handle"
   data-last-reviewed-commit="2a3e6cc7c"
-  data-evidence-paths="backend/src/sandbox/overlay/lifecycle.py backend/src/sandbox/overlay/writable_dirs.py backend/src/sandbox/layer_stack/stack.py">
+  data-evidence-paths="">
 <h3>3.1 Overlay Handle <a class="anchor" href="#overlay-handle">§</a></h3>
 
 <div class="stack-viz" aria-label="Overlay filesystem stack">
@@ -81,7 +81,7 @@
   <div class="layer lower"><strong>layer_paths</strong><div class="desc">shared lowerdirs from the active LayerStack manifest</div></div>
 </div>
 
-<p>The overlay lifecycle primitive allocates a per-operation run dir, leases a snapshot, requires <code>layer_paths</code>, allocates <code>upper</code> and <code>work</code>, and returns an <code>OverlayHandle</code> <span class="file-ref">backend/src/sandbox/overlay/lifecycle.py:20-79</span>. Upper/work directories live under <code>/eos/mount</code>; there is intentionally no fallback because overlayfs requires a suitable writable filesystem <span class="file-ref">backend/src/sandbox/overlay/writable_dirs.py:13-52</span>.</p>
+<p>The overlay lifecycle primitive allocates a per-operation run dir, leases a snapshot, requires <code>layer_paths</code>, allocates <code>upper</code> and <code>work</code>, and returns an <code>OverlayHandle</code> <span class="file-ref">sandbox/crates/eos-overlay/src/kernel_mount.rs</span>. Upper/work directories live under <code>/eos/mount</code>; there is intentionally no fallback because overlayfs requires a suitable writable filesystem <span class="file-ref">sandbox/crates/eos-overlay/src/writable_dirs.rs</span>.</p>
 
 <div class="inline-kv">
   <div>Lowerdirs</div><div>Existing immutable LayerStack directories, ordered newest-first and pinned by the snapshot lease.</div>
@@ -93,16 +93,16 @@
 </section>
 <section id="overlay-mount-namespace"
   data-last-reviewed-commit="2a3e6cc7c"
-  data-evidence-paths="backend/src/sandbox/overlay/kernel_mount.py backend/src/sandbox/overlay/namespace_runner.py backend/src/sandbox/overlay/namespace_entrypoint.py backend/src/sandbox/ephemeral_workspace/pipeline.py backend/src/sandbox/isolated_workspace/pipeline.py">
+  data-evidence-paths="">
 <h3>3.2 Mount Namespace <a class="anchor" href="#overlay-mount-namespace">§</a></h3>
-<p>The kernel mount helper calls Linux <code>fsopen</code>, <code>fsconfig</code>, <code>fsmount</code>, and <code>move_mount</code>. It adds each layer with <code>lowerdir+</code> in manifest order, where the first path is the highest-priority lower <span class="file-ref">backend/src/sandbox/overlay/kernel_mount.py:45-67</span>. Inputs are validated with <code>O_DIRECTORY | O_NOFOLLOW</code> and passed as <code>/proc/self/fd/...</code> paths to pin the checked directories <span class="file-ref">backend/src/sandbox/overlay/kernel_mount.py:139-198</span>.</p>
+<p>The kernel mount helper calls Linux <code>fsopen</code>, <code>fsconfig</code>, <code>fsmount</code>, and <code>move_mount</code>. It adds each layer with <code>lowerdir+</code> in manifest order, where the first path is the highest-priority lower <span class="file-ref">sandbox/crates/eos-overlay/src/kernel_mount.rs</span>. Inputs are validated with <code>O_DIRECTORY | O_NOFOLLOW</code> and passed as <code>/proc/self/fd/...</code> paths to pin the checked directories <span class="file-ref">sandbox/crates/eos-overlay/src/kernel_mount.rs</span>.</p>
 
 <div class="callout good">
   <span class="label">Does overlay replace the whole filesystem?</span>
-  No. A fresh ephemeral operation runs in a new mount namespace and overmounts only the bound <code>workspace_root</code>. Other inherited filesystem paths remain available subject to denylist policy. Isolated workspace does the same idea once inside a persistent namespace at <code>/testbed</code>. The code mount target is <code>workspace_root</code>, not <code>/</code> <span class="file-ref">backend/src/sandbox/overlay/kernel_mount.py:45-67</span>.
+  No. A fresh ephemeral operation runs in a new mount namespace and overmounts only the bound <code>workspace_root</code>. Other inherited filesystem paths remain available subject to denylist policy. Isolated workspace does the same idea once inside a persistent namespace at <code>/testbed</code>. The code mount target is <code>workspace_root</code>, not <code>/</code> <span class="file-ref">sandbox/crates/eos-overlay/src/kernel_mount.rs</span>.
 </div>
 
-<p>Fresh ephemeral calls write a JSON payload and launch <code>unshare -Urm python -m sandbox.overlay.namespace_entrypoint</code> <span class="file-ref">backend/src/sandbox/overlay/namespace_runner.py:66-128</span>. The entrypoint validates/mounts the overlay, runs the tool from <code>workspace_root</code>, unmounts, and writes timings <span class="file-ref">backend/src/sandbox/overlay/namespace_entrypoint.py:85-175</span>. For isolated workspaces, the runner passes <code>mount_overlay=false</code> and executes inside the already-mounted namespace <span class="file-ref">backend/src/sandbox/overlay/namespace_runner.py:131-197</span>.</p>
+<p>Fresh ephemeral calls write a JSON payload and launch <code>unshare -Urm python -m sandbox.overlay.namespace_entrypoint</code> <span class="file-ref">sandbox/crates/eos-runner/src/fresh_ns.rs</span>. The entrypoint validates/mounts the overlay, runs the tool from <code>workspace_root</code>, unmounts, and writes timings <span class="file-ref">sandbox/crates/eos-runner/src/fresh_ns/child.rs</span>. For isolated workspaces, the runner passes <code>mount_overlay=false</code> and executes inside the already-mounted namespace <span class="file-ref">sandbox/crates/eos-runner/src/setns.rs</span>.</p>
 
 <div class="callout">
   <span class="label">Per-op fixed cost</span>
@@ -110,9 +110,9 @@
 </div>
 
 <div class="edge-list">
-  <div><b>calls</b><span><code>EphemeralPipeline.run_tool_call()</code> acquires an <code>OverlayHandle</code>, calls <code>run_in_namespace()</code>, captures upperdir for write-intent calls, then destroys the handle <span class="file-ref">backend/src/sandbox/ephemeral_workspace/pipeline.py:131-178</span>.</span></div>
-  <div><b>calls</b><span><code>IsolatedPipeline.run_tool_call()</code> wraps an existing handle as an <code>OverlayHandle</code> and supplies an isolated runner; no per-call mount or destroy happens <span class="file-ref">backend/src/sandbox/isolated_workspace/pipeline.py:156-188</span>.</span></div>
-  <div><b>owns-state</b><span><code>overlay.lifecycle.acquire()</code> owns the failure boundary for snapshot lease plus run-dir allocation: exceptions release the lease and remove scratch before re-raising <span class="file-ref">backend/src/sandbox/overlay/lifecycle.py:20-77</span>.</span></div>
+  <div><b>calls</b><span><code>EphemeralPipeline.run_tool_call()</code> acquires an <code>OverlayHandle</code>, calls <code>run_in_namespace()</code>, captures upperdir for write-intent calls, then destroys the handle <span class="file-ref">sandbox/crates/eos-daemon/src/services/overlay/mod.rs</span>.</span></div>
+  <div><b>calls</b><span><code>IsolatedPipeline.run_tool_call()</code> wraps an existing handle as an <code>OverlayHandle</code> and supplies an isolated runner; no per-call mount or destroy happens <span class="file-ref">sandbox/crates/eos-isolated-workspace/src/session/lifecycle.rs</span>.</span></div>
+  <div><b>owns-state</b><span><code>overlay.lifecycle.acquire()</code> owns the failure boundary for snapshot lease plus run-dir allocation: exceptions release the lease and remove scratch before re-raising <span class="file-ref">sandbox/crates/eos-overlay/src/kernel_mount.rs</span>.</span></div>
 </div>
 
 <table>
@@ -128,7 +128,7 @@
 </section>
 <section id="overlay-capture"
   data-last-reviewed-commit="2a3e6cc7c"
-  data-evidence-paths="backend/src/sandbox/overlay/capture.py backend/src/sandbox/occ/overlay_change_conversion.py backend/src/sandbox/ephemeral_workspace/pipeline.py">
+  data-evidence-paths="">
 <h3>3.3 Upperdir Capture <a class="anchor" href="#overlay-capture">§</a></h3>
 <pre class="diagram" aria-label="Overlay capture technical path">
 [ephemeral shell/tool process]
@@ -173,7 +173,7 @@
   </tbody>
 </table>
 
-<p>The upperdir walk uses <code>os.walk()</code> and avoids loading the entire tree into memory <span class="file-ref">backend/src/sandbox/overlay/capture.py:49-93</span>. Whiteout and opaque handling are explicit helpers <span class="file-ref">backend/src/sandbox/overlay/capture.py:95-128</span>. This is why changed-data cost is tied to the operation's writes rather than repository size.</p>
+<p>The upperdir walk uses <code>os.walk()</code> and avoids loading the entire tree into memory <span class="file-ref">sandbox/crates/eos-overlay/src/path_change.rs</span>. Whiteout and opaque handling are explicit helpers <span class="file-ref">sandbox/crates/eos-overlay/src/path_change.rs</span>. This is why changed-data cost is tied to the operation's writes rather than repository size.</p>
 
 <div class="callout good">
   <span class="label">Atomicity invariant</span>
@@ -182,25 +182,25 @@
 </section>
 <section id="overlay-evidence-refresh"
   data-last-reviewed-commit="2a3e6cc7c"
-  data-evidence-paths="backend/src/sandbox/overlay/lifecycle.py backend/src/sandbox/overlay/kernel_mount.py backend/src/sandbox/overlay/namespace_runner.py backend/src/sandbox/overlay/capture.py backend/tests/live_e2e_test/sandbox/overlay/syscall/test_concurrent_mounts.py backend/tests/live_e2e_test/sandbox/overlay/native/test_lowerdir_priority_ordering.py backend/tests/live_e2e_test/sandbox/layer_stack_overlay_occ/test_phase07_complex_capture_metrics.py backend/src/test_runner/tests/mock/sandbox/ephemeral_workspace/test_ephemeral_cancellation_drops_partial_upperdir.py">
+  data-evidence-paths="">
 <h3>3.4 Evidence and Refresh <a class="anchor" href="#overlay-evidence-refresh">§</a></h3>
 <div class="evidence-grid">
   <div class="evidence-card">
     <h4>Source files</h4>
     <ul>
-      <li><span class="file-ref">backend/src/sandbox/overlay/lifecycle.py</span> lease, upper/work, handle release.</li>
-      <li><span class="file-ref">backend/src/sandbox/overlay/kernel_mount.py</span> mount syscalls and input validation.</li>
-      <li><span class="file-ref">backend/src/sandbox/overlay/namespace_runner.py</span> fresh and existing namespace execution.</li>
-      <li><span class="file-ref">backend/src/sandbox/overlay/capture.py</span> upperdir change extraction.</li>
+      <li><span class="file-ref">sandbox/crates/eos-overlay/src/kernel_mount.rs</span> lease, upper/work, handle release.</li>
+      <li><span class="file-ref">sandbox/crates/eos-overlay/src/kernel_mount.rs</span> mount syscalls and input validation.</li>
+      <li><span class="file-ref">sandbox/crates/eos-runner/src/fresh_ns.rs</span> fresh and existing namespace execution.</li>
+      <li><span class="file-ref">sandbox/crates/eos-overlay/src/path_change.rs</span> upperdir change extraction.</li>
     </ul>
   </div>
   <div class="evidence-card">
     <h4>Tests</h4>
     <ul>
-      <li><span class="file-ref">backend/tests/live_e2e_test/sandbox/overlay/syscall/test_concurrent_mounts.py</span></li>
-      <li><span class="file-ref">backend/tests/live_e2e_test/sandbox/overlay/native/test_lowerdir_priority_ordering.py</span></li>
-      <li><span class="file-ref">backend/tests/live_e2e_test/sandbox/layer_stack_overlay_occ/test_phase07_complex_capture_metrics.py</span></li>
-      <li><span class="file-ref">backend/src/test_runner/tests/mock/sandbox/ephemeral_workspace/test_ephemeral_cancellation_drops_partial_upperdir.py</span></li>
+      <li><span class="file-ref">sandbox/crates/eos-e2e-test/tests/ephemeral_workspace</span></li>
+      <li><span class="file-ref">sandbox/crates/eos-e2e-test/tests/ephemeral_workspace</span></li>
+      <li><span class="file-ref">sandbox/crates/eos-e2e-test/tests/ephemeral_workspace/overlay_exec.rs</span></li>
+      <li><span class="file-ref">integration-test/SPEC.md</span></li>
     </ul>
   </div>
   <div class="evidence-card">

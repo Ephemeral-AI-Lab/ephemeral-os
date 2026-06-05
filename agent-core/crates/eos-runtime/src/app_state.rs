@@ -29,7 +29,6 @@ use eos_tools::{
     ToolRegistry,
 };
 use eos_types::RequestId;
-use tokio_util::sync::CancellationToken;
 
 // The per-agent event-source factory and per-run stream-event callback are owned
 // by `eos-engine` (next to the loop they drive, so the engine-driven advisor run
@@ -119,7 +118,6 @@ pub struct AppState {
     pub(crate) transport: Arc<dyn SandboxTransport>,
     pub(crate) isolated_workspace: Arc<dyn IsolatedWorkspacePort>,
     pub(crate) provisioner: Arc<dyn RequestProvisioner>,
-    pub(crate) shutdown: CancellationToken,
 }
 
 impl std::fmt::Debug for AppState {
@@ -136,12 +134,6 @@ impl AppState {
     /// Start building an `AppState`.
     pub fn builder() -> AppStateBuilder {
         AppStateBuilder::default()
-    }
-
-    /// The graceful-shutdown / parent-exit cancellation token.
-    #[must_use]
-    pub fn shutdown_token(&self) -> CancellationToken {
-        self.shutdown.clone()
     }
 
     /// Bundle the explicit run handles `eos_engine::run_agent` needs (in
@@ -356,7 +348,7 @@ impl AppStateBuilder {
 
         // Optional model-registry seed (GC-eos-runtime-04: missing JSON is
         // non-fatal — seed_from_json returns Ok(0) for a missing file).
-        let model_path = self.model_registry_path.clone().or_else(|| {
+        let model_path = self.model_registry_path.or_else(|| {
             let candidate = PathBuf::from(&repo_root)
                 .join("models")
                 .join("registry.json");
@@ -459,7 +451,6 @@ impl AppStateBuilder {
             transport,
             isolated_workspace,
             provisioner,
-            shutdown: CancellationToken::new(),
         })
     }
 }

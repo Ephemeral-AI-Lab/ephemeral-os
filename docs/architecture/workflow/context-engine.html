@@ -54,7 +54,7 @@
 
 <p class="lead">Workflow context is now an explicit role-scoped document. <code>ContextEngine</code> reads persisted Workflow -&gt; Iteration -&gt; Attempt state and returns an <code>AgentContext</code>; XML and task guidance are pure renderings of that same typed object. The engine does not own lifecycle policy, retries, terminal submission handling, delegated-workflow routing, or provider execution.</p>
 
-<section id="scope-verdict" data-last-reviewed-commit="HEAD" data-evidence-paths="backend/src/workflow/context_engine/engine.py backend/src/workflow/context_engine/context.py backend/src/workflow/context_engine/scope.py backend/src/workflow/context_engine/xml.py backend/src/workflow/context_engine/task_guidance.py backend/src/workflow/agent_launch/composer.py backend/src/workflow/attempt/launch.py backend/tests/unit_test/test_workflow/test_context_engine/test_agent_context.py backend/tests/unit_test/test_workflow/test_agent_launch/test_composer.py">
+<section id="scope-verdict" data-last-reviewed-commit="HEAD" data-evidence-paths="">
 <h2>Scope And Verdict <a class="anchor" href="#scope-verdict">#</a></h2>
 <div class="summary">
   <ul>
@@ -67,7 +67,7 @@
 <div class="callout warn"><span class="label">Boundary</span> Keep lifecycle decisions in Workflow orchestrators and coordinators. Context construction only projects the state the launched role can act on.</div>
 </section>
 
-<section id="launch-workflow" data-last-reviewed-commit="HEAD-plus-worktree" data-evidence-paths="backend/src/workflow/attempt/launch.py backend/src/workflow/agent_launch/composer.py backend/src/workflow/context_engine/engine.py backend/src/workflow/context_engine/xml.py backend/src/workflow/context_engine/task_guidance.py backend/src/workflow/context_engine/skill_message.py backend/tests/unit_test/test_workflow/test_agent_launch">
+<section id="launch-workflow" data-last-reviewed-commit="HEAD-plus-worktree" data-evidence-paths="">
 <h2>Launch Workflow <a class="anchor" href="#launch-workflow">#</a></h2>
 <pre class="diagram" aria-label="Context launch workflow">
 [AgentLaunchFactory]
@@ -90,7 +90,7 @@
 </div>
 </section>
 
-<section id="role-shapes" data-last-reviewed-commit="HEAD" data-evidence-paths="backend/src/workflow/context_engine/engine.py backend/src/workflow/context_engine/context.py backend/src/workflow/context_engine/xml.py backend/tests/unit_test/test_workflow/test_context_engine/test_agent_context.py backend/src/workflow/_core/outcomes.py">
+<section id="role-shapes" data-last-reviewed-commit="HEAD" data-evidence-paths="">
 <h2>Role Context Shapes <a class="anchor" href="#role-shapes">#</a></h2>
 <div class="table-wrap">
   <table>
@@ -119,7 +119,7 @@
 </pre>
 </section>
 
-<section id="guidance-wire-shape" data-last-reviewed-commit="HEAD" data-evidence-paths="backend/src/workflow/context_engine/task_guidance.py backend/src/workflow/context_engine/skill_message.py backend/src/tools/_terminals/registry.py backend/src/agents/profile/main backend/tests/unit_test/test_workflow/test_agent_launch/test_composer.py backend/tests/unit_test/test_tools/test_terminals/test_descriptor_registry.py">
+<section id="guidance-wire-shape" data-last-reviewed-commit="HEAD" data-evidence-paths="">
 <h2>Guidance And Wire Shape <a class="anchor" href="#guidance-wire-shape">#</a></h2>
 <p><code>render_task_guidance(context)</code> derives the role outline, context limits, and directive from <code>AgentContext</code>. There is no separate tag dictionary, outline walker, or token-budget priority system in the current context path.</p>
 <div class="trace-grid">
@@ -130,7 +130,7 @@
 </div>
 </section>
 
-<section id="outcomes" data-last-reviewed-commit="HEAD" data-evidence-paths="backend/src/workflow/_core/outcomes.py backend/src/workflow/attempt/orchestrator.py backend/src/workflow/iteration/attempt_coordinator.py backend/src/runtime/entry.py backend/tests/unit_test/test_workflow/test_lifecycle backend/tests/unit_test/test_workflow/test_context_engine/test_agent_context.py">
+<section id="outcomes" data-last-reviewed-commit="HEAD" data-evidence-paths="">
 <h2>Outcome Inputs <a class="anchor" href="#outcomes">#</a></h2>
 <p>Context renders execution evidence only. A task outcome is bounded to one task. Aggregate attempt, iteration, and workflow outcomes are projections over generator/reducer <code>ExecutionTaskOutcome</code> records.</p>
 <div class="edge-list">
@@ -142,26 +142,26 @@
 </div>
 </section>
 
-<section id="evidence-refresh" data-last-reviewed-commit="HEAD-plus-worktree" data-evidence-paths="backend/src/workflow/context_engine backend/src/workflow/agent_launch backend/src/workflow/_core/outcomes.py backend/src/tools/_hooks backend/src/workflow/attempt backend/src/tools/submission backend/src/agents/profile/main backend/tests/unit_test/test_workflow/test_context_engine backend/tests/unit_test/test_workflow/test_agent_launch backend/tests/unit_test/test_tools">
+<section id="evidence-refresh" data-last-reviewed-commit="HEAD-plus-worktree" data-evidence-paths="">
 <h2>Evidence And Refresh <a class="anchor" href="#evidence-refresh">#</a></h2>
 <div class="evidence-grid">
   <div class="evidence-card">
     <h3>Primary Code</h3>
     <ul>
-      <li><span class="file-ref">backend/src/workflow/context_engine/context.py</span> owns <code>AgentContext</code> and <code>ContextSection</code>.</li>
-      <li><span class="file-ref">backend/src/workflow/context_engine/engine.py</span> owns role builders and store projection.</li>
-      <li><span class="file-ref">backend/src/workflow/context_engine/xml.py</span> owns XML escaping and rendering.</li>
-      <li><span class="file-ref">backend/src/workflow/context_engine/task_guidance.py</span> owns role guidance.</li>
-      <li><span class="file-ref">backend/src/workflow/agent_launch/composer.py</span> owns launch row composition.</li>
+      <li><span class="file-ref">agent-core/crates/eos-workflow/src/context/section.rs</span> owns <code>AgentContext</code> and <code>ContextSection</code>.</li>
+      <li><span class="file-ref">agent-core/crates/eos-workflow/src/context/engine.rs</span> owns role builders and store projection.</li>
+      <li><span class="file-ref">agent-core/crates/eos-workflow/src/context/xml.rs</span> owns XML escaping and rendering.</li>
+      <li><span class="file-ref">agent-core/crates/eos-workflow/src/context/</span> owns role guidance.</li>
+      <li><span class="file-ref">agent-core/crates/eos-workflow/src/context/composer.rs</span> owns launch row composition.</li>
     </ul>
   </div>
   <div class="evidence-card">
     <h3>Verification Anchors</h3>
     <ul>
-      <li><span class="file-ref">backend/tests/unit_test/test_workflow/test_context_engine/test_agent_context.py</span></li>
-      <li><span class="file-ref">backend/tests/unit_test/test_workflow/test_agent_launch/test_composer.py</span></li>
-      <li><span class="file-ref">backend/tests/unit_test/test_workflow/test_lifecycle</span></li>
-      <li><span class="file-ref">backend/tests/unit_test/test_tools</span></li>
+      <li><span class="file-ref">agent-core/crates/eos-workflow/tests/context</span></li>
+      <li><span class="file-ref">agent-core/crates/eos-workflow/tests/context</span></li>
+      <li><span class="file-ref">agent-core/crates/eos-workflow/tests/attempt</span></li>
+      <li><span class="file-ref">agent-core/crates/eos-tools/tests</span></li>
     </ul>
   </div>
   <div class="evidence-card">

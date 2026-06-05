@@ -43,7 +43,7 @@
 
 <section id="sandbox-overview"
   data-last-reviewed-commit="HEAD-plus-worktree"
-  data-evidence-paths=".eos-agents/tools agent-core/crates/eos-tools/src/tools/sandbox agent-core/crates/eos-tools/src/core/name.rs backend/src/tools/sandbox/_lib/registry.py backend/src/tools/sandbox/read_file/read_file.py backend/src/tools/sandbox/write_file/write_file.py backend/src/tools/sandbox/edit_file/edit_file.py backend/src/tools/sandbox/exec_command/exec_command.py backend/src/tools/sandbox/write_stdin/write_stdin.py backend/src/sandbox/api/tool/command.py backend/src/tools/isolated_workspace/enter_isolated_workspace/definition.py backend/src/tools/isolated_workspace/exit_isolated_workspace/definition.py">
+  data-evidence-paths=".eos-agents/tools agent-core/crates/eos-tools/src/tools/sandbox agent-core/crates/eos-tools/src/core/name.rs">
 <h1>Sandbox Tools</h1>
 <nav class="page-toc" aria-labelledby="page-toc-heading">
   <h3 id="page-toc-heading">Contents</h3>
@@ -83,7 +83,7 @@
 
 <section id="tool-surface"
   data-last-reviewed-commit="HEAD-plus-worktree"
-  data-evidence-paths=".eos-agents/tools agent-core/crates/eos-tools/src/tools/sandbox agent-core/crates/eos-tools/src/core/name.rs backend/src/tools/sandbox/_lib/registry.py backend/src/tools/sandbox/read_file/read_file.py backend/src/tools/sandbox/write_file/write_file.py backend/src/tools/sandbox/edit_file/edit_file.py backend/src/tools/sandbox/_lib/mutation_result.py backend/src/tools/sandbox/exec_command/exec_command.py backend/src/tools/sandbox/write_stdin/write_stdin.py backend/src/sandbox/api/tool/command.py">
+  data-evidence-paths=".eos-agents/tools agent-core/crates/eos-tools/src/tools/sandbox agent-core/crates/eos-tools/src/core/name.rs">
 <h2>Tool Surface</h2>
 <p>The registry is intentionally narrow: it returns the default workspace verbs plus command/session controls and <code>enter_isolated_workspace</code> / <code>exit_isolated_workspace</code>, then stamps every tool with <code>SANDBOX_CONTEXT</code>. That means all of these tools expect the engine/tool framework to provide the sandbox id, caller metadata, layer-stack root, repo root, invocation id, audit sink, and background manager in the execution context.</p>
 <table>
@@ -101,7 +101,7 @@
 
 <section id="api-daemon-hop"
   data-last-reviewed-commit="569f12c3f39471dbaa643906856a8daf81a21a2d"
-  data-evidence-paths="backend/src/sandbox/api/__init__.py backend/src/sandbox/api/tool/read.py backend/src/sandbox/api/tool/write.py backend/src/sandbox/api/tool/edit.py backend/src/sandbox/api/tool/shell.py backend/src/sandbox/api/transport.py backend/src/sandbox/daemon/builtin_operations.py backend/src/sandbox/daemon/rpc/dispatcher.py agent-core/crates/eos-sandbox-api/src/tool_api sandbox/crates/eos-protocol/src/ops.rs sandbox/crates/eos-daemon/src/dispatcher.rs sandbox/crates/eos-runner/src/request.rs">
+  data-evidence-paths="agent-core/crates/eos-sandbox-api/src/tool_api sandbox/crates/eos-protocol/src/ops.rs sandbox/crates/eos-daemon/src/dispatcher.rs sandbox/crates/eos-runner/src/request.rs">
 <h2>API and Daemon Hop</h2>
 <p><code>sandbox.api.tool</code> is the public facade between tools and the in-sandbox daemon. Each verb builds a JSON-safe daemon payload from the typed request identity fields, calls the transport operation, parses the daemon response back into a typed result, and wraps the call in audited operation metadata.</p>
 <pre class="diagram" aria-label="Sandbox tool dispatch ASCII workflow">
@@ -138,7 +138,7 @@
 
 <section id="shared-routing"
   data-last-reviewed-commit="HEAD-plus-worktree"
-  data-evidence-paths="backend/src/sandbox/daemon/workspace_tool_dispatch.py backend/src/sandbox/layer_stack/workspace_binding.py backend/src/sandbox/daemon/occ_runtime_services.py backend/src/sandbox/occ/changeset.py backend/src/sandbox/ephemeral_workspace/pipeline.py backend/src/sandbox/ephemeral_workspace/workspace_publish.py backend/src/sandbox/overlay/namespace_runner.py backend/src/sandbox/overlay/lifecycle.py">
+  data-evidence-paths="">
 <h2>Default Shared Workspace Routing</h2>
 <p>For the default shared workspace, <code>workspace_tool_dispatch</code> first checks whether the agent has an active isolated pipeline. If not, it tries a direct layer-stack/OCC path for <code>read_file</code>, <code>write_file</code>, and <code>edit_file</code> when the layer-stack root has a workspace binding. That direct path avoids a per-call overlay mount for single-file operations.</p>
 <div class="edge-list">
@@ -152,7 +152,7 @@
 
 <section id="command-background-policy"
   data-last-reviewed-commit="HEAD-plus-worktree"
-  data-evidence-paths="backend/src/tools/sandbox/exec_command/exec_command.py backend/src/tools/sandbox/write_stdin/write_stdin.py backend/src/sandbox/api/tool/command.py backend/src/sandbox/api/tool/shell.py backend/src/sandbox/daemon/rpc/in_flight.py backend/src/sandbox/daemon/builtin_operations.py sandbox/crates/eos-daemon/src/services/command_session/mod.rs sandbox/crates/eos-command-session/src/manager.rs">
+  data-evidence-paths="sandbox/crates/eos-daemon/src/services/command_session/mod.rs sandbox/crates/eos-command-session/src/manager.rs">
 <h2>Command Sessions and Policy</h2>
 <p><code>exec_command</code> is declared <code>WRITE_ALLOWED</code> and is the model-facing replacement for the deleted public <code>shell</code> tool package. There is no public <code>mode switch</code> switch: completed commands return directly, while still-running commands return <code>command_session_id</code> and are controlled with <code>write_stdin</code>. Generic <code>background=true</code> and generic background check/wait/cancel tools are not exposed.</p>
 <p>Before daemon dispatch, <code>exec_command</code> runs destructive git and destructive shell pre-hooks through the <a class="wiki-link" href="hooks.html">Tool Hooks</a> pipeline. These hooks block command forms that would bypass the sandbox write/audit path or destructively mutate workspace/system state. That policy keeps commands useful for builds and tests while steering file edits toward <code>edit_file</code> and <code>write_file</code>.</p>
@@ -164,7 +164,7 @@
 
 <section id="workflow-engine-connections"
   data-last-reviewed-commit="569f12c3f39471dbaa643906856a8daf81a21a2d"
-  data-evidence-paths="backend/src/engine/query/loop.py backend/src/engine/tool_call/dispatch.py backend/src/tools/_framework/execution/tool_call.py backend/src/tools/_framework/core/decorator.py backend/src/tools/_framework/core/registry.py backend/src/workflow/context_engine/engine.py backend/src/workflow/context_engine/xml.py backend/src/workflow/_core/state.py backend/src/tools/submission backend/src/tools/_terminals">
+  data-evidence-paths="">
 <h2>Engine and Workflow Connections</h2>
 <p>The sandbox tools are ordinary framework tools from the engine's perspective. The engine loop and tool-call dispatch layer enforce tool execution, background wrapping, and terminal-tool completion rules; sandbox tools provide the workspace mutation/search/command substrate those tasks use while working toward terminal submission.</p>
 <p>Workflow does not receive peer-to-peer messages from sandbox tools. It observes persisted workflow, iteration, attempt, task, terminal, and context state. The important contract is that sandbox tool results carry enough structured metadata for later role context: status, conflicts, changed paths, timings, and background task state. Terminal tools then mark completion and handoff state; sandbox tools only mutate or inspect the workspace that those terminal decisions refer to.</p>
@@ -173,28 +173,28 @@
 
 <section id="sandbox-evidence-refresh"
   data-last-reviewed-commit="HEAD-plus-worktree"
-  data-evidence-paths="backend/src/tools/sandbox backend/src/sandbox/api/tool backend/src/sandbox/daemon/builtin_operations.py backend/src/sandbox/daemon/workspace_tool_dispatch.py backend/src/sandbox/ephemeral_workspace/pipeline.py backend/src/sandbox/overlay/namespace_runner.py backend/tests/unit_test/test_sandbox/test_daemon/test_file_dispatch.py backend/tests/unit_test/test_sandbox/test_api/test_shell.py backend/tests/unit_test/test_sandbox/test_static_background_lifecycle.py backend/src/test_runner/tests/mock/sandbox/background_tool backend/src/test_runner/tests/mock/sandbox/layer_stack_occ_overlay backend/src/test_runner/tests/mock/sandbox/ephemeral_workspace">
+  data-evidence-paths="">
 <h2>Evidence and Refresh</h2>
 <div class="evidence-grid">
   <div class="evidence-card">
     <h3>Primary source</h3>
     <ul>
-      <li><code>backend/src/tools/sandbox</code> for agent-facing wrappers and shell policy.</li>
-      <li><code>backend/src/sandbox/api/tool</code> for public API facade calls.</li>
-      <li><code>backend/src/sandbox/daemon/builtin_operations.py</code> for daemon op aliases.</li>
-      <li><code>backend/src/sandbox/daemon/workspace_tool_dispatch.py</code> for isolated/direct/overlay routing.</li>
-      <li><code>backend/src/sandbox/ephemeral_workspace/pipeline.py</code> for per-call overlay and OCC publish.</li>
+      <li><code>agent-core/crates/eos-tools/src/tools/sandbox</code> for agent-facing wrappers and shell policy.</li>
+      <li><code>agent-core/crates/eos-sandbox-api/src/tool_api</code> for public API facade calls.</li>
+      <li><code>sandbox/crates/eos-daemon/src/ops/registry.rs</code> for daemon op aliases.</li>
+      <li><code>sandbox/crates/eos-daemon/src/dispatch/dispatcher.rs</code> for isolated/direct/overlay routing.</li>
+      <li><code>sandbox/crates/eos-ephemeral-workspace/src/ops.rs</code> for per-call overlay and OCC publish.</li>
     </ul>
   </div>
   <div class="evidence-card">
     <h3>Tests to refresh with routing changes</h3>
     <ul>
-      <li><code>backend/tests/unit_test/test_sandbox/test_daemon/test_file_dispatch.py</code></li>
-      <li><code>backend/tests/unit_test/test_sandbox/test_api/test_shell.py</code></li>
-      <li><code>backend/tests/unit_test/test_tools/test_sandbox_toolkit/test_exec_command.py</code></li>
-      <li><code>backend/tests/unit_test/test_sandbox/test_static_background_lifecycle.py</code></li>
-      <li><code>backend/src/test_runner/tests/mock/sandbox/background_tool</code></li>
-      <li><code>backend/src/test_runner/tests/mock/sandbox/ephemeral_workspace</code></li>
+      <li><code>sandbox/crates/eos-daemon/tests/dispatcher</code></li>
+      <li><code>agent-core/crates/eos-sandbox-api/tests</code></li>
+      <li><code>agent-core/crates/eos-tools/tests/tools/sandbox</code></li>
+      <li><code>agent-core/crates/eos-engine/tests</code> for background lifecycle coverage.</li>
+      <li><code>integration-test/SPEC.md</code> for sandbox background-tool coverage.</li>
+      <li><code>integration-test/SPEC.md</code> for ephemeral-workspace coverage.</li>
     </ul>
   </div>
   <div class="evidence-card">

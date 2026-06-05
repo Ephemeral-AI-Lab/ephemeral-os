@@ -56,7 +56,12 @@
 
 <p class="lead">SWE-EVO is one benchmark adapter on top of the generic harness. It loads a Hugging Face instance, provisions a persistent Docker sandbox at <code>sweevo-&lt;instance_id&gt;</code>, runs the real LLM agent stack through <code>run_pipeline</code>, materializes the active overlay onto <code>/testbed</code>, then runs FAIL_TO_PASS and PASS_TO_PASS pytest sets to compute <code>resolved</code> and <code>fix_rate</code>.</p>
 
-<section id="scope" data-last-reviewed-commit="d32994314" data-evidence-paths="backend/src/test_runner/benchmarks/sweevo backend/src/test_runner/benchmarks/sweevo/__init__.py backend/src/test_runner/benchmarks/sweevo/__main__.py backend/src/test_runner/benchmarks/sweevo/pipeline.py">
+<div class="callout warn">
+  <span class="label">REMOVED</span>
+  ⚠️ The Python <code>backend/src/test_runner</code> documented here has been removed. The Rust replacement is specified in <code>integration-test/SPEC.md</code> (see also <code>docs/plans/test_runner_rust_SPEC.md</code>) but is not yet implemented; the evidence paths below describe the removed Python design for historical reference.
+</div>
+
+<section id="scope" data-last-reviewed-commit="d32994314" data-evidence-paths="">
 <h2>Scope <a class="anchor" href="#scope">#</a></h2>
 <div class="summary">
   <ul>
@@ -74,7 +79,7 @@
 </div>
 </section>
 
-<section id="cli-entry" data-last-reviewed-commit="d32994314" data-evidence-paths="backend/src/test_runner/benchmarks/sweevo/__main__.py backend/src/test_runner/benchmarks/sweevo/models.py backend/src/test_runner/benchmarks/sweevo/__init__.py">
+<section id="cli-entry" data-last-reviewed-commit="d32994314" data-evidence-paths="">
 <h2>CLI Entry <a class="anchor" href="#cli-entry">#</a></h2>
 <pre class="diagram" aria-label="CLI usage">
 python -m test_runner.benchmarks.sweevo \
@@ -92,7 +97,7 @@ python -m test_runner.benchmarks.sweevo \
 </div>
 </section>
 
-<section id="workflow" data-last-reviewed-commit="d32994314" data-evidence-paths="backend/src/test_runner/benchmarks/sweevo/pipeline.py backend/src/test_runner/benchmarks/sweevo/setup.py backend/src/test_runner/benchmarks/sweevo/run.py backend/src/test_runner/benchmarks/sweevo/eval.py">
+<section id="workflow" data-last-reviewed-commit="d32994314" data-evidence-paths="">
 <h2>Three-Stage Workflow <a class="anchor" href="#workflow">#</a></h2>
 <pre class="diagram" aria-label="Sweevo benchmark workflow">
 run_benchmark_sweevo(args)
@@ -158,11 +163,11 @@ format_verdict(report) -&gt; one-line stdout + exit code (0 resolved, 1 else)
 </pre>
 </section>
 
-<section id="stage-preflight" data-last-reviewed-commit="d32994314" data-evidence-paths="backend/src/test_runner/benchmarks/sweevo/setup.py backend/src/test_runner/benchmarks/sweevo/_provision.py backend/src/test_runner/benchmarks/sweevo/_snapshot.py">
+<section id="stage-preflight" data-last-reviewed-commit="d32994314" data-evidence-paths="">
 <h2>Stage 1: Preflight And Provision <a class="anchor" href="#stage-preflight">#</a></h2>
 <div class="edge-list" aria-label="Preflight subsystems">
   <div><b>dataset loader</b><span><code>load_sweevo_dataset</code> reads from a Parquet path, a cached HF Arrow file under <code>HF_DATASETS_CACHE</code>, or falls back to <code>datasets.load_dataset</code>. <code>functools.lru_cache</code> keeps the call cheap inside a session.</span></div>
-  <div><b>PR description loader</b><span><code>load_pr_description(instance_id, csv_path)</code> is strict — missing CSV, missing row, and empty value all raise. The default CSV is <code>backend/config/benchmarks/sweevo_gpt5_2025_08_07_pr_descriptions.csv</code>; <code>SWEEVO_PR_DESCRIPTIONS_CSV</code> overrides.</span></div>
+  <div><b>PR description loader</b><span><code>load_pr_description(instance_id, csv_path)</code> is strict — missing CSV, missing row, and empty value all raise. The default CSV was the removed Python <code>sweevo_gpt5_2025_08_07_pr_descriptions.csv</code> fixture; <code>SWEEVO_PR_DESCRIPTIONS_CSV</code> overrides.</span></div>
   <div><b>prompt builder</b><span><code>build_sweevo_user_prompt</code> wraps the PR description in the canonical SWE-EVO <code>&lt;Workspace Root&gt;</code> / <code>&lt;pr_description&gt;</code> envelope plus an explicit instruction not to touch test files. Mocked-agent tests reuse this builder via <code>environments/sweevo_image/fixtures.py</code>.</span></div>
   <div><b>provider bootstrap</b><span><code>bootstrap_sandbox_provider()</code> respects <code>EOS_SANDBOX_PROVIDER</code> + central config. Docker is default; Daytona is selected by env var.</span></div>
   <div><b>snapshot verify</b><span><code>verify_sweevo_snapshot_exists(instance)</code> raises <code>SnapshotNotRegisteredError</code> when the snapshot is missing. Pre-register via <code>test_runner.benchmarks.sweevo._snapshot.register_sweevo_snapshot(instance)</code> before invoking the CLI — fails fast instead of after a 30-minute LLM run.</span></div>
@@ -171,7 +176,7 @@ format_verdict(report) -&gt; one-line stdout + exit code (0 resolved, 1 else)
 </div>
 </section>
 
-<section id="stage-runconfig" data-last-reviewed-commit="d32994314" data-evidence-paths="backend/src/test_runner/benchmarks/sweevo/run.py">
+<section id="stage-runconfig" data-last-reviewed-commit="d32994314" data-evidence-paths="">
 <h2>Stage 2: RunConfig Assembly <a class="anchor" href="#stage-runconfig">#</a></h2>
 <div class="edge-list" aria-label="Run.py exports">
   <div><b>SweevoProvisioner</b><span>Verify-only provisioner. <code>provision(ctx)</code> re-runs <code>setup_sweevo_sandbox(instance, sandbox_id, repo_dir, install_lsp=True)</code> so retry attempts get a clean checkout, then returns a <code>SandboxLease(sandbox_id, metadata={instance_id, repo_dir})</code>. <code>release(lease)</code> is a no-op — the caller owns container lifecycle.</span></div>
@@ -180,7 +185,7 @@ format_verdict(report) -&gt; one-line stdout + exit code (0 resolved, 1 else)
 </div>
 </section>
 
-<section id="stage-lifecycle" data-last-reviewed-commit="d32994314" data-evidence-paths="backend/src/test_runner/benchmarks/sweevo/eval.py backend/src/test_runner/audit/io.py">
+<section id="stage-lifecycle" data-last-reviewed-commit="d32994314" data-evidence-paths="">
 <h2>Stage 3: Lifecycle, Materialize, Grade <a class="anchor" href="#stage-lifecycle">#</a></h2>
 <div class="edge-list" aria-label="SweevoLifecycle pieces">
   <div><b>before_run / on_event / on_aborted</b><span>No-ops except <code>on_aborted</code> stashes the timeout reason for after-run reporting.</span></div>
@@ -194,7 +199,7 @@ format_verdict(report) -&gt; one-line stdout + exit code (0 resolved, 1 else)
 </div>
 </section>
 
-<section id="image-environment" data-last-reviewed-commit="d32994314" data-evidence-paths="backend/src/test_runner/environments/sweevo_image/fixtures.py backend/src/test_runner/environments/sweevo_image/health.py">
+<section id="image-environment" data-last-reviewed-commit="d32994314" data-evidence-paths="">
 <h2>SWE-EVO Image Environment <a class="anchor" href="#image-environment">#</a></h2>
 <p>The image-backed environment is shared by mocked-agent and real-agent tests. It exposes three pytest fixtures and one helper.</p>
 <div class="edge-list" aria-label="environments/sweevo_image surfaces">
@@ -206,12 +211,12 @@ format_verdict(report) -&gt; one-line stdout + exit code (0 resolved, 1 else)
 <div class="summary">
   <ul>
     <li>The session lock is fcntl-based; lock files live under <code>.sweevo_runs/locks/</code> and carry the holder's PID. Acquisition is reentrant per process (count-tracked).</li>
-    <li>Tier-0 health is loaded dynamically from <code>backend/tests/live_e2e_test/_tools/tier0_health.py</code> so the architecture-level harness does not depend on the legacy test tree being importable as a package.</li>
+    <li>Tier-0 health was loaded dynamically from the removed Python <code>tier0_health</code> tooling so the architecture-level harness did not depend on the legacy test tree being importable as a package.</li>
   </ul>
 </div>
 </section>
 
-<section id="persistent-sandbox" data-last-reviewed-commit="d32994314" data-evidence-paths="backend/src/test_runner/benchmarks/sweevo/__init__.py backend/src/test_runner/benchmarks/sweevo/models.py backend/src/test_runner/benchmarks/sweevo/_provision.py">
+<section id="persistent-sandbox" data-last-reviewed-commit="d32994314" data-evidence-paths="">
 <h2>Persistent Sandbox Model <a class="anchor" href="#persistent-sandbox">#</a></h2>
 <div class="summary">
   <ul>
@@ -224,7 +229,7 @@ format_verdict(report) -&gt; one-line stdout + exit code (0 resolved, 1 else)
 </div>
 </section>
 
-<section id="models" data-last-reviewed-commit="d32994314" data-evidence-paths="backend/src/test_runner/benchmarks/sweevo/models.py">
+<section id="models" data-last-reviewed-commit="d32994314" data-evidence-paths="">
 <h2>Models And Constants <a class="anchor" href="#models">#</a></h2>
 <div class="edge-list" aria-label="Sweevo dataclasses">
   <div><b>SWEEvoInstance</b><span>One benchmark row: <code>instance_id</code>, <code>repo</code>, <code>base_commit</code>, <code>problem_statement</code>, <code>patch</code>, <code>fail_to_pass</code>, <code>pass_to_pass</code>, <code>docker_image</code>, <code>test_cmds</code>, <code>environment_setup_commit</code>, <code>test_patch</code>, <code>start_version</code>, <code>end_version</code>, <code>instance_id_swe</code>, <code>pr_description</code>.</span></div>
@@ -262,7 +267,7 @@ format_verdict(report) -&gt; one-line stdout + exit code (0 resolved, 1 else)
 <div class="page-baseline" data-page-baseline-commit="d32994314">
   <strong>Maintenance baseline</strong>
   <span>SWE-EVO Benchmark page reviewed against <code>d32994314</code>.</span>
-  <code>git diff d32994314..HEAD -- backend/src/test_runner/benchmarks/sweevo backend/src/test_runner/environments/sweevo_image</code>
+  <code>git diff d32994314..HEAD -- integration-test/SPEC.md docs/architecture/test_runner</code>
 </div>
 <div class="page-footer-nav"><span><a href="mocked-agents.html">Mocked Agents</a></span><span><a href="tests-layout.html">Test Suites</a></span></div>
 </main>

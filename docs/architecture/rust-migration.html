@@ -37,37 +37,37 @@
     <li><a href="#side-by-side"><span>2</span> Rust vs Python Matrix</a></li>
     <li><a href="#workflow-parity"><span>3</span> Workflow Parity</a></li>
     <li><a href="#performance-resource"><span>4</span> Performance And Resource Contracts</a></li>
-    <li><a href="#remaining-python"><span>5</span> Remaining Python Surface</a></li>
+    <li><a href="#remaining-python"><span>5</span> Test Runner: Specified, Not Yet Built</a></li>
     <li><a href="#doc-refresh-rules"><span>6</span> Wiki Refresh Rules</a></li>
   </ol>
 </nav>
 
-<p class="lead">The current architecture wiki should treat <code>agent-core/</code> and <code>sandbox/</code> as the canonical runtime implementation. The legacy Python implementation remains useful as parity evidence and historical comparison, but the only active Python-owned architecture module is <code>backend/src/test_runner</code>: the test and benchmark harness that validates the Rust agent-core and sandbox paths.</p>
+<p class="lead">The Rust migration is complete. <code>agent-core/</code> and <code>sandbox/</code> are the canonical, only runtime implementation, and the legacy Python <code>backend/</code> directory has been removed. The table below is retained as a legacy-to-Rust crate map for refreshing any architecture page that still cites an old <code>backend/src/*</code> evidence path; the Python anchors no longer exist on disk. The Rust validation harness is specified in <code>integration-test/SPEC.md</code> but is not yet implemented.</p>
 
-<section id="migration-verdict" data-last-reviewed-commit="HEAD-plus-worktree" data-evidence-paths="agent-core/crates sandbox/crates backend/src/test_runner docs/plans/test_runner_migration_PLAN.md">
+<section id="migration-verdict" data-last-reviewed-commit="HEAD-plus-worktree" data-evidence-paths="agent-core/crates sandbox/crates docs/plans/test_runner_migration_PLAN.md">
 <h2>Migration Verdict <a class="anchor" href="#migration-verdict">#</a></h2>
 <div class="summary">
   <ul>
     <li><strong>Runtime owners are Rust.</strong> Request bootstrap, root-agent execution, workflow lifecycle, context packets, engine query loop, tool framework, sandbox host/API, daemon dispatch, command sessions, LayerStack/OCC/overlay, isolated workspaces, plugin PPC, and PTY allocation live in <code>agent-core/crates/*</code> and <code>sandbox/crates/*</code>.</li>
-    <li><strong>Python is comparison material except the runner.</strong> Old <code>backend/src/workflow</code>, <code>backend/src/engine</code>, <code>backend/src/tools</code>, and <code>backend/src/sandbox</code> paths explain the source behavior the Rust code ports, but docs should not present them as current owners.</li>
+    <li><strong>Python has been removed.</strong> The old <code>backend/src/workflow</code>, <code>backend/src/engine</code>, <code>backend/src/tools</code>, and <code>backend/src/sandbox</code> trees were deleted; their ported behavior now lives in <code>agent-core/crates/eos-workflow</code>, <code>agent-core/crates/eos-engine</code>, <code>agent-core/crates/eos-tools</code>, and <code>sandbox/crates/*</code>. No page should cite a Python path as a current owner.</li>
     <li><strong>Rust mostly follows Python's workflows.</strong> The shape is intentionally preserved: root Task first, optional <code>delegate_workflow</code>, <code>Workflow -&gt; Iteration -&gt; Attempt</code>, planner-authored generator/reducer DAG, terminal submissions, OCC publish, explicit isolated enter/exit, and background/session controls.</li>
     <li><strong>Rust removes Python redundancy.</strong> Stringly op dispatch, compatibility-only fields, provider branches, runtime bundle shims, hidden close-time parent mutation, and split evaluator/verifier concepts are collapsed into typed IDs, enums, DTOs, crate ports, Docker-only sandbox host paths, reducer plan tasks, and explicit state transitions.</li>
   </ul>
 </div>
 <div class="callout">
   <span class="label">Doc migration rule</span>
-  When an architecture page still cites <code>backend/src/*</code> for runtime ownership, refresh the smallest affected section to a Rust evidence path. Keep Python references only in a labeled <em>Python parity / historical comparison</em> row, or under <a class="wiki-link" href="test_runner/index.html">Test Runner</a>.
+  The Python <code>backend/</code> tree no longer exists, so any surviving <code>backend/src/*</code> evidence path is stale. Refresh the smallest affected section to the matching Rust crate path using the map below; do not reintroduce Python paths as current or comparison owners.
 </div>
 </section>
 
-<section id="side-by-side" data-last-reviewed-commit="HEAD-plus-worktree" data-evidence-paths="agent-core/crates/eos-runtime agent-core/crates/eos-workflow agent-core/crates/eos-engine agent-core/crates/eos-tools agent-core/crates/eos-sandbox-api agent-core/crates/eos-sandbox-host sandbox/crates backend/src">
+<section id="side-by-side" data-last-reviewed-commit="HEAD-plus-worktree" data-evidence-paths="agent-core/crates/eos-runtime agent-core/crates/eos-workflow agent-core/crates/eos-engine agent-core/crates/eos-tools agent-core/crates/eos-sandbox-api agent-core/crates/eos-sandbox-host sandbox/crates">
 <h2>Rust vs Python Matrix <a class="anchor" href="#side-by-side">#</a></h2>
 <div class="table-wrap">
 <table>
   <thead>
     <tr>
       <th>Surface</th>
-      <th>Legacy Python anchor</th>
+      <th>Ported-from crate area</th>
       <th>Current Rust anchor</th>
       <th>Parity, optimization, or disparity</th>
     </tr>
@@ -75,87 +75,87 @@
   <tbody>
     <tr>
       <td>Request bootstrap and root agent</td>
-      <td><span class="file-ref">backend/src/runtime/entry.py</span></td>
+      <td><span class="file-ref">agent-core/crates/eos-runtime</span></td>
       <td><span class="file-ref">agent-core/crates/eos-runtime/src/entry.rs</span>, <span class="file-ref">agent-core/crates/eos-runtime/src/root_agent.rs</span></td>
       <td>Parity: a request creates a root <code>Task(role=root, workflow_id=None)</code> and runs it directly. Optimization: Rust wires per-request workflow ports, background supervisor, command-session heartbeat, and unfinished-root CAS guard as typed dependencies.</td>
     </tr>
     <tr>
       <td>Persisted state and stores</td>
-      <td><span class="file-ref">backend/src/workflow/_core/state.py</span>, Python store modules</td>
+      <td><span class="file-ref">agent-core/crates/eos-state</span>, <span class="file-ref">agent-core/crates/eos-db</span></td>
       <td><span class="file-ref">agent-core/crates/eos-state</span>, <span class="file-ref">agent-core/crates/eos-db</span>, <span class="file-ref">agent-core/crates/eos-types</span></td>
       <td>Parity: Request, Task, Workflow, Iteration, Attempt, AgentRun, and terminal result shapes remain the durable memory model. Optimization: typed IDs and DTOs replace ad hoc strings and JSON bags at crate boundaries.</td>
     </tr>
     <tr>
       <td>Workflow lifecycle</td>
-      <td><span class="file-ref">backend/src/workflow/starter.py</span>, <span class="file-ref">backend/src/workflow/lifecycle.py</span>, <span class="file-ref">backend/src/workflow/iteration</span></td>
+      <td><span class="file-ref">agent-core/crates/eos-workflow/src/starter.rs</span>, <span class="file-ref">agent-core/crates/eos-workflow/src/lifecycle.rs</span>, <span class="file-ref">agent-core/crates/eos-workflow/src/iteration</span></td>
       <td><span class="file-ref">agent-core/crates/eos-workflow/src/lifecycle.rs</span>, <span class="file-ref">agent-core/crates/eos-workflow/src/iteration</span></td>
       <td>Parity: <code>WorkflowStarter</code> creates delegated workflow state from a running parent task; iteration retry and deferred continuation stay explicit. Optimization: workflow close no longer mutates the parent task; the launching agent observes/cancels and submits its own terminal outcome.</td>
     </tr>
     <tr>
       <td>Attempt harness and plan DAG</td>
-      <td><span class="file-ref">backend/src/workflow/attempt/orchestrator.py</span>, <span class="file-ref">backend/src/workflow/attempt/run_stage.py</span>, <span class="file-ref">backend/src/workflow/attempt/plan_dag.py</span></td>
+      <td><span class="file-ref">agent-core/crates/eos-workflow/src/attempt</span></td>
       <td><span class="file-ref">agent-core/crates/eos-workflow/src/attempt/orchestrator.rs</span>, <span class="file-ref">agent-core/crates/eos-workflow/src/attempt/run_stage.rs</span>, <span class="file-ref">agent-core/crates/eos-workflow/src/attempt/plan_dag.rs</span></td>
       <td>Parity: planner submits a generator/reducer DAG, RUN schedules ready tasks to quiescence, reducers are the exit gate, and failures block descendants while runnable siblings drain. Optimization: Rust records terminal submissions through a shared orchestrator registry and keeps one RUN-stage advancer writer.</td>
     </tr>
     <tr>
       <td>Context packets</td>
-      <td><span class="file-ref">backend/src/workflow/context_engine</span></td>
+      <td><span class="file-ref">agent-core/crates/eos-workflow/src/context</span></td>
       <td><span class="file-ref">agent-core/crates/eos-workflow/src/context</span></td>
       <td>Parity: workflow agents receive role-scoped planner/generator/reducer context from persisted state. Disparity to document: the root agent does not receive a workflow ContextEngine packet; its first user message is the request prompt.</td>
     </tr>
     <tr>
       <td>Engine query loop</td>
-      <td><span class="file-ref">backend/src/engine/query/loop.py</span>, <span class="file-ref">backend/src/engine/tool_call/dispatch.py</span></td>
+      <td><span class="file-ref">agent-core/crates/eos-engine/src/query/loop_.rs</span>, <span class="file-ref">agent-core/crates/eos-engine/src/tool_call/dispatch.rs</span></td>
       <td><span class="file-ref">agent-core/crates/eos-engine/src/runtime/agent_loop.rs</span>, <span class="file-ref">agent-core/crates/eos-engine/src/query</span>, <span class="file-ref">agent-core/crates/eos-engine/src/tool_call</span></td>
       <td>Parity: provider turns, final tool dispatch, background launch, terminal stop, missing-terminal handling, and message persistence remain engine-owned. Optimization: terminal presence and background/subagent classifications are typed and tested in Rust.</td>
     </tr>
     <tr>
       <td>Tool framework and model tools</td>
-      <td><span class="file-ref">backend/src/tools</span></td>
+      <td><span class="file-ref">agent-core/crates/eos-tools/src</span></td>
       <td><span class="file-ref">agent-core/crates/eos-tools/src</span></td>
       <td>Parity: sandbox, workflow, isolated workspace, subagent, advisor, skills, and submission tools keep the model-facing contract. Optimization: <code>ToolName</code>, terminal descriptors, hook ports, and submission DTOs replace stringly registry lookups.</td>
     </tr>
     <tr>
       <td>Sandbox public API and host lifecycle</td>
-      <td><span class="file-ref">backend/src/sandbox/api</span>, <span class="file-ref">backend/src/sandbox/host</span></td>
+      <td><span class="file-ref">agent-core/crates/eos-sandbox-api</span>, <span class="file-ref">agent-core/crates/eos-sandbox-host</span></td>
       <td><span class="file-ref">agent-core/crates/eos-sandbox-api</span>, <span class="file-ref">agent-core/crates/eos-sandbox-host</span></td>
       <td>Parity: typed read/write/edit/command/plugin/control/isolation requests still cross a host-to-daemon boundary. Optimization: Rust host is Docker-only; Daytona and Python module-tarball/chunked upload branches are not part of the active Rust path.</td>
     </tr>
     <tr>
       <td>Daemon dispatch and protocol</td>
-      <td><span class="file-ref">backend/src/sandbox/daemon/rpc/dispatcher.py</span>, <span class="file-ref">backend/src/sandbox/daemon/workspace_tool_dispatch.py</span></td>
+      <td><span class="file-ref">sandbox/crates/eos-daemon/src/dispatch</span>, <span class="file-ref">sandbox/crates/eos-protocol</span></td>
       <td><span class="file-ref">sandbox/crates/eosd/src/main.rs</span>, <span class="file-ref">sandbox/crates/eos-daemon/src/dispatcher.rs</span>, <span class="file-ref">sandbox/crates/eos-protocol</span></td>
       <td>Parity: daemon validates envelopes, registers built-in ops, routes isolated first, direct file fast paths second, and overlay fallback third. Optimization: Rust uses protocol enums/models and fixture snapshots instead of ad hoc dict envelopes.</td>
     </tr>
     <tr>
       <td>LayerStack, overlay, and OCC</td>
-      <td><span class="file-ref">backend/src/sandbox/layer_stack</span>, <span class="file-ref">backend/src/sandbox/overlay</span>, <span class="file-ref">backend/src/sandbox/occ</span></td>
+      <td><span class="file-ref">sandbox/crates/eos-layerstack</span>, <span class="file-ref">sandbox/crates/eos-overlay</span>, <span class="file-ref">sandbox/crates/eos-occ</span></td>
       <td><span class="file-ref">sandbox/crates/eos-layerstack</span>, <span class="file-ref">sandbox/crates/eos-overlay</span>, <span class="file-ref">sandbox/crates/eos-occ</span>, <span class="file-ref">sandbox/crates/eos-runner</span></td>
       <td>Parity: O(1) snapshot leases, per-operation overlay upper/work dirs, typed changesets, direct vs gated routing, CAS publish, conflict projection, and deferred squash remain the storage contract. Optimization: Rust separates storage, overlay, runner, and OCC crates by ownership.</td>
     </tr>
     <tr>
       <td>Command sessions and PTY allocation</td>
-      <td><span class="file-ref">backend/src/tools/sandbox/exec_command</span>, <span class="file-ref">backend/src/sandbox/api/tool/command.py</span></td>
+      <td><span class="file-ref">agent-core/crates/eos-tools/src/tools/sandbox</span>, <span class="file-ref">sandbox/crates/eos-command-session</span></td>
       <td><span class="file-ref">agent-core/crates/eos-sandbox-api/src/tool_api/command.rs</span>, <span class="file-ref">sandbox/crates/eos-daemon/src/services/command_session/mod.rs</span>, <span class="file-ref">sandbox/crates/eos-command-session/src/manager.rs</span>, <span class="file-ref">sandbox/crates/eos-command-session/src/process/pty.rs</span></td>
       <td>Parity: commands are long-running command sessions with stdin, progress, cancellation, and completion delivery. Optimization: Rust command-session lifecycle, output cursors, PTY/process control, and completion parking live in the workspace-mode-agnostic <code>eos-command-session</code> crate; the daemon only selects workspace policy and maps wire JSON.</td>
     </tr>
     <tr>
       <td>Isolated workspace lifecycle</td>
-      <td><span class="file-ref">backend/src/sandbox/isolated_workspace</span>, <span class="file-ref">backend/src/tools/isolated_workspace</span></td>
-      <td><span class="file-ref">agent-core/crates/eos-tools/src/tools/isolated_workspace</span>, <span class="file-ref">agent-core/crates/eos-tools/src/hooks/require_no_background_sessions.rs</span>, <span class="file-ref">agent-core/crates/eos-runtime/src/isolated_workspace.rs</span>, <span class="file-ref">agent-core/crates/eos-sandbox-api/src/tool_api/isolated.rs</span>, <span class="file-ref">sandbox/crates/eos-daemon/src/services/isolated_workspace/mod.rs</span>, <span class="file-ref">sandbox/crates/eos-isolated</span></td>
+      <td><span class="file-ref">sandbox/crates/eos-isolated-workspace</span>, <span class="file-ref">agent-core/crates/eos-tools/src/tools/isolated_workspace</span></td>
+      <td><span class="file-ref">agent-core/crates/eos-tools/src/tools/isolated_workspace</span>, <span class="file-ref">agent-core/crates/eos-tools/src/hooks/require_no_background_sessions.rs</span>, <span class="file-ref">agent-core/crates/eos-runtime/src/isolated_workspace.rs</span>, <span class="file-ref">agent-core/crates/eos-sandbox-api/src/tool_api/isolated.rs</span>, <span class="file-ref">sandbox/crates/eos-daemon/src/services/isolated_workspace/mod.rs</span>, <span class="file-ref">sandbox/crates/eos-isolated-workspace</span></td>
       <td>Parity: explicit enter/exit, per-agent private namespace, background gate, plugin/LSP block, audit-only writes, and teardown remain. Optimization: public routing uses the active sandbox <code>caller_id</code> isolated handle, not a public isolated workspace id parameter.</td>
     </tr>
     <tr>
       <td>Plugin service and PPC</td>
-      <td><span class="file-ref">backend/src/sandbox/daemon/plugin</span>, <span class="file-ref">backend/src/plugins/catalog</span></td>
-      <td><span class="file-ref">agent-core/crates/eos-plugin-catalog</span>, <span class="file-ref">sandbox/crates/eos-plugin</span>, <span class="file-ref">sandbox/crates/eos-daemon/src/plugin</span></td>
+      <td><span class="file-ref">agent-core/crates/eos-plugin-catalog</span>, <span class="file-ref">sandbox/crates/eos-plugin</span></td>
+      <td><span class="file-ref">agent-core/crates/eos-plugin-catalog</span>, <span class="file-ref">sandbox/crates/eos-plugin</span>, <span class="file-ref">sandbox/crates/eos-daemon/src/services/plugins</span></td>
       <td>Parity: plugin ensure/status/dynamic op dispatch and OCC-backed writes remain. Optimization: Rust daemon owns PPC route registration, refresh singleflight, self-managed service callbacks, and daemon-side plugin state.</td>
     </tr>
     <tr>
       <td>Test and benchmark harness</td>
-      <td><span class="file-ref">backend/src/test_runner</span>, <span class="file-ref">docs/architecture/test_runner</span></td>
-      <td>No Rust replacement yet</td>
-      <td>Intentional remaining disparity: Python still owns mocked scenarios, SWE-EVO, live E2E runner glue, run reports, and benchmark orchestration. It should validate Rust runtime behavior without being documented as the runtime owner.</td>
+      <td><span class="file-ref">integration-test/SPEC.md</span> (spec), <span class="file-ref">docs/architecture/test_runner</span></td>
+      <td>Specified, not yet implemented</td>
+      <td>The Python harness was removed with the rest of <code>backend/</code>; the Rust replacement (mocked scenarios, SWE-EVO, live E2E glue, run reports, benchmark orchestration) is specified in <span class="file-ref">integration-test/SPEC.md</span> and <span class="file-ref">docs/plans/test_runner_rust_SPEC.md</span> but has no implementation crate in this checkout.</td>
     </tr>
   </tbody>
 </table>
@@ -182,37 +182,37 @@
 </div>
 </section>
 
-<section id="performance-resource" data-last-reviewed-commit="HEAD-plus-worktree" data-evidence-paths="sandbox/crates/eos-layerstack sandbox/crates/eos-occ sandbox/crates/eos-overlay sandbox/crates/eos-daemon backend/tests/live_e2e_test/sandbox docs/plans/test_runner_migration_PLAN.md">
+<section id="performance-resource" data-last-reviewed-commit="HEAD-plus-worktree" data-evidence-paths="sandbox/crates/eos-layerstack sandbox/crates/eos-occ sandbox/crates/eos-overlay sandbox/crates/eos-daemon docs/plans/test_runner_migration_PLAN.md">
 <h2>Performance And Resource Contracts <a class="anchor" href="#performance-resource">#</a></h2>
 <div class="summary">
   <ul>
     <li><strong>Space model:</strong> Rust preserves the Python spec that lower layers are shared by lease. Runtime disk cost is <code>O(repo) + O(N * changed_bytes)</code>, not <code>O(N * repo)</code>.</li>
     <li><strong>Fast file APIs:</strong> <code>read_file</code>, <code>write_file</code>, and <code>edit_file</code> use daemon-owned LayerStack/OCC fast paths when a workspace binding exists; shell/search/plugin work uses overlay capture because the write set is not known up front.</li>
-    <li><strong>Conflict control:</strong> OCC keeps direct/gated routing, stale-base rejection, publish serialization, conflict projection, and no silent overwrite. Rust should keep load tests anchored to the live E2E concurrency reports under <code>backend/tests/live_e2e_test/sandbox</code>.</li>
+    <li><strong>Conflict control:</strong> OCC keeps direct/gated routing, stale-base rejection, publish serialization, conflict projection, and no silent overwrite. Load tests should be anchored to the live E2E concurrency lane under <code>sandbox/crates/eos-e2e-test</code>.</li>
     <li><strong>Overlay guard:</strong> The operational auto-squash target remains <code>AUTO_SQUASH_MAX_DEPTH = 100</code>; docs should not reintroduce a runtime <code>OVL_MAX_STACK_GUARD</code> claim.</li>
     <li><strong>Shell latency:</strong> Rust command sessions should keep the non-login Bash contract; <code>bash -lc</code> is a latency tax and should appear only where a test explicitly requires login-shell behavior.</li>
-    <li><strong>Live runner quota:</strong> Current Python runner config sets <code>runner.sandbox_quota = 3</code> and <code>runner.live_e2e.concurrent_sandbox_runners = 3</code>. Treat that as a harness cap for validation lanes, not a Rust runtime concurrency ceiling.</li>
+    <li><strong>Live runner quota:</strong> The harness spec carries <code>runner.sandbox_quota = 3</code> and <code>runner.live_e2e.concurrent_sandbox_runners = 3</code> (see <code>integration-test/SPEC.md</code>). Treat that as a validation-lane cap, not a Rust runtime concurrency ceiling.</li>
   </ul>
 </div>
 <div class="evidence-grid">
   <div class="evidence-card">
-    <h3>Rust benchmark scripts</h3>
-    <p>Current checkout anchors include <span class="file-ref">backend/scripts/bench_sandbox_e2e.py</span>, <span class="file-ref">backend/scripts/bench_rust_daemon_phase2.py</span>, <span class="file-ref">backend/scripts/bench_rust_daemon_phase3.py</span>, <span class="file-ref">backend/scripts/bench_rust_daemon_phase3t_command_session.py</span>, <span class="file-ref">backend/scripts/bench_rust_daemon_phase3t_av7_parity.py</span>, <span class="file-ref">backend/scripts/bench_rust_daemon_phase3t_mixed_non_plugin.py</span>, <span class="file-ref">backend/scripts/bench_rust_daemon_phase3t_section7_non_plugin.py</span>, <span class="file-ref">backend/scripts/bench_rust_daemon_plugin.py</span>, and <span class="file-ref">backend/scripts/bench_plugin_refresh_strategies.py</span>.</p>
+    <h3>Rust sandbox benchmarks</h3>
+    <p>The Python <code>backend/scripts/bench_*.py</code> drivers were removed with the rest of <code>backend/</code>. Live sandbox throughput and concurrency coverage now lives in the <span class="file-ref">sandbox/crates/eos-e2e-test</span> crate, notably the pressure and concurrency lanes under <span class="file-ref">sandbox/crates/eos-e2e-test/tests/pressure</span>.</p>
   </div>
   <div class="evidence-card">
     <h3>Live E2E artifacts</h3>
     <p>Use <code>run.json</code>, <code>sandbox_events.jsonl</code>, <code>performance_report.json</code>, and <code>.omc/results/*.jsonl</code> when a page makes a performance or resource claim. These artifacts are more reliable than silent pytest output for long sandbox runs.</p>
   </div>
   <div class="evidence-card">
-    <h3>Current plan drift</h3>
-    <p>Some plan text still names <code>bench_rust_daemon_phase3t_pty.py</code>; the current checkout contains <code>bench_rust_daemon_phase3t_command_session.py</code>. Wiki pages should prefer current file names and call out historical names only when explaining plan drift.</p>
+    <h3>Historical plan drift</h3>
+    <p>Older plan text references Python bench scripts such as <code>bench_rust_daemon_phase3t_pty.py</code> and <code>bench_rust_daemon_phase3t_command_session.py</code>. These no longer exist; cite the Rust <span class="file-ref">sandbox/crates/eos-e2e-test</span> lanes instead and treat the Python names as historical only.</p>
   </div>
 </div>
 </section>
 
-<section id="remaining-python" data-last-reviewed-commit="HEAD-plus-worktree" data-evidence-paths="backend/src/test_runner docs/architecture/test_runner docs/plans/test_runner_migration_PLAN.md">
-<h2>Remaining Python Surface <a class="anchor" href="#remaining-python">#</a></h2>
-<p><code>backend/src/test_runner</code> remains Python by design today. It is the harness for deterministic mocked-agent scenarios, real-agent/freeform runs, SWE-EVO benchmark setup/evaluation, live E2E orchestration, run reports, and artifact collection. There is no implemented Rust <code>test_runner</code> crate in this checkout; <code>docs/plans/test_runner_rust_SPEC.md</code> is a forward-looking spec, not current architecture. The Python runner must be documented as a consumer and validator of the Rust runtime, not as the owner of runtime behavior.</p>
+<section id="remaining-python" data-last-reviewed-commit="HEAD-plus-worktree" data-evidence-paths="integration-test/SPEC.md docs/plans/test_runner_rust_SPEC.md docs/architecture/test_runner">
+<h2>Test Runner: Specified, Not Yet Built <a class="anchor" href="#remaining-python">#</a></h2>
+<p>The Python test runner was removed with the rest of <code>backend/</code>; no Python runtime or harness surface remains. The Rust replacement harness for deterministic mocked-agent scenarios, real-agent/freeform runs, SWE-EVO benchmark setup/evaluation, live E2E orchestration, run reports, and artifact collection is specified in <code>integration-test/SPEC.md</code> and <code>docs/plans/test_runner_rust_SPEC.md</code> but has no implementation crate in this checkout. When built, the runner must be a consumer and validator of the Rust runtime, not the owner of runtime behavior.</p>
 <div class="edge-list">
   <div><b>runner owns</b><span><code>run_pipeline</code>, <code>RunConfig</code>, per-test store bundles, scenario lifecycle hooks, mock event sources, SWE-EVO setup/eval, run labels, and report schemas.</span></div>
   <div><b>runner validates</b><span>Rust request/root-task flow, delegated workflow handles, engine/tool terminal behavior, Rust sandbox command sessions, plugin PPC, OCC, LayerStack, overlay, and isolated workspace lifecycle.</span></div>
@@ -223,8 +223,8 @@
 <section id="doc-refresh-rules" data-last-reviewed-commit="HEAD-plus-worktree" data-evidence-paths="docs/architecture docs/architecture/assets/search-index.js docs/architecture/assets/nav.js">
 <h2>Wiki Refresh Rules <a class="anchor" href="#doc-refresh-rules">#</a></h2>
 <div class="refresh-list">
-  <div><strong>Runtime claim cites Python</strong><span>Replace the owner with the Rust crate path and, if useful, add a Python parity note. Do not leave <code>backend/src/workflow</code>, <code>backend/src/engine</code>, <code>backend/src/tools</code>, or <code>backend/src/sandbox</code> as the current runtime owner.</span></div>
-  <div><strong>Runner claim cites Rust</strong><span>Check whether it is really runner-owned. If it is validation glue, keep it under <code>test_runner</code>; if it is runtime policy, move the claim to Workflow, Agent Loops, Tools, or Sandbox and cite Rust code.</span></div>
+  <div><strong>Page still cites a Python path</strong><span>The <code>backend/</code> tree no longer exists, so any <code>backend/src/*</code> path is stale. Replace it with the matching Rust crate path using the matrix above; never leave a deleted Python path as a current owner.</span></div>
+  <div><strong>Runner claim</strong><span>The runner is unbuilt. If a claim is validation glue, keep it under <code>test_runner</code> and tie it to <code>integration-test/SPEC.md</code>; if it is runtime policy, move the claim to Workflow, Agent Loops, Tools, or Sandbox and cite Rust code.</span></div>
   <div><strong>Provider branch mentions Daytona</strong><span>Mark it historical/legacy unless the current Rust code has reintroduced a non-Docker provider branch. Rust sandbox host config is Docker-only today.</span></div>
   <div><strong>Performance claim changes</strong><span>Refresh benchmark script names, live E2E artifacts, and resource caps in the same patch; avoid copying older plan placeholders.</span></div>
   <div><strong>Search or navigation changes</strong><span>Update <code>docs/architecture/assets/search-index.js</code> and <code>docs/architecture/assets/nav.js</code> with the page edit.</span></div>
@@ -236,7 +236,7 @@
   <span>Rust migration status created from the current checkout and migration plan evidence.</span>
   <code>git diff --check -- docs/architecture/rust-migration.html docs/architecture/assets/search-index.js docs/architecture/assets/nav.js</code>
 </div>
-<div class="page-footer-nav"><span><a href="./index.html">Architecture Root</a></span><span><a href="test_runner/index.html">Remaining Python: Test Runner</a></span></div>
+<div class="page-footer-nav"><span><a href="./index.html">Architecture Root</a></span><span><a href="test_runner/index.html">Test Runner</a></span></div>
 </main>
 <script src="assets/search-index.js"></script>
 <script src="assets/nav.js"></script>

@@ -54,7 +54,7 @@
 
 <p class="lead">The request-level control plane is now Task-first. A top-level request mints a root <code>Task</code> with <code>role=root</code> and <code>workflow_id=NULL</code>, runs the root agent directly, and finishes through <code>submit_root_outcome</code>. A <code>Workflow -> Iteration -> Attempt</code> chain exists only when a running agent calls <code>delegate_workflow</code>. A Workflow owns the delegated objective, an Iteration is the bounded planning slice, and an Attempt is one planner-authored DAG of generator and reducer Task rows.</p>
 
-<section id="scope-state-chain" data-last-reviewed-commit="HEAD-plus-worktree" data-evidence-paths="backend/src/task/task.py backend/src/workflow/_core/state.py backend/src/workflow/_core/outcomes.py backend/src/workflow/submissions.py backend/src/workflow/_core/persistence.py backend/src/db/models/request.py backend/src/db/models/task.py">
+<section id="scope-state-chain" data-last-reviewed-commit="HEAD-plus-worktree" data-evidence-paths="">
 <h2>Task + Workflow Model <a class="anchor" href="#scope-state-chain">#</a></h2>
 <div class="summary">
   <ul>
@@ -82,7 +82,7 @@
 </div>
 </section>
 
-<section id="workflow-start-workflow" data-last-reviewed-commit="HEAD-plus-worktree" data-evidence-paths="backend/src/workflow/starter.py backend/src/workflow/lifecycle.py backend/src/workflow/_core/state.py backend/src/workflow/iteration/attempt_coordinator.py backend/src/workflow/attempt/orchestrator.py backend/src/workflow/attempt/launch.py backend/src/runtime/entry.py backend/src/tools/workflow/delegate_workflow.py">
+<section id="workflow-start-workflow" data-last-reviewed-commit="HEAD-plus-worktree" data-evidence-paths="">
 <h2>Workflow Start <a class="anchor" href="#workflow-start-workflow">#</a></h2>
 <p><code>WorkflowStarter.start(*, prompt, parent_task_id)</code> is the prompt-to-Workflow start path for delegated work. It strips and validates the prompt, asserts the parent task is running with no open delegated workflow for that same parent, creates the Workflow row linked by <code>parent_task_id</code>, creates Iteration 1 with a registered <code>IterationAttemptCoordinator</code>, creates the initial Attempt, and starts the Attempt orchestrator. It returns a <code>StartedWorkflow</code> containing workflow, iteration, and attempt ids.</p>
 <pre class="diagram" aria-label="WorkflowStarter start workflow diagram">
@@ -117,7 +117,7 @@
 </div>
 </section>
 
-<section id="iteration-retry-deferral" data-last-reviewed-commit="d32994314" data-evidence-paths="backend/src/workflow/_core/state.py backend/src/workflow/iteration/attempt_coordinator.py backend/src/workflow/lifecycle.py backend/src/workflow/_core/invariants.py backend/src/workflow/_core/outcomes.py backend/tests/unit_test/test_workflow/test_lifecycle/test_iteration_attempt_coordinator.py backend/tests/unit_test/test_workflow/test_lifecycle/test_iteration_attempt_coordinator.py backend/tests/unit_test/test_workflow/test_lifecycle/test_iteration_attempt_coordinator.py">
+<section id="iteration-retry-deferral" data-last-reviewed-commit="d32994314" data-evidence-paths="">
 <h2>Retry And Deferral <a class="anchor" href="#iteration-retry-deferral">#</a></h2>
 <p>Retry and deferral are separate Workflow -> Iteration -> Attempt decisions. A failed Attempt can retry inside the same Iteration while budget remains. A passed Attempt can either terminally close the Workflow or carry <code>deferred_goal_for_next_iteration</code>, which closes the current Iteration as succeeded and starts the next Iteration under the same Workflow.</p>
 <div class="diagram" aria-label="Retry versus deferral workflow">
@@ -161,7 +161,7 @@
 </div>
 </section>
 
-<section id="delegated-workflows" data-last-reviewed-commit="HEAD-plus-worktree" data-evidence-paths="backend/src/tools/workflow backend/src/workflow/starter.py backend/src/workflow/lifecycle.py backend/src/workflow/attempt/orchestrator.py backend/src/workflow/attempt/orchestrator_registry.py backend/src/workflow/_core/outcomes.py backend/src/engine/background/task_supervisor.py backend/tests/unit_test/test_tools/test_submission_main_role_terminals.py">
+<section id="delegated-workflows" data-last-reviewed-commit="HEAD-plus-worktree" data-evidence-paths="">
 <h2>Delegated Workflows <a class="anchor" href="#delegated-workflows">#</a></h2>
 <p>Delegation creates another complete Workflow -> Iteration -> Attempt chain. It starts from the workflow tool context, not from a direct agent-to-agent channel. <code>delegate_workflow</code> resolves the running task and invokes <code>WorkflowStarter.start(prompt=goal, parent_task_id=current_task_id)</code>. There is no close-time mutation of the launching task.</p>
 <pre class="diagram" aria-label="Delegated workflow diagram">
@@ -203,7 +203,7 @@
 </div>
 </section>
 
-<section id="nested-planning-case" data-last-reviewed-commit="HEAD-plus-worktree" data-evidence-paths="backend/src/workflow/_core/workflow_depth.py backend/src/tools/_hooks/disallow_nested_planner_deferral.py backend/src/workflow/starter.py backend/src/tools/workflow/delegate_workflow.py backend/src/workflow/attempt/orchestrator.py backend/src/workflow/attempt/run_stage.py backend/tests/unit_test/test_tools/test_submission_main_role_terminals.py">
+<section id="nested-planning-case" data-last-reviewed-commit="HEAD-plus-worktree" data-evidence-paths="">
 <h2>Nested Planning Case <a class="anchor" href="#nested-planning-case">#</a></h2>
 <p>The nested planning case is a delegated workflow launched from a generator task that itself belongs to another workflow. This is still the same model: the parent generator keeps running with an outstanding handle, the delegated workflow gets its own Iteration and Attempt, and the delegated planner authors its own plan DAG of generators and reducers.</p>
 <div class="diagram" aria-label="Nested planning state chain">
@@ -251,7 +251,7 @@
 </div>
 </section>
 
-<section id="closure-routing-invariants" data-last-reviewed-commit="HEAD-plus-worktree" data-evidence-paths="backend/src/workflow/lifecycle.py backend/src/workflow/attempt/orchestrator_registry.py backend/src/workflow/attempt/orchestrator.py backend/src/workflow/_core/invariants.py backend/src/workflow/_core/primitives.py backend/src/runtime/entry.py">
+<section id="closure-routing-invariants" data-last-reviewed-commit="HEAD-plus-worktree" data-evidence-paths="">
 <h2>Close And Invariants <a class="anchor" href="#closure-routing-invariants">#</a></h2>
 <p>Closing is a state transition, not a report. <code>WorkflowLifecycle.handle_iteration_closed(iteration_id, succeeded, deferred_goal, final_attempt_id)</code> takes primitive args: a succeeded iteration with a deferred goal creates the next iteration; otherwise it calls <code>close_workflow()</code>, then deregisters the closed coordinator. <code>close_workflow()</code> sets workflow status and persists projected outcomes. Root request close is separate and owned by <code>submit_root_outcome</code>.</p>
 <div class="edge-list">
@@ -270,7 +270,7 @@
 </div>
 </section>
 
-<section id="evidence-refresh" data-last-reviewed-commit="HEAD-plus-worktree" data-evidence-paths="backend/src/task/task.py backend/src/runtime/entry.py backend/src/workflow/_core/state.py backend/src/workflow/starter.py backend/src/workflow/lifecycle.py backend/src/workflow/iteration/attempt_coordinator.py backend/src/workflow/_core/outcomes.py backend/src/workflow/_core/workflow_depth.py backend/src/workflow/submissions.py backend/src/workflow/_core/persistence.py backend/tests/unit_test/test_tools/test_submission_main_role_terminals.py">
+<section id="evidence-refresh" data-last-reviewed-commit="HEAD-plus-worktree" data-evidence-paths="">
 <h2>Evidence And Refresh <a class="anchor" href="#evidence-refresh">#</a></h2>
 <div class="evidence-grid">
   <div class="evidence-card">
@@ -288,8 +288,8 @@
 </div>
 <div class="summary">
   <ul>
-    <li>Refresh command shape: <code>git diff HEAD -- backend/src/task backend/src/runtime backend/src/workflow backend/src/tools/workflow backend/src/tools/submission</code></li>
-    <li>Focused verification: <code>uv run pytest backend/tests/unit_test/test_tools/test_submission_main_role_terminals.py -q</code></li>
+    <li>Refresh command shape: <code>git diff HEAD -- agent-core/crates/eos-state agent-core/crates/eos-runtime/src agent-core/crates/eos-workflow/src agent-core/crates/eos-tools/src/tools/workflow agent-core/crates/eos-tools/src/tools/submission</code></li>
+    <li>Focused verification: <code>cargo test -p eos-tools</code></li>
   </ul>
 </div>
 </section>

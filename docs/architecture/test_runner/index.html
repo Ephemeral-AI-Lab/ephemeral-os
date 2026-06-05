@@ -52,7 +52,12 @@
 
 <p class="lead">The Python <code>test_runner</code> package is the remaining Python-owned architecture module after the Rust <code>agent-core</code> / <code>sandbox</code> migration: it is a test and benchmark harness, not the owner of request runtime, workflow lifecycle, engine loop, tool dispatch, or sandbox infrastructure. One coroutine, <code>run_pipeline</code>, serves three validation modes: mocked-agent scenario tests, real-LLM freeform runs, and the SWE-EVO benchmark CLI. The five mode-specific seams (runner factory, bootstrap, lifecycle, sandbox provisioner, run label) are the only differences between modes.</p>
 
-<section id="scope-verdict" data-last-reviewed-commit="d32994314" data-evidence-paths="backend/src/test_runner/__init__.py backend/src/test_runner/core/runner.py backend/src/test_runner/core/engine.py backend/src/test_runner/core/config.py backend/src/test_runner/scenarios/__init__.py backend/src/test_runner/benchmarks/sweevo/pipeline.py">
+<div class="callout warn">
+  <span class="label">REMOVED</span>
+  ⚠️ The Python <code>backend/src/test_runner</code> documented here has been removed. The Rust replacement is specified in <code>integration-test/SPEC.md</code> (see also <code>docs/plans/test_runner_rust_SPEC.md</code>) but is not yet implemented; the evidence paths below describe the removed Python design for historical reference.
+</div>
+
+<section id="scope-verdict" data-last-reviewed-commit="d32994314" data-evidence-paths="">
 <h2>Scope And Verdict <a class="anchor" href="#scope-verdict">#</a></h2>
 <div class="summary">
   <ul>
@@ -60,7 +65,7 @@
     <li>The harness is <em>dataset-agnostic</em>. The generic scenario runner lives at <code>core/runner.py</code> + <code>core/engine.py</code>; SWE-EVO is one benchmark adapter under <code>benchmarks/sweevo/</code>.</li>
     <li><strong>One engine, three modes.</strong> <code>core/engine.py::run_pipeline</code> is the only orchestrator; <code>RunConfig</code> swaps in a <code>ScenarioLoopRunner</code> for mock scenarios, returns <code>None</code> for real-agent (delegating to <code>start_workflow_run</code>'s default runner), or wraps the production runner via <code>build_agent_delegate</code> for the benchmark.</li>
     <li><strong>The harness is NOT runtime.</strong> Rust owns request bootstrap, root <code>Task</code> execution, delegated Workflow / Iteration / Attempt state, the engine query loop, terminal-tool policy, model-facing tools, and sandbox host / daemon behavior. Python <code>test_runner</code> drives validation over those surfaces.</li>
-    <li><strong>Mocked agents call real tools.</strong> <code>ScenarioLoopRunner</code> injects a deterministic <code>ScenarioEventSource</code> into the real query loop, so scripted mock turns still dispatch through production tool execution; agent definitions come from <code>backend/src/agents/profile/main/*.md</code>, the same markdown the real launcher resolves.</li>
+    <li><strong>Mocked agents call real tools.</strong> <code>ScenarioLoopRunner</code> injects a deterministic <code>ScenarioEventSource</code> into the real query loop, so scripted mock turns still dispatch through production tool execution; agent definitions come from <code>.eos-agents/profile/main/*.md</code>, the same markdown the real launcher resolves.</li>
     <li><strong>Persistent sandbox per SWE-EVO instance.</strong> Naming is deterministic (<code>sweevo-&lt;instance_id&gt;</code>); back-to-back runs reuse the container, and the CLI does NOT destroy it on exit. Reclaim with <code>docker container prune</code>.</li>
     <li><strong>Migration anchors are not completion claims.</strong> <code>docs/plans/test_runner_migration_PLAN.md</code> sets live concurrent sandbox runners to <code>3</code> and keeps current benchmark/setup evidence in the root scripts; this page records that harness boundary without claiming every migration gate has passed.</li>
   </ul>
@@ -74,7 +79,7 @@
 </div>
 </section>
 
-<section id="workflow-map" data-last-reviewed-commit="d32994314" data-evidence-paths="backend/src/test_runner/core/engine.py backend/src/test_runner/core/runner.py backend/src/test_runner/scenarios/builder.py backend/src/test_runner/agent/mock/scenario_loop_runner.py backend/src/test_runner/agent/mock/scenario_adapter.py backend/src/test_runner/benchmarks/sweevo/pipeline.py backend/src/test_runner/benchmarks/sweevo/run.py">
+<section id="workflow-map" data-last-reviewed-commit="d32994314" data-evidence-paths="">
 <h2>Workflow Map <a class="anchor" href="#workflow-map">#</a></h2>
 <p>Two lanes share one harness engine. The mock lane is for fast deterministic coverage of root request, delegated workflow, plan-DAG (generator + reducer), and RUN-stage control flow. The benchmark lane runs a real LLM against the SWE-EVO image and scores the result. Both lanes validate Rust-owned runtime and sandbox behavior from Python; neither lane owns that behavior.</p>
 <pre class="diagram" aria-label="test_runner two-lane workflow">
@@ -125,7 +130,7 @@
 </div>
 </section>
 
-<section id="reading-paths" data-last-reviewed-commit="d32994314" data-evidence-paths="backend/src/test_runner backend/tests/unit_test/test_test_runner backend/tests/unit_test/test_benchmarks docs/architecture/test_runner">
+<section id="reading-paths" data-last-reviewed-commit="d32994314" data-evidence-paths="docs/architecture/test_runner">
 <h2>Reading Paths <a class="anchor" href="#reading-paths">#</a></h2>
 <div class="evidence-grid">
   <div class="evidence-card">
@@ -155,7 +160,7 @@
 </div>
 </section>
 
-<section id="ownership-map" data-last-reviewed-commit="d32994314" data-evidence-paths="backend/src/test_runner/core backend/src/test_runner/scenarios backend/src/test_runner/agent/mock backend/src/test_runner/audit backend/src/test_runner/benchmarks/sweevo backend/src/test_runner/environments/sweevo_image backend/src/test_runner/tests">
+<section id="ownership-map" data-last-reviewed-commit="d32994314" data-evidence-paths="">
 <h2>Ownership Map <a class="anchor" href="#ownership-map">#</a></h2>
 <div class="edge-list">
   <div><b>boundary</b><span>Rust owns request bootstrap and root-agent entry in <code>agent-core/crates/eos-runtime</code>, persisted Request / Task / Workflow state in <code>eos-state</code> + <code>eos-db</code>, delegated lifecycle in <code>eos-workflow</code>, query loop / provider stream / dispatch in <code>eos-engine</code>, model tools in <code>eos-tools</code>, host sandbox APIs in <code>eos-sandbox-api</code> + <code>eos-sandbox-host</code>, and daemon execution under <code>sandbox/crates/*</code>.</span></div>
@@ -171,7 +176,7 @@
 </div>
 </section>
 
-<section id="stale-claim-map" data-last-reviewed-commit="d32994314" data-evidence-paths="backend/src/test_runner/benchmarks/sweevo backend/src/test_runner/__init__.py docs/plans/sweevo_layerstack_migration_REPORT.md">
+<section id="stale-claim-map" data-last-reviewed-commit="d32994314" data-evidence-paths="docs/plans/sweevo_layerstack_migration_REPORT.md">
 <h2>Stale Claim Map <a class="anchor" href="#stale-claim-map">#</a></h2>
 <div class="summary">
   <ul>
@@ -186,7 +191,7 @@
 <div class="page-baseline" data-page-baseline-commit="d32994314">
   <strong>Maintenance baseline</strong>
   <span>Test Runner overview reviewed against <code>d32994314</code>.</span>
-  <code>git diff d32994314..HEAD -- backend/src/test_runner docs/architecture/test_runner</code>
+  <code>git diff d32994314..HEAD -- integration-test/SPEC.md docs/architecture/test_runner</code>
 </div>
 <div class="page-footer-nav"><span><a href="../index.html">Architecture Root</a></span><span><a href="core-harness.html">Core Harness</a></span></div>
 </main>

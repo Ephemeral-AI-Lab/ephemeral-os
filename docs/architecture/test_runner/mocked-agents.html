@@ -54,7 +54,12 @@
 
 <p class="lead">The mocked-agent lane is deterministic but behaves like a real agent: it inspects the prompt, emits scripted turns through the real query loop, calls real sandbox tools, inspects their outputs, and submits through the real terminal tool. It uses production main-profile markdown definitions so live e2e coverage exercises the same frontmatter, variants, terminals, and system prompts as production launches.</p>
 
-<section id="scope" data-last-reviewed-commit="d32994314" data-evidence-paths="backend/src/test_runner/agent/mock backend/src/test_runner/agent/mock/scenario_loop_runner.py backend/src/test_runner/agent/mock/scenario_adapter.py backend/src/test_runner/agent/mock/definitions.py">
+<div class="callout warn">
+  <span class="label">REMOVED</span>
+  ⚠️ The Python <code>backend/src/test_runner</code> documented here has been removed. The Rust replacement is specified in <code>integration-test/SPEC.md</code> (see also <code>docs/plans/test_runner_rust_SPEC.md</code>) but is not yet implemented; the evidence paths below describe the removed Python design for historical reference.
+</div>
+
+<section id="scope" data-last-reviewed-commit="d32994314" data-evidence-paths="">
 <h2>Scope <a class="anchor" href="#scope">#</a></h2>
 <div class="summary">
   <ul>
@@ -73,7 +78,7 @@
 </div>
 </section>
 
-<section id="registry" data-last-reviewed-commit="d32994314" data-evidence-paths="backend/src/test_runner/agent/mock/definitions.py backend/src/agents/profile/main backend/src/test_runner/core/runner.py">
+<section id="registry" data-last-reviewed-commit="d32994314" data-evidence-paths="">
 <h2>Squad Registry <a class="anchor" href="#registry">#</a></h2>
 <p><code>registered_mock_agents()</code> is the context manager that swaps the live agent registry to the production main-profile markdown definitions for the duration of one mock run.</p>
 <pre class="diagram" aria-label="Mock agent registry swap">
@@ -92,14 +97,14 @@ run_scenario(...)                            agents/profile/main/
 </pre>
 <div class="summary">
   <ul>
-    <li><code>_MAIN_PROFILE_DIR</code> is <code>backend/src/agents/profile/main</code>; the launcher resolves planner/executor/reducer from those markdown files.</li>
+    <li><code>_MAIN_PROFILE_DIR</code> is <code>.eos-agents/profile/main</code>; the launcher resolves planner/executor/reducer from those markdown files.</li>
     <li>Restoration on exit makes the swap reversible — pytest sessions that run multiple scenarios back-to-back leave the registry untouched between tests.</li>
     <li>The benchmark lane does NOT use this context manager; instead <code>bootstrap_real_agent_runtime</code> loads the same markdown tree once via <code>load_agents_tree</code>.</li>
   </ul>
 </div>
 </section>
 
-<section id="dispatch" data-last-reviewed-commit="d32994314" data-evidence-paths="backend/src/test_runner/agent/mock/scenario_loop_runner.py backend/src/test_runner/agent/mock/scenario_adapter.py backend/src/test_runner/scenarios/base.py">
+<section id="dispatch" data-last-reviewed-commit="d32994314" data-evidence-paths="">
 <h2>Per-Agent Dispatch <a class="anchor" href="#dispatch">#</a></h2>
 <p><code>ScenarioLoopRunner.__call__</code> has the same signature as the real <code>AttemptAgentRunner</code> so Workflow cannot tell them apart. Dispatch is by <code>agent_def.name</code>, but tool execution is owned by the real query loop.</p>
 <pre class="diagram" aria-label="ScenarioLoopRunner per-call lifecycle">
@@ -132,7 +137,7 @@ EphemeralRunResult from the real query loop
 </div>
 </section>
 
-<section id="tool-scripts" data-last-reviewed-commit="d32994314" data-evidence-paths="backend/src/test_runner/agent/mock/tool_scripts.py backend/src/test_runner/agent/mock/full_stack_tool_scripts.py backend/src/test_runner/agent/mock/capacity_actions.py">
+<section id="tool-scripts" data-last-reviewed-commit="d32994314" data-evidence-paths="">
 <h2>Prepared Tool Scripts <a class="anchor" href="#tool-scripts">#</a></h2>
 <p><code>PreparedToolScript</code> is a deterministic sequence of real tool calls; <code>PreparedToolScriptEngine</code> walks the steps, emits a status text-delta, calls each tool, and verifies <code>expect_error</code> contracts.</p>
 <div class="edge-list" aria-label="Tool-script datatypes">
@@ -166,7 +171,7 @@ EphemeralRunResult from the real query loop
 </div>
 </section>
 
-<section id="probes" data-last-reviewed-commit="d32994314" data-evidence-paths="backend/src/test_runner/agent/mock/sandbox_probe.py backend/src/test_runner/agent/mock/ephemeral_workspace_probe.py backend/src/test_runner/agent/mock/plugin_workspace_probe.py backend/src/test_runner/agent/mock/background_shell_probe.py backend/src/test_runner/agent/mock/complex_project_build_probe.py backend/src/test_runner/agent/mock/complex_project_build_shell_edit_lsp_probe.py backend/src/test_runner/agent/mock/complex_project_build_grep_glob_probe.py backend/src/test_runner/agent/mock/high_concurrency_probe.py backend/src/test_runner/agent/mock/heavy_io_zoned_probe.py">
+<section id="probes" data-last-reviewed-commit="d32994314" data-evidence-paths="">
 <h2>Probe Library <a class="anchor" href="#probes">#</a></h2>
 <p>Probes are larger end-to-end checks that the executor lane dispatches when it sees a probe action token. The runner has dispatch tables for the families with mode parameters.</p>
 <div class="evidence-grid">
@@ -212,7 +217,7 @@ EphemeralRunResult from the real query loop
 </div>
 </section>
 
-<section id="advisor-shim" data-last-reviewed-commit="d32994314" data-evidence-paths="backend/src/test_runner/agent/mock/scenario_adapter.py backend/src/test_runner/agent/mock/_advisor_approval.py">
+<section id="advisor-shim" data-last-reviewed-commit="d32994314" data-evidence-paths="">
 <h2>Advisor-Approval Flow <a class="anchor" href="#advisor-shim">#</a></h2>
 <p>Scenario scripts call the real <code>ask_advisor</code> tool before gated terminal submissions, so <code>AdvisorApprovalPreHook</code> sees the same transcript shape as a real agent. <code>build_advisor_approval_messages</code> remains as a focused test helper for direct dispatch negative-path contracts.</p>
 <pre class="diagram" aria-label="Advisor approval flow diagram">
@@ -238,7 +243,7 @@ the gate is not a no-op.
 <p>The helper is only for direct dispatch tests; scenario runs use the production helper-tool path.</p>
 </section>
 
-<section id="mock-events" data-last-reviewed-commit="d32994314" data-evidence-paths="backend/src/test_runner/audit/events.py backend/src/test_runner/agent/mock/prompt_inspector.py backend/src/test_runner/agent/mock/sandbox_probe.py backend/src/test_runner/scenarios/lifecycle.py">
+<section id="mock-events" data-last-reviewed-commit="d32994314" data-evidence-paths="">
 <h2>MOCK_* Side-Channel Events <a class="anchor" href="#mock-events">#</a></h2>
 <p>Four <code>EventType</code> values exist only for the mock lane. Real-agent and benchmark runs never emit them; subscribers must tolerate absence.</p>
 <div class="edge-list" aria-label="Mock side-channel events">
@@ -258,7 +263,7 @@ the gate is not a no-op.
 <div class="page-baseline" data-page-baseline-commit="d32994314">
   <strong>Maintenance baseline</strong>
   <span>Mocked Agents page reviewed against <code>d32994314</code>.</span>
-  <code>git diff d32994314..HEAD -- backend/src/test_runner/agent/mock</code>
+  <code>git diff d32994314..HEAD -- integration-test/SPEC.md docs/architecture/test_runner</code>
 </div>
 <div class="page-footer-nav"><span><a href="scenarios.html">Scenarios</a></span><span><a href="benchmark-sweevo.html">SWE-EVO Benchmark</a></span></div>
 </main>

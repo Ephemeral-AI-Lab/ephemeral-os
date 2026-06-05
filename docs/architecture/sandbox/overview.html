@@ -41,7 +41,7 @@
   <span><a href="index.html">Index</a> / 1. Overview</span>
   <span class="nav-pair"><a href="index.html">← Index</a><a href="layerstack.html">2. LayerStack →</a></span>
 </div>
-<section id="overview" data-last-reviewed-commit="2a3e6cc7c" data-evidence-paths="backend/src/sandbox/daemon/workspace_tool_dispatch.py backend/src/sandbox/layer_stack/stack.py backend/src/sandbox/ephemeral_workspace/pipeline.py backend/src/sandbox/isolated_workspace/pipeline.py">
+<section id="overview" data-last-reviewed-commit="2a3e6cc7c" data-evidence-paths="">
 <h2>1. Overview <a class="anchor" href="#overview">§</a></h2>
 <nav class="page-toc" aria-labelledby="page-toc-heading">
   <h3 id="page-toc-heading">Contents</h3>
@@ -103,7 +103,7 @@
 
 <p>The important split is lifetime. <a class="wiki-link" href="workspaces.html#main-workspace">main_workspace</a> is the persistent repository identity. <a class="wiki-link" href="workspaces.html#ephemeral-workspace">ephemeral_workspace</a> creates private overlay state per tool/plugin operation or uses direct LayerStack/OCC fast paths. <a class="wiki-link" href="workspaces.html#isolated-workspace">isolated_workspace</a> creates one private overlay namespace at <code>enter_isolated_workspace</code> and discards it at <code>exit_isolated_workspace</code>.</p>
 </section>
-<section id="overview-moat" data-last-reviewed-commit="2a3e6cc7c" data-evidence-paths="backend/src/sandbox/occ/changeset_preparation.py backend/src/sandbox/occ/commit_transaction.py backend/src/sandbox/layer_stack/lease.py backend/src/sandbox/layer_stack/stack.py backend/src/sandbox/ephemeral_workspace/pipeline.py">
+<section id="overview-moat" data-last-reviewed-commit="2a3e6cc7c" data-evidence-paths="">
 <h3>1.1 Differentiation and Moat <a class="anchor" href="#overview-moat">§</a></h3>
 
 <div class="summary">
@@ -147,7 +147,7 @@
   The moat guards a specific bet: <strong>collaborative</strong> multi-agent work (a team converging on one codebase, needing to see each other's in-progress artifacts), not <strong>competitive</strong> multi-agent work (N agents racing to produce the best independent output, where worktree isolation is correct). The residual risk is whether the collaborative pattern wins adoption &mdash; not whether the infra can deliver it. If it does, merge-back is not replicable by VM-fork or container-commit systems without rebuilding their storage layer.
 </div>
 </section>
-<section id="overview-invariants" data-last-reviewed-commit="2a3e6cc7c" data-evidence-paths="backend/src/sandbox/layer_stack/stack.py backend/src/sandbox/overlay/lifecycle.py backend/src/sandbox/occ/service.py backend/src/sandbox/isolated_workspace/pipeline.py backend/src/sandbox/provider/bootstrap.py">
+<section id="overview-invariants" data-last-reviewed-commit="2a3e6cc7c" data-evidence-paths="">
 <h3>1.2 Core Invariants <a class="anchor" href="#overview-invariants">§</a></h3>
 <table>
   <thead><tr><th>Invariant</th><th>Practical meaning</th><th>Primary node</th></tr></thead>
@@ -161,7 +161,7 @@
 </table>
 
 </section>
-<section id="overview-structure" data-last-reviewed-commit="2a3e6cc7c" data-evidence-paths="backend/src/sandbox/api backend/src/sandbox/host backend/src/sandbox/daemon backend/src/sandbox/layer_stack backend/src/sandbox/overlay backend/src/sandbox/occ backend/src/sandbox/ephemeral_workspace backend/src/sandbox/isolated_workspace">
+<section id="overview-structure" data-last-reviewed-commit="2a3e6cc7c" data-evidence-paths="">
 <h3>1.3 Structural Map <a class="anchor" href="#overview-structure">§</a></h3>
 <div class="concept-grid">
   <div class="concept-card"><strong><code>sandbox.api</code></strong><p>Public typed API and transport entrypoints. Tool modules build daemon payloads with shared identity fields and parse daemon response payloads back into result models.</p><div class="wiki-links"><a href="daemon.html#request-lifecycle">Request Lifecycle</a></div></div>
@@ -175,7 +175,7 @@
 </div>
 
 </section>
-<section id="overview-request-shape" data-last-reviewed-commit="2a3e6cc7c" data-evidence-paths="backend/src/sandbox/api/tool/_daemon_request_payloads.py backend/src/sandbox/api/transport.py backend/src/sandbox/host/daemon_client.py backend/src/sandbox/daemon/workspace_tool_dispatch.py">
+<section id="overview-request-shape" data-last-reviewed-commit="2a3e6cc7c" data-evidence-paths="">
 <h3>1.4 Request Shape <a class="anchor" href="#overview-request-shape">§</a></h3>
 <p>Most runtime behavior is easier to understand as three nested boundaries: public API builds a typed request, the host transport wraps it as a daemon envelope, and the daemon router decides the workspace execution path. A direct file write can skip overlay mechanics, but it still publishes through OCC. A shell command usually needs a mounted overlay, then publishes captured upperdir changes. An isolated call reuses the already-open private namespace and discards changes on exit.</p>
 <div class="trace-grid">
@@ -185,33 +185,33 @@
   <div>Plugin/LSP</div><div><a class="wiki-link" href="workflow-cookbook.html#cookbook-plugin-write">Plugin Write Operation</a> and <a class="wiki-link" href="workflow-cookbook.html#cookbook-pyright-refresh">Pyright Latest-Projection Refresh</a>.</div>
 </div>
 </section>
-<section id="overview-evidence-refresh" data-last-reviewed-commit="2a3e6cc7c" data-evidence-paths="backend/src/sandbox/api/tool/_daemon_request_payloads.py backend/src/sandbox/api/tool/_daemon_response_parsing.py backend/src/sandbox/host/daemon_client.py backend/src/sandbox/daemon/workspace_tool_dispatch.py backend/src/sandbox/layer_stack/stack.py backend/tests/live_e2e_test/sandbox/layer_stack_overlay_occ/test_phase05_public_file_ops_correctness.py backend/src/test_runner/tests/mock/sandbox/ephemeral_workspace/test_ephemeral_all_verbs_publish_and_cleanup.py backend/src/test_runner/tests/mock/sandbox/isolated_workspace/happy_path/test_enter_then_shell_then_exit.py">
+<section id="overview-evidence-refresh" data-last-reviewed-commit="2a3e6cc7c" data-evidence-paths="">
 <h3>1.5 Evidence and Refresh <a class="anchor" href="#overview-evidence-refresh">§</a></h3>
 <div class="evidence-grid">
   <div class="evidence-card">
     <h4>Entry points</h4>
     <p>Public tools build daemon payloads through <code>sandbox.api.tool</code>, using one request identity helper and one response parsing helper before the host transport calls the resident daemon.</p>
-    <span class="file-ref">backend/src/sandbox/api/tool/_daemon_request_payloads.py:8-15</span>
-    <span class="file-ref">backend/src/sandbox/api/tool/_daemon_response_parsing.py:67-169</span>
-    <span class="file-ref">backend/src/sandbox/host/daemon_client.py:186-191</span>
-    <span class="file-ref">backend/src/sandbox/api/transport.py:44-77</span>
+    <span class="file-ref">agent-core/crates/eos-sandbox-api/src/tool_api/mod.rs</span>
+    <span class="file-ref">agent-core/crates/eos-sandbox-api/src/tool_api/parse.rs</span>
+    <span class="file-ref">agent-core/crates/eos-sandbox-host/src/daemon_client.rs</span>
+    <span class="file-ref">agent-core/crates/eos-sandbox-api/src/transport.rs</span>
   </div>
   <div class="evidence-card">
     <h4>Router</h4>
     <p>The daemon workspace router is the first place that distinguishes direct file paths from overlay and isolated execution.</p>
-    <span class="file-ref">backend/src/sandbox/daemon/workspace_tool_dispatch.py:53-75</span>
+    <span class="file-ref">sandbox/crates/eos-daemon/src/dispatch/dispatcher.rs</span>
   </div>
   <div class="evidence-card">
     <h4>Storage owner</h4>
     <p>LayerStack coordinates active manifests, snapshot leases, merged reads, and publish transactions.</p>
-    <span class="file-ref">backend/src/sandbox/layer_stack/stack.py:69-343</span>
+    <span class="file-ref">sandbox/crates/eos-layerstack/src/stack.rs</span>
   </div>
   <div class="evidence-card">
     <h4>Validation anchors</h4>
     <ul>
-      <li><span class="file-ref">backend/tests/live_e2e_test/sandbox/layer_stack_overlay_occ/test_phase05_public_file_ops_correctness.py</span></li>
-      <li><span class="file-ref">backend/src/test_runner/tests/mock/sandbox/ephemeral_workspace/test_ephemeral_all_verbs_publish_and_cleanup.py</span></li>
-      <li><span class="file-ref">backend/src/test_runner/tests/mock/sandbox/isolated_workspace/happy_path/test_enter_then_shell_then_exit.py</span></li>
+      <li><span class="file-ref">sandbox/crates/eos-e2e-test/tests/core</span></li>
+      <li><span class="file-ref">integration-test/SPEC.md</span></li>
+      <li><span class="file-ref">integration-test/SPEC.md</span></li>
     </ul>
   </div>
 </div>

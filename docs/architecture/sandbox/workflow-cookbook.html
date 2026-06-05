@@ -41,7 +41,7 @@
   <span><a href="index.html">Index</a> / 10. Workflow Cookbook</span>
   <span class="nav-pair"><a href="space-model.html">← 9. Space Model</a><a href="maintenance.html">11. Wiki Maintenance →</a></span>
 </div>
-<section id="workflow-cookbook" data-last-reviewed-commit="2a3e6cc7c" data-evidence-paths="backend/src/sandbox/api/tool/_daemon_request_payloads.py backend/src/sandbox/api/transport.py backend/src/sandbox/daemon/workspace_tool_dispatch.py backend/src/sandbox/layer_stack/stack.py backend/src/sandbox/occ/service.py backend/src/sandbox/isolated_workspace/pipeline.py">
+<section id="workflow-cookbook" data-last-reviewed-commit="2a3e6cc7c" data-evidence-paths="">
 <h2>10. Workflow Cookbook <a class="anchor" href="#workflow-cookbook">§</a></h2>
 <nav class="page-toc" aria-labelledby="page-toc-heading">
   <h3 id="page-toc-heading">Contents</h3>
@@ -86,7 +86,7 @@
   </tbody>
 </table>
 </section>
-<section id="cookbook-layerstack-read" data-last-reviewed-commit="2a3e6cc7c" data-evidence-paths="backend/src/sandbox/daemon/workspace_tool_dispatch.py backend/src/sandbox/layer_stack/view.py">
+<section id="cookbook-layerstack-read" data-last-reviewed-commit="2a3e6cc7c" data-evidence-paths="">
 <h3>10.1 Direct LayerStack Read <a class="anchor" href="#cookbook-layerstack-read">§</a></h3>
 <pre class="diagram" aria-label="Direct LayerStack read technical route">
 [read_file request]
@@ -117,10 +117,10 @@
   </ol>
 </div>
 
-<p>Relevant code: router fast path <span class="file-ref">backend/src/sandbox/daemon/workspace_tool_dispatch.py:94-110</span>, path binding <span class="file-ref">backend/src/sandbox/daemon/workspace_tool_dispatch.py:208-224</span>, direct resource metrics <span class="file-ref">backend/src/sandbox/daemon/workspace_tool_dispatch.py:232-260</span>, and merged-view reads <span class="file-ref">backend/src/sandbox/layer_stack/view.py:60-114</span>.</p>
+<p>Relevant code: router fast path <span class="file-ref">sandbox/crates/eos-daemon/src/dispatch/dispatcher.rs</span>, path binding <span class="file-ref">sandbox/crates/eos-daemon/src/dispatch/dispatcher.rs</span>, direct resource metrics <span class="file-ref">sandbox/crates/eos-daemon/src/dispatch/dispatcher.rs</span>, and merged-view reads <span class="file-ref">sandbox/crates/eos-layerstack/src/stack/projection.rs</span>.</p>
 
 </section>
-<section id="cookbook-ephemeral-shell" data-last-reviewed-commit="2a3e6cc7c" data-evidence-paths="backend/src/sandbox/ephemeral_workspace/pipeline.py backend/src/sandbox/overlay/namespace_entrypoint.py backend/src/sandbox/ephemeral_workspace/workspace_publish.py">
+<section id="cookbook-ephemeral-shell" data-last-reviewed-commit="2a3e6cc7c" data-evidence-paths="">
 <h3>10.2 Ephemeral Shell or Search Operation <a class="anchor" href="#cookbook-ephemeral-shell">§</a></h3>
 <pre class="diagram" aria-label="Ephemeral shell operation branches">
 [shell command request]
@@ -154,10 +154,10 @@
   </ol>
 </div>
 
-<p>Relevant code: pipeline run loop <span class="file-ref">backend/src/sandbox/ephemeral_workspace/pipeline.py:131-179</span>, shell pre-mount maintenance <span class="file-ref">backend/src/sandbox/ephemeral_workspace/pipeline.py:219-250</span>, namespace entrypoint <span class="file-ref">backend/src/sandbox/overlay/namespace_entrypoint.py:85-175</span>, and publish helper <span class="file-ref">backend/src/sandbox/ephemeral_workspace/workspace_publish.py:157-217</span>.</p>
+<p>Relevant code: pipeline run loop <span class="file-ref">sandbox/crates/eos-daemon/src/services/overlay/mod.rs</span>, shell pre-mount maintenance <span class="file-ref">sandbox/crates/eos-daemon/src/services/overlay/mod.rs</span>, namespace entrypoint <span class="file-ref">sandbox/crates/eos-runner/src/fresh_ns/child.rs</span>, and publish helper <span class="file-ref">sandbox/crates/eos-ephemeral-workspace/src/finalize.rs</span>.</p>
 
 </section>
-<section id="cookbook-occ-publish" data-last-reviewed-commit="2a3e6cc7c" data-evidence-paths="backend/src/sandbox/daemon/workspace_tool_dispatch.py backend/src/sandbox/occ/changeset_preparation.py backend/src/sandbox/occ/commit_queue.py backend/src/sandbox/occ/commit_transaction.py backend/src/sandbox/daemon/changeset_projection.py">
+<section id="cookbook-occ-publish" data-last-reviewed-commit="2a3e6cc7c" data-evidence-paths="">
 <h3>10.3 OCC Publish from API Write/Edit <a class="anchor" href="#cookbook-occ-publish">§</a></h3>
 <pre class="diagram" aria-label="API write edit OCC technical route">
 [write_file / edit_file]
@@ -189,10 +189,10 @@
   </ol>
 </div>
 
-<p>Relevant code: direct write/edit router <span class="file-ref">backend/src/sandbox/daemon/workspace_tool_dispatch.py:113-179</span>, preparer <span class="file-ref">backend/src/sandbox/occ/changeset_preparation.py:41-174</span>, commit queue <span class="file-ref">backend/src/sandbox/occ/commit_queue.py:55-239</span>, transaction <span class="file-ref">backend/src/sandbox/occ/commit_transaction.py:65-141</span>, and result projection <span class="file-ref">backend/src/sandbox/daemon/changeset_projection.py:16-60</span>.</p>
+<p>Relevant code: direct write/edit router <span class="file-ref">sandbox/crates/eos-daemon/src/dispatch/dispatcher.rs</span>, preparer <span class="file-ref">sandbox/crates/eos-occ/src/service.rs</span>, commit queue <span class="file-ref">sandbox/crates/eos-occ/src/commit_queue.rs</span>, transaction <span class="file-ref">sandbox/crates/eos-occ/src/service.rs</span>, and result projection <span class="file-ref">sandbox/crates/eos-daemon/src/services/overlay/mod.rs</span>.</p>
 
 </section>
-<section id="cookbook-isolated" data-last-reviewed-commit="HEAD-plus-worktree" data-evidence-paths=".eos-agents/tools/enter_isolated_workspace.md .eos-agents/tools/exit_isolated_workspace.md agent-core/crates/eos-tools/src/hooks/require_no_background_sessions.rs agent-core/crates/eos-runtime/src/isolated_workspace.rs agent-core/crates/eos-sandbox-api/src/tool_api/isolated.rs backend/src/tools/sandbox/_lib/registry.py backend/src/tools/isolated_workspace/enter_isolated_workspace/definition.py backend/src/tools/isolated_workspace/exit_isolated_workspace/definition.py backend/src/sandbox/host/isolated_workspace_lifecycle.py backend/src/sandbox/daemon/rpc/dispatcher.py backend/src/sandbox/isolated_workspace/_control_plane/pipeline_registry.py backend/src/sandbox/isolated_workspace/_control_plane/workspace_handle_lifecycle.py backend/src/sandbox/isolated_workspace/pipeline.py sandbox/crates/eos-daemon/src/workspace_ops.rs sandbox/crates/eos-daemon/src/workspace_ops/isolated_workspace.rs sandbox/crates/eos-daemon/src/services/command_session/mod.rs sandbox/crates/eos-daemon/src/services/command_session/ports/isolated.rs sandbox/crates/eos-command-session/src/manager.rs sandbox/crates/eos-daemon/src/services/isolated_workspace/mod.rs sandbox/crates/eos-runner/src/setns.rs">
+<section id="cookbook-isolated" data-last-reviewed-commit="HEAD-plus-worktree" data-evidence-paths=".eos-agents/tools/enter_isolated_workspace.md .eos-agents/tools/exit_isolated_workspace.md agent-core/crates/eos-tools/src/hooks/require_no_background_sessions.rs agent-core/crates/eos-runtime/src/isolated_workspace.rs agent-core/crates/eos-sandbox-api/src/tool_api/isolated.rs sandbox/crates/eos-daemon/src/workspace_ops.rs sandbox/crates/eos-daemon/src/workspace_ops/isolated_workspace.rs sandbox/crates/eos-daemon/src/services/command_session/mod.rs sandbox/crates/eos-daemon/src/services/command_session/ports/isolated.rs sandbox/crates/eos-command-session/src/manager.rs sandbox/crates/eos-daemon/src/services/isolated_workspace/mod.rs sandbox/crates/eos-runner/src/setns.rs">
 <h3>10.4 Isolated Workspace Tool Lifecycle <a class="anchor" href="#cookbook-isolated">§</a></h3>
 <pre class="diagram" aria-label="Isolated workspace lifecycle branches">
 [enter_isolated_workspace]
@@ -228,10 +228,10 @@
   </ol>
 </div>
 
-<p>Relevant code: Rust tool config <span class="file-ref">.eos-agents/tools/enter_isolated_workspace.md</span>, <span class="file-ref">.eos-agents/tools/exit_isolated_workspace.md</span>, Rust background-session hook <span class="file-ref">agent-core/crates/eos-tools/src/hooks/require_no_background_sessions.rs</span>, runtime bridge <span class="file-ref">agent-core/crates/eos-runtime/src/isolated_workspace.rs</span>, sandbox API bridge <span class="file-ref">agent-core/crates/eos-sandbox-api/src/tool_api/isolated.rs</span>, Rust isolated file/search routing <span class="file-ref">sandbox/crates/eos-daemon/src/workspace_ops.rs</span>, <span class="file-ref">sandbox/crates/eos-daemon/src/workspace_ops/isolated_workspace.rs</span>, Rust command routing and runtime <span class="file-ref">sandbox/crates/eos-daemon/src/services/command_session/mod.rs</span>, <span class="file-ref">sandbox/crates/eos-daemon/src/services/command_session/ports/isolated.rs</span>, <span class="file-ref">sandbox/crates/eos-command-session/src/manager.rs</span>, Rust daemon lifecycle <span class="file-ref">sandbox/crates/eos-daemon/src/services/isolated_workspace/mod.rs</span>, legacy Python tools registry <span class="file-ref">backend/src/tools/sandbox/_lib/registry.py:17-31</span>, legacy Python host lifecycle <span class="file-ref">backend/src/sandbox/host/isolated_workspace_lifecycle.py:41-136</span>, lazy pipeline construction <span class="file-ref">backend/src/sandbox/isolated_workspace/_control_plane/pipeline_registry.py:73-113</span>, handle lifecycle <span class="file-ref">backend/src/sandbox/isolated_workspace/_control_plane/workspace_handle_lifecycle.py:21-260</span>, and Python isolated run/no-publish path <span class="file-ref">backend/src/sandbox/isolated_workspace/pipeline.py:156-188</span>.</p>
+<p>Relevant code: Rust tool config <span class="file-ref">.eos-agents/tools/enter_isolated_workspace.md</span>, <span class="file-ref">.eos-agents/tools/exit_isolated_workspace.md</span>, Rust background-session hook <span class="file-ref">agent-core/crates/eos-tools/src/hooks/require_no_background_sessions.rs</span>, runtime bridge <span class="file-ref">agent-core/crates/eos-runtime/src/isolated_workspace.rs</span>, sandbox API bridge <span class="file-ref">agent-core/crates/eos-sandbox-api/src/tool_api/isolated.rs</span>, Rust isolated file/search routing <span class="file-ref">sandbox/crates/eos-daemon/src/workspace_ops.rs</span>, <span class="file-ref">sandbox/crates/eos-daemon/src/workspace_ops/isolated_workspace.rs</span>, Rust command routing and runtime <span class="file-ref">sandbox/crates/eos-daemon/src/services/command_session/mod.rs</span>, <span class="file-ref">sandbox/crates/eos-daemon/src/services/command_session/ports/isolated.rs</span>, <span class="file-ref">sandbox/crates/eos-command-session/src/manager.rs</span>, Rust daemon lifecycle <span class="file-ref">sandbox/crates/eos-daemon/src/services/isolated_workspace/mod.rs</span>, tools registry <span class="file-ref">agent-core/crates/eos-tools/src/tools/sandbox/mod.rs</span>, host lifecycle <span class="file-ref">agent-core/crates/eos-sandbox-host/src/lifecycle.rs</span>, lazy session construction <span class="file-ref">sandbox/crates/eos-isolated-workspace/src/session.rs</span>, handle lifecycle <span class="file-ref">sandbox/crates/eos-isolated-workspace/src/session/lifecycle.rs</span>, and isolated run/no-publish path <span class="file-ref">sandbox/crates/eos-isolated-workspace/src/session/lifecycle.rs</span>.</p>
 
 </section>
-<section id="cookbook-plugin-write" data-last-reviewed-commit="2a3e6cc7c" data-evidence-paths="backend/src/sandbox/ephemeral_workspace/plugin/host_dispatch.py backend/src/sandbox/ephemeral_workspace/plugin/op_registry.py backend/src/sandbox/ephemeral_workspace/plugin/overlay_dispatch.py backend/src/sandbox/ephemeral_workspace/workspace_publish.py">
+<section id="cookbook-plugin-write" data-last-reviewed-commit="2a3e6cc7c" data-evidence-paths="">
 <h3>10.5 Plugin Write Operation <a class="anchor" href="#cookbook-plugin-write">§</a></h3>
 <pre class="diagram" aria-label="Plugin write operation technical route">
 [plugin write tool]
@@ -261,10 +261,10 @@
   </ol>
 </div>
 
-<p>Relevant code: host dispatch <span class="file-ref">backend/src/sandbox/ephemeral_workspace/plugin/host_dispatch.py:70-186</span>, plugin registry <span class="file-ref">backend/src/sandbox/ephemeral_workspace/plugin/op_registry.py:85-220</span>, operation overlay dispatch <span class="file-ref">backend/src/sandbox/ephemeral_workspace/plugin/overlay_dispatch.py:29-173</span>, and workspace publish cycle <span class="file-ref">backend/src/sandbox/ephemeral_workspace/workspace_publish.py:84-99</span>.</p>
+<p>Relevant code: host dispatch <span class="file-ref">sandbox/crates/eos-daemon/src/services/plugins/dispatch.rs</span>, plugin registry <span class="file-ref">sandbox/crates/eos-daemon/src/services/plugins/service.rs</span>, operation overlay dispatch <span class="file-ref">sandbox/crates/eos-daemon/src/services/plugins/overlay.rs</span>, and workspace publish cycle <span class="file-ref">sandbox/crates/eos-ephemeral-workspace/src/finalize.rs</span>.</p>
 
 </section>
-<section id="cookbook-pyright-refresh" data-last-reviewed-commit="2a3e6cc7c" data-evidence-paths="backend/src/plugins/catalog/lsp/runtime/session_manager.py backend/src/plugins/catalog/lsp/runtime/pyright_session.py backend/src/plugins/catalog/lsp/runtime/apply.py">
+<section id="cookbook-pyright-refresh" data-last-reviewed-commit="2a3e6cc7c" data-evidence-paths="">
 <h3>10.6 Pyright Latest-Projection Refresh <a class="anchor" href="#cookbook-pyright-refresh">§</a></h3>
 <pre class="diagram" aria-label="Pyright latest projection refresh route">
 [Pyright / LSP request]
@@ -295,19 +295,19 @@
   </ol>
 </div>
 
-<p>Relevant code: session reconciliation <span class="file-ref">backend/src/plugins/catalog/lsp/runtime/session_manager.py:34-98</span>, overlay acquisition <span class="file-ref">backend/src/plugins/catalog/lsp/runtime/session_manager.py:176-221</span>, event pump <span class="file-ref">backend/src/plugins/catalog/lsp/runtime/session_manager.py:294-360</span>, Pyright remount/notification <span class="file-ref">backend/src/plugins/catalog/lsp/runtime/pyright_session.py:374-415</span>, <span class="file-ref">backend/src/plugins/catalog/lsp/runtime/pyright_session.py:583-650</span>, and LSP apply path <span class="file-ref">backend/src/plugins/catalog/lsp/runtime/apply.py:21-148</span>.</p>
+<p>Relevant code: session reconciliation <span class="file-ref">agent-core/crates/eos-plugin-catalog/lsp/runtime/ppc_service.py</span>, overlay acquisition <span class="file-ref">agent-core/crates/eos-plugin-catalog/lsp/runtime/ppc_service.py</span>, event pump <span class="file-ref">agent-core/crates/eos-plugin-catalog/lsp/runtime/ppc_service.py</span>, Pyright remount/notification <span class="file-ref">agent-core/crates/eos-plugin-catalog/lsp/runtime/ppc_service.py</span>, <span class="file-ref">agent-core/crates/eos-plugin-catalog/lsp/runtime/ppc_service.py</span>, and LSP apply path <span class="file-ref">agent-core/crates/eos-plugin-catalog/lsp/runtime/ppc_service.py</span>.</p>
 </section>
-<section id="cookbook-evidence-refresh" data-last-reviewed-commit="2a3e6cc7c" data-evidence-paths="backend/tests/live_e2e_test/sandbox/layer_stack_overlay_occ backend/src/test_runner/tests/mock/sandbox/ephemeral_workspace backend/src/test_runner/tests/mock/sandbox/background_tool backend/src/test_runner/tests/mock/sandbox/isolated_workspace backend/src/test_runner/tests/mock/sandbox/plugin backend/src/sandbox/isolated_workspace/_control_plane/pipeline_registry.py backend/src/test_runner/tests/mock/sandbox/isolated_workspace/conftest.py">
+<section id="cookbook-evidence-refresh" data-last-reviewed-commit="2a3e6cc7c" data-evidence-paths="">
 <h3>10.7 Cross-workflow Evidence and Refresh <a class="anchor" href="#cookbook-evidence-refresh">§</a></h3>
 <div class="evidence-grid">
   <div class="evidence-card">
     <h4>Behavior suites</h4>
     <ul>
-      <li><span class="file-ref">backend/tests/live_e2e_test/sandbox/layer_stack_overlay_occ</span> integrated public file, shell, OCC, and overlay workflows.</li>
-      <li><span class="file-ref">backend/src/test_runner/tests/mock/sandbox/ephemeral_workspace</span> ephemeral-mode cleanup and conflict workflows.</li>
-      <li><span class="file-ref">backend/src/test_runner/tests/mock/sandbox/background_tool</span> background command heartbeat/cancel/isolated-gate workflows.</li>
-      <li><span class="file-ref">backend/src/test_runner/tests/mock/sandbox/isolated_workspace</span> direct daemon RPC lifecycle, isolation, GC, networking, stress, and performance workflows.</li>
-      <li><span class="file-ref">backend/src/test_runner/tests/mock/sandbox/plugin</span> plugin/LSP runtime workflows.</li>
+      <li><span class="file-ref">sandbox/crates/eos-e2e-test/tests</span> integrated public file, shell, OCC, and overlay workflows.</li>
+      <li><span class="file-ref">integration-test/SPEC.md</span> ephemeral-mode cleanup and conflict workflows.</li>
+      <li><span class="file-ref">integration-test/SPEC.md</span> background command heartbeat/cancel/isolated-gate workflows.</li>
+      <li><span class="file-ref">integration-test/SPEC.md</span> direct daemon RPC lifecycle, isolation, GC, networking, stress, and performance workflows.</li>
+      <li><span class="file-ref">integration-test/SPEC.md</span> plugin/LSP runtime workflows.</li>
     </ul>
   </div>
   <div class="evidence-card">
@@ -317,7 +317,7 @@
   <div class="evidence-card">
     <h4>Isolated audit sequence</h4>
     <p>The daemon audit sink appends <code>sandbox_isolated_workspace_enter</code>, <code>sandbox_isolated_workspace_tool_call</code>, <code>sandbox_isolated_workspace_exit</code>, and GC/eviction events. Test fixtures truncate and snapshot the in-container JSONL via <code>raw_exec</code>, then derive phase/latency assertions from the copied file.</p>
-    <p>Evidence anchors: <span class="file-ref">backend/src/sandbox/isolated_workspace/_control_plane/pipeline_registry.py:55-70</span>, <span class="file-ref">backend/src/sandbox/isolated_workspace/_control_plane/pipeline_registry.py:103-113</span>, <span class="file-ref">backend/src/test_runner/tests/mock/sandbox/isolated_workspace/conftest.py:440-465</span>, and <span class="file-ref">backend/src/test_runner/tests/mock/sandbox/isolated_workspace/conftest.py:596-610</span>.</p>
+    <p>Evidence anchors: <span class="file-ref">sandbox/crates/eos-isolated-workspace/src/session.rs</span>, <span class="file-ref">sandbox/crates/eos-isolated-workspace/src/session.rs</span>, <span class="file-ref">integration-test/SPEC.md</span>, and <span class="file-ref">integration-test/SPEC.md</span>.</p>
   </div>
   <div class="evidence-card">
     <h4>Refresh triggers</h4>

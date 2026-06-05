@@ -52,7 +52,7 @@
 
 <p class="lead">This support page records how the Workflow wiki was built and how future agents should refresh it. It is documentation metadata only; runtime code is not owned here.</p>
 
-<section id="delegation-log" data-last-reviewed-commit="d32994314" data-evidence-paths=".agents/skills/codebase-wiki-builder/SKILL.md .agents/skills/codebase-wiki-builder/agents/graph_explorer.md .agents/skills/codebase-wiki-builder/agents/wiki_builder.md backend/src/workflow backend/src/agents/profile backend/src/tools/submission backend/src/tools/ask_helper backend/src/engine backend/src/sandbox">
+<section id="delegation-log" data-last-reviewed-commit="d32994314" data-evidence-paths=".agents/skills/codebase-wiki-builder/SKILL.md .agents/skills/codebase-wiki-builder/agents/graph_explorer.md .agents/skills/codebase-wiki-builder/agents/wiki_builder.md">
 <h2>Delegation Log <a class="anchor" href="#delegation-log">#</a></h2>
 <div class="edge-list">
   <div><b>coordinator/reducer</b><span>Owned scope, page taxonomy, shared assets, source-truth merge, stale-claim decisions, overview, maintenance, and final validation.</span></div>
@@ -98,12 +98,12 @@
     <li><code>python3 .agents/skills/codebase-wiki-builder/scripts/check_html_wiki.py docs/architecture/workflow/*.html</code></li>
     <li><code>git diff --check -- docs/architecture/workflow docs/architecture/assets/search-index.js docs/architecture/assets/nav.js docs/architecture/index.html</code></li>
     <li><code>rg -n "\\[\\[|\\]\\]|style=|&lt;style" docs/architecture/workflow</code></li>
-    <li><code>rg -n -e "WorkflowLifecycle" -e "IterationAttemptCoordinator" -e "AttemptOrchestrator" -e "delegate_workflow" -e "ask_advisor" backend/src/workflow backend/src/tools backend/tests/unit_test</code></li>
+    <li><code>rg -n -e "WorkflowLifecycle" -e "IterationAttemptCoordinator" -e "AttemptOrchestrator" -e "delegate_workflow" -e "ask_advisor" agent-core/crates/eos-workflow/src agent-core/crates/eos-tools/src</code></li>
   </ul>
 </div>
 </section>
 
-<section id="refresh-triggers" data-last-reviewed-commit="d32994314" data-evidence-paths="backend/src/workflow backend/src/agents/profile backend/src/tools/submission backend/src/tools/ask_helper backend/src/tools/_terminals backend/src/engine backend/src/sandbox backend/src/test_runner docs/architecture/tools docs/architecture/agent_loops docs/architecture/sandbox">
+<section id="refresh-triggers" data-last-reviewed-commit="d32994314" data-evidence-paths="docs/architecture/tools docs/architecture/agent_loops docs/architecture/sandbox">
 <h2>Refresh Triggers <a class="anchor" href="#refresh-triggers">#</a></h2>
 <div class="evidence-grid">
   <div class="evidence-card">
@@ -133,7 +133,7 @@
 </div>
 </section>
 
-<section id="stale-claims" data-last-reviewed-commit="d32994314" data-evidence-paths="docs/architecture/agent_loops/prompt-context.html docs/architecture/tools/submission.html backend/src/workflow backend/src/tools/submission backend/src/tools/_terminals/registry.py">
+<section id="stale-claims" data-last-reviewed-commit="d32994314" data-evidence-paths="docs/architecture/agent_loops/prompt-context.html docs/architecture/tools/submission.html">
 <h2>Stale Claims <a class="anchor" href="#stale-claims">#</a></h2>
 <div class="summary">
   <ul>

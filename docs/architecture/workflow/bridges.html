@@ -57,7 +57,7 @@
   <p>This boundary map is deliberately not a global orchestrator. Workflow starts a run, prepares one sandbox binding, composes launch messages, schedules attempt-scoped agents, and receives terminal submissions through persisted state. The engine loop remains the enforcement layer for terminal tools, and sandbox operations still pass through <code>tools/sandbox</code>, <code>sandbox.api</code>, and daemon workspace routing.</p>
 </div>
 
-<section id="bridge-boundary-map" data-last-reviewed-commit="d32994314" data-evidence-paths="backend/src/runtime/entry.py backend/src/runtime/sandbox_provisioning.py backend/src/workflow/attempt/launch.py backend/src/engine/api.py backend/src/engine/agent/lifecycle.py backend/src/engine/query/loop.py backend/src/tools/_framework/core/runtime.py backend/src/tools/sandbox backend/src/sandbox/api backend/src/sandbox/daemon/workspace_tool_dispatch.py docs/architecture/agent_loops/main-loop.html docs/architecture/agent_loops/prompt-context.html docs/architecture/agent_loops/provider-sandbox-bridge.html">
+<section id="bridge-boundary-map" data-last-reviewed-commit="d32994314" data-evidence-paths="docs/architecture/agent_loops/main-loop.html docs/architecture/agent_loops/prompt-context.html docs/architecture/agent_loops/provider-sandbox-bridge.html">
 <h2>Runtime Boundary Map <a class="anchor" href="#bridge-boundary-map">#</a></h2>
 <div class="diagram" aria-label="Workflow engine tools sandbox boundary map">
   <div class="flow-row">
@@ -82,7 +82,7 @@
 </div>
 </section>
 
-<section id="entry-sandbox-provisioning" data-last-reviewed-commit="HEAD-plus-worktree" data-evidence-paths="backend/src/runtime/entry.py backend/src/runtime/sandbox_provisioning.py backend/src/workflow/starter.py backend/src/workflow/_core/state.py backend/src/workflow/attempt/launch.py backend/tests/unit_test/test_workflow/test_lifecycle/test_sandbox_provisioning.py backend/src/sandbox/api/provider_control.py">
+<section id="entry-sandbox-provisioning" data-last-reviewed-commit="HEAD-plus-worktree" data-evidence-paths="">
 <h2>Entry And Sandbox Provisioning <a class="anchor" href="#entry-sandbox-provisioning">#</a></h2>
 <p><code>start_request()</code> is the entry seam for top-level request work. It receives stores, runtime config, prompt, optional sandbox id, event callback, and optional sandbox provisioner. It creates the request row, mints a root Task with <code>workflow_id=NULL</code>, builds the workflow runtime for future delegated work, and schedules the root agent directly through <code>engine.run_ephemeral_agent</code>. <code>WorkflowStarter.start()</code> is used only after an agent calls <code>delegate_workflow</code>.</p>
 <pre class="diagram" aria-label="Workflow entry workflow diagram">
@@ -122,7 +122,7 @@
 </div>
 </section>
 
-<section id="launch-engine-bridge" data-last-reviewed-commit="d32994314" data-evidence-paths="backend/src/workflow/attempt/launch.py backend/src/workflow/agent_launch/composer.py backend/src/workflow/agent_launch/entry_messages.py backend/src/workflow/context_engine/skill_message.py backend/src/workflow/context_engine/engine.py backend/src/tools/_framework/core/runtime.py backend/src/engine/api.py backend/src/engine/agent/lifecycle.py backend/src/engine/query/request.py backend/tests/unit_test/test_workflow/test_agent_launch/test_runner_kwargs_contract.py backend/tests/unit_test/test_workflow/test_agent_launch/test_attempt_launcher_retry.py backend/src/test_runner/tests/mock/workflow/test_initial_messages_capture.py">
+<section id="launch-engine-bridge" data-last-reviewed-commit="d32994314" data-evidence-paths="">
 <h2>Launch To Engine Path <a class="anchor" href="#launch-engine-bridge">#</a></h2>
 <p>The attempt launcher is the Workflow-to-engine adapter. It receives an <code>AgentLaunch</code> record from <code>AgentLaunchFactory</code>, attaches Workflow runtime metadata, chooses the launch message shape, and awaits the runner. If no runner is injected, it imports <code>engine.api.run_ephemeral_agent</code> lazily and uses the real engine path.</p>
 <div class="diagram" aria-label="Attempt launch to engine path">
@@ -142,7 +142,7 @@
 </div>
 </section>
 
-<section id="tool-and-sandbox-routing" data-last-reviewed-commit="HEAD-plus-worktree" data-evidence-paths="backend/src/engine/agent/lifecycle.py backend/src/engine/query/loop.py backend/src/engine/tool_call/dispatch.py backend/src/tools/_framework/execution/tool_call.py backend/src/tools/_framework/core/runtime.py backend/src/tools/sandbox/_lib/registry.py backend/src/tools/sandbox/_lib/tool_context.py backend/src/tools/sandbox/read_file/read_file.py backend/src/tools/sandbox/write_file/write_file.py backend/src/tools/sandbox/edit_file/edit_file.py backend/src/tools/sandbox/exec_command/exec_command.py backend/src/sandbox/api/tool backend/src/sandbox/api/transport.py backend/src/sandbox/daemon/workspace_tool_dispatch.py docs/architecture/tools/sandbox.html docs/architecture/sandbox/workspaces.html docs/architecture/agent_loops/provider-sandbox-bridge.html">
+<section id="tool-and-sandbox-routing" data-last-reviewed-commit="HEAD-plus-worktree" data-evidence-paths="docs/architecture/tools/sandbox.html docs/architecture/sandbox/workspaces.html docs/architecture/agent_loops/provider-sandbox-bridge.html">
 <h2>Tool And Sandbox Routing <a class="anchor" href="#tool-and-sandbox-routing">#</a></h2>
 <p>The engine does not special-case Workflow sandbox work. Workflow metadata enters the normal <code>ExecutionMetadata</code> object, the tool framework exposes it through <code>ToolExecutionContextService</code>, and sandbox tools build typed <code>sandbox.api</code> requests with caller identity.</p>
 <pre class="diagram" aria-label="Workflow sandbox tool routing diagram">
@@ -177,7 +177,7 @@
 </div>
 </section>
 
-<section id="runner-live-artifacts" data-last-reviewed-commit="d32994314" data-evidence-paths="backend/src/test_runner/core/engine.py backend/src/test_runner/audit/recorder.py backend/src/test_runner/audit/stream_bridge.py backend/src/message/agent_message_recorder.py backend/src/engine/query/request.py backend/src/test_runner/agent/mock/scenario_loop_runner.py backend/src/test_runner/tests/mock/workflow/test_initial_messages_capture.py backend/src/test_runner/tests/mock/workflow/test_correctness.py backend/src/test_runner/tests/mock/workflow/test_full_case_user_input.py">
+<section id="runner-live-artifacts" data-last-reviewed-commit="d32994314" data-evidence-paths="">
 <h2>Runner And Live Artifacts <a class="anchor" href="#runner-live-artifacts">#</a></h2>
 <p><code>test_runner.core.engine.run_pipeline()</code> is the live/mock/benchmark harness entrypoint around Workflow. It provisions the sandbox, opens an audit bus, starts <code>AuditRecorder</code>, injects a runner if the mode has one, starts Workflow, waits for the launcher to go idle, releases the sandbox, and writes a performance report task.</p>
 <div class="trace-grid">
@@ -197,7 +197,7 @@
 </div>
 </section>
 
-<section id="boundary-rules-failure-modes" data-last-reviewed-commit="HEAD-plus-worktree" data-evidence-paths="backend/src/runtime/entry.py backend/src/workflow/attempt/launch.py backend/src/workflow/attempt/orchestrator.py backend/src/workflow/starter.py backend/src/tools/submission/context/attempt.py backend/src/tools/submission/context/generator.py backend/src/tools/workflow backend/src/engine/agent/lifecycle.py backend/src/engine/query/loop.py backend/src/sandbox/daemon/workspace_tool_dispatch.py">
+<section id="boundary-rules-failure-modes" data-last-reviewed-commit="HEAD-plus-worktree" data-evidence-paths="">
 <h2>Boundary Rules And Failure Modes <a class="anchor" href="#boundary-rules-failure-modes">#</a></h2>
 <div class="edge-list">
   <div><b>No global orchestrator</b><span><code>AttemptOrchestrator</code> is per Attempt. Entry bootstrap wires registries and stores, but mutation still flows through Workflow, Iteration, Attempt, task, and terminal-submission state.</span></div>
@@ -209,7 +209,7 @@
 </div>
 </section>
 
-<section id="tests-maintenance" data-last-reviewed-commit="d32994314" data-evidence-paths="backend/tests/unit_test/test_workflow/test_lifecycle/test_phase03_submission_integration.py backend/tests/unit_test/test_workflow/test_lifecycle/test_sandbox_provisioning.py backend/tests/unit_test/test_workflow/test_agent_launch/test_runner_kwargs_contract.py backend/tests/unit_test/test_workflow/test_agent_launch/test_attempt_launcher_retry.py backend/src/test_runner/tests/mock/workflow/test_initial_messages_capture.py backend/src/test_runner/tests/mock/workflow/test_correctness.py backend/src/test_runner/tests/mock/workflow/test_full_case_user_input.py docs/architecture/agent_loops/main-loop.html docs/architecture/agent_loops/prompt-context.html docs/architecture/agent_loops/provider-sandbox-bridge.html docs/architecture/tools/sandbox.html docs/architecture/sandbox/workspaces.html">
+<section id="tests-maintenance" data-last-reviewed-commit="d32994314" data-evidence-paths="docs/architecture/agent_loops/main-loop.html docs/architecture/agent_loops/prompt-context.html docs/architecture/agent_loops/provider-sandbox-bridge.html docs/architecture/tools/sandbox.html docs/architecture/sandbox/workspaces.html">
 <h2>Tests And Maintenance <a class="anchor" href="#tests-maintenance">#</a></h2>
 <div class="evidence-grid">
   <div class="evidence-card">

@@ -52,7 +52,7 @@
 
 <p class="lead">This support page records how the Agent Loops wiki was built and how to keep it current. It is documentation metadata only; runtime code is not owned here.</p>
 
-<section id="delegation-log" data-last-reviewed-commit="e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa" data-evidence-paths=".agents/skills/codebase-wiki-builder/SKILL.md .agents/skills/codebase-wiki-builder/agents/graph_explorer.md .agents/skills/codebase-wiki-builder/agents/wiki_builder.md backend/src/engine backend/src/message backend/src/notification backend/src/prompt backend/src/workflow/context_engine backend/src/sandbox/provider">
+<section id="delegation-log" data-last-reviewed-commit="e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa" data-evidence-paths=".agents/skills/codebase-wiki-builder/SKILL.md .agents/skills/codebase-wiki-builder/agents/graph_explorer.md .agents/skills/codebase-wiki-builder/agents/wiki_builder.md">
 <h2>Delegation Log <a class="anchor" href="#delegation-log">#</a></h2>
 <div class="edge-list">
   <div><b>coordinator/reducer</b><span>Owned scope, taxonomy, graph reduction, index, shared assets, maintenance page, validation, and final integration.</span></div>
@@ -98,7 +98,7 @@
 </div>
 </section>
 
-<section id="refresh-triggers" data-last-reviewed-commit="e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa" data-evidence-paths="backend/src/engine backend/src/message backend/src/notification backend/src/prompt backend/src/workflow/context_engine backend/src/workflow/agent_launch backend/src/sandbox/provider backend/src/sandbox/api backend/src/sandbox/daemon backend/src/tools">
+<section id="refresh-triggers" data-last-reviewed-commit="e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa" data-evidence-paths="">
 <h2>Refresh Triggers <a class="anchor" href="#refresh-triggers">#</a></h2>
 <div class="evidence-grid">
   <div class="evidence-card">
@@ -128,18 +128,18 @@
 </div>
 </section>
 
-<section id="component-gap-sweep" data-last-reviewed-commit="e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa" data-evidence-paths="backend/src/providers backend/src/engine/audit backend/src/engine/agent/run_tracker.py backend/src/prompt/prompt_report_recorder.py docs/architecture/agent_loops/model-provider.html docs/architecture/agent_loops/notifications-messages.html docs/architecture/agent_loops/prompt-context.html">
+<section id="component-gap-sweep" data-last-reviewed-commit="e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa" data-evidence-paths="docs/architecture/agent_loops/model-provider.html docs/architecture/agent_loops/notifications-messages.html docs/architecture/agent_loops/prompt-context.html">
 <h2>Component Gap Sweep <a class="anchor" href="#component-gap-sweep">#</a></h2>
 <div class="summary">
   <ul>
-    <li><code>backend/src/providers</code> is now covered by <a class="wiki-link" href="model-provider.html">Model Provider Runtime</a>. It was the main missing source module from the original engine/notification/message/provider/prompt scope.</li>
-    <li><code>backend/src/engine/audit</code>, <code>AgentRunTracker</code>, and <code>PromptReportRecorder</code> are now covered by <a class="wiki-link" href="notifications-messages.html#observability-persistence">Observability And Persistence</a>.</li>
-    <li><code>backend/src/sandbox/provider</code> remains covered separately by <a class="wiki-link" href="provider-sandbox-bridge.html">Sandbox Tool Dispatch Path</a> to avoid mixing model-provider and sandbox-provider ownership.</li>
+    <li><code>agent-core/crates/eos-llm-client/src</code> is now covered by <a class="wiki-link" href="model-provider.html">Model Provider Runtime</a>. It was the main missing source module from the original engine/notification/message/provider/prompt scope.</li>
+    <li><code>agent-core/crates/eos-audit/src</code>, <code>AgentRunTracker</code>, and <code>PromptReportRecorder</code> are now covered by <a class="wiki-link" href="notifications-messages.html#observability-persistence">Observability And Persistence</a>.</li>
+    <li><code>agent-core/crates/eos-sandbox-host/src/provider.rs</code> remains covered separately by <a class="wiki-link" href="provider-sandbox-bridge.html">Sandbox Tool Dispatch Path</a> to avoid mixing model-provider and sandbox-provider ownership.</li>
   </ul>
 </div>
 </section>
 
-<section id="stale-claims" data-last-reviewed-commit="HEAD-plus-worktree" data-evidence-paths="docs/architecture/tools/subagent.html docs/architecture/tools/background.html backend/tests/live_e2e_test/sandbox/phase-04-pure-sandbox-api-load-report.md backend/src/engine/agent/lifecycle.py backend/src/workflow/context_engine backend/src/tools/_hooks/disallow_nested_planner_deferral.py backend/src/tools/workflow backend/src/sandbox/api/transport.py backend/src/sandbox/daemon/builtin_operations.py">
+<section id="stale-claims" data-last-reviewed-commit="HEAD-plus-worktree" data-evidence-paths="docs/architecture/tools/subagent.html docs/architecture/tools/background.html">
 <h2>Stale Claims <a class="anchor" href="#stale-claims">#</a></h2>
 <div class="summary">
   <ul>
@@ -148,7 +148,7 @@
     <li>The older packet renderer and token-priority description is obsolete; current context rendering is a pure XML pass over <code>AgentContext</code>.</li>
     <li>A comment in <code>EphemeralAgent.run</code> still mentions a retry path, but <code>run_ephemeral_agent</code> documents that retry-with-fresh-budget no longer exists.</li>
     <li>A historical sandbox load report mentions public <code>api.shell_batch</code>; current daemon/API source exposes <code>api.v1.shell</code> and harness-local batch helpers.</li>
-    <li>The singular <code>backend/src/provider</code> path does not exist; the model-provider package is <code>backend/src/providers</code> and the sandbox-provider package is <code>backend/src/sandbox/provider</code>.</li>
+    <li>The model-provider package is <code>agent-core/crates/eos-llm-client/src</code>; the sandbox-provider lives in <code>agent-core/crates/eos-sandbox-host/src/provider.rs</code>.</li>
   </ul>
 </div>
 </section>
@@ -158,7 +158,7 @@
 <div class="summary">
   <ul>
     <li><span><strong>2026-05-26.</strong> Created the Agent Loops architecture module from three graph-explorer shards plus parallel write lanes, covering engine run lifecycle, background operations, prompt assembly, provider/sandbox dispatch path, notifications, messages, stale claims, and validation rules.</span></li>
-    <li><span><strong>2026-05-26.</strong> Added the model-provider runtime for <code>backend/src/providers</code> and filled the observability/persistence and prompt-environment gaps found during the component sweep.</span></li>
+    <li><span><strong>2026-05-26.</strong> Added the model-provider runtime for <code>agent-core/crates/eos-llm-client/src</code> and filled the observability/persistence and prompt-environment gaps found during the component sweep.</span></li>
   </ul>
 </div>
 </section>

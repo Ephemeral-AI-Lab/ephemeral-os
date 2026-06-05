@@ -43,7 +43,7 @@
 </div>
 <section id="occ"
   data-last-reviewed-commit="2a3e6cc7c"
-  data-evidence-paths="backend/src/sandbox/occ backend/src/sandbox/layer_stack backend/src/sandbox/overlay">
+  data-evidence-paths="">
 <h2>4. OCC <a class="anchor" href="#occ">§</a></h2>
 <nav class="page-toc" aria-labelledby="page-toc-heading">
   <h3 id="page-toc-heading">Contents</h3>
@@ -77,9 +77,9 @@
 </section>
 <section id="occ-change-sources"
   data-last-reviewed-commit="2a3e6cc7c"
-  data-evidence-paths="backend/src/sandbox/occ/changeset.py backend/src/sandbox/occ/changeset_preparation.py backend/src/sandbox/occ/path_staging.py backend/src/sandbox/occ/commit_transaction.py backend/src/sandbox/occ/commit_queue.py backend/src/sandbox/occ/overlay_change_conversion.py backend/src/sandbox/occ/service.py">
+  data-evidence-paths="">
 <h3>4.1 Change Sources <a class="anchor" href="#occ-change-sources">§</a></h3>
-<p>OCC accepts typed changes tagged as <code>api_write</code>, <code>api_edit</code>, or <code>overlay_capture</code> <span class="file-ref">backend/src/sandbox/occ/changeset.py:15-125</span>. The preparer groups changes by normalized path, drops <code>.git</code>, routes gitignored paths to <code>DIRECT</code>, routes tracked paths to <code>GATED</code>, and attaches base hashes when needed <span class="file-ref">backend/src/sandbox/occ/changeset_preparation.py:41-158</span>.</p>
+<p>OCC accepts typed changes tagged as <code>api_write</code>, <code>api_edit</code>, or <code>overlay_capture</code> <span class="file-ref">sandbox/crates/eos-occ/src/route.rs</span>. The preparer groups changes by normalized path, drops <code>.git</code>, routes gitignored paths to <code>DIRECT</code>, routes tracked paths to <code>GATED</code>, and attaches base hashes when needed <span class="file-ref">sandbox/crates/eos-occ/src/service.rs</span>.</p>
 
 <div class="diagram" aria-label="OCC publish flow">
   <div class="flow-row">
@@ -95,14 +95,14 @@
   </div>
 </div>
 
-<p>The stager uses different profiles for direct and gated changes. Direct changes skip hash checks and support symlinks; gated changes check hashes and reject unsupported symlinks <span class="file-ref">backend/src/sandbox/occ/path_staging.py:84-115</span>. The commit transaction reads the live active manifest inside the layer-stack transaction, validates each path group, stages accepted deltas, and calls <code>publish_layer</code> once <span class="file-ref">backend/src/sandbox/occ/commit_transaction.py:65-141</span>. The commit queue runs a background worker, drains/batches work, retries bounded CAS conflicts, and splits atomic or overlay-capture changes away from unrelated batches <span class="file-ref">backend/src/sandbox/occ/commit_queue.py:55-239</span>.</p>
+<p>The stager uses different profiles for direct and gated changes. Direct changes skip hash checks and support symlinks; gated changes check hashes and reject unsupported symlinks <span class="file-ref">sandbox/crates/eos-occ/src/service.rs</span>. The commit transaction reads the live active manifest inside the layer-stack transaction, validates each path group, stages accepted deltas, and calls <code>publish_layer</code> once <span class="file-ref">sandbox/crates/eos-occ/src/service.rs</span>. The commit queue runs a background worker, drains/batches work, retries bounded CAS conflicts, and splits atomic or overlay-capture changes away from unrelated batches <span class="file-ref">sandbox/crates/eos-occ/src/commit_queue.rs</span>.</p>
 
-<p>Overlay changes are converted without rereading large files into memory: write changes thread <code>content_path</code> and <code>final_hash</code> into <code>WriteChange</code>, deletes become <code>DeleteChange</code>, symlinks become <code>SymlinkChange</code>, and opaque markers become <code>OpaqueDirChange</code> <span class="file-ref">backend/src/sandbox/occ/overlay_change_conversion.py:19-72</span>.</p>
+<p>Overlay changes are converted without rereading large files into memory: write changes thread <code>content_path</code> and <code>final_hash</code> into <code>WriteChange</code>, deletes become <code>DeleteChange</code>, symlinks become <code>SymlinkChange</code>, and opaque markers become <code>OpaqueDirChange</code> <span class="file-ref">sandbox/crates/eos-occ/src/overlay_change_conversion.rs</span>.</p>
 
 <div class="edge-list">
-  <div><b>calls</b><span><code>OccService.apply_changeset()</code> prepares a changeset, then commits it through the queue <span class="file-ref">backend/src/sandbox/occ/service.py:52-104</span>.</span></div>
-  <div><b>owns-state</b><span><code>CommitQueue</code> owns the background worker, queued futures, drain window, batching rules, and CAS retry budget <span class="file-ref">backend/src/sandbox/occ/commit_queue.py:54-183</span>.</span></div>
-  <div><b>calls</b><span><code>CommitTransaction.revalidate_and_publish()</code> opens the LayerStack transaction, revalidates every path group against the live manifest, stages accepted content, and publishes one layer <span class="file-ref">backend/src/sandbox/occ/commit_transaction.py:62-138</span>.</span></div>
+  <div><b>calls</b><span><code>OccService.apply_changeset()</code> prepares a changeset, then commits it through the queue <span class="file-ref">sandbox/crates/eos-occ/src/service.rs</span>.</span></div>
+  <div><b>owns-state</b><span><code>CommitQueue</code> owns the background worker, queued futures, drain window, batching rules, and CAS retry budget <span class="file-ref">sandbox/crates/eos-occ/src/commit_queue.rs</span>.</span></div>
+  <div><b>calls</b><span><code>CommitTransaction.revalidate_and_publish()</code> opens the LayerStack transaction, revalidates every path group against the live manifest, stages accepted content, and publishes one layer <span class="file-ref">sandbox/crates/eos-occ/src/service.rs</span>.</span></div>
   <div><b>emits-artifact</b><span>Result timings expose queue wait, commit worker, manifest lag, route/base-hash cost, transaction lock wait, validation, staging, and publish cost.</span></div>
 </div>
 
@@ -119,7 +119,7 @@
 </section>
 <section id="occ-technical-workflow"
   data-last-reviewed-commit="2a3e6cc7c"
-  data-evidence-paths="backend/src/sandbox/occ/service.py backend/src/sandbox/occ/changeset_preparation.py backend/src/sandbox/occ/commit_queue.py backend/src/sandbox/occ/commit_transaction.py backend/src/sandbox/occ/path_staging.py backend/src/sandbox/occ/maintenance.py">
+  data-evidence-paths="">
 <h3>4.2 Technical Workflow <a class="anchor" href="#occ-technical-workflow">§</a></h3>
 
 <pre class="diagram" aria-label="OCC prepare commit branch workflow">
@@ -160,18 +160,18 @@
 <table>
   <thead><tr><th>Stage</th><th>Current code behavior</th><th>Failure mode</th><th>Evidence</th></tr></thead>
   <tbody>
-    <tr><td>Prepare</td><td>Lock-free path normalization, grouping, gitignore routing, and base-hash attachment.</td><td>Reject invalid paths or drop ignored internal paths before queueing.</td><td><span class="file-ref">backend/src/sandbox/occ/service.py:237-272</span>, <span class="file-ref">backend/src/sandbox/occ/changeset_preparation.py:41-174</span></td></tr>
-    <tr><td>Queue</td><td>Owns a worker task and a small drain window; batches only disjoint safe changes.</td><td>CAS race retries up to <code>MAX_OCC_CAS_RETRIES</code>.</td><td><span class="file-ref">backend/src/sandbox/occ/commit_queue.py:22-36</span>, <span class="file-ref">backend/src/sandbox/occ/commit_queue.py:128-214</span></td></tr>
-    <tr><td>Transaction</td><td>Revalidates against live manifest, stages filesystem deltas, and calls publisher once.</td><td>Hash mismatch becomes <code>ABORTED_VERSION</code>; overlap can abort an atomic set.</td><td><span class="file-ref">backend/src/sandbox/occ/commit_transaction.py:65-183</span></td></tr>
-    <tr><td>Staging</td><td>Direct route skips hash checks; gated route requires base hash checks and rejects symlinks.</td><td>Unsupported or stale paths become rejected/aborted statuses.</td><td><span class="file-ref">backend/src/sandbox/occ/path_staging.py:84-115</span>, <span class="file-ref">backend/src/sandbox/occ/path_staging.py:153-340</span></td></tr>
-    <tr><td>Maintenance</td><td>Successful publishes can trigger auto-squash when manifest depth is above the configured max.</td><td>No publish means no post-publish maintenance.</td><td><span class="file-ref">backend/src/sandbox/occ/maintenance.py:25-66</span>, <span class="file-ref">backend/src/sandbox/occ/service.py:150-179</span></td></tr>
+    <tr><td>Prepare</td><td>Lock-free path normalization, grouping, gitignore routing, and base-hash attachment.</td><td>Reject invalid paths or drop ignored internal paths before queueing.</td><td><span class="file-ref">sandbox/crates/eos-occ/src/service.rs</span>, <span class="file-ref">sandbox/crates/eos-occ/src/service.rs</span></td></tr>
+    <tr><td>Queue</td><td>Owns a worker task and a small drain window; batches only disjoint safe changes.</td><td>CAS race retries up to <code>MAX_OCC_CAS_RETRIES</code>.</td><td><span class="file-ref">sandbox/crates/eos-occ/src/commit_queue.rs</span>, <span class="file-ref">sandbox/crates/eos-occ/src/commit_queue.rs</span></td></tr>
+    <tr><td>Transaction</td><td>Revalidates against live manifest, stages filesystem deltas, and calls publisher once.</td><td>Hash mismatch becomes <code>ABORTED_VERSION</code>; overlap can abort an atomic set.</td><td><span class="file-ref">sandbox/crates/eos-occ/src/service.rs</span></td></tr>
+    <tr><td>Staging</td><td>Direct route skips hash checks; gated route requires base hash checks and rejects symlinks.</td><td>Unsupported or stale paths become rejected/aborted statuses.</td><td><span class="file-ref">sandbox/crates/eos-occ/src/service.rs</span>, <span class="file-ref">sandbox/crates/eos-occ/src/service.rs</span></td></tr>
+    <tr><td>Maintenance</td><td>Successful publishes can trigger auto-squash when manifest depth is above the configured max.</td><td>No publish means no post-publish maintenance.</td><td><span class="file-ref">sandbox/crates/eos-layerstack/src/squash.rs</span>, <span class="file-ref">sandbox/crates/eos-occ/src/service.rs</span></td></tr>
   </tbody>
 </table>
 
 </section>
 <section id="occ-routes-statuses"
   data-last-reviewed-commit="2a3e6cc7c"
-  data-evidence-paths="backend/src/sandbox/occ/changeset.py backend/src/sandbox/occ/changeset_preparation.py backend/src/sandbox/occ/path_staging.py">
+  data-evidence-paths="">
 <h3>4.3 Routes and Statuses <a class="anchor" href="#occ-routes-statuses">§</a></h3>
 <div class="trace-grid" aria-label="OCC route semantics">
   <div><code>DROP</code></div>
@@ -200,7 +200,7 @@
 </section>
 <section id="occ-throughput"
   data-last-reviewed-commit="2a3e6cc7c"
-  data-evidence-paths="backend/src/sandbox/occ/commit_queue.py backend/src/sandbox/occ/commit_transaction.py backend/src/sandbox/occ/service.py">
+  data-evidence-paths="">
 <h3>4.4 Throughput Model <a class="anchor" href="#occ-throughput">§</a></h3>
 <div class="summary">
   <ul>
@@ -231,25 +231,25 @@
 </section>
 <section id="occ-evidence-refresh"
   data-last-reviewed-commit="2a3e6cc7c"
-  data-evidence-paths="backend/src/sandbox/occ backend/tests/live_e2e_test/sandbox/occ backend/tests/live_e2e_test/sandbox/layer_stack_overlay_occ">
+  data-evidence-paths="">
 <h3>4.5 Evidence and Refresh <a class="anchor" href="#occ-evidence-refresh">§</a></h3>
 <div class="evidence-grid">
   <div class="evidence-card">
     <h4>Source files</h4>
     <ul>
-      <li><span class="file-ref">backend/src/sandbox/occ/changeset.py</span> change/result models and route/status enums.</li>
-      <li><span class="file-ref">backend/src/sandbox/occ/changeset_preparation.py</span> route and base-hash preparation.</li>
-      <li><span class="file-ref">backend/src/sandbox/occ/commit_queue.py</span> serialization and batching.</li>
-      <li><span class="file-ref">backend/src/sandbox/occ/commit_transaction.py</span> live revalidation and LayerStack publish.</li>
+      <li><span class="file-ref">sandbox/crates/eos-occ/src/route.rs</span> change/result models and route/status enums.</li>
+      <li><span class="file-ref">sandbox/crates/eos-occ/src/service.rs</span> route and base-hash preparation.</li>
+      <li><span class="file-ref">sandbox/crates/eos-occ/src/commit_queue.rs</span> serialization and batching.</li>
+      <li><span class="file-ref">sandbox/crates/eos-occ/src/service.rs</span> live revalidation and LayerStack publish.</li>
     </ul>
   </div>
   <div class="evidence-card">
     <h4>Tests</h4>
     <ul>
-      <li><span class="file-ref">backend/tests/live_e2e_test/sandbox/occ/test_direct_route.py</span></li>
-      <li><span class="file-ref">backend/tests/live_e2e_test/sandbox/occ/test_gated_route.py</span></li>
-      <li><span class="file-ref">backend/tests/live_e2e_test/sandbox/occ/test_commit_transaction.py</span></li>
-      <li><span class="file-ref">backend/tests/live_e2e_test/sandbox/layer_stack_overlay_occ/test_codegen_race.py</span></li>
+      <li><span class="file-ref">sandbox/crates/eos-e2e-test/tests/occ</span></li>
+      <li><span class="file-ref">sandbox/crates/eos-e2e-test/tests/occ</span></li>
+      <li><span class="file-ref">sandbox/crates/eos-e2e-test/tests/occ</span></li>
+      <li><span class="file-ref">sandbox/crates/eos-e2e-test/tests/layerstack</span></li>
     </ul>
   </div>
   <div class="evidence-card">

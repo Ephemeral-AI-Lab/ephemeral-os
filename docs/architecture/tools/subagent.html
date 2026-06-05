@@ -53,13 +53,13 @@
 </nav>
 
 <p class="lead"><code>run_subagent</code> is the supervised async-session launch surface for focused worker agents without creating peer-to-peer orchestration.</p>
-<section id="registration" data-last-reviewed-commit="569f12c3f39471dbaa643906856a8daf81a21a2d" data-evidence-paths="backend/src/tools/subagent/_factory.py backend/src/tools/subagent/run_subagent/run_subagent.py backend/src/tools/_framework/factory.py backend/src/agents/definition/registry.py backend/tests/unit_test/test_engine/test_spawn_agent.py backend/tests/unit_test/test_prompt/test_runtime_prompt.py">
+<section id="registration" data-last-reviewed-commit="569f12c3f39471dbaa643906856a8daf81a21a2d" data-evidence-paths="">
 <h2>Registration <a class="anchor" href="#registration">#</a></h2>
-<p><code>backend/src/tools/subagent</code> owns the caller-aware launch tool <code>run_subagent</code> and the typed control tools <code>check_subagent_progress</code> and <code>cancel_subagent</code>. The framework factory uses <code>make_subagent_tool_from_context()</code>, which wraps the base launch tool in <code>RestrictedRunSubagentTool</code> and narrows <code>agent_name</code> to registered dispatchable subagents.</p>
+<p><code>agent-core/crates/eos-tools/src/tools/subagent</code> owns the caller-aware launch tool <code>run_subagent</code> and the typed control tools <code>check_subagent_progress</code> and <code>cancel_subagent</code>. The framework factory uses <code>make_subagent_tool_from_context()</code>, which wraps the base launch tool in <code>RestrictedRunSubagentTool</code> and narrows <code>agent_name</code> to registered dispatchable subagents.</p>
 <p>The launch tool is declared with <code>intent=Intent.WRITE_ALLOWED</code> and <code>task_type=SUBAGENT_TASK_TYPE</code>. Agent finalization and dispatch use <code>engine.background.policy</code> to route <code>run_subagent</code> to the internal supervisor and synthesize typed subagent controls instead of generic <code>check_background_task_result</code> / <code>wait_background_tasks</code> controls.</p>
 </section>
 
-<section id="launch-workflow" data-last-reviewed-commit="8f5e415f6a22ad46517dd60aca89ce151028c715" data-evidence-paths="backend/src/tools/subagent/run_subagent/run_subagent.py backend/src/tools/subagent/explorer_guidance.py backend/src/engine/background/dispatch.py backend/src/engine/agent/lifecycle.py backend/src/engine/agent/factory.py">
+<section id="launch-workflow" data-last-reviewed-commit="8f5e415f6a22ad46517dd60aca89ce151028c715" data-evidence-paths="">
 <h2>Launch Workflow <a class="anchor" href="#launch-workflow">#</a></h2>
 <div class="diagram" aria-label="Subagent launch workflow">
   <div class="flow-row">
@@ -83,21 +83,21 @@
 </ol>
 </section>
 
-<section id="progress-and-results" data-last-reviewed-commit="HEAD" data-evidence-paths="backend/src/tools/subagent/run_subagent/run_subagent.py backend/src/tools/subagent/control.py backend/src/engine/background/task_supervisor.py backend/src/engine/query/loop.py backend/src/message/message.py backend/tests/unit_test/test_engine/test_background_tasks.py backend/tests/unit_test/test_engine/test_background_task_emitters.py backend/tests/unit_test/test_engine/test_subagent_mock_loop.py backend/tests/unit_test/test_tools/test_subagent_retry.py">
+<section id="progress-and-results" data-last-reviewed-commit="HEAD" data-evidence-paths="">
 <h2>Progress and Results <a class="anchor" href="#progress-and-results">#</a></h2>
 <p>When the child agent is spawned, <code>run_subagent</code> registers a supervisor progress provider under the same <code>subagent_session_id</code>. The provider snapshots the child agent's latest conversation messages and renders text, thinking, tool-use, and tool-result blocks for <code>check_subagent_progress(subagent_session_id, last_n_messages)</code>.</p>
 <p>The child must call one of its registered terminal tools. <code>run_ephemeral_agent</code> returns an <code>EphemeralRunResult</code>; <code>run_subagent</code> forwards <code>terminal_result.output</code>, <code>is_error</code>, and terminal metadata to the parent, adding <code>subagent_terminal_called=true</code>. The initial launch response stays <code>status=running</code> with the public session id; the terminal output is later surfaced by the typed completion notification and by <code>check_subagent_progress</code>. If the child crashes or exits without a terminal result, the metadata marks <code>subagent_terminal_called=false</code>, and the typed progress tool reports the session as failed with the latest peek instead of pretending the findings were delivered.</p>
 <p>Cancellation is also subagent-aware. <code>cancel_subagent(subagent_session_id)</code> asks the supervisor to request an early stop for that session, cancel the child task, and allow the child path to salvage a partial result before it settles. If the parent run submits a terminal while a subagent is still active, the query loop terminates that subagent as <code>non_cancellation_tool_request</code> and emits one typed notification plus audit reason instead of leaving an anonymous abandoned worker.</p>
 </section>
 
-<section id="workflow-boundary" data-last-reviewed-commit="HEAD" data-evidence-paths="backend/src/tools/subagent/run_subagent/run_subagent.py backend/src/tools/subagent/explorer_guidance.py backend/src/workflow/attempt/launch.py backend/src/workflow/context_engine/task_guidance.py backend/src/tools/submission backend/src/engine/query/loop.py">
+<section id="workflow-boundary" data-last-reviewed-commit="HEAD" data-evidence-paths="">
 <h2>Workflow Boundary <a class="anchor" href="#workflow-boundary">#</a></h2>
 <p><code>run_subagent</code> is a worker launch tool, not a global orchestrator. It lets the parent ask for focused exploration or implementation help while Workflow state still advances through persisted terminal submissions, rendered role context, lifecycle transitions, and attempt state machines.</p>
 <p>The parent receives the subagent's terminal output through the typed subagent session surface. The parent then decides whether to continue, call another tool, ask a helper, or submit a Workflow terminal tool. This keeps task handoff and completion state in Workflow rather than creating direct agent-to-agent control flow.</p>
 <p>Sandbox behavior follows the child run's ordinary tool execution. If the child uses sandbox tools, those calls still route through sandbox APIs, the daemon workspace dispatcher, the ephemeral workspace overlay pipeline, direct LayerStack/OCC fast paths, or isolated workspace lifecycle according to the active workspace mode.</p>
 </section>
 
-<section id="verification" data-last-reviewed-commit="HEAD" data-evidence-paths="backend/tests/unit_test/test_tools/test_subagent_retry.py backend/tests/unit_test/test_engine/test_subagent_mock_loop.py backend/tests/unit_test/test_engine/test_background_tasks.py backend/tests/unit_test/test_engine/test_spawn_agent.py backend/tests/unit_test/test_prompt/test_runtime_prompt.py backend/tests/unit_test/test_message/test_event_printer.py">
+<section id="verification" data-last-reviewed-commit="HEAD" data-evidence-paths="">
 <h2>Verification <a class="anchor" href="#verification">#</a></h2>
 <p>Key tests cover factory policy, supervisor exposure, <code>subagent_session_id</code> launch/progress/cancel behavior, retry behavior through <code>run_ephemeral_agent</code>, terminal metadata projection, failed/no-terminal outcomes, mocked query-loop natural completion, explicit cancel, parent terminal abandonment, concurrent subagent calls, status rendering, and event-printer display. Refresh this page when subagent target registration, terminal metadata, progress-provider rendering, parent-exit termination, or cancellation semantics change.</p>
 </section>

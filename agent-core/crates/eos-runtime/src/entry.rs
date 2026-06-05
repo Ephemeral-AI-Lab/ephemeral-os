@@ -2,10 +2,8 @@
 //! per-request delegated-workflow runtime, run the root agent **inline** through
 //! the shared engine primitive, and return the root's terminal outcome.
 //!
-//! Ports `runtime/entry.py::start_request` / `_create_runtime` / `_run_root_agent`
-//! / `_fail_unfinished_root`, collapsed into one run-to-completion function. The
-//! root is a `Task(role=Root, workflow_id=None)` run directly through the engine —
-//! never the workflow starter (GC-eos-runtime-01). Closure is a single
+//! The root is a `Task(role=Root, workflow_id=None)` run directly through the
+//! engine — never the workflow starter (GC-eos-runtime-01). Closure is a single
 //! framework-side guard (`fail_unfinished_root`); the happy-path writer is the
 //! engine-stamped `submit_root_outcome`.
 
@@ -92,9 +90,9 @@ pub async fn run_request(
         .await
         .context("creating the request row")?;
 
-    // Per-request delegated-workflow runtime (Python `_create_runtime`). The
-    // single supervisor carries the engine run handles the subagent driver needs
-    // (it calls `run_agent` directly).
+    // Per-request delegated-workflow runtime. The single supervisor carries the
+    // engine run handles the subagent driver needs (it calls `run_agent`
+    // directly).
     let supervisor = Arc::new(BackgroundSupervisorHandle::new(
         state.engine_run_handles(),
         state.transport.clone(),
@@ -227,7 +225,7 @@ pub async fn run_request(
                 &state.engine_run_handles(),
                 AgentRunInput {
                     agent: root_def,
-                    initial_messages: vec![Message::from_user_text(prompt.clone())],
+                    initial_messages: vec![Message::from_user_text(prompt)],
                     task_id: Some(root_task_id.clone()),
                     agent_run_id,
                     tool_metadata: metadata,

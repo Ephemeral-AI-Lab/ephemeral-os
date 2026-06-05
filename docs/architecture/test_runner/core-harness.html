@@ -55,7 +55,12 @@
 
 <p class="lead">The core harness has one purpose: drive <code>workflow.start_workflow_run</code> with a per-test database, audit-bus fanout, sandbox lease, and lifecycle hooks. Three modes (mock, real-LLM, benchmark) reach the same coroutine through one frozen dataclass.</p>
 
-<section id="scope" data-last-reviewed-commit="d32994314" data-evidence-paths="backend/src/test_runner/core backend/src/test_runner/audit backend/src/test_runner/__init__.py">
+<div class="callout warn">
+  <span class="label">REMOVED</span>
+  ⚠️ The Python <code>backend/src/test_runner</code> documented here has been removed. The Rust replacement is specified in <code>integration-test/SPEC.md</code> (see also <code>docs/plans/test_runner_rust_SPEC.md</code>) but is not yet implemented; the evidence paths below describe the removed Python design for historical reference.
+</div>
+
+<section id="scope" data-last-reviewed-commit="d32994314" data-evidence-paths="">
 <h2>Scope <a class="anchor" href="#scope">#</a></h2>
 <div class="summary">
   <ul>
@@ -73,7 +78,7 @@
 </div>
 </section>
 
-<section id="run-config" data-last-reviewed-commit="d32994314" data-evidence-paths="backend/src/test_runner/core/config.py backend/src/test_runner/scenarios/builder.py backend/src/test_runner/benchmarks/sweevo/run.py">
+<section id="run-config" data-last-reviewed-commit="d32994314" data-evidence-paths="">
 <h2>RunConfig And Mode Deltas <a class="anchor" href="#run-config">#</a></h2>
 <p><code>RunConfig</code> is a frozen dataclass with five mode-varying seams and a small bag of shared options. <code>RunContext</code> is the narrow handle (<code>config</code>, <code>bundle</code>, <code>bus</code>) passed to lifecycle hooks and sandbox provisioners — they cannot reach engine internals.</p>
 <pre class="diagram" aria-label="RunConfig mode delta table">
@@ -101,7 +106,7 @@
 </div>
 </section>
 
-<section id="run-pipeline" data-last-reviewed-commit="d32994314" data-evidence-paths="backend/src/test_runner/core/engine.py backend/src/test_runner/audit/recorder.py backend/src/test_runner/audit/stream_bridge.py backend/src/test_runner/audit/performance_report.py">
+<section id="run-pipeline" data-last-reviewed-commit="d32994314" data-evidence-paths="">
 <h2>run_pipeline Lifecycle <a class="anchor" href="#run-pipeline">#</a></h2>
 <pre class="diagram" aria-label="run_pipeline step-by-step diagram">
 run_pipeline(config) coroutine
@@ -156,7 +161,7 @@ run_pipeline(config) coroutine
 </div>
 </section>
 
-<section id="lifecycle-hooks" data-last-reviewed-commit="d32994314" data-evidence-paths="backend/src/test_runner/core/lifecycle.py backend/src/test_runner/scenarios/lifecycle.py backend/src/test_runner/benchmarks/sweevo/eval.py">
+<section id="lifecycle-hooks" data-last-reviewed-commit="d32994314" data-evidence-paths="">
 <h2>LifecycleHooks Protocol <a class="anchor" href="#lifecycle-hooks">#</a></h2>
 <p>One protocol, four entry points, three implementations.</p>
 <div class="edge-list" aria-label="LifecycleHooks methods">
@@ -174,7 +179,7 @@ run_pipeline(config) coroutine
 </div>
 </section>
 
-<section id="store-bundle" data-last-reviewed-commit="d32994314" data-evidence-paths="backend/src/test_runner/core/stores.py">
+<section id="store-bundle" data-last-reviewed-commit="d32994314" data-evidence-paths="">
 <h2>WorkflowStoreBundle <a class="anchor" href="#store-bundle">#</a></h2>
 <p>The bundle reuses the project's shared SQLAlchemy engine via <code>db.engine.initialize_db()</code> and carves a fresh isolated store per test so concurrent tests do not collide.</p>
 <div class="edge-list" aria-label="WorkflowStoreBundle dialects">
@@ -190,7 +195,7 @@ run_pipeline(config) coroutine
 </div>
 </section>
 
-<section id="sandbox-provisioner" data-last-reviewed-commit="d32994314" data-evidence-paths="backend/src/test_runner/core/sandbox.py backend/src/test_runner/benchmarks/sweevo/run.py backend/src/test_runner/environments/sweevo_image/fixtures.py">
+<section id="sandbox-provisioner" data-last-reviewed-commit="d32994314" data-evidence-paths="">
 <h2>SandboxProvisioner Protocol <a class="anchor" href="#sandbox-provisioner">#</a></h2>
 <div class="edge-list" aria-label="SandboxProvisioner implementations">
   <div><b>SandboxLease</b><span>Frozen handle: <code>sandbox_id</code> plus opaque <code>metadata</code> mapping. Returned by <code>provision(ctx)</code>; consumed by <code>release(lease)</code>.</span></div>
@@ -205,7 +210,7 @@ run_pipeline(config) coroutine
 </div>
 </section>
 
-<section id="audit-bus" data-last-reviewed-commit="d32994314" data-evidence-paths="backend/src/test_runner/audit/bus.py backend/src/test_runner/audit/events.py backend/src/test_runner/audit/recorder.py backend/src/test_runner/audit/stream_bridge.py backend/src/test_runner/audit/performance_report.py backend/src/test_runner/audit/metrics.py">
+<section id="audit-bus" data-last-reviewed-commit="d32994314" data-evidence-paths="">
 <h2>Audit Bus And Recorder <a class="anchor" href="#audit-bus">#</a></h2>
 <p>Two layers: the in-memory <code>AuditEventBus</code> for lifecycle subscribers, and <code>AuditRecorder</code> for durable per-run artifacts.</p>
 <div class="edge-list" aria-label="Audit bus surfaces">
@@ -223,7 +228,7 @@ run_pipeline(config) coroutine
 </div>
 </section>
 
-<section id="reports" data-last-reviewed-commit="d32994314" data-evidence-paths="backend/src/test_runner/core/report.py backend/src/test_runner/core/runner.py">
+<section id="reports" data-last-reviewed-commit="d32994314" data-evidence-paths="">
 <h2>PipelineReport And RunReport <a class="anchor" href="#reports">#</a></h2>
 <p><code>PipelineReport</code> is the engine's narrow return shape; the mock-rich <code>RunReport</code> is rebuilt by <code>run_scenario</code> from <code>ScenarioLifecycle</code> records and Workflow store state.</p>
 <div class="edge-list" aria-label="Report fields">
@@ -242,7 +247,7 @@ run_pipeline(config) coroutine
 <div class="page-baseline" data-page-baseline-commit="d32994314">
   <strong>Maintenance baseline</strong>
   <span>Core Harness reviewed against <code>d32994314</code>.</span>
-  <code>git diff d32994314..HEAD -- backend/src/test_runner/core backend/src/test_runner/audit</code>
+  <code>git diff d32994314..HEAD -- integration-test/SPEC.md docs/architecture/test_runner</code>
 </div>
 <div class="page-footer-nav"><span><a href="index.html">Overview</a></span><span><a href="scenarios.html">Scenarios</a></span></div>
 </main>

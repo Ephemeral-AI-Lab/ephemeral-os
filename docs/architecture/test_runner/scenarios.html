@@ -53,7 +53,12 @@
 
 <p class="lead">A <code>Scenario</code> is a pure description of what a mocked planner / executor / reducer should submit at each decision point. The mock runner translates those descriptions into real submission tool calls against a real Workflow run, and an audit-bus-fed lifecycle accumulates the events into a rich <code>RunReport</code> for assertions.</p>
 
-<section id="scope" data-last-reviewed-commit="d32994314" data-evidence-paths="backend/src/test_runner/scenarios backend/src/test_runner/scenarios/__init__.py backend/src/test_runner/scenarios/base.py">
+<div class="callout warn">
+  <span class="label">REMOVED</span>
+  ⚠️ The Python <code>backend/src/test_runner</code> documented here has been removed. The Rust replacement is specified in <code>integration-test/SPEC.md</code> (see also <code>docs/plans/test_runner_rust_SPEC.md</code>) but is not yet implemented; the evidence paths below describe the removed Python design for historical reference.
+</div>
+
+<section id="scope" data-last-reviewed-commit="d32994314" data-evidence-paths="">
 <h2>Scope <a class="anchor" href="#scope">#</a></h2>
 <div class="summary">
   <ul>
@@ -71,7 +76,7 @@
 </div>
 </section>
 
-<section id="scenario-protocol" data-last-reviewed-commit="d32994314" data-evidence-paths="backend/src/test_runner/scenarios/base.py backend/src/test_runner/scenarios/builder.py">
+<section id="scenario-protocol" data-last-reviewed-commit="d32994314" data-evidence-paths="">
 <h2>Scenario Protocol <a class="anchor" href="#scenario-protocol">#</a></h2>
 <p>The protocol is implemented either via <code>ScenarioBase</code> (with overridable defaults) or by satisfying <code>Scenario</code> structurally.</p>
 <div class="edge-list" aria-label="Scenario protocol methods">
@@ -84,7 +89,7 @@
 <p><code>ScenarioContext</code> is the live state visible to the scenario at each decision: <code>attempt</code>, <code>iteration</code>, <code>workflow</code>, <code>prompt</code>, <code>metadata</code>, <code>audit_recorder</code>, <code>task_id</code>, <code>agent_name</code>, <code>instruction</code>, plus optional <code>requirement_ledger</code>, <code>package_plan</code>, and <code>matrix_plan</code> for composite scenarios.</p>
 </section>
 
-<section id="scenario-lifecycle-wiring" data-last-reviewed-commit="d32994314" data-evidence-paths="backend/src/test_runner/scenarios/builder.py backend/src/test_runner/scenarios/lifecycle.py backend/src/test_runner/agent/mock/scenario_loop_runner.py backend/src/test_runner/agent/mock/scenario_adapter.py">
+<section id="scenario-lifecycle-wiring" data-last-reviewed-commit="d32994314" data-evidence-paths="">
 <h2>ScenarioLifecycle Wiring <a class="anchor" href="#scenario-lifecycle-wiring">#</a></h2>
 <p>One builder, one lifecycle. <code>build_scenario_config</code> is the single point of truth where the <code>ScenarioLoopRunner</code> factory and lifecycle are wired together.</p>
 <pre class="diagram" aria-label="ScenarioLifecycle wiring diagram">
@@ -118,7 +123,7 @@ run_pipeline executes; per event:
 </div>
 </section>
 
-<section id="catalog" data-last-reviewed-commit="d32994314" data-evidence-paths="backend/src/test_runner/scenarios/__init__.py backend/src/test_runner/scenarios/pipeline backend/src/test_runner/scenarios/sandbox backend/src/test_runner/scenarios/capacity backend/src/test_runner/scenarios/planner_validation">
+<section id="catalog" data-last-reviewed-commit="d32994314" data-evidence-paths="">
 <h2>Scenario Catalog <a class="anchor" href="#catalog">#</a></h2>
 <p>The registry has five lanes, each owning a concern. Use the lane to pick where a new test should live; do not add cross-lane scenarios.</p>
 <div class="evidence-grid">
@@ -147,7 +152,7 @@ run_pipeline executes; per event:
 </div>
 </section>
 
-<section id="graph-backed-assertions" data-last-reviewed-commit="d32994314" data-evidence-paths="backend/src/test_runner/tests/mock/_focused_scenario_contracts.py backend/src/test_runner/core/runner.py">
+<section id="graph-backed-assertions" data-last-reviewed-commit="d32994314" data-evidence-paths="">
 <h2>Graph-Backed Assertions <a class="anchor" href="#graph-backed-assertions">#</a></h2>
 <p>Role lifecycle assertions are derived from persisted Workflow graph state instead of synthetic event hooks. The runner still exposes true audit events for tools and sandbox probes.</p>
 <div class="edge-list" aria-label="Graph-backed assertion helpers">
@@ -163,7 +168,7 @@ run_pipeline executes; per event:
 </div>
 </section>
 
-<section id="example-initial-workflow" data-last-reviewed-commit="d32994314" data-evidence-paths="backend/src/test_runner/scenarios/pipeline/initial_workflow.py backend/src/test_runner/scenarios/_scenario_helpers/plan_shapes.py">
+<section id="example-initial-workflow" data-last-reviewed-commit="d32994314" data-evidence-paths="">
 <h2>Example: InitialWorkflow <a class="anchor" href="#example-initial-workflow">#</a></h2>
 <p>The smallest pipeline scenario — the canonical template for "single-attempt success" tests.</p>
 <pre class="diagram" aria-label="InitialWorkflow scenario step diagram">
@@ -196,7 +201,7 @@ Assertions:
 <div class="page-baseline" data-page-baseline-commit="d32994314">
   <strong>Maintenance baseline</strong>
   <span>Scenarios page reviewed against <code>d32994314</code>.</span>
-  <code>git diff d32994314..HEAD -- backend/src/test_runner/scenarios</code>
+  <code>git diff d32994314..HEAD -- integration-test/SPEC.md docs/architecture/test_runner</code>
 </div>
 <div class="page-footer-nav"><span><a href="core-harness.html">Core Harness</a></span><span><a href="mocked-agents.html">Mocked Agents</a></span></div>
 </main>

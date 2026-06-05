@@ -43,7 +43,7 @@
 </div>
 <section id="space-model"
   data-last-reviewed-commit="2a3e6cc7c"
-  data-evidence-paths="backend/src/sandbox/layer_stack/stack.py backend/src/sandbox/overlay/writable_dirs.py backend/src/sandbox/overlay/capture.py backend/src/sandbox/occ/commit_transaction.py backend/src/sandbox/isolated_workspace/_control_plane/workspace_handle_lifecycle.py">
+  data-evidence-paths="">
 <h2>9. Space Model <a class="anchor" href="#space-model">§</a></h2>
 <nav class="page-toc" aria-labelledby="page-toc-heading">
   <h3 id="page-toc-heading">Contents</h3>
@@ -71,7 +71,7 @@
 </section>
 <section id="space-cost-model"
   data-last-reviewed-commit="2a3e6cc7c"
-  data-evidence-paths="backend/src/sandbox/layer_stack/stack.py backend/src/sandbox/ephemeral_workspace/pipeline.py backend/src/sandbox/overlay/writable_dirs.py backend/src/sandbox/overlay/capture.py backend/src/sandbox/occ/commit_transaction.py">
+  data-evidence-paths="">
 <h3>9.1 Cost Model <a class="anchor" href="#space-cost-model">§</a></h3>
 <div class="diagram" aria-label="Space scaling model">
   <div class="flow-row">
@@ -86,9 +86,9 @@
   </div>
 </div>
 
-<p>For normal ephemeral operations and isolated enter, additional lowerdir storage is <strong>O(1) repository bytes per operation</strong>: code returns existing <code>layer_paths</code> and a lease, not a rendered copy of the tree <span class="file-ref">backend/src/sandbox/layer_stack/stack.py:105-129</span>. The mount still carries O(manifest depth) path references and the shell path can pre-squash deep manifests before mounting <span class="file-ref">backend/src/sandbox/ephemeral_workspace/pipeline.py:221-230</span>, but it does not allocate O(repository bytes) lowerdir space.</p>
+<p>For normal ephemeral operations and isolated enter, additional lowerdir storage is <strong>O(1) repository bytes per operation</strong>: code returns existing <code>layer_paths</code> and a lease, not a rendered copy of the tree <span class="file-ref">sandbox/crates/eos-layerstack/src/stack.rs</span>. The mount still carries O(manifest depth) path references and the shell path can pre-squash deep manifests before mounting <span class="file-ref">sandbox/crates/eos-daemon/src/services/overlay/mod.rs</span>, but it does not allocate O(repository bytes) lowerdir space.</p>
 
-<p>For <code>n</code> concurrent operations, writable scratch is <strong>O(n * per-operation changed bytes)</strong> plus small metadata. Each operation/session has its own <code>upper</code> and <code>work</code> directories <span class="file-ref">backend/src/sandbox/overlay/writable_dirs.py:46-52</span>. Capturing changes walks only the upperdir and emits writes/deletes/symlinks/opaque markers <span class="file-ref">backend/src/sandbox/overlay/capture.py:19-93</span>. OCC then publishes accepted changes as one new immutable layer rather than copying the whole workspace <span class="file-ref">backend/src/sandbox/occ/commit_transaction.py:113-141</span>.</p>
+<p>For <code>n</code> concurrent operations, writable scratch is <strong>O(n * per-operation changed bytes)</strong> plus small metadata. Each operation/session has its own <code>upper</code> and <code>work</code> directories <span class="file-ref">sandbox/crates/eos-overlay/src/writable_dirs.rs</span>. Capturing changes walks only the upperdir and emits writes/deletes/symlinks/opaque markers <span class="file-ref">sandbox/crates/eos-overlay/src/path_change.rs</span>. OCC then publishes accepted changes as one new immutable layer rather than copying the whole workspace <span class="file-ref">sandbox/crates/eos-occ/src/service.rs</span>.</p>
 
 <div class="edge-list">
   <div><b>lower side</b><span><code>LayerStack.acquire_snapshot()</code> returns existing <code>layer_paths</code> and a lease, so lowerdir storage stays shared across operations.</span></div>
@@ -100,7 +100,7 @@
 </section>
 <section id="space-by-mode"
   data-last-reviewed-commit="2a3e6cc7c"
-  data-evidence-paths="backend/src/sandbox/layer_stack/stack.py backend/src/sandbox/ephemeral_workspace/pipeline.py backend/src/sandbox/isolated_workspace/pipeline.py backend/src/sandbox/ephemeral_workspace/plugin/overlay_dispatch.py backend/src/plugins/catalog/lsp/runtime/pyright_session.py backend/src/plugins/catalog/lsp/runtime/apply.py">
+  data-evidence-paths="">
 <h3>9.2 Mode Cost Table <a class="anchor" href="#space-by-mode">§</a></h3>
 <table>
   <thead><tr><th>Mode</th><th>Lower side</th><th>Writable side</th><th>Publish behavior</th></tr></thead>
@@ -117,7 +117,7 @@
 </section>
 <section id="space-myths"
   data-last-reviewed-commit="2a3e6cc7c"
-  data-evidence-paths="backend/src/sandbox/layer_stack/stack.py backend/src/sandbox/overlay/writable_dirs.py backend/src/sandbox/overlay/capture.py backend/src/sandbox/occ/service.py backend/src/sandbox/isolated_workspace/_control_plane/workspace_handle_lifecycle.py">
+  data-evidence-paths="">
 <h3>9.3 Non-goals and Myths <a class="anchor" href="#space-myths">§</a></h3>
 <table>
   <thead><tr><th>Claim</th><th>Correct reading</th><th>Where to verify</th></tr></thead>
@@ -149,25 +149,25 @@
 </section>
 <section id="space-evidence-refresh"
   data-last-reviewed-commit="2a3e6cc7c"
-  data-evidence-paths="backend/src/sandbox/layer_stack/stack.py backend/src/sandbox/overlay/writable_dirs.py backend/src/sandbox/overlay/capture.py backend/src/sandbox/isolated_workspace/_control_plane/workspace_handle_lifecycle.py backend/src/test_runner/tests/mock/sandbox/ephemeral_workspace/test_ephemeral_lowerdir_disk_is_o1_under_100_calls.py backend/src/test_runner/tests/mock/sandbox/isolated_workspace/gc_and_persistence/test_lowerdir_disk_usage_is_o1.py backend/tests/live_e2e_test/sandbox/overlay/native/test_o1_memory_bound.py backend/tests/live_e2e_test/sandbox/overlay/syscall/test_heavy_write_copy_up.py">
+  data-evidence-paths="">
 <h3>9.4 Evidence and Refresh <a class="anchor" href="#space-evidence-refresh">§</a></h3>
 <div class="evidence-grid">
   <div class="evidence-card">
     <h4>Code anchors</h4>
     <ul>
-      <li><span class="file-ref">backend/src/sandbox/layer_stack/stack.py:104-129</span> snapshot lease and layer path return.</li>
-      <li><span class="file-ref">backend/src/sandbox/overlay/writable_dirs.py:13-52</span> writable root and per-run upper/work allocation.</li>
-      <li><span class="file-ref">backend/src/sandbox/overlay/capture.py:49-93</span> upperdir-only traversal.</li>
-      <li><span class="file-ref">backend/src/sandbox/isolated_workspace/_control_plane/workspace_handle_lifecycle.py:192-247</span> exit byte count and scratch removal.</li>
+      <li><span class="file-ref">sandbox/crates/eos-layerstack/src/stack.rs</span> snapshot lease and layer path return.</li>
+      <li><span class="file-ref">sandbox/crates/eos-overlay/src/writable_dirs.rs</span> writable root and per-run upper/work allocation.</li>
+      <li><span class="file-ref">sandbox/crates/eos-overlay/src/path_change.rs</span> upperdir-only traversal.</li>
+      <li><span class="file-ref">sandbox/crates/eos-isolated-workspace/src/session/lifecycle.rs</span> exit byte count and scratch removal.</li>
     </ul>
   </div>
   <div class="evidence-card">
     <h4>Tests</h4>
     <ul>
-      <li><span class="file-ref">backend/src/test_runner/tests/mock/sandbox/ephemeral_workspace/test_ephemeral_lowerdir_disk_is_o1_under_100_calls.py</span></li>
-      <li><span class="file-ref">backend/src/test_runner/tests/mock/sandbox/isolated_workspace/gc_and_persistence/test_lowerdir_disk_usage_is_o1.py</span></li>
-      <li><span class="file-ref">backend/tests/live_e2e_test/sandbox/overlay/native/test_o1_memory_bound.py</span></li>
-      <li><span class="file-ref">backend/tests/live_e2e_test/sandbox/overlay/syscall/test_heavy_write_copy_up.py</span></li>
+      <li><span class="file-ref">integration-test/SPEC.md</span></li>
+      <li><span class="file-ref">integration-test/SPEC.md</span></li>
+      <li><span class="file-ref">sandbox/crates/eos-e2e-test/tests/ephemeral_workspace</span></li>
+      <li><span class="file-ref">sandbox/crates/eos-e2e-test/tests/ephemeral_workspace</span></li>
     </ul>
   </div>
   <div class="evidence-card">

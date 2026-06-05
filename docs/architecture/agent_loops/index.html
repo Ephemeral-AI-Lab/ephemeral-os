@@ -167,7 +167,7 @@
 </div>
 </section>
 
-<section id="staleness-notes" data-last-reviewed-commit="HEAD-plus-worktree" data-evidence-paths="docs/architecture/tools/background.html docs/architecture/tools/subagent.html backend/src/engine/agent/lifecycle.py backend/src/tools/_hooks backend/src/tools/workflow backend/src/workflow/context_engine/xml.py">
+<section id="staleness-notes" data-last-reviewed-commit="HEAD-plus-worktree" data-evidence-paths="docs/architecture/tools/background.html docs/architecture/tools/subagent.html">
 <h2>Staleness Notes <a class="anchor" href="#staleness-notes">#</a></h2>
 <div class="summary">
   <ul>
@@ -175,7 +175,7 @@
     <li>Workflow context is role-scoped (<code>planner</code>, <code>generator</code>, <code>reducer</code>), generator delegation uses non-terminal workflow tools, and context rendering is a pure XML pass over <code>AgentContext</code>.</li>
     <li>The current agent lifecycle is single-pass. <code>run_ephemeral_agent</code> does not retry with a fresh budget; missing terminal output becomes exhaustion/failure handling at the Workflow launch boundary.</li>
     <li>Historical live reports may mention <code>api.shell_batch</code>. Current daemon/API source exposes <code>api.v1.shell</code> plus harness-local batch helpers, not a public shell-batch daemon operation.</li>
-    <li>The model-provider package is plural: <code>backend/src/providers</code>. The singular <code>backend/src/provider</code> path does not exist in this checkout.</li>
+    <li>The model-provider package lives in <code>agent-core/crates/eos-llm-client/src</code>, separate from the sandbox-provider in <code>agent-core/crates/eos-sandbox-host/src/provider.rs</code>.</li>
   </ul>
 </div>
 </section>

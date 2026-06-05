@@ -55,7 +55,7 @@
 </nav>
 
 <p class="lead">
-  Tool hooks are explicit per-tool gates in <code>backend/src/tools/_framework</code>. They are not a
+  Tool hooks are explicit per-tool gates in <code>agent-core/crates/eos-tools/src/hooks</code>. They are not a
   global orchestrator, not provider schema fields, and not Workflow lifecycle state. The current
   implementation has a small contract module for hook results and target validation, plus a runtime
   pipeline that runs hooks around one validated tool body call.
@@ -63,7 +63,7 @@
 
 <section id="hook-boundary"
   data-last-reviewed-commit="6c45d4565cc912df20e5e688185982fdbe237550"
-  data-evidence-paths="backend/src/tools/_framework/core/hooks.py backend/src/tools/_framework/core/base.py backend/src/tools/_framework/execution/hook_pipeline.py backend/src/tools/_framework/execution/tool_call.py backend/src/tools/__init__.py">
+  data-evidence-paths="">
 <h2>Hook Boundary</h2>
 <div class="diagram" aria-label="Tool hook module boundary">
   <div class="flow-row">
@@ -86,7 +86,7 @@
 
 <section id="registration-contract"
   data-last-reviewed-commit="6c45d4565cc912df20e5e688185982fdbe237550"
-  data-evidence-paths="backend/src/tools/_framework/core/hooks.py backend/src/tools/_framework/core/base.py backend/src/tools/_framework/core/decorator.py backend/src/tools/subagent/_factory.py backend/tests/unit_test/test_tools/test_tool_execution.py">
+  data-evidence-paths="">
 <h2>Registration Contract</h2>
 <p>
   A hook is attached by passing <code>pre_hooks</code> or <code>post_hooks</code> to the <code>@tool</code>
@@ -114,7 +114,7 @@
 
 <section id="execution-pipeline"
   data-last-reviewed-commit="6c45d4565cc912df20e5e688185982fdbe237550"
-  data-evidence-paths="backend/src/tools/_framework/execution/tool_call.py backend/src/tools/_framework/execution/hook_pipeline.py backend/src/tools/_framework/core/validation.py backend/src/tools/_framework/core/results.py backend/src/tools/_framework/execution/trace.py backend/tests/unit_test/test_tools/test_tool_execution.py">
+  data-evidence-paths="">
 <h2>Execution Pipeline</h2>
 <div class="sequence" aria-label="Hook execution sequence">
   <ol>
@@ -144,7 +144,7 @@
 
 <section id="sandbox-shell-prehooks"
   data-last-reviewed-commit="6c45d4565cc912df20e5e688185982fdbe237550"
-  data-evidence-paths="backend/src/tools/sandbox/exec_command/exec_command.py backend/src/tools/_hooks/destructive_shell.py backend/tests/unit_test/test_tools/test_sandbox_toolkit/test_shell_prehooks.py docs/architecture/tools/sandbox.html">
+  data-evidence-paths="docs/architecture/tools/sandbox.html">
 <h2>Sandbox Command Pre-Hooks</h2>
 <p>
   The main concrete hook family is the sandbox command policy. <code>exec_command</code> registers
@@ -167,12 +167,12 @@
 
 <section id="advisor-approval-prehook"
   data-last-reviewed-commit="b1f90277db47df4796821e86513bed67cf7afa22"
-  data-evidence-paths="backend/src/tools/_hooks/advisor_approval.py backend/src/tools/ask_helper/ask_advisor/ask_advisor.py backend/src/tools/submission/advisor/submit_advisor_feedback/submit_advisor_feedback.py backend/src/tools/submission/planner/submit_planner_outcome/submit_planner_outcome.py backend/src/tools/submission/generator/submit_generator_outcome/submit_generator_outcome.py backend/src/tools/submission/reducer/submit_reducer_outcome/submit_reducer_outcome.py backend/src/tools/submission/root/submit_root_outcome/submit_root_outcome.py backend/tests/unit_test/test_tools/test_submission/test_advisor_approval_prehook.py">
+  data-evidence-paths="">
 <h2>Advisor Approval Pre-Hook</h2>
 <p>
   The second concrete pre-hook family gates main-agent terminal submissions on an
   advisor approval. <code>AdvisorApprovalPreHook</code> in
-  <code>backend/src/tools/_hooks/advisor_approval.py</code> is wired
+  <code>agent-core/crates/eos-tools/src/hooks/advisor_approval.rs</code> is wired
   per-terminal: planner, generator, and reducer submission tools attach their own
   instance via <code>pre_hooks=(..., AdvisorApprovalPreHook("&lt;own_name&gt;"))</code>
   in the <code>@tool</code> decorator. The root terminal is gated by in-flight background work but not advisor approval. Helper / subagent terminals
@@ -221,25 +221,25 @@
 
 <section id="evidence-refresh"
   data-last-reviewed-commit="b1f90277db47df4796821e86513bed67cf7afa22"
-  data-evidence-paths="backend/src/tools/_framework/core/hooks.py backend/src/tools/_framework/execution/hook_pipeline.py backend/src/tools/_framework/execution/tool_call.py backend/src/tools/_hooks/destructive_shell.py backend/src/tools/sandbox/exec_command/exec_command.py backend/src/tools/submission/_advisor_approval_prehook.py backend/tests/unit_test/test_tools/test_tool_execution.py backend/tests/unit_test/test_tools/test_sandbox_toolkit/test_shell_prehooks.py backend/tests/unit_test/test_tools/test_submission/test_advisor_approval_prehook.py docs/architecture/tools/framework.html docs/architecture/tools/sandbox.html docs/architecture/tools/submission.html">
+  data-evidence-paths="docs/architecture/tools/framework.html docs/architecture/tools/sandbox.html docs/architecture/tools/submission.html">
 <h2>Evidence and Refresh</h2>
 <div class="evidence-grid">
   <div class="evidence-card">
     <h3>Primary source</h3>
     <ul>
-      <li><code>backend/src/tools/_framework/core/hooks.py</code> for the hook contract.</li>
-      <li><code>backend/src/tools/_framework/execution/hook_pipeline.py</code> for runtime execution and hook-failure metadata.</li>
-      <li><code>backend/src/tools/_framework/execution/tool_call.py</code> for hook placement in the tool lifecycle.</li>
-      <li><code>backend/src/tools/_hooks/destructive_shell.py</code> for concrete command pre-hook policy.</li>
-      <li><code>backend/src/tools/submission/_advisor_approval_prehook.py</code> for the advisor approval gate on main-agent terminal submissions.</li>
+      <li><code>agent-core/crates/eos-tools/src/hooks/mod.rs</code> for the hook contract.</li>
+      <li><code>agent-core/crates/eos-tools/src/runtime/execution.rs</code> for runtime execution and hook-failure metadata.</li>
+      <li><code>agent-core/crates/eos-tools/src/runtime/dispatch.rs</code> for hook placement in the tool lifecycle.</li>
+      <li><code>agent-core/crates/eos-tools/src/hooks</code> for concrete command pre-hook policy.</li>
+      <li><code>agent-core/crates/eos-tools/src/hooks/advisor_approval.rs</code> for the advisor approval gate on main-agent terminal submissions.</li>
     </ul>
   </div>
   <div class="evidence-card">
     <h3>Tests</h3>
     <ul>
-      <li><code>backend/tests/unit_test/test_tools/test_tool_execution.py</code></li>
-      <li><code>backend/tests/unit_test/test_tools/test_sandbox_toolkit/test_shell_prehooks.py</code></li>
-      <li><code>backend/tests/unit_test/test_tools/test_submission/test_advisor_approval_prehook.py</code></li>
+      <li><code>agent-core/crates/eos-tools/tests/tools</code></li>
+      <li><code>agent-core/crates/eos-tools/tests/tools/sandbox</code></li>
+      <li><code>agent-core/crates/eos-tools/tests/tools</code></li>
     </ul>
   </div>
   <div class="evidence-card">
