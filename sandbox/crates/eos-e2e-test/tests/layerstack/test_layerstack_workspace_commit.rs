@@ -4,7 +4,7 @@ use eos_e2e_test::cas::looks_like_sha256;
 use eos_protocol::ops;
 use serde_json::{json, Value};
 
-use crate::support::{as_bool, as_i64, as_str, live_pool_or_skip};
+use crate::support::{as_bool, as_i64, as_str, live_pool_or_skip, wait_for_active_leases};
 
 #[test]
 fn commit_collapses_layers() -> Result<()> {
@@ -125,6 +125,58 @@ fn commit_emits_audit() -> Result<()> {
             .is_some_and(looks_like_sha256),
         "commit audit should report a CAS-shaped root hash: {event}"
     );
+    Ok(())
+}
+
+#[test]
+fn commit_refuses_active_snapshot_lease_then_succeeds_after_release() -> Result<()> {
+    let Some(pool) = live_pool_or_skip()? else {
+        return Ok(());
+    };
+    let lease = pool.acquire()?;
+    lease.call_ok(
+        ops::API_V1_WRITE_FILE,
+        json!({"path": "commit/lease-guard.txt", "content": "guard\n", "overwrite": true}),
+    )?;
+    lease.call_ok(ops::API_ISOLATED_WORKSPACE_ENTER, json!({}))?;
+    let held = wait_for_active_leases(&lease, 1)?;
+    assert_eq!(
+        as_i64(&held, "active_leases")?,
+        1,
+        "isolated enter should hold a lease on this checkout's LayerStack root: {held}"
+    );
+
+    let blocked = lease.call(
+        ops::API_COMMIT_TO_WORKSPACE,
+        json!({"workspace_root": lease.workspace_root()}),
+    )?;
+    let outcome: Result<()> = (|| {
+        assert_eq!(
+            blocked.get("success").and_then(Value::as_bool),
+            Some(false),
+            "commit_to_workspace must reject while an isolated snapshot lease is active: {blocked}"
+        );
+        let message = blocked
+            .get("error")
+            .and_then(|error| error.get("message"))
+            .and_then(Value::as_str)
+            .unwrap_or_default();
+        assert!(
+            message.contains("active leases"),
+            "active-lease rejection should identify the guard: {blocked}"
+        );
+        Ok(())
+    })();
+
+    lease.call_ok(ops::API_ISOLATED_WORKSPACE_EXIT, json!({}))?;
+    let released = wait_for_active_leases(&lease, 0)?;
+    assert_eq!(as_i64(&released, "active_leases")?, 0, "{released}");
+    outcome?;
+    let committed = lease.call_ok(
+        ops::API_COMMIT_TO_WORKSPACE,
+        json!({"workspace_root": lease.workspace_root()}),
+    )?;
+    assert!(as_bool(&committed, "success")?, "{committed}");
     Ok(())
 }
 

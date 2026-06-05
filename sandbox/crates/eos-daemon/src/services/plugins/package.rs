@@ -377,7 +377,14 @@ fn ensure_setup(manifest: &PluginManifest, paths: &PackagePaths) -> Result<bool,
         .env("TMPDIR", paths.setup_tmp_root.join("tmp"))
         .env("HOME", &paths.setup_tmp_root)
         .stdin(Stdio::null())
-        .output()?;
+        .output()
+        .map_err(|err| {
+            PluginError::Ensure(format!(
+                "plugin setup command {:?} failed to start in {}: {err}",
+                setup.command,
+                cwd.display()
+            ))
+        })?;
     if !output.status.success() {
         return Err(PluginError::Ensure(format!(
             "plugin setup failed with status {:?}: {}{}",

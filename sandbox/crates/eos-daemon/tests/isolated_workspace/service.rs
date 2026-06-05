@@ -97,6 +97,67 @@ fn enter_uses_workspace_binding_over_configured_workspace_root() -> TestResult {
 }
 
 #[test]
+#[cfg(target_os = "linux")]
+fn enter_rebinds_idle_state_to_new_layer_stack_root() -> TestResult {
+    let _guard = lock_isolated_test_state();
+    let root =
+        std::env::temp_dir().join(format!("eos-daemon-iws-root-switch-{}", std::process::id()));
+    let scratch = root.join("scratch");
+    let stack_a = root.join("stack-a");
+    let stack_b = root.join("stack-b");
+    configure_test_isolated_workspace(&scratch, Path::new("/testbed"));
+    set_env(TEST_HARNESS_ENV, "true");
+    let _ = op_test_reset(&json!({}), DispatchContext::empty());
+    let _ = std::fs::remove_dir_all(&root);
+    seed_empty_stack(&stack_a)?;
+    seed_empty_stack(&stack_b)?;
+
+    let entered_a = op_enter(
+        &json!({"caller_id": "caller-root-a", "layer_stack_root": stack_a}),
+        DispatchContext::empty(),
+    )?;
+    assert_eq!(entered_a["success"], true);
+    assert_eq!(
+        eos_layerstack::LayerStack::open(stack_a.clone())?.active_lease_count(),
+        1
+    );
+    assert_eq!(
+        eos_layerstack::LayerStack::open(stack_b.clone())?.active_lease_count(),
+        0
+    );
+    let exited_a = op_exit(
+        &json!({"caller_id": "caller-root-a"}),
+        DispatchContext::empty(),
+    )?;
+    assert_eq!(exited_a["success"], true);
+
+    let entered_b = op_enter(
+        &json!({"caller_id": "caller-root-b", "layer_stack_root": stack_b}),
+        DispatchContext::empty(),
+    )?;
+    assert_eq!(entered_b["success"], true);
+    assert_eq!(
+        eos_layerstack::LayerStack::open(stack_a.clone())?.active_lease_count(),
+        0
+    );
+    assert_eq!(
+        eos_layerstack::LayerStack::open(stack_b.clone())?.active_lease_count(),
+        1
+    );
+
+    let exited_b = op_exit(
+        &json!({"caller_id": "caller-root-b"}),
+        DispatchContext::empty(),
+    )?;
+    assert_eq!(exited_b["success"], true);
+    let _ = op_test_reset(&json!({}), DispatchContext::empty());
+    clear_env(TEST_HARNESS_ENV);
+    reset_isolated_workspace_config();
+    let _ = std::fs::remove_dir_all(&root);
+    Ok(())
+}
+
+#[test]
 fn test_reset_rewrites_invalid_manager_json() -> TestResult {
     let _guard = lock_isolated_test_state();
     let root = std::env::temp_dir().join(format!(
@@ -159,4 +220,15 @@ fn configure_test_isolated_workspace(scratch_root: &Path, workspace_root: &Path)
 
 fn reset_isolated_workspace_config() {
     configure_isolated_workspace(&default_isolated_workspace_config());
+}
+
+#[cfg(target_os = "linux")]
+fn seed_empty_stack(root: &Path) -> TestResult {
+    std::fs::create_dir_all(root.join("layers"))?;
+    std::fs::create_dir_all(root.join("staging"))?;
+    std::fs::write(
+        root.join("manifest.json"),
+        r#"{"schema_version":1,"version":1,"layers":[]}"#,
+    )?;
+    Ok(())
 }

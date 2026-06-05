@@ -309,6 +309,33 @@ fn direct_route_ignores_stale_base_and_publishes() -> TestResult {
 }
 
 #[test]
+fn gated_symlink_change_validates_and_publishes() -> TestResult {
+    let fixture = Fixture::new("gated_symlink")?;
+    let result = transaction(&fixture)
+        .revalidate_and_publish(&PreparedChangeset {
+            snapshot_version: Some(1),
+            path_groups: vec![publish_decision("link.txt", Route::Gated, None)?],
+            changes: vec![LayerChange::Symlink {
+                path: lp("link.txt")?,
+                source_path: "target.txt".to_owned(),
+            }],
+            atomic: true,
+        })
+        .map_err(|conflict| format!("unexpected publish conflict: {conflict:?}"))?;
+
+    assert!(result.success());
+    assert_eq!(result.files[0].status, OccStatus::Committed);
+    let manifest = LayerStack::open(fixture.root.clone())?.read_active_manifest()?;
+    let projected = fixture.base.join("projected");
+    eos_layerstack::MergedView::new(fixture.root.clone()).project(&projected, &manifest)?;
+    assert_eq!(
+        std::fs::read_link(projected.join("link.txt"))?,
+        PathBuf::from("target.txt")
+    );
+    Ok(())
+}
+
+#[test]
 fn atomic_mixed_validation_failure_drops_accepted_paths() -> TestResult {
     let fixture = Fixture::new("atomic_mixed")?;
     let old_hash = hash_bytes(b"# README\n");

@@ -158,7 +158,6 @@ fn protocol_only_bundled_sandbox_capstone() -> Result<()> {
     let suffix = eos_e2e_test::unique_suffix();
     let digest = format!("digest-{}", suffix.replace('-', "_"));
     let setup_digest = format!("setup-{digest}");
-    ensure_generic_service_package(&lease, &digest, &setup_digest)?;
 
     lease.call_ok(
         ops::API_V1_WRITE_FILE,
@@ -223,13 +222,6 @@ fn protocol_only_bundled_sandbox_capstone() -> Result<()> {
         )?;
     }
 
-    let plugin = lease.call_ok(
-        "plugin.generic.query",
-        json!({"path": "capstone/scaffold.txt", "request": "capstone"}),
-    )?;
-    assert_eq!(plugin["success"], true, "{plugin}");
-    assert_eq!(plugin["content"], "scaffold\n", "{plugin}");
-
     let isolated_caller = format!("capstone-iws-{suffix}");
     lease.call_ok(
         ops::API_ISOLATED_WORKSPACE_ENTER,
@@ -256,14 +248,14 @@ fn protocol_only_bundled_sandbox_capstone() -> Result<()> {
         !as_bool(&private_read, "exists")?,
         "isolated capstone write must be private after exit: {private_read}"
     );
+    let metrics = wait_for_active_leases(&lease, 0)?;
+    assert_eq!(as_i64(&metrics, "active_leases")?, 0, "{metrics}");
 
     let commit = lease.call_ok(
         ops::API_COMMIT_TO_WORKSPACE,
         json!({"workspace_root": lease.workspace_root()}),
     )?;
     assert!(as_bool(&commit, "success")?, "{commit}");
-    let metrics = wait_for_active_leases(&lease, 0)?;
-    assert_eq!(as_i64(&metrics, "active_leases")?, 0, "{metrics}");
     let scaffold = lease.call_ok(
         ops::API_V1_READ_FILE,
         json!({"path": "capstone/scaffold.txt"}),
@@ -271,6 +263,14 @@ fn protocol_only_bundled_sandbox_capstone() -> Result<()> {
     assert_eq!(as_str(&scaffold, "content")?, "scaffold\n", "{scaffold}");
     let exec_read = lease.call_ok(ops::API_V1_READ_FILE, json!({"path": "capstone/exec.txt"}))?;
     assert_eq!(as_str(&exec_read, "content")?, "exec", "{exec_read}");
+
+    ensure_generic_service_package(&lease, &digest, &setup_digest)?;
+    let plugin = lease.call_ok(
+        "plugin.generic.query",
+        json!({"path": "capstone/scaffold.txt", "request": "capstone"}),
+    )?;
+    assert_eq!(plugin["success"], true, "{plugin}");
+    assert_eq!(plugin["content"], "scaffold\n", "{plugin}");
     Ok(())
 }
 

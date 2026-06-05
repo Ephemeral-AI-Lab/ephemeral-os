@@ -302,7 +302,6 @@ fn validate_prepared(
                 root,
                 view,
                 manifest,
-                prepared,
                 &group.path,
                 group.base_hash.as_deref(),
                 &mut parent_absent_cache,
@@ -328,21 +327,11 @@ fn validate_gated_group(
     root: &Path,
     view: &MergedView,
     manifest: &Manifest,
-    prepared: &PreparedChangeset,
     path: &LayerPath,
     base_hash: Option<&str>,
     parent_absent_cache: &mut HashMap<String, bool>,
 ) -> FileResult {
     let path_str = path.as_str();
-    if prepared.changes.iter().any(|change| {
-        change.path().as_str() == path_str && matches!(change, LayerChange::Symlink { .. })
-    }) {
-        return FileResult {
-            path: path.clone(),
-            status: OccStatus::Rejected,
-            message: "unsupported gated change kind: SymlinkChange".to_owned(),
-        };
-    }
     if base_hash.is_none() {
         if let Some(parent) = parent_dir(path_str) {
             let parent_absent = *parent_absent_cache

@@ -261,18 +261,35 @@ pub fn record_tool_call(caller_id: &str, payload: Value) {
 }
 
 fn ensure_state(root: &Path) -> Result<(), IsolatedError> {
+    let root = normalized_root(root);
     {
         let mut guard = lock_state_cell();
+        #[cfg(target_os = "linux")]
+        if let Some(state) = guard.as_mut() {
+            if state.layer_stack_root != root {
+                let open_callers = state.session.list_open_callers();
+                if !open_callers.is_empty() || !state.active_command_sessions.is_empty() {
+                    return Err(IsolatedError::SetupFailed {
+                        step: format!(
+                            "isolated workspace manager is bound to {} with active callers",
+                            state.layer_stack_root.display()
+                        ),
+                    });
+                }
+                state.session.reap_orphan_resources();
+                *guard = None;
+            }
+        }
         if guard.is_none() {
             let config = isolated_workspace_config();
             let mut caps = resource_caps_from_config(&config);
             if !caps.enabled {
                 return Err(IsolatedError::FeatureDisabled);
             }
-            if let Some(binding) = read_workspace_binding(root).map_err(setup_error)? {
+            if let Some(binding) = read_workspace_binding(&root).map_err(setup_error)? {
                 caps.eos_workspace_root = binding.workspace_root;
             }
-            let stack = LayerStack::open(root.to_path_buf()).map_err(setup_error)?;
+            let stack = LayerStack::open(root.clone()).map_err(setup_error)?;
             let mut session = IsolatedSession::with_scratch_root(
                 caps,
                 DaemonLayerStackPort {
@@ -285,13 +302,17 @@ fn ensure_state(root: &Path) -> Result<(), IsolatedError> {
             session.initialize()?;
             *guard = Some(DaemonIsolatedState {
                 #[cfg(target_os = "linux")]
-                layer_stack_root: root.to_path_buf(),
+                layer_stack_root: root,
                 session,
                 active_command_sessions: HashMap::new(),
             });
         }
     }
     Ok(())
+}
+
+fn normalized_root(root: &Path) -> PathBuf {
+    root.canonicalize().unwrap_or_else(|_| root.to_path_buf())
 }
 
 fn isolated_workspace_config() -> IsolatedWorkspaceConfig {

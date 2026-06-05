@@ -207,6 +207,11 @@ fn isolated_workspace_jsonl_records_lifecycle_and_tool_call_fields() -> Result<(
             "max_output_tokens": 20000
         }),
     )?;
+    assert_eq!(
+        as_str(&audit_file, "status")?,
+        "ok",
+        "audit JSONL read command should succeed before parsing stdout: {audit_file}"
+    );
     let events = stdout(&audit_file)
         .lines()
         .filter_map(|line| serde_json::from_str::<Value>(line).ok())
