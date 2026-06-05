@@ -409,7 +409,7 @@ impl AppStateBuilder {
         let needs_host_provider = self.transport.is_none() || self.provisioner.is_none();
         let provider_registry = Arc::new(ProviderRegistry::new());
         if needs_host_provider {
-            seed_default_sandbox_provider(&provider_registry, &config)?;
+            seed_default_sandbox_provider(&provider_registry)?;
         }
         let daemon_client = Arc::new(DaemonClient::new(provider_registry));
         let transport: Arc<dyn SandboxTransport> =
@@ -423,7 +423,9 @@ impl AppStateBuilder {
             Arc::new(HostProvisioner {
                 inner: Arc::new(RequestSandboxProvisioner::with_default_snapshot(
                     Arc::new(lifecycle),
-                    Some(&config.sandbox.docker.default_snapshot),
+                    // No host-side default snapshot: a fresh sandbox uses the
+                    // provider default unless a request supplies an explicit id.
+                    None,
                 )),
             })
         });
@@ -473,16 +475,10 @@ fn default_llm_client(config: &CentralConfig) -> Arc<dyn LlmClient> {
     Arc::new(UnconfiguredLlmClient)
 }
 
-fn seed_default_sandbox_provider(
-    registry: &ProviderRegistry,
-    config: &CentralConfig,
-) -> Result<()> {
-    let env_override = std::env::var("EOS_SANDBOX_PROVIDER").ok();
-    let provider_kind = resolve_provider_kind(env_override.as_deref(), &config.sandbox)
-        .context("resolving sandbox provider")?;
-
-    let docker = DockerProviderAdapter::connect(&config.sandbox.docker)
-        .context("connecting docker sandbox provider")?;
+fn seed_default_sandbox_provider(registry: &ProviderRegistry) -> Result<()> {
+    let provider_kind = resolve_provider_kind();
+    let docker =
+        DockerProviderAdapter::connect().context("connecting docker sandbox provider")?;
     registry.set_default(Arc::new(docker));
     tracing::info!(
         sandbox_provider = provider_kind.as_str(),

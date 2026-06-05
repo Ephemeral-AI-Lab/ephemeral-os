@@ -10,22 +10,19 @@ use serde::{Deserialize, Serialize};
 use crate::attempt::AttemptConfig;
 use crate::database::DatabaseConfig;
 use crate::providers::ProvidersConfig;
-use crate::sandbox::SandboxConfig;
 
 /// The validated, immutable composition root for all runtime-tunable config.
 ///
-/// Built by [`load_central_config`] (and wrapped in `Arc` by `eos-runtime`); it
-/// is read-only after load and holds no secrets, connections, or tasks.
+/// Built by [`load`] (and wrapped in `Arc` by `eos-runtime`); it is read-only
+/// after load and holds no secrets, connections, or tasks.
 ///
-/// [`load_central_config`]: crate::load_central_config
+/// [`load`]: crate::load
 #[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
 #[non_exhaustive]
 pub struct CentralConfig {
     /// Sqlite database config.
     pub database: DatabaseConfig,
-    /// Sandbox provider config.
-    pub sandbox: SandboxConfig,
     /// Provider (retry) config.
     pub providers: ProvidersConfig,
     /// Per-Attempt run-stage tunables (Rust-only).

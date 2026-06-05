@@ -167,6 +167,69 @@ fn generic_plugin_refreshes_after_workspace_edit() -> Result<()> {
 }
 
 #[test]
+fn concurrent_plugin_refresh_singleflight() -> Result<()> {
+    let Some(pool) = live_pool_or_skip()? else {
+        return Ok(());
+    };
+    let concurrency = pool
+        .workload()
+        .concurrency_levels
+        .iter()
+        .copied()
+        .find(|level| *level >= 6)
+        .unwrap_or(6);
+    let lease = pool.acquire()?;
+    let digest = format!("digest-{}", unique_suffix().replace('-', "_"));
+    let setup_digest = format!("setup-{digest}");
+    ensure_generic_service_package(&lease, &digest, &setup_digest)?;
+
+    lease.call_ok(
+        ops::API_V1_WRITE_FILE,
+        json!({
+            "path": "phase5/singleflight.txt",
+            "content": "after-singleflight\n",
+            "overwrite": true
+        }),
+    )?;
+
+    let mut handles = Vec::with_capacity(concurrency);
+    for index in 0..concurrency {
+        let client = lease.client().clone();
+        let root = lease.root().to_owned();
+        let caller_id = lease.caller_id().to_owned();
+        let invocation_id = format!("plugin-singleflight-{index}-{}", unique_suffix());
+        handles.push(thread::spawn(move || {
+            client.request(
+                "plugin.generic.query",
+                &invocation_id,
+                &json!({
+                    "layer_stack_root": root,
+                    "caller_id": caller_id,
+                    "path": "phase5/singleflight.txt",
+                    "request": format!("singleflight-{index}")
+                }),
+            )
+        }));
+    }
+
+    for handle in handles {
+        let response = handle
+            .join()
+            .map_err(|_| anyhow::anyhow!("plugin refresh thread panicked"))??;
+        assert_eq!(response["success"], true, "{response}");
+        assert_eq!(response["content"], "after-singleflight\n", "{response}");
+    }
+
+    let status = lease.call_ok(ops::API_PLUGIN_STATUS, json!({}))?;
+    assert_eq!(
+        service_refresh_count(&status),
+        1,
+        "concurrent stale dispatches should share one refresh: {status}"
+    );
+    Ok(())
+}
+
+#[test]
 fn service_health_probe_reports_connected_service() -> Result<()> {
     let Some(pool) = live_pool_or_skip()? else {
         return Ok(());
@@ -191,12 +254,78 @@ fn service_health_probe_reports_connected_service() -> Result<()> {
         "probe_services must populate service_health: {status}"
     );
     assert_eq!(
-        health[0]["success"], json!(true),
+        health[0]["success"],
+        json!(true),
         "the service health probe must succeed: {status}"
     );
     assert_eq!(
-        health[0]["accepted"], json!(true),
+        health[0]["accepted"],
+        json!(true),
         "the worker must accept the health probe: {status}"
+    );
+    Ok(())
+}
+
+#[test]
+fn package_reload_reaps_old_service_and_routes() -> Result<()> {
+    let Some(pool) = live_pool_or_skip()? else {
+        return Ok(());
+    };
+    let lease = pool.acquire()?;
+    let first_digest = format!("digest-{}", unique_suffix().replace('-', "_"));
+    let first_setup_digest = format!("setup-{first_digest}");
+    ensure_generic_service_package(&lease, &first_digest, &first_setup_digest)?;
+    let first_status = lease.call_ok(ops::API_PLUGIN_STATUS, json!({}))?;
+    let first_pid = running_service_pid(&first_status)?;
+
+    let second_digest = format!("digest-{}", unique_suffix().replace('-', "_"));
+    let second_setup_digest = format!("setup-{second_digest}");
+    let staged = stage_generic_service_package(&lease, &second_digest)?;
+    let upload_root = staged
+        .strip_suffix("/package")
+        .context("staged package path must end with /package")?
+        .to_owned();
+    let reloaded = lease.call_ok(
+        ops::API_PLUGIN_ENSURE,
+        json!({
+            "workspace_root": lease.workspace_root(),
+            "manifest": service_manifest(&second_digest, &second_setup_digest),
+            "staged_package_root": staged,
+            "start_services": true,
+        }),
+    )?;
+    assert_eq!(reloaded["success"], true, "{reloaded}");
+    assert_eq!(reloaded["service_processes_started"], true, "{reloaded}");
+    assert_eq!(
+        reloaded["connected_ppc_routes"],
+        json!(["plugin.generic.query"]),
+        "{reloaded}"
+    );
+
+    wait_for_container_path_absent(&lease, &format!("/proc/{first_pid}"))?;
+    assert_container_absent(&lease, &upload_root)?;
+
+    let status = lease.call_ok(ops::API_PLUGIN_STATUS, json!({}))?;
+    assert_eq!(status["loaded_plugins"][0]["digest"], second_digest);
+    assert_eq!(
+        status["loaded_plugins"][0]["services"][0]["key"]["plugin_digest"],
+        second_digest
+    );
+    assert_eq!(
+        status["connected_ppc_routes"],
+        json!(["plugin.generic.query"])
+    );
+    let second_pid = running_service_pid(&status)?;
+    assert_ne!(
+        second_pid, first_pid,
+        "reload should replace the worker process: {status}"
+    );
+
+    let routed = lease.call_ok("plugin.generic.query", json!({"path": "missing.txt"}))?;
+    assert_eq!(
+        routed["package_root"],
+        format!("/eos/runtime/plugins/catalog/generic/{second_digest}"),
+        "dynamic route should point at the reloaded package: {routed}"
     );
     Ok(())
 }
@@ -232,7 +361,10 @@ fn restart_service_strategy_restarts_on_workspace_edit() -> Result<()> {
         }),
     )?;
     assert_eq!(cold["service_processes_started"], json!(true), "{cold}");
-    assert_eq!(restart_count(&lease.call_ok(ops::API_PLUGIN_STATUS, json!({}))?), 0);
+    assert_eq!(
+        restart_count(&lease.call_ok(ops::API_PLUGIN_STATUS, json!({}))?),
+        0
+    );
 
     // Advance the workspace manifest, then a dispatch forces the refresh, which
     // for restart_service is a process restart (used only to trigger; may defer).
@@ -263,6 +395,46 @@ fn restart_service_strategy_restarts_on_workspace_edit() -> Result<()> {
         let _ = lease.call("plugin.generic.query", json!({"path": "restart/edit.txt"}));
         thread::sleep(Duration::from_millis(150));
     }
+}
+
+#[test]
+fn oneshot_overlay_plugin_write_publishes_through_occ() -> Result<()> {
+    let Some(pool) = live_pool_or_skip()? else {
+        return Ok(());
+    };
+    let lease = pool.acquire()?;
+    let digest = format!("digest-{}", unique_suffix().replace('-', "_"));
+    ensure_generic_oneshot_package(&lease, &digest)?;
+    let mut audit = lease.audit_tap()?;
+
+    let response = lease.call_ok(
+        "plugin.generic.write",
+        json!({
+            "path": "plugin/oneshot-write.txt",
+            "content": "written by oneshot plugin\n"
+        }),
+    )?;
+    assert_eq!(response["success"], true, "{response}");
+    assert_eq!(response["status"], "committed", "{response}");
+    assert!(
+        response["plugin_overlay"]["changed_paths"]
+            .as_array()
+            .is_some_and(|paths| paths.iter().any(|path| path == "plugin/oneshot-write.txt")),
+        "plugin overlay response should report changed path: {response}"
+    );
+
+    let read = lease.call_ok(
+        ops::API_V1_READ_FILE,
+        json!({"path": "plugin/oneshot-write.txt"}),
+    )?;
+    assert_eq!(read["content"], "written by oneshot plugin\n", "{read}");
+    audit.collect()?;
+    assert!(
+        audit.any("occ.publish"),
+        "plugin overlay write should publish through daemon OCC: {:?}",
+        audit.events()
+    );
+    Ok(())
 }
 
 fn restart_count(status: &Value) -> i64 {
@@ -332,6 +504,33 @@ fn service_manifest_with_strategy(
     })
 }
 
+fn oneshot_manifest(digest: &str) -> Value {
+    json!({
+        "plugin_id": "generic",
+        "plugin_version": "0.1.0",
+        "plugin_digest": digest,
+        "package": {
+            "runtime_dir": "runtime",
+            "dependency_scope": "package_digest"
+        },
+        "services": [{
+            "service_id": "worker",
+            "service_profile_digest": format!("oneshot-profile-{digest}"),
+            "service_mode": "oneshot_overlay",
+            "refresh_strategy": "restart_service",
+            "command": ["./oneshot.py"],
+            "working_dir": "runtime",
+            "ppc_protocol_version": 1
+        }],
+        "operations": [{
+            "op_name": "write",
+            "intent": "write_allowed",
+            "service_id": "worker",
+            "timeout_ms": 5000
+        }]
+    })
+}
+
 fn stage_generic_package(lease: &eos_e2e_test::NodeLease<'_>, digest: &str) -> Result<String> {
     let staged = format!("/eos/scratch/uploads/plugins/generic/{digest}/upload-1/package");
     let cmd = format!(
@@ -393,6 +592,38 @@ fn ensure_generic_service_package(
     assert_eq!(
         cold["connected_ppc_routes"],
         json!(["plugin.generic.query"])
+    );
+    Ok(cold)
+}
+
+fn ensure_generic_oneshot_package(
+    lease: &eos_e2e_test::NodeLease<'_>,
+    digest: &str,
+) -> Result<Value> {
+    let manifest = oneshot_manifest(digest);
+    let warm = lease.call_ok(
+        ops::API_PLUGIN_ENSURE,
+        json!({
+            "workspace_root": lease.workspace_root(),
+            "manifest": manifest,
+        }),
+    )?;
+    assert_eq!(warm["needs_upload"], true, "{warm}");
+    let staged = stage_generic_oneshot_package(lease, digest)?;
+    let cold = lease.call_ok(
+        ops::API_PLUGIN_ENSURE,
+        json!({
+            "workspace_root": lease.workspace_root(),
+            "manifest": oneshot_manifest(digest),
+            "staged_package_root": staged,
+            "start_services": true,
+        }),
+    )?;
+    assert_eq!(cold["success"], true, "{cold}");
+    assert_eq!(cold["service_processes_started"], false, "{cold}");
+    assert_eq!(
+        cold["operation_routes"][0]["dispatch_mode"], "write_allowed_oneshot_overlay",
+        "{cold}"
     );
     Ok(cold)
 }
@@ -480,6 +711,47 @@ chmod +x "$pkg/runtime/server.py"
     Ok(staged)
 }
 
+fn stage_generic_oneshot_package(
+    lease: &eos_e2e_test::NodeLease<'_>,
+    digest: &str,
+) -> Result<String> {
+    let staged = format!("/eos/scratch/uploads/plugins/generic/{digest}/upload-1/package");
+    let cmd = format!(
+        r#"set -eu
+pkg="{staged}"
+rm -rf "$pkg"
+mkdir -p "$pkg/runtime"
+printf '%s' "{digest}" > "$pkg/.package-sha256"
+printf '{{}}' > "$pkg/sandbox-plugin.json"
+cat > "$pkg/runtime/oneshot.py" <<'PY'
+#!/usr/bin/env python3
+import json
+import os
+from pathlib import Path
+
+request = json.loads(Path(os.environ["EOS_PLUGIN_REQUEST_PATH"]).read_text(encoding="utf-8"))
+args = request.get("args", {{}})
+relative = args.get("path", "plugin/oneshot.txt")
+content = args.get("content", "")
+workspace = Path(os.environ["EOS_PLUGIN_WORKSPACE_ROOT"])
+target = workspace / relative
+target.parent.mkdir(parents=True, exist_ok=True)
+target.write_text(content, encoding="utf-8")
+Path(os.environ["EOS_PLUGIN_RESULT_PATH"]).write_text(
+    json.dumps({{"success": True, "wrote": relative}}, separators=(",", ":")),
+    encoding="utf-8",
+)
+PY
+chmod +x "$pkg/runtime/oneshot.py"
+"#
+    );
+    let response = lease.call_ok(ops::API_V1_EXEC_COMMAND, json!({"cmd": cmd}))?;
+    if response.get("status").and_then(Value::as_str) == Some("error") {
+        anyhow::bail!("oneshot package staging command failed: {response}");
+    }
+    Ok(staged)
+}
+
 fn assert_container_path(lease: &eos_e2e_test::NodeLease<'_>, path: &str) -> Result<()> {
     let response = lease.call_ok(
         ops::API_V1_EXEC_COMMAND,
@@ -489,6 +761,30 @@ fn assert_container_path(lease: &eos_e2e_test::NodeLease<'_>, path: &str) -> Res
         anyhow::bail!("expected container path {path}: {response}");
     }
     Ok(())
+}
+
+fn assert_container_absent(lease: &eos_e2e_test::NodeLease<'_>, path: &str) -> Result<()> {
+    let response = lease.call_ok(
+        ops::API_V1_EXEC_COMMAND,
+        json!({"cmd": format!("test ! -e {}", shell_quote(path))}),
+    )?;
+    if response.get("status").and_then(Value::as_str) == Some("error") {
+        anyhow::bail!("expected container path to be absent {path}: {response}");
+    }
+    Ok(())
+}
+
+fn wait_for_container_path_absent(lease: &eos_e2e_test::NodeLease<'_>, path: &str) -> Result<()> {
+    let deadline = Instant::now() + Duration::from_secs(5);
+    loop {
+        if assert_container_absent(lease, path).is_ok() {
+            return Ok(());
+        }
+        if Instant::now() >= deadline {
+            assert_container_absent(lease, path)?;
+        }
+        thread::sleep(Duration::from_millis(50));
+    }
 }
 
 fn read_container_file(lease: &eos_e2e_test::NodeLease<'_>, path: &str) -> Result<String> {
@@ -502,6 +798,25 @@ fn read_container_file(lease: &eos_e2e_test::NodeLease<'_>, path: &str) -> Resul
         .and_then(Value::as_str)
         .map(ToOwned::to_owned)
         .with_context(|| format!("stdout missing in {response}"))
+}
+
+fn running_service_pid(status: &Value) -> Result<i64> {
+    status
+        .get("running_service_processes")
+        .and_then(Value::as_array)
+        .and_then(|processes| {
+            processes
+                .iter()
+                .find(|process| process["running"] == true)
+                .and_then(|process| process["pid"].as_i64())
+        })
+        .with_context(|| format!("running service pid missing in {status}"))
+}
+
+fn service_refresh_count(status: &Value) -> i64 {
+    status["loaded_plugins"][0]["services"][0]["refresh_count"]
+        .as_i64()
+        .unwrap_or(-1)
 }
 
 fn shell_quote(value: &str) -> String {

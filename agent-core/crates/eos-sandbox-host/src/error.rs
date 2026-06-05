@@ -17,10 +17,6 @@ pub enum SandboxHostError {
     /// default fallback available.
     #[error("no adapter for sandbox {0}")]
     UnknownSandbox(SandboxId),
-    /// Provider selection resolved a non-Docker (or unknown) kind. agent-core is
-    /// Docker-only (`api-parse-dont-validate`, GC-02).
-    #[error("unknown sandbox provider {0:?}; expected docker")]
-    UnknownProviderKind(String),
     /// A provider `exec` returned a non-zero exit the caller treats as fatal.
     #[error("provider exec failed (exit {exit_code}): {message}")]
     ExecFailed {

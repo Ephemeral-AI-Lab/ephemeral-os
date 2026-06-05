@@ -127,13 +127,9 @@ fn isolated_exec_write_is_private_and_discarded() -> Result<()> {
             Some(false),
             "isolated exec must not publish to OCC: {exec}"
         );
-        let command_audit = exec
-            .get("audit")
-            .context("isolated command response missing audit metadata")?;
-        assert_eq!(
-            command_audit.get("published").and_then(Value::as_bool),
-            Some(false),
-            "isolated exec audit must record no publication: {exec}"
+        assert!(
+            exec.get("audit").is_none(),
+            "isolated exec audit payload is internal and must not be exposed on the wire: {exec}"
         );
 
         audit.collect()?;

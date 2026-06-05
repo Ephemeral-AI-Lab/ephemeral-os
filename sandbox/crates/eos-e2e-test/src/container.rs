@@ -48,7 +48,7 @@ impl DaemonContainer {
     pub fn start(config: &Config, config_yaml: &str) -> Result<Self> {
         let name = format!("eos-e2e-{}", unique_suffix());
         let token = format!("tok-{}", unique_suffix());
-        let config_digest = config_digest(config_yaml);
+        let config_digest = runtime_digest(config, config_yaml)?;
         let keep = config.keep_container && config.mode != NodeMode::PerTest;
 
         let mut run = vec![
@@ -144,7 +144,9 @@ impl DaemonContainer {
     /// config digest matches, their published daemon port resolves, and the
     /// daemon answers heartbeat.
     pub fn adopt_healthy(config: &Config, config_yaml: &str) -> Vec<Self> {
-        let digest = config_digest(config_yaml);
+        let Ok(digest) = runtime_digest(config, config_yaml) else {
+            return Vec::new();
+        };
         let out = Command::new("docker")
             .args([
                 "ps",
@@ -428,8 +430,18 @@ fn path_str(path: &Path) -> Result<String> {
         .with_context(|| format!("container path is not UTF-8: {}", path.display()))
 }
 
-fn config_digest(config_yaml: &str) -> String {
-    hex_lower(&Sha256::digest(config_yaml.as_bytes()))
+fn runtime_digest(config: &Config, config_yaml: &str) -> Result<String> {
+    let mut hasher = Sha256::new();
+    hasher.update(config_yaml.as_bytes());
+    hasher.update(b"\0eosd\0");
+    let eosd = fs::read(&config.eosd_path).with_context(|| {
+        format!(
+            "read eosd binary for digest: {}",
+            config.eosd_path.display()
+        )
+    })?;
+    hasher.update(eosd);
+    Ok(hex_lower(&hasher.finalize()))
 }
 
 fn hex_lower(bytes: &[u8]) -> String {
@@ -709,11 +721,17 @@ pub fn reap_e2e_containers() -> Result<usize> {
 
 #[cfg(test)]
 mod tests {
+    use std::fs;
     use std::path::PathBuf;
+    use std::time::Duration;
+
+    use anyhow::Result;
+
+    use crate::config::{Config, NodeMode, WorkloadConfig};
 
     use super::{
-        config_digest, docker_exec_args, docker_http_status, docker_unix_socket_from_host,
-        percent_encode, tar_single_file,
+        docker_exec_args, docker_http_status, docker_unix_socket_from_host, percent_encode,
+        runtime_digest, tar_single_file,
     };
 
     #[test]
@@ -763,17 +781,73 @@ mod tests {
         );
     }
 
+    fn digest_test_config(eosd_path: PathBuf) -> Config {
+        Config {
+            image: "image".to_owned(),
+            platform: None,
+            eosd_path,
+            remote_daemon_dir: PathBuf::from("/eos/runtime/daemon"),
+            remote_eosd_path: PathBuf::from("/eos/runtime/daemon/eosd"),
+            root_dir: PathBuf::from("/eos/state/e2e"),
+            cap_add: Vec::new(),
+            security_opt: Vec::new(),
+            tmpfs: Vec::new(),
+            tcp_port: 37_657,
+            sandboxes: 1,
+            mode: NodeMode::Pool,
+            recycle_after: 50,
+            ready_timeout: Duration::from_secs(1),
+            request_timeout: Duration::from_secs(1),
+            base_build_timeout: Duration::from_secs(1),
+            workspace_root: "/testbed".to_owned(),
+            keep_container: true,
+            non_kept_container_ttl: Duration::from_secs(60),
+            audit_pull_limit: 100,
+            workload: WorkloadConfig {
+                concurrency_levels: vec![1, 3, 6, 12],
+                write_iterations: 1,
+                sample_count: 1,
+                perf_artifact_dir: PathBuf::from("target/e2e-perf"),
+                timeout: Duration::from_secs(1),
+            },
+        }
+    }
+
     #[test]
-    fn config_digest_is_stable_and_config_specific() {
-        let baseline = config_digest("daemon:\n  layer_stack:\n    auto_squash_max_depth: 100\n");
-        let override_digest =
-            config_digest("daemon:\n  layer_stack:\n    auto_squash_max_depth: 8\n");
+    fn runtime_digest_tracks_config_and_eosd_bytes() -> Result<()> {
+        let root =
+            std::env::temp_dir().join(format!("eos-e2e-runtime-digest-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&root);
+        fs::create_dir_all(&root)?;
+        let eosd_path = root.join("eosd");
+        fs::write(&eosd_path, b"daemon-v1")?;
+        let config = digest_test_config(eosd_path);
+        let baseline = runtime_digest(
+            &config,
+            "daemon:\n  layer_stack:\n    auto_squash_max_depth: 100\n",
+        )?;
+        let override_digest = runtime_digest(
+            &config,
+            "daemon:\n  layer_stack:\n    auto_squash_max_depth: 8\n",
+        )?;
 
         assert_eq!(
             baseline,
-            config_digest("daemon:\n  layer_stack:\n    auto_squash_max_depth: 100\n")
+            runtime_digest(
+                &config,
+                "daemon:\n  layer_stack:\n    auto_squash_max_depth: 100\n",
+            )?
         );
         assert_eq!(baseline.len(), 64);
         assert_ne!(baseline, override_digest);
+        fs::write(&config.eosd_path, b"daemon-v2")?;
+        let rebuilt_digest = runtime_digest(
+            &config,
+            "daemon:\n  layer_stack:\n    auto_squash_max_depth: 100\n",
+        )?;
+        assert_ne!(baseline, rebuilt_digest);
+
+        let _ = fs::remove_dir_all(root);
+        Ok(())
     }
 }

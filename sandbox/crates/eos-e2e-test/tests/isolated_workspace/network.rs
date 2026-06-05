@@ -10,7 +10,10 @@
 //! `ensure!` so the cleanup that cancels servers / exits the isolated session
 //! runs even on failure, and the isolated session for caller B is always exited.
 
-use anyhow::{ensure, Context, Result};
+use std::thread;
+use std::time::{Duration, Instant};
+
+use anyhow::{bail, ensure, Context, Result};
 use eos_protocol::ops;
 use serde_json::{json, Value};
 
@@ -73,6 +76,68 @@ fn cancel(lease: &eos_e2e_test::NodeLease<'_>, caller_id: Option<&str>, id: &str
     let _ = lease.call(ops::API_V1_COMMAND_CANCEL, args);
 }
 
+fn wait_for_output(
+    lease: &eos_e2e_test::NodeLease<'_>,
+    caller_id: Option<&str>,
+    response: &Value,
+    marker: &str,
+) -> Result<()> {
+    if stdout(response).contains(marker) {
+        return Ok(());
+    }
+    let session_id = as_str(response, "command_session_id")?;
+    let deadline = Instant::now() + Duration::from_secs(5);
+    let mut last = response.clone();
+    loop {
+        let mut poll_args = json!({
+            "command_session_id": session_id,
+            "chars": "",
+            "yield_time_ms": 250,
+            "max_output_tokens": 1000
+        });
+        if let Some(caller) = caller_id {
+            poll_args["caller_id"] = json!(caller);
+        }
+        if let Ok(poll) = lease.call_ok(ops::API_V1_WRITE_STDIN, poll_args) {
+            if stdout(&poll).contains(marker) {
+                return Ok(());
+            }
+            last = poll;
+        }
+
+        let mut collect_args = json!({"command_session_ids": [session_id]});
+        if let Some(caller) = caller_id {
+            collect_args["caller_id"] = json!(caller);
+        }
+        let collected = lease.call_ok(ops::API_V1_COMMAND_COLLECT_COMPLETED, collect_args)?;
+        let completions = collected
+            .get("completions")
+            .and_then(Value::as_array)
+            .cloned()
+            .unwrap_or_default();
+        if let Some(completion) = completions.first() {
+            let result = completion
+                .get("result")
+                .context("command session completion result")?;
+            if stdout(result).contains(marker) {
+                return Ok(());
+            }
+            last = result.clone();
+        }
+
+        if Instant::now() >= deadline {
+            bail!("session output never contained {marker}: {last}");
+        }
+        thread::sleep(Duration::from_millis(100));
+    }
+}
+
+fn bind_probe_command(port: u16, success_marker: &str) -> String {
+    format!(
+        "python3 - <<'PY'\nimport socket\ns = socket.socket()\ntry:\n    s.bind(('0.0.0.0', {port}))\nexcept OSError:\n    print('EADDRINUSE', flush=True)\nelse:\n    print('{success_marker}', flush=True)\nPY"
+    )
+}
+
 #[test]
 fn cross_mode_same_port_no_conflict() -> Result<()> {
     let Some(pool) = live_pool_or_skip()? else {
@@ -113,10 +178,8 @@ fn cross_mode_same_port_no_conflict() -> Result<()> {
             as_str(&bind_b, "status")? == "running",
             "isolated server must stay running: {bind_b}"
         );
-        ensure!(
-            stdout(&bind_b).contains("BOUND"),
-            "isolated server must bind the same port in its own netns: {bind_b}"
-        );
+        wait_for_output(&lease, Some(&caller_b), &bind_b, "BOUND")
+            .with_context(|| format!("isolated server must bind the same port: {bind_b}"))?;
         if let Some(id_b) = bind_b.get("command_session_id").and_then(Value::as_str) {
             cancel(&lease, Some(&caller_b), id_b);
         }
@@ -155,16 +218,15 @@ fn same_mode_same_port_conflicts() -> Result<()> {
         let bind = lease.call_ok(
             ops::API_V1_EXEC_COMMAND,
             json!({
-                "cmd": format!("python3 -c \"import socket;socket.socket().bind(('0.0.0.0',{port}))\" && echo BOUND || echo EADDRINUSE"),
+                "cmd": bind_probe_command(port, "BOUND"),
                 "yield_time_ms": 2000,
                 "timeout_seconds": 30,
                 "max_output_tokens": 500
             }),
         )?;
-        ensure!(
-            stdout(&bind).contains("EADDRINUSE"),
-            "a second ephemeral bind on the same port must fail (shared netns): {bind}"
-        );
+        wait_for_output(&lease, None, &bind, "EADDRINUSE").with_context(|| {
+            format!("a second ephemeral bind on the same port must fail: {bind}")
+        })?;
         ensure!(
             !stdout(&bind).contains("BOUND"),
             "the second ephemeral bind must not succeed: {bind}"
@@ -240,10 +302,8 @@ fn isolated_to_isolated_same_port_matrix() -> Result<()> {
             as_str(&server_a, "status")? == "running",
             "caller A isolated server must stay running: {server_a}"
         );
-        ensure!(
-            stdout(&server_a).contains("BOUND-A"),
-            "caller A must bind the selected port: {server_a}"
-        );
+        wait_for_output(&lease, Some(&caller_a), &server_a, "BOUND-A")
+            .with_context(|| format!("caller A must bind the selected port: {server_a}"))?;
         sessions.push((
             caller_a.clone(),
             as_str(&server_a, "command_session_id")?.to_owned(),
@@ -254,10 +314,8 @@ fn isolated_to_isolated_same_port_matrix() -> Result<()> {
             as_str(&server_b, "status")? == "running",
             "caller B isolated server must also stay running on the same port: {server_b}"
         );
-        ensure!(
-            stdout(&server_b).contains("BOUND-B"),
-            "caller B must bind the same port in its own netns: {server_b}"
-        );
+        wait_for_output(&lease, Some(&caller_b), &server_b, "BOUND-B")
+            .with_context(|| format!("caller B must bind the same port: {server_b}"))?;
         sessions.push((
             caller_b.clone(),
             as_str(&server_b, "command_session_id")?.to_owned(),
@@ -267,16 +325,15 @@ fn isolated_to_isolated_same_port_matrix() -> Result<()> {
             ops::API_V1_EXEC_COMMAND,
             json!({
                 "caller_id": caller_a,
-                "cmd": format!("python3 -c \"import socket;s=socket.socket();s.bind(('0.0.0.0',{port}));print('SAME_CALLER_BOUND')\" && echo SAME_CALLER_BOUND || echo EADDRINUSE"),
+                "cmd": bind_probe_command(port, "SAME_CALLER_BOUND"),
                 "yield_time_ms": 2000,
                 "timeout_seconds": 30,
                 "max_output_tokens": 500
             }),
         )?;
-        ensure!(
-            stdout(&same_namespace).contains("EADDRINUSE"),
-            "a second bind inside caller A's isolated netns must conflict: {same_namespace}"
-        );
+        wait_for_output(&lease, Some(&caller_a), &same_namespace, "EADDRINUSE").with_context(
+            || format!("a second bind inside caller A's isolated netns must conflict: {same_namespace}"),
+        )?;
         ensure!(
             !stdout(&same_namespace).contains("SAME_CALLER_BOUND"),
             "same-caller bind must not succeed while the first caller A server is live: {same_namespace}"

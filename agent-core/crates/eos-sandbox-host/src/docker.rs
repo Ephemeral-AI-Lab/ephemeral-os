@@ -20,7 +20,6 @@ use bollard::models::{
     PortBinding,
 };
 use bollard::Docker;
-use eos_config::DockerConfig;
 use eos_types::SandboxId;
 use futures::StreamExt;
 use tokio::io::AsyncWriteExt;
@@ -53,35 +52,40 @@ fn is_eos_tmpfs_destination(dest_dir: &str) -> bool {
             .is_some_and(|suffix| suffix.starts_with('/'))
 }
 
+// Host-side Docker launch knob. The host adapter only *launches* the container
+// the sandbox daemon runs in; sandbox configuration (including the E2E launch
+// config in `sandbox/config/prd.yml`) is owned by the ephemeral-os sandbox
+// module — so this is a fixed compiled default, not agent-core config (the
+// Python-port `DockerConfig` was removed from `eos-config`). Sandbox containers
+// always run with SYS_ADMIN + NET_ADMIN (see `host_config_kwargs`); the old
+// `privileged` / `no_privilege` knobs were dead — dropping those caps would
+// break the namespace/overlay/netlink machinery the sandbox requires.
+const DAEMON_TCP: bool = true;
+
 /// The Docker-backed provider adapter. Holds a cheap-to-clone, pooled
 /// `bollard::Docker` (no lazy `Option`/`to_thread` artifacts — bollard is async)
-/// plus the create-time knobs read once from the typed, validated
-/// [`DockerConfig`] instead of re-parsing `EOS_DOCKER_*` env per `create`.
+/// plus the fixed daemon-TCP launch knob (no env / config — sandbox provisioning
+/// policy is owned by the sandbox module).
 #[derive(Debug, Clone)]
 pub struct DockerProviderAdapter {
     docker: Docker,
     daemon_tcp: bool,
-    privileged: bool,
-    no_privilege: bool,
 }
 
 impl DockerProviderAdapter {
-    /// Connect to the local Docker daemon (env / default socket), taking the
-    /// create-time knobs from the typed config (`privileged`/`no_privilege` are
-    /// already validated as non-contradictory at config load).
-    pub fn connect(config: &DockerConfig) -> Result<Self, SandboxHostError> {
+    /// Connect to the local Docker daemon (env / default socket) with the fixed
+    /// host-adapter launch knob.
+    pub fn connect() -> Result<Self, SandboxHostError> {
         let docker = Docker::connect_with_local_defaults().map_err(SandboxHostError::Docker)?;
-        Ok(Self::from_client(docker, config))
+        Ok(Self::from_client(docker))
     }
 
-    /// Wrap an existing `bollard::Docker` handle with the typed config knobs.
+    /// Wrap an existing `bollard::Docker` handle with the fixed launch knob.
     #[must_use]
-    pub fn from_client(docker: Docker, config: &DockerConfig) -> Self {
+    pub fn from_client(docker: Docker) -> Self {
         Self {
             docker,
-            daemon_tcp: config.daemon_tcp,
-            privileged: config.privileged,
-            no_privilege: config.no_privilege,
+            daemon_tcp: DAEMON_TCP,
         }
     }
 }
@@ -164,7 +168,7 @@ impl ProviderAdapter for DockerProviderAdapter {
         labels.insert(DOCKER_INIT_ENABLED_LABEL.to_owned(), "1".to_owned());
 
         let mut environment = normalize_string_map(&spec.env_vars);
-        let mut host_config = host_config_kwargs(self.privileged, self.no_privilege);
+        let mut host_config = host_config_kwargs();
         if self.daemon_tcp {
             environment.insert(DAEMON_TCP_ENV_HOST.to_owned(), "0.0.0.0".to_owned());
             environment.insert(
@@ -587,22 +591,20 @@ fn generate_auth_token() -> String {
     )
 }
 
-fn host_config_kwargs(privileged: bool, no_privilege: bool) -> HostConfig {
+fn host_config_kwargs() -> HostConfig {
+    // Sandbox containers always run with SYS_ADMIN + NET_ADMIN and unconfined
+    // seccomp/apparmor: these caps are load-bearing for the namespace, overlay,
+    // and netlink machinery the sandbox daemon runs. There is no host-side
+    // privilege toggle (the old privileged / no_privilege knobs were dead).
     let mut host_config = HostConfig {
         init: Some(true),
-        ..Default::default()
-    };
-    if privileged {
-        host_config.privileged = Some(true);
-    } else if no_privilege {
-        // force-drop privileges: no caps, no security-opt.
-    } else {
-        host_config.cap_add = Some(vec!["SYS_ADMIN".to_owned(), "NET_ADMIN".to_owned()]);
-        host_config.security_opt = Some(vec![
+        cap_add: Some(vec!["SYS_ADMIN".to_owned(), "NET_ADMIN".to_owned()]),
+        security_opt: Some(vec![
             "seccomp=unconfined".to_owned(),
             "apparmor=unconfined".to_owned(),
-        ]);
-    }
+        ]),
+        ..Default::default()
+    };
     if !env_is_one("EOS_DOCKER_DISABLE_OVERLAY_WRITABLE_TMPFS") {
         let options = std::env::var("EOS_DOCKER_OVERLAY_WRITABLE_TMPFS_OPTIONS")
             .ok()

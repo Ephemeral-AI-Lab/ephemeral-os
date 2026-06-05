@@ -1,40 +1,36 @@
 //! eos-config — typed, validated, immutable runtime configuration.
 //!
-//! This crate loads [`CentralConfig`] from layered sources
-//! (`defaults < YAML < env < init`), parses raw strings into validated config
-//! types at the boundary, resolves on-disk config/data/log [`paths`], and fails
-//! fast on contradictory or unsupported settings (network database urls, docker
-//! `privileged + no_privilege`). It is a leaf of the dependency DAG — it has no
-//! internal upstream edge (not even `eos-types`) — and is consumed read-only by
-//! every crate that needs tunables.
+//! This crate loads [`CentralConfig`] from files only — the committed
+//! `agent-core/config/prd.yml` baseline merged with a gitignored
+//! `agent-core/config/local.yml` override (objects recurse, scalars/arrays
+//! replace) — parses raw strings into validated config types at the boundary,
+//! and fails fast on unsupported settings (network database urls). There is no
+//! environment-variable or CLI config selection: config is chosen by file. It is
+//! a leaf of the dependency DAG — it has no internal upstream edge (not even
+//! `eos-types`) — and is consumed read-only by every crate that needs tunables.
 //!
-//! It deliberately does **not** resolve the active model (that is `eos-db`), own
-//! the CLI `Settings` UI shape, hold secrets, open connections, spawn tasks, or
-//! perform any I/O beyond reading config files and the environment.
+//! It deliberately does **not** resolve the active model (that is `eos-db`),
+//! hold secrets (those live only in the gitignored override), open connections,
+//! spawn tasks, or perform any I/O beyond reading the config files.
 #![forbid(unsafe_code)]
 #![warn(missing_docs)]
 
 mod attempt;
 mod config;
 mod database;
-mod env;
 mod error;
 mod loader;
 mod markdown;
-pub mod paths;
 mod providers;
-mod sandbox;
 mod validation;
 
 pub use attempt::AttemptConfig;
 pub use config::CentralConfig;
 pub use database::{DatabaseConfig, DatabaseUrl, DEFAULT_SQLITE_DATABASE_URL};
-pub use env::EnvMap;
 pub use error::ConfigError;
-pub use loader::{load_central_config, ConfigLoader};
+pub use loader::{load, load_with_override};
 pub use markdown::parse_markdown_frontmatter;
 pub use providers::{ProvidersConfig, RetryConfig};
-pub use sandbox::{DockerConfig, SandboxConfig, SandboxProvider};
 
 #[cfg(test)]
 mod schema_parity {
@@ -101,10 +97,12 @@ mod schema_parity {
         let py: Value = serde_json::from_str(PYTHON_SCHEMA).unwrap();
         let rust: Value = serde_json::to_value(schema_for!(CentralConfig)).unwrap();
 
-        // Top level: drop runner/engine, add the Rust-only attempt section.
+        // Top level: drop runner/engine + the whole sandbox section (sandbox
+        // config is owned by the ephemeral-os sandbox module, not agent-core),
+        // add the Rust-only attempt section.
         assert_eq!(
             top_fields(&rust),
-            expect(&top_fields(&py), &["runner", "engine"], &["attempt"]),
+            expect(&top_fields(&py), &["runner", "engine", "sandbox"], &["attempt"]),
             "CentralConfig top-level field names diverged from Python beyond the documented deltas",
         );
 
@@ -114,14 +112,6 @@ mod schema_parity {
                 &["pool_pre_ping", "max_overflow", "echo"],
                 &["busy_timeout_ms", "wal", "foreign_keys"],
             ),
-            // timeout_s / runtime_client_timeout_s dropped as dead config — the
-            // ephemeral-os sandbox module owns sandbox-execution timeouts.
-            (
-                "SandboxConfig",
-                &["runtime_client_timeout_s", "timeout_s"],
-                &[],
-            ),
-            ("DockerConfig", &[], &[]),
             ("ProvidersConfig", &["minimax"], &[]),
             ("RetryConfig", &[], &[]),
         ];

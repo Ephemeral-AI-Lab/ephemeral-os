@@ -1,129 +1,81 @@
-//! Layered config loading with precedence `defaults < YAML < env < init`
-//! (`central.py`/`loader.py`). The merge is hand-rolled over [`serde_yaml::Value`]
-//! trees (a `figment` dependency would be speculative for a recursive map-merge):
-//! the defaults are serialized to a full tree, each higher-priority source is
-//! deep-merged over it, the provider-key alias is applied, and the result is
-//! deserialized into [`CentralConfig`] — which is where `deny_unknown_fields`,
-//! the [`DatabaseUrl`] parse, and scalar coercion take effect — then validated.
-//!
-//! The Python `ContextVar` override / lazy global is intentionally not ported
-//! (spec-conventions §7): tests pass an explicit [`ConfigLoader::env`]/`init`
-//! instead of mutating process or global state.
+//! File-only config loading: `defaults < prd.yml < local override`. No env, no
+//! CLI selection — config is chosen by *file*, mirroring the sandbox config
+//! model. The committed `agent-core/config/prd.yml` is the baseline; a gitignored
+//! `agent-core/config/local.yml` (or, in tests, an explicit override file) is
+//! merged over it (objects recurse, scalars/arrays replace), then the result is
+//! deserialized into [`CentralConfig`] — where `deny_unknown_fields`, the
+//! [`DatabaseUrl`] parse, and scalar coercion take effect — and validated.
 //!
 //! [`DatabaseUrl`]: crate::DatabaseUrl
 
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use serde_yaml::Value;
 
 use crate::config::CentralConfig;
-use crate::env::{data_from_env, EnvMap};
 use crate::error::ConfigError;
-use crate::{paths, validation};
+use crate::validation;
 
-/// Builder for [`CentralConfig`] loading. Defaults read the process environment
-/// and discover the central YAML; tests inject an explicit env / YAML path /
-/// init layer for determinism.
-#[derive(Debug)]
-pub struct ConfigLoader {
-    yaml_path: Option<PathBuf>,
-    env: EnvMap,
-    init: Value,
-}
-
-impl Default for ConfigLoader {
-    fn default() -> Self {
-        Self {
-            yaml_path: None,
-            env: std::env::vars().collect(),
-            init: Value::Null,
-        }
-    }
-}
-
-impl ConfigLoader {
-    /// A loader reading the process environment and discovering the central YAML.
-    #[must_use]
-    pub fn new() -> Self {
-        Self::default()
-    }
-
-    /// Use an explicit YAML file instead of central-config discovery.
-    #[must_use]
-    pub fn yaml_path(mut self, path: impl Into<PathBuf>) -> Self {
-        self.yaml_path = Some(path.into());
-        self
-    }
-
-    /// Use an explicit environment map instead of the process environment.
-    #[must_use]
-    pub fn env(mut self, env: EnvMap) -> Self {
-        self.env = env;
-        self
-    }
-
-    /// Set the highest-priority init-override layer (a partial mapping).
-    #[must_use]
-    pub fn init(mut self, init: Value) -> Self {
-        self.init = init;
-        self
-    }
-
-    /// Load, merge, alias-rename, deserialize, and validate the config.
-    ///
-    /// # Errors
-    /// Returns [`ConfigError`] on an unreadable/invalid YAML file, an unknown
-    /// key, an invalid value, a rejected database url, or a failed range /
-    /// contradiction check.
-    pub fn load(self) -> Result<CentralConfig, ConfigError> {
-        // defaults (a full tree) < YAML < env < init (init highest). The
-        // provider alias is applied per-source (matching `loader.py`, which
-        // renames inside `_data_from_env`): normalizing after the merge would
-        // see the always-present default `default_provider` and wrongly drop a
-        // source-supplied `provider`.
-        let mut merged =
-            serde_yaml::to_value(CentralConfig::default()).expect("serialize default config");
-        for mut source in [
-            self.read_yaml()?,
-            Some(data_from_env(&self.env)),
-            self.init_layer(),
-        ]
-        .into_iter()
-        .flatten()
-        {
-            apply_provider_alias(&mut source);
-            deep_merge(&mut merged, source);
-        }
-
-        let cfg: CentralConfig = serde_yaml::from_value(merged).map_err(ConfigError::ParseYaml)?;
-        validation::validate(&cfg)?;
-        Ok(cfg)
-    }
-
-    fn init_layer(&self) -> Option<Value> {
-        (!self.init.is_null()).then(|| self.init.clone())
-    }
-
-    fn read_yaml(&self) -> Result<Option<Value>, ConfigError> {
-        let path = match &self.yaml_path {
-            Some(p) => p.clone(),
-            None => paths::central_config_file_path(&self.env),
-        };
-        if !path.exists() {
-            return Ok(None);
-        }
-        let text = std::fs::read_to_string(&path).map_err(ConfigError::ReadFile)?;
-        let doc: Value = serde_yaml::from_str(&text).map_err(ConfigError::ParseYaml)?;
-        Ok((!doc.is_null()).then_some(doc))
-    }
-}
-
-/// Load [`CentralConfig`] from the process environment and discovered YAML.
+/// Load [`CentralConfig`] from the committed baseline `agent-core/config/prd.yml`
+/// merged with the gitignored `agent-core/config/local.yml` override when present.
+/// Missing files are skipped, so an absent baseline yields the defaults.
 ///
 /// # Errors
-/// See [`ConfigLoader::load`].
-pub fn load_central_config() -> Result<CentralConfig, ConfigError> {
-    ConfigLoader::new().load()
+/// Returns [`ConfigError`] on an unreadable/invalid YAML file, an unknown key, a
+/// rejected database url, or a failed range check.
+pub fn load() -> Result<CentralConfig, ConfigError> {
+    load_layers(&[baseline_path(), local_override_path()])
+}
+
+/// Load the baseline merged with an explicit override file (the test/local seam).
+///
+/// # Errors
+/// See [`load`].
+pub fn load_with_override(override_path: impl AsRef<Path>) -> Result<CentralConfig, ConfigError> {
+    load_layers(&[baseline_path(), override_path.as_ref().to_path_buf()])
+}
+
+/// The committed baseline path `agent-core/config/prd.yml`.
+fn baseline_path() -> PathBuf {
+    config_dir().join("prd.yml")
+}
+
+/// The gitignored production override path `agent-core/config/local.yml`.
+fn local_override_path() -> PathBuf {
+    config_dir().join("local.yml")
+}
+
+/// `agent-core/config` resolved from the crate layout (this crate lives at
+/// `agent-core/crates/eos-config`).
+fn config_dir() -> PathBuf {
+    Path::new(env!("CARGO_MANIFEST_DIR"))
+        .ancestors()
+        .nth(2)
+        .map_or_else(|| PathBuf::from("config"), |root| root.join("config"))
+}
+
+/// Fold `defaults < paths[0] < paths[1] < ...`, skipping files that do not exist.
+fn load_layers(paths: &[PathBuf]) -> Result<CentralConfig, ConfigError> {
+    let mut merged =
+        serde_yaml::to_value(CentralConfig::default()).expect("serialize default config");
+    for path in paths {
+        if let Some(doc) = read_yaml(path)? {
+            deep_merge(&mut merged, doc);
+        }
+    }
+    let cfg: CentralConfig = serde_yaml::from_value(merged).map_err(ConfigError::ParseYaml)?;
+    validation::validate(&cfg)?;
+    Ok(cfg)
+}
+
+/// Read and parse a YAML file, returning `None` when it is absent or empty.
+fn read_yaml(path: &Path) -> Result<Option<Value>, ConfigError> {
+    if !path.exists() {
+        return Ok(None);
+    }
+    let text = std::fs::read_to_string(path).map_err(ConfigError::ReadFile)?;
+    let doc: Value = serde_yaml::from_str(&text).map_err(ConfigError::ParseYaml)?;
+    Ok((!doc.is_null()).then_some(doc))
 }
 
 /// Recursively merge `overlay` into `base`: two mappings merge key-by-key, any
@@ -144,143 +96,55 @@ fn deep_merge(base: &mut Value, overlay: Value) {
     }
 }
 
-/// Rename a `sandbox.provider` key to `default_provider` (`loader.py:125-127`).
-/// `provider` is always removed (matching the Python `sandbox.pop("provider")`),
-/// and promoted to `default_provider` only when the latter is absent — so a
-/// stray `provider` never trips `deny_unknown_fields`.
-fn apply_provider_alias(merged: &mut Value) {
-    let Some(sandbox) = merged
-        .as_mapping_mut()
-        .and_then(|m| m.get_mut("sandbox"))
-        .and_then(Value::as_mapping_mut)
-    else {
-        return;
-    };
-    if let Some(provider) = sandbox.remove("provider") {
-        if !sandbox.contains_key("default_provider") {
-            sandbox.insert(Value::String("default_provider".to_owned()), provider);
-        }
-    }
-}
-
 #[cfg(test)]
 mod tests {
     #![allow(clippy::unwrap_used)]
-    use std::collections::BTreeMap;
-
     use super::*;
-    use crate::sandbox::SandboxProvider;
 
-    fn env(pairs: &[(&str, &str)]) -> EnvMap {
-        pairs
-            .iter()
-            .map(|(k, v)| ((*k).to_owned(), (*v).to_owned()))
-            .collect()
-    }
-
-    /// Write a uniquely-named temp YAML file (no external tempfile dep). Each
-    /// test uses a distinct name so parallel runs do not collide.
+    /// Write a uniquely-named temp YAML file (no external tempfile dep).
     fn temp_yaml(name: &str, content: &str) -> PathBuf {
         let path = std::env::temp_dir().join(name);
         std::fs::write(&path, content).unwrap();
         path
     }
 
-    /// A guaranteed-absent YAML path. Tests that exercise only the env/init
-    /// layers point at this so they never hit central-config discovery (which
-    /// could otherwise read a real repo-root `ephemeralos.yaml`).
-    fn no_yaml() -> PathBuf {
-        let path = std::env::temp_dir().join("eos_config_intentionally_absent.yaml");
-        let _ = std::fs::remove_file(&path);
-        path
-    }
-
-    // AC-eos-config-01: precedence is init > env > yaml > default, and a layer
-    // that does not set a field leaves the lower layer's value intact.
+    // AC: override values win over the baseline, baseline-only fields survive,
+    // and an untouched field keeps its default.
     #[test]
-    fn test_precedence_init_over_env_over_yaml() {
-        let yaml = temp_yaml(
-            "eos_config_test_precedence.yaml",
+    fn test_override_wins_over_baseline_over_default() {
+        let baseline = temp_yaml(
+            "eos_config_baseline.yaml",
             "database:\n  pool_size: 10\n  busy_timeout_ms: 20\n",
         );
-        let init: Value = serde_yaml::from_str("database:\n  pool_size: 40\n").unwrap();
-        let cfg = ConfigLoader::new()
-            .yaml_path(&yaml)
-            .env(env(&[("EOS__DATABASE__POOL_SIZE", "30")]))
-            .init(init)
-            .load()
-            .unwrap();
+        let over = temp_yaml("eos_config_override.yaml", "database:\n  pool_size: 40\n");
 
-        assert_eq!(
-            cfg.database.pool_size, 40,
-            "init must win over env and yaml"
-        );
+        let cfg = load_layers(&[baseline.clone(), over.clone()]).unwrap();
+
+        assert_eq!(cfg.database.pool_size, 40, "override wins");
         assert_eq!(
             cfg.database.busy_timeout_ms, 20,
-            "yaml-only field survives"
+            "baseline-only field survives"
         );
         assert!(cfg.database.wal, "untouched field keeps its default");
-        let _ = std::fs::remove_file(&yaml);
+
+        let _ = std::fs::remove_file(&baseline);
+        let _ = std::fs::remove_file(&over);
     }
 
-    // AC-eos-config-08: an unknown key fails deserialization (extra="forbid").
+    // AC: a missing layer file is skipped; absent files yield the defaults.
     #[test]
-    fn test_unknown_yaml_key_rejected() {
-        let init: Value = serde_yaml::from_str("sandbox:\n  bogus: true\n").unwrap();
-        let result = ConfigLoader::new()
-            .yaml_path(no_yaml())
-            .env(BTreeMap::new())
-            .init(init)
-            .load();
+    fn test_missing_files_yield_defaults() {
+        let absent = std::env::temp_dir().join("eos_config_intentionally_absent.yaml");
+        let _ = std::fs::remove_file(&absent);
+        assert_eq!(load_layers(&[absent]).unwrap(), CentralConfig::default());
+    }
+
+    // AC: an unknown key fails deserialization (deny_unknown_fields).
+    #[test]
+    fn test_unknown_key_rejected() {
+        let bad = temp_yaml("eos_config_unknown_key.yaml", "database:\n  bogus: true\n");
+        let result = load_layers(std::slice::from_ref(&bad));
+        let _ = std::fs::remove_file(&bad);
         assert!(matches!(result, Err(ConfigError::ParseYaml(_))));
-    }
-
-    // AC-eos-config-09: a `sandbox.provider` key aliases to `default_provider`
-    // when the latter is absent; a non-Docker value is rejected.
-    #[test]
-    fn test_provider_key_aliases_to_default_provider() {
-        let cfg = ConfigLoader::new()
-            .yaml_path(no_yaml())
-            .env(env(&[("EOS__SANDBOX__PROVIDER", "docker")]))
-            .load()
-            .unwrap();
-        assert_eq!(cfg.sandbox.default_provider, SandboxProvider::Docker);
-
-        let rejected = ConfigLoader::new()
-            .yaml_path(no_yaml())
-            .env(env(&[("EOS__SANDBOX__PROVIDER", "podman")]))
-            .load();
-        assert!(matches!(rejected, Err(ConfigError::ParseYaml(_))));
-    }
-
-    // Subtle risk (§8 ordering note): a legacy var beats an EOS__ var on the
-    // same path. No dedicated AC covers this counterintuitive ordering.
-    #[test]
-    fn test_legacy_env_beats_eos_nested_on_same_path() {
-        let cfg = ConfigLoader::new()
-            .yaml_path(no_yaml())
-            .env(env(&[
-                ("EOS__DATABASE__URL", "sqlite:///./from_eos.db"),
-                ("EPHEMERALOS_DATABASE_URL", "sqlite:///./from_legacy.db"),
-            ]))
-            .load()
-            .unwrap();
-        assert_eq!(cfg.database.url.as_str(), "sqlite:///./from_legacy.db");
-    }
-
-    // Subtle risk (provider alias always pops): with both the EOS__ provider
-    // alias key and the legacy default_provider var set, the stray `provider`
-    // key must be removed so deny_unknown_fields does not fire.
-    #[test]
-    fn test_provider_alias_pops_even_when_default_present() {
-        let cfg = ConfigLoader::new()
-            .yaml_path(no_yaml())
-            .env(env(&[
-                ("EOS__SANDBOX__PROVIDER", "docker"),
-                ("EOS_SANDBOX_PROVIDER", "docker"),
-            ]))
-            .load()
-            .unwrap();
-        assert_eq!(cfg.sandbox.default_provider, SandboxProvider::Docker);
     }
 }

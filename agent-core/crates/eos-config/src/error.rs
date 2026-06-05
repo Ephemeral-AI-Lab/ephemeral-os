@@ -14,9 +14,6 @@ pub enum ConfigError {
     /// A database url that is neither a `sqlite:` scheme nor a local `.db` path.
     #[error("unsupported database url (expected local sqlite): {0}")]
     UnsupportedDatabaseUrl(String),
-    /// The docker section set both `privileged` and `no_privilege`.
-    #[error("docker config sets both privileged and no_privilege")]
-    DockerPrivilegeContradiction,
     /// A numeric field fell outside its allowed range (Pydantic `ge`/`gt` parity).
     #[error("config value '{field}' is out of range: {detail}")]
     OutOfRange {

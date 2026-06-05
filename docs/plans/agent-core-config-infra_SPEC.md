@@ -123,43 +123,13 @@ database:                       # eos-db::config::DatabaseConfig
   wal: true
   foreign_keys: true
 
-sandbox:                        # eos-sandbox-host::config::SandboxConfig (owns section)
-  default_provider: docker
-  default_language: python
-  # NOTE: the old SandboxConfig.timeout_s(300)/runtime_client_timeout_s(600) are
-  # DEAD today (defined+validated, never read — see §3.4). Dropped here; the
-  # timeouts that actually run are host_timeouts + timeouts below. Re-add only if
-  # a field is genuinely wired to govern those.
-  docker:
-    daemon_tcp: true
-    privileged: false
-    no_privilege: false
-    default_snapshot: ""
-  overlay:                      # was EOS_DOCKER_OVERLAY_* env reads → fields
-    writable_tmpfs: true
-    tmpfs_options: "rw,exec,size=2g,mode=1777"
-  host_timeouts:                # pure host-side waits (seconds)
-    daemon_spawn_s: 20
-    readiness_s: 30
-    tcp_default_s: 60
-    bundle_upload_join_s: 60
-    ensure_workspace_base_s: 180
-    runtime_ready_s: 60
-    git_probe_s: 10
-    git_install_s: 120
-    running_probe_s: 10
-    plugin_package_upload_s: 30
-    bootstrap_probe_s: 15
-    bootstrap_finalize_s: 30
-  timeouts:                     # eos-sandbox-api::config::SandboxTimeouts (per-verb RPC budgets)
-    read_file_s: 60
-    write_file_s: 60
-    edit_file_s: 20
-    exec_default_s: 60
-    exec_dispatch_grace_s: 30
-    control_s: 15
-    isolated_s: 180
-    isolated_exit_grace_s: 5.0
+# NO `sandbox:` SECTION. Sandbox configuration is owned by the ephemeral-os
+# sandbox module (`sandbox/config/prd.yml` + the daemon). agent-core's host
+# adapter (`eos-sandbox-host`) only *launches* the container the daemon runs in;
+# its launch knobs are fixed compiled constants (daemon TCP on; caps always
+# SYS_ADMIN + NET_ADMIN), not config. The old `SandboxConfig`/`DockerConfig`
+# (a Python-port vestige) and all host-side timeout/overlay constants stay out
+# of this file. (Done: removed from `eos-config` / relocated to `eos-sandbox-host`.)
 
 providers:                      # eos-llm-client::config::ProvidersConfig
   anthropic: { base_url: "https://api.anthropic.com", model: "", api_key: "" }   # api_key ← local.yml; base_url currently hardcoded app_state.rs:464
@@ -200,7 +170,7 @@ workflow:                       # eos-workflow::config::WorkflowConfig
   default_attempt_budget: 2
 
 audit:                          # eos-audit::config::AuditConfig
-  jsonl_path: ""                # default resolved under runtime.data_dir when empty
+  jsonl_path: ""                # default relative path when empty
   sink_capacity: 1024           # bounded-channel backpressure (no home today)
 
 obs:                            # eos-obs-collector::config::ObsConfig
@@ -214,16 +184,11 @@ plugin_catalog:                 # eos-plugin-catalog::config::PluginCatalogConfi
 skills:                         # eos-skills::config::SkillsConfig
   description_max_chars: 200
 
-runtime:                        # eos-runtime::config::RuntimeConfig (was EPHEMERALOS_*_DIR env)
-  config_dir: "~/.ephemeralos"
-  data_dir: ""                  # default <config_dir>/data when empty
-  logs_dir: ""                  # default <config_dir>/logs when empty
+# NO `runtime:` SECTION. The old EPHEMERALOS_CONFIG_DIR/DATA_DIR/LOGS_DIR knobs
+# were dead (`data_dir`/`logs_dir` never read; `config_dir` only located the
+# central YAML, which the fixed `agent-core/config/prd.yml` path removes). The
+# DB path is self-contained in `database.url`; `paths.rs` is deleted.
 ```
-
-> The config-file location itself is **not** config-driven (it is the fixed
-> `agent-core/config/prd.yml`, resolved from the workspace root like sandbox), so
-> the `runtime.*_dir` fields control only where the db / logs / artifacts go —
-> resolving the chicken-and-egg the old `EPHEMERALOS_CONFIG_DIR` discovery had.
 
 ---
 

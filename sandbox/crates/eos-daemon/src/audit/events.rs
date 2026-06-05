@@ -95,7 +95,9 @@ fn skip_dispatch_audit(op: &str) -> bool {
 }
 
 fn emit_occ_audit(request: &Request, response: &Value) {
-    if !is_occ_op(&request.op) {
+    if (!is_occ_op(&request.op) && !is_plugin_overlay_response(response))
+        || response_workspace_isolated(response)
+    {
         return;
     }
     let changed_path_count = response
@@ -404,6 +406,9 @@ fn is_occ_op(op: &str) -> bool {
 }
 
 pub(crate) fn uses_overlay_or_lease(op: &str, response: &Value) -> bool {
+    if response_workspace_isolated(response) {
+        return false;
+    }
     if op == "api.v1.command.cancel" {
         return true;
     }
@@ -413,7 +418,22 @@ pub(crate) fn uses_overlay_or_lease(op: &str, response: &Value) -> bool {
             .and_then(Value::as_str)
             .is_none();
     }
+    if is_plugin_overlay_response(response) {
+        return true;
+    }
     false
+}
+
+fn response_workspace_isolated(response: &Value) -> bool {
+    response
+        .get("workspace_mode")
+        .or_else(|| response.get("workspace"))
+        .and_then(Value::as_str)
+        == Some("isolated")
+}
+
+fn is_plugin_overlay_response(response: &Value) -> bool {
+    response.get("plugin_overlay").is_some()
 }
 
 fn emit_os_resource_audit(request: &Request, response: &Value) {

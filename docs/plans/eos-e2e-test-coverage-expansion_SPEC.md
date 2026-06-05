@@ -128,8 +128,10 @@ README requirements:
 2. Checklist IDs are stable and local to the module, for example
    `occ-git-drop` or `iws-port-matrix`.
 3. Every checklist item appears in at least one `Test Case` row.
-4. Each module has at most five `Test Case` rows. Rows are scenario contracts,
-   not a one-row-per-Rust-function inventory.
+4. Each module has at most ten `Test Case` rows. Rows are scenario contracts,
+   not a one-row-per-Rust-function inventory; prefer fewer rows when a scenario
+   can naturally carry multiple checklist items through one expensive live
+   daemon/container setup.
 5. Checklist and test rows are many-to-many. Because live sandbox setup is
    expensive, one test case should cover multiple checklist items when the
    assertions naturally share a daemon/container setup; do not split a coherent
@@ -325,7 +327,7 @@ Checklist:
 | `layer-base` | Workspace base creation and rebuild are idempotent and visible through metrics. |
 | `layer-lease-pin` | Active leases pin their frozen manifest and release to zero. |
 | `layer-squash-depth` | Auto-squash keeps depth bounded by configured target. |
-| `layer-squash-gap-formula` | Post-squash depth equals lease heads plus foldable gap runs. |
+| `layer-multi-pin-squash-bound` | Multiple isolated callers keep stable pinned status while public squash pressure keeps the active manifest and layer dirs bounded. |
 | `layer-storage-bounded` | Repeated overwrites do not grow durable layer storage linearly. |
 | `layer-commit-workspace` | Commit to workspace materializes merged view and emits coherent version/timing data. |
 | `layer-commit-git` | Commit to Git works after repeated squash and reports bounded depth. |
@@ -335,7 +337,7 @@ Planned test cases:
 | Test name | Description | Command | Checklist |
 |---|---|---|---|
 | `layer-base-and-commit-scenario` | Groups base creation/rebuild visibility, commit-to-workspace merged view, version monotonicity, and audit/timing fields. | `cargo test -p eos-e2e-test --features e2e --test layerstack commit_to_workspace -- --nocapture` | `layer-base`, `layer-commit-workspace` |
-| `layer-lease-and-squash-formula-scenario` | Groups lease acquire/release, lease pin under squash, hold-time ordering, and planned post-squash lease-head plus foldable-gap formula. | `cargo test -p eos-e2e-test --features e2e --test layerstack lease -- --nocapture` | `layer-lease-pin`, `layer-squash-depth`, `layer-squash-gap-formula` |
+| `layer-lease-and-multi-pin-squash-scenario` | Groups lease acquire/release, lease pin under squash, hold-time ordering, multi-caller pinned status stability, and bounded active squash depth/layer dirs. | `cargo test -p eos-e2e-test --features e2e --test layerstack lease -- --nocapture` | `layer-lease-pin`, `layer-squash-depth`, `layer-multi-pin-squash-bound` |
 | `layer-storage-bound-scenario` | Groups auto-squash trigger, bounded depth, repeated overwrite storage growth, superseded layer-dir reclaim, and deep-stack repeated squash. | `cargo test -p eos-e2e-test --features e2e --test layerstack squash -- --nocapture` | `layer-squash-depth`, `layer-storage-bounded` |
 | `layer-git-overlay-commit-scenario` | Groups commit-to-Git after repeated squash, overlay snapshot materialization, bounded depth reporting, path filtering, and timing phases. | `cargo test -p eos-e2e-test --features e2e --test layerstack commit_to_git_commits_overlay_snapshot_after_repeated_squash -- --nocapture` | `layer-commit-git`, `layer-squash-depth`, `layer-storage-bounded` |
 
@@ -486,7 +488,7 @@ cargo check -p eos-daemon --all-targets
 
 1. All 8 module `readme.md` files exist and use the required structure.
 2. Every README checklist item is covered by at least one test-case row.
-3. README test rows are at most five per module, cover every checklist item, and
+3. README test rows are at most ten per module, cover every checklist item, and
    group live Rust functions or planned additions into load-bearing scenarios.
 4. Default live module runs pass under Docker with the default dask image.
 5. The suite has typed module-local workload contracts; there are no

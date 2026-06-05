@@ -1,1 +1,5 @@
 /target
+
+# Gitignored config override: secrets (API keys) + per-deployment values,
+# merged over the committed config/prd.yml baseline by eos_config::load().
+/config/local.yml

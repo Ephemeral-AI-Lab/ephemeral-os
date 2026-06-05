@@ -1,24 +1,17 @@
-//! Fail-fast contradiction and range checks (`validate`). Network-url rejection
-//! happens earlier, in [`DatabaseUrl::parse`]; this module covers the docker
-//! privilege contradiction and the Pydantic `ge`/`gt` numeric ranges the Rust
-//! types do not already enforce (§8 item 9).
+//! Fail-fast range checks (`validate`). Network-url rejection happens earlier,
+//! in [`DatabaseUrl::parse`]; this module covers the Pydantic `ge`/`gt` numeric
+//! ranges the Rust types do not already enforce (§8 item 9).
 //!
 //! [`DatabaseUrl::parse`]: crate::DatabaseUrl::parse
 
 use crate::config::CentralConfig;
 use crate::error::ConfigError;
 
-/// Validate cross-field contradictions and numeric ranges.
+/// Validate numeric-range constraints.
 ///
 /// # Errors
-/// Returns [`ConfigError::DockerPrivilegeContradiction`] when docker sets both
-/// `privileged` and `no_privilege`, or [`ConfigError::OutOfRange`] for an
-/// out-of-range numeric field.
+/// Returns [`ConfigError::OutOfRange`] for an out-of-range numeric field.
 pub(crate) fn validate(cfg: &CentralConfig) -> Result<(), ConfigError> {
-    let d = &cfg.sandbox.docker;
-    if d.privileged && d.no_privilege {
-        return Err(ConfigError::DockerPrivilegeContradiction);
-    }
     // Pydantic ge/gt parity — only the constraints the Rust type does not give.
     if cfg.database.pool_size < 1 {
         return Err(ConfigError::OutOfRange {
@@ -45,18 +38,6 @@ pub(crate) fn validate(cfg: &CentralConfig) -> Result<(), ConfigError> {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    // AC-eos-config-07: privileged + no_privilege is a contradiction.
-    #[test]
-    fn test_docker_privilege_contradiction() {
-        let mut c = CentralConfig::default();
-        c.sandbox.docker.privileged = true;
-        c.sandbox.docker.no_privilege = true;
-        assert!(matches!(
-            validate(&c),
-            Err(ConfigError::DockerPrivilegeContradiction)
-        ));
-    }
 
     // AC-eos-config-11: out-of-range numeric fields are rejected; in-range pass.
     #[test]

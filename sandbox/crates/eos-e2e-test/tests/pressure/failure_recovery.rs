@@ -136,8 +136,7 @@ fn command_sessions_ladder_1_3_6_12() -> Result<()> {
         );
         let leased = lease.call_ok(ops::API_LAYER_METRICS, json!({}))?;
         assert!(
-            as_i64(&leased, "active_leases")?
-                >= i64::try_from(level).unwrap_or(i64::MAX),
+            as_i64(&leased, "active_leases")? >= i64::try_from(level).unwrap_or(i64::MAX),
             "running command sessions should each hold a lease at level {level}: {leased}"
         );
 

@@ -8,36 +8,18 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use eos_config::{SandboxConfig, SandboxProvider};
 use eos_types::SandboxId;
 use parking_lot::RwLock;
 
 use crate::error::SandboxHostError;
 use crate::provider::{ProviderAdapter, ProviderKind};
 
-/// Resolve the sandbox provider kind from the optional `EOS_SANDBOX_PROVIDER`
-/// override and the central config, failing fast on a non-Docker value
-/// (`api-parse-dont-validate`, GC-02). `env_override` is the resolved value of
-/// `EOS_SANDBOX_PROVIDER` (the `eos-runtime` composition root reads the process
-/// env); `None` falls back to `config.default_provider`.
-///
-/// The registry owns first-call-wins default binding locally.
-pub fn resolve_provider_kind(
-    env_override: Option<&str>,
-    config: &SandboxConfig,
-) -> Result<ProviderKind, SandboxHostError> {
-    match env_override {
-        Some(raw) => match raw.trim().to_ascii_lowercase().as_str() {
-            "docker" => Ok(ProviderKind::Docker),
-            other => Err(SandboxHostError::UnknownProviderKind(other.to_owned())),
-        },
-        None => match config.default_provider {
-            SandboxProvider::Docker => Ok(ProviderKind::Docker),
-            // `SandboxProvider` is `#[non_exhaustive]`; agent-core is Docker-only,
-            // so any future variant fails fast here.
-            other => Err(SandboxHostError::UnknownProviderKind(format!("{other:?}"))),
-        },
-    }
+/// The sandbox provider kind. agent-core is Docker-only, and sandbox
+/// configuration (including any provider selection) is owned by the ephemeral-os
+/// sandbox module — so this is a fixed host-side constant, not central config.
+#[must_use]
+pub fn resolve_provider_kind() -> ProviderKind {
+    ProviderKind::Docker
 }
 
 /// Process-local provider adapter registry, held as `Arc<ProviderRegistry>` and
@@ -136,27 +118,10 @@ mod tests {
         s.parse().expect("non-empty id")
     }
 
-    // AC-eos-sandbox-host-01: provider selection from config/env resolves to
-    // Docker, and any non-Docker value returns UnknownProviderKind.
+    // AC-eos-sandbox-host-01: the Docker-only host resolves to Docker.
     #[test]
-    fn selects_provider_from_config() {
-        let config = SandboxConfig::default();
-        // env override "docker" (any case / whitespace) → Docker.
-        assert_eq!(
-            resolve_provider_kind(Some(" Docker "), &config).unwrap(),
-            ProviderKind::Docker
-        );
-        // env unset → falls back to config (Docker).
-        assert_eq!(
-            resolve_provider_kind(None, &config).unwrap(),
-            ProviderKind::Docker
-        );
-        // a non-Docker env value fails fast.
-        let err = resolve_provider_kind(Some("podman"), &config).unwrap_err();
-        assert!(matches!(
-            err,
-            SandboxHostError::UnknownProviderKind(k) if k == "podman"
-        ));
+    fn resolves_docker_provider() {
+        assert_eq!(resolve_provider_kind(), ProviderKind::Docker);
     }
 
     // AC-eos-sandbox-host-02: register+adapter returns the bound adapter;

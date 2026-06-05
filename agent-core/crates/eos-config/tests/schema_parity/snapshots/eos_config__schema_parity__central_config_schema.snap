@@ -46,30 +46,6 @@ expression: rust
         }
       }
     },
-    "DockerConfig": {
-      "additionalProperties": false,
-      "type": "object",
-      "required": [
-        "daemon_tcp",
-        "default_snapshot",
-        "no_privilege",
-        "privileged"
-      ],
-      "properties": {
-        "daemon_tcp": {
-          "type": "boolean"
-        },
-        "default_snapshot": {
-          "type": "string"
-        },
-        "no_privilege": {
-          "type": "boolean"
-        },
-        "privileged": {
-          "type": "boolean"
-        }
-      }
-    },
     "ProvidersConfig": {
       "additionalProperties": false,
       "type": "object",
@@ -115,48 +91,13 @@ expression: rust
           }
         }
       }
-    },
-    "SandboxConfig": {
-      "additionalProperties": false,
-      "type": "object",
-      "required": [
-        "default_provider",
-        "docker"
-      ],
-      "properties": {
-        "default_provider": {
-          "allOf": [
-            {
-              "$ref": "#/definitions/SandboxProvider"
-            }
-          ]
-        },
-        "docker": {
-          "allOf": [
-            {
-              "$ref": "#/definitions/DockerConfig"
-            }
-          ]
-        }
-      }
-    },
-    "SandboxProvider": {
-      "oneOf": [
-        {
-          "enum": [
-            "docker"
-          ],
-          "type": "string"
-        }
-      ]
     }
   },
   "type": "object",
   "required": [
     "attempt",
     "database",
-    "providers",
-    "sandbox"
+    "providers"
   ],
   "properties": {
     "attempt": {
@@ -177,13 +118,6 @@ expression: rust
       "allOf": [
         {
           "$ref": "#/definitions/ProvidersConfig"
-        }
-      ]
-    },
-    "sandbox": {
-      "allOf": [
-        {
-          "$ref": "#/definitions/SandboxConfig"
         }
       ]
     }
