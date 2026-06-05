@@ -1,29 +1,25 @@
-//! File-only config loading: `defaults < prd.yml < local override`. No env, no
-//! CLI selection — config is chosen by *file*, mirroring the sandbox config
-//! model. The committed `agent-core/config/prd.yml` is the baseline; a gitignored
+//! File-only config loading: `prd.yml < local override`. No env, no CLI
+//! selection — config is chosen by *file*, mirroring the sandbox config model.
+//! The committed `agent-core/config/prd.yml` is the baseline; a gitignored
 //! `agent-core/config/local.yml` (or, in tests, an explicit override file) is
-//! merged over it (objects recurse, scalars/arrays replace), then the result is
-//! deserialized into [`CentralConfig`] — where `deny_unknown_fields`, the
-//! [`DatabaseUrl`] parse, and scalar coercion take effect — and validated.
-//!
-//! [`DatabaseUrl`]: crate::DatabaseUrl
+//! merged over it (objects recurse, scalars/arrays replace). The result is a
+//! [`ConfigDocument`]; each crate deserializes its section via
+//! [`ConfigDocument::section`].
 
 use std::path::{Path, PathBuf};
 
 use serde_yaml::Value;
 
-use crate::config::CentralConfig;
+use crate::document::ConfigDocument;
 use crate::error::ConfigError;
-use crate::validation;
 
-/// Load [`CentralConfig`] from the committed baseline `agent-core/config/prd.yml`
-/// merged with the gitignored `agent-core/config/local.yml` override when present.
-/// Missing files are skipped, so an absent baseline yields the defaults.
+/// Load the merged config document from the committed baseline
+/// `agent-core/config/prd.yml` overlaid by the gitignored
+/// `agent-core/config/local.yml` when present. Missing files are skipped.
 ///
 /// # Errors
-/// Returns [`ConfigError`] on an unreadable/invalid YAML file, an unknown key, a
-/// rejected database url, or a failed range check.
-pub fn load() -> Result<CentralConfig, ConfigError> {
+/// Returns [`ConfigError`] on an unreadable or invalid YAML file.
+pub fn load() -> Result<ConfigDocument, ConfigError> {
     load_layers(&[baseline_path(), local_override_path()])
 }
 
@@ -31,7 +27,7 @@ pub fn load() -> Result<CentralConfig, ConfigError> {
 ///
 /// # Errors
 /// See [`load`].
-pub fn load_with_override(override_path: impl AsRef<Path>) -> Result<CentralConfig, ConfigError> {
+pub fn load_with_override(override_path: impl AsRef<Path>) -> Result<ConfigDocument, ConfigError> {
     load_layers(&[baseline_path(), override_path.as_ref().to_path_buf()])
 }
 
@@ -54,18 +50,16 @@ fn config_dir() -> PathBuf {
         .map_or_else(|| PathBuf::from("config"), |root| root.join("config"))
 }
 
-/// Fold `defaults < paths[0] < paths[1] < ...`, skipping files that do not exist.
-fn load_layers(paths: &[PathBuf]) -> Result<CentralConfig, ConfigError> {
-    let mut merged =
-        serde_yaml::to_value(CentralConfig::default()).expect("serialize default config");
+/// Fold `paths[0] < paths[1] < ...`, skipping files that do not exist. An empty
+/// or all-absent set yields an empty document (every `section()` then misses).
+fn load_layers(paths: &[PathBuf]) -> Result<ConfigDocument, ConfigError> {
+    let mut merged = Value::Mapping(serde_yaml::Mapping::new());
     for path in paths {
         if let Some(doc) = read_yaml(path)? {
             deep_merge(&mut merged, doc);
         }
     }
-    let cfg: CentralConfig = serde_yaml::from_value(merged).map_err(ConfigError::ParseYaml)?;
-    validation::validate(&cfg)?;
-    Ok(cfg)
+    Ok(ConfigDocument::from_value(merged))
 }
 
 /// Read and parse a YAML file, returning `None` when it is absent or empty.
@@ -100,6 +94,7 @@ fn deep_merge(base: &mut Value, overlay: Value) {
 mod tests {
     #![allow(clippy::unwrap_used)]
     use super::*;
+    use crate::DatabaseConfig;
 
     /// Write a uniquely-named temp YAML file (no external tempfile dep).
     fn temp_yaml(name: &str, content: &str) -> PathBuf {
@@ -108,42 +103,47 @@ mod tests {
         path
     }
 
-    // AC: override values win over the baseline, baseline-only fields survive,
-    // and an untouched field keeps its default.
+    // A complete baseline section deserializes via `section()`; an override
+    // merges over it at the value level (override field wins, baseline fields
+    // survive) before deserialization.
     #[test]
-    fn test_override_wins_over_baseline_over_default() {
+    fn test_override_merges_then_section_deserializes() {
         let baseline = temp_yaml(
             "eos_config_baseline.yaml",
-            "database:\n  pool_size: 10\n  busy_timeout_ms: 20\n",
+            "database:\n  url: \"sqlite:///./x.db\"\n  pool_size: 10\n  busy_timeout_ms: 20\n  wal: true\n  foreign_keys: true\n",
         );
         let over = temp_yaml("eos_config_override.yaml", "database:\n  pool_size: 40\n");
 
-        let cfg = load_layers(&[baseline.clone(), over.clone()]).unwrap();
+        let doc = load_layers(&[baseline.clone(), over.clone()]).unwrap();
+        let db: DatabaseConfig = doc.section("database").unwrap();
 
-        assert_eq!(cfg.database.pool_size, 40, "override wins");
-        assert_eq!(
-            cfg.database.busy_timeout_ms, 20,
-            "baseline-only field survives"
-        );
-        assert!(cfg.database.wal, "untouched field keeps its default");
+        assert_eq!(db.pool_size, 40, "override wins");
+        assert_eq!(db.busy_timeout_ms, 20, "baseline-only field survives");
+        assert!(db.wal);
 
         let _ = std::fs::remove_file(&baseline);
         let _ = std::fs::remove_file(&over);
     }
 
-    // AC: a missing layer file is skipped; absent files yield the defaults.
+    // A missing section is reported as MissingSection.
     #[test]
-    fn test_missing_files_yield_defaults() {
+    fn test_missing_section_errors() {
         let absent = std::env::temp_dir().join("eos_config_intentionally_absent.yaml");
         let _ = std::fs::remove_file(&absent);
-        assert_eq!(load_layers(&[absent]).unwrap(), CentralConfig::default());
+        let doc = load_layers(&[absent]).unwrap();
+        let result: Result<DatabaseConfig, _> = doc.section("database");
+        assert!(matches!(result, Err(ConfigError::MissingSection { .. })));
     }
 
-    // AC: an unknown key fails deserialization (deny_unknown_fields).
+    // An unknown field within a section fails deserialization (deny_unknown_fields).
     #[test]
-    fn test_unknown_key_rejected() {
-        let bad = temp_yaml("eos_config_unknown_key.yaml", "database:\n  bogus: true\n");
-        let result = load_layers(std::slice::from_ref(&bad));
+    fn test_unknown_field_rejected() {
+        let bad = temp_yaml(
+            "eos_config_unknown_field.yaml",
+            "database:\n  url: \"sqlite:///./x.db\"\n  pool_size: 5\n  busy_timeout_ms: 5000\n  wal: true\n  foreign_keys: true\n  bogus: 1\n",
+        );
+        let doc = load_layers(std::slice::from_ref(&bad)).unwrap();
+        let result: Result<DatabaseConfig, _> = doc.section("database");
         let _ = std::fs::remove_file(&bad);
         assert!(matches!(result, Err(ConfigError::ParseYaml(_))));
     }

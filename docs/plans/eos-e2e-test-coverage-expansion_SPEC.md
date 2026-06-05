@@ -50,19 +50,18 @@ infrastructure, not a sandbox operation oracle.
 
 ## 3. Current Harness Facts
 
-The crate already has 8 integration targets and roughly 114 live test
-functions:
+The crate has 8 integration targets and 139 live integration test functions:
 
 | Target | Current source files |
 |---|---|
-| `core` | `command_sessions.rs`, `direct_file_ops.rs`, `envelope_contract.rs`, `errors_and_limits.rs`, `runtime_setup.rs`, `smoke_paths.rs` |
-| `daemon` | `control_cancel.rs`, `control_heartbeat.rs`, `control_inflight.rs`, `op_registration.rs`, `runtime_identity.rs` |
-| `ephemeral_workspace` | `command_sessions.rs`, `overlay_exec.rs` |
-| `isolated_workspace` | `command_sessions.rs`, `lifecycle.rs`, `network.rs`, `no_publish.rs`, `tool_routing.rs` |
-| `layerstack` | `commit_to_git.rs`, `commit_to_workspace.rs`, `lease.rs`, `squash.rs`, `squash_bounds.rs`, `squash_deep.rs` |
-| `occ` | `gating.rs`, `merge.rs` |
-| `plugin` | `isolated_gate.rs`, `lsp.rs`, `packages.rs` |
-| `pressure` | `concurrency.rs`, `cross_subsystem.rs`, `failure_recovery.rs` |
+| `core` | `test_core_command_session_lifecycle.rs`, `test_core_direct_file_contracts.rs`, `test_core_protocol_envelope_guards.rs`, `test_core_error_catalog_and_limits.rs`, `test_core_runtime_readiness_and_base.rs`, `test_core_protocol_smoke_paths.rs` |
+| `daemon` | `test_daemon_audit_pagination_and_reset.rs`, `test_daemon_cancel_control.rs`, `test_daemon_heartbeat_control.rs`, `test_daemon_inflight_control.rs`, `test_daemon_builtin_op_registration.rs`, `test_daemon_plugin_background_control.rs`, `test_daemon_runtime_identity.rs`, `test_daemon_inflight_ttl_reaper.rs` |
+| `ephemeral_workspace` | `test_ephemeral_workspace_command_sessions.rs`, `test_ephemeral_workspace_overlay_exec.rs` |
+| `isolated_workspace` | `test_isolated_workspace_command_sessions.rs`, `test_isolated_workspace_lifecycle.rs`, `test_isolated_workspace_network_isolation.rs`, `test_isolated_workspace_private_no_publish.rs`, `test_isolated_workspace_tool_routing.rs` |
+| `layerstack` | `test_layerstack_git_overlay_commit.rs`, `test_layerstack_workspace_commit.rs`, `test_layerstack_lease_and_squash_pinning.rs`, `test_layerstack_squash_integrity.rs`, `test_layerstack_squash_bounds_and_cleanup.rs`, `test_layerstack_deep_squash_storage.rs` |
+| `occ` | `test_occ_route_gating.rs`, `test_occ_merge_conflicts_and_publish.rs` |
+| `plugin` | `test_plugin_isolated_workspace_gate.rs`, `test_plugin_lsp_dispatch.rs`, `test_plugin_package_lifecycle_and_overlay.rs` |
+| `pressure` | `test_pressure_file_ops_concurrency.rs`, `test_pressure_cross_subsystem_ladders.rs`, `test_pressure_failure_recovery.rs`, `test_pressure_plugin_refresh_and_isolated_cap.rs`, `test_pressure_resource_report.rs` |
 
 Existing harness commands:
 
@@ -75,7 +74,8 @@ cargo test -p eos-e2e-test --features e2e --test <target> <filter> -- --nocaptur
 ```
 
 Live defaults come from `sandbox/config/prd.yml`; each target may merge one
-module-local `config/default.test.yml`. Today those overrides are thin:
+module-local `config/default.test.yml`. Today those
+overrides are thin:
 
 - Most targets enable `isolated_workspace` with smaller upperdir and memory
   settings.

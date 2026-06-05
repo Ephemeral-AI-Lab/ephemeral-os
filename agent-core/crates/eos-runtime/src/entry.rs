@@ -156,7 +156,7 @@ pub async fn run_request(
     .with_iteration_coordinators(iteration_coordinators)
     .with_lifecycle_config(WorkflowLifecycleConfig::default())
     .with_composer(composer)
-    .with_max_concurrent_task_runs(state.config.attempt.max_concurrent_task_runs);
+    .with_max_concurrent_task_runs(state.attempt.max_concurrent_task_runs);
     let starter = WorkflowStarter::new(attempt_deps);
     let workflow_control: Arc<dyn WorkflowControlPort> = Arc::new(WorkflowControlAdapter::new(
         starter,

@@ -34,6 +34,22 @@ impl Default for RetryConfig {
     }
 }
 
+impl RetryConfig {
+    /// Enforce numeric-range constraints (call after deserializing a section).
+    ///
+    /// # Errors
+    /// Returns [`ConfigError::OutOfRange`] when a delay is negative.
+    pub fn validate(&self) -> Result<(), crate::error::ConfigError> {
+        if self.base_delay_s < 0.0 || self.max_delay_s < 0.0 {
+            return Err(crate::error::ConfigError::OutOfRange {
+                field: "providers.retry.*delay_s".to_owned(),
+                detail: "must be >= 0".to_owned(),
+            });
+        }
+        Ok(())
+    }
+}
+
 /// Provider-level runtime configuration (`sections/providers.py:33-37`).
 #[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
@@ -41,6 +57,16 @@ impl Default for RetryConfig {
 pub struct ProvidersConfig {
     /// Retry policy applied across providers.
     pub retry: RetryConfig,
+}
+
+impl ProvidersConfig {
+    /// Validate nested provider sections.
+    ///
+    /// # Errors
+    /// Propagates [`RetryConfig::validate`].
+    pub fn validate(&self) -> Result<(), crate::error::ConfigError> {
+        self.retry.validate()
+    }
 }
 
 #[cfg(test)]

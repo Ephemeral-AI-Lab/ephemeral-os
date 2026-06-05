@@ -28,6 +28,22 @@ impl Default for AttemptConfig {
     }
 }
 
+impl AttemptConfig {
+    /// Enforce numeric-range constraints (call after deserializing a section).
+    ///
+    /// # Errors
+    /// Returns [`ConfigError::OutOfRange`] when `max_concurrent_task_runs < 1`.
+    pub fn validate(&self) -> Result<(), crate::error::ConfigError> {
+        if self.max_concurrent_task_runs < 1 {
+            return Err(crate::error::ConfigError::OutOfRange {
+                field: "attempt.max_concurrent_task_runs".to_owned(),
+                detail: "must be >= 1".to_owned(),
+            });
+        }
+        Ok(())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

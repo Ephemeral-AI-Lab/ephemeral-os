@@ -3,9 +3,9 @@ mod support;
 
 const E2E_CONFIG: &str = "crates/eos-e2e-test/tests/core/config/default.test.yml";
 
-mod command_sessions;
-mod direct_file_ops;
-mod envelope_contract;
-mod errors_and_limits;
-mod runtime_setup;
-mod smoke_paths;
+mod test_core_command_session_lifecycle;
+mod test_core_direct_file_contracts;
+mod test_core_protocol_envelope_guards;
+mod test_core_error_catalog_and_limits;
+mod test_core_runtime_readiness_and_base;
+mod test_core_protocol_smoke_paths;

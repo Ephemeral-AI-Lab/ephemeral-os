@@ -92,6 +92,22 @@ impl Default for DatabaseConfig {
     }
 }
 
+impl DatabaseConfig {
+    /// Enforce numeric-range constraints (call after deserializing a section).
+    ///
+    /// # Errors
+    /// Returns [`ConfigError::OutOfRange`] when `pool_size < 1`.
+    pub fn validate(&self) -> Result<(), ConfigError> {
+        if self.pool_size < 1 {
+            return Err(ConfigError::OutOfRange {
+                field: "database.pool_size".to_owned(),
+                detail: "must be >= 1".to_owned(),
+            });
+        }
+        Ok(())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     #![allow(clippy::unwrap_used)] // unwrap permitted in tests (err-no-unwrap-prod)

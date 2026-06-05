@@ -576,10 +576,6 @@ fn normalize_string_map(map: &Labels) -> Labels {
         .collect()
 }
 
-fn env_is_one(name: &str) -> bool {
-    std::env::var(name).map(|v| v == "1").unwrap_or(false)
-}
-
 fn generate_auth_token() -> String {
     // The Python uses secrets.token_urlsafe(32); the exact format is not
     // load-bearing (the daemon reads whatever is in EOS_DAEMON_AUTH_TOKEN). Two
@@ -605,16 +601,15 @@ fn host_config_kwargs() -> HostConfig {
         ]),
         ..Default::default()
     };
-    if !env_is_one("EOS_DOCKER_DISABLE_OVERLAY_WRITABLE_TMPFS") {
-        let options = std::env::var("EOS_DOCKER_OVERLAY_WRITABLE_TMPFS_OPTIONS")
-            .ok()
-            .map(|s| s.trim().to_owned())
-            .filter(|s| !s.is_empty())
-            .unwrap_or_else(|| DEFAULT_OVERLAY_WRITABLE_TMPFS_OPTIONS.to_owned());
-        let mut tmpfs = HashMap::new();
-        tmpfs.insert(EOS_RUNTIME_TMPFS_TARGET.to_owned(), options);
-        host_config.tmpfs = Some(tmpfs);
-    }
+    // Always mount the writable /eos overlay tmpfs with the default options.
+    // The size/disable toggles were env config; sandbox provisioning policy is
+    // owned by the sandbox module, not agent-core, so this is a fixed default.
+    let mut tmpfs = HashMap::new();
+    tmpfs.insert(
+        EOS_RUNTIME_TMPFS_TARGET.to_owned(),
+        DEFAULT_OVERLAY_WRITABLE_TMPFS_OPTIONS.to_owned(),
+    );
+    host_config.tmpfs = Some(tmpfs);
     host_config
 }
 

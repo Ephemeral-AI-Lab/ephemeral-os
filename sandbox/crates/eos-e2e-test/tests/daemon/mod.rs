@@ -21,14 +21,14 @@ use serde_json::{json, Value};
 
 const E2E_CONFIG: &str = "crates/eos-e2e-test/tests/daemon/config/default.test.yml";
 
-mod audit;
-mod control_cancel;
-mod control_heartbeat;
-mod control_inflight;
-mod op_registration;
-mod plugin_control;
-mod runtime_identity;
-mod ttl_reaper;
+mod test_daemon_audit_pagination_and_reset;
+mod test_daemon_cancel_control;
+mod test_daemon_heartbeat_control;
+mod test_daemon_inflight_control;
+mod test_daemon_builtin_op_registration;
+mod test_daemon_plugin_background_control;
+mod test_daemon_runtime_identity;
+mod test_daemon_inflight_ttl_reaper;
 
 /// Fire a backgrounded `exec_command` on its own thread under an explicit
 /// `invocation_id`, keeping the invocation registered in-flight for the yield

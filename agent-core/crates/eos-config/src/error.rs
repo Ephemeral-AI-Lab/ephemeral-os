@@ -1,11 +1,18 @@
-//! The single `ConfigError` enum for this crate (spec-conventions §8).
+//! The single `ConfigError` enum for this crate.
 
-/// Errors raised while loading, parsing, or validating [`CentralConfig`].
-///
-/// [`CentralConfig`]: crate::CentralConfig
+/// Errors raised while loading, parsing, or deserializing config.
 #[derive(Debug, thiserror::Error)]
 #[non_exhaustive]
 pub enum ConfigError {
+    /// A requested top-level config section was absent from the document.
+    #[error("config section '{section}' is missing")]
+    MissingSection {
+        /// The missing top-level section name.
+        section: String,
+    },
+    /// The config document root was not a YAML mapping.
+    #[error("config document root must be a YAML mapping")]
+    InvalidDocumentRoot,
     /// A network database url (a `postgres`/`mysql` scheme, or a credentialed
     /// `//host` authority) was supplied; agent-core is sqlite-only and rejects
     /// it (spec-conventions §2 — no `PostgreSQL`).
@@ -25,11 +32,9 @@ pub enum ConfigError {
     /// A config file could not be read from disk.
     #[error("failed to read config file")]
     ReadFile(#[source] std::io::Error),
-    /// The config yaml — a file, an env value, or the merged tree — failed to
-    /// parse or to deserialize into [`CentralConfig`] (this is where
+    /// A config file or a deserialized section failed to parse (this is where
     /// `deny_unknown_fields` and the [`DatabaseUrl`] parse surface).
     ///
-    /// [`CentralConfig`]: crate::CentralConfig
     /// [`DatabaseUrl`]: crate::DatabaseUrl
     #[error("failed to parse config yaml")]
     ParseYaml(#[source] serde_yaml::Error),

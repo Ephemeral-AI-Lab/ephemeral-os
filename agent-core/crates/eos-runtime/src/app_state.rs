@@ -12,7 +12,7 @@ use anyhow::{Context, Result};
 use async_trait::async_trait;
 use eos_agent_def::{load_agents_tree, AgentRegistry, AgentRegistryBuilder};
 use eos_audit::{AuditSink, BufferedAuditShutdown, BufferedJsonlSink, NoopAuditSink};
-use eos_config::{CentralConfig, DatabaseUrl};
+use eos_config::{AttemptConfig, DatabaseConfig, DatabaseUrl, RetryConfig};
 use eos_db::Database;
 use eos_llm_client::{Auth, LlmClient, LlmRequest, LlmStream, ProviderError};
 use eos_sandbox_api::SandboxTransport;
@@ -98,7 +98,7 @@ impl LlmClient for UnconfiguredLlmClient {
 #[derive(Clone)]
 #[non_exhaustive]
 pub struct AppState {
-    pub(crate) config: Arc<CentralConfig>,
+    pub(crate) attempt: AttemptConfig,
     pub(crate) cwd: String,
     pub(crate) repo_root: String,
     pub(crate) task_store: Arc<dyn TaskStore>,
@@ -153,12 +153,6 @@ impl AppState {
         }
     }
 
-    /// The shared central configuration.
-    #[must_use]
-    pub fn config(&self) -> &CentralConfig {
-        &self.config
-    }
-
     /// Flush and join the buffered audit writer thread, if any (graceful
     /// shutdown). Idempotent: a second call is a no-op.
     pub fn flush_audit(&self) {
@@ -176,7 +170,6 @@ impl AppState {
 #[must_use = "AppStateBuilder does nothing until build() is called"]
 #[derive(Default)]
 pub struct AppStateBuilder {
-    config: Option<CentralConfig>,
     database_url: Option<String>,
     cwd: Option<String>,
     llm_client: Option<Arc<dyn LlmClient>>,
@@ -198,19 +191,12 @@ pub struct AppStateBuilder {
 impl std::fmt::Debug for AppStateBuilder {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("AppStateBuilder")
-            .field("has_config", &self.config.is_some())
             .field("compatibility_mode", &self.compatibility_mode)
             .finish_non_exhaustive()
     }
 }
 
 impl AppStateBuilder {
-    /// Use an explicit central config (else [`CentralConfig::default`]).
-    pub fn config(mut self, config: CentralConfig) -> Self {
-        self.config = Some(config);
-        self
-    }
-
     /// Override the database URL (test seam; a network URL makes `build()` fail
     /// fast).
     pub fn database_url(mut self, url: impl Into<String>) -> Self {
@@ -320,12 +306,10 @@ impl AppStateBuilder {
     /// configured agent/skill/plugin root cannot be loaded, or (without
     /// compatibility mode) an agent names an unknown tool.
     pub async fn build(self) -> Result<AppState> {
-        let config = self.config.unwrap_or_default();
-
         // Database: a network URL fails fast at parse (GC: SQLite-only).
         // `DatabaseConfig` is `#[non_exhaustive]`, so override the url by mutation
         // rather than struct-update syntax.
-        let mut db_config = config.database.clone();
+        let mut db_config = DatabaseConfig::default();
         if let Some(url) = self.database_url {
             db_config.url =
                 DatabaseUrl::parse(url).context("database url is not a local sqlite url")?;
@@ -365,9 +349,7 @@ impl AppStateBuilder {
             }
         }
 
-        let llm_client: Arc<dyn LlmClient> = self
-            .llm_client
-            .unwrap_or_else(|| default_llm_client(&config));
+        let llm_client: Arc<dyn LlmClient> = self.llm_client.unwrap_or_else(default_llm_client);
 
         // Audit: explicit sink wins; else a buffered JSONL sink when a path is
         // configured; else a no-op sink.
@@ -431,7 +413,7 @@ impl AppStateBuilder {
         });
 
         Ok(AppState {
-            config: Arc::new(config),
+            attempt: AttemptConfig::default(),
             cwd,
             repo_root,
             task_store: database.tasks(),
@@ -458,9 +440,9 @@ impl AppStateBuilder {
 /// Build the LLM client from env credentials, falling back to an unconfigured
 /// placeholder (Phase-6 tests inject an `event_source_factory`; real provider
 /// selection is a cutover concern).
-fn default_llm_client(config: &CentralConfig) -> Arc<dyn LlmClient> {
+fn default_llm_client() -> Arc<dyn LlmClient> {
     use eos_llm_client::{AnthropicClient, OpenAiClient};
-    let retry = Arc::new(config.providers.retry.clone());
+    let retry = Arc::new(RetryConfig::default());
     if let Ok(key) = std::env::var("ANTHROPIC_API_KEY") {
         if let Ok(client) =
             AnthropicClient::new("https://api.anthropic.com", Auth::api_key(key), retry)
