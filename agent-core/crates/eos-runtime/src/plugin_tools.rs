@@ -88,11 +88,12 @@ impl ToolExecutor for PluginToolExecutor {
             ));
         };
         let sandbox_id = ctx.require_sandbox_id()?;
-        let base = SandboxRequestBase {
-            caller: ctx.caller.clone(),
-            description: format!("plugin {plugin_id}.{op_name}"),
-            invocation_id: ctx.sandbox_invocation_id.clone(),
-        };
+        let agent_run_id = ctx.require_agent_run_id()?;
+        let base = SandboxRequestBase::new(
+            agent_run_id.as_str(),
+            format!("plugin {plugin_id}.{op_name}"),
+            ctx.sandbox_invocation_id.clone(),
+        );
         ensure_plugin_runtime(&self.package, &base, ctx).await?;
         let response = eos_sandbox_api::plugin_dispatch(
             &*ctx.transport,
@@ -158,7 +159,7 @@ mod tests {
     use std::sync::Mutex;
 
     use eos_llm_client::Message;
-    use eos_sandbox_api::{DaemonOp, SandboxApiError, SandboxCaller, SandboxTransport};
+    use eos_sandbox_api::{DaemonOp, SandboxApiError, SandboxTransport};
     use eos_skills::SkillRegistry;
     use eos_state::{
         ExecutionTaskOutcome, Request, RequestStatus, RequestStore, Sealed, StoreError, Task,
@@ -308,7 +309,7 @@ mod tests {
         let store = Arc::new(InertStore);
         ExecutionMetadata {
             sandbox_id: Some("sandbox-1".parse().expect("sandbox id")),
-            agent_run_id: None,
+            agent_run_id: Some("agent-run-1".parse().expect("agent run id")),
             agent_name: "tester".to_owned(),
             cwd: "/repo".to_owned(),
             repo_root: "/repo".to_owned(),
@@ -319,7 +320,6 @@ mod tests {
             workflow_id: None,
             tool_use_id: None,
             sandbox_invocation_id: Some("inv-1".parse().expect("invocation id")),
-            caller: caller(),
             transport,
             task_store: store.clone(),
             request_store: store,
@@ -331,19 +331,6 @@ mod tests {
             isolated_workspace: None,
             notifications: None,
             conversation: Arc::from(Vec::<Message>::new()),
-        }
-    }
-
-    fn caller() -> SandboxCaller {
-        SandboxCaller {
-            caller_id: "caller-1".to_owned(),
-            run_id: String::new(),
-            agent_run_id: String::new(),
-            task_id: String::new(),
-            request_id: String::new(),
-            attempt_id: String::new(),
-            workflow_id: String::new(),
-            tool_id: None,
         }
     }
 

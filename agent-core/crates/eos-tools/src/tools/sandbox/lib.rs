@@ -5,6 +5,7 @@ use eos_types::JsonObject;
 use serde::Serialize;
 use serde_json::{json, Value};
 
+use crate::core::error::ToolError;
 use crate::core::metadata::ExecutionMetadata;
 use crate::core::name::ToolName;
 use crate::core::result::ToolResult;
@@ -28,12 +29,16 @@ pub(super) fn register(
     registration::register(registry, config);
 }
 
-pub(super) fn request_base(ctx: &ExecutionMetadata, description: &str) -> SandboxRequestBase {
-    SandboxRequestBase {
-        caller: ctx.caller.clone(),
-        description: description.to_owned(),
-        invocation_id: ctx.sandbox_invocation_id.clone(),
-    }
+pub(super) fn request_base(
+    ctx: &ExecutionMetadata,
+    description: &str,
+) -> Result<SandboxRequestBase, ToolError> {
+    let agent_run_id = ctx.require_agent_run_id()?;
+    Ok(SandboxRequestBase::new(
+        agent_run_id.as_str(),
+        description,
+        ctx.sandbox_invocation_id.clone(),
+    ))
 }
 
 /// Absolute paths pass through; relative paths resolve under `repo_root`.

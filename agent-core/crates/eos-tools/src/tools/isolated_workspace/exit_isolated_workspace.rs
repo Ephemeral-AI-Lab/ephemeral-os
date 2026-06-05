@@ -41,7 +41,7 @@ impl ToolExecutor for ExitIsolatedWorkspace {
             match parse_input(ToolName::ExitIsolatedWorkspace, input) {
                 Ok(v) => v,
                 Err(err) => return Ok(err),
-        };
+            };
         let sandbox_id = ctx.require_sandbox_id()?;
         let agent_run_id = ctx.require_agent_run_id()?;
         ctx.require_isolated_workspace()?

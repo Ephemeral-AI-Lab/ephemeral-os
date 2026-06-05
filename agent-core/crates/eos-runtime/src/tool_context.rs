@@ -3,7 +3,6 @@
 
 use std::sync::Arc;
 
-use eos_sandbox_api::SandboxCaller;
 use eos_tools::{
     BackgroundSupervisorPort, CommandSessionSupervisorPort, ExecutionMetadata, NotificationSink,
     PlanSubmissionPort, WorkflowControlPort,
@@ -42,38 +41,6 @@ pub(crate) struct MetadataParams {
 /// per-call by the engine dispatch before any hook reads it (advisor remediation
 /// plan §2b).
 pub(crate) fn build_metadata(state: &AppState, params: MetadataParams) -> ExecutionMetadata {
-    let agent_run_id = params.agent_run_id.as_str().to_owned();
-    let caller = SandboxCaller {
-        caller_id: agent_run_id.clone(),
-        run_id: agent_run_id.clone(),
-        agent_run_id,
-        task_id: params
-            .task_id
-            .as_ref()
-            .map(TaskId::as_str)
-            .unwrap_or_default()
-            .to_owned(),
-        request_id: params
-            .request_id
-            .as_ref()
-            .map(RequestId::as_str)
-            .unwrap_or_default()
-            .to_owned(),
-        attempt_id: params
-            .attempt_id
-            .as_ref()
-            .map(AttemptId::as_str)
-            .unwrap_or_default()
-            .to_owned(),
-        workflow_id: params
-            .workflow_id
-            .as_ref()
-            .map(WorkflowId::as_str)
-            .unwrap_or_default()
-            .to_owned(),
-        tool_id: None,
-    };
-
     ExecutionMetadata {
         sandbox_id: params.sandbox_id,
         agent_run_id: Some(params.agent_run_id),
@@ -87,7 +54,6 @@ pub(crate) fn build_metadata(state: &AppState, params: MetadataParams) -> Execut
         workflow_id: params.workflow_id,
         tool_use_id: None,
         sandbox_invocation_id: None,
-        caller,
         transport: state.transport.clone(),
         task_store: state.task_store.clone(),
         request_store: state.request_store.clone(),

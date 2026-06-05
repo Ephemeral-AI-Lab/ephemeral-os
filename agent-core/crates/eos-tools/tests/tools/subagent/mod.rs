@@ -3,7 +3,7 @@
 use std::sync::{Arc, Mutex};
 
 use async_trait::async_trait;
-use eos_types::{JsonObject, SubagentSessionId, WorkflowSessionId};
+use eos_types::{AgentRunId, JsonObject, SubagentSessionId, WorkflowSessionId};
 use serde_json::json;
 
 use super::super::{
@@ -60,7 +60,10 @@ impl BackgroundSupervisorPort for FakeBackgroundSupervisor {
         Ok(ToolResult::ok("cancelled"))
     }
 
-    async fn inflight_report(&self, _agent_id: &str) -> BackgroundInflightReport {
+    async fn inflight_report(
+        &self,
+        _agent_run_id: Option<&AgentRunId>,
+    ) -> BackgroundInflightReport {
         BackgroundInflightReport {
             total: 0,
             subagent: 0,
@@ -69,7 +72,10 @@ impl BackgroundSupervisorPort for FakeBackgroundSupervisor {
         }
     }
 
-    async fn cancel_subagents_for_agent(&self, _agent_id: &str) -> BackgroundInflightReport {
+    async fn cancel_subagents_for_agent_run(
+        &self,
+        _agent_run_id: &AgentRunId,
+    ) -> BackgroundInflightReport {
         BackgroundInflightReport {
             total: 0,
             subagent: 0,
@@ -78,7 +84,7 @@ impl BackgroundSupervisorPort for FakeBackgroundSupervisor {
         }
     }
 
-    async fn register_workflow(&self, _agent_id: &str, _workflow: &StartedWorkflow) {}
+    async fn register_workflow(&self, _agent_run_id: &AgentRunId, _workflow: &StartedWorkflow) {}
 
     async fn cancel_workflow_record(
         &self,
@@ -90,7 +96,7 @@ impl BackgroundSupervisorPort for FakeBackgroundSupervisor {
 
     async fn cancel_for_parent_exit(
         &self,
-        _agent_id: &str,
+        _agent_run_id: Option<&AgentRunId>,
         _workflow_control: Option<Arc<dyn WorkflowControlPort>>,
         _reason: &str,
     ) -> BackgroundInflightReport {

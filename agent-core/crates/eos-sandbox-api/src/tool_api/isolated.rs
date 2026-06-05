@@ -171,7 +171,7 @@ mod tests {
     use serde_json::json;
 
     use super::*;
-    use crate::{SandboxCaller, SandboxRequestBase};
+    use crate::SandboxRequestBase;
 
     #[derive(Default)]
     struct RecordingTransport {
@@ -275,16 +275,7 @@ mod tests {
 
     fn base() -> SandboxRequestBase {
         SandboxRequestBase {
-            caller: SandboxCaller {
-                caller_id: "agent-1".to_owned(),
-                run_id: String::new(),
-                agent_run_id: String::new(),
-                task_id: String::new(),
-                request_id: String::new(),
-                attempt_id: String::new(),
-                workflow_id: String::new(),
-                tool_id: None,
-            },
+            caller_id: "agent-1".to_owned(),
             description: String::new(),
             invocation_id: None,
         }

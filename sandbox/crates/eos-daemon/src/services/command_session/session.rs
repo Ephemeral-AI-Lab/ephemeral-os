@@ -1,7 +1,7 @@
 #[cfg(target_os = "linux")]
 use std::collections::{HashMap, HashSet};
 #[cfg(target_os = "linux")]
-use std::os::unix::process::ExitStatusExt;
+use std::path::PathBuf;
 #[cfg(target_os = "linux")]
 use std::sync::atomic::{AtomicU64, Ordering};
 #[cfg(target_os = "linux")]
@@ -10,24 +10,24 @@ use std::sync::{Arc, Mutex, MutexGuard, OnceLock};
 use std::time::{Duration, Instant};
 
 #[cfg(target_os = "linux")]
-use eos_layerstack::LayerStack;
-#[cfg(target_os = "linux")]
-use eos_runner::RunResult;
-#[cfg(target_os = "linux")]
 use serde_json::{json, Value};
 
 #[cfg(target_os = "linux")]
 use super::{
-    command_result, command_session_config, finalize_command_workspace,
-    finalize_isolated_command_workspace, response_with_stdout, runtime_command_session_config,
-    CommandWorkspaceKind,
+    command_result, command_session_config, finalize_command_session_policy, response_with_stdout,
+    runtime_command_session_config,
+};
+#[cfg(target_os = "linux")]
+use eos_command_session::process::{
+    CommandCompletionStatus, CommandRunnerResult, CommandSessionProcess, ProcessReap,
 };
 #[cfg(target_os = "linux")]
 use eos_command_session::{
     wait_for_yield as runtime_wait_for_yield, CommandSessionOutput, CommandSessionOutputCursor,
-    CommandSessionProcess, CommandSessionWaitTarget, ProcessReap,
-    WaitOutcome as RuntimeWaitOutcome,
+    CommandSessionWaitTarget, DynCommandWorkspacePolicy, WaitOutcome as RuntimeWaitOutcome,
 };
+#[cfg(target_os = "linux")]
+use eos_workspace_api::WorkspaceMode;
 
 #[cfg(any(target_os = "linux", test))]
 pub(super) const fn should_publish_command_session_completion(
@@ -60,7 +60,11 @@ pub(super) struct CommandSession {
     pub(super) interrupted: Mutex<bool>,
     pub(super) model_cursor: Mutex<CommandSessionOutputCursor>,
     pub(super) notification_cursor: Mutex<CommandSessionOutputCursor>,
-    pub(super) workspace: CommandWorkspaceKind,
+    pub(super) workspace_mode: WorkspaceMode,
+    pub(super) output_path: PathBuf,
+    pub(super) final_path: PathBuf,
+    pub(super) workspace_policy: Mutex<Option<DynCommandWorkspacePolicy>>,
+    pub(super) finalize_context: Value,
     pub(super) finalized: Mutex<Option<Value>>,
     pub(super) timeout_deadline: Option<Instant>,
 }
@@ -85,89 +89,48 @@ impl CommandSession {
     /// double-delivered).
     ///
     /// This subsumes the two former per-session detached finalizer threads;
-    /// prologue/epilogue are shared and only the workspace-finalize body and the
-    /// teardown branch on [`CommandWorkspaceKind`].
+    /// prologue/epilogue are shared and workspace finalization runs through the
+    /// stored policy object.
     pub(super) fn try_finalize(&self, publish: bool) -> Option<Value> {
         let mut latch = lock_command_session_state(&self.finalized);
         if let Some(cached) = latch.as_ref() {
             return Some(cached.clone());
         }
         // Reap the child without blocking; bail while it is still running.
-        let exit_status = match self.process.try_reap() {
+        let process_exit = match self.process.try_reap() {
             ProcessReap::Running => return None,
-            ProcessReap::Exited(status) => status,
+            ProcessReap::Exited(exit) => exit,
         };
         self.process.terminate();
-        let runner = std::fs::read(self.workspace.output_path())
-            .ok()
-            .and_then(|bytes| serde_json::from_slice::<RunResult>(&bytes).ok());
-        let mut exit_code = runner
-            .as_ref()
-            .map(|result| i64::from(result.exit_code))
-            .or_else(|| {
-                exit_status.map(|status| {
-                    status
-                        .code()
-                        .map(i64::from)
-                        .or_else(|| status.signal().map(|signal| -i64::from(signal)))
-                        .unwrap_or(1)
-                })
-            })
-            .unwrap_or(1);
-        let mut command_status = runner
-            .as_ref()
-            .and_then(|result| result.tool_result.get("status"))
-            .and_then(Value::as_str)
-            .unwrap_or("error")
-            .to_owned();
+        let runner = CommandRunnerResult::read_from_path(&self.output_path);
         let cancelled = *lock_command_session_state(&self.cancelled);
-        if cancelled
-            || (*lock_command_session_state(&self.interrupted) && matches!(exit_code, 130 | -2))
-        {
-            "cancelled".clone_into(&mut command_status);
-            exit_code = 130;
-        }
+        let interrupted = *lock_command_session_state(&self.interrupted);
+        let completion = CommandCompletionStatus::from_process_and_runner(
+            process_exit,
+            runner.as_ref(),
+            cancelled,
+            interrupted,
+        );
         let stdout = completed_session_stdout(self);
-        let response = match &self.workspace {
-            CommandWorkspaceKind::Ephemeral(workspace) => finalize_command_workspace(
-                self,
-                workspace,
-                &command_status,
-                exit_code,
-                &stdout,
-                publish,
-            ),
-            CommandWorkspaceKind::Isolated(workspace) => finalize_isolated_command_workspace(
-                self,
-                workspace,
-                runner.as_ref(),
-                &command_status,
-                exit_code,
-                &stdout,
-                publish,
-            ),
-        }
+        let response = finalize_command_session_policy(
+            self,
+            runner.as_ref(),
+            completion.status(),
+            completion.exit_code(),
+            &stdout,
+            publish,
+        )
         .unwrap_or_else(|err| {
             command_result(
                 "error",
-                Some(exit_code),
+                Some(completion.exit_code()),
                 &stdout,
                 &err.to_string(),
                 Some(self.id.clone()),
             )
         });
-        // Teardown MUST run even on a finalize Err, or the shared ephemeral lease
-        // leaks. Isolated teardown is deferred to `exit_isolated_workspace`.
-        match &self.workspace {
-            CommandWorkspaceKind::Ephemeral(workspace) => {
-                let _ = std::fs::remove_dir_all(&workspace.dirs.run_dir);
-                let _ = LayerStack::open(workspace.root.clone())
-                    .and_then(|mut stack| stack.release_lease(&workspace.lease_id));
-            }
-            CommandWorkspaceKind::Isolated(_) => {}
-        }
         let owned_live_session = command_session_registry().remove(&self.id).is_some();
-        if let CommandWorkspaceKind::Isolated(_) = &self.workspace {
+        if matches!(self.workspace_mode, WorkspaceMode::Isolated) {
             crate::services::isolated_workspace::unregister_command_session(
                 &self.caller_id,
                 &self.id,

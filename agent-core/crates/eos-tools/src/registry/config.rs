@@ -169,10 +169,11 @@ fn parse_tool_config(name: ToolName, content: &str) -> Result<ToolConfig, ToolCo
         .get("intent")
         .and_then(Value::as_str)
         .ok_or(ToolConfigError::MissingIntent(name))?;
-    let intent = ToolIntent::from_wire(intent_str).ok_or_else(|| ToolConfigError::UnknownIntent {
-        tool: name,
-        value: intent_str.to_owned(),
-    })?;
+    let intent =
+        ToolIntent::from_wire(intent_str).ok_or_else(|| ToolConfigError::UnknownIntent {
+            tool: name,
+            value: intent_str.to_owned(),
+        })?;
 
     let declared_terminal = frontmatter
         .get("terminal")

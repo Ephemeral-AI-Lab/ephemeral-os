@@ -9,11 +9,10 @@
 
 use std::sync::Arc;
 
-use eos_sandbox_api::{
-    CommandSessionCancelRequest, SandboxCaller, SandboxRequestBase, SandboxTransport,
-};
+use eos_sandbox_api::{CommandSessionCancelRequest, SandboxRequestBase, SandboxTransport};
 use eos_tools::ports::Sealed;
 use eos_tools::{BackgroundInflightReport, WorkflowControlPort};
+use eos_types::AgentRunId;
 use tokio::sync::Mutex;
 
 use super::supervisor::{BackgroundTaskSupervisor, CommandSessionCancelTarget};
@@ -53,20 +52,23 @@ impl BackgroundSupervisorHandle {
         self.inner.clone()
     }
 
-    /// Cancel all background work tracked for one parent agent. This is the common
-    /// parent-exit finalizer for `ToolStop`, terminal exhaustion, and engine faults.
+    /// Cancel all background work tracked for one parent agent run. This is the
+    /// common parent-exit finalizer for `ToolStop`, terminal exhaustion, and
+    /// engine faults.
     pub async fn cancel_for_parent_exit(
         &self,
-        agent_id: &str,
+        agent_run_id: Option<&AgentRunId>,
         workflow_control: Option<Arc<dyn WorkflowControlPort>>,
         reason: &str,
     ) -> BackgroundInflightReport {
         let (workflows, commands) = {
             let mut guard = self.inner.lock().await;
-            guard.cancel_subagents_for_agent(agent_id);
+            if let Some(agent_run_id) = agent_run_id {
+                guard.cancel_subagents_for_agent_run(agent_run_id);
+            }
             (
-                guard.running_workflows_for_agent(agent_id),
-                guard.running_commands_for_agent(agent_id),
+                guard.running_workflows_for_agent_run(agent_run_id),
+                guard.running_commands_for_agent_run(agent_run_id),
             )
         };
 
@@ -95,7 +97,7 @@ impl BackgroundSupervisorHandle {
                 .cancel_command_record(&command.command_session_id);
         }
 
-        self.inner.lock().await.inflight_report(agent_id)
+        self.inner.lock().await.inflight_report(agent_run_id)
     }
 
     async fn cancel_command_session_for_parent_exit(
@@ -104,20 +106,11 @@ impl BackgroundSupervisorHandle {
         reason: &str,
     ) {
         let request = CommandSessionCancelRequest {
-            base: SandboxRequestBase {
-                caller: SandboxCaller {
-                    caller_id: command.agent_id.clone(),
-                    run_id: command.agent_id.clone(),
-                    agent_run_id: command.agent_id.clone(),
-                    task_id: String::new(),
-                    request_id: String::new(),
-                    attempt_id: String::new(),
-                    workflow_id: String::new(),
-                    tool_id: None,
-                },
-                description: format!("parent-exit cleanup: {reason}"),
-                invocation_id: None,
-            },
+            base: SandboxRequestBase::new(
+                command.agent_run_id.as_str(),
+                format!("parent-exit cleanup: {reason}"),
+                None,
+            ),
             command_session_id: command.command_session_id.as_str().to_owned(),
         };
         if let Err(err) =

@@ -11,12 +11,13 @@ use super::super::read_file::ReadFile;
 use super::super::write_stdin::WriteStdin;
 use crate::core::metadata::ExecutionMetadata;
 use crate::runtime::executor::ToolExecutor;
-use crate::testsupport::{caller, FakeRequestStore, FakeTaskStore, FakeTransport};
+use crate::testsupport::{test_agent_run_id, FakeRequestStore, FakeTaskStore, FakeTransport};
 
 fn metadata_with(transport: Arc<dyn eos_sandbox_api::SandboxTransport>) -> ExecutionMetadata {
+    let agent_run_id = test_agent_run_id();
     ExecutionMetadata {
         sandbox_id: Some("sandbox-1".parse().expect("id")),
-        agent_run_id: None,
+        agent_run_id: Some(agent_run_id),
         agent_name: "tester".to_owned(),
         cwd: String::new(),
         repo_root: "/repo".to_owned(),
@@ -27,7 +28,6 @@ fn metadata_with(transport: Arc<dyn eos_sandbox_api::SandboxTransport>) -> Execu
         workflow_id: None,
         tool_use_id: None,
         sandbox_invocation_id: Some("inv-1".parse().expect("id")),
-        caller: caller(),
         transport,
         task_store: Arc::new(FakeTaskStore::new()),
         request_store: Arc::new(FakeRequestStore::new()),

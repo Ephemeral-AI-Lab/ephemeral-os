@@ -12,7 +12,7 @@
 use async_trait::async_trait;
 use eos_tools::ports::CommandSessionSupervisorPort;
 use eos_tools::SystemNotification as ToolNotification;
-use eos_types::{CommandSessionId, SandboxId};
+use eos_types::{AgentRunId, CommandSessionId, SandboxId};
 use serde_json::Value;
 
 use super::handle::BackgroundSupervisorHandle;
@@ -27,8 +27,8 @@ pub struct CommandSessionRecord {
     pub command_session_id: CommandSessionId,
     /// Owning sandbox id.
     pub sandbox_id: SandboxId,
-    /// Owning agent id (`agent_run_id`) — per-task-run ownership.
-    pub agent_id: String,
+    /// Owning agent run — per-task-run ownership.
+    pub agent_run_id: AgentRunId,
     /// The launched command, for the notification body.
     pub command: String,
     /// Lifecycle status.
@@ -86,7 +86,7 @@ impl BackgroundTaskSupervisor {
         &mut self,
         command_session_id: &CommandSessionId,
         sandbox_id: &SandboxId,
-        agent_id: &str,
+        agent_run_id: &AgentRunId,
         command: &str,
     ) {
         self.commands
@@ -94,7 +94,7 @@ impl BackgroundTaskSupervisor {
             .or_insert_with(|| CommandSessionRecord {
                 command_session_id: command_session_id.clone(),
                 sandbox_id: sandbox_id.clone(),
-                agent_id: agent_id.to_owned(),
+                agent_run_id: agent_run_id.clone(),
                 command: command.to_owned(),
                 status: BackgroundTaskStatus::Running,
                 result: None,
@@ -178,20 +178,20 @@ impl BackgroundTaskSupervisor {
             .is_some_and(|record| matches!(record.status, BackgroundTaskStatus::Delivered))
     }
 
-    /// Running command-session ids grouped by `(sandbox_id, agent_id)` — the
+    /// Running command-session ids grouped by `(sandbox_id, agent_run_id)` — the
     /// heartbeat's pull plan (deterministic order for stable polling).
     #[must_use]
-    pub fn running_command_session_ids_by_sandbox_agent(
+    pub fn running_command_session_ids_by_sandbox_run(
         &self,
-    ) -> Vec<((String, String), Vec<String>)> {
-        let mut groups: std::collections::BTreeMap<(String, String), Vec<String>> =
+    ) -> Vec<((String, AgentRunId), Vec<String>)> {
+        let mut groups: std::collections::BTreeMap<(String, AgentRunId), Vec<String>> =
             std::collections::BTreeMap::new();
         for record in self.commands.values() {
             if matches!(record.status, BackgroundTaskStatus::Running) {
                 groups
                     .entry((
                         record.sandbox_id.as_str().to_owned(),
-                        record.agent_id.clone(),
+                        record.agent_run_id.clone(),
                     ))
                     .or_default()
                     .push(record.command_session_id.as_str().to_owned());
@@ -200,15 +200,15 @@ impl BackgroundTaskSupervisor {
         groups.into_iter().collect()
     }
 
-    /// Count this agent's tracked, still-running command sessions (empty
-    /// `agent_id` counts all).
+    /// Count tracked, still-running command sessions for one agent run, or all
+    /// runs when `agent_run_id` is `None`.
     #[must_use]
-    pub fn count_commands_by_agent(&self, agent_id: &str) -> usize {
+    pub fn count_commands_by_run(&self, agent_run_id: Option<&AgentRunId>) -> usize {
         self.commands
             .values()
             .filter(|record| {
                 matches!(record.status, BackgroundTaskStatus::Running)
-                    && (agent_id.is_empty() || record.agent_id == agent_id)
+                    && super::supervisor::matches_agent_run(&record.agent_run_id, agent_run_id)
             })
             .count()
     }
@@ -220,13 +220,13 @@ impl CommandSessionSupervisorPort for BackgroundSupervisorHandle {
         &self,
         command_session_id: &CommandSessionId,
         sandbox_id: &SandboxId,
-        agent_id: &str,
+        agent_run_id: &AgentRunId,
         command: &str,
     ) {
         self.inner().lock().await.register_command_session(
             command_session_id,
             sandbox_id,
-            agent_id,
+            agent_run_id,
             command,
         );
     }
@@ -249,7 +249,10 @@ impl CommandSessionSupervisorPort for BackgroundSupervisorHandle {
             .mark_command_session_reported(command_session_id, result);
     }
 
-    async fn command_session_already_reported(&self, command_session_id: &CommandSessionId) -> bool {
+    async fn command_session_already_reported(
+        &self,
+        command_session_id: &CommandSessionId,
+    ) -> bool {
         self.inner()
             .lock()
             .await
@@ -266,7 +269,7 @@ mod tests {
     fn completion(id: &str, agent: &str, status: &str, stdout: &str) -> Value {
         json!({
             "command_session_id": id,
-            "agent_id": agent,
+            "agent_run_id": agent,
             "command": "pytest -q",
             "result": {
                 "status": status,
@@ -284,15 +287,20 @@ mod tests {
         id.parse().expect("valid sandbox id")
     }
 
+    fn arid(id: &str) -> AgentRunId {
+        id.parse().expect("valid agent run id")
+    }
+
     #[test]
     fn register_pull_completed_flips_count_and_renders_once() {
         let mut supervisor = BackgroundTaskSupervisor::new();
-        supervisor.register_command_session(&csid("cmd_1"), &sbid("sb"), "agent-a", "pytest -q");
-        assert_eq!(supervisor.count_commands_by_agent("agent-a"), 1);
+        let agent_run = arid("agent-a");
+        supervisor.register_command_session(&csid("cmd_1"), &sbid("sb"), &agent_run, "pytest -q");
+        assert_eq!(supervisor.count_commands_by_run(Some(&agent_run)), 1);
 
         supervisor.ingest_completion(&completion("cmd_1", "agent-a", "ok", "3 passed"));
         // Terminal → no longer counted as running.
-        assert_eq!(supervisor.count_commands_by_agent("agent-a"), 0);
+        assert_eq!(supervisor.count_commands_by_run(Some(&agent_run)), 0);
 
         let first = supervisor.drain_command_session_notifications();
         assert_eq!(first.len(), 1);
@@ -308,7 +316,7 @@ mod tests {
     #[test]
     fn recover_race_returns_stored_terminal_and_marks_reported() {
         let mut supervisor = BackgroundTaskSupervisor::new();
-        supervisor.register_command_session(&csid("cmd_2"), &sbid("sb"), "agent-a", "make");
+        supervisor.register_command_session(&csid("cmd_2"), &sbid("sb"), &arid("agent-a"), "make");
         // Still running → no recoverable result yet, not reported.
         assert!(supervisor.command_session_result(&csid("cmd_2")).is_none());
         assert!(!supervisor.command_session_already_reported(&csid("cmd_2")));
@@ -329,16 +337,18 @@ mod tests {
     }
 
     #[test]
-    fn running_ids_group_by_sandbox_and_agent() {
+    fn running_ids_group_by_sandbox_and_agent_run() {
         let mut supervisor = BackgroundTaskSupervisor::new();
-        supervisor.register_command_session(&csid("cmd_a"), &sbid("sb1"), "agent-a", "a");
-        supervisor.register_command_session(&csid("cmd_b"), &sbid("sb1"), "agent-a", "b");
-        supervisor.register_command_session(&csid("cmd_c"), &sbid("sb2"), "agent-b", "c");
-        let groups = supervisor.running_command_session_ids_by_sandbox_agent();
+        let agent_a = arid("agent-a");
+        let agent_b = arid("agent-b");
+        supervisor.register_command_session(&csid("cmd_a"), &sbid("sb1"), &agent_a, "a");
+        supervisor.register_command_session(&csid("cmd_b"), &sbid("sb1"), &agent_a, "b");
+        supervisor.register_command_session(&csid("cmd_c"), &sbid("sb2"), &agent_b, "c");
+        let groups = supervisor.running_command_session_ids_by_sandbox_run();
         assert_eq!(groups.len(), 2);
         let agent_a = groups
             .iter()
-            .find(|((sandbox, agent), _)| sandbox == "sb1" && agent == "agent-a")
+            .find(|((sandbox, agent), _)| sandbox == "sb1" && agent.as_str() == "agent-a")
             .expect("agent-a group");
         assert_eq!(agent_a.1.len(), 2);
     }

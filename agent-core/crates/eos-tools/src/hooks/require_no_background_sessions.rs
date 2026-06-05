@@ -46,7 +46,7 @@ fn is_bailout_submission(tool: ToolName, raw_input: &JsonObject) -> bool {
 
 fn subagent_in_flight_message(count: usize, tool: ToolName) -> String {
     format!(
-        "BLOCKED: {count} subagent background task(s) are still in flight for this agent. \
+        "BLOCKED: {count} subagent background task(s) are still in flight for this agent run. \
          Wait for them to finish or cancel them before calling {}, then retry.",
         tool.as_str()
     )
@@ -54,14 +54,14 @@ fn subagent_in_flight_message(count: usize, tool: ToolName) -> String {
 
 fn command_session_in_flight_message(count: usize, tool: ToolName) -> String {
     format!(
-        "BLOCKED: {count} command session background task(s) are still in flight for this agent. \
+        "BLOCKED: {count} command session background task(s) are still in flight for this agent run. \
          Finish or interrupt active command sessions before calling {}, then retry.",
         tool.as_str()
     )
 }
 
 /// `RequireNoBackgroundSessions`: cancel subagents (or, for `enter_isolated_workspace`,
-/// inspect) the agent's in-flight subagents, deny on outstanding workflows, then
+/// inspect) the agent run's in-flight subagents, deny on outstanding workflows, then
 /// deny on daemon command sessions (fail-OPEN only for bailout submissions on a
 /// daemon error). Invariant: no workflows, no subagents, and no command sessions.
 pub(crate) async fn run_require_no_background_sessions(
@@ -69,16 +69,18 @@ pub(crate) async fn run_require_no_background_sessions(
     raw_input: &JsonObject,
     ctx: &ExecutionMetadata,
 ) -> Result<HookOutcome, ToolError> {
-    let agent_id = ctx.agent_id();
+    let agent_run_id = ctx.require_agent_run_id()?;
 
     if let Some(supervisor) = &ctx.background_supervisor {
         // Terminal/exit tools settle the agent's subagents to 0; enter_isolated
         // only inspects (reject). After cancellation `report.subagent == 0`, so
         // the deny below fires only on the reject path.
         let report = if cancels_inflight_subagents(tool) {
-            supervisor.cancel_subagents_for_agent(&agent_id).await
+            supervisor
+                .cancel_subagents_for_agent_run(agent_run_id)
+                .await
         } else {
-            supervisor.inflight_report(&agent_id).await
+            supervisor.inflight_report(Some(agent_run_id)).await
         };
         if report.subagent > 0 {
             return Ok(HookOutcome::Deny(
@@ -96,12 +98,12 @@ pub(crate) async fn run_require_no_background_sessions(
     // workflow lifecycle remains authoritative here. Deny while a delegated
     // workflow is still open.
     if let (Some(control), Some(task_id)) = (&ctx.workflow_control, &ctx.task_id) {
-        let outstanding = control.find_outstanding(task_id, &agent_id).await?;
+        let outstanding = control.find_outstanding(task_id, agent_run_id).await?;
         if !outstanding.is_empty() {
             return Ok(HookOutcome::Deny(
                 HookDenial::new(
                     format!(
-                        "BLOCKED: {} delegated workflow(s) are still outstanding for this agent. \
+                        "BLOCKED: {} delegated workflow(s) are still outstanding for this agent run. \
                          Use check_workflow_status to collect them or cancel_workflow to stop them \
                          before calling {}, then retry.",
                         outstanding.len(),
@@ -123,7 +125,7 @@ pub(crate) async fn run_require_no_background_sessions(
     let daemon = match eos_sandbox_api::command_session_count(
         &*ctx.transport,
         sandbox_id,
-        &agent_id,
+        agent_run_id.as_str(),
     )
     .await
     {
@@ -174,7 +176,7 @@ mod tests {
     };
 
     use async_trait::async_trait;
-    use eos_types::{SubagentSessionId, TaskId, WorkflowId, WorkflowSessionId};
+    use eos_types::{AgentRunId, SubagentSessionId, TaskId, WorkflowId, WorkflowSessionId};
 
     use crate::ports::{
         BackgroundInflightReport, BackgroundSupervisorPort, OutstandingWorkflow, Sealed,
@@ -217,11 +219,11 @@ mod tests {
             unreachable!("not used by hook tests")
         }
 
-        async fn inflight_report(&self, _: &str) -> BackgroundInflightReport {
+        async fn inflight_report(&self, _: Option<&AgentRunId>) -> BackgroundInflightReport {
             self.report
         }
 
-        async fn cancel_subagents_for_agent(&self, _: &str) -> BackgroundInflightReport {
+        async fn cancel_subagents_for_agent_run(&self, _: &AgentRunId) -> BackgroundInflightReport {
             self.cancel_called.store(true, Ordering::Relaxed);
             BackgroundInflightReport {
                 subagent: 0,
@@ -230,7 +232,7 @@ mod tests {
             }
         }
 
-        async fn register_workflow(&self, _: &str, _: &StartedWorkflow) {}
+        async fn register_workflow(&self, _: &AgentRunId, _: &StartedWorkflow) {}
 
         async fn cancel_workflow_record(&self, _: &WorkflowSessionId, _: &str) -> bool {
             false
@@ -238,7 +240,7 @@ mod tests {
 
         async fn cancel_for_parent_exit(
             &self,
-            _: &str,
+            _: Option<&AgentRunId>,
             _: Option<Arc<dyn WorkflowControlPort>>,
             _: &str,
         ) -> BackgroundInflightReport {
@@ -251,7 +253,12 @@ mod tests {
 
     #[async_trait]
     impl WorkflowControlPort for OneOutstanding {
-        async fn start(&self, _: &TaskId, _: &str, _: &str) -> Result<StartedWorkflow, ToolError> {
+        async fn start(
+            &self,
+            _: &TaskId,
+            _: &AgentRunId,
+            _: &str,
+        ) -> Result<StartedWorkflow, ToolError> {
             unreachable!("deny short-circuits before start")
         }
 
@@ -270,7 +277,7 @@ mod tests {
         async fn find_outstanding(
             &self,
             _: &TaskId,
-            _: &str,
+            _: &AgentRunId,
         ) -> Result<Vec<OutstandingWorkflow>, ToolError> {
             Ok(vec![OutstandingWorkflow {
                 workflow_id: WorkflowId::new_v4(),
@@ -304,6 +311,11 @@ mod tests {
         }
     }
 
+    fn bind_agent_run(ctx: &mut ExecutionMetadata) {
+        let agent_run_id: AgentRunId = "agent-run-test".parse().expect("agent run id");
+        ctx.agent_run_id = Some(agent_run_id);
+    }
+
     // A daemon-count failure on a *bailout* submission fails OPEN, and the
     // pass-phase metadata records the override reason (Python parity:
     // `daemon_unavailable_bailout`).
@@ -314,6 +326,7 @@ mod tests {
         use crate::testsupport::{metadata, FakeTransport};
 
         let mut ctx = metadata();
+        bind_agent_run(&mut ctx);
         ctx.sandbox_id = Some("sandbox-1".parse().expect("sandbox id"));
         // Every daemon RPC (here, command_session_count) errors.
         ctx.transport = Arc::new(FakeTransport::new(|_, _| {
@@ -348,6 +361,7 @@ mod tests {
         use crate::testsupport::metadata;
 
         let mut ctx = metadata();
+        bind_agent_run(&mut ctx);
         ctx.task_id = Some("parent".parse().expect("task id"));
         ctx.workflow_control = Some(Arc::new(OneOutstanding));
 
@@ -377,6 +391,7 @@ mod tests {
 
         let supervisor = Arc::new(ReportSupervisor::new(report(1, 0, 0)));
         let mut ctx = metadata();
+        bind_agent_run(&mut ctx);
         ctx.background_supervisor = Some(supervisor.clone());
 
         let outcome = run_require_no_background_sessions(
@@ -406,6 +421,7 @@ mod tests {
         use crate::testsupport::metadata;
 
         let mut ctx = metadata();
+        bind_agent_run(&mut ctx);
         ctx.task_id = Some("parent".parse().expect("task id"));
         ctx.workflow_control = Some(Arc::new(OneOutstanding));
 
@@ -438,6 +454,7 @@ mod tests {
         use crate::testsupport::{metadata, FakeTransport};
 
         let mut ctx = metadata();
+        bind_agent_run(&mut ctx);
         ctx.sandbox_id = Some("sandbox-1".parse().expect("sandbox id"));
         ctx.transport = Arc::new(FakeTransport::new(|op, _| match op {
             DaemonOp::CommandSessionCount => Ok(json_object(json!({"count": 2}))),
@@ -474,6 +491,7 @@ mod tests {
 
         let supervisor = Arc::new(ReportSupervisor::new(report(3, 0, 0)));
         let mut ctx = metadata();
+        bind_agent_run(&mut ctx);
         ctx.background_supervisor = Some(supervisor.clone());
         ctx.sandbox_id = Some("sandbox-1".parse().expect("sandbox id"));
         ctx.transport = Arc::new(FakeTransport::new(|op, _| match op {

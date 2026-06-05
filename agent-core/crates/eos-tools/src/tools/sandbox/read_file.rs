@@ -75,7 +75,7 @@ impl ToolExecutor for ReadFile {
         let path = resolve_path(ctx, &parsed.file_path);
         let sandbox_id = ctx.require_sandbox_id()?;
         let request = ReadFileRequest {
-            base: request_base(ctx, &format!("read {path}")),
+            base: request_base(ctx, &format!("read {path}"))?,
             path: path.clone(),
         };
         let result = match eos_sandbox_api::read_file(&*ctx.transport, sandbox_id, &request).await {

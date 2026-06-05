@@ -53,14 +53,19 @@ mod tests {
     use super::*;
     use crate::ports::{OutstandingWorkflow, Sealed, StartedWorkflow, WorkflowControlPort};
     use crate::testsupport::metadata;
-    use eos_types::{TaskId, WorkflowId, WorkflowSessionId};
+    use eos_types::{AgentRunId, TaskId, WorkflowId, WorkflowSessionId};
 
     struct FixedDepth(u32);
     impl Sealed for FixedDepth {}
 
     #[async_trait]
     impl WorkflowControlPort for FixedDepth {
-        async fn start(&self, _: &TaskId, _: &str, _: &str) -> Result<StartedWorkflow, ToolError> {
+        async fn start(
+            &self,
+            _: &TaskId,
+            _: &AgentRunId,
+            _: &str,
+        ) -> Result<StartedWorkflow, ToolError> {
             unreachable!("depth hook never starts workflows")
         }
 
@@ -79,7 +84,7 @@ mod tests {
         async fn find_outstanding(
             &self,
             _: &TaskId,
-            _: &str,
+            _: &AgentRunId,
         ) -> Result<Vec<OutstandingWorkflow>, ToolError> {
             unreachable!("depth hook never checks outstanding workflows")
         }

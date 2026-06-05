@@ -110,8 +110,8 @@ cross-module map now lives under `docs/architecture`.
   `sandbox/crates/eos-overlay` and `sandbox/crates/eos-runner`.
 - Isolated workspace mode is an explicit `enter_isolated_workspace` /
   `exit_isolated_workspace` lifecycle. It gives an agent a persistent private
-  workspace for that isolated session through the active `agent_id` handle, not
-  a separate public `isolated_workspace_id` routing parameter. Writes are
+  workspace for that isolated session through the active sandbox `caller_id` handle,
+  not a separate public `isolated_workspace_id` routing parameter. Writes are
   captured and audited but not OCC-published; exit tears down the namespace,
   releases the snapshot lease, and removes scratch state. Enter rejects active
   sandbox-bound background work, exit cancels or drains it, and plugin/LSP

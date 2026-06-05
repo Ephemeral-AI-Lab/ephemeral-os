@@ -74,16 +74,23 @@ api.v1.command_session_count
 
 ## 3. Current State Summary
 
-Current command-session code is mostly under:
+Current command-session runtime code is split across the new runtime crate and
+the remaining daemon adapter layer:
 
 ```text
+sandbox/crates/eos-command-session/src/
+  manager.rs    # policy-erased manager, Linux process-backed start/write/cancel/sweep
+  registry.rs   # typed live/completed registry used by the manager
+  output.rs     # output buffer/cursors and UTF-8 handling
+  wait.rs       # generic yield waiting
+  process/      # Linux PTY, process group, runner request/output handling
+
 sandbox/crates/eos-daemon/src/services/command_session/
   mod.rs        # daemon op handlers, config, reaper entry points
-  lifecycle.rs  # start paths, mode-specific prepare adapters, PTY spawn
-  session.rs    # CommandSession aggregate, registry, wait/finalize
-  finalize.rs   # workspace finalization, stdin, cancel
-  output.rs     # output buffer/cursors
-  pty.rs        # rustix PTY allocation
+  lifecycle.rs  # daemon start path and boxed policy construction
+  session.rs    # remaining daemon CommandSession aggregate and JSON registry
+  finalize.rs   # generic policy finalization, stdin, cancel
+  policy/       # daemon concrete workspace policy adapters
 ```
 
 The current workspace policy contract already lives in the existing crate:
@@ -96,15 +103,14 @@ That file defines `CommandWorkspacePolicy` and states the intended boundary:
 mode-specific command workspace policy belongs behind the trait, while
 PTY/process/session registry behavior stays outside it.
 
-The current main coupling problems are:
+The remaining coupling problems are:
 
 | Coupling | Current Location | Why It Blocks Extraction |
 |---|---|---|
-| `CommandWorkspaceKind::Ephemeral/Isolated` enum | `eos-daemon/src/services/command_session/lifecycle.rs` | The session aggregate stores concrete workspace-mode data. |
-| Finalization `match` on workspace kind | `eos-daemon/src/services/command_session/session.rs` | Runtime lifecycle knows every workspace mode. |
-| Isolated active-session register/unregister calls | `eos-daemon/src/services/command_session/lifecycle.rs` and `session.rs` | Runtime calls daemon isolated services directly. |
-| Ephemeral LayerStack/OCC details | daemon command prepare/finalize adapter structs | Correct policy, but needs to stay in daemon adapter or workspace crate, not command-session core. |
-| Result response shaping mixed with workspace finalization | `finalize.rs` | Can be split between generic command result delivery and workspace outcome conversion. |
+| Daemon-owned live session/registry | `eos-daemon/src/services/command_session/session.rs` | `CommandSessionManager` is not yet the live start/write/cancel/reaper path. |
+| Isolated active-session register/unregister calls | `eos-daemon/src/services/command_session/lifecycle.rs` and `session.rs` | Runtime handoff needs daemon event handling instead of direct session code. |
+| Daemon response shaping mixed with finalization | `finalize.rs` | The daemon still converts `WorkspaceCommandOutcome` into wire JSON and writes final response files. |
+| Reaper/orphan recovery | `eos-daemon/src/services/command_session/mod.rs` | Timeout sweep and orphan parking are not yet delegated to the runtime manager. |
 
 ---
 
@@ -509,7 +515,7 @@ where
 
     pub fn collect_completed(&self, request: CollectCompleted) -> CollectCompletedResponse;
 
-    pub fn count_by_agent(&self, agent_id: Option<&str>) -> usize;
+    pub fn count_by_caller(&self, caller_id: Option<&str>) -> usize;
 
     pub fn sweep(&self) -> SweepReport;
 }
@@ -560,12 +566,12 @@ eos-daemon/src/services/command_session/policy/isolated.rs
 | Area | Current | Target | Verification |
 |---|---|---|---|
 | Runtime owner | `eos-daemon/src/services/command_session` owns all runtime and policy glue | `eos-command-session` owns runtime; daemon wires policy | `rg "struct CommandSession" sandbox/crates/eos-command-session/src` |
-| Workspace mode storage | `CommandSession` stores `CommandWorkspaceKind` concrete enum | `CommandSession` stores `DynCommandWorkspacePolicy` plus prepared paths/context | `rg "CommandWorkspaceKind" sandbox/crates/eos-command-session` returns no matches |
+| Workspace mode storage | Daemon `CommandSession` stores `DynCommandWorkspacePolicy` plus prepared paths/context | Runtime `CommandSession` stores `DynCommandWorkspacePolicy` plus prepared paths/context | `rg "CommandWorkspaceKind" sandbox/crates/eos-daemon/src/services/command_session sandbox/crates/eos-command-session` returns no matches |
 | Workspace crate coupling | Daemon session lifecycle imports both workspace crates | New runtime crate imports only `eos-workspace-api` and runner/process deps | `cargo tree -p eos-command-session` has no workspace-mode crates |
 | Ephemeral policy | Daemon adapter plus `eos-ephemeral-workspace` prepare/finalize | Adapter remains in daemon; policy implementation remains in `eos-ephemeral-workspace` | Existing ephemeral command tests still pass |
 | Isolated policy | Daemon adapter plus `eos-isolated-workspace` prepare/finalize; runtime calls isolated register/unregister | Adapter remains in daemon; active-session bookkeeping via event sink | Isolated command-session E2E confirms no leaked active records |
 | Start path | `start_command_session` and `start_isolated_command_session` split early | One `Manager.start(request, policy)` path | Unit test starts both modes through same core manager |
-| Finalization | `match CommandWorkspaceKind` in session finalization | `policy.finalize_command_workspace(...)` | No mode match in `eos-command-session/src/session.rs` |
+| Finalization | Daemon session finalizes through stored `policy.finalize_command_workspace(...)` | Runtime session finalizes through stored `policy.finalize_command_workspace(...)` | No mode match in `eos-command-session/src/session.rs` |
 | Output/cursors | Daemon-private output module | `eos-command-session/src/output.rs` | Output cursor tests moved to new crate |
 | Cancel/terminate | Daemon `finalize.rs` | `eos-command-session` manager/control module | Existing cancel tests pass unchanged |
 | Reaper/orphan recovery | Daemon service functions | Manager sweep plus daemon startup wiring | Startup orphan recovery test still passes |
@@ -840,9 +846,9 @@ cancellation cleanup, and descendant cleanup.
 | P1. `eos-workspace-api` command policy contract prep | DONE | `cargo check -p eos-workspace-api -p eos-ephemeral-workspace -p eos-isolated-workspace -p eos-command-session --all-targets` | Added `CommandWorkspacePolicy: Send + Sync`, an object-safety guard, and prepared `session_dir` / `transcript_path`. |
 | P2. Workspace policy crates updated to new prepared DTO | DONE | `cargo test -p eos-ephemeral-workspace -p eos-isolated-workspace` | `eos-ephemeral-workspace` and `eos-isolated-workspace` populate the new prepared DTO fields and implement `CommandWorkspacePolicy` generically over their ports. |
 | P3. New `eos-command-session` crate with fake-policy tests | DONE | `cargo test -p eos-command-session`; `cargo tree -p eos-command-session`; source-shape `rg` guards | Added the workspace member, policy-erased manager/session/registry/output surface, Linux PTY/process helpers, and fake-policy integration tests. No daemon wiring yet. |
-| P4. Daemon manager wiring and event sink | IN_PROGRESS | `cargo tree -p eos-daemon \| rg "eos-command-session\|eos-ephemeral-workspace\|eos-isolated-workspace"`; `cargo check -p eos-daemon --all-targets`; `cargo test -p eos-daemon command`; `cargo test -p eos-daemon isolated -- --test-threads=1` | Daemon now depends on `eos-command-session` and consumes runtime-owned output/cursor, wait/yield, PTY allocation, native `ns-runner` spawn/output-reader, SIGINT interrupt, and SIGTERM/SIGKILL process-group teardown helpers from it. Full `CommandSessionManager` start/write/cancel/reaper wiring and event sink remain. |
-| P5. Remove old daemon runtime modules and mode enum | IN_PROGRESS | `rg "mod output|mod pty|super::output|super::pty|rustix::pty" sandbox/crates/eos-daemon/src/services/command_session sandbox/crates/eos-daemon/Cargo.toml` returns no matches; `rg "spawn_command_output_reader|Command::new|process_group\(|OpenOptions|std_mpsc|utf8_consumable_prefix_len|open_pty_pair" sandbox/crates/eos-daemon/src/services/command_session/lifecycle.rs` returns no matches; `rg "killpg|Signal|Pid" sandbox/crates/eos-daemon/src/services/command_session` returns only the orphan-recovery comment | Removed drained daemon `output.rs` and `pty.rs`; moved the daemon-local process spawn, output-reader helper, and command-session process-group signal helpers into `eos-command-session::process`. Daemon `session.rs`, `lifecycle.rs`, `finalize.rs`, and `CommandWorkspaceKind` remain until manager wiring is complete. |
-| P6. Focused Rust verification | IN_PROGRESS | `cargo check -p eos-command-session --all-targets`; `cargo test -p eos-command-session`; `cargo clippy -p eos-command-session --all-targets -- -D warnings`; `cargo check -p eos-command-session --all-targets --target x86_64-unknown-linux-musl`; `cargo clippy -p eos-command-session --all-targets --target x86_64-unknown-linux-musl -- -D warnings`; `cargo check -p eos-daemon --all-targets`; `cargo test -p eos-daemon command`; `cargo test -p eos-daemon isolated -- --test-threads=1`; `cargo tree -p eos-command-session`; `cargo tree -p eos-command-session --target x86_64-unknown-linux-musl`; `git diff --check` | Current partial daemon-consumption checks pass. Keep open for full P4/P5 daemon manager wiring verification and live smoke. |
+| P4. Daemon manager wiring and event sink | IN_PROGRESS | `cargo tree -p eos-daemon \| rg "eos-command-session\|eos-ephemeral-workspace\|eos-isolated-workspace"`; `cargo check -p eos-daemon --all-targets`; `cargo test -p eos-daemon command`; `cargo test -p eos-daemon isolated -- --test-threads=1` | Daemon now depends on `eos-command-session` and consumes runtime-owned output/cursor, wait/yield, runner request serialization, PTY allocation, native `ns-runner` spawn/output-reader, `CommandSessionProcess` child/stdin/reader-drain wrapper, runtime-owned process exit-code summary, runner-result JSON/status extraction, completion status normalization, SIGINT interrupt, and SIGTERM/SIGKILL process-group teardown helpers from it. Daemon concrete workspace policies now implement `CommandWorkspacePolicy` end-to-end under `command_session/policy/ephemeral.rs` and `command_session/policy/isolated.rs`; the daemon live session stores a boxed policy plus prepared paths/context and finalizes through `policy.finalize_command_workspace(...)`. `eos-command-session::CommandSessionManager` now has a Linux process-backed `start_boxed` / `write_stdin` / `cancel` / `sweep_expired` path that spawns `current_exe ns-runner`, writes PTY stdin, interrupts/cancels the process group, waits for yield, finalizes through the stored policy, and parks reaper completions. Daemon op handlers and reaper still call the daemon-local session/registry, so full manager wiring and daemon event sink remain. |
+| P5. Remove old daemon runtime modules and mode enum | IN_PROGRESS | `rg "mod output|mod pty|super::output|super::pty|rustix::pty" sandbox/crates/eos-daemon/src/services/command_session sandbox/crates/eos-daemon/Cargo.toml` returns no matches; `rg "write_run_request|serde_json::to_vec\\(request\\)|spawn_command_output_reader|Command::new|process_group\(|std_mpsc|utf8_consumable_prefix_len|open_pty_pair" sandbox/crates/eos-daemon/src/services/command_session sandbox/crates/eos-command-session/src/process` returns matches only under `eos-command-session/src/process`; `rg "pub\\(super\\) pgid|pub\\(super\\) writer|pub\\(super\\) reader_done|pub\\(super\\) child|\\.pgid|\\.writer|\\.reader_done|\\.child|std_mpsc|use std::fs::File|use std::process::Child" sandbox/crates/eos-daemon/src/services/command_session sandbox/crates/eos-daemon/tests/command/mod.rs` returns no matches; `rg "matches!\\(exit_code|unwrap_or\\(\\\"error\\\"\\)|exit_code = 130|RunResult|eos_runner|tool_result|ExitStatusExt|ExitStatus|status\\.signal\\(|status\\.code\\(" sandbox/crates/eos-daemon/src/services/command_session sandbox/crates/eos-command-session/src/process sandbox/crates/eos-command-session/Cargo.toml` returns matches only under `eos-command-session/src/process`; `rg "killpg|Signal|Pid" sandbox/crates/eos-daemon/src/services/command_session` returns only the orphan-recovery comment; `rg "CommandWorkspaceKind" sandbox/crates/eos-daemon/src/services/command_session sandbox/crates/eos-daemon/tests/command/mod.rs sandbox/crates/eos-command-session/src` returns no matches; `rg "struct (Ephemeral|Isolated)Command(Prepare|Finalize)Port" sandbox/crates/eos-daemon/src/services/command_session/{lifecycle.rs,finalize.rs}` returns no matches; `rg "start_boxed_linux|write_process_stdin|try_finalize_process|sweep_linux" sandbox/crates/eos-command-session/src` returns runtime-owned Linux manager/session matches | Removed drained daemon `output.rs` and `pty.rs`; moved daemon-local runner request serialization, process spawn, output-reader, child/stdin/reader-drain storage, process exit-code mapping, runner-result status extraction, completion status normalization, command-session process-group signal helpers, and concrete workspace prepare/finalize adapter structs out of the daemon lifecycle/finalize runtime files. Removed `CommandWorkspaceKind`; daemon session/finalize now uses a boxed policy plus prepared `output_path`, `final_path`, and `finalize_context`. Added equivalent Linux process-backed manager/session control in `eos-command-session`, but daemon `session.rs`, `lifecycle.rs`, and `finalize.rs` remain until op handlers are switched to the manager. |
+| P6. Focused Rust verification | IN_PROGRESS | `cargo check -p eos-command-session --all-targets`; `cargo test -p eos-command-session`; `cargo clippy -p eos-command-session --all-targets -- -D warnings`; `cargo check -p eos-command-session --all-targets --target x86_64-unknown-linux-musl`; `cargo clippy -p eos-command-session --all-targets --target x86_64-unknown-linux-musl -- -D warnings`; `cargo check -p eos-daemon --all-targets`; `cargo clippy -p eos-daemon --all-targets -- -D warnings`; `cargo check -p eos-daemon --all-targets --target x86_64-unknown-linux-musl`; `cargo clippy -p eos-daemon --all-targets --target x86_64-unknown-linux-musl -- -D warnings`; `cargo test -p eos-daemon command`; `cargo test -p eos-daemon isolated -- --test-threads=1`; `cargo tree -p eos-command-session`; `cargo tree -p eos-command-session --target x86_64-unknown-linux-musl`; `git diff --check` | Current partial daemon-consumption checks pass. Latest scoped rerun after adding the Linux process-backed runtime manager path: `cargo check -p eos-command-session --all-targets`, `cargo check -p eos-command-session --all-targets --target x86_64-unknown-linux-musl`, `cargo check -p eos-daemon --all-targets`, `cargo check -p eos-daemon --all-targets --target x86_64-unknown-linux-musl`, `cargo test -p eos-command-session`, `cargo test -p eos-daemon command`, `cargo test -p eos-daemon isolated -- --test-threads=1`, `cargo clippy -p eos-command-session --all-targets -- -D warnings`, `cargo clippy -p eos-command-session --all-targets --target x86_64-unknown-linux-musl -- -D warnings`, `cargo clippy -p eos-daemon --all-targets -- -D warnings`, `cargo clippy -p eos-daemon --all-targets --target x86_64-unknown-linux-musl -- -D warnings`, `cargo tree -p eos-command-session --target x86_64-unknown-linux-musl`, and `git diff --check`. Keep open for full P4/P5 daemon manager wiring verification and live smoke. |
 | P7. Live command-session smoke | TODO |  | Required if runtime artifact or daemon behavior changes. |
 | P8. Architecture/doc refresh | TODO |  | Update `docs/architecture` after implementation lands. |
 

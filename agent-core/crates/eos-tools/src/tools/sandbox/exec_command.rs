@@ -61,7 +61,7 @@ impl ToolExecutor for ExecCommand {
             .sandbox_invocation_id
             .clone()
             .unwrap_or_else(InvocationId::new_v4);
-        let mut base = request_base(ctx, "exec_command");
+        let mut base = request_base(ctx, "exec_command")?;
         base.invocation_id = Some(invocation_id);
         let command = parsed.cmd.clone();
         let request = ExecCommandRequest {
@@ -76,17 +76,21 @@ impl ToolExecutor for ExecCommand {
                 Ok(result) => result,
                 Err(err) => return Ok(ToolResult::error(err.to_string())),
             };
-        // Register a backgrounded session with the supervisor so the heartbeat
-        // pulls its completion. The daemon scopes the session under the RPC's
-        // top-level `caller_id`, so register under the same id or the
-        // heartbeat's `collect_completed` filter would never match.
+        // Register a backgrounded session with the same agent-run identity used
+        // to build the sandbox request, otherwise the heartbeat completion
+        // filter would never match.
         if let (Some(port), Some(session_id)) =
             (&ctx.command_session_supervisor, &result.command_session_id)
         {
             if result.is_running() {
                 if let Ok(session_id) = session_id.parse::<CommandSessionId>() {
-                    port.register(&session_id, sandbox_id, &ctx.caller.caller_id, &command)
-                        .await;
+                    port.register(
+                        &session_id,
+                        sandbox_id,
+                        ctx.require_agent_run_id()?,
+                        &command,
+                    )
+                    .await;
                 }
             }
         }

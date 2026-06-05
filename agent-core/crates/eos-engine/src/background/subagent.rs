@@ -85,7 +85,7 @@ const fn status_value(status: BackgroundTaskStatus) -> &'static str {
 fn trace_background_tool(
     event_type: &str,
     task_id: &str,
-    agent_id: &str,
+    agent_run_id: &AgentRunId,
     status: BackgroundTaskStatus,
     exit_code: Option<i64>,
 ) {
@@ -95,7 +95,7 @@ fn trace_background_tool(
         background_task_id = task_id,
         task_kind = "subagent",
         tool_name = "run_subagent",
-        agent_id,
+        agent_run_id = agent_run_id.as_str(),
         status = status_value(status),
         exit_code,
         "background tool lifecycle"
@@ -217,7 +217,7 @@ impl BackgroundSupervisorPort for BackgroundSupervisorHandle {
         // Build the child run input by deriving from the parent metadata (the
         // engine has no `&AppState`; the child needs the parent's transport /
         // stores / skill_registry to run its tools).
-        let caller_agent_id = ctx.agent_id();
+        let caller_agent_run_id = ctx.require_agent_run_id()?.clone();
         let mut tool_input = JsonObject::new();
         tool_input.insert("agent_name".to_owned(), json!(agent_name));
         tool_input.insert("prompt".to_owned(), json!(prompt));
@@ -253,13 +253,13 @@ impl BackgroundSupervisorPort for BackgroundSupervisorHandle {
         let inner = self.inner();
         let handles = self.handles.clone();
         let driver_inner = inner.clone();
-        let driver_agent_id = caller_agent_id.clone();
+        let driver_agent_run_id = caller_agent_run_id.clone();
 
         // Register, spawn the driver, and store its abort handle under one lock so
         // concurrent cancellation can never miss a not-yet-stored handle.
         let task_id = {
             let mut supervisor = inner.lock().await;
-            let task_id = supervisor.register_subagent(tool_input, caller_agent_id.clone());
+            let task_id = supervisor.register_subagent(tool_input, caller_agent_run_id.clone());
             // Emit `started` while still holding the lock, before the driver can
             // run: the driver cannot acquire the lock to settle + emit its terminal
             // event until this block releases, so `started` strictly precedes any
@@ -268,7 +268,7 @@ impl BackgroundSupervisorPort for BackgroundSupervisorHandle {
             trace_background_tool(
                 "background_tool.started",
                 task_id.as_str(),
-                &caller_agent_id,
+                &caller_agent_run_id,
                 BackgroundTaskStatus::Running,
                 None,
             );
@@ -284,7 +284,7 @@ impl BackgroundSupervisorPort for BackgroundSupervisorHandle {
                 trace_background_tool(
                     terminal_event_type(status),
                     driver_task_id.as_str(),
-                    &driver_agent_id,
+                    &driver_agent_run_id,
                     status,
                     Some(exit_code),
                 );
@@ -340,18 +340,17 @@ impl BackgroundSupervisorPort for BackgroundSupervisorHandle {
         subagent_session_id: &SubagentSessionId,
         reason: &str,
     ) -> Result<ToolResult, ToolError> {
-        let (cancelled, agent_id) = {
+        let (cancelled, agent_run_id) = {
             let supervisor = self.inner();
             let mut guard = supervisor.lock().await;
-            let agent_id = guard
+            let agent_run_id = guard
                 .get_subagent(subagent_session_id)
-                .map(|record| record.agent_id.clone())
-                .unwrap_or_default();
+                .map(|record| record.agent_run_id.clone());
             let cancelled = guard.cancel_subagent(subagent_session_id, reason);
             if cancelled {
                 guard.take_and_abort_handle(subagent_session_id);
             }
-            (cancelled, agent_id)
+            (cancelled, agent_run_id)
         };
         if !cancelled {
             // E6: unknown / already-settled cancel is an in-band error
@@ -362,10 +361,17 @@ impl BackgroundSupervisorPort for BackgroundSupervisorHandle {
                 subagent_session_id.as_str()
             )));
         }
+        let Some(agent_run_id) = agent_run_id else {
+            return Ok(ToolResult::error(format!(
+                "Could not cancel subagent session {}. It may have already completed \
+                 or does not exist.",
+                subagent_session_id.as_str()
+            )));
+        };
         trace_background_tool(
             "background_tool.cancelled",
             subagent_session_id.as_str(),
-            &agent_id,
+            &agent_run_id,
             BackgroundTaskStatus::Cancelled,
             None,
         );
@@ -380,22 +386,25 @@ impl BackgroundSupervisorPort for BackgroundSupervisorHandle {
         )))
     }
 
-    async fn inflight_report(&self, agent_id: &str) -> BackgroundInflightReport {
-        self.inner().lock().await.inflight_report(agent_id)
+    async fn inflight_report(&self, agent_run_id: Option<&AgentRunId>) -> BackgroundInflightReport {
+        self.inner().lock().await.inflight_report(agent_run_id)
     }
 
-    async fn cancel_subagents_for_agent(&self, agent_id: &str) -> BackgroundInflightReport {
+    async fn cancel_subagents_for_agent_run(
+        &self,
+        agent_run_id: &AgentRunId,
+    ) -> BackgroundInflightReport {
         self.inner()
             .lock()
             .await
-            .cancel_subagents_for_agent(agent_id)
+            .cancel_subagents_for_agent_run(agent_run_id)
     }
 
-    async fn register_workflow(&self, agent_id: &str, workflow: &StartedWorkflow) {
+    async fn register_workflow(&self, agent_run_id: &AgentRunId, workflow: &StartedWorkflow) {
         self.inner()
             .lock()
             .await
-            .register_workflow(agent_id, workflow);
+            .register_workflow(agent_run_id, workflow);
     }
 
     async fn cancel_workflow_record(
@@ -411,12 +420,17 @@ impl BackgroundSupervisorPort for BackgroundSupervisorHandle {
 
     async fn cancel_for_parent_exit(
         &self,
-        agent_id: &str,
+        agent_run_id: Option<&AgentRunId>,
         workflow_control: Option<Arc<dyn WorkflowControlPort>>,
         reason: &str,
     ) -> BackgroundInflightReport {
-        BackgroundSupervisorHandle::cancel_for_parent_exit(self, agent_id, workflow_control, reason)
-            .await
+        BackgroundSupervisorHandle::cancel_for_parent_exit(
+            self,
+            agent_run_id,
+            workflow_control,
+            reason,
+        )
+        .await
     }
 }
 
@@ -431,7 +445,7 @@ mod tests {
             subagent_session_id: "subagent_1".parse().expect("subagent id"),
             tool_input,
             status,
-            agent_id: "root".to_owned(),
+            agent_run_id: "root".parse().expect("agent run id"),
             result,
         }
     }

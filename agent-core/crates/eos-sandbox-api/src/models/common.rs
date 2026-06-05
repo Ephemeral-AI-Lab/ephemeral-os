@@ -4,8 +4,6 @@ use eos_types::{InvocationId, JsonObject};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use super::identity::SandboxCaller;
-
 /// High-level execution intent for a foreground sandbox tool call.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
@@ -48,8 +46,8 @@ pub enum Workspace {
 /// flattened field on each verb request.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 pub struct SandboxRequestBase {
-    /// Caller identity for audit and routing.
-    pub caller: SandboxCaller,
+    /// Opaque sandbox caller identity for audit and routing.
+    pub caller_id: String,
     /// Human-readable operation description; falls back via [`Self::description_or`].
     #[serde(default)]
     pub description: String,
@@ -59,6 +57,20 @@ pub struct SandboxRequestBase {
 }
 
 impl SandboxRequestBase {
+    /// Build a request base from an opaque sandbox caller identity.
+    #[must_use]
+    pub fn new(
+        caller_identity: impl Into<String>,
+        description: impl Into<String>,
+        invocation_id: Option<InvocationId>,
+    ) -> Self {
+        Self {
+            caller_id: caller_identity.into(),
+            description: description.into(),
+            invocation_id,
+        }
+    }
+
     /// `description` if non-empty, else `fallback` (mirrors `default_description`).
     #[must_use]
     pub fn description_or(&self, fallback: &str) -> String {
@@ -139,32 +151,11 @@ impl ConflictInfo {
 mod tests {
     use super::*;
 
-    fn caller(caller_id: &str) -> SandboxCaller {
-        SandboxCaller {
-            caller_id: caller_id.to_owned(),
-            run_id: String::new(),
-            agent_run_id: String::new(),
-            task_id: String::new(),
-            request_id: String::new(),
-            attempt_id: String::new(),
-            workflow_id: String::new(),
-            tool_id: None,
-        }
-    }
-
     #[test]
     fn description_or_falls_back_when_empty() {
-        let base = SandboxRequestBase {
-            caller: caller("a"),
-            description: String::new(),
-            invocation_id: None,
-        };
+        let base = SandboxRequestBase::new("caller-a", "", None);
         assert_eq!(base.description_or("write x"), "write x");
-        let base = SandboxRequestBase {
-            caller: caller("a"),
-            description: "custom".to_owned(),
-            invocation_id: None,
-        };
+        let base = SandboxRequestBase::new("caller-a", "custom", None);
         assert_eq!(base.description_or("write x"), "custom");
     }
 }

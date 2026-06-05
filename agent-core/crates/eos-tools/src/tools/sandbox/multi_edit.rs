@@ -55,7 +55,7 @@ impl ToolExecutor for MultiEdit {
             parsed.description.clone()
         };
         let request = EditFileRequest {
-            base: request_base(ctx, &description),
+            base: request_base(ctx, &description)?,
             path: path.clone(),
             edits: parsed
                 .edits

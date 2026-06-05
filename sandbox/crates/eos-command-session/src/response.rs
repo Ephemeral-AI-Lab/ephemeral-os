@@ -33,6 +33,19 @@ impl CommandResponse {
     }
 
     #[must_use]
+    pub fn cancelled(stdout: String) -> Self {
+        Self {
+            status: "cancelled".to_owned(),
+            exit_code: None,
+            stdout,
+            stderr: String::new(),
+            command_session_id: None,
+            workspace_mode: None,
+            metadata: Value::Null,
+        }
+    }
+
+    #[must_use]
     pub fn error(stderr: impl Into<String>) -> Self {
         Self {
             status: "error".to_owned(),
@@ -71,6 +84,71 @@ impl CommandResponse {
     pub fn with_stdout(mut self, stdout: String) -> Self {
         self.stdout = stdout;
         self
+    }
+
+    #[must_use]
+    pub fn to_wire_value(&self) -> Value {
+        let mut response = json!({
+            "status": self.status,
+            "exit_code": self.exit_code,
+            "output": {
+                "stdout": self.stdout,
+                "stderr": self.stderr,
+            },
+        });
+        if let Some(command_session_id) = self.command_session_id.as_ref() {
+            response["command_session_id"] = json!(command_session_id);
+        }
+        let Some(mode) = self.workspace_mode else {
+            return response;
+        };
+        let mode = mode.as_str();
+        response["success"] = self
+            .metadata
+            .get("success")
+            .cloned()
+            .unwrap_or_else(|| json!(self.status == "ok"));
+        response["workspace"] = json!(mode);
+        response["workspace_mode"] = json!(mode);
+        response["stdout"] = json!(self.stdout);
+        response["stderr"] = json!(self.stderr);
+        response["conflict"] = self
+            .metadata
+            .get("conflict")
+            .cloned()
+            .unwrap_or(Value::Null);
+        response["conflict_reason"] = self
+            .metadata
+            .get("conflict_reason")
+            .cloned()
+            .unwrap_or(Value::Null);
+        response["changed_paths"] = self
+            .metadata
+            .get("changed_paths")
+            .cloned()
+            .unwrap_or_else(|| json!([]));
+        response["changed_path_kinds"] = self
+            .metadata
+            .get("changed_path_kinds")
+            .cloned()
+            .unwrap_or_else(|| json!({}));
+        response["mutation_source"] = self
+            .metadata
+            .get("mutation_source")
+            .cloned()
+            .unwrap_or_else(|| json!(""));
+        response["error"] = Value::Null;
+        response["timings"] = self
+            .metadata
+            .get("timings")
+            .cloned()
+            .unwrap_or_else(|| json!({}));
+        if let Some(metadata) = self.metadata.get("metadata").and_then(Value::as_object) {
+            for (key, value) in metadata {
+                response[key] = value.clone();
+            }
+        }
+        response
     }
 }
 

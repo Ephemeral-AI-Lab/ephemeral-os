@@ -33,8 +33,8 @@ pub use models::{
     EditFileResult, EnterIsolatedWorkspaceRequest, EnterIsolatedWorkspaceResult,
     ExecCommandRequest, ExecCommandResult, ExecStdinRequest, ExitIsolatedWorkspaceRequest,
     ExitIsolatedWorkspaceResult, Intent, KnownCommandStatus, LifecycleError, LifecycleResultBase,
-    ReadFileRequest, ReadFileResult, SandboxCaller, SandboxRequestBase, SandboxResultBase,
-    SearchReplaceEdit, ToolCallRequest, Workspace, WriteFileRequest, WriteFileResult,
+    ReadFileRequest, ReadFileResult, SandboxRequestBase, SandboxResultBase, SearchReplaceEdit,
+    ToolCallRequest, Workspace, WriteFileRequest, WriteFileResult,
 };
 pub use ops::DaemonOp;
 pub use timeouts::{

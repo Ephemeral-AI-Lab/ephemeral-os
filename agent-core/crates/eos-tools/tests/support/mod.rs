@@ -8,12 +8,12 @@ use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
 use async_trait::async_trait;
-use eos_sandbox_api::{DaemonOp, SandboxApiError, SandboxCaller, SandboxTransport};
+use eos_sandbox_api::{DaemonOp, SandboxApiError, SandboxTransport};
 use eos_skills::SkillRegistry;
 use eos_state::{
     ExecutionTaskOutcome, Request, RequestStatus, RequestStore, Sealed, Task, TaskStatus, TaskStore,
 };
-use eos_types::{CoreError, JsonObject, RequestId, SandboxId, TaskId, UtcDateTime};
+use eos_types::{AgentRunId, CoreError, JsonObject, RequestId, SandboxId, TaskId, UtcDateTime};
 
 use crate::core::error::ToolError;
 use crate::core::metadata::ExecutionMetadata;
@@ -206,25 +206,16 @@ impl RequestStore for FakeRequestStore {
     }
 }
 
-/// An empty-caller identity.
-pub(crate) fn caller() -> SandboxCaller {
-    SandboxCaller {
-        caller_id: String::new(),
-        run_id: String::new(),
-        agent_run_id: String::new(),
-        task_id: String::new(),
-        request_id: String::new(),
-        attempt_id: String::new(),
-        workflow_id: String::new(),
-        tool_id: None,
-    }
+pub(crate) fn test_agent_run_id() -> AgentRunId {
+    "agent-run-test".parse().expect("agent run id")
 }
 
 /// A default [`ExecutionMetadata`] backed by inert fakes (no ports wired).
 pub(crate) fn metadata() -> ExecutionMetadata {
+    let agent_run_id = test_agent_run_id();
     ExecutionMetadata {
         sandbox_id: None,
-        agent_run_id: None,
+        agent_run_id: Some(agent_run_id),
         agent_name: "tester".to_owned(),
         cwd: String::new(),
         repo_root: String::new(),
@@ -235,7 +226,6 @@ pub(crate) fn metadata() -> ExecutionMetadata {
         workflow_id: None,
         tool_use_id: None,
         sandbox_invocation_id: None,
-        caller: caller(),
         transport: Arc::new(FakeTransport::inert()),
         task_store: Arc::new(FakeTaskStore::new()),
         request_store: Arc::new(FakeRequestStore::new()),

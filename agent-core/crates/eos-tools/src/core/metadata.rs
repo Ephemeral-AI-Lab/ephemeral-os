@@ -22,7 +22,7 @@
 use std::sync::Arc;
 
 use eos_llm_client::Message;
-use eos_sandbox_api::{SandboxCaller, SandboxTransport};
+use eos_sandbox_api::SandboxTransport;
 use eos_skills::SkillRegistry;
 use eos_state::{RequestStore, TaskStore};
 use eos_types::{
@@ -64,8 +64,6 @@ pub struct ExecutionMetadata {
     pub tool_use_id: Option<ToolUseId>,
     /// In-flight sandbox correlation id, when set.
     pub sandbox_invocation_id: Option<InvocationId>,
-    /// Caller identity for sandbox calls (`sandbox_caller_from_tool_context`).
-    pub caller: SandboxCaller,
     /// The sandbox RPC surface (`sandbox_api.*`).
     pub transport: Arc<dyn SandboxTransport>,
     /// Task persistence (`submit_root_outcome` and task lookups).
@@ -111,21 +109,6 @@ impl std::fmt::Debug for ExecutionMetadata {
 }
 
 impl ExecutionMetadata {
-    /// The calling agent's id: `agent_run_id` then `agent_name`, stripped
-    /// (Python `resolve_agent_id`).
-    #[must_use]
-    pub fn agent_id(&self) -> String {
-        let from_run = self
-            .agent_run_id
-            .as_ref()
-            .map(|id| id.as_str().trim())
-            .filter(|s| !s.is_empty());
-        match from_run {
-            Some(s) => s.to_owned(),
-            None => self.agent_name.trim().to_owned(),
-        }
-    }
-
     /// The calling agent's sandbox id as a string, or `""` when unbound (Python
     /// `resolve_sandbox_id`).
     #[must_use]

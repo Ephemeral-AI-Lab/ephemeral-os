@@ -74,7 +74,7 @@ pub trait WorkflowControlPort: Sealed + Send + Sync {
     async fn start(
         &self,
         parent_task_id: &TaskId,
-        agent_id: &str,
+        agent_run_id: &AgentRunId,
         workflow_goal: &str,
     ) -> Result<StartedWorkflow, ToolError>;
 
@@ -92,11 +92,11 @@ pub trait WorkflowControlPort: Sealed + Send + Sync {
         reason: &str,
     ) -> Result<String, ToolError>;
 
-    /// All workflows this parent task still has outstanding for `agent_id`.
+    /// All workflows this parent task still has outstanding for `agent_run_id`.
     async fn find_outstanding(
         &self,
         parent_task_id: &TaskId,
-        agent_id: &str,
+        agent_run_id: &AgentRunId,
     ) -> Result<Vec<OutstandingWorkflow>, ToolError>;
 
     /// The delegation-ancestry depth of `workflow_id` (1 = top-level, 2 = nested
@@ -214,20 +214,20 @@ pub enum SpawnedSubagent {
     Rejected(String),
 }
 
-/// Per-agent, per-kind in-flight background-task count (Running records only),
-/// scoped to one `agent_id`, serialized to JSON for the terminal-cleanup audit
+/// Per-agent-run, per-kind in-flight background-task count (Running records only),
+/// scoped to one `agent_run_id`, serialized to JSON for the terminal-cleanup audit
 /// assertion.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 pub struct BackgroundInflightReport {
     /// `subagent + workflow + command_session`.
     pub total: usize,
-    /// In-flight subagent runs for this agent.
+    /// In-flight subagent runs for this agent run.
     pub subagent: usize,
-    /// Outstanding delegated workflows for this agent. The supervisor owns the
+    /// Outstanding delegated workflows for this agent run. The supervisor owns the
     /// background handle bookkeeping; [`WorkflowControlPort`] remains the source
     /// of truth for persisted workflow lifecycle.
     pub workflow: usize,
-    /// In-flight, supervisor-tracked command sessions for this agent
+    /// In-flight, supervisor-tracked command sessions for this agent run
     /// (diagnostic; the authoritative live-session gate is the daemon RPC).
     pub command_session: usize,
 }
@@ -239,7 +239,7 @@ pub struct BackgroundInflightReport {
 pub trait BackgroundSupervisorPort: Sealed + Send + Sync {
     /// Validate, launch, and track a dispatchable subagent run. `ctx` is the
     /// caller's execution metadata: the implementor reads the caller identity
-    /// from it (for recursion + the agent-scoped count) and clones it to build
+    /// from it (for recursion + the agent-run-scoped count) and clones it to build
     /// the child run's metadata. Validation failures (recursion / unknown /
     /// non-subagent) return `Ok(Rejected(_))`; `Err` is a framework fault only.
     async fn spawn(
@@ -266,21 +266,24 @@ pub trait BackgroundSupervisorPort: Sealed + Send + Sync {
         reason: &str,
     ) -> Result<ToolResult, ToolError>;
 
-    /// This agent's in-flight background report (Running-only), without mutating
+    /// This agent run's in-flight background report (Running-only), without mutating
     /// state — the reject-mode read for `enter_isolated_workspace`.
-    async fn inflight_report(&self, agent_id: &str) -> BackgroundInflightReport;
+    async fn inflight_report(&self, agent_run_id: Option<&AgentRunId>) -> BackgroundInflightReport;
 
-    /// Cancel this agent's in-flight subagent runs only (settle `Cancelled` +
+    /// Cancel this agent run's in-flight subagent runs only (settle `Cancelled` +
     /// abort) and return the post-cancel report. The terminal / exit prehook
     /// uses this lane-specific cleanup so a live or phantom subagent never
     /// wedges the terminal, while delegated workflows remain gated by persisted
     /// workflow state.
-    async fn cancel_subagents_for_agent(&self, agent_id: &str) -> BackgroundInflightReport;
+    async fn cancel_subagents_for_agent_run(
+        &self,
+        agent_run_id: &AgentRunId,
+    ) -> BackgroundInflightReport;
 
-    /// Track a workflow that was just delegated by this agent. The workflow
+    /// Track a workflow that was just delegated by this agent run. The workflow
     /// control port owns persisted workflow state; the background supervisor owns
     /// the handle for in-flight accounting and parent-exit cancellation.
-    async fn register_workflow(&self, agent_id: &str, workflow: &StartedWorkflow);
+    async fn register_workflow(&self, agent_run_id: &AgentRunId, workflow: &StartedWorkflow);
 
     /// Mark a tracked workflow handle cancelled in the supervisor ledger.
     async fn cancel_workflow_record(
@@ -289,13 +292,13 @@ pub trait BackgroundSupervisorPort: Sealed + Send + Sync {
         reason: &str,
     ) -> bool;
 
-    /// Cancel all background work known to this supervisor for the parent agent.
+    /// Cancel all background work known to this supervisor for the parent agent run.
     /// Workflow cancellation is delegated through the optional authoritative
     /// workflow-control port; missing workflow control still settles the in-memory
     /// record so the parent exit cannot leave a phantom running handle.
     async fn cancel_for_parent_exit(
         &self,
-        agent_id: &str,
+        agent_run_id: Option<&AgentRunId>,
         workflow_control: Option<Arc<dyn WorkflowControlPort>>,
         reason: &str,
     ) -> BackgroundInflightReport;
@@ -323,7 +326,7 @@ pub trait CommandSessionSupervisorPort: Sealed + Send + Sync {
         &self,
         command_session_id: &CommandSessionId,
         sandbox_id: &SandboxId,
-        agent_id: &str,
+        agent_run_id: &AgentRunId,
         command: &str,
     );
 
@@ -358,7 +361,7 @@ pub trait CommandSessionSupervisorPort: Sealed + Send + Sync {
 /// no direct `eos-sandbox-host -> eos-tools` edge).
 #[async_trait]
 pub trait IsolatedWorkspacePort: Sealed + Send + Sync {
-    /// Open this agent's private isolated workspace; returns the model-facing
+    /// Open this agent run's private isolated workspace; returns the model-facing
     /// in-band result.
     async fn enter(
         &self,
@@ -367,7 +370,7 @@ pub trait IsolatedWorkspacePort: Sealed + Send + Sync {
         layer_stack_root: &str,
     ) -> Result<ToolResult, ToolError>;
 
-    /// Close and discard this agent's isolated workspace; returns the
+    /// Close and discard this agent run's isolated workspace; returns the
     /// model-facing in-band result.
     async fn exit(
         &self,

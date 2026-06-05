@@ -496,8 +496,9 @@ async fn run_block_in_isolated_mode(ctx: &ExecutionMetadata) -> Result<HookOutco
         Some(id) => id,
         None => return Ok(HookOutcome::pass()),
     };
-    let agent_id = ctx.agent_id();
-    match eos_sandbox_api::isolated_active(&*ctx.transport, sandbox_id, &agent_id).await {
+    let agent_run_id = ctx.require_agent_run_id()?;
+    match eos_sandbox_api::isolated_active(&*ctx.transport, sandbox_id, agent_run_id.as_str()).await
+    {
         Ok(true) => Ok(HookOutcome::Deny(
             HookDenial::new(BLOCK_IN_ISOLATED_MESSAGE, "block_in_isolated_mode")
                 .with_reason("isolated_workspace_open"),

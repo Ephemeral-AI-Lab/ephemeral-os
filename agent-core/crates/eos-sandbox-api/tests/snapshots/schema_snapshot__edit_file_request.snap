@@ -8,18 +8,14 @@ expression: schema
   "description": "Apply search/replace edits through OCC.",
   "type": "object",
   "required": [
-    "caller",
+    "caller_id",
     "edits",
     "path"
   ],
   "properties": {
-    "caller": {
-      "description": "Caller identity for audit and routing.",
-      "allOf": [
-        {
-          "$ref": "#/definitions/SandboxCaller"
-        }
-      ]
+    "caller_id": {
+      "description": "Opaque sandbox caller identity for audit and routing.",
+      "type": "string"
     },
     "description": {
       "description": "Human-readable operation description; falls back via [`Self::description_or`].",
@@ -46,56 +42,6 @@ expression: schema
     }
   },
   "definitions": {
-    "SandboxCaller": {
-      "description": "Caller identity threaded onto every audit-aware request.\n\n`caller_id` is the daemon-facing sandbox identity. Agent/workflow/task metadata stays in this host-side typed API and is projected only where a higher-level audit consumer needs it.",
-      "type": "object",
-      "required": [
-        "caller_id"
-      ],
-      "properties": {
-        "agent_run_id": {
-          "description": "Agent-run id as a raw wire field (required-empty). Use [`Self::agent_run`] for the validated typed form.",
-          "default": "",
-          "type": "string"
-        },
-        "attempt_id": {
-          "description": "Attempt id as a raw wire field (optional-empty). Use [`Self::attempt`].",
-          "default": "",
-          "type": "string"
-        },
-        "caller_id": {
-          "description": "Neutral sandbox caller identity. In agent-core it is derived from the current agent identity, but the daemon contract does not name agents.",
-          "type": "string"
-        },
-        "request_id": {
-          "description": "Request id as a raw wire field (optional-empty). Use [`Self::request`].",
-          "default": "",
-          "type": "string"
-        },
-        "run_id": {
-          "description": "Run id (required-empty compatibility field).",
-          "default": "",
-          "type": "string"
-        },
-        "task_id": {
-          "description": "Task id as a raw wire field (required-empty). Use [`Self::task`].",
-          "default": "",
-          "type": "string"
-        },
-        "tool_id": {
-          "description": "Tool-use id, stored already-typed; omitted from the wire when unset.",
-          "type": [
-            "string",
-            "null"
-          ]
-        },
-        "workflow_id": {
-          "description": "Workflow id as a raw wire field (optional-empty). Use [`Self::workflow`].",
-          "default": "",
-          "type": "string"
-        }
-      }
-    },
     "SearchReplaceEdit": {
       "description": "One exact-match replacement applied as part of an [`EditFileRequest`].",
       "type": "object",

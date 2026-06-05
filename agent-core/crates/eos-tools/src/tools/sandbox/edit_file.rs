@@ -52,7 +52,7 @@ impl ToolExecutor for EditFile {
             parsed.description.clone()
         };
         let request = EditFileRequest {
-            base: request_base(ctx, &description),
+            base: request_base(ctx, &description)?,
             path: path.clone(),
             edits: vec![SearchReplaceEdit {
                 old_text: parsed.old_text,

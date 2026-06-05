@@ -36,7 +36,10 @@ impl ToolCallRequest {
             "invocation_id".to_owned(),
             Value::String(self.invocation_id.to_string()),
         );
-        payload.insert("caller_id".to_owned(), Value::String(self.caller_id.clone()));
+        payload.insert(
+            "caller_id".to_owned(),
+            Value::String(self.caller_id.clone()),
+        );
         payload.insert("verb".to_owned(), Value::String(self.verb.clone()));
         payload.insert(
             "intent".to_owned(),

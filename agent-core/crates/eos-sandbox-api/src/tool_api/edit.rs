@@ -86,22 +86,13 @@ fn edit_conflict_result(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::models::{SandboxCaller, SandboxRequestBase, SearchReplaceEdit};
+    use crate::models::{SandboxRequestBase, SearchReplaceEdit};
     use crate::transport::mock::MockTransport;
 
     fn request() -> EditFileRequest {
         EditFileRequest {
             base: SandboxRequestBase {
-                caller: SandboxCaller {
-                    caller_id: "agent-1".to_owned(),
-                    run_id: String::new(),
-                    agent_run_id: String::new(),
-                    task_id: String::new(),
-                    request_id: String::new(),
-                    attempt_id: String::new(),
-                    workflow_id: String::new(),
-                    tool_id: None,
-                },
+                caller_id: "agent-1".to_owned(),
                 description: String::new(),
                 invocation_id: None,
             },

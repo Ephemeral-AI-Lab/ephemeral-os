@@ -6,7 +6,7 @@ use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
 use async_trait::async_trait;
-use eos_sandbox_api::{DaemonOp, SandboxApiError, SandboxCaller, SandboxTransport};
+use eos_sandbox_api::{DaemonOp, SandboxApiError, SandboxTransport};
 use eos_skills::SkillRegistry;
 use eos_state::{
     ExecutionTaskOutcome, Request, RequestStatus, RequestStore, Sealed, Task, TaskStatus, TaskStore,
@@ -145,19 +145,6 @@ impl RequestStore for FakeRequestStore {
     }
 }
 
-fn caller() -> SandboxCaller {
-    SandboxCaller {
-        caller_id: String::new(),
-        run_id: String::new(),
-        agent_run_id: String::new(),
-        task_id: String::new(),
-        request_id: String::new(),
-        attempt_id: String::new(),
-        workflow_id: String::new(),
-        tool_id: None,
-    }
-}
-
 pub(crate) fn metadata() -> ExecutionMetadata {
     ExecutionMetadata {
         sandbox_id: None,
@@ -172,7 +159,6 @@ pub(crate) fn metadata() -> ExecutionMetadata {
         workflow_id: None,
         tool_use_id: None,
         sandbox_invocation_id: None,
-        caller: caller(),
         transport: Arc::new(FakeTransport),
         task_store: Arc::new(FakeTaskStore::default()),
         request_store: Arc::new(FakeRequestStore),

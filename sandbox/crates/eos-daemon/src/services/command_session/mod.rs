@@ -4,6 +4,8 @@
 mod finalize;
 #[cfg(target_os = "linux")]
 mod lifecycle;
+#[cfg(target_os = "linux")]
+mod policy;
 #[cfg(any(target_os = "linux", test))]
 mod session;
 
@@ -18,8 +20,6 @@ use std::time::{Duration, Instant};
 // Test-support imports: the `tests` child module pulls these through `use
 // super::*`. They exist only when that linux-gated test code is compiled.
 #[cfg(all(test, target_os = "linux"))]
-use std::collections::HashMap;
-#[cfg(all(test, target_os = "linux"))]
 use std::fs::OpenOptions;
 #[cfg(all(test, target_os = "linux"))]
 use std::path::PathBuf;
@@ -28,6 +28,8 @@ use std::sync::Mutex;
 
 use serde_json::{json, Value};
 
+#[cfg(all(test, target_os = "linux"))]
+use eos_command_session::process::CommandSessionProcess;
 #[cfg(target_os = "linux")]
 use eos_command_session::CommandSessionConfig as RuntimeCommandSessionConfig;
 #[cfg(all(test, target_os = "linux"))]
@@ -52,7 +54,6 @@ pub(crate) fn configure_command_sessions(config: &CommandSessionConfig) {
     *guard = config.clone();
 }
 
-#[cfg(any(target_os = "linux", test))]
 #[cfg(any(target_os = "linux", test))]
 // Non-Linux test builds compile command output helpers without the Linux
 // lifecycle call graph that normally reads this config.

@@ -8,7 +8,9 @@
 use std::collections::HashMap;
 
 use eos_tools::{BackgroundInflightReport, StartedWorkflow, ToolResult};
-use eos_types::{CommandSessionId, JsonObject, SandboxId, SubagentSessionId, WorkflowSessionId};
+use eos_types::{
+    AgentRunId, CommandSessionId, JsonObject, SandboxId, SubagentSessionId, WorkflowSessionId,
+};
 use serde_json::{json, Value};
 use tokio::task::AbortHandle;
 
@@ -52,8 +54,8 @@ pub struct SubagentRecord {
     pub tool_input: JsonObject,
     /// Current status.
     pub status: BackgroundTaskStatus,
-    /// Owning agent id (the launching agent), for the agent-scoped count.
-    pub agent_id: String,
+    /// Owning agent run (the launching agent execution), for run-scoped counts.
+    pub agent_run_id: AgentRunId,
     /// Final result.
     pub result: Option<ToolResult>,
 }
@@ -84,8 +86,8 @@ pub struct WorkflowBackgroundRecord {
     pub workflow_task_id: WorkflowSessionId,
     /// Current supervisor status.
     pub status: BackgroundTaskStatus,
-    /// Owning agent id (the launching agent), for the agent-scoped count.
-    pub agent_id: String,
+    /// Owning agent run (the launching agent execution), for run-scoped counts.
+    pub agent_run_id: AgentRunId,
 }
 
 impl WorkflowBackgroundRecord {
@@ -104,7 +106,14 @@ impl WorkflowBackgroundRecord {
 pub(super) struct CommandSessionCancelTarget {
     pub command_session_id: CommandSessionId,
     pub sandbox_id: SandboxId,
-    pub agent_id: String,
+    pub agent_run_id: AgentRunId,
+}
+
+pub(super) fn matches_agent_run(recorded: &AgentRunId, scope: Option<&AgentRunId>) -> bool {
+    match scope {
+        Some(agent_run_id) => recorded == agent_run_id,
+        None => true,
+    }
 }
 
 /// Single-owner background supervisor state.
@@ -131,11 +140,11 @@ impl BackgroundTaskSupervisor {
         Self::default()
     }
 
-    /// Register a running subagent, stamping the owning `agent_id`.
+    /// Register a running subagent, stamping the owning `agent_run_id`.
     pub fn register_subagent(
         &mut self,
         tool_input: JsonObject,
-        agent_id: String,
+        agent_run_id: AgentRunId,
     ) -> SubagentSessionId {
         self.subagent_counter = self.subagent_counter.saturating_add(1);
         let subagent_session_id: SubagentSessionId =
@@ -149,7 +158,7 @@ impl BackgroundTaskSupervisor {
                 subagent_session_id: subagent_session_id.clone(),
                 tool_input,
                 status: BackgroundTaskStatus::Running,
-                agent_id,
+                agent_run_id,
                 result: None,
             },
         );
@@ -159,13 +168,13 @@ impl BackgroundTaskSupervisor {
     /// Register a delegated workflow as background work. The workflow-control
     /// adapter owns persisted state; this supervisor only tracks the handle for
     /// counts and parent-exit cleanup.
-    pub fn register_workflow(&mut self, agent_id: &str, workflow: &StartedWorkflow) {
+    pub fn register_workflow(&mut self, agent_run_id: &AgentRunId, workflow: &StartedWorkflow) {
         self.workflows.insert(
             workflow.workflow_task_id.clone(),
             WorkflowBackgroundRecord {
                 workflow_task_id: workflow.workflow_task_id.clone(),
                 status: BackgroundTaskStatus::Running,
-                agent_id: agent_id.to_owned(),
+                agent_run_id: agent_run_id.clone(),
             },
         );
     }
@@ -219,17 +228,20 @@ impl BackgroundTaskSupervisor {
             .is_some_and(|record| record.cancel(reason))
     }
 
-    /// Cancel this agent's in-flight subagent runs (settle `Cancelled` + abort
+    /// Cancel this agent run's in-flight subagent runs (settle `Cancelled` + abort
     /// the drivers), then return the post-cancel report. The terminal/exit
     /// prehook runs this so a live or phantom subagent never wedges the agent's
     /// terminal (D9). Workflows and commands have separate cleanup paths.
-    pub fn cancel_subagents_for_agent(&mut self, agent_id: &str) -> BackgroundInflightReport {
+    pub fn cancel_subagents_for_agent_run(
+        &mut self,
+        agent_run_id: &AgentRunId,
+    ) -> BackgroundInflightReport {
         let ids: Vec<SubagentSessionId> = self
             .subagents
             .values()
             .filter(|record| {
                 matches!(record.status, BackgroundTaskStatus::Running)
-                    && (agent_id.is_empty() || record.agent_id == agent_id)
+                    && record.agent_run_id == *agent_run_id
             })
             .map(|record| record.subagent_session_id.clone())
             .collect();
@@ -239,38 +251,41 @@ impl BackgroundTaskSupervisor {
             }
             self.take_and_abort_handle(&id);
         }
-        self.inflight_report(agent_id)
+        self.inflight_report(Some(agent_run_id))
     }
 
-    /// Running workflow handles for this agent, used by parent-exit cleanup.
+    /// Running workflow handles for this agent run, used by parent-exit cleanup.
     #[must_use]
-    pub fn running_workflows_for_agent(&self, agent_id: &str) -> Vec<WorkflowSessionId> {
+    pub fn running_workflows_for_agent_run(
+        &self,
+        agent_run_id: Option<&AgentRunId>,
+    ) -> Vec<WorkflowSessionId> {
         self.workflows
             .values()
             .filter(|record| {
                 matches!(record.status, BackgroundTaskStatus::Running)
-                    && (agent_id.is_empty() || record.agent_id == agent_id)
+                    && matches_agent_run(&record.agent_run_id, agent_run_id)
             })
             .map(|record| record.workflow_task_id.clone())
             .collect()
     }
 
-    /// Running commands for this agent, used by parent-exit cleanup.
+    /// Running commands for this agent run, used by parent-exit cleanup.
     #[must_use]
-    pub(super) fn running_commands_for_agent(
+    pub(super) fn running_commands_for_agent_run(
         &self,
-        agent_id: &str,
+        agent_run_id: Option<&AgentRunId>,
     ) -> Vec<CommandSessionCancelTarget> {
         self.commands
             .values()
             .filter(|record| {
                 matches!(record.status, BackgroundTaskStatus::Running)
-                    && (agent_id.is_empty() || record.agent_id == agent_id)
+                    && matches_agent_run(&record.agent_run_id, agent_run_id)
             })
             .map(|record| CommandSessionCancelTarget {
                 command_session_id: record.command_session_id.clone(),
                 sandbox_id: record.sandbox_id.clone(),
-                agent_id: record.agent_id.clone(),
+                agent_run_id: record.agent_run_id.clone(),
             })
             .collect()
     }
@@ -293,16 +308,16 @@ impl BackgroundTaskSupervisor {
         true
     }
 
-    /// This agent's in-flight background report (Running-only): subagents,
-    /// workflows, and commands. An empty `agent_id` counts all.
+    /// This agent run's in-flight background report (Running-only): subagents,
+    /// workflows, and commands. `None` counts all.
     #[must_use]
-    pub fn inflight_report(&self, agent_id: &str) -> BackgroundInflightReport {
+    pub fn inflight_report(&self, agent_run_id: Option<&AgentRunId>) -> BackgroundInflightReport {
         let subagent = self
             .subagents
             .values()
             .filter(|record| {
                 matches!(record.status, BackgroundTaskStatus::Running)
-                    && (agent_id.is_empty() || record.agent_id == agent_id)
+                    && matches_agent_run(&record.agent_run_id, agent_run_id)
             })
             .count();
         let workflow = self
@@ -310,10 +325,10 @@ impl BackgroundTaskSupervisor {
             .values()
             .filter(|record| {
                 matches!(record.status, BackgroundTaskStatus::Running)
-                    && (agent_id.is_empty() || record.agent_id == agent_id)
+                    && matches_agent_run(&record.agent_run_id, agent_run_id)
             })
             .count();
-        let command_session = self.count_commands_by_agent(agent_id);
+        let command_session = self.count_commands_by_run(agent_run_id);
         BackgroundInflightReport {
             total: subagent + workflow + command_session,
             subagent,
@@ -346,16 +361,21 @@ mod tests {
 
     use super::*;
 
+    fn agent_run_id(value: &str) -> AgentRunId {
+        value.parse().expect("agent run id")
+    }
+
     #[test]
     fn parent_exit_then_cancel_finish_race() {
         let mut supervisor = BackgroundTaskSupervisor::new();
-        let running = supervisor.register_subagent(JsonObject::new(), "agent".to_owned());
-        supervisor.cancel_subagents_for_agent("agent");
+        let agent = agent_run_id("agent");
+        let running = supervisor.register_subagent(JsonObject::new(), agent.clone());
+        supervisor.cancel_subagents_for_agent_run(&agent);
         let record = supervisor.get_subagent(&running).expect("record exists");
         assert_eq!(record.status, BackgroundTaskStatus::Cancelled);
         assert!(record.result.is_some());
 
-        let racing = supervisor.register_subagent(JsonObject::new(), "agent".to_owned());
+        let racing = supervisor.register_subagent(JsonObject::new(), agent.clone());
         // A cancel racing a finish resolves to Completed via the precedence latch.
         supervisor.cancel_subagent(&racing, "no longer needed");
         supervisor.settle_subagent(
@@ -370,9 +390,9 @@ mod tests {
             Some("finished anyway")
         );
 
-        // Both records left Running, so the agent-scoped count is zero.
-        assert_eq!(supervisor.inflight_report("agent").subagent, 0);
-        assert_eq!(supervisor.inflight_report("agent").total, 0);
+        // Both records left Running, so the agent-run-scoped count is zero.
+        assert_eq!(supervisor.inflight_report(Some(&agent)).subagent, 0);
+        assert_eq!(supervisor.inflight_report(Some(&agent)).total, 0);
     }
 
     #[test]
@@ -396,7 +416,7 @@ mod tests {
         let mut supervisor = BackgroundTaskSupervisor::new();
         assert_eq!(
             supervisor
-                .register_subagent(JsonObject::new(), "agent".to_owned())
+                .register_subagent(JsonObject::new(), agent_run_id("agent"))
                 .as_str(),
             "subagent_1"
         );
@@ -409,9 +429,10 @@ mod tests {
             workflow_id: eos_types::WorkflowId::new_v4(),
             workflow_task_id: "wf_1".parse().expect("workflow handle"),
         };
-        supervisor.register_workflow("agent-a", &workflow);
+        let agent = agent_run_id("agent-a");
+        supervisor.register_workflow(&agent, &workflow);
         assert_eq!(
-            supervisor.inflight_report("agent-a").workflow,
+            supervisor.inflight_report(Some(&agent)).workflow,
             1,
             "workflow handles are background-supervisor-aware"
         );
@@ -420,27 +441,29 @@ mod tests {
             "workflow record should share the generalized cancel transition"
         );
         assert_eq!(
-            supervisor.inflight_report("agent-a").workflow,
+            supervisor.inflight_report(Some(&agent)).workflow,
             0,
             "cancelled workflow leaves the running count"
         );
     }
 
     #[test]
-    fn inflight_report_is_subagent_and_agent_scoped() {
+    fn inflight_report_is_subagent_and_agent_run_scoped() {
         let mut supervisor = BackgroundTaskSupervisor::new();
-        let a = supervisor.register_subagent(JsonObject::new(), "agent-a".to_owned());
-        supervisor.register_subagent(JsonObject::new(), "agent-b".to_owned());
-        assert_eq!(supervisor.inflight_report("agent-a").subagent, 1);
-        assert_eq!(supervisor.inflight_report("agent-b").subagent, 1);
+        let agent_a = agent_run_id("agent-a");
+        let agent_b = agent_run_id("agent-b");
+        let a = supervisor.register_subagent(JsonObject::new(), agent_a.clone());
+        supervisor.register_subagent(JsonObject::new(), agent_b.clone());
+        assert_eq!(supervisor.inflight_report(Some(&agent_a)).subagent, 1);
+        assert_eq!(supervisor.inflight_report(Some(&agent_b)).subagent, 1);
 
-        // Cancelling agent-a settles only its subagent; agent-b is untouched.
-        let report = supervisor.cancel_subagents_for_agent("agent-a");
+        // Cancelling agent-a's run settles only its subagent; agent-b is untouched.
+        let report = supervisor.cancel_subagents_for_agent_run(&agent_a);
         assert_eq!(report.subagent, 0);
         assert_eq!(
             supervisor.get_subagent(&a).expect("record").status,
             BackgroundTaskStatus::Cancelled
         );
-        assert_eq!(supervisor.inflight_report("agent-b").subagent, 1);
+        assert_eq!(supervisor.inflight_report(Some(&agent_b)).subagent, 1);
     }
 }

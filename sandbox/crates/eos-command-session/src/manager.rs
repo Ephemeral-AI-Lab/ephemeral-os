@@ -1,4 +1,6 @@
 use std::sync::Arc;
+#[cfg(target_os = "linux")]
+use std::time::Duration;
 use std::time::Instant;
 
 use eos_workspace_api::CommandWorkspacePolicy;
@@ -6,6 +8,12 @@ use eos_workspace_api::CommandWorkspacePolicy;
 use crate::event::{CommandSessionFinished, CommandSessionStarted};
 use crate::registry::CommandSessionCompletion;
 use crate::session::CommandSessionSpec;
+#[cfg(target_os = "linux")]
+use crate::session::RunningCommandSessionParts;
+#[cfg(target_os = "linux")]
+use crate::{
+    process::spawn_current_exe_ns_runner, wait_for_yield, CommandSessionOutput, WaitOutcome,
+};
 use crate::{
     CancelCommandSession, CollectCompleted, CollectCompletedResponse, CommandResponse,
     CommandSession, CommandSessionConfig, CommandSessionError, CommandSessionEventSink,
@@ -62,6 +70,22 @@ impl CommandSessionManager {
         request: StartCommandSession,
         policy: DynCommandWorkspacePolicy,
     ) -> Result<CommandResponse, CommandSessionError> {
+        #[cfg(target_os = "linux")]
+        {
+            self.start_boxed_linux(request, policy)
+        }
+        #[cfg(not(target_os = "linux"))]
+        {
+            self.start_boxed_scaffold(request, policy)
+        }
+    }
+
+    #[cfg(not(target_os = "linux"))]
+    fn start_boxed_scaffold(
+        &self,
+        request: StartCommandSession,
+        policy: DynCommandWorkspacePolicy,
+    ) -> Result<CommandResponse, CommandSessionError> {
         if request.cmd.trim().is_empty() {
             return Err(CommandSessionError::InvalidRequest(
                 "cmd must be non-empty".to_owned(),
@@ -93,7 +117,81 @@ impl CommandSessionManager {
         ))
     }
 
+    #[cfg(target_os = "linux")]
+    fn start_boxed_linux(
+        &self,
+        request: StartCommandSession,
+        policy: DynCommandWorkspacePolicy,
+    ) -> Result<CommandResponse, CommandSessionError> {
+        if request.cmd.trim().is_empty() {
+            return Err(CommandSessionError::InvalidRequest(
+                "cmd must be non-empty".to_owned(),
+            ));
+        }
+        let id = self.registry.next_id();
+        let prepared = policy.prepare_command_workspace(request.prepare_request(id.clone()))?;
+        let output = Arc::new(CommandSessionOutput::new(&self.config));
+        let process = spawn_current_exe_ns_runner(
+            &prepared.request_path,
+            &prepared.run_request,
+            &prepared.output_path,
+            prepared.transcript_path.clone(),
+            Arc::clone(&output),
+        )?;
+        let session = Arc::new(CommandSession::new_running(
+            CommandSessionSpec {
+                id: id.clone(),
+                caller_id: request.caller_id,
+                command: request.cmd,
+                workspace_mode: prepared.mode,
+                timeout_seconds: request.timeout_seconds,
+                finalize_context: prepared.finalize_context,
+            },
+            policy,
+            RunningCommandSessionParts {
+                process,
+                output,
+                output_path: prepared.output_path,
+                final_path: prepared.final_path,
+                output_drain_grace_ms: self.config.output_drain_grace_ms,
+            },
+        ));
+        self.events.session_started(CommandSessionStarted {
+            command_session_id: id.clone(),
+            caller_id: session.caller_id().to_owned(),
+            workspace_mode: session.workspace_mode(),
+        });
+        self.registry.insert(Arc::clone(&session));
+        match wait_for_yield(
+            session.as_ref(),
+            &self.config,
+            request.yield_time_ms,
+            request.max_output_tokens,
+        ) {
+            WaitOutcome::Completed(result) => {
+                let response = result?;
+                Ok(self.finish_completed(session, response, false))
+            }
+            WaitOutcome::Running(stdout) => Ok(CommandResponse::running(id, stdout)),
+        }
+    }
+
     pub fn write_stdin(&self, request: WriteStdin) -> Result<CommandResponse, CommandSessionError> {
+        #[cfg(target_os = "linux")]
+        {
+            self.write_stdin_linux(request)
+        }
+        #[cfg(not(target_os = "linux"))]
+        {
+            self.write_stdin_scaffold(request)
+        }
+    }
+
+    #[cfg(not(target_os = "linux"))]
+    fn write_stdin_scaffold(
+        &self,
+        request: WriteStdin,
+    ) -> Result<CommandResponse, CommandSessionError> {
         let Some(session) = self.registry.get(&request.command_session_id) else {
             return self
                 .registry
@@ -112,7 +210,53 @@ impl CommandSessionManager {
         ))
     }
 
+    #[cfg(target_os = "linux")]
+    fn write_stdin_linux(
+        &self,
+        request: WriteStdin,
+    ) -> Result<CommandResponse, CommandSessionError> {
+        let Some(session) = self.registry.get(&request.command_session_id) else {
+            return self
+                .registry
+                .take_completed_result(&request.command_session_id)
+                .ok_or(CommandSessionError::NotFound(request.command_session_id));
+        };
+        session.write_process_stdin(&request.chars)?;
+        if request.terminate {
+            session.cancel_process();
+        }
+        match wait_for_yield(
+            session.as_ref(),
+            &self.config,
+            request.yield_time_ms,
+            request.max_output_tokens,
+        ) {
+            WaitOutcome::Completed(result) => {
+                let response = result?;
+                Ok(self.finish_completed(session, response, false))
+            }
+            WaitOutcome::Running(stdout) => {
+                Ok(CommandResponse::running(request.command_session_id, stdout))
+            }
+        }
+    }
+
     pub fn cancel(
+        &self,
+        request: CancelCommandSession,
+    ) -> Result<CommandResponse, CommandSessionError> {
+        #[cfg(target_os = "linux")]
+        {
+            self.cancel_linux(request)
+        }
+        #[cfg(not(target_os = "linux"))]
+        {
+            self.cancel_scaffold(request)
+        }
+    }
+
+    #[cfg(not(target_os = "linux"))]
+    fn cancel_scaffold(
         &self,
         request: CancelCommandSession,
     ) -> Result<CommandResponse, CommandSessionError> {
@@ -126,6 +270,32 @@ impl CommandSessionManager {
         self.finish_session(session, "cancelled", Some(130), true)
     }
 
+    #[cfg(target_os = "linux")]
+    fn cancel_linux(
+        &self,
+        request: CancelCommandSession,
+    ) -> Result<CommandResponse, CommandSessionError> {
+        let Some(session) = self.registry.get(&request.command_session_id) else {
+            return self
+                .registry
+                .take_completed_result(&request.command_session_id)
+                .ok_or(CommandSessionError::NotFound(request.command_session_id));
+        };
+        session.cancel_process();
+        match wait_for_yield(
+            session.as_ref(),
+            &self.config,
+            self.config.cancel_wait_ms,
+            request.max_output_tokens,
+        ) {
+            WaitOutcome::Completed(result) => {
+                let response = result?;
+                Ok(self.finish_completed(session, response, false))
+            }
+            WaitOutcome::Running(stdout) => Ok(CommandResponse::cancelled(stdout)),
+        }
+    }
+
     #[must_use]
     pub fn count_by_caller(&self, caller_id: Option<&str>) -> usize {
         self.registry.count_by_caller(caller_id)
@@ -137,7 +307,83 @@ impl CommandSessionManager {
     }
 
     #[must_use]
+    pub fn cleanup_caller(&self, caller_id: &str, grace_s: Option<f64>) -> usize {
+        #[cfg(target_os = "linux")]
+        {
+            self.cleanup_caller_linux(caller_id, grace_s)
+        }
+        #[cfg(not(target_os = "linux"))]
+        {
+            let _ = (caller_id, grace_s);
+            0
+        }
+    }
+
+    #[cfg(target_os = "linux")]
+    fn cleanup_caller_linux(&self, caller_id: &str, grace_s: Option<f64>) -> usize {
+        let caller_id = caller_id.trim();
+        if caller_id.is_empty() {
+            return 0;
+        }
+        let sessions: Vec<Arc<CommandSession>> = self
+            .registry
+            .live()
+            .into_iter()
+            .filter(|session| session.caller_id() == caller_id)
+            .collect();
+        if sessions.is_empty() {
+            return 0;
+        }
+        for session in &sessions {
+            session.cancel_process();
+        }
+
+        let cancel_wait_s = self.config.cancel_wait_ms as f64 / 1000.0;
+        let wait_s = grace_s.unwrap_or(cancel_wait_s).max(cancel_wait_s);
+        let deadline = Instant::now() + Duration::from_secs_f64(wait_s);
+        let mut pending = sessions.clone();
+        loop {
+            pending.retain(|session| match session.try_finalize_process() {
+                Some(Ok(response)) => {
+                    let _ = self.finish_completed(Arc::clone(session), response, false);
+                    false
+                }
+                Some(Err(error)) => {
+                    let response = CommandResponse::error(error.to_string());
+                    let _ = self.finish_completed(Arc::clone(session), response, false);
+                    false
+                }
+                None => true,
+            });
+            if pending.is_empty() || Instant::now() >= deadline {
+                break;
+            }
+            std::thread::sleep(Duration::from_millis(10));
+        }
+        for session in pending {
+            if let Some(result) = session.try_finalize_process() {
+                let response =
+                    result.unwrap_or_else(|error| CommandResponse::error(error.to_string()));
+                let _ = self.finish_completed(session, response, false);
+            }
+        }
+        sessions.len()
+    }
+
+    #[must_use]
     pub fn sweep_expired(&self, now: Instant) -> SweepReport {
+        #[cfg(target_os = "linux")]
+        {
+            self.sweep_linux(now)
+        }
+        #[cfg(not(target_os = "linux"))]
+        {
+            self.sweep_scaffold(now)
+        }
+    }
+
+    #[cfg(not(target_os = "linux"))]
+    fn sweep_scaffold(&self, now: Instant) -> SweepReport {
         let mut expired = 0;
         for session in self.registry.live() {
             if session.is_expired(now) && self.registry.remove(session.id()).is_some() {
@@ -150,6 +396,28 @@ impl CommandSessionManager {
         }
     }
 
+    #[cfg(target_os = "linux")]
+    fn sweep_linux(&self, now: Instant) -> SweepReport {
+        let mut expired = 0;
+        for session in self.registry.live() {
+            if session.is_past_deadline(now, self.config.max_session_s) {
+                expired += 1;
+                session.cancel_process();
+            }
+            if let Some(result) = session.try_finalize_process() {
+                let response =
+                    result.unwrap_or_else(|error| CommandResponse::error(error.to_string()));
+                let publish_completion = !session.is_cancelled();
+                let _ = self.finish_completed(session, response, publish_completion);
+            }
+        }
+        SweepReport {
+            expired,
+            live: self.registry.live().len(),
+        }
+    }
+
+    #[cfg(not(target_os = "linux"))]
     fn finish_session(
         &self,
         session: Arc<CommandSession>,
@@ -158,6 +426,20 @@ impl CommandSessionManager {
         include_session_id: bool,
     ) -> Result<CommandResponse, CommandSessionError> {
         let result = session.finalize(status, exit_code, include_session_id)?;
+        Ok(self.finish_completed(session, result, true))
+    }
+
+    fn finish_completed(
+        &self,
+        session: Arc<CommandSession>,
+        result: CommandResponse,
+        publish_completion: bool,
+    ) -> CommandResponse {
+        let result_for_completion = if publish_completion {
+            result.clone().with_stdout(session.read_model_output(None))
+        } else {
+            result.clone()
+        };
         let notification_result = result
             .clone()
             .with_stdout(session.read_notification_output(None));
@@ -172,14 +454,16 @@ impl CommandSessionManager {
             workspace_mode,
             status: result.status.clone(),
         });
-        self.registry.push_completed(CommandSessionCompletion {
-            command_session_id,
-            caller_id,
-            command,
-            result: result.clone(),
-            notification_result,
-        });
-        Ok(result)
+        if publish_completion {
+            self.registry.push_completed(CommandSessionCompletion {
+                command_session_id,
+                caller_id,
+                command,
+                result: result_for_completion,
+                notification_result,
+            });
+        }
+        result
     }
 }
 

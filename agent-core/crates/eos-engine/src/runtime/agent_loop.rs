@@ -121,21 +121,12 @@ pub struct EphemeralRun {
 struct BackgroundRunFinalizer {
     supervisor: Option<Arc<dyn BackgroundSupervisorPort>>,
     workflow_control: Option<Arc<dyn WorkflowControlPort>>,
-    agent_ids: Vec<String>,
+    agent_run_ids: Vec<AgentRunId>,
     armed: bool,
 }
 
-fn parent_exit_agent_ids(metadata: &ExecutionMetadata) -> Vec<String> {
-    let mut ids = Vec::new();
-    let resolved = metadata.agent_id();
-    if !resolved.trim().is_empty() {
-        ids.push(resolved);
-    }
-    let caller = metadata.caller.caller_id.trim();
-    if !caller.is_empty() && !ids.iter().any(|id| id == caller) {
-        ids.push(caller.to_owned());
-    }
-    ids
+fn parent_exit_agent_run_ids(metadata: &ExecutionMetadata) -> Vec<AgentRunId> {
+    metadata.agent_run_id.iter().cloned().collect()
 }
 
 impl BackgroundRunFinalizer {
@@ -143,7 +134,7 @@ impl BackgroundRunFinalizer {
         Self {
             supervisor: metadata.background_supervisor.clone(),
             workflow_control: metadata.workflow_control.clone(),
-            agent_ids: parent_exit_agent_ids(metadata),
+            agent_run_ids: parent_exit_agent_run_ids(metadata),
             armed: true,
         }
     }
@@ -162,16 +153,16 @@ impl Drop for BackgroundRunFinalizer {
             return;
         };
         let workflow_control = self.workflow_control.take();
-        let agent_ids = std::mem::take(&mut self.agent_ids);
+        let agent_run_ids = std::mem::take(&mut self.agent_run_ids);
         let reason = "engine run dropped before background finalization".to_owned();
         let Ok(handle) = tokio::runtime::Handle::try_current() else {
             tracing::warn!("engine run dropped outside a Tokio runtime; background cleanup could not be spawned");
             return;
         };
         handle.spawn(async move {
-            for agent_id in agent_ids {
+            for agent_run_id in agent_run_ids {
                 supervisor
-                    .cancel_for_parent_exit(&agent_id, workflow_control.clone(), &reason)
+                    .cancel_for_parent_exit(Some(&agent_run_id), workflow_control.clone(), &reason)
                     .await;
             }
         });
@@ -417,10 +408,10 @@ async fn finalize_background_for_agent(ctx: &crate::query::QueryContext, error: 
         (Some(QueryExitReason::ToolStop), None) => "parent agent submitted its terminal".to_owned(),
         (None, None) => "parent agent exited".to_owned(),
     };
-    for agent_id in parent_exit_agent_ids(&ctx.tool_metadata) {
+    for agent_run_id in parent_exit_agent_run_ids(&ctx.tool_metadata) {
         supervisor
             .cancel_for_parent_exit(
-                &agent_id,
+                Some(&agent_run_id),
                 ctx.tool_metadata.workflow_control.clone(),
                 &reason,
             )

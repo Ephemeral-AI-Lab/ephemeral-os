@@ -47,14 +47,15 @@ pub fn spawn_command_completion_heartbeat(
                 supervisor
                     .lock()
                     .await
-                    .running_command_session_ids_by_sandbox_agent()
+                    .running_command_session_ids_by_sandbox_run()
             };
-            for ((sandbox_id, agent_id), ids) in groups {
+            for ((sandbox_id, agent_run_id), ids) in groups {
                 let Ok(sandbox) = sandbox_id.parse::<SandboxId>() else {
                     continue;
                 };
                 let Ok(completions) =
-                    collect_command_completions(&*transport, &sandbox, &agent_id, &ids).await
+                    collect_command_completions(&*transport, &sandbox, agent_run_id.as_str(), &ids)
+                        .await
                 else {
                     continue; // transport faults are swallowed; retried next tick
                 };

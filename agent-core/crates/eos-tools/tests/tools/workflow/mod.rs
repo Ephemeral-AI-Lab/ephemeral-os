@@ -3,7 +3,7 @@
 use std::sync::{Arc, Mutex};
 
 use async_trait::async_trait;
-use eos_types::{JsonObject, SubagentSessionId, TaskId, WorkflowId, WorkflowSessionId};
+use eos_types::{AgentRunId, JsonObject, SubagentSessionId, TaskId, WorkflowId, WorkflowSessionId};
 use serde_json::json;
 
 use super::super::{
@@ -62,7 +62,10 @@ impl BackgroundSupervisorPort for RecordingSupervisor {
         unreachable!()
     }
 
-    async fn inflight_report(&self, _agent_id: &str) -> BackgroundInflightReport {
+    async fn inflight_report(
+        &self,
+        _agent_run_id: Option<&AgentRunId>,
+    ) -> BackgroundInflightReport {
         BackgroundInflightReport {
             total: 0,
             subagent: 0,
@@ -71,11 +74,14 @@ impl BackgroundSupervisorPort for RecordingSupervisor {
         }
     }
 
-    async fn cancel_subagents_for_agent(&self, agent_id: &str) -> BackgroundInflightReport {
-        self.inflight_report(agent_id).await
+    async fn cancel_subagents_for_agent_run(
+        &self,
+        agent_run_id: &AgentRunId,
+    ) -> BackgroundInflightReport {
+        self.inflight_report(Some(agent_run_id)).await
     }
 
-    async fn register_workflow(&self, _agent_id: &str, workflow: &StartedWorkflow) {
+    async fn register_workflow(&self, _agent_run_id: &AgentRunId, workflow: &StartedWorkflow) {
         self.workflows
             .lock()
             .unwrap()
@@ -96,11 +102,11 @@ impl BackgroundSupervisorPort for RecordingSupervisor {
 
     async fn cancel_for_parent_exit(
         &self,
-        agent_id: &str,
+        agent_run_id: Option<&AgentRunId>,
         _workflow_control: Option<Arc<dyn WorkflowControlPort>>,
         _reason: &str,
     ) -> BackgroundInflightReport {
-        self.inflight_report(agent_id).await
+        self.inflight_report(agent_run_id).await
     }
 }
 
@@ -113,7 +119,7 @@ impl WorkflowControlPort for OutstandingControl {
     async fn start(
         &self,
         _parent_task_id: &TaskId,
-        _agent_id: &str,
+        _agent_run_id: &AgentRunId,
         _workflow_goal: &str,
     ) -> Result<StartedWorkflow, ToolError> {
         unreachable!("outstanding short-circuit returns before start")
@@ -138,7 +144,7 @@ impl WorkflowControlPort for OutstandingControl {
     async fn find_outstanding(
         &self,
         _parent_task_id: &TaskId,
-        _agent_id: &str,
+        _agent_run_id: &AgentRunId,
     ) -> Result<Vec<OutstandingWorkflow>, ToolError> {
         Ok(vec![OutstandingWorkflow {
             workflow_id: WorkflowId::new_v4(),
@@ -177,7 +183,7 @@ impl WorkflowControlPort for StartingControl {
     async fn start(
         &self,
         _parent_task_id: &TaskId,
-        _agent_id: &str,
+        _agent_run_id: &AgentRunId,
         _workflow_goal: &str,
     ) -> Result<StartedWorkflow, ToolError> {
         Ok(StartedWorkflow {
@@ -205,7 +211,7 @@ impl WorkflowControlPort for StartingControl {
     async fn find_outstanding(
         &self,
         _parent_task_id: &TaskId,
-        _agent_id: &str,
+        _agent_run_id: &AgentRunId,
     ) -> Result<Vec<OutstandingWorkflow>, ToolError> {
         Ok(Vec::new())
     }

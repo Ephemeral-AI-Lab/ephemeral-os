@@ -8,14 +8,13 @@
 //! `tool_api` helpers build each daemon payload field-by-field — so the derived
 //! serde shape only backs schema snapshots and round-trip tests.
 //!
-//! Two source-driven removals/relocations from the Python module: `tool_name`
-//! is dropped from [`SandboxCaller`] (GC-sandbox-api-01) and `RawExecResult` is
-//! dropped (raw provider exec is a host concern, not a daemon op).
+//! Source-driven cleanup from the Python module: one-field identity wrappers and
+//! `RawExecResult` are dropped; daemon requests carry a direct, opaque
+//! `caller_id`.
 
 mod command;
 mod common;
 mod file;
-mod identity;
 mod lifecycle;
 mod tool_call;
 
@@ -28,7 +27,6 @@ pub use file::{
     EditFileRequest, EditFileResult, ReadFileRequest, ReadFileResult, SearchReplaceEdit,
     WriteFileRequest, WriteFileResult,
 };
-pub use identity::SandboxCaller;
 pub use lifecycle::{
     EnterIsolatedWorkspaceRequest, EnterIsolatedWorkspaceResult, ExitIsolatedWorkspaceRequest,
     ExitIsolatedWorkspaceResult, LifecycleError, LifecycleResultBase,

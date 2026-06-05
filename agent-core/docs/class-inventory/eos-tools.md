@@ -219,7 +219,6 @@ The typed bag of runtime context a tool executor reads; built per tool call and 
 | `workflow_id` | `Option<WorkflowId>` | `pub` |
 | `tool_use_id` | `Option<ToolUseId>` | `pub` |
 | `sandbox_invocation_id` | `Option<InvocationId>` | `pub` |
-| `caller` | `SandboxCaller` | `pub` |
 | `transport` | `Arc<dyn SandboxTransport>` | `pub` |
 | `task_store` | `Arc<dyn TaskStore>` | `pub` |
 | `request_store` | `Arc<dyn RequestStore>` | `pub` |
@@ -235,7 +234,7 @@ The typed bag of runtime context a tool executor reads; built per tool call and 
 
 <details><summary>Methods (11)</summary>
 
-`agent_id`, `sandbox_id_str`, `require_sandbox_id`, `require_task_id`, `require_request_id`, `require_attempt_id`, `require_workflow_control`, `require_plan_submission`, `require_subagent_supervisor`, `require_advisor`, `require_isolated_workspace`
+`sandbox_id_str`, `require_sandbox_id`, `require_task_id`, `require_request_id`, `require_agent_run_id`, `require_attempt_id`, `require_workflow_control`, `require_plan_submission`, `require_subagent_supervisor`, `require_advisor`, `require_isolated_workspace`
 
 </details>
 
@@ -957,10 +956,10 @@ One outstanding workflow launched by a parent task (for `find_outstanding`).
 Per-Attempt workflow control for the `delegate`/`check`/`cancel_workflow` tools; live state lives downstream, so `status`/`cancel` return rendered text.
 
 **Trait items**:
-- `async fn start(&self, parent_task_id: &TaskId, agent_id: &str, workflow_goal: &str) -> Result<StartedWorkflow, ToolError>;`
+- `async fn start(&self, parent_task_id: &TaskId, agent_run_id: &AgentRunId, workflow_goal: &str) -> Result<StartedWorkflow, ToolError>;`
 - `async fn status(&self, workflow_id: &WorkflowId, workflow_task_id: Option<&WorkflowSessionId>) -> Result<String, ToolError>;`
 - `async fn cancel(&self, workflow_task_id: &WorkflowSessionId, reason: &str) -> Result<String, ToolError>;`
-- `async fn find_outstanding(&self, parent_task_id: &TaskId, agent_id: &str) -> Result<Vec<OutstandingWorkflow>, ToolError>;`
+- `async fn find_outstanding(&self, parent_task_id: &TaskId, agent_run_id: &AgentRunId) -> Result<Vec<OutstandingWorkflow>, ToolError>;`
 - `async fn is_nested_workflow(&self, workflow_id: &WorkflowId) -> Result<bool, ToolError>;`
 
 #### `PlanTask`  ·  _struct_  ·  derives: `Debug, Clone, PartialEq, Eq`  ·  [L106]
@@ -1036,7 +1035,7 @@ The engine background supervisor for the subagent tools and the no-inflight-back
 - `async fn spawn(&self, agent_name: &str, prompt: &str) -> Result<StartedSubagent, ToolError>;`
 - `async fn progress(&self, subagent_session_id: &SubagentSessionId, last_n_messages: u8) -> Result<String, ToolError>;`
 - `async fn cancel(&self, subagent_session_id: &SubagentSessionId, reason: &str) -> Result<String, ToolError>;`
-- `async fn background_inflight_count(&self, agent_id: &str) -> usize;`
+- `async fn inflight_report(&self, agent_run_id: Option<&AgentRunId>) -> BackgroundInflightReport;`
 
 #### `AdvisorApproval`  ·  _struct_  ·  derives: `Debug, Clone, PartialEq, Eq`  ·  [L235]
 
@@ -1062,8 +1061,8 @@ The advisor helper-agent runner; implemented by `eos-engine`.
 The `eos-runtime` adapter over the `eos-sandbox-host` isolated-workspace lifecycle (enter/exit).
 
 **Trait items**:
-- `async fn enter(&self, agent_id: &str, sandbox_id: &SandboxId, layer_stack_root: &str) -> Result<String, ToolError>;`
-- `async fn exit(&self, agent_id: &str, sandbox_id: &SandboxId, grace_s: f64) -> Result<String, ToolError>;`
+- `async fn enter(&self, agent_run_id: &AgentRunId, sandbox_id: &SandboxId, layer_stack_root: &str) -> Result<String, ToolError>;`
+- `async fn exit(&self, agent_run_id: &AgentRunId, sandbox_id: &SandboxId, grace_s: f64) -> Result<String, ToolError>;`
 
 #### `SystemNotification`  ·  _struct_  ·  derives: `Debug, Clone, PartialEq, Eq`  ·  [L291]
 

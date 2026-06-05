@@ -23,18 +23,13 @@ use crate::models::{
 // Outbound identity payload
 // ---------------------------------------------------------------------------
 
-/// Build the full daemon-envelope identity: a top-level `caller_id`, the nested
-/// `caller` block, and (only when present) a top-level `invocation_id`. Mirrors
-/// `daemon_request_identity_fields`.
+/// Build the daemon-envelope identity: a top-level `caller_id` and, only when
+/// present, a top-level `invocation_id`.
 pub(crate) fn daemon_request_identity_fields(base: &SandboxRequestBase) -> JsonObject {
     let mut payload = JsonObject::new();
     payload.insert(
         "caller_id".to_owned(),
-        Value::String(base.caller.caller_id.clone()),
-    );
-    payload.insert(
-        "caller".to_owned(),
-        Value::Object(base.caller.identity_block()),
+        Value::String(base.caller_id.clone()),
     );
     if let Some(invocation_id) = &base.invocation_id {
         payload.insert(
@@ -424,8 +419,6 @@ pub(crate) fn parse_exec_command_result(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::models::SandboxCaller;
-
     fn obj(value: Value) -> JsonObject {
         match value {
             Value::Object(map) => map,
@@ -433,40 +426,23 @@ mod tests {
         }
     }
 
-    fn caller() -> SandboxCaller {
-        SandboxCaller {
-            caller_id: "caller-1".to_owned(),
-            run_id: String::new(),
-            agent_run_id: "caller-1".to_owned(),
-            task_id: String::new(),
-            request_id: String::new(),
-            attempt_id: String::new(),
-            workflow_id: String::new(),
-            tool_id: None,
-        }
-    }
-
-    // AC-sandbox-api-04 (envelope portion): the full identity emits a top-level
-    // caller_id, the nested caller block, and a top-level invocation_id only when
-    // present. The fixture uses caller_id == agent_run_id.
+    // AC-sandbox-api-04 (envelope portion): the daemon identity emits only a
+    // top-level caller_id and a top-level invocation_id when present. The fixture
+    // keeps that sandbox-facing identity opaque.
     #[test]
     fn identity_envelope_has_top_level_caller_and_optional_invocation() {
         let base = SandboxRequestBase {
-            caller: caller(),
+            caller_id: "caller-1".to_owned(),
             description: String::new(),
             invocation_id: None,
         };
         let payload = daemon_request_identity_fields(&base);
         assert_eq!(payload["caller_id"], serde_json::json!("caller-1"));
-        assert!(payload["caller"].is_object());
-        assert_eq!(
-            payload["caller"]["agent_run_id"],
-            serde_json::json!("caller-1")
-        );
+        assert!(!payload.contains_key("caller"));
         assert!(!payload.contains_key("invocation_id"));
 
         let base = SandboxRequestBase {
-            caller: caller(),
+            caller_id: "caller-1".to_owned(),
             description: String::new(),
             invocation_id: Some("inv-9".parse().expect("non-empty")),
         };

@@ -40,11 +40,11 @@ impl ToolExecutor for DelegateWorkflow {
             return Ok(ToolResult::error("goal must be nonblank"));
         }
         let task_id = ctx.require_task_id()?;
-        let agent_id = ctx.agent_id();
+        let agent_run_id = ctx.require_agent_run_id()?;
         let control = ctx.require_workflow_control()?;
         let supervisor = ctx.require_background_supervisor()?;
 
-        let outstanding = control.find_outstanding(task_id, &agent_id).await?;
+        let outstanding = control.find_outstanding(task_id, agent_run_id).await?;
         if let Some(existing) = outstanding.first() {
             let payload = json!({
                 "workflow_task_id": existing.workflow_task_id.as_str(),
@@ -56,8 +56,8 @@ impl ToolExecutor for DelegateWorkflow {
             return Ok(ToolResult::error(payload.to_string()));
         }
 
-        let started = control.start(task_id, &agent_id, &parsed.goal).await?;
-        supervisor.register_workflow(&agent_id, &started).await;
+        let started = control.start(task_id, agent_run_id, &parsed.goal).await?;
+        supervisor.register_workflow(agent_run_id, &started).await;
         let payload = json!({
             "workflow_task_id": started.workflow_task_id.as_str(),
             "workflow_id": started.workflow_id.as_str(),

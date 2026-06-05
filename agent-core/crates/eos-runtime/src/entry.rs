@@ -85,7 +85,7 @@ impl Drop for RequestEntryHandle {
         handle.spawn(async move {
             supervisor
                 .cancel_for_parent_exit(
-                    "",
+                    None,
                     Some(workflow_control),
                     "request handle dropped before join/shutdown",
                 )
@@ -116,7 +116,7 @@ impl RequestEntryHandle {
         self.heartbeat.abort();
         self.supervisor
             .cancel_for_parent_exit(
-                "",
+                None,
                 Some(self.workflow_control.clone()),
                 "request root task joined",
             )
@@ -135,7 +135,7 @@ impl RequestEntryHandle {
         self.state.shutdown.cancel();
         self.heartbeat.abort();
         self.supervisor
-            .cancel_for_parent_exit("", Some(self.workflow_control.clone()), reason)
+            .cancel_for_parent_exit(None, Some(self.workflow_control.clone()), reason)
             .await;
 
         if let Some(root_agent_task) = self.root_agent_task.take() {

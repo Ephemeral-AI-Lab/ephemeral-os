@@ -1,3 +1,5 @@
+#[cfg(target_os = "linux")]
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::sync::{Mutex, MutexGuard, PoisonError};
 use std::time::{Duration, Instant};
@@ -5,9 +7,17 @@ use std::time::{Duration, Instant};
 use eos_workspace_api::{FinalizeCommandRequest, WorkspaceMode};
 use serde_json::Value;
 
+#[cfg(target_os = "linux")]
+use crate::process::{
+    CommandCompletionStatus, CommandRunnerResult, CommandSessionProcess, ProcessReap,
+};
+#[cfg(any(not(target_os = "linux"), test))]
+use crate::CommandSessionConfig;
+#[cfg(target_os = "linux")]
+use crate::CommandSessionWaitTarget;
 use crate::{
-    CommandResponse, CommandSessionConfig, CommandSessionError, CommandSessionOutput,
-    CommandSessionOutputCursor, DynCommandWorkspacePolicy,
+    CommandResponse, CommandSessionError, CommandSessionOutput, CommandSessionOutputCursor,
+    DynCommandWorkspacePolicy,
 };
 
 pub struct CommandSession {
@@ -20,6 +30,18 @@ pub struct CommandSession {
     notification_cursor: Mutex<CommandSessionOutputCursor>,
     policy: Mutex<Option<DynCommandWorkspacePolicy>>,
     finalize_context: Value,
+    #[cfg(target_os = "linux")]
+    process: CommandSessionProcess,
+    #[cfg(target_os = "linux")]
+    output_path: PathBuf,
+    #[cfg(target_os = "linux")]
+    final_path: PathBuf,
+    #[cfg(target_os = "linux")]
+    cancelled: Mutex<bool>,
+    #[cfg(target_os = "linux")]
+    interrupted: Mutex<bool>,
+    #[cfg(target_os = "linux")]
+    output_drain_grace_ms: u64,
     finalized: Mutex<Option<CommandResponse>>,
     started_at: Instant,
     timeout: Option<Duration>,
@@ -34,23 +56,102 @@ pub(crate) struct CommandSessionSpec {
     pub finalize_context: Value,
 }
 
+#[cfg(target_os = "linux")]
+pub(crate) struct RunningCommandSessionParts {
+    pub process: CommandSessionProcess,
+    pub output: Arc<CommandSessionOutput>,
+    pub output_path: PathBuf,
+    pub final_path: PathBuf,
+    pub output_drain_grace_ms: u64,
+}
+
 impl CommandSession {
     #[must_use]
+    #[cfg(any(not(target_os = "linux"), test))]
     pub(crate) fn new(
         spec: CommandSessionSpec,
         policy: DynCommandWorkspacePolicy,
         config: &CommandSessionConfig,
+    ) -> Self {
+        Self::new_scaffold(
+            spec,
+            policy,
+            Arc::new(CommandSessionOutput::new(config)),
+            config.output_drain_grace_ms,
+        )
+    }
+
+    #[cfg(target_os = "linux")]
+    #[must_use]
+    pub(crate) fn new_running(
+        spec: CommandSessionSpec,
+        policy: DynCommandWorkspacePolicy,
+        parts: RunningCommandSessionParts,
+    ) -> Self {
+        let output = Arc::clone(&parts.output);
+        Self::new_with_process(spec, policy, output, parts)
+    }
+
+    #[cfg(any(not(target_os = "linux"), test))]
+    fn new_scaffold(
+        spec: CommandSessionSpec,
+        policy: DynCommandWorkspacePolicy,
+        output: Arc<CommandSessionOutput>,
+        _output_drain_grace_ms: u64,
+    ) -> Self {
+        #[cfg(target_os = "linux")]
+        let inactive = inactive_process_parts(Arc::clone(&output), _output_drain_grace_ms);
+        Self {
+            id: spec.id,
+            caller_id: spec.caller_id,
+            command: spec.command,
+            workspace_mode: spec.workspace_mode,
+            output,
+            model_cursor: Mutex::new(CommandSessionOutputCursor::default()),
+            notification_cursor: Mutex::new(CommandSessionOutputCursor::default()),
+            policy: Mutex::new(Some(policy)),
+            finalize_context: spec.finalize_context,
+            #[cfg(target_os = "linux")]
+            process: inactive.process,
+            #[cfg(target_os = "linux")]
+            output_path: inactive.output_path,
+            #[cfg(target_os = "linux")]
+            final_path: inactive.final_path,
+            #[cfg(target_os = "linux")]
+            cancelled: Mutex::new(false),
+            #[cfg(target_os = "linux")]
+            interrupted: Mutex::new(false),
+            #[cfg(target_os = "linux")]
+            output_drain_grace_ms: inactive.output_drain_grace_ms,
+            finalized: Mutex::new(None),
+            started_at: Instant::now(),
+            timeout: spec.timeout_seconds.and_then(duration_from_secs_f64),
+        }
+    }
+
+    #[cfg(target_os = "linux")]
+    fn new_with_process(
+        spec: CommandSessionSpec,
+        policy: DynCommandWorkspacePolicy,
+        output: Arc<CommandSessionOutput>,
+        running: RunningCommandSessionParts,
     ) -> Self {
         Self {
             id: spec.id,
             caller_id: spec.caller_id,
             command: spec.command,
             workspace_mode: spec.workspace_mode,
-            output: Arc::new(CommandSessionOutput::new(config)),
+            output,
             model_cursor: Mutex::new(CommandSessionOutputCursor::default()),
             notification_cursor: Mutex::new(CommandSessionOutputCursor::default()),
             policy: Mutex::new(Some(policy)),
             finalize_context: spec.finalize_context,
+            process: running.process,
+            output_path: running.output_path,
+            final_path: running.final_path,
+            cancelled: Mutex::new(false),
+            interrupted: Mutex::new(false),
+            output_drain_grace_ms: running.output_drain_grace_ms,
             finalized: Mutex::new(None),
             started_at: Instant::now(),
             timeout: spec.timeout_seconds.and_then(duration_from_secs_f64),
@@ -87,8 +188,36 @@ impl CommandSession {
         &self.finalize_context
     }
 
+    #[cfg(target_os = "linux")]
+    #[must_use]
+    pub fn final_path(&self) -> &Path {
+        &self.final_path
+    }
+
+    #[cfg(target_os = "linux")]
+    #[must_use]
+    pub fn is_cancelled(&self) -> bool {
+        *lock(&self.cancelled)
+    }
+
     pub fn append_output(&self, text: String) {
         self.output.append(text);
+    }
+
+    #[cfg(target_os = "linux")]
+    pub fn write_process_stdin(&self, chars: &str) -> Result<(), CommandSessionError> {
+        self.process.write_stdin(chars.as_bytes())?;
+        if chars.contains('\u{3}') {
+            *lock(&self.interrupted) = true;
+            self.process.interrupt();
+        }
+        Ok(())
+    }
+
+    #[cfg(target_os = "linux")]
+    pub fn cancel_process(&self) {
+        *lock(&self.cancelled) = true;
+        self.process.terminate();
     }
 
     #[must_use]
@@ -119,10 +248,36 @@ impl CommandSession {
             .is_some_and(|timeout| now.duration_since(self.started_at) >= timeout)
     }
 
+    #[cfg(target_os = "linux")]
+    #[must_use]
+    pub fn is_past_deadline(&self, now: Instant, max_session_s: u64) -> bool {
+        let timeout = self
+            .timeout
+            .unwrap_or_else(|| Duration::from_secs(max_session_s));
+        now.duration_since(self.started_at) >= timeout
+    }
+
     pub fn finalize(
         &self,
         status: &str,
         exit_code: Option<i64>,
+        include_session_id: bool,
+    ) -> Result<CommandResponse, CommandSessionError> {
+        self.finalize_with_output(
+            status,
+            exit_code,
+            None,
+            self.output.all_recent(None),
+            include_session_id,
+        )
+    }
+
+    fn finalize_with_output(
+        &self,
+        status: &str,
+        exit_code: Option<i64>,
+        runner_result: Option<Value>,
+        stdout: String,
         include_session_id: bool,
     ) -> Result<CommandResponse, CommandSessionError> {
         let mut finalized = lock(&self.finalized);
@@ -135,18 +290,84 @@ impl CommandSession {
         })?;
         let outcome = policy.finalize_command_workspace(FinalizeCommandRequest {
             finalize_context: self.finalize_context.clone(),
-            runner_result: None,
+            runner_result,
             command_elapsed_s: self.started_at.elapsed().as_secs_f64(),
             spool_truncated: self.output.spool_truncated(),
             status: status.to_owned(),
             exit_code,
-            stdout: self.output.all_recent(None),
+            stdout,
             stderr: String::new(),
             command_session_id: include_session_id.then(|| self.id.clone()),
         })?;
         let response = CommandResponse::from_workspace_outcome(outcome);
         *finalized = Some(response.clone());
         Ok(response)
+    }
+
+    #[cfg(target_os = "linux")]
+    pub fn try_finalize_process(&self) -> Option<Result<CommandResponse, CommandSessionError>> {
+        let process_exit = match self.process.try_reap() {
+            ProcessReap::Running => return None,
+            ProcessReap::Exited(exit) => exit,
+        };
+        self.process.terminate();
+        self.process
+            .wait_for_reader_done(Duration::from_millis(self.output_drain_grace_ms));
+        let runner = CommandRunnerResult::read_from_path(&self.output_path);
+        let cancelled = *lock(&self.cancelled);
+        let interrupted = *lock(&self.interrupted);
+        let completion = CommandCompletionStatus::from_process_and_runner(
+            process_exit,
+            runner.as_ref(),
+            cancelled,
+            interrupted,
+        );
+        let response = self.finalize_with_output(
+            completion.status(),
+            Some(completion.exit_code()),
+            runner.map(|runner| runner.value().clone()),
+            self.output.all_recent(None),
+            true,
+        );
+        if let Ok(response) = response.as_ref() {
+            if let Err(error) = write_final_response(&self.final_path, response) {
+                return Some(Err(error));
+            }
+        }
+        Some(response)
+    }
+}
+
+#[cfg(target_os = "linux")]
+fn write_final_response(
+    path: &Path,
+    response: &CommandResponse,
+) -> Result<(), CommandSessionError> {
+    if path.as_os_str().is_empty() {
+        return Ok(());
+    }
+    let bytes = serde_json::to_vec_pretty(&response.to_wire_value()).map_err(|error| {
+        CommandSessionError::InvalidRequest(format!("serialize final command response: {error}"))
+    })?;
+    std::fs::write(path, bytes)?;
+    Ok(())
+}
+
+#[cfg(target_os = "linux")]
+impl CommandSessionWaitTarget<Result<CommandResponse, CommandSessionError>> for CommandSession {
+    fn try_finalize(
+        &self,
+        _publish_completion: bool,
+    ) -> Option<Result<CommandResponse, CommandSessionError>> {
+        self.try_finalize_process()
+    }
+
+    fn next_output_byte_offset(&self) -> u64 {
+        self.output.next_byte_offset()
+    }
+
+    fn read_model_output(&self, max_tokens: Option<u64>) -> String {
+        Self::read_model_output(self, max_tokens)
     }
 }
 
@@ -155,6 +376,25 @@ fn duration_from_secs_f64(seconds: f64) -> Option<Duration> {
         Some(Duration::from_secs_f64(seconds))
     } else {
         None
+    }
+}
+
+#[cfg(all(target_os = "linux", test))]
+fn inactive_process_parts(
+    output: Arc<CommandSessionOutput>,
+    output_drain_grace_ms: u64,
+) -> RunningCommandSessionParts {
+    let writer = std::fs::OpenOptions::new()
+        .read(true)
+        .write(true)
+        .open("/dev/null")
+        .expect("open /dev/null for inactive command session process");
+    RunningCommandSessionParts {
+        process: CommandSessionProcess::inactive(writer),
+        output,
+        output_path: PathBuf::new(),
+        final_path: PathBuf::new(),
+        output_drain_grace_ms,
     }
 }
 

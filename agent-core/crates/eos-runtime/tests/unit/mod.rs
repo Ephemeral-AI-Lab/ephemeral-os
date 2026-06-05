@@ -13,6 +13,7 @@ use eos_engine::{EngineError, EngineStream, EventSource, StreamEvent};
 use eos_llm_client::{ContentBlock, LlmRequest};
 use eos_state::{RequestStatus, TaskRole, TaskStatus, WorkflowStatus};
 use eos_tools::StartedWorkflow;
+use eos_types::AgentRunId;
 use serde_json::json;
 
 use crate::app_state::test_seams::{
@@ -952,11 +953,12 @@ async fn dropped_handle_cancels_background_and_fails_running_root() {
         workflow_id: eos_types::WorkflowId::new_v4(),
         workflow_task_id: "wf_drop".parse().unwrap(),
     };
+    let parent_agent_run_id: AgentRunId = "parent-run".parse().expect("agent run id");
     supervisor
         .inner()
         .lock()
         .await
-        .register_workflow("root", &workflow);
+        .register_workflow(&parent_agent_run_id, &workflow);
 
     tokio::time::sleep(Duration::from_millis(40)).await;
     drop(handle);
@@ -968,7 +970,7 @@ async fn dropped_handle_cancels_background_and_fails_running_root() {
             .await
             .unwrap()
             .is_some_and(|task| task.status == TaskStatus::Failed);
-        let background_clear = supervisor.inner().lock().await.inflight_report("").total == 0;
+        let background_clear = supervisor.inner().lock().await.inflight_report(None).total == 0;
         if task_failed && background_clear {
             break;
         }
@@ -982,7 +984,7 @@ async fn dropped_handle_cancels_background_and_fails_running_root() {
     let task = state.task_store.get(&root_task_id).await.unwrap().unwrap();
     assert_eq!(task.status, TaskStatus::Failed);
     assert_eq!(
-        supervisor.inner().lock().await.inflight_report("").total,
+        supervisor.inner().lock().await.inflight_report(None).total,
         0,
         "drop cleanup cancels supervisor-tracked background handles"
     );
@@ -1043,7 +1045,7 @@ mod command_session_delivery {
                     "success": true,
                     "completions": [{
                         "command_session_id": "cmd_1",
-                        "agent_id": "root",
+                        "agent_run_id": "root",
                         "command": "sleep 1",
                         "result": {
                             "status": "ok",
@@ -1362,7 +1364,12 @@ mod subagent_lifecycle {
         );
         // The cancellation settled the live subagent: no Running subagent remains.
         assert_eq!(
-            supervisor.inner().lock().await.inflight_report("").subagent,
+            supervisor
+                .inner()
+                .lock()
+                .await
+                .inflight_report(None)
+                .subagent,
             0,
             "cancellation must leave zero in-flight subagents"
         );

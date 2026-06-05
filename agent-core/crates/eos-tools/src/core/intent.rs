@@ -53,7 +53,9 @@ impl ToolIntent {
     /// reusing [`as_str`](ToolIntent::as_str) as the single source of spelling.
     #[must_use]
     pub fn from_wire(value: &str) -> Option<Self> {
-        Self::ALL.into_iter().find(|intent| intent.as_str() == value)
+        Self::ALL
+            .into_iter()
+            .find(|intent| intent.as_str() == value)
     }
 }
 

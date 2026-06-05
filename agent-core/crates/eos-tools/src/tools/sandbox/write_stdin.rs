@@ -71,7 +71,7 @@ impl ToolExecutor for WriteStdin {
         // and the daemon raises SIGINT; teardown is the explicit `terminate`
         // flag, so the tool no longer escalates to a cancel RPC.
         let write_request = ExecStdinRequest {
-            base: request_base(ctx, "write_stdin"),
+            base: request_base(ctx, "write_stdin")?,
             command_session_id: command_session_id.as_str().to_owned(),
             chars: parsed.chars.clone(),
             yield_time_ms: Some(parsed.yield_time_ms),

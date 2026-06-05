@@ -75,21 +75,7 @@ impl IsolatedWorkspacePort for RuntimeIsolatedWorkspace {
 }
 
 fn request_base(agent_run_id: &AgentRunId, description: &str) -> SandboxRequestBase {
-    let agent_run_id = agent_run_id.as_str().to_owned();
-    SandboxRequestBase {
-        caller: eos_sandbox_api::SandboxCaller {
-            caller_id: agent_run_id.clone(),
-            run_id: agent_run_id.clone(),
-            agent_run_id,
-            task_id: String::new(),
-            request_id: String::new(),
-            attempt_id: String::new(),
-            workflow_id: String::new(),
-            tool_id: None,
-        },
-        description: description.to_owned(),
-        invocation_id: None,
-    }
+    SandboxRequestBase::new(agent_run_id.as_str(), description, None)
 }
 
 fn effective_layer_stack_root(layer_stack_root: &str) -> String {
@@ -247,12 +233,6 @@ mod tests {
         assert_eq!(output["error"], Value::Null);
         let calls = transport.calls.lock().expect("calls lock");
         assert_eq!(calls[0].0, DaemonOp::IsolatedWorkspaceEnter);
-        assert_eq!(calls[0].1["caller_id"], json!("agent-run-1"));
-        assert_eq!(calls[0].1["caller"]["run_id"], json!("agent-run-1"));
-        assert_eq!(
-            calls[0].1["caller"]["agent_run_id"],
-            json!("agent-run-1")
-        );
         assert_eq!(
             calls[0].1["layer_stack_root"],
             json!(DEFAULT_LAYER_STACK_ROOT)
@@ -265,7 +245,7 @@ mod tests {
             "error": {
                 "kind": "not_active",
                 "message": "isolated workspace is not active",
-                "details": {"caller_id": "agent-1"}
+                "details": {"reason": "missing active handle"}
             }
         })));
         let adapter = RuntimeIsolatedWorkspace::new(transport.clone());
@@ -283,12 +263,6 @@ mod tests {
         assert_eq!(output["error"]["kind"], json!("not_active"));
         let calls = transport.calls.lock().expect("calls lock");
         assert_eq!(calls[0].0, DaemonOp::IsolatedWorkspaceExit);
-        assert_eq!(calls[0].1["caller_id"], json!("agent-run-1"));
-        assert_eq!(calls[0].1["caller"]["run_id"], json!("agent-run-1"));
-        assert_eq!(
-            calls[0].1["caller"]["agent_run_id"],
-            json!("agent-run-1")
-        );
         assert_eq!(calls[0].1["grace_s"], json!(0.5));
     }
 

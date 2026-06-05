@@ -249,7 +249,7 @@ Payload section for `plugin.*` events, serialized nested under `"plugin"`; `plug
 | `error_kind` | `Option<String>` | `pub`, `#[serde(skip_serializing_if = "Option::is_none", default)]` |
 | `message_hash` | `Option<String>` | `pub`, `#[serde(skip_serializing_if = "Option::is_none", default)]` |
 | `workspace_handle_id` | `Option<String>` | `pub`, `#[serde(skip_serializing_if = "Option::is_none", default)]` |
-| `agent_id` | `Option<String>` | `pub`, `#[serde(skip_serializing_if = "Option::is_none", default)]` |
+| `agent_run_id` | `Option<String>` | `pub`, `#[serde(skip_serializing_if = "Option::is_none", default)]` |
 | `peak_resident_bytes` | `Option<u64>` | `pub`, `#[serde(skip_serializing_if = "Option::is_none", default)]` |
 
 **Trait impls**: `Default`

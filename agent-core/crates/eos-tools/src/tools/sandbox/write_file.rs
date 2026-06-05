@@ -39,7 +39,7 @@ impl ToolExecutor for WriteFile {
         let path = resolve_path(ctx, &parsed.file_path);
         let sandbox_id = ctx.require_sandbox_id()?;
         let request = WriteFileRequest {
-            base: request_base(ctx, &format!("write {path}")),
+            base: request_base(ctx, &format!("write {path}"))?,
             path: path.clone(),
             content: parsed.content.clone(),
             overwrite: true,

@@ -86,8 +86,8 @@ fn command_session_completion_result_can_be_claimed_by_control_tool() -> TestRes
 }
 
 /// A minimal live `CommandSession` for registry/count tests. The workspace is
-/// an empty isolated stub (never finalized here), so only `id`/`caller_id`
-/// matter. One constructor keeps the 16-field literal in a single place.
+/// never finalized here, so only `id`/`caller_id` matter. One constructor keeps
+/// the field literal in a single place.
 #[cfg(target_os = "linux")]
 fn test_command_session(id: &str, caller_id: &str) -> TestResult<CommandSession> {
     Ok(CommandSession {
@@ -106,24 +106,11 @@ fn test_command_session(id: &str, caller_id: &str) -> TestResult<CommandSession>
         interrupted: Mutex::new(false),
         model_cursor: Mutex::new(CommandSessionOutputCursor::default()),
         notification_cursor: Mutex::new(CommandSessionOutputCursor::default()),
-        workspace: CommandWorkspaceKind::Isolated(IsolatedCommandWorkspace {
-            handle: crate::services::isolated_workspace::CommandHandle {
-                caller_id: String::new(),
-                workspace_handle_id: String::new(),
-                layer_stack_root: PathBuf::new(),
-                manifest_version: 0,
-                manifest_root_hash: String::new(),
-                workspace_root: PathBuf::new(),
-                scratch_dir: PathBuf::new(),
-                upperdir: PathBuf::new(),
-                workdir: PathBuf::new(),
-                layer_paths: Vec::new(),
-                ns_fds: HashMap::new(),
-                cgroup_path: None,
-            },
-            output_path: PathBuf::new(),
-            final_path: PathBuf::new(),
-        }),
+        workspace_mode: eos_workspace_api::WorkspaceMode::Isolated,
+        output_path: PathBuf::new(),
+        final_path: PathBuf::new(),
+        workspace_policy: Mutex::new(None),
+        finalize_context: json!({}),
         finalized: Mutex::new(None),
         timeout_deadline: None,
     })

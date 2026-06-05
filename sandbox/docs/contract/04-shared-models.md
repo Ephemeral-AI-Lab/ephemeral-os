@@ -84,28 +84,23 @@ crossing the daemon boundary.
 |-------|------|---------|
 | `caller_id` | `str` | (required) |
 
-Optional host metadata may be supplied in a nested `caller` object for audit
-correlation. The sandbox validates only that the supplied caller fields are
-strings of bounded length; it does not define or route on those field names.
 Ground truth:
 
 ```json
 {"caller_id": "caller-1"}
-{"caller_id": "caller-1", "caller": {"tool_id": "tool-1"}}
 ```
 
-### `SandboxRequestBase` — `models.py:51-60`
-`@dataclass(frozen=True, kw_only=True)`. Base for all verb requests.
+### Request identity base
+Every verb wrapper starts from the same opaque caller identity.
 
 | field | type | default |
 |-------|------|---------|
-| `caller` | `SandboxCaller` | (required) |
+| `caller_id` | `str` | (required) |
 | `description` | `str` | `""` |
 | `invocation_id` | `str` | `""` |
 
 `default_description(fallback)` returns `self.description or fallback`.
-**`caller` and `description` are NOT placed on the wire by `ToolCallRequest.to_payload()`**
-— they cross only through the per-verb wrappers (see §2 identity envelope) and audit.
+`description` is host-facing context and is not part of the daemon routing key.
 
 ### `SandboxResultBase` — `models.py:63-73`
 `@dataclass(frozen=True, kw_only=True)`. Base for read/glob/grep results.
@@ -189,7 +184,7 @@ One-shot raw provider exec (not a public verb, but in the model). Adds:
 ### Identity-envelope wire helper — `api/tool/_daemon_response_parsing.py:23-30`
 `daemon_request_identity_fields(request)` prepends to **every** verb's wire `args`:
 ```json
-{"caller_id": "<caller.caller_id>", "caller": { ...audit_fields()... }}
+{"caller_id": "<caller_id>"}
 ```
 plus `"invocation_id": "<...>"` ONLY when `request.invocation_id` is truthy. Each per-verb
 wrapper then merges its own keys on top (`identity | {verb-specific}`).
@@ -206,7 +201,7 @@ wrapper then merges its own keys on top (`identity | {verb-specific}`).
 
 | wire arg | type | required | notes |
 |----------|------|----------|-------|
-| `caller_id` + `caller` (+ `invocation_id`) | identity envelope | yes | §1 |
+| `caller_id` (+ `invocation_id`) | identity envelope | yes | §1 |
 | `path` | `str` | yes | required, non-empty |
 
 ### Response — `ReadFileResult(SandboxResultBase)` — `models.py:162-166`
@@ -597,7 +592,7 @@ booleans.
 | (search/replace) | `apply_search_replace` (free fn; `SearchReplaceError`) | — | — | shared primitive (lives in `eos-protocol`) |
 | (envelope) | `ToolCallRequest` | `ToolCallResult` (= `dict`) | — | overlay dispatch |
 | (raw exec) | — | `RawExecResult` | `SandboxResultBase` | provider raw exec |
-| (common) | `SandboxCaller`, `SandboxRequestBase` | `SandboxResultBase`, `GuardedResultBase`, `ConflictInfo` | — | — |
+| (common) | `SandboxRequestBase` | `SandboxResultBase`, `GuardedResultBase`, `ConflictInfo` | — | — |
 
 Lifecycle models (`EnterIsolatedWorkspaceRequest/Result`, `ExitIsolatedWorkspaceRequest/Result`,
 `LifecycleError`, `LifecycleResultBase`, `models.py:259-298`) are isolated-workspace

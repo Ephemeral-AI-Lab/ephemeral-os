@@ -12,7 +12,7 @@ use eos_tools::{
     OutstandingWorkflow, PlanSubmissionPort, PlannerPlan, SubmissionAck, ToolError,
     WorkflowControlPort,
 };
-use eos_types::WorkflowSessionId;
+use eos_types::{AgentRunId, WorkflowSessionId};
 use parking_lot::Mutex;
 
 use crate::attempt::AttemptOrchestratorRegistry;
@@ -145,7 +145,7 @@ impl WorkflowControlPort for WorkflowControlAdapter {
     async fn start(
         &self,
         parent_task_id: &eos_state::TaskId,
-        _agent_id: &str,
+        _agent_run_id: &AgentRunId,
         workflow_goal: &str,
     ) -> Result<eos_tools::StartedWorkflow, ToolError> {
         let started = self
@@ -214,7 +214,7 @@ impl WorkflowControlPort for WorkflowControlAdapter {
     async fn find_outstanding(
         &self,
         parent_task_id: &eos_state::TaskId,
-        _agent_id: &str,
+        _agent_run_id: &AgentRunId,
     ) -> Result<Vec<OutstandingWorkflow>, ToolError> {
         self.workflow_store
             .list_for_parent_task(parent_task_id)
@@ -438,8 +438,9 @@ mod tests {
             stores.clone(),
         );
 
+        let agent_run_id: AgentRunId = "agent-run-1".parse().expect("agent run id");
         let started = adapter
-            .start(&parent.id, "agent-1", "delegated goal")
+            .start(&parent.id, &agent_run_id, "delegated goal")
             .await
             .unwrap();
         assert_eq!(started.workflow_task_id.as_str(), "wf_1");

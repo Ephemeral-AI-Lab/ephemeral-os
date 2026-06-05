@@ -8,14 +8,14 @@
 > helper types are excluded. This generated inventory is distinct from any
 > hand-curated architecture memory layer.
 
-**34 types across 5 files.**
+**33 types across 5 files.**
 
 The `eos-sandbox-api` crate owns the host-facing sandbox protocol boundary: the typed contract agent-core uses to call the existing sandbox daemon. Its responsibility is purely declarative and translational — it defines the request/result DTOs and the [`Intent`] for each daemon operation (`models.rs`), the typed daemon-op constants `DaemonOp` whose serialized form is the exact daemon wire string (`ops.rs`), the single library error enum `SandboxApiError` (`error.rs`), the per-verb timeout policy (`timeouts.rs`), and the `SandboxTransport` async-trait DIP seam (`transport.rs`). The pure `tool_api` helpers each build a daemon payload from a typed request, call a `&dyn SandboxTransport`, and hand-parse the JSON envelope into a typed result struct via the decoders/coercers/conflict-classifier in `tool_api/parse.rs` (whose only module-scope helper struct is `GuardedCommon`). The crate depends on `eos-types` (for id newtypes, `JsonObject`, `SandboxId`) plus `serde`/`schemars`/`thiserror`/`async-trait`; it deliberately does not implement the daemon-backed transport (that is `eos-sandbox-host`'s `DaemonSandboxTransport`), select a provider, own a runtime, or emit audit events (audit wrapping lives in `eos-tools`). `eos-runtime` injects an `Arc<dyn SandboxTransport>` at the composition root, and `eos-tools` consumes the typed helpers.
 
 ## Contents
 
 - **`eos-sandbox-api/src/error.rs`** — `SandboxApiError`
-- **`eos-sandbox-api/src/models.rs`** — `Intent`, `Workspace`, `SandboxCaller`, `SandboxRequestBase`, `SandboxResultBase`, `ConflictInfo`, `ReadFileRequest`, `ReadFileResult`, `WriteFileRequest`, `WriteFileResult`, `SearchReplaceEdit`, `EditFileRequest`, `EditFileResult`, `CommandOutput`, `ExecCommandRequest`, `ExecCommandResult`, `ExecStdinRequest`, `CommandSessionWriteRequest`, `CommandSessionCancelRequest`, `GlobRequest`, `GlobResult`, `GrepRequest`, `GrepResult`, `LifecycleError`, `LifecycleResultBase`, `EnterIsolatedWorkspaceRequest`, `EnterIsolatedWorkspaceResult`, `ExitIsolatedWorkspaceRequest`, `ExitIsolatedWorkspaceResult`, `ToolCallRequest`
+- **`eos-sandbox-api/src/models.rs`** — `Intent`, `Workspace`, `SandboxRequestBase`, `SandboxResultBase`, `ConflictInfo`, `ReadFileRequest`, `ReadFileResult`, `WriteFileRequest`, `WriteFileResult`, `SearchReplaceEdit`, `EditFileRequest`, `EditFileResult`, `CommandOutput`, `ExecCommandRequest`, `ExecCommandResult`, `ExecStdinRequest`, `CommandSessionWriteRequest`, `CommandSessionCancelRequest`, `GlobRequest`, `GlobResult`, `GrepRequest`, `GrepResult`, `LifecycleError`, `LifecycleResultBase`, `EnterIsolatedWorkspaceRequest`, `EnterIsolatedWorkspaceResult`, `ExitIsolatedWorkspaceRequest`, `ExitIsolatedWorkspaceResult`, `ToolCallRequest`
 - **`eos-sandbox-api/src/ops.rs`** — `DaemonOp`
 - **`eos-sandbox-api/src/tool_api/parse.rs`** — `GuardedCommon`
 - **`eos-sandbox-api/src/transport.rs`** — `SandboxTransport`
@@ -60,29 +60,6 @@ Which workspace a result was produced against; never decoded from a daemon envel
 
 **Variants**: `Ephemeral` (`#[default]`), `Isolated`
 
-#### `SandboxCaller`  ·  _struct_  ·  derives: `Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema`  ·  [L70]
-
-Caller identity threaded onto every audit-aware request; four required ids always present, the rest optional.
-
-**Fields**
-
-| name | type | vis / attrs |
-|------|------|-------------|
-| `agent_id` | `String` | `pub` |
-| `run_id` | `String` | `pub` · `#[serde(default)]` |
-| `agent_run_id` | `String` | `pub` · `#[serde(default)]` |
-| `task_id` | `String` | `pub` · `#[serde(default)]` |
-| `request_id` | `String` | `pub` · `#[serde(default)]` |
-| `attempt_id` | `String` | `pub` · `#[serde(default)]` |
-| `workflow_id` | `String` | `pub` · `#[serde(default)]` |
-| `tool_id` | `Option<ToolUseId>` | `pub` · `#[serde(default, skip_serializing_if = "Option::is_none")]` |
-
-<details><summary>Methods (6)</summary>
-
-`identity_block`, `agent_run`, `task`, `request`, `attempt`, `workflow`
-
-</details>
-
 #### `SandboxRequestBase`  ·  _struct_  ·  derives: `Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema`  ·  [L175]
 
 Base request shape for audit-aware public sandbox operations; embedded as a flattened field on each verb request.
@@ -91,13 +68,13 @@ Base request shape for audit-aware public sandbox operations; embedded as a flat
 
 | name | type | vis / attrs |
 |------|------|-------------|
-| `caller` | `SandboxCaller` | `pub` |
+| `caller_id` | `String` | `pub` |
 | `description` | `String` | `pub` · `#[serde(default)]` |
 | `invocation_id` | `Option<InvocationId>` | `pub` · `#[serde(default, skip_serializing_if = "Option::is_none")]` |
 
-<details><summary>Methods (1)</summary>
+<details><summary>Methods (2)</summary>
 
-`description_or`
+`new`, `description_or`
 
 </details>
 
@@ -436,7 +413,7 @@ One tool invocation routed through a workspace pipeline; `invocation_id` is the 
 | name | type | vis / attrs |
 |------|------|-------------|
 | `invocation_id` | `InvocationId` | `pub` |
-| `agent_id` | `String` | `pub` |
+| `caller_id` | `String` | `pub` |
 | `verb` | `String` | `pub` |
 | `intent` | `Intent` | `pub` |
 | `args` | `JsonObject` | `pub` |

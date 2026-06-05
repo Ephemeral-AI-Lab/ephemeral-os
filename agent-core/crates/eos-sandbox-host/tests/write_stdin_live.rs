@@ -93,7 +93,7 @@ async fn run_proof(
                 ("cmd", json!(stdin_recorder_command())),
                 ("yield_time_ms", json!(20)),
                 ("timeout", json!(30)),
-                ("agent_id", json!("live-write-stdin-proof")),
+                ("agent_run_id", json!("live-write-stdin-proof")),
             ]),
             60,
             DEFAULT_LAYER_STACK_ROOT,
