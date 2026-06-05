@@ -7,6 +7,7 @@ members = [
   "crates/eos-tools", "crates/eos-engine", "crates/eos-workflow",
   "crates/eos-obs-collector",
   "crates/eos-sandbox-host", "crates/eos-plugin-catalog", "crates/eos-runtime",
+  "crates/eos-testkit",
   "workspace-guard",
 ]
 
@@ -77,6 +78,10 @@ eos-obs-collector  = { path = "crates/eos-obs-collector" }
 eos-sandbox-host   = { path = "crates/eos-sandbox-host" }
 eos-plugin-catalog = { path = "crates/eos-plugin-catalog" }
 eos-runtime        = { path = "crates/eos-runtime" }
+# Dev-only shared test doubles (scripted LLM/EventSource, fake sandbox edges,
+# AppState builder, Layer-B workflow runners). Consumed under [dev-dependencies]
+# with the minimal feature; the resulting dev-only dep cycles are Cargo-legal.
+eos-testkit        = { path = "crates/eos-testkit" }
 # External edge into the sibling `sandbox/` workspace: the eosd wire-protocol
 # crate is the single source of truth for protocol version, field names, exit
 # codes, and reconnect schedule. Unilateral — `sandbox/` never depends back on

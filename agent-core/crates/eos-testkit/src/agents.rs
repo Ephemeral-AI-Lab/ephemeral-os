@@ -1,10 +1,11 @@
-//! Agent-definition builders for tests.
+//! Agent-definition builders for Layer-A tests.
 
 use std::num::NonZeroU32;
 
 use eos_agent_def::{AgentDefinition, AgentName, AgentRole, AgentType};
 
 /// Build a minimal agent definition for tests.
+#[must_use]
 pub fn agent_def(
     name: &str,
     role: AgentRole,
@@ -30,6 +31,7 @@ pub fn agent_def(
 /// The repo's `.eos-agents/tools` tree, resolved relative to this crate's
 /// manifest so the (mandatory) tool-config build path has a real source in tests
 /// without depending on the process working directory.
+#[must_use]
 pub fn test_tools_root() -> std::path::PathBuf {
     std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../.eos-agents/tools")
 }

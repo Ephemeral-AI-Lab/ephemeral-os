@@ -21,7 +21,7 @@ macro_rules! define_id {
         define_id!(@core $(#[$meta])* $name);
         impl $name {
             /// Mint a fresh dashed `UUIDv4`-backed identifier. The runtime's
-            /// prefixed mints (`root-<hex16>`, `uuid4().hex[:16]`,
+            /// prefixed mints (`root-{request_id}`, `uuid4().hex[:16]`,
             /// `subagent_<counter>`) are produced by the owning crate, not by
             /// this generic helper.
             #[must_use]
@@ -99,7 +99,8 @@ define_id!(
 );
 define_id!(
     /// Identifier for a persisted Task row. Opaque string; the root mint is
-    /// `root-<uuid4().hex[:16]>` (produced by the owning crate, not `new_v4`).
+    /// `root-{request_id}` (derived by the owning `eos-runtime` crate from the
+    /// injected request id, not `new_v4`).
     TaskId,
     mint
 );

@@ -1,7 +1,7 @@
-//! `build_test_state`: a fully-wired `AppState` over a temp SQLite db, the fake
-//! provisioner/transport, the given agent registry, and an optional event-source
-//! factory. Requires `eos-runtime`'s `test-util` feature for the
-//! `RequestProvisioner` seam.
+//! `build_test_state`: a fully-wired [`AppState`] over a temp SQLite db, the
+//! fake provisioner/transport, the given agent registry, and an optional
+//! event-source factory. `.provisioner(...)` is plain `pub` (TESTING_SPEC §14.4),
+//! so no `test-util` feature is required.
 
 use std::sync::Arc;
 
@@ -17,6 +17,7 @@ use crate::sandbox::FakeTransport;
 /// A provisioner that binds a fixed sandbox id without touching Docker.
 #[derive(Debug)]
 pub struct FakeProvisioner {
+    /// The sandbox id bound when the caller passes none (or a blank id).
     pub id: String,
 }
 
@@ -38,8 +39,10 @@ impl RequestProvisioner for FakeProvisioner {
     }
 }
 
-/// Build a fully-wired test `AppState`. Returns the state and the owning temp dir
-/// (keep it alive for the test's duration).
+/// Build a fully-wired test [`AppState`] over a temp SQLite db, the fake
+/// provisioner/transport, the given agent registry, and an optional event-source
+/// factory. Returns the state and the owning temp dir (keep it alive for the
+/// test's duration).
 pub async fn build_test_state(
     factory: Option<EventSourceFactory>,
     agents: Vec<AgentDefinition>,

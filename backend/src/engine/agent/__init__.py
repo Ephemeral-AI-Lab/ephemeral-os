@@ -1,1 +1,0 @@
-"""Ephemeral agent package."""

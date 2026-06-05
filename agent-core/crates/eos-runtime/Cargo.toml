@@ -32,6 +32,9 @@ uuid.workspace = true
 
 [dev-dependencies]
 tempfile.workspace = true
+# Layer-A doubles + the AppState test builder (TESTING_SPEC §11). `mock-state`
+# implies `llm`; runtime runs Layer A only (§14.1), so no `workflow` feature.
+eos-testkit = { workspace = true, default-features = false, features = ["mock-state"] }
 
 [features]
 tokio-console = ["dep:console-subscriber"]

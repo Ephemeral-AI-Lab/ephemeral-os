@@ -1,5 +1,0 @@
-{
-  "upstream_commit": "2df20649b3158324d1be9c4c6c53a5844034ebc2",
-  "fixtures_sha256": "17900852f229976a2d375f650622f4c63c1ede488ca7ec3b2ccd9f0baf615f6d",
-  "note": "vendored pinned copy of sandbox/crates/eos-protocol/fixtures; dual-side pin assert"
-}

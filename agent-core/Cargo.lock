@@ -663,6 +663,7 @@ dependencies = [
  "eos-sandbox-host",
  "eos-skills",
  "eos-state",
+ "eos-testkit",
  "eos-tools",
  "eos-types",
  "eos-workflow",
@@ -737,6 +738,27 @@ dependencies = [
  "schemars 0.8.22",
  "serde",
  "serde_json",
+ "tokio",
+]
+
+[[package]]
+name = "eos-testkit"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "eos-agent-def",
+ "eos-engine",
+ "eos-llm-client",
+ "eos-runtime",
+ "eos-sandbox-api",
+ "eos-state",
+ "eos-types",
+ "eos-workflow",
+ "futures",
+ "parking_lot",
+ "serde_json",
+ "tempfile",
  "tokio",
 ]
 

@@ -1,180 +1,94 @@
-//! Request bootstrap: mint the root task, provision the sandbox, wire the
-//! per-request delegated-workflow runtime, and spawn the root agent.
+//! Request run-to-completion: mint the root task, provision the sandbox, wire the
+//! per-request delegated-workflow runtime, run the root agent **inline** through
+//! the shared engine primitive, and return the root's terminal outcome.
 //!
-//! Ports `runtime/entry.py::RequestEntry` / `start_request` / `_create_runtime`.
-//! The root is a `Task(role=root, workflow_id=None)` run directly through the
-//! engine — never the workflow starter (GC-eos-runtime-01).
+//! Ports `runtime/entry.py::start_request` / `_create_runtime` / `_run_root_agent`
+//! / `_fail_unfinished_root`, collapsed into one run-to-completion function. The
+//! root is a `Task(role=Root, workflow_id=None)` run directly through the engine —
+//! never the workflow starter (GC-eos-runtime-01). Closure is a single
+//! framework-side guard (`fail_unfinished_root`); the happy-path writer is the
+//! engine-stamped `submit_root_outcome`.
 
 use std::sync::{Arc, OnceLock};
-use std::time::Duration;
 
 use anyhow::{Context, Result};
+use eos_agent_def::{AgentDefinition, AgentName};
 use eos_engine::{
-    spawn_command_completion_heartbeat, BackgroundSupervisorHandle, NotificationService,
+    run_agent, spawn_command_completion_heartbeat, AgentRunInput, BackgroundSupervisorHandle,
+    NotificationService,
 };
-use eos_state::{Task, TaskRole, TaskStatus};
+use eos_llm_client::Message;
+use eos_state::{RequestStatus, Task, TaskRole, TaskStatus};
 use eos_tools::{
     BackgroundSupervisorPort, CommandSessionSupervisorPort, NotificationSink, PlanSubmissionPort,
     WorkflowControlPort,
 };
-use eos_types::{RequestId, TaskId};
+use eos_types::{AgentRunId, JsonObject, RequestId, TaskId};
 use eos_workflow::{
     AgentEntryComposer, AgentRunner, AttemptDeps, AttemptOrchestratorRegistry, ContextEngine,
     ContextEngineDeps, OpenIterationCoordinatorRegistry, PlanSubmissionAdapter,
     WorkflowControlAdapter, WorkflowLifecycleConfig, WorkflowStarter,
 };
-use tokio::task::JoinHandle;
-use uuid::Uuid;
+use serde_json::json;
 
 use crate::agent_runner::RuntimeAgentRunner;
 use crate::app_state::{AppState, EventCallback};
-use crate::root_agent::{fail_unfinished_root, run_root_agent, RootAgentParams};
+use crate::tool_context::{build_metadata, MetadataParams};
 
-/// Handle to a started request: the minted ids, the per-request workflow
-/// dependency bundle, and the spawned root-agent task.
+/// The terminal outcome of a completed top-level request — the root's outcome
+/// (canonical flow step 7). The ids are caller-known (`request_id` is injected,
+/// `root_task_id` is derived), so they are not echoed here; this struct holds
+/// only what the run produces.
 #[non_exhaustive]
-pub struct RequestEntryHandle {
-    /// The top-level request id.
-    pub request_id: RequestId,
-    /// The root task id (`root-<hex16>`).
-    pub root_task_id: TaskId,
-    /// The runtime-wired per-request delegated-workflow dependency bundle.
-    pub attempt_deps: AttemptDeps,
-    pub(crate) root_agent_task: Option<JoinHandle<()>>,
-    pub(crate) supervisor: Arc<BackgroundSupervisorHandle>,
-    pub(crate) workflow_control: Arc<dyn WorkflowControlPort>,
-    /// Per-request command-completion heartbeat (anchor §5.3); aborted at
-    /// request teardown.
-    pub(crate) heartbeat: JoinHandle<()>,
-    pub(crate) state: AppState,
-    finished: bool,
+#[derive(Debug, Clone)]
+pub struct RequestOutcome {
+    /// Authoritative final status of the root task (`Done` or `Failed`).
+    pub status: TaskStatus,
+    /// The root's persisted terminal payload (`Task.terminal_tool_result`): the
+    /// agent's submitted outcome on success, or `{ fail_reason, summary }`
+    /// written by the guard on failure. `Some(_)` on every normal-or-guarded
+    /// completion.
+    pub terminal: Option<JsonObject>,
 }
 
-impl std::fmt::Debug for RequestEntryHandle {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("RequestEntryHandle")
-            .field("request_id", &self.request_id)
-            .field("root_task_id", &self.root_task_id)
-            .finish_non_exhaustive()
-    }
+/// The single source of truth for the root task id derivation (Option A):
+/// `root-{request_id}`. Used by `run_request` to mint the row and by tests to
+/// know the id before the run completes. The `root-` prefix makes the string
+/// statically non-empty, so `TaskId` parsing (which only rejects the empty
+/// string) cannot fail.
+pub(crate) fn root_task_id_for(request_id: &RequestId) -> TaskId {
+    format!("root-{request_id}")
+        .parse()
+        .expect("root-{request_id} is non-empty, so TaskId parsing cannot fail")
 }
 
-impl Drop for RequestEntryHandle {
-    fn drop(&mut self) {
-        if self.finished {
-            return;
-        }
-        self.state.shutdown.cancel();
-        self.heartbeat.abort();
-        if let Some(root_agent_task) = &self.root_agent_task {
-            root_agent_task.abort();
-        }
-
-        let supervisor = self.supervisor.clone();
-        let workflow_control = self.workflow_control.clone();
-        let state = self.state.clone();
-        let request_id = self.request_id.clone();
-        let root_task_id = self.root_task_id.clone();
-        let Ok(handle) = tokio::runtime::Handle::try_current() else {
-            tracing::warn!(
-                request_id = self.request_id.as_str(),
-                "request handle dropped outside a Tokio runtime; background cleanup could not be spawned"
-            );
-            return;
-        };
-        handle.spawn(async move {
-            supervisor
-                .cancel_for_parent_exit(
-                    None,
-                    Some(workflow_control),
-                    "request handle dropped before join/shutdown",
-                )
-                .await;
-            fail_unfinished_root(
-                &state,
-                &request_id,
-                &root_task_id,
-                "request handle dropped before join/shutdown",
-            )
-            .await;
-            state.flush_audit();
-        });
-    }
-}
-
-impl RequestEntryHandle {
-    /// Await the root agent to completion. On a join error (the spawned task
-    /// panicked or was aborted), apply the still-running unfinished-root guard so
-    /// a crash persists a failure instead of leaving the task running
-    /// (AC-eos-runtime-03b).
-    pub async fn join(mut self) {
-        let result = match self.root_agent_task.take() {
-            Some(root_agent_task) => root_agent_task.await,
-            None => return,
-        };
-        // The root run is done; the heartbeat has nothing left to deliver.
-        self.heartbeat.abort();
-        self.supervisor
-            .cancel_for_parent_exit(
-                None,
-                Some(self.workflow_control.clone()),
-                "request root task joined",
-            )
-            .await;
-        if let Err(join_err) = result {
-            let summary = format!("root agent task did not complete: {join_err}");
-            fail_unfinished_root(&self.state, &self.request_id, &self.root_task_id, &summary).await;
-        }
-        self.finished = true;
-    }
-
-    /// Graceful shutdown: cancel the token, parent-exit the background
-    /// supervisor, await the root task within `grace`, abort on timeout, run the
-    /// unfinished-root guard, then flush audit (AC-eos-runtime-08b).
-    pub async fn shutdown(mut self, reason: &str, grace: Duration) {
-        self.state.shutdown.cancel();
-        self.heartbeat.abort();
-        self.supervisor
-            .cancel_for_parent_exit(None, Some(self.workflow_control.clone()), reason)
-            .await;
-
-        if let Some(root_agent_task) = self.root_agent_task.take() {
-            let abort = root_agent_task.abort_handle();
-            if tokio::time::timeout(grace, root_agent_task).await.is_err() {
-                abort.abort();
-            }
-        }
-        let summary = format!("request shutdown: {reason}");
-        fail_unfinished_root(&self.state, &self.request_id, &self.root_task_id, &summary).await;
-        self.state.flush_audit();
-        self.finished = true;
-    }
-}
-
-/// Start a top-level request: provision the sandbox, create the request + root
-/// task, wire the delegated-workflow runtime, and spawn the root agent. Must be
-/// called within a Tokio runtime (it spawns the root-agent task).
+/// Run a top-level request to completion and return the root's outcome.
+/// `request_id` is minted by the caller (identity is an input, not an output):
+/// the root task id is `root-{request_id}`, so both ids are caller-known before
+/// the run finishes. Must be called within a Tokio runtime (it spawns the
+/// per-request command-completion heartbeat).
 ///
 /// # Errors
-/// Returns an error if provisioning, request/root-task creation, or root-task-id
-/// minting fails.
-pub async fn start_request(
+/// Returns an error if provisioning, request/root-task creation, or the final
+/// root-task read-back fails.
+pub async fn run_request(
     state: &AppState,
+    request_id: &RequestId,
     prompt: impl Into<String>,
     sandbox_id: Option<&str>,
     on_event: Option<EventCallback>,
-) -> Result<RequestEntryHandle> {
+) -> Result<RequestOutcome> {
     let prompt = prompt.into();
 
-    let request_id = RequestId::new_v4();
+    // [2] BOOTSTRAP — provision the sandbox and create the request row.
     let binding = state
         .provisioner
-        .prepare_for_run(&request_id, sandbox_id)
+        .prepare_for_run(request_id, sandbox_id)
         .await
         .context("provisioning the request sandbox")?;
     state
         .request_store
-        .create_request(&request_id, &state.cwd, Some(&binding.sandbox_id), &prompt)
+        .create_request(request_id, &state.cwd, Some(&binding.sandbox_id), &prompt)
         .await
         .context("creating the request row")?;
 
@@ -193,6 +107,9 @@ pub async fn start_request(
     let notifier = NotificationService::new();
     let notification_sink: Arc<dyn NotificationSink> = Arc::new(notifier.clone());
     let command_session_port: Arc<dyn CommandSessionSupervisorPort> = supervisor.clone();
+    // GUARDRAIL: the heartbeat is a separate concurrent spawn — a producer into the
+    // shared NotificationService the loop drains mid-run. Inlining it would break
+    // background-completion delivery.
     let heartbeat = spawn_command_completion_heartbeat(
         supervisor.inner(),
         notification_sink,
@@ -215,8 +132,9 @@ pub async fn start_request(
     // (Path A-recording). Stateless and shared across all runs.
     let plan_submission: Arc<dyn PlanSubmissionPort> =
         Arc::new(PlanSubmissionAdapter::new(orchestrator_registry.clone()));
-    // `workflow_control` is built downstream of the runner (starter → attempt_deps
-    // → runner), so it is late-bound through this cell and read at run() time.
+    // GUARDRAIL: `workflow_control` is built downstream of the runner (starter →
+    // attempt_deps → runner), so it is late-bound through this cell and read at
+    // run() time — irreducible given the construction cycle.
     let workflow_control_cell: Arc<OnceLock<Arc<dyn WorkflowControlPort>>> =
         Arc::new(OnceLock::new());
     let runner: Arc<dyn AgentRunner> = Arc::new(RuntimeAgentRunner::new(
@@ -227,6 +145,7 @@ pub async fn start_request(
         command_session_port.clone(),
         notifier.clone(),
     ));
+    // `attempt_deps` is a local moved into the starter (no clone, never returned).
     let attempt_deps = AttemptDeps::new(
         state.workflow_store.clone(),
         state.iteration_store.clone(),
@@ -240,7 +159,7 @@ pub async fn start_request(
     .with_lifecycle_config(WorkflowLifecycleConfig::default())
     .with_composer(composer)
     .with_max_concurrent_task_runs(state.config.attempt.max_concurrent_task_runs);
-    let starter = WorkflowStarter::new(attempt_deps.clone());
+    let starter = WorkflowStarter::new(attempt_deps);
     let workflow_control: Arc<dyn WorkflowControlPort> = Arc::new(WorkflowControlAdapter::new(
         starter,
         state.workflow_store.clone(),
@@ -253,10 +172,8 @@ pub async fn start_request(
     // no-inflight hook reads find_outstanding).
     let _ = workflow_control_cell.set(workflow_control.clone());
 
-    // Root task: `root-<hex16>`, running, no workflow (non-goal: no root workflow).
-    let root_task_id: TaskId = format!("root-{}", &Uuid::new_v4().simple().to_string()[..16])
-        .parse()
-        .context("minting root task id")?;
+    // Root task: `root-{request_id}` (Option A), running, no workflow.
+    let root_task_id = root_task_id_for(request_id);
     state
         .task_store
         .upsert_task(&Task {
@@ -277,36 +194,138 @@ pub async fn start_request(
         .context("creating the root task")?;
     state
         .request_store
-        .set_root_task_id(&request_id, &root_task_id)
+        .set_root_task_id(request_id, &root_task_id)
         .await
         .context("recording the root task id")?;
 
-    let workflow_control_handle = workflow_control.clone();
-    let params = RootAgentParams {
-        request_id: request_id.clone(),
-        root_task_id: root_task_id.clone(),
-        prompt,
-        sandbox_id: binding.sandbox_id,
-        workflow_control,
-        background_supervisor: background_supervisor_port,
-        command_session_supervisor: command_session_port,
-        notifier,
-        on_event,
+    // [3][4][5] RUN — resolve the root agent def, build its tool metadata, and run
+    // the shared engine primitive INLINE. `submit_root_outcome` closes the task
+    // mid-loop on success (step 6, inside the run). `summary` feeds the post-run
+    // guard; on the happy path it is unused (the guard no-ops on a closed task).
+    let summary = match resolve_root_def(state) {
+        Some(root_def) => {
+            let agent_run_id = AgentRunId::new_v4();
+            let sink: Arc<dyn NotificationSink> = Arc::new(notifier.clone());
+            let metadata = build_metadata(
+                state,
+                MetadataParams {
+                    agent_name: "root".to_owned(),
+                    sandbox_id: Some(binding.sandbox_id),
+                    agent_run_id: agent_run_id.clone(),
+                    request_id: Some(request_id.clone()),
+                    task_id: Some(root_task_id.clone()),
+                    attempt_id: None,
+                    workflow_id: None,
+                    workflow_control: Some(workflow_control.clone()),
+                    plan_submission: None,
+                    background_supervisor: Some(background_supervisor_port),
+                    command_session_supervisor: Some(command_session_port),
+                    notifications: sink,
+                },
+            );
+            let run = run_agent(
+                &state.engine_run_handles(),
+                AgentRunInput {
+                    agent: root_def,
+                    initial_messages: vec![Message::from_user_text(prompt.clone())],
+                    task_id: Some(root_task_id.clone()),
+                    agent_run_id,
+                    tool_metadata: metadata,
+                    notifier: notifier.clone(),
+                    persist_agent_run: true,
+                },
+                on_event.as_ref(),
+            )
+            .await;
+            // Success leaves the engine-stamped terminal as the persisted outcome.
+            let has_terminal = run.terminal_result.is_some();
+            run.error.unwrap_or_else(|| {
+                if has_terminal {
+                    "root run complete".to_owned()
+                } else {
+                    "root agent ended without submit_root_outcome".to_owned()
+                }
+            })
+        }
+        None => "root agent definition 'root' is not registered".to_owned(),
     };
-    let root_state = state.clone();
-    let root_agent_task = tokio::spawn(async move {
-        run_root_agent(root_state, params).await;
-    });
 
-    Ok(RequestEntryHandle {
-        request_id,
-        root_task_id,
-        attempt_deps,
-        root_agent_task: Some(root_agent_task),
-        supervisor,
-        workflow_control: workflow_control_handle,
-        heartbeat,
-        state: state.clone(),
-        finished: false,
+    // [6] FINALIZE / CLEANUP.
+    heartbeat.abort();
+    // GUARDRAIL: `None` sweeps ALL still-running background records (request-scoped),
+    // not just the root's own agent_run.
+    supervisor
+        .cancel_for_parent_exit(None, Some(workflow_control), "request root task finished")
+        .await;
+    // The single framework-side closure guard, called unconditionally: a no-op once
+    // submit_root_outcome has closed the task; otherwise marks the root Failed +
+    // finish_request(Failed).
+    fail_unfinished_root(state, request_id, &root_task_id, &summary).await;
+    state.flush_audit();
+
+    // [7] RETURN OUTCOME — single read-back of the persisted root task.
+    let task = state
+        .task_store
+        .get(&root_task_id)
+        .await
+        .context("reading the root task outcome")?
+        .context("root task row missing after the run")?;
+    Ok(RequestOutcome {
+        status: task.status,
+        terminal: task.terminal_tool_result,
     })
+}
+
+/// Resolve the registered `root` agent definition, or `None` when the registry
+/// has no `root` profile (the shipped binary seeds one; tests inject one).
+fn resolve_root_def(state: &AppState) -> Option<AgentDefinition> {
+    let root_name = AgentName::new("root").ok()?;
+    state
+        .agent_registry
+        .get(&root_name)
+        .map(|def| (**def).clone())
+}
+
+/// Fail the root **iff** it is still running (idempotent compare-and-set) and
+/// finish the request as `Failed`. Called unconditionally after the inline run; a
+/// no-op once `submit_root_outcome` has closed the task. The root role is not in
+/// `ExecutionRole`, so the summary rides in `terminal_tool_result` rather than a
+/// typed outcome row (documented deviation; the typed outcome column is left
+/// empty for root).
+async fn fail_unfinished_root(
+    state: &AppState,
+    request_id: &RequestId,
+    root_task_id: &TaskId,
+    summary: &str,
+) {
+    let mut terminal = JsonObject::new();
+    terminal.insert("fail_reason".to_owned(), json!("root_run_exhausted"));
+    terminal.insert("summary".to_owned(), json!(summary));
+
+    match state
+        .task_store
+        .set_task_status_if_current(
+            root_task_id,
+            TaskStatus::Running,
+            TaskStatus::Failed,
+            None,
+            Some(&terminal),
+        )
+        .await
+    {
+        Ok(Some(_)) => {
+            if let Err(err) = state
+                .request_store
+                .finish_request(request_id, RequestStatus::Failed)
+                .await
+            {
+                tracing::warn!(error = %err, "finish_request(failed) failed for unfinished root");
+            }
+        }
+        // Task is no longer running (a real terminal won) — do not clobber it.
+        Ok(None) => {}
+        Err(err) => {
+            tracing::warn!(error = %err, "unfinished-root guard could not read the root task");
+        }
+    }
 }

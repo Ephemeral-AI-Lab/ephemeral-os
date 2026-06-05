@@ -7,7 +7,7 @@
 #![forbid(unsafe_code)]
 
 use eos_runtime::observability::{init_tracing, LogFormat};
-use eos_runtime::{start_request, AppState};
+use eos_runtime::{run_request, AppState};
 
 fn main() -> anyhow::Result<()> {
     init_tracing(LogFormat::Text).map_err(|err| anyhow::anyhow!(err.to_string()))?;
@@ -21,9 +21,13 @@ fn main() -> anyhow::Result<()> {
         tracing::info!("eos-runtime app state constructed");
 
         if let Some(prompt) = std::env::args().nth(1) {
-            let handle = start_request(&state, prompt, None, None).await?;
-            tracing::info!(request_id = %handle.request_id, "request started");
-            handle.join().await;
+            let request_id = eos_types::RequestId::new_v4();
+            let outcome = run_request(&state, &request_id, prompt, None, None).await?;
+            tracing::info!(
+                request_id = %request_id,
+                status = ?outcome.status,
+                "request finished"
+            );
         }
         state.flush_audit();
         anyhow::Ok(())

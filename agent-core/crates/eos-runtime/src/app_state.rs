@@ -34,7 +34,7 @@ use tokio_util::sync::CancellationToken;
 // The per-agent event-source factory and per-run stream-event callback are owned
 // by `eos-engine` (next to the loop they drive, so the engine-driven advisor run
 // can resolve a source without a runtime back-edge) and re-exported here for the
-// composition root and the `start_request` signature.
+// composition root and the `run_request` signature.
 pub use eos_engine::{EventCallback, EventSourceFactory};
 
 use crate::isolated_workspace::RuntimeIsolatedWorkspace;
@@ -48,7 +48,7 @@ use crate::plugin_tools::register_plugin_tools;
 /// of it, so this narrow runtime seam exists purely for testability: production
 /// wraps the host provisioner; tests inject a fake.
 #[async_trait]
-pub(crate) trait RequestProvisioner: Send + Sync + std::fmt::Debug {
+pub trait RequestProvisioner: Send + Sync + std::fmt::Debug {
     /// Resolve the sandbox binding for one request (start an explicit id, or
     /// create a fresh `request-<hex8>` sandbox labelled `origin=workflow`).
     async fn prepare_for_run(
@@ -299,8 +299,10 @@ impl AppStateBuilder {
     }
 
     /// Inject a request provisioner (a host-backed provisioner by default).
-    #[cfg(test)]
-    pub(crate) fn provisioner(mut self, provisioner: Arc<dyn RequestProvisioner>) -> Self {
+    /// Public so `eos-testkit`'s `build_test_state` can inject a fake without a
+    /// `test-util` feature gate (the seam is invisible to other crates when
+    /// gated by `#[cfg(test)]`).
+    pub fn provisioner(mut self, provisioner: Arc<dyn RequestProvisioner>) -> Self {
         self.provisioner = Some(provisioner);
         self
     }
@@ -555,5 +557,16 @@ fn validate_agent_tools(agents: &AgentRegistry, registry: &ToolRegistry) -> Resu
 }
 
 #[cfg(test)]
-#[path = "../tests/unit/app_state_test_seams.rs"]
-pub(crate) mod test_seams;
+mod tests {
+    // Pure-logic unit test for a module-private fn (no reusable doubles defined,
+    // so I2-permitted inline). The shared seams that used to live beside it moved
+    // to `eos-testkit` (TESTING_SPEC §7); the behavior tests live in
+    // `tests/unit/mod.rs` and pull those doubles from the `eos-testkit` dev-dep.
+    #[test]
+    fn eosd_artifact_dir_is_repo_sandbox_dist() {
+        assert_eq!(
+            super::default_eosd_artifact_dir("/repo"),
+            std::path::PathBuf::from("/repo/sandbox/dist")
+        );
+    }
+}

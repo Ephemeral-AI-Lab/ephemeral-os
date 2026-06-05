@@ -12,16 +12,16 @@ use eos_agent_def::{AgentDefinition, AgentRegistry, AgentRole};
 use eos_engine::{EngineError, EngineStream, EventSource, StreamEvent};
 use eos_llm_client::{ContentBlock, LlmRequest};
 use eos_state::{RequestStatus, TaskRole, TaskStatus, WorkflowStatus};
-use eos_tools::StartedWorkflowHandle;
-use eos_types::AgentRunId;
+use eos_types::RequestId;
 use serde_json::json;
 
-use crate::app_state::test_seams::{
+use eos_testkit::{
     agent_def, build_test_state, factory_by_agent, factory_from, factory_root_blocks_after,
-    test_tools_root, tool_use_turn, BlockingSource,
+    test_tools_root, tool_use_turn,
 };
 use crate::app_state::EventSourceFactory;
-use crate::{start_request, AppState};
+use crate::entry::root_task_id_for;
+use crate::{run_request, AppState};
 
 fn root_agent() -> AgentDefinition {
     agent_def(
@@ -237,19 +237,20 @@ async fn agents_dir_seeds_registry_so_root_resolves() {
 // --- AC-eos-runtime-01: root request mints a root Task, no root workflow.
 
 #[tokio::test]
-async fn start_request_mints_root_task_no_workflow() {
+async fn run_request_mints_root_task_no_workflow() {
     let factory = factory_from(vec![tool_use_turn(
         "toolu_1",
         "submit_root_outcome",
         json!({"status": "success", "outcome": "done"}),
     )]);
     let (state, _dir) = build_test_state(Some(factory), vec![root_agent()]).await;
-    let handle = start_request(&state, "do the thing", Some("sb-1"), None)
+    // Identity is an input: the caller mints the request id and derives the root
+    // task id before the run completes (Option A).
+    let request_id = RequestId::new_v4();
+    let root_task_id = root_task_id_for(&request_id);
+    let outcome = run_request(&state, &request_id, "do the thing", Some("sb-1"), None)
         .await
         .unwrap();
-    let request_id = handle.request_id.clone();
-    let root_task_id = handle.root_task_id.clone();
-    handle.join().await;
 
     let task = state
         .task_store
@@ -259,6 +260,10 @@ async fn start_request_mints_root_task_no_workflow() {
         .expect("root task row exists");
     assert_eq!(task.role, TaskRole::Root);
     assert_eq!(task.workflow_id, None);
+    // The returned outcome is the single read-back of the persisted root task
+    // (step 7 contract): it mirrors the store regardless of success/failure.
+    assert_eq!(outcome.status, task.status);
+    assert_eq!(outcome.terminal, task.terminal_tool_result);
 
     let request = state
         .request_store
@@ -311,12 +316,11 @@ async fn successful_root_keeps_engine_terminal() {
         ),
     ]);
     let (state, _dir) = build_test_state(Some(factory), vec![root_agent(), advisor_agent()]).await;
-    let handle = start_request(&state, "task", Some("sb-1"), None)
+    let request_id = RequestId::new_v4();
+    let root_task_id = root_task_id_for(&request_id);
+    run_request(&state, &request_id, "task", Some("sb-1"), None)
         .await
         .unwrap();
-    let request_id = handle.request_id.clone();
-    let root_task_id = handle.root_task_id.clone();
-    handle.join().await;
 
     let task = state.task_store.get(&root_task_id).await.unwrap().unwrap();
     assert_eq!(task.status, TaskStatus::Done);
@@ -350,12 +354,11 @@ async fn root_terminal_blocked_without_advisor_approval() {
     // The root submits directly without ever calling `ask_advisor`, so the gate
     // finds no advisor verdict in the transcript and denies with reason `missing`.
     let (state, _dir) = build_test_state(Some(factory), vec![root_agent()]).await;
-    let handle = start_request(&state, "task", Some("sb-1"), None)
+    let request_id = RequestId::new_v4();
+    let root_task_id = root_task_id_for(&request_id);
+    run_request(&state, &request_id, "task", Some("sb-1"), None)
         .await
         .unwrap();
-    let request_id = handle.request_id.clone();
-    let root_task_id = handle.root_task_id.clone();
-    handle.join().await;
 
     let task = state.task_store.get(&root_task_id).await.unwrap().unwrap();
     assert_eq!(
@@ -381,12 +384,11 @@ async fn unfinished_root_sets_run_exhausted() {
     // terminal_result=None → the unfinished-root guard fires.
     let factory = factory_from(vec![]);
     let (state, _dir) = build_test_state(Some(factory), vec![root_agent()]).await;
-    let handle = start_request(&state, "task", Some("sb-1"), None)
+    let request_id = RequestId::new_v4();
+    let root_task_id = root_task_id_for(&request_id);
+    run_request(&state, &request_id, "task", Some("sb-1"), None)
         .await
         .unwrap();
-    let request_id = handle.request_id.clone();
-    let root_task_id = handle.root_task_id.clone();
-    handle.join().await;
 
     let task = state.task_store.get(&root_task_id).await.unwrap().unwrap();
     assert_eq!(task.status, TaskStatus::Failed);
@@ -396,34 +398,6 @@ async fn unfinished_root_sets_run_exhausted() {
         Some("root_run_exhausted")
     );
 
-    let request = state.request_store.get(&request_id).await.unwrap().unwrap();
-    assert_eq!(request.status, RequestStatus::Failed);
-}
-
-// --- AC-eos-runtime-03b: a join error persists a root failure.
-
-#[tokio::test]
-async fn join_error_marks_unfinished_root_failed() {
-    let factory: EventSourceFactory =
-        Arc::new(|_def: &AgentDefinition| Arc::new(BlockingSource) as Arc<dyn EventSource>);
-    let (state, _dir) = build_test_state(Some(factory), vec![root_agent()]).await;
-    let handle = start_request(&state, "task", Some("sb-1"), None)
-        .await
-        .unwrap();
-    let request_id = handle.request_id.clone();
-    let root_task_id = handle.root_task_id.clone();
-
-    // Let the spawned task reach the blocking stream, then abort it.
-    tokio::time::sleep(Duration::from_millis(50)).await;
-    handle
-        .root_agent_task
-        .as_ref()
-        .expect("root agent task")
-        .abort();
-    handle.join().await; // observes a JoinError → runs the still-running guard.
-
-    let task = state.task_store.get(&root_task_id).await.unwrap().unwrap();
-    assert_eq!(task.status, TaskStatus::Failed);
     let request = state.request_store.get(&request_id).await.unwrap().unwrap();
     assert_eq!(request.status, RequestStatus::Failed);
 }
@@ -441,10 +415,16 @@ async fn delegate_workflow_leaves_parent_running() {
         json!({"goal": "do the subwork"}),
     )]);
     let (state, _dir) = build_test_state(Some(factory), vec![root_agent(), planner_agent()]).await;
-    let handle = start_request(&state, "delegate please", Some("sb-1"), None)
-        .await
-        .unwrap();
-    let root_task_id = handle.root_task_id.clone();
+    // The root blocks forever after delegating, so run it on a spawned task and
+    // observe the delegated workflow through the stores (the ids are caller-known
+    // via Option A, before the run completes); the abort at the end is teardown.
+    let request_id = RequestId::new_v4();
+    let root_task_id = root_task_id_for(&request_id);
+    let run = tokio::spawn({
+        let state = state.clone();
+        let request_id = request_id.clone();
+        async move { run_request(&state, &request_id, "delegate please", Some("sb-1"), None).await }
+    });
 
     // Poll for the delegated Workflow→Iteration→Attempt to appear.
     let mut workflow_id = None;
@@ -515,9 +495,9 @@ async fn delegate_workflow_leaves_parent_running() {
         "the parent task must remain running after the delegated workflow closes"
     );
 
-    handle
-        .shutdown("test complete", Duration::from_secs(2))
-        .await;
+    // Teardown only: the aborted future runs no finalizer (there is no Drop guard),
+    // so every assertion above observed pre-abort state (AC3.3).
+    run.abort();
 }
 
 // --- D5 closure (attempt_harness-remediation-PLAN §7, primary criterion): the
@@ -532,7 +512,7 @@ async fn delegate_workflow_leaves_parent_running() {
 // mutated at close, GC-eos-runtime-03).
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn delegated_workflow_drives_to_succeeded_via_real_runner() {
-    use crate::app_state::test_seams::ScriptedSource;
+    use eos_testkit::ScriptedSource;
 
     // Each role: ask the advisor for its own terminal, then (with the approve
     // verdict now in its transcript) submit. The advisor profile returns approve.
@@ -598,10 +578,16 @@ async fn delegated_workflow_drives_to_succeeded_via_real_runner() {
         vec![root, planner, coder, reducer, advisor_agent()],
     )
     .await;
-    let handle = start_request(&state, "delegate please", Some("sb-1"), None)
-        .await
-        .unwrap();
-    let root_task_id = handle.root_task_id.clone();
+    // The root blocks forever after delegating; run it on a spawned task and observe
+    // the delegated workflow drive to Succeeded through the stores (ids are
+    // caller-known via Option A). The abort at the end is teardown only.
+    let request_id = RequestId::new_v4();
+    let root_task_id = root_task_id_for(&request_id);
+    let run = tokio::spawn({
+        let state = state.clone();
+        let request_id = request_id.clone();
+        async move { run_request(&state, &request_id, "delegate please", Some("sb-1"), None).await }
+    });
 
     // The delegated workflow appears, then drives to Succeeded entirely through
     // the real RuntimeAgentRunner + recording port.
@@ -668,9 +654,8 @@ async fn delegated_workflow_drives_to_succeeded_via_real_runner() {
         "the parent root task must remain running after the delegated workflow succeeds"
     );
 
-    handle
-        .shutdown("test complete", Duration::from_secs(2))
-        .await;
+    // Teardown only: the aborted future runs no finalizer (AC3.3).
+    run.abort();
 }
 
 #[derive(Debug)]
@@ -763,7 +748,7 @@ impl EventSource for DelegateThenTerminalRootSource {
 // advisor approval, and submits `submit_root_outcome`.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn root_delegates_waits_and_submits_terminal() {
-    use crate::app_state::test_seams::ScriptedSource;
+    use eos_testkit::ScriptedSource;
 
     let (planner_turns, coder_turns, reducer_turns) = one_step_workflow_turns();
     let advisor_turns = vec![tool_use_turn(
@@ -832,12 +817,11 @@ async fn root_delegates_waits_and_submits_terminal() {
         vec![root, planner, coder, reducer, advisor_agent()],
     )
     .await;
-    let handle = start_request(&state, "delegate then finish", Some("sb-1"), None)
+    let request_id = RequestId::new_v4();
+    let root_task_id = root_task_id_for(&request_id);
+    run_request(&state, &request_id, "delegate then finish", Some("sb-1"), None)
         .await
         .unwrap();
-    let root_task_id = handle.root_task_id.clone();
-    let request_id = handle.request_id.clone();
-    handle.join().await;
 
     let workflows = state
         .workflow_store
@@ -873,12 +857,13 @@ async fn root_delegates_waits_and_submits_terminal() {
 async fn provisioning_binds_request_sandbox() {
     let (state, _dir) = build_test_state(Some(factory_from(vec![])), vec![root_agent()]).await;
 
-    let explicit = start_request(&state, "task", Some("  sb-explicit  "), None)
+    let explicit_id = RequestId::new_v4();
+    run_request(&state, &explicit_id, "task", Some("  sb-explicit  "), None)
         .await
         .unwrap();
     let request = state
         .request_store
-        .get(&explicit.request_id)
+        .get(&explicit_id)
         .await
         .unwrap()
         .unwrap();
@@ -890,12 +875,14 @@ async fn provisioning_binds_request_sandbox() {
         Some("sb-explicit"),
         "explicit sandbox id is trimmed and bound"
     );
-    explicit.join().await;
 
-    let auto = start_request(&state, "task", None, None).await.unwrap();
+    let auto_id = RequestId::new_v4();
+    run_request(&state, &auto_id, "task", None, None)
+        .await
+        .unwrap();
     let request = state
         .request_store
-        .get(&auto.request_id)
+        .get(&auto_id)
         .await
         .unwrap()
         .unwrap();
@@ -907,95 +894,12 @@ async fn provisioning_binds_request_sandbox() {
         Some("sb-test"),
         "auto path binds the provisioner-created sandbox id"
     );
-    auto.join().await;
-}
-
-// --- AC-eos-runtime-08b: shutdown cancels background work and persists the root.
-
-#[tokio::test]
-async fn shutdown_cancels_background_and_fails_running_root() {
-    let factory: EventSourceFactory =
-        Arc::new(|_def: &AgentDefinition| Arc::new(BlockingSource) as Arc<dyn EventSource>);
-    let (state, _dir) = build_test_state(Some(factory), vec![root_agent()]).await;
-    let handle = start_request(&state, "task", Some("sb-1"), None)
-        .await
-        .unwrap();
-    let request_id = handle.request_id.clone();
-    let root_task_id = handle.root_task_id.clone();
-    let token = state.shutdown_token();
-
-    // Let the root reach its blocking stream, then shut down with a short grace.
-    tokio::time::sleep(Duration::from_millis(40)).await;
-    handle
-        .shutdown("operator stop", Duration::from_millis(100))
-        .await;
-
-    assert!(token.is_cancelled(), "shutdown cancels the token");
-    let task = state.task_store.get(&root_task_id).await.unwrap().unwrap();
-    assert_eq!(task.status, TaskStatus::Failed);
-    let request = state.request_store.get(&request_id).await.unwrap().unwrap();
-    assert_eq!(request.status, RequestStatus::Failed);
-}
-
-#[tokio::test]
-async fn dropped_handle_cancels_background_and_fails_running_root() {
-    let factory: EventSourceFactory =
-        Arc::new(|_def: &AgentDefinition| Arc::new(BlockingSource) as Arc<dyn EventSource>);
-    let (state, _dir) = build_test_state(Some(factory), vec![root_agent()]).await;
-    let handle = start_request(&state, "task", Some("sb-1"), None)
-        .await
-        .unwrap();
-    let request_id = handle.request_id.clone();
-    let root_task_id = handle.root_task_id.clone();
-    let token = state.shutdown_token();
-    let supervisor = handle.supervisor.clone();
-    let workflow = StartedWorkflowHandle {
-        workflow_id: eos_types::WorkflowId::new_v4(),
-        workflow_task_id: "wf_drop".parse().unwrap(),
-    };
-    let parent_agent_run_id: AgentRunId = "parent-run".parse().expect("agent run id");
-    supervisor
-        .inner()
-        .lock()
-        .await
-        .register_workflow(&parent_agent_run_id, &workflow);
-
-    tokio::time::sleep(Duration::from_millis(40)).await;
-    drop(handle);
-
-    for _ in 0..20 {
-        let task_failed = state
-            .task_store
-            .get(&root_task_id)
-            .await
-            .unwrap()
-            .is_some_and(|task| task.status == TaskStatus::Failed);
-        let background_clear = supervisor.inner().lock().await.inflight_report(None).total == 0;
-        if task_failed && background_clear {
-            break;
-        }
-        tokio::time::sleep(Duration::from_millis(20)).await;
-    }
-
-    assert!(
-        token.is_cancelled(),
-        "dropping the handle cancels the token"
-    );
-    let task = state.task_store.get(&root_task_id).await.unwrap().unwrap();
-    assert_eq!(task.status, TaskStatus::Failed);
-    assert_eq!(
-        supervisor.inner().lock().await.inflight_report(None).total,
-        0,
-        "drop cleanup cancels supervisor-tracked background handles"
-    );
-    let request = state.request_store.get(&request_id).await.unwrap().unwrap();
-    assert_eq!(request.status, RequestStatus::Failed);
 }
 
 // --- Slice 1 instance identity (anchor §7): a backgrounded command-session
 // completion is pulled by the per-request heartbeat and delivered to the model
 // as a `[BACKGROUND COMPLETED]` SystemNotification in a later provider request.
-// This goes through the real `start_request` wiring, proving the heartbeat sink
+// This goes through the real `run_request` wiring, proving the heartbeat sink
 // and the loop's `notifier` are the SAME `NotificationService`. If the wiring
 // handed the loop a different instance, the model would never see the
 // notification and `saw_notification` would stay false.
@@ -1013,12 +917,13 @@ mod command_session_delivery {
     use eos_llm_client::{ContentBlock, LlmRequest, Message, MessageRole, UsageSnapshot};
     use eos_sandbox_api::{DaemonOp, SandboxApiError, SandboxTransport};
     use eos_state::TaskStatus;
-    use eos_types::{JsonObject, SandboxId};
+    use eos_types::{JsonObject, RequestId, SandboxId};
     use serde_json::json;
 
-    use crate::app_state::test_seams::{agent_def, FakeProvisioner, ScriptedSource};
+    use eos_testkit::{agent_def, FakeProvisioner, ScriptedSource};
     use crate::app_state::EventSourceFactory;
-    use crate::{start_request, AppState};
+    use crate::entry::root_task_id_for;
+    use crate::{run_request, AppState};
 
     /// A fake daemon transport: `exec_command` starts a backgrounded session
     /// `cmd_1`, `collect_completed` parks a successful completion for it, and the
@@ -1209,7 +1114,7 @@ mod command_session_delivery {
         let state = AppState::builder()
             .database_url(url)
             .cwd(dir.path().display().to_string())
-            .tools_root(crate::app_state::test_seams::test_tools_root())
+            .tools_root(eos_testkit::test_tools_root())
             .provisioner(Arc::new(FakeProvisioner {
                 id: "sb-test".to_owned(),
             }))
@@ -1220,11 +1125,17 @@ mod command_session_delivery {
             .await
             .expect("build state");
 
-        let handle = start_request(&state, "run a background command", Some("sb-test"), None)
-            .await
-            .expect("start request");
-        let root_task_id = handle.root_task_id.clone();
-        handle.join().await;
+        let request_id = RequestId::new_v4();
+        let root_task_id = root_task_id_for(&request_id);
+        run_request(
+            &state,
+            &request_id,
+            "run a background command",
+            Some("sb-test"),
+            None,
+        )
+        .await
+        .expect("run request");
 
         assert!(
             saw_notification.load(Ordering::SeqCst),
@@ -1253,14 +1164,16 @@ mod subagent_lifecycle {
     use eos_agent_def::{AgentDefinition, AgentRole, AgentType};
     use eos_engine::{EngineError, EngineStream, EventSource, StreamEvent};
     use eos_llm_client::{ContentBlock, LlmRequest};
-    use eos_state::TaskStatus;
+    use eos_state::{RequestStatus, TaskStatus};
+    use eos_types::RequestId;
     use serde_json::json;
 
-    use crate::app_state::test_seams::{
+    use eos_testkit::{
         agent_def, build_test_state, tool_use_turn, ScriptedSource,
     };
     use crate::app_state::EventSourceFactory;
-    use crate::start_request;
+    use crate::entry::root_task_id_for;
+    use crate::run_request;
 
     fn stream_of(events: Vec<StreamEvent>) -> EngineStream {
         Box::pin(futures::stream::iter(events.into_iter().map(Ok)))
@@ -1349,29 +1262,30 @@ mod subagent_lifecycle {
             vec![root_with_subagent(), advisor_agent(), explorer_subagent()],
         )
         .await;
-        let handle = start_request(&state, "task", Some("sb-1"), None)
+        let request_id = RequestId::new_v4();
+        let root_task_id = root_task_id_for(&request_id);
+        run_request(&state, &request_id, "task", Some("sb-1"), None)
             .await
             .unwrap();
-        let root_task_id = handle.root_task_id.clone();
-        let supervisor = handle.supervisor.clone();
-        handle.join().await;
 
+        // `run_request` returns only after the `submit_root_outcome` prehook's
+        // settle+abort AND the post-run request-scoped `cancel_for_parent_exit(None,
+        // …)` sweep have both run, so the root reaching Done in the store is the
+        // observable proof the live subagent was cancelled rather than wedging the
+        // terminal (D9). The per-request supervisor is now a `run_request` local and
+        // is intentionally not re-exposed, so the cancellation is observed through
+        // the persisted task/request rows.
         let task = state.task_store.get(&root_task_id).await.unwrap().unwrap();
         assert_eq!(
             task.status,
             TaskStatus::Done,
             "a live subagent must not wedge the root terminal — the prehook cancels it (D9)"
         );
-        // The cancellation settled the live subagent: no Running subagent remains.
+        let request = state.request_store.get(&request_id).await.unwrap().unwrap();
         assert_eq!(
-            supervisor
-                .inner()
-                .lock()
-                .await
-                .inflight_report(None)
-                .subagent,
-            0,
-            "cancellation must leave zero in-flight subagents"
+            request.status,
+            RequestStatus::Done,
+            "the request finishes Done once the root submits despite the live subagent"
         );
     }
 
@@ -1459,11 +1373,11 @@ mod subagent_lifecycle {
             vec![root_with_subagent(), advisor_agent(), explorer_subagent()],
         )
         .await;
-        let handle = start_request(&state, "task", Some("sb-1"), None)
+        let request_id = RequestId::new_v4();
+        let root_task_id = root_task_id_for(&request_id);
+        run_request(&state, &request_id, "task", Some("sb-1"), None)
             .await
             .unwrap();
-        let root_task_id = handle.root_task_id.clone();
-        handle.join().await;
 
         assert!(
             saw_finished.load(Ordering::SeqCst),
@@ -1541,11 +1455,11 @@ mod subagent_lifecycle {
         // No "explorer" agent registered → run_subagent must reject "not registered".
         let (state, _dir) =
             build_test_state(Some(factory), vec![root_with_subagent(), advisor_agent()]).await;
-        let handle = start_request(&state, "task", Some("sb-1"), None)
+        let request_id = RequestId::new_v4();
+        let root_task_id = root_task_id_for(&request_id);
+        run_request(&state, &request_id, "task", Some("sb-1"), None)
             .await
             .unwrap();
-        let root_task_id = handle.root_task_id.clone();
-        handle.join().await;
 
         let captured = rejection.lock().unwrap().clone();
         assert_eq!(

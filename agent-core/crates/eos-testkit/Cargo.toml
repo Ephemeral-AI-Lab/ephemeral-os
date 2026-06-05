@@ -4,7 +4,7 @@ version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
-description = "Shared agent-core test doubles: scripted LLM/EventSource, fake sandbox transport/provisioner, and the AppState test builder. Dev-dependency only."
+description = "Shared agent-core test doubles: scripted LLM/EventSource, fake sandbox transport/provisioner, the AppState test builder, and the Layer-B workflow runner/store doubles. Dev-dependency only."
 
 [dependencies]
 async-trait = { workspace = true }
@@ -12,22 +12,31 @@ futures = { workspace = true }
 serde_json = { workspace = true }
 tokio = { workspace = true }
 eos-types = { workspace = true }
-eos-agent-def = { workspace = true }
-eos-engine = { workspace = true }
-eos-llm-client = { workspace = true }
-eos-sandbox-api = { workspace = true }
-# `mock-state` only: build a real AppState over fake provisioner/transport. Needs
-# the runtime's `test-util` feature to reach the `RequestProvisioner` seam.
-eos-runtime = { workspace = true, features = ["test-util"], optional = true }
+# `llm` (Layer A): scripted EventSource doubles, fake transport, AppState agent
+# builders, and the `run_until` stream stepper.
+eos-agent-def = { workspace = true, optional = true }
+eos-engine = { workspace = true, optional = true }
+eos-llm-client = { workspace = true, optional = true }
+eos-sandbox-api = { workspace = true, optional = true }
+# `mock-state`: a real AppState over the fake provisioner/transport + temp SQLite.
+# `.provisioner(...)` is plain `pub` (no `test-util` gate), so no feature is
+# required on `eos-runtime`.
+eos-runtime = { workspace = true, optional = true }
 anyhow = { workspace = true, optional = true }
 tempfile = { workspace = true, optional = true }
+# `workflow` (Layer B): in-memory stores + AgentRunner doubles + wait_until.
+eos-workflow = { workspace = true, optional = true }
+eos-state = { workspace = true, optional = true }
+parking_lot = { workspace = true, optional = true }
 
 [features]
 default = ["llm", "mock-state"]
-# Scripted LLM/EventSource doubles + factories + tool_use_turn (public-API only).
-llm = []
-# FakeProvisioner + build_test_state (pulls eos-runtime/test-util).
-mock-state = ["dep:eos-runtime", "dep:anyhow", "dep:tempfile"]
+# Layer A doubles (public-API only); pulls only the engine path.
+llm = ["dep:eos-agent-def", "dep:eos-engine", "dep:eos-llm-client", "dep:eos-sandbox-api"]
+# build_test_state + FakeProvisioner; pulls eos-runtime (implies `llm`).
+mock-state = ["llm", "dep:eos-runtime", "dep:anyhow", "dep:tempfile"]
+# Layer B workflow runner/store doubles + wait_until; independent of `llm`.
+workflow = ["dep:eos-workflow", "dep:eos-state", "dep:parking_lot"]
 
 [lints]
 workspace = true

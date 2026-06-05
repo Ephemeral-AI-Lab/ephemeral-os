@@ -114,8 +114,18 @@ impl LiveSandbox {
     /// off (graceful skip). Hard-fails under `--features e2e`.
     pub async fn spawn() -> anyhow::Result<Option<Self>>;
 
-    /// Drive one scripted request to a terminal outcome.
+    /// Drive one scripted request to a terminal outcome (closure).
     pub async fn run(&self, script: Script) -> anyhow::Result<Outcome>;
+
+    /// Drive a scripted request only until `predicate` holds, then return —
+    /// the closure-optional path (agent-core spec I5). Lets a live test assert a
+    /// partial effect (e.g. a real file write landed) without forcing the agent
+    /// loop all the way to submit_root_outcome.
+    pub async fn run_until(
+        &self,
+        script: Script,
+        predicate: impl Fn(&StreamEvent) -> bool,
+    ) -> anyhow::Result<Vec<StreamEvent>>;
 
     /// Read back real container state for assertions.
     pub async fn read_file(&self, path: &str) -> anyhow::Result<String>;
@@ -123,6 +133,11 @@ impl LiveSandbox {
 
 impl Drop for LiveSandbox { /* tear down container */ }
 ```
+
+`run_until` reuses the same early-termination seams as agent-core (pull the
+engine stream to a checkpoint; `wait_until` for background workflow state). The
+live tier still *defaults* to `run` (closure) because exercising the full
+sandbox round-trip is the point; `run_until` is for targeted partial checks.
 
 Composition inside `spawn()`:
 `DockerProviderAdapter::connect` → `DaemonClient` → production provisioner with
@@ -201,3 +216,57 @@ with file/line, before a live container run). Example:
 4. Port `write_stdin.rs` from the deleted agent-core live test.
 5. Add `file_ops.rs`, `isolated_workspace.rs`.
 6. (Later) implement `Llm::Real` tier.
+
+## 13. Provisioning reality (deep investigation)
+
+A source audit refined §4/§6. The "stock image + host-injected eosd" model holds,
+but the harness must clear two gaps and one injection seam. Evidence is in
+`eos-runtime/src/app_state.rs`, `eos-sandbox-host/src/{provisioning,lifecycle,
+bootstrap_artifact,docker}.rs`, and `eos-sandbox-host/tests/write_stdin_live.rs`.
+
+### 13.1 The default `build()` path provisions for real — but won't bootstrap eosd yet
+
+`AppState::builder()…build()` with a Docker config and **no** injected
+transport/provisioner wires the real `DockerProviderAdapter` → `DaemonClient` →
+`SandboxLifecycle::new(daemon, <repo>/sandbox/dist)` → `RequestSandboxProvisioner`
+→ `HostProvisioner` automatically (`app_state.rs:417-437`). All inputs are public.
+Two gaps block a clean fresh-sandbox run:
+
+- **Gap A — no `project_dir`, so eosd bootstrap is skipped.** `setup_post_lifecycle`
+  uploads eosd only when `SandboxInfo.project_dir` is non-empty
+  (`lifecycle.rs:182,200,218`). `fresh_create_spec` sets no `project_dir` label and
+  `CreateSandboxSpec` has no such field (`provisioning.rs:31-47`, `provider.rs:47`).
+  There is **no public hook** to set it. `write_stdin_live.rs:59` sets a
+  `project_dir=/testbed` label by hand.
+- **Gap B — stale amd64 eosd SHA pin.** Pinned `af19…` (`bootstrap_artifact.rs:53`)
+  ≠ on-disk `eosd-linux-amd64` `5b47…` → `ensure_daemon_bootstrap` fails with
+  `ArtifactHashMismatch` on amd64. arm64 pin matches. The project-default platform
+  is `linux/amd64`, so `SandboxLifecycle` bootstrap is currently broken there until
+  the pin is bumped. (Flagged as a likely latent bug regardless of this work.)
+
+### 13.2 Binding a pre-provisioned sandbox needs the provisioner seam exposed
+
+To use the `write_stdin_live` pattern (provision via public host APIs, then bind
+into `AppState`), the harness needs to inject a fixed-id provisioner — but
+`AppStateBuilder::provisioner(...)` is `#[cfg(test)] pub(crate)` and
+`RequestProvisioner`/`HostProvisioner` are unexported (`app_state.rs:51,64,302`).
+Same three exposures as agent-core spec §14.4.
+
+### 13.3 Two harness recipes (pick per how much production change is acceptable)
+
+- **Recipe A — pure public `build()` path.** Smallest harness code; requires
+  fixing Gap A (default `project_dir`) and Gap B (bump amd64 pin). Then
+  `build()` → `start_request(prompt, None)` bootstraps eosd itself.
+- **Recipe B — pre-provision via public host APIs** (`DockerProviderAdapter`,
+  `ProviderRegistry`, `DaemonClient`, `SandboxLifecycle`, all `pub` per
+  `write_stdin_live.rs`), set the `project_dir` label, then bind into `AppState`.
+  Works **today on arm64**; on amd64 use raw `docker cp` to bypass Gap B. Needs
+  the §13.2 provisioner exposure to bind, **or** the explicit-id branch
+  `start_request(prompt, Some(id))` (`provisioning.rs:86`) — which still hits
+  Gap B on amd64.
+
+**Recommendation:** target Recipe A but treat Gap A + Gap B as small prerequisite
+production fixes (set a default `project_dir`; bump the amd64 pin) so the public
+`build()` path bootstraps eosd unaided. That keeps the harness thin and avoids
+widening the provisioner API. Confirm with the owner before changing provisioning
+defaults.
