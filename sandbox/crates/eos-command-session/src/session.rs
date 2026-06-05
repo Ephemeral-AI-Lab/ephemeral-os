@@ -20,7 +20,7 @@ use crate::{
     DynCommandWorkspacePolicy,
 };
 
-pub struct CommandSession {
+pub(crate) struct CommandSession {
     id: String,
     caller_id: String,
     command: String,
@@ -151,43 +151,33 @@ impl CommandSession {
     }
 
     #[must_use]
-    pub fn id(&self) -> &str {
+    pub(crate) fn id(&self) -> &str {
         &self.id
     }
 
     #[must_use]
-    pub fn caller_id(&self) -> &str {
+    pub(crate) fn caller_id(&self) -> &str {
         &self.caller_id
     }
 
     #[must_use]
-    pub fn command(&self) -> &str {
+    pub(crate) fn command(&self) -> &str {
         &self.command
     }
 
-    #[must_use]
-    pub fn output(&self) -> &Arc<CommandSessionOutput> {
-        &self.output
-    }
-
     #[cfg(target_os = "linux")]
     #[must_use]
-    pub fn final_path(&self) -> &Path {
-        &self.final_path
-    }
-
-    #[cfg(target_os = "linux")]
-    #[must_use]
-    pub fn is_cancelled(&self) -> bool {
+    pub(crate) fn is_cancelled(&self) -> bool {
         *lock(&self.cancelled)
     }
 
-    pub fn append_output(&self, text: String) {
+    #[cfg(not(target_os = "linux"))]
+    pub(crate) fn append_output(&self, text: String) {
         self.output.append(text);
     }
 
     #[cfg(target_os = "linux")]
-    pub fn write_process_stdin(&self, chars: &str) -> Result<(), CommandSessionError> {
+    pub(crate) fn write_process_stdin(&self, chars: &str) -> Result<(), CommandSessionError> {
         self.process.write_stdin(chars.as_bytes())?;
         if chars.contains('\u{3}') {
             *lock(&self.interrupted) = true;
@@ -197,49 +187,47 @@ impl CommandSession {
     }
 
     #[cfg(target_os = "linux")]
-    pub fn cancel_process(&self) {
+    pub(crate) fn cancel_process(&self) {
         *lock(&self.cancelled) = true;
         self.process.terminate();
     }
 
     #[must_use]
-    pub fn read_model_output(&self, max_tokens: Option<u64>) -> String {
+    pub(crate) fn read_model_output(&self, max_tokens: Option<u64>) -> String {
         let mut cursor = lock(&self.model_cursor);
         self.output.read_since(&mut cursor, max_tokens)
     }
 
     #[must_use]
-    pub fn read_notification_output(&self, max_tokens: Option<u64>) -> String {
+    pub(crate) fn read_notification_output(&self, max_tokens: Option<u64>) -> String {
         let mut cursor = lock(&self.notification_cursor);
         self.output.read_since(&mut cursor, max_tokens)
     }
 
+    #[cfg(test)]
     #[must_use]
-    pub const fn started_at(&self) -> Instant {
+    pub(crate) const fn started_at(&self) -> Instant {
         self.started_at
     }
 
+    #[cfg(any(not(target_os = "linux"), test))]
     #[must_use]
-    pub const fn timeout(&self) -> Option<Duration> {
-        self.timeout
-    }
-
-    #[must_use]
-    pub fn is_expired(&self, now: Instant) -> bool {
+    pub(crate) fn is_expired(&self, now: Instant) -> bool {
         self.timeout
             .is_some_and(|timeout| now.duration_since(self.started_at) >= timeout)
     }
 
     #[cfg(target_os = "linux")]
     #[must_use]
-    pub fn is_past_deadline(&self, now: Instant, max_session_s: u64) -> bool {
+    pub(crate) fn is_past_deadline(&self, now: Instant, max_session_s: u64) -> bool {
         let timeout = self
             .timeout
             .unwrap_or_else(|| Duration::from_secs(max_session_s));
         now.duration_since(self.started_at) >= timeout
     }
 
-    pub fn finalize(
+    #[cfg(not(target_os = "linux"))]
+    pub(crate) fn finalize(
         &self,
         status: &str,
         exit_code: Option<i64>,
@@ -285,7 +273,7 @@ impl CommandSession {
         Ok(response)
     }
 
-    pub fn command_session_finished(&self, status: &str) {
+    pub(crate) fn command_session_finished(&self, status: &str) {
         let policy = lock(&self.policy);
         if let Some(policy) = policy.as_ref() {
             policy.command_session_finished(&self.id, &self.caller_id, status);
@@ -293,7 +281,9 @@ impl CommandSession {
     }
 
     #[cfg(target_os = "linux")]
-    pub fn try_finalize_process(&self) -> Option<Result<CommandResponse, CommandSessionError>> {
+    pub(crate) fn try_finalize_process(
+        &self,
+    ) -> Option<Result<CommandResponse, CommandSessionError>> {
         let process_exit = match self.process.try_reap() {
             ProcessReap::Running => return None,
             ProcessReap::Exited(exit) => exit,

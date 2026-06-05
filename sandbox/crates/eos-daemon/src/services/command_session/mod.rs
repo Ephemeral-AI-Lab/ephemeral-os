@@ -365,15 +365,13 @@ pub fn recover_orphaned_command_sessions() {
                         workspace_mode: None,
                         metadata: Value::Null,
                     };
-                    command_session_manager()
-                        .registry()
-                        .push_completed(CommandSessionCompletion {
-                            command_session_id: id.to_owned(),
-                            caller_id: caller_id.to_owned(),
-                            command: command.to_owned(),
-                            result: result.clone(),
-                            notification_result: result,
-                        });
+                    command_session_manager().push_completed(CommandSessionCompletion {
+                        command_session_id: id.to_owned(),
+                        caller_id: caller_id.to_owned(),
+                        command: command.to_owned(),
+                        result: result.clone(),
+                        notification_result: result,
+                    });
                 }
             }
         }

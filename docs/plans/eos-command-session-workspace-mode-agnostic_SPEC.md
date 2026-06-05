@@ -531,21 +531,10 @@ inspect `WorkspaceMode`. Isolated active-session bookkeeping is driven by the
 
 ### 8.3 `eos-daemon`
 
-Daemon owns concrete policy factories:
-
-```rust
-pub trait DaemonCommandPolicyFactory {
-    fn policy_for(
-        &self,
-        request: &StartCommandSession,
-        args: &Value,
-        context: DispatchContext<'_>,
-    ) -> Result<DynCommandWorkspacePolicy, DaemonError>;
-}
-```
-
-Concrete adapters live in daemon because they need daemon ports and service
-access:
+Daemon owns concrete policy selection in the command-session op handler.
+Concrete daemon ports live in daemon because they need daemon service access;
+the reusable workspace-mode behavior lives in `EphemeralCommandPolicy` and
+`IsolatedCommandPolicy`.
 
 ```text
 eos-daemon/src/services/command_session/ports/ephemeral.rs

@@ -2,7 +2,7 @@ use serde_json::json;
 
 #[cfg(target_os = "linux")]
 use eos_command_session::{
-    CollectCompleted, CommandResponse, CommandSessionCompletion, CommandSessionRegistry,
+    CollectCompleted, CommandResponse, CommandSessionCompletion, CommandSessionManager, WriteStdin,
 };
 
 use super::*;
@@ -49,17 +49,29 @@ fn command_session_cancel_suppresses_background_completion_publication() {
 #[test]
 #[cfg(target_os = "linux")]
 fn command_session_completion_result_can_be_claimed_by_control_tool() -> TestResult {
-    let registry = CommandSessionRegistry::new();
-    registry.push_completed(test_completion("cmd_keep", "caller", "keep\n"));
-    registry.push_completed(test_completion("cmd_done", "caller", "done\n"));
+    let manager = CommandSessionManager::default();
+    manager.push_completed(test_completion("cmd_keep", "caller", "keep\n"));
+    manager.push_completed(test_completion("cmd_done", "caller", "done\n"));
 
-    let result = registry
-        .take_completed_result("cmd_done")
-        .ok_or("matching completion should be returned")?;
+    let result = manager.write_stdin(WriteStdin {
+        command_session_id: "cmd_done".to_owned(),
+        chars: String::new(),
+        terminate: false,
+        yield_time_ms: 1,
+        max_output_tokens: None,
+    })?;
     assert_eq!(result.status, "ok");
-    assert!(registry.take_completed_result("cmd_done").is_none());
 
-    let remaining = registry.collect_completed(&CollectCompleted {
+    let redelivered = manager.write_stdin(WriteStdin {
+        command_session_id: "cmd_done".to_owned(),
+        chars: String::new(),
+        terminate: false,
+        yield_time_ms: 1,
+        max_output_tokens: None,
+    });
+    assert!(redelivered.is_err());
+
+    let remaining = manager.collect_completed(&CollectCompleted {
         command_session_ids: Some(vec!["cmd_keep".to_owned()]),
         caller_id: None,
     });
@@ -67,7 +79,7 @@ fn command_session_completion_result_can_be_claimed_by_control_tool() -> TestRes
 
     // Remove-on-deliver: a second collect finds nothing — the map is bounded,
     // not accumulating delivered entries forever.
-    let redelivered = registry.collect_completed(&CollectCompleted {
+    let redelivered = manager.collect_completed(&CollectCompleted {
         command_session_ids: Some(vec!["cmd_keep".to_owned()]),
         caller_id: None,
     });
@@ -93,19 +105,18 @@ fn command_session_count_uses_runtime_manager() -> TestResult {
 #[cfg(target_os = "linux")]
 fn command_session_write_stdin_returns_completed_result_when_live_session_is_gone() -> TestResult {
     let id = "cmd_stdin_done_unit";
-    command_session_manager()
-        .registry()
-        .push_completed(test_completion(id, "caller", "written\n"));
+    command_session_manager().push_completed(test_completion(id, "caller", "written\n"));
 
     let response =
         command_session_write_stdin(&json!({"command_session_id": id, "chars": "ignored"}))?;
 
     assert_eq!(response["status"], "ok");
     assert_eq!(response["output"]["stdout"], "written\n");
-    assert!(command_session_manager()
-        .registry()
-        .take_completed_result(id)
-        .is_none());
+    let remaining = command_session_manager().collect_completed(&CollectCompleted {
+        command_session_ids: Some(vec![id.to_owned()]),
+        caller_id: None,
+    });
+    assert_eq!(remaining.completions.len(), 0);
     Ok(())
 }
 
@@ -113,18 +124,17 @@ fn command_session_write_stdin_returns_completed_result_when_live_session_is_gon
 #[cfg(target_os = "linux")]
 fn command_session_cancel_returns_completed_result_when_live_session_is_gone() -> TestResult {
     let id = "command_session_cancel_done_unit";
-    command_session_manager()
-        .registry()
-        .push_completed(test_completion(id, "caller", "already-finished\n"));
+    command_session_manager().push_completed(test_completion(id, "caller", "already-finished\n"));
 
     let response = command_session_cancel(&json!({"command_session_id": id}))?;
 
     assert_eq!(response["status"], "ok");
     assert_eq!(response["output"]["stdout"], "already-finished\n");
-    assert!(command_session_manager()
-        .registry()
-        .take_completed_result(id)
-        .is_none());
+    let remaining = command_session_manager().collect_completed(&CollectCompleted {
+        command_session_ids: Some(vec![id.to_owned()]),
+        caller_id: None,
+    });
+    assert_eq!(remaining.completions.len(), 0);
     Ok(())
 }
 

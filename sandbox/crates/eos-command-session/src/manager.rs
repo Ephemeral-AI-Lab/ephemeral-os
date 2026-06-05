@@ -5,18 +5,18 @@ use std::time::Instant;
 
 use eos_workspace_api::CommandWorkspacePolicy;
 
-use crate::registry::CommandSessionCompletion;
-use crate::session::CommandSessionSpec;
+use crate::registry::{CommandSessionCompletion, CommandSessionRegistry};
 #[cfg(target_os = "linux")]
 use crate::session::RunningCommandSessionParts;
+use crate::session::{CommandSession, CommandSessionSpec};
 #[cfg(target_os = "linux")]
 use crate::{
     process::spawn_current_exe_ns_runner, wait_for_yield, CommandSessionOutput, WaitOutcome,
 };
 use crate::{
     CancelCommandSession, CollectCompleted, CollectCompletedResponse, CommandResponse,
-    CommandSession, CommandSessionConfig, CommandSessionError, CommandSessionRegistry,
-    DynCommandWorkspacePolicy, StartCommandSession, WriteStdin,
+    CommandSessionConfig, CommandSessionError, DynCommandWorkspacePolicy, StartCommandSession,
+    WriteStdin,
 };
 
 pub struct CommandSessionManager {
@@ -31,11 +31,6 @@ impl CommandSessionManager {
             config,
             registry: Arc::new(CommandSessionRegistry::new()),
         }
-    }
-
-    #[must_use]
-    pub fn registry(&self) -> &Arc<CommandSessionRegistry> {
-        &self.registry
     }
 
     pub fn start<P>(
@@ -282,6 +277,10 @@ impl CommandSessionManager {
         self.registry.collect_completed(request)
     }
 
+    pub fn push_completed(&self, completion: CommandSessionCompletion) {
+        self.registry.push_completed(completion);
+    }
+
     #[must_use]
     pub fn cleanup_caller(&self, caller_id: &str, grace_s: Option<f64>) -> usize {
         #[cfg(target_os = "linux")]
@@ -452,7 +451,7 @@ pub struct SweepReport {
 #[cfg(test)]
 mod tests {
     use std::path::PathBuf;
-    use std::time::Duration;
+    use std::time::{Duration, Instant};
 
     use eos_workspace_api::{
         FinalizeCommandRequest, PrepareCommandRequest, PreparedCommandWorkspace, WorkspaceApiError,
@@ -522,14 +521,11 @@ mod tests {
         let id = started
             .command_session_id
             .unwrap_or_else(|| panic!("running session id"));
-        let session = manager
-            .registry()
-            .get(&id)
-            .unwrap_or_else(|| panic!("registered session"));
+        assert!(id.starts_with("cmd_"));
 
         assert_eq!(manager.count_by_caller(Some("caller")), 1);
 
-        let report = manager.sweep_expired(session.started_at() + Duration::from_millis(2));
+        let report = manager.sweep_expired(Instant::now() + Duration::from_millis(2));
 
         assert_eq!(report.expired, 1);
         assert_eq!(report.live, 0);
