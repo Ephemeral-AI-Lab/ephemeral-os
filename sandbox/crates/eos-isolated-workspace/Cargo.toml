@@ -6,6 +6,7 @@ rust-version.workspace = true
 license.workspace = true
 
 [dependencies]
+eos-config.workspace = true
 eos-overlay.workspace = true
 eos-protocol.workspace = true
 eos-workspace-api.workspace = true
@@ -25,6 +26,3 @@ tokio.workspace = true
 
 [lints]
 workspace = true
-
-[dev-dependencies]
-eos-config.workspace = true

@@ -6,6 +6,7 @@ rust-version.workspace = true
 license.workspace = true
 
 [dependencies]
+eos-config.workspace = true
 eos-overlay.workspace = true
 eos-protocol.workspace = true
 serde.workspace = true
@@ -18,6 +19,3 @@ libc.workspace = true
 
 [lints]
 workspace = true
-
-[dev-dependencies]
-eos-config.workspace = true

@@ -1,6 +1,9 @@
 use std::path::PathBuf;
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+use serde::Deserialize;
+
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct CommandSessionConfig {
     pub scratch_root: PathBuf,
     pub default_yield_time_ms: u64,

@@ -6,6 +6,7 @@ rust-version.workspace = true
 license.workspace = true
 
 [dependencies]
+anyhow.workspace = true
 serde.workspace = true
 serde_path_to_error.workspace = true
 serde_yaml.workspace = true

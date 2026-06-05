@@ -1,22 +1,21 @@
-//! Per-Attempt run-stage tunables. This section is Rust-only: it has no Python
-//! equivalent (the Python attempt launcher spawned every ready run unbounded via
-//! `loop.create_task`). It is the configurable home of the per-Attempt fan-out
-//! cap consumed by `eos-workflow` (impl-eos-workflow.md §7).
+//! Per-Attempt run-stage tunables: the cap on concurrently-launched agent runs
+//! in an Attempt's RUN stage.
 //!
 //! `eos-workflow` has no `eos-config` edge, so the value does not flow directly:
-//! `eos-runtime` reads `config.attempt.max_concurrent_task_runs` and injects it
-//! into the per-attempt deps as a plain `usize`.
+//! `eos-runtime` reads `attempt.max_concurrent_task_runs` and injects it into the
+//! per-attempt deps as a plain `usize`.
 
-use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
+use crate::error::ConfigError;
+
 /// Per-Attempt run-stage tunables.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 #[non_exhaustive]
 pub struct AttemptConfig {
     /// Per-Attempt cap on concurrently-launched generator/reducer agent runs.
-    /// Range-checked `>= 1`.
+    /// Range-checked `>= 1` by [`AttemptConfig::validate`].
     pub max_concurrent_task_runs: usize,
 }
 
@@ -33,9 +32,9 @@ impl AttemptConfig {
     ///
     /// # Errors
     /// Returns [`ConfigError::OutOfRange`] when `max_concurrent_task_runs < 1`.
-    pub fn validate(&self) -> Result<(), crate::error::ConfigError> {
+    pub fn validate(&self) -> Result<(), ConfigError> {
         if self.max_concurrent_task_runs < 1 {
-            return Err(crate::error::ConfigError::OutOfRange {
+            return Err(ConfigError::OutOfRange {
                 field: "attempt.max_concurrent_task_runs".to_owned(),
                 detail: "must be >= 1".to_owned(),
             });
@@ -48,9 +47,8 @@ impl AttemptConfig {
 mod tests {
     use super::*;
 
-    // AC-eos-config-02 (attempt subset): the Rust-only default is 8.
     #[test]
-    fn test_attempt_defaults() {
+    fn defaults_are_set() {
         assert_eq!(AttemptConfig::default().max_concurrent_task_runs, 8);
     }
 }

@@ -132,7 +132,10 @@ where
 
     /// Return every caller with an open handle.
     pub fn list_open_callers(&self) -> Vec<String> {
-        self.by_caller.keys().map(|caller| caller.0.clone()).collect()
+        self.by_caller
+            .keys()
+            .map(|caller| caller.0.clone())
+            .collect()
     }
 
     /// Emit an isolated tool-call audit event for an active handle.

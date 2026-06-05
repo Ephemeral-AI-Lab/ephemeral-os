@@ -31,14 +31,16 @@ use tokio::net::{TcpListener, UnixListener};
 use tokio::time::timeout;
 use tokio_util::sync::CancellationToken;
 
-use eos_isolated_workspace::config::IsolatedWorkspaceConfig;
+use eos_config::configs::{
+    daemon::{AuditConfig, DaemonConfig},
+    isolated_workspace::IsolatedWorkspaceConfig,
+};
 use eos_protocol::{
     audit::{build_event, Lane, ToolCallSection},
     decode, encode, Envelope, ErrorKind, Request,
 };
 
 use crate::audit::buffer::{safe_emit, AuditBuffer};
-use crate::config::{AuditConfig, DaemonConfig};
 use crate::dispatcher::{DispatchContext, OpTable};
 use crate::error::DaemonError;
 use crate::invocation_registry::InFlightRegistry;

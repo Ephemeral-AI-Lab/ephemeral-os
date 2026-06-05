@@ -1,22 +1,19 @@
 //! Sqlite-only database configuration and the validated [`DatabaseUrl`] newtype.
 //!
-//! Network database backends are rejected at parse time (GC-eos-config-02);
-//! `pool_pre_ping`/`max_overflow` from the Python `DatabaseConfig` are dropped as
-//! connection-server concepts meaningless for embedded sqlite (GC-eos-config-03).
+//! Network database backends are rejected at parse time; agent-core is
+//! sqlite-only.
 
-use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use crate::error::ConfigError;
 
-/// The local sqlite database url default (`sections/database.py:14`).
+/// The local sqlite database url default.
 pub const DEFAULT_SQLITE_DATABASE_URL: &str = "sqlite:///./.ephemeralos/ephemeralos.db";
 
-/// A validated local-sqlite database url. Network backends are rejected at parse
-/// time (`api-parse-dont-validate`, `type-no-stringly`).
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, JsonSchema)]
+/// A validated local-sqlite database url; network backends are rejected at parse
+/// time (parse, don't validate).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(transparent)] // serialize as a plain string, not a 1-tuple
-#[schemars(transparent)] // render as a plain string in the JSON Schema (matches Python `str`)
 pub struct DatabaseUrl(String);
 
 impl DatabaseUrl {
@@ -30,7 +27,7 @@ impl DatabaseUrl {
     pub fn parse(raw: impl Into<String>) -> Result<Self, ConfigError> {
         let raw = raw.into();
         let lower = raw.to_ascii_lowercase();
-        // Reject network DBs (fail fast) — non-goal: no PostgreSQL in agent-core.
+        // Reject network databases (fail fast): agent-core is sqlite-only.
         let network_scheme = lower.starts_with("postgres://")
             || lower.starts_with("postgresql://")
             || lower.starts_with("mysql://");
@@ -62,15 +59,14 @@ impl<'de> Deserialize<'de> for DatabaseUrl {
     }
 }
 
-/// Sqlite-only database configuration. The new `busy_timeout_ms`/`wal`/
-/// `foreign_keys` controls are the agent-core sqlite tunables (plan §4).
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+/// Sqlite-only database configuration.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 #[non_exhaustive]
 pub struct DatabaseConfig {
     /// Database url; rejects network backends at parse time.
     pub url: DatabaseUrl,
-    /// Connection-pool size. Range-checked `>= 1` during validation.
+    /// Connection-pool size. Range-checked `>= 1` by [`DatabaseConfig::validate`].
     pub pool_size: u32,
     /// Sqlite `busy_timeout` in milliseconds.
     pub busy_timeout_ms: u64,
@@ -110,12 +106,11 @@ impl DatabaseConfig {
 
 #[cfg(test)]
 mod tests {
-    #![allow(clippy::unwrap_used)] // unwrap permitted in tests (err-no-unwrap-prod)
+    #![allow(clippy::unwrap_used)]
     use super::*;
 
-    // AC-eos-config-06: network DB urls are rejected; local sqlite parses.
     #[test]
-    fn test_network_database_url_rejected() {
+    fn network_database_urls_rejected() {
         assert!(matches!(
             DatabaseUrl::parse("postgresql://user:pw@db.example.com/app"),
             Err(ConfigError::NetworkDatabaseUrl(_))
@@ -128,7 +123,6 @@ mod tests {
             DatabaseUrl::parse("mysql://host/app"),
             Err(ConfigError::NetworkDatabaseUrl(_))
         ));
-        // local sqlite parses
         assert_eq!(
             DatabaseUrl::parse("sqlite:///./x.db").unwrap().as_str(),
             "sqlite:///./x.db"
@@ -144,9 +138,8 @@ mod tests {
         ));
     }
 
-    // AC-eos-config-02 (database subset): defaults match the Python source.
     #[test]
-    fn test_database_defaults() {
+    fn defaults_are_set() {
         let d = DatabaseConfig::default();
         assert_eq!(d.url.as_str(), DEFAULT_SQLITE_DATABASE_URL);
         assert_eq!(d.pool_size, 5);

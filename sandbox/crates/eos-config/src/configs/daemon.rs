@@ -8,6 +8,8 @@ use std::path::{Path, PathBuf};
 use serde::Deserialize;
 use thiserror::Error;
 
+pub use super::command_session::CommandSessionConfig;
+
 #[derive(Debug, Clone, PartialEq, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct DaemonConfig {
@@ -43,19 +45,6 @@ pub struct AuditConfig {
     pub ring_max_events: u64,
     pub ring_max_bytes: u64,
     pub pressure_threshold: f64,
-}
-
-#[derive(Debug, Clone, PartialEq, Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct CommandSessionConfig {
-    pub scratch_root: PathBuf,
-    pub default_yield_time_ms: u64,
-    pub quiet_ms: u64,
-    pub cancel_wait_ms: u64,
-    pub output_drain_grace_ms: u64,
-    pub max_session_s: u64,
-    pub output_ring_max_bytes: usize,
-    pub output_spool_max_bytes: u64,
 }
 
 #[derive(Debug, Clone, PartialEq, Deserialize)]
@@ -282,14 +271,19 @@ mod tests {
     #[test]
     fn config_plugin_child_module_does_not_own_config_rs() {
         let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
+        let daemon_dir = manifest_dir
+            .ancestors()
+            .nth(2)
+            .expect("eos-config lives below sandbox/crates")
+            .join("crates/eos-daemon");
         assert!(
-            !manifest_dir.join("src/plugin/config.rs").exists(),
-            "plugin config must be owned by eos-daemon/src/runtime/config.rs"
+            !daemon_dir.join("src/services/plugins/config.rs").exists(),
+            "plugin config must be owned by eos-config/src/configs/daemon.rs"
         );
     }
 
     fn prd_config() -> DaemonConfig {
-        eos_config::load_prd()
+        crate::load_prd()
             .expect("prd config loads")
             .section("daemon")
             .expect("daemon section deserializes")

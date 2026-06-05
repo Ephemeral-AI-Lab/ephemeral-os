@@ -7,6 +7,10 @@ use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 
 use anyhow::{anyhow, Context, Result};
+use eos_config::configs::{
+    daemon::{DaemonConfig, DaemonServerConfig},
+    isolated_workspace::IsolatedWorkspaceConfig,
+};
 
 /// Start, spawn, or call the async RPC server.
 ///
@@ -52,18 +56,18 @@ pub(crate) fn run(args: std::env::Args) -> Result<()> {
 }
 
 struct DaemonRuntimeConfig {
-    daemon: eos_daemon::config::DaemonConfig,
-    isolated_workspace: eos_isolated_workspace::config::IsolatedWorkspaceConfig,
+    daemon: DaemonConfig,
+    isolated_workspace: IsolatedWorkspaceConfig,
 }
 
 fn load_runtime_config() -> Result<DaemonRuntimeConfig> {
     let doc = eos_config::load_prd().context("load sandbox/config/prd.yml")?;
     let daemon = doc
-        .section::<eos_daemon::config::DaemonConfig>("daemon")
+        .section::<DaemonConfig>("daemon")
         .context("deserialize daemon config section")?;
     daemon.validate().context("validate daemon config")?;
     let isolated_workspace = doc
-        .section::<eos_isolated_workspace::config::IsolatedWorkspaceConfig>("isolated_workspace")
+        .section::<IsolatedWorkspaceConfig>("isolated_workspace")
         .context("deserialize isolated_workspace config section")?;
     isolated_workspace
         .validate()
@@ -94,10 +98,7 @@ struct DaemonCliConfig {
 }
 
 impl DaemonCliConfig {
-    fn parse(
-        args: std::env::Args,
-        server_defaults: &eos_daemon::config::DaemonServerConfig,
-    ) -> Result<Self> {
+    fn parse(args: std::env::Args, server_defaults: &DaemonServerConfig) -> Result<Self> {
         let mut socket_path = server_defaults.socket_path.clone();
         let mut pid_path = server_defaults.pid_path.clone();
         let mut log_path = None;

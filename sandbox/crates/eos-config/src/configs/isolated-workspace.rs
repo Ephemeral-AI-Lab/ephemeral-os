@@ -1,7 +1,7 @@
 //! Typed schema for the isolated workspace section of `sandbox/config/prd.yml`.
 //!
-//! This is schema-only; runtime loading remains on the existing env/default path
-//! until the config-infra wiring phase.
+//! The daemon loads this through `eos-config` and injects it into the isolated
+//! workspace lifecycle.
 
 use std::path::{Path, PathBuf};
 
@@ -191,7 +191,7 @@ mod tests {
     }
 
     fn prd_config() -> IsolatedWorkspaceConfig {
-        eos_config::load_prd()
+        crate::load_prd()
             .expect("prd config loads")
             .section("isolated_workspace")
             .expect("isolated_workspace section deserializes")

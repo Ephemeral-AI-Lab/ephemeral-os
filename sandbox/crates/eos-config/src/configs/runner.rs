@@ -108,7 +108,7 @@ mod tests {
     }
 
     fn prd_config() -> RunnerConfig {
-        eos_config::load_prd()
+        crate::load_prd()
             .expect("prd config loads")
             .section("runner")
             .expect("runner section deserializes")

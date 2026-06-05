@@ -590,10 +590,12 @@ fn configure_isolated_workspace_for_test(
     audit_path: Option<&Path>,
 ) -> TestResult {
     let doc = eos_config::load_prd()?;
-    let daemon = doc.section::<eos_daemon::config::DaemonConfig>("daemon")?;
+    let daemon = doc.section::<eos_config::configs::daemon::DaemonConfig>("daemon")?;
     daemon.validate()?;
     let mut isolated = doc
-        .section::<eos_isolated_workspace::config::IsolatedWorkspaceConfig>("isolated_workspace")?;
+        .section::<eos_config::configs::isolated_workspace::IsolatedWorkspaceConfig>(
+            "isolated_workspace",
+        )?;
     isolated.enabled = enabled;
     if let Some(scratch_root) = scratch_root {
         isolated.scratch_root = scratch_root.to_path_buf();

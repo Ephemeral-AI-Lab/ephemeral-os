@@ -16,9 +16,12 @@ use anyhow::Result;
 pub mod audit;
 pub mod cas;
 pub mod client;
-pub mod config;
 pub mod container;
 pub mod pool;
+
+pub mod config {
+    pub use eos_config::configs::e2e_test::*;
+}
 
 pub use config::WorkloadConfig;
 pub use pool::{NodeLease, NodePool};

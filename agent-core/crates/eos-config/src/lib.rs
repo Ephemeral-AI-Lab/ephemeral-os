@@ -20,18 +20,17 @@
 #![forbid(unsafe_code)]
 #![warn(missing_docs)]
 
-mod attempt;
-mod database;
+mod configs;
 mod document;
 mod error;
 mod loader;
 mod markdown;
-mod providers;
 
-pub use attempt::AttemptConfig;
-pub use database::{DatabaseConfig, DatabaseUrl, DEFAULT_SQLITE_DATABASE_URL};
+pub use configs::{
+    AttemptConfig, DatabaseConfig, DatabaseUrl, ProvidersConfig, RetryConfig,
+    DEFAULT_SQLITE_DATABASE_URL,
+};
 pub use document::ConfigDocument;
 pub use error::ConfigError;
 pub use loader::{load, load_with_override};
 pub use markdown::parse_markdown_frontmatter;
-pub use providers::{ProvidersConfig, RetryConfig};

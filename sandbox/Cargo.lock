@@ -145,6 +145,7 @@ dependencies = [
 name = "eos-command-session"
 version = "0.1.0"
 dependencies = [
+ "eos-config",
  "eos-workspace-api",
  "nix 0.29.0",
  "rustix 0.38.44",
@@ -157,6 +158,7 @@ dependencies = [
 name = "eos-config"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "serde",
  "serde_path_to_error",
  "serde_yaml",
@@ -195,7 +197,6 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "eos-config",
- "eos-isolated-workspace",
  "eos-protocol",
  "serde",
  "serde_json",
@@ -328,7 +329,6 @@ dependencies = [
  "anyhow",
  "eos-config",
  "eos-daemon",
- "eos-isolated-workspace",
  "eos-ns-holder",
  "eos-overlay",
  "eos-protocol",

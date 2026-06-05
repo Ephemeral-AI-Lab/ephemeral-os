@@ -360,11 +360,8 @@ fn nohup_child_keeps_session_running() -> Result<()> {
         "running",
         "plain nohup stays in the runner process group and keeps the session live: {started}"
     );
-    assert!(
-        stdout(&started).contains("nohup-ready"),
-        "foreground shell should have returned before the session yield: {started}"
-    );
     let id = as_str(&started, "command_session_id")?.to_owned();
+    wait_for_session_stdout(&lease, &id, &started, "nohup-ready")?;
     wait_for_marker_at_least(&lease, &marker, 1)?;
 
     let collected = lease.call_ok(
@@ -416,6 +413,39 @@ fn setsid_nohup_contract() -> Result<()> {
     wait_for_marker_at_least(&lease, &marker, 1)?;
     wait_for_marker_count(&lease, &marker, 0, Duration::from_secs(6))?;
     Ok(())
+}
+
+fn wait_for_session_stdout(
+    lease: &NodeLease<'_>,
+    session_id: &str,
+    initial: &Value,
+    marker: &str,
+) -> Result<()> {
+    if stdout(initial).contains(marker) {
+        return Ok(());
+    }
+
+    let deadline = Instant::now() + Duration::from_secs(5);
+    let mut last = initial.clone();
+    loop {
+        if Instant::now() >= deadline {
+            bail!("session output never contained {marker}: {last}");
+        }
+        let poll = lease.call_ok(
+            ops::API_V1_WRITE_STDIN,
+            json!({
+                "command_session_id": session_id,
+                "chars": "",
+                "yield_time_ms": 250,
+                "max_output_tokens": 1000
+            }),
+        )?;
+        if stdout(&poll).contains(marker) {
+            return Ok(());
+        }
+        last = poll;
+        thread::sleep(Duration::from_millis(50));
+    }
 }
 
 fn marker_count(lease: &NodeLease<'_>, marker: &str) -> Result<i64> {

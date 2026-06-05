@@ -9,9 +9,10 @@ use std::path::{Path, PathBuf};
 use std::time::Duration;
 
 use anyhow::{bail, Context, Result};
-use eos_config::ConfigDocument;
-use eos_isolated_workspace::config::IsolatedWorkspaceConfig;
 use serde::Deserialize;
+
+use crate::configs::isolated_workspace::IsolatedWorkspaceConfig;
+use crate::ConfigDocument;
 
 /// How nodes (containers) map to tests.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -270,7 +271,7 @@ impl Config {
     /// # Errors
     /// Returns an error if either config document cannot be read or validated.
     pub fn load_test_override(path: impl AsRef<Path>) -> Result<(Self, ConfigDocument)> {
-        let doc = eos_config::load_test_override(path).context("load E2E test override")?;
+        let doc = crate::load_test_override(path).context("load E2E test override")?;
         let config = Self::from_document(&doc)?;
         Ok((config, doc))
     }
@@ -414,7 +415,7 @@ mod tests {
 
     #[test]
     fn prd_e2e_section_deserializes_and_validates() {
-        let doc = eos_config::load_prd().expect("prd config loads");
+        let doc = crate::load_prd().expect("prd config loads");
         EosE2eTestConfig::from_document(&doc).expect("prd eos_e2e_test config is valid");
     }
 
@@ -454,7 +455,7 @@ mod tests {
     }
 
     fn prd_config() -> EosE2eTestConfig {
-        let doc = eos_config::load_prd().expect("prd config loads");
+        let doc = crate::load_prd().expect("prd config loads");
         EosE2eTestConfig::from_document(&doc).expect("eos_e2e_test section deserializes")
     }
 

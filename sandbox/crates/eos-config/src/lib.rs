@@ -1,8 +1,9 @@
 //! Generic loader for the sandbox runtime configuration document.
 //!
-//! This crate owns file loading, path validation, YAML parsing, and merge
-//! semantics only. Runtime crates own their typed schemas and validation.
+//! This crate owns file loading, path validation, YAML parsing, merge semantics,
+//! and typed schemas for the sandbox config sections.
 
+pub mod configs;
 mod document;
 mod error;
 mod merge;

@@ -1,21 +1,19 @@
-//! Markdown configuration parsing helpers (`config/markdown.py`).
+//! Markdown configuration parsing helper.
 //!
 //! A `---`-delimited YAML frontmatter split shared by every config-format
-//! consumer (skills, context-engine, agent profiles). Owned here per the anchor
-//! "upstream owns the shared contract" rule; `eos-skills` calls it rather than
-//! re-implementing the split.
+//! consumer (skills, agent profiles, plugins). Owned here as the shared
+//! contract; consumers call it rather than re-implementing the split.
 
 use serde_yaml::{Mapping, Value};
 
 /// Split a Markdown document into its YAML frontmatter mapping and body text.
 ///
-/// Faithful port of `config/markdown.py:parse_markdown_frontmatter`:
 /// - returns `(empty, full_content)` when the document has no leading
 ///   `---`-delimited block or the closing `---` is missing;
-/// - **swallows** malformed YAML (`serde_yaml` parse error) by returning
-///   `(empty, full_content)`, matching Python's `except yaml.YAMLError`;
+/// - **swallows** malformed YAML (a `serde_yaml` parse error) by returning
+///   `(empty, full_content)`;
 /// - coerces a non-mapping frontmatter (e.g. a bare scalar or list) to an empty
-///   mapping, matching Python's `if not isinstance(frontmatter, dict)`;
+///   mapping;
 /// - otherwise returns the parsed mapping and the trimmed post-frontmatter body.
 #[must_use]
 pub fn parse_markdown_frontmatter(content: &str) -> (Mapping, String) {

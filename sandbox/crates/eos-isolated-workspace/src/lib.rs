@@ -30,11 +30,14 @@
 pub mod audit;
 pub mod caps;
 pub mod command_session;
-pub mod config;
 pub mod error;
 pub mod network;
 mod ops;
 pub mod session;
+
+pub mod config {
+    pub use eos_config::configs::isolated_workspace::*;
+}
 
 pub use audit::{AuditSink, JsonlAuditSink, DEFAULT_AUDIT_JSONL_PATH};
 pub use caps::{

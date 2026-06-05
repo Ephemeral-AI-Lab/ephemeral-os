@@ -50,9 +50,11 @@ code near their owner.
 
 ## Schema Ownership
 
-Runtime schema lives in crate-root `src/config.rs` files only. Child modules
-consume typed sub-configs from their parent crate, for example
-`crate::config::PluginRuntimeConfig`.
+Runtime schema lives in `crates/eos-config/src/configs/<module-name>.rs`.
+Multi-word crate modules use their crate-style filename, for example
+`isolated-workspace.rs` exports the `isolated_workspace` Rust module. Runtime
+crates may re-export those typed schemas through compatibility modules, but they
+do not own duplicate `src/config.rs` schema files.
 
 Local test `config/` folders are YAML-only override folders. They do not define
 Rust schema.

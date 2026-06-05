@@ -1,6 +1,6 @@
 use super::super::*;
 
-use eos_isolated_workspace::config::{
+use eos_config::configs::isolated_workspace::{
     IsolatedWorkspaceConfig, Rfc1918Egress as ConfigRfc1918Egress,
 };
 use eos_layerstack::LayerStack;

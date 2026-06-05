@@ -13,8 +13,10 @@ use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex, MutexGuard, OnceLock, PoisonError};
 
+use eos_config::configs::isolated_workspace::{
+    IsolatedWorkspaceConfig, Rfc1918Egress as ConfigRfc1918Egress,
+};
 use eos_isolated_workspace::{
-    config::{IsolatedWorkspaceConfig, Rfc1918Egress as ConfigRfc1918Egress},
     CallerId, IsolatedError, IsolatedSession, JsonlAuditSink, ResourceCaps,
     Rfc1918Egress as RuntimeRfc1918Egress,
 };

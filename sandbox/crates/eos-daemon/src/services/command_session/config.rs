@@ -23,17 +23,7 @@ pub(super) fn command_session_config() -> CommandSessionConfig {
 
 #[cfg(target_os = "linux")]
 pub(super) fn runtime_command_session_config() -> RuntimeCommandSessionConfig {
-    let config = command_session_config();
-    RuntimeCommandSessionConfig {
-        scratch_root: config.scratch_root,
-        default_yield_time_ms: config.default_yield_time_ms,
-        quiet_ms: config.quiet_ms,
-        cancel_wait_ms: config.cancel_wait_ms,
-        output_drain_grace_ms: config.output_drain_grace_ms,
-        max_session_s: config.max_session_s,
-        output_ring_max_bytes: config.output_ring_max_bytes,
-        output_spool_max_bytes: config.output_spool_max_bytes,
-    }
+    command_session_config()
 }
 
 #[cfg(target_os = "linux")]

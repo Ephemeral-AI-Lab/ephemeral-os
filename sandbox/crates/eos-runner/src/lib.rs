@@ -41,13 +41,16 @@
 //! (kernel overlay mount and upper-dir capture primitives).
 #![deny(unsafe_op_in_unsafe_fn)]
 
-pub mod config;
 pub mod error;
 pub mod fresh_ns;
 #[cfg(target_os = "linux")]
 mod path;
 pub mod request;
 pub mod setns;
+
+pub mod config {
+    pub use eos_config::configs::runner::*;
+}
 
 pub use error::RunnerError;
 pub use request::{Fd, NsFds, RunMode, RunRequest, RunResult, RunnerVerb, ToolCall, WorkspaceRoot};

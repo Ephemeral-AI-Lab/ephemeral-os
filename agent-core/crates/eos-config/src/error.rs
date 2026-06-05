@@ -14,14 +14,13 @@ pub enum ConfigError {
     #[error("config document root must be a YAML mapping")]
     InvalidDocumentRoot,
     /// A network database url (a `postgres`/`mysql` scheme, or a credentialed
-    /// `//host` authority) was supplied; agent-core is sqlite-only and rejects
-    /// it (spec-conventions §2 — no `PostgreSQL`).
+    /// `//host` authority) was supplied; agent-core is sqlite-only and rejects it.
     #[error("network database urls are not supported in agent-core: {0}")]
     NetworkDatabaseUrl(String),
     /// A database url that is neither a `sqlite:` scheme nor a local `.db` path.
     #[error("unsupported database url (expected local sqlite): {0}")]
     UnsupportedDatabaseUrl(String),
-    /// A numeric field fell outside its allowed range (Pydantic `ge`/`gt` parity).
+    /// A numeric field fell outside its allowed range.
     #[error("config value '{field}' is out of range: {detail}")]
     OutOfRange {
         /// Dotted config path of the offending field (e.g. `database.pool_size`).

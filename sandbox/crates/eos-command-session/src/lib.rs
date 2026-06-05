@@ -1,6 +1,5 @@
 //! Workspace-mode-agnostic command-session runtime.
 
-mod config;
 mod error;
 mod manager;
 pub mod output;
@@ -12,6 +11,10 @@ mod wait;
 
 #[cfg(target_os = "linux")]
 pub mod process;
+
+pub mod config {
+    pub use eos_config::configs::command_session::*;
+}
 
 pub use config::CommandSessionConfig;
 pub use error::CommandSessionError;
