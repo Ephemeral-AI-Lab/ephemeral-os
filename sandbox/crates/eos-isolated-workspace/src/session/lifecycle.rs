@@ -203,7 +203,7 @@ where
             let existing = self
                 .by_caller
                 .get(caller_id)
-                .and_then(|handle_id| self.handles.get(handle_id))
+                .and_then(|workspace_handle_id| self.handles.get(workspace_handle_id))
                 .ok_or_else(|| IsolatedError::SetupFailed {
                     step: "agent handle index is inconsistent".to_owned(),
                 })?;
@@ -240,7 +240,7 @@ where
             caller_id: caller_id.clone(),
             lease_id: snapshot.lease_id.clone(),
             manifest_version: snapshot.manifest_version,
-            manifest_root_hash: snapshot.root_hash.clone(),
+            manifest_root_hash: snapshot.manifest_root_hash.clone(),
             workspace_root,
             scratch_dir,
             upperdir,
@@ -329,10 +329,10 @@ where
                 "caller_id is required".to_owned(),
             ));
         }
-        let Some(handle_id) = self.by_caller.remove(caller_id) else {
+        let Some(workspace_handle_id) = self.by_caller.remove(caller_id) else {
             return Err(IsolatedError::NotOpen);
         };
-        let Some(handle) = self.handles.remove(&handle_id) else {
+        let Some(handle) = self.handles.remove(&workspace_handle_id) else {
             return Err(IsolatedError::NotOpen);
         };
         let timer = Instant::now();

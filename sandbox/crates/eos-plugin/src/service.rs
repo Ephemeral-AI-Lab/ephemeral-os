@@ -115,7 +115,13 @@ impl PluginServiceKey {
         Ok(())
     }
 
-    /// Manifest key used in status and refresh health checks.
+    /// Deterministic, content-addressed reuse key for a service instance.
+    ///
+    /// Despite the `_id` suffix this is NOT a per-spawn unique handle: it is a
+    /// stable digest of the identity dimensions that define instance sharing
+    /// (layer-stack root, plugin, service, profile digest), so two payloads with
+    /// the same dimensions intentionally resolve to — and reuse — one instance.
+    /// Used as the manifest key in status and refresh health checks.
     #[must_use]
     pub fn service_instance_id(&self) -> String {
         format!(

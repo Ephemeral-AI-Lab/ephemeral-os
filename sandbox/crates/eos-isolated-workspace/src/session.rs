@@ -126,7 +126,7 @@ where
     pub fn get_handle(&self, caller_id: &CallerId) -> Option<WorkspaceHandle> {
         self.by_caller
             .get(caller_id)
-            .and_then(|handle_id| self.handles.get(handle_id))
+            .and_then(|workspace_handle_id| self.handles.get(workspace_handle_id))
             .cloned()
     }
 
@@ -137,10 +137,10 @@ where
 
     /// Emit an isolated tool-call audit event for an active handle.
     pub fn record_tool_call(&mut self, caller_id: &CallerId, mut payload: Value) {
-        let Some(handle_id) = self.by_caller.get(caller_id).cloned() else {
+        let Some(workspace_handle_id) = self.by_caller.get(caller_id).cloned() else {
             return;
         };
-        let Some(handle) = self.handles.get_mut(&handle_id) else {
+        let Some(handle) = self.handles.get_mut(&workspace_handle_id) else {
             return;
         };
         handle.last_activity = monotonic_seconds();

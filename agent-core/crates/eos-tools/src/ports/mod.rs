@@ -45,7 +45,7 @@ pub trait Sealed {}
 
 /// A started delegated workflow handle (returned by [`WorkflowControlPort::start`]).
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct StartedWorkflow {
+pub struct StartedWorkflowHandle {
     /// The persisted workflow id.
     pub workflow_id: WorkflowId,
     /// The agent-facing background handle (`wf_<n>`, Python `workflow_task_id`).
@@ -76,7 +76,7 @@ pub trait WorkflowControlPort: Sealed + Send + Sync {
         parent_task_id: &TaskId,
         agent_run_id: &AgentRunId,
         workflow_goal: &str,
-    ) -> Result<StartedWorkflow, ToolError>;
+    ) -> Result<StartedWorkflowHandle, ToolError>;
 
     /// Render delegated-workflow progress (and terminal outcomes when available).
     async fn status(
@@ -283,7 +283,7 @@ pub trait BackgroundSupervisorPort: Sealed + Send + Sync {
     /// Track a workflow that was just delegated by this agent run. The workflow
     /// control port owns persisted workflow state; the background supervisor owns
     /// the handle for in-flight accounting and parent-exit cancellation.
-    async fn register_workflow(&self, agent_run_id: &AgentRunId, workflow: &StartedWorkflow);
+    async fn register_workflow(&self, agent_run_id: &AgentRunId, workflow: &StartedWorkflowHandle);
 
     /// Mark a tracked workflow handle cancelled in the supervisor ledger.
     async fn cancel_workflow_record(

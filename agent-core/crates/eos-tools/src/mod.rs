@@ -41,7 +41,7 @@ pub use hooks::{Hook, HookDenial, HookOutcome};
 pub use ports::{
     BackgroundInflightReport, BackgroundSupervisorPort, CommandSessionSupervisorPort,
     IsolatedWorkspacePort, NotificationSink, OutstandingWorkflow, PlanReducer, PlanSubmissionPort,
-    PlanTask, PlannerPlan, SpawnedSubagent, StartedSubagent, StartedWorkflow, SubmissionAck,
+    PlanTask, PlannerPlan, SpawnedSubagent, StartedSubagent, StartedWorkflowHandle, SubmissionAck,
     SystemNotification, WorkflowControlPort,
 };
 pub use registry::config::{ToolConfig, ToolConfigError, ToolConfigSet};

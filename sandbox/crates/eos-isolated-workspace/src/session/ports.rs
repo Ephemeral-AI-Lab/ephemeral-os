@@ -76,7 +76,7 @@ pub trait NamespaceRuntimePort {
     fn mount_overlay(
         &self,
         handle: &WorkspaceHandle,
-        layer_paths: &[String],
+        layer_paths: &[PathBuf],
     ) -> Result<(), IsolatedError>;
 
     /// Configure DNS inside the namespace; returns whether the fallback applied.

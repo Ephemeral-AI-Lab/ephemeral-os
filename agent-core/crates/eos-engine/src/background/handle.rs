@@ -111,7 +111,7 @@ impl BackgroundSupervisorHandle {
                 format!("parent-exit cleanup: {reason}"),
                 None,
             ),
-            command_session_id: command.command_session_id.as_str().to_owned(),
+            command_session_id: command.command_session_id.clone(),
         };
         if let Err(err) =
             eos_sandbox_api::cancel_command_session(&*self.transport, &command.sandbox_id, &request)

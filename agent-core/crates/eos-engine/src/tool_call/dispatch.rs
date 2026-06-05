@@ -224,9 +224,9 @@ async fn dispatch_foreground_tools(
 }
 
 /// Run an `ask_advisor` call: its pre-hooks (e.g. `BlockInIsolatedMode`) gate the
-/// call, then — if they pass — the engine drives an ephemeral advisor agent
+/// call, then — if they pass — the engine drives an advisor agent
 /// (`advisor::run_advisor`). The advisor run is an engine primitive, so this is
-/// the faithful Rust form of Python `ask_advisor` calling `run_ephemeral_agent`.
+/// the faithful Rust form of Python `ask_advisor` calling `run_agent`.
 async fn run_advisor_call(
     ctx: &QueryContext,
     conversation: &Arc<[Message]>,
@@ -390,7 +390,7 @@ pub async fn dispatch_assistant_tools(
         };
 
         events.push(started_event(call));
-        // `ask_advisor` is engine-driven (an ephemeral advisor agent), not a
+        // `ask_advisor` is engine-driven (an advisor agent), not a
         // generic foreground executor — route it out of the parallel fan-out.
         if tool.name.as_builtin() == Some(ToolName::AskAdvisor) {
             advisor_runnable.push((call.clone(), tool.clone()));

@@ -180,7 +180,7 @@ mod tests {
 
     use crate::ports::{
         BackgroundInflightReport, BackgroundSupervisorPort, OutstandingWorkflow, Sealed,
-        SpawnedSubagent, StartedWorkflow, WorkflowControlPort,
+        SpawnedSubagent, StartedWorkflowHandle, WorkflowControlPort,
     };
     use crate::ToolResult;
 
@@ -232,7 +232,7 @@ mod tests {
             }
         }
 
-        async fn register_workflow(&self, _: &AgentRunId, _: &StartedWorkflow) {}
+        async fn register_workflow(&self, _: &AgentRunId, _: &StartedWorkflowHandle) {}
 
         async fn cancel_workflow_record(&self, _: &WorkflowSessionId, _: &str) -> bool {
             false
@@ -258,7 +258,7 @@ mod tests {
             _: &TaskId,
             _: &AgentRunId,
             _: &str,
-        ) -> Result<StartedWorkflow, ToolError> {
+        ) -> Result<StartedWorkflowHandle, ToolError> {
             unreachable!("deny short-circuits before start")
         }
 

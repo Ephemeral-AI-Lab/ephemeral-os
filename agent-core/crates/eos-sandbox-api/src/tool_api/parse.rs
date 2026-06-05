@@ -410,7 +410,8 @@ pub(crate) fn parse_exec_command_result(
         status,
         exit_code,
         output,
-        command_session_id: truthy_string(response, "command_session_id"),
+        command_session_id: truthy_string(response, "command_session_id")
+            .and_then(|raw| raw.parse().ok()),
         changed_path_kinds: parse_changed_path_kinds_unfiltered(response.get("changed_path_kinds")),
         mutation_source: optional_string(response, "mutation_source").unwrap_or_default(),
     })

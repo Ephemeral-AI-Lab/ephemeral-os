@@ -1,6 +1,6 @@
 use std::collections::BTreeMap;
 
-use eos_types::JsonObject;
+use eos_types::{CommandSessionId, JsonObject};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -37,7 +37,7 @@ pub(in crate::tools::sandbox) struct CommandToolOutput {
     pub(in crate::tools::sandbox) exit_code: Option<i32>,
     pub(in crate::tools::sandbox) output: BTreeMap<String, String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub(in crate::tools::sandbox) command_session_id: Option<String>,
+    pub(in crate::tools::sandbox) command_session_id: Option<CommandSessionId>,
     pub(in crate::tools::sandbox) stdout: String,
     pub(in crate::tools::sandbox) stderr: String,
     pub(in crate::tools::sandbox) changed_paths: Vec<String>,

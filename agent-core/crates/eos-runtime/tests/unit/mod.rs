@@ -12,7 +12,7 @@ use eos_agent_def::{AgentDefinition, AgentRegistry, AgentRole};
 use eos_engine::{EngineError, EngineStream, EventSource, StreamEvent};
 use eos_llm_client::{ContentBlock, LlmRequest};
 use eos_state::{RequestStatus, TaskRole, TaskStatus, WorkflowStatus};
-use eos_tools::StartedWorkflow;
+use eos_tools::StartedWorkflowHandle;
 use eos_types::AgentRunId;
 use serde_json::json;
 
@@ -949,7 +949,7 @@ async fn dropped_handle_cancels_background_and_fails_running_root() {
     let root_task_id = handle.root_task_id.clone();
     let token = state.shutdown_token();
     let supervisor = handle.supervisor.clone();
-    let workflow = StartedWorkflow {
+    let workflow = StartedWorkflowHandle {
         workflow_id: eos_types::WorkflowId::new_v4(),
         workflow_task_id: "wf_drop".parse().unwrap(),
     };
@@ -1241,7 +1241,7 @@ mod command_session_delivery {
 }
 
 // --- Subagent lifecycle (subagent-remediation-PLAN §5): a real child agent runs
-// through `run_ephemeral_agent`, its result surfaces as `finished`, and a live
+// through `run_agent`, its result surfaces as `finished`, and a live
 // subagent is drained (not wedged) at the parent's terminal (D1/D2/D3/D9).
 mod subagent_lifecycle {
     use std::num::NonZeroU32;

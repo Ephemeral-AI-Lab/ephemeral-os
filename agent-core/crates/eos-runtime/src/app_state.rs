@@ -144,7 +144,7 @@ impl AppState {
         self.shutdown.clone()
     }
 
-    /// Bundle the explicit run handles `eos_engine::run_ephemeral_agent` needs (in
+    /// Bundle the explicit run handles `eos_engine::run_agent` needs (in
     /// place of `&AppState`, advisor remediation plan §6). Cheap (Arc/`String`
     /// clones); the root-agent and delegated-workflow runners pass this in.
     pub(crate) fn engine_run_handles(&self) -> eos_engine::EngineRunHandles {

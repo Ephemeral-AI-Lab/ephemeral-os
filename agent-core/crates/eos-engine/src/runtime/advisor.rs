@@ -3,8 +3,8 @@
 //! `dispatch_assistant_tools` intercepts `ToolName::AskAdvisor` and calls
 //! [`run_advisor`], which builds the advisor's two seed user messages from the
 //! live caller transcript, resolves the `advisor` `AgentDefinition`, and drives
-//! [`run_ephemeral_agent`](crate::run_ephemeral_agent) to completion —
-//! the faithful Rust form of Python `ask_advisor.py` calling `run_ephemeral_agent`
+//! [`run_agent`](crate::run_agent) to completion —
+//! the faithful Rust form of Python `ask_advisor.py` calling `run_agent`
 //! (the crate DAG forbids `eos-tools` from calling back into the engine, so the
 //! run is driven here, next to the loop). The advisor's `submit_advisor_feedback`
 //! verdict rides back into the caller transcript by construction (D3).
@@ -31,7 +31,7 @@ use serde_json::Value;
 
 use crate::notifications::NotificationService;
 
-use super::agent_loop::{run_ephemeral_agent, EngineRunHandles, EphemeralRunInput};
+use super::agent_loop::{run_agent, EngineRunHandles, AgentRunInput};
 
 const MAX_TRANSCRIPT_MESSAGES: usize = 40;
 const MAX_TOOL_RESULT_CHARS: usize = 4096;
@@ -124,9 +124,9 @@ pub(crate) async fn run_advisor(
     let agent_run_id = AgentRunId::new_v4();
     let advisor_meta = advisor_metadata(ctx, &agent_run_id);
 
-    let run = run_ephemeral_agent(
+    let run = run_agent(
         handles,
-        EphemeralRunInput {
+        AgentRunInput {
             agent: advisor_def,
             initial_messages: vec![
                 Message::from_user_text(user_msg_1),

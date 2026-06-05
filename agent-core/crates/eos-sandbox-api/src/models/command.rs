@@ -1,5 +1,6 @@
 use std::collections::BTreeMap;
 
+use eos_types::CommandSessionId;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
@@ -50,7 +51,7 @@ pub struct ExecCommandResult {
     pub output: CommandOutput,
     /// The managed command-session id, when one was opened.
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub command_session_id: Option<String>,
+    pub command_session_id: Option<CommandSessionId>,
     /// Per-path mutation kinds reported by the daemon.
     #[serde(default)]
     pub changed_path_kinds: BTreeMap<String, String>,
@@ -167,7 +168,7 @@ pub struct ExecStdinRequest {
     #[serde(flatten)]
     pub base: SandboxRequestBase,
     /// Target command-session id.
-    pub command_session_id: String,
+    pub command_session_id: CommandSessionId,
     /// Characters (stdin) to write.
     pub chars: String,
     /// Yield window in milliseconds before returning partial output.
@@ -189,5 +190,5 @@ pub struct CommandSessionCancelRequest {
     #[serde(flatten)]
     pub base: SandboxRequestBase,
     /// Target command-session id.
-    pub command_session_id: String,
+    pub command_session_id: CommandSessionId,
 }

@@ -6,7 +6,7 @@
 use std::sync::Arc;
 
 use eos_agent_def::AgentName;
-use eos_engine::{run_ephemeral_agent, EphemeralRunInput, NotificationService};
+use eos_engine::{run_agent, AgentRunInput, NotificationService};
 use eos_llm_client::Message;
 use eos_state::{RequestStatus, TaskStatus};
 use eos_tools::{
@@ -82,9 +82,9 @@ pub(crate) async fn run_root_agent(state: AppState, params: RootAgentParams) {
         },
     );
 
-    let run = run_ephemeral_agent(
+    let run = run_agent(
         &state.engine_run_handles(),
-        EphemeralRunInput {
+        AgentRunInput {
             agent: root_def,
             initial_messages: vec![Message::from_user_text(params.prompt.clone())],
             task_id: Some(params.root_task_id.clone()),

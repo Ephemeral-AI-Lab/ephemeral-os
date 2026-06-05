@@ -1,4 +1,4 @@
-//! `eos-engine` — one ephemeral agent query loop, tool dispatch, background
+//! `eos-engine` — one agent query loop, tool dispatch, background
 //! supervision, notifications, prompt reports, and the event-source seam.
 #![forbid(unsafe_code)]
 
@@ -23,7 +23,7 @@ pub use query::{
     ProviderEventSource, QueryContext, QueryExitReason, QueryRunRequest, QueryStream,
 };
 pub use runtime::{
-    run_ephemeral_agent, EngineRunHandles, EphemeralRun, EphemeralRunInput, EventCallback,
+    run_agent, EngineRunHandles, AgentRunResult, AgentRunInput, EventCallback,
     EventSourceFactory, ToolRegistryExtender,
 };
 pub use support::EngineError;

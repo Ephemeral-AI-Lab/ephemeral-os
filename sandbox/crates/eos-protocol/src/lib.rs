@@ -16,11 +16,13 @@ pub mod audit;
 pub mod canonical;
 pub mod cas;
 pub mod envelope;
+pub mod ids;
 pub mod models;
 pub mod ops;
 pub mod version;
 
 pub use canonical::canonicalize;
+pub use ids::{CallerId, InvocationId, WorkspaceHandleId};
 pub use cas::{
     aggregate_layer_changes, layer_digest, manifest_root_hash, CasError, LayerChange, LayerPath,
     LayerRef, Manifest,

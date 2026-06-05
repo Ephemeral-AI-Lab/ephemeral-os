@@ -51,7 +51,7 @@ mod tests {
     use serde_json::json;
 
     use super::*;
-    use crate::ports::{OutstandingWorkflow, Sealed, StartedWorkflow, WorkflowControlPort};
+    use crate::ports::{OutstandingWorkflow, Sealed, StartedWorkflowHandle, WorkflowControlPort};
     use crate::testsupport::metadata;
     use eos_types::{AgentRunId, TaskId, WorkflowId, WorkflowSessionId};
 
@@ -65,7 +65,7 @@ mod tests {
             _: &TaskId,
             _: &AgentRunId,
             _: &str,
-        ) -> Result<StartedWorkflow, ToolError> {
+        ) -> Result<StartedWorkflowHandle, ToolError> {
             unreachable!("depth hook never starts workflows")
         }
 

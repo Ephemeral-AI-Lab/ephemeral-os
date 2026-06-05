@@ -1,5 +1,5 @@
-//! The single "drive one ephemeral agent" loop driver — the engine primitive
-//! `run_ephemeral_agent`, relocated here from `eos-runtime` (advisor remediation
+//! The single "drive one agent" loop driver — the engine primitive
+//! `run_agent`, relocated here from `eos-runtime` (advisor remediation
 //! plan §2a).
 //!
 //! It wraps the engine's own `build_query_context` + `run_query` seam, so it is
@@ -48,7 +48,7 @@ pub type EventCallback = Arc<dyn Fn(&StreamEvent) + Send + Sync>;
 /// ignorant of plugin catalog internals.
 pub type ToolRegistryExtender = Arc<dyn Fn(&mut ToolRegistry) + Send + Sync>;
 
-/// The explicit run handles `run_ephemeral_agent` needs, in place of `&AppState`
+/// The explicit run handles `run_agent` needs, in place of `&AppState`
 /// (constraint 6). Cheap to clone (every field is an `Arc` or a small value); it
 /// rides on the [`QueryContext`](crate::query::QueryContext) so the advisor
 /// dispatch path can spawn a child run with the same handles.
@@ -88,9 +88,9 @@ impl std::fmt::Debug for EngineRunHandles {
     }
 }
 
-/// Inputs for [`run_ephemeral_agent`].
+/// Inputs for [`run_agent`].
 #[derive(Debug)]
-pub struct EphemeralRunInput {
+pub struct AgentRunInput {
     /// The resolved agent definition to run.
     pub agent: AgentDefinition,
     /// The seed transcript (typically one user message).
@@ -102,16 +102,16 @@ pub struct EphemeralRunInput {
     /// The typed tool execution context threaded through every tool call.
     pub tool_metadata: ExecutionMetadata,
     /// The per-request notification sink shared with the tools/heartbeat; the
-    /// loop drains it each turn (anchor §7 instance identity). Ephemeral helper
+    /// loop drains it each turn (anchor §7 instance identity). Helper
     /// runs (e.g. the advisor) pass a fresh, standalone service.
     pub notifier: NotificationService,
     /// Whether to record an `agent_run` row (create + finish).
     pub persist_agent_run: bool,
 }
 
-/// The result of one ephemeral agent run, read from the loop's `QueryContext`.
+/// The result of one agent run, read from the loop's `QueryContext`.
 #[derive(Debug)]
-pub struct EphemeralRun {
+pub struct AgentRunResult {
     /// The terminal tool result, when a terminal tool succeeded.
     pub terminal_result: Option<ToolResult>,
     /// A framework-fault summary if context construction or the stream broke.
@@ -169,14 +169,14 @@ impl Drop for BackgroundRunFinalizer {
     }
 }
 
-/// Drive one ephemeral agent to completion.
-pub async fn run_ephemeral_agent(
+/// Drive one agent to completion.
+pub async fn run_agent(
     handles: &EngineRunHandles,
-    input: EphemeralRunInput,
+    input: AgentRunInput,
     on_event: Option<&EventCallback>,
-) -> EphemeralRun {
+) -> AgentRunResult {
     let run_started = Instant::now();
-    let EphemeralRunInput {
+    let AgentRunInput {
         agent,
         mut initial_messages,
         task_id,
@@ -258,7 +258,7 @@ pub async fn run_ephemeral_agent(
             if persisted {
                 finish_run(handles, &agent_run_id, Some(&summary)).await;
             }
-            return EphemeralRun {
+            return AgentRunResult {
                 terminal_result: None,
                 error: Some(summary),
             };
@@ -297,7 +297,7 @@ pub async fn run_ephemeral_agent(
     if persisted {
         finish_run(handles, &agent_run_id, error.as_deref()).await;
     }
-    EphemeralRun {
+    AgentRunResult {
         terminal_result,
         error,
     }

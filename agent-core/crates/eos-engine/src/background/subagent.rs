@@ -1,6 +1,6 @@
 //! Subagent orchestration: the `BackgroundSupervisorPort` impl on
 //! [`BackgroundSupervisorHandle`] — validate, build the child run, drive
-//! `run_ephemeral_agent` on a detached task, and settle the record when it
+//! `run_agent` on a detached task, and settle the record when it
 //! finishes. Ports `tools/subagent/run_subagent/run_subagent.py` (driver +
 //! validation + terminal forwarding) and `tools/subagent/control.py`
 //! (status/result taxonomy + JSON payload).
@@ -16,7 +16,7 @@ use eos_agent_def::{AgentName, AgentType};
 use eos_llm_client::Message;
 use eos_tools::ports::{
     BackgroundInflightReport, BackgroundSupervisorPort, SpawnedSubagent, StartedSubagent,
-    StartedWorkflow,
+    StartedWorkflowHandle,
 };
 use eos_tools::{ExecutionMetadata, ToolError, ToolResult, WorkflowControlPort};
 use eos_types::{AgentRunId, JsonObject, SubagentSessionId, WorkflowSessionId};
@@ -25,7 +25,7 @@ use serde_json::{json, Value};
 use super::handle::BackgroundSupervisorHandle;
 use super::supervisor::{BackgroundTaskStatus, SubagentRecord};
 use crate::notifications::NotificationService;
-use crate::{run_ephemeral_agent, EphemeralRun, EphemeralRunInput};
+use crate::{run_agent, AgentRunResult, AgentRunInput};
 
 const RECURSION_MESSAGE: &str = "run_subagent: subagents may not spawn further subagents. \
      This is a hard contract — handle the work directly or submit your findings via the terminal tool.";
@@ -84,7 +84,7 @@ const fn status_value(status: BackgroundTaskStatus) -> &'static str {
 /// must validate correctness from state, not from tracing.
 fn trace_background_tool(
     event_type: &str,
-    task_id: &str,
+    background_task_id: &SubagentSessionId,
     agent_run_id: &AgentRunId,
     status: BackgroundTaskStatus,
     exit_code: Option<i64>,
@@ -92,7 +92,7 @@ fn trace_background_tool(
     tracing::debug!(
         target: "eos_engine::diagnostics",
         event_type,
-        background_task_id = task_id,
+        background_task_id = background_task_id.as_str(),
         task_kind = "subagent",
         tool_name = "run_subagent",
         agent_run_id = agent_run_id.as_str(),
@@ -102,12 +102,12 @@ fn trace_background_tool(
     );
 }
 
-/// Classify a finished ephemeral run into a settled `(status, result, exit_code)`
+/// Classify a finished agent run into a settled `(status, result, exit_code)`
 /// — port of `run_subagent.py:231-251`. Terminal present → `Completed` + the
 /// terminal verbatim (incl. its `is_error`) + `subagent_terminal_called:true`;
 /// crash / no-terminal → `Failed` with the distinct Python messages +
 /// `subagent_terminal_called:false`.
-fn classify_run(run: EphemeralRun) -> (BackgroundTaskStatus, ToolResult, i64) {
+fn classify_run(run: AgentRunResult) -> (BackgroundTaskStatus, ToolResult, i64) {
     match run.terminal_result {
         Some(terminal) => {
             let exit_code = i64::from(terminal.is_error);
@@ -237,7 +237,7 @@ impl BackgroundSupervisorPort for BackgroundSupervisorHandle {
         // run foreground-only — no supervisor registration, no heartbeat notify.
         child_meta.command_session_supervisor = None;
 
-        let run_input = EphemeralRunInput {
+        let run_input = AgentRunInput {
             agent: sub_def,
             initial_messages: vec![
                 Message::from_user_text(prompt),
@@ -267,14 +267,14 @@ impl BackgroundSupervisorPort for BackgroundSupervisorHandle {
             // (D8). Mirrors Python emitting `started` synchronously inside launch().
             trace_background_tool(
                 "background_tool.started",
-                task_id.as_str(),
+                &task_id,
                 &caller_agent_run_id,
                 BackgroundTaskStatus::Running,
                 None,
             );
             let driver_task_id = task_id.clone();
             let join = tokio::spawn(async move {
-                let run = run_ephemeral_agent(&handles, run_input, None).await;
+                let run = run_agent(&handles, run_input, None).await;
                 let (status, result, exit_code) = classify_run(run);
                 {
                     let mut supervisor = driver_inner.lock().await;
@@ -283,7 +283,7 @@ impl BackgroundSupervisorPort for BackgroundSupervisorHandle {
                 }
                 trace_background_tool(
                     terminal_event_type(status),
-                    driver_task_id.as_str(),
+                    &driver_task_id,
                     &driver_agent_run_id,
                     status,
                     Some(exit_code),
@@ -370,7 +370,7 @@ impl BackgroundSupervisorPort for BackgroundSupervisorHandle {
         };
         trace_background_tool(
             "background_tool.cancelled",
-            subagent_session_id.as_str(),
+            subagent_session_id,
             &agent_run_id,
             BackgroundTaskStatus::Cancelled,
             None,
@@ -400,7 +400,7 @@ impl BackgroundSupervisorPort for BackgroundSupervisorHandle {
             .cancel_subagents_for_agent_run(agent_run_id)
     }
 
-    async fn register_workflow(&self, agent_run_id: &AgentRunId, workflow: &StartedWorkflow) {
+    async fn register_workflow(&self, agent_run_id: &AgentRunId, workflow: &StartedWorkflowHandle) {
         self.inner()
             .lock()
             .await
@@ -461,7 +461,7 @@ mod tests {
     // reports `finished` — classification keys on terminal presence, not is_error.
     #[test]
     fn terminal_with_error_settles_completed_and_finished() {
-        let (status, result, exit_code) = classify_run(EphemeralRun {
+        let (status, result, exit_code) = classify_run(AgentRunResult {
             terminal_result: Some(ToolResult::error("partial but delivered")),
             error: None,
         });
@@ -478,7 +478,7 @@ mod tests {
 
     #[test]
     fn terminal_ok_settles_completed_finished() {
-        let (status, result, exit_code) = classify_run(EphemeralRun {
+        let (status, result, exit_code) = classify_run(AgentRunResult {
             terminal_result: Some(ToolResult::ok("findings")),
             error: None,
         });
@@ -495,7 +495,7 @@ mod tests {
     // D3: a crash with no terminal settles Failed + subagent_terminal_called:false.
     #[test]
     fn crash_settles_failed() {
-        let (status, result, exit_code) = classify_run(EphemeralRun {
+        let (status, result, exit_code) = classify_run(AgentRunResult {
             terminal_result: None,
             error: Some("provider exploded".to_owned()),
         });
@@ -514,7 +514,7 @@ mod tests {
     // D3: exiting without a terminal settles Failed with the distinct message.
     #[test]
     fn no_terminal_settles_failed() {
-        let (status, result, _) = classify_run(EphemeralRun {
+        let (status, result, _) = classify_run(AgentRunResult {
             terminal_result: None,
             error: None,
         });

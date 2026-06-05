@@ -71,8 +71,8 @@ impl LayerStackSnapshotPort for DaemonLayerStackPort {
         Ok(SnapshotLease {
             lease_id: lease.lease_id,
             manifest_version: lease.manifest_version,
-            root_hash: lease.root_hash,
-            layer_paths: lease.layer_paths,
+            manifest_root_hash: lease.root_hash,
+            layer_paths: lease.layer_paths.into_iter().map(PathBuf::from).collect(),
         })
     }
 
@@ -184,7 +184,7 @@ impl NamespaceRuntimePort for DaemonNamespaceRuntime {
     fn mount_overlay(
         &self,
         handle: &WorkspaceHandle,
-        layer_paths: &[String],
+        layer_paths: &[PathBuf],
     ) -> Result<(), IsolatedError> {
         if test_runtime_stub_enabled() || handle.holder_pid <= 0 {
             return Ok(());
@@ -206,7 +206,7 @@ impl NamespaceRuntimePort for DaemonNamespaceRuntime {
                     background: false,
                 },
                 workspace_root: WorkspaceRoot(PathBuf::from(&handle.workspace_root)),
-                layer_paths: layer_paths.iter().map(PathBuf::from).collect(),
+                layer_paths: layer_paths.to_vec(),
                 upperdir: Some(handle.upperdir.clone()),
                 workdir: Some(handle.workdir.clone()),
                 ns_fds: ns_fds_from_map(&handle.ns_fds),

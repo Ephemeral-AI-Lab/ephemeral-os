@@ -4,13 +4,7 @@ use std::path::PathBuf;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-/// Caller identity supplied by the daemon for one fresh operation.
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
-pub struct CallerId(pub String);
-
-/// Tool invocation identity supplied by the daemon for one fresh operation.
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
-pub struct InvocationId(pub String);
+pub use eos_protocol::{CallerId, InvocationId};
 
 /// Root of the LayerStack workspace whose snapshot is used by the operation.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]

@@ -180,7 +180,7 @@ pub async fn start_request(
 
     // Per-request delegated-workflow runtime (Python `_create_runtime`). The
     // single supervisor carries the engine run handles the subagent driver needs
-    // (it calls `run_ephemeral_agent` directly).
+    // (it calls `run_agent` directly).
     let supervisor = Arc::new(BackgroundSupervisorHandle::new(
         state.engine_run_handles(),
         state.transport.clone(),

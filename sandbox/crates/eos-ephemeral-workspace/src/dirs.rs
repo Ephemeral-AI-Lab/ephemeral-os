@@ -70,9 +70,6 @@ impl RunDirCleanup {
         Self { path: Some(path) }
     }
 
-    pub fn disarm(&mut self) {
-        self.path = None;
-    }
 }
 
 impl Drop for RunDirCleanup {

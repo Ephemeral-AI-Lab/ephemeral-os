@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 use eos_sandbox_api::ExecCommandRequest;
-use eos_types::{CommandSessionId, InvocationId, JsonObject};
+use eos_types::{InvocationId, JsonObject};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
@@ -83,15 +83,8 @@ impl ToolExecutor for ExecCommand {
             (&ctx.command_session_supervisor, &result.command_session_id)
         {
             if result.is_running() {
-                if let Ok(session_id) = session_id.parse::<CommandSessionId>() {
-                    port.register(
-                        &session_id,
-                        sandbox_id,
-                        ctx.require_agent_run_id()?,
-                        &command,
-                    )
+                port.register(session_id, sandbox_id, ctx.require_agent_run_id()?, &command)
                     .await;
-                }
             }
         }
         Ok(command_tool_result(&result))

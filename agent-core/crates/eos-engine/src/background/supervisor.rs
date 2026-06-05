@@ -7,7 +7,7 @@
 
 use std::collections::HashMap;
 
-use eos_tools::{BackgroundInflightReport, StartedWorkflow, ToolResult};
+use eos_tools::{BackgroundInflightReport, StartedWorkflowHandle, ToolResult};
 use eos_types::{
     AgentRunId, CommandSessionId, JsonObject, SandboxId, SubagentSessionId, WorkflowSessionId,
 };
@@ -168,7 +168,7 @@ impl BackgroundTaskSupervisor {
     /// Register a delegated workflow as background work. The workflow-control
     /// adapter owns persisted state; this supervisor only tracks the handle for
     /// counts and parent-exit cleanup.
-    pub fn register_workflow(&mut self, agent_run_id: &AgentRunId, workflow: &StartedWorkflow) {
+    pub fn register_workflow(&mut self, agent_run_id: &AgentRunId, workflow: &StartedWorkflowHandle) {
         self.workflows.insert(
             workflow.workflow_task_id.clone(),
             WorkflowBackgroundRecord {
@@ -357,7 +357,7 @@ impl BackgroundTaskSupervisor {
 
 #[cfg(test)]
 mod tests {
-    use eos_tools::{StartedWorkflow, ToolResult};
+    use eos_tools::{StartedWorkflowHandle, ToolResult};
 
     use super::*;
 
@@ -425,7 +425,7 @@ mod tests {
     #[test]
     fn workflow_registration_is_counted_and_cancellable() {
         let mut supervisor = BackgroundTaskSupervisor::new();
-        let workflow = StartedWorkflow {
+        let workflow = StartedWorkflowHandle {
             workflow_id: eos_types::WorkflowId::new_v4(),
             workflow_task_id: "wf_1".parse().expect("workflow handle"),
         };

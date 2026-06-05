@@ -244,35 +244,6 @@ pub struct OccSection {
     pub current_manifest_version: Option<i64>,
 }
 
-/// `plugin` section. `plugin_id`/`plugin_kind` are required (always present).
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct PluginSection {
-    pub plugin_id: String,
-    pub plugin_kind: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub plugin_version: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub plugin_tool_name: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub request_bytes: Option<i64>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub response_bytes: Option<i64>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub duration_ms: Option<f64>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub status: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub error_kind: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub message_hash: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub workspace_handle_id: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub caller_id: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub peak_resident_bytes: Option<i64>,
-}
-
 /// `background_tool` section. `background_work_id` required.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct BackgroundToolSection {

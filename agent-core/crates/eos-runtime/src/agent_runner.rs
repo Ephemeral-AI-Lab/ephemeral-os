@@ -17,7 +17,7 @@
 use std::sync::{Arc, OnceLock};
 
 use async_trait::async_trait;
-use eos_engine::{run_ephemeral_agent, EphemeralRunInput, NotificationService};
+use eos_engine::{run_agent, AgentRunInput, NotificationService};
 use eos_llm_client::Message;
 use eos_tools::{
     BackgroundSupervisorPort, CommandSessionSupervisorPort, NotificationSink, PlanSubmissionPort,
@@ -104,9 +104,9 @@ impl AgentRunner for RuntimeAgentRunner {
             prompt.push_str(skill);
         }
 
-        let run = run_ephemeral_agent(
+        let run = run_agent(
             &self.state.engine_run_handles(),
-            EphemeralRunInput {
+            AgentRunInput {
                 agent: launch.agent_def().clone(),
                 initial_messages: vec![Message::from_user_text(prompt)],
                 task_id: Some(launch.task_id().clone()),

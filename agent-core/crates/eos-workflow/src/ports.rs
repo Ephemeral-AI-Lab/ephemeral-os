@@ -147,14 +147,14 @@ impl WorkflowControlPort for WorkflowControlAdapter {
         parent_task_id: &eos_state::TaskId,
         _agent_run_id: &AgentRunId,
         workflow_goal: &str,
-    ) -> Result<eos_tools::StartedWorkflow, ToolError> {
+    ) -> Result<eos_tools::StartedWorkflowHandle, ToolError> {
         let started = self
             .starter
             .start(workflow_goal, parent_task_id)
             .await
             .map_err(workflow_control_error)?;
         let workflow_task_id = self.handles.handle_for_workflow(&started.workflow_id)?;
-        Ok(eos_tools::StartedWorkflow {
+        Ok(eos_tools::StartedWorkflowHandle {
             workflow_task_id,
             workflow_id: started.workflow_id,
         })

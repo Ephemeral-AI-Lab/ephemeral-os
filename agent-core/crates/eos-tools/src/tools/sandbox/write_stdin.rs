@@ -72,7 +72,7 @@ impl ToolExecutor for WriteStdin {
         // flag, so the tool no longer escalates to a cancel RPC.
         let write_request = ExecStdinRequest {
             base: request_base(ctx, "write_stdin")?,
-            command_session_id: command_session_id.as_str().to_owned(),
+            command_session_id: command_session_id.clone(),
             chars: parsed.chars.clone(),
             yield_time_ms: Some(parsed.yield_time_ms),
             max_output_tokens: parsed.max_output_tokens,

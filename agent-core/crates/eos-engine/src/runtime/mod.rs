@@ -4,6 +4,6 @@ mod resource_sample;
 
 pub(crate) use advisor::run_advisor;
 pub use agent_loop::{
-    run_ephemeral_agent, EngineRunHandles, EphemeralRun, EphemeralRunInput, EventCallback,
+    run_agent, EngineRunHandles, AgentRunResult, AgentRunInput, EventCallback,
     EventSourceFactory, ToolRegistryExtender,
 };

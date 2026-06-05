@@ -120,23 +120,6 @@ impl PluginServiceRegistry {
         Ok(())
     }
 
-    /// Mark a registered service stale.
-    ///
-    /// # Errors
-    ///
-    /// Returns [`PluginError::Ensure`] when `key` has not been registered.
-    pub fn mark_stale(&mut self, key: &PluginServiceKey, reason: impl Into<String>) -> Result<()> {
-        let status = self.services.get_mut(key).ok_or_else(|| {
-            PluginError::Ensure(format!(
-                "service {} is not registered",
-                key.service_instance_id()
-            ))
-        })?;
-        status.state = PluginServiceState::Stale;
-        status.last_error = Some(reason.into());
-        Ok(())
-    }
-
     #[must_use]
     pub fn statuses(&self) -> Vec<&PluginServiceStatus> {
         self.services.values().collect()

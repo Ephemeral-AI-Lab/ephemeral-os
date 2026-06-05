@@ -15,7 +15,7 @@ use crate::core::metadata::ExecutionMetadata;
 use crate::core::result::ToolResult;
 use crate::ports::{
     BackgroundInflightReport, BackgroundSupervisorPort, OutstandingWorkflow, Sealed,
-    SpawnedSubagent, StartedWorkflow, WorkflowControlPort,
+    SpawnedSubagent, StartedWorkflowHandle, WorkflowControlPort,
 };
 use crate::runtime::executor::ToolExecutor;
 use crate::testsupport::metadata;
@@ -81,7 +81,7 @@ impl BackgroundSupervisorPort for RecordingSupervisor {
         self.inflight_report(Some(agent_run_id)).await
     }
 
-    async fn register_workflow(&self, _agent_run_id: &AgentRunId, workflow: &StartedWorkflow) {
+    async fn register_workflow(&self, _agent_run_id: &AgentRunId, workflow: &StartedWorkflowHandle) {
         self.workflows
             .lock()
             .unwrap()
@@ -121,7 +121,7 @@ impl WorkflowControlPort for OutstandingControl {
         _parent_task_id: &TaskId,
         _agent_run_id: &AgentRunId,
         _workflow_goal: &str,
-    ) -> Result<StartedWorkflow, ToolError> {
+    ) -> Result<StartedWorkflowHandle, ToolError> {
         unreachable!("outstanding short-circuit returns before start")
     }
 
@@ -185,8 +185,8 @@ impl WorkflowControlPort for StartingControl {
         _parent_task_id: &TaskId,
         _agent_run_id: &AgentRunId,
         _workflow_goal: &str,
-    ) -> Result<StartedWorkflow, ToolError> {
-        Ok(StartedWorkflow {
+    ) -> Result<StartedWorkflowHandle, ToolError> {
+        Ok(StartedWorkflowHandle {
             workflow_id: WorkflowId::new_v4(),
             workflow_task_id: "wf_1".parse()?,
         })

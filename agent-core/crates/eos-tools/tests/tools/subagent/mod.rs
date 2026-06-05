@@ -15,7 +15,7 @@ use crate::core::metadata::ExecutionMetadata;
 use crate::core::result::ToolResult;
 use crate::ports::{
     BackgroundInflightReport, BackgroundSupervisorPort, Sealed, SpawnedSubagent, StartedSubagent,
-    StartedWorkflow, WorkflowControlPort,
+    StartedWorkflowHandle, WorkflowControlPort,
 };
 use crate::runtime::executor::ToolExecutor;
 use crate::testsupport::metadata;
@@ -84,7 +84,7 @@ impl BackgroundSupervisorPort for FakeBackgroundSupervisor {
         }
     }
 
-    async fn register_workflow(&self, _agent_run_id: &AgentRunId, _workflow: &StartedWorkflow) {}
+    async fn register_workflow(&self, _agent_run_id: &AgentRunId, _workflow: &StartedWorkflowHandle) {}
 
     async fn cancel_workflow_record(
         &self,

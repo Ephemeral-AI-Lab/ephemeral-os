@@ -55,7 +55,7 @@ pub async fn exec_stdin(
     let mut payload = daemon_request_identity_fields(&request.base);
     payload.insert(
         "command_session_id".to_owned(),
-        Value::String(request.command_session_id.clone()),
+        Value::String(request.command_session_id.to_string()),
     );
     payload.insert("chars".to_owned(), Value::String(request.chars.clone()));
     if let Some(yield_time_ms) = request.yield_time_ms {
@@ -90,7 +90,7 @@ pub async fn cancel_command_session(
     let mut payload = daemon_request_identity_fields(&request.base);
     payload.insert(
         "command_session_id".to_owned(),
-        Value::String(request.command_session_id.clone()),
+        Value::String(request.command_session_id.to_string()),
     );
     let response = transport
         .call(

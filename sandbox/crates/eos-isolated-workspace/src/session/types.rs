@@ -3,13 +3,7 @@ use std::path::PathBuf;
 
 use crate::network::VethAllocation;
 
-/// Newtype for a caller identity (the enter/exit key).
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct CallerId(pub String);
-
-/// Newtype for a per-workspace handle id.
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct WorkspaceHandleId(pub String);
+pub use eos_protocol::{CallerId, WorkspaceHandleId};
 
 /// A snapshot lease borrowed from the layer stack (snapshot/lease HINGE only).
 ///
@@ -23,9 +17,9 @@ pub struct SnapshotLease {
     /// Active manifest version captured at acquire time.
     pub manifest_version: i64,
     /// Active manifest root hash captured at acquire time.
-    pub root_hash: String,
+    pub manifest_root_hash: String,
     /// Lower-layer paths to feed the overlay mount (newest-first).
-    pub layer_paths: Vec<String>,
+    pub layer_paths: Vec<PathBuf>,
 }
 
 /// Per-workspace state. Not a subclass of any overlay handle (C1).
@@ -50,7 +44,7 @@ pub struct WorkspaceHandle {
     /// Overlay workdir.
     pub workdir: PathBuf,
     /// Lower-layer paths pinned by the snapshot lease.
-    pub layer_paths: Vec<String>,
+    pub layer_paths: Vec<PathBuf>,
     /// Open namespace FDs by name (`user`/`mnt`/`pid`/`net`).
     pub ns_fds: HashMap<String, i32>,
     /// ns-holder PID (`0` = not spawned).

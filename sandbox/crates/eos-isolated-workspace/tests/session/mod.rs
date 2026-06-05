@@ -118,8 +118,8 @@ impl LayerStackSnapshotPort for RecordingLayerStack {
         Ok(SnapshotLease {
             lease_id: "lease-1".to_owned(),
             manifest_version: 7,
-            root_hash: "root-hash".to_owned(),
-            layer_paths: vec!["/lower".to_owned()],
+            manifest_root_hash: "root-hash".to_owned(),
+            layer_paths: vec![PathBuf::from("/lower")],
         })
     }
 
@@ -151,7 +151,7 @@ impl NamespaceRuntimePort for NoopRuntime {
     fn mount_overlay(
         &self,
         _handle: &WorkspaceHandle,
-        _layer_paths: &[String],
+        _layer_paths: &[PathBuf],
     ) -> Result<(), IsolatedError> {
         Ok(())
     }

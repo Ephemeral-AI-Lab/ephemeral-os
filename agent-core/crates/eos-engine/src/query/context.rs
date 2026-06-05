@@ -91,7 +91,7 @@ pub struct QueryContext {
     /// Optional agent-core observability sink.
     pub audit: Option<Arc<dyn AuditSink>>,
     /// The explicit run handles the engine-driven advisor dispatch needs to spawn
-    /// a child `run_ephemeral_agent` (advisor remediation plan §2a). `None` in
+    /// a child `run_agent` (advisor remediation plan §2a). `None` in
     /// tests that never exercise `ask_advisor`; the gate itself reads only the
     /// transcript, never these handles.
     pub run_handles: Option<EngineRunHandles>,
