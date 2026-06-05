@@ -40,20 +40,18 @@ fn spawn_inflight_exec(lease: &NodeLease<'_>, invocation_id: &str) -> JoinHandle
     let caller_id = lease.caller_id().to_owned();
     let invocation_id = invocation_id.to_owned();
     thread::spawn(move || {
-        client
-            .request(
-                ops::API_V1_EXEC_COMMAND,
-                &invocation_id,
-                &json!({
-                    "layer_stack_root": root,
-                    "caller_id": caller_id,
-                    "background": true,
-                    "cmd": "sleep 8",
-                    "yield_time_ms": 5000,
-                    "timeout_seconds": 120,
-                    "max_output_tokens": 200
-                }),
-            )
-            .map_err(Into::into)
+        client.request(
+            ops::API_V1_EXEC_COMMAND,
+            &invocation_id,
+            &json!({
+                "layer_stack_root": root,
+                "caller_id": caller_id,
+                "background": true,
+                "cmd": "sleep 8",
+                "yield_time_ms": 5000,
+                "timeout_seconds": 120,
+                "max_output_tokens": 200
+            }),
+        )
     })
 }

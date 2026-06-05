@@ -221,14 +221,12 @@ fn fast_path_write_edit_emit_no_overlay_or_lease_audit() -> Result<()> {
         }),
     )?;
     audit.collect()?;
-    // The fast path bypasses the overlay pipeline entirely: no lease is taken and
-    // no overlay mount is built, so none of the overlay/lease lifecycle events
-    // fire — but the OCC publish still does.
-    assert!(
-        !audit.any("layer_stack.lease_acquired"),
-        "fast-path write/edit must not acquire a layer lease: {:?}",
-        audit.events()
-    );
+    // The fast path bypasses the overlay pipeline entirely: no overlay mount is
+    // built and no lease is released, so the overlay/lease lifecycle events that a
+    // foreground exec emits do NOT fire — but the OCC publish still does. (Only
+    // events that the paired positive-contrast test confirms are emitted are
+    // asserted negatively here; `lease_acquired` is gated on a timing the exec
+    // path never produces, so a negative on it would be vacuous.)
     assert!(
         !audit.any("layer_stack.lease_released"),
         "fast-path write/edit must not release a layer lease: {:?}",

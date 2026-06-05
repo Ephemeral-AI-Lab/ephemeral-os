@@ -1,4 +1,4 @@
-use anyhow::Result;
+use anyhow::{ensure, Result};
 use eos_protocol::ops;
 use serde_json::json;
 
@@ -23,12 +23,12 @@ fn isolated_write_does_not_publish_or_release_lease() -> Result<()> {
             ops::API_V1_WRITE_FILE,
             json!({"path": "iso/no-publish.txt", "content": "private\n", "overwrite": true}),
         )?;
-        assert!(
+        ensure!(
             !as_bool(&write, "published")?,
             "isolated write must not publish to OCC: {write}"
         );
         audit.collect()?;
-        assert!(
+        ensure!(
             !audit.any("layer_stack.lease_released"),
             "isolated write must not release a public layer lease: {:?}",
             audit.events()
