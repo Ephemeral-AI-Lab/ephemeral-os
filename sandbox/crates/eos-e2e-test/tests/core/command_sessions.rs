@@ -5,7 +5,7 @@ use anyhow::{bail, Context, Result};
 use eos_protocol::ops;
 use serde_json::{json, Value};
 
-use crate::common::{array, as_i64, as_str, live_pool_or_skip, stdout};
+use crate::support::{array, as_i64, as_str, live_pool_or_skip, stdout};
 
 fn start_sleeping_session(lease: &eos_e2e_test::NodeLease<'_>, marker: &str) -> Result<String> {
     let started = lease.call_ok(

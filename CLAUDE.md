@@ -133,6 +133,9 @@ cross-module map now lives under `docs/architecture`.
   progress impossible.
 - Keep your edits scoped to your task, but integrate with concurrent changes
   when needed for correctness.
+- Feel free to launch dynamic workflows and subagents for parallel execution,
+  exploration, and redundancy checks when the scopes can stay disjoint; reconcile
+  their findings before acting on or reporting results.
 - If tests fail because of another agent's in-progress work, it is acceptable to
   help fix those failures when the fix is clear and compatible with your task;
   then continue your own work.

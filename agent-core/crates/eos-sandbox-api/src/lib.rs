@@ -32,25 +32,23 @@ pub use models::{
     CommandOutput, CommandSessionCancelRequest, ConflictInfo, EditFileRequest, EditFileResult,
     EnterIsolatedWorkspaceRequest, EnterIsolatedWorkspaceResult, ExecCommandRequest,
     ExecCommandResult, ExecStdinRequest, ExitIsolatedWorkspaceRequest, ExitIsolatedWorkspaceResult,
-    GlobRequest, GlobResult, GrepOutputMode, GrepRequest, GrepResult, Intent, LifecycleError,
-    LifecycleResultBase, ReadFileRequest, ReadFileResult, SandboxCaller, SandboxRequestBase,
-    SandboxResultBase, SearchReplaceEdit, ToolCallRequest, Workspace, WriteFileRequest,
-    WriteFileResult,
+    Intent, LifecycleError, LifecycleResultBase, ReadFileRequest, ReadFileResult, SandboxCaller,
+    SandboxRequestBase, SandboxResultBase, SearchReplaceEdit, ToolCallRequest, Workspace,
+    WriteFileRequest, WriteFileResult,
 };
 pub use ops::DaemonOp;
 pub use timeouts::{
     exec_dispatch_timeout, EDIT_FILE_TIMEOUT_S, EXEC_DEFAULT_COMMAND_TIMEOUT_S,
-    EXEC_DISPATCH_GRACE_S, GLOB_TIMEOUT_S, GREP_TIMEOUT_S, READ_FILE_TIMEOUT_S,
-    WRITE_FILE_TIMEOUT_S,
+    EXEC_DISPATCH_GRACE_S, READ_FILE_TIMEOUT_S, WRITE_FILE_TIMEOUT_S,
 };
 pub use tool_api::{
     cancel, cancel_command_session, collect_command_completions, command_session_count, edit_file,
     ensure_plugin_package, enter_isolated_workspace, exec_command, exec_stdin,
-    exit_isolated_workspace, glob, grep, heartbeat, inflight_count, isolated_active,
-    plugin_dispatch, plugin_ensure, read_file, write_file, PluginDependencyScope,
-    PluginDispatchRequest, PluginEnsureRequest, PluginManifestDescriptor,
-    PluginOperationDescriptor, PluginPackageContract, PluginPackageDescriptor,
-    PluginPackageEnsureRequest, PluginPackageFile, PluginPackageTree, PluginRefreshStrategy,
-    PluginServiceDescriptor, PluginServiceMode, PluginSetupDescriptor,
+    exit_isolated_workspace, heartbeat, inflight_count, isolated_active, plugin_dispatch,
+    plugin_ensure, read_file, write_file, PluginDependencyScope, PluginDispatchRequest,
+    PluginEnsureRequest, PluginManifestDescriptor, PluginOperationDescriptor,
+    PluginPackageContract, PluginPackageDescriptor, PluginPackageEnsureRequest, PluginPackageFile,
+    PluginPackageTree, PluginRefreshStrategy, PluginServiceDescriptor, PluginServiceMode,
+    PluginSetupDescriptor,
 };
 pub use transport::SandboxTransport;

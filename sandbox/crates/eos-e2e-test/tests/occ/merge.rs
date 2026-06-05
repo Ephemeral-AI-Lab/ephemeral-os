@@ -6,7 +6,7 @@ use eos_e2e_test::next_invocation_id;
 use eos_protocol::ops;
 use serde_json::{json, Value};
 
-use crate::common::{array, as_bool, as_str, conflict_reason, live_pool_or_skip};
+use crate::support::{array, as_bool, as_str, conflict_reason, live_pool_or_skip};
 
 #[test]
 fn concurrent_conflicting_writes() -> Result<()> {

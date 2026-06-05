@@ -341,33 +341,7 @@ fn parse_kind(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::sync::atomic::{AtomicU64, Ordering};
-
-    fn temp_root(tag: &str) -> PathBuf {
-        static COUNTER: AtomicU64 = AtomicU64::new(0);
-        let n = COUNTER.fetch_add(1, Ordering::Relaxed);
-        let dir = std::env::temp_dir().join(format!(
-            "eos_plugin_catalog_manifest_{}_{tag}_{n}",
-            std::process::id()
-        ));
-        let _ = std::fs::remove_dir_all(&dir);
-        std::fs::create_dir_all(&dir).expect("create temp root");
-        dir
-    }
-
-    fn make_plugin(root: &Path, name: &str, manifest_md: &str, files: &[&str]) -> PathBuf {
-        let dir = root.join(name);
-        std::fs::create_dir_all(&dir).expect("create plugin dir");
-        std::fs::write(dir.join("plugin.md"), manifest_md).expect("write plugin.md");
-        for f in files {
-            let path = dir.join(f);
-            if let Some(parent) = path.parent() {
-                std::fs::create_dir_all(parent).expect("create parent");
-            }
-            std::fs::write(&path, b"# stub\n").expect("write stub file");
-        }
-        dir
-    }
+    use crate::test_support::{make_plugin, temp_root};
 
     const LSP_MANIFEST: &str = "\
 ---
@@ -423,7 +397,7 @@ Pyright-backed Python language tools.
     #[test]
     fn parses_lsp_manifest() {
         let root = temp_root("lsp_ok");
-        let dir = make_plugin(&root, "lsp", LSP_MANIFEST, LSP_FILES);
+        let dir = make_plugin(&root, "lsp", Some(LSP_MANIFEST), LSP_FILES);
         let manifest = parse_plugin_manifest(&dir).expect("parses");
         assert_eq!(manifest.name.as_str(), "lsp");
         assert_eq!(manifest.kind, Some(PluginKind::LanguageServer));
@@ -446,7 +420,7 @@ Pyright-backed Python language tools.
         let d1 = make_plugin(
             &root,
             "lsp",
-            "---\nname: other\ndescription: d\ntools:\n  - name: other.x\n    module: tools/x.py\n---\n",
+            Some("---\nname: other\ndescription: d\ntools:\n  - name: other.x\n    module: tools/x.py\n---\n"),
             &[],
         );
         assert!(matches!(
@@ -457,7 +431,7 @@ Pyright-backed Python language tools.
         let d2 = make_plugin(
             &root,
             "alpha",
-            "---\nname: alpha\ndescription: d\ntools:\n  - name: beta.x\n    module: tools/x.py\n---\n",
+            Some("---\nname: alpha\ndescription: d\ntools:\n  - name: beta.x\n    module: tools/x.py\n---\n"),
             &[],
         );
         assert!(matches!(
@@ -471,7 +445,7 @@ Pyright-backed Python language tools.
         let d3 = make_plugin(
             &root,
             "gamma",
-            "---\nname: gamma\ndescription: d\ntools:\n  - name: gamma.x\n    module: a.py\n  - name: gamma.x\n    module: b.py\n---\n",
+            Some("---\nname: gamma\ndescription: d\ntools:\n  - name: gamma.x\n    module: a.py\n  - name: gamma.x\n    module: b.py\n---\n"),
             &["a.py"],
         );
         assert!(matches!(
@@ -479,7 +453,7 @@ Pyright-backed Python language tools.
             Err(PluginCatalogError::DuplicateTool(_))
         ));
 
-        let d4 = make_plugin(&root, "seqp", "---\n- a\n- b\n---\n", &[]);
+        let d4 = make_plugin(&root, "seqp", Some("---\n- a\n- b\n---\n"), &[]);
         assert!(matches!(
             parse_plugin_manifest(&d4),
             Err(PluginCatalogError::NotMapping(_))
@@ -488,7 +462,7 @@ Pyright-backed Python language tools.
         let d5 = make_plugin(
             &root,
             "empty",
-            "---\nname: empty\ndescription: d\ntools: []\n---\n",
+            Some("---\nname: empty\ndescription: d\ntools: []\n---\n"),
             &[],
         );
         assert!(matches!(
@@ -499,7 +473,7 @@ Pyright-backed Python language tools.
         let d6 = make_plugin(
             &root,
             "noname",
-            "---\ndescription: d\ntools:\n  - name: noname.x\n    module: tools/x.py\n---\n",
+            Some("---\ndescription: d\ntools:\n  - name: noname.x\n    module: tools/x.py\n---\n"),
             &[],
         );
         assert!(matches!(
@@ -508,14 +482,14 @@ Pyright-backed Python language tools.
         ));
 
         // No `---` fence at all -> MissingFrontmatter (manifest.py 87-92).
-        let d7 = make_plugin(&root, "nofence", "name: nofence\n", &[]);
+        let d7 = make_plugin(&root, "nofence", Some("name: nofence\n"), &[]);
         assert!(matches!(
             parse_plugin_manifest(&d7),
             Err(PluginCatalogError::MissingFrontmatter(_))
         ));
 
         // Fenced but malformed YAML -> Frontmatter (manifest.py 96-99).
-        let d8 = make_plugin(&root, "badyaml", "---\nname: [unterminated\n---\n", &[]);
+        let d8 = make_plugin(&root, "badyaml", Some("---\nname: [unterminated\n---\n"), &[]);
         assert!(matches!(
             parse_plugin_manifest(&d8),
             Err(PluginCatalogError::Frontmatter { .. })
@@ -531,7 +505,7 @@ Pyright-backed Python language tools.
         let dir = make_plugin(
             &root,
             "alpha",
-            "---\nname: alpha\ndescription: d\ntools:\n  - name: alpha.x\n    module: tools/x.py\n---\n",
+            Some("---\nname: alpha\ndescription: d\ntools:\n  - name: alpha.x\n    module: tools/x.py\n---\n"),
             &[],
         );
         assert!(matches!(
@@ -551,23 +525,23 @@ Pyright-backed Python language tools.
             )
         };
 
-        let d_unset = make_plugin(&root, "k", &manifest(""), &["tools/x.py"]);
+        let d_unset = make_plugin(&root, "k", Some(&manifest("")), &["tools/x.py"]);
         assert_eq!(parse_plugin_manifest(&d_unset).expect("parses").kind, None);
 
-        let d_known = make_plugin(&root, "k", &manifest("kind: formatter\n"), &["tools/x.py"]);
+        let d_known = make_plugin(&root, "k", Some(&manifest("kind: formatter\n")), &["tools/x.py"]);
         assert_eq!(
             parse_plugin_manifest(&d_known).expect("parses").kind,
             Some(PluginKind::Formatter)
         );
 
-        let d_unknown = make_plugin(&root, "k", &manifest("kind: wizard\n"), &["tools/x.py"]);
+        let d_unknown = make_plugin(&root, "k", Some(&manifest("kind: wizard\n")), &["tools/x.py"]);
         assert!(matches!(
             parse_plugin_manifest(&d_unknown),
             Err(PluginCatalogError::UnknownKind(_))
         ));
 
         // A present-but-non-string kind -> KindNotString (manifest.py 154-157).
-        let d_nonstr = make_plugin(&root, "k", &manifest("kind: 123\n"), &["tools/x.py"]);
+        let d_nonstr = make_plugin(&root, "k", Some(&manifest("kind: 123\n")), &["tools/x.py"]);
         assert!(matches!(
             parse_plugin_manifest(&d_nonstr),
             Err(PluginCatalogError::KindNotString(_))
@@ -584,7 +558,7 @@ Pyright-backed Python language tools.
         let dir = make_plugin(
             &root,
             "s",
-            "---\nname: s\ndescription: d\ntools:\n  - name: s.x\n    module: tools/x.py\n---\n",
+            Some("---\nname: s\ndescription: d\ntools:\n  - name: s.x\n    module: tools/x.py\n---\n"),
             &["tools/x.py", "setup.sh"],
         );
         let manifest = parse_plugin_manifest(&dir).expect("parses");

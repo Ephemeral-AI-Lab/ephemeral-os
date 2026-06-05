@@ -1,5 +1,4 @@
 use std::{
-    collections::HashMap,
     path::{Path, PathBuf},
     time::Instant,
 };
@@ -8,20 +7,16 @@ use eos_layerstack::{MergedView, WorkspaceBinding};
 use eos_protocol::{
     apply_search_replace,
     models::{MAX_FILE_BYTES, MAX_READ_BYTES},
-    Intent, LayerPath, LayerRef, Manifest,
+    LayerPath, LayerRef, Manifest,
 };
-use eos_runner::{Fd, NsFds, RunMode, RunRequest, ToolCall, WorkspaceRoot};
 use serde_json::{json, Value};
 
 use super::{parse_edits, search_replace_message};
 use crate::{
     error::DaemonError,
     isolated::{record_tool_call, CommandHandle},
-    overlay_runner::run_ns_runner_child,
     request_args::{require_raw_string, require_string},
-    response_timings::{
-        merge_runner_timings, resource_timings, usize_to_f64_saturating, usize_to_i64_saturating,
-    },
+    response_timings::{resource_timings, usize_to_f64_saturating, usize_to_i64_saturating},
 };
 
 pub(super) fn read_file(
@@ -160,59 +155,6 @@ pub(super) fn edit_file(
         total_start,
         Some(usize_to_i64_saturating(edits.len())),
     ))
-}
-
-pub(super) fn read_tool(
-    args: &Value,
-    verb: &str,
-    handle: &CommandHandle,
-    total_start: Instant,
-) -> Result<Value, DaemonError> {
-    let invocation_id = args
-        .get("invocation_id")
-        .and_then(Value::as_str)
-        .unwrap_or(verb)
-        .to_owned();
-    let ns_fds = isolated_ns_fds(&handle.ns_fds);
-    let request = RunRequest {
-        mode: if ns_fds.is_some() {
-            RunMode::SetNs
-        } else {
-            RunMode::FreshNs
-        },
-        tool_call: ToolCall {
-            invocation_id,
-            agent_id: handle.agent_id.clone(),
-            verb: verb.into(),
-            intent: Intent::ReadOnly,
-            args: args.clone(),
-            background: false,
-        },
-        workspace_root: WorkspaceRoot(handle.workspace_root.clone()),
-        layer_paths: handle.layer_paths.clone(),
-        upperdir: Some(handle.upperdir.clone()),
-        workdir: Some(handle.workdir.clone()),
-        ns_fds,
-        cgroup_path: handle.cgroup_path.clone(),
-        timeout_seconds: args.get("timeout_seconds").and_then(Value::as_f64),
-    };
-    let runner = run_ns_runner_child(&request, None)?;
-    let mut timings = resource_timings(&isolated_manifest(handle), 0);
-    merge_runner_timings(&mut timings, &runner);
-    timings.insert(
-        "command_exec.total_s".to_owned(),
-        json!(total_start.elapsed().as_secs_f64()),
-    );
-    timings.insert(
-        format!("api.{verb}.total_s"),
-        json!(total_start.elapsed().as_secs_f64()),
-    );
-    let mut response = runner.tool_result;
-    response["workspace"] = json!("isolated");
-    response["workspace_mode"] = json!("isolated");
-    response["timings"] = Value::Object(timings);
-    record_isolated_tool_call(handle, verb, "ok", &[], total_start);
-    Ok(response)
 }
 
 fn isolated_layer_path(handle: &CommandHandle, args: &Value) -> Result<LayerPath, DaemonError> {
@@ -400,16 +342,4 @@ fn record_isolated_tool_call(
             },
         }),
     );
-}
-
-fn isolated_ns_fds(map: &HashMap<String, i32>) -> Option<NsFds> {
-    if map.is_empty() {
-        return None;
-    }
-    Some(NsFds {
-        user: map.get("user").copied().map(Fd),
-        mnt: map.get("mnt").copied().map(Fd),
-        pid: map.get("pid").copied().map(Fd),
-        net: map.get("net").copied().map(Fd),
-    })
 }

@@ -1,5 +1,5 @@
-#[path = "../common/mod.rs"]
-mod common;
+#[path = "../support/mod.rs"]
+mod support;
 
 mod isolated_gate;
 mod lsp;

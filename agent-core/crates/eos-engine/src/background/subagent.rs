@@ -22,7 +22,8 @@ use eos_tools::{ExecutionMetadata, ToolError, ToolResult, WorkflowControlPort};
 use eos_types::{AgentRunId, JsonObject, SubagentSessionId, WorkflowSessionId};
 use serde_json::{json, Value};
 
-use super::supervisor::{BackgroundSupervisorHandle, BackgroundTaskStatus, SubagentRecord};
+use super::handle::BackgroundSupervisorHandle;
+use super::supervisor::{BackgroundTaskStatus, SubagentRecord};
 use crate::notifications::NotificationService;
 use crate::{run_ephemeral_agent, EphemeralRun, EphemeralRunInput};
 

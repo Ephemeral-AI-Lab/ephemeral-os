@@ -43,7 +43,7 @@
 
 <section id="sandbox-overview"
   data-last-reviewed-commit="HEAD-plus-worktree"
-  data-evidence-paths="backend/src/tools/sandbox/_lib/registry.py backend/src/tools/sandbox/read_file/read_file.py backend/src/tools/sandbox/write_file/write_file.py backend/src/tools/sandbox/edit_file/edit_file.py backend/src/tools/sandbox/exec_command/exec_command.py backend/src/tools/sandbox/write_stdin/write_stdin.py backend/src/sandbox/api/tool/command.py backend/src/tools/sandbox/glob/glob.py backend/src/tools/sandbox/grep/grep.py backend/src/tools/isolated_workspace/enter_isolated_workspace/definition.py backend/src/tools/isolated_workspace/exit_isolated_workspace/definition.py">
+  data-evidence-paths=".eos-agents/tools agent-core/crates/eos-tools/src/tools/sandbox agent-core/crates/eos-tools/src/core/name.rs backend/src/tools/sandbox/_lib/registry.py backend/src/tools/sandbox/read_file/read_file.py backend/src/tools/sandbox/write_file/write_file.py backend/src/tools/sandbox/edit_file/edit_file.py backend/src/tools/sandbox/exec_command/exec_command.py backend/src/tools/sandbox/write_stdin/write_stdin.py backend/src/sandbox/api/tool/command.py backend/src/tools/isolated_workspace/enter_isolated_workspace/definition.py backend/src/tools/isolated_workspace/exit_isolated_workspace/definition.py">
 <h1>Sandbox Tools</h1>
 <nav class="page-toc" aria-labelledby="page-toc-heading">
   <h3 id="page-toc-heading">Contents</h3>
@@ -57,7 +57,7 @@
   </ol>
 </nav>
 
-<p><code>backend/src/tools/sandbox</code> is the agent-facing tool folder for file, command, search, and isolated-workspace work inside a sandboxed workspace. Its registry returns <code>read_file</code>, <code>write_file</code>, <code>edit_file</code>, <code>multi_edit</code>, <code>exec_command</code>, <code>write_stdin</code>, <code>glob</code>, and <code>grep</code>, and it also includes the isolated workspace lifecycle tools in the same sandbox context so the engine can register one coherent sandbox tool surface.</p>
+<p><code>agent-core/crates/eos-tools/src/tools/sandbox</code> is the current Rust agent-facing tool folder for file, command, and isolated-workspace work inside a sandboxed workspace. Its registry returns <code>read_file</code>, <code>write_file</code>, <code>edit_file</code>, <code>multi_edit</code>, <code>exec_command</code>, and <code>write_stdin</code>, and it also includes the isolated workspace lifecycle tools in the same sandbox context so the engine can register one coherent sandbox tool surface. Legacy Python exposed <code>glob</code> and <code>grep</code>; Rust intentionally deletes them from both the model-facing tool registry and the raw daemon/protocol/runner surface.</p>
 <div class="summary">
   <ul>
     <li>Read/write/edit wrappers normalize tool input and call the public <code>sandbox.api</code> facade.</li>
@@ -68,14 +68,14 @@
 </div>
 <div class="diagram" aria-label="Sandbox tool routing workflow">
   <div class="flow-row">
-    <div class="node info"><strong>Tool wrapper</strong><small><code>read_file</code>, <code>write_file</code>, <code>edit_file</code>, <code>exec_command</code>, <code>glob</code>, <code>grep</code></small></div>
+    <div class="node info"><strong>Tool wrapper</strong><small><code>read_file</code>, <code>write_file</code>, <code>edit_file</code>, <code>exec_command</code>, <code>write_stdin</code></small></div>
     <div class="node"><strong><code>sandbox.api.tool</code></strong><small>typed request, audit wrapper, daemon op</small></div>
     <div class="node"><strong>Daemon envelope</strong><small>in-flight registration and plugin/isolation gates</small></div>
     <div class="node good"><strong>Workspace dispatcher</strong><small>isolated, direct LayerStack/OCC, or overlay</small></div>
   </div>
   <div class="flow-row">
     <div class="node"><strong>Direct file path</strong><small>read/write/edit against LayerStack + OCC</small></div>
-    <div class="node"><strong>Ephemeral overlay</strong><small>command/search or unbound file work</small></div>
+    <div class="node"><strong>Ephemeral overlay</strong><small>command or unbound file work</small></div>
     <div class="node warn"><strong>Isolated handle</strong><small>private persistent scratch; no publish</small></div>
   </div>
 </div>
@@ -83,7 +83,7 @@
 
 <section id="tool-surface"
   data-last-reviewed-commit="HEAD-plus-worktree"
-  data-evidence-paths="backend/src/tools/sandbox/_lib/registry.py backend/src/tools/sandbox/read_file/read_file.py backend/src/tools/sandbox/write_file/write_file.py backend/src/tools/sandbox/edit_file/edit_file.py backend/src/tools/sandbox/_lib/mutation_result.py backend/src/tools/sandbox/exec_command/exec_command.py backend/src/tools/sandbox/write_stdin/write_stdin.py backend/src/sandbox/api/tool/command.py backend/src/tools/sandbox/glob/glob.py backend/src/tools/sandbox/grep/grep.py">
+  data-evidence-paths=".eos-agents/tools agent-core/crates/eos-tools/src/tools/sandbox agent-core/crates/eos-tools/src/core/name.rs backend/src/tools/sandbox/_lib/registry.py backend/src/tools/sandbox/read_file/read_file.py backend/src/tools/sandbox/write_file/write_file.py backend/src/tools/sandbox/edit_file/edit_file.py backend/src/tools/sandbox/_lib/mutation_result.py backend/src/tools/sandbox/exec_command/exec_command.py backend/src/tools/sandbox/write_stdin/write_stdin.py backend/src/sandbox/api/tool/command.py">
 <h2>Tool Surface</h2>
 <p>The registry is intentionally narrow: it returns the default workspace verbs plus command/session controls and <code>enter_isolated_workspace</code> / <code>exit_isolated_workspace</code>, then stamps every tool with <code>SANDBOX_CONTEXT</code>. That means all of these tools expect the engine/tool framework to provide the sandbox id, caller metadata, layer-stack root, repo root, invocation id, audit sink, and background manager in the execution context.</p>
 <table>
@@ -94,8 +94,6 @@
     <tr><td><code>edit_file</code></td><td>Write allowed</td><td>Apply search/replace edits and preserve conflict/status fields in the tool result.</td><td><code>sandbox_api.edit_file</code></td></tr>
     <tr><td><code>exec_command</code></td><td>Write allowed</td><td>Run a finite command or start a command session, return stdout/stderr/exit code, and surface changed paths/conflict metadata.</td><td><code>sandbox_api.exec_command</code></td></tr>
     <tr><td><code>write_stdin</code></td><td>Write allowed</td><td>Send input to an active command session, or poll by passing empty <code>chars</code>.</td><td><code>sandbox_api.write_stdin</code></td></tr>
-    <tr><td><code>glob</code></td><td>Read-only</td><td>Enumerate workspace paths by pattern.</td><td><code>sandbox_api.glob</code></td></tr>
-    <tr><td><code>grep</code></td><td>Read-only</td><td>Regex-scan workspace files with output mode, glob filter, and limit options.</td><td><code>sandbox_api.grep</code></td></tr>
   </tbody>
 </table>
 <p>The read/write/edit wrappers construct typed request models and delegate to the API facade rather than touching provider or filesystem code directly. Write and edit route through a shared mutation normalization layer so status, conflicts, changed paths, mutation source, and timing fields stay stable for the engine and Workflow context consumers.</p>
@@ -103,7 +101,7 @@
 
 <section id="api-daemon-hop"
   data-last-reviewed-commit="569f12c3f39471dbaa643906856a8daf81a21a2d"
-  data-evidence-paths="backend/src/sandbox/api/__init__.py backend/src/sandbox/api/tool/read.py backend/src/sandbox/api/tool/write.py backend/src/sandbox/api/tool/edit.py backend/src/sandbox/api/tool/shell.py backend/src/sandbox/api/tool/glob.py backend/src/sandbox/api/tool/grep.py backend/src/sandbox/api/transport.py backend/src/sandbox/daemon/builtin_operations.py backend/src/sandbox/daemon/rpc/dispatcher.py">
+  data-evidence-paths="backend/src/sandbox/api/__init__.py backend/src/sandbox/api/tool/read.py backend/src/sandbox/api/tool/write.py backend/src/sandbox/api/tool/edit.py backend/src/sandbox/api/tool/shell.py backend/src/sandbox/api/transport.py backend/src/sandbox/daemon/builtin_operations.py backend/src/sandbox/daemon/rpc/dispatcher.py agent-core/crates/eos-sandbox-api/src/tool_api sandbox/crates/eos-protocol/src/ops.rs sandbox/crates/eos-daemon/src/dispatcher.rs sandbox/crates/eos-runner/src/request.rs">
 <h2>API and Daemon Hop</h2>
 <p><code>sandbox.api.tool</code> is the public facade between tools and the in-sandbox daemon. Each verb builds a JSON-safe daemon payload from the typed request identity fields, calls the transport operation, parses the daemon response back into a typed result, and wraps the call in audited operation metadata.</p>
 <pre class="diagram" aria-label="Sandbox tool dispatch ASCII workflow">
@@ -129,13 +127,13 @@
   <ol>
     <li><span>The engine dispatches a tool call through the tool framework with <code>SANDBOX_CONTEXT</code>.</span></li>
     <li><span>The tool wrapper builds a typed request and calls <code>sandbox.api</code>.</span></li>
-    <li><span>The facade calls daemon op names such as <code>api.v1.read_file</code>, <code>api.v1.write_file</code>, <code>api.v1.edit_file</code>, <code>api.v1.shell</code>, <code>api.v1.exec_command</code>, <code>api.v1.write_stdin</code>, <code>api.v1.command.cancel</code>, <code>api.v1.command.collect_completed</code>, <code>api.v1.glob</code>, and <code>api.v1.grep</code>.</span></li>
+    <li><span>The facade calls daemon op names such as <code>api.v1.read_file</code>, <code>api.v1.write_file</code>, <code>api.v1.edit_file</code>, <code>api.v1.shell</code>, <code>api.v1.exec_command</code>, <code>api.v1.write_stdin</code>, <code>api.v1.command.cancel</code>, and <code>api.v1.command.collect_completed</code>. Rust does not register raw daemon search ops.</span></li>
     <li><span><code>daemon.rpc.dispatcher</code> validates the envelope, registers in-flight state, blocks plugin ops when this agent has an active isolated workspace, and invokes the registered handler.</span></li>
     <li><span><code>daemon.builtin_operations</code> maps workspace ops to <code>dispatch_workspace_tool_call</code> with the static verb and intent.</span></li>
   </ol>
 </div>
 <p>The daemon operation table is deliberately generic: the handler does not know whether a request will use layer-stack/OCC or overlay. It only establishes the verb, intent, in-flight lifecycle, and error envelope. The workspace dispatcher owns routing.</p>
-<p>The Rust grep/glob wire contract is pinned by typed request DTOs and schema snapshots: <code>GlobRequest</code> carries <code>pattern</code> plus optional <code>path</code>, while <code>GrepRequest</code> carries <code>pattern</code>, optional <code>path</code>/<code>glob_filter</code>/<code>head_limit</code>, <code>output_mode</code>, <code>offset</code>, <code>case_insensitive</code>, <code>line_numbers</code>, and <code>multiline</code>. The snapshots live in <code>agent-core/crates/eos-sandbox-api/tests/schema_snapshot.rs</code>, so field-name, optionality, and default drift is reviewed rather than inferred from stale Python glue.</p>
+<p>The old Rust grep/glob model-tool and raw daemon schemas are intentionally gone. Search-like work now runs through explicit shell commands or a future dedicated tool rather than hidden daemon primitives.</p>
 </section>
 
 <section id="shared-routing"
@@ -147,9 +145,9 @@
   <div><b>Fast read</b><span><code>read_file</code> resolves the requested path through the workspace binding and reads text from the active layer-stack manager.</span></div>
   <div><b>Fast write</b><span><code>write_file</code> turns the final content into an API write change and applies it through the OCC service.</span></div>
   <div><b>Fast edit</b><span><code>edit_file</code> turns each search/replace edit into an OCC edit change and reports applied edit count from the changeset result.</span></div>
-  <div><b>Fallback</b><span>Unbound file requests, finite commands, glob, grep, outside-workspace paths, and other overlay-shaped work use the ephemeral overlay pipeline.</span></div>
+  <div><b>Fallback</b><span>Unbound file requests, finite commands, outside-workspace paths, and other overlay-shaped work use the ephemeral overlay pipeline.</span></div>
 </div>
-<p>The ephemeral pipeline acquires a fresh overlay handle for one call, executes the tool payload in a new namespace, captures upperdir changes for write-allowed calls, publishes accepted changes through OCC, attaches timing/resource metadata, and destroys the handle. Read-only search work can use the overlay execution shape without publishing. Write-capable overlay results must pass through the OCC-gated publish boundary before becoming part of the shared layer-stack state.</p>
+<p>The ephemeral pipeline acquires a fresh overlay handle for one call, executes the tool payload in a new namespace, captures upperdir changes for write-allowed calls, publishes accepted changes through OCC, attaches timing/resource metadata, and destroys the handle. Write-capable overlay results must pass through the OCC-gated publish boundary before becoming part of the shared layer-stack state.</p>
 </section>
 
 <section id="command-background-policy"

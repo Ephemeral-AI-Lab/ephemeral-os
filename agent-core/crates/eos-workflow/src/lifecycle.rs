@@ -92,7 +92,11 @@ impl WorkflowLifecycle {
                 workflow.workflow_goal.clone(),
             )
         } else {
-            let previous_id = workflow.iteration_ids.last().expect("non-empty").clone();
+            let previous_id = workflow
+                .iteration_ids
+                .last()
+                .ok_or_else(|| WorkflowError::invariant("workflow has no iterations"))?
+                .clone();
             let previous = self
                 .deps
                 .iteration_store

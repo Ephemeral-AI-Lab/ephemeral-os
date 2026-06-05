@@ -89,9 +89,9 @@ manifest, layer_paths, timings={"layer_stack.acquire_snapshot.total_s": ...})`.
 - `backend/scripts/bench_rust_daemon_phase3.py` — starts the Rust daemon, seeds
   an 8 MiB base-only fixture by default (`--space-fixture-mib`), builds the base
   from the image workspace via `api.build_workspace_base`, then measures
-  `api.v1.exec_command` (no-op + small-write publish), `api.v1.glob`,
-  `api.v1.grep`, and a **1/3/5/10 concurrent** shell-exec load matrix (no-op +
-  unique-write), plus daemon RSS before/between/after. The script now samples
+  `api.v1.exec_command` (no-op + small-write publish) and a **1/3/5/10
+  concurrent** shell-exec load matrix (no-op + unique-write), plus daemon RSS
+  before/between/after. The script now samples
   LayerStack disk usage after base build / before load / after load and folds
   `space.gate_pass` into the top-level gate.
 

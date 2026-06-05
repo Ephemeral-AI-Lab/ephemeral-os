@@ -136,8 +136,6 @@ impl OpTable {
         table.register_builtin("api.v1.read_file", crate::workspace_ops::op_read_file);
         table.register_builtin("api.v1.write_file", crate::workspace_ops::op_write_file);
         table.register_builtin("api.v1.edit_file", crate::workspace_ops::op_edit_file);
-        table.register_builtin("api.v1.glob", crate::workspace_ops::op_glob);
-        table.register_builtin("api.v1.grep", crate::workspace_ops::op_grep);
         table.register_builtin("api.plugin.ensure", crate::plugin::op_ensure);
         table.register_builtin("api.plugin.status", crate::plugin::op_status);
         table.register_builtin("api.isolated_workspace.enter", crate::isolated::op_enter);

@@ -17,8 +17,8 @@ macro_rules! snapshot_schema {
 fn request_dto_schemas() {
     use eos_sandbox_api::{
         CommandSessionCancelRequest, EditFileRequest, EnterIsolatedWorkspaceRequest,
-        ExecCommandRequest, ExecStdinRequest, ExitIsolatedWorkspaceRequest, GlobRequest,
-        GrepRequest, ReadFileRequest, ToolCallRequest, WriteFileRequest,
+        ExecCommandRequest, ExecStdinRequest, ExitIsolatedWorkspaceRequest, ReadFileRequest,
+        ToolCallRequest, WriteFileRequest,
     };
 
     snapshot_schema!("read_file_request", ReadFileRequest);
@@ -30,8 +30,6 @@ fn request_dto_schemas() {
         "command_session_cancel_request",
         CommandSessionCancelRequest
     );
-    snapshot_schema!("glob_request", GlobRequest);
-    snapshot_schema!("grep_request", GrepRequest);
     snapshot_schema!(
         "enter_isolated_workspace_request",
         EnterIsolatedWorkspaceRequest

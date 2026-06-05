@@ -17,7 +17,6 @@ mod common;
 mod file;
 mod identity;
 mod lifecycle;
-mod search;
 mod tool_call;
 
 pub use command::{
@@ -34,5 +33,4 @@ pub use lifecycle::{
     EnterIsolatedWorkspaceRequest, EnterIsolatedWorkspaceResult, ExitIsolatedWorkspaceRequest,
     ExitIsolatedWorkspaceResult, LifecycleError, LifecycleResultBase,
 };
-pub use search::{GlobRequest, GlobResult, GrepOutputMode, GrepRequest, GrepResult};
 pub use tool_call::ToolCallRequest;

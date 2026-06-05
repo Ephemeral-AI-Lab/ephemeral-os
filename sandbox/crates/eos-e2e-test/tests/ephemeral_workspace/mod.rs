@@ -1,7 +1,5 @@
-#[path = "../common/mod.rs"]
-mod common;
+#[path = "../support/mod.rs"]
+mod support;
 
 mod command_sessions;
-mod failure;
 mod overlay_exec;
-mod read_only_search;

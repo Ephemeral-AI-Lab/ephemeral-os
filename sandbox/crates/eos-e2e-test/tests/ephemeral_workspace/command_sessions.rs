@@ -2,7 +2,7 @@ use anyhow::Result;
 use eos_protocol::ops;
 use serde_json::json;
 
-use crate::common::{as_i64, as_str, live_pool_or_skip, stdout};
+use crate::support::{as_i64, as_str, live_pool_or_skip, stdout};
 
 #[test]
 fn exec_simple() -> Result<()> {

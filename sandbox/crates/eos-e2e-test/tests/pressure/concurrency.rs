@@ -6,7 +6,7 @@ use eos_e2e_test::next_invocation_id;
 use eos_protocol::ops;
 use serde_json::json;
 
-use crate::common::{as_bool, as_i64, as_str, live_pool_or_skip};
+use crate::support::{as_bool, as_i64, as_str, live_pool_or_skip};
 
 #[test]
 fn n_concurrent_mixed_ops() -> Result<()> {
@@ -38,20 +38,20 @@ fn n_concurrent_mixed_ops() -> Result<()> {
                     1 => json!({
                         "layer_stack_root": root,
                         "agent_id": agent_id,
-                        "pattern": "needle",
-                        "path": "pressure",
-                        "output_mode": "content"
+                        "path": "pressure/mixed-seed.txt"
                     }),
                     _ => json!({
                         "layer_stack_root": root,
                         "agent_id": agent_id,
-                        "pattern": "pressure/*.txt"
+                        "cmd": "printf pressure",
+                        "yield_time_ms": 1000,
+                        "timeout_seconds": 10
                     }),
                 };
                 let op = match index % 3 {
                     0 => ops::API_V1_WRITE_FILE,
-                    1 => ops::API_V1_GREP,
-                    _ => ops::API_V1_GLOB,
+                    1 => ops::API_V1_READ_FILE,
+                    _ => ops::API_V1_EXEC_COMMAND,
                 };
                 client.request(op, &next_invocation_id(), &args)
             })
@@ -89,11 +89,9 @@ fn write_storm_squash_under_load() -> Result<()> {
             }),
         )?;
         if version % 20 == 0 {
-            let grep = lease.call_ok(
-                ops::API_V1_GREP,
-                json!({"pattern": "storm", "path": "pressure", "output_mode": "content"}),
-            )?;
-            assert!(as_str(&grep, "content")?.contains("storm"));
+            let read =
+                lease.call_ok(ops::API_V1_READ_FILE, json!({"path": "pressure/storm.txt"}))?;
+            assert!(as_str(&read, "content")?.contains("storm"));
         }
     }
     let read = lease.call_ok(ops::API_V1_READ_FILE, json!({"path": "pressure/storm.txt"}))?;

@@ -108,7 +108,7 @@
     <tr><td><code>rpc/in_flight.py</code></td><td>Tracks daemon asyncio tasks by invocation id for cancellation, heartbeat refresh, per-agent background counts, and TTL reaping.</td><td>Only daemon task liveness; engine-facing aliases and result delivery live in <a href="#background-lifecycle-detail">Background Task Lifecycle</a>.</td><td><span class="file-ref">backend/src/sandbox/daemon/rpc/in_flight.py:20-149</span></td></tr>
     <tr><td><code>layer_stack_runtime.py</code></td><td>Caches <code>LayerStack</code> managers, fences stale staging dirs once per daemon process, and exposes base/snapshot/lease helpers.</td><td>LayerStack manager lifecycle only; OCC service composition lives in <code>occ_runtime_services.py</code>.</td><td><span class="file-ref">backend/src/sandbox/daemon/layer_stack_runtime.py:26-150</span></td></tr>
     <tr><td><code>occ_runtime_services.py</code></td><td>Builds the daemon-local service bundle: LayerStack client, OCC service/client, gitignore oracle, and manager.</td><td>Uses canonical <code>workspace_ref=layer_stack_root</code>; path classification is delegated to operation payload helpers.</td><td><span class="file-ref">backend/src/sandbox/daemon/occ_runtime_services.py:1-9</span>, <span class="file-ref">backend/src/sandbox/daemon/occ_runtime_services.py:28-95</span></td></tr>
-    <tr><td><code>workspace_tool_dispatch.py</code></td><td>Routes read/write/edit/glob/grep/shell to isolated workspace, direct LayerStack/OCC fast path, or ephemeral overlay pipeline.</td><td>It decides execution target, not transport, background aliasing, or provider lifecycle.</td><td><span class="file-ref">backend/src/sandbox/daemon/workspace_tool_dispatch.py:53-75</span></td></tr>
+    <tr><td><code>workspace_tool_dispatch.py</code></td><td>Routes read/write/edit/shell to isolated workspace, direct LayerStack/OCC fast path, or ephemeral overlay pipeline. Rust deletes the raw search ops from its daemon table.</td><td>It decides execution target, not transport, background aliasing, or provider lifecycle.</td><td><span class="file-ref">backend/src/sandbox/daemon/workspace_tool_dispatch.py:53-75</span></td></tr>
   </tbody>
 </table>
 
@@ -189,8 +189,8 @@
 </table>
 
 <div class="edge-list">
-  <div><b>imports</b><span>Every public workspace verb imports <code>daemon_request_identity_fields()</code> from <code>_daemon_request_payloads.py</code>, then adds only verb-specific fields before calling <code>call_sandbox_daemon()</code> <span class="file-ref">backend/src/sandbox/api/tool/read.py:6-32</span>, <span class="file-ref">backend/src/sandbox/api/tool/write.py:6-37</span>, <span class="file-ref">backend/src/sandbox/api/tool/edit.py:7-50</span>, <span class="file-ref">backend/src/sandbox/api/tool/glob.py:6-34</span>, <span class="file-ref">backend/src/sandbox/api/tool/grep.py:6-45</span>, <span class="file-ref">backend/src/sandbox/api/tool/shell.py:7-66</span>.</span></div>
-  <div><b>calls</b><span><code>_daemon_response_parsing.py</code> owns the host-side conversion from daemon dictionaries into <code>ReadFileResult</code>, <code>GlobResult</code>, <code>GrepResult</code>, guarded mutation results, and <code>ShellResult</code> <span class="file-ref">backend/src/sandbox/api/tool/_daemon_response_parsing.py:67-169</span>.</span></div>
+  <div><b>imports</b><span>Every public workspace verb imports <code>daemon_request_identity_fields()</code> from <code>_daemon_request_payloads.py</code>, then adds only verb-specific fields before calling <code>call_sandbox_daemon()</code> <span class="file-ref">backend/src/sandbox/api/tool/read.py:6-32</span>, <span class="file-ref">backend/src/sandbox/api/tool/write.py:6-37</span>, <span class="file-ref">backend/src/sandbox/api/tool/edit.py:7-50</span>, <span class="file-ref">backend/src/sandbox/api/tool/shell.py:7-66</span>.</span></div>
+  <div><b>calls</b><span><code>_daemon_response_parsing.py</code> owns the host-side conversion from daemon dictionaries into <code>ReadFileResult</code>, guarded mutation results, and <code>ShellResult</code> <span class="file-ref">backend/src/sandbox/api/tool/_daemon_response_parsing.py:67-169</span>. The old glob/grep result types are not part of the Rust facade.</span></div>
   <div><b>tested-by</b><span><code>test_payload_helpers.py</code> pins caller audit fields, strict daemon integer parsing, internal-error cleanup, and structured conflict detection so public result semantics do not depend on fragile message wording <span class="file-ref">backend/tests/unit_test/test_sandbox/test_api/test_payload_helpers.py:18-61</span>.</span></div>
 </div>
 
@@ -247,12 +247,12 @@
   data-evidence-paths="backend/src/sandbox/daemon/rpc/dispatcher.py backend/src/sandbox/daemon/builtin_operations.py sandbox/crates/eos-daemon/src/dispatcher.rs sandbox/crates/eos-daemon/src/command.rs">
 <h3>6.4 Operation Surface <a class="anchor" href="#operation-surface">§</a></h3>
 
-<p>The operation table is registered at import time. Duplicate registration of the same handler is a no-op, while a different handler for an existing op raises immediately, so runtime extension remains explicit instead of silently overriding commands <span class="file-ref">backend/src/sandbox/daemon/rpc/dispatcher.py:37-53</span>. Built-in registrations cover isolated workspace lifecycle, LayerStack base/snapshot/lease control, file/search/shell/command tools, command-session controls, plugin ensure/status, and in-flight cancellation/heartbeat/count operations <span class="file-ref">backend/src/sandbox/daemon/rpc/dispatcher.py:344-373</span>. In Rust mode, <code>sandbox/crates/eos-daemon/src/dispatcher.rs</code> owns the op table while <code>sandbox/crates/eos-daemon/src/command.rs</code> owns the Phase 3T <code>exec_command</code> and command session registry.</p>
+<p>The operation table is registered at import time. Duplicate registration of the same handler is a no-op, while a different handler for an existing op raises immediately, so runtime extension remains explicit instead of silently overriding commands <span class="file-ref">backend/src/sandbox/daemon/rpc/dispatcher.py:37-53</span>. Built-in registrations cover isolated workspace lifecycle, LayerStack base/snapshot/lease control, file/shell/command tools, command-session controls, plugin ensure/status, and in-flight cancellation/heartbeat/count operations <span class="file-ref">backend/src/sandbox/daemon/rpc/dispatcher.py:344-373</span>. In Rust mode, <code>sandbox/crates/eos-daemon/src/dispatcher.rs</code> owns the op table while <code>sandbox/crates/eos-daemon/src/command.rs</code> owns the Phase 3T <code>exec_command</code> and command session registry. Rust no longer registers raw daemon search ops.</p>
 
 <table>
   <thead><tr><th>Operation group</th><th>Ops</th><th>What the daemon owns</th><th>Evidence</th></tr></thead>
   <tbody>
-    <tr><td>Tool operations</td><td><code>api.v1.read_file</code>, <code>api.v1.write_file</code>, <code>api.v1.edit_file</code>, <code>api.v1.glob</code>, <code>api.v1.grep</code>, <code>api.v1.shell</code>, <code>api.v1.exec_command</code>, <code>api.v1.write_stdin</code>, <code>api.v1.command.cancel</code></td><td>Workspace verbs delegate to the common router; command and command-session verbs use the Phase 3T command contract while preserving overlay/OCC ownership for writes.</td><td><span class="file-ref">backend/src/sandbox/daemon/builtin_operations.py:49-86</span>, <span class="file-ref">sandbox/crates/eos-daemon/src/command.rs</span></td></tr>
+    <tr><td>Tool operations</td><td><code>api.v1.read_file</code>, <code>api.v1.write_file</code>, <code>api.v1.edit_file</code>, <code>api.v1.shell</code>, <code>api.v1.exec_command</code>, <code>api.v1.write_stdin</code>, <code>api.v1.command.cancel</code></td><td>Workspace verbs delegate to the common router; command and command-session verbs use the Phase 3T command contract while preserving overlay/OCC ownership for writes.</td><td><span class="file-ref">backend/src/sandbox/daemon/builtin_operations.py:49-86</span>, <span class="file-ref">sandbox/crates/eos-daemon/src/command.rs</span></td></tr>
     <tr><td>In-flight control</td><td><code>api.v1.cancel</code>, <code>api.v1.heartbeat</code>, <code>api.v1.inflight_count</code></td><td>Cancel one daemon task, refresh liveness for invocation ids, or count live background invocations by agent.</td><td><span class="file-ref">backend/src/sandbox/daemon/builtin_operations.py:94-123</span></td></tr>
     <tr><td>Command session control</td><td><code>api.v1.write_stdin</code>, <code>api.v1.command.cancel</code>, <code>api.v1.command.collect_completed</code>, <code>api.v1.command_session_count</code></td><td>Operate on daemon-owned typed command sessions and count live sessions for isolated-workspace gating.</td><td><span class="file-ref">sandbox/crates/eos-daemon/src/command.rs</span></td></tr>
     <tr><td>Runtime diagnostics</td><td><code>api.runtime.ready</code>, <code>api.layer_metrics</code></td><td>Probe control plane, data plane, mutation gate, daemon PID/uptime, storage bytes, active leases, and manifest depth.</td><td><span class="file-ref">backend/src/sandbox/daemon/builtin_operations.py:131-245</span></td></tr>
@@ -272,7 +272,7 @@
 
 <div class="diagram" aria-label="Daemon workspace routing decision">
   <div class="flow-row">
-    <div class="node"><strong>Daemon tool op</strong><small>read/write/edit/glob/grep/shell</small></div>
+    <div class="node"><strong>Daemon tool op</strong><small>read/write/edit/shell</small></div>
     <div class="arrow">&rarr;</div>
     <div class="node info"><strong>Isolated handle?</strong><small>agent id maps to open handle</small></div>
     <div class="arrow">&rarr;</div>
@@ -299,7 +299,7 @@
     <p><b>User-visible effect:</b> accepted changes become part of the shared workspace history.</p>
   </div>
   <div class="concept-card">
-    <strong>Shell, grep, and glob</strong>
+    <strong>Shell</strong>
     <p>Broader operations run in a fresh ephemeral workspace view. Write-capable calls publish only after captured changes pass OCC.</p>
     <p><b>User-visible effect:</b> successful mutations appear in the shared workspace; rejected mutations leave it unchanged.</p>
   </div>

@@ -8,8 +8,6 @@ pub(crate) mod parse;
 mod command;
 mod control;
 mod edit;
-mod glob;
-mod grep;
 mod isolated;
 mod plugin;
 mod read;
@@ -18,8 +16,6 @@ mod write;
 pub use command::{cancel_command_session, collect_command_completions, exec_command, exec_stdin};
 pub use control::{cancel, command_session_count, heartbeat, inflight_count, isolated_active};
 pub use edit::edit_file;
-pub use glob::glob;
-pub use grep::grep;
 pub use isolated::{enter_isolated_workspace, exit_isolated_workspace};
 pub(crate) use plugin::plugin_ensure_payload;
 pub use plugin::{

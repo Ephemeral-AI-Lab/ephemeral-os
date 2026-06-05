@@ -1,39 +1,11 @@
 use std::sync::{Arc, Barrier};
 use std::thread;
 
-use anyhow::{Context, Result};
-use eos_e2e_test::{live_pool, NodePool};
+use anyhow::Result;
 use eos_protocol::ops;
 use serde_json::{json, Value};
 
-fn live_pool_or_skip() -> Result<Option<Arc<NodePool>>> {
-    let Some(pool) = live_pool()? else {
-        eprintln!("skipping live eos-e2e-test; enable with `--features e2e`");
-        return Ok(None);
-    };
-    Ok(Some(pool))
-}
-
-fn as_bool(value: &Value, key: &str) -> Result<bool> {
-    value
-        .get(key)
-        .and_then(Value::as_bool)
-        .with_context(|| format!("{key} missing or not bool in {value}"))
-}
-
-fn as_i64(value: &Value, key: &str) -> Result<i64> {
-    value
-        .get(key)
-        .and_then(Value::as_i64)
-        .with_context(|| format!("{key} missing or not i64 in {value}"))
-}
-
-fn as_str<'a>(value: &'a Value, key: &str) -> Result<&'a str> {
-    value
-        .get(key)
-        .and_then(Value::as_str)
-        .with_context(|| format!("{key} missing or not string in {value}"))
-}
+use crate::support::{as_bool, as_i64, as_str, live_pool_or_skip};
 
 #[test]
 fn overlay_exec_publishes_file_back_to_layerstack() -> Result<()> {

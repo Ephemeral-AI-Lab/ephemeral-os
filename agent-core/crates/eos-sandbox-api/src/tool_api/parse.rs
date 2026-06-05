@@ -16,8 +16,8 @@ use serde_json::Value;
 
 use crate::error::SandboxApiError;
 use crate::models::{
-    CommandOutput, ConflictInfo, EditFileResult, ExecCommandResult, GlobResult, GrepOutputMode,
-    GrepResult, ReadFileResult, SandboxRequestBase, SandboxResultBase, Workspace, WriteFileResult,
+    CommandOutput, ConflictInfo, EditFileResult, ExecCommandResult, ReadFileResult,
+    SandboxRequestBase, SandboxResultBase, Workspace, WriteFileResult,
 };
 
 // ---------------------------------------------------------------------------
@@ -186,14 +186,6 @@ fn strict_int(map: &JsonObject, key: &str, default: i64) -> Result<i64, SandboxA
     }
 }
 
-/// `strict_int(...) if value is not None else None`.
-fn optional_strict_int(map: &JsonObject, key: &str) -> Result<Option<i64>, SandboxApiError> {
-    match map.get(key) {
-        None | Some(Value::Null) => Ok(None),
-        _ => Ok(Some(strict_int(map, key, 0)?)),
-    }
-}
-
 fn json_type_name(value: &Value) -> &'static str {
     match value {
         Value::Null => "null",
@@ -296,9 +288,9 @@ fn parse_timing_map(value: Option<&Value>) -> BTreeMap<String, f64> {
 // Per-verb result parsers
 // ---------------------------------------------------------------------------
 
-/// The result base for the read-only verbs (read/glob/grep): only `success` and
-/// `timings` come from the envelope; conflict/changed-path/error fields stay at
-/// their empty defaults and `workspace` is always `Ephemeral` (invariant 9).
+/// The result base for read-only verbs: only `success` and `timings` come from
+/// the envelope; conflict/changed-path/error fields stay at their empty defaults
+/// and `workspace` is always `Ephemeral` (invariant 9).
 fn simple_result_base(response: &JsonObject) -> SandboxResultBase {
     SandboxResultBase {
         success: get_bool(response, "success"),
@@ -320,39 +312,6 @@ pub(crate) fn parse_read_file_result(
         exists: get_bool(response, "exists"),
         encoding: get_string(response, "encoding", "utf-8"),
     })
-}
-
-pub(crate) fn parse_glob_result(response: &JsonObject) -> Result<GlobResult, SandboxApiError> {
-    Ok(GlobResult {
-        base: simple_result_base(response),
-        filenames: parse_path_tuple(response.get("filenames")),
-        num_files: strict_int(response, "num_files", 0)? as u32,
-        truncated: get_bool(response, "truncated"),
-    })
-}
-
-pub(crate) fn parse_grep_result(response: &JsonObject) -> Result<GrepResult, SandboxApiError> {
-    let applied_limit = optional_strict_int(response, "applied_limit")?.map(|value| value as u32);
-    Ok(GrepResult {
-        base: simple_result_base(response),
-        output_mode: parse_grep_output_mode(response.get("output_mode"))?,
-        filenames: parse_path_tuple(response.get("filenames")),
-        content: get_string(response, "content", ""),
-        num_files: strict_int(response, "num_files", 0)? as u32,
-        num_lines: strict_int(response, "num_lines", 0)? as u32,
-        num_matches: strict_int(response, "num_matches", 0)? as u32,
-        applied_limit,
-        applied_offset: strict_int(response, "applied_offset", 0)? as u32,
-        truncated: get_bool(response, "truncated"),
-    })
-}
-
-fn parse_grep_output_mode(value: Option<&Value>) -> Result<GrepOutputMode, SandboxApiError> {
-    let Some(value) = value else {
-        return Ok(GrepOutputMode::FilesWithMatches);
-    };
-    serde_json::from_value(value.clone())
-        .map_err(|err| SandboxApiError::decode(format!("invalid grep output_mode: {err}")))
 }
 
 /// The common guarded-mutation fields shared by write/edit/shell results.
@@ -523,58 +482,6 @@ mod tests {
         assert_eq!(result.base.timings.get("api.read.total_s"), Some(&0.5));
     }
 
-    #[test]
-    fn parse_glob_decodes_and_strict_ints() {
-        let response = obj(serde_json::json!({
-            "success": true,
-            "filenames": ["a.txt", "b.txt"],
-            "num_files": 2,
-            "truncated": false,
-            "timings": {"api.glob.total_s": 0.1},
-        }));
-        let result = parse_glob_result(&response).expect("parse");
-        assert_eq!(result.filenames, vec!["a.txt", "b.txt"]);
-        assert_eq!(result.num_files, 2);
-        assert_eq!(result.base.timings.get("api.glob.total_s"), Some(&0.1));
-    }
-
-    #[test]
-    fn parse_grep_decodes_optional_applied_limit_and_timings() {
-        let with_limit = obj(serde_json::json!({
-            "success": true,
-            "output_mode": "content",
-            "filenames": ["a.txt"],
-            "content": "match",
-            "num_files": 1,
-            "num_lines": 3,
-            "num_matches": 3,
-            "applied_limit": 10,
-            "applied_offset": 2,
-            "truncated": true,
-            "timings": {"api.grep.total_s": 0.2},
-        }));
-        let result = parse_grep_result(&with_limit).expect("parse");
-        assert_eq!(result.applied_limit, Some(10));
-        assert_eq!(result.applied_offset, 2);
-        assert_eq!(result.num_matches, 3);
-        assert_eq!(result.base.timings.get("api.grep.total_s"), Some(&0.2));
-
-        let without_limit = obj(serde_json::json!({"success": true}));
-        let result = parse_grep_result(&without_limit).expect("parse");
-        assert_eq!(result.applied_limit, None);
-        assert_eq!(result.output_mode, GrepOutputMode::FilesWithMatches);
-    }
-
-    #[test]
-    fn parse_grep_rejects_unknown_output_mode() {
-        let response = obj(serde_json::json!({
-            "success": true,
-            "output_mode": "bogus",
-        }));
-        let err = parse_grep_result(&response).expect_err("unknown mode fails decode");
-        assert!(err.message().contains("invalid grep output_mode"));
-    }
-
     // AC-sandbox-api-03: missing `success`/`exists` decode to false (fail-closed).
     #[test]
     fn parse_missing_success_and_exists_are_false() {
@@ -653,8 +560,8 @@ mod tests {
     // strict_int rejects bool-as-int; raw serde would silently coerce.
     #[test]
     fn strict_int_rejects_bool() {
-        let response = obj(serde_json::json!({"success": true, "num_files": true}));
-        assert!(parse_glob_result(&response).is_err());
+        let response = obj(serde_json::json!({"success": true, "applied_edits": true}));
+        assert!(parse_edit_file_result(&response).is_err());
     }
 
     // invariant 9: workspace is never decoded from the envelope.

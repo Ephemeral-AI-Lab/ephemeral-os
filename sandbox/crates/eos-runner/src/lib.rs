@@ -44,10 +44,10 @@
 pub mod error;
 pub mod fresh_ns;
 pub mod mount;
+#[cfg(target_os = "linux")]
+mod path;
 pub mod request;
 pub mod setns;
-#[cfg(any(test, target_os = "linux"))]
-mod tool_primitives;
 
 pub use error::RunnerError;
 pub use mount::{KernelMountPort, MountInputs, MountedOverlay};

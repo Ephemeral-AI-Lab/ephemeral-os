@@ -6,7 +6,7 @@ use eos_e2e_test::next_invocation_id;
 use eos_protocol::ops;
 use serde_json::{json, Value};
 
-use crate::common::{as_i64, as_str, live_pool_or_skip};
+use crate::support::{as_i64, as_str, live_pool_or_skip};
 
 #[test]
 fn enter_acquires_lease() -> Result<()> {
@@ -109,32 +109,6 @@ fn lease_hold_time_ordering() -> Result<()> {
         lifetime_s >= 0.0,
         "isolated exit lifetime should be nonnegative: {exit}"
     );
-    Ok(())
-}
-
-#[test]
-fn read_op_transient_lease_released() -> Result<()> {
-    let Some(pool) = live_pool_or_skip()? else {
-        return Ok(());
-    };
-    let lease = pool.acquire()?;
-    lease.call_ok(
-        ops::API_V1_WRITE_FILE,
-        json!({"path": "lease/read.txt", "content": "needle\n", "overwrite": true}),
-    )?;
-    let mut audit = lease.audit_tap()?;
-    lease.call_ok(
-        ops::API_V1_GREP,
-        json!({"pattern": "needle", "path": "lease", "output_mode": "content"}),
-    )?;
-    audit.collect()?;
-    assert!(
-        audit.any("layer_stack.lease_released"),
-        "overlay read op should release its transient snapshot lease: {:?}",
-        audit.events()
-    );
-    let metrics = wait_for_active_leases(&lease, 0)?;
-    assert_eq!(as_i64(&metrics, "active_leases")?, 0);
     Ok(())
 }
 

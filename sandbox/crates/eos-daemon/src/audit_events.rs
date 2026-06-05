@@ -404,7 +404,7 @@ fn is_occ_op(op: &str) -> bool {
 }
 
 pub(crate) fn uses_overlay_or_lease(op: &str, response: &Value) -> bool {
-    if matches!(op, "api.v1.glob" | "api.v1.grep" | "api.v1.command.cancel") {
+    if op == "api.v1.command.cancel" {
         return true;
     }
     if op == "api.v1.exec_command" {

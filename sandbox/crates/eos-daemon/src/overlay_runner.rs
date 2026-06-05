@@ -4,15 +4,13 @@ use std::io::Write;
 #[cfg(target_os = "linux")]
 use std::os::unix::process::CommandExt;
 use std::path::Path;
-use std::path::PathBuf;
 use std::process::{Command, Stdio};
 
 use eos_ephemeral_workspace::{
-    EphemeralDirAllocator, EphemeralRunDirs, EphemeralSnapshot, EphemeralSnapshotPort,
-    EphemeralWorkspaceError, FreshNamespaceRunnerPort, InvocationId, PathChange, PublishOutcome,
-    PublishStatus, WorkspacePublisherPort, WorkspaceRoot,
+    EphemeralDirAllocator, EphemeralRunDirs, EphemeralSnapshot, EphemeralWorkspaceError,
+    InvocationId, PathChange, PublishOutcome, PublishStatus, WorkspacePublisherPort, WorkspaceRoot,
 };
-use eos_layerstack::{LayerStack, Manifest};
+use eos_layerstack::Manifest;
 use eos_occ::{ChangesetResult, FileResult, OccStatus};
 use eos_overlay::overlay_writable_root;
 use eos_protocol::{LayerChange, LayerPath};
@@ -27,74 +25,6 @@ use crate::occ_writer::{
 };
 
 pub(crate) use eos_ephemeral_workspace::RunDirCleanup;
-
-pub(crate) struct DaemonSnapshotPort;
-
-impl EphemeralSnapshotPort for DaemonSnapshotPort {
-    fn acquire_snapshot(
-        &self,
-        root: &WorkspaceRoot,
-        request_id: &str,
-    ) -> Result<EphemeralSnapshot, EphemeralWorkspaceError> {
-        let mut stack = LayerStack::open(root.0.clone()).map_err(|error| {
-            EphemeralWorkspaceError::SnapshotAcquire {
-                reason: error.to_string(),
-            }
-        })?;
-        let lease = stack.acquire_snapshot(request_id).map_err(|error| {
-            EphemeralWorkspaceError::SnapshotAcquire {
-                reason: error.to_string(),
-            }
-        })?;
-        Ok(EphemeralSnapshot {
-            lease_id: lease.lease_id,
-            manifest_version: lease.manifest_version,
-            manifest_root_hash: lease.root_hash,
-            layer_paths: lease.layer_paths.into_iter().map(PathBuf::from).collect(),
-        })
-    }
-
-    fn release_lease(
-        &self,
-        root: &WorkspaceRoot,
-        lease_id: &str,
-    ) -> Result<bool, EphemeralWorkspaceError> {
-        let mut stack = LayerStack::open(root.0.clone()).map_err(|error| {
-            EphemeralWorkspaceError::LeaseRelease {
-                lease_id: lease_id.to_owned(),
-                reason: error.to_string(),
-            }
-        })?;
-        stack
-            .release_lease(lease_id)
-            .map_err(|error| EphemeralWorkspaceError::LeaseRelease {
-                lease_id: lease_id.to_owned(),
-                reason: error.to_string(),
-            })
-    }
-}
-
-pub(crate) struct DaemonFreshNamespaceRunner<'a> {
-    invocation_registry: Option<&'a InFlightRegistry>,
-}
-
-impl<'a> DaemonFreshNamespaceRunner<'a> {
-    pub(crate) const fn new(invocation_registry: Option<&'a InFlightRegistry>) -> Self {
-        Self {
-            invocation_registry,
-        }
-    }
-}
-
-impl FreshNamespaceRunnerPort for DaemonFreshNamespaceRunner<'_> {
-    fn run(&self, request: &RunRequest) -> Result<RunResult, EphemeralWorkspaceError> {
-        run_ns_runner_child(request, self.invocation_registry).map_err(|error| {
-            EphemeralWorkspaceError::RunnerFailed {
-                reason: error.to_string(),
-            }
-        })
-    }
-}
 
 pub(crate) struct DaemonPublisherPort<'a> {
     root: &'a Path,

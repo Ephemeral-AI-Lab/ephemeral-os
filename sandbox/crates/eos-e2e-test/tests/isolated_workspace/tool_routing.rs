@@ -2,7 +2,7 @@ use anyhow::Result;
 use eos_protocol::ops;
 use serde_json::json;
 
-use crate::common::{array, as_bool, as_i64, as_str, live_pool_or_skip};
+use crate::support::{array, as_bool, as_i64, as_str, live_pool_or_skip};
 
 #[test]
 fn isolated_enter_status_reports_manifest_pin() -> Result<()> {
@@ -55,7 +55,7 @@ fn isolated_write_response_fields() -> Result<()> {
 }
 
 #[test]
-fn isolated_read_tools_see_private_upperdir() -> Result<()> {
+fn isolated_read_file_sees_private_upperdir() -> Result<()> {
     let Some(pool) = live_pool_or_skip()? else {
         return Ok(());
     };
@@ -65,19 +65,12 @@ fn isolated_read_tools_see_private_upperdir() -> Result<()> {
         ops::API_V1_WRITE_FILE,
         json!({"path": "iso-overlay/search.txt", "content": "needle\n", "overwrite": true}),
     )?;
-    let grep = lease.call_ok(
-        ops::API_V1_GREP,
-        json!({"pattern": "needle", "path": "iso-overlay", "output_mode": "content"}),
+    let read = lease.call_ok(
+        ops::API_V1_READ_FILE,
+        json!({"path": "iso-overlay/search.txt"}),
     )?;
-    assert_eq!(as_str(&grep, "workspace")?, "isolated");
-    assert!(as_str(&grep, "content")?.contains("needle"));
-    let glob = lease.call_ok(ops::API_V1_GLOB, json!({"pattern": "iso-overlay/*.txt"}))?;
-    assert!(
-        array(&glob, "filenames")?
-            .iter()
-            .any(|path| path.as_str() == Some("iso-overlay/search.txt")),
-        "isolated glob should see private upperdir files: {glob}"
-    );
+    assert_eq!(as_str(&read, "workspace")?, "isolated");
+    assert_eq!(as_str(&read, "content")?, "needle\n");
     lease.call_ok(ops::API_ISOLATED_WORKSPACE_EXIT, json!({}))?;
     Ok(())
 }

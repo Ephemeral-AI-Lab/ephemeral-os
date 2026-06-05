@@ -6,8 +6,6 @@ use anyhow::{Context, Result};
 use eos_e2e_test::{live_pool, NodePool};
 use serde_json::Value;
 
-pub mod fixtures;
-
 pub fn live_pool_or_skip() -> Result<Option<Arc<NodePool>>> {
     let Some(pool) = live_pool()? else {
         eprintln!("skipping live eos-e2e-test; enable with `--features e2e`");
@@ -42,12 +40,6 @@ pub fn array<'a>(value: &'a Value, key: &str) -> Result<&'a Vec<Value>> {
         .get(key)
         .and_then(Value::as_array)
         .with_context(|| format!("{key} missing or not array in {value}"))
-}
-
-pub fn object_field<'a>(value: &'a Value, key: &str) -> Result<&'a Value> {
-    value
-        .get(key)
-        .with_context(|| format!("{key} missing in {value}"))
 }
 
 pub fn stdout(value: &Value) -> &str {

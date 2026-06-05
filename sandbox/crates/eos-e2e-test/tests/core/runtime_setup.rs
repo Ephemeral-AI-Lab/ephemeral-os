@@ -2,7 +2,7 @@ use anyhow::Result;
 use eos_protocol::ops;
 use serde_json::{json, Value};
 
-use crate::common::{as_bool, as_i64, live_pool_or_skip};
+use crate::support::{as_bool, as_i64, live_pool_or_skip};
 
 #[test]
 fn runtime_ready_handshake() -> Result<()> {

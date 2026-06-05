@@ -3,7 +3,7 @@ use eos_protocol::ops;
 use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
 
-use crate::common::live_pool_or_skip;
+use crate::support::live_pool_or_skip;
 
 const PLUGIN_MD: &str = r##"# LSP Plugin Package
 

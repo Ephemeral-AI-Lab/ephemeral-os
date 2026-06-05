@@ -330,22 +330,5 @@ pub(crate) fn u64_to_usize_saturating(value: u64) -> usize {
 }
 
 pub(crate) fn f64_to_i64_rounded_saturating(value: f64) -> i64 {
-    if value.is_nan() {
-        return 0;
-    }
-    if value.is_infinite() {
-        return if value.is_sign_negative() {
-            i64::MIN
-        } else {
-            i64::MAX
-        };
-    }
-    let rounded = value.round();
-    format!("{rounded:.0}").parse::<i64>().unwrap_or_else(|_| {
-        if rounded.is_sign_negative() {
-            i64::MIN
-        } else {
-            i64::MAX
-        }
-    })
+    value.round() as i64
 }

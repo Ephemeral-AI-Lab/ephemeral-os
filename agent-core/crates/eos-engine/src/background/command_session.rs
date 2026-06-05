@@ -15,9 +15,8 @@ use eos_tools::SystemNotification as ToolNotification;
 use eos_types::{CommandSessionId, SandboxId};
 use serde_json::Value;
 
-use super::supervisor::{
-    BackgroundSupervisorHandle, BackgroundTaskStatus, BackgroundTaskSupervisor,
-};
+use super::handle::BackgroundSupervisorHandle;
+use super::supervisor::{BackgroundTaskStatus, BackgroundTaskSupervisor};
 
 /// One tracked background command session. `status` reuses
 /// [`BackgroundTaskStatus`] (`Running` → `Completed`/`Failed`/`Cancelled` →

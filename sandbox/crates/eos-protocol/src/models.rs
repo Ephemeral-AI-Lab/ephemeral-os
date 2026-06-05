@@ -11,10 +11,8 @@ use thiserror::Error;
 
 /// Read cap shared by `read_file` (over it raises `ValueError`).
 pub const MAX_READ_BYTES: usize = 16 * 1024 * 1024;
-/// Per-file grep cap; over it the file is silently skipped.
+/// Per-file write/edit cap.
 pub const MAX_FILE_BYTES: usize = 2 * 1024 * 1024;
-/// Glob result limit; results sorted then sliced, `truncated` if more.
-pub const DEFAULT_GLOB_LIMIT: usize = 100;
 
 /// The single enum in the verb model; serialized as its `.value` string.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -134,50 +132,6 @@ pub struct CommandSessionCancelArgs {
     pub command_session_id: String,
 }
 
-/// `glob` request args. `path` sent only when non-None.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct GlobArgs {
-    pub pattern: String,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub path: Option<String>,
-}
-
-/// `grep.output_mode` wire values.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub enum GrepOutputMode {
-    /// Return matching file paths and rendered matching lines.
-    Content,
-    /// Return only matching file paths.
-    #[default]
-    FilesWithMatches,
-    /// Return per-file match counts.
-    Count,
-}
-
-/// `grep` request args. `path`/`glob_filter`/`head_limit` sent only when
-/// non-None; `head_limit`/`offset` are wire-present but primitive-inert.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct GrepArgs {
-    pub pattern: String,
-    #[serde(default)]
-    pub output_mode: GrepOutputMode,
-    #[serde(default)]
-    pub offset: i64,
-    #[serde(default)]
-    pub case_insensitive: bool,
-    #[serde(default)]
-    pub line_numbers: bool,
-    #[serde(default)]
-    pub multiline: bool,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub path: Option<String>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub glob_filter: Option<String>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub head_limit: Option<i64>,
-}
-
 /// `read_file` response (`SandboxResultBase` + content/exists/encoding).
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ReadFileResult {
@@ -222,42 +176,6 @@ pub struct EditFileResult {
     pub mutation_source: String,
     pub status: String,
     pub applied_edits: i64,
-}
-
-/// `glob` response (`SandboxResultBase` + `filenames/num_files/truncated`).
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct GlobResult {
-    pub success: bool,
-    pub workspace: String,
-    pub timings: Map<String, Value>,
-    pub conflict: Option<ConflictInfo>,
-    pub conflict_reason: Option<String>,
-    pub changed_paths: Vec<String>,
-    pub error: Option<Value>,
-    pub filenames: Vec<String>,
-    pub num_files: i64,
-    pub truncated: bool,
-}
-
-/// `grep` response (`SandboxResultBase` + grep counters/content).
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct GrepResult {
-    pub success: bool,
-    pub workspace: String,
-    pub timings: Map<String, Value>,
-    pub conflict: Option<ConflictInfo>,
-    pub conflict_reason: Option<String>,
-    pub changed_paths: Vec<String>,
-    pub error: Option<Value>,
-    pub output_mode: GrepOutputMode,
-    pub filenames: Vec<String>,
-    pub content: String,
-    pub num_files: i64,
-    pub num_lines: i64,
-    pub num_matches: i64,
-    pub applied_limit: Option<i64>,
-    pub applied_offset: i64,
-    pub truncated: bool,
 }
 
 /// A single search/replace edit on the wire: `{old_text, new_text, replace_all}`.
@@ -370,32 +288,6 @@ mod tests {
                 "exit_code": null,
                 "output": {"stdout": "hi", "stderr": ""},
                 "command_session_id": "cmd_1",
-            })
-        );
-        // glob: path omitted when None.
-        assert_eq!(
-            serde_json::to_value(GlobArgs {
-                pattern: "*.rs".to_owned(),
-                path: None,
-            })?,
-            serde_json::json!({"pattern":"*.rs"})
-        );
-        // grep: optional path/glob_filter/head_limit omitted when None.
-        assert_eq!(
-            serde_json::to_value(GrepArgs {
-                pattern: "fn".to_owned(),
-                output_mode: GrepOutputMode::Content,
-                offset: 0,
-                case_insensitive: false,
-                line_numbers: true,
-                multiline: false,
-                path: None,
-                glob_filter: None,
-                head_limit: None,
-            })?,
-            serde_json::json!({
-                "pattern":"fn","output_mode":"content","offset":0,
-                "case_insensitive":false,"line_numbers":true,"multiline":false
             })
         );
         // read/write/edit round-trip cleanly.

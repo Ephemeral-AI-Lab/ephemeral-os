@@ -1,42 +1,13 @@
-use std::sync::Arc;
 use std::thread;
 use std::time::{Duration, Instant};
 
 use anyhow::{bail, Context, Result};
 use eos_e2e_test::audit::section;
 use eos_e2e_test::cas::looks_like_sha256;
-use eos_e2e_test::{live_pool, NodePool};
 use eos_protocol::ops;
 use serde_json::{json, Value};
 
-fn live_pool_or_skip() -> Result<Option<Arc<NodePool>>> {
-    let Some(pool) = live_pool()? else {
-        eprintln!("skipping live eos-e2e-test; enable with `--features e2e`");
-        return Ok(None);
-    };
-    Ok(Some(pool))
-}
-
-fn as_bool(value: &Value, key: &str) -> Result<bool> {
-    value
-        .get(key)
-        .and_then(Value::as_bool)
-        .with_context(|| format!("{key} missing or not bool in {value}"))
-}
-
-fn as_i64(value: &Value, key: &str) -> Result<i64> {
-    value
-        .get(key)
-        .and_then(Value::as_i64)
-        .with_context(|| format!("{key} missing or not i64 in {value}"))
-}
-
-fn as_str<'a>(value: &'a Value, key: &str) -> Result<&'a str> {
-    value
-        .get(key)
-        .and_then(Value::as_str)
-        .with_context(|| format!("{key} missing or not string in {value}"))
-}
+use crate::support::{as_bool, as_i64, as_str, live_pool_or_skip};
 
 fn wait_for_active_leases(lease: &eos_e2e_test::NodeLease<'_>, expected: i64) -> Result<Value> {
     let deadline = Instant::now() + Duration::from_secs(3);
@@ -105,7 +76,7 @@ fn setup_readiness_metrics_and_audit_are_protocol_visible() -> Result<()> {
 }
 
 #[test]
-fn file_tool_calls_round_trip_through_protocol() -> Result<()> {
+fn direct_file_ops_round_trip_through_protocol() -> Result<()> {
     let Some(pool) = live_pool_or_skip()? else {
         return Ok(());
     };
@@ -130,18 +101,8 @@ fn file_tool_calls_round_trip_through_protocol() -> Result<()> {
     )?;
     assert!(as_bool(&edit, "success")?);
 
-    let grep = lease.call_ok(
-        ops::API_V1_GREP,
-        json!({"pattern": "hi from protocol", "path": "e2e", "output_mode": "content"}),
-    )?;
-    assert!(as_str(&grep, "content")?.contains("hi from protocol"));
-
-    let glob = lease.call_ok(ops::API_V1_GLOB, json!({"pattern": "e2e/*.txt"}))?;
-    let names = glob
-        .get("filenames")
-        .and_then(Value::as_array)
-        .context("glob filenames missing")?;
-    assert!(names.iter().any(|name| name.as_str() == Some(path)));
+    let read = lease.call_ok(ops::API_V1_READ_FILE, json!({"path": path}))?;
+    assert_eq!(as_str(&read, "content")?, "hi from protocol\n");
     Ok(())
 }
 

@@ -66,8 +66,6 @@ pub struct NsFds {
 pub enum RunnerVerb {
     ExecCommand,
     PluginService,
-    Glob,
-    Grep,
     Unknown(String),
 }
 
@@ -77,8 +75,6 @@ impl RunnerVerb {
         match self {
             Self::ExecCommand => "exec_command",
             Self::PluginService => "plugin_service",
-            Self::Glob => "glob",
-            Self::Grep => "grep",
             Self::Unknown(verb) => verb,
         }
     }
@@ -89,8 +85,6 @@ impl From<&str> for RunnerVerb {
         match value {
             "exec_command" => Self::ExecCommand,
             "plugin_service" => Self::PluginService,
-            "glob" => Self::Glob,
-            "grep" => Self::Grep,
             other => Self::Unknown(other.to_owned()),
         }
     }
@@ -101,8 +95,6 @@ impl From<String> for RunnerVerb {
         match value.as_str() {
             "exec_command" => Self::ExecCommand,
             "plugin_service" => Self::PluginService,
-            "glob" => Self::Glob,
-            "grep" => Self::Grep,
             _ => Self::Unknown(value),
         }
     }

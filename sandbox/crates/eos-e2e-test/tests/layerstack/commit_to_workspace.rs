@@ -4,7 +4,7 @@ use eos_e2e_test::cas::looks_like_sha256;
 use eos_protocol::ops;
 use serde_json::json;
 
-use crate::common::{as_bool, as_i64, as_str, live_pool_or_skip};
+use crate::support::{as_bool, as_i64, as_str, live_pool_or_skip};
 
 #[test]
 fn commit_collapses_layers() -> Result<()> {

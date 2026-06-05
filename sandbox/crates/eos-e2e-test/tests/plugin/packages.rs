@@ -3,7 +3,7 @@ use eos_e2e_test::unique_suffix;
 use eos_protocol::ops;
 use serde_json::{json, Value};
 
-use crate::common::live_pool_or_skip;
+use crate::support::live_pool_or_skip;
 
 #[test]
 fn host_ensure_plugin_package_installs_generic_package() -> Result<()> {

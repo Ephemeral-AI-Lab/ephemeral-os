@@ -60,12 +60,6 @@ pub enum DaemonOp {
     /// `api.plugin.ensure`
     #[serde(rename = "api.plugin.ensure")]
     PluginEnsure,
-    /// `api.v1.glob`
-    #[serde(rename = "api.v1.glob")]
-    Glob,
-    /// `api.v1.grep`
-    #[serde(rename = "api.v1.grep")]
-    Grep,
     /// `api.audit.pull`
     #[serde(rename = "api.audit.pull")]
     AuditPull,
@@ -99,8 +93,6 @@ impl DaemonOp {
             Self::IsolatedWorkspaceEnter => "api.isolated_workspace.enter",
             Self::IsolatedWorkspaceExit => "api.isolated_workspace.exit",
             Self::PluginEnsure => "api.plugin.ensure",
-            Self::Glob => "api.v1.glob",
-            Self::Grep => "api.v1.grep",
             Self::AuditPull => "api.audit.pull",
             Self::AuditSnapshot => "api.audit.snapshot",
             Self::AuditResetFloor => "api.audit.reset_floor",
@@ -147,8 +139,6 @@ mod tests {
                 "api.isolated_workspace.exit",
             ),
             (DaemonOp::PluginEnsure, "api.plugin.ensure"),
-            (DaemonOp::Glob, "api.v1.glob"),
-            (DaemonOp::Grep, "api.v1.grep"),
             (DaemonOp::AuditPull, "api.audit.pull"),
             (DaemonOp::AuditSnapshot, "api.audit.snapshot"),
             (DaemonOp::AuditResetFloor, "api.audit.reset_floor"),

@@ -4,7 +4,7 @@ use serde_json::json;
 use std::path::PathBuf;
 
 /// Enumerate every `src/*.rs` file as `(path, contents)` for the AC
-/// source-grep tests. Scoped to enumeration only: the per-test needle
+/// source-scan tests. Scoped to enumeration only: the per-test needle
 /// assembly and matching logic stay inline so this helper never carries a
 /// forbidden literal (it is itself walked by those greps).
 fn crate_src_files() -> Vec<(PathBuf, String)> {
@@ -186,7 +186,7 @@ fn model_registration_no_class_path_dispatch() {
     let _normalized_key: &str = &reg.model_key;
     let _opaque_path: &str = &reg.class_path;
 
-    // Source-grep: the migration-only field is never used to branch. The
+    // Source scan: the migration-only field is never used to branch. The
     // needle is assembled so the contiguous token does not appear on this
     // logic line (it would otherwise self-match), mirroring AC-02.
     let needle = format!("class{}path", "_");

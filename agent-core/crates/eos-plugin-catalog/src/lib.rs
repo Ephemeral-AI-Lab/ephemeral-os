@@ -24,6 +24,8 @@ mod frontmatter;
 mod manifest;
 mod names;
 mod package;
+#[cfg(test)]
+mod test_support;
 mod tool_specs;
 
 pub use discovery::PluginCatalog;

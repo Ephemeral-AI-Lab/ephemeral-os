@@ -4,7 +4,7 @@ use eos_e2e_test::cas::looks_like_sha256;
 use eos_protocol::ops;
 use serde_json::{json, Value};
 
-use crate::common::{as_i64, as_str, live_pool_or_skip};
+use crate::support::{as_i64, as_str, live_pool_or_skip};
 
 fn grow_past_auto_squash(lease: &eos_e2e_test::NodeLease<'_>, path: &str) -> Result<Value> {
     let mut last = Value::Null;

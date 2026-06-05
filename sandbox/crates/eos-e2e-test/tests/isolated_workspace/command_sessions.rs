@@ -2,7 +2,7 @@ use anyhow::Result;
 use eos_protocol::ops;
 use serde_json::json;
 
-use crate::common::{as_str, live_pool_or_skip};
+use crate::support::{as_str, live_pool_or_skip};
 
 #[test]
 fn iws_same_port_discard() -> Result<()> {

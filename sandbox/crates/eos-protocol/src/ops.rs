@@ -33,10 +33,6 @@ pub const API_V1_READ_FILE: &str = "api.v1.read_file";
 pub const API_V1_WRITE_FILE: &str = "api.v1.write_file";
 /// Direct OCC-gated edit.
 pub const API_V1_EDIT_FILE: &str = "api.v1.edit_file";
-/// Glob over the effective workspace view.
-pub const API_V1_GLOB: &str = "api.v1.glob";
-/// Grep over the effective workspace view.
-pub const API_V1_GREP: &str = "api.v1.grep";
 /// Ensure a plugin service is available.
 pub const API_PLUGIN_ENSURE: &str = "api.plugin.ensure";
 /// Inspect plugin service status.
@@ -79,8 +75,6 @@ pub const BUILTIN_DAEMON_OPS: &[&str] = &[
     API_V1_READ_FILE,
     API_V1_WRITE_FILE,
     API_V1_EDIT_FILE,
-    API_V1_GLOB,
-    API_V1_GREP,
     API_PLUGIN_ENSURE,
     API_PLUGIN_STATUS,
     API_ISOLATED_WORKSPACE_ENTER,

@@ -143,8 +143,9 @@
             <div>
               <strong>One tool lifecycle runs.</strong>
               <p>
-                Rust tool execution parses input, runs pre-hooks, executes the body, validates output,
-                runs post-hooks, and stamps successful terminal tools with <code>is_terminal=True</code>.
+                Rust tool execution parses input, runs configured pre-hooks, executes the body, validates output,
+                and stamps successful terminal tools with <code>is_terminal=True</code>. Post-hooks are an accepted
+                deferred capability, not part of the current Rust execution path.
               </p>
             </div>
           </div>

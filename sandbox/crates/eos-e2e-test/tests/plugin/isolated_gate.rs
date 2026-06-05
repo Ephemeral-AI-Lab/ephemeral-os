@@ -2,7 +2,7 @@ use anyhow::Result;
 use eos_protocol::ops;
 use serde_json::json;
 
-use crate::common::live_pool_or_skip;
+use crate::support::live_pool_or_skip;
 
 #[test]
 fn generic_plugin_rejected_in_isolated_workspace() -> Result<()> {

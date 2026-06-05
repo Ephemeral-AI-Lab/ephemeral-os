@@ -1,12 +1,8 @@
-//! Workspace file and read-only search op handlers.
+//! Workspace file op handlers.
 
 use std::path::{Path, PathBuf};
 use std::time::Instant;
 
-use eos_ephemeral_workspace::{
-    run_read_tool, AgentId as EphemeralAgentId, InvocationId as EphemeralInvocationId,
-    ReadToolRequest, WorkspaceRoot as EphemeralWorkspaceRoot,
-};
 use eos_layerstack::{require_workspace_binding, LayerStack};
 use eos_protocol::{
     apply_search_replace,
@@ -18,13 +14,10 @@ use serde_json::{json, Value};
 use crate::dispatcher::DispatchContext;
 use crate::error::DaemonError;
 use crate::occ_writer::{apply_occ_changeset, hash_current, manifest_version_u64};
-use crate::overlay_runner::{
-    ephemeral_daemon_error, ephemeral_dir_allocator, DaemonFreshNamespaceRunner, DaemonSnapshotPort,
-};
 use crate::request_args::{require_raw_string, require_string};
 use crate::response_timings::{
-    guarded_changeset_response, guarded_conflict_response, merge_runner_timings,
-    published_file_count, resource_timings, usize_to_f64_saturating, usize_to_i64_saturating,
+    guarded_changeset_response, guarded_conflict_response, published_file_count, resource_timings,
+    usize_to_f64_saturating, usize_to_i64_saturating,
 };
 
 #[cfg(target_os = "linux")]
@@ -252,75 +245,6 @@ pub(crate) fn op_edit_file(
         total_start,
         Some(usize_to_i64_saturating(edits.len())),
     ))
-}
-
-/// `api.v1.glob` — read-only overlay namespace search.
-pub(crate) fn op_glob(args: &Value, _context: DispatchContext<'_>) -> Result<Value, DaemonError> {
-    #[cfg(target_os = "linux")]
-    if let Some(handle) = crate::isolated::command_handle_for_args(args) {
-        return isolated_workspace::read_tool(args, "glob", &handle, Instant::now());
-    }
-    run_overlay_read_tool(args, "glob")
-}
-
-/// `api.v1.grep` — read-only overlay namespace content search.
-pub(crate) fn op_grep(args: &Value, _context: DispatchContext<'_>) -> Result<Value, DaemonError> {
-    #[cfg(target_os = "linux")]
-    if let Some(handle) = crate::isolated::command_handle_for_args(args) {
-        return isolated_workspace::read_tool(args, "grep", &handle, Instant::now());
-    }
-    run_overlay_read_tool(args, "grep")
-}
-
-fn run_overlay_read_tool(args: &Value, verb: &str) -> Result<Value, DaemonError> {
-    let total_start = Instant::now();
-    let root = PathBuf::from(require_string(args, "layer_stack_root")?);
-    let invocation_id = args
-        .get("invocation_id")
-        .and_then(Value::as_str)
-        .unwrap_or(verb)
-        .to_owned();
-    let agent_id = args
-        .get("agent_id")
-        .and_then(Value::as_str)
-        .unwrap_or("default")
-        .to_owned();
-    let binding = require_workspace_binding(&root)?;
-
-    let request = ReadToolRequest {
-        layer_stack_root: EphemeralWorkspaceRoot(root.clone()),
-        workspace_root: PathBuf::from(&binding.workspace_root),
-        agent_id: EphemeralAgentId(agent_id),
-        invocation_id: EphemeralInvocationId(invocation_id),
-        verb: verb.to_owned(),
-        args: args.clone(),
-        timeout_seconds: args.get("timeout_seconds").and_then(Value::as_f64),
-    };
-    let dirs = ephemeral_dir_allocator()?;
-    let runner = DaemonFreshNamespaceRunner::new(None);
-    let outcome = run_read_tool(&DaemonSnapshotPort, &runner, &dirs, request)
-        .map_err(ephemeral_daemon_error)?;
-    let manifest = LayerStack::open(root)?.read_active_manifest()?;
-    let mut timings = resource_timings(&manifest, 0);
-    merge_runner_timings(&mut timings, &outcome.runner);
-    timings.insert(
-        "layer_stack.acquire_snapshot.total_s".to_owned(),
-        json!(outcome.lease_acquire_s),
-    );
-    let mut response = outcome.runner.tool_result;
-    timings
-        .entry("command_exec.capture_upperdir_s".to_owned())
-        .or_insert_with(|| json!(0.0));
-    timings.insert(
-        "command_exec.total_s".to_owned(),
-        json!(total_start.elapsed().as_secs_f64()),
-    );
-    timings.insert(
-        format!("api.{verb}.total_s"),
-        json!(total_start.elapsed().as_secs_f64()),
-    );
-    response["timings"] = Value::Object(timings);
-    Ok(response)
 }
 
 fn bound_layer_path(root: &Path, args: &Value) -> Result<String, DaemonError> {

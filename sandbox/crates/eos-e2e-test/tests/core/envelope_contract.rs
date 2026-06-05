@@ -1,24 +1,15 @@
-//! Envelope / error-surface contract tests (plan §6 foundational tier).
+//! Envelope and error-surface contract tests.
 //!
 //! Asserts the daemon's wire-error catalog directly over `eos-protocol`:
 //! unknown op, malformed frame, oversized request, and TCP auth. All four are
 //! observed as structured error envelopes (`success:false` + `error.kind`).
 
-use std::sync::Arc;
-
 use anyhow::{Context, Result};
 use eos_e2e_test::client::error_kind;
-use eos_e2e_test::{live_pool, NodePool};
 use eos_protocol::{ops, MAX_REQUEST_BYTES};
 use serde_json::json;
 
-fn live_pool_or_skip() -> Result<Option<Arc<NodePool>>> {
-    let Some(pool) = live_pool()? else {
-        eprintln!("skipping live eos-e2e-test; enable with `--features e2e`");
-        return Ok(None);
-    };
-    Ok(Some(pool))
-}
+use crate::support::live_pool_or_skip;
 
 #[test]
 fn unknown_op_rejected() -> Result<()> {

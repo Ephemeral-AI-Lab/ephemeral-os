@@ -2,7 +2,7 @@ use anyhow::Result;
 use eos_protocol::ops;
 use serde_json::json;
 
-use crate::common::{array, as_i64, as_str, live_pool_or_skip};
+use crate::support::{array, as_i64, as_str, live_pool_or_skip};
 
 #[test]
 fn exec_overlay_mount_publishes_changed_paths() -> Result<()> {

@@ -1,6 +1,6 @@
 //! Per-verb timeout policy (ported from `sandbox/api/timeouts.py`).
 //!
-//! File/search verbs have fixed per-verb budgets; command execution derives its
+//! File verbs have fixed per-verb budgets; command execution derives its
 //! budget from the command timeout plus a dispatch grace. Control RPCs use a separate
 //! `CONTROL_TIMEOUT_S` that lives in `tool_api::control`. Values are `u32`
 //! seconds, matching the [`SandboxTransport::call`] `timeout_s` parameter.
@@ -17,11 +17,6 @@ pub const EDIT_FILE_TIMEOUT_S: u32 = 20;
 pub const EXEC_DEFAULT_COMMAND_TIMEOUT_S: u32 = 60;
 /// Grace added on top of the command budget for exec dispatch, seconds.
 pub const EXEC_DISPATCH_GRACE_S: u32 = 30;
-/// Glob RPC budget, seconds.
-pub const GLOB_TIMEOUT_S: u32 = 60;
-/// Grep RPC budget, seconds.
-pub const GREP_TIMEOUT_S: u32 = 60;
-
 /// Dispatch timeout for an exec command: the command budget
 /// (`command_timeout_s`, defaulting to [`EXEC_DEFAULT_COMMAND_TIMEOUT_S`]) plus
 /// [`EXEC_DISPATCH_GRACE_S`].
@@ -47,7 +42,5 @@ mod tests {
         assert_eq!(EDIT_FILE_TIMEOUT_S, 20);
         assert_eq!(EXEC_DEFAULT_COMMAND_TIMEOUT_S, 60);
         assert_eq!(EXEC_DISPATCH_GRACE_S, 30);
-        assert_eq!(GLOB_TIMEOUT_S, 60);
-        assert_eq!(GREP_TIMEOUT_S, 60);
     }
 }

@@ -67,12 +67,12 @@ Python fires when `used >= ceil(limit*num/den)`. Rust fires when `used*den >= li
 
 ## Disparities
 
-### D1 — Rust drops profile `notification_triggers`; no `resolve_harness_notification_triggers` merge path (out-of-area but a real parity gap)
-- Status: **divergent** · Severity: **low** (for THIS area; medium as a general parity item)
+### D1 — Rust drops profile `notification_triggers`; no `resolve_harness_notification_triggers` merge path (accepted deferral)
+- Status: **deferred by scope decision** · Severity: **low** (for THIS area; medium as a general parity item)
 - Python evidence: `backend/src/engine/agent/factory.py:382-387` extends `notification_rules` with `resolve_harness_notification_triggers(agent_def.notification_triggers)` **before** `_attach_default_notification_rules`, whose dedupe-by-name (factory.py:281-287) exists precisely so a profile-supplied rule with the same name wins over the default. The planner profile sets `notification_triggers: [nested_planner_deferral_disabled]` (`backend/src/agents/profile/main/planner.md:16-17`), which resolves to `make_nested_planner_deferral_disabled_reminder` (`backend/src/tools/submission/notification_triggers/__init__.py:11-23`).
 - Rust evidence: `agent-core/crates/eos-engine/src/agent/factory.rs:144` sets `notification_rules: make_default_notification_rules()` unconditionally; `agent.notification_triggers` is parsed and stored (`eos-agent-def/src/model.rs:192,230-245`) but **never consumed** by `build_query_context` — confirmed by `grep -rn "notification_triggers" agent-core/crates/eos-engine/src` (only the test-fixture `Vec::new()` at factory.rs:222) and the absence of any `resolve_harness_notification_triggers` symbol in `agent-core/crates`.
 - Why it matters: the planner agent loses its `nested_planner_deferral_disabled` reminder. This does NOT affect the budget tiers or the terminal reminder (those names don't collide with the planner trigger), so invariant 5's *default* set is still correct. But the dedupe-by-name *mechanism* the invariant references has no profile input to dedupe against in Rust — the merge path is simply missing.
-- Suggested fix: thread `agent.notification_triggers` into `build_query_context`, resolve each id to a `NotificationRule`, prepend before `make_default_notification_rules()`, and dedupe by `name()` (default appended only if name absent), mirroring `_attach_default_notification_rules`.
+- Scope decision: profile `notification_triggers` are intentionally ignored for now. If this becomes active later, thread `agent.notification_triggers` into `build_query_context`, resolve each id to a `NotificationRule`, prepend before `make_default_notification_rules()`, and dedupe by `name()` (default appended only if name absent), mirroring `_attach_default_notification_rules`.
 
 ### D2 — Failure message text diverges; diagnostic fields dropped
 - Status: **divergent** · Severity: **low**
@@ -99,5 +99,5 @@ Python fires when `used >= ceil(limit*num/den)`. Rust fires when `used*den >= li
 
 ## Open questions
 
-1. Is the absence of the planner's `nested_planner_deferral_disabled` reminder in Rust (D1) an intentional deferral of harness notification triggers, or an oversight? It is the only in-tree non-empty `notification_triggers` entry, so it is reachable for planner agents.
+1. Profile `notification_triggers` are intentionally deferred for now. The planner's `nested_planner_deferral_disabled` reminder remains the only in-tree non-empty trigger and should be the regression target if this seam is restored later.
 2. Is cross-implementation parity of the terminal-not-submitted failure *string* (D2) required by any consumer (test harness, audit parser, UI), or is the collapsed Rust message acceptable?

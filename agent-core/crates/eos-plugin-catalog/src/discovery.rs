@@ -112,39 +112,15 @@ fn is_candidate_dir(path: &Path) -> bool {
 mod tests {
     #![allow(clippy::unwrap_used)] // unwrap is permitted in tests (err-no-unwrap-prod)
     use super::*;
-    use std::sync::atomic::{AtomicU64, Ordering};
-
-    fn temp_root(tag: &str) -> PathBuf {
-        static COUNTER: AtomicU64 = AtomicU64::new(0);
-        let n = COUNTER.fetch_add(1, Ordering::Relaxed);
-        let dir = std::env::temp_dir().join(format!(
-            "eos_plugin_catalog_discovery_{}_{tag}_{n}",
-            std::process::id()
-        ));
-        let _ = std::fs::remove_dir_all(&dir);
-        std::fs::create_dir_all(&dir).expect("create temp root");
-        dir
-    }
-
-    /// Create `<root>/<name>/` with a one-tool manifest and its module file.
-    fn make_plugin(root: &Path, name: &str) -> PathBuf {
-        let dir = root.join(name);
-        std::fs::create_dir_all(dir.join("tools")).expect("create plugin dir");
-        let manifest = format!(
-            "---\nname: {name}\ndescription: d\ntools:\n  - name: {name}.x\n    module: tools/x.py\n---\n"
-        );
-        std::fs::write(dir.join("plugin.md"), manifest).expect("write plugin.md");
-        std::fs::write(dir.join("tools/x.py"), b"# stub\n").expect("write module");
-        dir
-    }
+    use crate::test_support::{make_plugin, temp_root};
 
     // AC-plugin-catalog-06: sorted discovery, skip rules, empty/file roots
     // (proves GC-plugin-catalog-02).
     #[test]
     fn discovers_sorted_dedup_and_roots() {
         let root = temp_root("ok");
-        make_plugin(&root, "bravo");
-        make_plugin(&root, "alpha");
+        make_plugin(&root, "bravo", None, &[]);
+        make_plugin(&root, "alpha", None, &[]);
         // Skipped: a dot-folder, __pycache__, and a folder without plugin.md.
         std::fs::create_dir_all(root.join(".hidden")).unwrap();
         std::fs::create_dir_all(root.join("__pycache__")).unwrap();
@@ -180,7 +156,7 @@ mod tests {
     #[test]
     fn duplicate_plugin_name_via_symlink() {
         let root = temp_root("dup");
-        make_plugin(&root, "foo");
+        make_plugin(&root, "foo", None, &[]);
         // `bar` -> `foo`: canonicalizes to foo, so its manifest name "foo" collides.
         std::os::unix::fs::symlink(root.join("foo"), root.join("bar")).expect("symlink");
 

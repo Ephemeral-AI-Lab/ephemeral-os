@@ -155,7 +155,7 @@
 <div class="summary">
   <ul>
     <li>Most tool calls should not keep private workspace state after the operation ends.</li>
-    <li><code>ephemeral_workspace</code> creates fresh overlays for shell/search/plugin operations; simple file APIs use shared direct LayerStack/OCC ops instead.</li>
+    <li><code>ephemeral_workspace</code> creates fresh overlays for shell/plugin operations and fallback file work; simple file APIs use shared direct LayerStack/OCC ops instead.</li>
     <li>LayerStack leases lower layers, overlay captures upperdir, and OCC publishes accepted changes.</li>
     <li>Every call gets a clean snapshot and releases its scratch space when done.</li>
   </ul>
@@ -165,7 +165,7 @@
 
 <div class="diagram" aria-label="Ephemeral workspace flow">
   <div class="flow-row">
-    <div class="node"><strong>Tool call</strong><small>shell/glob/grep or fallback file op</small></div>
+    <div class="node"><strong>Tool call</strong><small>shell/plugin or fallback file op</small></div>
     <div class="arrow">&rarr;</div>
     <div class="node"><strong>Lease snapshot</strong><small>layer_paths + upper/work</small></div>
     <div class="arrow">&rarr;</div>

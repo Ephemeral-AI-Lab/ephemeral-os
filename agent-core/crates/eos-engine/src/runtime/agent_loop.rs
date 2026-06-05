@@ -334,16 +334,7 @@ fn publish_agent_run_completed(
 
     let mut payload = JsonObject::new();
     payload.insert("agent_run".to_owned(), Value::Object(section));
-    let event = AuditEvent::new(
-        AuditSource::Engine,
-        AGENT_RUN_COMPLETED,
-        agent_run_audit_node(ctx),
-        payload,
-        &SystemClock,
-    );
-    if let Err(err) = handles.audit.publish(&event) {
-        tracing::warn!(error = %err, agent_run_id = ctx.agent_run_id.as_str(), "agent-run obs publish failed");
-    }
+    publish_audit_event(handles, ctx, AGENT_RUN_COMPLETED, payload);
 }
 
 fn publish_os_resource_sampled(handles: &EngineRunHandles, ctx: &crate::query::QueryContext) {
@@ -359,15 +350,31 @@ fn publish_os_resource_sampled(handles: &EngineRunHandles, ctx: &crate::query::Q
         "os_resource".to_owned(),
         Value::Object(sample.into_payload()),
     );
+    publish_audit_event(handles, ctx, OS_RESOURCE_SAMPLED, payload);
+}
+
+/// Publish one engine audit event scoped to this agent run, warning if the obs
+/// sink rejects it. Shared by the per-run completion and OS-resource publishers.
+fn publish_audit_event(
+    handles: &EngineRunHandles,
+    ctx: &crate::query::QueryContext,
+    event_type: &str,
+    payload: JsonObject,
+) {
     let event = AuditEvent::new(
         AuditSource::Engine,
-        OS_RESOURCE_SAMPLED,
+        event_type,
         agent_run_audit_node(ctx),
         payload,
         &SystemClock,
     );
     if let Err(err) = handles.audit.publish(&event) {
-        tracing::warn!(error = %err, agent_run_id = ctx.agent_run_id.as_str(), "os-resource obs publish failed");
+        tracing::warn!(
+            error = %err,
+            agent_run_id = ctx.agent_run_id.as_str(),
+            event_type,
+            "obs publish failed"
+        );
     }
 }
 

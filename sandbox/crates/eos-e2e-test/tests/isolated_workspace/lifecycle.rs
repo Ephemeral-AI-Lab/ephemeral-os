@@ -1,4 +1,4 @@
-//! Isolated-workspace lifecycle tests (plan §10 isolated path).
+//! Isolated-workspace lifecycle tests.
 //!
 //! Exercises the real SetNs / ns-holder / veth / cgroup machinery via
 //! `enter` → (isolated write/read) → `status` → `exit`, asserting on the op
@@ -10,7 +10,7 @@ use anyhow::{Context, Result};
 use eos_protocol::ops;
 use serde_json::{json, Value};
 
-use crate::common::{as_bool, as_str, live_pool_or_skip};
+use crate::support::{as_bool, as_str, live_pool_or_skip};
 
 #[test]
 fn enter_status_exit_pin_and_teardown() -> Result<()> {

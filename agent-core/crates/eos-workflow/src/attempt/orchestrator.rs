@@ -1,7 +1,6 @@
-use std::collections::{BTreeMap, BTreeSet, VecDeque};
+use std::collections::BTreeMap;
 use std::sync::Arc;
 
-use eos_agent_def::{AgentName, AgentRole};
 use eos_state::{
     execution_outcome_for_submission, Attempt, AttemptFailReason, AttemptId, AttemptStage,
     AttemptStatus, ExecutionRole, GeneratorSubmission, PlannerFailReason, PlannerFailureSubmission,
@@ -10,6 +9,7 @@ use eos_state::{
 };
 use eos_tools::PlannerPlan;
 
+use crate::attempt::plan_dag::{validate_plan_agents, validate_plan_shape};
 use crate::attempt::{
     AgentLaunch, AgentLaunchFactory, AgentRunReport, AttemptDeps, AttemptStageAdvancer,
 };
@@ -202,7 +202,7 @@ impl AttemptOrchestrator {
     }
 
     async fn materialize_plan_tasks(&self, plan: &PlannerPlan) -> Result<PlannerSubmission> {
-        self.validate_plan_shape(plan)?;
+        validate_plan_shape(plan)?;
         let attempt = self
             .validate_planner_submission(&plan.planner_task_id)
             .await?;
@@ -219,7 +219,7 @@ impl AttemptOrchestrator {
         // Pending rows. Mirrors PLAN §3 ("validate shape / acyclic / ROLE, then
         // materialize") and Python `build_planner_submission`, which resolves all
         // agents up front before creating tasks.
-        self.validate_plan_agents(plan)?;
+        validate_plan_agents(plan, &self.deps.agent_registry)?;
         let mut local_to_task = BTreeMap::new();
         for task in &plan.tasks {
             let id = generator_task_id(&attempt.id, &task.id)?;
@@ -315,137 +315,6 @@ impl AttemptOrchestrator {
             reducer_task_ids: reducer_ids,
             deferred_goal_for_next_iteration: plan.deferred_goal_for_next_iteration.clone(),
         })
-    }
-
-    fn validate_plan_shape(&self, plan: &PlannerPlan) -> Result<()> {
-        if plan.reducers.is_empty() {
-            return Err(WorkflowError::invariant(
-                "plan must contain at least one reducer",
-            ));
-        }
-        // D1: reject a duplicate id across the union of generators and reducers
-        // (mirror `plan_dag.py` union-dedup). The tool layer only checks
-        // generator-vs-generator duplicates, so a reducer<->reducer (or
-        // generator<->reducer) collision would otherwise push duplicate task
-        // rows into `reducer_task_ids`/`generator_task_ids`.
-        let mut seen_ids: BTreeSet<&str> = BTreeSet::new();
-        for id in plan
-            .tasks
-            .iter()
-            .map(|task| task.id.as_str())
-            .chain(plan.reducers.iter().map(|reducer| reducer.id.as_str()))
-        {
-            if !seen_ids.insert(id) {
-                return Err(WorkflowError::invariant(format!(
-                    "plan contains duplicate task id {id:?}"
-                )));
-            }
-        }
-        let generator_ids: BTreeSet<&str> =
-            plan.tasks.iter().map(|task| task.id.as_str()).collect();
-        let reducer_ids: BTreeSet<&str> =
-            plan.reducers.iter().map(|task| task.id.as_str()).collect();
-        let all_ids: BTreeSet<&str> = generator_ids.union(&reducer_ids).copied().collect();
-        for task in &plan.tasks {
-            let reducer_needs: Vec<&str> = task
-                .needs
-                .iter()
-                .map(String::as_str)
-                .filter(|need| reducer_ids.contains(*need))
-                .collect();
-            if !reducer_needs.is_empty() {
-                return Err(WorkflowError::invariant(format!(
-                    "generator task {:?} cannot need reducer task(s): {reducer_needs:?}",
-                    task.id
-                )));
-            }
-            for need in &task.needs {
-                if !all_ids.contains(need.as_str()) {
-                    return Err(WorkflowError::invariant(format!(
-                        "plan task {:?} has unknown needs: {:?}",
-                        task.id, need
-                    )));
-                }
-            }
-        }
-        let mut downstream_by_generator: BTreeMap<&str, Vec<&str>> =
-            generator_ids.iter().map(|id| (*id, Vec::new())).collect();
-        for task in &plan.tasks {
-            for need in &task.needs {
-                if let Some(downstream) = downstream_by_generator.get_mut(need.as_str()) {
-                    downstream.push(task.id.as_str());
-                }
-            }
-        }
-        for reducer in &plan.reducers {
-            if reducer.needs.is_empty() {
-                return Err(WorkflowError::invariant(format!(
-                    "reducer task {:?} must need at least one generator",
-                    reducer.id
-                )));
-            }
-            for need in &reducer.needs {
-                if reducer_ids.contains(need.as_str()) {
-                    return Err(WorkflowError::invariant(format!(
-                        "reducer task {:?} cannot need reducer task(s)",
-                        reducer.id
-                    )));
-                }
-                if !all_ids.contains(need.as_str()) {
-                    return Err(WorkflowError::invariant(format!(
-                        "plan task {:?} has unknown needs: {:?}",
-                        reducer.id, need
-                    )));
-                }
-                if let Some(downstream) = downstream_by_generator.get_mut(need.as_str()) {
-                    downstream.push(reducer.id.as_str());
-                }
-            }
-        }
-        let dangling: Vec<&str> = downstream_by_generator
-            .iter()
-            .filter_map(|(id, downstream)| downstream.is_empty().then_some(*id))
-            .collect();
-        if !dangling.is_empty() {
-            return Err(WorkflowError::invariant(format!(
-                "plan has generator(s) no downstream task needs: {dangling:?}"
-            )));
-        }
-        assert_acyclic(plan)
-    }
-
-    /// Validate every plan agent before any task row is written: each generator
-    /// is bound to a registered generator-role profile (D6) and has a task spec,
-    /// and the fixed `reducer` profile is registered. Runs after the pure shape
-    /// checks and before materialization so a rejected plan leaves no orphan rows.
-    fn validate_plan_agents(&self, plan: &PlannerPlan) -> Result<()> {
-        for task in &plan.tasks {
-            let agent_name = AgentName::new(task.agent_name.clone())?;
-            let agent_def = self.deps.agent_registry.get(&agent_name).ok_or_else(|| {
-                WorkflowError::AgentDefinition(format!(
-                    "agent definition {:?} is not registered",
-                    task.agent_name
-                ))
-            })?;
-            // D6: a generator task must be bound to a generator-capable profile
-            // (Python `_schemas.py` requires `AgentRole.GENERATOR`).
-            if agent_def.role != AgentRole::Generator {
-                return Err(WorkflowError::invariant(format!(
-                    "generator task {:?} is bound to agent {:?} with role {:?}, expected generator",
-                    task.id, task.agent_name, agent_def.role
-                )));
-            }
-            if !plan.task_specs.contains_key(&task.id) {
-                return Err(WorkflowError::not_found("task spec", &task.id));
-            }
-        }
-        let reducer_name = AgentName::new("reducer")?;
-        self.deps.agent_registry.get(&reducer_name).ok_or_else(|| {
-            WorkflowError::AgentDefinition(
-                "agent definition \"reducer\" is not registered".to_owned(),
-            )
-        })?;
-        Ok(())
     }
 
     async fn record_plan_submission(&self, submission: PlannerSubmission) -> Result<()> {
@@ -780,63 +649,6 @@ impl AttemptOrchestrator {
         }
         Ok(())
     }
-}
-
-fn assert_acyclic(plan: &PlannerPlan) -> Result<()> {
-    let mut by_needs: BTreeMap<&str, Vec<&str>> = BTreeMap::new();
-    for task in &plan.tasks {
-        by_needs.insert(
-            task.id.as_str(),
-            task.needs.iter().map(String::as_str).collect(),
-        );
-    }
-    for reducer in &plan.reducers {
-        by_needs.insert(
-            reducer.id.as_str(),
-            reducer.needs.iter().map(String::as_str).collect(),
-        );
-    }
-    let mut remaining = by_needs
-        .iter()
-        .map(|(id, needs)| (*id, needs.iter().copied().collect::<BTreeSet<_>>()))
-        .collect::<BTreeMap<_, _>>();
-    let mut dependents: BTreeMap<&str, Vec<&str>> =
-        by_needs.keys().map(|id| (*id, Vec::new())).collect();
-    for (id, needs) in &by_needs {
-        for need in needs {
-            if let Some(entries) = dependents.get_mut(need) {
-                entries.push(id);
-            }
-        }
-    }
-    let mut ready = remaining
-        .iter()
-        .filter_map(|(id, needs)| needs.is_empty().then_some(*id))
-        .collect::<VecDeque<_>>();
-    let mut order = Vec::new();
-    while let Some(id) = ready.pop_front() {
-        order.push(id);
-        for dependent in dependents.get(id).into_iter().flatten() {
-            if let Some(needs) = remaining.get_mut(dependent) {
-                needs.remove(id);
-                if needs.is_empty() {
-                    ready.push_back(dependent);
-                }
-            }
-        }
-    }
-    if order.len() != by_needs.len() {
-        let ordered = order.into_iter().collect::<BTreeSet<_>>();
-        let cycle = by_needs
-            .keys()
-            .filter(|id| !ordered.contains(**id))
-            .copied()
-            .collect::<Vec<_>>();
-        return Err(WorkflowError::invariant(format!(
-            "plan contains a dependency cycle among: {cycle:?}"
-        )));
-    }
-    Ok(())
 }
 
 #[cfg(test)]

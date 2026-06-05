@@ -6,7 +6,7 @@ use eos_protocol::{
 };
 use serde_json::{json, Value};
 
-use crate::common::{array, as_bool, as_i64, as_str, conflict_message, live_pool_or_skip};
+use crate::support::{array, as_bool, as_i64, as_str, conflict_message, live_pool_or_skip};
 
 #[test]
 fn write_read_roundtrip() -> Result<()> {
@@ -151,43 +151,6 @@ fn read_nonexistent() -> Result<()> {
     let read = lease.call_ok(ops::API_V1_READ_FILE, json!({"path": "tool/missing.txt"}))?;
     assert!(!as_bool(&read, "exists")?);
     assert_eq!(as_str(&read, "content")?, "");
-    Ok(())
-}
-
-#[test]
-fn glob_matches() -> Result<()> {
-    let Some(pool) = live_pool_or_skip()? else {
-        return Ok(());
-    };
-    let lease = pool.acquire()?;
-    lease.call_ok(
-        ops::API_V1_WRITE_FILE,
-        json!({"path": "tool/glob/a.rs", "content": "fn a() {}\n", "overwrite": true}),
-    )?;
-    let glob = lease.call_ok(ops::API_V1_GLOB, json!({"pattern": "tool/glob/*.rs"}))?;
-    assert_eq!(as_i64(&glob, "num_files")?, 1);
-    assert_eq!(
-        array(&glob, "filenames")?[0],
-        Value::String("tool/glob/a.rs".to_owned())
-    );
-    Ok(())
-}
-
-#[test]
-fn grep_content_mode() -> Result<()> {
-    let Some(pool) = live_pool_or_skip()? else {
-        return Ok(());
-    };
-    let lease = pool.acquire()?;
-    lease.call_ok(
-        ops::API_V1_WRITE_FILE,
-        json!({"path": "tool/grep.txt", "content": "needle\nhay\n", "overwrite": true}),
-    )?;
-    let grep = lease.call_ok(
-        ops::API_V1_GREP,
-        json!({"pattern": "needle", "path": "tool", "output_mode": "content"}),
-    )?;
-    assert!(as_str(&grep, "content")?.contains("needle"));
     Ok(())
 }
 
