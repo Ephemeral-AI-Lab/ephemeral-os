@@ -21,7 +21,7 @@ use crate::sink::AuditSink;
 
 /// Serialize one event to its normalized `JSONL` row.
 fn event_line(event: &AuditEvent) -> Result<String, AuditError> {
-    Ok(eos_obs_contract::to_jsonl_line(&event.to_obs_envelope())?)
+    Ok(crate::to_jsonl_line(&event.to_obs_envelope())?)
 }
 
 /// Open `path` for appending, creating parent directories as needed.
@@ -218,20 +218,20 @@ mod tests {
         let path = dir.path.join("nested/audit.jsonl");
         let sink = JsonlSink::new(&path);
 
-        sink.publish(&event(eos_obs_contract::AGENT_RUN_COMPLETED))
+        sink.publish(&event(crate::AGENT_RUN_COMPLETED))
             .unwrap();
-        sink.publish(&event(eos_obs_contract::TOOL_CALL_COMPLETED))
+        sink.publish(&event(crate::TOOL_CALL_COMPLETED))
             .unwrap();
 
         let contents = std::fs::read_to_string(&path).unwrap();
         let lines: Vec<&str> = contents.lines().collect();
         assert_eq!(lines.len(), 2);
-        assert!(lines[0].contains(eos_obs_contract::AGENT_RUN_COMPLETED));
-        assert!(lines[1].contains(eos_obs_contract::TOOL_CALL_COMPLETED));
+        assert!(lines[0].contains(crate::AGENT_RUN_COMPLETED));
+        assert!(lines[1].contains(crate::TOOL_CALL_COMPLETED));
         // Each line is a complete normalized JSON object.
         for line in lines {
-            let row = eos_obs_contract::from_jsonl_line(line).unwrap();
-            assert_eq!(row.source, eos_obs_contract::ObsSource::AgentCore);
+            let row = crate::from_jsonl_line(line).unwrap();
+            assert_eq!(row.source, crate::ObsSource::AgentCore);
         }
     }
 
@@ -245,7 +245,7 @@ mod tests {
 
         const N: usize = 20;
         for _ in 0..N {
-            sink.publish(&event(eos_obs_contract::TOOL_CALL_COMPLETED))
+            sink.publish(&event(crate::TOOL_CALL_COMPLETED))
                 .unwrap();
         }
         shutdown.shutdown();
@@ -254,8 +254,8 @@ mod tests {
         let lines: Vec<&str> = contents.lines().collect();
         assert_eq!(lines.len(), N);
         for line in lines {
-            let row = eos_obs_contract::from_jsonl_line(line).unwrap();
-            assert_eq!(row.event_type, eos_obs_contract::TOOL_CALL_COMPLETED);
+            let row = crate::from_jsonl_line(line).unwrap();
+            assert_eq!(row.event_type, crate::TOOL_CALL_COMPLETED);
         }
     }
 }

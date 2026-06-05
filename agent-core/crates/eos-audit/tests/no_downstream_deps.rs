@@ -1,9 +1,9 @@
-// AC-audit-07: the crate's dependency set is exactly {eos-types,
-// eos-obs-contract} among EphemeralOS crates. It must not depend on downstream
-// agent-core crates (no eos-tools / eos-engine / eos-workflow / ...), which
-// would create the eos-audit -> eos-engine -> eos-audit cycle banned by
-// GC-audit-05. The workspace-wide dependency topology is also guarded centrally
-// by workspace-guard; this is the crate-local proof.
+// AC-audit-07: the crate's dependency set is exactly {eos-types} among
+// EphemeralOS crates. It must not depend on downstream agent-core crates (no
+// eos-tools / eos-engine / eos-workflow / ...), which would create the
+// eos-audit -> eos-engine -> eos-audit cycle banned by GC-audit-05. The
+// workspace-wide dependency topology is also guarded centrally by
+// workspace-guard; this is the crate-local proof.
 //
 // Plain `//` comments throughout so clippy::doc_markdown never fires on crate
 // identifiers in a test file.
@@ -38,9 +38,9 @@ fn eos_audit_internal_deps_are_base_contracts_only() {
         .filter(|n| n.starts_with("eos-"))
         .collect();
 
-    let expected: BTreeSet<&str> = ["eos-obs-contract", "eos-types"].into_iter().collect();
+    let expected: BTreeSet<&str> = ["eos-types"].into_iter().collect();
     assert_eq!(
         internal_deps, expected,
-        "eos-audit must depend only on base contracts among EphemeralOS crates"
+        "eos-audit must depend only on eos-types among EphemeralOS crates"
     );
 }

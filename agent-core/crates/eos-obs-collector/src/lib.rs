@@ -2,7 +2,7 @@
 //!
 //! Producers keep their local mechanics: agent-core writes normalized JSONL and
 //! the sandbox daemon exposes its bounded native ring. This crate is the small
-//! collector boundary that turns both inputs into [`eos_obs_contract::ObsEnvelope`]
+//! collector boundary that turns both inputs into [`eos_audit::ObsEnvelope`]
 //! rows for future runner gates.
 
 #![forbid(unsafe_code)]

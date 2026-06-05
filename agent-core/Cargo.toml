@@ -66,7 +66,6 @@ eos-config         = { path = "crates/eos-config" }
 eos-state          = { path = "crates/eos-state" }
 eos-db             = { path = "crates/eos-db" }
 eos-audit          = { path = "crates/eos-audit" }
-eos-obs-contract   = { path = "../base/crates/eos-obs-contract" }
 eos-llm-client     = { path = "crates/eos-llm-client" }
 eos-agent-def      = { path = "crates/eos-agent-def" }
 eos-sandbox-api    = { path = "crates/eos-sandbox-api" }

@@ -15,7 +15,7 @@ use std::time::Instant;
 use eos_agent_def::{AgentDefinition, AgentRegistry};
 use eos_audit::{AuditEvent, AuditNode, AuditSink, AuditSource};
 use eos_llm_client::{LlmClient, Message, DEFAULT_MAX_TOKENS};
-use eos_obs_contract::{AGENT_RUN_COMPLETED, OS_RESOURCE_SAMPLED};
+use eos_audit::{AGENT_RUN_COMPLETED, OS_RESOURCE_SAMPLED};
 use eos_state::{AgentRunStore, ModelStore};
 use eos_tools::{
     build_default_registry, BackgroundSupervisorPort, CallerScope, ExecutionMetadata,

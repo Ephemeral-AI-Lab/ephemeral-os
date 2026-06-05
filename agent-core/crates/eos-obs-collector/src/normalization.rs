@@ -1,4 +1,4 @@
-use eos_obs_contract::{from_jsonl_line, JsonObject, ObsEnvelope, ObsIds, ObsSource};
+use eos_audit::{from_jsonl_line, JsonObject, ObsEnvelope, ObsIds, ObsSource};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
@@ -205,7 +205,7 @@ fn sum_known(left: Option<i64>, right: Option<i64>) -> Option<i64> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use eos_obs_contract::{ObsSource, TOOL_CALL_COMPLETED};
+    use eos_audit::{ObsSource, TOOL_CALL_COMPLETED};
     use serde_json::json;
 
     #[test]

@@ -1,6 +1,6 @@
-//! Shared audit/observability contract for cross-workspace consumers.
+//! Normalized audit/observability contract for collectors.
 //!
-//! This crate intentionally owns only the normalized row shape used by
+//! This module intentionally owns only the normalized row shape used by
 //! collectors. It does not own producer policy, sinks, daemon rings, tracing, or
 //! report rendering.
 

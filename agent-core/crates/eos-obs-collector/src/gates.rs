@@ -1,6 +1,6 @@
 use std::collections::BTreeSet;
 
-use eos_obs_contract::{ObsEnvelope, OS_RESOURCE_SAMPLED, TOOL_CALL_COMPLETED};
+use eos_audit::{ObsEnvelope, OS_RESOURCE_SAMPLED, TOOL_CALL_COMPLETED};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
@@ -466,8 +466,8 @@ fn failure(kind: RunnerGateFailureKind, detail: impl Into<String>) -> RunnerGate
 
 #[cfg(test)]
 mod tests {
-    use eos_obs_contract::to_jsonl_line;
-    use eos_obs_contract::{JsonObject, ObsIds, ObsSource};
+    use eos_audit::to_jsonl_line;
+    use eos_audit::{JsonObject, ObsIds, ObsSource};
     use serde_json::json;
 
     use super::*;

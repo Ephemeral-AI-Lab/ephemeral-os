@@ -5,12 +5,12 @@
 //! collapsing Python's double `ts` stamping. The `type` key maps to the Rust
 //! field `event_type` (`type` is a keyword).
 
-use eos_obs_contract::{ObsEnvelope, ObsIds, ObsSource};
 use eos_types::{Clock, JsonObject, UtcDateTime};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use crate::node::AuditNode;
+use crate::{ObsEnvelope, ObsIds, ObsSource};
 
 /// The serialized-row schema version. Bumped only on a wire-shape change.
 pub const SCHEMA_VERSION: u32 = 1;
@@ -147,14 +147,14 @@ mod tests {
         payload.insert("status".to_owned(), Value::String("ok".to_owned()));
         let event = AuditEvent::new(
             AuditSource::Engine,
-            eos_obs_contract::TOOL_CALL_COMPLETED,
+            crate::TOOL_CALL_COMPLETED,
             node,
             payload,
             &fixed_clock(),
         );
 
         let value = serde_json::to_value(&event).unwrap();
-        assert_eq!(value["type"], json!(eos_obs_contract::TOOL_CALL_COMPLETED));
+        assert_eq!(value["type"], json!(crate::TOOL_CALL_COMPLETED));
         assert_eq!(value["schema_version"], json!(1));
         assert!(value.get("node").unwrap().is_object());
         assert_eq!(value["node"]["request_id"], json!("req-1"));
@@ -190,9 +190,9 @@ mod tests {
         let obs = event.to_obs_envelope();
         let value = serde_json::to_value(obs).unwrap();
 
-        assert_eq!(value["schema"], json!(eos_obs_contract::SCHEMA));
+        assert_eq!(value["schema"], json!(crate::SCHEMA));
         assert_eq!(value["source"], json!("agent_core"));
-        assert_eq!(value["type"], json!(eos_obs_contract::TOOL_CALL_COMPLETED));
+        assert_eq!(value["type"], json!(crate::TOOL_CALL_COMPLETED));
         assert_eq!(value["ids"]["request_id"], json!("req-1"));
         assert_eq!(value["ids"]["task_id"], json!("task-1"));
         assert_eq!(value["ids"]["agent_run_id"], json!("run-1"));

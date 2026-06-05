@@ -44,7 +44,7 @@ fn expected_edges() -> Edges {
             "eos-workflow",
             &["eos-types", "eos-state", "eos-tools", "eos-agent-def"],
         ),
-        ("eos-obs-collector", &[]),
+        ("eos-obs-collector", &["eos-audit"]),
         (
             "eos-sandbox-host",
             &["eos-sandbox-api", "eos-config", "eos-types"],
