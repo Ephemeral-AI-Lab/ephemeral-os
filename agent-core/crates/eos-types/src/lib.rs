@@ -5,8 +5,7 @@
 //! twelve typed string ids, the [`UtcDateTime`] wrapper, the [`Clock`] trait
 //! seam, the transitional [`JsonObject`] alias, and the minimal [`CoreError`].
 //! It deliberately holds no domain state, status enums, SQL, HTTP, or config —
-//! those belong to their owning crates (see
-//! `docs/plans/backend_agent_core_rust_migration/impl-eos-types.md`).
+//! those belong to their owning crates.
 //!
 //! The public surface is re-exported flatly, so consumers write
 //! `use eos_types::{TaskId, UtcDateTime, Clock, JsonObject};`.

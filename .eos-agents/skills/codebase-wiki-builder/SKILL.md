@@ -276,14 +276,14 @@ For HTML, prefer attributes on the section container:
 ```html
 <section id="request-lifecycle"
   data-last-reviewed-commit="abc1234"
-  data-evidence-paths="backend/src/sandbox/host/daemon_client.py tests/sandbox/test_daemon_client.py">
+  data-evidence-paths="agent-core/crates/eos-sandbox-host/src/lib.rs agent-core/crates/eos-sandbox-host/tests">
 ```
 
 For Markdown, place a compact comment directly after the heading:
 
 ```markdown
 ## Request Lifecycle
-<!-- wiki-section: request-lifecycle; last-reviewed-commit: abc1234; evidence-paths: backend/src/sandbox/host/daemon_client.py, tests/sandbox/test_daemon_client.py -->
+<!-- wiki-section: request-lifecycle; last-reviewed-commit: abc1234; evidence-paths: agent-core/crates/eos-sandbox-host/src/lib.rs, agent-core/crates/eos-sandbox-host/tests -->
 ```
 
 Future quick-refresh command pattern:

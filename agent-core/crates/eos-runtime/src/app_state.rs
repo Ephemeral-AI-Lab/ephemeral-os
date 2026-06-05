@@ -47,7 +47,7 @@ use crate::plugin_tools::register_plugin_tools;
 /// of it, so this narrow runtime seam exists purely for testability: production
 /// wraps the host provisioner; tests inject a fake.
 #[async_trait]
-pub trait RequestProvisioner: Send + Sync + std::fmt::Debug {
+pub(crate) trait RequestProvisioner: Send + Sync + std::fmt::Debug {
     /// Resolve the sandbox binding for one request (start an explicit id, or
     /// create a fresh `request-<hex8>` sandbox labelled `origin=workflow`).
     async fn prepare_for_run(
@@ -291,10 +291,8 @@ impl AppStateBuilder {
     }
 
     /// Inject a request provisioner (a host-backed provisioner by default).
-    /// Public so `eos-testkit`'s `build_test_state` can inject a fake without a
-    /// `test-util` feature gate (the seam is invisible to other crates when
-    /// gated by `#[cfg(test)]`).
-    pub fn provisioner(mut self, provisioner: Arc<dyn RequestProvisioner>) -> Self {
+    #[cfg(test)]
+    pub(crate) fn provisioner(mut self, provisioner: Arc<dyn RequestProvisioner>) -> Self {
         self.provisioner = Some(provisioner);
         self
     }
@@ -547,12 +545,23 @@ fn validate_agent_tools(agents: &AgentRegistry, registry: &ToolRegistry) -> Resu
     Ok(())
 }
 
+// Crate-local Layer-A fixtures (`build_test_state` + `FakeProvisioner`). They
+// reference `eos-runtime` types, so the dev-dep two-instance rule bars consuming
+// them from an external `eos-testkit` in this crate's own in-crate tests
+// (TESTING_SPEC §14.2); the cross-crate-safe doubles still come from
+// `eos-testkit`. Declared here (not under `tests`) so they can reach the
+// `pub(crate)` provisioner seam via `super::`.
+#[cfg(test)]
+#[path = "../tests/unit/support.rs"]
+pub(crate) mod support;
+
 #[cfg(test)]
 mod tests {
     // Pure-logic unit test for a module-private fn (no reusable doubles defined,
-    // so I2-permitted inline). The shared seams that used to live beside it moved
-    // to `eos-testkit` (TESTING_SPEC §7); the behavior tests live in
-    // `tests/unit/mod.rs` and pull those doubles from the `eos-testkit` dev-dep.
+    // so I2-permitted inline). The shared Layer-A doubles moved to `eos-testkit`
+    // (TESTING_SPEC §7); the behavior tests live in `tests/unit/mod.rs` and pull
+    // those doubles from the `eos-testkit` dev-dep plus the local `support`
+    // module.
     #[test]
     fn eosd_artifact_dir_is_repo_sandbox_dist() {
         assert_eq!(

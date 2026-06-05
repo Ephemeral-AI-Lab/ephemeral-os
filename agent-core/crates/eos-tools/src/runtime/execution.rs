@@ -194,7 +194,7 @@ mod tests {
     use crate::core::metadata::ExecutionMetadata;
     use crate::hooks::Hook;
     use crate::runtime::executor::{RegisteredTool, ToolExecutor};
-    use crate::testsupport::metadata;
+    use crate::support::metadata;
 
     #[derive(Serialize, Deserialize, schemars::JsonSchema)]
     struct Structured {

@@ -52,7 +52,7 @@ mod tests {
 
     use super::*;
     use crate::ports::{OutstandingWorkflow, Sealed, StartedWorkflowHandle, WorkflowControlPort};
-    use crate::testsupport::metadata;
+    use crate::support::metadata;
     use eos_types::{AgentRunId, TaskId, WorkflowId, WorkflowSessionId};
 
     struct FixedDepth(u32);

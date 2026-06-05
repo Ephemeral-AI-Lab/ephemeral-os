@@ -172,7 +172,7 @@ mod tests {
     };
 
     use super::*;
-    use crate::testsupport::{
+    use crate::support::{
         agent_registry_without_planner, root_task, MemoryStores, QueueRunner,
     };
 

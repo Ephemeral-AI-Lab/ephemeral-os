@@ -18,7 +18,7 @@ use crate::ports::{
     StartedWorkflowHandle, WorkflowControlPort,
 };
 use crate::runtime::executor::ToolExecutor;
-use crate::testsupport::metadata;
+use crate::support::metadata;
 
 #[derive(Default)]
 struct FakeBackgroundSupervisor {

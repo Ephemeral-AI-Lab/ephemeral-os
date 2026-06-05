@@ -327,7 +327,7 @@ fn parse_kind(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::test_support::{make_plugin, temp_root};
+    use crate::support::{make_plugin, temp_root};
 
     const LSP_MANIFEST: &str = "\
 ---

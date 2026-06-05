@@ -1,35 +1,25 @@
-//! Shared engine test fakes.
-
-#![allow(clippy::expect_used)]
+//! The tool [`ExecutionMetadata`] fixture and the in-memory store fakes it binds.
+//!
+//! Relocated from `eos-engine/src/support/test_support.rs` (TESTING_SPEC §7).
+//! Every type here is owned by `eos-state` / `eos-tools` / `eos-skills` /
+//! `eos-sandbox-api` — all external to `eos-engine` — so engine **in-crate**
+//! tests can consume `metadata()` despite the dev-dep cycle (no `eos-engine`
+//! type crosses the boundary).
 
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
 use async_trait::async_trait;
-use eos_sandbox_api::{DaemonOp, SandboxApiError, SandboxTransport};
 use eos_skills::SkillRegistry;
 use eos_state::{
     ExecutionTaskOutcome, Request, RequestStatus, RequestStore, Sealed, Task, TaskStatus, TaskStore,
 };
 use eos_tools::ExecutionMetadata;
-use eos_types::{CoreError, JsonObject, RequestId, SandboxId, TaskId, UtcDateTime};
+use eos_types::{CoreError, JsonObject, RequestId, TaskId, UtcDateTime};
 
-#[derive(Debug, Default)]
-struct FakeTransport;
+use crate::sandbox::FakeTransport;
 
-#[async_trait]
-impl SandboxTransport for FakeTransport {
-    async fn call(
-        &self,
-        _sandbox_id: &SandboxId,
-        _op: DaemonOp,
-        _payload: JsonObject,
-        _timeout_s: u32,
-    ) -> Result<JsonObject, SandboxApiError> {
-        Ok(JsonObject::new())
-    }
-}
-
+/// In-memory [`TaskStore`] fake backed by a `Mutex<HashMap<…>>`.
 #[derive(Debug, Default)]
 struct FakeTaskStore {
     tasks: Mutex<HashMap<String, Task>>,
@@ -92,6 +82,7 @@ impl TaskStore for FakeTaskStore {
     }
 }
 
+/// In-memory [`RequestStore`] fake returning synthetic rows.
 #[derive(Debug, Default)]
 struct FakeRequestStore;
 
@@ -118,7 +109,7 @@ impl RequestStore for FakeRequestStore {
         &self,
         _request_id: &RequestId,
         _cwd: &str,
-        _sandbox_id: Option<&SandboxId>,
+        _sandbox_id: Option<&eos_types::SandboxId>,
         _request_prompt: &str,
     ) -> Result<(), CoreError> {
         Ok(())
@@ -145,7 +136,10 @@ impl RequestStore for FakeRequestStore {
     }
 }
 
-pub(crate) fn metadata() -> ExecutionMetadata {
+/// A minimal [`ExecutionMetadata`] over the in-memory store fakes and the fake
+/// transport — the standard tool-execution context for engine/tool tests.
+#[must_use]
+pub fn metadata() -> ExecutionMetadata {
     ExecutionMetadata {
         sandbox_id: None,
         agent_run_id: None,

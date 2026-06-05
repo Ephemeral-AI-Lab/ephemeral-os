@@ -339,7 +339,7 @@ mod tests {
 
     use super::AttemptStageAdvancer;
     use crate::ids::generator_task_id;
-    use crate::testsupport::{
+    use crate::support::{
         one_step_plan, root_task, wait_for_workflow_status, MemoryStores, QueueRunner,
         ScriptedRunner, ScriptedSubmission,
     };
@@ -377,7 +377,7 @@ mod tests {
                 task_id: generator_id.clone(),
                 status: TaskOutcomeStatus::Success,
                 outcome: "generated".to_owned(),
-                terminal_tool_result: crate::testsupport::terminal_result(),
+                terminal_tool_result: crate::support::terminal_result(),
             },
         ));
         runner.push(ScriptedSubmission::Reducer(eos_state::ReducerSubmission {
@@ -385,7 +385,7 @@ mod tests {
             task_id: crate::reducer_task_id(&started.attempt_id, &node("r1")).unwrap(),
             status: TaskOutcomeStatus::Success,
             outcome: "reduced".to_owned(),
-            terminal_tool_result: crate::testsupport::terminal_result(),
+            terminal_tool_result: crate::support::terminal_result(),
         }));
         wait_for_workflow_status(&stores, &started.workflow_id, WorkflowStatus::Succeeded).await;
 
@@ -589,3 +589,9 @@ mod tests {
         );
     }
 }
+
+// Plan-DAG materialization + PLAN->RUN, asserted at a non-closure park
+// (TESTING_SPEC §9 `plan_dag`; the Layer-B half of AC6).
+#[cfg(test)]
+#[path = "../../tests/plan_dag/mod.rs"]
+mod plan_dag_tests;

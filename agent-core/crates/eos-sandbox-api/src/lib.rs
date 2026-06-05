@@ -15,8 +15,7 @@
 //!
 //! It deliberately does **not** implement the daemon-backed transport, stamp the
 //! protocol version, emit audit events (audit wrapping lives in `eos-tools`),
-//! select a sandbox provider, or own a Tokio runtime — see
-//! `docs/plans/backend_agent_core_rust_migration/impl-eos-sandbox-api.md`.
+//! select a sandbox provider, or own a Tokio runtime.
 #![forbid(unsafe_code)]
 #![warn(missing_docs)]
 

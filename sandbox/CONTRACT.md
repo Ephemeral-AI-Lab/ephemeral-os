@@ -1,9 +1,8 @@
 # Cross-repo contract: protocol version + fixture pin
 
-The Rust `eosd` runtime and the Python backend share two version surfaces that
-must be bumped as **coordinated cross-repo events**. Neither may move on one side
-alone — a unilateral bump silently breaks the thin-client handshake or the
-on-disk manifest read path.
+The Rust `eosd` runtime pins two version surfaces that must move deliberately.
+A careless bump silently breaks the thin-client handshake or the on-disk
+manifest read path.
 
 ## 1. Wire protocol version
 
@@ -11,8 +10,7 @@ on-disk manifest read path.
 - Carried as the `_eos_daemon_protocol_version` field **inside `args`** on every
   request. The daemon does **not** gate on it today (inert hook); it is present
   so a future version can branch.
-- Source of truth (Python): `backend/src/sandbox/host/daemon_client.py:46-47`.
-- Source of truth (Rust): `sandbox/crates/eos-protocol/src/version.rs`
+- Source of truth: `sandbox/crates/eos-protocol/src/version.rs`
   (`DAEMON_PROTOCOL_VERSION`). Host-side daemon clients **derive** their copy from
   that crate via a unilateral path dependency into `sandbox/crates/eos-protocol`,
   so host↔daemon protocol lockstep is compiler-enforced on the Rust side rather
@@ -26,15 +24,14 @@ on-disk manifest read path.
   schema version can change without invalidating existing layer hashes — but a
   reader that does not understand a new schema version must refuse to load it.
 
-## 3. Coordinated bump procedure
+## 3. Bump procedure
 
 When either version must change:
 
-1. Land the Python change and the Rust change in lockstep (same logical release).
-2. Regenerate the golden fixtures from the live Python
-   (`crates/eos-protocol/fixtures/`) only as part of the same coordinated bump.
-   Fixtures are otherwise **immutable ground truth** — never edit a fixture to
-   match Rust code.
-3. Bump the constant on both sides and update this file.
+1. Bump the constant in the owning Rust crate and update this file in the same
+   change.
+2. The golden fixtures (`crates/eos-protocol/fixtures/`) are **immutable ground
+   truth** captured from the original Python runtime, which has been removed —
+   they can no longer be regenerated. Never edit a fixture to match Rust code.
 
-Until such a coordinated event, both versions are pinned at `1`.
+Until such a change, both versions are pinned at `1`.

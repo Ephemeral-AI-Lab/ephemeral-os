@@ -18,7 +18,7 @@ use crate::ports::{
     SpawnedSubagent, StartedWorkflowHandle, WorkflowControlPort,
 };
 use crate::runtime::executor::ToolExecutor;
-use crate::testsupport::metadata;
+use crate::support::metadata;
 
 fn obj(pairs: &[(&str, serde_json::Value)]) -> JsonObject {
     pairs

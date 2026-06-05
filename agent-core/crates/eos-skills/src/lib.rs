@@ -13,8 +13,7 @@
 //! It deliberately does **not** own the `load_skill_reference` `ToolSpec` or
 //! executor, know about agent-to-skill binding or allowlist scoping, build the
 //! launch-time skill message, traverse outside the configured root, or
-//! watch/reload at runtime. See
-//! `docs/plans/backend_agent_core_rust_migration/impl-eos-skills.md`.
+//! watch/reload at runtime.
 //!
 //! The public surface is re-exported flatly:
 //! `use eos_skills::{SkillDefinition, SkillRegistry};`.
@@ -27,7 +26,8 @@ mod error;
 mod loader;
 mod registry;
 #[cfg(test)]
-mod test_support;
+#[path = "../tests/support/mod.rs"]
+mod support;
 
 pub use definition::{ReferenceName, SkillDefinition, SkillName, SkillSource};
 pub use error::SkillLoadError;

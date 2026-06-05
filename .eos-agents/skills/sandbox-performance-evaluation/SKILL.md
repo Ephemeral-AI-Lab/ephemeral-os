@@ -5,6 +5,12 @@ description: Use when evaluating EphemeralOS sandbox correctness or performance 
 
 # Sandbox Performance Evaluation
 
+> ⚠️ The Python `backend/` and its `task_center_runner` mock/live test harness
+> have been removed. The Rust replacement is specified in
+> `integration-test/SPEC.md` but is not yet implemented. The `backend/src/...`
+> paths and Python commands below are historical and will not resolve until the
+> Rust harness lands; treat them as a behavior reference, not runnable steps.
+
 Use this skill to verify whether EphemeralOS sandbox operations preserve the
 intended filesystem semantics and remain fast under concurrency. It also
 verifies that sandbox audit events, performance-report stats, and resource

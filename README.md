@@ -268,22 +268,21 @@ with `EPHEMERALOS_SANDBOX_DEFAULT_SNAPSHOT` and
 
 ## 🏗️ Harness Architecture
 
-EphemeralOS implements the core Agent Harness pattern across the Python backend runtime:
+EphemeralOS implements the core Agent Harness pattern across two Rust workspaces:
 
 ```
-backend/src/
-  engine/          # 🧠 Agent loop, streaming executor, background task lifecycle
-  tools/           # 🔧 Built-in tools: sandbox, skills, subagent, submissions
-  skills/          # 📚 File-backed skill discovery and registry internals
-  agents/          # 🤖 Agent definition loading and profile assets
-  runtime/         # ⚙️ Runtime config and store bootstrap
-  sandbox/         # 🧪 Sandbox lifecycle, workspace discovery, credentials
-  prompt/          # 📝 Runtime prompt assembly and environment context
-  live_e2e/        # 🧪 Scenario harnesses and SWE-EVO adapters
-  config/          # ⚙️ Settings, model resolution, paths
-backend/config/
-  agents/          # 🤖 Optional local agent definitions (empty by default)
-  skills/          # 📚 Bundled skill definitions
+agent-core/crates/                   # 🦀 Agent control plane
+  eos-runtime/                       # ⚙️ Request bootstrap and root-agent entry
+  eos-engine/                        # 🧠 Query loop, streaming executor, background supervisor
+  eos-workflow/                      # 🔀 Delegated workflow lifecycle, attempts, context packets
+  eos-tools/                         # 🔧 Model-facing tools: sandbox, skills, subagent, submissions
+  eos-state/ eos-db/                 # 🗄️ Persisted request/task/workflow state and stores
+  eos-sandbox-api/ eos-sandbox-host/ # 🧪 Host-side sandbox protocol and lifecycle
+  eos-agent-def/ eos-skills/ eos-plugin-catalog/  # 🤖 Agent profiles, skills, plugins
+  eos-llm-client/                    # 📡 Provider client and streaming
+sandbox/crates/                      # 📦 Sandbox substrate: eosd daemon, LayerStack, OCC,
+                                     #     overlay execution, isolated workspaces, wire protocol
+.eos-agents/                         # 🤖 Shipped agent profiles and their coupled skills
 ```
 
 ### The Agent Loop
@@ -344,8 +343,8 @@ Every tool has:
 
 ### 📚 Skills System
 
-Agents are not equipped with skill-loading tools by default, and the repo does
-not ship built-in `SKILL.md` playbooks under `backend/config/skills/`.
+Agents are not equipped with skill-loading tools by default unless their profile
+binds a skill under `.eos-agents/skills/`.
 
 ### 🔌 Plugin System
 

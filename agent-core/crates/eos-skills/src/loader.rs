@@ -44,7 +44,7 @@ mod tests {
 
     use super::*;
     use crate::definition::{SkillName, SkillSource};
-    use crate::test_support::Scratch;
+    use crate::support::Scratch;
 
     /// Restore the process working directory on drop so the cwd-mutating test
     /// cannot leak into others.

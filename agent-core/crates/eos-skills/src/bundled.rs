@@ -166,7 +166,7 @@ fn read_file(path: &Path) -> Result<String, SkillLoadError> {
 mod tests {
     #![allow(clippy::unwrap_used)] // unwrap is permitted in tests (err-no-unwrap-prod)
     use super::*;
-    use crate::test_support::Scratch;
+    use crate::support::Scratch;
 
     // AC-skills-02: only *.md references are kept, keyed by stem, in sorted order.
     #[test]

@@ -400,7 +400,7 @@ mod tests {
     use super::*;
     use crate::provider::{ProviderAdapter, RawExecResult};
     use crate::registry::ProviderRegistry;
-    use crate::testutil::MockAdapter;
+    use crate::support::MockAdapter;
 
     fn sid() -> SandboxId {
         "sb-1".parse().unwrap()

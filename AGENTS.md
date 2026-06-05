@@ -19,13 +19,9 @@ not as a reason to stop.
   or `cd sandbox && cargo ...`). Keep dependencies in the workspace
   `Cargo.toml`, respect the existing Rust 2021 / `rust-version = "1.85"`
   contract, and follow the workspace lint posture.
-- Python package metadata still lives in `pyproject.toml` for legacy backend
-  code, tests, scripts, and migration glue. Use `uv` only when touching that
-  Python surface.
-- `backend/src` is the legacy Python backend during the Rust migration. It will
-  be deprecated once the migration is complete; prefer the Rust implementation
-  when behavior exists in both places unless the task explicitly asks for Python
-  parity, migration glue, or a legacy backend fix.
+- The legacy Python backend has been removed; `agent-core/` and `sandbox/` are
+  the only implementation. There is no `backend/`, `pyproject.toml`, or `uv`
+  surface to maintain.
 
 ## Codebase Memory And Architecture
 
@@ -41,11 +37,10 @@ cross-module map now lives under `docs/architecture`.
 
 - Treat the code checkout as source truth and `docs/architecture` as the
   curated memory layer. For Rust-owned behavior, verify the current anchor in
-  `agent-core/` or `sandbox/` even when an architecture page still lists
-  `backend/src` evidence paths. When refreshing architecture docs, update the
-  smallest affected page and convert stale Python evidence paths to Rust
-  evidence paths instead of adding disconnected notes.
-- Use this Rust ownership map before falling back to legacy Python:
+  `agent-core/` or `sandbox/`. When refreshing architecture docs, update the
+  smallest affected page and keep evidence paths pointed at the owning Rust
+  crate instead of adding disconnected notes.
+- Use this Rust ownership map:
   `agent-core/crates/eos-runtime` owns request bootstrap and root-agent entry;
   `eos-state` and `eos-db` own persisted Request/Task/Workflow/Iteration/Attempt
   state and stores; `eos-workflow` owns delegated workflow lifecycle, context
@@ -98,8 +93,7 @@ cross-module map now lives under `docs/architecture`.
   `agent-core/crates/eos-sandbox-host`; the daemon and wire protocol live in
   `sandbox/crates/eos-daemon`, `sandbox/crates/eosd`, and
   `sandbox/crates/eos-protocol`. Rust sandbox config is Docker-only today; do
-  not reintroduce Daytona or non-Docker provider branches unless the task is
-  explicitly a legacy Python migration task.
+  not reintroduce Daytona or non-Docker provider branches.
 - Workspace routing in Rust lives in `sandbox/crates/eos-daemon/src/dispatcher.rs`
   and the daemon command/plugin/isolated modules. Shared workspace `read_file`,
   `write_file`, and `edit_file` use daemon-owned LayerStack/OCC fast paths when
@@ -276,8 +270,7 @@ cross-module map now lives under `docs/architecture`.
   and after risky changes when practical.
 - For Rust-owned changes, prefer scoped Cargo verification from the owning
   workspace (`cargo check`, `cargo test -p <crate>`, targeted tests, then
-  clippy when risk warrants it). Run Python checks only for legacy Python,
-  parity, or migration-glue changes.
+  clippy when risk warrants it).
 - For default live E2E sandbox testing, use Docker with platform `linux/amd64`
   and image `sweevo-dask__dask-10042:latest` unless the task explicitly names a
   different image or architecture. Set the harness image variable, such as

@@ -5,8 +5,8 @@
 
 ## Validation
 
-- [ ] `uv run ruff check backend/src backend/tests`
-- [ ] `uv run pytest -q`
+- [ ] `cargo clippy --workspace --all-targets -- -D warnings` (run in `agent-core/` and `sandbox/`)
+- [ ] `cargo test --workspace` (run in `agent-core/` and `sandbox/`)
 - [ ] If this PR is the Phase 1 sandbox workspace unification, complete `docs/sandbox/unify_sandbox_workspace_phase1_review_checklist.md`.
 
 ## Notes

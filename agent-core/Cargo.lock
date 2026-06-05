@@ -568,6 +568,7 @@ dependencies = [
  "eos-sandbox-api",
  "eos-skills",
  "eos-state",
+ "eos-testkit",
  "eos-tools",
  "eos-types",
  "futures",
@@ -743,20 +744,17 @@ dependencies = [
 name = "eos-testkit"
 version = "0.1.0"
 dependencies = [
- "anyhow",
  "async-trait",
  "eos-agent-def",
  "eos-engine",
  "eos-llm-client",
- "eos-runtime",
  "eos-sandbox-api",
+ "eos-skills",
  "eos-state",
+ "eos-tools",
  "eos-types",
- "eos-workflow",
  "futures",
- "parking_lot",
  "serde_json",
- "tempfile",
  "tokio",
 ]
 

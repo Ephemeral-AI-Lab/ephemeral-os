@@ -10,7 +10,7 @@ use super::codec::{can_retry_empty_response, decode_and_classify};
 use super::tcp::{authenticated_envelope_json, io_failed};
 use super::*;
 use crate::provider::RawExecResult;
-use crate::testutil::MockAdapter;
+use crate::support::MockAdapter;
 
 fn sid() -> SandboxId {
     "sb-1".parse().unwrap()

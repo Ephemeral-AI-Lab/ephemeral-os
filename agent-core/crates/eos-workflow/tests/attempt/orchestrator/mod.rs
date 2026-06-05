@@ -8,7 +8,7 @@ use eos_state::{
 };
 
 use crate::ids::{generator_task_id, reducer_task_id};
-use crate::testsupport::{
+use crate::support::{
     one_step_plan, root_task, terminal_result, wait_for_workflow_status, MemoryStores, QueueRunner,
     ScriptedSubmission,
 };

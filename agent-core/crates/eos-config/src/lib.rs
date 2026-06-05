@@ -10,8 +10,7 @@
 //!
 //! It deliberately does **not** resolve the active model (that is `eos-db`), own
 //! the CLI `Settings` UI shape, hold secrets, open connections, spawn tasks, or
-//! perform any I/O beyond reading config files and the environment. See
-//! `docs/plans/backend_agent_core_rust_migration/impl-eos-config.md`.
+//! perform any I/O beyond reading config files and the environment.
 #![forbid(unsafe_code)]
 #![warn(missing_docs)]
 

@@ -2,8 +2,7 @@
 //! vocabularies, the `AgentName` newtype, and the `AgentDefinition` value type
 //! with its construction-time invariants.
 //!
-//! Source of truth: `backend/src/agents/definition/model.py`. Pydantic
-//! validators become parse-don't-validate construction (`api-parse-dont-validate`):
+//! Pydantic-era validators become parse-don't-validate construction (`api-parse-dont-validate`):
 //! the serde DTO [`RawAgentDefinition`] funnels through
 //! [`AgentDefinition::from_frontmatter`], so an invalid definition is
 //! unrepresentable.

@@ -276,7 +276,7 @@ mod tests {
     use eos_state::{DeferredGoal, IterationOutcome, WorkflowOutcome, WorkflowStatus};
 
     use super::*;
-    use crate::testsupport::{
+    use crate::support::{
         agent_registry_without_planner, root_task, MemoryStores, QueueRunner,
     };
 
@@ -308,7 +308,7 @@ mod tests {
         // a real "close wrote no tasks", not a stuck-at-zero counter.
         eos_state::TaskStore::upsert_task(
             stores.as_ref(),
-            &crate::testsupport::root_task("parent", eos_state::TaskStatus::Running),
+            &crate::support::root_task("parent", eos_state::TaskStatus::Running),
         )
         .await
         .unwrap();

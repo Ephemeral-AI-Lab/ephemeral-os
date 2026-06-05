@@ -5,6 +5,11 @@ description: Use when given an EphemeralOS 3.* live E2E plan file and asked to c
 
 # Live E2E Plan Executor
 
+> ⚠️ The Python `backend/` and its `task_center_runner` test harness have been
+> removed. The Rust replacement is specified in `integration-test/SPEC.md` but is
+> not yet implemented. The `backend/src/...` and `backend/tests/...` paths below
+> are historical and will not resolve until the Rust harness lands.
+
 Use this skill to execute a repo-local `docs/plans/3.*` test plan end to end: add missing load-bearing tests, run the plan's verification command, fix correctness/performance bugs, inspect live artifacts, and maintain an iteration report.
 
 This skill is self-contained for the `3.*` plan family. Do not blindly copy older generic sandbox-performance steps. The specific plan file is the source of truth for test shape, harness work, evidence source, command, and performance gates.

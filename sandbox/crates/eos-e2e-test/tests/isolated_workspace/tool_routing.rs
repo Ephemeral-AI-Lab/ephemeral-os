@@ -7,6 +7,69 @@ use crate::support::{
 };
 
 #[test]
+fn isolated_write_does_not_publish_or_release_lease() -> Result<()> {
+    let Some(pool) = live_pool_or_skip()? else {
+        return Ok(());
+    };
+    let lease = pool.acquire()?;
+    lease.call_ok(ops::API_ISOLATED_WORKSPACE_ENTER, json!({}))?;
+    // Baseline AFTER enter so enter's own lease_acquired is excluded; the isolated
+    // write must not release a public lease (it writes the private upperdir only).
+    let mut audit = lease.audit_tap()?;
+    let body = (|| -> Result<()> {
+        let write = lease.call_ok(
+            ops::API_V1_WRITE_FILE,
+            json!({"path": "iso/no-publish.txt", "content": "private\n", "overwrite": true}),
+        )?;
+        assert!(
+            !as_bool(&write, "published")?,
+            "isolated write must not publish to OCC: {write}"
+        );
+        audit.collect()?;
+        assert!(
+            !audit.any("layer_stack.lease_released"),
+            "isolated write must not release a public layer lease: {:?}",
+            audit.events()
+        );
+        Ok(())
+    })();
+    let _ = lease.call(ops::API_ISOLATED_WORKSPACE_EXIT, json!({}));
+    body
+}
+
+#[test]
+fn isolated_read_after_exit_routes_ephemeral() -> Result<()> {
+    let Some(pool) = live_pool_or_skip()? else {
+        return Ok(());
+    };
+    let lease = pool.acquire()?;
+    lease.call_ok(ops::API_ISOLATED_WORKSPACE_ENTER, json!({}))?;
+    let path = "iso/private-only.txt";
+    let result = (|| -> Result<()> {
+        lease.call_ok(
+            ops::API_V1_WRITE_FILE,
+            json!({"path": path, "content": "secret\n", "overwrite": true}),
+        )?;
+        Ok(())
+    })();
+    lease.call_ok(ops::API_ISOLATED_WORKSPACE_EXIT, json!({}))?;
+    result?;
+    // After exit the router falls back to the ephemeral workspace; the private
+    // upperdir write was never published, so it is invisible there.
+    let read = lease.call_ok(ops::API_V1_READ_FILE, json!({"path": path}))?;
+    assert_eq!(
+        as_str(&read, "workspace")?,
+        "ephemeral",
+        "read after isolated exit must route ephemeral: {read}"
+    );
+    assert!(
+        !as_bool(&read, "exists")?,
+        "an isolated-only write must not be visible after exit: {read}"
+    );
+    Ok(())
+}
+
+#[test]
 fn isolated_enter_status_reports_manifest_pin() -> Result<()> {
     let Some(pool) = live_pool_or_skip()? else {
         return Ok(());

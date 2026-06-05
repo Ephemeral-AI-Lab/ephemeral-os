@@ -2,8 +2,7 @@
 //!
 //! Invariant: these values mirror the live Python daemon byte-for-byte. The
 //! protocol-version field is carried INSIDE `args` and the daemon never reads
-//! it (an inert versioning hook) — see [`crate::envelope`]. Source anchors are
-//! cited per constant against `backend/src/sandbox`.
+//! it (an inert versioning hook) — see [`crate::envelope`].
 
 /// Daemon protocol version. Carried inside request `args`, never gated on by the
 /// daemon.

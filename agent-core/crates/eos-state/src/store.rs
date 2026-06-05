@@ -288,7 +288,7 @@ pub trait ModelStore: Sealed + Send + Sync {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::fakes::FakeTaskStore;
+    use crate::support::FakeTaskStore;
     use crate::task::{Task, TaskRole, TaskStatus};
     use eos_types::RequestId;
 

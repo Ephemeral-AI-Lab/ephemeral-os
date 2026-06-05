@@ -10,8 +10,7 @@
 //! It deliberately does **not** build `ToolSpec`s, resolve the `model: inherit`
 //! sentinel, materialize the effective visible tool set, own the
 //! `allowed_tools ∪ terminals` union policy, or run the `context_recipe` catalog
-//! check — those live in `eos-engine` / `eos-workflow` / `eos-runtime`. See
-//! `docs/plans/backend_agent_core_rust_migration/impl-eos-agent-def.md`.
+//! check — those live in `eos-engine` / `eos-workflow` / `eos-runtime`.
 //!
 //! The public surface is re-exported flatly: `use eos_agent_def::{AgentDefinition,
 //! AgentRegistry, load_agents_tree};`.

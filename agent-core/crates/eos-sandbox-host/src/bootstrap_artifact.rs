@@ -262,7 +262,7 @@ mod tests {
     use super::*;
     use crate::provider::RawExecResult;
     use crate::registry::ProviderRegistry;
-    use crate::testutil::MockAdapter;
+    use crate::support::MockAdapter;
 
     fn sid() -> eos_types::SandboxId {
         "sb-1".parse().unwrap()

@@ -4,8 +4,7 @@
 //! [`ProviderRegistry`] as explicit application state, runs container lifecycle
 //! with post-lifecycle setup, transports JSON envelopes to the resident
 //! in-sandbox daemon with spawn/connect recovery and typed error decoding, and
-//! uploads + verifies the pinned `eosd` bootstrap artifact. See
-//! `docs/plans/backend_agent_core_rust_migration/impl-eos-sandbox-host.md`.
+//! uploads + verifies the pinned `eosd` bootstrap artifact.
 //!
 //! AC-eos-sandbox-host-10 — the [`ProviderAdapter`] trait is **sealed**: its
 //! `Sealed` supertrait lives in a `pub(crate)` module, so a downstream crate
@@ -35,7 +34,8 @@ mod registry;
 mod sandbox_upload;
 
 #[cfg(test)]
-mod testutil;
+#[path = "../tests/support/mod.rs"]
+mod support;
 
 pub use bootstrap_artifact::{EOSD_VERSION, PROTOCOL_VERSION};
 pub use daemon_client::{

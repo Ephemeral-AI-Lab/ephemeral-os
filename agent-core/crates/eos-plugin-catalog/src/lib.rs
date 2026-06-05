@@ -13,8 +13,7 @@
 //! `eos_llm_client::ToolSpec`/`ToolExecutor`/`ToolRegistry` (those are bound in
 //! `eos-runtime` — GC-plugin-catalog-04), run `setup`/`runtime` scripts or hold
 //! any Pyright/LSP session (GC-plugin-catalog-05), or traverse outside the
-//! configured catalog root. See
-//! `docs/plans/backend_agent_core_rust_migration/impl-eos-plugin-catalog.md`.
+//! configured catalog root.
 #![forbid(unsafe_code)]
 #![warn(missing_docs)]
 
@@ -25,7 +24,8 @@ mod manifest;
 mod names;
 mod package;
 #[cfg(test)]
-mod test_support;
+#[path = "../tests/support/mod.rs"]
+mod support;
 mod tool_specs;
 
 pub use discovery::PluginCatalog;

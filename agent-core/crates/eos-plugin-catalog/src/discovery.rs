@@ -112,7 +112,7 @@ fn is_candidate_dir(path: &Path) -> bool {
 mod tests {
     #![allow(clippy::unwrap_used)] // unwrap is permitted in tests (err-no-unwrap-prod)
     use super::*;
-    use crate::test_support::{make_plugin, temp_root};
+    use crate::support::{make_plugin, temp_root};
 
     // AC-plugin-catalog-06: sorted discovery, skip rules, empty/file roots
     // (proves GC-plugin-catalog-02).

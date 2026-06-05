@@ -49,7 +49,7 @@ mod tests {
 
     use super::*;
     use crate::notifications::NotificationService;
-    use crate::test_support::metadata;
+    use eos_testkit::metadata;
 
     fn context() -> QueryContext {
         QueryContext {

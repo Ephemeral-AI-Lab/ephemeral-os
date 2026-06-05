@@ -183,7 +183,7 @@ mod tests {
     use std::io::Read;
 
     use super::*;
-    use crate::testutil::MockAdapter;
+    use crate::support::MockAdapter;
 
     fn sid() -> SandboxId {
         "sb-upload".parse().unwrap()

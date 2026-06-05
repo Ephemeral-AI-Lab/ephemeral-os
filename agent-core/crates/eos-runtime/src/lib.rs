@@ -19,8 +19,6 @@
 //! scheduling logic, introduce a global agent orchestrator, or mutate the parent
 //! Task at workflow close. It is the only crate that may use `anyhow` and the
 //! only crate that constructs/owns the async runtime.
-//!
-//! See `docs/plans/backend_agent_core_rust_migration/impl-eos-runtime.md`.
 #![forbid(unsafe_code)]
 #![warn(missing_docs)]
 
@@ -36,9 +34,7 @@ mod tool_context;
 #[path = "../tests/unit/mod.rs"]
 mod tests;
 
-pub use app_state::{
-    AppState, AppStateBuilder, EventCallback, EventSourceFactory, RequestProvisioner,
-};
+pub use app_state::{AppState, AppStateBuilder, EventCallback, EventSourceFactory};
 pub use entry::{run_request, RequestOutcome};
 
 // Re-export the sandbox binding value object owned upstream by `eos-sandbox-host`

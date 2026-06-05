@@ -1,10 +1,13 @@
 #![allow(dead_code)]
 
 use std::sync::Arc;
+use std::thread;
+use std::time::{Duration, Instant};
 
-use anyhow::{Context, Result};
-use eos_e2e_test::{live_pool_with_config, NodePool};
-use serde_json::Value;
+use anyhow::{bail, Context, Result};
+use eos_e2e_test::{live_pool_with_config, NodeLease, NodePool};
+use eos_protocol::ops;
+use serde_json::{json, Value};
 
 pub fn live_pool_or_skip() -> Result<Option<Arc<NodePool>>> {
     let Some(pool) = live_pool_with_config(crate::E2E_CONFIG)? else {
@@ -12,6 +15,46 @@ pub fn live_pool_or_skip() -> Result<Option<Arc<NodePool>>> {
         return Ok(None);
     };
     Ok(Some(pool))
+}
+
+/// Poll `api.layer_metrics` until `active_leases` settles at `expected`,
+/// returning the metrics payload. Layer-lease accounting is asynchronous on the
+/// release path, so callers must poll rather than read it instantaneously.
+///
+/// # Errors
+/// Returns an error if the metrics op fails or `active_leases` never reaches
+/// `expected` within the deadline.
+pub fn wait_for_active_leases(lease: &NodeLease<'_>, expected: i64) -> Result<Value> {
+    let deadline = Instant::now() + Duration::from_secs(5);
+    loop {
+        let metrics = lease.call_ok(ops::API_LAYER_METRICS, json!({}))?;
+        if as_i64(&metrics, "active_leases")? == expected {
+            return Ok(metrics);
+        }
+        if Instant::now() >= deadline {
+            bail!("active_leases did not reach {expected}: {metrics}");
+        }
+        thread::sleep(Duration::from_millis(50));
+    }
+}
+
+/// Poll `api.v1.command_session_count` until `count` settles at `expected`.
+///
+/// # Errors
+/// Returns an error if the count op fails or never reaches `expected` within
+/// the deadline.
+pub fn wait_for_session_count(lease: &NodeLease<'_>, expected: i64) -> Result<()> {
+    let deadline = Instant::now() + Duration::from_secs(5);
+    loop {
+        let count = lease.call_ok(ops::API_V1_COMMAND_SESSION_COUNT, json!({}))?;
+        if as_i64(&count, "count")? == expected {
+            return Ok(());
+        }
+        if Instant::now() >= deadline {
+            bail!("command_session_count did not reach {expected}: {count}");
+        }
+        thread::sleep(Duration::from_millis(50));
+    }
 }
 
 pub fn as_bool(value: &Value, key: &str) -> Result<bool> {

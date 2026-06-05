@@ -1,4 +1,5 @@
 use anyhow::{Context, Result};
+use eos_e2e_test::audit::section;
 use eos_e2e_test::client::error_kind;
 use eos_protocol::{
     models::{MAX_FILE_BYTES, MAX_READ_BYTES},
@@ -6,7 +7,17 @@ use eos_protocol::{
 };
 use serde_json::{json, Value};
 
-use crate::support::{array, as_bool, as_i64, as_str, conflict_message, live_pool_or_skip};
+use crate::support::{
+    array, as_bool, as_i64, as_str, conflict_message, live_pool_or_skip, wait_for_active_leases,
+};
+
+/// Read a nested `timings.<key>` number from a response.
+fn timing_f64(value: &Value, key: &str) -> Option<f64> {
+    value
+        .get("timings")
+        .and_then(|timings| timings.get(key))
+        .and_then(Value::as_f64)
+}
 
 #[test]
 fn write_read_roundtrip() -> Result<()> {
@@ -187,6 +198,141 @@ fn read_max_bytes_guard() -> Result<()> {
             .context("error message")?
             .contains("file too large"),
         "large read should fail with the read guard: {read}"
+    );
+    Ok(())
+}
+
+#[test]
+fn fast_path_write_edit_emit_no_overlay_or_lease_audit() -> Result<()> {
+    let Some(pool) = live_pool_or_skip()? else {
+        return Ok(());
+    };
+    let lease = pool.acquire()?;
+    let mut audit = lease.audit_tap()?;
+    lease.call_ok(
+        ops::API_V1_WRITE_FILE,
+        json!({"path": "fastpath/no-overlay.txt", "content": "x\n", "overwrite": true}),
+    )?;
+    lease.call_ok(
+        ops::API_V1_EDIT_FILE,
+        json!({
+            "path": "fastpath/no-overlay.txt",
+            "edits": [{"old_text": "x", "new_text": "y", "replace_all": false}]
+        }),
+    )?;
+    audit.collect()?;
+    // The fast path bypasses the overlay pipeline entirely: no lease is taken and
+    // no overlay mount is built, so none of the overlay/lease lifecycle events
+    // fire — but the OCC publish still does.
+    assert!(
+        !audit.any("layer_stack.lease_acquired"),
+        "fast-path write/edit must not acquire a layer lease: {:?}",
+        audit.events()
+    );
+    assert!(
+        !audit.any("layer_stack.lease_released"),
+        "fast-path write/edit must not release a layer lease: {:?}",
+        audit.events()
+    );
+    assert!(
+        !audit.any("overlay_workspace.cleanup"),
+        "fast-path write/edit must not build/recycle an overlay: {:?}",
+        audit.events()
+    );
+    assert!(
+        audit.any("occ.publish"),
+        "fast-path write must still publish through OCC: {:?}",
+        audit.events()
+    );
+    Ok(())
+}
+
+#[test]
+fn foreground_exec_emits_lease_and_overlay_audit() -> Result<()> {
+    let Some(pool) = live_pool_or_skip()? else {
+        return Ok(());
+    };
+    let lease = pool.acquire()?;
+    let mut audit = lease.audit_tap()?;
+    // A foreground exec (completes within the yield, so NO command_session_id)
+    // DOES run the overlay pipeline: lease acquire/release + overlay cleanup.
+    let exec = lease.call_ok(
+        ops::API_V1_EXEC_COMMAND,
+        json!({
+            "cmd": "mkdir -p fastpath && printf hi > fastpath/exec.txt",
+            "yield_time_ms": 1000,
+            "timeout_seconds": 20,
+            "max_output_tokens": 1000
+        }),
+    )?;
+    assert_eq!(as_str(&exec, "status")?, "ok", "exec must complete: {exec}");
+    assert!(
+        exec.get("command_session_id").is_none(),
+        "completed foreground exec must not be a background session: {exec}"
+    );
+    audit.collect()?;
+    assert!(
+        audit.any("layer_stack.lease_released"),
+        "foreground exec must release a layer lease: {:?}",
+        audit.events()
+    );
+    let cleanup = audit
+        .first("overlay_workspace.cleanup")
+        .context("foreground exec must emit overlay_workspace.cleanup")?;
+    assert_eq!(
+        section(cleanup, "overlay_workspace")
+            .and_then(|overlay| overlay.get("workspace_mode"))
+            .and_then(Value::as_str),
+        Some("ephemeral"),
+        "overlay cleanup should report ephemeral mode: {cleanup}"
+    );
+    Ok(())
+}
+
+#[test]
+fn fast_path_surfaces_occ_and_read_timings() -> Result<()> {
+    let Some(pool) = live_pool_or_skip()? else {
+        return Ok(());
+    };
+    let lease = pool.acquire()?;
+    let write = lease.call_ok(
+        ops::API_V1_WRITE_FILE,
+        json!({"path": "fastpath/timings.txt", "content": "t\n", "overwrite": true}),
+    )?;
+    // The fast path accounts its work as a direct LayerStack/OCC operation
+    // (occ_apply / layer_stack_read), not via overlay-capture timing keys.
+    assert!(
+        timing_f64(&write, "api.write.occ_apply_s").is_some(),
+        "fast-path write should surface api.write.occ_apply_s: {write}"
+    );
+    let read = lease.call_ok(ops::API_V1_READ_FILE, json!({"path": "fastpath/timings.txt"}))?;
+    assert!(
+        timing_f64(&read, "api.read.layer_stack_read_s").is_some(),
+        "fast-path read should surface api.read.layer_stack_read_s: {read}"
+    );
+    Ok(())
+}
+
+#[test]
+fn repeated_fast_path_writes_keep_leases_zero() -> Result<()> {
+    let Some(pool) = live_pool_or_skip()? else {
+        return Ok(());
+    };
+    let lease = pool.acquire()?;
+    for index in 0..30 {
+        lease.call_ok(
+            ops::API_V1_WRITE_FILE,
+            json!({"path": "fastpath/leak.txt", "content": format!("v{index}\n"), "overwrite": true}),
+        )?;
+    }
+    // The fast path never leases: across 30 overwrites no overlay lease is ever
+    // taken, so both the live lease count and the held-layer count stay at 0
+    // (the no-lease-leak half of the spec-point-4 "fast path bypasses overlay").
+    let metrics = wait_for_active_leases(&lease, 0)?;
+    assert_eq!(
+        as_i64(&metrics, "leased_layers")?,
+        0,
+        "fast-path writes must hold no leased layers: {metrics}"
     );
     Ok(())
 }

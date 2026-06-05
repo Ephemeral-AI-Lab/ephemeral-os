@@ -118,7 +118,7 @@ mod tests {
     use super::*;
     use crate::daemon_client::DaemonClient;
     use crate::registry::ProviderRegistry;
-    use crate::testutil::MockAdapter;
+    use crate::support::MockAdapter;
 
     fn provisioner(adapter: MockAdapter) -> RequestSandboxProvisioner {
         let registry = ProviderRegistry::new();

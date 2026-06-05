@@ -6,7 +6,7 @@ use eos_state::{
     WorkflowStatus,
 };
 
-use crate::testsupport::{root_task, wait_for_workflow_status, MemoryStores, ScriptedRunner};
+use crate::support::{root_task, wait_for_workflow_status, MemoryStores, ScriptedRunner};
 use crate::WorkflowStarter;
 
 fn budget(value: u32) -> AttemptBudget {

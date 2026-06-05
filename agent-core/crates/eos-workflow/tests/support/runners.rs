@@ -386,17 +386,25 @@ pub(crate) fn one_step_plan(started: &crate::StartedWorkflow) -> PlannerPlan {
     }
 }
 
-/// Spin the runtime until `workflow_id` reaches `status`, or panic.
+/// Spin the test runtime until `predicate` holds, or panic. The single waiter
+/// (TESTING_SPEC §4.4 / AC3): every mid-flight checkpoint predicate — a launched
+/// role, an attempt stage, a workflow status — funnels through here, so there is
+/// no parallel waiter.
+pub(crate) async fn wait_until<F: FnMut() -> bool>(mut predicate: F) {
+    for _ in 0..5000 {
+        if predicate() {
+            return;
+        }
+        tokio::task::yield_now().await;
+    }
+    panic!("wait_until: predicate not satisfied within the spin budget");
+}
+
+/// Spin until `workflow_id` reaches `status` — a thin [`wait_until`] wrapper.
 pub(crate) async fn wait_for_workflow_status(
     stores: &MemoryStores,
     workflow_id: &WorkflowId,
     status: WorkflowStatus,
 ) {
-    for _ in 0..5000 {
-        if stores.workflow(workflow_id).unwrap().status == status {
-            return;
-        }
-        tokio::task::yield_now().await;
-    }
-    panic!("workflow {workflow_id} did not reach {status:?}");
+    wait_until(|| stores.workflow(workflow_id).map(|w| w.status) == Some(status)).await;
 }

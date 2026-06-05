@@ -30,9 +30,11 @@ console-subscriber = { workspace = true, optional = true }
 
 [dev-dependencies]
 tempfile.workspace = true
-# Layer-A doubles + the AppState test builder (TESTING_SPEC §11). `mock-state`
-# implies `llm`; runtime runs Layer A only (§14.1), so no `workflow` feature.
-eos-testkit = { workspace = true, default-features = false, features = ["mock-state"] }
+# Layer-A scripted-LLM/EventSource doubles + fake transport (TESTING_SPEC §11).
+# `build_test_state`/`FakeProvisioner` stay crate-local (tests/unit/support.rs):
+# they are `eos-runtime` types, so the dev-dep two-instance rule bars consuming
+# them from this crate's in-crate tests (§14.2).
+eos-testkit = { workspace = true }
 
 [features]
 tokio-console = ["dep:console-subscriber"]

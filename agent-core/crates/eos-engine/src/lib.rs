@@ -28,8 +28,3 @@ pub use runtime::{
 };
 pub use support::EngineError;
 pub use telemetry::{stamp_identity, AssistantMessageComplete, PromptReportRecorder, StreamEvent};
-
-#[cfg(test)]
-mod test_support {
-    pub(crate) use crate::support::test_support::*;
-}

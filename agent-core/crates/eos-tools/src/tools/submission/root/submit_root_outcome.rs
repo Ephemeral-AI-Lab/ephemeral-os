@@ -135,7 +135,7 @@ mod tests {
     use serde_json::json;
 
     use super::*;
-    use crate::testsupport::{metadata, FakeRequestStore, FakeTaskStore};
+    use crate::support::{metadata, FakeRequestStore, FakeTaskStore};
 
     fn obj(pairs: &[(&str, serde_json::Value)]) -> JsonObject {
         pairs

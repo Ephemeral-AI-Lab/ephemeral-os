@@ -11,7 +11,7 @@ use super::super::read_file::ReadFile;
 use super::super::write_stdin::WriteStdin;
 use crate::core::metadata::ExecutionMetadata;
 use crate::runtime::executor::ToolExecutor;
-use crate::testsupport::{test_agent_run_id, FakeRequestStore, FakeTaskStore, FakeTransport};
+use crate::support::{test_agent_run_id, FakeRequestStore, FakeTaskStore, FakeTransport};
 
 fn metadata_with(transport: Arc<dyn eos_sandbox_api::SandboxTransport>) -> ExecutionMetadata {
     let agent_run_id = test_agent_run_id();

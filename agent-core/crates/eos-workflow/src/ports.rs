@@ -417,7 +417,7 @@ mod tests {
     use serde_json::json;
 
     use super::*;
-    use crate::testsupport::{root_task, MemoryStores, QueueRunner};
+    use crate::support::{root_task, MemoryStores, QueueRunner};
 
     // The workflow-control adapter mints `wf_<n>` handles (not workflow ids),
     // rejects a fabricated handle, and `cancel` tears down the delegated tree

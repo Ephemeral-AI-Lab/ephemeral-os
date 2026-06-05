@@ -4,7 +4,6 @@
 //! This is the upstream domain contract that `eos-db` implements and that
 //! `eos-tools`/`eos-engine`/`eos-workflow`/`eos-runtime` consume. It defines
 //! *what is stored and what shapes flow between layers*; it never executes I/O.
-//! See `docs/plans/backend_agent_core_rust_migration/impl-eos-state.md`.
 #![forbid(unsafe_code)]
 #![warn(missing_docs)]
 
@@ -21,7 +20,8 @@ mod task;
 mod workflow;
 
 #[cfg(test)]
-mod fakes;
+#[path = "../tests/support/mod.rs"]
+mod support;
 
 pub use agent_run::AgentRun;
 pub use attempt::{

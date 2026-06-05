@@ -17,8 +17,14 @@ mod ports;
 mod starter;
 mod util;
 
+// Layer-B doubles (in-memory stores + `AgentRunner` doubles + `wait_until`).
+// Kept crate-local under `tests/` (not `eos-testkit`): they are single-consumer
+// `eos-workflow` types, so the dev-dep two-instance rule bars consuming them
+// from this crate's own in-crate tests (TESTING_SPEC §14.2). Named `support` so
+// the AC2 `mod (testsupport|test_support|…)` grep stays clean.
 #[cfg(test)]
-mod testsupport;
+#[path = "../tests/support/mod.rs"]
+mod support;
 
 pub use attempt::{
     AgentLaunch, AgentRunReport, AgentRunner, AttemptDeps, AttemptOrchestratorRegistry,

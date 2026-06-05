@@ -17,7 +17,7 @@ use tokio::sync::Barrier;
 use tokio::time::{timeout, Duration};
 
 use super::*;
-use crate::test_support::metadata;
+use eos_testkit::metadata;
 
 #[derive(Debug, Default)]
 struct RecordingAuditSink {

@@ -323,7 +323,7 @@ mod tests {
     async fn bailout_pass_carries_daemon_unavailable_reason() {
         use eos_sandbox_api::SandboxApiError;
 
-        use crate::testsupport::{metadata, FakeTransport};
+        use crate::support::{metadata, FakeTransport};
 
         let mut ctx = metadata();
         bind_agent_run(&mut ctx);
@@ -358,7 +358,7 @@ mod tests {
     // than a supervisor handle record.
     #[tokio::test]
     async fn outstanding_workflow_denies_terminal() {
-        use crate::testsupport::metadata;
+        use crate::support::metadata;
 
         let mut ctx = metadata();
         bind_agent_run(&mut ctx);
@@ -387,7 +387,7 @@ mod tests {
 
     #[tokio::test]
     async fn enter_isolated_workspace_denies_inflight_subagents_without_cancelling() {
-        use crate::testsupport::metadata;
+        use crate::support::metadata;
 
         let supervisor = Arc::new(ReportSupervisor::new(report(1, 0, 0)));
         let mut ctx = metadata();
@@ -418,7 +418,7 @@ mod tests {
 
     #[tokio::test]
     async fn enter_isolated_workspace_denies_outstanding_workflows() {
-        use crate::testsupport::metadata;
+        use crate::support::metadata;
 
         let mut ctx = metadata();
         bind_agent_run(&mut ctx);
@@ -451,7 +451,7 @@ mod tests {
     async fn enter_isolated_workspace_denies_daemon_command_sessions() {
         use eos_sandbox_api::DaemonOp;
 
-        use crate::testsupport::{metadata, FakeTransport};
+        use crate::support::{metadata, FakeTransport};
 
         let mut ctx = metadata();
         bind_agent_run(&mut ctx);
@@ -487,7 +487,7 @@ mod tests {
     async fn exit_isolated_workspace_cancels_subagents_then_denies_command_sessions() {
         use eos_sandbox_api::DaemonOp;
 
-        use crate::testsupport::{metadata, FakeTransport};
+        use crate::support::{metadata, FakeTransport};
 
         let supervisor = Arc::new(ReportSupervisor::new(report(3, 0, 0)));
         let mut ctx = metadata();

@@ -5,7 +5,6 @@
 //! `SqlitePool` (PRAGMA discipline), the versioned `migrations/`, the typed row
 //! structs and their explicit row↔domain mapping (the naming gap, anchor §4),
 //! the model registry, and the single composition-root constructor [`Database`].
-//! See `docs/plans/backend_agent_core_rust_migration/impl-eos-db.md`.
 #![forbid(unsafe_code)]
 #![warn(missing_docs)]
 

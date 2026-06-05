@@ -142,7 +142,7 @@ mod tests {
     use serde_json::Value;
 
     use super::*;
-    use crate::testsupport::metadata;
+    use crate::support::metadata;
 
     /// Throwaway skill root under the temp dir, removed on drop (the loader is
     /// filesystem-backed and `SkillDefinition` is `#[non_exhaustive]`, so a real

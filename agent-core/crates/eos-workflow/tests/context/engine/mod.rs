@@ -9,7 +9,7 @@ use eos_state::{
 use super::*;
 use crate::context::{render_context_xml, render_task_guidance, ContextScope, ContextSection};
 use crate::ids::{generator_task_id, reducer_task_id};
-use crate::testsupport::{tid, MemoryStores};
+use crate::support::{tid, MemoryStores};
 
 fn deps(stores: &Arc<MemoryStores>) -> ContextEngineDeps {
     ContextEngineDeps {

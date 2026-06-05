@@ -200,7 +200,7 @@ pub async fn project_iteration_outcomes(
 mod tests {
     use super::*;
     use crate::attempt::{Attempt, AttemptClosure, AttemptState, AttemptStatus};
-    use crate::fakes::FakeTaskStore;
+    use crate::support::FakeTaskStore;
     use crate::task::{Task, TaskRole, TaskStatus};
     use eos_types::{AttemptId, IterationId, RequestId, UtcDateTime, WorkflowId};
 

@@ -16,9 +16,10 @@ use eos_types::RequestId;
 use serde_json::json;
 
 use eos_testkit::{
-    agent_def, build_test_state, factory_by_agent, factory_from, factory_root_blocks_after,
-    test_tools_root, tool_use_turn,
+    agent_def, factory_by_agent, factory_from, factory_root_blocks_after, test_tools_root,
+    tool_use_turn,
 };
+use crate::app_state::support::build_test_state;
 use crate::app_state::EventSourceFactory;
 use crate::entry::root_task_id_for;
 use crate::{run_request, AppState};
@@ -920,7 +921,8 @@ mod command_session_delivery {
     use eos_types::{JsonObject, RequestId, SandboxId};
     use serde_json::json;
 
-    use eos_testkit::{agent_def, FakeProvisioner, ScriptedSource};
+    use eos_testkit::{agent_def, ScriptedSource};
+    use crate::app_state::support::FakeProvisioner;
     use crate::app_state::EventSourceFactory;
     use crate::entry::root_task_id_for;
     use crate::{run_request, AppState};
@@ -1168,9 +1170,8 @@ mod subagent_lifecycle {
     use eos_types::RequestId;
     use serde_json::json;
 
-    use eos_testkit::{
-        agent_def, build_test_state, tool_use_turn, ScriptedSource,
-    };
+    use eos_testkit::{agent_def, tool_use_turn, ScriptedSource};
+    use crate::app_state::support::build_test_state;
     use crate::app_state::EventSourceFactory;
     use crate::entry::root_task_id_for;
     use crate::run_request;

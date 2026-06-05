@@ -8,8 +8,7 @@
 //! [`LlmStreamEvent`], [`ProviderError`], [`ToolSpec`], and the [`LlmClient`]
 //! seam (anchor §5). It depends on no provider SDK — direct `reqwest` + a
 //! hand-rolled SSE splitter only — and owns no engine-domain events, tool
-//! registry, or lifecycle policy. See
-//! `docs/plans/backend_agent_core_rust_migration/impl-eos-llm-client.md`.
+//! registry, or lifecycle policy.
 #![forbid(unsafe_code)]
 #![warn(missing_docs)]
 

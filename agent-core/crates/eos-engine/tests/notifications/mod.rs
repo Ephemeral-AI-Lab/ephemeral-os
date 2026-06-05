@@ -9,7 +9,7 @@ use eos_tools::{ToolName, ToolRegistry, ToolResult};
 use eos_types::{AgentRunId, JsonObject};
 
 use super::*;
-use crate::test_support::metadata;
+use eos_testkit::metadata;
 
 fn ctx() -> QueryContext {
     QueryContext {

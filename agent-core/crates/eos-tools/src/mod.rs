@@ -10,8 +10,7 @@
 //! It owns the *decisions*; `eos-engine` owns the async query/dispatch *loop*,
 //! the background supervisor, stream events, and `ToolResultBlock`. Tools that
 //! need downstream state depend on a **narrow [port trait](ports)** defined here
-//! and implemented downstream. See
-//! `docs/plans/backend_agent_core_rust_migration/impl-eos-tools.md`.
+//! and implemented downstream.
 #![forbid(unsafe_code)]
 #![warn(missing_docs)]
 
@@ -30,7 +29,7 @@ mod tools;
 
 #[cfg(test)]
 #[path = "../tests/support/mod.rs"]
-mod testsupport;
+mod support;
 
 pub use core::error::ToolError;
 pub use core::intent::ToolIntent;

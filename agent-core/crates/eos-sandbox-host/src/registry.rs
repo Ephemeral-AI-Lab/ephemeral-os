@@ -130,7 +130,7 @@ impl ProviderRegistry {
 mod tests {
     #![allow(clippy::unwrap_used)]
     use super::*;
-    use crate::testutil::MockAdapter;
+    use crate::support::MockAdapter;
 
     fn sid(s: &str) -> SandboxId {
         s.parse().expect("non-empty id")

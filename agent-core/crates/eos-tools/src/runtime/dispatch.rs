@@ -178,7 +178,7 @@ pub fn lifecycle_batch_decision(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::testsupport::registry_with;
+    use crate::support::registry_with;
     use crate::ToolName;
 
     fn call<'a>(id: &'a str, name: &'a str) -> DispatchCall<'a> {
