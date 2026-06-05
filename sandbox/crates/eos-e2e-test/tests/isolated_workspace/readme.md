@@ -15,6 +15,10 @@ This module owns the unified live E2E contract for isolated-session lifecycle, p
 - [ ] isolated_workspace-exit-cleanup: Exit or cancel drains long-lived isolated command sessions and removes namespace resources so re-enter starts cleanly.
 - [ ] isolated_workspace-tool-routing-contract: File tools in isolated mode return explicit workspace, mode, mutation, publish, and conflict fields, then route back to ephemeral after exit.
 - [ ] isolated_workspace-exec-private-discard: Exec writes inside isolated mode remain private while open, then disappear on exit without OCC publication.
+- [ ] isolated_workspace-lifecycle-gates: Enter rejects active sandbox-bound background work, repeated enter reports an already-open or lifecycle-in-progress state, and exit drain timeout/retry remains stable.
+- [ ] isolated_workspace-network-peer-block: Isolated callers can reach their own loopback service but cannot reach peer isolated sessions through namespace or bridge addresses.
+- [ ] isolated_workspace-audit-trail: Enter, exit, and isolated tool calls emit lifecycle audit fields, teardown timings, discarded-byte counters, and orphan-check evidence.
+- [ ] isolated_workspace-ttl-eviction: Short test config TTL evicts idle isolated sessions and preserves coherent status/list-open behavior.
 
 ## Test Case
 

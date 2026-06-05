@@ -7,11 +7,13 @@
 ## Checklist
 
 - [ ] core-runtime-base: Runtime readiness, probes, workspace binding, base-layer metrics, rebuild timing, heartbeat idle state, and base audit fields remain protocol-visible and coherent.
+- [ ] core-host-default-layer-stack-root: Host and protocol workspace setup inject the LayerStack root from workspace configuration without requiring a separate caller routing parameter.
 - [ ] core-workspace-commit: Committing the LayerStack view to the workspace survives a base rebuild and keeps manifest audit fields aligned with the response.
 - [ ] core-envelope-guards: Unknown ops, malformed frames, oversized requests, bad or missing auth, and isolated-mode plugin-family ops return deterministic structured errors.
 - [ ] core-direct-file-ops: Direct read/write/edit paths publish through OCC, bypass overlay leasing, expose direct timing counters, and keep lease counts at zero under repeated writes.
 - [ ] core-file-error-catalog: Missing reads, edit anchor failures, ambiguous edit counts, create-only conflicts, and file size limits return deterministic no-publish error payloads.
 - [ ] core-command-lifecycle: `exec_command`, `write_stdin`, collect-completed, cancel, timeout, session count, and output cap behavior are coherent for running and completed sessions.
+- [ ] core-command-background-contract: Command-session lifecycle coverage exposes the daemon contract higher-level background tools rely on while model-facing wait/check behavior stays outside this suite.
 - [ ] core-command-cursors: Command output cursors advance without replaying previously consumed output across repeated polls or stdin writes.
 - [ ] core-command-terminate-kills-group: Command termination cancels the owned process group, drains command sessions, releases leases, and leaves no descendant marker processes.
 - [ ] core-detached-child-contract: `nohup` and `setsid nohup` descendants have an explicit tested contract instead of an accidental leak policy.

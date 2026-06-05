@@ -15,6 +15,8 @@
 - [ ] pressure-squash-bound: Repeated overwrite pressure keeps manifest depth under the operational auto-squash target while preserving latest content.
 - [ ] pressure-recovery-cleanup: Midflight cancel and cancel bursts leave daemon readiness intact and drain command sessions, active leases, and marker work.
 - [ ] pressure-resource-report: E2E runs emit JSON summaries for latency shape, resource counters, and leak counters before strict regression thresholds are introduced.
+- [ ] pressure-bundled-sandbox-capstone: A protocol-only mini-bundle combines scaffold, disjoint writes, same-path conflict, squash, background command, plugin dispatch, isolated private write, and commit projection without agent-loop assertions.
+- [ ] pressure-sandbox-only-boundary: Pressure capstone coverage remains limited to sandbox protocol and resource behavior, leaving TaskCenter state, advisor gates, and notification-loop assertions to agent-core tests.
 
 ## Test Case
 

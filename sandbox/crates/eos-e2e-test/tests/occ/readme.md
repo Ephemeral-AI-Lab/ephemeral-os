@@ -14,6 +14,7 @@ OCC tests cover the workspace publish gate in front of LayerStack through `api.v
 - [ ] occ-edit-anchor-errors: missing, stale, or ambiguous edit anchors return structured no-op conflict payloads without partial file mutation.
 - [ ] occ-audit-accounting: successful publish and conflict/rejection paths emit coherent audit or route accounting signals.
 - [ ] occ-result-catalog: committed, rejected, dropped, and edit-conflict FileResult statuses keep stable wire names and reasons.
+- [ ] occ-atomic-changeset-audit: Multi-path publishes are all-or-nothing on conflict, causal audit identifiers link prepare/apply, and conflict versus publish outcomes are mutually exclusive for one commit.
 
 ## Test Case
 

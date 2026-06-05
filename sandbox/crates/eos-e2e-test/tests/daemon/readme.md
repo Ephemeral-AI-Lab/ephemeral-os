@@ -12,8 +12,10 @@
 - [ ] daemon-heartbeat: Heartbeat `touched` counts distinguish live invocation ids from bogus ids without mutating idle state.
 - [ ] daemon-cancel-control: Cancel envelopes are coherent for unknown and live inflight invocation ids, including already-done and cancelled semantics.
 - [ ] daemon-audit: Audit pull, pagination, cursor/floor behavior, and the config-gated reset hook are explicitly covered without relying on transient global state.
+- [ ] daemon-audit-scope-boundary: Daemon audit tests cover ring pagination/reset behavior while isolated lifecycle event fields and orphan checks stay owned by isolated workspace tests.
 - [ ] daemon-ttl-reaper: Short TTL/reaper daemon config removes stale inflight state and proves cleanup through registry counts.
 - [ ] daemon-plugin-control: Dynamic plugin operations marked `background: true` participate in inflight, heartbeat, and cancel envelope control. Plugin process-group cancellation is not asserted: `sandbox/crates/eos-daemon/src/transport/server.rs` registers every background request, while `sandbox/crates/eos-daemon/src/services/overlay/mod.rs` is the only current `register_process_group` caller.
+- [ ] daemon-plugin-background-boundary: Dynamic plugin background requests use daemon inflight, heartbeat, and cancel control while plugin publish, setup failure, and worker replacement semantics stay plugin-owned.
 
 ## Test Case
 

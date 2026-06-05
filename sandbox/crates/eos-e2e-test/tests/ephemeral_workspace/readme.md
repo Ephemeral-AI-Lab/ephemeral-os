@@ -14,6 +14,10 @@ This module owns the unified live E2E contract for ephemeral workspace routing, 
 - [ ] ephemeral_workspace-command-session-termination: `write_stdin` termination and command cancel reap all same-pgid descendants without session-count or marker leaks.
 - [ ] ephemeral_workspace-occ-publish-readback: In-workspace exec writes publish through daemon-owned OCC and are readable through `api.v1.read_file`.
 - [ ] ephemeral_workspace-stale-exec-conflict: A long-running exec from a stale snapshot cannot silently overwrite newer direct file content.
+- [ ] ephemeral_workspace-route-edges: Multi-path shell capture, mount/publish timing fields, and read-intent no-publish behavior stay observable through daemon responses and audit events.
+- [ ] ephemeral_workspace-policy-denials: Host-prefix writes, cwd escapes, and workspace-destructive shell commands are rejected before any workspace publish when the daemon owns those protocol errors.
+- [ ] ephemeral_workspace-whiteout-resync: Deletes, opaque directory replacement, deep-manifest pre-mount squash, and foreign-published workspace changes round-trip through overlay readback.
+- [ ] ephemeral_workspace-cancel-no-partial-publish: Cancelled background execs do not publish partial workspace mutation and still release overlay leases.
 
 ## Test Case
 

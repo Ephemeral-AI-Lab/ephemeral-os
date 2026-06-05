@@ -17,6 +17,9 @@ LayerStack tests cover daemon-owned workspace base rebuild, active lease pinning
 - [ ] layerstack-squash-integrity: squash completion reduces input depth, keeps the head readable, reports a CAS-shaped hash, and does not fail under single-client growth.
 - [ ] layerstack-storage-cleanup: repeated overwrites and superseded layer dirs stay bounded using storage bytes, layer dir counts, and supplemental orphan/missing metrics.
 - [ ] layerstack-git-commit-overlay: commit-to-git after repeated squash commits the overlay snapshot, honors path filters, reports timing phases, and records bounded LayerStack depth.
+- [ ] layerstack-lease-commit-guard: Commit-to-workspace refuses while snapshot leases are active and succeeds after release.
+- [ ] layerstack-projection-roundtrip: Workspace projection preserves delete and whiteout masking, symlinks, directory replacement, timing fields, and storage-writer lock integrity.
+- [ ] layerstack-deferred-gc: Leased layer directories survive squash pressure until release, and garbage collection reclaims only unreferenced storage afterward.
 
 ## Test Case
 

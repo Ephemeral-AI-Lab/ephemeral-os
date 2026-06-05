@@ -17,6 +17,8 @@ This module owns the unified live E2E contract for plugin package setup, daemon-
 - [ ] plugin-isolated-gate: Plugin dynamic ops are rejected while the caller is in isolated workspace mode and the handle exits cleanly.
 - [ ] plugin-lsp-lifecycle: The LSP package uses the generic lifecycle, installs node/pyright dependency roots, connects `plugin.lsp.query_symbols`, and returns live workspace symbols.
 - [ ] plugin-write-allowed: Write-allowed or oneshot plugin operations publish only through daemon-owned OCC paths and report changed paths.
+- [ ] plugin-lsp-apply-and-failures: LSP read-only queries, workspace edit application, stale edit conflict/retry, and structured setup failures are covered through daemon plugin/LSP flows.
+- [ ] plugin-intent-contract: Missing intent, non-write caller misuse, unbootstrapped plugin calls, and foreign/lifecycle misuse fail fast with stable audit and error payloads.
 
 ## Test Case
 
