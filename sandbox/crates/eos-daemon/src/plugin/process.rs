@@ -22,10 +22,11 @@ use eos_runner::{RunMode, RunRequest, ToolCall, WorkspaceRoot};
 use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
 
+#[cfg(test)]
+use super::plugin_runtime_config;
 use super::ppc_router::PpcClient;
 use crate::error::DaemonError;
 
-pub(super) const PLUGIN_PPC_ROOT: &str = "/eos/plugin/ppc";
 pub(super) const ENV_PLUGIN_PPC_SOCKET: &str = "EOS_PLUGIN_PPC_SOCKET";
 pub(super) const ENV_PLUGIN_LAYER_STACK_ROOT: &str = "EOS_PLUGIN_LAYER_STACK_ROOT";
 pub(super) const ENV_PLUGIN_WORKSPACE_ROOT: &str = "EOS_PLUGIN_WORKSPACE_ROOT";
@@ -66,6 +67,7 @@ impl PluginProcessSpec {
     ) -> Result<Self, PluginError> {
         let package_root = default_package_root(&key);
         let dependency_root = default_dependency_root(&key);
+        let socket_root = plugin_runtime_config().ppc_root;
         Self::new_with_package_paths(
             key,
             command,
@@ -73,7 +75,7 @@ impl PluginProcessSpec {
             dependency_root,
             PathBuf::from("."),
             ppc_protocol_version,
-            PLUGIN_PPC_ROOT,
+            socket_root,
         )
     }
 

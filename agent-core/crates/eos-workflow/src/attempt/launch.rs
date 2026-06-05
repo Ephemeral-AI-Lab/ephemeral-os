@@ -306,7 +306,7 @@ impl AgentLaunchFactory {
                 agent_name: args.base_agent_name.to_owned(),
                 context: format!(
                     "{} context for {}",
-                    args.scope.role.as_str(),
+                    args.scope.role().as_str(),
                     args.base_agent_name
                 ),
                 task_guidance: None,

@@ -10,11 +10,8 @@
 //!   monotonic `seq`/`lane` injection, and the `pull` / `snapshot` views the
 //!   `api.audit.{pull,snapshot}` ops read. The daemon never writes audit to
 //!   disk; consumers pull from this ring.
-//! * [`safe_emit`] / [`safe_record_phase`] — the two impure bridges that the
-//!   audit-schema severing (severing #1, the PARTIAL one) keeps daemon-side:
-//!   `safe_emit` appends to this ring swallowing errors; `safe_record_phase`
-//!   reaches into the out-of-scope engine phase buffer. Both never break the
-//!   hot path.
+//! * [`safe_emit`] — the impure bridge that appends to this ring while
+//!   swallowing errors so audit emission never breaks the hot path.
 //!
 //! Concurrency: a single mutex guards all ring state. The daemon dispatcher is
 //! single-threaded async plus boot-time emitters that may fire before the loop
@@ -35,26 +32,26 @@ use eos_protocol::audit::{
 /// A single buffered event: its monotonic sequence, lane, encoded size, and the
 /// payload (already stamped with `seq`/`lane`).
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct BufferedEvent {
+struct BufferedEvent {
     /// Monotonic per-buffer sequence number.
-    pub seq: u64,
+    seq: u64,
     /// Lane this event was appended on.
-    pub lane: Lane,
+    lane: Lane,
     /// Byte size of the JSON-encoded payload (drives the byte cap).
-    pub encoded_bytes: u64,
+    encoded_bytes: u64,
     /// The event payload, with `seq`/`lane` injected.
-    pub payload: Value,
+    payload: Value,
 }
 
 /// Per-lane retained-event/byte/dropped counters.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
-pub struct LaneCounters {
+struct LaneCounters {
     /// Retained events in this lane.
-    pub events: u64,
+    events: u64,
     /// Retained bytes in this lane.
-    pub bytes: u64,
+    bytes: u64,
     /// Events evicted from this lane under pressure.
-    pub dropped: u64,
+    dropped: u64,
 }
 
 /// Bounded in-memory audit ring with lane-priority eviction.
@@ -64,7 +61,7 @@ pub struct LaneCounters {
 /// so critical-lane events survive sample-lane pressure. A rising cross of the
 /// pressure threshold is edge-triggered and (in the full port) re-emits a
 /// `daemon.audit_buffer_pressure` critical event OUTSIDE the lock.
-pub struct AuditBuffer {
+pub(crate) struct AuditBuffer {
     inner: Mutex<RingState>,
     boot_epoch_id: i64,
     pressure_threshold: f64,
@@ -92,13 +89,13 @@ impl AuditBuffer {
     /// Build a ring with the default caps (`50_000` events / 8 MiB) and a fresh
     /// boot epoch id.
     #[must_use]
-    pub fn new() -> Self {
+    pub(crate) fn new() -> Self {
         Self::with_caps(DEFAULT_MAX_EVENTS, DEFAULT_MAX_BYTES, None)
     }
 
     /// Build a ring with explicit caps and an optional fixed boot epoch id.
     #[must_use]
-    pub fn with_caps(max_events: u64, max_bytes: u64, boot_epoch_id: Option<i64>) -> Self {
+    fn with_caps(max_events: u64, max_bytes: u64, boot_epoch_id: Option<i64>) -> Self {
         Self {
             inner: Mutex::new(RingState {
                 max_events,
@@ -116,11 +113,6 @@ impl AuditBuffer {
         }
     }
 
-    /// The boot epoch id stamped on `daemon.*` events and the snapshot block.
-    pub const fn boot_epoch_id(&self) -> i64 {
-        self.boot_epoch_id
-    }
-
     fn lock_state(&self) -> MutexGuard<'_, RingState> {
         match self.inner.lock() {
             Ok(guard) => guard,
@@ -133,7 +125,7 @@ impl AuditBuffer {
     /// Injects `seq`/`lane` into the payload, enforces the caps (evicting in
     /// lane priority), and on a rising pressure cross re-emits the
     /// `daemon.audit_buffer_pressure` event OUTSIDE the lock.
-    pub fn append(&self, event: Value, lane: Lane) -> u64 {
+    fn append(&self, event: Value, lane: Lane) -> u64 {
         let encoded_bytes = encoded_size(&event);
         let mut state = self.lock_state();
         let seq = state.next_seq;
@@ -165,7 +157,7 @@ impl AuditBuffer {
 
     /// Pull events strictly after `after_seq` (up to `limit`), with the buffer +
     /// snapshot blocks and the cursor. Backs `api.audit.pull`.
-    pub fn pull(&self, after_seq: i64, limit: usize) -> Value {
+    pub(crate) fn pull(&self, after_seq: i64, limit: usize) -> Value {
         let limit = limit.max(1);
         let requested_after_seq = after_seq;
         let after_seq = u64::try_from(after_seq).ok();
@@ -204,7 +196,7 @@ impl AuditBuffer {
     }
 
     /// Buffer + snapshot blocks with no events. Backs `api.audit.snapshot`.
-    pub fn snapshot(&self) -> Value {
+    pub(crate) fn snapshot(&self) -> Value {
         let state = self.lock_state();
         serde_json::json!({
             "schema": SCHEMA_VERSION,
@@ -226,19 +218,10 @@ impl Default for AuditBuffer {
 /// the try/swallow discipline lives in one place. IMPURE: it reaches the
 /// process-wide buffer singleton (the future port resolves the singleton; the
 /// pure schema constructors stay in [`eos_protocol::audit`]).
-pub fn safe_emit(event: Value, lane: Lane) {
+pub(crate) fn safe_emit(event: Value, lane: Lane) {
     let _ = catch_unwind(AssertUnwindSafe(|| {
         let _ = global_audit_buffer().append(event, lane);
     }));
-}
-
-/// Bridge to the engine's per-call phase buffer (`record_phase`).
-///
-/// Lazy-bound so the sandbox does not carry an unconditional engine dependency;
-/// no-ops when no per-call buffer is active. Used by the overlay/OCC publish
-/// boundaries. IMPURE: it reaches the (out-of-scope) engine package.
-pub const fn safe_record_phase(phase: &str, duration_ms: f64) {
-    let _ = (phase, duration_ms);
 }
 
 pub(crate) fn global_audit_buffer() -> &'static AuditBuffer {

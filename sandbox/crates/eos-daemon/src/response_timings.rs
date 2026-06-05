@@ -162,41 +162,6 @@ const fn occ_status_wire(status: OccStatus) -> &'static str {
     }
 }
 
-pub(crate) fn guarded_conflict_response(
-    verb: &str,
-    path: &str,
-    status: &str,
-    reason: &str,
-    message: &str,
-    mut timings: serde_json::Map<String, Value>,
-    total_start: Instant,
-) -> Value {
-    timings.insert(
-        format!("api.{verb}.total_s"),
-        json!(total_start.elapsed().as_secs_f64()),
-    );
-    let mut response = json!({
-        "success": false,
-        "workspace": "ephemeral",
-        "changed_paths": [],
-        "changed_path_kinds": {},
-        "mutation_source": mutation_source(verb),
-        "status": status,
-        "conflict": {
-            "reason": reason,
-            "conflict_file": path,
-            "message": message,
-        },
-        "conflict_reason": reason,
-        "error": null,
-        "timings": Value::Object(timings),
-    });
-    if verb == "edit" {
-        response["applied_edits"] = json!(0);
-    }
-    response
-}
-
 pub(crate) fn resource_timings(
     manifest: &Manifest,
     changed_path_count: usize,

@@ -10,6 +10,7 @@ members = [
     "crates/eos-layerstack",
     "crates/eos-overlay",
     "crates/eos-occ",
+    "crates/eos-workspace-api",
     "crates/eos-isolated-workspace",
     "crates/eos-ephemeral-workspace",
     "crates/eos-plugin",
@@ -54,6 +55,7 @@ eos-config = { path = "crates/eos-config" }
 eos-layerstack = { path = "crates/eos-layerstack" }
 eos-overlay = { path = "crates/eos-overlay" }
 eos-occ = { path = "crates/eos-occ" }
+eos-workspace-api = { path = "crates/eos-workspace-api" }
 eos-isolated-workspace = { path = "crates/eos-isolated-workspace" }
 eos-ephemeral-workspace = { path = "crates/eos-ephemeral-workspace" }
 eos-plugin = { path = "crates/eos-plugin" }

@@ -29,7 +29,7 @@ pub use model::ModelRegistration;
 pub use outcomes::{
     attempt_execution_outcomes, execution_outcome_for_submission, latest_iteration, present_status,
     project_attempt_outcomes, project_iteration_outcomes, ExecutionRole, ExecutionTaskOutcome,
-    TaskOutcomeStatus,
+    TaskOutcomeStatus, NO_OUTCOME,
 };
 pub use request::{Request, RequestStatus};
 pub use store::{

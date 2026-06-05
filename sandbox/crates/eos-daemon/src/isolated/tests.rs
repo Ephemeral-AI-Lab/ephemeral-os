@@ -4,13 +4,15 @@ type TestResult = Result<(), Box<dyn std::error::Error + Send + Sync>>;
 
 #[test]
 fn active_command_session_records_do_not_guard_exit() -> TestResult {
-    let _guard = TEST_LOCK.lock().map_err(|_| "test lock poisoned")?;
-    let _ = op_test_reset(&json!({}), DispatchContext::empty());
+    let _guard = lock_isolated_test_state();
     let root = std::env::temp_dir().join(format!(
         "eos-daemon-iws-command-session-block-{}",
         std::process::id()
     ));
     let scratch = root.join("scratch");
+    configure_test_isolated_workspace(&scratch, Path::new("/testbed"));
+    set_env(TEST_HARNESS_ENV, "true");
+    let _ = op_test_reset(&json!({}), DispatchContext::empty());
     let _ = std::fs::remove_dir_all(&root);
     std::fs::create_dir_all(root.join("layers"))?;
     std::fs::create_dir_all(root.join("staging"))?;
@@ -18,9 +20,6 @@ fn active_command_session_records_do_not_guard_exit() -> TestResult {
         root.join("manifest.json"),
         r#"{"schema_version":1,"version":1,"layers":[]}"#,
     )?;
-    set_env("EOS_ISOLATED_WORKSPACE_ENABLED", "true");
-    set_env(TEST_HARNESS_ENV, "true");
-    set_env(TEST_SCRATCH_ROOT_ENV, &scratch.to_string_lossy());
 
     let entered = op_enter(
         &json!({"agent_id": "agent-command-session", "layer_stack_root": root}),
@@ -39,16 +38,15 @@ fn active_command_session_records_do_not_guard_exit() -> TestResult {
         json!(false)
     );
     let _ = op_test_reset(&json!({}), DispatchContext::empty());
-    clear_env("EOS_ISOLATED_WORKSPACE_ENABLED");
     clear_env(TEST_HARNESS_ENV);
-    clear_env(TEST_SCRATCH_ROOT_ENV);
+    reset_isolated_workspace_config();
     let _ = std::fs::remove_dir_all(&root);
     Ok(())
 }
 
 #[test]
-fn enter_uses_workspace_binding_over_eos_workspace_root_env() -> TestResult {
-    let _guard = TEST_LOCK.lock().map_err(|_| "test lock poisoned")?;
+fn enter_uses_workspace_binding_over_configured_workspace_root() -> TestResult {
+    let _guard = lock_isolated_test_state();
     let root = std::env::temp_dir().join(format!(
         "eos-daemon-iws-bound-workspace-root-{}",
         std::process::id()
@@ -60,10 +58,8 @@ fn enter_uses_workspace_binding_over_eos_workspace_root_env() -> TestResult {
     std::fs::create_dir_all(&workspace_root)?;
     std::fs::write(workspace_root.join("seed.txt"), "seed\n")?;
     eos_layerstack::build_workspace_base(&stack_root, &workspace_root, true)?;
-    set_env("EOS_ISOLATED_WORKSPACE_ENABLED", "true");
+    configure_test_isolated_workspace(&scratch, Path::new("/configured-fallback"));
     set_env(TEST_HARNESS_ENV, "true");
-    set_env(TEST_SCRATCH_ROOT_ENV, &scratch.to_string_lossy());
-    set_env("EOS_WORKSPACE_ROOT", "/configured-fallback");
     let _ = op_test_reset(&json!({}), DispatchContext::empty());
 
     let entered = op_enter(
@@ -94,17 +90,15 @@ fn enter_uses_workspace_binding_over_eos_workspace_root_env() -> TestResult {
     )?;
     assert_eq!(exited["success"], true);
     let _ = op_test_reset(&json!({}), DispatchContext::empty());
-    clear_env("EOS_WORKSPACE_ROOT");
-    clear_env("EOS_ISOLATED_WORKSPACE_ENABLED");
     clear_env(TEST_HARNESS_ENV);
-    clear_env(TEST_SCRATCH_ROOT_ENV);
+    reset_isolated_workspace_config();
     let _ = std::fs::remove_dir_all(&root);
     Ok(())
 }
 
 #[test]
 fn test_reset_rewrites_invalid_manager_json() -> TestResult {
-    let _guard = TEST_LOCK.lock().map_err(|_| "test lock poisoned")?;
+    let _guard = lock_isolated_test_state();
     let root = std::env::temp_dir().join(format!(
         "eos-daemon-iws-reset-manager-{}",
         std::process::id()
@@ -117,8 +111,8 @@ fn test_reset_rewrites_invalid_manager_json() -> TestResult {
         manager_root.join("manager.json"),
         r#"{"schema_version":999,"handles":[{"workspace_handle_id":"ghost"}]}"#,
     )?;
+    configure_test_isolated_workspace(&scratch, Path::new("/testbed"));
     set_env(TEST_HARNESS_ENV, "true");
-    set_env(TEST_SCRATCH_ROOT_ENV, &scratch.to_string_lossy());
 
     let reset = op_test_reset(&json!({}), DispatchContext::empty())?;
 
@@ -129,7 +123,7 @@ fn test_reset_rewrites_invalid_manager_json() -> TestResult {
         json!({"schema_version": 1, "handles": []})
     );
     clear_env(TEST_HARNESS_ENV);
-    clear_env(TEST_SCRATCH_ROOT_ENV);
+    reset_isolated_workspace_config();
     let _ = std::fs::remove_dir_all(&root);
     Ok(())
 }
@@ -146,12 +140,23 @@ fn host_ram_pressure_error_keeps_capacity_details() {
     assert_eq!(response["error"]["details"]["budget_bytes"], 29);
 }
 
-static TEST_LOCK: Mutex<()> = Mutex::new(());
-
 fn set_env(key: &str, value: &str) {
     std::env::set_var(key, value);
 }
 
 fn clear_env(key: &str) {
     std::env::remove_var(key);
+}
+
+fn configure_test_isolated_workspace(scratch_root: &Path, workspace_root: &Path) {
+    let mut config = default_isolated_workspace_config();
+    config.enabled = true;
+    config.scratch_root = scratch_root.to_path_buf();
+    config.audit_jsonl_path = scratch_root.join("audit.jsonl");
+    config.workspace_root = workspace_root.to_path_buf();
+    configure_isolated_workspace(&config);
+}
+
+fn reset_isolated_workspace_config() {
+    configure_isolated_workspace(&default_isolated_workspace_config());
 }

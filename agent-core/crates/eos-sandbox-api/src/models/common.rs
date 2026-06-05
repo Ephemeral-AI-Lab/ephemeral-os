@@ -31,9 +31,9 @@ impl Intent {
     }
 }
 
-/// Which workspace a result was produced against. **Never decoded from a daemon
-/// envelope** — the hand-written parsers always leave it at the `Ephemeral`
-/// default (invariant 9); the `Deserialize` derive exists only for round-tripping.
+/// Which workspace a result was produced against. The hand-written daemon
+/// response parsers preserve the daemon's `workspace` / `workspace_mode` field
+/// when present and fall back to `Ephemeral` for older responses.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum Workspace {
@@ -74,13 +74,13 @@ impl SandboxRequestBase {
 /// field on each verb result.
 ///
 /// `success` has **no** `Default`/construction shortcut on the parse path — the
-/// hand-written parsers set it explicitly with a fail-closed `false` default
-/// (invariant 9). `workspace` is never decoded from the envelope.
+/// hand-written parsers set it explicitly with a fail-closed `false` default.
+/// `workspace` is decoded from daemon mode fields when present.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 pub struct SandboxResultBase {
     /// Whether the operation succeeded.
     pub success: bool,
-    /// Workspace the result was produced against (always `Ephemeral` on parse).
+    /// Workspace the result was produced against.
     #[serde(default)]
     pub workspace: Workspace,
     /// Operation timings, keys normalized to plain strings.

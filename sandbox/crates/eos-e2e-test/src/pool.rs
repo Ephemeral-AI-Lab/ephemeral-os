@@ -16,7 +16,7 @@ use serde_json::{json, Map, Value};
 use crate::audit::AuditTap;
 use crate::client::{error_kind, is_success, ProtocolClient};
 use crate::config::{Config, NodeMode};
-use crate::container::{reap_e2e_containers, DaemonContainer, E2E_ROOT_DIR};
+use crate::container::{reap_e2e_containers, DaemonContainer};
 use crate::{next_invocation_id, unique_suffix};
 
 struct Node {
@@ -32,6 +32,7 @@ struct Inner {
 /// A bounded pool of daemon containers.
 pub struct NodePool {
     config: Config,
+    config_yaml: String,
     inner: Mutex<Inner>,
     cvar: Condvar,
 }
@@ -39,7 +40,7 @@ pub struct NodePool {
 impl NodePool {
     /// Build a pool from `config`, adopting warm kept containers when enabled.
     #[must_use]
-    pub fn new(config: Config) -> Self {
+    pub fn new(config: Config, config_yaml: String) -> Self {
         if !config.keep_container || config.mode == NodeMode::PerTest {
             reap_stale_containers();
         }
@@ -59,6 +60,7 @@ impl NodePool {
         let created = available.len();
         Self {
             config,
+            config_yaml,
             inner: Mutex::new(Inner { available, created }),
             cvar: Condvar::new(),
         }
@@ -83,7 +85,8 @@ impl NodePool {
             let node = self.take_node()?;
             match NodeLease::open(self, node) {
                 Ok(lease) => return Ok(lease),
-                Err((node, err)) => {
+                Err(failure) => {
+                    let (node, err) = *failure;
                     // A failed root-mint usually means the container/daemon died
                     // after checkout. Drop it and retry once with a fresh node.
                     self.give_back(node, true);
@@ -103,7 +106,7 @@ impl NodePool {
             if inner.created < self.cap() {
                 inner.created += 1;
                 drop(inner);
-                match DaemonContainer::start(&self.config) {
+                match DaemonContainer::start(&self.config, &self.config_yaml) {
                     Ok(container) => {
                         return Ok(Node {
                             container,
@@ -148,10 +151,10 @@ pub struct NodeLease<'p> {
 }
 
 impl<'p> NodeLease<'p> {
-    fn open(pool: &'p NodePool, mut node: Node) -> Result<Self, (Node, anyhow::Error)> {
+    fn open(pool: &'p NodePool, mut node: Node) -> Result<Self, Box<(Node, anyhow::Error)>> {
         node.checkouts += 1;
         let id = unique_suffix();
-        let base = format!("{E2E_ROOT_DIR}/{id}");
+        let base = format!("{}/{id}", pool.config.root_dir.to_string_lossy());
         let stack_root = format!("{base}/stack");
         let workspace_root = pool.config.workspace_root.clone();
         let agent_id = format!("agent-{id}");
@@ -168,7 +171,7 @@ impl<'p> NodeLease<'p> {
                     .exec(&["mkdir", "-p", "--", workspace_root.as_str()])
             })
         {
-            return Err((node, err));
+            return Err(Box::new((node, err)));
         }
         let iid = next_invocation_id();
         let ensure = node.container.client().request(
@@ -188,11 +191,11 @@ impl<'p> NodeLease<'p> {
                 workspace_root,
                 agent_id,
             }),
-            Ok(resp) => Err((
+            Ok(resp) => Err(Box::new((
                 node,
                 anyhow::anyhow!("ensure_workspace_base failed: {resp}"),
-            )),
-            Err(err) => Err((node, err)),
+            ))),
+            Err(err) => Err(Box::new((node, err))),
         }
     }
 

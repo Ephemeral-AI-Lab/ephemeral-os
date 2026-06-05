@@ -10,17 +10,23 @@ fn iws_same_port_discard() -> Result<()> {
         return Ok(());
     };
     let lease = pool.acquire()?;
+    let server_cmd =
+        "mkdir -p /eos/scratch/e2e && python3 -m http.server 39001 >/eos/scratch/e2e/eos-e2e-http.log 2>&1";
     lease.call_ok(ops::API_ISOLATED_WORKSPACE_ENTER, json!({}))?;
     let first = lease.call_ok(
         ops::API_V1_EXEC_COMMAND,
         json!({
-            "cmd": "python3 -m http.server 39001 >/eos/scratch/e2e/eos-e2e-http.log 2>&1",
+            "cmd": server_cmd,
             "yield_time_ms": 100,
             "timeout_seconds": 120,
             "max_output_tokens": 500
         }),
     )?;
-    assert_eq!(as_str(&first, "status")?, "running");
+    assert_eq!(
+        as_str(&first, "status")?,
+        "running",
+        "isolated command should start: {first}"
+    );
     let first_id = as_str(&first, "command_session_id")?.to_owned();
     lease.call_ok(
         ops::API_V1_COMMAND_CANCEL,
@@ -32,7 +38,7 @@ fn iws_same_port_discard() -> Result<()> {
     let second = lease.call_ok(
         ops::API_V1_EXEC_COMMAND,
         json!({
-            "cmd": "python3 -m http.server 39001 >/eos/scratch/e2e/eos-e2e-http.log 2>&1",
+            "cmd": server_cmd,
             "yield_time_ms": 100,
             "timeout_seconds": 120,
             "max_output_tokens": 500

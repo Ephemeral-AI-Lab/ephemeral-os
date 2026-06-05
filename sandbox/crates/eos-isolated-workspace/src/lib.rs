@@ -29,15 +29,17 @@
 
 pub mod audit;
 pub mod caps;
+pub mod command_session;
 pub mod config;
 pub mod error;
+pub mod file_ops;
 pub mod network;
+pub mod ops;
 pub mod session;
 
-pub use audit::{AuditSink, JsonlAuditSink, AUDIT_PATH_ENV, DEFAULT_AUDIT_JSONL_PATH};
+pub use audit::{AuditSink, JsonlAuditSink, DEFAULT_AUDIT_JSONL_PATH};
 pub use caps::{
-    ResourceCaps, Rfc1918Egress, CGROUP_ROOT, EOS_WORKSPACE_ROOT_ENV, HANDLE_PREFIX,
-    PERSISTED_HANDLES_SCHEMA_VERSION,
+    ResourceCaps, Rfc1918Egress, CGROUP_ROOT, HANDLE_PREFIX, PERSISTED_HANDLES_SCHEMA_VERSION,
 };
 pub use error::IsolatedError;
 pub use network::{
@@ -45,6 +47,7 @@ pub use network::{
     BRIDGE_PREFIX_LEN, GATEWAY, IMDS_ADDR, NFT_FILTER_TABLE, NFT_NAT_TABLE, RFC1918_NETS,
     VETH_PREFIX,
 };
+pub use ops::IsolatedWorkspaceOps;
 pub use session::{
     AgentId, IsolatedSession, LayerStackSnapshotPort, NamespaceRuntimePort, SnapshotLease,
     WorkspaceHandle, WorkspaceHandleId, DEFAULT_ISOLATED_SCRATCH_ROOT,

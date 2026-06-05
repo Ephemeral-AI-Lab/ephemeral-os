@@ -43,7 +43,7 @@
 </div>
 <section id="plugins"
   data-last-reviewed-commit="local-phase7-20260604"
-  data-evidence-paths="agent-core/crates/eos-plugin-catalog/src/package.rs agent-core/crates/eos-plugin-catalog/lsp/plugin.md agent-core/crates/eos-plugin-catalog/lsp/setup.sh agent-core/crates/eos-plugin-catalog/lsp/runtime/ppc_service.py agent-core/crates/eos-sandbox-api/src/tool_api/plugin.rs agent-core/crates/eos-sandbox-host/src/plugin_package.rs agent-core/crates/eos-runtime/src/plugin_tools.rs sandbox/crates/eos-plugin/src/manifest.rs sandbox/crates/eos-plugin/src/service.rs sandbox/crates/eos-daemon/src/plugin/ensure_args.rs sandbox/crates/eos-daemon/src/plugin/package.rs sandbox/crates/eos-daemon/src/plugin/service.rs sandbox/crates/eos-daemon/src/plugin/mod.rs sandbox/crates/eos-daemon/src/plugin/process.rs sandbox/crates/eos-daemon/tests/plugin/mod.rs sandbox/crates/eos-e2e-test/tests/plugin_packages.rs sandbox/crates/eos-e2e-test/tests/plugin_lsp.rs">
+  data-evidence-paths="agent-core/crates/eos-plugin-catalog/src/package.rs agent-core/crates/eos-plugin-catalog/lsp/plugin.md agent-core/crates/eos-plugin-catalog/lsp/setup.sh agent-core/crates/eos-plugin-catalog/lsp/runtime/ppc_service.py agent-core/crates/eos-sandbox-api/src/tool_api/plugin.rs agent-core/crates/eos-sandbox-host/src/plugin_package.rs agent-core/crates/eos-runtime/src/plugin_tools.rs sandbox/crates/eos-plugin/src/manifest.rs sandbox/crates/eos-plugin/src/service.rs sandbox/crates/eos-daemon/src/plugin/ensure_args.rs sandbox/crates/eos-daemon/src/plugin/package.rs sandbox/crates/eos-daemon/src/plugin/service.rs sandbox/crates/eos-daemon/src/plugin/mod.rs sandbox/crates/eos-daemon/src/plugin/process.rs sandbox/crates/eos-daemon/tests/plugin/mod.rs sandbox/crates/eos-e2e-test/tests/plugin/packages.rs sandbox/crates/eos-e2e-test/tests/plugin/lsp.rs">
 <h2>8. Plugin in ephemeral_workspace <a class="anchor" href="#plugins">§</a></h2>
 <nav class="page-toc" aria-labelledby="page-toc-heading">
   <h3 id="page-toc-heading">Contents</h3>
@@ -74,7 +74,7 @@
 </section>
 <section id="plugin-host-daemon-flow"
   data-last-reviewed-commit="local-phase7-20260604"
-  data-evidence-paths="agent-core/crates/eos-plugin-catalog/src/package.rs agent-core/crates/eos-plugin-catalog/lsp/plugin.md agent-core/crates/eos-plugin-catalog/lsp/setup.sh agent-core/crates/eos-plugin-catalog/lsp/runtime/ppc_service.py agent-core/crates/eos-sandbox-api/src/tool_api/plugin.rs agent-core/crates/eos-sandbox-host/src/plugin_package.rs agent-core/crates/eos-runtime/src/plugin_tools.rs sandbox/crates/eos-plugin/src/manifest.rs sandbox/crates/eos-daemon/src/plugin/ensure_args.rs sandbox/crates/eos-daemon/src/plugin/package.rs sandbox/crates/eos-daemon/src/plugin/service.rs sandbox/crates/eos-daemon/src/plugin/mod.rs sandbox/crates/eos-daemon/src/plugin/process.rs sandbox/crates/eos-daemon/tests/plugin/mod.rs sandbox/crates/eos-e2e-test/tests/plugin_packages.rs sandbox/crates/eos-e2e-test/tests/plugin_lsp.rs">
+  data-evidence-paths="agent-core/crates/eos-plugin-catalog/src/package.rs agent-core/crates/eos-plugin-catalog/lsp/plugin.md agent-core/crates/eos-plugin-catalog/lsp/setup.sh agent-core/crates/eos-plugin-catalog/lsp/runtime/ppc_service.py agent-core/crates/eos-sandbox-api/src/tool_api/plugin.rs agent-core/crates/eos-sandbox-host/src/plugin_package.rs agent-core/crates/eos-runtime/src/plugin_tools.rs sandbox/crates/eos-plugin/src/manifest.rs sandbox/crates/eos-daemon/src/plugin/ensure_args.rs sandbox/crates/eos-daemon/src/plugin/package.rs sandbox/crates/eos-daemon/src/plugin/service.rs sandbox/crates/eos-daemon/src/plugin/mod.rs sandbox/crates/eos-daemon/src/plugin/process.rs sandbox/crates/eos-daemon/tests/plugin/mod.rs sandbox/crates/eos-e2e-test/tests/plugin/packages.rs sandbox/crates/eos-e2e-test/tests/plugin/lsp.rs">
 <h3>8.1 Host and Daemon Flow <a class="anchor" href="#plugin-host-daemon-flow">§</a></h3>
 <p>Agent-core catalog code builds a neutral <code>PluginPackageDescriptor</code> from package source metadata and model-facing tool specs <span class="file-ref">agent-core/crates/eos-plugin-catalog/src/package.rs</span>. The descriptor uses the <code>eos-sandbox-api</code> DTO, so sandbox-host consumes package content without depending on catalog internals <span class="file-ref">agent-core/crates/eos-sandbox-api/src/tool_api/plugin.rs</span>. Runtime registers model tools, calls <code>ensure_plugin_package(...)</code>, and dispatches <code>plugin.&lt;plugin_id&gt;.&lt;op_name&gt;</code> only after setup succeeds <span class="file-ref">agent-core/crates/eos-runtime/src/plugin_tools.rs</span>.</p>
 <p>For the built-in LSP plugin, the catalog package tree is file-backed by <code>agent-core/crates/eos-plugin-catalog/lsp</code>. Its setup script writes <code>node22</code>, <code>pyright</code>, and <code>npm-cache</code> below <code>/eos/runtime/packages/lsp/&lt;digest&gt;</code>; the service computes the absolute Pyright argv from <code>EOS_PLUGIN_DEPENDENCY_ROOT</code> and connects to the daemon PPC socket like any other service <span class="file-ref">agent-core/crates/eos-plugin-catalog/lsp/setup.sh</span>, <span class="file-ref">agent-core/crates/eos-plugin-catalog/lsp/runtime/ppc_service.py</span>.</p>
@@ -128,7 +128,7 @@
 </section>
 <section id="plugin-operation-classes"
   data-last-reviewed-commit="local-phase7-20260604"
-  data-evidence-paths="sandbox/crates/eos-plugin/src/manifest.rs sandbox/crates/eos-plugin/src/service.rs sandbox/crates/eos-daemon/src/plugin/ensure_args.rs sandbox/crates/eos-daemon/src/plugin/mod.rs sandbox/crates/eos-daemon/src/plugin/overlay.rs sandbox/crates/eos-daemon/src/plugin/occ_callbacks.rs sandbox/crates/eos-daemon/tests/plugin/mod.rs sandbox/crates/eos-e2e-test/tests/plugin_packages.rs sandbox/crates/eos-e2e-test/tests/plugin_lsp.rs">
+  data-evidence-paths="sandbox/crates/eos-plugin/src/manifest.rs sandbox/crates/eos-plugin/src/service.rs sandbox/crates/eos-daemon/src/plugin/ensure_args.rs sandbox/crates/eos-daemon/src/plugin/mod.rs sandbox/crates/eos-daemon/src/plugin/overlay.rs sandbox/crates/eos-daemon/src/plugin/occ_callbacks.rs sandbox/crates/eos-daemon/tests/plugin/mod.rs sandbox/crates/eos-e2e-test/tests/plugin/packages.rs sandbox/crates/eos-e2e-test/tests/plugin/lsp.rs">
 <h3>8.2 Operation Classes <a class="anchor" href="#plugin-operation-classes">§</a></h3>
 <div class="diagram" aria-label="Plugin operation flow">
   <div class="flow-row">
@@ -149,13 +149,13 @@
 
 <p>Read-only PPC dispatch is multiplexed by message id and bounded by the plugin response size limit. A failed PPC round trip tears down the connected route and marks the service stopped; a later dispatch can restart the declared service. Self-managed write callbacks are checked against the expected LayerStack root before OCC apply, and oneshot overlay workers run through the daemon overlay path <span class="file-ref">sandbox/crates/eos-daemon/src/plugin/ppc_router.rs</span>, <span class="file-ref">sandbox/crates/eos-daemon/src/plugin/occ_callbacks.rs</span>, <span class="file-ref">sandbox/crates/eos-daemon/src/plugin/overlay.rs</span>.</p>
 
-<p>The live generic package fixture is intentionally non-LSP-shaped: it starts a small PPC service from package content, dispatches <code>plugin.generic.query</code>, verifies package/dependency roots in the service environment, and proves the same operation family is rejected while isolated workspace mode is active <span class="file-ref">sandbox/crates/eos-e2e-test/tests/plugin_packages.rs</span>.</p>
-<p>The live LSP fixture uses the same operation class: it installs the LSP package through <code>api.plugin.ensure</code>, starts the <code>pyright</code> service through daemon process supervision, then dispatches <code>plugin.lsp.query_symbols</code> against a small workspace file <span class="file-ref">sandbox/crates/eos-e2e-test/tests/plugin_lsp.rs</span>.</p>
+<p>The live generic package fixture is intentionally non-LSP-shaped: it starts a small PPC service from package content, dispatches <code>plugin.generic.query</code>, verifies package/dependency roots in the service environment, and proves the same operation family is rejected while isolated workspace mode is active <span class="file-ref">sandbox/crates/eos-e2e-test/tests/plugin/packages.rs</span>.</p>
+<p>The live LSP fixture uses the same operation class: it installs the LSP package through <code>api.plugin.ensure</code>, starts the <code>pyright</code> service through daemon process supervision, then dispatches <code>plugin.lsp.query_symbols</code> against a small workspace file <span class="file-ref">sandbox/crates/eos-e2e-test/tests/plugin/lsp.rs</span>.</p>
 
 </section>
 <section id="plugin-refresh-detail"
   data-last-reviewed-commit="local-phase5-20260604"
-  data-evidence-paths="sandbox/crates/eos-plugin/src/refresh.rs sandbox/crates/eos-daemon/src/plugin/service.rs sandbox/crates/eos-daemon/src/plugin/process.rs sandbox/crates/eos-daemon/src/plugin/mod.rs sandbox/crates/eos-daemon/tests/plugin/mod.rs sandbox/crates/eos-e2e-test/tests/plugin_packages.rs">
+  data-evidence-paths="sandbox/crates/eos-plugin/src/refresh.rs sandbox/crates/eos-daemon/src/plugin/service.rs sandbox/crates/eos-daemon/src/plugin/process.rs sandbox/crates/eos-daemon/src/plugin/mod.rs sandbox/crates/eos-daemon/tests/plugin/mod.rs sandbox/crates/eos-e2e-test/tests/plugin/packages.rs">
 <h3>8.3 Workspace Refresh and Service Writes <a class="anchor" href="#plugin-refresh-detail">§</a></h3>
 
 <pre class="diagram" aria-label="Plugin projection refresh and write branches">
@@ -192,11 +192,11 @@
     <tr><td>Prepare/quiesce</td><td>Send target manifest key and request a quiet point.</td><td>Reply with an accepted refresh ack for the target manifest key.</td><td><span class="file-ref">sandbox/crates/eos-plugin/src/refresh.rs</span>, <span class="file-ref">sandbox/crates/eos-daemon/src/plugin/mod.rs</span></td></tr>
     <tr><td>Swap/remount</td><td>Acquire a new snapshot lease, remount the service workspace namespace when available, then send <code>swap_workspace</code>.</td><td>Use <code>EOS_PLUGIN_WORKSPACE_ROOT</code> for workspace reads after remount.</td><td><span class="file-ref">sandbox/crates/eos-daemon/src/plugin/service.rs</span>, <span class="file-ref">sandbox/crates/eos-daemon/src/plugin/process.rs</span></td></tr>
     <tr><td>Notify/resume/health</td><td>Optionally notify full resync, resume, then require a health ack for the new manifest key.</td><td>Reject or wrong-key ack fails closed and marks the service stale/stopped.</td><td><span class="file-ref">sandbox/crates/eos-daemon/tests/plugin/mod.rs</span></td></tr>
-    <tr><td>Operation dispatch</td><td>Send the original plugin op only after freshness is established.</td><td>Return a bounded JSON object over the same PPC framing.</td><td><span class="file-ref">sandbox/crates/eos-e2e-test/tests/plugin_packages.rs</span></td></tr>
+    <tr><td>Operation dispatch</td><td>Send the original plugin op only after freshness is established.</td><td>Return a bounded JSON object over the same PPC framing.</td><td><span class="file-ref">sandbox/crates/eos-e2e-test/tests/plugin/packages.rs</span></td></tr>
   </tbody>
 </table>
 
-<p>The live refresh test writes a file through the normal workspace write API, dispatches a generic read-only plugin op, and requires both a service refresh count and the updated file content through <code>EOS_PLUGIN_WORKSPACE_ROOT</code>. This proves the refresh path is generic service lifecycle, not an LSP-specific session shortcut <span class="file-ref">sandbox/crates/eos-e2e-test/tests/plugin_packages.rs</span>.</p>
+<p>The live refresh test writes a file through the normal workspace write API, dispatches a generic read-only plugin op, and requires both a service refresh count and the updated file content through <code>EOS_PLUGIN_WORKSPACE_ROOT</code>. This proves the refresh path is generic service lifecycle, not an LSP-specific session shortcut <span class="file-ref">sandbox/crates/eos-e2e-test/tests/plugin/packages.rs</span>.</p>
 
 <div class="callout">
   <span class="label">Daemon change for plugins</span>
@@ -205,7 +205,7 @@
 </section>
 <section id="plugin-evidence-refresh"
   data-last-reviewed-commit="local-phase7-20260604"
-  data-evidence-paths="agent-core/crates/eos-plugin-catalog/src/package.rs agent-core/crates/eos-plugin-catalog/lsp/plugin.md agent-core/crates/eos-plugin-catalog/lsp/setup.sh agent-core/crates/eos-plugin-catalog/lsp/runtime/ppc_service.py agent-core/crates/eos-sandbox-api/src/tool_api/plugin.rs agent-core/crates/eos-sandbox-host/src/plugin_package.rs agent-core/crates/eos-runtime/src/plugin_tools.rs sandbox/crates/eos-plugin/src/manifest.rs sandbox/crates/eos-plugin/src/service.rs sandbox/crates/eos-plugin/src/refresh.rs sandbox/crates/eos-daemon/src/plugin/ensure_args.rs sandbox/crates/eos-daemon/src/plugin/package.rs sandbox/crates/eos-daemon/src/plugin/service.rs sandbox/crates/eos-daemon/src/plugin/mod.rs sandbox/crates/eos-daemon/src/plugin/process.rs sandbox/crates/eos-daemon/tests/plugin/mod.rs sandbox/crates/eos-e2e-test/tests/plugin_packages.rs sandbox/crates/eos-e2e-test/tests/plugin_lsp.rs">
+  data-evidence-paths="agent-core/crates/eos-plugin-catalog/src/package.rs agent-core/crates/eos-plugin-catalog/lsp/plugin.md agent-core/crates/eos-plugin-catalog/lsp/setup.sh agent-core/crates/eos-plugin-catalog/lsp/runtime/ppc_service.py agent-core/crates/eos-sandbox-api/src/tool_api/plugin.rs agent-core/crates/eos-sandbox-host/src/plugin_package.rs agent-core/crates/eos-runtime/src/plugin_tools.rs sandbox/crates/eos-plugin/src/manifest.rs sandbox/crates/eos-plugin/src/service.rs sandbox/crates/eos-plugin/src/refresh.rs sandbox/crates/eos-daemon/src/plugin/ensure_args.rs sandbox/crates/eos-daemon/src/plugin/package.rs sandbox/crates/eos-daemon/src/plugin/service.rs sandbox/crates/eos-daemon/src/plugin/mod.rs sandbox/crates/eos-daemon/src/plugin/process.rs sandbox/crates/eos-daemon/tests/plugin/mod.rs sandbox/crates/eos-e2e-test/tests/plugin/packages.rs sandbox/crates/eos-e2e-test/tests/plugin/lsp.rs">
 <h3>8.4 Evidence and Refresh <a class="anchor" href="#plugin-evidence-refresh">§</a></h3>
 <div class="evidence-grid">
   <div class="evidence-card">
@@ -229,8 +229,8 @@
     <h4>Tests</h4>
     <ul>
       <li><span class="file-ref">sandbox/crates/eos-daemon/tests/plugin/mod.rs</span> daemon package publish/setup/idempotency/status, PPC dispatch, refresh, crash, and isolation coverage.</li>
-      <li><span class="file-ref">sandbox/crates/eos-e2e-test/tests/plugin_packages.rs</span> live generic package install/setup/re-ensure/dispatch/refresh/isolation coverage through <code>eos-protocol</code>.</li>
-      <li><span class="file-ref">sandbox/crates/eos-e2e-test/tests/plugin_lsp.rs</span> live LSP package install/setup/service/dispatch coverage through <code>eos-protocol</code>.</li>
+      <li><span class="file-ref">sandbox/crates/eos-e2e-test/tests/plugin/packages.rs</span> live generic package install/setup/re-ensure/dispatch/refresh/isolation coverage through <code>eos-protocol</code>.</li>
+      <li><span class="file-ref">sandbox/crates/eos-e2e-test/tests/plugin/lsp.rs</span> live LSP package install/setup/service/dispatch coverage through <code>eos-protocol</code>.</li>
     </ul>
   </div>
   <div class="evidence-card">

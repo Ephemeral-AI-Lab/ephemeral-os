@@ -1,22 +1,43 @@
 use eos_state::{AttemptId, IterationId, TaskId, WorkflowId};
 
-use crate::{Result, WorkflowError};
-
 use super::ContextRole;
 
-/// Identity fields a context builder can read.
+/// Identity a context builder reads, keyed by launch role so each role carries
+/// exactly the ids it requires. Constructed only through the `for_*`
+/// constructors, which makes an id/role mismatch unrepresentable.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct ContextScope {
-    /// Launch role.
-    pub role: ContextRole,
-    /// Workflow id.
-    pub workflow_id: Option<WorkflowId>,
-    /// Iteration id.
-    pub iteration_id: Option<IterationId>,
-    /// Attempt id.
-    pub attempt_id: Option<AttemptId>,
-    /// Assigned task id.
-    pub task_id: Option<TaskId>,
+pub enum ContextScope {
+    /// Planner launch: workflow + iteration + attempt.
+    Planner {
+        /// Workflow id.
+        workflow_id: WorkflowId,
+        /// Iteration id.
+        iteration_id: IterationId,
+        /// Attempt id.
+        attempt_id: AttemptId,
+    },
+    /// Generator launch: planner ids plus the assigned task.
+    Generator {
+        /// Workflow id.
+        workflow_id: WorkflowId,
+        /// Iteration id.
+        iteration_id: IterationId,
+        /// Attempt id.
+        attempt_id: AttemptId,
+        /// Assigned task id.
+        task_id: TaskId,
+    },
+    /// Reducer launch: planner ids plus the assigned task.
+    Reducer {
+        /// Workflow id.
+        workflow_id: WorkflowId,
+        /// Iteration id.
+        iteration_id: IterationId,
+        /// Attempt id.
+        attempt_id: AttemptId,
+        /// Assigned task id.
+        task_id: TaskId,
+    },
 }
 
 impl ContextScope {
@@ -27,12 +48,10 @@ impl ContextScope {
         iteration_id: IterationId,
         attempt_id: AttemptId,
     ) -> Self {
-        Self {
-            role: ContextRole::Planner,
-            workflow_id: Some(workflow_id),
-            iteration_id: Some(iteration_id),
-            attempt_id: Some(attempt_id),
-            task_id: None,
+        Self::Planner {
+            workflow_id,
+            iteration_id,
+            attempt_id,
         }
     }
 
@@ -44,12 +63,11 @@ impl ContextScope {
         attempt_id: AttemptId,
         task_id: TaskId,
     ) -> Self {
-        Self {
-            role: ContextRole::Generator,
-            workflow_id: Some(workflow_id),
-            iteration_id: Some(iteration_id),
-            attempt_id: Some(attempt_id),
-            task_id: Some(task_id),
+        Self::Generator {
+            workflow_id,
+            iteration_id,
+            attempt_id,
+            task_id,
         }
     }
 
@@ -61,36 +79,21 @@ impl ContextScope {
         attempt_id: AttemptId,
         task_id: TaskId,
     ) -> Self {
-        Self {
-            role: ContextRole::Reducer,
-            workflow_id: Some(workflow_id),
-            iteration_id: Some(iteration_id),
-            attempt_id: Some(attempt_id),
-            task_id: Some(task_id),
+        Self::Reducer {
+            workflow_id,
+            iteration_id,
+            attempt_id,
+            task_id,
         }
     }
 
-    pub(crate) fn workflow_id(&self) -> Result<&WorkflowId> {
-        self.workflow_id
-            .as_ref()
-            .ok_or(WorkflowError::MissingContextField("workflow_id"))
-    }
-
-    pub(crate) fn iteration_id(&self) -> Result<&IterationId> {
-        self.iteration_id
-            .as_ref()
-            .ok_or(WorkflowError::MissingContextField("iteration_id"))
-    }
-
-    pub(crate) fn attempt_id(&self) -> Result<&AttemptId> {
-        self.attempt_id
-            .as_ref()
-            .ok_or(WorkflowError::MissingContextField("attempt_id"))
-    }
-
-    pub(crate) fn task_id(&self) -> Result<&TaskId> {
-        self.task_id
-            .as_ref()
-            .ok_or(WorkflowError::MissingContextField("task_id"))
+    /// The launch role this scope was built for.
+    #[must_use]
+    pub fn role(&self) -> ContextRole {
+        match self {
+            Self::Planner { .. } => ContextRole::Planner,
+            Self::Generator { .. } => ContextRole::Generator,
+            Self::Reducer { .. } => ContextRole::Reducer,
+        }
     }
 }

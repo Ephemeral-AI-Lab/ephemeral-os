@@ -14,7 +14,9 @@ use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex, MutexGuard, OnceLock, PoisonError};
 
 use eos_isolated_workspace::{
+    config::{IsolatedWorkspaceConfig, Rfc1918Egress as ConfigRfc1918Egress},
     AgentId, IsolatedError, IsolatedSession, JsonlAuditSink, ResourceCaps,
+    Rfc1918Egress as RuntimeRfc1918Egress,
 };
 use eos_layerstack::{read_workspace_binding, LayerStack};
 use serde_json::{json, Value};
@@ -29,7 +31,6 @@ pub use runtime::CommandHandle;
 use runtime::{DaemonLayerStackPort, DaemonNamespaceRuntime};
 
 const TEST_HARNESS_ENV: &str = "EOS_ISOLATED_WORKSPACE_TEST_HARNESS";
-const TEST_SCRATCH_ROOT_ENV: &str = "EOS_ISOLATED_WORKSPACE_TEST_SCRATCH_ROOT";
 
 type DaemonSession = IsolatedSession<DaemonLayerStackPort, DaemonNamespaceRuntime, JsonlAuditSink>;
 
@@ -38,6 +39,13 @@ struct DaemonIsolatedState {
     layer_stack_root: PathBuf,
     session: DaemonSession,
     active_command_sessions: HashMap<String, String>,
+}
+
+pub(crate) fn configure_isolated_workspace(config: &IsolatedWorkspaceConfig) {
+    let mut guard = isolated_workspace_config_cell()
+        .write()
+        .unwrap_or_else(PoisonError::into_inner);
+    *guard = config.clone();
 }
 
 // Dispatcher op handlers share the `Result<Value, DaemonError>` ABI even when
@@ -247,14 +255,14 @@ fn ensure_state(root: &Path) -> Result<(), IsolatedError> {
     {
         let mut guard = lock_state_cell();
         if guard.is_none() {
-            let mut caps = ResourceCaps::from_env();
+            let config = isolated_workspace_config();
+            let mut caps = resource_caps_from_config(&config);
             if !caps.enabled {
                 return Err(IsolatedError::FeatureDisabled);
             }
             if let Some(binding) = read_workspace_binding(root).map_err(setup_error)? {
                 caps.eos_workspace_root = binding.workspace_root;
             }
-            let scratch_root = scratch_root();
             let stack = LayerStack::open(root.to_path_buf()).map_err(setup_error)?;
             let mut session = IsolatedSession::with_scratch_root(
                 caps,
@@ -262,8 +270,8 @@ fn ensure_state(root: &Path) -> Result<(), IsolatedError> {
                     stack: Arc::new(Mutex::new(stack)),
                 },
                 DaemonNamespaceRuntime,
-                JsonlAuditSink::from_env(),
-                scratch_root,
+                JsonlAuditSink::new(&config.audit_jsonl_path),
+                config.scratch_root,
             );
             session.initialize()?;
             *guard = Some(DaemonIsolatedState {
@@ -275,6 +283,55 @@ fn ensure_state(root: &Path) -> Result<(), IsolatedError> {
         }
     }
     Ok(())
+}
+
+fn isolated_workspace_config() -> IsolatedWorkspaceConfig {
+    isolated_workspace_config_cell()
+        .read()
+        .unwrap_or_else(PoisonError::into_inner)
+        .clone()
+}
+
+fn isolated_workspace_config_cell() -> &'static std::sync::RwLock<IsolatedWorkspaceConfig> {
+    static CONFIG: OnceLock<std::sync::RwLock<IsolatedWorkspaceConfig>> = OnceLock::new();
+    CONFIG.get_or_init(|| std::sync::RwLock::new(default_isolated_workspace_config()))
+}
+
+fn default_isolated_workspace_config() -> IsolatedWorkspaceConfig {
+    IsolatedWorkspaceConfig {
+        enabled: false,
+        scratch_root: PathBuf::from("/eos/scratch/isolated"),
+        audit_jsonl_path: PathBuf::from("/eos/scratch/isolated/audit.jsonl"),
+        ttl_s: 1800.0,
+        total_cap: 5,
+        upperdir_bytes: 1_073_741_824,
+        memavail_fraction: 0.5,
+        setup_timeout_s: 30.0,
+        exit_grace_s: 0.25,
+        rfc1918_egress: ConfigRfc1918Egress::Allow,
+        fallback_dns: "1.1.1.1".to_owned(),
+        workspace_root: PathBuf::from("/testbed"),
+        sample_interval_s: 0.5,
+    }
+}
+
+fn resource_caps_from_config(config: &IsolatedWorkspaceConfig) -> ResourceCaps {
+    ResourceCaps {
+        enabled: config.enabled,
+        ttl_s: config.ttl_s,
+        total_cap: config.total_cap,
+        upperdir_bytes: config.upperdir_bytes,
+        memavail_fraction: config.memavail_fraction,
+        setup_timeout_s: config.setup_timeout_s,
+        exit_grace_s: config.exit_grace_s,
+        rfc1918_egress: match config.rfc1918_egress {
+            ConfigRfc1918Egress::Allow => RuntimeRfc1918Egress::Allow,
+            ConfigRfc1918Egress::Deny => RuntimeRfc1918Egress::Deny,
+        },
+        fallback_dns: config.fallback_dns.clone(),
+        eos_workspace_root: config.workspace_root.to_string_lossy().into_owned(),
+        sample_interval_s: config.sample_interval_s,
+    }
 }
 
 fn with_state<T>(
@@ -293,6 +350,14 @@ fn state_cell() -> &'static Mutex<Option<DaemonIsolatedState>> {
 
 fn lock_state_cell() -> MutexGuard<'static, Option<DaemonIsolatedState>> {
     state_cell().lock().unwrap_or_else(PoisonError::into_inner)
+}
+
+#[cfg(test)]
+pub(crate) fn lock_isolated_test_state() -> MutexGuard<'static, ()> {
+    static LOCK: OnceLock<Mutex<()>> = OnceLock::new();
+    LOCK.get_or_init(|| Mutex::new(()))
+        .lock()
+        .unwrap_or_else(PoisonError::into_inner)
 }
 
 fn require_arg(args: &Value, key: &str) -> Result<String, Value> {
@@ -365,27 +430,10 @@ fn env_true(key: &str) -> bool {
 
 fn test_runtime_stub_enabled() -> bool {
     env_true(TEST_HARNESS_ENV)
-        && !std::env::var(TEST_SCRATCH_ROOT_ENV)
-            .unwrap_or_default()
-            .trim()
-            .is_empty()
-}
-
-fn scratch_root() -> PathBuf {
-    if env_true(TEST_HARNESS_ENV) {
-        let root = std::env::var(TEST_SCRATCH_ROOT_ENV)
-            .unwrap_or_default()
-            .trim()
-            .to_owned();
-        if !root.is_empty() {
-            return PathBuf::from(root);
-        }
-    }
-    PathBuf::from(eos_isolated_workspace::DEFAULT_ISOLATED_SCRATCH_ROOT)
 }
 
 fn reset_test_manager_file() {
-    let session_root = scratch_root();
+    let session_root = isolated_workspace_config().scratch_root;
     let _ = std::fs::remove_dir_all(&session_root);
     if std::fs::create_dir_all(&session_root).is_err() {
         return;

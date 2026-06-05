@@ -2,7 +2,7 @@
 
 use serde_json::Value;
 
-use crate::dispatcher::{DispatchContext, AUDIT_ALLOW_FLOOR_RESET_ENV};
+use crate::dispatcher::DispatchContext;
 use crate::error::DaemonError;
 use crate::response_timings::u64_to_usize_saturating;
 
@@ -15,14 +15,17 @@ use crate::response_timings::u64_to_usize_saturating;
 )]
 pub(crate) fn op_audit_pull(
     args: &Value,
-    _context: DispatchContext<'_>,
+    context: DispatchContext<'_>,
 ) -> Result<Value, DaemonError> {
     let after_seq = args.get("after_seq").and_then(Value::as_i64).unwrap_or(-1);
+    let default_limit = context
+        .audit_config()
+        .map_or(1000, |config| config.pull_limit_default);
     let limit = args
         .get("limit")
         .and_then(Value::as_u64)
-        .map_or(1000, u64_to_usize_saturating);
-    let mut response = crate::audit_buffer::global_audit_buffer().pull(after_seq, limit);
+        .map_or(default_limit, u64_to_usize_saturating);
+    let mut response = crate::audit::buffer::global_audit_buffer().pull(after_seq, limit);
     response["success"] = Value::Bool(true);
     Ok(response)
 }
@@ -39,18 +42,21 @@ pub(crate) fn op_audit_snapshot(
     _context: DispatchContext<'_>,
 ) -> Result<Value, DaemonError> {
     let _ = args;
-    let mut response = crate::audit_buffer::global_audit_buffer().snapshot();
+    let mut response = crate::audit::buffer::global_audit_buffer().snapshot();
     response["success"] = Value::Bool(true);
     Ok(response)
 }
 
-/// `api.audit.reset_floor` — gated behind [`AUDIT_ALLOW_FLOOR_RESET_ENV`].
+/// `api.audit.reset_floor` — gated by typed daemon audit config.
 pub(crate) fn op_audit_reset_floor(
     args: &Value,
-    _context: DispatchContext<'_>,
+    context: DispatchContext<'_>,
 ) -> Result<Value, DaemonError> {
     let _ = args;
-    if std::env::var(AUDIT_ALLOW_FLOOR_RESET_ENV).is_ok_and(|raw| raw == "true") {
+    if context
+        .audit_config()
+        .is_some_and(|config| config.allow_floor_reset)
+    {
         Ok(serde_json::json!({"success": true, "reset": true}))
     } else {
         Err(DaemonError::Forbidden(

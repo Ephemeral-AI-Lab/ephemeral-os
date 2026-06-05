@@ -13,11 +13,8 @@ use serde_json::Value;
 
 use crate::error::IsolatedError;
 
-/// Default JSONL path when `EOS_ISOLATED_WORKSPACE_AUDIT_PATH` is unset.
+/// Default JSONL path used by the default isolated workspace config.
 pub const DEFAULT_AUDIT_JSONL_PATH: &str = "/eos/scratch/isolated/audit.jsonl";
-
-/// Environment variable selecting the audit JSONL path.
-pub const AUDIT_PATH_ENV: &str = "EOS_ISOLATED_WORKSPACE_AUDIT_PATH";
 
 /// Sink for isolated-workspace audit events.
 ///
@@ -45,21 +42,6 @@ impl JsonlAuditSink {
     pub fn new(path: impl AsRef<Path>) -> Self {
         Self {
             path: path.as_ref().to_path_buf(),
-        }
-    }
-
-    /// Build a sink from `EOS_ISOLATED_WORKSPACE_AUDIT_PATH`, falling back to
-    /// [`DEFAULT_AUDIT_JSONL_PATH`] when unset or blank.
-    #[must_use]
-    pub fn from_env() -> Self {
-        let path = std::env::var(AUDIT_PATH_ENV)
-            .unwrap_or_default()
-            .trim()
-            .to_owned();
-        if path.is_empty() {
-            Self::new(DEFAULT_AUDIT_JSONL_PATH)
-        } else {
-            Self::new(path)
         }
     }
 }

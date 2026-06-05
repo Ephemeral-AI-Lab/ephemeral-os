@@ -92,6 +92,22 @@ fn builtin_table_routes_commit_to_workspace() {
 }
 
 #[test]
+fn builtin_table_routes_commit_to_git() {
+    let response = OpTable::with_builtins().dispatch(&Request {
+        op: "api.commit_to_git".to_owned(),
+        invocation_id: "commit-to-git-route-test".to_owned(),
+        args: json!({}),
+    });
+
+    assert_ne!(response["error"]["kind"], json!("unknown_op"));
+    assert_eq!(response["error"]["kind"], json!("invalid_envelope"));
+    assert!(response["error"]["message"]
+        .as_str()
+        .unwrap_or_default()
+        .contains("layer_stack_root is required"));
+}
+
+#[test]
 fn dispatch_attaches_real_runtime_timings() {
     #[expect(
         clippy::unnecessary_wraps,
@@ -113,6 +129,7 @@ fn dispatch_attaches_real_runtime_timings() {
         },
         DispatchContext {
             invocation_registry: None,
+            audit_config: None,
             read_request_s: Some(0.125),
         },
     );
@@ -557,7 +574,7 @@ fn nested_anchored_pattern_not_double_stripped_on_prefix_replay() -> TestResult 
 fn audit_pull_reads_shared_daemon_ring() -> TestResult {
     let marker = format!("phase3t-audit-test-{}", unique_suffix());
     let after_seq = audit_after_seq()?;
-    crate::audit_buffer::safe_emit(
+    crate::audit::buffer::safe_emit(
         json!({"type": marker, "payload": {"source": "unit-test"}}),
         Lane::Normal,
     );

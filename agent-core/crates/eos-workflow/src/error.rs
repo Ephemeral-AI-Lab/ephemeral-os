@@ -24,9 +24,6 @@ pub enum WorkflowError {
     /// Context recipe and scope do not line up.
     #[error("{0}")]
     Recipe(String),
-    /// A context scope omitted a field required by the selected role.
-    #[error("context scope is missing required field: {0}")]
-    MissingContextField(&'static str),
     /// An agent definition was missing or invalid for launch.
     #[error("{0}")]
     AgentDefinition(String),

@@ -18,20 +18,11 @@ const PLUGIN_PACKAGE_UPLOAD_ROOT: &str = "/eos/scratch/uploads/plugins";
 
 /// Ensure a plugin package is available in a running sandbox.
 ///
-/// This is the normal public host setup API for plugin packages. It performs a
-/// daemon warm ensure first; if the daemon reports that package content is
-/// missing or stale, this function privately uploads the catalog package tree
-/// under `/eos/scratch/uploads/plugins/...` and retries the daemon ensure with a
-/// staged package root.
-pub async fn ensure_plugin_package(
-    daemon: &DaemonClient,
-    sandbox_id: &SandboxId,
-    request: PluginPackageEnsureRequest,
-) -> Result<JsonObject, SandboxApiError> {
-    ensure_plugin_package_inner(daemon, sandbox_id, request).await
-}
-
-pub(crate) async fn ensure_plugin_package_inner(
+/// Performs a daemon warm ensure first; if the daemon reports that package
+/// content is missing or stale, privately uploads the catalog package tree under
+/// `/eos/scratch/uploads/plugins/...` and retries the daemon ensure with a staged
+/// package root. Reached through the `DaemonClient` plugin-package host path.
+pub(crate) async fn ensure_plugin_package(
     daemon: &DaemonClient,
     sandbox_id: &SandboxId,
     request: PluginPackageEnsureRequest,

@@ -7,8 +7,7 @@
 //! `message_id`; self-managed plugin operations can also service
 //! plugin-originated callback requests on the same socket before their final
 //! operation reply arrives. Concurrent callback-capable operations are routed by
-//! `parent_message_id` in the callback body, with a legacy message-id prefix
-//! fallback for older harnesses.
+//! `parent_message_id` in the callback body.
 
 mod frame_io;
 mod pending;
@@ -29,7 +28,6 @@ use self::frame_io::FrameWriter;
 use self::pending::{CallbackHandler, PendingCalls};
 use crate::error::DaemonError;
 
-pub(super) const DEFAULT_PLUGIN_PPC_TIMEOUT_MS: u64 = 5_000;
 #[cfg(test)]
 pub(super) use self::frame_io::read_frame;
 

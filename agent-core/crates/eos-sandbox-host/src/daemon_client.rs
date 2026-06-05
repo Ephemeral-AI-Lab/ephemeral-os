@@ -516,6 +516,6 @@ impl SandboxTransport for DaemonClient {
         sandbox_id: &SandboxId,
         request: PluginPackageEnsureRequest,
     ) -> Result<JsonObject, SandboxApiError> {
-        crate::plugin_package::ensure_plugin_package_inner(self, sandbox_id, request).await
+        crate::plugin_package::ensure_plugin_package(self, sandbox_id, request).await
     }
 }

@@ -9,7 +9,7 @@ use async_trait::async_trait;
 use eos_audit::AuditSink;
 use eos_llm_client::LlmRequest;
 use eos_tools::{ExecutionMetadata, ToolName, ToolRegistry, ToolResult};
-use eos_types::{AgentRunId, JsonObject, TaskId};
+use eos_types::{AgentRunId, TaskId};
 use futures::Stream;
 use serde::{Deserialize, Serialize};
 
@@ -83,8 +83,6 @@ pub struct QueryContext {
     pub notification_rules: Vec<Arc<dyn NotificationRule>>,
     /// Fire-once notification names already emitted.
     pub notification_fired: BTreeSet<String>,
-    /// Per-rule scratchpad.
-    pub notification_state: JsonObject,
     /// The per-request notification sink the loop drains at the top of every
     /// turn (anchor §6). Shares its queue with the tool/heartbeat sink — the
     /// instance-identity invariant (anchor §7): if these diverge it compiles and

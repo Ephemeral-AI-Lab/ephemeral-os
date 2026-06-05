@@ -1,7 +1,6 @@
 //! Linux command-session finalize, teardown, and stdin/cancel handling.
 
 use std::io::Write;
-use std::sync::OnceLock;
 use std::thread;
 use std::time::{Duration, Instant};
 
@@ -22,7 +21,7 @@ use super::session::{
     command_session_registry, lock_command_session_state, wait_for_yield, CommandSession,
     WaitOutcome,
 };
-use super::{command_result, command_session_not_found, optional_u64};
+use super::{command_result, command_session_config, command_session_not_found, optional_u64};
 use crate::error::DaemonError;
 use crate::overlay_runner::{
     changeset_from_publish_outcome, ephemeral_daemon_error, overlay_daemon_error,
@@ -232,10 +231,6 @@ pub(crate) fn terminate_command_process_group(pgid: i32) {
     }
 }
 
-/// How long `cancel`/exit-cleanup wait for the SIGKILLed child to exit so the
-/// finalize (lease release + isolated unregister) runs inline.
-pub(crate) const COMMAND_SESSION_CANCEL_WAIT_MS: u64 = 500;
-
 pub(crate) fn command_session_write_stdin(args: &Value) -> Result<Value, DaemonError> {
     let id = require_string(args, "command_session_id")?;
     let chars = args
@@ -243,7 +238,8 @@ pub(crate) fn command_session_write_stdin(args: &Value) -> Result<Value, DaemonE
         .and_then(Value::as_str)
         .unwrap_or_default()
         .to_owned();
-    let yield_time_ms = optional_u64(args, "yield_time_ms").unwrap_or(1000);
+    let yield_time_ms = optional_u64(args, "yield_time_ms")
+        .unwrap_or(command_session_config().default_yield_time_ms);
     let max_tokens = optional_u64(args, "max_output_tokens");
     // sense-2 D7: `terminate` is the explicit teardown channel, decoupled from
     // `\x03` (which is SIGINT/interrupt only).
@@ -298,25 +294,10 @@ pub(crate) fn command_session_cancel(args: &Value) -> Result<Value, DaemonError>
     // is stamped; if the child is somehow still alive, the reaper finalizes it.
     match wait_for_yield(
         &session,
-        COMMAND_SESSION_CANCEL_WAIT_MS,
+        command_session_config().cancel_wait_ms,
         optional_u64(args, "max_output_tokens"),
     ) {
         WaitOutcome::Completed(result) => Ok(result),
         WaitOutcome::Running(stdout) => Ok(command_result("cancelled", None, &stdout, "", None)),
     }
-}
-
-/// Wall-clock cap (seconds) for a session started WITHOUT an explicit `timeout`
-/// (anchor §3). Without it, a fire-and-forget no-timeout command is unbounded in
-/// both the runner and the reaper. Large default (6 h) — a safety net, not a
-/// policy; override with `EOS_COMMAND_SESSION_MAX_S` (`0`/invalid → default).
-pub(crate) fn command_session_max_seconds() -> u64 {
-    static MAX_SECONDS: OnceLock<u64> = OnceLock::new();
-    *MAX_SECONDS.get_or_init(|| {
-        std::env::var("EOS_COMMAND_SESSION_MAX_S")
-            .ok()
-            .and_then(|raw| raw.parse::<u64>().ok())
-            .filter(|seconds| *seconds > 0)
-            .unwrap_or(6 * 60 * 60)
-    })
 }

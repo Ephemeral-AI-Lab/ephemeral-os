@@ -9,9 +9,9 @@
 //! Only the daemon-owned ops this phase wires are declared here:
 //! `api.runtime.ready` (probes `control_plane` / `data_plane` / `mutation_gate`),
 //! `api.v1.heartbeat`, `api.layer_metrics`, `api.audit.{pull,snapshot,reset_floor}`
-//! (floor-reset gated by [`AUDIT_ALLOW_FLOOR_RESET_ENV`]). The full op table
-//! (workspace-tool, isolated-workspace, plugin, layer-stack control) folds in at
-//! port time through the same routing.
+//! (floor-reset gated by typed daemon audit config). The full op table
+//! (workspace-tool, isolated-workspace, plugin, layer-stack control) folds in
+//! at port time through the same routing.
 
 use std::collections::HashMap;
 #[cfg(test)]
@@ -26,11 +26,12 @@ use eos_protocol::{ops as protocol_ops, ErrorKind, Request};
 #[cfg(test)]
 use eos_protocol::{LayerChange, LayerPath};
 
-use crate::audit_events::emit_dispatch_audit;
+use crate::audit::events::emit_dispatch_audit;
 #[cfg(test)]
-use crate::audit_events::{background_event_kind, emit_auto_squash_audit, uses_overlay_or_lease};
+use crate::audit::events::{background_event_kind, emit_auto_squash_audit, uses_overlay_or_lease};
 #[cfg(test)]
-use crate::audit_ops::{op_audit_pull, op_audit_snapshot};
+use crate::audit::ops::{op_audit_pull, op_audit_snapshot};
+use crate::config::AuditConfig;
 use crate::error::DaemonError;
 use crate::invocation_registry::InFlightRegistry;
 #[cfg(test)]
@@ -38,7 +39,7 @@ use crate::occ_writer::{
     base_hashes_for_snapshot, hash_bytes, normalize_root_key, occ_route_metrics,
     LayerStackCommitTransaction, LayerStackRouteProvider, OccServiceCache, OCC_SERVICE_CACHE_MAX,
 };
-use crate::ops::{runtime, workspace_base};
+use crate::ops::{commit_to_git, commit_to_workspace, runtime, workspace_base};
 #[cfg(test)]
 use crate::response_timings::{
     i64_to_f64_saturating, insert_tree_resource_timings, resource_timings, TreeResourceStats,
@@ -48,9 +49,6 @@ use eos_occ::{
     CommitQueue, CommitTransactionPort, OccRouteProvider, OccService, OccStatus, PreparedChangeset,
     Route,
 };
-
-/// Env gate for `api.audit.reset_floor` (must be `"true"`).
-pub const AUDIT_ALLOW_FLOOR_RESET_ENV: &str = "EOS_DAEMON_AUDIT_ALLOW_FLOOR_RESET";
 
 /// A synchronous op handler: decoded args -> response value.
 ///
@@ -63,6 +61,7 @@ type Handler = for<'ctx> fn(&Value, DispatchContext<'ctx>) -> Result<Value, Daem
 #[derive(Clone, Copy, Default)]
 pub struct DispatchContext<'ctx> {
     invocation_registry: Option<&'ctx InFlightRegistry>,
+    audit_config: Option<&'ctx AuditConfig>,
     read_request_s: Option<f64>,
 }
 
@@ -72,6 +71,7 @@ impl<'ctx> DispatchContext<'ctx> {
     pub const fn empty() -> Self {
         Self {
             invocation_registry: None,
+            audit_config: None,
             read_request_s: None,
         }
     }
@@ -81,25 +81,32 @@ impl<'ctx> DispatchContext<'ctx> {
     pub const fn with_invocation_registry(invocation_registry: &'ctx InFlightRegistry) -> Self {
         Self {
             invocation_registry: Some(invocation_registry),
+            audit_config: None,
             read_request_s: None,
         }
     }
 
-    /// Context carrying the server's invocation registry and measured request
-    /// read duration.
+    /// Context carrying the server's invocation registry, audit config, and
+    /// measured request read duration.
     #[must_use]
-    pub const fn with_invocation_registry_and_read_timing(
+    pub const fn with_runtime_config(
         invocation_registry: &'ctx InFlightRegistry,
+        audit_config: &'ctx AuditConfig,
         read_request_s: f64,
     ) -> Self {
         Self {
             invocation_registry: Some(invocation_registry),
+            audit_config: Some(audit_config),
             read_request_s: Some(read_request_s),
         }
     }
 
     pub(crate) const fn invocation_registry(&self) -> Option<&'ctx InFlightRegistry> {
         self.invocation_registry
+    }
+
+    pub(crate) const fn audit_config(&self) -> Option<&'ctx AuditConfig> {
+        self.audit_config
     }
 }
 
@@ -127,7 +134,10 @@ impl OpTable {
             protocol_ops::API_V1_INFLIGHT_COUNT,
             runtime::op_inflight_count,
         );
-        table.register_builtin(protocol_ops::API_LAYER_METRICS, workspace_base::op_layer_metrics);
+        table.register_builtin(
+            protocol_ops::API_LAYER_METRICS,
+            workspace_base::op_layer_metrics,
+        );
         table.register_builtin(
             protocol_ops::API_ENSURE_WORKSPACE_BASE,
             workspace_base::op_ensure_workspace_base,
@@ -138,27 +148,40 @@ impl OpTable {
         );
         table.register_builtin(
             protocol_ops::API_COMMIT_TO_WORKSPACE,
-            workspace_base::op_commit_to_workspace,
+            commit_to_workspace::op_commit_to_workspace,
+        );
+        table.register_builtin(
+            protocol_ops::API_COMMIT_TO_GIT,
+            commit_to_git::op_commit_to_git,
         );
         table.register_builtin(
             protocol_ops::API_WORKSPACE_BINDING,
             workspace_base::op_workspace_binding,
         );
-        table.register_builtin(protocol_ops::API_AUDIT_PULL, crate::audit_ops::op_audit_pull);
+        table.register_builtin(
+            protocol_ops::API_AUDIT_PULL,
+            crate::audit::ops::op_audit_pull,
+        );
         table.register_builtin(
             protocol_ops::API_AUDIT_SNAPSHOT,
-            crate::audit_ops::op_audit_snapshot,
+            crate::audit::ops::op_audit_snapshot,
         );
         table.register_builtin(
             protocol_ops::API_AUDIT_RESET_FLOOR,
-            crate::audit_ops::op_audit_reset_floor,
+            crate::audit::ops::op_audit_reset_floor,
         );
-        table.register_builtin(protocol_ops::API_V1_READ_FILE, crate::workspace_ops::op_read_file);
+        table.register_builtin(
+            protocol_ops::API_V1_READ_FILE,
+            crate::workspace_ops::op_read_file,
+        );
         table.register_builtin(
             protocol_ops::API_V1_WRITE_FILE,
             crate::workspace_ops::op_write_file,
         );
-        table.register_builtin(protocol_ops::API_V1_EDIT_FILE, crate::workspace_ops::op_edit_file);
+        table.register_builtin(
+            protocol_ops::API_V1_EDIT_FILE,
+            crate::workspace_ops::op_edit_file,
+        );
         table.register_builtin(protocol_ops::API_PLUGIN_ENSURE, crate::plugin::op_ensure);
         table.register_builtin(protocol_ops::API_PLUGIN_STATUS, crate::plugin::op_status);
         table.register_builtin(
@@ -358,290 +381,6 @@ fn error_details(is_internal_error: bool, details: Value) -> Value {
 
 fn new_error_id() -> String {
     uuid::Uuid::new_v4().simple().to_string()
-}
-
-/// `api.runtime.ready` — binary readiness plus the three plane probes
-/// (`control_plane` / `data_plane` / `mutation_gate`). Requires `layer_stack_root`.
-fn op_runtime_ready(args: &Value, _context: DispatchContext<'_>) -> Result<Value, DaemonError> {
-    let total_start = Instant::now();
-    let root = require_string(args, "layer_stack_root")?;
-    let mut timings = serde_json::Map::new();
-    let probes = vec![
-        run_probe("control_plane", || probe_control_plane(&root), &mut timings),
-        run_probe("data_plane", || Ok(probe_data_plane()), &mut timings),
-        run_probe("mutation_gate", || Ok(probe_mutation_gate()), &mut timings),
-    ];
-    timings.insert(
-        "runtime.ready.total_s".to_owned(),
-        json!(total_start.elapsed().as_secs_f64()),
-    );
-    Ok(json!({
-        "success": true,
-        "ready": probes.iter().all(|probe| probe.get("status") == Some(&Value::String("ok".to_owned()))),
-        "probes": probes,
-        "daemon_pid": std::process::id(),
-        "uptime_s": daemon_uptime_s(),
-        "timings": Value::Object(timings),
-    }))
-}
-
-/// `api.v1.cancel` — cancel one in-flight invocation id.
-// Op handlers share the fallible dispatcher ABI even when this handler encodes
-// invalid/missing ids as ordinary JSON response fields.
-#[expect(
-    clippy::unnecessary_wraps,
-    reason = "dispatcher handlers share a fallible ABI"
-)]
-fn op_cancel(args: &Value, context: DispatchContext<'_>) -> Result<Value, DaemonError> {
-    let invocation_id = args
-        .get("invocation_id")
-        .and_then(Value::as_str)
-        .unwrap_or_default()
-        .trim()
-        .to_owned();
-    let (cancelled, cleanup_done) = context
-        .invocation_registry
-        .map_or((false, true), |registry| {
-            let cancelled = registry.cancel(&invocation_id);
-            let cleanup_done =
-                !cancelled || registry.wait_for_cleanup(&invocation_id, Duration::from_secs(5));
-            (cancelled, cleanup_done)
-        });
-    Ok(json!({
-        "success": true,
-        "invocation_id": invocation_id,
-        "cancelled": cancelled,
-        "already_done": !cancelled,
-        "cleanup_done": cleanup_done,
-    }))
-}
-
-/// `api.v1.heartbeat` — touch `last_seen` for the given invocation ids.
-// Op handlers share the fallible dispatcher ABI even when this handler encodes
-// invalid/missing ids as ordinary JSON response fields.
-#[expect(
-    clippy::unnecessary_wraps,
-    reason = "dispatcher handlers share a fallible ABI"
-)]
-fn op_heartbeat(args: &Value, context: DispatchContext<'_>) -> Result<Value, DaemonError> {
-    let invocation_ids: Vec<String> = args
-        .get("invocation_ids")
-        .and_then(Value::as_array)
-        .map(|ids| {
-            ids.iter()
-                .filter_map(Value::as_str)
-                .map(str::to_owned)
-                .collect()
-        })
-        .unwrap_or_default();
-    let touched = context
-        .invocation_registry
-        .map_or(0, |registry| registry.heartbeat(&invocation_ids));
-    Ok(json!({"success": true, "touched": touched}))
-}
-
-/// `api.v1.inflight_count` — count background daemon invocations for one agent.
-// Op handlers share the fallible dispatcher ABI even when this handler encodes
-// missing registry state as a zero count.
-#[expect(
-    clippy::unnecessary_wraps,
-    reason = "dispatcher handlers share a fallible ABI"
-)]
-fn op_inflight_count(args: &Value, context: DispatchContext<'_>) -> Result<Value, DaemonError> {
-    let agent_id = args
-        .get("agent_id")
-        .and_then(Value::as_str)
-        .unwrap_or_default()
-        .trim()
-        .to_owned();
-    let count = context
-        .invocation_registry
-        .map_or(0, |registry| registry.count_by_agent(&agent_id));
-    Ok(json!({"success": true, "agent_id": agent_id, "count": count}))
-}
-
-/// `api.layer_metrics` — summarize layer-stack storage + lease state for a root.
-fn op_layer_metrics(args: &Value, _context: DispatchContext<'_>) -> Result<Value, DaemonError> {
-    let root = PathBuf::from(require_string(args, "layer_stack_root")?);
-    let stack = LayerStack::open(root.clone())?;
-    let manifest = stack.read_active_manifest()?;
-    let binding = read_workspace_binding(&root)?;
-    Ok(json!({
-        "success": true,
-        "manifest_version": manifest.version,
-        "manifest_depth": manifest.depth(),
-        "active_leases": stack.active_lease_count(),
-        "leased_layers": stack.leased_layers().len(),
-        "layer_dirs": count_dirs(&root.join("layers"))?,
-        "referenced_layers": manifest.layers.len(),
-        "orphan_layer_count": 0,
-        "missing_layer_count": 0,
-        "orphan_layer_ids": [],
-        "missing_layer_ids": [],
-        "staging_dirs": count_dirs(&root.join("staging"))?,
-        "storage_bytes": storage_bytes(&root)?,
-        "workspace_bound": binding.is_some(),
-        "workspace_root": binding.as_ref().map_or("", |binding| binding.workspace_root.as_str()),
-        "base_root_hash": binding.as_ref().map_or("", |binding| binding.base_root_hash.as_str()),
-        "occ_runtime_service_cache": occ_service_cache_snapshot(),
-    }))
-}
-
-fn op_build_workspace_base(
-    args: &Value,
-    _context: DispatchContext<'_>,
-) -> Result<Value, DaemonError> {
-    let total_start = Instant::now();
-    let root = PathBuf::from(require_string(args, "layer_stack_root")?);
-    let workspace_root = PathBuf::from(require_string(args, "workspace_root")?);
-    let reset = args.get("reset").and_then(Value::as_bool).unwrap_or(false);
-    if reset {
-        crate::plugin::stop_services_for_layer_stack_root(&root.to_string_lossy())?;
-    }
-    let built = build_workspace_base(&root, &workspace_root, reset)?;
-    let mut timings = timings_to_value_map(&built.timings);
-    timings.insert(
-        "api.workspace_base.total_s".to_owned(),
-        json!(total_start.elapsed().as_secs_f64()),
-    );
-    let binding = binding_to_value(&built.binding)?;
-    Ok(json!({
-        "success": true,
-        "created": true,
-        "binding": binding,
-        "timings": Value::Object(timings),
-    }))
-}
-
-fn op_ensure_workspace_base(
-    args: &Value,
-    _context: DispatchContext<'_>,
-) -> Result<Value, DaemonError> {
-    let total_start = Instant::now();
-    let root = PathBuf::from(require_string(args, "layer_stack_root")?);
-    let workspace_root = PathBuf::from(require_string(args, "workspace_root")?);
-    let (binding, created) = ensure_workspace_base(&root, &workspace_root)?;
-    let binding = binding_to_value(&binding)?;
-    let timings = json!({
-        "api.workspace_base.total_s": total_start.elapsed().as_secs_f64(),
-    });
-    Ok(json!({
-        "success": true,
-        "created": created,
-        "binding": binding,
-        "timings": timings,
-    }))
-}
-
-fn op_commit_to_workspace(
-    args: &Value,
-    _context: DispatchContext<'_>,
-) -> Result<Value, DaemonError> {
-    let total_start = Instant::now();
-    let root = PathBuf::from(require_string(args, "layer_stack_root")?);
-    let workspace_root = PathBuf::from(require_string(args, "workspace_root")?);
-    let mut stack = LayerStack::open(root)?;
-    let (manifest, commit_timings) = stack.commit_to_workspace(&workspace_root)?;
-    let mut timings = timings_to_value_map(&commit_timings);
-    timings.insert(
-        "api.commit_to_workspace.total_s".to_owned(),
-        json!(total_start.elapsed().as_secs_f64()),
-    );
-    Ok(json!({
-        "success": true,
-        "manifest_version": manifest.version,
-        "timings": Value::Object(timings),
-    }))
-}
-
-fn op_workspace_binding(args: &Value, _context: DispatchContext<'_>) -> Result<Value, DaemonError> {
-    let root = PathBuf::from(require_string(args, "layer_stack_root")?);
-    let binding = require_workspace_binding(&root)?;
-    let binding = binding_to_value(&binding)?;
-    Ok(json!({
-        "success": true,
-        "binding": binding,
-    }))
-}
-
-fn run_probe<F>(name: &str, probe: F, timings: &mut serde_json::Map<String, Value>) -> Value
-where
-    F: FnOnce() -> Result<Value, DaemonError>,
-{
-    let start = Instant::now();
-    let (status, details) = match probe() {
-        Ok(details) => ("ok", details),
-        Err(err) => (
-            "down",
-            json!({"error_type": error_type(&err), "error": err.to_string()}),
-        ),
-    };
-    timings.insert(
-        format!("runtime.ready.{name}_s"),
-        json!(start.elapsed().as_secs_f64()),
-    );
-    json!({"name": name, "status": status, "details": details})
-}
-
-fn probe_control_plane(root: &str) -> Result<Value, DaemonError> {
-    let binding = require_workspace_binding(root)?;
-    let stack = LayerStack::open(PathBuf::from(root))?;
-    let manifest = stack.read_active_manifest()?;
-    Ok(json!({
-        "workspace_root": binding.workspace_root,
-        "manifest_version": manifest.version,
-        "manifest_depth": manifest.depth(),
-        "base_root_hash": binding.base_root_hash,
-    }))
-}
-
-fn probe_data_plane() -> Value {
-    json!({
-        "handlers_services_ready": true,
-        "shell_services_ready": true,
-        "workspace_mount_mode": "private_namespace",
-    })
-}
-
-fn probe_mutation_gate() -> Value {
-    json!({
-        "backend_ready": true,
-        "backend_fields": ["layer_stack", "occ_service", "occ_client", "gitignore", "layer_stack_manager"],
-        "occ_client_class": "OccClient",
-    })
-}
-
-fn count_dirs(path: &Path) -> Result<usize, DaemonError> {
-    if !path.exists() {
-        return Ok(0);
-    }
-    let mut count = 0;
-    for entry in std::fs::read_dir(path)? {
-        if entry?.file_type()?.is_dir() {
-            count += 1;
-        }
-    }
-    Ok(count)
-}
-
-fn storage_bytes(path: &Path) -> Result<u64, DaemonError> {
-    if !path.exists() {
-        return Ok(0);
-    }
-    let mut total = 0;
-    let mut stack = vec![path.to_path_buf()];
-    while let Some(dir) = stack.pop() {
-        for entry in std::fs::read_dir(dir)? {
-            let entry = entry?;
-            let meta = entry.metadata()?;
-            if meta.is_dir() {
-                stack.push(entry.path());
-            } else if meta.is_file() {
-                total += meta.len();
-            }
-        }
-    }
-    Ok(total)
 }
 
 fn attach_runtime_timings(

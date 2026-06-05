@@ -102,8 +102,3 @@ eos_e2e_test:
 
   audit:
     pull_limit: 2000
-
-  isolated_workspace_overrides:
-    enabled: true
-    upperdir_bytes: 67108864
-    memavail_fraction: 0.9

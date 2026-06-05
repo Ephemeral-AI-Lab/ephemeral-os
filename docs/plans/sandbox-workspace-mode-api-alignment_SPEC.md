@@ -4,8 +4,9 @@ Status: DRAFT
 Date: 2026-06-05
 Owner doc: `docs/plans/sandbox-workspace-mode-api-alignment_SPEC.md`
 Scope: `sandbox/crates/eos-daemon`, `sandbox/crates/eos-ephemeral-workspace`,
-`sandbox/crates/eos-isolated-workspace`, and the typed sandbox API result
-parsers that consume daemon workspace responses.
+`sandbox/crates/eos-isolated-workspace`, a small neutral workspace API contract
+crate, and the typed sandbox API result parsers that consume daemon workspace
+responses.
 
 This spec defines the target shape for aligning `ephemeral_workspace` and
 `isolated_workspace` APIs. The public daemon tool surface stays unified. The
@@ -30,6 +31,8 @@ and lifecycle semantics.
 6. Preserve the isolated no-publish guarantee at the dependency level.
 7. Normalize result shapes so typed API consumers can distinguish
    `Workspace::Ephemeral` from `Workspace::Isolated`.
+8. Make the intended OO-style symmetry explicit through narrow Rust capability
+   traits, not a monolithic workspace base class.
 
 ## 2. Non-Goals
 
@@ -39,12 +42,25 @@ and lifecycle semantics.
 - No plugin/LSP execution inside isolated mode.
 - No extraction of PTY/process/session registry ownership out of `eos-daemon`.
 - No `eos-occ` dependency in `eos-isolated-workspace`.
+- No `WorkspaceLifecycle` trait that forces no-op lifecycle methods onto
+  ephemeral workspaces.
+- No one-size-fits-all `Workspace` trait that mixes file operations, command
+  sessions, lifecycle, audit, network, and publishing.
 
 ---
 
 ## 3. Target File and Folder Structure
 
 ```text
+sandbox/crates/eos-workspace-api/src/
+  lib.rs
+  mode.rs                       # WorkspaceMode and mode metadata
+  file_ops.rs                   # WorkspaceFileOps trait + file DTOs
+  command_session.rs            # CommandWorkspaceOps trait + command DTOs
+  read_view.rs                  # WorkspaceReadView trait
+  mutation.rs                   # WorkspaceMutationSink trait
+  response.rs                   # shared outcomes/conflicts/timing DTOs
+
 sandbox/crates/eos-daemon/src/
   workspace_ops.rs              # thin read/write/edit router
   workspace_adapters.rs         # daemon ports for LayerStack/OCC/snapshot reads
@@ -58,6 +74,7 @@ sandbox/crates/eos-daemon/src/
     reaper.rs                   # timeout/orphan recovery
 
 sandbox/crates/eos-ephemeral-workspace/src/
+  ops.rs                        # EphemeralWorkspaceOps trait implementation
   file_ops/
     mod.rs
     read.rs
@@ -66,8 +83,8 @@ sandbox/crates/eos-ephemeral-workspace/src/
     response.rs
   command_session/
     mod.rs
-    prepare.rs                  # fresh overlay command workspace
-    finalize.rs                 # capture + publish outcome
+    prepare.rs                  # build fresh-overlay command workspace context
+    finalize.rs                 # finish capture/publish/cleanup after runner exit
     types.rs
   capture.rs
   cleanup.rs
@@ -77,6 +94,7 @@ sandbox/crates/eos-ephemeral-workspace/src/
   types.rs
 
 sandbox/crates/eos-isolated-workspace/src/
+  ops.rs                        # IsolatedWorkspaceOps trait implementation
   file_ops/
     mod.rs
     read.rs
@@ -85,8 +103,8 @@ sandbox/crates/eos-isolated-workspace/src/
     response.rs
   command_session/
     mod.rs
-    prepare.rs                  # handle/setns/private command workspace
-    finalize.rs                 # audit-only capture, no publish
+    prepare.rs                  # build handle/setns private command context
+    finalize.rs                 # finish audit-only capture after runner exit
     types.rs
   session/
     mod.rs
@@ -108,14 +126,143 @@ state to those root-level capability modules.
 
 ---
 
-## 4. Workspace Ops Role
+## 4. OO-Style Capability Interfaces
+
+The alignment should use Rust trait interfaces where both workspace modes really
+share a callable capability. These are OO-style interfaces in the Rust sense:
+small behavior contracts implemented by concrete mode structs. They are not an
+inheritance hierarchy.
+
+The shared traits and DTOs live in `eos-workspace-api` so
+`eos-ephemeral-workspace` and `eos-isolated-workspace` compile against the same
+contract without depending on each other.
+
+Concrete implementations:
+
+```rust
+pub struct EphemeralWorkspaceOps<P> {
+    // daemon-injected snapshot/read/publish/audit adapters as needed
+    ports: P,
+}
+
+pub struct IsolatedWorkspaceOps<P> {
+    // daemon-supplied handle plus snapshot/read/audit adapters as needed
+    ports: P,
+}
+```
+
+The daemon can dispatch through an enum wrapper or trait object. Prefer an enum
+when the selected mode is known per request and no dynamic storage is needed;
+use `dyn` only where the command-session registry benefits from storing one
+polymorphic finalize/cleanup policy.
+
+### 4.1 `WorkspaceFileOps`
+
+Use this trait for direct file APIs:
+
+```rust
+pub trait WorkspaceFileOps {
+    fn read_file(&self, request: ReadFileRequest) -> Result<ReadFileOutcome, WorkspaceApiError>;
+    fn write_file(&self, request: WriteFileRequest) -> Result<WriteFileOutcome, WorkspaceApiError>;
+    fn edit_file(&self, request: EditFileRequest) -> Result<EditFileOutcome, WorkspaceApiError>;
+}
+```
+
+`EphemeralWorkspaceOps` implements it with LayerStack/OCC-backed publish
+semantics. `IsolatedWorkspaceOps` implements it with upperdir-first reads,
+private upperdir writes, and audit-only metadata.
+
+### 4.2 `CommandWorkspaceOps`
+
+Use this trait for mode-specific command workspace policy:
+
+```rust
+pub trait CommandWorkspaceOps {
+    fn prepare_command_workspace(
+        &self,
+        request: PrepareCommandRequest,
+    ) -> Result<PreparedCommandWorkspace, WorkspaceApiError>;
+
+    fn finalize_command_workspace(
+        &self,
+        request: FinalizeCommandRequest,
+    ) -> Result<WorkspaceCommandOutcome, WorkspaceApiError>;
+}
+```
+
+`prepare_command_workspace` is implemented inside each crate's
+`command_session/prepare.rs`. `finalize_command_workspace` is implemented
+inside each crate's `command_session/finalize.rs`.
+
+This trait must not absorb daemon-owned command-session control. PTY allocation,
+process spawning/reaping, output cursors, `write_stdin`, cancel, collect, count,
+completion parking, and live-session registry ownership remain in `eos-daemon`.
+
+### 4.3 `WorkspaceReadView`
+
+Use this trait for the read side below file ops and command finalization:
+
+```rust
+pub trait WorkspaceReadView {
+    fn resolve_path(&self, request_path: &str) -> Result<ResolvedWorkspacePath, WorkspaceApiError>;
+    fn read_bytes(
+        &self,
+        path: &ResolvedWorkspacePath,
+    ) -> Result<WorkspaceReadBytes, WorkspaceApiError>;
+}
+```
+
+Ephemeral implementation reads from active LayerStack truth through daemon
+adapters. Isolated implementation reads from upperdir first, then from the
+pinned snapshot/merged view. This keeps read semantics explicit without making
+isolated depend directly on publish-capable LayerStack/OCC internals.
+
+### 4.4 `WorkspaceMutationSink`
+
+Use this trait for the write/capture result sink:
+
+```rust
+pub trait WorkspaceMutationSink {
+    fn commit_or_record(
+        &self,
+        request: WorkspaceMutationRequest,
+    ) -> Result<WorkspaceMutationOutcome, WorkspaceApiError>;
+}
+```
+
+Ephemeral implementation publishes captured changes through a daemon-injected
+OCC publisher port. Isolated implementation records audit-only metadata and
+returns `published: false`. This trait is the explicit polymorphic boundary for
+"same mutation shape, different persistence semantics."
+
+The trait must not require `eos-occ`; otherwise the isolated build-time
+no-publish guarantee is lost.
+
+### 4.5 OO Refactor Matrix
+
+| Candidate | Plan | Why |
+|---|---|---|
+| `WorkspaceFileOps` | Yes | Direct file APIs are symmetric public capabilities |
+| `CommandWorkspaceOps` | Yes | Command prepare/finalize are symmetric mode-policy hooks |
+| `WorkspaceReadView` | Yes | Both modes need path resolution and bytes reads with different backing stores |
+| `WorkspaceMutationSink` | Yes | Both modes produce mutation outcomes with different persistence semantics |
+| Response builders | DTO first, optional trait later | Shared typed outcomes reduce JSON drift before adding polymorphism |
+| Audit/timing builders | Builder structs, not required trait | The DTOs differ enough that a trait may add ceremony |
+| Workspace lifecycle | No | Isolated has real enter/exit/TTL; ephemeral would be fake no-op lifecycle |
+
+---
+
+## 5. Workspace Ops Role
 
 `sandbox/crates/eos-daemon/src/workspace_ops.rs` becomes dispatch-only:
 
 1. Receive `api.v1.read_file`, `api.v1.write_file`, and `api.v1.edit_file`.
 2. Select mode by active isolated state for `agent_id`.
-3. Call `eos_isolated_workspace::file_ops::*` when isolated is open.
-4. Otherwise call `eos_ephemeral_workspace::file_ops::*`.
+3. Build the corresponding concrete `WorkspaceFileOps` implementation:
+   `IsolatedWorkspaceOps` when isolated is open, otherwise
+   `EphemeralWorkspaceOps`.
+4. Call `read_file`, `write_file`, or `edit_file` through the shared trait
+   contract.
 5. Inject daemon adapters for LayerStack, OCC publish, and snapshot reads.
 6. Map lower-crate errors into `DaemonError`.
 
@@ -124,7 +271,7 @@ search/replace logic, isolated upperdir logic, or response builders.
 
 ---
 
-## 5. Command Session Role
+## 6. Command Session Role
 
 `eos-daemon` still contains command-session management:
 
@@ -139,20 +286,122 @@ search/replace logic, isolated upperdir logic, or response builders.
 | Isolated command workspace prepare/finalize policy | `eos-isolated-workspace` |
 | Concrete OCC publish adapter | `eos-daemon` |
 
-The workspace crates expose symmetric mode-policy entry points. The daemon owns
-the long-running session control plane.
+The workspace crates expose the shared `CommandWorkspaceOps` mode-policy
+interface. The daemon owns the long-running session control plane.
+
+### 6.1 `command_session/prepare.rs`
+
+`prepare.rs` builds the workspace-mode context needed before the daemon spawns a
+command-session child. It is not the process/session manager.
+
+Responsibilities common to both workspace crates:
+
+1. Accept typed command-workspace input from the daemon adapter.
+2. Resolve the workspace root and runner workspace view.
+3. Allocate or select mode-specific scratch/output/final paths.
+4. Build the `eos_runner::RunRequest` or equivalent runner request DTO.
+5. Return a `PreparedCommandWorkspace` containing:
+   - `run_request`
+   - `request_path`
+   - `output_path`
+   - `final_path`
+   - `finalize_context`
+   - any cleanup/failure rollback context needed by the mode
+
+Responsibilities specific to `eos-ephemeral-workspace`:
+
+1. Acquire a fresh LayerStack snapshot through an injected snapshot port.
+2. Allocate fresh overlay run dirs.
+3. Build a `FreshNs` runner request over the snapshot layer paths and run dirs.
+4. Roll back the lease and run dirs if preparation fails before the daemon takes
+   ownership of the prepared context.
+
+Responsibilities specific to `eos-isolated-workspace`:
+
+1. Use an existing isolated `WorkspaceHandle` supplied by the daemon adapter.
+2. Allocate command-session scratch paths under the handle scratch directory.
+3. Build a private runner request using the handle workspace root, layer paths,
+   upperdir, workdir, namespace FDs, and cgroup path.
+4. Acquire no new LayerStack lease and create no publish path.
+
+`prepare.rs` must not:
+
+- spawn the PTY child;
+- own the command-session registry;
+- implement `write_stdin`, cancel, collect, or count;
+- park completions for heartbeat/notification delivery;
+- call OCC directly.
+
+After `prepare.rs` returns, `eos-daemon` serializes the returned runner request
+to `request_path`, opens the PTY, spawns the `ns-runner` child process group,
+and registers the live command session.
+
+### 6.2 `command_session/finalize.rs`
+
+`finalize.rs` converts a finished command-session runner result plus a
+mode-specific finalize context into a workspace command outcome. It is not the
+child reaper and does not decide when a process is done.
+
+Responsibilities common to both workspace crates:
+
+1. Accept typed finalize input from daemon command-session code:
+   `finalize_context`, runner result if available, terminal status, exit code,
+   stdout/stderr, start time, and whether a session id should be included.
+2. Inspect mode-specific writable state after the runner exits.
+3. Build a normalized `WorkspaceCommandOutcome` with:
+   - workspace mode;
+   - status and exit code;
+   - stdout/stderr;
+   - changed paths and path kinds;
+   - conflict/error fields;
+   - timings/resource metrics;
+   - mode-specific metadata.
+4. Write or return enough data for the daemon to persist the final response at
+   `final_path`.
+
+Responsibilities specific to `eos-ephemeral-workspace`:
+
+1. Capture the fresh overlay upperdir.
+2. Publish captured changes through an injected `WorkspacePublisherPort`.
+3. Convert publish results into the shared guarded command response shape.
+4. Clean up the fresh run dir and release the snapshot lease, or expose an
+   idempotent cleanup hook that the daemon must call in a `finally` path.
+
+Responsibilities specific to `eos-isolated-workspace`:
+
+1. Capture the isolated upperdir for reporting/audit only.
+2. Never publish and never call OCC.
+3. Stamp isolated metadata such as handle id, manifest pin, and
+   `published: false`.
+4. Emit or return the isolated tool-call audit payload through an injected audit
+   sink/port.
+5. Leave handle teardown, lease release, namespace teardown, and scratch removal
+   to `exit_isolated_workspace`.
+
+`finalize.rs` must not:
+
+- wait on or reap the child process;
+- kill process groups;
+- manipulate PTY readers/writers;
+- remove entries from the daemon command-session registry;
+- park completed results for later collection;
+- add any publish-capable dependency to `eos-isolated-workspace`.
 
 ---
 
-## 6. Symmetry Table
+## 7. Symmetry Table
 
 | Area | Ephemeral | Isolated | Symmetric Contract |
 |---|---|---|---|
+| Concrete ops struct | `EphemeralWorkspaceOps<P>` | `IsolatedWorkspaceOps<P>` | Same trait implementations |
 | File module | `eos-ephemeral-workspace/src/file_ops/` | `eos-isolated-workspace/src/file_ops/` | Same root-level folder |
-| File functions | `read_file`, `write_file`, `edit_file` | `read_file`, `write_file`, `edit_file` | Same callable shape from daemon |
+| File trait | `WorkspaceFileOps` impl | `WorkspaceFileOps` impl | Same direct file API |
+| Read view | LayerStack-backed `WorkspaceReadView` | Upperdir + snapshot `WorkspaceReadView` | Same path/read contract |
+| Mutation sink | Publish-capable `WorkspaceMutationSink` | Audit-only `WorkspaceMutationSink` | Same mutation outcome contract |
 | Command module | `command_session/` | `command_session/` | Same root-level folder |
-| Command prep | Fresh overlay workspace | Existing isolated handle workspace | `prepare_command_workspace(...)` |
-| Command finalize | Capture + publish | Capture + audit-only | `finalize_command_workspace(...)` |
+| Command trait | `CommandWorkspaceOps` impl | `CommandWorkspaceOps` impl | Same command policy API |
+| Command prep | Fresh overlay workspace | Existing isolated handle workspace | `prepare_command_workspace(...)` in trait |
+| Command finalize | Capture + publish | Capture + audit-only | `finalize_command_workspace(...)` in trait |
 | Public daemon ops | Shared | Shared | One wire/API surface |
 | Daemon role | Route + adapters | Route + adapters | No mode policy in daemon |
 | Tests | Shared behavior tests | Shared behavior tests | Same public op expectations |
@@ -160,19 +409,11 @@ the long-running session control plane.
 Target internal signatures:
 
 ```rust
-// eos-ephemeral-workspace
-pub fn read_file(...);
-pub fn write_file(...);
-pub fn edit_file(...);
-pub fn prepare_command_workspace(...) -> PreparedCommandWorkspace;
-pub fn finalize_command_workspace(...) -> WorkspaceCommandOutcome;
+impl<P> WorkspaceFileOps for EphemeralWorkspaceOps<P> { ... }
+impl<P> CommandWorkspaceOps for EphemeralWorkspaceOps<P> { ... }
 
-// eos-isolated-workspace
-pub fn read_file(...);
-pub fn write_file(...);
-pub fn edit_file(...);
-pub fn prepare_command_workspace(...) -> PreparedCommandWorkspace;
-pub fn finalize_command_workspace(...) -> WorkspaceCommandOutcome;
+impl<P> WorkspaceFileOps for IsolatedWorkspaceOps<P> { ... }
+impl<P> CommandWorkspaceOps for IsolatedWorkspaceOps<P> { ... }
 ```
 
 Exact argument structs should be typed DTOs, not ad hoc JSON bags, once moved
@@ -180,7 +421,7 @@ below the daemon adapter boundary.
 
 ---
 
-## 7. Intentional Asymmetry Table
+## 8. Intentional Asymmetry Table
 
 | Area | Ephemeral | Isolated | Keep Different? |
 |---|---|---|---|
@@ -193,13 +434,19 @@ below the daemon adapter boundary.
 | Search | `exec_command` over shared view | `exec_command` over private view | Symmetric via shell |
 | Lifecycle | No enter/exit | Explicit enter/status/exit/TTL | Yes |
 | Crate deps | May use runner/overlay and publish ports | No `eos-occ`; avoid LayerStack direct | Yes |
+| Concrete trait internals | Publishes and cleans per operation/session | Keeps handle-private state until exit | Yes |
 
 ---
 
-## 8. Dependency Rules
+## 9. Dependency Rules
 
 | Edge | Status | Reason |
 |---|---|---|
+| `eos-workspace-api -> eos-daemon` | Forbidden | API contract must stay neutral |
+| `eos-workspace-api -> eos-occ` | Forbidden | Shared contract must not imply publish |
+| `eos-workspace-api -> eos-layerstack` | Avoid | Use neutral DTOs and daemon-injected ports |
+| `eos-ephemeral-workspace -> eos-workspace-api` | Allowed | Implements shared capability traits |
+| `eos-isolated-workspace -> eos-workspace-api` | Allowed | Implements shared capability traits |
 | `eos-isolated-workspace -> eos-occ` | Forbidden | Build-time no-publish guarantee |
 | `eos-isolated-workspace -> eos-layerstack` | Avoid | Use daemon-injected snapshot/read ports |
 | `eos-isolated-workspace -> eos-runner` | Avoid | Keep runner request/process execution behind daemon/runtime ports |
@@ -214,7 +461,7 @@ publish-capable dependencies.
 
 ---
 
-## 9. Result Shape Rules
+## 10. Result Shape Rules
 
 1. `read_file`, `write_file`, `edit_file`, and `exec_command` responses must
    preserve the actual workspace mode.
@@ -227,23 +474,27 @@ publish-capable dependencies.
    `published: false`, and audit fields.
 5. Ephemeral responses may include publish/OCC timings and published manifest
    metadata.
+6. Shared trait methods return typed outcomes; daemon JSON construction should
+   be a thin conversion from those DTOs rather than hand-built mode JSON.
 
 ---
 
-## 10. Surface Decisions
+## 11. Surface Decisions
 
 | Surface | Decision |
 |---|---|
-| `read_file` / `write_file` / `edit_file` | Symmetric public ops, mode-specific implementation in workspace crates |
-| `exec_command` | Symmetric public op; daemon session control, mode-specific workspace prepare/finalize |
+| `read_file` / `write_file` / `edit_file` | Symmetric public ops through `WorkspaceFileOps`; mode-specific implementation in workspace crates |
+| `exec_command` | Symmetric public op; daemon session control, mode-specific `CommandWorkspaceOps` prepare/finalize |
 | `write_stdin` / cancel / collect / count | Daemon-owned command-session control |
+| Path/read backing | Trait-shaped through `WorkspaceReadView` |
+| Mutation persistence | Trait-shaped through `WorkspaceMutationSink`; publish vs audit differs by mode |
 | Search | Use `exec_command`; future dedicated search tools should route symmetrically |
 | Plugins / LSP | Explicitly forbidden while isolated mode is active |
 | Isolated lifecycle | Owned by `eos-isolated-workspace::session` |
 
 ---
 
-## 11. Verification Targets
+## 12. Verification Targets
 
 Implementation should add or preserve focused coverage for:
 
@@ -260,3 +511,9 @@ Implementation should add or preserve focused coverage for:
 6. Plugin/LSP operations return `forbidden_in_isolated_workspace` while isolated
    mode is active.
 7. `eos-isolated-workspace` still has no `eos-occ` dependency.
+8. `eos-ephemeral-workspace` and `eos-isolated-workspace` both compile against
+   `WorkspaceFileOps` and `CommandWorkspaceOps`.
+9. `WorkspaceReadView` tests cover LayerStack-backed reads and isolated
+   upperdir-first reads through the same request DTOs.
+10. `WorkspaceMutationSink` tests prove ephemeral publishes while isolated
+    returns `published: false` without linking `eos-occ`.

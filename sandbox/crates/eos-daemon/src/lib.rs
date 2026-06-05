@@ -8,7 +8,7 @@
 //! AND a 127.0.0.1 TCP listener ([`server`]), routes ops through the
 //! [`dispatcher`] op table, tracks in-flight invocations with a TTL reaper
 //! ([`invocation_registry`]), houses the audit RING BUFFER plus the impure emit
-//! bridges ([`audit_buffer`]), and orchestrates background execution.
+//! bridges ([`audit`]), and orchestrates background execution.
 //!
 //! It ORCHESTRATES but NEVER enters a namespace. The kernel requires the
 //! `unshare(CLONE_NEWUSER)` / `setns`-into-a-userns caller to be single-threaded,
@@ -32,9 +32,7 @@
 //!
 #![forbid(unsafe_code)]
 
-pub mod audit_buffer;
-pub(crate) mod audit_events;
-pub(crate) mod audit_ops;
+pub(crate) mod audit;
 pub(crate) mod command;
 pub mod config;
 pub mod dispatcher;
@@ -48,13 +46,12 @@ pub(crate) mod plugin;
 pub(crate) mod request_args;
 pub(crate) mod response_timings;
 pub mod server;
+pub(crate) mod workspace_adapters;
 pub(crate) mod workspace_ops;
 
-pub use audit_buffer::{safe_emit, safe_record_phase, AuditBuffer, BufferedEvent, LaneCounters};
-pub use dispatcher::{error_envelope, DispatchContext, OpTable, AUDIT_ALLOW_FLOOR_RESET_ENV};
+pub use dispatcher::{error_envelope, DispatchContext, OpTable};
 pub use error::{DaemonError, Result};
 pub use invocation_registry::{
-    ActiveCallGuard, InFlightInvocation, InFlightRegistry, DEFAULT_REAPER_INTERVAL_S,
-    DEFAULT_TTL_S, ENV_REAPER_INTERVAL_S, ENV_TTL_S,
+    ActiveCallGuard, InFlightInvocation, InFlightRegistry, DEFAULT_REAPER_INTERVAL_S, DEFAULT_TTL_S,
 };
 pub use server::{DaemonServer, ServerConfig, MAX_REQUEST_BYTES, REQUEST_READ_TIMEOUT_S};

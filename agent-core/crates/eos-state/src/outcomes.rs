@@ -15,6 +15,11 @@ use eos_types::{CoreError, TaskId};
 use crate::attempt::{Attempt, AttemptStatus};
 use crate::store::TaskStore;
 
+/// Placeholder text for an [`ExecutionTaskOutcome`] outcome with no recorded
+/// detail. Shared by the `eos-db` row mapper and the `eos-workflow` context
+/// engine so the prompt-facing wording has one source of truth.
+pub const NO_OUTCOME: &str = "(no outcome recorded)";
+
 /// Binary status of one execution outcome (Python `TaskOutcomeStatus`).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]

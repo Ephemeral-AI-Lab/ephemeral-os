@@ -5,9 +5,8 @@
 //! Ports `sandbox/api/tool/_daemon_response_parsing.py` and
 //! `sandbox/api/tool/_conflict_detection.py`. Result decode is **hand-written**,
 //! never a blanket `serde_json::from_value` of the envelope into the result
-//! struct: the daemon envelope never carries `workspace`, and several fields
-//! need defaults / filtering / derivation that raw serde would not apply
-//! (invariant 9). Everything here is `pub(crate)`.
+//! struct: several fields need defaults / filtering / derivation that raw serde
+//! would not apply. Everything here is `pub(crate)`.
 
 use std::collections::BTreeMap;
 
@@ -284,17 +283,28 @@ fn parse_timing_map(value: Option<&Value>) -> BTreeMap<String, f64> {
     }
 }
 
+fn parse_workspace(response: &JsonObject) -> Workspace {
+    response
+        .get("workspace")
+        .or_else(|| response.get("workspace_mode"))
+        .and_then(Value::as_str)
+        .map_or(Workspace::Ephemeral, |workspace| match workspace {
+            "isolated" | "isolated_workspace" => Workspace::Isolated,
+            _ => Workspace::Ephemeral,
+        })
+}
+
 // ---------------------------------------------------------------------------
 // Per-verb result parsers
 // ---------------------------------------------------------------------------
 
 /// The result base for read-only verbs: only `success` and `timings` come from
 /// the envelope; conflict/changed-path/error fields stay at their empty defaults
-/// and `workspace` is always `Ephemeral` (invariant 9).
+/// and workspace mode is preserved when the daemon reports it.
 fn simple_result_base(response: &JsonObject) -> SandboxResultBase {
     SandboxResultBase {
         success: get_bool(response, "success"),
-        workspace: Workspace::Ephemeral,
+        workspace: parse_workspace(response),
         timings: parse_timing_map(response.get("timings")),
         conflict: None,
         conflict_reason: None,
@@ -326,7 +336,7 @@ fn parse_guarded_common(response: &JsonObject) -> GuardedCommon {
     GuardedCommon {
         base: SandboxResultBase {
             success: get_bool(response, "success"),
-            workspace: Workspace::Ephemeral,
+            workspace: parse_workspace(response),
             timings: parse_timing_map(response.get("timings")),
             conflict: parse_conflict_info(response.get("conflict")),
             conflict_reason: optional_string(response, "conflict_reason"),
@@ -395,7 +405,7 @@ pub(crate) fn parse_exec_command_result(
     Ok(ExecCommandResult {
         base: SandboxResultBase {
             success,
-            workspace: Workspace::Ephemeral,
+            workspace: parse_workspace(response),
             timings: parse_timing_map(response.get("timings")),
             conflict: None,
             conflict_reason: optional_string(response, "conflict_reason"),
@@ -564,12 +574,26 @@ mod tests {
         assert!(parse_edit_file_result(&response).is_err());
     }
 
-    // invariant 9: workspace is never decoded from the envelope.
+    // Workspace mode now comes from the daemon response when present.
     #[test]
-    fn parse_ignores_workspace_field() {
+    fn parse_preserves_workspace_field() {
         let response = obj(serde_json::json!({"success": true, "workspace": "isolated"}));
         let result = parse_write_file_result(&response).expect("parse");
-        assert_eq!(result.base.workspace, Workspace::Ephemeral);
+        assert_eq!(result.base.workspace, Workspace::Isolated);
+
+        let read = parse_read_file_result(&obj(serde_json::json!({
+            "success": true,
+            "workspace_mode": "isolated",
+        })))
+        .expect("parse");
+        assert_eq!(read.base.workspace, Workspace::Isolated);
+
+        let exec = parse_exec_command_result(&obj(serde_json::json!({
+            "status": "completed",
+            "workspace": "isolated",
+        })))
+        .expect("parse");
+        assert_eq!(exec.base.workspace, Workspace::Isolated);
     }
 
     #[test]

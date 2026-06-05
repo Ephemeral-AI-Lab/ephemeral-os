@@ -116,14 +116,6 @@ impl PendingCalls {
             return Ok((parent_id, Arc::clone(handler)));
         }
 
-        if let Some((prefix, _)) = frame.message_id.split_once(':') {
-            if let Some(pending_request) = pending.get(prefix) {
-                if let Some(handler) = &pending_request.callback_handler {
-                    return Ok((prefix.to_owned(), Arc::clone(handler)));
-                }
-            }
-        }
-
         let callback_ready = pending
             .iter()
             .filter_map(|(message_id, request)| {

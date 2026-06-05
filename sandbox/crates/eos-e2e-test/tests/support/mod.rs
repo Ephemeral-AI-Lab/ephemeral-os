@@ -3,11 +3,11 @@
 use std::sync::Arc;
 
 use anyhow::{Context, Result};
-use eos_e2e_test::{live_pool, NodePool};
+use eos_e2e_test::{live_pool_with_config, NodePool};
 use serde_json::Value;
 
 pub fn live_pool_or_skip() -> Result<Option<Arc<NodePool>>> {
-    let Some(pool) = live_pool()? else {
+    let Some(pool) = live_pool_with_config(crate::E2E_CONFIG)? else {
         eprintln!("skipping live eos-e2e-test; enable with `--features e2e`");
         return Ok(None);
     };

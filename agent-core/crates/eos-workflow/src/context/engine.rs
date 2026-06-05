@@ -1,8 +1,9 @@
 use std::sync::Arc;
 
 use eos_state::{
-    attempt_execution_outcomes, Attempt, AttemptStore, ExecutionRole, ExecutionTaskOutcome,
-    IterationStore, TaskOutcomeStatus, TaskRole, TaskStatus, TaskStore, WorkflowStore,
+    attempt_execution_outcomes, Attempt, AttemptId, AttemptStore, ExecutionRole,
+    ExecutionTaskOutcome, IterationId, IterationStore, TaskId, TaskOutcomeStatus, TaskRole,
+    TaskStatus, TaskStore, WorkflowId, WorkflowStore, NO_OUTCOME,
 };
 
 use crate::{Result, WorkflowError};
@@ -54,24 +55,37 @@ impl ContextEngine {
     /// Returns [`WorkflowError`] if the recipe is unknown/mismatched or required
     /// persisted state cannot be loaded.
     pub async fn build(&self, recipe_id: &str, scope: &ContextScope) -> Result<AgentContext> {
-        validate_context_recipe(recipe_id, scope.role)?;
-        match scope.role {
-            ContextRole::Planner => self.build_planner_context(scope).await,
-            ContextRole::Generator => {
-                self.build_execution_context(scope, ContextRole::Generator)
+        validate_context_recipe(recipe_id, scope.role())?;
+        match scope {
+            ContextScope::Planner {
+                workflow_id,
+                iteration_id,
+                attempt_id,
+            } => {
+                self.build_planner_context(workflow_id, iteration_id, attempt_id)
                     .await
             }
-            ContextRole::Reducer => {
-                self.build_execution_context(scope, ContextRole::Reducer)
+            ContextScope::Generator {
+                attempt_id, task_id, ..
+            } => {
+                self.build_execution_context(attempt_id, task_id, ContextRole::Generator)
+                    .await
+            }
+            ContextScope::Reducer {
+                attempt_id, task_id, ..
+            } => {
+                self.build_execution_context(attempt_id, task_id, ContextRole::Reducer)
                     .await
             }
         }
     }
 
-    async fn build_planner_context(&self, scope: &ContextScope) -> Result<AgentContext> {
-        let workflow_id = scope.workflow_id()?;
-        let iteration_id = scope.iteration_id()?;
-        let attempt_id = scope.attempt_id()?;
+    async fn build_planner_context(
+        &self,
+        workflow_id: &WorkflowId,
+        iteration_id: &IterationId,
+        attempt_id: &AttemptId,
+    ) -> Result<AgentContext> {
         let workflow = self
             .deps
             .workflow_store
@@ -130,11 +144,10 @@ impl ContextEngine {
 
     async fn build_execution_context(
         &self,
-        scope: &ContextScope,
+        attempt_id: &AttemptId,
+        task_id: &TaskId,
         role: ContextRole,
     ) -> Result<AgentContext> {
-        let attempt_id = scope.attempt_id()?;
-        let task_id = scope.task_id()?;
         self.deps
             .attempt_store
             .get(attempt_id)
@@ -263,7 +276,7 @@ impl ContextEngine {
                     status: TaskOutcomeStatus::Success,
                     role: execution_role(task.role),
                     task_id: task_id.clone(),
-                    outcome: "(no outcome recorded)".to_owned(),
+                    outcome: NO_OUTCOME.to_owned(),
                 });
             }
             sections.push(

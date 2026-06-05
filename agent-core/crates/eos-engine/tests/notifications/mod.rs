@@ -32,7 +32,6 @@ fn ctx() -> QueryContext {
         prompt_report: None,
         notification_rules: make_default_notification_rules(),
         notification_fired: BTreeSet::new(),
-        notification_state: JsonObject::new(),
         notifier: NotificationService::new(),
         audit: None,
         run_handles: None,

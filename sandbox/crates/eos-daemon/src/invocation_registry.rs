@@ -5,15 +5,6 @@
 //! per-agent isolated-workspace lifecycle state and active command-session records — do not
 //! fuse those with this invocation-keyed background-control registry.
 //!
-//! # Source divergence (noted, not silently resolved)
-//!
-//! * The task names `EOS_BACKGROUND_HEARTBEAT_INTERVAL_S`; the live Python uses
-//!   [`ENV_TTL_S`] (`EOS_INFLIGHT_TTL_S`, default 300s) and
-//!   [`ENV_REAPER_INTERVAL_S`] (`EOS_INFLIGHT_REAPER_INTERVAL_S`, default 30s).
-//!   We reproduce the source env vars; the heartbeat-interval naming is a
-//!   port-time reconciliation.
-//!
-
 use std::collections::HashMap;
 use std::sync::{Mutex, MutexGuard, OnceLock, PoisonError};
 use std::thread;
@@ -31,12 +22,6 @@ pub const DEFAULT_TTL_S: f64 = 300.0;
 
 /// Default reaper sweep interval (seconds).
 pub const DEFAULT_REAPER_INTERVAL_S: f64 = 30.0;
-
-/// Env override for the TTL.
-pub const ENV_TTL_S: &str = "EOS_INFLIGHT_TTL_S";
-
-/// Env override for the reaper interval.
-pub const ENV_REAPER_INTERVAL_S: &str = "EOS_INFLIGHT_REAPER_INTERVAL_S";
 
 /// One tracked daemon-side invocation.
 #[derive(Debug)]
@@ -88,16 +73,6 @@ impl InFlightRegistry {
             ttl_s: positive_f64(ttl_s, DEFAULT_TTL_S),
             reaper_interval_s: positive_f64(reaper_interval_s, DEFAULT_REAPER_INTERVAL_S),
         }
-    }
-
-    /// Build a registry, sourcing TTL / reaper interval from env (falling back
-    /// to the defaults).
-    #[must_use]
-    pub fn from_env() -> Self {
-        Self::new(
-            env_positive_f64(ENV_TTL_S, DEFAULT_TTL_S),
-            env_positive_f64(ENV_REAPER_INTERVAL_S, DEFAULT_REAPER_INTERVAL_S),
-        )
     }
 
     /// Reaper sweep interval (seconds) the daemon's reaper loop sleeps between.
@@ -281,15 +256,6 @@ impl Drop for ActiveCallGuard<'_> {
             entry.active_calls = entry.active_calls.saturating_sub(1);
         }
     }
-}
-
-/// Read a positive `f64` env var, falling back to `default` on absent/invalid/<=0.
-fn env_positive_f64(name: &str, default: f64) -> f64 {
-    std::env::var(name).map_or(default, |raw| {
-        raw.trim()
-            .parse::<f64>()
-            .map_or(default, |value| positive_f64(value, default))
-    })
 }
 
 fn positive_f64(value: f64, default: f64) -> f64 {

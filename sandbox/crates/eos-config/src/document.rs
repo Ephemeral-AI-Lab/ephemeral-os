@@ -42,6 +42,18 @@ impl ConfigDocument {
         Ok(())
     }
 
+    /// Serialize the current document to YAML.
+    ///
+    /// This is primarily used by test harnesses that load one approved
+    /// `*.test.yml` override and need to hand the merged document to a daemon
+    /// that still loads its production filename.
+    ///
+    /// # Errors
+    /// Returns an error if the in-memory YAML value cannot be serialized.
+    pub fn to_yaml_string(&self) -> Result<String, ConfigError> {
+        serde_yaml::to_string(&self.value).map_err(|source| ConfigError::Serialize { source })
+    }
+
     #[cfg(test)]
     pub(crate) fn into_value(self) -> Value {
         self.value

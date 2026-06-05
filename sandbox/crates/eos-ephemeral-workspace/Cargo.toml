@@ -8,6 +8,7 @@ license.workspace = true
 [dependencies]
 eos-overlay.workspace = true
 eos-protocol.workspace = true
+eos-workspace-api.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 thiserror.workspace = true

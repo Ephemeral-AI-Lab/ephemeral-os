@@ -26,8 +26,9 @@ use serde_json::{json, Value};
 use super::output::{CommandSessionOutput, CommandSessionOutputCursor};
 #[cfg(target_os = "linux")]
 use super::{
-    command_result, finalize_command_workspace, finalize_isolated_command_workspace,
-    response_with_stdout, terminate_command_process_group, CommandWorkspaceKind,
+    command_result, command_session_config, finalize_command_workspace,
+    finalize_isolated_command_workspace, response_with_stdout, terminate_command_process_group,
+    CommandWorkspaceKind,
 };
 
 #[cfg(any(target_os = "linux", test))]
@@ -38,9 +39,6 @@ pub(super) const fn should_publish_command_session_completion(
 ) -> bool {
     publish_completion && !cancelled && owned_live_session
 }
-
-#[cfg(target_os = "linux")]
-const COMMAND_SESSION_OUTPUT_DRAIN_GRACE_MS: u64 = 500;
 
 #[cfg(target_os = "linux")]
 pub(super) fn lock_command_session_state<T>(mutex: &Mutex<T>) -> MutexGuard<'_, T> {
@@ -217,11 +215,6 @@ pub(super) enum WaitOutcome {
     Running(String),
 }
 
-/// Quiet window: after output appears, a settled gap this long lets a session
-/// that "responded and went quiet" (e.g. a REPL prompt) yield early.
-#[cfg(target_os = "linux")]
-const COMMAND_SESSION_QUIET_MS: u64 = 50;
-
 /// Sense-2 unified wait shared by `exec_command` and `write_stdin`: early-return
 /// on completion (inline finalize) or on quiet-after-output, capped at the
 /// caller's `yield_time_ms`.
@@ -244,7 +237,7 @@ pub(super) fn wait_for_yield(
             last_change = Instant::now();
         }
         if off > start_off
-            && last_change.elapsed() >= Duration::from_millis(COMMAND_SESSION_QUIET_MS)
+            && last_change.elapsed() >= Duration::from_millis(command_session_config().quiet_ms)
         {
             return WaitOutcome::Running(session.read_model_output(max_tokens));
         }
@@ -383,8 +376,9 @@ pub(super) fn command_session_registry() -> &'static CommandSessionRegistry {
 fn completed_session_stdout(session: &CommandSession) -> String {
     let reader_done = lock_command_session_state(&session.reader_done).take();
     if let Some(reader_done) = reader_done {
-        let _ =
-            reader_done.recv_timeout(Duration::from_millis(COMMAND_SESSION_OUTPUT_DRAIN_GRACE_MS));
+        let _ = reader_done.recv_timeout(Duration::from_millis(
+            command_session_config().output_drain_grace_ms,
+        ));
     }
     session.output.all_recent(None)
 }

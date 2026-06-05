@@ -54,20 +54,6 @@ impl PluginKind {
             other => Err(PluginCatalogError::UnknownKind(other.to_owned())),
         }
     }
-
-    /// The serde `snake_case` wire string for this kind, used when stamping the
-    /// `plugin_kind` value on an audit event.
-    #[must_use]
-    pub fn as_wire(self) -> &'static str {
-        match self {
-            Self::LanguageServer => "language_server",
-            Self::Formatter => "formatter",
-            Self::Indexer => "indexer",
-            Self::BuildDaemon => "build_daemon",
-            Self::McpBridge => "mcp_bridge",
-            Self::Custom => "custom",
-        }
-    }
 }
 
 /// One declared tool in a manifest (manifest.py 57-62).

@@ -292,8 +292,6 @@ impl IsolatedNetwork {
 fn test_harness_enabled() -> bool {
     std::env::var("EOS_ISOLATED_WORKSPACE_TEST_HARNESS")
         .is_ok_and(|value| matches!(value.as_str(), "1" | "true" | "TRUE" | "yes" | "YES"))
-        && std::env::var("EOS_ISOLATED_WORKSPACE_TEST_SCRATCH_ROOT")
-            .is_ok_and(|value| !value.trim().is_empty())
 }
 
 fn is_pool_ip(ip: Ipv4Addr) -> bool {

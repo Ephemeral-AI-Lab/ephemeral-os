@@ -90,27 +90,6 @@ pub(crate) fn op_ensure_workspace_base(
     }))
 }
 
-pub(crate) fn op_commit_to_workspace(
-    args: &Value,
-    _context: DispatchContext<'_>,
-) -> Result<Value, DaemonError> {
-    let total_start = Instant::now();
-    let root = PathBuf::from(require_string(args, "layer_stack_root")?);
-    let workspace_root = PathBuf::from(require_string(args, "workspace_root")?);
-    let mut stack = LayerStack::open(root)?;
-    let (manifest, commit_timings) = stack.commit_to_workspace(&workspace_root)?;
-    let mut timings = timings_to_value_map(&commit_timings);
-    timings.insert(
-        "api.commit_to_workspace.total_s".to_owned(),
-        json!(total_start.elapsed().as_secs_f64()),
-    );
-    Ok(json!({
-        "success": true,
-        "manifest_version": manifest.version,
-        "timings": Value::Object(timings),
-    }))
-}
-
 pub(crate) fn op_workspace_binding(
     args: &Value,
     _context: DispatchContext<'_>,

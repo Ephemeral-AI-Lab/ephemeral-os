@@ -13,6 +13,7 @@ mod session;
 
 #[cfg(target_os = "linux")]
 use std::sync::Arc;
+use std::sync::{OnceLock, RwLock};
 #[cfg(target_os = "linux")]
 use std::thread;
 #[cfg(target_os = "linux")]
@@ -36,6 +37,7 @@ use output::{CommandSessionOutput, CommandSessionOutputCursor};
 #[cfg(target_os = "linux")]
 use session::{command_session_registry, lock_command_session_state, CommandSession};
 
+use crate::config::CommandSessionConfig;
 use crate::dispatcher::DispatchContext;
 use crate::error::DaemonError;
 use crate::response_timings::u64_to_f64_saturating;
@@ -45,9 +47,48 @@ use finalize::*;
 #[cfg(target_os = "linux")]
 pub(crate) use lifecycle::*;
 
+pub(crate) fn configure_command_sessions(config: &CommandSessionConfig) {
+    let mut guard = command_session_config_cell()
+        .write()
+        .unwrap_or_else(std::sync::PoisonError::into_inner);
+    *guard = config.clone();
+}
+
+#[cfg(any(target_os = "linux", test))]
+#[cfg(any(target_os = "linux", test))]
+// Non-Linux test builds compile command output helpers without the Linux
+// lifecycle call graph that normally reads this config.
+#[cfg_attr(not(target_os = "linux"), allow(dead_code))]
+pub(super) fn command_session_config() -> CommandSessionConfig {
+    command_session_config_cell()
+        .read()
+        .unwrap_or_else(std::sync::PoisonError::into_inner)
+        .clone()
+}
+
+fn command_session_config_cell() -> &'static RwLock<CommandSessionConfig> {
+    static CONFIG: OnceLock<RwLock<CommandSessionConfig>> = OnceLock::new();
+    CONFIG.get_or_init(|| RwLock::new(default_command_session_config()))
+}
+
+fn default_command_session_config() -> CommandSessionConfig {
+    CommandSessionConfig {
+        scratch_root: std::path::PathBuf::from("/eos/scratch/command-sessions"),
+        default_yield_time_ms: 1000,
+        quiet_ms: 50,
+        cancel_wait_ms: 500,
+        output_drain_grace_ms: 500,
+        max_session_s: 6 * 60 * 60,
+        output_ring_max_bytes: 1024 * 1024,
+        output_spool_max_bytes: 32 * 1024 * 1024,
+    }
+}
+
 /// `api.v1.exec_command` — command-session start contract.
 pub fn op_exec_command(args: &Value, _context: DispatchContext<'_>) -> Result<Value, DaemonError> {
     let cmd = require_command_string(args, "cmd")?;
+    #[cfg(target_os = "linux")]
+    let command_config = command_session_config();
     #[cfg(not(target_os = "linux"))]
     let _ = &cmd;
     let timeout_seconds = optional_u64(args, "timeout")
@@ -65,13 +106,15 @@ pub fn op_exec_command(args: &Value, _context: DispatchContext<'_>) -> Result<Va
     }
     #[cfg(target_os = "linux")]
     if let Some(handle) = crate::isolated::command_handle_for_args(args) {
-        let yield_time_ms = optional_u64(args, "yield_time_ms").unwrap_or(1000);
+        let yield_time_ms =
+            optional_u64(args, "yield_time_ms").unwrap_or(command_config.default_yield_time_ms);
         return start_isolated_command_session(args, &cmd, timeout_seconds, yield_time_ms, handle);
     }
 
     #[cfg(target_os = "linux")]
     {
-        let yield_time_ms = optional_u64(args, "yield_time_ms").unwrap_or(1000);
+        let yield_time_ms =
+            optional_u64(args, "yield_time_ms").unwrap_or(command_config.default_yield_time_ms);
         start_command_session(args, &cmd, timeout_seconds, yield_time_ms)
     }
     #[cfg(not(target_os = "linux"))]
@@ -251,9 +294,8 @@ pub fn cleanup_command_sessions_for_agent(agent_id: &str, grace_s: Option<f64>) 
         terminate_command_process_group(session.pgid);
     }
 
-    let wait_s = grace_s
-        .unwrap_or(COMMAND_SESSION_CANCEL_WAIT_MS as f64 / 1000.0)
-        .max(COMMAND_SESSION_CANCEL_WAIT_MS as f64 / 1000.0);
+    let cancel_wait_s = command_session_config().cancel_wait_ms as f64 / 1000.0;
+    let wait_s = grace_s.unwrap_or(cancel_wait_s).max(cancel_wait_s);
     let deadline = Instant::now() + Duration::from_secs_f64(wait_s);
     let mut pending = sessions.clone();
     loop {
@@ -279,14 +321,14 @@ pub const fn cleanup_command_sessions_for_agent(_agent_id: &str, _grace_s: Optio
 /// parking the completion for the heartbeat. The runner enforces the per-call
 /// timeout internally (primary); this is the backstop for a wedged or
 /// no-timeout runner and the only finalizer for fire-and-forget sessions. A
-/// session started without an explicit `timeout` falls back to the
-/// `EOS_COMMAND_SESSION_MAX_S` wall-clock cap so it can never run forever.
+/// session started without an explicit `timeout` falls back to the configured
+/// wall-clock cap so it can never run forever.
 #[cfg(target_os = "linux")]
 pub fn command_session_reaper_sweep() {
     let now = Instant::now();
     for session in command_session_registry().live() {
         let deadline = session.timeout_deadline.unwrap_or_else(|| {
-            session.started_at + Duration::from_secs(command_session_max_seconds())
+            session.started_at + Duration::from_secs(command_session_config().max_session_s)
         });
         if now > deadline {
             terminate_command_process_group(session.pgid);
@@ -356,5 +398,5 @@ pub fn command_session_reaper_sweep() {}
 pub fn recover_orphaned_command_sessions() {}
 
 #[cfg(test)]
-#[path = "../tests/command/mod.rs"]
+#[path = "../../tests/command/mod.rs"]
 mod tests;

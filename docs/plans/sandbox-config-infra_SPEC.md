@@ -30,12 +30,12 @@ the previous phase's acceptance criteria have passed.
 | Phase 0: Spec and inventory | Complete | Planning artifact updated with parent-only config ownership; spec diff check passed before Phase 1 edits. |
 | Phase 1: Add config file layout | Complete | Added `sandbox/config/prd.yml` and README only; config-selection scan recorded below. |
 | Phase 2: Add `eos-config` loader crate | Complete | Added generic loader crate; `cargo test -p eos-config` and `cargo check -p eos-config --all-targets` passed. |
-| Phase 3: Add typed runtime schemas | Not started | Crate-root config modules define typed schemas and validation. |
-| Phase 4: Wire production loading | Not started | Replace scattered env/default reads with injected config. |
-| Phase 5: Wire E2E test local overrides | Not started | Test modules load hardcoded local `*.test.yml`. |
-| Phase 6: Remove CLI/env config setup | Not started | Config path selection via CLI/env is forbidden. |
-| Phase 7: Static contract cleanup | Not started | Confirm static constants remain out of YAML. |
-| Phase 8: Documentation and full verification | Not started | README, examples, full targeted checks. |
+| Phase 3: Add typed runtime schemas | Complete | Added crate-root schemas and validation tests for daemon, isolated workspace, runner, and E2E; config test commands passed. |
+| Phase 4: Wire production loading | Complete | `eosd daemon` loads `prd.yml` for daemon and isolated workspace schema; daemon worker cap, in-flight timings, audit pull/reset defaults, command sessions, isolated runtime caps/audit/scratch root, and plugin PPC runtime defaults are wired. |
+| Phase 5: Wire E2E test local overrides | Complete | Rust E2E harness loads one module-local default `*.test.yml`, derives harness config from the merged document, uploads the merged YAML to the daemon's `prd.yml` path inside Docker, and no longer reads `e2e.toml` or `EOS_E2E_*` config overrides. |
+| Phase 6: Remove CLI/env config setup | Complete | Removed Rust E2E env/profile/TOML setup and isolated test-harness scratch/audit env paths; config selection is by test name plus hardcoded test YAML only. |
+| Phase 7: Static contract cleanup | Complete | `prd.yml` was audited for protocol/schema/kernel/netlink/nft/whiteout/static overlay constants; static contracts remain in Rust owner modules. |
+| Phase 8: Documentation and full verification | Complete | Config README and architecture E2E examples were refreshed; final static scans, targeted checks, and the full Docker E2E command passed. |
 
 Progress update rules:
 
@@ -54,6 +54,120 @@ Phase 1 review notes:
 - `--configure-dns` hits in `eosd/src/runner.rs` and
   `eos-daemon/src/isolated/runtime.rs` are namespace runner action flags, not
   config file selection.
+
+Phase 4 review notes:
+
+- `rg -n "EOS_CONFIG|EOS_CONFIG_OVERRIDE|--config" sandbox/crates/eosd
+  sandbox/crates/eos-daemon` finds only `--configure-dns`, which remains a
+  namespace runner action flag.
+- `EOS_E2E_CONFIG` remains isolated to `eos-e2e-test` and is still a Phase 6
+  removal target.
+- `cargo check -p eos-daemon --all-targets` passed.
+- `cargo check -p eosd --all-targets` passed.
+- `cargo test -p eos-daemon --all-targets config` passed.
+- `cargo test -p eos-daemon --all-targets command` passed.
+- `cargo test -p eos-daemon --all-targets isolated` passed.
+- `cargo test -p eos-daemon --all-targets audit` passed.
+- `cargo test -p eos-daemon --all-targets plugin` passed after plugin runtime
+  config rewiring.
+
+Phase 5 review notes:
+
+- Added module-local `config/default.test.yml` overrides for all Rust E2E test
+  crates.
+- Deleted `sandbox/crates/eos-e2e-test/e2e.toml`; Rust E2E config now comes
+  from `sandbox/config/prd.yml` plus one hardcoded test override.
+- `rg -n "EOS_E2E_CONFIG|EOS_LIVE_E2E_IMAGE|EOS_E2E_IMAGE|EOS_E2E_PROFILE|e2e\\.toml|EOS_E2E_EOSD|EOS_E2E_NODE_MODE|EOS_E2E_SANDBOXES|EOS_E2E_KEEP_CONTAINER|EOS_E2E_ISOLATED" crates/eos-e2e-test`
+  returned no hits from the sandbox workspace.
+- `cargo test -p eos-e2e-test config --features e2e` passed.
+- `cargo check -p eos-e2e-test --all-targets --features e2e` passed.
+- `cargo test -p eos-e2e-test --features e2e direct_file_ops_round_trip_through_protocol -- --nocapture`
+  passed against Docker.
+
+Phase 6 review notes:
+
+- `rg -n "EOS_ISOLATED_WORKSPACE_TEST_SCRATCH_ROOT|EOS_ISOLATED_WORKSPACE_AUDIT_PATH|EOS_ISOLATED_WORKSPACE_ENABLED|EOS_WORKSPACE_ROOT_ENV|AUDIT_PATH_ENV|ResourceCaps::from_env|JsonlAuditSink::from_env|from_env\\(|EOS_INFLIGHT|ENV_TTL_S|ENV_REAPER_INTERVAL_S" sandbox/crates/eos-daemon/src sandbox/crates/eos-daemon/tests sandbox/crates/eos-isolated-workspace/src sandbox/crates/eos-e2e-test`
+  returned no hits.
+- `rg -n "EOS_CONFIG|EOS_CONFIG_OVERRIDE|EOS_E2E_CONFIG|EOS_E2E_PROFILE|--config" sandbox/crates`
+  finds only `--configure-dns`, which is a namespace runner action flag.
+- The broad `config.*path` scan was reviewed; remaining hits are typed config
+  loader/path policy, runtime socket/pid paths, Docker upload plumbing, or test
+  helper path values, not user-selectable config setup paths.
+- `cargo test -p eos-config` passed.
+- `cargo check -p eos-e2e-test --all-targets --features e2e` passed.
+- `cargo check -p eos-daemon --all-targets` passed.
+- `cargo test -p eos-daemon --all-targets isolated` passed.
+
+Phase 7 review notes:
+
+- `find sandbox/crates -path '*/src/*/config.rs' -o -path '*/src/config.rs'`
+  lists only crate-root config modules.
+- `rg -n "OVL_MAX_STACK_GUARD|AUTO_SQUASH_MAX_DEPTH|schema_version|api\\.v1|api\\.|NFT_|BRIDGE_|WHITEOUT|MAX_REQUEST_BYTES|REQUEST_READ_TIMEOUT" sandbox/config/prd.yml`
+  returned no hits.
+- Static contract constants remain in Rust owner modules, including
+  `AUTO_SQUASH_MAX_DEPTH` in `eos-layerstack`, protocol request limits in
+  `eos-protocol`, whiteout markers in layerstack/overlay modules, and
+  netlink/nft constants in `eos-isolated-workspace`.
+
+Phase 8 review notes:
+
+- Updated `sandbox/config/README.md` to document one module-local E2E
+  `config/default.test.yml`, merged YAML upload to the daemon `prd.yml` path,
+  and removal of legacy Rust E2E TOML/env/profile selectors.
+- Updated sandbox architecture plugin pages so visible examples and evidence
+  paths reference `tests/plugin/packages.rs` and `tests/plugin/lsp.rs` instead
+  of the retired `plugin_packages.rs` / `plugin_lsp.rs` targets.
+- `rg -n "plugin_packages|plugin_lsp|sandbox/crates/eos-e2e-test/tests/plugin_packages\\.rs|sandbox/crates/eos-e2e-test/tests/plugin_lsp\\.rs" docs/architecture sandbox/config/README.md`
+  returned no hits.
+- `rg -n "EOS_E2E_CONFIG|EOS_LIVE_E2E_IMAGE|EOS_E2E_IMAGE|EOS_E2E_PROFILE|e2e\\.toml|EOS_E2E_EOSD|EOS_E2E_NODE_MODE|EOS_E2E_SANDBOXES|EOS_E2E_KEEP_CONTAINER|EOS_E2E_ISOLATED" sandbox/crates/eos-e2e-test`
+  returned no hits.
+- `rg -n "EOS_CONFIG|EOS_CONFIG_OVERRIDE|EOS_E2E_CONFIG|EOS_E2E_PROFILE|--config" sandbox/crates`
+  finds only `--configure-dns`, which is a namespace runner action flag.
+- `find sandbox/crates -path '*/src/*/config.rs' -o -path '*/src/config.rs'`
+  lists only crate-root config modules.
+- The full Docker E2E command initially exposed a pre-existing test
+  assumption: `iws_same_port_discard` wrote its server log to
+  `/eos/scratch/e2e/...` without creating that directory. The test command now
+  creates its own log directory before starting the server, keeping the test
+  focused on isolated command-session cleanup and same-port reuse.
+- `cargo test -p eos-config` passed.
+- `cargo check -p eos-daemon --all-targets` passed.
+- `cargo check -p eos-isolated-workspace --all-targets` passed.
+- `cargo check -p eos-e2e-test --all-targets --features e2e` passed.
+- `cargo test -p eos-e2e-test config --features e2e` passed.
+- `cargo test -p eos-e2e-test --features e2e --test isolated_workspace iws_same_port_discard -- --nocapture`
+  passed.
+- `cargo test -p eos-e2e-test --features e2e -- --nocapture` passed.
+- `git diff --check` passed.
+
+Post-Phase 8 cleanup notes:
+
+- Removed obsolete `eos_e2e_test.isolated_workspace_overrides` from the E2E
+  schema and `prd.yml`. E2E isolated tuning now uses the normal
+  `isolated_workspace` section in each module-local test override, which is the
+  same merged YAML uploaded to the daemon.
+- Removed the unused no-override `eos_e2e_test::live_pool()` / `Config::load()`
+  path so live tests cannot bypass their hardcoded local `*.test.yml`.
+- Boxed the E2E pool checkout-open failure path after clippy flagged the large
+  `Err((Node, anyhow::Error))` variant.
+- Set the plugin E2E module override to `pool.mode: per-test` and
+  `keep_container: false` because plugin routes and service processes are
+  daemon-global state and should not leak across plugin tests or warm-container
+  reuse.
+- Updated `docs/architecture/sandbox/workspaces.html` to remove legacy
+  isolated-workspace env config/audit claims and point at typed Rust config.
+- `cargo clippy -p eos-e2e-test --all-targets --features e2e -- -D warnings`
+  passed.
+- `cargo clippy -p eos-config --all-targets -- -D warnings` passed.
+- `cargo clippy -p eos-isolated-workspace --all-targets -- -D warnings`
+  passed.
+- `cargo clippy -p eos-daemon --all-targets -- -D warnings` passed.
+- `cargo clippy -p eosd --all-targets -- -D warnings` passed.
+- `cargo test -p eos-daemon --all-targets isolated` passed.
+- `cargo test -p eos-e2e-test --features e2e --test plugin -- --nocapture`
+  passed.
+- `cargo test -p eos-e2e-test --features e2e -- --nocapture` passed after the
+  plugin override isolation change.
 
 ---
 
@@ -493,18 +607,12 @@ eos_e2e_test:
 
   audit:
     pull_limit: 2000
-
-  isolated_workspace_overrides:
-    enabled: true
-    upperdir_bytes: 67108864
-    memavail_fraction: 0.9
 ```
 
 Notes:
 
-- `eos_e2e_test.isolated_workspace_overrides` is harness-owned sugar. The
-  harness may merge it into the daemon process environment or generated daemon
-  runtime config when launching E2E containers.
+- E2E tests tune isolated-workspace runtime behavior with the same
+  `isolated_workspace` section they upload to the daemon container.
 - Production daemon startup should ignore `eos_e2e_test`.
 - The E2E harness may read `daemon`, `isolated_workspace`, and
   `eos_e2e_test`.
@@ -719,7 +827,6 @@ pub struct EosE2eTestConfig {
     pub pool: E2ePoolConfig,
     pub timeouts: E2eTimeoutConfig,
     pub audit: E2eAuditConfig,
-    pub isolated_workspace_overrides: Option<E2eIsolatedWorkspaceOverrides>,
 }
 
 pub struct E2eDockerConfig {
@@ -760,12 +867,6 @@ pub struct E2eTimeoutConfig {
 
 pub struct E2eAuditConfig {
     pub pull_limit: u64,
-}
-
-pub struct E2eIsolatedWorkspaceOverrides {
-    pub enabled: Option<bool>,
-    pub upperdir_bytes: Option<u64>,
-    pub memavail_fraction: Option<f64>,
 }
 ```
 
@@ -1099,9 +1200,12 @@ Work:
 
 Acceptance criteria:
 
-- Production code has no config path CLI/env input.
-- `rg -n "EOS_CONFIG|EOS_CONFIG_OVERRIDE|EOS_E2E_CONFIG|--config" sandbox/crates`
-  finds no live config selection path.
+- Production daemon code has no config path CLI/env input.
+- `rg -n "EOS_CONFIG|EOS_CONFIG_OVERRIDE|--config" sandbox/crates/eosd sandbox/crates/eos-daemon`
+  finds no live daemon config selection path. `--configure-dns` remains a
+  namespace runner action flag, not config selection.
+- `EOS_E2E_CONFIG` hits in `eos-e2e-test` remain Phase 6 removal targets, as
+  recorded in the Phase 1 review notes.
 - Remaining env reads are either non-config process data, secrets/auth, or
   explicitly documented exceptions.
 - `cargo check -p eos-daemon --all-targets` passes.

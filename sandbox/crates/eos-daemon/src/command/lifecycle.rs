@@ -21,11 +21,9 @@ use super::output;
 use super::output::{CommandSessionOutput, CommandSessionOutputCursor};
 use super::pty::open_pty_pair;
 use super::session::{command_session_registry, wait_for_yield, CommandSession, WaitOutcome};
-use super::{command_result, optional_u64};
+use super::{command_result, command_session_config, optional_u64};
 use crate::error::DaemonError;
 use crate::overlay_runner::{overlay_run_dirs, RunDirCleanup};
-
-const COMMAND_SESSION_SCRATCH_ROOT: &str = "/eos/scratch/command-sessions";
 
 pub(crate) struct EphemeralCommandWorkspace {
     pub(crate) root: PathBuf,
@@ -422,5 +420,5 @@ fn spawn_command_output_reader(
 }
 
 pub(crate) fn command_session_scratch_root() -> PathBuf {
-    PathBuf::from(COMMAND_SESSION_SCRATCH_ROOT)
+    command_session_config().scratch_root
 }

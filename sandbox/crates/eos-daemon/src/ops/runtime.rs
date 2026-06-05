@@ -45,24 +45,22 @@ pub(crate) fn op_runtime_ready(
     clippy::unnecessary_wraps,
     reason = "dispatcher handlers share a fallible ABI"
 )]
-pub(crate) fn op_cancel(
-    args: &Value,
-    context: DispatchContext<'_>,
-) -> Result<Value, DaemonError> {
+pub(crate) fn op_cancel(args: &Value, context: DispatchContext<'_>) -> Result<Value, DaemonError> {
     let invocation_id = args
         .get("invocation_id")
         .and_then(Value::as_str)
         .unwrap_or_default()
         .trim()
         .to_owned();
-    let (cancelled, cleanup_done) = context
-        .invocation_registry()
-        .map_or((false, true), |registry| {
-            let cancelled = registry.cancel(&invocation_id);
-            let cleanup_done =
-                !cancelled || registry.wait_for_cleanup(&invocation_id, Duration::from_secs(5));
-            (cancelled, cleanup_done)
-        });
+    let (cancelled, cleanup_done) =
+        context
+            .invocation_registry()
+            .map_or((false, true), |registry| {
+                let cancelled = registry.cancel(&invocation_id);
+                let cleanup_done =
+                    !cancelled || registry.wait_for_cleanup(&invocation_id, Duration::from_secs(5));
+                (cancelled, cleanup_done)
+            });
     Ok(json!({
         "success": true,
         "invocation_id": invocation_id,

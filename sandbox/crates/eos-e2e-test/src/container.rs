@@ -17,6 +17,7 @@ use std::thread;
 use std::time::{Duration, Instant};
 
 use anyhow::{bail, Context, Result};
+use eos_config::ConfigPath;
 use eos_protocol::ops;
 use serde_json::json;
 
@@ -24,15 +25,6 @@ use crate::client::{is_success, ProtocolClient};
 use crate::config::{Config, NodeMode};
 use crate::unique_suffix;
 
-/// Daemon runtime dir under the EphemeralOS-owned root.
-const DAEMON_DIR: &str = "/eos/runtime/daemon";
-/// Remote daemon executable path. Keep this aligned with host runtime paths.
-const EOSD_REMOTE_PATH: &str = "/eos/runtime/daemon/eosd";
-/// Root under which the pool mints per-test `layer_stack_root`s.
-pub const E2E_ROOT_DIR: &str = "/eos/state/e2e";
-/// A non-kept container self-removes after this long (`--rm` + `timeout`), so an
-/// aborted run cannot strand privileged containers even if teardown never runs.
-const CONTAINER_TTL_SECONDS: u64 = 1800;
 const POOL_LABEL: &str = "eos.e2e.pool";
 const AUTH_LABEL: &str = "eos.e2e.auth";
 
@@ -41,6 +33,7 @@ const AUTH_LABEL: &str = "eos.e2e.auth";
 pub struct DaemonContainer {
     name: String,
     client: ProtocolClient,
+    daemon_log_path: String,
     keep: bool,
 }
 
@@ -50,7 +43,7 @@ impl DaemonContainer {
     ///
     /// # Errors
     /// Returns an error if any docker step fails or the daemon never becomes ready.
-    pub fn start(config: &Config) -> Result<Self> {
+    pub fn start(config: &Config, config_yaml: &str) -> Result<Self> {
         let name = format!("eos-e2e-{}", unique_suffix());
         let token = format!("tok-{}", unique_suffix());
         let keep = config.keep_container && config.mode != NodeMode::PerTest;
@@ -88,26 +81,6 @@ impl DaemonContainer {
             run.push("--security-opt".to_owned());
             run.push(opt.clone());
         }
-        // Enable the isolated-workspace feature for the daemon (the
-        // `docker exec`-spawned eosd inherits the container env). Harmless for
-        // non-isolated tiers. The upperdir cap is lowered and the MemAvailable
-        // fraction raised so the host-RAM admission gate fits inside a
-        // memory-modest Docker VM (the default 1 GiB reservation would be
-        // refused); the real namespace/veth/cgroup path is otherwise unchanged.
-        let isolated_upperdir = format!(
-            "EOS_ISOLATED_WORKSPACE_UPPERDIR_BYTES={}",
-            config.isolated_upperdir_bytes
-        );
-        let workspace_root = format!("EOS_WORKSPACE_ROOT={}", config.workspace_root);
-        for env_kv in [
-            "EOS_ISOLATED_WORKSPACE_ENABLED=true",
-            isolated_upperdir.as_str(),
-            "EOS_ISOLATED_WORKSPACE_MEMAVAIL_FRACTION=0.9",
-            workspace_root.as_str(),
-        ] {
-            run.push("-e".to_owned());
-            run.push(env_kv.to_owned());
-        }
         for tmpfs in &config.tmpfs {
             run.push("--tmpfs".to_owned());
             run.push(tmpfs.clone());
@@ -123,7 +96,7 @@ impl DaemonContainer {
         } else {
             run.extend([
                 "timeout".to_owned(),
-                CONTAINER_TTL_SECONDS.to_string(),
+                config.non_kept_container_ttl.as_secs().to_string(),
                 "sleep".to_owned(),
                 "infinity".to_owned(),
             ]);
@@ -140,9 +113,14 @@ impl DaemonContainer {
                 Some(token.clone()),
                 config.request_timeout,
             ),
+            daemon_log_path: config
+                .remote_daemon_dir
+                .join("runtime.log")
+                .to_string_lossy()
+                .into_owned(),
             keep,
         };
-        match container.bringup(config, &token) {
+        match container.bringup(config, &token, config_yaml) {
             Ok(client) => {
                 container.client = client;
                 Ok(container)
@@ -198,6 +176,11 @@ impl DaemonContainer {
                 Some(token.clone()),
                 config.request_timeout,
             ),
+            daemon_log_path: config
+                .remote_daemon_dir
+                .join("runtime.log")
+                .to_string_lossy()
+                .into_owned(),
             keep: true,
         };
         let addr = container.resolve_addr(config.tcp_port)?;
@@ -207,8 +190,24 @@ impl DaemonContainer {
         Ok(container)
     }
 
-    fn bringup(&self, config: &Config, token: &str) -> Result<ProtocolClient> {
-        self.exec(&["mkdir", "-p", DAEMON_DIR, E2E_ROOT_DIR])
+    fn bringup(&self, config: &Config, token: &str, config_yaml: &str) -> Result<ProtocolClient> {
+        let daemon_dir = path_str(&config.remote_daemon_dir)?;
+        let root_dir = path_str(&config.root_dir)?;
+        let remote_eosd_path = path_str(&config.remote_eosd_path)?;
+        let config_path = ConfigPath::prd()
+            .context("resolve compiled daemon config path")?
+            .as_path()
+            .to_path_buf();
+        let config_dir = config_path
+            .parent()
+            .context("compiled daemon config path has no parent")?;
+        let config_dir = path_str(config_dir)?;
+        let config_name = config_path
+            .file_name()
+            .and_then(|name| name.to_str())
+            .context("compiled daemon config path has no UTF-8 file name")?;
+
+        self.exec(&["mkdir", "-p", &daemon_dir, &root_dir, &config_dir])
             .context("mkdir daemon dirs")?;
         self.exec(&[
             "sh",
@@ -218,29 +217,38 @@ impl DaemonContainer {
         .context("make cgroup v2 writable for isolated-workspace tests")?;
         put_archive_file(
             &self.name,
-            DAEMON_DIR,
+            &daemon_dir,
             "eosd",
             &config.eosd_path,
             config.request_timeout,
         )
         .with_context(|| {
             format!(
-                "Docker put_archive eosd ({}) into {DAEMON_DIR}",
+                "Docker put_archive eosd ({}) into {daemon_dir}",
                 config.eosd_path.display()
             )
         })?;
+        put_archive_bytes(
+            &self.name,
+            &config_dir,
+            config_name,
+            config_yaml.as_bytes(),
+            0o644,
+            config.request_timeout,
+        )
+        .with_context(|| format!("Docker put_archive merged config into {config_dir}"))?;
 
         // Detached foreground daemon (no --spawn needed: `exec -d` backgrounds it).
         self.exec(&[
             "-d",
-            EOSD_REMOTE_PATH,
+            &remote_eosd_path,
             "daemon",
             "--socket",
-            &format!("{DAEMON_DIR}/runtime.sock"),
+            &format!("{daemon_dir}/runtime.sock"),
             "--pid-file",
-            &format!("{DAEMON_DIR}/runtime.pid"),
+            &format!("{daemon_dir}/runtime.pid"),
             "--log-file",
-            &format!("{DAEMON_DIR}/runtime.log"),
+            &format!("{daemon_dir}/runtime.log"),
             "--tcp-host",
             "0.0.0.0",
             "--tcp-port",
@@ -329,7 +337,7 @@ impl DaemonContainer {
             "tail".to_owned(),
             "-n".to_owned(),
             "40".to_owned(),
-            format!("{DAEMON_DIR}/runtime.log"),
+            self.daemon_log_path.clone(),
         ])
         .ok()
     }
@@ -391,6 +399,24 @@ fn put_archive_file(
     let payload = fs::read(source).with_context(|| format!("read eosd {}", source.display()))?;
     let tar_stream = tar_single_file(remote_name, &payload, 0o755)?;
     docker_put_archive(container, dest_dir, &tar_stream, timeout)
+}
+
+fn put_archive_bytes(
+    container: &str,
+    dest_dir: &str,
+    remote_name: &str,
+    payload: &[u8],
+    mode: u32,
+    timeout: Duration,
+) -> Result<()> {
+    let tar_stream = tar_single_file(remote_name, payload, mode)?;
+    docker_put_archive(container, dest_dir, &tar_stream, timeout)
+}
+
+fn path_str(path: &Path) -> Result<String> {
+    path.to_str()
+        .map(str::to_owned)
+        .with_context(|| format!("container path is not UTF-8: {}", path.display()))
 }
 
 #[cfg(unix)]

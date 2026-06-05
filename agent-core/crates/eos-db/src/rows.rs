@@ -12,7 +12,7 @@ use time::OffsetDateTime;
 use eos_state::{
     present_status, AgentRun, Attempt, AttemptFailReason, AttemptStage, AttemptStatus, CoreError,
     ExecutionRole, ExecutionTaskOutcome, Iteration, Request, RequestStatus, Task,
-    TaskOutcomeStatus, UtcDateTime, Workflow,
+    TaskOutcomeStatus, UtcDateTime, Workflow, NO_OUTCOME,
 };
 
 use crate::error::DbError;
@@ -154,8 +154,6 @@ pub(crate) fn enum_to_db<T: serde::Serialize>(value: &T) -> String {
 }
 
 // ---- outcome-record normalization (the eos-db parse boundary, §6.8) --------
-
-const NO_OUTCOME: &str = "(no outcome recorded)";
 
 fn execution_role(raw: Option<&str>) -> Option<ExecutionRole> {
     match raw {

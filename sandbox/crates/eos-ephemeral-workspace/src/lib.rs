@@ -8,9 +8,12 @@
 //! publisher ownership stay outside this crate.
 
 pub mod capture;
+pub mod command_session;
 pub mod dirs;
 pub mod error;
+pub mod file_ops;
 pub mod finalize;
+pub mod ops;
 pub mod ports;
 pub mod timings;
 pub mod types;
@@ -19,6 +22,7 @@ pub use capture::{capture_for_publish, CapturedUpperdir};
 pub use dirs::{EphemeralDirAllocator, RunDirCleanup};
 pub use error::EphemeralWorkspaceError;
 pub use finalize::{finalize_publishable_workspace, FinalizeOutcome, FinalizeRequest};
+pub use ops::EphemeralWorkspaceOps;
 pub use ports::WorkspacePublisherPort;
 pub use timings::{EphemeralTimings, TreeResourceStats};
 pub use types::{

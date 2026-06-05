@@ -13,6 +13,7 @@ use eos_ephemeral_workspace::{
     EphemeralWorkspace, FinalizeRequest, InvocationId, WorkspaceRoot as EphemeralWorkspaceRoot,
 };
 use eos_layerstack::{require_workspace_binding, LayerStack, Lease, WorkspaceBinding};
+use eos_plugin::ServiceMode;
 use eos_protocol::Intent;
 use eos_runner::{RunMode, RunRequest, RunResult, ToolCall, WorkspaceRoot};
 use serde_json::{json, Value};
@@ -24,8 +25,11 @@ use crate::overlay_runner::{
 };
 use crate::response_timings::{
     attach_runner_shell_fields, guarded_changeset_response, insert_tree_resource_timings,
-    merge_runner_timings, published_file_count, resource_timings, TreeResourceStats,
+    merge_runner_timings, published_file_count, resource_timings, u64_to_f64_saturating,
+    TreeResourceStats,
 };
+
+use super::state::PluginOperationRoute;
 
 pub(crate) struct PluginOverlayCommand {
     pub(crate) layer_stack_root: PathBuf,
@@ -37,6 +41,75 @@ pub(crate) struct PluginOverlayCommand {
     pub(crate) command: Vec<String>,
     pub(crate) env: BTreeMap<String, String>,
     pub(crate) timeout_seconds: Option<f64>,
+}
+
+pub(super) fn dispatch_oneshot_overlay_route(
+    route: &PluginOperationRoute,
+    invocation_id: &str,
+    args: &Value,
+) -> Result<Option<Value>, DaemonError> {
+    if route.service_mode != Some(ServiceMode::OneshotOverlay) {
+        return Ok(None);
+    }
+    let Some(layer_stack_root) = route.layer_stack_root.clone() else {
+        return Ok(None);
+    };
+    let Some(service_key) = route.service_key.clone() else {
+        return Ok(None);
+    };
+    if route.service_command.is_empty() {
+        return Ok(None);
+    }
+    let agent_id = args
+        .get("agent_id")
+        .and_then(Value::as_str)
+        .unwrap_or("default")
+        .to_owned();
+    let mut env = BTreeMap::from([
+        (
+            "EOS_PLUGIN_LAYER_STACK_ROOT".to_owned(),
+            service_key.layer_stack_root,
+        ),
+        (
+            "EOS_PLUGIN_WORKSPACE_ROOT".to_owned(),
+            service_key.workspace_root,
+        ),
+        ("EOS_PLUGIN_ID".to_owned(), service_key.plugin_id),
+        ("EOS_PLUGIN_DIGEST".to_owned(), service_key.plugin_digest),
+        ("EOS_PLUGIN_SERVICE_ID".to_owned(), service_key.service_id),
+        (
+            "EOS_PLUGIN_SERVICE_PROFILE_DIGEST".to_owned(),
+            service_key.service_profile_digest,
+        ),
+        (
+            "EOS_PLUGIN_PPC_PROTOCOL_VERSION".to_owned(),
+            route.service_ppc_protocol_version.unwrap_or(1).to_string(),
+        ),
+        (
+            "EOS_PLUGIN_SERVICE_MODE".to_owned(),
+            "oneshot_overlay".to_owned(),
+        ),
+    ]);
+    env.insert("EOS_PLUGIN_PUBLIC_OP".to_owned(), route.public_op.clone());
+    let timeout_seconds = route
+        .timeout_ms
+        .map(|timeout| u64_to_f64_saturating(timeout) / 1000.0);
+    let overlay_command = PluginOverlayCommand {
+        layer_stack_root: PathBuf::from(layer_stack_root),
+        invocation_id: invocation_id.to_owned(),
+        agent_id,
+        public_op: route.public_op.clone(),
+        plugin_id: route.plugin_id.clone(),
+        op_name: route.op_name.clone(),
+        command: route.service_command.clone(),
+        env,
+        timeout_seconds,
+    };
+    Ok(Some(run_plugin_overlay_command(
+        &overlay_command,
+        args,
+        Instant::now(),
+    )?))
 }
 
 struct PluginOverlayRunOutcome {

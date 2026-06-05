@@ -1,5 +1,8 @@
 use super::super::*;
 
+use eos_isolated_workspace::config::{
+    IsolatedWorkspaceConfig, Rfc1918Egress as ConfigRfc1918Egress,
+};
 use eos_layerstack::LayerStack;
 use serde_json::{json, Value};
 use std::error::Error;
@@ -54,6 +57,47 @@ impl Drop for TestEnvVar {
         } else {
             std::env::remove_var(self.key);
         }
+    }
+}
+
+pub(super) struct TestIsolatedWorkspaceConfig {
+    _guard: std::sync::MutexGuard<'static, ()>,
+}
+
+impl TestIsolatedWorkspaceConfig {
+    pub(super) fn enabled(scratch_root: &Path, workspace_root: &Path) -> Self {
+        let guard = crate::isolated::lock_isolated_test_state();
+        let mut config = default_isolated_workspace_config();
+        config.enabled = true;
+        config.scratch_root = scratch_root.to_path_buf();
+        config.audit_jsonl_path = scratch_root.join("audit.jsonl");
+        config.workspace_root = workspace_root.to_path_buf();
+        crate::isolated::configure_isolated_workspace(&config);
+        Self { _guard: guard }
+    }
+}
+
+impl Drop for TestIsolatedWorkspaceConfig {
+    fn drop(&mut self) {
+        crate::isolated::configure_isolated_workspace(&default_isolated_workspace_config());
+    }
+}
+
+fn default_isolated_workspace_config() -> IsolatedWorkspaceConfig {
+    IsolatedWorkspaceConfig {
+        enabled: false,
+        scratch_root: PathBuf::from("/eos/scratch/isolated"),
+        audit_jsonl_path: PathBuf::from("/eos/scratch/isolated/audit.jsonl"),
+        ttl_s: 1800.0,
+        total_cap: 5,
+        upperdir_bytes: 1_073_741_824,
+        memavail_fraction: 0.5,
+        setup_timeout_s: 30.0,
+        exit_grace_s: 0.25,
+        rfc1918_egress: ConfigRfc1918Egress::Allow,
+        fallback_dns: "1.1.1.1".to_owned(),
+        workspace_root: PathBuf::from("/testbed"),
+        sample_interval_s: 0.5,
     }
 }
 

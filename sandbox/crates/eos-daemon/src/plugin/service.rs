@@ -12,7 +12,7 @@ use crate::overlay_runner::overlay_run_dirs;
 
 use super::process::{PluginProcessSpec, PluginServiceOverlay};
 use super::{
-    ppc_router,
+    plugin_runtime_config,
     state::{DaemonPluginState, SharedPpcClient},
 };
 
@@ -55,7 +55,7 @@ pub(super) fn spawn_service_processes(
         let snapshot = acquire_service_snapshot(spec.key(), "start")?;
         let (process, client) = match spec.spawn_connected_with_overlay(
             snapshot.overlay.as_ref(),
-            Duration::from_millis(ppc_router::DEFAULT_PLUGIN_PPC_TIMEOUT_MS),
+            Duration::from_millis(plugin_runtime_config().service_probe_timeout_ms),
         ) {
             Ok(started) => started,
             Err(err) => {

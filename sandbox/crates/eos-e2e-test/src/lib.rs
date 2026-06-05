@@ -4,6 +4,7 @@
 //! container bring-up; every sandbox operation under test must go through
 //! `eos-protocol` over the live daemon wire.
 
+use std::path::Path;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -37,52 +38,55 @@ pub fn next_invocation_id() -> String {
     format!("eos-e2e-{}", unique_suffix())
 }
 
-/// Return a live pool when the `e2e` feature is enabled.
-///
-/// Without `--features e2e`, live tests call this and skip cleanly. With the
-/// feature enabled, missing Docker or missing `eosd` is a hard failure.
+/// Return a live pool backed by one test-local config override.
 ///
 /// # Errors
 /// Returns an error when live execution is requested but the environment cannot
-/// start Docker containers or locate the configured `eosd` binary.
+/// start Docker containers, locate the configured `eosd` binary, or load the
+/// hardcoded test override.
 #[cfg(feature = "e2e")]
-pub fn live_pool() -> Result<Option<Arc<NodePool>>> {
+pub fn live_pool_with_config(config_path: impl AsRef<Path>) -> Result<Option<Arc<NodePool>>> {
     use std::sync::OnceLock;
 
     static POOL: OnceLock<Result<Arc<NodePool>, String>> = OnceLock::new();
-    match POOL.get_or_init(load_live_pool) {
+    let config_path = config_path.as_ref();
+    match POOL.get_or_init(|| load_live_pool(config_path)) {
         Ok(pool) => Ok(Some(Arc::clone(pool))),
         Err(err) => anyhow::bail!("{err}"),
     }
 }
 
-/// Return no live pool unless the `e2e` feature is enabled.
-///
-/// # Errors
-/// This non-live path does not fail.
 #[cfg(not(feature = "e2e"))]
-pub fn live_pool() -> Result<Option<Arc<NodePool>>> {
+pub fn live_pool_with_config(_config_path: impl AsRef<Path>) -> Result<Option<Arc<NodePool>>> {
     Ok(None)
 }
 
 #[cfg(feature = "e2e")]
-fn load_live_pool() -> Result<Arc<NodePool>, String> {
-    try_load_live_pool()
+fn load_live_pool(config_path: &Path) -> Result<Arc<NodePool>, String> {
+    try_load_live_pool(config_path)
         .map(Arc::new)
         .map_err(|err| format!("{err:#}"))
 }
 
 #[cfg(feature = "e2e")]
-fn try_load_live_pool() -> Result<NodePool> {
-    let config = config::Config::load()?;
+fn try_load_live_pool(config_path: &Path) -> Result<NodePool> {
+    let (config, doc) = config::Config::load_test_override(config_path)?;
+    pool_from_config_and_doc(config, &doc)
+}
+
+#[cfg(feature = "e2e")]
+fn pool_from_config_and_doc(
+    config: config::Config,
+    doc: &eos_config::ConfigDocument,
+) -> Result<NodePool> {
     if !container::docker_available() {
         anyhow::bail!("docker is required for eos-e2e-test --features e2e");
     }
     if !config.eosd_path.is_file() {
         anyhow::bail!(
-            "missing eosd binary at {}; build/package it or set EOS_E2E_EOSD",
+            "missing configured eosd binary at {}; build/package it before running live E2E",
             config.eosd_path.display()
         );
     }
-    Ok(NodePool::new(config))
+    Ok(NodePool::new(config, doc.to_yaml_string()?))
 }

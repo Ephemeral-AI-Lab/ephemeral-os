@@ -1,18 +1,16 @@
-//! Topology/environment config: the committed `e2e.toml` plus `EOS_E2E_*` env
-//! overrides and `[profile.*]` selection.
+//! Topology/runtime config for the Rust E2E harness.
 //!
-//! Precedence (highest first): `EOS_E2E_*` env var > selected `[profile.<name>]`
-//! (via `EOS_E2E_PROFILE`) > the file's top-level tables > built-in defaults.
+//! Test modules load one hardcoded local `*.test.yml` override through
+//! `eos-config`; this module resolves the merged document into the concrete
+//! Docker harness settings.
 
-use std::collections::BTreeMap;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::time::Duration;
 
 use anyhow::{bail, Context, Result};
 use eos_config::ConfigDocument;
+use eos_isolated_workspace::config::IsolatedWorkspaceConfig;
 use serde::Deserialize;
-
-const DEFAULT_EOS_WORKSPACE_ROOT: &str = "/testbed";
 
 /// How nodes (containers) map to tests.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -28,13 +26,12 @@ pub enum NodeMode {
 }
 
 impl NodeMode {
-    fn parse(value: &str) -> Result<Self> {
+    const fn from_config(value: E2eNodeMode) -> Self {
         match value {
-            "shared" => Ok(Self::Shared),
-            "pool" => Ok(Self::Pool),
-            "per-file" => Ok(Self::PerFile),
-            "per-test" => Ok(Self::PerTest),
-            other => anyhow::bail!("unknown EOS_E2E_NODE_MODE {other:?}"),
+            E2eNodeMode::Shared => Self::Shared,
+            E2eNodeMode::Pool => Self::Pool,
+            E2eNodeMode::PerFile => Self::PerFile,
+            E2eNodeMode::PerTest => Self::PerTest,
         }
     }
 }
@@ -48,6 +45,12 @@ pub struct Config {
     pub platform: Option<String>,
     /// Absolute host path to the `eosd` binary uploaded into each container.
     pub eosd_path: PathBuf,
+    /// Container directory that receives the daemon binary and log/socket files.
+    pub remote_daemon_dir: PathBuf,
+    /// Container path to the uploaded daemon binary.
+    pub remote_eosd_path: PathBuf,
+    /// Container root under which the pool mints per-test LayerStack state.
+    pub root_dir: PathBuf,
     /// `--cap-add` capability names.
     pub cap_add: Vec<String>,
     /// `--security-opt` values.
@@ -72,10 +75,10 @@ pub struct Config {
     pub workspace_root: String,
     /// Skip container teardown for inspection.
     pub keep_container: bool,
+    /// A non-kept container self-removes after this long.
+    pub non_kept_container_ttl: Duration,
     /// `limit` passed to `api.audit.pull`.
     pub audit_pull_limit: u64,
-    /// `EOS_ISOLATED_WORKSPACE_UPPERDIR_BYTES` passed into the daemon container.
-    pub isolated_upperdir_bytes: u64,
 }
 
 /// Typed `eos_e2e_test` section from `sandbox/config/prd.yml`.
@@ -86,7 +89,6 @@ pub struct EosE2eTestConfig {
     pub pool: E2ePoolConfig,
     pub timeouts: E2eTimeoutConfig,
     pub audit: E2eAuditConfig,
-    pub isolated_workspace_overrides: Option<E2eIsolatedWorkspaceOverrides>,
 }
 
 /// Docker/container defaults for the E2E harness.
@@ -140,15 +142,6 @@ pub struct E2eTimeoutConfig {
 #[serde(deny_unknown_fields)]
 pub struct E2eAuditConfig {
     pub pull_limit: u64,
-}
-
-/// Harness-owned isolated-workspace runtime overrides for live Docker tests.
-#[derive(Debug, Clone, PartialEq, Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct E2eIsolatedWorkspaceOverrides {
-    pub enabled: Option<bool>,
-    pub upperdir_bytes: Option<u64>,
-    pub memavail_fraction: Option<f64>,
 }
 
 impl EosE2eTestConfig {
@@ -214,218 +207,66 @@ impl EosE2eTestConfig {
             "eos_e2e_test.timeouts.base_build_s",
         )?;
         require_u64_at_least(self.audit.pull_limit, 1, "eos_e2e_test.audit.pull_limit")?;
-        if let Some(overrides) = &self.isolated_workspace_overrides {
-            if let Some(upperdir_bytes) = overrides.upperdir_bytes {
-                require_u64_at_least(
-                    upperdir_bytes,
-                    1,
-                    "eos_e2e_test.isolated_workspace_overrides.upperdir_bytes",
-                )?;
-            }
-            if let Some(memavail_fraction) = overrides.memavail_fraction {
-                require_ratio(
-                    memavail_fraction,
-                    "eos_e2e_test.isolated_workspace_overrides.memavail_fraction",
-                )?;
-            }
-        }
         Ok(())
     }
 }
 
-#[derive(Debug, Default, Deserialize)]
-struct FileConfig {
-    docker: Option<DockerCfg>,
-    concurrency: Option<ConcurrencyCfg>,
-    timeouts: Option<TimeoutsCfg>,
-    run: Option<RunCfg>,
-    workspace: Option<WorkspaceCfg>,
-    isolated: Option<IsolatedCfg>,
-    profile: Option<BTreeMap<String, ProfileCfg>>,
-}
-
-#[derive(Debug, Default, Deserialize)]
-struct DockerCfg {
-    image: Option<String>,
-    platform: Option<String>,
-    eosd: Option<String>,
-    cap_add: Option<Vec<String>>,
-    security_opt: Option<Vec<String>>,
-    tmpfs: Option<TmpfsCfg>,
-    tcp_port: Option<u16>,
-}
-
-#[derive(Debug, Default, Deserialize)]
-struct ConcurrencyCfg {
-    sandboxes: Option<usize>,
-    mode: Option<String>,
-    recycle_after: Option<usize>,
-}
-
-#[derive(Debug, Default, Deserialize)]
-struct TimeoutsCfg {
-    ready: Option<u64>,
-    request: Option<u64>,
-    base_build: Option<u64>,
-}
-
-#[derive(Debug, Default, Deserialize)]
-struct RunCfg {
-    keep_container: Option<bool>,
-    audit_pull_limit: Option<u64>,
-}
-
-#[derive(Debug, Default, Deserialize)]
-struct WorkspaceCfg {
-    root: Option<String>,
-}
-
-#[derive(Debug, Default, Deserialize)]
-struct IsolatedCfg {
-    upperdir_bytes: Option<u64>,
-}
-
-#[derive(Debug, Default, Deserialize)]
-struct ProfileCfg {
-    sandboxes: Option<usize>,
-    mode: Option<String>,
-    recycle_after: Option<usize>,
-}
-
 impl Config {
-    /// Load and fully resolve the config, applying file, profile, and env layers.
+    /// Load and fully resolve one test-local `*.test.yml` override.
     ///
     /// # Errors
-    /// Returns an error if the config file is present but malformed, or if an
-    /// env override has an invalid value.
-    pub fn load() -> Result<Self> {
-        let file = load_file_config()?;
-        let docker = file.docker.unwrap_or_default();
-        let concurrency = file.concurrency.unwrap_or_default();
-        let timeouts = file.timeouts.unwrap_or_default();
-        let run = file.run.unwrap_or_default();
-        let workspace = file.workspace.unwrap_or_default();
-        let isolated = file.isolated.unwrap_or_default();
-        let profile = select_profile(file.profile.as_ref());
+    /// Returns an error if either config document cannot be read or validated.
+    pub fn load_test_override(path: impl AsRef<Path>) -> Result<(Self, ConfigDocument)> {
+        let doc = eos_config::load_test_override(path).context("load E2E test override")?;
+        let config = Self::from_document(&doc)?;
+        Ok((config, doc))
+    }
 
-        // `EOS_LIVE_E2E_IMAGE` is the shared live-e2e convention (also read by the
-        // Python provider harness); `EOS_E2E_IMAGE` is the crate-specific override.
-        let image = env_str("EOS_E2E_IMAGE")
-            .or_else(|| env_str("EOS_LIVE_E2E_IMAGE"))
-            .or(docker.image)
-            .unwrap_or_else(|| "sweevo-dask__dask-10042:latest".to_owned());
-        let platform = env_str("EOS_E2E_PLATFORM").or(docker.platform);
-        let eosd_rel = env_str("EOS_E2E_EOSD")
-            .or(docker.eosd)
-            .unwrap_or_else(|| "dist/eosd-linux-amd64".to_owned());
+    /// Resolve the harness configuration from an already-loaded document.
+    ///
+    /// # Errors
+    /// Returns an error if required sections are missing or invalid.
+    pub fn from_document(doc: &ConfigDocument) -> Result<Self> {
+        let e2e = EosE2eTestConfig::from_document(doc)?;
+        let isolated = doc
+            .section::<IsolatedWorkspaceConfig>("isolated_workspace")
+            .context("deserialize isolated_workspace config section")?;
+        isolated
+            .validate()
+            .context("validate isolated_workspace config")?;
+        Self::from_sections(e2e, isolated)
+    }
 
-        let sandboxes = env_parse("EOS_E2E_SANDBOXES")?
-            .or(profile.as_ref().and_then(|p| p.sandboxes))
-            .or(concurrency.sandboxes)
-            .unwrap_or(2)
-            .max(1);
-        let mode_str = env_str("EOS_E2E_NODE_MODE")
-            .or(profile.as_ref().and_then(|p| p.mode.clone()))
-            .or(concurrency.mode)
-            .unwrap_or_else(|| "pool".to_owned());
-        let recycle_after = profile
-            .as_ref()
-            .and_then(|p| p.recycle_after)
-            .or(concurrency.recycle_after)
-            .unwrap_or(50)
-            .max(1);
-
+    fn from_sections(e2e: EosE2eTestConfig, isolated: IsolatedWorkspaceConfig) -> Result<Self> {
         Ok(Self {
-            image,
-            platform,
-            eosd_path: resolve_eosd_path(&eosd_rel),
-            cap_add: docker
-                .cap_add
-                .unwrap_or_else(|| vec!["SYS_ADMIN".to_owned(), "NET_ADMIN".to_owned()]),
-            security_opt: docker.security_opt.unwrap_or_else(|| {
-                vec![
-                    "seccomp=unconfined".to_owned(),
-                    "apparmor=unconfined".to_owned(),
-                ]
-            }),
-            tmpfs: docker
-                .tmpfs
-                .map(TmpfsCfg::into_vec)
-                .unwrap_or_else(default_tmpfs),
-            tcp_port: docker.tcp_port.unwrap_or(37657),
-            sandboxes,
-            mode: NodeMode::parse(&mode_str)?,
-            recycle_after,
-            ready_timeout: Duration::from_secs(timeouts.ready.unwrap_or(60)),
-            request_timeout: Duration::from_secs(timeouts.request.unwrap_or(30)),
-            base_build_timeout: Duration::from_secs(timeouts.base_build.unwrap_or(180)),
-            workspace_root: env_str("EOS_E2E_WORKSPACE_ROOT")
-                .or_else(|| env_str("EOS_WORKSPACE_ROOT"))
-                .or(workspace.root)
-                .unwrap_or_else(|| DEFAULT_EOS_WORKSPACE_ROOT.to_owned()),
-            keep_container: env_bool("EOS_E2E_KEEP_CONTAINER")
-                .or(run.keep_container)
-                .unwrap_or(true),
-            audit_pull_limit: run.audit_pull_limit.unwrap_or(2000),
-            isolated_upperdir_bytes: env_parse_u64("EOS_E2E_ISOLATED_UPPERDIR_BYTES")?
-                .or(isolated.upperdir_bytes)
-                .unwrap_or(64 * 1024 * 1024),
+            image: e2e.docker.image,
+            platform: e2e.docker.platform,
+            eosd_path: resolve_eosd_path(&e2e.docker.eosd_path),
+            remote_daemon_dir: e2e.docker.remote_daemon_dir,
+            remote_eosd_path: e2e.docker.remote_eosd_path,
+            root_dir: e2e.docker.root_dir,
+            cap_add: e2e.docker.cap_add,
+            security_opt: e2e.docker.security_opt,
+            tmpfs: e2e.docker.tmpfs,
+            tcp_port: e2e.docker.tcp_port,
+            sandboxes: e2e.pool.sandboxes,
+            mode: NodeMode::from_config(e2e.pool.mode),
+            recycle_after: e2e.pool.recycle_after,
+            ready_timeout: Duration::from_secs(e2e.timeouts.ready_s),
+            request_timeout: Duration::from_secs(e2e.timeouts.request_s),
+            base_build_timeout: Duration::from_secs(e2e.timeouts.base_build_s),
+            workspace_root: isolated.workspace_root.to_string_lossy().into_owned(),
+            keep_container: e2e.pool.keep_container,
+            non_kept_container_ttl: Duration::from_secs(e2e.docker.non_kept_container_ttl_s),
+            audit_pull_limit: e2e.audit.pull_limit,
         })
     }
 }
 
-fn load_file_config() -> Result<FileConfig> {
-    let path = match std::env::var("EOS_E2E_CONFIG") {
-        Ok(custom) => PathBuf::from(custom),
-        Err(_) => PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("e2e.toml"),
-    };
-    match std::fs::read_to_string(&path) {
-        Ok(text) => {
-            toml::from_str(&text).with_context(|| format!("parse e2e config {}", path.display()))
-        }
-        // A missing file is fine; built-in defaults fully populate Config.
-        Err(err) if err.kind() == std::io::ErrorKind::NotFound => Ok(FileConfig::default()),
-        Err(err) => Err(err).with_context(|| format!("read e2e config {}", path.display())),
-    }
-}
-
-#[derive(Debug, Deserialize)]
-#[serde(untagged)]
-enum TmpfsCfg {
-    One(String),
-    Many(Vec<String>),
-}
-
-impl TmpfsCfg {
-    fn into_vec(self) -> Vec<String> {
-        match self {
-            Self::One(value) => vec![value],
-            Self::Many(values) => values,
-        }
-    }
-}
-
-fn default_tmpfs() -> Vec<String> {
-    vec![
-        "/eos/state:rw,exec,size=2g,mode=1777".to_owned(),
-        "/eos/scratch:rw,exec,size=2g,mode=1777".to_owned(),
-    ]
-}
-
-fn select_profile(profiles: Option<&BTreeMap<String, ProfileCfg>>) -> Option<ProfileCfg> {
-    let name = std::env::var("EOS_E2E_PROFILE").ok()?;
-    let table = profiles?;
-    table.get(&name).map(|p| ProfileCfg {
-        sandboxes: p.sandboxes,
-        mode: p.mode.clone(),
-        recycle_after: p.recycle_after,
-    })
-}
-
 /// Resolve the `eosd` path: absolute as-is, relative against the sandbox
 /// workspace root (`CARGO_MANIFEST_DIR/../..`).
-fn resolve_eosd_path(value: &str) -> PathBuf {
-    let candidate = PathBuf::from(value);
+fn resolve_eosd_path(value: &Path) -> PathBuf {
+    let candidate = value.to_path_buf();
     if candidate.is_absolute() {
         return candidate;
     }
@@ -435,34 +276,6 @@ fn resolve_eosd_path(value: &str) -> PathBuf {
         .map(PathBuf::from)
         .unwrap_or_else(|| PathBuf::from("."));
     workspace_root.join(candidate)
-}
-
-fn env_str(key: &str) -> Option<String> {
-    std::env::var(key).ok().filter(|value| !value.is_empty())
-}
-
-fn env_parse(key: &str) -> Result<Option<usize>> {
-    match env_str(key) {
-        Some(value) => value
-            .parse::<usize>()
-            .map(Some)
-            .with_context(|| format!("{key} must be a positive integer, got {value:?}")),
-        None => Ok(None),
-    }
-}
-
-fn env_parse_u64(key: &str) -> Result<Option<u64>> {
-    match env_str(key) {
-        Some(value) => value
-            .parse::<u64>()
-            .map(Some)
-            .with_context(|| format!("{key} must be a positive integer, got {value:?}")),
-        None => Ok(None),
-    }
-}
-
-fn env_bool(key: &str) -> Option<bool> {
-    env_str(key).map(|value| matches!(value.as_str(), "1" | "true" | "yes"))
 }
 
 fn require_non_empty(value: &str, field: &str) -> Result<()> {
@@ -514,13 +327,6 @@ fn require_usize_at_least(value: usize, minimum: usize, field: &str) -> Result<(
     Ok(())
 }
 
-fn require_ratio(value: f64, field: &str) -> Result<()> {
-    if !(value.is_finite() && value > 0.0 && value <= 1.0) {
-        bail!("{field}: must be greater than 0.0 and at most 1.0");
-    }
-    Ok(())
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -552,16 +358,6 @@ mod tests {
         let mut cfg = prd_config();
         cfg.timeouts.ready_s = 0;
         assert_invalid(cfg, "eos_e2e_test.timeouts.ready_s");
-
-        let mut cfg = prd_config();
-        cfg.isolated_workspace_overrides
-            .as_mut()
-            .expect("prd has isolated overrides")
-            .memavail_fraction = Some(2.0);
-        assert_invalid(
-            cfg,
-            "eos_e2e_test.isolated_workspace_overrides.memavail_fraction",
-        );
     }
 
     fn prd_config() -> EosE2eTestConfig {

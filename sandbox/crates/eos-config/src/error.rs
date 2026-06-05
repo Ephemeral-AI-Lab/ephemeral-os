@@ -28,6 +28,13 @@ pub enum ConfigError {
         source: serde_yaml::Error,
     },
 
+    /// A merged config document could not be serialized back to YAML.
+    #[error("failed to serialize YAML config document: {source}")]
+    Serialize {
+        #[source]
+        source: serde_yaml::Error,
+    },
+
     /// A test override path violated the sandbox config path policy.
     #[error("invalid test override path {path}: {reason}")]
     InvalidOverridePath { path: PathBuf, reason: String },

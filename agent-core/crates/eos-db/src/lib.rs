@@ -20,6 +20,3 @@ mod rows;
 pub use composition::Database;
 pub use error::DbError;
 pub use model_registry::{ModelRegistry, ResolvedModel};
-pub use repositories::{
-    SqlAgentRunStore, SqlAttemptStore, SqlIterationStore, SqlRequestTaskStore, SqlWorkflowStore,
-};

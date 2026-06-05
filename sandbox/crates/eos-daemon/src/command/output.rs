@@ -4,9 +4,7 @@ use std::collections::VecDeque;
 use std::sync::{Mutex, MutexGuard};
 
 #[cfg(target_os = "linux")]
-const RING_MAX_BYTES: usize = 1024 * 1024;
-#[cfg(target_os = "linux")]
-const SPOOL_MAX_BYTES: u64 = 32 * 1024 * 1024;
+use super::command_session_config;
 
 #[cfg(target_os = "linux")]
 pub(super) struct CommandSessionOutput {
@@ -55,7 +53,8 @@ impl CommandSessionOutput {
         let mut bytes = lock(&self.bytes);
         chunks.push_back(CommandSessionOutputChunk { start, end, text });
         *bytes += byte_len;
-        while *bytes > RING_MAX_BYTES {
+        let ring_max_bytes = command_session_config().output_ring_max_bytes;
+        while *bytes > ring_max_bytes {
             let Some(chunk) = chunks.pop_front() else {
                 break;
             };
@@ -128,11 +127,12 @@ impl CommandSessionOutput {
 
     pub(super) fn note_spooled(&self, bytes: u64) -> bool {
         let mut spool_bytes = lock(&self.spool_bytes);
-        if *spool_bytes >= SPOOL_MAX_BYTES {
+        let spool_max_bytes = command_session_config().output_spool_max_bytes;
+        if *spool_bytes >= spool_max_bytes {
             *lock(&self.spool_truncated) = true;
             return false;
         }
-        *spool_bytes = (*spool_bytes + bytes).min(SPOOL_MAX_BYTES);
+        *spool_bytes = (*spool_bytes + bytes).min(spool_max_bytes);
         true
     }
 

@@ -450,12 +450,8 @@ fn dynamic_plugin_op_is_blocked_in_isolated_workspace_before_route_lookup() -> T
         "test layer root must have a parent",
     )?
     .join("scratch");
-    let _enabled = TestEnvVar::set("EOS_ISOLATED_WORKSPACE_ENABLED", "true");
+    let _isolated_config = TestIsolatedWorkspaceConfig::enabled(&scratch, Path::new("/testbed"));
     let _harness = TestEnvVar::set("EOS_ISOLATED_WORKSPACE_TEST_HARNESS", "true");
-    let _scratch = TestEnvVar::set(
-        "EOS_ISOLATED_WORKSPACE_TEST_SCRATCH_ROOT",
-        &scratch.to_string_lossy(),
-    );
 
     let _ = table.dispatch(&Request {
         op: "api.isolated_workspace.test_reset".to_owned(),
@@ -730,11 +726,12 @@ fn digest_reload_replaces_dynamic_plugin_routes() -> TestResult {
 
 #[test]
 fn plugin_response_payload_rejects_over_8_mib_body() {
+    let max_response_bytes = plugin_runtime_config().max_response_bytes;
     let reply = PpcEnvelope {
         message_id: "plugin-large-reply".to_owned(),
         direction: PpcDirection::Reply,
         op: "reply".to_owned(),
-        body: "x".repeat(MAX_PLUGIN_RESPONSE_BYTES + 1),
+        body: "x".repeat(max_response_bytes + 1),
     };
 
     assert!(matches!(

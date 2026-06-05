@@ -24,7 +24,7 @@ fn emit_section<T: Serialize>(event_type: &str, section_key: &str, section: &T, 
     let Ok(section) = serde_json::to_value(section) else {
         return;
     };
-    crate::audit_buffer::safe_emit(build_event(event_type, section_key, section), lane);
+    crate::audit::buffer::safe_emit(build_event(event_type, section_key, section), lane);
 }
 
 pub(crate) fn emit_dispatch_audit(request: &Request, response: &Value, dispatch_s: f64) {
@@ -501,5 +501,5 @@ fn timing_f64(response: &Value, key: &str) -> Option<f64> {
 }
 
 #[cfg(test)]
-#[path = "../tests/audit_events/mod.rs"]
+#[path = "../../tests/audit_events/mod.rs"]
 mod tests;

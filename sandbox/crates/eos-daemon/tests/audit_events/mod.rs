@@ -175,7 +175,7 @@ fn dispatch_audit_emits_commit_completed() -> TestResult {
 }
 
 fn audit_after_seq() -> TestResult<i64> {
-    let snapshot = crate::audit_buffer::global_audit_buffer().snapshot();
+    let snapshot = crate::audit::buffer::global_audit_buffer().snapshot();
     Ok(snapshot["snapshot"]["daemon"]["next_seq"]
         .as_i64()
         .unwrap_or(0)
@@ -183,7 +183,7 @@ fn audit_after_seq() -> TestResult<i64> {
 }
 
 fn events_after(after_seq: i64) -> TestResult<Vec<Value>> {
-    let pulled = crate::audit_buffer::global_audit_buffer().pull(after_seq, 256);
+    let pulled = crate::audit::buffer::global_audit_buffer().pull(after_seq, 256);
     Ok(pulled["events"].as_array().ok_or("events array")?.clone())
 }
 

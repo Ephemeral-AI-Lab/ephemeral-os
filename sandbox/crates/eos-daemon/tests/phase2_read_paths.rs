@@ -139,15 +139,14 @@ fn isolated_workspace_ops_are_registered_and_disabled_by_default() -> TestResult
     let _guard = ISOLATED_ENV_LOCK
         .lock()
         .map_err(|_| "isolated env lock poisoned")?;
+    configure_isolated_workspace_for_test(false, None, None)?;
     std::env::set_var("EOS_ISOLATED_WORKSPACE_TEST_HARNESS", "true");
     let _ = OpTable::with_builtins().dispatch(&Request {
         op: "api.isolated_workspace.test_reset".to_owned(),
         invocation_id: "iws-reset".to_owned(),
         args: json!({}),
     });
-    std::env::remove_var("EOS_ISOLATED_WORKSPACE_ENABLED");
     std::env::remove_var("EOS_ISOLATED_WORKSPACE_TEST_HARNESS");
-    std::env::remove_var("EOS_ISOLATED_WORKSPACE_TEST_SCRATCH_ROOT");
     let table = OpTable::with_builtins();
 
     let enter = table.dispatch(&Request {
@@ -235,7 +234,7 @@ fn isolated_workspace_ops_validate_required_arguments() -> TestResult {
     let _guard = ISOLATED_ENV_LOCK
         .lock()
         .map_err(|_| "isolated env lock poisoned")?;
-    std::env::remove_var("EOS_ISOLATED_WORKSPACE_ENABLED");
+    configure_isolated_workspace_for_test(false, None, None)?;
     let response = OpTable::with_builtins().dispatch(&Request {
         op: "api.isolated_workspace.enter".to_owned(),
         invocation_id: "iws-enter-missing-agent".to_owned(),
@@ -566,16 +565,8 @@ impl IsolatedLifecycleEnv {
         let base = root.parent().ok_or("layer root parent")?;
         let scratch = base.join("isolated-scratch");
         let audit_path = base.join("isolated-audit.jsonl");
-        std::env::set_var("EOS_ISOLATED_WORKSPACE_ENABLED", "true");
+        configure_isolated_workspace_for_test(true, Some(&scratch), Some(&audit_path))?;
         std::env::set_var("EOS_ISOLATED_WORKSPACE_TEST_HARNESS", "true");
-        std::env::set_var(
-            "EOS_ISOLATED_WORKSPACE_TEST_SCRATCH_ROOT",
-            scratch.to_string_lossy().as_ref(),
-        );
-        std::env::set_var(
-            "EOS_ISOLATED_WORKSPACE_AUDIT_PATH",
-            audit_path.to_string_lossy().as_ref(),
-        );
         Ok(Self {
             root,
             scratch,
@@ -586,14 +577,40 @@ impl IsolatedLifecycleEnv {
 
 impl Drop for IsolatedLifecycleEnv {
     fn drop(&mut self) {
-        std::env::remove_var("EOS_ISOLATED_WORKSPACE_ENABLED");
         std::env::remove_var("EOS_ISOLATED_WORKSPACE_TEST_HARNESS");
-        std::env::remove_var("EOS_ISOLATED_WORKSPACE_TEST_SCRATCH_ROOT");
-        std::env::remove_var("EOS_ISOLATED_WORKSPACE_AUDIT_PATH");
         if let Some(base) = self.root.parent() {
             let _ = std::fs::remove_dir_all(base);
         }
     }
+}
+
+fn configure_isolated_workspace_for_test(
+    enabled: bool,
+    scratch_root: Option<&Path>,
+    audit_path: Option<&Path>,
+) -> TestResult {
+    let doc = eos_config::load_prd()?;
+    let daemon = doc.section::<eos_daemon::config::DaemonConfig>("daemon")?;
+    daemon.validate()?;
+    let mut isolated = doc
+        .section::<eos_isolated_workspace::config::IsolatedWorkspaceConfig>("isolated_workspace")?;
+    isolated.enabled = enabled;
+    if let Some(scratch_root) = scratch_root {
+        isolated.scratch_root = scratch_root.to_path_buf();
+    }
+    if let Some(audit_path) = audit_path {
+        isolated.audit_jsonl_path = audit_path.to_path_buf();
+    }
+    isolated.validate()?;
+    let server_config = ServerConfig {
+        socket_path: std::env::temp_dir().join("eos-daemon-test.sock"),
+        pid_path: std::env::temp_dir().join("eos-daemon-test.pid"),
+        tcp_host: None,
+        tcp_port: None,
+        auth_token: None,
+    };
+    let _server = DaemonServer::with_daemon_config(server_config, &daemon, &isolated);
+    Ok(())
 }
 
 fn assert_isolated_test_reset(table: &OpTable, invocation_id: &str) {

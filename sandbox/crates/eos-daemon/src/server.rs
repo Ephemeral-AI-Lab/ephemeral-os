@@ -32,12 +32,14 @@ use tokio::net::{TcpListener, UnixListener};
 use tokio::time::timeout;
 use tokio_util::sync::CancellationToken;
 
+use eos_isolated_workspace::config::IsolatedWorkspaceConfig;
 use eos_protocol::{
     audit::{build_event, Lane, ToolCallSection},
     decode, encode, Envelope, ErrorKind, Request,
 };
 
-use crate::audit_buffer::{safe_emit, AuditBuffer};
+use crate::audit::buffer::{safe_emit, AuditBuffer};
+use crate::config::{AuditConfig, DaemonConfig};
 use crate::dispatcher::{DispatchContext, OpTable};
 use crate::error::DaemonError;
 use crate::invocation_registry::InFlightRegistry;
@@ -75,7 +77,9 @@ pub struct DaemonServer {
     config: ServerConfig,
     op_table: OpTable,
     audit: AuditBuffer,
+    audit_config: AuditConfig,
     invocation_registry: Arc<InFlightRegistry>,
+    isolated_sweeper_interval_ms: u64,
     shutdown: CancellationToken,
 }
 
@@ -88,7 +92,37 @@ impl DaemonServer {
             config,
             op_table: OpTable::with_builtins(),
             audit: AuditBuffer::new(),
-            invocation_registry: Arc::new(InFlightRegistry::from_env()),
+            audit_config: default_audit_config(),
+            invocation_registry: Arc::new(InFlightRegistry::new(
+                crate::DEFAULT_TTL_S,
+                crate::DEFAULT_REAPER_INTERVAL_S,
+            )),
+            isolated_sweeper_interval_ms: 500,
+            shutdown: CancellationToken::new(),
+        }
+    }
+
+    /// Assemble a daemon using the typed `daemon` config section loaded from
+    /// `sandbox/config/prd.yml`.
+    #[must_use]
+    pub fn with_daemon_config(
+        config: ServerConfig,
+        daemon_config: &DaemonConfig,
+        isolated_config: &IsolatedWorkspaceConfig,
+    ) -> Self {
+        crate::command::configure_command_sessions(&daemon_config.command_sessions);
+        crate::isolated::configure_isolated_workspace(isolated_config);
+        crate::plugin::configure_plugin_runtime(&daemon_config.plugin);
+        Self {
+            config,
+            op_table: OpTable::with_builtins(),
+            audit: AuditBuffer::new(),
+            audit_config: daemon_config.audit.clone(),
+            invocation_registry: Arc::new(InFlightRegistry::new(
+                daemon_config.inflight.ttl_s,
+                daemon_config.inflight.reaper_interval_s,
+            )),
+            isolated_sweeper_interval_ms: daemon_config.isolated_sweeper.ttl_sweep_interval_ms,
             shutdown: CancellationToken::new(),
         }
     }
@@ -127,11 +161,12 @@ impl DaemonServer {
         };
         let _isolated_ttl_task = {
             let shutdown = server.shutdown.clone();
+            let sweep_interval_ms = server.isolated_sweeper_interval_ms;
             tokio::spawn(async move {
                 loop {
                     tokio::select! {
                         () = shutdown.cancelled() => break,
-                        () = tokio::time::sleep(Duration::from_millis(500)) => {
+                        () = tokio::time::sleep(Duration::from_millis(sweep_interval_ms)) => {
                             let _ = tokio::task::spawn_blocking(crate::isolated::ttl_sweep).await;
                         }
                     }
@@ -328,16 +363,14 @@ impl DaemonServer {
         let registry = Arc::clone(&self.invocation_registry);
         let task_invocation_id = invocation_id.clone();
         let task_registry = Arc::clone(&registry);
+        let audit_config = self.audit_config.clone();
         let (start_tx, start_rx) = std_mpsc::channel::<()>();
         let task = tokio::task::spawn_blocking(move || {
             let _ = start_rx.recv();
             let _active_call = task_registry.enter_call(&task_invocation_id);
             table.dispatch_with_context(
                 &request,
-                DispatchContext::with_invocation_registry_and_read_timing(
-                    &task_registry,
-                    read_request_s,
-                ),
+                DispatchContext::with_runtime_config(&task_registry, &audit_config, read_request_s),
             )
         });
         registry.register(
@@ -396,6 +429,16 @@ impl DaemonServer {
         let mut encoded = serde_json::to_vec(&value).map_err(eos_protocol::ProtocolError::from)?;
         encoded.push(b'\n');
         Ok(encoded)
+    }
+}
+
+fn default_audit_config() -> AuditConfig {
+    AuditConfig {
+        allow_floor_reset: false,
+        pull_limit_default: 1000,
+        ring_max_events: 50_000,
+        ring_max_bytes: 8_388_608,
+        pressure_threshold: 0.8,
     }
 }
 

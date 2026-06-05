@@ -19,6 +19,8 @@ pub const API_ENSURE_WORKSPACE_BASE: &str = "api.ensure_workspace_base";
 pub const API_BUILD_WORKSPACE_BASE: &str = "api.build_workspace_base";
 /// Materialize LayerStack state into the bound workspace.
 pub const API_COMMIT_TO_WORKSPACE: &str = "api.commit_to_workspace";
+/// Commit a LayerStack snapshot into the bound workspace's durable Git repo.
+pub const API_COMMIT_TO_GIT: &str = "api.commit_to_git";
 /// Inspect the workspace binding for a layer stack root.
 pub const API_WORKSPACE_BINDING: &str = "api.workspace_binding";
 /// Pull audit events after a cursor.
@@ -68,6 +70,7 @@ pub const BUILTIN_DAEMON_OPS: &[&str] = &[
     API_ENSURE_WORKSPACE_BASE,
     API_BUILD_WORKSPACE_BASE,
     API_COMMIT_TO_WORKSPACE,
+    API_COMMIT_TO_GIT,
     API_WORKSPACE_BINDING,
     API_AUDIT_PULL,
     API_AUDIT_SNAPSHOT,

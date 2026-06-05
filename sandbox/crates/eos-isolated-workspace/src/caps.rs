@@ -1,8 +1,4 @@
-//! Resource caps and lifecycle config, sourced from the environment.
-//!
-//! Matches the `_PipelineConfig.from_env()` defaults and environment keys.
-
-use std::env;
+//! Resource caps and lifecycle config.
 
 /// Persisted-handles schema tag.
 pub const PERSISTED_HANDLES_SCHEMA_VERSION: u32 = 1;
@@ -18,9 +14,6 @@ pub const HANDLE_PREFIX: &str = "eos-iws-";
 pub const CGROUP_ROOT: &str = "/sys/fs/cgroup";
 
 const DEFAULT_EOS_WORKSPACE_ROOT: &str = "/testbed";
-
-/// Environment key for the visible EOS workspace mount root.
-pub const EOS_WORKSPACE_ROOT_ENV: &str = "EOS_WORKSPACE_ROOT";
 
 /// RFC1918 egress policy.
 ///
@@ -79,75 +72,4 @@ impl Default for ResourceCaps {
             sample_interval_s: 0.5,
         }
     }
-}
-
-impl ResourceCaps {
-    /// Build the caps from the process environment.
-    ///
-    /// This mirrors Python's defaults, environment keys, and clamped fields.
-    /// Malformed numeric values fall back to defaults so daemon startup does
-    /// not fail before it can return a structured isolated-workspace error.
-    #[must_use]
-    pub fn from_env() -> Self {
-        let mut caps = Self::default();
-        caps.enabled = env_bool("EOS_ISOLATED_WORKSPACE_ENABLED", false);
-        caps.ttl_s = env_f64("EOS_ISOLATED_WORKSPACE_TTL_S", caps.ttl_s);
-        caps.total_cap = env_u32("EOS_ISOLATED_WORKSPACE_TOTAL_CAP", caps.total_cap);
-        caps.upperdir_bytes = env_u64("EOS_ISOLATED_WORKSPACE_UPPERDIR_BYTES", caps.upperdir_bytes);
-        caps.memavail_fraction = env_f64(
-            "EOS_ISOLATED_WORKSPACE_MEMAVAIL_FRACTION",
-            caps.memavail_fraction,
-        );
-        caps.setup_timeout_s = env_f64(
-            "EOS_ISOLATED_WORKSPACE_SETUP_TIMEOUT_S",
-            caps.setup_timeout_s,
-        );
-        caps.exit_grace_s =
-            env_f64("EOS_ISOLATED_WORKSPACE_EXIT_GRACE_S", caps.exit_grace_s).max(0.0);
-        caps.rfc1918_egress =
-            if env_string("EOS_ISOLATED_WORKSPACE_RFC1918_EGRESS").eq_ignore_ascii_case("deny") {
-                Rfc1918Egress::Deny
-            } else {
-                Rfc1918Egress::Allow
-            };
-        let fallback_dns = env_string("EOS_ISOLATED_WORKSPACE_FALLBACK_DNS");
-        if !fallback_dns.is_empty() {
-            caps.fallback_dns = fallback_dns;
-        }
-        let eos_workspace_root = env_string(EOS_WORKSPACE_ROOT_ENV);
-        if !eos_workspace_root.is_empty() {
-            caps.eos_workspace_root = eos_workspace_root;
-        }
-        caps.sample_interval_s = env_f64(
-            "EOS_ISOLATED_WORKSPACE_SAMPLE_INTERVAL_S",
-            caps.sample_interval_s,
-        )
-        .max(0.01);
-        caps
-    }
-}
-
-fn env_string(key: &str) -> String {
-    env::var(key).unwrap_or_default().trim().to_owned()
-}
-
-fn env_bool(key: &str, default: bool) -> bool {
-    let raw = env_string(key);
-    if raw.is_empty() {
-        default
-    } else {
-        raw.eq_ignore_ascii_case("true")
-    }
-}
-
-fn env_f64(key: &str, default: f64) -> f64 {
-    env_string(key).parse().unwrap_or(default)
-}
-
-fn env_u32(key: &str, default: u32) -> u32 {
-    env_string(key).parse().unwrap_or(default)
-}
-
-fn env_u64(key: &str, default: u64) -> u64 {
-    env_string(key).parse().unwrap_or(default)
 }

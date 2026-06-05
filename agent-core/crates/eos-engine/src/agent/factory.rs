@@ -8,7 +8,7 @@ use eos_agent_def::AgentDefinition;
 use eos_audit::AuditSink;
 use eos_llm_client::LlmClient;
 use eos_tools::{ExecutionMetadata, ToolKey, ToolName, ToolRegistry};
-use eos_types::{AgentRunId, JsonObject, TaskId};
+use eos_types::{AgentRunId, TaskId};
 
 use crate::notifications::{make_default_notification_rules, NotificationService};
 use crate::prompt::build_termination_condition_prompt;
@@ -164,7 +164,6 @@ pub fn build_query_context(input: BuildQueryContextInput) -> Result<QueryContext
         prompt_report: None,
         notification_rules: make_default_notification_rules(),
         notification_fired: BTreeSet::new(),
-        notification_state: JsonObject::new(),
         notifier,
         audit,
         run_handles,
@@ -180,6 +179,7 @@ mod tests {
     use eos_agent_def::{AgentName, AgentRole, AgentType};
     use eos_llm_client::ToolSpec;
     use eos_tools::{OutputShape, RegisteredTool, ToolExecutor, ToolIntent, ToolResult};
+    use eos_types::JsonObject;
     use serde_json::json;
 
     use super::*;

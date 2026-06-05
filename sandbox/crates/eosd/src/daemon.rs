@@ -8,8 +8,6 @@ use std::process::{Command, Stdio};
 
 use anyhow::{anyhow, Context, Result};
 
-const MAX_DAEMON_WORKER_THREADS: usize = 4;
-
 /// Start, spawn, or call the async RPC server.
 ///
 /// Modes:
@@ -19,7 +17,9 @@ const MAX_DAEMON_WORKER_THREADS: usize = 4;
 /// - `eosd daemon --client SOCKET JSON` is the Rust replacement for
 ///   `thin_client.py`, preserving exit codes 97/98.
 pub(crate) fn run(args: std::env::Args) -> Result<()> {
-    let config = DaemonCliConfig::parse(args)?;
+    let runtime_config = load_runtime_config()?;
+    let daemon_config = &runtime_config.daemon;
+    let config = DaemonCliConfig::parse(args, &daemon_config.server)?;
     if let Some((socket_path, payload)) = config.client {
         return run_daemon_client(&socket_path, &payload);
     }
@@ -34,21 +34,50 @@ pub(crate) fn run(args: std::env::Args) -> Result<()> {
         auth_token: config.auth_token,
     };
     let runtime = tokio::runtime::Builder::new_multi_thread()
-        .worker_threads(daemon_worker_threads())
+        .worker_threads(daemon_worker_threads(
+            daemon_config.server.max_worker_threads,
+        ))
         .enable_all()
         .build()
         .context("failed to build daemon tokio runtime")?;
     runtime.block_on(async move {
-        let server = eos_daemon::DaemonServer::new(server_config);
+        let server = eos_daemon::DaemonServer::with_daemon_config(
+            server_config,
+            &runtime_config.daemon,
+            &runtime_config.isolated_workspace,
+        );
         server.serve().await
     })?;
     Ok(())
 }
 
-fn daemon_worker_threads() -> usize {
+struct DaemonRuntimeConfig {
+    daemon: eos_daemon::config::DaemonConfig,
+    isolated_workspace: eos_isolated_workspace::config::IsolatedWorkspaceConfig,
+}
+
+fn load_runtime_config() -> Result<DaemonRuntimeConfig> {
+    let doc = eos_config::load_prd().context("load sandbox/config/prd.yml")?;
+    let daemon = doc
+        .section::<eos_daemon::config::DaemonConfig>("daemon")
+        .context("deserialize daemon config section")?;
+    daemon.validate().context("validate daemon config")?;
+    let isolated_workspace = doc
+        .section::<eos_isolated_workspace::config::IsolatedWorkspaceConfig>("isolated_workspace")
+        .context("deserialize isolated_workspace config section")?;
+    isolated_workspace
+        .validate()
+        .context("validate isolated_workspace config")?;
+    Ok(DaemonRuntimeConfig {
+        daemon,
+        isolated_workspace,
+    })
+}
+
+fn daemon_worker_threads(max_worker_threads: usize) -> usize {
     std::thread::available_parallelism()
-        .map_or(MAX_DAEMON_WORKER_THREADS, |threads| {
-            threads.get().min(MAX_DAEMON_WORKER_THREADS)
+        .map_or(max_worker_threads, |threads| {
+            threads.get().min(max_worker_threads)
         })
         .max(1)
 }
@@ -65,9 +94,12 @@ struct DaemonCliConfig {
 }
 
 impl DaemonCliConfig {
-    fn parse(args: std::env::Args) -> Result<Self> {
-        let mut socket_path = PathBuf::from("/eos/runtime/daemon/runtime.sock");
-        let mut pid_path = PathBuf::from("/eos/runtime/daemon/runtime.pid");
+    fn parse(
+        args: std::env::Args,
+        server_defaults: &eos_daemon::config::DaemonServerConfig,
+    ) -> Result<Self> {
+        let mut socket_path = server_defaults.socket_path.clone();
+        let mut pid_path = server_defaults.pid_path.clone();
         let mut log_path = None;
         let mut tcp_host = None;
         let mut tcp_port = None;

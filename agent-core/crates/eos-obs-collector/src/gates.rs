@@ -234,7 +234,7 @@ pub fn evaluate_runner_gates(input: RunnerGateInput<'_>) -> RunnerGateReport {
 
     if input.settings.strict_audit_loss {
         if let Some(loss) = input.sandbox_loss {
-            if counted_loss(loss) {
+            if loss.has_counted_loss() {
                 failures.push(failure(
                     RunnerGateFailureKind::AuditLoss,
                     format!(
@@ -412,11 +412,6 @@ fn unique_tool_use_ids(ids: &[ExpectedToolUse]) -> BTreeSet<&str> {
 
 fn contains_tool_use_id(ids: &BTreeSet<&str>, needle: &str) -> bool {
     ids.iter().any(|id| *id == needle)
-}
-
-fn counted_loss(loss: &SandboxAuditLoss) -> bool {
-    loss.lost_before_seq.is_some_and(|seq| seq > 0)
-        || loss.dropped_event_count.is_some_and(|count| count > 0)
 }
 
 fn valid_tool_call(row: &ObsEnvelope) -> bool {

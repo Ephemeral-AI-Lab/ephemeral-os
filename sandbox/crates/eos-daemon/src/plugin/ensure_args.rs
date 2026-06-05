@@ -9,7 +9,8 @@ use serde_json::Value;
 
 use super::{
     package::{self, PackageRoots},
-    process::{self, PluginProcessSpec},
+    plugin_runtime_config,
+    process::PluginProcessSpec,
     state::{LoadedPluginRuntime, PluginOperationRoute, MAX_PLUGIN_CALLER_FIELD_CHARS},
 };
 use crate::error::DaemonError;
@@ -346,7 +347,10 @@ fn ppc_socket_root(args: &Value) -> String {
         }
     }
     let _ = args;
-    process::PLUGIN_PPC_ROOT.to_owned()
+    plugin_runtime_config()
+        .ppc_root
+        .to_string_lossy()
+        .into_owned()
 }
 
 fn require_string(args: &Value, key: &str) -> Result<String, DaemonError> {

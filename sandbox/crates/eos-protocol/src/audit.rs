@@ -1,6 +1,6 @@
 //! Audit event schema (channel A: the daemon ring-buffer's typed `*Section`
-//! dataclasses). This is the movable, pure schema; the impure
-//! `safe_emit`/`safe_record_phase` bridges stay daemon-side.
+//! dataclasses). This is the movable, pure schema; the impure audit emission
+//! bridge stays daemon-side.
 //!
 //! Invariant: serialization reproduces Python `_drop_none` — a field whose value
 //! is `None` is OMITTED; a field with a non-None default IS emitted. Modeled
