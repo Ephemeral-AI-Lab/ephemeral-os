@@ -1,6 +1,6 @@
 # SPEC: sandbox/crates Generalization & Polymorphism Review
 
-Status: DRAFT
+Status: IMPLEMENTED
 Date: 2026-06-05
 Owner workspace: `sandbox/`
 Scope: `sandbox/crates/eos-workspace-api`, `eos-isolated-workspace`,
@@ -351,20 +351,36 @@ Status: ☐ not started · ◐ in progress · ☑ done · ✗ dropped
 | ID | Phase | Item | Status | Owner | Notes |
 |---|---|---|---|---|---|
 | P0 | 0 | Spec export | ☑ | — | this file |
-| LS-2 | 1 | manifest IO converge (BUG: fsync + validation) | ☐ | | adds 3 tests |
-| LS-1 | 1 | create `fsutil.rs`, dedup pure helpers | ☐ | | |
-| LS-3 | 1 | `resolve_layer_path` (pure) | ☐ | | `layer_dir` stays |
-| LS-4 | 1 | `check_layer_path` predicate | ☐ | | |
-| RUN-1a | 2 | remove `MountedOverlay` + `Box<dyn>` | ☐ | | with RUN-1b |
-| RUN-1b | 2 | remove `KernelMountPort` + `MountInputs` + adapter; delete `mount.rs` | ☐ | | |
-| WS-1 | 3 | hoist read/write/edit to workspace-api | ☐ | | delete 6 files |
-| WS-2 | 3 | hoist response builders; thin `mod.rs` | ☐ | | delete 2 files; preserve mutation_source strings |
-| OCC-1 | 4 | 5 inherent methods; delete 8 daemon copies | ☐ | | |
-| DM-1 | 5 | `timing_map` shared | ☐ | | |
-| DM-2 | 5 | `resolve_layer_path` shared tail | ☐ | | cfg import move |
-| DM-3 | 5 | `find_service_status` (P2) | ☐ | | |
-| DM-4 | 5 | `round_trip_connected_route` (P3) | ☐ | | |
-| SWEEP | 6 | workspace test + clippy + E2E | ☐ | | gates AC-G1..G5 |
+| LS-2 | 1 | manifest IO converge (BUG: fsync + validation) | ☑ | Codex | 3 regression tests added |
+| LS-1 | 1 | create `fsutil.rs`, dedup pure helpers | ☑ | Codex | |
+| LS-3 | 1 | `resolve_layer_path` (pure) | ☑ | Codex | `layer_dir` stays |
+| LS-4 | 1 | `check_layer_path` predicate | ☑ | Codex | |
+| RUN-1a | 2 | remove `MountedOverlay` + `Box<dyn>` | ☑ | Codex | with RUN-1b |
+| RUN-1b | 2 | remove `KernelMountPort` + `MountInputs` + adapter; delete `mount.rs` | ☑ | Codex | |
+| WS-1 | 3 | hoist read/write/edit to workspace-api | ☑ | Codex | deleted 6 files |
+| WS-2 | 3 | hoist response builders; thin `mod.rs` | ☑ | Codex | deleted 2 files; preserved mutation_source strings |
+| OCC-1 | 4 | 5 inherent methods; delete 8 daemon copies | ☑ | Codex | |
+| DM-1 | 5 | `timing_map` shared | ☑ | Codex | |
+| DM-2 | 5 | `resolve_layer_path` shared tail | ☑ | Codex | cfg import move |
+| DM-3 | 5 | `find_service_status` (P2) | ☑ | Codex | |
+| DM-4 | 5 | `round_trip_connected_route` (P3) | ☑ | Codex | |
+| SWEEP | 6 | workspace test + clippy + E2E | ☑ | Codex | `cargo test --workspace --all-targets`; `cargo clippy --workspace --all-targets -- -D warnings`; Docker live E2E passed |
+
+### 9.1 Implementation Closeout
+
+The 13 review items are implemented in the live checkout. The contract sweep
+also found and fixed an E2E harness issue: kept Docker containers were adopted
+only by image label, so a layerstack run could reuse a daemon started with a
+different merged YAML config and miss `auto_squash_max_depth: 8`. The harness now
+labels containers with a SHA-256 digest of the merged config and adopts only
+matching containers.
+
+Final verification on 2026-06-05:
+
+- `cargo fmt --all --check`
+- `cargo test --workspace --all-targets`
+- `cargo clippy --workspace --all-targets -- -D warnings`
+- `EOS_LIVE_E2E_IMAGE=sweevo-dask__dask-10042:latest cargo test -p eos-e2e-test --features e2e -- --nocapture`
 
 ---
 

@@ -22,7 +22,7 @@ use eos_isolated_workspace::command_session::types::{
 };
 use eos_isolated_workspace::IsolatedWorkspaceOps;
 use eos_layerstack::{require_workspace_binding, LayerStack, WorkspaceBinding};
-use eos_workspace_api::{CommandWorkspaceOps, PrepareCommandRequest, WorkspaceApiError};
+use eos_workspace_api::{CommandWorkspacePolicy, PrepareCommandRequest, WorkspaceApiError};
 
 use super::finalize::strip_session_id;
 use super::output;

@@ -5,15 +5,15 @@ mod prepare;
 pub mod types;
 
 use eos_workspace_api::{
-    CommandWorkspaceOps, FinalizeCommandRequest, PrepareCommandRequest, PreparedCommandWorkspace,
-    WorkspaceApiError, WorkspaceCommandOutcome,
+    CommandWorkspacePolicy, FinalizeCommandRequest, PrepareCommandRequest,
+    PreparedCommandWorkspace, WorkspaceApiError, WorkspaceCommandOutcome,
 };
 
 use crate::ops::EphemeralWorkspaceOps;
 
-impl<P> CommandWorkspaceOps for EphemeralWorkspaceOps<P>
+impl<P> CommandWorkspacePolicy for EphemeralWorkspaceOps<P>
 where
-    P: types::EphemeralCommandSessionPort,
+    P: types::EphemeralCommandSessionPort + Send + Sync,
 {
     fn prepare_command_workspace(
         &self,

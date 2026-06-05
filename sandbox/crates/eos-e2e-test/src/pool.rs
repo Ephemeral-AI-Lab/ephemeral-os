@@ -46,7 +46,7 @@ impl NodePool {
         }
         let cap = cap_for(&config);
         let available: Vec<Node> = if config.keep_container && config.mode != NodeMode::PerTest {
-            DaemonContainer::adopt_healthy(&config)
+            DaemonContainer::adopt_healthy(&config, &config_yaml)
                 .into_iter()
                 .take(cap)
                 .map(|container| Node {

@@ -185,6 +185,28 @@ cross-module map now lives under `docs/architecture`.
   over stringly or ad hoc compatibility shims. Keep workspace dependency DAGs
   intentional; do not add cross-workspace back-edges or broad dependencies just
   to reach a helper.
+- Treat Rust "OOP" as encapsulation plus composition plus trait-defined
+  behavior, not class inheritance. Do not add abstract-base-style modules, deep
+  trait hierarchies, `I*` interface names, or empty marker traits unless they
+  encode a real invariant.
+- Every Rust implementation or proposal that introduces a behavior boundary must
+  name the dispatch strategy: concrete type or enum for a closed set, generics
+  or `impl Trait` for compile-time polymorphism, and `dyn Trait` only for
+  runtime-selected providers, plugins, test doubles, or other heterogeneous
+  open sets. Traits intended for `dyn` use must stay object-safe.
+- Keep generic bounds local and minimal. Prefer `where` clauses for readable
+  multi-bound APIs, associated types when the trait owns output/resource types,
+  and method-level bounds instead of constraining a whole struct or impl block
+  for one operation.
+- Design public APIs as narrow crate-owned contracts: typed DTOs, newtypes,
+  state enums, ports, and explicit error types. Use `pub(crate)` internally,
+  `pub use` for a clean public surface, sealed traits when callers should use
+  but not implement a trait, and `#[non_exhaustive]` when versioning requires
+  future fields or variants.
+- Put dependency injection at real resource, provider, plugin, or cross-crate
+  boundaries. Prefer concrete types inside a crate; introduce trait ports,
+  generics, or trait objects only when substitution is load-bearing for tests,
+  alternate backends, or runtime selection.
 - Avoid defensive branches for impossible states unless the surrounding codebase
   already requires that style.
 - Match the existing code's style and ownership boundaries even when you would

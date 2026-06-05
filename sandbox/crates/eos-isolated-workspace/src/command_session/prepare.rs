@@ -45,6 +45,7 @@ where
     let final_path = session_dir.join("final.json");
     let output_path = session_dir.join("runner-result.json");
     let request_path = session_dir.join("runner-request.json");
+    let transcript_path = session_dir.join("transcript.log");
     let run_request = json!({
         "mode": mode,
         "tool_call": {
@@ -73,6 +74,8 @@ where
         request_path,
         output_path,
         final_path,
+        session_dir: session_dir.clone(),
+        transcript_path,
         finalize_context: json!({
             "session_dir": session_dir,
             "workspace_handle_id": context.workspace_handle_id,
@@ -102,7 +105,7 @@ fn namespace_fd(map: &HashMap<String, i32>, name: &str) -> Value {
 mod tests {
     use std::path::PathBuf;
 
-    use eos_workspace_api::CommandWorkspaceOps;
+    use eos_workspace_api::CommandWorkspacePolicy;
 
     use super::*;
     use crate::command_session::types::IsolatedCommandPrepareContext;
@@ -172,6 +175,17 @@ mod tests {
                 .join("command-sessions")
                 .join("cmd-1")
                 .join("runner-request.json")
+        );
+        assert_eq!(
+            prepared.session_dir,
+            scratch_dir.join("command-sessions").join("cmd-1")
+        );
+        assert_eq!(
+            prepared.transcript_path,
+            scratch_dir
+                .join("command-sessions")
+                .join("cmd-1")
+                .join("transcript.log")
         );
 
         let _ = std::fs::remove_dir_all(scratch_dir);

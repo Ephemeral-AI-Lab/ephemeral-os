@@ -255,7 +255,7 @@ mod tests {
     use std::collections::BTreeMap;
     use std::path::PathBuf;
 
-    use eos_workspace_api::{CommandWorkspaceOps, WorkspaceMode};
+    use eos_workspace_api::{CommandWorkspacePolicy, WorkspaceMode};
     use serde_json::json;
 
     use super::*;

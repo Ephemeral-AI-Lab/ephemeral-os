@@ -25,6 +25,8 @@ pub struct PreparedCommandWorkspace {
     pub request_path: PathBuf,
     pub output_path: PathBuf,
     pub final_path: PathBuf,
+    pub session_dir: PathBuf,
+    pub transcript_path: PathBuf,
     #[serde(default)]
     pub finalize_context: Value,
 }
@@ -82,7 +84,7 @@ pub struct WorkspaceCommandOutcome {
 
 /// Mode-specific command workspace policy. Daemon-owned PTY/process/session
 /// registry behavior stays outside this trait.
-pub trait CommandWorkspaceOps {
+pub trait CommandWorkspacePolicy: Send + Sync {
     fn prepare_command_workspace(
         &self,
         request: PrepareCommandRequest,

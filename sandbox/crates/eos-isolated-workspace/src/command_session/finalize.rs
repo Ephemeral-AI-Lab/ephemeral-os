@@ -156,7 +156,7 @@ fn u64_to_f64_saturating(value: u64) -> f64 {
 mod tests {
     use std::collections::BTreeMap;
 
-    use eos_workspace_api::{CommandWorkspaceOps, WorkspaceMode};
+    use eos_workspace_api::{CommandWorkspacePolicy, WorkspaceMode};
 
     use super::*;
     use crate::command_session::types::IsolatedCommandFinalizeContext;

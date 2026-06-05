@@ -68,6 +68,8 @@ where
         request_path,
         output_path: dirs.output_path.clone(),
         final_path: context.final_path.clone(),
+        session_dir: context.session_dir.clone(),
+        transcript_path: context.session_dir.join("transcript.log"),
         finalize_context: json!({
             "root": context.layer_stack_root,
             "session_dir": context.session_dir,
@@ -85,7 +87,7 @@ fn prepare_error(error: EphemeralWorkspaceError) -> WorkspaceApiError {
 mod tests {
     use std::path::PathBuf;
 
-    use eos_workspace_api::CommandWorkspaceOps;
+    use eos_workspace_api::CommandWorkspacePolicy;
 
     use super::*;
     use crate::command_session::types::EphemeralCommandPrepareContext;
@@ -171,6 +173,11 @@ mod tests {
         assert_eq!(
             prepared.final_path,
             PathBuf::from("/sessions/cmd-1/final.json")
+        );
+        assert_eq!(prepared.session_dir, PathBuf::from("/sessions/cmd-1"));
+        assert_eq!(
+            prepared.transcript_path,
+            PathBuf::from("/sessions/cmd-1/transcript.log")
         );
         assert_eq!(prepared.finalize_context["root"], "/layers");
         assert_eq!(prepared.finalize_context["session_dir"], "/sessions/cmd-1");

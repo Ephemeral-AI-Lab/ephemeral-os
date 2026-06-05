@@ -30,7 +30,7 @@ pub struct EphemeralCommandFinalizeContext {
 /// Daemon-supplied port for ephemeral command-session prepare/finalize policy.
 ///
 /// The port keeps PTY/process/session registry ownership in `eos-daemon` while
-/// allowing this crate to compile against the shared `CommandWorkspaceOps`
+/// allowing this crate to compile against the shared `CommandWorkspacePolicy`
 /// contract.
 pub trait EphemeralCommandSessionPort {
     fn prepare_context(&self) -> Result<EphemeralCommandPrepareContext, WorkspaceApiError> {

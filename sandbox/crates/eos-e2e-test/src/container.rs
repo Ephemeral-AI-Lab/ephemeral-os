@@ -20,6 +20,7 @@ use anyhow::{bail, Context, Result};
 use eos_config::ConfigPath;
 use eos_protocol::ops;
 use serde_json::json;
+use sha2::{Digest, Sha256};
 
 use crate::client::{is_success, ProtocolClient};
 use crate::config::{Config, NodeMode};
@@ -27,6 +28,7 @@ use crate::unique_suffix;
 
 const POOL_LABEL: &str = "eos.e2e.pool";
 const AUTH_LABEL: &str = "eos.e2e.auth";
+const CONFIG_DIGEST_LABEL: &str = "eos.e2e.config_sha256";
 
 /// A live daemon container.
 #[derive(Debug)]
@@ -46,6 +48,7 @@ impl DaemonContainer {
     pub fn start(config: &Config, config_yaml: &str) -> Result<Self> {
         let name = format!("eos-e2e-{}", unique_suffix());
         let token = format!("tok-{}", unique_suffix());
+        let config_digest = config_digest(config_yaml);
         let keep = config.keep_container && config.mode != NodeMode::PerTest;
 
         let mut run = vec![
@@ -57,6 +60,8 @@ impl DaemonContainer {
             format!("{POOL_LABEL}={}", config.image),
             "--label".to_owned(),
             format!("{AUTH_LABEL}={token}"),
+            "--label".to_owned(),
+            format!("{CONFIG_DIGEST_LABEL}={config_digest}"),
         ];
         if !keep {
             run.push("--rm".to_owned());
@@ -136,14 +141,18 @@ impl DaemonContainer {
     /// Adopt already-running warm e2e containers for this image.
     ///
     /// Containers are accepted only when their auth label is present, their
-    /// published daemon port resolves, and the daemon answers heartbeat.
-    pub fn adopt_healthy(config: &Config) -> Vec<Self> {
+    /// config digest matches, their published daemon port resolves, and the
+    /// daemon answers heartbeat.
+    pub fn adopt_healthy(config: &Config, config_yaml: &str) -> Vec<Self> {
+        let digest = config_digest(config_yaml);
         let out = Command::new("docker")
             .args([
                 "ps",
                 "-q",
                 "--filter",
                 &format!("label={POOL_LABEL}={}", config.image),
+                "--filter",
+                &format!("label={CONFIG_DIGEST_LABEL}={digest}"),
             ])
             .output();
         let Ok(out) = out else {
@@ -419,6 +428,21 @@ fn path_str(path: &Path) -> Result<String> {
         .with_context(|| format!("container path is not UTF-8: {}", path.display()))
 }
 
+fn config_digest(config_yaml: &str) -> String {
+    hex_lower(&Sha256::digest(config_yaml.as_bytes()))
+}
+
+fn hex_lower(bytes: &[u8]) -> String {
+    const LOWER_HEX: &[u8; 16] = b"0123456789abcdef";
+
+    let mut out = String::with_capacity(bytes.len() * 2);
+    for &byte in bytes {
+        out.push(char::from(LOWER_HEX[usize::from(byte >> 4)]));
+        out.push(char::from(LOWER_HEX[usize::from(byte & 0x0f)]));
+    }
+    out
+}
+
 #[cfg(unix)]
 fn docker_put_archive(
     container: &str,
@@ -688,8 +712,8 @@ mod tests {
     use std::path::PathBuf;
 
     use super::{
-        docker_exec_args, docker_http_status, docker_unix_socket_from_host, percent_encode,
-        tar_single_file,
+        config_digest, docker_exec_args, docker_http_status, docker_unix_socket_from_host,
+        percent_encode, tar_single_file,
     };
 
     #[test]
@@ -737,5 +761,19 @@ mod tests {
                 "daemon"
             ]
         );
+    }
+
+    #[test]
+    fn config_digest_is_stable_and_config_specific() {
+        let baseline = config_digest("daemon:\n  layer_stack:\n    auto_squash_max_depth: 100\n");
+        let override_digest =
+            config_digest("daemon:\n  layer_stack:\n    auto_squash_max_depth: 8\n");
+
+        assert_eq!(
+            baseline,
+            config_digest("daemon:\n  layer_stack:\n    auto_squash_max_depth: 100\n")
+        );
+        assert_eq!(baseline.len(), 64);
+        assert_ne!(baseline, override_digest);
     }
 }

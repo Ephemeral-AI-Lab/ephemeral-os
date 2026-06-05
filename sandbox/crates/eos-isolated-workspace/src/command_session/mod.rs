@@ -5,15 +5,15 @@ mod prepare;
 pub mod types;
 
 use eos_workspace_api::{
-    CommandWorkspaceOps, FinalizeCommandRequest, PrepareCommandRequest, PreparedCommandWorkspace,
-    WorkspaceApiError, WorkspaceCommandOutcome,
+    CommandWorkspacePolicy, FinalizeCommandRequest, PrepareCommandRequest,
+    PreparedCommandWorkspace, WorkspaceApiError, WorkspaceCommandOutcome,
 };
 
 use crate::ops::IsolatedWorkspaceOps;
 
-impl<P> CommandWorkspaceOps for IsolatedWorkspaceOps<P>
+impl<P> CommandWorkspacePolicy for IsolatedWorkspaceOps<P>
 where
-    P: types::IsolatedCommandSessionPort,
+    P: types::IsolatedCommandSessionPort + Send + Sync,
 {
     fn prepare_command_workspace(
         &self,

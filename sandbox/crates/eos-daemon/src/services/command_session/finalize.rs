@@ -24,7 +24,7 @@ use eos_layerstack::LayerStack;
 use eos_protocol::LayerChange;
 use eos_runner::RunResult;
 use eos_workspace_api::{
-    CommandWorkspaceOps, FinalizeCommandRequest, WorkspaceApiError, WorkspaceCommandOutcome,
+    CommandWorkspacePolicy, FinalizeCommandRequest, WorkspaceApiError, WorkspaceCommandOutcome,
 };
 
 use super::lifecycle::{require_string, EphemeralCommandWorkspace, IsolatedCommandWorkspace};

@@ -32,7 +32,7 @@ pub struct IsolatedCommandFinalizeContext {
 /// Daemon-supplied port for isolated command-session prepare/finalize policy.
 ///
 /// This port exposes no publish capability. It exists so isolated command
-/// workspace policy compiles against `CommandWorkspaceOps` while daemon PTY,
+/// workspace policy compiles against `CommandWorkspacePolicy` while daemon PTY,
 /// child process, registry, and reaper control remain in `eos-daemon`.
 pub trait IsolatedCommandSessionPort {
     fn prepare_context(&self) -> Result<IsolatedCommandPrepareContext, WorkspaceApiError> {

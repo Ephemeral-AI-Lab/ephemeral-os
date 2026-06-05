@@ -14,8 +14,8 @@ pub mod read_view;
 pub mod response;
 
 pub use command_session::{
-    CommandWorkspaceOps, FinalizeCommandRequest, PrepareCommandRequest, PreparedCommandWorkspace,
-    WorkspaceCommandOutcome,
+    CommandWorkspacePolicy, FinalizeCommandRequest, PrepareCommandRequest,
+    PreparedCommandWorkspace, WorkspaceCommandOutcome,
 };
 pub use file_ops::{
     EditFileOutcome, EditFileRequest, ReadFileOutcome, ReadFileRequest, SearchReplaceEdit,
