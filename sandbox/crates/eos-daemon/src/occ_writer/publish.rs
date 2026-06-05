@@ -1,5 +1,6 @@
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicUsize, Ordering};
 use std::time::Instant;
 
 use eos_layerstack::{LayerStack, MergedView, AUTO_SQUASH_MAX_DEPTH};
@@ -12,6 +13,16 @@ use eos_protocol::{LayerChange, LayerPath, Manifest};
 use crate::response_timings::{i64_to_f64_saturating, usize_to_f64_saturating};
 
 use super::hash_current;
+
+static AUTO_SQUASH_MAX_DEPTH_CONFIG: AtomicUsize = AtomicUsize::new(AUTO_SQUASH_MAX_DEPTH);
+
+pub(super) fn configure_auto_squash_max_depth(max_depth: usize) {
+    AUTO_SQUASH_MAX_DEPTH_CONFIG.store(max_depth.max(1), Ordering::Relaxed);
+}
+
+fn auto_squash_max_depth() -> usize {
+    AUTO_SQUASH_MAX_DEPTH_CONFIG.load(Ordering::Relaxed)
+}
 
 #[derive(Clone)]
 pub(crate) struct LayerStackCommitTransaction {
@@ -178,16 +189,17 @@ fn run_auto_squash(stack: &mut LayerStack) -> BTreeMap<String, f64> {
     let Some(active) = stack.read_active_manifest().ok() else {
         return timings;
     };
-    if active.depth() <= AUTO_SQUASH_MAX_DEPTH
+    let max_depth = auto_squash_max_depth();
+    if active.depth() <= max_depth
         || !stack
-            .can_squash(AUTO_SQUASH_MAX_DEPTH)
+            .can_squash(max_depth)
             .is_ok_and(|can_squash| can_squash)
     {
         return timings;
     }
 
     let squash_start = Instant::now();
-    let squashed = stack.squash(AUTO_SQUASH_MAX_DEPTH).ok().flatten();
+    let squashed = stack.squash(max_depth).ok().flatten();
     let squash_elapsed_s = squash_start.elapsed().as_secs_f64();
     timings.insert(
         "layer_stack.auto_squash.total_s".to_owned(),
@@ -195,7 +207,7 @@ fn run_auto_squash(stack: &mut LayerStack) -> BTreeMap<String, f64> {
     );
     timings.insert(
         "layer_stack.auto_squash.max_depth".to_owned(),
-        usize_to_f64_saturating(AUTO_SQUASH_MAX_DEPTH),
+        usize_to_f64_saturating(max_depth),
     );
     timings.insert(
         "layer_stack.auto_squash.depth_before".to_owned(),

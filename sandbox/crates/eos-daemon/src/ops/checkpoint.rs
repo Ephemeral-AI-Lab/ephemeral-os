@@ -1,4 +1,4 @@
-//! Commit a LayerStack snapshot into a durable Git repository.
+//! Checkpoint operation handlers.
 
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
@@ -15,6 +15,56 @@ use serde_json::{json, Value};
 use crate::dispatcher::DispatchContext;
 use crate::error::DaemonError;
 use crate::request_args::{require_string, timings_to_value_map};
+
+/// `api.layer_metrics` — summarize layer-stack storage + lease state for a root.
+pub(crate) fn op_layer_metrics(
+    args: &Value,
+    _context: DispatchContext<'_>,
+) -> Result<Value, DaemonError> {
+    crate::checkpoint::layer_metrics(args)
+}
+
+pub(crate) fn op_build_workspace_base(
+    args: &Value,
+    _context: DispatchContext<'_>,
+) -> Result<Value, DaemonError> {
+    crate::checkpoint::build_workspace_base(args)
+}
+
+pub(crate) fn op_ensure_workspace_base(
+    args: &Value,
+    _context: DispatchContext<'_>,
+) -> Result<Value, DaemonError> {
+    crate::checkpoint::ensure_workspace_base(args)
+}
+
+pub(crate) fn op_workspace_binding(
+    args: &Value,
+    _context: DispatchContext<'_>,
+) -> Result<Value, DaemonError> {
+    crate::checkpoint::workspace_binding(args)
+}
+
+pub(crate) fn op_commit_to_workspace(
+    args: &Value,
+    _context: DispatchContext<'_>,
+) -> Result<Value, DaemonError> {
+    let total_start = Instant::now();
+    let root = PathBuf::from(require_string(args, "layer_stack_root")?);
+    let workspace_root = PathBuf::from(require_string(args, "workspace_root")?);
+    let mut stack = LayerStack::open(root)?;
+    let (manifest, commit_timings) = stack.commit_to_workspace(&workspace_root)?;
+    let mut timings = timings_to_value_map(&commit_timings);
+    timings.insert(
+        "api.commit_to_workspace.total_s".to_owned(),
+        json!(total_start.elapsed().as_secs_f64()),
+    );
+    Ok(json!({
+        "success": true,
+        "manifest_version": manifest.version,
+        "timings": Value::Object(timings),
+    }))
+}
 
 pub(crate) fn op_commit_to_git(
     args: &Value,

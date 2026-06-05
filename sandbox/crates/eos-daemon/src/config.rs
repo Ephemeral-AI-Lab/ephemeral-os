@@ -1,7 +1,7 @@
 //! Typed schema for the daemon section of `sandbox/config/prd.yml`.
 //!
-//! This module intentionally only owns schema at this phase. Runtime loading and
-//! injection stay out until the config-infra wiring phase.
+//! The `eosd` binary loads this section from the merged runtime YAML and injects
+//! it into daemon-owned subsystems during server startup.
 
 use std::path::{Path, PathBuf};
 
@@ -17,6 +17,7 @@ pub struct DaemonConfig {
     pub command_sessions: CommandSessionConfig,
     pub isolated_sweeper: IsolatedSweeperConfig,
     pub plugin: PluginRuntimeConfig,
+    pub layer_stack: LayerStackConfig,
 }
 
 #[derive(Debug, Clone, PartialEq, Deserialize)]
@@ -70,6 +71,12 @@ pub struct PluginRuntimeConfig {
     pub ppc_timeout_ms: u64,
     pub service_probe_timeout_ms: u64,
     pub max_response_bytes: usize,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct LayerStackConfig {
+    pub auto_squash_max_depth: usize,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Error)]
@@ -173,6 +180,11 @@ impl DaemonConfig {
             1,
             "daemon.plugin.max_response_bytes",
         )?;
+        require_usize_at_least(
+            self.layer_stack.auto_squash_max_depth,
+            1,
+            "daemon.layer_stack.auto_squash_max_depth",
+        )?;
         Ok(())
     }
 }
@@ -261,6 +273,10 @@ mod tests {
         let mut cfg = prd_config();
         cfg.plugin.ppc_root = PathBuf::from("relative");
         assert_invalid(cfg, "daemon.plugin.ppc_root");
+
+        let mut cfg = prd_config();
+        cfg.layer_stack.auto_squash_max_depth = 0;
+        assert_invalid(cfg, "daemon.layer_stack.auto_squash_max_depth");
     }
 
     #[test]

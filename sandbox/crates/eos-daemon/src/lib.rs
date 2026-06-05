@@ -33,6 +33,7 @@
 #![forbid(unsafe_code)]
 
 pub(crate) mod audit;
+pub(crate) mod checkpoint;
 pub(crate) mod command;
 pub mod config;
 pub mod dispatcher;

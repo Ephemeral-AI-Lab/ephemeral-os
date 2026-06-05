@@ -36,6 +36,9 @@ daemon:
     service_probe_timeout_ms: 5000
     max_response_bytes: 8388608
 
+  layer_stack:
+    auto_squash_max_depth: 100
+
 isolated_workspace:
   enabled: false
   scratch_root: /eos/scratch/isolated

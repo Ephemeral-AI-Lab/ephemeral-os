@@ -47,6 +47,14 @@ Current working-tree caveat: this repo is edited by parallel agents. The line
 anchors below were read from the live checkout on 2026-06-05 and may drift.
 Anchor on the symbol if a line number moves.
 
+Refresh note: a later live-check found that some review items had already
+landed in the checkout. In particular, `ContextScope` is already role-keyed,
+`NO_OUTCOME` is already centralized, the dead `PluginKind::as_wire` encoder is
+gone, the duplicated `counted_loss` free function is gone, the sqlx store
+re-exports are already `pub(crate)`, and the dead streaming/notification-state
+cleanups are no longer present in source. Those are recorded here as completed
+or stale, not as remaining implementation work.
+
 ---
 
 ## 2. Executive Result
@@ -80,8 +88,9 @@ types.
 | P0 | `attempt_budget: i64` and `default_attempt_budget: i64` | `AttemptBudget` value object backed by non-zero unsigned count | No negative/zero retry budgets at runtime | `eos-state/src/iteration.rs`, `eos-workflow/src/ids.rs`, `eos-db/src/repositories/iteration.rs` |
 | P0 | `PlannerKind` plus `deferred_goal_for_next_iteration: Option<String>` | `PlanDisposition::{Complete, Defer(DeferredGoal)}` | Removes kind/option mismatch checks | `eos-tools/src/ports/mod.rs`, `eos-state/src/submissions.rs`, `eos-tools/src/tools/submission/planner/*`, `eos-workflow/src/attempt/orchestrator.rs` |
 | P1 | Planner-local ids are plain `String`; persisted ids are `TaskId` | `PlanNodeId` for planner-local DAG ids, converted once to `TaskId` | Prevents accidental mixing of local plan ids and persisted task ids | `eos-tools/src/ports/mod.rs`, `eos-workflow/src/ids.rs`, `eos-workflow/src/attempt/plan_dag.rs` |
-| P1 | `ContextScope` has `role` plus optional ids | `ContextScope` enum variants with required ids per role | Removes `MissingContextField` defensive accessors | `eos-workflow/src/context/scope.rs`, `eos-workflow/src/context/engine.rs` |
+| Done | `ContextScope` formerly had `role` plus optional ids | Current checkout already has `ContextScope::{Planner, Generator, Reducer}` | Keep this enum shape; no remaining source work except regression protection | `eos-workflow/src/context/scope.rs`, `eos-workflow/src/context/engine.rs` |
 | P1 | `AgentLaunch` is a role plus optional `attempt_id`, `workflow_id`, `agent_def`, `task_guidance`, `skill` | Role-specific launch enum/structs with required members per variant | Runtime no longer handles impossible missing launch data | `eos-workflow/src/attempt/launch.rs`, `eos-runtime/src/agent_runner.rs` |
+| P2 | `DagStatus` is three booleans: `all_quiescent`, `all_done`, `any_failed_or_blocked` | `DagResolution::{Running, Passed, FailedOrBlocked}` or equivalent closed enum | Removes scheduler boolean-combination reasoning | `eos-workflow/src/attempt/plan_dag.rs`, `eos-workflow/src/attempt/run_stage.rs` |
 | P2 | `ExecCommandResult.status: String`; repeated string checks for `running`, `error`, `timed_out` | Keep raw wire string, add internal `CommandStatusView`/helpers | Centralizes branching without breaking daemon wire vocabulary | `eos-sandbox-api/src/models/command.rs`, `eos-sandbox-api/src/tool_api/parse.rs`, `eos-tools/src/tools/sandbox/*` |
 | P2 | `QueryContext` exposes many mutable public members | Private loop state plus narrow mutation methods | Keeps loop invariants inside engine | `eos-engine/src/query/context.rs`, `eos-engine/src/query/loop_.rs`, `eos-engine/src/tool_call/dispatch.rs` |
 | P2 | `DaemonClient` owns endpoint resolution, recovery, TCP cache, envelope send, plugin package path | Keep public `DaemonClient`; split private modules/responsibilities | Smaller host modules without adding a new public transport seam | `eos-sandbox-host/src/daemon_client.rs`, `eos-sandbox-host/src/daemon_client/*`, `eos-sandbox-host/src/plugin_package.rs` |
@@ -117,16 +126,18 @@ Method naming should follow Rust conventions:
 
 ## 5. Resulting Folder Structure
 
-This is the target source organization if the full type-driven plan is
+This is the minimal target organization if the full type-driven plan is
 implemented. It keeps crate ownership intact and avoids new cross-workspace
-back-edges.
+back-edges. It is not a mandatory file-splitting plan: keep existing modules
+when the implementation remains cohesive, and split only where the type changes
+create a real ownership boundary.
 
 ```text
 agent-core/crates/eos-state/src/
   attempt.rs                    # Attempt entity, AttemptState, AttemptClosure
   iteration.rs                  # Iteration entity, IterationState, IterationOutcome, AttemptBudget
   workflow.rs                   # Workflow entity, WorkflowState, WorkflowOutcome
-  plan.rs                       # PlanDisposition, PlanNodeId, DeferredGoal, materialized plan values
+  plan.rs                       # optional owner for PlanDisposition, PlanNodeId, DeferredGoal
   submissions.rs                # submission DTOs built from typed plan/outcome values
   outcomes.rs                   # ExecutionTaskOutcome and shared outcome projection values
   store.rs                      # narrow Store traits using transition-oriented methods
@@ -142,12 +153,11 @@ agent-core/crates/eos-db/src/
 agent-core/crates/eos-workflow/src/
   attempt/
     mod.rs                      # thin exports
-    lifecycle.rs                # attempt transitions and close/retry policy
-    plan.rs                     # planner submission materialization
-    dag.rs                      # DAG validation/readiness/blockage
-    run.rs                      # ready frontier and task scheduling
+    orchestrator.rs             # attempt transitions and close/retry policy
+    plan_dag.rs                 # DAG validation/readiness/blockage
+    run_stage.rs                # ready frontier and task scheduling
     launch.rs                   # role launch envelopes
-    registry.rs                 # open attempt registry
+    orchestrator_registry.rs    # open attempt registry
   iteration/
     mod.rs                      # iteration coordinator and outcome handling
   context/
@@ -162,10 +172,10 @@ agent-core/crates/eos-workflow/src/
 
 agent-core/crates/eos-tools/src/
   ports/
-    mod.rs                      # thin exports
-    plan.rs                     # PlannerPlan, PlanTask, PlanReducer using PlanNodeId/Disposition
-    submission.rs               # terminal submission ports and acks
-    command.rs                  # command status projection helpers if tool-owned
+    mod.rs                      # current owner of ports; split only if cohesion worsens
+    plan.rs                     # optional: PlannerPlan, PlanTask, PlanReducer
+    submission.rs               # optional: terminal submission ports and acks
+    command.rs                  # optional: command status projection helpers if tool-owned
   tools/
     submission/
       planner/
@@ -195,9 +205,9 @@ agent-core/crates/eos-sandbox-api/src/
 agent-core/crates/eos-sandbox-host/src/
   daemon_client/
     mod.rs                      # public DaemonClient impl surface
-    envelope.rs                 # protocol-version stamping and RPC envelope
-    endpoint.rs                 # provider/TCP endpoint resolution
-    recovery.rs                 # retry/recovery state machine
+    envelope.rs                 # optional: protocol-version stamping and RPC envelope
+    endpoint.rs                 # optional: provider/TCP endpoint resolution
+    recovery.rs                 # optional: retry/recovery state machine
     tcp.rs
     codec.rs
     shell.rs
@@ -213,15 +223,17 @@ The structure is intentionally conservative:
 - `eos-tools` owns model-facing terminal tool contracts.
 - `eos-sandbox-api` owns raw daemon/API contracts.
 - `eos-sandbox-host` owns host-side transport implementation details.
+- File splits are a cleanup consequence, not a goal. Do not split
+  `orchestrator.rs`, `run_stage.rs`, `plan_dag.rs`, `ports/mod.rs`, or
+  `daemon_client.rs` only because they are large.
 
 ---
 
 ## 6. Type Inventory
 
-The user-facing phrase "class and field info" maps to Rust as "types and
-members." Members should be private when they guard invariants. Public DTO
-members may remain public only when they are pure wire/persisted records and do
-not imply behavior.
+This section is the Rust type/member inventory. Members should be private when
+they guard invariants. Public DTO members may remain public only when they are
+pure wire/persisted records and do not imply behavior.
 
 ### 6.1 Attempt
 
@@ -232,15 +244,17 @@ pub struct Attempt {
     workflow_id: WorkflowId,
     sequence_no: u32,
     state: AttemptState,
-    plan: AttemptPlan,
     created_at: UtcDateTime,
     updated_at: UtcDateTime,
 }
 
 pub enum AttemptState {
-    Planning { planner_task_id: TaskId },
+    Planning { planner_task_id: Option<TaskId> },
     Running { plan: MaterializedPlan },
-    Closed(AttemptClosure),
+    Closed {
+        closure: AttemptClosure,
+        plan: Option<MaterializedPlan>,
+    },
 }
 
 pub enum AttemptClosure {
@@ -255,19 +269,13 @@ pub enum AttemptClosure {
     },
 }
 
-pub struct AttemptPlan {
-    planner_task_id: Option<TaskId>,
-    generator_task_ids: Vec<TaskId>,
-    reducer_task_ids: Vec<TaskId>,
-    disposition: Option<PlanDisposition>,
-}
 ```
 
 Current evidence:
 
 - `Attempt` currently exposes independent public members at
   `agent-core/crates/eos-state/src/attempt.rs:51`.
-- `AttemptStore` currently exposes field-oriented mutations at
+- `AttemptStore` currently exposes member-oriented mutations at
   `agent-core/crates/eos-state/src/store.rs:166`.
 - `SqlAttemptStore::close` persists `status` and `fail_reason` independently at
   `agent-core/crates/eos-db/src/repositories/attempt.rs:161`.
@@ -278,6 +286,11 @@ Compatibility rule: the database may keep `stage`, `status`, `fail_reason`, and
 `closed_at` columns. The repository should map those columns into
 `AttemptState`/`AttemptClosure`, so the schema does not have to change in the
 same phase.
+
+Do not keep a separate `Attempt.plan` member alongside a plan-bearing
+`AttemptState::Running`; that duplicates lifecycle data. Closed attempts may
+carry `plan: Option<MaterializedPlan>` because startup/planner failures can
+close before a materialized plan exists.
 
 ### 6.2 Iteration
 
@@ -458,12 +471,12 @@ pub enum ContextScope {
 
 Current evidence:
 
-- `ContextScope` currently has `role` plus optional ids at
+- The current checkout already has this enum shape at
   `agent-core/crates/eos-workflow/src/context/scope.rs:9`.
-- Missing-field accessors return `MissingContextField` at
-  `agent-core/crates/eos-workflow/src/context/scope.rs:73`.
-- `ContextEngine::build` matches on `scope.role` at
-  `agent-core/crates/eos-workflow/src/context/engine.rs:56`.
+- `ContextEngine::build` already destructures the variants and calls
+  role-specific helpers at `agent-core/crates/eos-workflow/src/context/engine.rs:57`.
+- No `MissingContextField` source symbol remains. Keep this shape as the
+  accepted pattern and do not reintroduce a role-plus-optional-id record.
 
 ### 6.6 Role Launch
 
@@ -516,7 +529,29 @@ If implemented, the type can keep the current external name `AgentLaunch` to
 reduce churn. The important part is the role-specific enum shape, not the exact
 name. `RoleLaunch` is the naming recommendation if a rename is worth the churn.
 
-### 6.7 Command Status View
+### 6.7 DAG Resolution
+
+```rust
+pub enum DagResolution {
+    Running,
+    Passed,
+    FailedOrBlocked,
+}
+```
+
+Current evidence:
+
+- `DagStatus` currently exposes three public booleans at
+  `agent-core/crates/eos-workflow/src/attempt/plan_dag.rs:11`.
+- `AttemptStageAdvancer::advance_run_stage` interprets the boolean combination
+  through nested checks at `agent-core/crates/eos-workflow/src/attempt/run_stage.rs:107`.
+
+This is a smaller version of the same boolean-record smell as
+`IterationClosed.succeeded`. If `plan_dag.rs` or `run_stage.rs` is touched for
+the attempt-state work, prefer returning a closed enum that directly states what
+the scheduler should do next.
+
+### 6.8 Command Status View
 
 ```rust
 pub struct CommandStatusView<'a> {
@@ -534,7 +569,7 @@ pub enum KnownCommandStatus {
 Rules:
 
 - `ExecCommandResult.status` remains `String` because it is a daemon/model-facing
-  wire field.
+  wire member.
 - Branching code should use helpers such as `is_running()`,
   `is_error_status()`, and `is_session_not_found()` instead of repeating raw
   string comparisons.
@@ -552,7 +587,7 @@ Current evidence:
 - Tool helpers check `"error"` / `"timed_out"` at
   `agent-core/crates/eos-tools/src/tools/sandbox/lib.rs:162` and `:234`.
 
-### 6.8 Query Loop State
+### 6.9 Query Loop State
 
 ```rust
 pub struct QueryContext {
@@ -713,18 +748,20 @@ Acceptance criteria:
 - `cargo test -p eos-workflow` covers success, continuation, failure, and
   cancellation paths.
 
-### Phase 5: Role-Scoped Context and Launch
+### Phase 5: Role Launch Cleanup
 
 Scope:
 
-- Convert `ContextScope` from role plus optional ids into enum variants.
+- Preserve the current role-scoped `ContextScope` enum; do not reintroduce a
+  role-plus-optional-id record.
 - Convert `AgentLaunch` into a role-specific enum shape or role-specific
   structs.
 - Remove runtime handling for missing `agent_def` and impossible missing ids.
 
 Acceptance criteria:
 
-- `MissingContextField` is removed if no remaining caller needs it.
+- `ContextScope` remains `Planner` / `Generator` / `Reducer` with required ids
+  per variant.
 - `RuntimeAgentRunner::run` no longer treats missing `agent_def` as a normal
   launch outcome.
 - Planner, generator, and reducer launch tests prove each role receives the
@@ -736,6 +773,8 @@ Acceptance criteria:
 
 Scope:
 
+- Replace `DagStatus` boolean-combination handling with a closed DAG resolution
+  enum if scheduler files are already in scope.
 - Add command status helper/view over raw daemon status strings.
 - Encapsulate `QueryContext` mutable loop state where it reduces risk.
 - Split private `DaemonClient` responsibilities only where the module becomes
@@ -745,6 +784,8 @@ Acceptance criteria:
 
 - `ExecCommandResult.status` remains raw wire text unless a separate daemon API
   contract change is approved.
+- Scheduler code no longer reasons over `all_quiescent` / `all_done` /
+  `any_failed_or_blocked` boolean combinations after the DAG enum cleanup.
 - Tool code no longer repeats raw `"running"`, `"error"`, `"timed_out"`
   comparisons in multiple modules.
 - Query loop state mutations go through narrow methods where practical.
@@ -783,7 +824,7 @@ Acceptance criteria:
 | Phase 2: Planner Disposition | Not started | Highest value after value objects. |
 | Phase 3: Attempt State | Not started | Largest core workflow refactor. |
 | Phase 4: Iteration and Workflow Outcomes | Not started | Depends naturally on attempt closure shape. |
-| Phase 5: Role-Scoped Context and Launch | Not started | Can run after or in parallel with Phase 4 if scoped carefully. |
+| Phase 5: Role Launch Cleanup | Partially complete | `ContextScope` is already role-scoped; remaining work is `AgentLaunch`. |
 | Phase 6: Engine and Sandbox Cleanup | Not started | Lower priority; keep wire text raw. |
 | Phase 7: Contract and Regression Sweep | Not started | Run after any source phase. |
 
@@ -807,8 +848,11 @@ Do not implement these as written:
 | "Introduce top-level `SandboxTransport`" | Stale. It already exists. |
 | "`DaemonSandboxTransport`" | Stale name. Use `DaemonClient` for the concrete host transport. |
 | "`max_concurrent_agent_runs`" | Stale name. Current field is `max_concurrent_task_runs`; target can become `RunConcurrency` or `TaskRunLimit`. |
+| "Convert `ContextScope` to an enum" | Stale. The live checkout already has `ContextScope::{Planner, Generator, Reducer}`. Preserve it and move on to `AgentLaunch`. |
 | "Public enum replacement for `ExecCommandResult.status` immediately" | Too broad. Keep raw wire `String`; add parsed helper/view first. |
 | "Class hierarchy for workflow roles" | Wrong Rust model. Use enums, structs, traits only at real extension seams. |
+| "Mandatory split of `orchestrator.rs`, `run_stage.rs`, `plan_dag.rs`, `ports/mod.rs`, or `daemon_client.rs`" | Too broad. Split only when a type/domain change creates a real ownership boundary. |
+| "`Attempt { state, plan }` where `state` also carries a plan" | Wrong target shape. Plan data should live in the lifecycle variant that owns it. |
 
 ---
 
@@ -821,6 +865,7 @@ The full refactor is successful when:
 - traits remain narrow and object-safe only where heterogeneous runtime storage
   requires them;
 - bool/option pairs no longer encode workflow terminal decisions;
+- boolean summaries like `DagStatus` are replaced by closed enums when touched;
 - raw strings are confined to wire/database boundaries or parsed once into
   typed views;
 - public API names use Rust/domain vocabulary: state, outcome, disposition,

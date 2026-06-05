@@ -1,24 +1,20 @@
-//! Workspace base, binding, commit, and LayerStack metric ops.
+//! Workspace checkpoint control, binding, and LayerStack metric ops.
 
 use std::path::{Path, PathBuf};
 use std::time::Instant;
 
 use eos_layerstack::{
-    build_workspace_base, ensure_workspace_base, read_workspace_binding, require_workspace_binding,
-    LayerStack,
+    build_workspace_base as build_layer_stack_workspace_base,
+    ensure_workspace_base as ensure_layer_stack_workspace_base, read_workspace_binding,
+    require_workspace_binding, LayerStack,
 };
 use serde_json::{json, Value};
 
-use crate::dispatcher::DispatchContext;
 use crate::error::DaemonError;
 use crate::occ_writer::occ_service_cache_snapshot;
 use crate::request_args::{binding_to_value, require_string, timings_to_value_map};
 
-/// `api.layer_metrics` — summarize layer-stack storage + lease state for a root.
-pub(crate) fn op_layer_metrics(
-    args: &Value,
-    _context: DispatchContext<'_>,
-) -> Result<Value, DaemonError> {
+pub(crate) fn layer_metrics(args: &Value) -> Result<Value, DaemonError> {
     let root = PathBuf::from(require_string(args, "layer_stack_root")?);
     let stack = LayerStack::open(root.clone())?;
     let manifest = stack.read_active_manifest()?;
@@ -44,10 +40,7 @@ pub(crate) fn op_layer_metrics(
     }))
 }
 
-pub(crate) fn op_build_workspace_base(
-    args: &Value,
-    _context: DispatchContext<'_>,
-) -> Result<Value, DaemonError> {
+pub(crate) fn build_workspace_base(args: &Value) -> Result<Value, DaemonError> {
     let total_start = Instant::now();
     let root = PathBuf::from(require_string(args, "layer_stack_root")?);
     let workspace_root = PathBuf::from(require_string(args, "workspace_root")?);
@@ -55,7 +48,7 @@ pub(crate) fn op_build_workspace_base(
     if reset {
         crate::plugin::stop_services_for_layer_stack_root(&root.to_string_lossy())?;
     }
-    let built = build_workspace_base(&root, &workspace_root, reset)?;
+    let built = build_layer_stack_workspace_base(&root, &workspace_root, reset)?;
     let mut timings = timings_to_value_map(&built.timings);
     timings.insert(
         "api.workspace_base.total_s".to_owned(),
@@ -70,14 +63,11 @@ pub(crate) fn op_build_workspace_base(
     }))
 }
 
-pub(crate) fn op_ensure_workspace_base(
-    args: &Value,
-    _context: DispatchContext<'_>,
-) -> Result<Value, DaemonError> {
+pub(crate) fn ensure_workspace_base(args: &Value) -> Result<Value, DaemonError> {
     let total_start = Instant::now();
     let root = PathBuf::from(require_string(args, "layer_stack_root")?);
     let workspace_root = PathBuf::from(require_string(args, "workspace_root")?);
-    let (binding, created) = ensure_workspace_base(&root, &workspace_root)?;
+    let (binding, created) = ensure_layer_stack_workspace_base(&root, &workspace_root)?;
     let binding = binding_to_value(&binding)?;
     let timings = json!({
         "api.workspace_base.total_s": total_start.elapsed().as_secs_f64(),
@@ -90,10 +80,7 @@ pub(crate) fn op_ensure_workspace_base(
     }))
 }
 
-pub(crate) fn op_workspace_binding(
-    args: &Value,
-    _context: DispatchContext<'_>,
-) -> Result<Value, DaemonError> {
+pub(crate) fn workspace_binding(args: &Value) -> Result<Value, DaemonError> {
     let root = PathBuf::from(require_string(args, "layer_stack_root")?);
     let binding = require_workspace_binding(&root)?;
     let binding = binding_to_value(&binding)?;

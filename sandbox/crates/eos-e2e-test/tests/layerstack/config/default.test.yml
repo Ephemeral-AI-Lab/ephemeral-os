@@ -2,3 +2,7 @@ isolated_workspace:
   enabled: true
   upperdir_bytes: 67108864
   memavail_fraction: 0.9
+
+daemon:
+  layer_stack:
+    auto_squash_max_depth: 8

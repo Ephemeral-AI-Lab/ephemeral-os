@@ -12,9 +12,17 @@ use std::time::{Duration, Instant};
 
 use serde_json::{json, Value};
 
+use eos_ephemeral_workspace::command_session::types::EphemeralCommandSessionPort;
+use eos_ephemeral_workspace::{EphemeralRunDirs, EphemeralWorkspaceOps};
+use eos_isolated_workspace::command_session::types::IsolatedCommandSessionPort;
+use eos_isolated_workspace::IsolatedWorkspaceOps;
 use eos_layerstack::{require_workspace_binding, LayerStack, Lease, WorkspaceBinding};
 use eos_protocol::Intent;
 use eos_runner::{Fd, NsFds, RunMode, RunRequest, ToolCall, WorkspaceRoot};
+use eos_workspace_api::{
+    CommandWorkspaceOps, PrepareCommandRequest, PreparedCommandWorkspace, WorkspaceApiError,
+    WorkspaceMode,
+};
 
 use super::finalize::strip_session_id;
 use super::output;
@@ -137,6 +145,148 @@ pub(crate) fn start_isolated_command_session(
     }
 }
 
+fn prepare_request(spec: &CommandSessionStartSpec) -> PrepareCommandRequest {
+    PrepareCommandRequest {
+        agent_id: spec.agent_id.clone(),
+        invocation_id: spec.invocation_id.clone(),
+        cmd: spec.command.clone(),
+        timeout_seconds: spec.timeout_seconds,
+    }
+}
+
+fn command_workspace_error(error: WorkspaceApiError) -> DaemonError {
+    DaemonError::InvalidEnvelope(error.to_string())
+}
+
+fn workspace_api_error(error: impl std::fmt::Display) -> WorkspaceApiError {
+    WorkspaceApiError::new("daemon_command_workspace_error", error.to_string())
+}
+
+struct EphemeralCommandPreparePort<'a> {
+    root: &'a Path,
+    binding: &'a WorkspaceBinding,
+    lease: &'a Lease,
+    session_dir: PathBuf,
+    final_path: PathBuf,
+}
+
+impl EphemeralCommandSessionPort for EphemeralCommandPreparePort<'_> {
+    fn prepare_ephemeral_command_workspace(
+        &self,
+        request: PrepareCommandRequest,
+    ) -> Result<PreparedCommandWorkspace, WorkspaceApiError> {
+        let mut dirs = overlay_run_dirs("sandbox-overlay", &request.invocation_id)
+            .map_err(workspace_api_error)?;
+        dirs.output_path = dirs.run_dir.join("command-runner-result.json");
+        let request_path = dirs.run_dir.join("command-runner-request.json");
+        dirs.request_path = Some(request_path.clone());
+        dirs.final_path = self.final_path.clone();
+        let run_request = RunRequest {
+            mode: RunMode::FreshNs,
+            tool_call: ToolCall {
+                invocation_id: request.invocation_id,
+                agent_id: request.agent_id,
+                verb: "exec_command".into(),
+                intent: Intent::WriteAllowed,
+                args: json!({
+                    "command": request.cmd,
+                    "cwd": ".",
+                }),
+                background: false,
+            },
+            workspace_root: WorkspaceRoot(PathBuf::from(&self.binding.workspace_root)),
+            layer_paths: self.lease.layer_paths.iter().map(PathBuf::from).collect(),
+            upperdir: Some(dirs.upperdir.clone()),
+            workdir: Some(dirs.workdir.clone()),
+            ns_fds: None,
+            cgroup_path: None,
+            timeout_seconds: request.timeout_seconds,
+        };
+        Ok(PreparedCommandWorkspace {
+            mode: WorkspaceMode::Ephemeral,
+            run_request: serde_json::to_value(run_request).map_err(workspace_api_error)?,
+            request_path,
+            output_path: dirs.output_path.clone(),
+            final_path: self.final_path.clone(),
+            finalize_context: json!({
+                "root": self.root,
+                "session_dir": self.session_dir,
+                "dirs": dirs,
+            }),
+        })
+    }
+
+    fn finalize_ephemeral_command_workspace(
+        &self,
+        _request: eos_workspace_api::FinalizeCommandRequest,
+    ) -> Result<eos_workspace_api::WorkspaceCommandOutcome, WorkspaceApiError> {
+        Err(WorkspaceApiError::new(
+            "unsupported_command_workspace_adapter",
+            "ephemeral prepare adapter cannot finalize command workspaces",
+        ))
+    }
+}
+
+struct IsolatedCommandPreparePort {
+    handle: crate::isolated::CommandHandle,
+    session_dir: PathBuf,
+    final_path: PathBuf,
+    output_path: PathBuf,
+    request_path: PathBuf,
+}
+
+impl IsolatedCommandSessionPort for IsolatedCommandPreparePort {
+    fn prepare_isolated_command_workspace(
+        &self,
+        request: PrepareCommandRequest,
+    ) -> Result<PreparedCommandWorkspace, WorkspaceApiError> {
+        let ns_fds = runner_ns_fds(&self.handle.ns_fds);
+        let run_request = RunRequest {
+            mode: runner_mode(ns_fds.as_ref()),
+            tool_call: ToolCall {
+                invocation_id: request.invocation_id,
+                agent_id: request.agent_id,
+                verb: "exec_command".into(),
+                intent: Intent::WriteAllowed,
+                args: json!({
+                    "command": request.cmd,
+                    "cwd": ".",
+                }),
+                background: false,
+            },
+            workspace_root: WorkspaceRoot(self.handle.workspace_root.clone()),
+            layer_paths: self.handle.layer_paths.clone(),
+            upperdir: Some(self.handle.upperdir.clone()),
+            workdir: Some(self.handle.workdir.clone()),
+            ns_fds,
+            cgroup_path: self.handle.cgroup_path.clone(),
+            timeout_seconds: request.timeout_seconds,
+        };
+        Ok(PreparedCommandWorkspace {
+            mode: WorkspaceMode::Isolated,
+            run_request: serde_json::to_value(run_request).map_err(workspace_api_error)?,
+            request_path: self.request_path.clone(),
+            output_path: self.output_path.clone(),
+            final_path: self.final_path.clone(),
+            finalize_context: json!({
+                "session_dir": self.session_dir,
+                "workspace_handle_id": self.handle.workspace_handle_id,
+                "published": false,
+            }),
+        })
+    }
+
+    fn finalize_isolated_command_workspace(
+        &self,
+        _request: eos_workspace_api::FinalizeCommandRequest,
+    ) -> Result<eos_workspace_api::WorkspaceCommandOutcome, WorkspaceApiError> {
+        Err(WorkspaceApiError::new(
+            "unsupported_command_workspace_adapter",
+            "isolated prepare adapter cannot finalize command workspaces",
+        ))
+    }
+}
+
 pub(crate) fn start_command_session(
     args: &Value,
     cmd: &str,
@@ -211,35 +361,22 @@ fn prepare_isolated_command_session(
         }))
         .map_err(|err| DaemonError::InvalidEnvelope(err.to_string()))?,
     )?;
-    let ns_fds = runner_ns_fds(&handle.ns_fds);
-    let request = RunRequest {
-        mode: runner_mode(ns_fds.as_ref()),
-        tool_call: ToolCall {
-            invocation_id: spec.invocation_id.clone(),
-            agent_id: handle.agent_id.clone(),
-            verb: "exec_command".into(),
-            intent: Intent::WriteAllowed,
-            args: json!({
-                "command": spec.command,
-                "cwd": ".",
-            }),
-            background: false,
-        },
-        workspace_root: WorkspaceRoot(handle.workspace_root.clone()),
-        layer_paths: handle.layer_paths.clone(),
-        upperdir: Some(handle.upperdir.clone()),
-        workdir: Some(handle.workdir.clone()),
-        ns_fds,
-        cgroup_path: handle.cgroup_path.clone(),
-        timeout_seconds: spec.timeout_seconds,
-    };
-    write_run_request(&request_path, &request)?;
+    let prepared = IsolatedWorkspaceOps::new(IsolatedCommandPreparePort {
+        handle: handle.clone(),
+        session_dir,
+        final_path,
+        output_path,
+        request_path,
+    })
+    .prepare_command_workspace(prepare_request(spec))
+    .map_err(command_workspace_error)?;
+    write_run_request(&prepared.request_path, &prepared.run_request)?;
     let workspace = CommandWorkspaceKind::Isolated(IsolatedCommandWorkspace {
         handle,
-        output_path,
-        final_path,
+        output_path: prepared.output_path,
+        final_path: prepared.final_path,
     });
-    spawn_command_runner_session(spec, &request_path, transcript_path, workspace)
+    spawn_command_runner_session(spec, &prepared.request_path, transcript_path, workspace)
 }
 
 fn prepare_command_session(
@@ -249,8 +386,6 @@ fn prepare_command_session(
     spec: &CommandSessionStartSpec,
 ) -> Result<Arc<CommandSession>, DaemonError> {
     let session_root = command_session_scratch_root();
-    let mut dirs = overlay_run_dirs("sandbox-overlay", &spec.invocation_id)?;
-    let mut run_dir_cleanup = RunDirCleanup::new(dirs.run_dir.clone());
     let session_dir = session_root.join(&spec.id);
     std::fs::create_dir_all(&session_dir)?;
     let transcript_path = session_dir.join("transcript.log");
@@ -266,32 +401,25 @@ fn prepare_command_session(
         }))
         .map_err(|err| DaemonError::InvalidEnvelope(err.to_string()))?,
     )?;
-    dirs.output_path = dirs.run_dir.join("command-runner-result.json");
-    let request_path = dirs.run_dir.join("command-runner-request.json");
-    dirs.request_path = Some(request_path.clone());
-    dirs.final_path = final_path.clone();
-    let request = RunRequest {
-        mode: RunMode::FreshNs,
-        tool_call: ToolCall {
-            invocation_id: spec.invocation_id.clone(),
-            agent_id: spec.agent_id.clone(),
-            verb: "exec_command".into(),
-            intent: Intent::WriteAllowed,
-            args: json!({
-                "command": spec.command,
-                "cwd": ".",
-            }),
-            background: false,
-        },
-        workspace_root: WorkspaceRoot(PathBuf::from(&binding.workspace_root)),
-        layer_paths: lease.layer_paths.iter().map(PathBuf::from).collect(),
-        upperdir: Some(dirs.upperdir.clone()),
-        workdir: Some(dirs.workdir.clone()),
-        ns_fds: None,
-        cgroup_path: None,
-        timeout_seconds: spec.timeout_seconds,
-    };
-    write_run_request(&request_path, &request)?;
+    let prepared = EphemeralWorkspaceOps::new(EphemeralCommandPreparePort {
+        root,
+        binding,
+        lease,
+        session_dir,
+        final_path,
+    })
+    .prepare_command_workspace(prepare_request(spec))
+    .map_err(command_workspace_error)?;
+    let dirs: EphemeralRunDirs = serde_json::from_value(
+        prepared
+            .finalize_context
+            .get("dirs")
+            .cloned()
+            .ok_or_else(|| DaemonError::InvalidEnvelope("missing command dirs".to_owned()))?,
+    )
+    .map_err(|err| DaemonError::InvalidEnvelope(err.to_string()))?;
+    let mut run_dir_cleanup = RunDirCleanup::new(dirs.run_dir.clone());
+    write_run_request(&prepared.request_path, &prepared.run_request)?;
     let workspace = CommandWorkspaceKind::Ephemeral(EphemeralCommandWorkspace {
         root: root.to_path_buf(),
         lease_id: lease.lease_id.clone(),
@@ -302,14 +430,15 @@ fn prepare_command_session(
         workspace_root: PathBuf::from(&binding.workspace_root),
         dirs,
     });
-    let session = spawn_command_runner_session(spec, &request_path, transcript_path, workspace);
+    let session =
+        spawn_command_runner_session(spec, &prepared.request_path, transcript_path, workspace);
     if session.is_ok() {
         run_dir_cleanup.disarm();
     }
     session
 }
 
-fn write_run_request(path: &Path, request: &RunRequest) -> Result<(), DaemonError> {
+fn write_run_request(path: &Path, request: &Value) -> Result<(), DaemonError> {
     std::fs::write(
         path,
         serde_json::to_vec(request).map_err(|err| DaemonError::InvalidEnvelope(err.to_string()))?,

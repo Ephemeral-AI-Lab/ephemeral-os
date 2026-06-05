@@ -113,6 +113,7 @@ impl DaemonServer {
         crate::command::configure_command_sessions(&daemon_config.command_sessions);
         crate::isolated::configure_isolated_workspace(isolated_config);
         crate::plugin::configure_plugin_runtime(&daemon_config.plugin);
+        crate::occ_writer::configure_layer_stack(&daemon_config.layer_stack);
         Self {
             config,
             op_table: OpTable::with_builtins(),

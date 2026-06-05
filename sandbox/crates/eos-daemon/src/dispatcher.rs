@@ -39,7 +39,7 @@ use crate::occ_writer::{
     base_hashes_for_snapshot, hash_bytes, normalize_root_key, occ_route_metrics,
     LayerStackCommitTransaction, LayerStackRouteProvider, OccServiceCache, OCC_SERVICE_CACHE_MAX,
 };
-use crate::ops::{commit_to_git, commit_to_workspace, runtime, workspace_base};
+use crate::ops::{checkpoint, runtime};
 #[cfg(test)]
 use crate::response_timings::{
     i64_to_f64_saturating, insert_tree_resource_timings, resource_timings, TreeResourceStats,
@@ -136,27 +136,27 @@ impl OpTable {
         );
         table.register_builtin(
             protocol_ops::API_LAYER_METRICS,
-            workspace_base::op_layer_metrics,
+            checkpoint::op_layer_metrics,
         );
         table.register_builtin(
             protocol_ops::API_ENSURE_WORKSPACE_BASE,
-            workspace_base::op_ensure_workspace_base,
+            checkpoint::op_ensure_workspace_base,
         );
         table.register_builtin(
             protocol_ops::API_BUILD_WORKSPACE_BASE,
-            workspace_base::op_build_workspace_base,
+            checkpoint::op_build_workspace_base,
         );
         table.register_builtin(
             protocol_ops::API_COMMIT_TO_WORKSPACE,
-            commit_to_workspace::op_commit_to_workspace,
+            checkpoint::op_commit_to_workspace,
         );
         table.register_builtin(
             protocol_ops::API_COMMIT_TO_GIT,
-            commit_to_git::op_commit_to_git,
+            checkpoint::op_commit_to_git,
         );
         table.register_builtin(
             protocol_ops::API_WORKSPACE_BINDING,
-            workspace_base::op_workspace_binding,
+            checkpoint::op_workspace_binding,
         );
         table.register_builtin(
             protocol_ops::API_AUDIT_PULL,
