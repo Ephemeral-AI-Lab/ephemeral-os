@@ -23,14 +23,14 @@ to three explicit owner decisions:
    or CLI flag — **zero env reads anywhere, including secrets.**
 
 **Two-layer file model (resolved — see §5.0):**
-- **`agent-core/config/config.yml`** — committed baseline (defaults, *no
-  secrets*), loaded **first**. Every value mirrors the Rust `Default`.
-- **`agent-core/config/prd.yml`** — **gitignored** production override holding
-  secrets (API keys) + deployment values (db path, provider); merged **over** the
-  baseline when present, override wins.
-- **per-submodule / per-test `local.yml`** (any custom name) — an override loaded
-  **explicitly by a test loader**, merged over the baseline. Mirrors the sandbox
-  flow (`config.yml` first, `local.yml` overwrites).
+- **`agent-core/config/prd.yml`** — committed baseline (defaults, *no secrets*),
+  loaded **first** (the sandbox baseline name). Every value mirrors the Rust `Default`.
+- **`agent-core/config/local.yml`** — **gitignored** override holding secrets
+  (API keys) + deployment values (db path, provider); merged **over** the baseline
+  when present, override wins.
+- **per-submodule / per-test override** (any custom name) — loaded **explicitly by
+  a test loader**, merged over the baseline. Mirrors the sandbox flow (`prd.yml`
+  first, `local.yml` overwrites).
 
 Per-crate typed sections; static contracts left in Rust.
 
@@ -39,11 +39,11 @@ Per-crate typed sections; static contracts left in Rust.
 ## 1. Architecture: generic loader + parent-owned section schemas
 
 ```
-        agent-core/config/config.yml          (committed baseline — defaults, no secrets)
+        agent-core/config/prd.yml             (committed baseline — defaults, no secrets)
                  │   merge (override wins, recurse/replace)
         ┌────────┴────────┬──────────────────────────────┐
         │                 │                              │
-   prd.yml (gitignored)   <crate>/tests/**/<name>.yml    (any custom-named override)
+   local.yml (gitignored) <crate>/tests/**/<name>.yml    (any custom-named override)
    secrets + deploy        loaded explicitly by tests
         ▼
   eos-config (GENERIC LOADER — owns NO schema)
@@ -87,42 +87,143 @@ this is parity, not a divergence).
 ## 2. File layout
 
 ```
-agent-core/config/config.yml       # NEW — committed baseline (defaults, no secrets); replaces deleted ephemeralos.yaml
-agent-core/config/prd.yml          # NEW — gitignored production override (secrets + deploy values)
+agent-core/config/prd.yml          # NEW — committed baseline (defaults, no secrets); replaces deleted ephemeralos.yaml
+agent-core/config/local.yml        # NEW — gitignored override (secrets + deploy values)
 agent-core/config/README.md        # NEW — documents the model (mirror sandbox/config/README.md)
-agent-core/.gitignore              # add: config/prd.yml  (and any *.local.yml convention)
+agent-core/.gitignore              # add: config/local.yml  (and any *.local.yml convention)
 agent-core/crates/<crate>/tests/**/<name>.yml   # per-test overrides, custom-named, YAML-only, no Rust schema
 ```
 
 **Loader API** (`eos-config`, mirrors sandbox's two-function surface):
-- `load() -> ConfigDocument` — production: read committed `config.yml`, then merge
-  the gitignored `config/prd.yml` override **if present** (override wins).
-- `load_with_override(path) -> ConfigDocument` — tests: read `config.yml`, then
+- `load() -> ConfigDocument` — production: read committed `prd.yml`, then merge
+  the gitignored `config/local.yml` override **if present** (override wins).
+- `load_with_override(path) -> ConfigDocument` — tests: read `prd.yml`, then
   merge the explicit override file at `path` (any custom name). Replaces sandbox's
   `.test.yml`-suffix policy with an explicit caller-chosen path; `ConfigPath` still
   rejects a path that resolves to the baseline itself.
 
-`config.yml` top-level shape (one section per owning crate):
+`config.rs` is the **only** config schema — there is no `env.rs`, no `EnvMap`,
+no env adapter table. Every value that used to be env-configurable
+(`EOS_COMMAND_HEARTBEAT_MS`, `EOS_DOCKER_OVERLAY_*`, `EPHEMERALOS_*_DIR`, …) is
+now a plain typed field in the owning crate's `config.rs` section below.
+
+### `prd.yml` — full committed outline (one section per owning crate)
+
+Values shown are the **defaults** (sourced from current Rust constants). Each
+top-level key deserializes into `crate::config::<Type>`. Secret-bearing fields
+(`api_key`) ship empty here and are filled only by the gitignored `local.yml`.
 
 ```yaml
 version: 1
-database:       { ... }   # eos-db
-sandbox:                  # eos-sandbox-host OWNS the section; `timeouts` type contributed by eos-sandbox-api
-  docker:        { ... }
-  overlay:       { ... }
-  host_timeouts: { ... }  # host-side waits (spawn/readiness/git/bootstrap/…)
-  timeouts:      { ... }  # per-verb RPC budgets (eos-sandbox-api::config::SandboxTimeouts)
-providers:      { anthropic: {...}, openai: {...}, minimax: {...}, retry: {...} }  # eos-llm-client
-llm_client:     { ... }   # eos-llm-client
-engine:         { budget: {...}, advisor: {...} }   # eos-engine
-tools:          { ... }   # eos-tools
-workflow:       { ... }   # eos-workflow (incl. attempt knobs)
-audit:          { ... }   # eos-audit
-obs:            { ... }   # eos-obs-collector
-plugin_catalog: { ... }   # eos-plugin-catalog
-skills:         { ... }   # eos-skills
-runtime:        { ... }   # eos-runtime (config/data/logs dirs)
+
+database:                       # eos-db::config::DatabaseConfig
+  url: "sqlite:///./.ephemeralos/ephemeralos.db"
+  pool_size: 5
+  busy_timeout_ms: 5000
+  wal: true
+  foreign_keys: true
+
+sandbox:                        # eos-sandbox-host::config::SandboxConfig (owns section)
+  default_provider: docker
+  default_language: python
+  # NOTE: the old SandboxConfig.timeout_s(300)/runtime_client_timeout_s(600) are
+  # DEAD today (defined+validated, never read — see §3.4). Dropped here; the
+  # timeouts that actually run are host_timeouts + timeouts below. Re-add only if
+  # a field is genuinely wired to govern those.
+  docker:
+    daemon_tcp: true
+    privileged: false
+    no_privilege: false
+    default_snapshot: ""
+  overlay:                      # was EOS_DOCKER_OVERLAY_* env reads → fields
+    writable_tmpfs: true
+    tmpfs_options: "rw,exec,size=2g,mode=1777"
+  host_timeouts:                # pure host-side waits (seconds)
+    daemon_spawn_s: 20
+    readiness_s: 30
+    tcp_default_s: 60
+    bundle_upload_join_s: 60
+    ensure_workspace_base_s: 180
+    runtime_ready_s: 60
+    git_probe_s: 10
+    git_install_s: 120
+    running_probe_s: 10
+    plugin_package_upload_s: 30
+    bootstrap_probe_s: 15
+    bootstrap_finalize_s: 30
+  timeouts:                     # eos-sandbox-api::config::SandboxTimeouts (per-verb RPC budgets)
+    read_file_s: 60
+    write_file_s: 60
+    edit_file_s: 20
+    exec_default_s: 60
+    exec_dispatch_grace_s: 30
+    control_s: 15
+    isolated_s: 180
+    isolated_exit_grace_s: 5.0
+
+providers:                      # eos-llm-client::config::ProvidersConfig
+  anthropic: { base_url: "https://api.anthropic.com", model: "", api_key: "" }   # api_key ← local.yml; base_url currently hardcoded app_state.rs:464
+  openai:    { base_url: "https://api.openai.com",    model: "", api_key: "" }   # api_key ← local.yml; base_url currently hardcoded app_state.rs:469
+  retry:
+    max_retries: 3
+    base_delay_s: 1.0
+    max_delay_s: 30.0
+    status_codes: [429, 500, 502, 503, 529]
+
+llm_client:                     # eos-llm-client::config::LlmClientConfig
+  default_max_tokens: 32768
+  http_timeout_s: 600           # NEW — closes the "reqwest has no timeout" gap
+  error_body_truncation_chars: 500
+
+engine:                         # eos-engine::config::EngineConfig
+  command_heartbeat_ms: 1000    # was EOS_COMMAND_HEARTBEAT_MS
+  budget:
+    hard_ceiling_ratio: 1.5     # single source for the loop_.rs gate AND notifications reminder
+    warn_tiers: [0.75, 1.0, 1.25]   # validate: max tier ≤ hard_ceiling_ratio
+  advisor:
+    max_transcript_messages: 40
+    max_tool_result_chars: 4096
+    max_transcript_bytes: 24576
+    max_bash_command_chars: 500
+
+tools:                          # eos-tools::config::ToolsConfig
+  max_read_file_lines: 200
+  default_yield_ms: 1000
+  check_subagent_default_messages: 5
+  isolated_exit_grace_s: 5.0
+  max_workflow_depth: 1
+  # NOTE: MAX_YIELD_TIME_MS(30000) and the 1..=10 page bound stay in Rust —
+  # schema-coupled to schemars(range) annotations (§5.1).
+
+workflow:                       # eos-workflow::config::WorkflowConfig
+  max_concurrent_task_runs: 8   # single-sourced (drops the duplicate launch.rs:276 fallback)
+  default_attempt_budget: 2
+
+audit:                          # eos-audit::config::AuditConfig
+  jsonl_path: ""                # default resolved under runtime.data_dir when empty
+  sink_capacity: 1024           # bounded-channel backpressure (no home today)
+
+obs:                            # eos-obs-collector::config::ObsConfig
+  strict_audit_loss: true
+  require_resource_sample: true
+
+plugin_catalog:                 # eos-plugin-catalog::config::PluginCatalogConfig
+  op_timeout_ms: 150000
+  lsp_setup_timeout_ms: 60000
+
+skills:                         # eos-skills::config::SkillsConfig
+  description_max_chars: 200
+
+runtime:                        # eos-runtime::config::RuntimeConfig (was EPHEMERALOS_*_DIR env)
+  config_dir: "~/.ephemeralos"
+  data_dir: ""                  # default <config_dir>/data when empty
+  logs_dir: ""                  # default <config_dir>/logs when empty
 ```
+
+> The config-file location itself is **not** config-driven (it is the fixed
+> `agent-core/config/prd.yml`, resolved from the workspace root like sandbox), so
+> the `runtime.*_dir` fields control only where the db / logs / artifacts go —
+> resolving the chicken-and-egg the old `EPHEMERALOS_CONFIG_DIR` discovery had.
 
 ---
 
@@ -190,7 +291,7 @@ exponential-backoff base, `sleep infinity` keep-alive.
 | Current `eos-config` file | Disposition |
 |---|---|
 | `config.rs` (`CentralConfig`) | **Delete.** No composition root. |
-| `loader.rs` (`defaults<YAML<env<init`) | **Replace** with sandbox-style `load_prd()`/`load_test_override()` over `ConfigDocument`. |
+| `loader.rs` (`defaults<YAML<env<init`) | **Replace** with sandbox-style `load()` (baseline `prd.yml` + gitignored `local.yml`) / `load_with_override(path)` over `ConfigDocument`. |
 | `env.rs` (`EOS__*`, `_LEGACY_ENV_MAP`) | **Delete** (decision #3, no env). |
 | `paths.rs` (`EPHEMERALOS_*` discovery) | **Delete** env discovery; replace with `ConfigPath::prd()` (fixed `agent-core/config/prd.yml`). Dir defaults move to `eos-runtime::config`. |
 | `validation.rs` (central validate) | **Distribute:** each section validates itself (`DatabaseUrl::parse`, docker contradiction, range checks). |
@@ -207,7 +308,7 @@ exponential-backoff base, `sleep infinity` keep-alive.
 | 1 | Add `agent-core/config/prd.yml` + README; no code wiring yet | files present; **every value sourced from the current Rust constant/`Default` impl, NOT the deleted `ephemeralos.yaml`** — the two have already drifted (e.g. `providers.retry.status_codes` is `{429,500,502,503,529}` in the Rust default vs `…504` in the old yaml). A round-trip test (Phase 3) pins each section's default. |
 | 2 | Rewrite `eos-config` as the generic loader (`ConfigDocument`/`ConfigPath`/`merge`/`section`); delete `CentralConfig`/`loader`/`env` | `cargo test -p eos-config`, `cargo check -p eos-config --all-targets` |
 | 3 | Add `src/config.rs` to each owning crate (move `database`/`sandbox`/`providers`/`attempt`; add `engine`/`tools`/`audit`/`obs`/`plugin_catalog`/`skills`/`sandbox_host`/`runtime`) with `Default` + `validate()` | `cargo test -p <crate> config` per crate |
-| 4 | Wire production loading: `eos-runtime` entry calls `load_prd()` once, deserializes sections, injects typed sub-configs (replaces hardcoded consts at call sites; remove the `EOS_*` env reads) | `cargo check -p eos-runtime --all-targets`; root request smoke test |
+| 4 | Wire production loading: `eos-runtime` entry calls `load()` once, deserializes sections, injects typed sub-configs (replaces hardcoded consts at call sites; remove the `EOS_*` env reads) | `cargo check -p eos-runtime --all-targets`; root request smoke test |
 | 5 | Wire test overrides: per-test `*.test.yml` for crates that need non-prod values | targeted `cargo test` per crate |
 | 6 | Remove env/CLI config selection: delete `env.rs`/env path discovery; grep-confirm no `EOS__`/`EPHEMERALOS_*`/`env::var` config reads remain (credentials excepted, §5) | `rg` clean scan recorded in this doc |
 | 7 | Static-contract audit: confirm §3.3 constants stayed in Rust; resolve §5 borderlines | `rg` scan; no protocol/schema/layout constant in `prd.yml` |
@@ -220,19 +321,19 @@ exponential-backoff base, `sleep infinity` keep-alive.
 ### 5.0 RESOLVED — secrets + overrides via a gitignored override file
 
 **Decision (owner, 2026-06-05):** zero env reads, including secrets. The
-committed `config.yml` carries only non-secret defaults; a **gitignored
-`config/prd.yml`** (and any custom-named `local.yml`) carries secrets +
-deployment values and is **merged over** the baseline, override wins. This is
-the literal "no env variable" outcome — API keys live in the untracked override
-file, read through the same merge machinery as the test overrides, never from
-`std::env`.
+committed `prd.yml` (the sandbox baseline name) carries only non-secret defaults;
+a **gitignored `config/local.yml`** (and any custom-named override) carries
+secrets + deployment values and is **merged over** the baseline, override wins.
+This is the literal "no env variable" outcome — API keys live in the untracked
+override file, read through the same merge machinery as the test overrides, never
+from `std::env`.
 
-Consequences threaded through this spec: `config.yml` is the committed baseline;
-`prd.yml` is gitignored; the loader exposes `load()` (baseline + gitignored
-`prd.yml` if present) and `load_with_override(path)` (baseline + explicit
+Consequences threaded through this spec: `prd.yml` is the committed baseline;
+`local.yml` is gitignored; the loader exposes `load()` (baseline + gitignored
+`local.yml` if present) and `load_with_override(path)` (baseline + explicit
 test/local override of any name); the `providers` section's per-provider
 `api_key` (and any secret-bearing field) is populated **only** from the override
-file, so `config.yml` ships those fields empty.
+file, so `prd.yml` ships those fields empty.
 
 ### 5.1 Lower-stakes borderlines (recommend keep-in-Rust; resolve during Phase 7)
 
@@ -252,7 +353,7 @@ file, so `config.yml` ships those fields empty.
 ## 6. Acceptance criteria
 
 - `eos-config` exposes only `ConfigDocument`, `ConfigPath`, `ConfigError`,
-  `load_prd()`, `load_test_override()`, `section::<T>()` — **no `CentralConfig`,
+  `load()`, `load_with_override()`, `section::<T>()` — **no `CentralConfig`,
   no `EnvMap`, no env or path-discovery surface.**
 - Every crate in §3.1 owns a crate-root `src/config.rs` with a
   `deny_unknown_fields` + `Default` + `validate()` section type; no child module

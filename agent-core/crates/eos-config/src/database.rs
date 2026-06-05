@@ -78,8 +78,6 @@ pub struct DatabaseConfig {
     pub wal: bool,
     /// Enable `PRAGMA foreign_keys`.
     pub foreign_keys: bool,
-    /// Echo executed sql statements.
-    pub echo: bool,
 }
 
 impl Default for DatabaseConfig {
@@ -90,7 +88,6 @@ impl Default for DatabaseConfig {
             busy_timeout_ms: 5000,
             wal: true,
             foreign_keys: true,
-            echo: false,
         }
     }
 }
@@ -139,6 +136,5 @@ mod tests {
         assert_eq!(d.pool_size, 5);
         assert!(d.wal);
         assert!(d.foreign_keys);
-        assert!(!d.echo);
     }
 }

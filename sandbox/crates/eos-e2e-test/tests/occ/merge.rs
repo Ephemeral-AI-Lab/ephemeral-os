@@ -2,11 +2,11 @@ use std::sync::{Arc, Barrier};
 use std::thread;
 
 use anyhow::Result;
-use eos_e2e_test::next_invocation_id;
+use eos_e2e_test::{next_invocation_id, unique_suffix};
 use eos_protocol::ops;
 use serde_json::{json, Value};
 
-use crate::support::{array, as_bool, as_str, conflict_reason, live_pool_or_skip};
+use crate::support::{array, as_bool, as_i64, as_str, conflict_reason, live_pool_or_skip};
 
 #[test]
 fn concurrent_conflicting_writes() -> Result<()> {
@@ -130,6 +130,54 @@ fn edit_overlap_conflict() -> Result<()> {
         "aborted_overlap",
         "overlap conflict expected: {edit}"
     );
+    Ok(())
+}
+
+#[test]
+fn edit_anchor_errors_do_not_publish_or_advance_manifest() -> Result<()> {
+    let Some(pool) = live_pool_or_skip()? else {
+        return Ok(());
+    };
+    let lease = pool.acquire()?;
+    let path = format!("occ/edit-anchor-{}.txt", unique_suffix());
+    let original = "alpha beta alpha\n";
+    lease.call_ok(
+        ops::API_V1_WRITE_FILE,
+        json!({"path": path, "content": original, "overwrite": true}),
+    )?;
+    let baseline = lease.call_ok(ops::API_LAYER_METRICS, json!({}))?;
+    let baseline_depth = as_i64(&baseline, "manifest_depth")?;
+
+    for old_text in ["missing", "alpha"] {
+        let edit = lease.call(
+            ops::API_V1_EDIT_FILE,
+            json!({
+                "path": path,
+                "edits": [{"old_text": old_text, "new_text": "changed", "replace_all": false}]
+            }),
+        )?;
+        assert!(!as_bool(&edit, "success")?, "{edit}");
+        assert_eq!(as_str(&edit, "status")?, "aborted_overlap", "{edit}");
+        assert_eq!(conflict_reason(&edit), "aborted_overlap", "{edit}");
+        assert_eq!(as_i64(&edit, "applied_edits")?, 0, "{edit}");
+        assert!(
+            array(&edit, "changed_paths")?.is_empty(),
+            "anchor conflict must not publish changed paths: {edit}"
+        );
+
+        let read = lease.call_ok(ops::API_V1_READ_FILE, json!({"path": path}))?;
+        assert_eq!(
+            as_str(&read, "content")?,
+            original,
+            "anchor conflict must leave content unchanged: {read}"
+        );
+        let metrics = lease.call_ok(ops::API_LAYER_METRICS, json!({}))?;
+        assert_eq!(
+            as_i64(&metrics, "manifest_depth")?,
+            baseline_depth,
+            "anchor conflict must not advance manifest-visible depth: {metrics}"
+        );
+    }
     Ok(())
 }
 

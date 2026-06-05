@@ -201,22 +201,22 @@ mod tests {
     fn test_precedence_init_over_env_over_yaml() {
         let yaml = temp_yaml(
             "eos_config_test_precedence.yaml",
-            "sandbox:\n  timeout_s: 10\n  runtime_client_timeout_s: 20\n",
+            "database:\n  pool_size: 10\n  busy_timeout_ms: 20\n",
         );
-        let init: Value = serde_yaml::from_str("sandbox:\n  timeout_s: 40\n").unwrap();
+        let init: Value = serde_yaml::from_str("database:\n  pool_size: 40\n").unwrap();
         let cfg = ConfigLoader::new()
             .yaml_path(&yaml)
-            .env(env(&[("EOS__SANDBOX__TIMEOUT_S", "30")]))
+            .env(env(&[("EOS__DATABASE__POOL_SIZE", "30")]))
             .init(init)
             .load()
             .unwrap();
 
         assert_eq!(
-            cfg.sandbox.timeout_s, 40.0,
+            cfg.database.pool_size, 40,
             "init must win over env and yaml"
         );
         assert_eq!(
-            cfg.sandbox.runtime_client_timeout_s, 20.0,
+            cfg.database.busy_timeout_ms, 20,
             "yaml-only field survives"
         );
         assert!(cfg.database.wal, "untouched field keeps its default");

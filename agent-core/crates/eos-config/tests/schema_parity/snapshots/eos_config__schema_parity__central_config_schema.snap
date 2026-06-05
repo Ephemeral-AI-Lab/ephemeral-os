@@ -23,7 +23,6 @@ expression: rust
       "type": "object",
       "required": [
         "busy_timeout_ms",
-        "echo",
         "foreign_keys",
         "pool_size",
         "url",
@@ -32,9 +31,6 @@ expression: rust
       "properties": {
         "busy_timeout_ms": {
           "type": "integer"
-        },
-        "echo": {
-          "type": "boolean"
         },
         "foreign_keys": {
           "type": "boolean"
@@ -74,37 +70,13 @@ expression: rust
         }
       }
     },
-    "MinimaxConfig": {
-      "additionalProperties": false,
-      "type": "object",
-      "required": [
-        "base_url",
-        "model"
-      ],
-      "properties": {
-        "base_url": {
-          "type": "string"
-        },
-        "model": {
-          "type": "string"
-        }
-      }
-    },
     "ProvidersConfig": {
       "additionalProperties": false,
       "type": "object",
       "required": [
-        "minimax",
         "retry"
       ],
       "properties": {
-        "minimax": {
-          "allOf": [
-            {
-              "$ref": "#/definitions/MinimaxConfig"
-            }
-          ]
-        },
         "retry": {
           "allOf": [
             {
@@ -149,9 +121,7 @@ expression: rust
       "type": "object",
       "required": [
         "default_provider",
-        "docker",
-        "runtime_client_timeout_s",
-        "timeout_s"
+        "docker"
       ],
       "properties": {
         "default_provider": {
@@ -167,14 +137,6 @@ expression: rust
               "$ref": "#/definitions/DockerConfig"
             }
           ]
-        },
-        "runtime_client_timeout_s": {
-          "format": "double",
-          "type": "number"
-        },
-        "timeout_s": {
-          "format": "double",
-          "type": "number"
         }
       }
     },

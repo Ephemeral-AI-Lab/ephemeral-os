@@ -9,7 +9,11 @@
 //!   - a gitignored write reports `timings.occ.commit.direct_path_count == 1`
 //!     (Route::Direct), with a non-ignored control reporting `gated_path_count`.
 
+use std::sync::{Arc, Barrier};
+use std::thread;
+
 use anyhow::Result;
+use eos_e2e_test::{next_invocation_id, unique_suffix};
 use eos_protocol::ops;
 use serde_json::{json, Value};
 
@@ -99,6 +103,79 @@ fn gitignored_writes_bypass_the_occ_gate() -> Result<()> {
         timing_f64(&tracked, "occ.commit.direct_path_count"),
         Some(0.0),
         "non-ignored write must not be direct: {tracked}"
+    );
+    Ok(())
+}
+
+#[test]
+fn concurrent_gitignored_same_path_direct_writes() -> Result<()> {
+    let Some(pool) = live_pool_or_skip()? else {
+        return Ok(());
+    };
+    let lease = pool.acquire()?;
+    let dir = format!("ignore-race-{}", unique_suffix());
+    let path = format!("{dir}/same.txt");
+    lease.call_ok(
+        ops::API_V1_WRITE_FILE,
+        json!({"path": format!("{dir}/.gitignore"), "content": "*.txt\n", "overwrite": true}),
+    )?;
+
+    let payloads: Vec<String> = (0..6)
+        .map(|index| {
+            let marker = format!("writer-{index}:");
+            format!("{marker}\n{}\n", marker.repeat(128))
+        })
+        .collect();
+    let barrier = Arc::new(Barrier::new(payloads.len()));
+    let handles: Vec<_> = payloads
+        .iter()
+        .cloned()
+        .map(|content| {
+            let client = lease.client().clone();
+            let root = lease.root().to_owned();
+            let caller_id = lease.caller_id().to_owned();
+            let path = path.clone();
+            let barrier = Arc::clone(&barrier);
+            thread::spawn(move || {
+                barrier.wait();
+                client.request(
+                    ops::API_V1_WRITE_FILE,
+                    &next_invocation_id(),
+                    &json!({
+                        "layer_stack_root": root,
+                        "caller_id": caller_id,
+                        "path": path,
+                        "content": content,
+                        "overwrite": true
+                    }),
+                )
+            })
+        })
+        .collect();
+
+    for handle in handles {
+        let response = handle.join().expect("writer thread panicked")?;
+        assert!(
+            as_bool(&response, "success")?,
+            "ignored same-path writer should commit directly: {response}"
+        );
+        assert_eq!(
+            timing_f64(&response, "occ.commit.direct_path_count"),
+            Some(1.0),
+            "ignored same-path writer must route Direct: {response}"
+        );
+        assert_eq!(
+            timing_f64(&response, "occ.commit.gated_path_count"),
+            Some(0.0),
+            "ignored same-path writer must bypass Gated OCC: {response}"
+        );
+    }
+
+    let read = lease.call_ok(ops::API_V1_READ_FILE, json!({"path": path}))?;
+    let final_content = as_str(&read, "content")?;
+    assert!(
+        payloads.iter().any(|payload| payload == final_content),
+        "final ignored-path content must be one whole writer payload: {read}"
     );
     Ok(())
 }

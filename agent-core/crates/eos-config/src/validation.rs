@@ -26,12 +26,6 @@ pub(crate) fn validate(cfg: &CentralConfig) -> Result<(), ConfigError> {
             detail: "must be >= 1".to_owned(),
         });
     }
-    if cfg.sandbox.timeout_s <= 0.0 || cfg.sandbox.runtime_client_timeout_s <= 0.0 {
-        return Err(ConfigError::OutOfRange {
-            field: "sandbox.*timeout_s".to_owned(),
-            detail: "must be > 0".to_owned(),
-        });
-    }
     let r = &cfg.providers.retry;
     if r.base_delay_s < 0.0 || r.max_delay_s < 0.0 {
         return Err(ConfigError::OutOfRange {
@@ -71,14 +65,6 @@ mod tests {
 
         let mut c = CentralConfig::default();
         c.database.pool_size = 0;
-        assert!(matches!(validate(&c), Err(ConfigError::OutOfRange { .. })));
-
-        let mut c = CentralConfig::default();
-        c.sandbox.timeout_s = 0.0;
-        assert!(matches!(validate(&c), Err(ConfigError::OutOfRange { .. })));
-
-        let mut c = CentralConfig::default();
-        c.sandbox.runtime_client_timeout_s = 0.0;
         assert!(matches!(validate(&c), Err(ConfigError::OutOfRange { .. })));
 
         let mut c = CentralConfig::default();

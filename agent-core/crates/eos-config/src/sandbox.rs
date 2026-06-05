@@ -44,16 +44,16 @@ impl Default for DockerConfig {
 }
 
 /// Sandbox provider defaults and Docker-specific config (`sections/sandbox.py`).
+///
+/// Only host-side provisioning settings live here (provider selection + Docker
+/// connect/launch options). Sandbox-execution timeouts are owned by the
+/// ephemeral-os sandbox module (`sandbox/config/prd.yml`), not agent-core.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
 #[non_exhaustive]
 pub struct SandboxConfig {
     /// The default sandbox backend (Docker only in agent-core).
     pub default_provider: SandboxProvider,
-    /// Per-operation sandbox timeout in seconds. Range-checked `> 0`.
-    pub timeout_s: f64,
-    /// Runtime client (daemon) timeout in seconds. Range-checked `> 0`.
-    pub runtime_client_timeout_s: f64,
     /// Docker-provider settings.
     pub docker: DockerConfig,
 }
@@ -62,8 +62,6 @@ impl Default for SandboxConfig {
     fn default() -> Self {
         Self {
             default_provider: SandboxProvider::Docker,
-            timeout_s: 300.0,
-            runtime_client_timeout_s: 600.0,
             docker: DockerConfig::default(),
         }
     }
@@ -79,8 +77,6 @@ mod tests {
     fn test_sandbox_defaults() {
         let s = SandboxConfig::default();
         assert_eq!(s.default_provider, SandboxProvider::Docker);
-        assert_eq!(s.timeout_s, 300.0);
-        assert_eq!(s.runtime_client_timeout_s, 600.0);
         assert!(s.docker.daemon_tcp);
         assert!(!s.docker.privileged);
         assert!(!s.docker.no_privilege);

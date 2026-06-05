@@ -5,6 +5,8 @@
 //! `eos-protocol` over the live daemon wire.
 
 use std::path::Path;
+#[cfg(feature = "e2e")]
+use std::path::PathBuf;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -18,6 +20,7 @@ pub mod config;
 pub mod container;
 pub mod pool;
 
+pub use config::WorkloadConfig;
 pub use pool::{NodeLease, NodePool};
 
 static INVOCATION_COUNTER: AtomicU64 = AtomicU64::new(1);
@@ -48,10 +51,15 @@ pub fn next_invocation_id() -> String {
 pub fn live_pool_with_config(config_path: impl AsRef<Path>) -> Result<Option<Arc<NodePool>>> {
     use std::sync::OnceLock;
 
-    static POOL: OnceLock<Result<Arc<NodePool>, String>> = OnceLock::new();
+    static POOL: OnceLock<Result<LivePool, String>> = OnceLock::new();
     let config_path = config_path.as_ref();
     match POOL.get_or_init(|| load_live_pool(config_path)) {
-        Ok(pool) => Ok(Some(Arc::clone(pool))),
+        Ok(pool) if pool.config_path == config_path => Ok(Some(Arc::clone(&pool.pool))),
+        Ok(pool) => anyhow::bail!(
+            "eos-e2e-test can merge at most one *.test.yml per test binary; already using {}, requested {}",
+            pool.config_path.display(),
+            config_path.display()
+        ),
         Err(err) => anyhow::bail!("{err}"),
     }
 }
@@ -62,9 +70,18 @@ pub fn live_pool_with_config(_config_path: impl AsRef<Path>) -> Result<Option<Ar
 }
 
 #[cfg(feature = "e2e")]
-fn load_live_pool(config_path: &Path) -> Result<Arc<NodePool>, String> {
+struct LivePool {
+    config_path: PathBuf,
+    pool: Arc<NodePool>,
+}
+
+#[cfg(feature = "e2e")]
+fn load_live_pool(config_path: &Path) -> Result<LivePool, String> {
     try_load_live_pool(config_path)
-        .map(Arc::new)
+        .map(|pool| LivePool {
+            config_path: config_path.to_path_buf(),
+            pool: Arc::new(pool),
+        })
         .map_err(|err| format!("{err:#}"))
 }
 

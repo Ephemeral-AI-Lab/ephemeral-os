@@ -26,14 +26,6 @@ const EOS_PREFIX: &str = "EOS__";
 /// Python `_LEGACY_ENV_MAP` are intentionally not ported (GC-eos-config-05/08).
 const LEGACY_ENV_MAP: &[(&str, &[&str])] = &[
     ("EPHEMERALOS_DATABASE_URL", &["database", "url"]),
-    (
-        "EPHEMERALOS_SANDBOX_TIMEOUT_SECONDS",
-        &["sandbox", "timeout_s"],
-    ),
-    (
-        "EPHEMERALOS_RUNTIME_CLIENT_TIMEOUT",
-        &["sandbox", "runtime_client_timeout_s"],
-    ),
     ("EOS_SANDBOX_PROVIDER", &["sandbox", "default_provider"]),
     (
         "EOS_DOCKER_DAEMON_TCP",
@@ -47,8 +39,6 @@ const LEGACY_ENV_MAP: &[(&str, &[&str])] = &[
         "EOS_DOCKER_NO_PRIVILEGE",
         &["sandbox", "docker", "no_privilege"],
     ),
-    ("MINIMAX_BASE_URL", &["providers", "minimax", "base_url"]),
-    ("MINIMAX_MODEL", &["providers", "minimax", "model"]),
 ];
 
 /// YAML-parse a single env scalar, falling back to the trimmed string when it is
@@ -156,11 +146,11 @@ mod tests {
     #[test]
     fn test_eos_nested_env_sets_path() {
         let tree = data_from_env(&env(&[
-            ("EOS__SANDBOX__TIMEOUT_S", "120"),
+            ("EOS__DATABASE__POOL_SIZE", "120"),
             ("EOS__PROVIDERS__RETRY__STATUS_CODES", "[429,503]"),
         ]));
         assert_eq!(
-            at(&tree, &["sandbox", "timeout_s"]),
+            at(&tree, &["database", "pool_size"]),
             Some(&Value::Number(120.into()))
         );
         let codes = at(&tree, &["providers", "retry", "status_codes"]).unwrap();
@@ -189,7 +179,7 @@ mod tests {
             ("EPHEMERALOS_DATABASE_URL", "  sqlite:///./x.db  "),
             ("EOS_SANDBOX_PROVIDER", "DOCKER"),
             ("EOS_DOCKER_PRIVILEGED", "true"),
-            ("MINIMAX_MODEL", ""), // blank → skipped
+            ("EOS_DOCKER_NO_PRIVILEGE", ""), // blank → skipped
         ]));
         assert_eq!(
             at(&tree, &["database", "url"]),
@@ -205,7 +195,7 @@ mod tests {
             "legacy EOS_DOCKER_PRIVILEGED=true should YAML-coerce to a bool"
         );
         assert!(
-            at(&tree, &["providers", "minimax", "model"]).is_none(),
+            at(&tree, &["sandbox", "docker", "no_privilege"]).is_none(),
             "blank legacy value should be skipped"
         );
     }

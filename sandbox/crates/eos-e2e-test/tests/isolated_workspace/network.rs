@@ -21,11 +21,17 @@ use crate::support::{as_str, live_pool_or_skip, reset_isolated_workspaces, stdou
 fn unique_port() -> u16 {
     let hash = eos_e2e_test::unique_suffix()
         .bytes()
-        .fold(0_u32, |acc, byte| acc.wrapping_mul(31).wrapping_add(u32::from(byte)));
+        .fold(0_u32, |acc, byte| {
+            acc.wrapping_mul(31).wrapping_add(u32::from(byte))
+        });
     40_000 + u16::try_from(hash % 8_000).unwrap_or(0)
 }
 
-fn start_server(lease: &eos_e2e_test::NodeLease<'_>, caller_id: Option<&str>, port: u16) -> Result<Value> {
+fn start_server(
+    lease: &eos_e2e_test::NodeLease<'_>,
+    caller_id: Option<&str>,
+    port: u16,
+) -> Result<Value> {
     let cmd = format!(
         "mkdir -p /eos/scratch/e2e && timeout 20 python3 -m http.server {port} >/eos/scratch/e2e/srv-{port}.log 2>&1"
     );
@@ -39,6 +45,24 @@ fn start_server(lease: &eos_e2e_test::NodeLease<'_>, caller_id: Option<&str>, po
         args["caller_id"] = json!(caller);
     }
     lease.call_ok(ops::API_V1_EXEC_COMMAND, args)
+}
+
+fn start_bound_socket(
+    lease: &eos_e2e_test::NodeLease<'_>,
+    caller_id: &str,
+    port: u16,
+    label: &str,
+) -> Result<Value> {
+    lease.call_ok(
+        ops::API_V1_EXEC_COMMAND,
+        json!({
+            "caller_id": caller_id,
+            "cmd": format!("python3 -c \"import socket,time;s=socket.socket();s.bind(('0.0.0.0',{port}));s.listen(1);print('BOUND-{label}',flush=True);time.sleep(20)\""),
+            "yield_time_ms": 600,
+            "timeout_seconds": 60,
+            "max_output_tokens": 500
+        }),
+    )
 }
 
 fn cancel(lease: &eos_e2e_test::NodeLease<'_>, caller_id: Option<&str>, id: &str) {
@@ -61,7 +85,9 @@ fn cross_mode_same_port_no_conflict() -> Result<()> {
 
     // Caller A: an ephemeral server holding the port in the container netns.
     let server_a = start_server(&lease, None, port)?;
-    let id_a = as_str(&server_a, "command_session_id").ok().map(ToOwned::to_owned);
+    let id_a = as_str(&server_a, "command_session_id")
+        .ok()
+        .map(ToOwned::to_owned);
 
     let body = (|| -> Result<()> {
         ensure!(
@@ -117,7 +143,9 @@ fn same_mode_same_port_conflicts() -> Result<()> {
 
     // Two ephemeral execs share the container netns: the second bind collides.
     let server = start_server(&lease, None, port)?;
-    let id = as_str(&server, "command_session_id").ok().map(ToOwned::to_owned);
+    let id = as_str(&server, "command_session_id")
+        .ok()
+        .map(ToOwned::to_owned);
 
     let body = (|| -> Result<()> {
         ensure!(
@@ -183,4 +211,89 @@ fn isolated_exit_reports_dedicated_netns() -> Result<()> {
         "ns veth name should follow the eos-iws-*n convention: {veth_ns}"
     );
     Ok(())
+}
+
+#[test]
+fn isolated_to_isolated_same_port_matrix() -> Result<()> {
+    let Some(pool) = live_pool_or_skip()? else {
+        return Ok(());
+    };
+    let lease = pool.acquire()?;
+    reset_isolated_workspaces(&lease);
+    let port = unique_port();
+    let caller_a = format!("iws-net-a-{}", eos_e2e_test::unique_suffix());
+    let caller_b = format!("iws-net-b-{}", eos_e2e_test::unique_suffix());
+
+    lease.call_ok(
+        ops::API_ISOLATED_WORKSPACE_ENTER,
+        json!({"caller_id": caller_a}),
+    )?;
+    lease.call_ok(
+        ops::API_ISOLATED_WORKSPACE_ENTER,
+        json!({"caller_id": caller_b}),
+    )?;
+
+    let mut sessions: Vec<(String, String)> = Vec::new();
+    let body = (|| -> Result<()> {
+        let server_a = start_bound_socket(&lease, &caller_a, port, "A")?;
+        ensure!(
+            as_str(&server_a, "status")? == "running",
+            "caller A isolated server must stay running: {server_a}"
+        );
+        ensure!(
+            stdout(&server_a).contains("BOUND-A"),
+            "caller A must bind the selected port: {server_a}"
+        );
+        sessions.push((
+            caller_a.clone(),
+            as_str(&server_a, "command_session_id")?.to_owned(),
+        ));
+
+        let server_b = start_bound_socket(&lease, &caller_b, port, "B")?;
+        ensure!(
+            as_str(&server_b, "status")? == "running",
+            "caller B isolated server must also stay running on the same port: {server_b}"
+        );
+        ensure!(
+            stdout(&server_b).contains("BOUND-B"),
+            "caller B must bind the same port in its own netns: {server_b}"
+        );
+        sessions.push((
+            caller_b.clone(),
+            as_str(&server_b, "command_session_id")?.to_owned(),
+        ));
+
+        let same_namespace = lease.call_ok(
+            ops::API_V1_EXEC_COMMAND,
+            json!({
+                "caller_id": caller_a,
+                "cmd": format!("python3 -c \"import socket;s=socket.socket();s.bind(('0.0.0.0',{port}));print('SAME_CALLER_BOUND')\" && echo SAME_CALLER_BOUND || echo EADDRINUSE"),
+                "yield_time_ms": 2000,
+                "timeout_seconds": 30,
+                "max_output_tokens": 500
+            }),
+        )?;
+        ensure!(
+            stdout(&same_namespace).contains("EADDRINUSE"),
+            "a second bind inside caller A's isolated netns must conflict: {same_namespace}"
+        );
+        ensure!(
+            !stdout(&same_namespace).contains("SAME_CALLER_BOUND"),
+            "same-caller bind must not succeed while the first caller A server is live: {same_namespace}"
+        );
+        Ok(())
+    })();
+
+    for (caller_id, session_id) in &sessions {
+        cancel(&lease, Some(caller_id), session_id);
+    }
+    let _ = lease.call(
+        ops::API_ISOLATED_WORKSPACE_EXIT,
+        json!({"caller_id": caller_b, "grace_s": 0.1}),
+    );
+    let _ = lease.call(
+        ops::API_ISOLATED_WORKSPACE_EXIT,
+        json!({"caller_id": caller_a, "grace_s": 0.1}),
+    );
+    body
 }

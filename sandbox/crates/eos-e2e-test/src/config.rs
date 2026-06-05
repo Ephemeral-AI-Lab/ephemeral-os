@@ -4,6 +4,7 @@
 //! `eos-config`; this module resolves the merged document into the concrete
 //! Docker harness settings.
 
+use std::collections::BTreeSet;
 use std::path::{Path, PathBuf};
 use std::time::Duration;
 
@@ -79,6 +80,23 @@ pub struct Config {
     pub non_kept_container_ttl: Duration,
     /// `limit` passed to `api.audit.pull`.
     pub audit_pull_limit: u64,
+    /// Correctness, pressure, and performance workload knobs.
+    pub workload: WorkloadConfig,
+}
+
+/// Fully resolved workload knobs used by live E2E tests.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct WorkloadConfig {
+    /// Concurrency ladder for tests that compare levels instead of one count.
+    pub concurrency_levels: Vec<usize>,
+    /// Bound repeated write, squash, refresh, or retry loops.
+    pub write_iterations: usize,
+    /// Number of samples before a perf/resource JSON artifact is emitted.
+    pub sample_count: usize,
+    /// Host-relative directory for JSON performance/resource artifacts.
+    pub perf_artifact_dir: PathBuf,
+    /// Workload operation budget independent of the socket timeout.
+    pub timeout: Duration,
 }
 
 /// Typed `eos_e2e_test` section from `sandbox/config/prd.yml`.
@@ -89,6 +107,7 @@ pub struct EosE2eTestConfig {
     pub pool: E2ePoolConfig,
     pub timeouts: E2eTimeoutConfig,
     pub audit: E2eAuditConfig,
+    pub workload: E2eWorkloadConfig,
 }
 
 /// Docker/container defaults for the E2E harness.
@@ -142,6 +161,17 @@ pub struct E2eTimeoutConfig {
 #[serde(deny_unknown_fields)]
 pub struct E2eAuditConfig {
     pub pull_limit: u64,
+}
+
+/// Workload defaults for correctness, pressure, and performance E2E tests.
+#[derive(Debug, Clone, PartialEq, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct E2eWorkloadConfig {
+    pub concurrency_levels: Vec<usize>,
+    pub write_iterations: usize,
+    pub sample_count: usize,
+    pub perf_artifact_dir: PathBuf,
+    pub timeout_s: u64,
 }
 
 impl EosE2eTestConfig {
@@ -207,6 +237,29 @@ impl EosE2eTestConfig {
             "eos_e2e_test.timeouts.base_build_s",
         )?;
         require_u64_at_least(self.audit.pull_limit, 1, "eos_e2e_test.audit.pull_limit")?;
+        require_concurrency_levels(
+            &self.workload.concurrency_levels,
+            "eos_e2e_test.workload.concurrency_levels",
+        )?;
+        require_usize_at_least(
+            self.workload.write_iterations,
+            1,
+            "eos_e2e_test.workload.write_iterations",
+        )?;
+        require_usize_at_least(
+            self.workload.sample_count,
+            1,
+            "eos_e2e_test.workload.sample_count",
+        )?;
+        require_non_empty_path(
+            &self.workload.perf_artifact_dir,
+            "eos_e2e_test.workload.perf_artifact_dir",
+        )?;
+        require_u64_at_least(
+            self.workload.timeout_s,
+            1,
+            "eos_e2e_test.workload.timeout_s",
+        )?;
         Ok(())
     }
 }
@@ -259,6 +312,13 @@ impl Config {
             keep_container: e2e.pool.keep_container,
             non_kept_container_ttl: Duration::from_secs(e2e.docker.non_kept_container_ttl_s),
             audit_pull_limit: e2e.audit.pull_limit,
+            workload: WorkloadConfig {
+                concurrency_levels: e2e.workload.concurrency_levels,
+                write_iterations: e2e.workload.write_iterations,
+                sample_count: e2e.workload.sample_count,
+                perf_artifact_dir: e2e.workload.perf_artifact_dir,
+                timeout: Duration::from_secs(e2e.workload.timeout_s),
+            },
         })
     }
 }
@@ -302,6 +362,27 @@ fn require_absolute(path: &std::path::Path, field: &str) -> Result<()> {
 fn require_non_empty_items(values: &[String], field: &str) -> Result<()> {
     if values.iter().any(|value| value.trim().is_empty()) {
         bail!("{field}: must not contain empty strings");
+    }
+    Ok(())
+}
+
+fn require_concurrency_levels(values: &[usize], field: &str) -> Result<()> {
+    if values.is_empty() {
+        bail!("{field}: must contain at least one level");
+    }
+    let mut seen = BTreeSet::new();
+    let mut previous = 0;
+    for &value in values {
+        if value == 0 {
+            bail!("{field}: must not contain zero");
+        }
+        if !seen.insert(value) {
+            bail!("{field}: duplicate level {value}");
+        }
+        if value < previous {
+            bail!("{field}: must be sorted ascending");
+        }
+        previous = value;
     }
     Ok(())
 }
@@ -358,6 +439,18 @@ mod tests {
         let mut cfg = prd_config();
         cfg.timeouts.ready_s = 0;
         assert_invalid(cfg, "eos_e2e_test.timeouts.ready_s");
+
+        let mut cfg = prd_config();
+        cfg.workload.concurrency_levels = vec![1, 0, 3];
+        assert_invalid(cfg, "eos_e2e_test.workload.concurrency_levels");
+
+        let mut cfg = prd_config();
+        cfg.workload.concurrency_levels = vec![1, 3, 3];
+        assert_invalid(cfg, "duplicate level 3");
+
+        let mut cfg = prd_config();
+        cfg.workload.write_iterations = 0;
+        assert_invalid(cfg, "eos_e2e_test.workload.write_iterations");
     }
 
     fn prd_config() -> EosE2eTestConfig {

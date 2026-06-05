@@ -34,17 +34,6 @@ impl Default for RetryConfig {
     }
 }
 
-/// Minimax provider routing config (`sections/providers.py:26-30`).
-#[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize, JsonSchema)]
-#[serde(deny_unknown_fields)]
-#[non_exhaustive]
-pub struct MinimaxConfig {
-    /// Minimax API base url (empty means unset).
-    pub base_url: String,
-    /// Minimax model key (empty means unset).
-    pub model: String,
-}
-
 /// Provider-level runtime configuration (`sections/providers.py:33-37`).
 #[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
@@ -52,8 +41,6 @@ pub struct MinimaxConfig {
 pub struct ProvidersConfig {
     /// Retry policy applied across providers.
     pub retry: RetryConfig,
-    /// Minimax routing config.
-    pub minimax: MinimaxConfig,
 }
 
 #[cfg(test)]

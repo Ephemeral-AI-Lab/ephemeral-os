@@ -2,7 +2,7 @@ use anyhow::{Context, Result};
 use eos_e2e_test::audit::section;
 use eos_e2e_test::cas::looks_like_sha256;
 use eos_protocol::ops;
-use serde_json::json;
+use serde_json::{json, Value};
 
 use crate::support::{as_bool, as_i64, as_str, live_pool_or_skip};
 
@@ -126,4 +126,197 @@ fn commit_emits_audit() -> Result<()> {
         "commit audit should report a CAS-shaped root hash: {event}"
     );
     Ok(())
+}
+
+#[test]
+fn workspace_base_rebuild_idempotent_metrics() -> Result<()> {
+    let Some(pool) = live_pool_or_skip()? else {
+        return Ok(());
+    };
+    let lease = pool.acquire()?;
+    let path = "commit/base-rebuild-idempotent.txt";
+    let content = "stable workspace base\n";
+
+    lease.call_ok(
+        ops::API_V1_WRITE_FILE,
+        json!({"path": path, "content": content, "overwrite": true}),
+    )?;
+    lease.call_ok(
+        ops::API_COMMIT_TO_WORKSPACE,
+        json!({"workspace_root": lease.workspace_root()}),
+    )?;
+
+    let mut audit = lease.audit_tap()?;
+    let first = rebuild_workspace_base(&lease)?;
+    let first_metrics = lease.call_ok(ops::API_LAYER_METRICS, json!({}))?;
+    let second = rebuild_workspace_base(&lease)?;
+    let second_metrics = lease.call_ok(ops::API_LAYER_METRICS, json!({}))?;
+    audit.collect()?;
+
+    assert_rebuild_response(&first)?;
+    assert_rebuild_response(&second)?;
+    assert_eq!(
+        binding_str(&second, "base_root_hash")?,
+        binding_str(&first, "base_root_hash")?,
+        "rebuilding an unchanged workspace base should keep the base hash stable: first={first} second={second}"
+    );
+    assert_rebuilt_base_metrics(&first_metrics)?;
+    assert_rebuilt_base_metrics(&second_metrics)?;
+    assert!(
+        as_i64(&second_metrics, "storage_bytes")? <= as_i64(&first_metrics, "storage_bytes")? + 8192,
+        "repeated reset rebuild should not grow durable stack storage: first={first_metrics} second={second_metrics}"
+    );
+
+    let read = lease.call_ok(ops::API_V1_READ_FILE, json!({"path": path}))?;
+    assert_eq!(as_str(&read, "content")?, content);
+
+    let built_events = audit.all("workspace_base.built");
+    assert!(
+        built_events.len() >= 2,
+        "two reset rebuilds should emit workspace_base.built audit events: {:?}",
+        audit.events()
+    );
+    for event in built_events.into_iter().rev().take(2) {
+        assert_workspace_base_built_event(event)?;
+    }
+    Ok(())
+}
+
+fn rebuild_workspace_base(lease: &eos_e2e_test::NodeLease<'_>) -> Result<Value> {
+    lease.call_ok(
+        ops::API_BUILD_WORKSPACE_BASE,
+        json!({"workspace_root": lease.workspace_root(), "reset": true}),
+    )
+}
+
+fn assert_rebuild_response(response: &Value) -> Result<()> {
+    assert!(
+        as_bool(response, "success")?,
+        "rebuild should succeed: {response}"
+    );
+    assert!(
+        as_bool(response, "created")?,
+        "reset rebuild should create a base: {response}"
+    );
+    let binding = response
+        .get("binding")
+        .context("binding missing from workspace base rebuild response")?;
+    assert_eq!(
+        binding
+            .get("active_manifest_version")
+            .and_then(Value::as_i64),
+        Some(1),
+        "reset rebuild should publish active manifest version 1: {response}"
+    );
+    assert_eq!(
+        binding.get("base_manifest_version").and_then(Value::as_i64),
+        Some(1),
+        "reset rebuild should publish base manifest version 1: {response}"
+    );
+    assert!(
+        binding
+            .get("base_root_hash")
+            .and_then(Value::as_str)
+            .is_some_and(looks_like_sha256),
+        "reset rebuild should report a CAS-shaped base hash: {response}"
+    );
+    for key in [
+        "api.workspace_base.total_s",
+        "workspace_base.prepare_stack_s",
+        "workspace_base.collect_s",
+        "workspace_base.write_layer_s",
+        "workspace_base.write_manifest_s",
+        "workspace_base.write_binding_s",
+    ] {
+        assert_timing_present(response, key)?;
+    }
+    Ok(())
+}
+
+fn assert_rebuilt_base_metrics(metrics: &Value) -> Result<()> {
+    assert_eq!(
+        as_i64(metrics, "manifest_depth")?,
+        1,
+        "base rebuild should leave a single active base layer: {metrics}"
+    );
+    assert_eq!(
+        as_i64(metrics, "referenced_layers")?,
+        1,
+        "base rebuild should reference exactly one layer: {metrics}"
+    );
+    assert_eq!(
+        as_i64(metrics, "layer_dirs")?,
+        1,
+        "base rebuild should not leave superseded layer dirs: {metrics}"
+    );
+    assert_eq!(
+        as_i64(metrics, "staging_dirs")?,
+        0,
+        "base rebuild should not leave staging dirs: {metrics}"
+    );
+    assert_eq!(
+        as_i64(metrics, "active_leases")?,
+        0,
+        "base rebuild should leave no active leases: {metrics}"
+    );
+    assert_eq!(
+        as_i64(metrics, "leased_layers")?,
+        0,
+        "base rebuild should leave no retained lease layers: {metrics}"
+    );
+    assert!(
+        as_i64(metrics, "storage_bytes")? > 0,
+        "base rebuild should expose nonzero stack storage bytes: {metrics}"
+    );
+    Ok(())
+}
+
+fn assert_workspace_base_built_event(event: &Value) -> Result<()> {
+    let layer_stack = section(event, "layer_stack").context("layer_stack audit section")?;
+    assert_eq!(
+        layer_stack.get("manifest_version").and_then(Value::as_i64),
+        Some(1),
+        "workspace_base.built audit should report rebuilt manifest version: {event}"
+    );
+    assert_eq!(
+        layer_stack.get("layer_count").and_then(Value::as_i64),
+        Some(1),
+        "workspace_base.built audit should report a single rebuilt layer: {event}"
+    );
+    assert!(
+        layer_stack
+            .get("manifest_root_hash")
+            .and_then(Value::as_str)
+            .is_some_and(looks_like_sha256),
+        "workspace_base.built audit should report a CAS-shaped manifest hash: {event}"
+    );
+    assert!(
+        layer_stack
+            .get("total_ms")
+            .and_then(Value::as_f64)
+            .is_some_and(|total_ms| total_ms >= 0.0),
+        "workspace_base.built audit should report nonnegative total_ms: {event}"
+    );
+    Ok(())
+}
+
+fn assert_timing_present(response: &Value, key: &str) -> Result<()> {
+    let timing = response
+        .get("timings")
+        .and_then(|timings| timings.get(key))
+        .and_then(Value::as_f64)
+        .with_context(|| format!("timing {key} missing in {response}"))?;
+    assert!(
+        timing >= 0.0,
+        "timing {key} should be nonnegative in response: {response}"
+    );
+    Ok(())
+}
+
+fn binding_str<'a>(response: &'a Value, key: &str) -> Result<&'a str> {
+    response
+        .get("binding")
+        .and_then(|binding| binding.get(key))
+        .and_then(Value::as_str)
+        .with_context(|| format!("binding.{key} missing in {response}"))
 }

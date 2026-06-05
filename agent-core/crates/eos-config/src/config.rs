@@ -26,7 +26,7 @@ pub struct CentralConfig {
     pub database: DatabaseConfig,
     /// Sandbox provider config.
     pub sandbox: SandboxConfig,
-    /// Provider (retry/minimax) config.
+    /// Provider (retry) config.
     pub providers: ProvidersConfig,
     /// Per-Attempt run-stage tunables (Rust-only).
     pub attempt: AttemptConfig,
@@ -42,8 +42,6 @@ mod tests {
     fn test_default_config_matches_python() {
         let c = CentralConfig::default();
         assert_eq!(c.database.pool_size, 5);
-        assert_eq!(c.sandbox.timeout_s, 300.0);
-        assert_eq!(c.sandbox.runtime_client_timeout_s, 600.0);
         assert_eq!(c.providers.retry.max_retries, 3);
         assert_eq!(c.providers.retry.base_delay_s, 1.0);
         assert_eq!(c.providers.retry.max_delay_s, 30.0);

@@ -1,0 +1,29 @@
+# plugin
+
+## Overview
+
+This module owns the unified live E2E contract for plugin package setup, daemon-hosted PPC service dispatch, workspace refresh, restart behavior, LSP dispatch, and isolated-gating coverage for the sandbox plugin subsystem. It exercises daemon ops `api.plugin.ensure`, `api.plugin.status`, dynamic plugin ops `plugin.generic.query` and `plugin.lsp.query_symbols`, plus `api.v1.write_file`, `api.v1.exec_command`, `api.isolated_workspace.enter`, and `api.isolated_workspace.exit` for fixture setup and routing gates. Module config lives at `crates/eos-e2e-test/tests/plugin/config/default.test.yml`.
+
+## Checklist
+
+- [ ] plugin-package-ensure: Warm/cold ensure requests upload when missing, publishes digest-keyed package roots, runs setup, and creates dependency/scratch setup artifacts.
+- [ ] plugin-setup-idempotent: Re-ensure with matching package and setup digests skips upload/setup and keeps the setup count at one.
+- [ ] plugin-dispatch-roundtrip: Dynamic daemon PPC dispatch preserves operation name, request body, success envelope, package root, and dependency root.
+- [ ] plugin-service-hosted: Daemon-hosted plugin services start as live PPC workers, connect routes, and report accepted health probes.
+- [ ] plugin-service-cleanup: Reload or stop removes old routes, PPC clients, service snapshots, sockets, uploads, markers, and worker processes.
+- [ ] plugin-refresh-remount: A read-only service sees the latest workspace after a LayerStack update and records bounded refresh activity.
+- [ ] plugin-refresh-singleflight: Concurrent refreshes after one workspace edit all observe new content while refresh counts stay bounded.
+- [ ] plugin-restart-policy: The `restart_service` strategy restarts the worker process instead of remounting the workspace.
+- [ ] plugin-isolated-gate: Plugin dynamic ops are rejected while the caller is in isolated workspace mode and the handle exits cleanly.
+- [ ] plugin-lsp-lifecycle: The LSP package uses the generic lifecycle, installs node/pyright dependency roots, connects `plugin.lsp.query_symbols`, and returns live workspace symbols.
+- [ ] plugin-write-allowed: Write-allowed or oneshot plugin operations publish only through daemon-owned OCC paths and report changed paths.
+
+## Test Case
+
+| Test name | Test description | Command to run | Checklist item |
+|---|---|---|---|
+| `plugin_package_setup_lifecycle` | Groups `host_ensure_plugin_package_installs_generic_package`, `generic_package_installs_and_sets_up`, `generic_package_reensure_is_idempotent`, and the package/setup portion of `lsp_package_uses_generic_lifecycle_and_dispatches_symbols`: missing packages request upload, staged packages publish digest roots, setup artifacts are created, and repeated ensure skips setup. | `cargo test -p eos-e2e-test --features e2e --test plugin -- --nocapture` | `plugin-package-ensure`, `plugin-setup-idempotent`, `plugin-lsp-lifecycle` |
+| `plugin_service_dispatch_and_health` | Groups `generic_plugin_dispatch_roundtrip`, `service_health_probe_reports_connected_service`, and the LSP dispatch portion of `lsp_package_uses_generic_lifecycle_and_dispatches_symbols`: dynamic PPC routes preserve request/response envelopes, service health probes are accepted, and `plugin.lsp.query_symbols` returns live workspace symbols. | `cargo test -p eos-e2e-test --features e2e --test plugin -- --nocapture` | `plugin-dispatch-roundtrip`, `plugin-service-hosted`, `plugin-lsp-lifecycle` |
+| `plugin_workspace_refresh_and_restart` | Groups `generic_plugin_refreshes_after_workspace_edit`, `restart_service_strategy_restarts_on_workspace_edit`, and planned `concurrent_plugin_refresh_singleflight`: services must observe LayerStack updates, refresh counts remain bounded under concurrent dispatch, and `restart_service` restarts rather than remounts. | `cargo test -p eos-e2e-test --features e2e --test plugin -- --nocapture` | `plugin-refresh-remount`, `plugin-refresh-singleflight`, `plugin-restart-policy` |
+| `plugin_isolated_gate` | Uses `generic_plugin_rejected_in_isolated_workspace`: dynamic plugin operations are rejected with `forbidden_in_isolated_workspace` while the caller is isolated, and the isolated handle exits cleanly afterward. | `cargo test -p eos-e2e-test --features e2e --test plugin -- --nocapture` | `plugin-isolated-gate` |
+| `plugin_cleanup_and_write_publish` | Planned, not implemented: add `package_reload_reaps_old_service_and_routes` and `oneshot_overlay_plugin_write_publishes_through_occ` so reload/stop reaps old service state and write-allowed plugin operations publish changed paths only through daemon-owned OCC. | `cargo test -p eos-e2e-test --features e2e --test plugin -- --nocapture` | `plugin-service-cleanup`, `plugin-write-allowed` |

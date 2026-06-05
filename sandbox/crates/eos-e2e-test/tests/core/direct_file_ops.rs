@@ -1,6 +1,10 @@
+use std::sync::{Arc, Barrier};
+use std::thread;
+
 use anyhow::{Context, Result};
 use eos_e2e_test::audit::section;
 use eos_e2e_test::client::error_kind;
+use eos_e2e_test::next_invocation_id;
 use eos_protocol::{
     models::{MAX_FILE_BYTES, MAX_READ_BYTES},
     ops,
@@ -303,7 +307,10 @@ fn fast_path_surfaces_occ_and_read_timings() -> Result<()> {
         timing_f64(&write, "api.write.occ_apply_s").is_some(),
         "fast-path write should surface api.write.occ_apply_s: {write}"
     );
-    let read = lease.call_ok(ops::API_V1_READ_FILE, json!({"path": "fastpath/timings.txt"}))?;
+    let read = lease.call_ok(
+        ops::API_V1_READ_FILE,
+        json!({"path": "fastpath/timings.txt"}),
+    )?;
     assert!(
         timing_f64(&read, "api.read.layer_stack_read_s").is_some(),
         "fast-path read should surface api.read.layer_stack_read_s: {read}"
@@ -332,6 +339,70 @@ fn repeated_fast_path_writes_keep_leases_zero() -> Result<()> {
         0,
         "fast-path writes must hold no leased layers: {metrics}"
     );
+    Ok(())
+}
+
+#[test]
+fn direct_file_ops_concurrency_ladder() -> Result<()> {
+    let Some(pool) = live_pool_or_skip()? else {
+        return Ok(());
+    };
+    let levels = pool.workload().concurrency_levels.clone();
+    let lease = pool.acquire()?;
+    for level in levels {
+        let barrier = Arc::new(Barrier::new(level));
+        let handles: Vec<_> = (0..level)
+            .map(|index| {
+                let client = lease.client().clone();
+                let root = lease.root().to_owned();
+                let caller_id = lease.caller_id().to_owned();
+                let barrier = Arc::clone(&barrier);
+                thread::spawn(move || {
+                    barrier.wait();
+                    client.request(
+                        ops::API_V1_WRITE_FILE,
+                        &next_invocation_id(),
+                        &json!({
+                            "layer_stack_root": root,
+                            "caller_id": caller_id,
+                            "path": format!("fastpath/ladder-{level}-{index}.txt"),
+                            "content": format!("level={level} index={index}\n"),
+                            "overwrite": true
+                        }),
+                    )
+                })
+            })
+            .collect();
+
+        for handle in handles {
+            let response = handle.join().expect("direct write thread panicked")?;
+            assert!(
+                as_bool(&response, "success")?,
+                "direct write ladder level {level} should commit: {response}"
+            );
+            assert_eq!(as_str(&response, "status")?, "committed");
+            assert!(
+                timing_f64(&response, "api.write.occ_apply_s").is_some(),
+                "direct write ladder should surface OCC timing: {response}"
+            );
+        }
+        for index in 0..level {
+            let read = lease.call_ok(
+                ops::API_V1_READ_FILE,
+                json!({"path": format!("fastpath/ladder-{level}-{index}.txt")}),
+            )?;
+            assert_eq!(
+                as_str(&read, "content")?,
+                format!("level={level} index={index}\n")
+            );
+        }
+        let metrics = wait_for_active_leases(&lease, 0)?;
+        assert_eq!(
+            as_i64(&metrics, "leased_layers")?,
+            0,
+            "direct file ladder must not hold leased layers after level {level}: {metrics}"
+        );
+    }
     Ok(())
 }
 

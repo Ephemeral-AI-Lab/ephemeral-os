@@ -23,16 +23,16 @@ infrastructure, not a sandbox operation oracle.
 1. Add a `readme.md` coverage contract for every integration target under
    `sandbox/crates/eos-e2e-test/tests`.
 2. Make each README load-bearing: every checklist item must be covered by at
-   least one listed test case.
+   least one listed scenario-style test case.
 3. Expand correctness coverage for OCC, ephemeral workspaces, isolated
    workspaces, file ops, command sessions, plugins, LayerStack/overlay, daemon
    control, and pressure.
 4. Promote performance and resource behavior to first-class E2E assertions.
 5. Add explicit concurrency comparisons at levels `1`, `3`, `6`, and `12`
    where the subsystem can support those levels.
-6. Keep fast developer runs separate from heavy/performance runs through
-   module-local YAML and typed harness config, not ad hoc environment
-   overrides.
+6. Keep correctness, concurrency, resource, and performance workload knobs in
+   module-local YAML contracts backed by typed harness config, not generic
+   cost-class variants or ad hoc environment overrides.
 
 ## 2. Non-Goals
 
@@ -123,33 +123,39 @@ Each README must use exactly this section structure:
 README requirements:
 
 1. The overview names the owning subsystem, the daemon ops under test, the
-   module-local config path, and whether the target is fast, heavy, perf, or
-   mixed.
+   module-local config path, and any named special-purpose config variant it
+   uses.
 2. Checklist IDs are stable and local to the module, for example
    `occ-git-drop` or `iws-port-matrix`.
 3. Every checklist item appears in at least one `Test Case` row.
-4. Every test function in the module appears in the table, or the README says
-   why it is only support/legacy coverage.
-5. Commands use Cargo filters that a developer can run directly from
+4. Each module has at most five `Test Case` rows. Rows are scenario contracts,
+   not a one-row-per-Rust-function inventory.
+5. Checklist and test rows are many-to-many. Because live sandbox setup is
+   expensive, one test case should cover multiple checklist items when the
+   assertions naturally share a daemon/container setup; do not split a coherent
+   live scenario into one test per checklist item.
+6. A row may name several existing Rust test functions in its description when
+   those functions already implement part of the scenario. Planned coverage may
+   be grouped into the same row when it completes the scenario.
+7. Commands use Cargo filters that a developer can run directly from
    `sandbox/`.
-6. README text records known heavy tests but does not record transient pass/fail
-   claims.
+8. README text records known expensive or long-running tests but does not record
+   transient pass/fail claims.
 
 Add a later validation check that compares `cargo test -p eos-e2e-test
 --features e2e -- --list` or an `rg` inventory against the README tables.
 
 ---
 
-## 5. Config and Profile Contract
+## 5. Unified Config Contract
 
-Keep `config/default.test.yml` as the default target config. Add profile files
-only when tests need distinct cost classes:
-
-```text
-tests/<module>/config/fast.test.yml
-tests/<module>/config/heavy.test.yml
-tests/<module>/config/perf.test.yml
-```
+Keep `config/default.test.yml` as the default target config for each module.
+Modules may add named `*.test.yml` variants only when a concrete subsystem test
+needs a distinct daemon or workload contract, but a live run uploads and merges
+at most one module-local `*.test.yml`. Do not add generic cost-class variant
+files; variant names must describe the actual special need, for example
+`short-ttl.test.yml`, `isolated-cap-12.test.yml`, or
+`plugin-reload.test.yml`.
 
 Required typed workload config additions:
 
@@ -157,31 +163,19 @@ Required typed workload config additions:
 |---|---|
 | `workload.concurrency_levels` | Default `[1, 3, 6, 12]` for ladder tests. |
 | `workload.write_iterations` | Bound repeated write/squash/refresh loops. |
-| `workload.sample_count` | Perf sample count before summary artifact emission. |
-| `workload.heavy_enabled` | Allows expensive tests to skip unless selected by profile. |
+| `workload.sample_count` | Performance sample count before summary artifact emission. |
 | `workload.perf_artifact_dir` | Directory for JSON performance reports. |
-| `workload.timeout_s` | Heavy/perf operation budget independent of socket timeout. |
+| `workload.timeout_s` | Workload operation budget independent of socket timeout. |
 
-Fast profile:
+Unified workload policy:
 
-- Small loops.
-- Single daemon or default pool.
-- No long-running 12-way isolated handle pressure unless the configured cap
-  supports it.
-
-Heavy profile:
-
-- Full `1/3/6/12` ladders where valid.
-- Larger audit pull limits.
-- Short TTL/reaper settings where the test owns the daemon config.
-- JSON performance/resource artifact output.
-
-Perf profile:
-
-- Repeated samples.
+- The committed default ladder is `1/3/6/12`; a test may use a subset only when
+  the daemon subsystem exposes a hard cap and the test asserts the cap behavior.
+- Repeated samples emit JSON artifacts before any strict regression threshold is
+  introduced.
 - No fragile absolute latency assertions in the first version.
-- Structural bounds first: O(1) resource shape, no monotonic leaks, no orphaned
-  sessions or processes.
+- Structural bounds come first: O(1) resource shape, no monotonic leaks, no
+  orphaned sessions or processes, and no unbounded durable storage growth.
 
 ---
 
@@ -241,17 +235,16 @@ Checklist:
 | `occ-conflict-report` | Concurrent same-path edits produce structured conflict results and coherent final content. |
 | `occ-edit-anchor-errors` | Missing anchor and ambiguous multiple occurrence edits return no-op conflict payloads. |
 | `occ-audit-accounting` | Publish and conflict paths emit audit events and route timing counters. |
+| `occ-result-catalog` | Committed, rejected, dropped, and edit-conflict FileResult statuses keep stable wire names and reasons. |
 
 Planned test cases:
 
 | Test name | Description | Command | Checklist |
 |---|---|---|---|
-| `git_writes_are_dropped_and_unreadable` | Strengthen existing test with unchanged `manifest_version`, `manifest_depth`, empty `changed_paths`, route counts zero, and readback absent. | `cargo test -p eos-e2e-test --features e2e --test occ git_writes_are_dropped_and_unreadable -- --nocapture` | `occ-git-drop` |
-| `gitignored_writes_bypass_the_occ_gate` | Keep existing direct route check and tracked sibling control. | `cargo test -p eos-e2e-test --features e2e --test occ gitignored_writes_bypass_the_occ_gate -- --nocapture` | `occ-gitignored-direct`, `occ-tracked-gated` |
-| `concurrent_gitignored_same_path_direct_writes` | New: two ignored writes race on the same path; both avoid stale-base conflict and final content is one whole payload. | `cargo test -p eos-e2e-test --features e2e --test occ concurrent_gitignored_same_path_direct_writes -- --nocapture` | `occ-gitignored-direct` |
-| `concurrent_disjoint_writes` | Keep existing correctness oracle for concurrent disjoint tracked paths. Do not assert queue batching until a non-atomic path exists. | `cargo test -p eos-e2e-test --features e2e --test occ concurrent_disjoint_writes -- --nocapture` | `occ-disjoint-merge` |
-| `concurrent_conflicting_writes` | Strengthen to exact one committed writer and `N - 1` conflict or structured rejection results. | `cargo test -p eos-e2e-test --features e2e --test occ concurrent_conflicting_writes -- --nocapture` | `occ-conflict-report` |
-| `edit_anchor_error_no_publish` | New or strengthened: missing anchor/multiple occurrence preserves content, `applied_edits == 0`, `changed_paths == []`, and manifest unchanged. | `cargo test -p eos-e2e-test --features e2e --test occ edit_anchor_error_no_publish -- --nocapture` | `occ-edit-anchor-errors`, `occ-audit-accounting` |
+| `occ-route-and-drop-matrix` | Groups `.git` drop, gitignored direct routing, tracked gated routing, and planned same-path ignored direct race; strengthens route timings, unchanged manifest state, absent readback, and whole-payload final content. | `cargo test -p eos-e2e-test --features e2e --test occ gating -- --nocapture` | `occ-git-drop`, `occ-gitignored-direct`, `occ-tracked-gated`, `occ-audit-accounting` |
+| `occ-concurrency-merge-conflict-matrix` | Groups disjoint merge, same-path conflict, and retry-budget pressure; asserts all disjoint writes remain readable and conflicting writers produce structured commit/conflict/rejection payloads with coherent final content. | `cargo test -p eos-e2e-test --features e2e --test occ merge -- --nocapture` | `occ-disjoint-merge`, `occ-conflict-report` |
+| `occ-edit-and-result-catalog` | Groups edit overlap, create-only rejection, missing-anchor/no-publish planned coverage, and stable FileResult status names/reasons. | `cargo test -p eos-e2e-test --features e2e --test occ route_fileresult_catalog -- --nocapture` | `occ-edit-anchor-errors`, `occ-result-catalog`, `occ-audit-accounting` |
+| `occ-publish-audit-accounting` | Groups tracked publish and conflict/rejection accounting so audit events, changed paths, and timing counters are checked as first-class oracles. | `cargo test -p eos-e2e-test --features e2e --test occ publish_accounting -- --nocapture` | `occ-tracked-gated`, `occ-audit-accounting` |
 
 ### 7.2 `ephemeral_workspace`
 
@@ -270,11 +263,10 @@ Planned test cases:
 
 | Test name | Description | Command | Checklist |
 |---|---|---|---|
-| `exec_write_outside_workspace_is_not_captured` | Existing test for workspace-filtered capture and direct `/tmp` write behavior. | `cargo test -p eos-e2e-test --features e2e --test ephemeral_workspace exec_write_outside_workspace_is_not_captured -- --nocapture` | `eph-outside-direct-fs` |
-| `foreground_exec_recycles_overlay_scratch` | Existing test for cleanup audit and lease release. | `cargo test -p eos-e2e-test --features e2e --test ephemeral_workspace foreground_exec_recycles_overlay_scratch -- --nocapture` | `eph-overlay-cleanup` |
-| `exec_upperdir_captures_only_the_delta` | Strengthen existing O(1) delta test with larger base and repeated overlay writes. | `cargo test -p eos-e2e-test --features e2e --test ephemeral_workspace exec_upperdir_captures_only_the_delta -- --nocapture` | `eph-upperdir-delta` |
-| `exec_overlay_mount_publishes_changed_paths` | Existing in-workspace publish path. | `cargo test -p eos-e2e-test --features e2e --test ephemeral_workspace exec_overlay_mount_publishes_changed_paths -- --nocapture` | `eph-occ-publish`, `eph-per-call-workspace` |
-| `long_running_exec_conflicts_after_direct_write` | New: start exec, mutate same file by direct write, release exec, assert conflict or rejection and direct-write content remains. | `cargo test -p eos-e2e-test --features e2e --test ephemeral_workspace long_running_exec_conflicts_after_direct_write -- --nocapture` | `eph-stale-exec-conflict` |
+| `eph-overlay-routing-publish-scenario` | Groups outside-workspace direct filesystem writes, in-workspace overlay capture, per-call workspace freshness, and OCC publish changed paths. | `cargo test -p eos-e2e-test --features e2e --test ephemeral_workspace overlay_exec -- --nocapture` | `eph-per-call-workspace`, `eph-outside-direct-fs`, `eph-occ-publish` |
+| `eph-resource-cleanup-and-delta-scenario` | Groups overlay cleanup audit, active lease release, scratch cleanup, and upperdir bytes scaling with changed bytes rather than lowerdir size. | `cargo test -p eos-e2e-test --features e2e --test ephemeral_workspace foreground_exec_recycles_overlay_scratch -- --nocapture` | `eph-upperdir-delta`, `eph-overlay-cleanup` |
+| `eph-command-descendant-lifecycle-scenario` | Groups foreground/background exec, lingering child semantics, terminate, cancel, and descendant cleanup so sessions do not leak across shared daemon setup. | `cargo test -p eos-e2e-test --features e2e --test ephemeral_workspace command_sessions -- --nocapture` | `eph-overlay-cleanup`, `eph-per-call-workspace` |
+| `eph-stale-snapshot-conflict-scenario` | Planned scenario: start long-running exec from a stale snapshot, mutate the same file directly, release exec, and assert conflict/rejection with direct-write content preserved. | `cargo test -p eos-e2e-test --features e2e --test ephemeral_workspace long_running_exec_conflicts_after_direct_write -- --nocapture` | `eph-stale-exec-conflict`, `eph-occ-publish` |
 
 ### 7.3 `isolated_workspace`
 
@@ -294,13 +286,10 @@ Planned test cases:
 
 | Test name | Description | Command | Checklist |
 |---|---|---|---|
-| `enter_status_exit_pin_and_teardown` | Existing lifecycle test, strengthened with full exit inspection fields. | `cargo test -p eos-e2e-test --features e2e --test isolated_workspace enter_status_exit_pin_and_teardown -- --nocapture` | `iws-lifecycle-pin`, `iws-exit-cleanup` |
-| `isolated_write_is_discarded_on_exit` | Existing private write discard test. | `cargo test -p eos-e2e-test --features e2e --test isolated_workspace isolated_write_is_discarded_on_exit -- --nocapture` | `iws-private-persistence`, `iws-discard-exit` |
-| `isolated_write_does_not_publish_or_release_lease` | Existing no-publish file write test. | `cargo test -p eos-e2e-test --features e2e --test isolated_workspace isolated_write_does_not_publish_or_release_lease -- --nocapture` | `iws-no-publish` |
-| `isolated_exec_write_is_private_and_discarded` | New: exec writes inside isolated mode, read succeeds while open, exit discards, no `occ.publish`. | `cargo test -p eos-e2e-test --features e2e --test isolated_workspace isolated_exec_write_is_private_and_discarded -- --nocapture` | `iws-no-publish`, `iws-discard-exit` |
-| `cross_mode_same_port_no_conflict` | Existing ephemeral plus isolated same-port case. | `cargo test -p eos-e2e-test --features e2e --test isolated_workspace cross_mode_same_port_no_conflict -- --nocapture` | `iws-network-isolation` |
-| `same_mode_same_port_conflicts` | Existing ephemeral plus ephemeral same-port conflict. | `cargo test -p eos-e2e-test --features e2e --test isolated_workspace same_mode_same_port_conflicts -- --nocapture` | `iws-same-netns-conflict` |
-| `isolated_to_isolated_same_port_matrix` | New: different caller IDs can bind same port, same caller conflicts, exit/re-enter can reuse port. | `cargo test -p eos-e2e-test --features e2e --test isolated_workspace isolated_to_isolated_same_port_matrix -- --nocapture` | `iws-network-isolation`, `iws-same-netns-conflict`, `iws-exit-cleanup` |
+| `iws-lifecycle-private-state-scenario` | Groups enter/status/exit, manifest pinning, private writes, readback while open, exit discard, and public read absence after teardown. | `cargo test -p eos-e2e-test --features e2e --test isolated_workspace lifecycle -- --nocapture` | `iws-lifecycle-pin`, `iws-private-persistence`, `iws-discard-exit`, `iws-exit-cleanup` |
+| `iws-no-publish-routing-scenario` | Groups isolated file write, edit, read, planned isolated exec write, no `occ.publish`, no lease release by private write, and ephemeral routing after exit. | `cargo test -p eos-e2e-test --features e2e --test isolated_workspace tool_routing -- --nocapture` | `iws-private-persistence`, `iws-no-publish`, `iws-discard-exit` |
+| `iws-network-port-matrix-scenario` | Groups cross-mode same-port success, same-namespace conflict, dedicated netns reporting, and planned isolated-to-isolated same-port matrix. | `cargo test -p eos-e2e-test --features e2e --test isolated_workspace network -- --nocapture` | `iws-network-isolation`, `iws-same-netns-conflict`, `iws-exit-cleanup` |
+| `iws-command-session-discard-scenario` | Groups isolated command session same-port behavior, exit discard, re-enter reuse, and command cleanup through the isolated caller handle. | `cargo test -p eos-e2e-test --features e2e --test isolated_workspace command_sessions -- --nocapture` | `iws-private-persistence`, `iws-network-isolation`, `iws-exit-cleanup` |
 
 ### 7.4 `core` File Ops and Command Sessions
 
@@ -308,6 +297,9 @@ Checklist:
 
 | ID | Requirement |
 |---|---|
+| `core-runtime-base` | Runtime readiness, probes, workspace binding, base-layer metrics, rebuild timing, heartbeat idle state, and base audit fields remain protocol-visible and coherent. |
+| `core-workspace-commit` | Committing the LayerStack view to the workspace survives a base rebuild and keeps manifest audit fields aligned with the response. |
+| `core-envelope-guards` | Unknown ops, malformed frames, oversized requests, bad or missing auth, and isolated-mode plugin-family ops return deterministic structured errors. |
 | `core-fast-file-ops` | Direct read/write/edit use fast paths and bypass overlay leasing. |
 | `core-file-error-catalog` | Read/write/edit guards and edit conflicts return deterministic payloads. |
 | `core-command-lifecycle` | `exec_command`, `write_stdin`, collect, cancel, timeout, and output cap behave correctly. |
@@ -319,14 +311,10 @@ Planned test cases:
 
 | Test name | Description | Command | Checklist |
 |---|---|---|---|
-| `fast_path_write_edit_emit_no_overlay_or_lease_audit` | Existing fast-path audit test. | `cargo test -p eos-e2e-test --features e2e --test core fast_path_write_edit_emit_no_overlay_or_lease_audit -- --nocapture` | `core-fast-file-ops` |
-| `direct_file_ops_concurrency_ladder` | New: direct file operations at `1/3/6/12`, no overlay lease/audit, OCC publish emitted, reads match. | `cargo test -p eos-e2e-test --features e2e --test core direct_file_ops_concurrency_ladder -- --nocapture` | `core-fast-file-ops` |
-| `edit_error_catalog_anchor_not_found_and_count_mismatch` | Existing error catalog anchor. | `cargo test -p eos-e2e-test --features e2e --test core edit_error_catalog_anchor_not_found_and_count_mismatch -- --nocapture` | `core-file-error-catalog` |
-| `write_stdin_echo` | Existing stdin echo behavior. | `cargo test -p eos-e2e-test --features e2e --test core write_stdin_echo -- --nocapture` | `core-command-lifecycle` |
-| `command_session_output_cursor_no_replay` | New: poll/write twice and assert output cursor advances without replay. | `cargo test -p eos-e2e-test --features e2e --test core command_session_output_cursor_no_replay -- --nocapture` | `core-command-cursors` |
-| `write_stdin_terminate_reaps_marker_process` | New or strengthened: terminate returns session count zero and `/proc` marker count zero. | `cargo test -p eos-e2e-test --features e2e --test core write_stdin_terminate_reaps_marker_process -- --nocapture` | `core-command-terminate-kills-group` |
-| `nohup_child_keeps_session_running` | New: `nohup sleep 3 & echo done` remains running until child exits. | `cargo test -p eos-e2e-test --features e2e --test core nohup_child_keeps_session_running -- --nocapture` | `core-detached-child-contract` |
-| `setsid_nohup_contract` | New: encode the chosen contract for new-session descendants: block, detect, reap, or explicitly accept. | `cargo test -p eos-e2e-test --features e2e --test core setsid_nohup_contract -- --nocapture` | `core-detached-child-contract` |
+| `core-runtime-envelope-base-scenario` | Groups readiness, probes, heartbeat idle state, workspace binding/base setup, commit-to-workspace rebuild, malformed/auth envelope guards, and isolated-mode forbidden ops. | `cargo test -p eos-e2e-test --features e2e --test core runtime_setup -- --nocapture` | `core-runtime-base`, `core-workspace-commit`, `core-envelope-guards` |
+| `core-direct-file-contract-scenario` | Groups direct write/read/edit, no overlay lease audit, OCC timings, repeated lease-zero writes, size guards, missing reads, anchor errors, count mismatch, create-only conflict, and planned `1/3/6/12` direct-file ladder. | `cargo test -p eos-e2e-test --features e2e --test core direct_file_ops -- --nocapture` | `core-fast-file-ops`, `core-file-error-catalog` |
+| `core-command-lifecycle-cursor-scenario` | Groups exec lifecycle, stdin, completed collection, cancel, timeout, session count, output cap, and planned cursor no-replay assertions. | `cargo test -p eos-e2e-test --features e2e --test core command_sessions -- --nocapture` | `core-command-lifecycle`, `core-command-cursors` |
+| `core-termination-detached-process-scenario` | Groups terminate/cancel descendant cleanup, process-group reaping, active lease drain, and planned `nohup` / `setsid nohup` contract decisions. | `cargo test -p eos-e2e-test --features e2e --test core command_sessions_cancel_cleans_descendant_processes -- --nocapture` | `core-command-terminate-kills-group`, `core-detached-child-contract` |
 
 ### 7.5 `layerstack`
 
@@ -346,12 +334,10 @@ Planned test cases:
 
 | Test name | Description | Command | Checklist |
 |---|---|---|---|
-| `enter_acquires_lease` / `exit_releases_lease` | Existing lease lifecycle coverage. | `cargo test -p eos-e2e-test --features e2e --test layerstack lease -- --nocapture` | `layer-lease-pin` |
-| `lease_pins_layers_vs_squash` | Existing pinned lease under squash pressure, strengthened with layer-dir retention and release cleanup. | `cargo test -p eos-e2e-test --features e2e --test layerstack lease_pins_layers_vs_squash -- --nocapture` | `layer-lease-pin`, `layer-squash-depth` |
-| `squash_keeps_each_lease_head_and_folds_every_gap_live` | New live E2E formula test with multiple active leases and manifest inspection. | `cargo test -p eos-e2e-test --features e2e --test layerstack squash_keeps_each_lease_head_and_folds_every_gap_live -- --nocapture` | `layer-squash-gap-formula` |
-| `repeated_overwrite_keeps_storage_bounded` | Existing storage bound coverage. | `cargo test -p eos-e2e-test --features e2e --test layerstack repeated_overwrite_keeps_storage_bounded -- --nocapture` | `layer-storage-bounded` |
-| `commit_materializes_merged_view` | Existing commit-to-workspace correctness. | `cargo test -p eos-e2e-test --features e2e --test layerstack commit_materializes_merged_view -- --nocapture` | `layer-commit-workspace` |
-| `commit_to_git_commits_overlay_snapshot_after_repeated_squash` | Existing Git commit after squash test. | `cargo test -p eos-e2e-test --features e2e --test layerstack commit_to_git_commits_overlay_snapshot_after_repeated_squash -- --nocapture` | `layer-commit-git` |
+| `layer-base-and-commit-scenario` | Groups base creation/rebuild visibility, commit-to-workspace merged view, version monotonicity, and audit/timing fields. | `cargo test -p eos-e2e-test --features e2e --test layerstack commit_to_workspace -- --nocapture` | `layer-base`, `layer-commit-workspace` |
+| `layer-lease-and-squash-formula-scenario` | Groups lease acquire/release, lease pin under squash, hold-time ordering, and planned post-squash lease-head plus foldable-gap formula. | `cargo test -p eos-e2e-test --features e2e --test layerstack lease -- --nocapture` | `layer-lease-pin`, `layer-squash-depth`, `layer-squash-gap-formula` |
+| `layer-storage-bound-scenario` | Groups auto-squash trigger, bounded depth, repeated overwrite storage growth, superseded layer-dir reclaim, and deep-stack repeated squash. | `cargo test -p eos-e2e-test --features e2e --test layerstack squash -- --nocapture` | `layer-squash-depth`, `layer-storage-bounded` |
+| `layer-git-overlay-commit-scenario` | Groups commit-to-Git after repeated squash, overlay snapshot materialization, bounded depth reporting, path filtering, and timing phases. | `cargo test -p eos-e2e-test --features e2e --test layerstack commit_to_git_commits_overlay_snapshot_after_repeated_squash -- --nocapture` | `layer-commit-git`, `layer-squash-depth`, `layer-storage-bounded` |
 
 ### 7.6 `plugin`
 
@@ -361,27 +347,24 @@ Checklist:
 |---|---|
 | `plugin-package-ensure` | Warm/cold ensure publishes package and setup roots by digest. |
 | `plugin-setup-idempotent` | Re-ensure skips setup when package and setup digests match. |
+| `plugin-dispatch-roundtrip` | Dynamic daemon PPC dispatch preserves operation name, request body, success envelope, package root, and dependency root. |
 | `plugin-service-hosted` | Daemon-hosted plugin services run as real processes and are visible in status. |
 | `plugin-service-cleanup` | Reload/stop removes routes, PPC clients, service snapshots, sockets, uploads, and marker processes. |
 | `plugin-refresh-remount` | Read-only service sees latest workspace after LayerStack update. |
 | `plugin-refresh-singleflight` | Concurrent refreshes see new content and keep refresh counts bounded. |
 | `plugin-restart-policy` | Restart strategy restarts process instead of remounting. |
 | `plugin-isolated-gate` | Plugin operations are rejected while the caller is in isolated mode. |
+| `plugin-lsp-lifecycle` | LSP package setup, dependency roots, route connection, and symbol dispatch remain live through the generic plugin lifecycle. |
 | `plugin-write-allowed` | Live write-allowed/oneshot overlay plugin paths publish only through daemon-owned OCC paths. |
 
 Planned test cases:
 
 | Test name | Description | Command | Checklist |
 |---|---|---|---|
-| `generic_package_installs_and_sets_up` | Existing warm/cold package install and setup root check. | `cargo test -p eos-e2e-test --features e2e --test plugin generic_package_installs_and_sets_up -- --nocapture` | `plugin-package-ensure` |
-| `generic_package_reensure_is_idempotent` | Existing idempotent setup count check. | `cargo test -p eos-e2e-test --features e2e --test plugin generic_package_reensure_is_idempotent -- --nocapture` | `plugin-setup-idempotent` |
-| `service_health_probe_reports_connected_service` | Existing live service probe. | `cargo test -p eos-e2e-test --features e2e --test plugin service_health_probe_reports_connected_service -- --nocapture` | `plugin-service-hosted` |
-| `package_reload_reaps_old_service_and_routes` | New: load digest A, reload digest B, assert old service marker/process/PPC route/upload state is gone. | `cargo test -p eos-e2e-test --features e2e --test plugin package_reload_reaps_old_service_and_routes -- --nocapture` | `plugin-service-cleanup` |
-| `generic_plugin_refreshes_after_workspace_edit` | Existing refresh behavior. | `cargo test -p eos-e2e-test --features e2e --test plugin generic_plugin_refreshes_after_workspace_edit -- --nocapture` | `plugin-refresh-remount` |
-| `concurrent_plugin_refresh_singleflight` | New: one workspace edit, `N` concurrent queries, all see new content, refresh count bounded. | `cargo test -p eos-e2e-test --features e2e --test plugin concurrent_plugin_refresh_singleflight -- --nocapture` | `plugin-refresh-singleflight` |
-| `restart_service_strategy_restarts_on_workspace_edit` | Existing restart policy test. | `cargo test -p eos-e2e-test --features e2e --test plugin restart_service_strategy_restarts_on_workspace_edit -- --nocapture` | `plugin-restart-policy` |
-| `generic_plugin_rejected_in_isolated_workspace` | Existing isolated gate test. | `cargo test -p eos-e2e-test --features e2e --test plugin generic_plugin_rejected_in_isolated_workspace -- --nocapture` | `plugin-isolated-gate` |
-| `oneshot_overlay_plugin_write_publishes_through_occ` | New: live write-allowed plugin operation publishes through OCC and reports changed paths. | `cargo test -p eos-e2e-test --features e2e --test plugin oneshot_overlay_plugin_write_publishes_through_occ -- --nocapture` | `plugin-write-allowed` |
+| `plugin-package-dispatch-scenario` | Groups warm/cold package ensure, setup-root publication, idempotent re-ensure, dependency/scratch setup artifacts, and generic dispatch roundtrip. | `cargo test -p eos-e2e-test --features e2e --test plugin packages -- --nocapture` | `plugin-package-ensure`, `plugin-setup-idempotent`, `plugin-dispatch-roundtrip` |
+| `plugin-service-lifecycle-cleanup-scenario` | Groups live service health/status, planned package reload cleanup of routes/PPC clients/sockets/uploads/markers/processes, and daemon-hosted worker visibility. | `cargo test -p eos-e2e-test --features e2e --test plugin service_health_probe_reports_connected_service -- --nocapture` | `plugin-service-hosted`, `plugin-service-cleanup` |
+| `plugin-refresh-restart-scenario` | Groups workspace refresh remount, planned concurrent singleflight refresh, bounded refresh counts, and restart-service strategy behavior. | `cargo test -p eos-e2e-test --features e2e --test plugin restart_service_strategy_restarts_on_workspace_edit -- --nocapture` | `plugin-refresh-remount`, `plugin-refresh-singleflight`, `plugin-restart-policy` |
+| `plugin-isolated-lsp-write-scenario` | Groups isolated-mode rejection, LSP package lifecycle/symbol query, and planned write-allowed plugin OCC publish path. | `cargo test -p eos-e2e-test --features e2e --test plugin -- --nocapture` | `plugin-isolated-gate`, `plugin-lsp-lifecycle`, `plugin-write-allowed` |
 
 ### 7.7 `daemon`
 
@@ -394,21 +377,17 @@ Checklist:
 | `daemon-inflight` | Background invocations are counted, heartbeated, and cancellable. |
 | `daemon-command-control` | Command-session control ops remain coherent under live sessions. |
 | `daemon-audit` | Audit pull, pagination, floor behavior, and reset/test hooks are explicitly tested. |
-| `daemon-ttl-reaper` | Short TTL/reaper config cleans stale inflight state in heavy profile. |
+| `daemon-ttl-reaper` | Short TTL/reaper config cleans stale inflight state in a named TTL variant. |
 | `daemon-plugin-control` | Background plugin/PPC operations participate in inflight/cancel/heartbeat control where supported. |
 
 Planned test cases:
 
 | Test name | Description | Command | Checklist |
 |---|---|---|---|
-| `runtime_ready_exposes_daemon_identity` | Existing identity probe. | `cargo test -p eos-e2e-test --features e2e --test daemon runtime_ready_exposes_daemon_identity -- --nocapture` | `daemon-ready-identity` |
-| `every_builtin_op_is_wire_routed` | Existing op registry coverage. | `cargo test -p eos-e2e-test --features e2e --test daemon every_builtin_op_is_wire_routed -- --nocapture` | `daemon-op-registry` |
-| `inflight_count_observes_concurrent_background_invocations` | Existing background exec inflight count. | `cargo test -p eos-e2e-test --features e2e --test daemon inflight_count_observes_concurrent_background_invocations -- --nocapture` | `daemon-inflight` |
-| `live_cancel_of_inflight_sets_cancelled` | Existing cancel inflight coverage, strengthened with cleanup fields where available. | `cargo test -p eos-e2e-test --features e2e --test daemon live_cancel_of_inflight_sets_cancelled -- --nocapture` | `daemon-inflight`, `daemon-command-control` |
-| `audit_pull_paginates_and_baselines` | New: audit cursor, pagination, and no reliance on reset floor. | `cargo test -p eos-e2e-test --features e2e --test daemon audit_pull_paginates_and_baselines -- --nocapture` | `daemon-audit` |
-| `isolated_workspace_test_reset_behavior` | New: behavior test for `api.isolated_workspace.test_reset` where test gate allows it. | `cargo test -p eos-e2e-test --features e2e --test daemon isolated_workspace_test_reset_behavior -- --nocapture` | `daemon-audit` |
-| `inflight_ttl_reaper_heavy` | New heavy-profile TTL reaper test with short `ttl_s` and `reaper_interval_s`. | `cargo test -p eos-e2e-test --features e2e --test daemon inflight_ttl_reaper_heavy -- --nocapture` | `daemon-ttl-reaper` |
-| `background_plugin_operation_control` | New: background plugin/PPC op with explicit invocation ID participates in inflight/heartbeat/cancel or documents unsupported behavior. | `cargo test -p eos-e2e-test --features e2e --test daemon background_plugin_operation_control -- --nocapture` | `daemon-plugin-control` |
+| `daemon-ready-registry-timing-scenario` | Groups runtime identity, dispatch timings on success/error, built-in op registry routing, and unknown-op rejection. | `cargo test -p eos-e2e-test --features e2e --test daemon runtime_identity -- --nocapture` | `daemon-ready-identity`, `daemon-op-registry` |
+| `daemon-inflight-heartbeat-cancel-scenario` | Groups concurrent background invocation visibility, heartbeat touch semantics, live cancel, unknown cancel, command-session control, and cleanup fields. | `cargo test -p eos-e2e-test --features e2e --test daemon control -- --nocapture` | `daemon-inflight`, `daemon-command-control` |
+| `daemon-audit-reset-scenario` | Planned scenario for audit pull pagination, baselines, floor behavior, and gated isolated-workspace test reset without transient global-state assumptions. | `cargo test -p eos-e2e-test --features e2e --test daemon audit_pull_paginates_and_baselines -- --nocapture` | `daemon-audit` |
+| `daemon-ttl-and-plugin-control-scenario` | Planned scenario for short-TTL inflight reaper and background plugin/PPC operation control through inflight, heartbeat, and cancel surfaces. | `cargo test -p eos-e2e-test --features e2e --test daemon inflight_ttl_reaper_cleanup -- --nocapture` | `daemon-ttl-reaper`, `daemon-plugin-control` |
 
 ### 7.8 `pressure`
 
@@ -422,20 +401,18 @@ Checklist:
 | `pressure-ladder-occ` | OCC disjoint writes and same-path conflict pressure return coherent payloads at `1/3/6/12`. |
 | `pressure-ladder-plugin` | Plugin refresh/dispatch pressure remains coherent at configured levels. |
 | `pressure-isolated-cap` | Isolated handle pressure either runs under a high-cap config or asserts cap rejection for levels beyond default. |
-| `pressure-resource-report` | Heavy/perf runs emit JSON summaries for latency shape, resource counters, and leak counters. |
+| `pressure-squash-bound` | Repeated overwrite pressure keeps manifest depth under the operational auto-squash target while preserving latest content. |
+| `pressure-recovery-cleanup` | Midflight cancel and cancel bursts leave daemon readiness intact and drain command sessions, active leases, and marker work. |
+| `pressure-resource-report` | Resource-report runs emit JSON summaries for latency shape, resource counters, and leak counters. |
 
 Planned test cases:
 
 | Test name | Description | Command | Checklist |
 |---|---|---|---|
-| `n_concurrent_mixed_ops` | Existing mixed pressure smoke. | `cargo test -p eos-e2e-test --features e2e --test pressure n_concurrent_mixed_ops -- --nocapture` | `pressure-ladder-file`, `pressure-ladder-exec` |
-| `file_ops_ladder_1_3_6_12` | New explicit direct file ladder. | `cargo test -p eos-e2e-test --features e2e --test pressure file_ops_ladder_1_3_6_12 -- --nocapture` | `pressure-ladder-file` |
-| `ephemeral_exec_ladder_1_3_6_12` | New explicit exec ladder, correctness over strict latency. | `cargo test -p eos-e2e-test --features e2e --test pressure ephemeral_exec_ladder_1_3_6_12 -- --nocapture` | `pressure-ladder-exec` |
-| `command_sessions_ladder_1_3_6_12` | New start/cancel/drain ladder. | `cargo test -p eos-e2e-test --features e2e --test pressure command_sessions_ladder_1_3_6_12 -- --nocapture` | `pressure-ladder-command` |
-| `occ_ladder_1_3_6_12` | New disjoint and conflict OCC ladder. | `cargo test -p eos-e2e-test --features e2e --test pressure occ_ladder_1_3_6_12 -- --nocapture` | `pressure-ladder-occ` |
-| `plugin_refresh_ladder_1_3_6_12` | New heavy-profile plugin refresh ladder. | `cargo test -p eos-e2e-test --features e2e --test pressure plugin_refresh_ladder_1_3_6_12 -- --nocapture` | `pressure-ladder-plugin` |
-| `isolated_handle_cap_ladder` | New: run high-cap profile or assert configured cap rejection at `6/12`. | `cargo test -p eos-e2e-test --features e2e --test pressure isolated_handle_cap_ladder -- --nocapture` | `pressure-isolated-cap` |
-| `perf_resource_report_smoke` | New: writes one JSON artifact with timings/resources/leak counters. | `cargo test -p eos-e2e-test --features e2e --test pressure perf_resource_report_smoke -- --nocapture` | `pressure-resource-report` |
+| `pressure-file-exec-ladder-scenario` | Groups mixed concurrent ops, explicit planned direct file and ephemeral exec ladders at `1/3/6/12`, publish/readback correctness, and lease cleanup. | `cargo test -p eos-e2e-test --features e2e --test pressure concurrency -- --nocapture` | `pressure-ladder-file`, `pressure-ladder-exec` |
+| `pressure-command-recovery-scenario` | Groups command-session start/cancel/drain ladder, cancel bursts, midflight cancel recovery, daemon readiness, session count zero, and active lease drain. | `cargo test -p eos-e2e-test --features e2e --test pressure failure_recovery -- --nocapture` | `pressure-ladder-command`, `pressure-recovery-cleanup` |
+| `pressure-occ-squash-scenario` | Groups OCC disjoint publish pressure, planned same-path conflict ladder, repeated write storm, LayerStack auto-squash bounded depth, and latest-content correctness. | `cargo test -p eos-e2e-test --features e2e --test pressure cross_subsystem -- --nocapture` | `pressure-ladder-occ`, `pressure-squash-bound` |
+| `pressure-plugin-isolated-resource-scenario` | Planned scenario for plugin refresh/dispatch ladder, isolated handle high-cap or cap-rejection matrix, and JSON latency/resource/leak report emission. | `cargo test -p eos-e2e-test --features e2e --test pressure resource_report_smoke -- --nocapture` | `pressure-ladder-plugin`, `pressure-isolated-cap`, `pressure-resource-report` |
 
 ---
 
@@ -509,10 +486,12 @@ cargo check -p eos-daemon --all-targets
 
 1. All 8 module `readme.md` files exist and use the required structure.
 2. Every README checklist item is covered by at least one test-case row.
-3. README test names match the live `cargo test -- --list` inventory or are
-   explicitly marked as planned.
-4. Fast live module runs pass under Docker with the default dask image.
-5. Heavy/perf runs are selectable without changing source code.
+3. README test rows are at most five per module, cover every checklist item, and
+   group live Rust functions or planned additions into load-bearing scenarios.
+4. Default live module runs pass under Docker with the default dask image.
+5. The suite has typed module-local workload contracts; there are no
+   generic cost-class variant files or selector environment variables, and
+   any named variant is selected as the one explicit `*.test.yml` for that run.
 6. `1/3/6/12` concurrency comparisons exist for direct file ops, ephemeral exec,
    command sessions, OCC pressure, and plugin refresh where valid.
 7. Isolated workspace pressure either uses a high-cap config or asserts cap

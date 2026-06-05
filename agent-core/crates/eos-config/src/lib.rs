@@ -33,7 +33,7 @@ pub use env::EnvMap;
 pub use error::ConfigError;
 pub use loader::{load_central_config, ConfigLoader};
 pub use markdown::parse_markdown_frontmatter;
-pub use providers::{MinimaxConfig, ProvidersConfig, RetryConfig};
+pub use providers::{ProvidersConfig, RetryConfig};
 pub use sandbox::{DockerConfig, SandboxConfig, SandboxProvider};
 
 #[cfg(test)]
@@ -111,14 +111,19 @@ mod schema_parity {
         let cases: &[(&str, &[&str], &[&str])] = &[
             (
                 "DatabaseConfig",
-                &["pool_pre_ping", "max_overflow"],
+                &["pool_pre_ping", "max_overflow", "echo"],
                 &["busy_timeout_ms", "wal", "foreign_keys"],
             ),
-            ("SandboxConfig", &[], &[]),
+            // timeout_s / runtime_client_timeout_s dropped as dead config — the
+            // ephemeral-os sandbox module owns sandbox-execution timeouts.
+            (
+                "SandboxConfig",
+                &["runtime_client_timeout_s", "timeout_s"],
+                &[],
+            ),
             ("DockerConfig", &[], &[]),
-            ("ProvidersConfig", &[], &[]),
+            ("ProvidersConfig", &["minimax"], &[]),
             ("RetryConfig", &[], &[]),
-            ("MinimaxConfig", &[], &[]),
         ];
         for (section, dropped, added) in cases {
             assert_eq!(

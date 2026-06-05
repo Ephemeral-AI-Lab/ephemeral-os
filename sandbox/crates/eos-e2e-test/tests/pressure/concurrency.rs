@@ -6,7 +6,8 @@ use eos_e2e_test::next_invocation_id;
 use eos_protocol::ops;
 use serde_json::json;
 
-use crate::support::{as_bool, as_i64, as_str, live_pool_or_skip};
+use crate::helpers::{pressure_levels, request_with_identity};
+use crate::support::{as_bool, as_i64, as_str, live_pool_or_skip, wait_for_active_leases};
 
 #[test]
 fn n_concurrent_mixed_ops() -> Result<()> {
@@ -70,6 +71,87 @@ fn n_concurrent_mixed_ops() -> Result<()> {
         0,
         "mixed ops should not leak leases: {metrics}"
     );
+    Ok(())
+}
+
+#[test]
+fn file_ops_ladder_1_3_6_12() -> Result<()> {
+    let Some(pool) = live_pool_or_skip()? else {
+        return Ok(());
+    };
+    let levels = pressure_levels(&pool)?;
+    let lease = pool.acquire()?;
+
+    for level in levels {
+        let barrier = Arc::new(Barrier::new(level));
+        let handles: Vec<_> = (0..level)
+            .map(|index| {
+                let client = lease.client().clone();
+                let root = lease.root().to_owned();
+                let caller_id = lease.caller_id().to_owned();
+                let barrier = Arc::clone(&barrier);
+                thread::spawn(move || {
+                    barrier.wait();
+                    request_with_identity(
+                        &client,
+                        ops::API_V1_WRITE_FILE,
+                        &root,
+                        &caller_id,
+                        json!({
+                            "path": format!("pressure/ladder/file/level-{level}/item-{index}.txt"),
+                            "content": format!("file-level-{level}-item-{index}\n"),
+                            "overwrite": true
+                        }),
+                    )
+                })
+            })
+            .collect();
+
+        for handle in handles {
+            let response = handle.join().expect("file writer thread panicked")?;
+            assert!(
+                as_bool(&response, "success")?,
+                "file ladder write should commit at level {level}: {response}"
+            );
+        }
+
+        let barrier = Arc::new(Barrier::new(level));
+        let handles: Vec<_> = (0..level)
+            .map(|index| {
+                let client = lease.client().clone();
+                let root = lease.root().to_owned();
+                let caller_id = lease.caller_id().to_owned();
+                let barrier = Arc::clone(&barrier);
+                thread::spawn(move || {
+                    barrier.wait();
+                    request_with_identity(
+                        &client,
+                        ops::API_V1_READ_FILE,
+                        &root,
+                        &caller_id,
+                        json!({
+                            "path": format!("pressure/ladder/file/level-{level}/item-{index}.txt")
+                        }),
+                    )
+                })
+            })
+            .collect();
+
+        for (index, handle) in handles.into_iter().enumerate() {
+            let response = handle.join().expect("file reader thread panicked")?;
+            assert_eq!(
+                as_str(&response, "content")?,
+                format!("file-level-{level}-item-{index}\n"),
+                "file ladder readback should match at level {level}: {response}"
+            );
+        }
+        let metrics = wait_for_active_leases(&lease, 0)?;
+        assert_eq!(
+            as_i64(&metrics, "active_leases")?,
+            0,
+            "file ladder should not leak leases at level {level}: {metrics}"
+        );
+    }
     Ok(())
 }
 

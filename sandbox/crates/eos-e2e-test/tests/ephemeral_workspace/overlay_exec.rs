@@ -1,10 +1,15 @@
-use anyhow::{Context, Result};
+use std::time::{Duration, Instant};
+
+use anyhow::{bail, Context, Result};
 use eos_e2e_test::audit::section;
-use eos_e2e_test::unique_suffix;
+use eos_e2e_test::{unique_suffix, NodeLease};
 use eos_protocol::ops;
 use serde_json::{json, Value};
 
-use crate::support::{array, as_i64, as_str, live_pool_or_skip, stdout, wait_for_active_leases};
+use crate::support::{
+    array, as_bool, as_i64, as_str, conflict_reason, live_pool_or_skip, stdout,
+    wait_for_active_leases, wait_for_session_count,
+};
 
 /// Read a nested `timings.<key>` number from a response.
 fn timing_f64(value: &Value, key: &str) -> Option<f64> {
@@ -162,4 +167,111 @@ fn exec_overlay_mount_publishes_changed_paths() -> Result<()> {
     let read = lease.call_ok(ops::API_V1_READ_FILE, json!({"path": "overlay/exec.txt"}))?;
     assert_eq!(as_str(&read, "content")?, "from-overlay");
     Ok(())
+}
+
+#[test]
+fn long_running_exec_conflicts_after_direct_write() -> Result<()> {
+    let Some(pool) = live_pool_or_skip()? else {
+        return Ok(());
+    };
+    let lease = pool.acquire()?;
+    let path = format!("stale-exec/{}.txt", unique_suffix().replace('-', "_"));
+    lease.call_ok(
+        ops::API_V1_WRITE_FILE,
+        json!({"path": path, "content": "base\n", "overwrite": true}),
+    )?;
+
+    let exec = lease.call_ok(
+        ops::API_V1_EXEC_COMMAND,
+        json!({
+            "cmd": format!("bash -lc 'printf SNAPSHOT_READY; sleep 2; printf stale-session > {path}'"),
+            "yield_time_ms": 500,
+            "timeout_seconds": 30,
+            "max_output_tokens": 1000
+        }),
+    )?;
+    assert_eq!(
+        as_str(&exec, "status")?,
+        "running",
+        "long-running exec must hold its old snapshot: {exec}"
+    );
+    assert!(
+        stdout(&exec).contains("SNAPSHOT_READY"),
+        "exec must have started before the direct write races it: {exec}"
+    );
+    let session_id = as_str(&exec, "command_session_id")?.to_owned();
+
+    let body = (|| -> Result<()> {
+        let direct = lease.call_ok(
+            ops::API_V1_WRITE_FILE,
+            json!({"path": path, "content": "direct-write\n", "overwrite": true}),
+        )?;
+        assert!(
+            as_bool(&direct, "published")?,
+            "direct write should publish the newer content: {direct}"
+        );
+
+        let result = wait_for_completion(&lease, &session_id)?;
+        assert_eq!(
+            as_str(&result, "workspace")?,
+            "ephemeral",
+            "background exec completion should finalize through ephemeral workspace: {result}"
+        );
+        assert_eq!(
+            as_str(&result, "status")?,
+            "ok",
+            "the command process itself should complete normally: {result}"
+        );
+        assert!(
+            !as_bool(&result, "success")?,
+            "stale publish must not report a successful workspace mutation: {result}"
+        );
+        assert_eq!(
+            conflict_reason(&result),
+            "aborted_version",
+            "stale snapshot publish should surface the OCC stale-version conflict: {result}"
+        );
+        assert!(
+            array(&result, "changed_paths")?.is_empty(),
+            "conflicted stale exec must not publish changed paths: {result}"
+        );
+        wait_for_session_count(&lease, 0)?;
+
+        let read = lease.call_ok(ops::API_V1_READ_FILE, json!({"path": path}))?;
+        assert_eq!(
+            as_str(&read, "content")?,
+            "direct-write\n",
+            "newer direct-write content must be preserved after stale exec finalization: {read}"
+        );
+        Ok(())
+    })();
+
+    if body.is_err() {
+        let _ = lease.call(
+            ops::API_V1_COMMAND_CANCEL,
+            json!({"command_session_id": session_id, "max_output_tokens": 1000}),
+        );
+        let _ = wait_for_session_count(&lease, 0);
+    }
+    body
+}
+
+fn wait_for_completion(lease: &NodeLease<'_>, session_id: &str) -> Result<Value> {
+    let deadline = Instant::now() + Duration::from_secs(8);
+    loop {
+        let collected = lease.call_ok(
+            ops::API_V1_COMMAND_COLLECT_COMPLETED,
+            json!({"command_session_ids": [session_id]}),
+        )?;
+        if let Some(completion) = array(&collected, "completions")?.first() {
+            return completion
+                .get("result")
+                .cloned()
+                .context("completion missing result");
+        }
+        if Instant::now() >= deadline {
+            bail!("session {session_id} never completed");
+        }
+        std::thread::sleep(Duration::from_millis(100));
+    }
 }

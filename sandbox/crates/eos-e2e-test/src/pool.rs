@@ -15,7 +15,7 @@ use serde_json::{json, Map, Value};
 
 use crate::audit::AuditTap;
 use crate::client::{error_kind, is_success, ProtocolClient};
-use crate::config::{Config, NodeMode};
+use crate::config::{Config, NodeMode, WorkloadConfig};
 use crate::container::{reap_e2e_containers, DaemonContainer};
 use crate::{next_invocation_id, unique_suffix};
 
@@ -69,6 +69,12 @@ impl NodePool {
     /// The effective cap (1 for `shared`, else `sandboxes`).
     fn cap(&self) -> usize {
         cap_for(&self.config)
+    }
+
+    /// Workload knobs selected by the module-local E2E config.
+    #[must_use]
+    pub fn workload(&self) -> &WorkloadConfig {
+        &self.config.workload
     }
 
     fn lock(&self) -> MutexGuard<'_, Inner> {
