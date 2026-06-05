@@ -262,7 +262,7 @@ async fn foreground_multi_tool_batch_runs_in_parallel_and_preserves_final_result
         barrier.clone(),
     ));
     registry.register(barrier_tool(
-        ToolName::Grep,
+        ToolName::EditFile,
         second_count.clone(),
         barrier.clone(),
     ));
@@ -277,7 +277,7 @@ async fn foreground_multi_tool_batch_runs_in_parallel_and_preserves_final_result
         },
         ToolUseRequest {
             tool_use_id: "toolu-2".parse().expect("valid id"),
-            name: "grep".to_owned(),
+            name: "edit_file".to_owned(),
             input: JsonObject::new(),
         },
     ];

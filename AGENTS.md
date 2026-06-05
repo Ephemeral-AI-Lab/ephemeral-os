@@ -166,6 +166,12 @@ cross-module map now lives under `docs/architecture`.
   helper layers. Very large files are acceptable only when mechanically
   cohesive, such as generated code, big enum/table definitions, or tightly
   coupled parser/state-machine code.
+- Keep test-only modules and helpers under the owning test tree. Rust
+  `tests.rs` files should live under the crate's `tests/` folder; when private
+  module access is still required, reference them from the source module with a
+  `#[path]` attribute pointing at `../tests/<module>/mod.rs`. Test setup,
+  config, seam/fake/mock, fixture, and harness files belong under `tests/`
+  unless they are shared production APIs.
 - Do not enforce a hard file-size cap in this repo. The better standard is final
   files as small as the request allows, with splits following real ownership
   boundaries like `eos-engine`, `eos-workflow`, `eos-tools`, or sandbox modules,

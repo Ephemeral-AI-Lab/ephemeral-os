@@ -1,6 +1,5 @@
 use std::collections::BTreeMap;
 
-use eos_sandbox_api::GrepOutputMode;
 use eos_types::JsonObject;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -29,30 +28,6 @@ pub(in crate::tools::sandbox) struct MutationOutput {
     /// `bytes_written` for `write_file`, `applied_edits` for the edit tools.
     #[serde(flatten)]
     pub(in crate::tools::sandbox) extra: BTreeMap<String, Value>,
-}
-
-#[derive(Debug, Serialize, Deserialize, JsonSchema)]
-pub(in crate::tools::sandbox) struct GrepOutput {
-    pub(in crate::tools::sandbox) cwd: String,
-    pub(in crate::tools::sandbox) pattern: String,
-    pub(in crate::tools::sandbox) mode: GrepOutputMode,
-    pub(in crate::tools::sandbox) filenames: Vec<String>,
-    pub(in crate::tools::sandbox) content: String,
-    pub(in crate::tools::sandbox) num_files: u32,
-    pub(in crate::tools::sandbox) num_lines: u32,
-    pub(in crate::tools::sandbox) num_matches: u32,
-    pub(in crate::tools::sandbox) applied_limit: Option<u32>,
-    pub(in crate::tools::sandbox) applied_offset: u32,
-    pub(in crate::tools::sandbox) truncated: bool,
-}
-
-#[derive(Debug, Serialize, Deserialize, JsonSchema)]
-pub(in crate::tools::sandbox) struct GlobOutput {
-    pub(in crate::tools::sandbox) cwd: String,
-    pub(in crate::tools::sandbox) pattern: String,
-    pub(in crate::tools::sandbox) filenames: Vec<String>,
-    pub(in crate::tools::sandbox) num_files: u32,
-    pub(in crate::tools::sandbox) truncated: bool,
 }
 
 /// Shared output shape for `exec_command` and `write_stdin`.

@@ -254,9 +254,9 @@ impl LayerChange {
 #[must_use]
 pub fn aggregate_layer_changes(changes: &[LayerChange]) -> Vec<LayerChange> {
     // BTreeMap gives sorted-by-path emission; insertion overwrites (last-write-wins).
-    let mut by_path: BTreeMap<String, LayerChange> = BTreeMap::new();
-    for change in changes {
-        by_path.insert(change.path().as_str().to_owned(), change.clone());
+    let mut by_path: BTreeMap<LayerPath, LayerChange> = BTreeMap::new();
+    for change in changes.iter().cloned() {
+        by_path.insert(change.path().clone(), change);
     }
     by_path.into_values().collect()
 }
@@ -297,7 +297,7 @@ fn hex_lower(bytes: &[u8]) -> String {
 }
 
 fn hex_char(nibble: u32) -> char {
-    let index = usize::try_from(nibble & 0x0f).unwrap_or(0);
+    let index = usize::from((nibble & 0x0f) as u8);
     char::from(LOWER_HEX[index])
 }
 

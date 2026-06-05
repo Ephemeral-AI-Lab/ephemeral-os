@@ -1,4 +1,6 @@
 #[path = "../common/mod.rs"]
 mod common;
 
-mod contract;
+mod isolated_gate;
+mod lsp;
+mod packages;

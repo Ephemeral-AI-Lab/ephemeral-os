@@ -29,7 +29,7 @@ use std::time::{Duration, Instant};
 use eos_protocol::LayerChange;
 
 use crate::error::OccError;
-use crate::route::{ChangesetResult, PublishDecision};
+use crate::route::{ChangesetResult, FileResult, OccStatus, PublishDecision, Route};
 
 /// Dedicated single-writer thread name (reproduce exactly).
 pub const COMMIT_QUEUE_THREAD_NAME: &str = "occ-commit-queue";
@@ -407,7 +407,7 @@ fn combine_prepared<'a>(
 fn result_files_for_item(
     result: &ChangesetResult,
     prepared: &PreparedChangeset,
-) -> Vec<crate::FileResult> {
+) -> Vec<FileResult> {
     prepared
         .path_groups
         .iter()
@@ -433,22 +433,23 @@ fn cas_exhaustion_result(
     let files = prepared
         .path_groups
         .iter()
-        .map(|group| match group.route {
-            crate::Route::Drop => crate::FileResult {
+        .map(|group| {
+            let (status, message) = match group.route {
+                Route::Drop => (
+                    OccStatus::Dropped,
+                    group.message.clone().unwrap_or_default(),
+                ),
+                Route::Reject => (
+                    OccStatus::Rejected,
+                    group.message.clone().unwrap_or_default(),
+                ),
+                Route::Direct | Route::Gated => (OccStatus::AbortedVersion, message.clone()),
+            };
+            FileResult {
                 path: group.path.clone(),
-                status: crate::OccStatus::Dropped,
-                message: group.message.clone().unwrap_or_default(),
-            },
-            crate::Route::Reject => crate::FileResult {
-                path: group.path.clone(),
-                status: crate::OccStatus::Rejected,
-                message: group.message.clone().unwrap_or_default(),
-            },
-            crate::Route::Direct | crate::Route::Gated => crate::FileResult {
-                path: group.path.clone(),
-                status: crate::OccStatus::AbortedVersion,
-                message: message.clone(),
-            },
+                status,
+                message,
+            }
         })
         .collect();
     ChangesetResult {

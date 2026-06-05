@@ -378,7 +378,7 @@ mod tests {
     async fn rejects_background_arg() {
         let ctx = metadata();
         let any = tool(
-            ToolName::Grep,
+            ToolName::ReadFile,
             false,
             OutputShape::Text,
             ToolResult::ok("x"),
@@ -401,7 +401,7 @@ mod tests {
         let ctx = metadata();
 
         let text = tool(
-            ToolName::Grep,
+            ToolName::ReadFile,
             false,
             OutputShape::Text,
             ToolResult::ok("free text"),
@@ -414,7 +414,7 @@ mod tests {
         );
 
         let bad = tool(
-            ToolName::Grep,
+            ToolName::ReadFile,
             false,
             OutputShape::json::<Structured>("Structured"),
             ToolResult::ok("not json"),
@@ -431,7 +431,7 @@ mod tests {
         );
 
         let good = tool(
-            ToolName::Grep,
+            ToolName::ReadFile,
             false,
             OutputShape::json::<Structured>("Structured"),
             ToolResult::ok(r#"{"ok":true}"#),

@@ -37,7 +37,7 @@ fn advisor_agent() -> AgentDefinition {
     agent_def(
         "advisor",
         AgentRole::Helper,
-        &["read_file", "glob", "grep"],
+        &["read_file"],
         &["submit_advisor_feedback"],
     )
 }
@@ -1173,7 +1173,7 @@ mod command_session_delivery {
         let advisor = agent_def(
             "advisor",
             AgentRole::Helper,
-            &["read_file", "glob", "grep"],
+            &["read_file"],
             &["submit_advisor_feedback"],
         );
 
@@ -1296,7 +1296,7 @@ mod subagent_lifecycle {
         agent_def(
             "advisor",
             AgentRole::Helper,
-            &["read_file", "glob", "grep"],
+            &["read_file"],
             &["submit_advisor_feedback"],
         )
     }

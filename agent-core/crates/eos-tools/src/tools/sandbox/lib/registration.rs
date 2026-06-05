@@ -12,14 +12,12 @@ use super::super::super::register_tool;
 use super::super::{
     edit_file::{EditFile, EditFileInput},
     exec_command::{ExecCommand, ExecCommandInput},
-    glob::{Glob, GlobInput},
-    grep::{Grep, GrepInput},
     multi_edit::{MultiEdit, MultiEditInput},
     read_file::{ReadFile, ReadFileInput},
     write_file::{WriteFile, WriteFileInput},
     write_stdin::{WriteStdin, WriteStdinInput},
 };
-use super::outputs::{CommandToolOutput, GlobOutput, GrepOutput, MutationOutput, ReadFileOutput};
+use super::outputs::{CommandToolOutput, MutationOutput, ReadFileOutput};
 
 pub(super) fn register(registry: &mut ToolRegistry, config: &ToolConfigSet) {
     let read_file = config.get(ToolName::ReadFile);
@@ -105,33 +103,5 @@ pub(super) fn register(registry: &mut ToolRegistry, config: &ToolConfigSet) {
         ),
         OutputShape::json::<CommandToolOutput>("CommandToolOutput"),
         Arc::new(WriteStdin),
-    );
-    let glob = config.get(ToolName::Glob);
-    register_tool(
-        registry,
-        ToolName::Glob,
-        glob,
-        json_spec(
-            ToolName::Glob,
-            &glob.description,
-            schema_for!(GlobInput),
-            schema_for!(GlobOutput),
-        ),
-        OutputShape::json::<GlobOutput>("GlobOutput"),
-        Arc::new(Glob),
-    );
-    let grep = config.get(ToolName::Grep);
-    register_tool(
-        registry,
-        ToolName::Grep,
-        grep,
-        json_spec(
-            ToolName::Grep,
-            &grep.description,
-            schema_for!(GrepInput),
-            schema_for!(GrepOutput),
-        ),
-        OutputShape::json::<GrepOutput>("GrepOutput"),
-        Arc::new(Grep),
     );
 }

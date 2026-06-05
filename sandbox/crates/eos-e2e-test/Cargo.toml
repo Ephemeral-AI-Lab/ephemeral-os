@@ -28,6 +28,10 @@ name = "command_sessions"
 path = "tests/command_sessions/mod.rs"
 
 [[test]]
+name = "ephemeral_workspace"
+path = "tests/ephemeral_workspace/mod.rs"
+
+[[test]]
 name = "isolated_workspace"
 path = "tests/isolated_workspace/mod.rs"
 
@@ -40,12 +44,12 @@ name = "occ"
 path = "tests/occ/mod.rs"
 
 [[test]]
-name = "overlay"
-path = "tests/overlay/mod.rs"
-
-[[test]]
 name = "pressure"
 path = "tests/pressure/mod.rs"
+
+[[test]]
+name = "plugin"
+path = "tests/plugin/mod.rs"
 
 [[test]]
 name = "protocol"

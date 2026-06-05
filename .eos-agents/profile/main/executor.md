@@ -11,8 +11,6 @@ allowed_tools:
   - edit_file
   - exec_command
   - write_stdin
-  - glob
-  - grep
   - lsp.hover
   - lsp.find_definitions
   - lsp.find_references

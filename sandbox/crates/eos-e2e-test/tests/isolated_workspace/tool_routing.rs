@@ -81,35 +81,3 @@ fn isolated_read_tools_see_private_upperdir() -> Result<()> {
     lease.call_ok(ops::API_ISOLATED_WORKSPACE_EXIT, json!({}))?;
     Ok(())
 }
-
-#[test]
-fn isolated_exit_discards_private_upperdir() -> Result<()> {
-    let Some(pool) = live_pool_or_skip()? else {
-        return Ok(());
-    };
-    let lease = pool.acquire()?;
-    lease.call_ok(ops::API_ISOLATED_WORKSPACE_ENTER, json!({}))?;
-    lease.call_ok(
-        ops::API_V1_WRITE_FILE,
-        json!({"path": "iso-overlay/discard.txt", "content": "discard\n", "overwrite": true}),
-    )?;
-    let exit = lease.call_ok(ops::API_ISOLATED_WORKSPACE_EXIT, json!({}))?;
-    assert!(
-        exit.get("inspection").is_some(),
-        "isolated exit should report teardown inspection: {exit}"
-    );
-    let read = lease.call_ok(
-        ops::API_V1_READ_FILE,
-        json!({"path": "iso-overlay/discard.txt"}),
-    )?;
-    assert!(
-        !as_bool(&read, "exists")?,
-        "private isolated write must not survive exit: {read}"
-    );
-    let closed = lease.call_ok(ops::API_ISOLATED_WORKSPACE_STATUS, json!({}))?;
-    assert!(
-        !as_bool(&closed, "open")?,
-        "status after exit should be closed: {closed}"
-    );
-    Ok(())
-}

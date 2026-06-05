@@ -1,6 +1,3 @@
-#[path = "common/mod.rs"]
-mod common;
-
 use anyhow::{Context, Result};
 use eos_protocol::ops;
 use serde_json::{json, Value};

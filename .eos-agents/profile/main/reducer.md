@@ -9,8 +9,6 @@ allowed_tools:
   - read_file
   - exec_command
   - write_stdin
-  - glob
-  - grep
   - ask_advisor
   - write_file
   - edit_file

@@ -9,8 +9,8 @@ use serde_json::Value;
 
 use super::{
     package::{self, PackageRoots},
-    process, LoadedPluginRuntime, PluginOperationRoute, PluginProcessSpec,
-    MAX_PLUGIN_CALLER_FIELD_CHARS,
+    process::{self, PluginProcessSpec},
+    state::{LoadedPluginRuntime, PluginOperationRoute, MAX_PLUGIN_CALLER_FIELD_CHARS},
 };
 use crate::error::DaemonError;
 

@@ -11,7 +11,10 @@ use crate::error::DaemonError;
 use crate::overlay_runner::overlay_run_dirs;
 
 use super::process::{PluginProcessSpec, PluginServiceOverlay};
-use super::{ppc_router, DaemonPluginState, SharedPpcClient};
+use super::{
+    ppc_router,
+    state::{DaemonPluginState, SharedPpcClient},
+};
 
 #[derive(Debug, Clone)]
 pub(super) struct PluginServiceSnapshot {

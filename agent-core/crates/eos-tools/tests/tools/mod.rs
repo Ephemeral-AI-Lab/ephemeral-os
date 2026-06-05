@@ -12,8 +12,8 @@ fn all_tools_named_and_intented() {
             skill_slug: None,
         },
     );
-    // The 24-tool default set, all keyed by ToolKey.
-    assert_eq!(registry.len(), 24);
+    // The default built-in set, all keyed by ToolKey.
+    assert_eq!(registry.len(), ToolName::ALL.len());
     let mut seen = std::collections::BTreeSet::new();
     for tool in registry.list() {
         assert!(seen.insert(tool.name.clone()), "duplicate {}", tool.name);

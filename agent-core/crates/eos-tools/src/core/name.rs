@@ -34,10 +34,6 @@ pub enum ToolName {
     ExecCommand,
     /// `write_stdin` (sandbox command session; omitted from `_names.py`).
     WriteStdin,
-    /// `grep` (sandbox).
-    Grep,
-    /// `glob` (sandbox).
-    Glob,
     /// `enter_isolated_workspace` (omitted from `_names.py`).
     EnterIsolatedWorkspace,
     /// `exit_isolated_workspace` (omitted from `_names.py`).
@@ -75,15 +71,13 @@ pub enum ToolName {
 impl ToolName {
     /// Every tool name, in a stable order. Used by registry-totality tests and
     /// as the canonical iteration order for default-set construction.
-    pub const ALL: [ToolName; 24] = [
+    pub const ALL: [ToolName; 22] = [
         ToolName::ReadFile,
         ToolName::WriteFile,
         ToolName::EditFile,
         ToolName::MultiEdit,
         ToolName::ExecCommand,
         ToolName::WriteStdin,
-        ToolName::Grep,
-        ToolName::Glob,
         ToolName::EnterIsolatedWorkspace,
         ToolName::ExitIsolatedWorkspace,
         ToolName::RunSubagent,
@@ -112,8 +106,6 @@ impl ToolName {
             ToolName::MultiEdit => "multi_edit",
             ToolName::ExecCommand => "exec_command",
             ToolName::WriteStdin => "write_stdin",
-            ToolName::Grep => "grep",
-            ToolName::Glob => "glob",
             ToolName::EnterIsolatedWorkspace => "enter_isolated_workspace",
             ToolName::ExitIsolatedWorkspace => "exit_isolated_workspace",
             ToolName::RunSubagent => "run_subagent",
@@ -249,7 +241,7 @@ mod tests {
         for name in ToolName::ALL {
             assert!(seen.insert(name.as_str()), "duplicate {}", name.as_str());
         }
-        assert_eq!(seen.len(), 24);
+        assert_eq!(seen.len(), ToolName::ALL.len());
     }
 
     // The hand-written wire table agrees with the serde `rename_all` projection.

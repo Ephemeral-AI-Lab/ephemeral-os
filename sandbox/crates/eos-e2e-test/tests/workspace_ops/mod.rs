@@ -1,5 +1,5 @@
 #[path = "../common/mod.rs"]
 mod common;
 
-mod core;
-mod extra;
+mod direct_file_ops;
+mod errors_and_limits;

@@ -17,8 +17,8 @@ Prefer over:
 
 Do NOT use for:
 - Binary files (PDF, images, archives) — output is UTF-8 only.
-- Directory listings — use `glob`.
-- Searching for content across many files — use `grep`.
+- Directory listings or content search across many files — use `exec_command`
+  with repository search tools when that capability is available to your agent.
 - Re-reading a file you just edited — `edit_file`/`write_file` would have
   errored if the change failed; the harness already tracks the new
   content.

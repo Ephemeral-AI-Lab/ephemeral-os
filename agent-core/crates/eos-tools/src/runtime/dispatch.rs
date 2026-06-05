@@ -195,7 +195,7 @@ mod tests {
         let registry = registry_with(&[
             ToolName::ReadFile,
             ToolName::SubmitRootOutcome,
-            ToolName::Grep,
+            ToolName::EditFile,
         ]);
 
         // Solo terminal: allowed.
@@ -215,10 +215,11 @@ mod tests {
         }
 
         // No terminal in batch: allowed.
-        assert!(
-            reject_terminal_batch(&[call("t1", "read_file"), call("t2", "grep")], &registry)
-                .is_none()
-        );
+        assert!(reject_terminal_batch(
+            &[call("t1", "read_file"), call("t2", "edit_file")],
+            &registry
+        )
+        .is_none());
     }
 
     // AC-tools-06: >1 lifecycle rejects all lifecycle, keeps siblings; 1

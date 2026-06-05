@@ -12,15 +12,16 @@ mod package;
 mod ppc_router;
 mod process;
 mod service;
+mod state;
 
 use std::collections::BTreeMap;
 use std::path::PathBuf;
-use std::sync::{Arc, Mutex, MutexGuard, OnceLock};
+use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
 use eos_plugin::{
-    PluginError, PluginManifest, PluginServiceKey, PluginServiceState, PluginServiceStatus,
-    PpcDirection, PpcEnvelope, RefreshAck, RefreshRequest, RefreshStrategy, ServiceMode,
+    PluginError, PluginManifest, PluginServiceKey, PluginServiceState, PpcDirection, PpcEnvelope,
+    RefreshAck, RefreshRequest, RefreshStrategy, ServiceMode,
 };
 use eos_protocol::Intent;
 use serde_json::{json, Value};
@@ -31,7 +32,6 @@ use crate::response_timings::u64_to_f64_saturating;
 use ensure_args::{loaded_matches_parsed, validate_plugin_caller_fields, ParsedEnsure};
 use overlay::PluginOverlayCommand;
 use package::{ensure_package, needs_upload_response, PackageEnsureReport};
-use process::PluginProcessSpec;
 use service::{
     acquire_service_snapshot, active_manifest_key, insert_started_service_processes,
     mark_service_ready, mark_service_restarted, mark_service_stale, mark_service_stopped,
@@ -40,88 +40,17 @@ use service::{
     stop_services_for_layer_stack_root as stop_services_for_layer_stack_root_in_state,
     PluginServiceSnapshot,
 };
+#[cfg(test)]
+use state::MAX_PLUGIN_CALLER_FIELD_CHARS;
+use state::{
+    connected_ppc_routes, connected_ppc_services, loaded_plugin_values, lock_state, process_values,
+    route_values, setup_failure_key, setup_failure_values, DaemonPluginState, LoadedPluginRuntime,
+    PluginOperationRoute, SharedPpcClient,
+};
 
-type SharedPpcClient = Arc<ppc_router::PpcClient>;
 const MAX_PLUGIN_RESPONSE_BYTES: usize = 8 * 1024 * 1024;
-const MAX_PLUGIN_CALLER_FIELD_CHARS: usize = 256;
 
 const WORKSPACE_SNAPSHOT_REFRESH_OP: &str = "daemon.workspace_snapshot_refresh";
-
-#[derive(Debug, Clone)]
-struct LoadedPluginRuntime {
-    digest: String,
-    registered_ops: Vec<String>,
-    operation_routes: BTreeMap<String, PluginOperationRoute>,
-    services: Vec<PluginServiceStatus>,
-    service_processes: Vec<PluginProcessSpec>,
-    runtime_loaded: bool,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-struct PluginOperationRoute {
-    plugin_id: String,
-    op_name: String,
-    public_op: String,
-    layer_stack_root: Option<String>,
-    intent: Intent,
-    auto_workspace_overlay: bool,
-    service_id: Option<String>,
-    service_instance_id: Option<String>,
-    service_key: Option<PluginServiceKey>,
-    service_mode: Option<ServiceMode>,
-    service_command: Vec<String>,
-    service_ppc_protocol_version: Option<u32>,
-    timeout_ms: Option<u64>,
-}
-
-impl PluginOperationRoute {
-    const fn dispatch_mode(&self) -> &'static str {
-        match self.intent {
-            Intent::ReadOnly => "read_only_service",
-            Intent::WriteAllowed if self.auto_workspace_overlay => "write_allowed_oneshot_overlay",
-            Intent::WriteAllowed => "self_managed_callback",
-            Intent::Lifecycle => "invalid_lifecycle",
-        }
-    }
-
-    fn to_json(&self) -> Value {
-        json!({
-            "plugin": self.plugin_id,
-            "op_name": self.op_name,
-            "public_op": self.public_op,
-            "layer_stack_root": self.layer_stack_root,
-            "intent": self.intent,
-            "auto_workspace_overlay": self.auto_workspace_overlay,
-            "service_id": self.service_id,
-            "service_instance_id": self.service_instance_id,
-            "service_mode": self.service_mode,
-            "service_command": self.service_command,
-            "timeout_ms": self.timeout_ms,
-            "dispatch_mode": self.dispatch_mode(),
-        })
-    }
-}
-
-#[derive(Debug, Default)]
-struct DaemonPluginState {
-    loaded: BTreeMap<String, LoadedPluginRuntime>,
-    service_ppc_clients: BTreeMap<String, SharedPpcClient>,
-    service_processes: BTreeMap<String, process::PluginServiceProcess>,
-    service_snapshots: BTreeMap<String, PluginServiceSnapshot>,
-    service_refresh_locks: BTreeMap<String, Arc<Mutex<()>>>,
-    setup_failures: BTreeMap<String, Value>,
-}
-
-fn state_cell() -> &'static Mutex<DaemonPluginState> {
-    static STATE: OnceLock<Mutex<DaemonPluginState>> = OnceLock::new();
-    STATE.get_or_init(|| Mutex::new(DaemonPluginState::default()))
-}
-
-fn lock_state() -> Result<MutexGuard<'static, DaemonPluginState>, DaemonError> {
-    state_cell()
-        .lock()
-        .map_err(|_| DaemonError::StateLockPoisoned("plugin registry"))
-}
 
 pub fn op_ensure(args: &Value, _context: DispatchContext<'_>) -> Result<Value, DaemonError> {
     ensure_plugin_family_allowed(args)?;
@@ -292,22 +221,8 @@ pub fn dispatch_registered_op(
 
 #[cfg(test)]
 fn reset_for_tests() {
-    if let Ok(mut state) = state_cell().lock() {
-        let snapshots = state
-            .service_snapshots
-            .values()
-            .cloned()
-            .collect::<Vec<_>>();
-        state.loaded.clear();
-        state.service_ppc_clients.clear();
-        state.service_processes.clear();
-        state.service_snapshots.clear();
-        state.service_refresh_locks.clear();
-        state.setup_failures.clear();
-        drop(state);
-        for snapshot in snapshots {
-            release_service_snapshot(&snapshot);
-        }
+    for snapshot in state::reset_state_for_tests() {
+        release_service_snapshot(&snapshot);
     }
 }
 
@@ -367,35 +282,6 @@ fn ensure_plugin_family_allowed(args: &Value) -> Result<(), DaemonError> {
     Ok(())
 }
 
-fn route_values(routes: &BTreeMap<String, PluginOperationRoute>) -> Vec<Value> {
-    routes.values().map(PluginOperationRoute::to_json).collect()
-}
-
-fn process_values(processes: &[PluginProcessSpec]) -> Vec<Value> {
-    processes.iter().map(PluginProcessSpec::to_json).collect()
-}
-
-fn connected_ppc_routes(state: &DaemonPluginState) -> Vec<String> {
-    state
-        .loaded
-        .values()
-        .flat_map(|loaded| loaded.operation_routes.values())
-        .filter(|route| {
-            route
-                .service_instance_id
-                .as_ref()
-                .is_some_and(|service_instance_id| {
-                    state.service_ppc_clients.contains_key(service_instance_id)
-                })
-        })
-        .map(|route| route.public_op.clone())
-        .collect()
-}
-
-fn connected_ppc_services(state: &DaemonPluginState) -> Vec<String> {
-    state.service_ppc_clients.keys().cloned().collect()
-}
-
 fn package_report_value(report: &PackageEnsureReport) -> Value {
     if !report.active {
         return Value::Null;
@@ -407,10 +293,6 @@ fn package_report_value(report: &PackageEnsureReport) -> Value {
         "package_published": report.package_published,
         "setup_ran": report.setup_ran,
     })
-}
-
-fn setup_failure_key(plugin_id: &str, plugin_digest: &str) -> String {
-    format!("{plugin_id}:{plugin_digest}")
 }
 
 fn record_setup_failure(manifest: Option<&PluginManifest>, err: &DaemonError) {
@@ -429,10 +311,6 @@ fn record_setup_failure(manifest: Option<&PluginManifest>, err: &DaemonError) {
     }
 }
 
-fn setup_failure_values(state: &DaemonPluginState) -> Vec<Value> {
-    state.setup_failures.values().cloned().collect()
-}
-
 pub(crate) fn stop_services_for_layer_stack_root(
     layer_stack_root: &str,
 ) -> Result<usize, DaemonError> {
@@ -441,24 +319,6 @@ pub(crate) fn stop_services_for_layer_stack_root(
         &mut state,
         layer_stack_root,
     ))
-}
-
-fn loaded_plugin_values(state: &DaemonPluginState) -> Vec<Value> {
-    state
-        .loaded
-        .iter()
-        .map(|(name, loaded)| {
-            json!({
-                "name": name,
-                "digest": loaded.digest,
-                "ops": loaded.registered_ops,
-                "operation_routes": route_values(&loaded.operation_routes),
-                "services": loaded.services,
-                "service_processes": process_values(&loaded.service_processes),
-                "runtime_loaded": loaded.runtime_loaded,
-            })
-        })
-        .collect()
 }
 
 #[derive(Debug, Clone)]

@@ -454,14 +454,14 @@ mod tests {
     fn load_rejects_missing_tool() {
         let scratch = Scratch::new("missing-tool");
         for name in ToolName::ALL {
-            if name == ToolName::Glob {
+            if name == ToolName::ReadFile {
                 continue; // drop one
             }
             scratch.write(&format!("{name}.md"), &valid_file(name));
         }
         let err = ToolConfigSet::load_from_dir(scratch.path()).unwrap_err();
         assert!(
-            matches!(err, ToolConfigError::MissingTool(ToolName::Glob)),
+            matches!(err, ToolConfigError::MissingTool(ToolName::ReadFile)),
             "{err:?}"
         );
     }

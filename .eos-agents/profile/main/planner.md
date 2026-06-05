@@ -7,7 +7,6 @@ role: planner
 agent_type: agent
 allowed_tools:
   - read_file
-  - glob
   - run_subagent
   - ask_advisor
   - load_skill_reference

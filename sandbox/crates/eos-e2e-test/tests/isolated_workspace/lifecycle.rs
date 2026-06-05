@@ -6,34 +6,11 @@
 //! discard-on-exit (the write is never OCC-published), and the exit `inspection`
 //! teardown facts.
 
-use std::sync::Arc;
-
 use anyhow::{Context, Result};
-use eos_e2e_test::{live_pool, NodePool};
 use eos_protocol::ops;
 use serde_json::{json, Value};
 
-fn live_pool_or_skip() -> Result<Option<Arc<NodePool>>> {
-    let Some(pool) = live_pool()? else {
-        eprintln!("skipping live eos-e2e-test; enable with `--features e2e`");
-        return Ok(None);
-    };
-    Ok(Some(pool))
-}
-
-fn as_bool(value: &Value, key: &str) -> Result<bool> {
-    value
-        .get(key)
-        .and_then(Value::as_bool)
-        .with_context(|| format!("{key} missing or not bool in {value}"))
-}
-
-fn as_str<'a>(value: &'a Value, key: &str) -> Result<&'a str> {
-    value
-        .get(key)
-        .and_then(Value::as_str)
-        .with_context(|| format!("{key} missing or not string in {value}"))
-}
+use crate::common::{as_bool, as_str, live_pool_or_skip};
 
 #[test]
 fn enter_status_exit_pin_and_teardown() -> Result<()> {
@@ -105,55 +82,6 @@ fn enter_status_exit_pin_and_teardown() -> Result<()> {
     assert!(
         !as_bool(&closed, "open")?,
         "status must report closed: {closed}"
-    );
-    Ok(())
-}
-
-#[test]
-fn isolated_write_is_discarded_on_exit() -> Result<()> {
-    let Some(pool) = live_pool_or_skip()? else {
-        return Ok(());
-    };
-    let lease = pool.acquire()?;
-    let path = "iso/private.txt";
-
-    lease.call_ok(ops::API_ISOLATED_WORKSPACE_ENTER, json!({}))?;
-
-    // A write inside isolated mode routes to the private upperdir.
-    let write = lease.call_ok(
-        ops::API_V1_WRITE_FILE,
-        json!({"path": path, "content": "isolated-only\n", "overwrite": true}),
-    )?;
-    assert_eq!(
-        as_str(&write, "mutation_source")?,
-        "isolated_workspace",
-        "write inside isolated mode must be isolated-sourced: {write}"
-    );
-    assert_eq!(
-        as_str(&write, "status")?,
-        "committed",
-        "isolated write status: {write}"
-    );
-
-    // Read inside isolated mode sees it.
-    let read_inside = lease.call_ok(ops::API_V1_READ_FILE, json!({"path": path}))?;
-    assert_eq!(as_str(&read_inside, "content")?, "isolated-only\n");
-
-    let exit = lease.call_ok(ops::API_ISOLATED_WORKSPACE_EXIT, json!({}))?;
-    assert!(
-        exit.get("evicted_upperdir_bytes")
-            .and_then(Value::as_i64)
-            .unwrap_or(0)
-            >= 0,
-        "exit reports evicted upperdir bytes: {exit}"
-    );
-
-    // After exit the private write is gone from the public layer stack: it was
-    // never OCC-published, so the public read sees no such file.
-    let read_public = lease.call_ok(ops::API_V1_READ_FILE, json!({"path": path}))?;
-    assert!(
-        !as_bool(&read_public, "exists")?,
-        "isolated write must not survive into the public workspace: {read_public}"
     );
     Ok(())
 }

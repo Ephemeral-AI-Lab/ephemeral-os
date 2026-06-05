@@ -7,8 +7,6 @@ role: helper
 agent_type: agent
 allowed_tools:
   - read_file
-  - glob
-  - grep
 terminals:
   - submit_advisor_feedback
 ---

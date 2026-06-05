@@ -501,4 +501,5 @@ fn timing_f64(response: &Value, key: &str) -> Option<f64> {
 }
 
 #[cfg(test)]
+#[path = "../tests/audit_events/mod.rs"]
 mod tests;

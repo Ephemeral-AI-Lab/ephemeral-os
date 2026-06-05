@@ -1,6 +1,3 @@
-#[path = "common/mod.rs"]
-mod common;
-
 use anyhow::{Context, Result};
 use eos_e2e_test::unique_suffix;
 use eos_protocol::ops;
@@ -163,20 +160,6 @@ fn generic_plugin_refreshes_after_workspace_edit() -> Result<()> {
             > 0,
         "status should record service refresh: {status}"
     );
-    Ok(())
-}
-
-#[test]
-fn generic_plugin_rejected_in_isolated_workspace() -> Result<()> {
-    let Some(pool) = live_pool_or_skip()? else {
-        return Ok(());
-    };
-    let lease = pool.acquire()?;
-    lease.call_ok(ops::API_ISOLATED_WORKSPACE_ENTER, json!({}))?;
-    let response = lease.call("plugin.generic.query", json!({"path": "anything.txt"}))?;
-    assert_eq!(response["success"], false);
-    assert_eq!(response["error"]["kind"], "forbidden_in_isolated_workspace");
-    lease.call_ok(ops::API_ISOLATED_WORKSPACE_EXIT, json!({}))?;
     Ok(())
 }
 
