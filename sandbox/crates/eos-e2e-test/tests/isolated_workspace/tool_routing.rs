@@ -44,6 +44,7 @@ fn isolated_write_response_fields() -> Result<()> {
     assert_eq!(as_str(&write, "workspace_mode")?, "isolated");
     assert_eq!(as_str(&write, "mutation_source")?, "isolated_workspace");
     assert_eq!(as_str(&write, "status")?, "committed");
+    assert!(!as_bool(&write, "published")?);
     assert!(
         array(&write, "changed_paths")?
             .iter()

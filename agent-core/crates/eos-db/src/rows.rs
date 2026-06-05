@@ -10,9 +10,10 @@ use serde_json::Value as JsonValue;
 use time::OffsetDateTime;
 
 use eos_state::{
-    present_status, AgentRun, Attempt, AttemptFailReason, AttemptStage, AttemptStatus, CoreError,
-    ExecutionRole, ExecutionTaskOutcome, Iteration, Request, RequestStatus, Task,
-    TaskOutcomeStatus, UtcDateTime, Workflow, NO_OUTCOME,
+    present_status, AgentRun, Attempt, AttemptBudget, AttemptClosure, AttemptFailReason,
+    AttemptStage, AttemptState, AttemptStatus, CoreError, DeferredGoal, ExecutionRole,
+    ExecutionTaskOutcome, Iteration, MaterializedPlan, PlanDisposition, Request, RequestStatus,
+    Task, TaskOutcomeStatus, UtcDateTime, Workflow, NO_OUTCOME,
 };
 
 use crate::error::DbError;
@@ -297,16 +298,29 @@ pub(crate) fn row_to_workflow(r: WorkflowRow) -> Result<Workflow, DbError> {
 }
 
 pub(crate) fn row_to_iteration(r: IterationRow) -> Result<Iteration, DbError> {
+    let attempt_budget =
+        AttemptBudget::try_from_i64(r.attempt_budget).map_err(|_| DbError::InvalidEnum {
+            field: "iterations.attempt_budget",
+            value: r.attempt_budget.to_string(),
+        })?;
+    let deferred_goal = r
+        .deferred_goal
+        .map(DeferredGoal::new)
+        .transpose()
+        .map_err(|_| DbError::InvalidEnum {
+            field: "iterations.deferred_goal",
+            value: String::new(),
+        })?;
     Ok(Iteration {
         id: parse_id("iterations.id", &r.id)?,
         workflow_id: parse_id("iterations.workflow_id", &r.workflow_id)?,
         sequence_no: r.sequence_no,
         creation_reason: parse_enum("iterations.creation_reason", &r.creation_reason)?,
         iteration_goal: r.goal, // §4 column `goal` → domain `iteration_goal`
-        attempt_budget: r.attempt_budget,
+        attempt_budget,
         status: parse_enum("iterations.status", &r.status)?,
         attempt_ids: json_col::decode_default(Some(&r.attempt_ids))?,
-        deferred_goal_for_next_iteration: r.deferred_goal, // §4 rename
+        deferred_goal_for_next_iteration: deferred_goal, // §4 rename
         created_at: UtcDateTime::from_offset(r.created_at),
         updated_at: UtcDateTime::from_offset(r.updated_at),
         closed_at: r.closed_at.map(UtcDateTime::from_offset),
@@ -317,28 +331,138 @@ pub(crate) fn row_to_iteration(r: IterationRow) -> Result<Iteration, DbError> {
 pub(crate) fn row_to_attempt(r: AttemptRow) -> Result<Attempt, DbError> {
     let records = json_col::decode_default::<Vec<JsonValue>>(Some(&r.outcomes))?;
     let outcomes = normalize_attempt_outcomes(&records);
+    let stage = parse_enum::<AttemptStage>("attempts.stage", &r.stage)?;
+    let status = parse_enum::<AttemptStatus>("attempts.status", &r.status)?;
+    let planner_task_id = opt_id("attempts.planner_task_id", r.planner_task_id.as_deref())?;
+    let generator_task_ids = json_col::decode_default(Some(&r.generator_task_ids))?;
+    let reducer_task_ids = json_col::decode_default(Some(&r.reducer_task_ids))?;
     let fail_reason: Option<AttemptFailReason> = r
         .fail_reason
         .as_deref()
         .map(|s| parse_enum("attempts.fail_reason", s))
         .transpose()?;
+    let deferred_goal = r
+        .deferred_goal
+        .map(DeferredGoal::new)
+        .transpose()
+        .map_err(|_| DbError::InvalidEnum {
+            field: "attempts.deferred_goal",
+            value: String::new(),
+        })?;
+    let closed_at = r.closed_at.map(UtcDateTime::from_offset);
+    let state = attempt_state_from_columns(AttemptLifecycleColumns {
+        stage,
+        status,
+        planner_task_id,
+        generator_task_ids,
+        reducer_task_ids,
+        deferred_goal: deferred_goal.as_ref(),
+        fail_reason,
+        closed_at,
+        outcomes,
+    })?;
     Ok(Attempt {
         id: parse_id("attempts.id", &r.id)?,
         iteration_id: parse_id("attempts.iteration_id", &r.iteration_id)?,
         workflow_id: parse_id("attempts.workflow_id", &r.workflow_id)?,
         attempt_sequence_no: r.attempt_sequence_no,
-        stage: parse_enum::<AttemptStage>("attempts.stage", &r.stage)?,
-        status: parse_enum::<AttemptStatus>("attempts.status", &r.status)?,
-        planner_task_id: opt_id("attempts.planner_task_id", r.planner_task_id.as_deref())?,
-        generator_task_ids: json_col::decode_default(Some(&r.generator_task_ids))?,
-        reducer_task_ids: json_col::decode_default(Some(&r.reducer_task_ids))?,
-        deferred_goal_for_next_iteration: r.deferred_goal,
-        fail_reason,
+        state,
         created_at: UtcDateTime::from_offset(r.created_at),
         updated_at: UtcDateTime::from_offset(r.updated_at),
-        closed_at: r.closed_at.map(UtcDateTime::from_offset),
-        outcomes,
     })
+}
+
+struct AttemptLifecycleColumns<'a> {
+    stage: AttemptStage,
+    status: AttemptStatus,
+    planner_task_id: Option<eos_state::TaskId>,
+    generator_task_ids: Vec<eos_state::TaskId>,
+    reducer_task_ids: Vec<eos_state::TaskId>,
+    deferred_goal: Option<&'a DeferredGoal>,
+    fail_reason: Option<AttemptFailReason>,
+    closed_at: Option<UtcDateTime>,
+    outcomes: Vec<ExecutionTaskOutcome>,
+}
+
+fn attempt_state_from_columns(
+    columns: AttemptLifecycleColumns<'_>,
+) -> Result<AttemptState, DbError> {
+    let AttemptLifecycleColumns {
+        stage,
+        status,
+        planner_task_id,
+        generator_task_ids,
+        reducer_task_ids,
+        deferred_goal,
+        fail_reason,
+        closed_at,
+        outcomes,
+    } = columns;
+    let lifecycle_value = format!("{stage:?}/{status:?}");
+    let invalid_lifecycle = || DbError::InvalidEnum {
+        field: "attempts.lifecycle",
+        value: lifecycle_value.clone(),
+    };
+    let has_plan_tasks = !generator_task_ids.is_empty() || !reducer_task_ids.is_empty();
+    let plan = planner_task_id.clone().and_then(|planner_task_id| {
+        has_plan_tasks.then(|| MaterializedPlan {
+            planner_task_id,
+            disposition: PlanDisposition::from_deferred_goal(deferred_goal.cloned()),
+            generator_task_ids,
+            reducer_task_ids,
+        })
+    });
+    match stage {
+        AttemptStage::Plan => {
+            if status != AttemptStatus::Running
+                || fail_reason.is_some()
+                || closed_at.is_some()
+                || has_plan_tasks
+                || deferred_goal.is_some()
+            {
+                return Err(invalid_lifecycle());
+            }
+            Ok(AttemptState::Planning { planner_task_id })
+        }
+        AttemptStage::Run => {
+            if status != AttemptStatus::Running || fail_reason.is_some() || closed_at.is_some() {
+                return Err(invalid_lifecycle());
+            }
+            Ok(AttemptState::Running {
+                plan: plan.ok_or_else(invalid_lifecycle)?,
+            })
+        }
+        AttemptStage::Closed => {
+            let closed_at = closed_at.ok_or_else(invalid_lifecycle)?;
+            let closure = match status {
+                AttemptStatus::Running => return Err(invalid_lifecycle()),
+                AttemptStatus::Passed => {
+                    if fail_reason.is_some() {
+                        return Err(invalid_lifecycle());
+                    }
+                    AttemptClosure::Passed {
+                        outcomes,
+                        closed_at,
+                    }
+                }
+                AttemptStatus::Failed => AttemptClosure::Failed {
+                    reason: fail_reason.ok_or_else(invalid_lifecycle)?,
+                    outcomes,
+                    closed_at,
+                },
+            };
+            let planner_task_id = if plan.is_some() {
+                None
+            } else {
+                planner_task_id
+            };
+            Ok(AttemptState::Closed {
+                closure,
+                planner_task_id,
+                plan,
+            })
+        }
+    }
 }
 
 pub(crate) fn row_to_agent_run(r: AgentRunRow) -> Result<AgentRun, DbError> {

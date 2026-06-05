@@ -5,8 +5,8 @@ use sqlx::{Sqlite, SqlitePool};
 use time::OffsetDateTime;
 
 use eos_state::{
-    Attempt, AttemptFailReason, AttemptId, AttemptStage, AttemptStatus, AttemptStore, CoreError,
-    ExecutionTaskOutcome, IterationId, Sealed, TaskId, UtcDateTime, WorkflowId,
+    Attempt, AttemptClosure, AttemptId, AttemptStage, AttemptStore, CoreError, IterationId,
+    MaterializedPlan, Sealed, TaskId, WorkflowId,
 };
 
 use crate::error::DbError;
@@ -72,21 +72,7 @@ impl AttemptStore for SqlAttemptStore {
         Ok(row.map(row_to_attempt).transpose()?)
     }
 
-    async fn set_stage(&self, id: &AttemptId, stage: AttemptStage) -> Result<Attempt, CoreError> {
-        let now = OffsetDateTime::now_utc();
-        let row = sqlx::query_as::<Sqlite, AttemptRow>(
-            "UPDATE attempts SET stage = ?, updated_at = ? WHERE id = ? RETURNING *",
-        )
-        .bind(enum_to_db(&stage))
-        .bind(now)
-        .bind(id.as_str())
-        .fetch_optional(&self.pool)
-        .await
-        .map_err(DbError::from)?;
-        Ok(row_to_attempt(row.ok_or_else(|| Self::not_found(id))?)?)
-    }
-
-    async fn set_planner_task_id(
+    async fn record_planner_task(
         &self,
         id: &AttemptId,
         planner_task_id: &TaskId,
@@ -104,16 +90,21 @@ impl AttemptStore for SqlAttemptStore {
         Ok(row_to_attempt(row.ok_or_else(|| Self::not_found(id))?)?)
     }
 
-    async fn set_generator_task_ids(
+    async fn record_plan(
         &self,
         id: &AttemptId,
-        generator_task_ids: &[TaskId],
+        plan: &MaterializedPlan,
     ) -> Result<Attempt, CoreError> {
         let now = OffsetDateTime::now_utc();
         let row = sqlx::query_as::<Sqlite, AttemptRow>(
-            "UPDATE attempts SET generator_task_ids = ?, updated_at = ? WHERE id = ? RETURNING *",
+            "UPDATE attempts SET stage = ?, planner_task_id = ?, generator_task_ids = ?, \
+               reducer_task_ids = ?, deferred_goal = ?, updated_at = ? WHERE id = ? RETURNING *",
         )
-        .bind(json_col::encode(generator_task_ids)?)
+        .bind(enum_to_db(&AttemptStage::Run))
+        .bind(plan.planner_task_id.as_str())
+        .bind(json_col::encode(&plan.generator_task_ids)?)
+        .bind(json_col::encode(&plan.reducer_task_ids)?)
+        .bind(plan.deferred_goal().map(eos_state::DeferredGoal::as_str))
         .bind(now)
         .bind(id.as_str())
         .fetch_optional(&self.pool)
@@ -122,61 +113,18 @@ impl AttemptStore for SqlAttemptStore {
         Ok(row_to_attempt(row.ok_or_else(|| Self::not_found(id))?)?)
     }
 
-    async fn set_reducer_task_ids(
-        &self,
-        id: &AttemptId,
-        reducer_task_ids: &[TaskId],
-    ) -> Result<Attempt, CoreError> {
+    async fn close(&self, id: &AttemptId, closure: AttemptClosure) -> Result<Attempt, CoreError> {
         let now = OffsetDateTime::now_utc();
-        let row = sqlx::query_as::<Sqlite, AttemptRow>(
-            "UPDATE attempts SET reducer_task_ids = ?, updated_at = ? WHERE id = ? RETURNING *",
-        )
-        .bind(json_col::encode(reducer_task_ids)?)
-        .bind(now)
-        .bind(id.as_str())
-        .fetch_optional(&self.pool)
-        .await
-        .map_err(DbError::from)?;
-        Ok(row_to_attempt(row.ok_or_else(|| Self::not_found(id))?)?)
-    }
-
-    async fn set_deferred_goal(
-        &self,
-        id: &AttemptId,
-        deferred_goal_for_next_iteration: Option<&str>,
-    ) -> Result<Attempt, CoreError> {
-        let now = OffsetDateTime::now_utc();
-        let row = sqlx::query_as::<Sqlite, AttemptRow>(
-            "UPDATE attempts SET deferred_goal = ?, updated_at = ? WHERE id = ? RETURNING *",
-        )
-        .bind(deferred_goal_for_next_iteration)
-        .bind(now)
-        .bind(id.as_str())
-        .fetch_optional(&self.pool)
-        .await
-        .map_err(DbError::from)?;
-        Ok(row_to_attempt(row.ok_or_else(|| Self::not_found(id))?)?)
-    }
-
-    async fn close(
-        &self,
-        id: &AttemptId,
-        status: AttemptStatus,
-        fail_reason: Option<AttemptFailReason>,
-        outcomes: Option<&[ExecutionTaskOutcome]>,
-        closed_at: UtcDateTime,
-    ) -> Result<Attempt, CoreError> {
-        let now = OffsetDateTime::now_utc();
-        let outcomes_json = outcomes.map(json_col::encode).transpose()?;
+        let outcomes_json = json_col::encode(closure.outcomes())?;
         let row = sqlx::query_as::<Sqlite, AttemptRow>(
             "UPDATE attempts SET stage = 'closed', status = ?, fail_reason = ?, \
-               outcomes = COALESCE(?, outcomes), closed_at = ?, updated_at = ? \
+               outcomes = ?, closed_at = ?, updated_at = ? \
              WHERE id = ? RETURNING *",
         )
-        .bind(enum_to_db(&status))
-        .bind(fail_reason.as_ref().map(enum_to_db))
+        .bind(enum_to_db(&closure.status()))
+        .bind(closure.fail_reason().as_ref().map(enum_to_db))
         .bind(outcomes_json)
-        .bind(closed_at.into_inner())
+        .bind(closure.closed_at().into_inner())
         .bind(now)
         .bind(id.as_str())
         .fetch_optional(&self.pool)

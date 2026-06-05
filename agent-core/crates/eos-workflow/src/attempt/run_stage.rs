@@ -9,7 +9,7 @@ use eos_state::{
 use serde_json::{json, Value};
 use tokio::task::JoinSet;
 
-use crate::attempt::plan_dag::{dag_status, ready_pending_plan_ids};
+use crate::attempt::plan_dag::{dag_resolution, ready_pending_plan_ids, DagResolution};
 use crate::attempt::{AgentLaunch, AgentLaunchFactory, AgentRunReport, AttemptDeps};
 use crate::util::json_object;
 use crate::{Result, WorkflowError};
@@ -49,7 +49,7 @@ impl AttemptStageAdvancer {
         let mut set = JoinSet::new();
         loop {
             let attempt = self.orchestrator.fresh_attempt().await?;
-            if attempt.is_closed() || attempt.stage != eos_state::AttemptStage::Run {
+            if attempt.is_closed() || attempt.stage() != eos_state::AttemptStage::Run {
                 return Ok(());
             }
             let tasks = self.orchestrator.plan_task_records(&attempt).await?;
@@ -103,23 +103,15 @@ impl AttemptStageAdvancer {
 
             let refreshed = self.orchestrator.fresh_attempt().await?;
             let refreshed_tasks = self.orchestrator.plan_task_records(&refreshed).await?;
-            let status = dag_status(&refreshed_tasks)?;
-            if status.all_quiescent {
-                if status.any_failed_or_blocked {
+            match dag_resolution(&refreshed_tasks)? {
+                DagResolution::FailedOrBlocked => {
                     return self
                         .orchestrator
-                        .close_attempt(
-                            eos_state::AttemptStatus::Failed,
-                            Some(eos_state::AttemptFailReason::TaskFailed),
-                        )
+                        .close_attempt_failed(eos_state::AttemptFailReason::TaskFailed)
                         .await;
                 }
-                if status.all_done {
-                    return self
-                        .orchestrator
-                        .close_attempt(eos_state::AttemptStatus::Passed, None)
-                        .await;
-                }
+                DagResolution::Passed => return self.orchestrator.close_attempt_passed().await,
+                DagResolution::Running => {}
             }
             if set.is_empty() {
                 return Ok(());
@@ -264,7 +256,7 @@ impl AttemptStageAdvancer {
             .orchestrator
             .deps()
             .task_store
-            .get(&launch.task_id)
+            .get(launch.task_id())
             .await?;
         if matches!(task, Some(ref task) if task.status == TaskStatus::Running) {
             let summary = match report {
@@ -280,19 +272,14 @@ impl AttemptStageAdvancer {
     }
 
     async fn synthesize_failure(&self, launch: &AgentLaunch, summary: &str) -> Result<()> {
-        let attempt_id = launch.attempt_id.clone().ok_or_else(|| {
-            WorkflowError::invariant(format!(
-                "role {:?} exhaustion report requires launch.attempt_id",
-                launch.role
-            ))
-        })?;
+        let attempt_id = launch.attempt_id().clone();
         let exhausted = json_object("fail_reason", "run_exhausted");
-        match launch.role {
+        match launch.role() {
             AgentRole::Planner => {
                 self.orchestrator
                     .apply_planner_failure(PlannerFailureSubmission {
                         attempt_id,
-                        planner_task_id: launch.task_id.clone(),
+                        planner_task_id: launch.task_id().clone(),
                         fail_reason: PlannerFailReason::RunExhausted,
                     })
                     .await
@@ -301,7 +288,7 @@ impl AttemptStageAdvancer {
                 self.orchestrator
                     .record_generator_submission(GeneratorSubmission {
                         attempt_id,
-                        task_id: launch.task_id.clone(),
+                        task_id: launch.task_id().clone(),
                         status: TaskOutcomeStatus::Failed,
                         outcome: summary.to_owned(),
                         terminal_tool_result: exhausted,
@@ -312,7 +299,7 @@ impl AttemptStageAdvancer {
                 self.orchestrator
                     .record_reducer_submission(ReducerSubmission {
                         attempt_id,
-                        task_id: launch.task_id.clone(),
+                        task_id: launch.task_id().clone(),
                         status: TaskOutcomeStatus::Failed,
                         outcome: summary.to_owned(),
                         terminal_tool_result: exhausted,
@@ -321,7 +308,7 @@ impl AttemptStageAdvancer {
             }
             _ => Err(WorkflowError::invariant(format!(
                 "no exhaustion reporter for role {:?}",
-                launch.role
+                launch.role()
             ))),
         }
     }
@@ -345,8 +332,8 @@ mod tests {
 
     use eos_agent_def::AgentRole;
     use eos_state::{
-        AttemptFailReason, AttemptStage, AttemptStatus, IterationStatus, Task, TaskOutcomeStatus,
-        TaskRole, TaskStatus, WorkflowStatus,
+        AttemptBudget, AttemptFailReason, AttemptStatus, IterationStatus, PlanDisposition,
+        PlanNodeId, Task, TaskOutcomeStatus, TaskRole, TaskStatus, WorkflowStatus,
     };
     use serde_json::json;
 
@@ -358,6 +345,14 @@ mod tests {
     };
     use crate::WorkflowStarter;
 
+    fn budget(value: u32) -> AttemptBudget {
+        AttemptBudget::try_from_u32(value).unwrap()
+    }
+
+    fn node(id: &str) -> PlanNodeId {
+        PlanNodeId::new(id).unwrap()
+    }
+
     // AC-eos-workflow-08: the run is exercised entirely through the injected
     // `AgentRunner` double (no eos-engine edge); the seam hands each role a
     // well-formed launch.
@@ -366,7 +361,7 @@ mod tests {
         let stores = Arc::new(MemoryStores::default());
         let runner = Arc::new(QueueRunner::default());
         let mut deps = stores.deps(runner.clone());
-        deps.lifecycle_config.default_attempt_budget = 1;
+        deps.lifecycle_config.default_attempt_budget = budget(1);
         runner.bind(&deps.orchestrator_registry);
         let parent = root_task("parent", TaskStatus::Running);
         stores.seed_task(parent.clone());
@@ -374,7 +369,7 @@ mod tests {
             .start("delegated goal", &parent.id)
             .await
             .unwrap();
-        let generator_id = generator_task_id(&started.attempt_id, "g1").unwrap();
+        let generator_id = generator_task_id(&started.attempt_id, &node("g1")).unwrap();
         runner.push(ScriptedSubmission::Planner(one_step_plan(&started)));
         runner.push(ScriptedSubmission::Generator(
             eos_state::GeneratorSubmission {
@@ -387,7 +382,7 @@ mod tests {
         ));
         runner.push(ScriptedSubmission::Reducer(eos_state::ReducerSubmission {
             attempt_id: started.attempt_id.clone(),
-            task_id: crate::reducer_task_id(&started.attempt_id, "r1").unwrap(),
+            task_id: crate::reducer_task_id(&started.attempt_id, &node("r1")).unwrap(),
             status: TaskOutcomeStatus::Success,
             outcome: "reduced".to_owned(),
             terminal_tool_result: crate::testsupport::terminal_result(),
@@ -396,11 +391,11 @@ mod tests {
 
         let launches = runner.launches();
         assert_eq!(launches.len(), 3);
-        assert_eq!(launches[0].role, AgentRole::Planner);
-        assert_eq!(launches[1].role, AgentRole::Generator);
-        assert_eq!(launches[1].task_id, generator_id);
-        assert_eq!(launches[1].attempt_id.as_ref(), Some(&started.attempt_id));
-        assert_eq!(launches[2].role, AgentRole::Reducer);
+        assert_eq!(launches[0].role(), AgentRole::Planner);
+        assert_eq!(launches[1].role(), AgentRole::Generator);
+        assert_eq!(launches[1].task_id(), &generator_id);
+        assert_eq!(launches[1].attempt_id(), &started.attempt_id);
+        assert_eq!(launches[2].role(), AgentRole::Reducer);
     }
 
     // AC-eos-workflow-07 (liveness): a generator run that ends WITHOUT a terminal
@@ -411,7 +406,7 @@ mod tests {
         let stores = Arc::new(MemoryStores::default());
         let runner = Arc::new(QueueRunner::default());
         let mut deps = stores.deps(runner.clone());
-        deps.lifecycle_config.default_attempt_budget = 1;
+        deps.lifecycle_config.default_attempt_budget = budget(1);
         runner.bind(&deps.orchestrator_registry);
         let parent = root_task("parent", TaskStatus::Running);
         stores.seed_task(parent.clone());
@@ -426,9 +421,9 @@ mod tests {
         wait_for_workflow_status(&stores, &started.workflow_id, WorkflowStatus::Failed).await;
 
         let attempt = stores.attempt(&started.attempt_id).unwrap();
-        assert_eq!(attempt.status, AttemptStatus::Failed);
-        assert_eq!(attempt.fail_reason, Some(AttemptFailReason::TaskFailed));
-        let generator_id = generator_task_id(&started.attempt_id, "g1").unwrap();
+        assert_eq!(attempt.status(), AttemptStatus::Failed);
+        assert_eq!(attempt.fail_reason(), Some(AttemptFailReason::TaskFailed));
+        let generator_id = generator_task_id(&started.attempt_id, &node("g1")).unwrap();
         let task = stores.task(&generator_id).unwrap();
         assert_eq!(task.status, TaskStatus::Failed);
         assert_eq!(
@@ -452,7 +447,7 @@ mod tests {
         let stores = Arc::new(MemoryStores::default());
         let runner = Arc::new(QueueRunner::default());
         let mut deps = stores.deps(runner.clone());
-        deps.lifecycle_config.default_attempt_budget = 1;
+        deps.lifecycle_config.default_attempt_budget = budget(1);
         let parent = root_task("parent", TaskStatus::Running);
         stores.seed_task(parent.clone());
         let started = WorkflowStarter::new(deps)
@@ -465,8 +460,8 @@ mod tests {
         wait_for_workflow_status(&stores, &started.workflow_id, WorkflowStatus::Failed).await;
 
         let attempt = stores.attempt(&started.attempt_id).unwrap();
-        assert_eq!(attempt.status, AttemptStatus::Failed);
-        assert_eq!(attempt.fail_reason, Some(AttemptFailReason::TaskFailed));
+        assert_eq!(attempt.status(), AttemptStatus::Failed);
+        assert_eq!(attempt.fail_reason(), Some(AttemptFailReason::TaskFailed));
         let planner_task = stores
             .task(&crate::planner_task_id(&started.attempt_id).unwrap())
             .unwrap();
@@ -489,7 +484,7 @@ mod tests {
         let stores = Arc::new(MemoryStores::default());
         let runner = ScriptedRunner::new(10, TaskOutcomeStatus::Success, 0, "");
         let mut deps = stores.deps(runner.clone());
-        deps.lifecycle_config.default_attempt_budget = 1;
+        deps.lifecycle_config.default_attempt_budget = budget(1);
         deps.max_concurrent_task_runs = 3;
         runner.bind(&deps.orchestrator_registry);
         let parent = root_task("parent", TaskStatus::Running);
@@ -513,18 +508,18 @@ mod tests {
             runner.max_in_flight()
         );
         assert_eq!(
-            stores.attempt(&started.attempt_id).unwrap().status,
+            stores.attempt(&started.attempt_id).unwrap().status(),
             AttemptStatus::Passed
         );
 
         let launches = runner.launches();
         // planner + 10 generators + 1 reducer.
         assert_eq!(launches.len(), 12);
-        assert_eq!(launches[0].role, AgentRole::Planner);
-        assert_eq!(launches.last().unwrap().role, AgentRole::Reducer);
+        assert_eq!(launches[0].role(), AgentRole::Planner);
+        assert_eq!(launches.last().unwrap().role(), AgentRole::Reducer);
         let generators = launches[1..11]
             .iter()
-            .filter(|l| l.role == AgentRole::Generator)
+            .filter(|l| l.role() == AgentRole::Generator)
             .count();
         assert_eq!(generators, 10, "all generators ran before the reducer");
     }
@@ -536,14 +531,15 @@ mod tests {
         let stores = Arc::new(MemoryStores::default());
         let runner = Arc::new(QueueRunner::default());
         let mut deps = stores.deps(runner);
-        deps.lifecycle_config.default_attempt_budget = 1;
+        deps.lifecycle_config.default_attempt_budget = budget(1);
         let parent = root_task("parent", TaskStatus::Running);
         stores.seed_task(parent.clone());
         let started = WorkflowStarter::new(deps.clone())
             .start("delegated goal", &parent.id)
             .await
             .unwrap();
-        let task_id = generator_task_id(&started.attempt_id, "missing-profile").unwrap();
+        let local_id = node("missing-profile");
+        let task_id = generator_task_id(&started.attempt_id, &local_id).unwrap();
         stores.seed_task(Task {
             id: task_id.clone(),
             request_id: parent.request_id,
@@ -558,16 +554,18 @@ mod tests {
             outcomes: Vec::new(),
             terminal_tool_result: None,
         });
-        eos_state::AttemptStore::set_generator_task_ids(
+        eos_state::AttemptStore::record_plan(
             stores.as_ref(),
             &started.attempt_id,
-            std::slice::from_ref(&task_id),
+            &eos_state::MaterializedPlan {
+                planner_task_id: crate::planner_task_id(&started.attempt_id).unwrap(),
+                disposition: PlanDisposition::Complete,
+                generator_task_ids: vec![task_id.clone()],
+                reducer_task_ids: Vec::new(),
+            },
         )
         .await
         .unwrap();
-        eos_state::AttemptStore::set_stage(stores.as_ref(), &started.attempt_id, AttemptStage::Run)
-            .await
-            .unwrap();
 
         let orchestrator = deps.orchestrator_registry.get(&started.attempt_id).unwrap();
         AttemptStageAdvancer::new(orchestrator)
@@ -582,7 +580,7 @@ mod tests {
             Some(&json!("agent_launch_failed"))
         );
         assert_eq!(
-            stores.attempt(&started.attempt_id).unwrap().status,
+            stores.attempt(&started.attempt_id).unwrap().status(),
             AttemptStatus::Failed
         );
         assert_eq!(

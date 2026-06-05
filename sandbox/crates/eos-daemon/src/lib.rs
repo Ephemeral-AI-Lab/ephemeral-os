@@ -16,43 +16,35 @@
 //! single-threaded `eosd ns-holder` / `eosd ns-runner` children and wires their
 //! pinned namespace FDs in — it does the namespace syscalls only by delegation.
 //!
-//! Concrete Phase 3/3T handlers own the direct LayerStack/OCC/overlay runtime
-//! paths in [`dispatcher`], [`command`], and [`isolated`]. There is no parallel
-//! daemon port-injector layer: write-capable shared-workspace operations
-//! route through the same per-root OCC service cache and single writer used by
-//! the live dispatcher.
+//! Built-in daemon operations live under [`ops`]; reusable command, checkpoint,
+//! plugin, isolated-workspace, overlay, workspace, and OCC machinery lives under
+//! [`services`]. Write-capable shared-workspace operations route through the same
+//! per-root OCC service cache and single writer used by the live dispatcher.
 //!
 //! # The single-writer / no-lock-across-await discipline (§5)
 //!
 //! The live OCC single-writer path is the dispatcher-owned per-root
 //! `OccService` cache, not a second daemon queue. The async server runs request
 //! dispatch in a spawned task and keeps synchronous mutex guards out of await
-//! points. Shutdown is a [`tokio_util::sync::CancellationToken`]; the cancel
-//! path kills the full child process group (the Python `start_new_session=True`).
+//! points. Shutdown is a [`tokio_util::sync::CancellationToken`]; cancellation
+//! tears down the full child process group for spawned background work.
 //!
 #![forbid(unsafe_code)]
 
 pub(crate) mod audit;
-pub(crate) mod checkpoint;
-pub(crate) mod command;
-pub mod config;
-pub mod dispatcher;
-pub mod error;
-pub mod invocation_registry;
-pub(crate) mod isolated;
-pub(crate) mod occ_writer;
+pub(crate) mod dispatch;
 pub(crate) mod ops;
-pub(crate) mod overlay_runner;
-pub(crate) mod plugin;
-pub(crate) mod request_args;
-pub(crate) mod response_timings;
-pub mod server;
-pub(crate) mod workspace_adapters;
-pub(crate) mod workspace_ops;
+pub(crate) mod runtime;
+pub(crate) mod services;
+pub(crate) mod transport;
 
+pub use dispatch::dispatcher;
 pub use dispatcher::{error_envelope, DispatchContext, OpTable};
 pub use error::{DaemonError, Result};
 pub use invocation_registry::{
     ActiveCallGuard, InFlightInvocation, InFlightRegistry, DEFAULT_REAPER_INTERVAL_S, DEFAULT_TTL_S,
 };
+pub use runtime::{config, error, invocation_registry};
+pub(crate) use runtime::{request_args, response_timings};
 pub use server::{DaemonServer, ServerConfig, MAX_REQUEST_BYTES, REQUEST_READ_TIMEOUT_S};
+pub use transport::server;

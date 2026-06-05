@@ -87,12 +87,12 @@ pub async fn enqueue_notification_rules(
     }
     for rule in ctx.notification_rules.clone() {
         let name = rule.name();
-        if rule.fire_once() && ctx.notification_fired.contains(&name) {
+        if rule.fire_once() && ctx.notification_was_fired(&name) {
             continue;
         }
         if rule.trigger(messages, ctx) {
             if rule.fire_once() {
-                ctx.notification_fired.insert(name.clone());
+                ctx.mark_notification_fired(name.clone());
             }
             let _ = sink
                 .notify_system(ToolNotification {

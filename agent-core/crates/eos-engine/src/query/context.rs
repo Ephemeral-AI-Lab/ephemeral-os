@@ -117,3 +117,35 @@ impl std::fmt::Debug for QueryContext {
             .finish_non_exhaustive()
     }
 }
+
+impl QueryContext {
+    /// Count one tool call without exposing counter arithmetic to the loop.
+    pub(crate) fn record_tool_call(&mut self) {
+        self.tool_calls_used = self.tool_calls_used.saturating_add(1);
+    }
+
+    /// Count one assistant turn that did not submit a terminal tool.
+    pub(crate) fn record_text_only_turn(&mut self) {
+        self.text_only_no_terminal_turns = self.text_only_no_terminal_turns.saturating_add(1);
+    }
+
+    /// Set the loop exit reason.
+    pub(crate) fn set_exit_reason(&mut self, reason: QueryExitReason) {
+        self.exit_reason = Some(reason);
+    }
+
+    /// Store the terminal tool result observed by dispatch.
+    pub(crate) fn set_terminal_result(&mut self, result: Option<ToolResult>) {
+        self.terminal_result = result;
+    }
+
+    /// Whether a fire-once notification has already fired.
+    pub(crate) fn notification_was_fired(&self, name: &str) -> bool {
+        self.notification_fired.contains(name)
+    }
+
+    /// Mark a fire-once notification as fired.
+    pub(crate) fn mark_notification_fired(&mut self, name: String) {
+        self.notification_fired.insert(name);
+    }
+}

@@ -2,7 +2,8 @@
 use std::sync::Arc;
 
 use eos_state::{
-    ExecutionTaskOutcome, IterationCreationReason, RequestId, Task, TaskOutcomeStatus,
+    AttemptBudget, AttemptClosure, ExecutionTaskOutcome, IterationCreationReason, MaterializedPlan,
+    PlanDisposition, PlanNodeId, RequestId, Task, TaskOutcomeStatus,
 };
 
 use super::*;
@@ -17,6 +18,14 @@ fn deps(stores: &Arc<MemoryStores>) -> ContextEngineDeps {
         attempt_store: stores.clone(),
         task_store: stores.clone(),
     }
+}
+
+fn budget(value: u32) -> AttemptBudget {
+    AttemptBudget::try_from_u32(value).unwrap()
+}
+
+fn node(id: &str) -> PlanNodeId {
+    PlanNodeId::new(id).unwrap()
 }
 
 fn outcome(
@@ -82,7 +91,7 @@ async fn build_planner_context_matches_source() {
             1,
             IterationCreationReason::Initial,
             "Build storage.",
-            2,
+            budget(2),
         )
         .await;
     let prior_outcomes = serde_json::to_string(&vec![outcome(
@@ -107,23 +116,23 @@ async fn build_planner_context_matches_source() {
             2,
             IterationCreationReason::DeferredGoalContinuation,
             "Finish the API and CLI slice.",
-            3,
+            budget(3),
         )
         .await;
     let previous_attempt = stores.seed_attempt(&current.id, &workflow.id, 1).await;
-    let gen_id = generator_task_id(&previous_attempt.id, "api").unwrap();
-    let red_id = reducer_task_id(&previous_attempt.id, "verify_api").unwrap();
-    eos_state::AttemptStore::set_generator_task_ids(
+    let gen_node = node("api");
+    let red_node = node("verify_api");
+    let gen_id = generator_task_id(&previous_attempt.id, &gen_node).unwrap();
+    let red_id = reducer_task_id(&previous_attempt.id, &red_node).unwrap();
+    eos_state::AttemptStore::record_plan(
         stores.as_ref(),
         &previous_attempt.id,
-        std::slice::from_ref(&gen_id),
-    )
-    .await
-    .unwrap();
-    eos_state::AttemptStore::set_reducer_task_ids(
-        stores.as_ref(),
-        &previous_attempt.id,
-        std::slice::from_ref(&red_id),
+        &MaterializedPlan {
+            planner_task_id: crate::planner_task_id(&previous_attempt.id).unwrap(),
+            disposition: PlanDisposition::Complete,
+            generator_task_ids: vec![gen_id.clone()],
+            reducer_task_ids: vec![red_id.clone()],
+        },
     )
     .await
     .unwrap();
@@ -162,10 +171,11 @@ async fn build_planner_context_matches_source() {
     eos_state::AttemptStore::close(
         stores.as_ref(),
         &previous_attempt.id,
-        eos_state::AttemptStatus::Failed,
-        Some(eos_state::AttemptFailReason::TaskFailed),
-        Some(&[]),
-        eos_state::UtcDateTime::now(),
+        AttemptClosure::Failed {
+            reason: eos_state::AttemptFailReason::TaskFailed,
+            outcomes: Vec::new(),
+            closed_at: eos_state::UtcDateTime::now(),
+        },
     )
     .await
     .unwrap();
@@ -229,12 +239,12 @@ async fn build_generator_context_is_dependencies_plus_assigned_task() {
             1,
             IterationCreationReason::Initial,
             &workflow.workflow_goal,
-            2,
+            budget(2),
         )
         .await;
     let attempt = stores.seed_attempt(&iteration.id, &workflow.id, 1).await;
-    let dep_id = generator_task_id(&attempt.id, "storage").unwrap();
-    let task_id = generator_task_id(&attempt.id, "api").unwrap();
+    let dep_id = generator_task_id(&attempt.id, &node("storage")).unwrap();
+    let task_id = generator_task_id(&attempt.id, &node("api")).unwrap();
     exec_task(
         &stores,
         &dep_id,
@@ -284,8 +294,9 @@ async fn build_generator_context_is_dependencies_plus_assigned_task() {
     assert!(xml.contains("Implement the API endpoints."));
     assert!(!xml.contains("<workflow>"));
     assert!(!xml.contains("<needs>"));
-    assert!(render_task_guidance(&context)
-        .contains("Complete <assigned_task> using <dependencies>."));
+    assert!(
+        render_task_guidance(&context).contains("Complete <assigned_task> using <dependencies>.")
+    );
 }
 
 // AC-eos-workflow-09: reducer context uses assigned_task, not assigned_prompt.
@@ -300,12 +311,12 @@ async fn build_reducer_context_uses_assigned_task() {
             1,
             IterationCreationReason::Initial,
             &workflow.workflow_goal,
-            2,
+            budget(2),
         )
         .await;
     let attempt = stores.seed_attempt(&iteration.id, &workflow.id, 1).await;
-    let dep_id = generator_task_id(&attempt.id, "api").unwrap();
-    let task_id = reducer_task_id(&attempt.id, "verify_api").unwrap();
+    let dep_id = generator_task_id(&attempt.id, &node("api")).unwrap();
+    let task_id = reducer_task_id(&attempt.id, &node("verify_api")).unwrap();
     exec_task(
         &stores,
         &dep_id,

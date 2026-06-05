@@ -83,7 +83,7 @@ impl ToolExecutor for ExecCommand {
         if let (Some(port), Some(session_id)) =
             (&ctx.command_session_supervisor, &result.command_session_id)
         {
-            if result.status == "running" {
+            if result.is_running() {
                 port.register(
                     session_id,
                     sandbox_id.as_str(),

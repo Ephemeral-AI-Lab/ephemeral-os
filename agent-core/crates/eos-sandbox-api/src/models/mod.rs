@@ -20,8 +20,8 @@ mod lifecycle;
 mod tool_call;
 
 pub use command::{
-    CommandOutput, CommandSessionCancelRequest, ExecCommandRequest, ExecCommandResult,
-    ExecStdinRequest,
+    CommandOutput, CommandSessionCancelRequest, CommandStatusView, ExecCommandRequest,
+    ExecCommandResult, ExecStdinRequest, KnownCommandStatus,
 };
 pub use common::{ConflictInfo, Intent, SandboxRequestBase, SandboxResultBase, Workspace};
 pub use file::{

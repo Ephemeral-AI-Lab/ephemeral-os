@@ -2,10 +2,10 @@ use std::collections::BTreeMap;
 use std::sync::Arc;
 
 use eos_state::{
-    execution_outcome_for_submission, Attempt, AttemptFailReason, AttemptId, AttemptStage,
-    AttemptStatus, ExecutionRole, GeneratorSubmission, PlannerFailReason, PlannerFailureSubmission,
-    PlannerKind, PlannerSubmission, ReducerSubmission, Task, TaskOutcomeStatus, TaskRole,
-    TaskStatus,
+    execution_outcome_for_submission, Attempt, AttemptClosure, AttemptFailReason, AttemptId,
+    AttemptStage, ExecutionRole, GeneratorSubmission, MaterializedPlan, PlannerFailReason,
+    PlannerFailureSubmission, PlannerSubmission, ReducerSubmission, Task, TaskOutcomeStatus,
+    TaskRole, TaskStatus,
 };
 use eos_tools::PlannerPlan;
 
@@ -63,13 +63,7 @@ impl AttemptOrchestrator {
     pub async fn start(self: &Arc<Self>) -> Result<()> {
         self.validate_run_concurrency()?;
         let attempt = self.assert_stage(AttemptStage::Plan).await?;
-        if attempt.status != AttemptStatus::Running {
-            return Err(WorkflowError::invariant(format!(
-                "attempt {:?} is not running",
-                attempt.id.as_str()
-            )));
-        }
-        if attempt.planner_task_id.is_some() {
+        if attempt.planner_task_id().is_some() {
             return Err(WorkflowError::invariant(format!(
                 "attempt {:?} already has a planner task",
                 attempt.id.as_str()
@@ -85,14 +79,14 @@ impl AttemptOrchestrator {
                 .task_store
                 .upsert_task(&Task {
                     id: task_id.clone(),
-                    request_id: launch.request_id.clone(),
+                    request_id: launch.request_id().clone(),
                     role: TaskRole::Planner,
-                    instruction: launch.context.clone(),
+                    instruction: launch.context().to_owned(),
                     status: TaskStatus::Running,
-                    workflow_id: launch.workflow_id.clone(),
+                    workflow_id: Some(launch.workflow_id().clone()),
                     iteration_id: Some(attempt.iteration_id.clone()),
                     attempt_id: Some(attempt.id.clone()),
-                    agent_name: Some(launch.agent_name.clone()),
+                    agent_name: Some(launch.agent_name().to_owned()),
                     needs: Vec::new(),
                     outcomes: Vec::new(),
                     terminal_tool_result: None,
@@ -100,7 +94,7 @@ impl AttemptOrchestrator {
                 .await?;
             self.deps
                 .attempt_store
-                .set_planner_task_id(&attempt.id, &task_id)
+                .record_planner_task(&attempt.id, &task_id)
                 .await?;
             Ok(())
         }
@@ -145,7 +139,7 @@ impl AttemptOrchestrator {
                 if let Some(summary) = &report.failure_summary {
                     tracing::warn!(
                         attempt_id = %self.attempt_id.as_str(),
-                        task_id = %launch.task_id.as_str(),
+                        task_id = %launch.task_id().as_str(),
                         %summary,
                         "planner run reported a failure summary"
                     );
@@ -154,7 +148,7 @@ impl AttemptOrchestrator {
             Err(err) => {
                 tracing::warn!(
                     attempt_id = %self.attempt_id.as_str(),
-                    task_id = %launch.task_id.as_str(),
+                    task_id = %launch.task_id().as_str(),
                     error = %err,
                     "planner run failed"
                 );
@@ -163,7 +157,7 @@ impl AttemptOrchestrator {
         let planner_status = self
             .deps
             .task_store
-            .get(&launch.task_id)
+            .get(launch.task_id())
             .await?
             .map(|task| task.status);
         match planner_status {
@@ -178,12 +172,9 @@ impl AttemptOrchestrator {
     }
 
     async fn synthesize_planner_failure(&self, launch: &AgentLaunch) -> Result<()> {
-        let attempt_id = launch.attempt_id.clone().ok_or_else(|| {
-            WorkflowError::invariant("planner exhaustion report requires launch.attempt_id")
-        })?;
         self.apply_planner_failure(PlannerFailureSubmission {
-            attempt_id,
-            planner_task_id: launch.task_id.clone(),
+            attempt_id: launch.attempt_id().clone(),
+            planner_task_id: launch.task_id().clone(),
             fail_reason: PlannerFailReason::RunExhausted,
         })
         .await
@@ -234,7 +225,7 @@ impl AttemptOrchestrator {
         for task in &plan.tasks {
             let id = local_to_task
                 .get(&task.id)
-                .ok_or_else(|| WorkflowError::not_found("plan task", &task.id))?
+                .ok_or_else(|| WorkflowError::not_found("plan task", task.id.as_str()))?
                 .clone();
             let needs = task
                 .needs
@@ -243,13 +234,13 @@ impl AttemptOrchestrator {
                     local_to_task
                         .get(need)
                         .cloned()
-                        .ok_or_else(|| WorkflowError::not_found("plan need", need))
+                        .ok_or_else(|| WorkflowError::not_found("plan need", need.as_str()))
                 })
                 .collect::<Result<Vec<_>>>()?;
             let instruction = plan
                 .task_specs
                 .get(&task.id)
-                .ok_or_else(|| WorkflowError::not_found("task spec", &task.id))?
+                .ok_or_else(|| WorkflowError::not_found("task spec", task.id.as_str()))?
                 .clone();
             self.deps
                 .task_store
@@ -275,7 +266,7 @@ impl AttemptOrchestrator {
         for reducer in &plan.reducers {
             let id = local_to_task
                 .get(&reducer.id)
-                .ok_or_else(|| WorkflowError::not_found("reducer", &reducer.id))?
+                .ok_or_else(|| WorkflowError::not_found("reducer", reducer.id.as_str()))?
                 .clone();
             let needs = reducer
                 .needs
@@ -284,7 +275,7 @@ impl AttemptOrchestrator {
                     local_to_task
                         .get(need)
                         .cloned()
-                        .ok_or_else(|| WorkflowError::not_found("plan need", need))
+                        .ok_or_else(|| WorkflowError::not_found("plan need", need.as_str()))
                 })
                 .collect::<Result<Vec<_>>>()?;
             self.deps
@@ -309,44 +300,26 @@ impl AttemptOrchestrator {
 
         Ok(PlannerSubmission {
             attempt_id: plan.attempt_id.clone(),
-            planner_task_id: plan.planner_task_id.clone(),
-            kind: plan.kind,
-            generator_task_ids: generator_ids,
-            reducer_task_ids: reducer_ids,
-            deferred_goal_for_next_iteration: plan.deferred_goal_for_next_iteration.clone(),
+            plan: MaterializedPlan {
+                planner_task_id: plan.planner_task_id.clone(),
+                disposition: plan.disposition.clone(),
+                generator_task_ids: generator_ids,
+                reducer_task_ids: reducer_ids,
+            },
         })
     }
 
     async fn record_plan_submission(&self, submission: PlannerSubmission) -> Result<()> {
         self.assert_submission_attempt(&submission.attempt_id)?;
         self.validate_run_concurrency()?;
-        match submission.kind {
-            PlannerKind::Completes if submission.deferred_goal_for_next_iteration.is_some() => {
-                return Err(WorkflowError::invariant(
-                    "full plans cannot set deferred_goal_for_next_iteration",
-                ));
-            }
-            PlannerKind::Defers if submission.deferred_goal_for_next_iteration.is_none() => {
-                return Err(WorkflowError::invariant(
-                    "partial plans require deferred_goal_for_next_iteration",
-                ));
-            }
-            _ => {}
-        }
         let attempt = self
-            .validate_planner_submission(&submission.planner_task_id)
+            .validate_planner_submission(&submission.plan.planner_task_id)
             .await?;
-        let planner_result = json_object(
-            "kind",
-            match submission.kind {
-                PlannerKind::Completes => "completes",
-                PlannerKind::Defers => "defers",
-            },
-        );
+        let planner_result = json_object("kind", submission.plan.disposition.kind_label());
         self.deps
             .task_store
             .set_task_status(
-                &submission.planner_task_id,
+                &submission.plan.planner_task_id,
                 TaskStatus::Done,
                 Some(&[]),
                 Some(&planner_result),
@@ -354,22 +327,7 @@ impl AttemptOrchestrator {
             .await?;
         self.deps
             .attempt_store
-            .set_deferred_goal(
-                &attempt.id,
-                submission.deferred_goal_for_next_iteration.as_deref(),
-            )
-            .await?;
-        self.deps
-            .attempt_store
-            .set_generator_task_ids(&attempt.id, &submission.generator_task_ids)
-            .await?;
-        self.deps
-            .attempt_store
-            .set_reducer_task_ids(&attempt.id, &submission.reducer_task_ids)
-            .await?;
-        self.deps
-            .attempt_store
-            .set_stage(&attempt.id, AttemptStage::Run)
+            .record_plan(&attempt.id, &submission.plan)
             .await?;
         // NO advance here (Path A-recording): `settle_planner` kicks the single
         // `advance_run_stage` once the planner run resolves.
@@ -396,7 +354,7 @@ impl AttemptOrchestrator {
                 Some(&planner_result),
             )
             .await?;
-        self.close_attempt(AttemptStatus::Failed, Some(AttemptFailReason::TaskFailed))
+        self.close_attempt_failed(AttemptFailReason::TaskFailed)
             .await
     }
 
@@ -406,7 +364,7 @@ impl AttemptOrchestrator {
     ) -> Result<()> {
         self.assert_submission_attempt(&submission.attempt_id)?;
         let attempt = self.assert_stage(AttemptStage::Run).await?;
-        if !attempt.generator_task_ids.contains(&submission.task_id) {
+        if !attempt.generator_task_ids().contains(&submission.task_id) {
             return Err(WorkflowError::invariant(format!(
                 "generator submission task {:?} is not a generator of attempt {:?}",
                 submission.task_id.as_str(),
@@ -433,7 +391,7 @@ impl AttemptOrchestrator {
     ) -> Result<()> {
         self.assert_submission_attempt(&submission.attempt_id)?;
         let attempt = self.assert_stage(AttemptStage::Run).await?;
-        if !attempt.reducer_task_ids.contains(&submission.task_id) {
+        if !attempt.reducer_task_ids().contains(&submission.task_id) {
             return Err(WorkflowError::invariant(format!(
                 "reducer submission task {:?} is not a reducer of attempt {:?}",
                 submission.task_id.as_str(),
@@ -508,26 +466,24 @@ impl AttemptOrchestrator {
         Ok(())
     }
 
-    pub(crate) async fn close_attempt(
-        &self,
-        status: AttemptStatus,
-        fail_reason: Option<AttemptFailReason>,
-    ) -> Result<()> {
-        if status == AttemptStatus::Failed && fail_reason.is_none() {
-            return Err(WorkflowError::invariant(
-                "failed attempt close requires fail_reason",
-            ));
-        }
-        if status == AttemptStatus::Passed && fail_reason.is_some() {
-            return Err(WorkflowError::invariant(
-                "passed attempt close cannot have fail_reason",
-            ));
-        }
-        if status == AttemptStatus::Running {
-            return Err(WorkflowError::invariant(
-                "cannot close attempt with running status",
-            ));
-        }
+    pub(crate) async fn close_attempt_passed(&self) -> Result<()> {
+        self.close_attempt(AttemptClosure::Passed {
+            outcomes: Vec::new(),
+            closed_at: eos_state::UtcDateTime::now(),
+        })
+        .await
+    }
+
+    pub(crate) async fn close_attempt_failed(&self, reason: AttemptFailReason) -> Result<()> {
+        self.close_attempt(AttemptClosure::Failed {
+            reason,
+            outcomes: Vec::new(),
+            closed_at: eos_state::UtcDateTime::now(),
+        })
+        .await
+    }
+
+    async fn close_attempt(&self, closure: AttemptClosure) -> Result<()> {
         let attempt = self.fresh_attempt().await?;
         if attempt.is_closed() {
             return Ok(());
@@ -535,17 +491,20 @@ impl AttemptOrchestrator {
         let outcomes =
             eos_state::project_attempt_outcomes(&attempt, Some(self.deps.task_store.as_ref()))
                 .await?;
-        let closed = self
-            .deps
-            .attempt_store
-            .close(
-                &attempt.id,
-                status,
-                fail_reason,
-                Some(&outcomes),
-                eos_state::UtcDateTime::now(),
-            )
-            .await?;
+        let closure = match closure {
+            AttemptClosure::Passed { closed_at, .. } => AttemptClosure::Passed {
+                outcomes,
+                closed_at,
+            },
+            AttemptClosure::Failed {
+                reason, closed_at, ..
+            } => AttemptClosure::Failed {
+                reason,
+                outcomes,
+                closed_at,
+            },
+        };
+        let closed = self.deps.attempt_store.close(&attempt.id, closure).await?;
         self.deps.orchestrator_registry.deregister(&attempt.id);
         if let Some(registry) = &self.deps.iteration_coordinators {
             if let Some(coordinator) = registry.get(&closed.iteration_id) {
@@ -558,9 +517,9 @@ impl AttemptOrchestrator {
     pub(crate) async fn plan_task_records(&self, attempt: &Attempt) -> Result<Vec<Task>> {
         let mut out = Vec::new();
         for task_id in attempt
-            .generator_task_ids
+            .generator_task_ids()
             .iter()
-            .chain(attempt.reducer_task_ids.iter())
+            .chain(attempt.reducer_task_ids().iter())
         {
             let task = self
                 .deps
@@ -589,12 +548,12 @@ impl AttemptOrchestrator {
                 attempt.id.as_str()
             )));
         }
-        if attempt.stage != expected {
+        if attempt.stage() != expected {
             return Err(WorkflowError::invariant(format!(
                 "attempt {:?} expected stage {:?}, got {:?}",
                 attempt.id.as_str(),
                 expected,
-                attempt.stage
+                attempt.stage()
             )));
         }
         Ok(attempt)
@@ -605,7 +564,7 @@ impl AttemptOrchestrator {
         planner_task_id: &eos_state::TaskId,
     ) -> Result<Attempt> {
         let attempt = self.assert_stage(AttemptStage::Plan).await?;
-        if attempt.planner_task_id.as_ref() != Some(planner_task_id) {
+        if attempt.planner_task_id() != Some(planner_task_id) {
             return Err(WorkflowError::invariant(format!(
                 "planner submission task {:?} does not match attempt planner",
                 planner_task_id.as_str()

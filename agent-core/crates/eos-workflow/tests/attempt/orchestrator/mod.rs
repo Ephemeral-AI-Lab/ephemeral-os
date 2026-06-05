@@ -3,8 +3,8 @@
 use std::sync::Arc;
 
 use eos_state::{
-    AttemptStatus, GeneratorSubmission, IterationStatus, ReducerSubmission, TaskOutcomeStatus,
-    TaskStatus, WorkflowStatus,
+    AttemptBudget, AttemptStatus, GeneratorSubmission, IterationStatus, PlanNodeId,
+    ReducerSubmission, TaskOutcomeStatus, TaskStatus, WorkflowStatus,
 };
 
 use crate::ids::{generator_task_id, reducer_task_id};
@@ -14,6 +14,14 @@ use crate::testsupport::{
 };
 use crate::WorkflowStarter;
 
+fn budget(value: u32) -> AttemptBudget {
+    AttemptBudget::try_from_u32(value).unwrap()
+}
+
+fn node(id: &str) -> PlanNodeId {
+    PlanNodeId::new(id).unwrap()
+}
+
 // AC-eos-workflow-06 (reducer exit gate): all generators DONE + all reducers
 // DONE -> attempt PASSED, iteration SUCCEEDED, workflow SUCCEEDED, parent
 // still running.
@@ -22,7 +30,7 @@ async fn reducer_is_exit_gate() {
     let stores = Arc::new(MemoryStores::default());
     let runner = Arc::new(QueueRunner::default());
     let mut deps = stores.deps(runner.clone());
-    deps.lifecycle_config.default_attempt_budget = 1;
+    deps.lifecycle_config.default_attempt_budget = budget(1);
     runner.bind(&deps.orchestrator_registry);
     let parent = root_task("parent", TaskStatus::Running);
     stores.seed_task(parent.clone());
@@ -30,8 +38,8 @@ async fn reducer_is_exit_gate() {
         .start("delegated goal", &parent.id)
         .await
         .unwrap();
-    let generator_id = generator_task_id(&started.attempt_id, "g1").unwrap();
-    let reducer_id = reducer_task_id(&started.attempt_id, "r1").unwrap();
+    let generator_id = generator_task_id(&started.attempt_id, &node("g1")).unwrap();
+    let reducer_id = reducer_task_id(&started.attempt_id, &node("r1")).unwrap();
     runner.push(ScriptedSubmission::Planner(one_step_plan(&started)));
     runner.push(ScriptedSubmission::Generator(GeneratorSubmission {
         attempt_id: started.attempt_id.clone(),
@@ -50,7 +58,7 @@ async fn reducer_is_exit_gate() {
     wait_for_workflow_status(&stores, &started.workflow_id, WorkflowStatus::Succeeded).await;
 
     assert_eq!(
-        stores.attempt(&started.attempt_id).unwrap().status,
+        stores.attempt(&started.attempt_id).unwrap().status(),
         AttemptStatus::Passed
     );
     assert_eq!(
@@ -72,7 +80,7 @@ async fn failed_reducer_closes_attempt_failed() {
     let stores = Arc::new(MemoryStores::default());
     let runner = Arc::new(QueueRunner::default());
     let mut deps = stores.deps(runner.clone());
-    deps.lifecycle_config.default_attempt_budget = 1;
+    deps.lifecycle_config.default_attempt_budget = budget(1);
     runner.bind(&deps.orchestrator_registry);
     let parent = root_task("parent", TaskStatus::Running);
     stores.seed_task(parent.clone());
@@ -80,8 +88,8 @@ async fn failed_reducer_closes_attempt_failed() {
         .start("delegated goal", &parent.id)
         .await
         .unwrap();
-    let generator_id = generator_task_id(&started.attempt_id, "g1").unwrap();
-    let reducer_id = reducer_task_id(&started.attempt_id, "r1").unwrap();
+    let generator_id = generator_task_id(&started.attempt_id, &node("g1")).unwrap();
+    let reducer_id = reducer_task_id(&started.attempt_id, &node("r1")).unwrap();
     runner.push(ScriptedSubmission::Planner(one_step_plan(&started)));
     runner.push(ScriptedSubmission::Generator(GeneratorSubmission {
         attempt_id: started.attempt_id.clone(),
@@ -100,9 +108,9 @@ async fn failed_reducer_closes_attempt_failed() {
     wait_for_workflow_status(&stores, &started.workflow_id, WorkflowStatus::Failed).await;
 
     let attempt = stores.attempt(&started.attempt_id).unwrap();
-    assert_eq!(attempt.status, AttemptStatus::Failed);
+    assert_eq!(attempt.status(), AttemptStatus::Failed);
     assert_eq!(
-        attempt.fail_reason,
+        attempt.fail_reason(),
         Some(eos_state::AttemptFailReason::TaskFailed)
     );
     assert_eq!(
@@ -116,10 +124,14 @@ async fn failed_reducer_closes_attempt_failed() {
 // agent (a model-facing validation error), not a silent accept.
 #[tokio::test]
 async fn record_plan_rejects_bad_shape_with_real_ack() {
-    use eos_state::PlannerKind;
+    use eos_state::{PlanDisposition, PlanNodeId};
     use eos_tools::{PlanReducer, PlanSubmissionPort, PlanTask, PlannerPlan, SubmissionAck};
 
     use crate::PlanSubmissionAdapter;
+
+    fn node(id: &str) -> PlanNodeId {
+        PlanNodeId::new(id).unwrap()
+    }
 
     let stores = Arc::new(MemoryStores::default());
     let runner = Arc::new(QueueRunner::default());
@@ -136,12 +148,9 @@ async fn record_plan_rejects_bad_shape_with_real_ack() {
     let plan = |tasks: Vec<PlanTask>, reducers: Vec<PlanReducer>| PlannerPlan {
         attempt_id: started.attempt_id.clone(),
         planner_task_id: planner_task_id.clone(),
-        kind: PlannerKind::Completes,
-        deferred_goal_for_next_iteration: None,
+        disposition: PlanDisposition::Complete,
         tasks,
-        task_specs: [("g1".to_owned(), "do work".to_owned())]
-            .into_iter()
-            .collect(),
+        task_specs: [(node("g1"), "do work".to_owned())].into_iter().collect(),
         reducers,
     };
 
@@ -149,13 +158,13 @@ async fn record_plan_rejects_bad_shape_with_real_ack() {
     let ack = adapter
         .apply_plan(plan(
             vec![PlanTask {
-                id: "g1".to_owned(),
+                id: node("g1"),
                 agent_name: "reducer".to_owned(),
                 needs: Vec::new(),
             }],
             vec![PlanReducer {
-                id: "r1".to_owned(),
-                needs: vec!["g1".to_owned()],
+                id: node("r1"),
+                needs: vec![node("g1")],
                 prompt: "reduce".to_owned(),
             }],
         ))
@@ -171,19 +180,19 @@ async fn record_plan_rejects_bad_shape_with_real_ack() {
     let ack = adapter
         .apply_plan(plan(
             vec![PlanTask {
-                id: "g1".to_owned(),
+                id: node("g1"),
                 agent_name: "coder".to_owned(),
                 needs: Vec::new(),
             }],
             vec![
                 PlanReducer {
-                    id: "r1".to_owned(),
-                    needs: vec!["g1".to_owned()],
+                    id: node("r1"),
+                    needs: vec![node("g1")],
                     prompt: "a".to_owned(),
                 },
                 PlanReducer {
-                    id: "r1".to_owned(),
-                    needs: vec!["g1".to_owned()],
+                    id: node("r1"),
+                    needs: vec![node("g1")],
                     prompt: "b".to_owned(),
                 },
             ],
@@ -198,8 +207,8 @@ async fn record_plan_rejects_bad_shape_with_real_ack() {
     // The attempt is untouched by either rejection (still in PLAN, no plan
     // tasks materialized).
     let attempt = stores.attempt(&started.attempt_id).unwrap();
-    assert_eq!(attempt.stage, eos_state::AttemptStage::Plan);
-    assert!(attempt.generator_task_ids.is_empty());
+    assert_eq!(attempt.stage(), eos_state::AttemptStage::Plan);
+    assert!(attempt.generator_task_ids().is_empty());
 }
 
 // The validation hoist (`validate_plan_agents` runs before any upsert): a plan
@@ -209,10 +218,14 @@ async fn record_plan_rejects_bad_shape_with_real_ack() {
 // `g2`'s registry check failed.
 #[tokio::test]
 async fn record_plan_rejects_late_agent_without_orphan_rows() {
-    use eos_state::PlannerKind;
+    use eos_state::{PlanDisposition, PlanNodeId};
     use eos_tools::{PlanReducer, PlanSubmissionPort, PlanTask, PlannerPlan, SubmissionAck};
 
     use crate::PlanSubmissionAdapter;
+
+    fn node(id: &str) -> PlanNodeId {
+        PlanNodeId::new(id).unwrap()
+    }
 
     let stores = Arc::new(MemoryStores::default());
     let runner = Arc::new(QueueRunner::default());
@@ -233,29 +246,28 @@ async fn record_plan_rejects_late_agent_without_orphan_rows() {
         .apply_plan(PlannerPlan {
             attempt_id: started.attempt_id.clone(),
             planner_task_id: crate::planner_task_id(&started.attempt_id).unwrap(),
-            kind: PlannerKind::Completes,
-            deferred_goal_for_next_iteration: None,
+            disposition: PlanDisposition::Complete,
             tasks: vec![
                 PlanTask {
-                    id: "g1".to_owned(),
+                    id: node("g1"),
                     agent_name: "coder".to_owned(),
                     needs: Vec::new(),
                 },
                 PlanTask {
-                    id: "g2".to_owned(),
+                    id: node("g2"),
                     agent_name: "ghost".to_owned(),
                     needs: Vec::new(),
                 },
             ],
             task_specs: [
-                ("g1".to_owned(), "do work 1".to_owned()),
-                ("g2".to_owned(), "do work 2".to_owned()),
+                (node("g1"), "do work 1".to_owned()),
+                (node("g2"), "do work 2".to_owned()),
             ]
             .into_iter()
             .collect(),
             reducers: vec![PlanReducer {
-                id: "r1".to_owned(),
-                needs: vec!["g1".to_owned(), "g2".to_owned()],
+                id: node("r1"),
+                needs: vec![node("g1"), node("g2")],
                 prompt: "reduce".to_owned(),
             }],
         })
@@ -268,12 +280,12 @@ async fn record_plan_rejects_late_agent_without_orphan_rows() {
 
     // No orphan rows: neither generator task row was persisted.
     assert!(stores
-        .task(&generator_task_id(&started.attempt_id, "g1").unwrap())
+        .task(&generator_task_id(&started.attempt_id, &node("g1")).unwrap())
         .is_none());
     assert!(stores
-        .task(&generator_task_id(&started.attempt_id, "g2").unwrap())
+        .task(&generator_task_id(&started.attempt_id, &node("g2")).unwrap())
         .is_none());
     let attempt = stores.attempt(&started.attempt_id).unwrap();
-    assert_eq!(attempt.stage, eos_state::AttemptStage::Plan);
-    assert!(attempt.generator_task_ids.is_empty());
+    assert_eq!(attempt.stage(), eos_state::AttemptStage::Plan);
+    assert!(attempt.generator_task_ids().is_empty());
 }

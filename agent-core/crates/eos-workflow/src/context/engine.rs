@@ -66,13 +66,17 @@ impl ContextEngine {
                     .await
             }
             ContextScope::Generator {
-                attempt_id, task_id, ..
+                attempt_id,
+                task_id,
+                ..
             } => {
                 self.build_execution_context(attempt_id, task_id, ContextRole::Generator)
                     .await
             }
             ContextScope::Reducer {
-                attempt_id, task_id, ..
+                attempt_id,
+                task_id,
+                ..
             } => {
                 self.build_execution_context(attempt_id, task_id, ContextRole::Reducer)
                     .await
@@ -243,7 +247,7 @@ impl ContextEngine {
                         ),
                         (
                             "status".to_owned(),
-                            format!("{:?}", attempt.status).to_lowercase(),
+                            format!("{:?}", attempt.status()).to_lowercase(),
                         ),
                     ])
                     .with_children(outcomes.iter().map(render_task_outcome).collect()),

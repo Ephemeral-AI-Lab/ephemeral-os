@@ -2,7 +2,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use eos_state::PlannerKind;
+use eos_state::{DeferredGoal, PlanDisposition, PlanNodeId};
 use eos_types::JsonObject;
 use schemars::{schema_for, JsonSchema};
 use serde::{Deserialize, Serialize};
@@ -67,52 +67,20 @@ impl ToolExecutor for SubmitPlannerOutcome {
             return Ok(ToolResult::error(message));
         }
 
-        let kind = if parsed.deferred_goal_for_next_iteration.is_some() {
-            PlannerKind::Defers
-        } else {
-            PlannerKind::Completes
-        };
         let attempt_id = ctx.require_attempt_id()?.clone();
         let planner_task_id = ctx.require_task_id()?.clone();
-
-        let plan = PlannerPlan {
-            attempt_id,
-            planner_task_id: planner_task_id.clone(),
-            kind,
-            deferred_goal_for_next_iteration: parsed.deferred_goal_for_next_iteration,
-            tasks: parsed
-                .tasks
-                .into_iter()
-                .map(|task| PlanTask {
-                    id: task.id,
-                    agent_name: task.agent_name,
-                    needs: task.needs,
-                })
-                .collect(),
-            task_specs: parsed.task_specs,
-            reducers: parsed
-                .reducers
-                .into_iter()
-                .map(|reducer| PlanReducer {
-                    id: reducer.id,
-                    needs: reducer.needs,
-                    prompt: reducer.prompt,
-                })
-                .collect(),
+        let plan = match planner_plan(parsed, attempt_id, planner_task_id.clone()) {
+            Ok(plan) => plan,
+            Err(err) => return Ok(ToolResult::error(err.to_string())),
         };
+        let submission_kind = plan.disposition.submission_kind_label();
 
         let ack = ctx.require_plan_submission()?.apply_plan(plan).await?;
         Ok(submission_ack_result(
             ack,
             "Accepted planner submission.",
             &meta_obj(&[
-                (
-                    "submission_kind",
-                    json!(match kind {
-                        PlannerKind::Defers => "planner_defers",
-                        PlannerKind::Completes => "planner_completes",
-                    }),
-                ),
+                ("submission_kind", json!(submission_kind)),
                 ("task_id", json!(planner_task_id.as_str())),
                 (
                     "attempt_id",
@@ -121,6 +89,59 @@ impl ToolExecutor for SubmitPlannerOutcome {
             ]),
         ))
     }
+}
+
+fn planner_plan(
+    parsed: SubmitPlannerOutcomeInput,
+    attempt_id: eos_types::AttemptId,
+    planner_task_id: eos_types::TaskId,
+) -> Result<PlannerPlan, eos_types::CoreError> {
+    let disposition = PlanDisposition::from_deferred_goal(
+        parsed
+            .deferred_goal_for_next_iteration
+            .map(DeferredGoal::new)
+            .transpose()?,
+    );
+    Ok(PlannerPlan {
+        attempt_id,
+        planner_task_id,
+        disposition,
+        tasks: parsed
+            .tasks
+            .into_iter()
+            .map(|task| {
+                Ok(PlanTask {
+                    id: PlanNodeId::new(task.id)?,
+                    agent_name: task.agent_name,
+                    needs: task
+                        .needs
+                        .into_iter()
+                        .map(PlanNodeId::new)
+                        .collect::<Result<Vec<_>, _>>()?,
+                })
+            })
+            .collect::<Result<Vec<_>, eos_types::CoreError>>()?,
+        task_specs: parsed
+            .task_specs
+            .into_iter()
+            .map(|(key, value)| PlanNodeId::new(key).map(|key| (key, value)))
+            .collect::<Result<BTreeMap<_, _>, _>>()?,
+        reducers: parsed
+            .reducers
+            .into_iter()
+            .map(|reducer| {
+                Ok(PlanReducer {
+                    id: PlanNodeId::new(reducer.id)?,
+                    needs: reducer
+                        .needs
+                        .into_iter()
+                        .map(PlanNodeId::new)
+                        .collect::<Result<Vec<_>, _>>()?,
+                    prompt: reducer.prompt,
+                })
+            })
+            .collect::<Result<Vec<_>, eos_types::CoreError>>()?,
+    })
 }
 
 fn validate_planner_input(input: &SubmitPlannerOutcomeInput) -> Result<(), String> {

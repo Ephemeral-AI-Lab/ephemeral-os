@@ -34,6 +34,10 @@ pub struct FinalizeCommandRequest {
     pub finalize_context: Value,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub runner_result: Option<Value>,
+    #[serde(default)]
+    pub command_elapsed_s: f64,
+    #[serde(default)]
+    pub spool_truncated: bool,
     pub status: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub exit_code: Option<i64>,

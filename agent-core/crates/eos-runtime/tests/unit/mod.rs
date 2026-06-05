@@ -653,7 +653,7 @@ async fn delegated_workflow_drives_to_succeeded_via_real_runner() {
         .list_for_iteration(&iterations[0].id)
         .await
         .unwrap();
-    assert_eq!(attempts[0].status, eos_state::AttemptStatus::Passed);
+    assert_eq!(attempts[0].status(), eos_state::AttemptStatus::Passed);
     assert_eq!(iterations[0].status, eos_state::IterationStatus::Succeeded);
     assert_eq!(
         state

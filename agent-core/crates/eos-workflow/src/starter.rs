@@ -1,4 +1,4 @@
-use eos_state::{AttemptId, TaskId, TaskStatus, WorkflowStatus};
+use eos_state::{AttemptClosure, AttemptFailReason, AttemptId, TaskId, TaskStatus, WorkflowStatus};
 
 use crate::attempt::AttemptDeps;
 use crate::lifecycle::WorkflowLifecycle;
@@ -126,10 +126,11 @@ impl WorkflowStarter {
                             .attempt_store
                             .close(
                                 attempt_id,
-                                eos_state::AttemptStatus::Failed,
-                                Some(eos_state::AttemptFailReason::StartupFailed),
-                                None,
-                                eos_state::UtcDateTime::now(),
+                                AttemptClosure::Failed {
+                                    reason: AttemptFailReason::StartupFailed,
+                                    outcomes: Vec::new(),
+                                    closed_at: eos_state::UtcDateTime::now(),
+                                },
                             )
                             .await?;
                     }
@@ -203,8 +204,8 @@ mod tests {
         assert_eq!(iteration.sequence_no, 1);
         assert_eq!(iteration.iteration_goal, "delegated goal");
         let attempt = stores.attempt(&started.attempt_id).unwrap();
-        assert_eq!(attempt.stage, AttemptStage::Plan);
-        assert_eq!(attempt.status, AttemptStatus::Running);
+        assert_eq!(attempt.stage(), AttemptStage::Plan);
+        assert_eq!(attempt.status(), AttemptStatus::Running);
         assert!(stores
             .task(&crate::planner_task_id(&attempt.id).unwrap())
             .is_some());
@@ -295,8 +296,11 @@ mod tests {
         );
         let attempt_id = iteration.attempt_ids.first().unwrap();
         let attempt = stores.attempt(attempt_id).unwrap();
-        assert_eq!(attempt.status, AttemptStatus::Failed);
-        assert_eq!(attempt.fail_reason, Some(AttemptFailReason::StartupFailed));
+        assert_eq!(attempt.status(), AttemptStatus::Failed);
+        assert_eq!(
+            attempt.fail_reason(),
+            Some(AttemptFailReason::StartupFailed)
+        );
         // Parent untouched.
         assert_eq!(stores.task(&parent.id).unwrap().status, TaskStatus::Running);
     }

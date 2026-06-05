@@ -424,7 +424,7 @@ pub async fn dispatch_assistant_tools(
 
     let terminal_result = first_terminal_result(calls, &results_by_id, ctx);
     if terminal_result.is_some() {
-        ctx.terminal_result = terminal_result.clone();
+        ctx.set_terminal_result(terminal_result.clone());
     }
 
     Ok(AssistantToolDispatchOutcome {

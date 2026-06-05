@@ -208,6 +208,7 @@ version = "0.1.0"
 dependencies = [
  "eos-config",
  "eos-overlay",
+ "eos-protocol",
  "eos-workspace-api",
  "futures-util",
  "libc",

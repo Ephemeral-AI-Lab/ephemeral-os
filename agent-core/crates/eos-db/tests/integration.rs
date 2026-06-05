@@ -4,9 +4,10 @@
 use eos_config::{DatabaseConfig, DatabaseUrl};
 use eos_db::Database;
 use eos_state::{
-    AttemptFailReason, AttemptStage, AttemptStatus, ExecutionRole, ExecutionTaskOutcome,
-    IterationCreationReason, IterationStatus, JsonObject, RequestId, RequestStatus, Task, TaskId,
-    TaskRole, TaskStatus, UtcDateTime, WorkflowStatus,
+    AttemptBudget, AttemptClosure, AttemptFailReason, AttemptStage, AttemptStatus, DeferredGoal,
+    ExecutionRole, ExecutionTaskOutcome, IterationCreationReason, IterationStatus, JsonObject,
+    MaterializedPlan, PlanDisposition, RequestId, RequestStatus, Task, TaskId, TaskRole,
+    TaskStatus, UtcDateTime, WorkflowStatus,
 };
 use sqlx::Row;
 
@@ -230,20 +231,24 @@ async fn iteration_roundtrip() {
             0,
             IterationCreationReason::Initial,
             "iterate well",
-            3,
+            AttemptBudget::try_from_u32(3).expect("budget"),
         )
         .await
         .expect("insert");
     assert_eq!(it.iteration_goal, "iterate well");
     assert_eq!(it.status, IterationStatus::Open);
-    assert_eq!(it.attempt_budget, 3);
+    assert_eq!(it.attempt_budget.get(), 3);
 
+    let next_time = DeferredGoal::new("next time").expect("goal");
     let deferred = iterations
-        .set_deferred_goal_for_next_iteration(&it.id, Some("next time"))
+        .set_deferred_goal_for_next_iteration(&it.id, Some(&next_time))
         .await
         .expect("set deferred");
     assert_eq!(
-        deferred.deferred_goal_for_next_iteration.as_deref(),
+        deferred
+            .deferred_goal_for_next_iteration
+            .as_ref()
+            .map(DeferredGoal::as_str),
         Some("next time")
     );
     // Raw column is `deferred_goal`.
@@ -267,7 +272,13 @@ async fn iteration_roundtrip() {
 
     // Unique (workflow_id, sequence_no): a duplicate insert errors.
     assert!(iterations
-        .insert(&wf.id, 0, IterationCreationReason::Initial, "dup", 1)
+        .insert(
+            &wf.id,
+            0,
+            IterationCreationReason::Initial,
+            "dup",
+            AttemptBudget::try_from_u32(1).expect("budget"),
+        )
         .await
         .is_err());
 
@@ -290,34 +301,39 @@ async fn attempt_roundtrip() {
         .expect("create");
     let wf = workflows.insert(&id, &tid("p4"), "goal").await.expect("wf");
     let it = iterations
-        .insert(&wf.id, 0, IterationCreationReason::Initial, "g", 3)
+        .insert(
+            &wf.id,
+            0,
+            IterationCreationReason::Initial,
+            "g",
+            AttemptBudget::try_from_u32(3).expect("budget"),
+        )
         .await
         .expect("it");
 
     let att = attempts.insert(&it.id, &wf.id, 0).await.expect("insert");
-    assert_eq!(att.stage, AttemptStage::Plan);
-    assert_eq!(att.status, AttemptStatus::Running);
-    assert!(att.outcomes.is_empty());
+    assert_eq!(att.stage(), AttemptStage::Plan);
+    assert_eq!(att.status(), AttemptStatus::Running);
+    assert!(att.outcomes().is_empty());
 
     attempts
-        .set_planner_task_id(&att.id, &tid("planner-1"))
+        .record_planner_task(&att.id, &tid("planner-1"))
         .await
         .expect("planner");
-    attempts
-        .set_generator_task_ids(&att.id, &[tid("g1"), tid("g2")])
-        .await
-        .expect("gen");
     let with_red = attempts
-        .set_reducer_task_ids(&att.id, &[tid("r1")])
+        .record_plan(
+            &att.id,
+            &MaterializedPlan {
+                planner_task_id: tid("planner-1"),
+                disposition: PlanDisposition::Complete,
+                generator_task_ids: vec![tid("g1"), tid("g2")],
+                reducer_task_ids: vec![tid("r1")],
+            },
+        )
         .await
-        .expect("red");
-    assert_eq!(with_red.generator_task_ids, vec![tid("g1"), tid("g2")]);
-    assert_eq!(with_red.reducer_task_ids, vec![tid("r1")]);
-
-    attempts
-        .set_stage(&att.id, AttemptStage::Run)
-        .await
-        .expect("stage");
+        .expect("plan");
+    assert_eq!(with_red.generator_task_ids(), &[tid("g1"), tid("g2")]);
+    assert_eq!(with_red.reducer_task_ids(), &[tid("r1")]);
 
     let outcomes = vec![ExecutionTaskOutcome {
         status: eos_state::TaskOutcomeStatus::Failed,
@@ -328,17 +344,18 @@ async fn attempt_roundtrip() {
     let closed = attempts
         .close(
             &att.id,
-            AttemptStatus::Failed,
-            Some(AttemptFailReason::TaskFailed),
-            Some(&outcomes),
-            UtcDateTime::now(),
+            AttemptClosure::Failed {
+                reason: AttemptFailReason::TaskFailed,
+                outcomes: outcomes.clone(),
+                closed_at: UtcDateTime::now(),
+            },
         )
         .await
         .expect("close");
-    assert_eq!(closed.stage, AttemptStage::Closed);
-    assert_eq!(closed.status, AttemptStatus::Failed);
-    assert_eq!(closed.fail_reason, Some(AttemptFailReason::TaskFailed));
-    assert_eq!(closed.outcomes, outcomes); // round-trips through normalization
+    assert_eq!(closed.stage(), AttemptStage::Closed);
+    assert_eq!(closed.status(), AttemptStatus::Failed);
+    assert_eq!(closed.fail_reason(), Some(AttemptFailReason::TaskFailed));
+    assert_eq!(closed.outcomes(), outcomes); // round-trips through normalization
 
     // Unique (iteration_id, attempt_sequence_no).
     assert!(attempts.insert(&it.id, &wf.id, 0).await.is_err());

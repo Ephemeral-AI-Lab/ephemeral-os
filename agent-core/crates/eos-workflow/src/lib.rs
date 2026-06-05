@@ -22,7 +22,8 @@ mod testsupport;
 
 pub use attempt::{
     ready_pending_plan_ids, AgentLaunch, AgentLaunchFactory, AgentRunReport, AgentRunner,
-    AttemptDeps, AttemptOrchestrator, AttemptOrchestratorRegistry, AttemptStageAdvancer, DagStatus,
+    AttemptDeps, AttemptOrchestrator, AttemptOrchestratorRegistry, AttemptStageAdvancer,
+    DagResolution, ExecutionLaunch, PlannerLaunch,
 };
 pub use context::{
     render_context_xml, render_task_guidance, AgentContext, AgentEntryComposer, AgentEntryMessages,

@@ -1,6 +1,6 @@
 ---
 source: crates/eos-state/src/../tests/unit/mod.rs
-assertion_line: 141
+assertion_line: 139
 expression: schemas
 ---
 {
@@ -89,67 +89,83 @@ expression: schemas
     "type": "object",
     "required": [
       "attempt_id",
-      "generator_task_ids",
-      "kind",
-      "planner_task_id",
-      "reducer_task_ids"
+      "plan"
     ],
     "properties": {
       "attempt_id": {
         "description": "Owning attempt.",
         "type": "string"
       },
-      "deferred_goal_for_next_iteration": {
-        "description": "Goal carried to the next iteration, if deferring (anchor §4).",
-        "type": [
-          "string",
-          "null"
-        ]
-      },
-      "generator_task_ids": {
-        "description": "The plan's generator task ids.",
-        "type": "array",
-        "items": {
-          "type": "string"
-        }
-      },
-      "kind": {
-        "description": "Whether the plan completes or defers.",
+      "plan": {
+        "description": "Resolved plan authored by the planner.",
         "allOf": [
           {
-            "$ref": "#/definitions/PlannerKind"
+            "$ref": "#/definitions/MaterializedPlan"
           }
         ]
-      },
-      "planner_task_id": {
-        "description": "The planner task that produced this submission.",
-        "type": "string"
-      },
-      "reducer_task_ids": {
-        "description": "The plan's reducer task ids.",
-        "type": "array",
-        "items": {
-          "type": "string"
-        }
       }
     },
     "definitions": {
-      "PlannerKind": {
-        "description": "Whether a planner submission completes the attempt or defers a goal (Python `Literal[\"completes\",\"defers\"]`).",
+      "MaterializedPlan": {
+        "description": "Resolved persisted task ids for a planner-authored attempt plan.",
+        "type": "object",
+        "required": [
+          "disposition",
+          "generator_task_ids",
+          "planner_task_id",
+          "reducer_task_ids"
+        ],
+        "properties": {
+          "disposition": {
+            "description": "Whether the plan completes or defers.",
+            "allOf": [
+              {
+                "$ref": "#/definitions/PlanDisposition"
+              }
+            ]
+          },
+          "generator_task_ids": {
+            "description": "Persisted generator task ids.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "planner_task_id": {
+            "description": "Planner task that authored the plan.",
+            "type": "string"
+          },
+          "reducer_task_ids": {
+            "description": "Persisted reducer task ids.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "PlanDisposition": {
+        "description": "Planner disposition after the current iteration's reducers complete.",
         "oneOf": [
           {
-            "description": "The plan completes the attempt.",
+            "description": "The plan covers the current iteration goal.",
             "type": "string",
             "enum": [
-              "completes"
+              "complete"
             ]
           },
           {
-            "description": "The plan defers a goal to the next iteration.",
-            "type": "string",
-            "enum": [
-              "defers"
-            ]
+            "description": "The plan intentionally defers remaining current-iteration items.",
+            "type": "object",
+            "required": [
+              "defer"
+            ],
+            "properties": {
+              "defer": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false
           }
         ]
       }

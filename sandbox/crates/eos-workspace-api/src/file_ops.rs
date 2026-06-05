@@ -52,6 +52,7 @@ pub struct ReadFileOutcome {
 pub struct WriteFileOutcome {
     pub mode: WorkspaceMode,
     pub success: bool,
+    pub published: bool,
     pub status: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub conflict: Option<WorkspaceConflict>,
@@ -72,6 +73,7 @@ impl From<WorkspaceMutationOutcome> for WriteFileOutcome {
         Self {
             mode: outcome.mode,
             success: outcome.success,
+            published: outcome.published,
             status: outcome.status,
             conflict: outcome.conflict,
             conflict_reason: outcome.conflict_reason,
@@ -87,6 +89,7 @@ impl From<WorkspaceMutationOutcome> for WriteFileOutcome {
 pub struct EditFileOutcome {
     pub mode: WorkspaceMode,
     pub success: bool,
+    pub published: bool,
     pub status: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub conflict: Option<WorkspaceConflict>,
@@ -109,6 +112,7 @@ impl EditFileOutcome {
         Self {
             mode: outcome.mode,
             success: outcome.success,
+            published: outcome.published,
             status: outcome.status,
             conflict: outcome.conflict,
             conflict_reason: outcome.conflict_reason,

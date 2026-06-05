@@ -37,6 +37,8 @@ pub struct WorkspaceMutationRequest {
 pub struct WorkspaceMutationOutcome {
     pub mode: WorkspaceMode,
     pub success: bool,
+    /// True only when the mutation reached shared workspace truth.
+    pub published: bool,
     pub status: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub conflict: Option<WorkspaceConflict>,

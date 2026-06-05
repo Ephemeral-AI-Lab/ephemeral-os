@@ -37,6 +37,7 @@ fn write_publishes_changed_paths() -> Result<()> {
     )?;
     assert_eq!(as_str(&write, "status")?, "committed");
     assert_eq!(as_str(&write, "mutation_source")?, "api_write");
+    assert!(as_bool(&write, "published")?);
     assert!(
         array(&write, "changed_paths")?
             .iter()

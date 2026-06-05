@@ -11,20 +11,22 @@ use std::sync::{Arc, OnceLock};
 use async_trait::async_trait;
 use eos_agent_def::{AgentDefinition, AgentName, AgentRegistry, AgentRegistryBuilder, AgentRole};
 use eos_state::{
-    GeneratorSubmission, JsonObject, PlannerKind, ReducerSubmission, RequestId, Task,
-    TaskOutcomeStatus, TaskRole, TaskStatus, WorkflowId, WorkflowStatus,
+    DeferredGoal, GeneratorSubmission, JsonObject, PlanDisposition, PlanNodeId, ReducerSubmission,
+    RequestId, Task, TaskOutcomeStatus, TaskRole, TaskStatus, WorkflowId, WorkflowStatus,
 };
 use eos_tools::{PlanReducer, PlanSubmissionPort, PlanTask, PlannerPlan};
 use parking_lot::Mutex;
 use serde_json::json;
 use tokio::sync::Notify;
 
-use crate::attempt::{
-    AgentLaunch, AgentRunReport, AgentRunner, AttemptOrchestratorRegistry,
-};
+use crate::attempt::{AgentLaunch, AgentRunReport, AgentRunner, AttemptOrchestratorRegistry};
 use crate::{PlanSubmissionAdapter, Result};
 
 use super::stores::MemoryStores;
+
+fn node(id: &str) -> PlanNodeId {
+    PlanNodeId::new(id).unwrap()
+}
 
 /// A scripted terminal submission a test double records via the recording
 /// [`PlanSubmissionPort`] during `run()` — the same tool->record path the real
@@ -214,31 +216,29 @@ impl ScriptedRunner {
         }
         let tasks = (0..self.generators)
             .map(|i| PlanTask {
-                id: format!("g{i}"),
+                id: node(&format!("g{i}")),
                 agent_name: "coder".to_owned(),
                 needs: Vec::new(),
             })
             .collect();
         let task_specs = (0..self.generators)
-            .map(|i| (format!("g{i}"), format!("do work {i}")))
+            .map(|i| (node(&format!("g{i}")), format!("do work {i}")))
             .collect();
-        let reducer_needs = (0..self.generators).map(|i| format!("g{i}")).collect();
+        let reducer_needs = (0..self.generators)
+            .map(|i| node(&format!("g{i}")))
+            .collect();
         PlannerPlan {
-            attempt_id: launch
-                .attempt_id
-                .clone()
-                .expect("planner launch attempt id"),
-            planner_task_id: launch.task_id.clone(),
-            kind: if defer {
-                PlannerKind::Defers
+            attempt_id: launch.attempt_id().clone(),
+            planner_task_id: launch.task_id().clone(),
+            disposition: if defer {
+                PlanDisposition::Defer(DeferredGoal::new(self.deferred_goal.clone()).unwrap())
             } else {
-                PlannerKind::Completes
+                PlanDisposition::Complete
             },
-            deferred_goal_for_next_iteration: defer.then(|| self.deferred_goal.clone()),
             tasks,
             task_specs,
             reducers: vec![PlanReducer {
-                id: "r1".to_owned(),
+                id: node("r1"),
                 needs: reducer_needs,
                 prompt: "reduce".to_owned(),
             }],
@@ -250,8 +250,8 @@ impl ScriptedRunner {
 impl AgentRunner for ScriptedRunner {
     async fn run(&self, launch: AgentLaunch) -> Result<AgentRunReport> {
         self.launches.lock().push(launch.clone());
-        let attempt_id = launch.attempt_id.clone().expect("launch attempt id");
-        let submission = match launch.role {
+        let attempt_id = launch.attempt_id().clone();
+        let submission = match launch.role() {
             AgentRole::Planner => ScriptedSubmission::Planner(self.build_plan(&launch)),
             AgentRole::Generator => {
                 self.enter();
@@ -261,7 +261,7 @@ impl AgentRunner for ScriptedRunner {
                 self.exit();
                 ScriptedSubmission::Generator(GeneratorSubmission {
                     attempt_id,
-                    task_id: launch.task_id.clone(),
+                    task_id: launch.task_id().clone(),
                     status: TaskOutcomeStatus::Success,
                     outcome: "generated".to_owned(),
                     terminal_tool_result: terminal_result(),
@@ -273,7 +273,7 @@ impl AgentRunner for ScriptedRunner {
                 self.exit();
                 ScriptedSubmission::Reducer(ReducerSubmission {
                     attempt_id,
-                    task_id: launch.task_id.clone(),
+                    task_id: launch.task_id().clone(),
                     status: self.reducer_status,
                     outcome: "reduced".to_owned(),
                     terminal_tool_result: terminal_result(),
@@ -371,19 +371,16 @@ pub(crate) fn one_step_plan(started: &crate::StartedWorkflow) -> PlannerPlan {
     PlannerPlan {
         attempt_id: started.attempt_id.clone(),
         planner_task_id: crate::planner_task_id(&started.attempt_id).unwrap(),
-        kind: PlannerKind::Completes,
-        deferred_goal_for_next_iteration: None,
+        disposition: PlanDisposition::Complete,
         tasks: vec![PlanTask {
-            id: "g1".to_owned(),
+            id: node("g1"),
             agent_name: "coder".to_owned(),
             needs: Vec::new(),
         }],
-        task_specs: [("g1".to_owned(), "do work".to_owned())]
-            .into_iter()
-            .collect(),
+        task_specs: [(node("g1"), "do work".to_owned())].into_iter().collect(),
         reducers: vec![PlanReducer {
-            id: "r1".to_owned(),
-            needs: vec!["g1".to_owned()],
+            id: node("r1"),
+            needs: vec![node("g1")],
             prompt: "reduce".to_owned(),
         }],
     }

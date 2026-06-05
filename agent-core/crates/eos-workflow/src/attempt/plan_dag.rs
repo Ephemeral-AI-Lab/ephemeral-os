@@ -1,20 +1,20 @@
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet, VecDeque};
 
 use eos_agent_def::{AgentName, AgentRegistry, AgentRole};
-use eos_state::{Task, TaskId, TaskStatus};
+use eos_state::{PlanNodeId, Task, TaskId, TaskStatus};
 use eos_tools::PlannerPlan;
 
 use crate::{Result, WorkflowError};
 
-/// Single-pass DAG status summary.
+/// Closed scheduler resolution for a persisted plan DAG.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct DagStatus {
-    /// Every task is terminal, or pending but unreachable because an ancestor failed.
-    pub all_quiescent: bool,
-    /// Every task is done.
-    pub all_done: bool,
-    /// Any task failed or blocked.
-    pub any_failed_or_blocked: bool,
+pub enum DagResolution {
+    /// More work may still be runnable or in flight.
+    Running,
+    /// Every persisted plan task is done.
+    Passed,
+    /// The DAG is quiescent because at least one task failed or blocked.
+    FailedOrBlocked,
 }
 
 /// Pending plan tasks whose needs are all done.
@@ -33,20 +33,26 @@ pub fn ready_pending_plan_ids(tasks: &[Task]) -> Result<Vec<TaskId>> {
         .collect())
 }
 
-pub(crate) fn dag_status(tasks: &[Task]) -> Result<DagStatus> {
+pub(crate) fn dag_resolution(tasks: &[Task]) -> Result<DagResolution> {
     let statuses = statuses_by_id(tasks);
     validate_persisted_needs(tasks, &statuses)?;
     let unreachable = unreachable_pending_ids(tasks, &statuses)?;
-    Ok(DagStatus {
-        all_quiescent: statuses.iter().all(|(task_id, status)| {
-            status.is_terminal_generator()
-                || (*status == TaskStatus::Pending && unreachable.contains(task_id))
-        }),
-        all_done: statuses.values().all(|s| *s == TaskStatus::Done),
-        any_failed_or_blocked: statuses
-            .values()
-            .any(|s| matches!(s, TaskStatus::Failed | TaskStatus::Blocked)),
-    })
+    let all_done = statuses.values().all(|s| *s == TaskStatus::Done);
+    if all_done {
+        return Ok(DagResolution::Passed);
+    }
+    let all_quiescent = statuses.iter().all(|(task_id, status)| {
+        status.is_terminal_generator()
+            || (*status == TaskStatus::Pending && unreachable.contains(task_id))
+    });
+    let any_failed_or_blocked = statuses
+        .values()
+        .any(|s| matches!(s, TaskStatus::Failed | TaskStatus::Blocked));
+    if all_quiescent && any_failed_or_blocked {
+        Ok(DagResolution::FailedOrBlocked)
+    } else {
+        Ok(DagResolution::Running)
+    }
 }
 
 fn statuses_by_id(tasks: &[Task]) -> HashMap<TaskId, TaskStatus> {
@@ -150,12 +156,12 @@ pub(crate) fn validate_plan_shape(plan: &PlannerPlan) -> Result<()> {
     // generator-vs-generator duplicates, so a reducer<->reducer (or
     // generator<->reducer) collision would otherwise push duplicate task
     // rows into `reducer_task_ids`/`generator_task_ids`.
-    let mut seen_ids: BTreeSet<&str> = BTreeSet::new();
+    let mut seen_ids: BTreeSet<&PlanNodeId> = BTreeSet::new();
     for id in plan
         .tasks
         .iter()
-        .map(|task| task.id.as_str())
-        .chain(plan.reducers.iter().map(|reducer| reducer.id.as_str()))
+        .map(|task| &task.id)
+        .chain(plan.reducers.iter().map(|reducer| &reducer.id))
     {
         if !seen_ids.insert(id) {
             return Err(WorkflowError::invariant(format!(
@@ -163,15 +169,15 @@ pub(crate) fn validate_plan_shape(plan: &PlannerPlan) -> Result<()> {
             )));
         }
     }
-    let generator_ids: BTreeSet<&str> = plan.tasks.iter().map(|task| task.id.as_str()).collect();
-    let reducer_ids: BTreeSet<&str> = plan.reducers.iter().map(|task| task.id.as_str()).collect();
-    let all_ids: BTreeSet<&str> = generator_ids.union(&reducer_ids).copied().collect();
+    let generator_ids: BTreeSet<&PlanNodeId> = plan.tasks.iter().map(|task| &task.id).collect();
+    let reducer_ids: BTreeSet<&PlanNodeId> = plan.reducers.iter().map(|task| &task.id).collect();
+    let all_ids: BTreeSet<&PlanNodeId> = generator_ids.union(&reducer_ids).copied().collect();
     for task in &plan.tasks {
         let reducer_needs: Vec<&str> = task
             .needs
             .iter()
-            .map(String::as_str)
             .filter(|need| reducer_ids.contains(*need))
+            .map(PlanNodeId::as_str)
             .collect();
         if !reducer_needs.is_empty() {
             return Err(WorkflowError::invariant(format!(
@@ -180,7 +186,7 @@ pub(crate) fn validate_plan_shape(plan: &PlannerPlan) -> Result<()> {
             )));
         }
         for need in &task.needs {
-            if !all_ids.contains(need.as_str()) {
+            if !all_ids.contains(need) {
                 return Err(WorkflowError::invariant(format!(
                     "plan task {:?} has unknown needs: {:?}",
                     task.id, need
@@ -188,11 +194,11 @@ pub(crate) fn validate_plan_shape(plan: &PlannerPlan) -> Result<()> {
             }
         }
     }
-    let mut downstream_by_generator: BTreeMap<&str, Vec<&str>> =
+    let mut downstream_by_generator: BTreeMap<&PlanNodeId, Vec<&str>> =
         generator_ids.iter().map(|id| (*id, Vec::new())).collect();
     for task in &plan.tasks {
         for need in &task.needs {
-            if let Some(downstream) = downstream_by_generator.get_mut(need.as_str()) {
+            if let Some(downstream) = downstream_by_generator.get_mut(need) {
                 downstream.push(task.id.as_str());
             }
         }
@@ -205,26 +211,26 @@ pub(crate) fn validate_plan_shape(plan: &PlannerPlan) -> Result<()> {
             )));
         }
         for need in &reducer.needs {
-            if reducer_ids.contains(need.as_str()) {
+            if reducer_ids.contains(need) {
                 return Err(WorkflowError::invariant(format!(
                     "reducer task {:?} cannot need reducer task(s)",
                     reducer.id
                 )));
             }
-            if !all_ids.contains(need.as_str()) {
+            if !all_ids.contains(need) {
                 return Err(WorkflowError::invariant(format!(
                     "plan task {:?} has unknown needs: {:?}",
                     reducer.id, need
                 )));
             }
-            if let Some(downstream) = downstream_by_generator.get_mut(need.as_str()) {
+            if let Some(downstream) = downstream_by_generator.get_mut(need) {
                 downstream.push(reducer.id.as_str());
             }
         }
     }
     let dangling: Vec<&str> = downstream_by_generator
         .iter()
-        .filter_map(|(id, downstream)| downstream.is_empty().then_some(*id))
+        .filter_map(|(id, downstream)| downstream.is_empty().then_some(id.as_str()))
         .collect();
     if !dangling.is_empty() {
         return Err(WorkflowError::invariant(format!(
@@ -256,7 +262,7 @@ pub(crate) fn validate_plan_agents(plan: &PlannerPlan, registry: &AgentRegistry)
             )));
         }
         if !plan.task_specs.contains_key(&task.id) {
-            return Err(WorkflowError::not_found("task spec", &task.id));
+            return Err(WorkflowError::not_found("task spec", task.id.as_str()));
         }
     }
     let reducer_name = AgentName::new("reducer")?;
@@ -271,13 +277,13 @@ fn assert_acyclic(plan: &PlannerPlan) -> Result<()> {
     for task in &plan.tasks {
         by_needs.insert(
             task.id.as_str(),
-            task.needs.iter().map(String::as_str).collect(),
+            task.needs.iter().map(PlanNodeId::as_str).collect(),
         );
     }
     for reducer in &plan.reducers {
         by_needs.insert(
             reducer.id.as_str(),
-            reducer.needs.iter().map(String::as_str).collect(),
+            reducer.needs.iter().map(PlanNodeId::as_str).collect(),
         );
     }
     let mut remaining = by_needs
@@ -360,10 +366,10 @@ mod tests {
             ready_pending_plan_ids(&tasks).expect("ready ids"),
             vec![tid("g2")]
         );
-        let status = dag_status(&tasks).expect("dag status");
-        assert!(!status.all_quiescent);
-        assert!(!status.all_done);
-        assert!(!status.any_failed_or_blocked);
+        assert_eq!(
+            dag_resolution(&tasks).expect("dag resolution"),
+            DagResolution::Running
+        );
     }
 
     #[test]
@@ -372,10 +378,10 @@ mod tests {
             task("g1", TaskStatus::Failed, &[]),
             task("r1", TaskStatus::Pending, &["g1"]),
         ];
-        let status = dag_status(&tasks).expect("dag status");
-        assert!(status.all_quiescent);
-        assert!(status.any_failed_or_blocked);
-        assert!(!status.all_done);
+        assert_eq!(
+            dag_resolution(&tasks).expect("dag resolution"),
+            DagResolution::FailedOrBlocked
+        );
     }
 
     #[test]
@@ -387,6 +393,6 @@ mod tests {
             task("a", TaskStatus::Pending, &["b"]),
             task("b", TaskStatus::Pending, &["a"]),
         ];
-        assert!(dag_status(&cycle).is_err());
+        assert!(dag_resolution(&cycle).is_err());
     }
 }

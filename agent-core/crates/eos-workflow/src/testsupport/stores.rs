@@ -8,9 +8,10 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use eos_state::{
-    Attempt, AttemptFailReason, AttemptId, AttemptStage, AttemptStatus, CoreError,
+    Attempt, AttemptBudget, AttemptClosure, AttemptId, AttemptState, CoreError, DeferredGoal,
     ExecutionTaskOutcome, Iteration, IterationCreationReason, IterationId, IterationStatus,
-    JsonObject, RequestId, Task, TaskId, TaskStatus, Workflow, WorkflowId, WorkflowStatus,
+    JsonObject, MaterializedPlan, RequestId, Task, TaskId, TaskStatus, Workflow, WorkflowId,
+    WorkflowStatus,
 };
 use parking_lot::Mutex;
 
@@ -87,7 +88,7 @@ impl MemoryStores {
         sequence_no: i64,
         creation_reason: IterationCreationReason,
         iteration_goal: &str,
-        attempt_budget: i64,
+        attempt_budget: AttemptBudget,
     ) -> Iteration {
         let iteration = eos_state::IterationStore::insert(
             self,
@@ -216,7 +217,7 @@ impl eos_state::IterationStore for MemoryStores {
         sequence_no: i64,
         creation_reason: IterationCreationReason,
         iteration_goal: &str,
-        attempt_budget: i64,
+        attempt_budget: AttemptBudget,
     ) -> std::result::Result<Iteration, CoreError> {
         let now = eos_state::UtcDateTime::now();
         let iteration = Iteration {
@@ -281,14 +282,13 @@ impl eos_state::IterationStore for MemoryStores {
     async fn set_deferred_goal_for_next_iteration(
         &self,
         id: &IterationId,
-        deferred_goal_for_next_iteration: Option<&str>,
+        deferred_goal_for_next_iteration: Option<&DeferredGoal>,
     ) -> std::result::Result<Iteration, CoreError> {
         let mut guard = self.iterations.lock();
         let iteration = guard
             .get_mut(id)
             .ok_or_else(|| not_found("iteration", id.as_str()))?;
-        iteration.deferred_goal_for_next_iteration =
-            deferred_goal_for_next_iteration.map(ToOwned::to_owned);
+        iteration.deferred_goal_for_next_iteration = deferred_goal_for_next_iteration.cloned();
         iteration.updated_at = eos_state::UtcDateTime::now();
         Ok(iteration.clone())
     }
@@ -333,17 +333,11 @@ impl eos_state::AttemptStore for MemoryStores {
             iteration_id: iteration_id.clone(),
             workflow_id: workflow_id.clone(),
             attempt_sequence_no,
-            stage: AttemptStage::Plan,
-            status: AttemptStatus::Running,
-            planner_task_id: None,
-            generator_task_ids: Vec::new(),
-            reducer_task_ids: Vec::new(),
-            deferred_goal_for_next_iteration: None,
-            fail_reason: None,
+            state: AttemptState::Planning {
+                planner_task_id: None,
+            },
             created_at: now,
             updated_at: now,
-            closed_at: None,
-            outcomes: Vec::new(),
         };
         self.attempts
             .lock()
@@ -355,21 +349,7 @@ impl eos_state::AttemptStore for MemoryStores {
         Ok(self.attempts.lock().get(id).cloned())
     }
 
-    async fn set_stage(
-        &self,
-        id: &AttemptId,
-        stage: AttemptStage,
-    ) -> std::result::Result<Attempt, CoreError> {
-        let mut guard = self.attempts.lock();
-        let attempt = guard
-            .get_mut(id)
-            .ok_or_else(|| not_found("attempt", id.as_str()))?;
-        attempt.stage = stage;
-        attempt.updated_at = eos_state::UtcDateTime::now();
-        Ok(attempt.clone())
-    }
-
-    async fn set_planner_task_id(
+    async fn record_planner_task(
         &self,
         id: &AttemptId,
         planner_task_id: &TaskId,
@@ -378,50 +358,23 @@ impl eos_state::AttemptStore for MemoryStores {
         let attempt = guard
             .get_mut(id)
             .ok_or_else(|| not_found("attempt", id.as_str()))?;
-        attempt.planner_task_id = Some(planner_task_id.clone());
+        attempt.state = AttemptState::Planning {
+            planner_task_id: Some(planner_task_id.clone()),
+        };
         attempt.updated_at = eos_state::UtcDateTime::now();
         Ok(attempt.clone())
     }
 
-    async fn set_generator_task_ids(
+    async fn record_plan(
         &self,
         id: &AttemptId,
-        generator_task_ids: &[TaskId],
+        plan: &MaterializedPlan,
     ) -> std::result::Result<Attempt, CoreError> {
         let mut guard = self.attempts.lock();
         let attempt = guard
             .get_mut(id)
             .ok_or_else(|| not_found("attempt", id.as_str()))?;
-        attempt.generator_task_ids = generator_task_ids.to_vec();
-        attempt.updated_at = eos_state::UtcDateTime::now();
-        Ok(attempt.clone())
-    }
-
-    async fn set_reducer_task_ids(
-        &self,
-        id: &AttemptId,
-        reducer_task_ids: &[TaskId],
-    ) -> std::result::Result<Attempt, CoreError> {
-        let mut guard = self.attempts.lock();
-        let attempt = guard
-            .get_mut(id)
-            .ok_or_else(|| not_found("attempt", id.as_str()))?;
-        attempt.reducer_task_ids = reducer_task_ids.to_vec();
-        attempt.updated_at = eos_state::UtcDateTime::now();
-        Ok(attempt.clone())
-    }
-
-    async fn set_deferred_goal(
-        &self,
-        id: &AttemptId,
-        deferred_goal_for_next_iteration: Option<&str>,
-    ) -> std::result::Result<Attempt, CoreError> {
-        let mut guard = self.attempts.lock();
-        let attempt = guard
-            .get_mut(id)
-            .ok_or_else(|| not_found("attempt", id.as_str()))?;
-        attempt.deferred_goal_for_next_iteration =
-            deferred_goal_for_next_iteration.map(ToOwned::to_owned);
+        attempt.state = AttemptState::Running { plan: plan.clone() };
         attempt.updated_at = eos_state::UtcDateTime::now();
         Ok(attempt.clone())
     }
@@ -429,23 +382,25 @@ impl eos_state::AttemptStore for MemoryStores {
     async fn close(
         &self,
         id: &AttemptId,
-        status: AttemptStatus,
-        fail_reason: Option<AttemptFailReason>,
-        outcomes: Option<&[ExecutionTaskOutcome]>,
-        closed_at: eos_state::UtcDateTime,
+        closure: AttemptClosure,
     ) -> std::result::Result<Attempt, CoreError> {
         let mut guard = self.attempts.lock();
         let attempt = guard
             .get_mut(id)
             .ok_or_else(|| not_found("attempt", id.as_str()))?;
-        attempt.stage = AttemptStage::Closed;
-        attempt.status = status;
-        attempt.fail_reason = fail_reason;
-        attempt.closed_at = Some(closed_at);
+        let planner_task_id = attempt.planner_task_id().cloned();
+        let plan = attempt.materialized_plan().cloned();
+        let planner_task_id = if plan.is_some() {
+            None
+        } else {
+            planner_task_id
+        };
+        attempt.state = AttemptState::Closed {
+            closure,
+            planner_task_id,
+            plan,
+        };
         attempt.updated_at = eos_state::UtcDateTime::now();
-        if let Some(outcomes) = outcomes {
-            attempt.outcomes = outcomes.to_vec();
-        }
         Ok(attempt.clone())
     }
 

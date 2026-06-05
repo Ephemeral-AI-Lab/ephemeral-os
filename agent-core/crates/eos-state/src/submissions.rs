@@ -9,17 +9,7 @@ use serde::{Deserialize, Serialize};
 use eos_types::{AttemptId, JsonObject, TaskId};
 
 use crate::outcomes::TaskOutcomeStatus;
-
-/// Whether a planner submission completes the attempt or defers a goal
-/// (Python `Literal["completes","defers"]`).
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, JsonSchema)]
-#[serde(rename_all = "snake_case")]
-pub enum PlannerKind {
-    /// The plan completes the attempt.
-    Completes,
-    /// The plan defers a goal to the next iteration.
-    Defers,
-}
+use crate::plan::MaterializedPlan;
 
 /// Why a planner submission failed (Python `Literal["run_exhausted"]`).
 /// Distinct from `AttemptFailReason` (spec §6.10).
@@ -36,16 +26,8 @@ pub enum PlannerFailReason {
 pub struct PlannerSubmission {
     /// Owning attempt.
     pub attempt_id: AttemptId,
-    /// The planner task that produced this submission.
-    pub planner_task_id: TaskId,
-    /// Whether the plan completes or defers.
-    pub kind: PlannerKind,
-    /// The plan's generator task ids.
-    pub generator_task_ids: Vec<TaskId>,
-    /// The plan's reducer task ids.
-    pub reducer_task_ids: Vec<TaskId>,
-    /// Goal carried to the next iteration, if deferring (anchor §4).
-    pub deferred_goal_for_next_iteration: Option<String>,
+    /// Resolved plan authored by the planner.
+    pub plan: MaterializedPlan,
 }
 
 /// Runtime-synthesized planner failure (Python `PlannerFailureSubmission`).

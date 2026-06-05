@@ -29,12 +29,12 @@ mod transport;
 
 pub use error::SandboxApiError;
 pub use models::{
-    CommandOutput, CommandSessionCancelRequest, ConflictInfo, EditFileRequest, EditFileResult,
-    EnterIsolatedWorkspaceRequest, EnterIsolatedWorkspaceResult, ExecCommandRequest,
-    ExecCommandResult, ExecStdinRequest, ExitIsolatedWorkspaceRequest, ExitIsolatedWorkspaceResult,
-    Intent, LifecycleError, LifecycleResultBase, ReadFileRequest, ReadFileResult, SandboxCaller,
-    SandboxRequestBase, SandboxResultBase, SearchReplaceEdit, ToolCallRequest, Workspace,
-    WriteFileRequest, WriteFileResult,
+    CommandOutput, CommandSessionCancelRequest, CommandStatusView, ConflictInfo, EditFileRequest,
+    EditFileResult, EnterIsolatedWorkspaceRequest, EnterIsolatedWorkspaceResult,
+    ExecCommandRequest, ExecCommandResult, ExecStdinRequest, ExitIsolatedWorkspaceRequest,
+    ExitIsolatedWorkspaceResult, Intent, KnownCommandStatus, LifecycleError, LifecycleResultBase,
+    ReadFileRequest, ReadFileResult, SandboxCaller, SandboxRequestBase, SandboxResultBase,
+    SearchReplaceEdit, ToolCallRequest, Workspace, WriteFileRequest, WriteFileResult,
 };
 pub use ops::DaemonOp;
 pub use timeouts::{

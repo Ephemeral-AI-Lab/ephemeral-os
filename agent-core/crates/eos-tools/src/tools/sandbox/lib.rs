@@ -160,7 +160,7 @@ pub(super) fn validate_command_timing(
 /// Whether the daemon says the live session is gone, so the supervisor's stored
 /// terminal result can be recovered.
 pub(super) fn is_command_session_not_found(result: &ExecCommandResult) -> bool {
-    result.status == "error" && result.output.stderr.contains("command_session_not_found")
+    result.is_session_not_found()
 }
 
 /// Project an [`ExecCommandResult`] into the completion payload the supervisor
@@ -201,7 +201,7 @@ pub(super) fn command_tool_result_from_value(result: &Value) -> ToolResult {
         .and_then(Value::as_str)
         .unwrap_or("")
         .to_owned();
-    let is_error = matches!(status.as_str(), "error" | "timed_out");
+    let is_error = eos_sandbox_api::KnownCommandStatus::is_error_raw(&status);
     let mut output_map = BTreeMap::new();
     output_map.insert("stdout".to_owned(), stdout.clone());
     output_map.insert("stderr".to_owned(), stderr.clone());
@@ -232,7 +232,7 @@ pub(super) fn command_tool_result_from_value(result: &Value) -> ToolResult {
 }
 
 pub(super) fn command_tool_result(result: &ExecCommandResult) -> ToolResult {
-    let is_error = matches!(result.status.as_str(), "error" | "timed_out");
+    let is_error = result.is_error_status();
     let mut output_map = BTreeMap::new();
     output_map.insert("stdout".to_owned(), result.output.stdout.clone());
     output_map.insert("stderr".to_owned(), result.output.stderr.clone());

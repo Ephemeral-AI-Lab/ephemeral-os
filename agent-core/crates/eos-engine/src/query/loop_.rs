@@ -100,7 +100,7 @@ fn tool_result_message(tool_results: Vec<ContentBlock>) -> Message {
 }
 
 fn terminal_not_submitted_event(ctx: &mut QueryContext) -> Result<StreamEvent, EngineError> {
-    ctx.exit_reason = Some(QueryExitReason::TerminalNotSubmitted);
+    ctx.set_exit_reason(QueryExitReason::TerminalNotSubmitted);
     Ok(StreamEvent::ToolExecutionCompleted {
         agent_name: ctx.agent_name.clone(),
         agent_run_id: Some(ctx.agent_run_id.clone()),
@@ -156,7 +156,7 @@ pub fn run_query<'a>(ctx: &'a mut QueryContext, messages: &'a mut Vec<Message>) 
                 match &event {
                     StreamEvent::ToolUseDelta { tool_use_id, .. } => {
                         if streamed_tool_use_ids.insert(tool_use_id.clone()) {
-                            ctx.tool_calls_used = ctx.tool_calls_used.saturating_add(1);
+                            ctx.record_tool_call();
                         }
                     }
                     StreamEvent::AssistantMessageComplete { payload, .. } => {
@@ -187,14 +187,13 @@ pub fn run_query<'a>(ctx: &'a mut QueryContext, messages: &'a mut Vec<Message>) 
             let tool_uses = tool_uses_from_message(&message);
             for call in &tool_uses {
                 if !streamed_tool_use_ids.contains(&call.tool_use_id) {
-                    ctx.tool_calls_used = ctx.tool_calls_used.saturating_add(1);
+                    ctx.record_tool_call();
                 }
             }
 
             messages.push(message.clone());
             if tool_uses.is_empty() {
-                ctx.text_only_no_terminal_turns =
-                    ctx.text_only_no_terminal_turns.saturating_add(1);
+                ctx.record_text_only_turn();
                 if terminal_submission_failed(ctx) {
                     let notifications = collect_notifications(ctx, messages).await;
                     for notification in &notifications {
@@ -224,7 +223,7 @@ pub fn run_query<'a>(ctx: &'a mut QueryContext, messages: &'a mut Vec<Message>) 
                 .as_ref()
                 .is_some_and(|result| result.is_terminal)
             {
-                ctx.exit_reason = Some(QueryExitReason::ToolStop);
+                ctx.set_exit_reason(QueryExitReason::ToolStop);
                 let notifications = collect_notifications(ctx, messages).await;
                 for notification in &notifications {
                     yield (notification_event(ctx, notification), None);

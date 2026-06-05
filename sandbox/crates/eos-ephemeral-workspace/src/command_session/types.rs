@@ -1,7 +1,32 @@
+use std::path::PathBuf;
+
+use eos_protocol::LayerChange;
 use eos_workspace_api::{
-    FinalizeCommandRequest, PrepareCommandRequest, PreparedCommandWorkspace, WorkspaceApiError,
-    WorkspaceCommandOutcome,
+    FinalizeCommandRequest, WorkspaceApiError, WorkspaceCommandOutcome, WorkspaceTimings,
 };
+
+use crate::{
+    EphemeralSnapshot, EphemeralWorkspace, EphemeralWorkspaceError, PathChange, PublishOutcome,
+    WorkspaceRoot,
+};
+
+/// Daemon-supplied facts needed to prepare a publishable command workspace.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct EphemeralCommandPrepareContext {
+    pub layer_stack_root: PathBuf,
+    pub workspace_root: PathBuf,
+    pub snapshot: EphemeralSnapshot,
+    pub writable_root: PathBuf,
+    pub session_dir: PathBuf,
+    pub final_path: PathBuf,
+}
+
+/// Daemon-supplied facts needed to finalize a publishable command workspace.
+#[derive(Debug, Clone, PartialEq)]
+pub struct EphemeralCommandFinalizeContext {
+    pub workspace: EphemeralWorkspace,
+    pub base_timings: WorkspaceTimings,
+}
 
 /// Daemon-supplied port for ephemeral command-session prepare/finalize policy.
 ///
@@ -9,13 +34,41 @@ use eos_workspace_api::{
 /// allowing this crate to compile against the shared `CommandWorkspaceOps`
 /// contract.
 pub trait EphemeralCommandSessionPort {
-    fn prepare_ephemeral_command_workspace(
+    fn prepare_context(&self) -> Result<EphemeralCommandPrepareContext, WorkspaceApiError> {
+        Err(WorkspaceApiError::new(
+            "unsupported_command_workspace_adapter",
+            "ephemeral adapter cannot prepare command workspaces",
+        ))
+    }
+
+    fn finalize_context(&self) -> Result<EphemeralCommandFinalizeContext, WorkspaceApiError> {
+        Err(WorkspaceApiError::new(
+            "unsupported_command_workspace_adapter",
+            "ephemeral adapter cannot provide command finalize context",
+        ))
+    }
+
+    fn publish_upperdir_changes(
         &self,
-        request: PrepareCommandRequest,
-    ) -> Result<PreparedCommandWorkspace, WorkspaceApiError>;
+        root: &WorkspaceRoot,
+        snapshot: &EphemeralSnapshot,
+        changes: &[LayerChange],
+        path_kinds: &[PathChange],
+    ) -> Result<PublishOutcome, EphemeralWorkspaceError> {
+        let _ = (root, snapshot, changes, path_kinds);
+        Err(EphemeralWorkspaceError::PublishFailed {
+            reason: "ephemeral command adapter cannot publish upperdir changes".to_owned(),
+        })
+    }
 
     fn finalize_ephemeral_command_workspace(
         &self,
         request: FinalizeCommandRequest,
-    ) -> Result<WorkspaceCommandOutcome, WorkspaceApiError>;
+    ) -> Result<WorkspaceCommandOutcome, WorkspaceApiError> {
+        let _ = request;
+        Err(WorkspaceApiError::new(
+            "unsupported_command_workspace_adapter",
+            "ephemeral adapter cannot finalize command workspaces",
+        ))
+    }
 }

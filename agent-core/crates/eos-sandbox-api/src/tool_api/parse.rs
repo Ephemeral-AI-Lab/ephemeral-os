@@ -15,8 +15,8 @@ use serde_json::Value;
 
 use crate::error::SandboxApiError;
 use crate::models::{
-    CommandOutput, ConflictInfo, EditFileResult, ExecCommandResult, ReadFileResult,
-    SandboxRequestBase, SandboxResultBase, Workspace, WriteFileResult,
+    CommandOutput, ConflictInfo, EditFileResult, ExecCommandResult, KnownCommandStatus,
+    ReadFileResult, SandboxRequestBase, SandboxResultBase, Workspace, WriteFileResult,
 };
 
 // ---------------------------------------------------------------------------
@@ -385,7 +385,7 @@ pub(crate) fn parse_exec_command_result(
         .get("status")
         .and_then(Value::as_str)
         .filter(|status| !status.is_empty());
-    let success = !matches!(raw_status.unwrap_or(""), "error" | "timed_out");
+    let success = !KnownCommandStatus::is_error_raw(raw_status.unwrap_or(""));
     let status = raw_status.unwrap_or("error").to_owned();
 
     let output_map = response.get("output").and_then(Value::as_object);

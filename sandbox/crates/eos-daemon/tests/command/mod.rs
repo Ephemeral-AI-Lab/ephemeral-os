@@ -111,7 +111,7 @@ fn test_command_session(id: &str, agent_id: &str) -> TestResult<CommandSession> 
         notification_cursor: Mutex::new(CommandSessionOutputCursor::default()),
         child: Mutex::new(None),
         workspace: CommandWorkspaceKind::Isolated(IsolatedCommandWorkspace {
-            handle: crate::isolated::CommandHandle {
+            handle: crate::services::isolated_workspace::CommandHandle {
                 agent_id: String::new(),
                 workspace_handle_id: String::new(),
                 layer_stack_root: PathBuf::new(),

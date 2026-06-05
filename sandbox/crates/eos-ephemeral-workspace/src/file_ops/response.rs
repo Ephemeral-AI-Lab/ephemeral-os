@@ -48,6 +48,7 @@ pub(super) fn write_conflict(
     WriteFileOutcome {
         mode: MODE,
         success: false,
+        published: false,
         status: status.to_owned(),
         conflict: Some(WorkspaceConflict::path(reason, path, message)),
         conflict_reason: Some(reason.to_owned()),
@@ -68,6 +69,7 @@ pub(super) fn edit_conflict(
     EditFileOutcome {
         mode: MODE,
         success: false,
+        published: false,
         status: status.to_owned(),
         conflict: Some(WorkspaceConflict::path(reason, path, message)),
         conflict_reason: Some(reason.to_owned()),

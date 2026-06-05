@@ -18,10 +18,11 @@ use eos_types::{
 };
 
 use crate::agent_run::AgentRun;
-use crate::attempt::{Attempt, AttemptFailReason, AttemptStage, AttemptStatus};
+use crate::attempt::{Attempt, AttemptClosure};
 use crate::iteration::{Iteration, IterationCreationReason, IterationStatus};
 use crate::model::ModelRegistration;
 use crate::outcomes::ExecutionTaskOutcome;
+use crate::plan::{AttemptBudget, DeferredGoal, MaterializedPlan};
 use crate::request::{Request, RequestStatus};
 use crate::task::{Task, TaskStatus};
 use crate::workflow::{Workflow, WorkflowStatus};
@@ -118,7 +119,7 @@ pub trait IterationStore: Sealed + Send + Sync {
         sequence_no: i64,
         creation_reason: IterationCreationReason,
         iteration_goal: &str,
-        attempt_budget: i64,
+        attempt_budget: AttemptBudget,
     ) -> Result<Iteration, CoreError>;
 
     /// Load an iteration by id.
@@ -145,7 +146,7 @@ pub trait IterationStore: Sealed + Send + Sync {
     async fn set_deferred_goal_for_next_iteration(
         &self,
         id: &IterationId,
-        deferred_goal_for_next_iteration: Option<&str>,
+        deferred_goal_for_next_iteration: Option<&DeferredGoal>,
     ) -> Result<Iteration, CoreError>;
 
     /// Atomically transition to `succeeded` and write the canonical outcomes.
@@ -177,47 +178,22 @@ pub trait AttemptStore: Sealed + Send + Sync {
     /// Load an attempt by id.
     async fn get(&self, id: &AttemptId) -> Result<Option<Attempt>, CoreError>;
 
-    /// Set the attempt stage.
-    async fn set_stage(&self, id: &AttemptId, stage: AttemptStage) -> Result<Attempt, CoreError>;
-
-    /// Set the planner task id.
-    async fn set_planner_task_id(
+    /// Record the planner task assigned to this attempt.
+    async fn record_planner_task(
         &self,
         id: &AttemptId,
         planner_task_id: &TaskId,
     ) -> Result<Attempt, CoreError>;
 
-    /// Set the generator task-id set.
-    async fn set_generator_task_ids(
+    /// Record a materialized planner DAG and transition the attempt to RUN.
+    async fn record_plan(
         &self,
         id: &AttemptId,
-        generator_task_ids: &[TaskId],
+        plan: &MaterializedPlan,
     ) -> Result<Attempt, CoreError>;
 
-    /// Set the reducer task-id set.
-    async fn set_reducer_task_ids(
-        &self,
-        id: &AttemptId,
-        reducer_task_ids: &[TaskId],
-    ) -> Result<Attempt, CoreError>;
-
-    /// Set the deferred-goal-for-next-iteration column.
-    async fn set_deferred_goal(
-        &self,
-        id: &AttemptId,
-        deferred_goal_for_next_iteration: Option<&str>,
-    ) -> Result<Attempt, CoreError>;
-
-    /// Close the attempt: status / `fail_reason` / outcomes / `closed_at`
-    /// (Python `close`). `None` outcomes leaves the persisted set unchanged.
-    async fn close(
-        &self,
-        id: &AttemptId,
-        status: AttemptStatus,
-        fail_reason: Option<AttemptFailReason>,
-        outcomes: Option<&[ExecutionTaskOutcome]>,
-        closed_at: UtcDateTime,
-    ) -> Result<Attempt, CoreError>;
+    /// Close the attempt with a typed terminal closure.
+    async fn close(&self, id: &AttemptId, closure: AttemptClosure) -> Result<Attempt, CoreError>;
 
     /// All attempts of an iteration, ordered by `attempt_sequence_no`.
     async fn list_for_iteration(

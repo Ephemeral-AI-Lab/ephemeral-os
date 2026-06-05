@@ -5,8 +5,8 @@ use sqlx::{Sqlite, SqlitePool};
 use time::OffsetDateTime;
 
 use eos_state::{
-    AttemptId, CoreError, Iteration, IterationCreationReason, IterationId, IterationStatus,
-    IterationStore, Sealed, UtcDateTime, WorkflowId,
+    AttemptBudget, AttemptId, CoreError, DeferredGoal, Iteration, IterationCreationReason,
+    IterationId, IterationStatus, IterationStore, Sealed, UtcDateTime, WorkflowId,
 };
 
 use crate::error::DbError;
@@ -34,7 +34,7 @@ impl IterationStore for SqlIterationStore {
         sequence_no: i64,
         creation_reason: IterationCreationReason,
         iteration_goal: &str,
-        attempt_budget: i64,
+        attempt_budget: AttemptBudget,
     ) -> Result<Iteration, CoreError> {
         let now = OffsetDateTime::now_utc();
         let row = sqlx::query_as::<Sqlite, IterationRow>(
@@ -48,7 +48,7 @@ impl IterationStore for SqlIterationStore {
         .bind(sequence_no)
         .bind(enum_to_db(&creation_reason))
         .bind(iteration_goal)
-        .bind(attempt_budget)
+        .bind(attempt_budget.as_i64())
         .bind(now)
         .bind(now)
         .fetch_one(&self.pool)
@@ -122,13 +122,13 @@ impl IterationStore for SqlIterationStore {
     async fn set_deferred_goal_for_next_iteration(
         &self,
         id: &IterationId,
-        deferred_goal_for_next_iteration: Option<&str>,
+        deferred_goal_for_next_iteration: Option<&DeferredGoal>,
     ) -> Result<Iteration, CoreError> {
         let now = OffsetDateTime::now_utc();
         let row = sqlx::query_as::<Sqlite, IterationRow>(
             "UPDATE iterations SET deferred_goal = ?, updated_at = ? WHERE id = ? RETURNING *",
         )
-        .bind(deferred_goal_for_next_iteration)
+        .bind(deferred_goal_for_next_iteration.map(DeferredGoal::as_str))
         .bind(now)
         .bind(id.as_str())
         .fetch_optional(&self.pool)

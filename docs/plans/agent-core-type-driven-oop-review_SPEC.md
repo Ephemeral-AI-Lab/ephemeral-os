@@ -23,7 +23,9 @@ The plan below is intentionally more domain/type-driven than
 net-negative cleanup items. Do not merge the two documents without reconciling
 their different goals.
 
-No Rust source change is included in this spec export.
+Implementation notes are tracked in the progress table below; the original spec
+export was source-free, and the later implementation pass updated the Rust
+source contracts in `agent-core/`.
 
 ---
 
@@ -46,6 +48,10 @@ flowchart TD
 Current working-tree caveat: this repo is edited by parallel agents. The line
 anchors below were read from the live checkout on 2026-06-05 and may drift.
 Anchor on the symbol if a line number moves.
+
+Implementation caveat: sections labeled "Current evidence" below are the
+original review baseline unless a progress/status table says the phase is now
+complete. Use the Rust source as the live contract after implementation.
 
 Refresh note: a later live-check found that some review items had already
 landed in the checkout. In particular, `ContextScope` is already role-keyed,
@@ -820,13 +826,13 @@ Acceptance criteria:
 | Phase | Status | Notes |
 |---|---|---|
 | Phase 0: Spec Export | Complete | This document. |
-| Phase 1: Shared Naming and Value Objects | Not started | Start with `DeferredGoal`, `PlanNodeId`, `AttemptBudget`. |
-| Phase 2: Planner Disposition | Not started | Highest value after value objects. |
-| Phase 3: Attempt State | Not started | Largest core workflow refactor. |
-| Phase 4: Iteration and Workflow Outcomes | Not started | Depends naturally on attempt closure shape. |
-| Phase 5: Role Launch Cleanup | Partially complete | `ContextScope` is already role-scoped; remaining work is `AgentLaunch`. |
-| Phase 6: Engine and Sandbox Cleanup | Not started | Lower priority; keep wire text raw. |
-| Phase 7: Contract and Regression Sweep | Not started | Run after any source phase. |
+| Phase 1: Shared Naming and Value Objects | Complete | Added `DeferredGoal`, `PlanNodeId`, and `AttemptBudget` with compatibility conversions. |
+| Phase 2: Planner Disposition | Complete | Replaced `PlannerKind` domain flow with `PlanDisposition` and typed deferred goals. |
+| Phase 3: Attempt State | Complete | Added `AttemptState` / `AttemptClosure`, typed plan recording, and DB row mapping into state variants. |
+| Phase 4: Iteration and Workflow Outcomes | Complete | `IterationOutcome` and `WorkflowOutcome` now replace bool-plus-option close decisions. |
+| Phase 5: Role Launch Cleanup | Complete | Preserved role-scoped `ContextScope`; converted `AgentLaunch` to role-specific variants. |
+| Phase 6: Engine and Sandbox Cleanup | Complete | Replaced DAG booleans, added command status views, and routed practical `QueryContext` mutations through narrow methods; `DaemonClient` was left intact because no clearer private split was needed in this pass. |
+| Phase 7: Contract and Regression Sweep | Complete | Focused `cargo check`, `cargo test`, and `cargo clippy -D warnings` pass for touched crates. |
 
 Update rules:
 

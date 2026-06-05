@@ -74,24 +74,18 @@ impl RuntimeAgentRunner {
 #[async_trait]
 impl AgentRunner for RuntimeAgentRunner {
     async fn run(&self, launch: AgentLaunch) -> WorkflowResult<AgentRunReport> {
-        let Some(agent_def) = launch.agent_def.clone() else {
-            return Ok(AgentRunReport::failed(
-                "workflow launch carried no agent definition",
-            ));
-        };
-
         let agent_run_id = AgentRunId::new_v4();
         let sink: Arc<dyn NotificationSink> = Arc::new(self.notifier.clone());
         let metadata = build_metadata(
             &self.state,
             MetadataParams {
-                agent_name: launch.agent_name.clone(),
+                agent_name: launch.agent_name().to_owned(),
                 sandbox_id: None,
                 agent_run_id: agent_run_id.clone(),
-                request_id: Some(launch.request_id.clone()),
-                task_id: Some(launch.task_id.clone()),
-                attempt_id: launch.attempt_id.clone(),
-                workflow_id: launch.workflow_id.clone(),
+                request_id: Some(launch.request_id().clone()),
+                task_id: Some(launch.task_id().clone()),
+                attempt_id: Some(launch.attempt_id().clone()),
+                workflow_id: Some(launch.workflow_id().clone()),
                 workflow_control: self.workflow_control.get().cloned(),
                 plan_submission: Some(self.plan_submission.clone()),
                 background_supervisor: Some(self.background_supervisor.clone()),
@@ -100,12 +94,12 @@ impl AgentRunner for RuntimeAgentRunner {
             },
         );
 
-        let mut prompt = launch.context.clone();
-        if let Some(guidance) = &launch.task_guidance {
+        let mut prompt = launch.context().to_owned();
+        if let Some(guidance) = launch.task_guidance() {
             prompt.push_str("\n\n");
             prompt.push_str(guidance);
         }
-        if let Some(skill) = &launch.skill {
+        if let Some(skill) = launch.skill() {
             prompt.push_str("\n\n");
             prompt.push_str(skill);
         }
@@ -113,9 +107,9 @@ impl AgentRunner for RuntimeAgentRunner {
         let run = run_ephemeral_agent(
             &self.state.engine_run_handles(),
             EphemeralRunInput {
-                agent: agent_def,
+                agent: launch.agent_def().clone(),
                 initial_messages: vec![Message::from_user_text(prompt)],
-                task_id: Some(launch.task_id.clone()),
+                task_id: Some(launch.task_id().clone()),
                 agent_run_id,
                 tool_metadata: metadata,
                 notifier: self.notifier.clone(),

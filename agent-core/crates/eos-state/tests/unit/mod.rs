@@ -47,7 +47,6 @@ fn serde_wire_values_match_python() {
     );
     assert_eq!(json!(TaskOutcomeStatus::Success), json!("success"));
     assert_eq!(json!(ExecutionRole::Reducer), json!("reducer"));
-    assert_eq!(json!(PlannerKind::Completes), json!("completes"));
     assert_eq!(
         json!(PlannerFailReason::RunExhausted),
         json!("run_exhausted")
@@ -73,10 +72,6 @@ fn any_task_outcome_status() -> impl Strategy<Value = TaskOutcomeStatus> {
 
 fn any_execution_role() -> impl Strategy<Value = ExecutionRole> {
     prop_oneof![Just(ExecutionRole::Generator), Just(ExecutionRole::Reducer)]
-}
-
-fn any_planner_kind() -> impl Strategy<Value = PlannerKind> {
-    prop_oneof![Just(PlannerKind::Completes), Just(PlannerKind::Defers)]
 }
 
 fn any_task_id() -> impl Strategy<Value = TaskId> {
@@ -106,18 +101,21 @@ proptest! {
     fn planner_submission_serde_roundtrip(
         attempt_id in any_attempt_id(),
         planner_task_id in any_task_id(),
-        kind in any_planner_kind(),
         generator_task_ids in prop::collection::vec(any_task_id(), 0..4),
         reducer_task_ids in prop::collection::vec(any_task_id(), 0..4),
         deferred in prop::option::of(".{0,32}"),
     ) {
+        let disposition = deferred
+            .and_then(|goal| DeferredGoal::new(goal).ok())
+            .map_or(PlanDisposition::Complete, PlanDisposition::Defer);
         let value = PlannerSubmission {
             attempt_id,
-            planner_task_id,
-            kind,
-            generator_task_ids,
-            reducer_task_ids,
-            deferred_goal_for_next_iteration: deferred,
+            plan: MaterializedPlan {
+                planner_task_id,
+                disposition,
+                generator_task_ids,
+                reducer_task_ids,
+            },
         };
         let encoded = serde_json::to_string(&value).expect("serialize");
         let decoded: PlannerSubmission =

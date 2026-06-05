@@ -3,8 +3,8 @@ use std::pin::Pin;
 use std::sync::Arc;
 
 use eos_state::{
-    project_iteration_outcomes, Attempt, AttemptFailReason, AttemptId, AttemptStatus, AttemptStore,
-    IterationId, IterationStatus,
+    project_iteration_outcomes, Attempt, AttemptClosure, AttemptFailReason, AttemptId,
+    AttemptStatus, AttemptStore, IterationId, IterationOutcome, IterationStatus,
 };
 use parking_lot::Mutex;
 
@@ -16,10 +16,8 @@ use crate::{Result, WorkflowError};
 pub struct IterationClosed {
     /// Iteration id.
     pub iteration_id: IterationId,
-    /// Whether the iteration succeeded.
-    pub succeeded: bool,
-    /// Deferred goal, if any.
-    pub deferred_goal: Option<String>,
+    /// Typed iteration outcome.
+    pub outcome: IterationOutcome,
 }
 
 /// Async callback invoked when an iteration closes.
@@ -165,13 +163,7 @@ impl IterationAttemptCoordinator {
                 iteration.id.as_str()
             )));
         }
-        if attempt.status == AttemptStatus::Failed && attempt.fail_reason.is_none() {
-            return Err(WorkflowError::invariant(format!(
-                "attempt {:?} closed failed with no fail_reason",
-                attempt.id.as_str()
-            )));
-        }
-        if attempt.status == AttemptStatus::Passed {
+        if attempt.status() == AttemptStatus::Passed {
             self.close_iteration_passed(&attempt).await
         } else {
             self.retry_or_close_failed(attempt).await
@@ -191,7 +183,7 @@ impl IterationAttemptCoordinator {
             .iteration_store
             .set_deferred_goal_for_next_iteration(
                 &self.iteration_id,
-                attempt.deferred_goal_for_next_iteration.as_deref(),
+                attempt.deferred_goal_for_next_iteration(),
             )
             .await?;
         let outcomes = iteration_outcomes_json(
@@ -208,10 +200,16 @@ impl IterationAttemptCoordinator {
                 Some(eos_state::UtcDateTime::now()),
             )
             .await?;
+        let outcome = if let Some(deferred_goal) = attempt.deferred_goal_for_next_iteration() {
+            IterationOutcome::Continue {
+                deferred_goal: deferred_goal.clone(),
+            }
+        } else {
+            IterationOutcome::Complete
+        };
         (self.on_iteration_closed)(IterationClosed {
             iteration_id: self.iteration_id.clone(),
-            succeeded: true,
-            deferred_goal: attempt.deferred_goal_for_next_iteration.clone(),
+            outcome,
         })
         .await
     }
@@ -253,8 +251,7 @@ impl IterationAttemptCoordinator {
             .await?;
         (self.on_iteration_closed)(IterationClosed {
             iteration_id: self.iteration_id.clone(),
-            succeeded: false,
-            deferred_goal: None,
+            outcome: IterationOutcome::Failed,
         })
         .await
     }
@@ -271,7 +268,7 @@ impl IterationAttemptCoordinator {
             return Ok(None);
         }
         let attempt = self.deps.attempt_store.get(latest_id).await?;
-        Ok(attempt.filter(|attempt| attempt.status == AttemptStatus::Failed))
+        Ok(attempt.filter(|attempt| attempt.status() == AttemptStatus::Failed))
     }
 
     async fn close_attempt_after_startup_failure(&self, attempt: &Attempt) -> Result<()> {
@@ -285,10 +282,11 @@ impl IterationAttemptCoordinator {
             .attempt_store
             .close(
                 &attempt.id,
-                AttemptStatus::Failed,
-                Some(AttemptFailReason::StartupFailed),
-                None,
-                eos_state::UtcDateTime::now(),
+                AttemptClosure::Failed {
+                    reason: AttemptFailReason::StartupFailed,
+                    outcomes: Vec::new(),
+                    closed_at: eos_state::UtcDateTime::now(),
+                },
             )
             .await?;
         Ok(())

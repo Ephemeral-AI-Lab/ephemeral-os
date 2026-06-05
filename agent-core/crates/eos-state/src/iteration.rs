@@ -7,6 +7,8 @@ use serde::{Deserialize, Serialize};
 
 use eos_types::{AttemptId, IterationId, UtcDateTime, WorkflowId};
 
+use crate::plan::{AttemptBudget, DeferredGoal};
+
 /// Lifecycle status of an [`Iteration`] (Python `IterationStatus`).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
@@ -31,6 +33,26 @@ pub enum IterationCreationReason {
     DeferredGoalContinuation,
 }
 
+/// Terminal outcome of an iteration.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum IterationOutcome {
+    /// The iteration completed the workflow goal.
+    Complete,
+    /// The iteration completed its bounded work and continues with a deferred goal.
+    Continue {
+        /// Goal for the next iteration.
+        deferred_goal: DeferredGoal,
+    },
+    /// The iteration failed.
+    Failed,
+    /// The iteration was cancelled.
+    Cancelled {
+        /// Cancellation reason.
+        reason: String,
+    },
+}
+
 /// Immutable view of a persisted Iteration (Python `state.py:Iteration`).
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 pub struct Iteration {
@@ -45,13 +67,13 @@ pub struct Iteration {
     /// The iteration goal (DB column `goal`; mapped in `eos-db`, anchor §4).
     pub iteration_goal: String,
     /// Maximum number of attempts allowed in this iteration.
-    pub attempt_budget: i64,
+    pub attempt_budget: AttemptBudget,
     /// Lifecycle status.
     pub status: IterationStatus,
     /// Ordered child attempt ids.
     pub attempt_ids: Vec<AttemptId>,
     /// Goal carried to the next iteration (DB column `deferred_goal`, anchor §4).
-    pub deferred_goal_for_next_iteration: Option<String>,
+    pub deferred_goal_for_next_iteration: Option<DeferredGoal>,
     /// Creation timestamp.
     pub created_at: UtcDateTime,
     /// Last-update timestamp.
@@ -78,7 +100,7 @@ impl Iteration {
     /// Whether the attempt budget still allows another attempt.
     #[must_use]
     pub fn has_budget_remaining(&self) -> bool {
-        (self.attempt_count() as i64) < self.attempt_budget
+        self.attempt_count() < self.attempt_budget.get() as usize
     }
 
     /// The most recently created attempt id, if any.

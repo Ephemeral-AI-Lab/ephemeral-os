@@ -3,7 +3,8 @@ use std::pin::Pin;
 use std::sync::Arc;
 
 use eos_state::{
-    IterationCreationReason, IterationStatus, IterationStore, Workflow, WorkflowId, WorkflowStatus,
+    IterationCreationReason, IterationOutcome, IterationStatus, IterationStore, Workflow,
+    WorkflowId, WorkflowOutcome,
 };
 
 use crate::attempt::AttemptDeps;
@@ -121,7 +122,7 @@ impl WorkflowLifecycle {
             (
                 previous.sequence_no + 1,
                 IterationCreationReason::DeferredGoalContinuation,
-                goal,
+                goal.into_string(),
             )
         };
         let expected = workflow.iteration_ids.len() as i64 + 1;
@@ -169,14 +170,19 @@ impl WorkflowLifecycle {
         // front so no early return below can leak it (mirrors Python's `finally`).
         self.iteration_coordinators.deregister(&iteration.id);
 
-        if closed.succeeded && closed.deferred_goal.is_some() {
-            self.start_iteration_with_deferred_goal(&iteration.workflow_id)
+        match closed.outcome {
+            IterationOutcome::Continue { .. } => {
+                self.start_iteration_with_deferred_goal(&iteration.workflow_id)
+                    .await
+            }
+            IterationOutcome::Complete => self
+                .close_workflow(&iteration.workflow_id, WorkflowOutcome::Succeeded)
                 .await
-        } else {
-            // succeeded + no deferral -> SUCCEEDED; not succeeded -> FAILED.
-            self.close_workflow(&iteration.workflow_id, closed.succeeded)
+                .map(|_| ()),
+            IterationOutcome::Failed | IterationOutcome::Cancelled { .. } => self
+                .close_workflow(&iteration.workflow_id, WorkflowOutcome::Failed)
                 .await
-                .map(|_| ())
+                .map(|_| ()),
         }
     }
 
@@ -206,7 +212,8 @@ impl WorkflowLifecycle {
                     None,
                 )
                 .await?;
-            self.close_workflow(workflow_id, false).await?;
+            self.close_workflow(workflow_id, WorkflowOutcome::Failed)
+                .await?;
         }
         Ok(())
     }
@@ -215,7 +222,7 @@ impl WorkflowLifecycle {
     pub async fn close_workflow(
         &self,
         workflow_id: &WorkflowId,
-        succeeded: bool,
+        outcome: WorkflowOutcome,
     ) -> Result<Workflow> {
         let workflow = self.require_workflow(workflow_id).await?;
         if !workflow.is_open() {
@@ -231,11 +238,7 @@ impl WorkflowLifecycle {
             .workflow_store
             .set_status(
                 workflow_id,
-                if succeeded {
-                    WorkflowStatus::Succeeded
-                } else {
-                    WorkflowStatus::Failed
-                },
+                outcome.status(),
                 Some(eos_state::UtcDateTime::now()),
                 Some(&outcomes),
             )
@@ -269,6 +272,8 @@ async fn workflow_outcomes_json(
 mod tests {
     #![allow(clippy::unwrap_used)]
     use std::sync::Arc;
+
+    use eos_state::{DeferredGoal, IterationOutcome, WorkflowOutcome, WorkflowStatus};
 
     use super::*;
     use crate::testsupport::{
@@ -310,7 +315,10 @@ mod tests {
 
         let writes_before = stores.task_write_count();
         assert!(writes_before > 0, "counter must observe writes");
-        let closed = lifecycle.close_workflow(&workflow.id, true).await.unwrap();
+        let closed = lifecycle
+            .close_workflow(&workflow.id, WorkflowOutcome::Succeeded)
+            .await
+            .unwrap();
 
         assert_eq!(stores.task_write_count(), writes_before);
         assert_eq!(closed.status, WorkflowStatus::Succeeded);
@@ -364,7 +372,7 @@ mod tests {
         eos_state::IterationStore::set_deferred_goal_for_next_iteration(
             stores.as_ref(),
             &iter1.id,
-            Some("continue"),
+            Some(&DeferredGoal::new("continue").unwrap()),
         )
         .await
         .unwrap();
@@ -374,8 +382,9 @@ mod tests {
         lifecycle
             .handle_iteration_closed(IterationClosed {
                 iteration_id: iter1.id.clone(),
-                succeeded: true,
-                deferred_goal: Some("continue".to_owned()),
+                outcome: IterationOutcome::Continue {
+                    deferred_goal: DeferredGoal::new("continue").unwrap(),
+                },
             })
             .await
             .unwrap();

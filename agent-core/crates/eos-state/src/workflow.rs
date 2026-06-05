@@ -22,6 +22,33 @@ pub enum WorkflowStatus {
     Cancelled,
 }
 
+/// Terminal outcome of a workflow.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum WorkflowOutcome {
+    /// Workflow succeeded.
+    Succeeded,
+    /// Workflow failed.
+    Failed,
+    /// Workflow was cancelled.
+    Cancelled {
+        /// Cancellation reason.
+        reason: String,
+    },
+}
+
+impl WorkflowOutcome {
+    /// Persisted status corresponding to this outcome.
+    #[must_use]
+    pub const fn status(&self) -> WorkflowStatus {
+        match self {
+            Self::Succeeded => WorkflowStatus::Succeeded,
+            Self::Failed => WorkflowStatus::Failed,
+            Self::Cancelled { .. } => WorkflowStatus::Cancelled,
+        }
+    }
+}
+
 /// Immutable view of a persisted Workflow (Python `state.py:Workflow`).
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 pub struct Workflow {

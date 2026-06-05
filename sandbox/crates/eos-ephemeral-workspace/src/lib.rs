@@ -2,10 +2,10 @@
 //!
 //! This crate owns the publish-capable ephemeral workspace lifecycle pieces that
 //! are unique to fresh overlay operations: allocate scratch, capture upperdir
-//! changes, classify path/resource data, and call an injected publisher. Daemon
-//! RPC routing, namespace-runner request construction, process supervision,
-//! command-session registry state, public JSON envelopes, and generic OCC
-//! publisher ownership stay outside this crate.
+//! changes, classify path/resource data, prepare runner requests for fresh
+//! command workspaces, and call an injected publisher. Daemon RPC routing,
+//! process supervision, command-session registry state, public JSON envelopes,
+//! and generic OCC publisher ownership stay outside this crate.
 
 pub mod capture;
 pub mod command_session;

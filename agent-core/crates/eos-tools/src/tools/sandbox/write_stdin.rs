@@ -102,7 +102,7 @@ impl ToolExecutor for WriteStdin {
                         .await;
                     return Ok(command_tool_result_from_value(&stored));
                 }
-            } else if result.status != "running" {
+            } else if !result.is_running() {
                 port.mark_command_session_reported(
                     &command_session_id,
                     command_result_value(&result),

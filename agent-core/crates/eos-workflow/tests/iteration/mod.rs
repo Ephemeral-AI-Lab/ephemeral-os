@@ -2,11 +2,16 @@
 use std::sync::Arc;
 
 use eos_state::{
-    IterationCreationReason, IterationStatus, TaskOutcomeStatus, TaskStatus, WorkflowStatus,
+    AttemptBudget, IterationCreationReason, IterationStatus, TaskOutcomeStatus, TaskStatus,
+    WorkflowStatus,
 };
 
 use crate::testsupport::{root_task, wait_for_workflow_status, MemoryStores, ScriptedRunner};
 use crate::WorkflowStarter;
+
+fn budget(value: u32) -> AttemptBudget {
+    AttemptBudget::try_from_u32(value).unwrap()
+}
 
 // AC-eos-workflow-10 (retry budget): a failed attempt with budget remaining
 // is retried; when the budget is exhausted the iteration closes FAILED and
@@ -17,7 +22,7 @@ async fn retry_and_continue() {
     // Every attempt fails at the reducer, forcing retries until exhaustion.
     let runner = ScriptedRunner::new(1, TaskOutcomeStatus::Failed, 0, "");
     let mut deps = stores.deps(runner.clone());
-    deps.lifecycle_config.default_attempt_budget = 2;
+    deps.lifecycle_config.default_attempt_budget = budget(2);
     runner.bind(&deps.orchestrator_registry);
     let parent = root_task("parent", TaskStatus::Running);
     stores.seed_task(parent.clone());
@@ -50,7 +55,7 @@ async fn deferred_goal_starts_next_iteration() {
     // First planner run defers "continue the work"; the next completes.
     let runner = ScriptedRunner::new(1, TaskOutcomeStatus::Success, 1, "continue the work");
     let mut deps = stores.deps(runner.clone());
-    deps.lifecycle_config.default_attempt_budget = 2;
+    deps.lifecycle_config.default_attempt_budget = budget(2);
     runner.bind(&deps.orchestrator_registry);
     let parent = root_task("parent", TaskStatus::Running);
     stores.seed_task(parent.clone());

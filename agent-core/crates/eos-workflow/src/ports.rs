@@ -4,7 +4,7 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use eos_state::{
-    execution_outcome_for_submission, AttemptFailReason, AttemptStatus, ExecutionRole,
+    execution_outcome_for_submission, AttemptClosure, AttemptFailReason, ExecutionRole,
     GeneratorSubmission, IterationStatus, ReducerSubmission, Task, TaskOutcomeStatus, TaskRole,
     TaskStatus, TaskStore, WorkflowId, WorkflowStatus,
 };
@@ -287,10 +287,10 @@ impl WorkflowControlAdapter {
                     continue;
                 }
                 for task_id in attempt
-                    .planner_task_id
-                    .iter()
-                    .chain(attempt.generator_task_ids.iter())
-                    .chain(attempt.reducer_task_ids.iter())
+                    .planner_task_id()
+                    .into_iter()
+                    .chain(attempt.generator_task_ids().iter())
+                    .chain(attempt.reducer_task_ids().iter())
                 {
                     if let Some(task) = self.task_store.get(task_id).await? {
                         self.cancel_active_task(&task, outcome_text).await?;
@@ -299,10 +299,11 @@ impl WorkflowControlAdapter {
                 self.attempt_store
                     .close(
                         &attempt.id,
-                        AttemptStatus::Failed,
-                        Some(AttemptFailReason::TaskFailed),
-                        Some(&[]),
-                        now,
+                        AttemptClosure::Failed {
+                            reason: AttemptFailReason::TaskFailed,
+                            outcomes: Vec::new(),
+                            closed_at: now,
+                        },
                     )
                     .await?;
             }
@@ -464,11 +465,9 @@ mod tests {
         assert_eq!(iteration.status, IterationStatus::Cancelled);
         let attempt_id = iteration.attempt_ids.first().unwrap();
         let attempt = stores.attempt(attempt_id).unwrap();
-        assert_eq!(attempt.status, AttemptStatus::Failed);
-        assert_eq!(attempt.fail_reason, Some(AttemptFailReason::TaskFailed));
-        let planner_task = stores
-            .task(attempt.planner_task_id.as_ref().unwrap())
-            .unwrap();
+        assert_eq!(attempt.status(), AttemptStatus::Failed);
+        assert_eq!(attempt.fail_reason(), Some(AttemptFailReason::TaskFailed));
+        let planner_task = stores.task(attempt.planner_task_id().unwrap()).unwrap();
         assert_eq!(planner_task.status, TaskStatus::Failed);
         assert_eq!(
             planner_task

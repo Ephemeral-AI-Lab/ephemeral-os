@@ -13,6 +13,7 @@ mod attempt;
 mod iteration;
 mod model;
 mod outcomes;
+mod plan;
 mod request;
 mod store;
 mod submissions;
@@ -23,25 +24,28 @@ mod workflow;
 mod fakes;
 
 pub use agent_run::AgentRun;
-pub use attempt::{Attempt, AttemptFailReason, AttemptStage, AttemptStatus};
-pub use iteration::{Iteration, IterationCreationReason, IterationStatus};
+pub use attempt::{
+    Attempt, AttemptClosure, AttemptFailReason, AttemptStage, AttemptState, AttemptStatus,
+};
+pub use iteration::{Iteration, IterationCreationReason, IterationOutcome, IterationStatus};
 pub use model::ModelRegistration;
 pub use outcomes::{
     attempt_execution_outcomes, execution_outcome_for_submission, latest_iteration, present_status,
     project_attempt_outcomes, project_iteration_outcomes, ExecutionRole, ExecutionTaskOutcome,
     TaskOutcomeStatus, NO_OUTCOME,
 };
+pub use plan::{AttemptBudget, DeferredGoal, MaterializedPlan, PlanDisposition, PlanNodeId};
 pub use request::{Request, RequestStatus};
 pub use store::{
     AgentRunStore, AttemptStore, IterationStore, ModelStore, RequestStore, Sealed, StoreError,
     TaskStore, WorkflowStore,
 };
 pub use submissions::{
-    GeneratorSubmission, PlannerFailReason, PlannerFailureSubmission, PlannerKind,
-    PlannerSubmission, ReducerSubmission,
+    GeneratorSubmission, PlannerFailReason, PlannerFailureSubmission, PlannerSubmission,
+    ReducerSubmission,
 };
 pub use task::{Task, TaskRole, TaskStatus, TASK_AGENT_ROLES};
-pub use workflow::{Workflow, WorkflowStatus};
+pub use workflow::{Workflow, WorkflowOutcome, WorkflowStatus};
 
 // Re-export the upstream value primitives that appear in this crate's public
 // API so downstream crates (notably `eos-db`) can name them without a direct

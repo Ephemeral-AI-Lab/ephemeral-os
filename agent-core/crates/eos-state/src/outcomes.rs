@@ -108,13 +108,13 @@ pub async fn project_attempt_outcomes(
     task_store: Option<&dyn TaskStore>,
 ) -> Result<Vec<ExecutionTaskOutcome>, CoreError> {
     let Some(store) = task_store else {
-        return Ok(attempt.outcomes.clone());
+        return Ok(attempt.outcomes().to_vec());
     };
     let mut out: Vec<ExecutionTaskOutcome> = Vec::new();
     for task_id in attempt
-        .generator_task_ids
+        .generator_task_ids()
         .iter()
-        .chain(attempt.reducer_task_ids.iter())
+        .chain(attempt.reducer_task_ids().iter())
     {
         if let Some(task) = store.get(task_id).await? {
             out.extend(task.outcomes.iter().cloned());
@@ -132,8 +132,8 @@ pub async fn attempt_execution_outcomes(
     attempt: &Attempt,
     task_store: Option<&dyn TaskStore>,
 ) -> Result<Vec<ExecutionTaskOutcome>, CoreError> {
-    if !attempt.outcomes.is_empty() {
-        return Ok(attempt.outcomes.clone());
+    if !attempt.outcomes().is_empty() {
+        return Ok(attempt.outcomes().to_vec());
     }
     project_attempt_outcomes(attempt, task_store).await
 }
@@ -156,7 +156,7 @@ pub async fn project_iteration_outcomes(
         return Ok(Vec::new());
     };
     let final_outcomes = attempt_execution_outcomes(final_attempt, task_store).await?;
-    let filtered = if final_attempt.status == AttemptStatus::Passed {
+    let filtered = if final_attempt.status() == AttemptStatus::Passed {
         final_outcomes
             .into_iter()
             .filter(|o| o.role == ExecutionRole::Reducer && o.status == TaskOutcomeStatus::Success)
@@ -176,7 +176,7 @@ pub async fn project_iteration_outcomes(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::attempt::{Attempt, AttemptStage, AttemptStatus};
+    use crate::attempt::{Attempt, AttemptClosure, AttemptState, AttemptStatus};
     use crate::fakes::FakeTaskStore;
     use crate::task::{Task, TaskRole, TaskStatus};
     use eos_types::{AttemptId, IterationId, RequestId, UtcDateTime, WorkflowId};
@@ -223,17 +223,31 @@ mod tests {
             iteration_id: IterationId::new_v4(),
             workflow_id: WorkflowId::new_v4(),
             attempt_sequence_no: 0,
-            stage: AttemptStage::Closed,
-            status,
-            planner_task_id: None,
-            generator_task_ids: generators.iter().map(|s| tid(s)).collect(),
-            reducer_task_ids: reducers.iter().map(|s| tid(s)).collect(),
-            deferred_goal_for_next_iteration: None,
-            fail_reason: None,
+            state: AttemptState::Closed {
+                closure: match status {
+                    AttemptStatus::Passed => AttemptClosure::Passed {
+                        outcomes,
+                        closed_at: now,
+                    },
+                    AttemptStatus::Failed => AttemptClosure::Failed {
+                        reason: crate::attempt::AttemptFailReason::TaskFailed,
+                        outcomes,
+                        closed_at: now,
+                    },
+                    AttemptStatus::Running => {
+                        unreachable!("test helper only builds closed attempts")
+                    }
+                },
+                planner_task_id: None,
+                plan: Some(crate::MaterializedPlan {
+                    planner_task_id: tid("planner"),
+                    disposition: crate::PlanDisposition::Complete,
+                    generator_task_ids: generators.iter().map(|s| tid(s)).collect(),
+                    reducer_task_ids: reducers.iter().map(|s| tid(s)).collect(),
+                }),
+            },
             created_at: now,
             updated_at: now,
-            closed_at: Some(now),
-            outcomes,
         }
     }
 
@@ -398,7 +412,7 @@ mod tests {
         let got = attempt_execution_outcomes(&with_persisted, Some(&store))
             .await
             .expect("projection");
-        assert_eq!(got, with_persisted.outcomes);
+        assert_eq!(got, with_persisted.outcomes());
 
         // Empty persisted outcomes recompute from the task rows.
         let empty = attempt(AttemptStatus::Failed, &["g1"], &[], Vec::new());

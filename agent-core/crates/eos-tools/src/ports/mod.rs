@@ -17,7 +17,7 @@ use std::collections::BTreeMap;
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use eos_state::{GeneratorSubmission, PlannerKind, ReducerSubmission};
+use eos_state::{GeneratorSubmission, PlanDisposition, PlanNodeId, ReducerSubmission};
 use eos_types::{SandboxId, SubagentSessionId, TaskId, WorkflowId, WorkflowSessionId};
 use serde::Serialize;
 use serde_json::Value;
@@ -110,20 +110,20 @@ pub trait WorkflowControlPort: Sealed + Send + Sync {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PlanTask {
     /// Caller-assigned task id (validated unique by the tool).
-    pub id: String,
+    pub id: PlanNodeId,
     /// Bound subagent profile name.
     pub agent_name: String,
     /// Ids this task depends on.
-    pub needs: Vec<String>,
+    pub needs: Vec<PlanNodeId>,
 }
 
 /// One planner-authored reducer task (id + `needs` + prompt).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PlanReducer {
     /// Caller-assigned reducer id.
-    pub id: String,
+    pub id: PlanNodeId,
     /// Ids this reducer depends on.
-    pub needs: Vec<String>,
+    pub needs: Vec<PlanNodeId>,
     /// The reducer's instruction prompt.
     pub prompt: String,
 }
@@ -144,13 +144,11 @@ pub struct PlannerPlan {
     /// The planner's own task (from execution context).
     pub planner_task_id: TaskId,
     /// Whether the plan completes the attempt or defers a goal.
-    pub kind: PlannerKind,
-    /// Goal carried to the next iteration, normalized (nonblank) when present.
-    pub deferred_goal_for_next_iteration: Option<String>,
+    pub disposition: PlanDisposition,
     /// The generator tasks, in submission order.
     pub tasks: Vec<PlanTask>,
     /// Per-task instruction specs, keyed by task id.
-    pub task_specs: BTreeMap<String, String>,
+    pub task_specs: BTreeMap<PlanNodeId, String>,
     /// The reducer tasks, in submission order.
     pub reducers: Vec<PlanReducer>,
 }
