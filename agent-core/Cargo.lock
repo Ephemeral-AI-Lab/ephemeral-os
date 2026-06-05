@@ -519,7 +519,6 @@ dependencies = [
 name = "eos-audit"
 version = "0.1.0"
 dependencies = [
- "eos-obs-contract",
  "eos-types",
  "schemars 0.8.22",
  "serde",
@@ -561,7 +560,6 @@ dependencies = [
  "eos-agent-def",
  "eos-audit",
  "eos-llm-client",
- "eos-obs-contract",
  "eos-sandbox-api",
  "eos-skills",
  "eos-state",
@@ -604,19 +602,11 @@ dependencies = [
 name = "eos-obs-collector"
 version = "0.1.0"
 dependencies = [
- "eos-obs-contract",
+ "eos-audit",
  "eos-protocol",
  "serde",
  "serde_json",
  "thiserror 2.0.18",
-]
-
-[[package]]
-name = "eos-obs-contract"
-version = "0.1.0"
-dependencies = [
- "serde",
- "serde_json",
 ]
 
 [[package]]
