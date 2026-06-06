@@ -2,8 +2,8 @@
 
 use std::collections::BTreeMap;
 
-use eos_sandbox_api::{
-    EnterIsolatedWorkspaceResult, ExitIsolatedWorkspaceResult, LifecycleError, SandboxApiError,
+use eos_sandbox_port::{
+    EnterIsolatedWorkspaceResult, ExitIsolatedWorkspaceResult, LifecycleError, SandboxPortError,
 };
 use serde_json::{json, Value};
 
@@ -56,7 +56,7 @@ fn render_exit_result(result: &ExitIsolatedWorkspaceResult) -> Result<ToolResult
     )
 }
 
-fn render_enter_api_failure(error: &SandboxApiError) -> Result<ToolResult, ToolError> {
+fn render_enter_api_failure(error: &SandboxPortError) -> Result<ToolResult, ToolError> {
     render_lifecycle(
         false,
         &json!({
@@ -68,7 +68,7 @@ fn render_enter_api_failure(error: &SandboxApiError) -> Result<ToolResult, ToolE
     )
 }
 
-fn render_exit_api_failure(error: &SandboxApiError) -> Result<ToolResult, ToolError> {
+fn render_exit_api_failure(error: &SandboxPortError) -> Result<ToolResult, ToolError> {
     render_lifecycle(
         false,
         &json!({
@@ -103,9 +103,9 @@ fn lifecycle_error_value(error: Option<&LifecycleError>) -> Value {
     }
 }
 
-fn lifecycle_error_from_api(error: &SandboxApiError) -> LifecycleError {
+fn lifecycle_error_from_api(error: &SandboxPortError) -> LifecycleError {
     let fallback = match error {
-        SandboxApiError::Decode { .. } => "decode_error",
+        SandboxPortError::Decode { .. } => "decode_error",
         _ => "internal_error",
     };
     LifecycleError {

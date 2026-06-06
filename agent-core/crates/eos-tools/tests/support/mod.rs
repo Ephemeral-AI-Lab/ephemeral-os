@@ -8,7 +8,7 @@ use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
 use async_trait::async_trait;
-use eos_sandbox_api::{DaemonOp, SandboxApiError, SandboxTransport};
+use eos_sandbox_port::{DaemonOp, SandboxPortError, SandboxTransport};
 use eos_state::{
     ExecutionTaskOutcome, Request, RequestStatus, RequestStore, Sealed, Task, TaskStatus, TaskStore,
 };
@@ -20,7 +20,7 @@ use crate::core::name::ToolName;
 use crate::core::result::{OutputShape, ToolResult};
 use crate::runtime::executor::{RegisteredTool, ToolExecutor};
 
-type Handler = dyn Fn(DaemonOp, &JsonObject) -> Result<JsonObject, SandboxApiError> + Send + Sync;
+type Handler = dyn Fn(DaemonOp, &JsonObject) -> Result<JsonObject, SandboxPortError> + Send + Sync;
 
 /// A `SandboxTransport` driven by a closure over `(op, payload)`.
 pub(crate) struct FakeTransport {
@@ -29,7 +29,7 @@ pub(crate) struct FakeTransport {
 
 impl FakeTransport {
     pub(crate) fn new(
-        handler: impl Fn(DaemonOp, &JsonObject) -> Result<JsonObject, SandboxApiError>
+        handler: impl Fn(DaemonOp, &JsonObject) -> Result<JsonObject, SandboxPortError>
             + Send
             + Sync
             + 'static,
@@ -54,7 +54,7 @@ impl SandboxTransport for FakeTransport {
         op: DaemonOp,
         payload: JsonObject,
         _timeout_s: u32,
-    ) -> Result<JsonObject, SandboxApiError> {
+    ) -> Result<JsonObject, SandboxPortError> {
         (self.handler)(op, &payload)
     }
 }

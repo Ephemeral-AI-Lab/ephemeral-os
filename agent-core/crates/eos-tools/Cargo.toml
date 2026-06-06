@@ -11,11 +11,11 @@ path = "src/mod.rs"
 # Direct eos-types edge: this crate names InvocationId, ToolUseId,
 # WorkflowSessionId, CommandSessionId, SubagentSessionId, and JsonObject/CoreError
 # in its own signatures, and none of the other upstream deps re-export them
-# (eos-state re-exports only a subset). Mirrors the eos-sandbox-host /
-# eos-plugin-catalog precedent.
+# (eos-state re-exports only a subset). Mirrors the eos-plugin-catalog
+# precedent.
 eos-types.workspace = true
 eos-state.workspace = true
-eos-sandbox-api.workspace = true
+eos-sandbox-port.workspace = true
 eos-skills.workspace = true
 eos-llm-client.workspace = true
 # Direct eos-config edge: `registry/config.rs` names

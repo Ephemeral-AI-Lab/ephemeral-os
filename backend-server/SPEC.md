@@ -469,6 +469,34 @@ CREATE TABLE audit_cursor (
 );
 ```
 
+## Backend Test Layout
+
+All backend-server crate test files live under each crate's `tests/` directory,
+not under `src/`.
+
+Rules:
+
+| Test artifact | Required location |
+|---|---|
+| Integration tests | `backend-server/crates/<crate>/tests/*.rs` or `backend-server/crates/<crate>/tests/<suite>/mod.rs` |
+| Unit-style tests that need private module access | `backend-server/crates/<crate>/tests/<module>/mod.rs`, referenced from the production module with a narrow `#[path = "../tests/<module>/mod.rs"]` or `#[path = "../../tests/<module>/mod.rs"]` attribute as needed |
+| Test support, fakes, mocks, fixtures, seams, harnesses, and sample configs | `backend-server/crates/<crate>/tests/support/`, `tests/fixtures/`, or a suite-local folder under `tests/` |
+| Generated or captured test artifacts | A crate-local ignored temp/output folder, never `src/` |
+
+Disallowed backend paths:
+
+- `backend-server/crates/*/src/tests.rs`
+- `backend-server/crates/*/src/**/tests/`
+- `backend-server/crates/*/src/**/fixtures/`
+- `backend-server/crates/*/src/**/mocks/`
+- `backend-server/crates/*/src/**/fakes/`
+- `backend-server/crates/*/src/**/support/`
+
+Production `src/` files may contain only production code and, when private
+access is unavoidable, a tiny `#[cfg(test)]` module declaration that points to a
+file under the crate `tests/` tree. Do not put the test body or test-only helper
+types in `src/`.
+
 ## Resulting File/Folder Structure
 
 ```text
@@ -525,7 +553,7 @@ EphemeralOS/
     `-- crates/
         |-- eos-sandbox-host/
         |   |-- Cargo.toml
-        |   `-- src/
+        |   |-- src/
         |       |-- bootstrap_artifact.rs
         |       |-- config.rs
         |       |-- docker.rs
@@ -534,18 +562,23 @@ EphemeralOS/
         |       |-- provider.rs
         |       |-- provisioning.rs
         |       `-- registry.rs
+        |   `-- tests/
+        |       `-- daemon_client/
+        |           `-- mod.rs
         |
         |-- eos-obs-collector/
         |   |-- Cargo.toml
-        |   `-- src/
+        |   |-- src/
         |       |-- gates.rs
         |       |-- lib.rs
         |       |-- normalization.rs
         |       `-- types.rs
+        |   `-- tests/
+        |       `-- normalization.rs
         |
         |-- eos-backend-types/
         |   |-- Cargo.toml
-        |   `-- src/
+        |   |-- src/
         |       |-- audit.rs
         |       |-- error.rs
         |       |-- events.rs
@@ -554,6 +587,8 @@ EphemeralOS/
         |       |-- requests.rs
         |       |-- sandboxes.rs
         |       `-- stats.rs
+        |   `-- tests/
+        |       `-- dto_contract.rs
         |
         |-- eos-backend-config/
         |   |-- Cargo.toml
@@ -665,3 +700,4 @@ EphemeralOS/
 | AC10 | V1 request API only supports `sandbox_id` as a per-request sandbox override unless the port/input/preference changes are implemented and tested. |
 | AC11 | Config ownership stays decentralized: backend config owns backend deployment and sandbox lifecycle defaults, agent-core owns provider/workflow config, and sandbox owns daemon/runtime config. |
 | AC12 | The current multi-crate backend structure stays unless implementation proves a crate has no independent ownership boundary. |
+| AC13 | Every backend-server crate keeps tests, fixtures, fakes, mocks, support modules, and harnesses under `backend-server/crates/<crate>/tests/`, not under `src/`. |

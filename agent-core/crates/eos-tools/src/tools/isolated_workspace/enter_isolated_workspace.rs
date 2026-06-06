@@ -3,7 +3,7 @@
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use eos_sandbox_api::{EnterIsolatedWorkspaceRequest, SandboxRequestBase};
+use eos_sandbox_port::{EnterIsolatedWorkspaceRequest, SandboxRequestBase};
 use eos_types::JsonObject;
 use schemars::{schema_for, JsonSchema};
 use serde::{Deserialize, Serialize};
@@ -55,7 +55,7 @@ impl ToolExecutor for EnterIsolatedWorkspace {
             base: SandboxRequestBase::new(agent_run_id.as_str(), "enter isolated workspace", None),
             layer_stack_root: effective_layer_stack_root(&parsed.layer_stack_root),
         };
-        let result = match eos_sandbox_api::enter_isolated_workspace(
+        let result = match eos_sandbox_port::enter_isolated_workspace(
             &*self.service.transport,
             sandbox_id,
             &request,

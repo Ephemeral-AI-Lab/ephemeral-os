@@ -1,0 +1,44 @@
+[package]
+name = "eos-sandbox-host"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+
+[features]
+# Real Docker integration tests that require a running Docker daemon. The
+# bollard adapter always compiles; only the daemon-hitting tests are gated.
+docker = []
+
+[dependencies]
+eos-sandbox-port.workspace = true
+# Direct edge: this crate names eos_types items (SandboxId, JsonObject, Clock,
+# CoreError, RequestId, InvocationId) in its own signatures — see
+# impl-eos-sandbox-host.md §2. eos-sandbox-port does not re-export them.
+eos-types.workspace = true
+# Wire-protocol source of truth (sibling `sandbox/` workspace). Protocol version,
+# field names, exit codes, and the reconnect schedule are consumed from here so a
+# daemon-side bump cannot silently drift the host.
+eos-protocol.workspace = true
+
+tokio = { workspace = true, features = ["net", "process"] }
+bollard.workspace = true
+async-trait.workspace = true
+parking_lot.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+sha2.workspace = true
+tar.workspace = true
+tracing.workspace = true
+futures.workspace = true
+schemars.workspace = true
+uuid.workspace = true
+bytes.workspace = true
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["macros", "rt-multi-thread", "test-util"] }
+proptest.workspace = true
+serde_json.workspace = true
+
+[lints]
+workspace = true

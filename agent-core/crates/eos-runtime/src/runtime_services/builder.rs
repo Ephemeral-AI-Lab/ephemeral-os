@@ -18,15 +18,15 @@ use eos_db::Database;
 use eos_llm_client::{
     Auth, ConfiguredLlmClient, LlmClient, LlmRequest, LlmRequestDefaults, LlmStream, ProviderError,
 };
-use eos_sandbox_api::SandboxTransport;
-use eos_sandbox_host::{
-    resolve_provider_kind, DaemonClient, DockerProviderAdapter, ProviderRegistry,
-    RequestProvisioner, RequestSandboxProvisioner, SandboxLifecycle,
+use eos_sandbox_port::{
+    DaemonOp, RequestProvisioner, RequestSandboxBinding, SandboxPortError, SandboxProvisionError,
+    SandboxTransport,
 };
 use eos_skills::SkillRegistry;
 use eos_tools::{
     build_default_registry, CallerScope, SandboxToolService, ToolConfigSet, ToolKey, ToolRegistry,
 };
+use eos_types::{JsonObject, RequestId, SandboxId};
 
 use super::{
     AgentCoreRegistryService, AuditService, DbStoreService, EngineService, EventSourceFactory,
@@ -49,6 +49,48 @@ impl LlmClient for UnconfiguredLlmClient {
     }
 }
 
+/// Placeholder sandbox transport used when none is injected: every RPC errors.
+/// The Docker/daemon transport now lives in `eos-sandbox-host` and is injected
+/// by the backend composition root (Phase 2 `SandboxGateway`); tests inject a
+/// fake transport. Mirrors [`UnconfiguredLlmClient`].
+#[derive(Debug, Default)]
+struct UnconfiguredSandboxTransport;
+
+#[async_trait]
+impl SandboxTransport for UnconfiguredSandboxTransport {
+    async fn call(
+        &self,
+        _sandbox_id: &SandboxId,
+        _op: DaemonOp,
+        _payload: JsonObject,
+        _timeout_s: u32,
+    ) -> Result<JsonObject, SandboxPortError> {
+        Err(SandboxPortError::transport(
+            None,
+            "no sandbox transport configured (backend must inject a sandbox gateway)",
+        ))
+    }
+}
+
+/// Placeholder request provisioner used when none is injected: `prepare_for_run`
+/// errors. The host-backed provisioner is injected by the backend composition
+/// root; tests inject a fake.
+#[derive(Debug, Default)]
+struct UnconfiguredProvisioner;
+
+#[async_trait]
+impl RequestProvisioner for UnconfiguredProvisioner {
+    async fn prepare_for_run(
+        &self,
+        _request_id: &RequestId,
+        _sandbox_id: Option<&str>,
+    ) -> Result<RequestSandboxBinding, SandboxProvisionError> {
+        Err(SandboxProvisionError::new(
+            "no sandbox provisioner configured (backend must inject a sandbox gateway)",
+        ))
+    }
+}
+
 /// `#[must_use]` builder for [`RuntimeServices`]. Every field is an optional override:
 /// `None` selects the production default. Tests inject in-memory stores, a mock
 /// `event_source_factory`, a fake provisioner, and explicit registries.
@@ -56,7 +98,6 @@ impl LlmClient for UnconfiguredLlmClient {
 #[derive(Default)]
 pub struct RuntimeServicesBuilder {
     database_url: Option<String>,
-    workspace_root: Option<String>,
     llm_client: Option<Arc<dyn LlmClient>>,
     providers_config: Option<ProvidersConfig>,
     workflow_config: Option<WorkflowConfig>,
@@ -87,12 +128,6 @@ impl RuntimeServicesBuilder {
     /// fast).
     pub fn database_url(mut self, url: impl Into<String>) -> Self {
         self.database_url = Some(url.into());
-        self
-    }
-
-    /// Set the workspace root used for build-time defaults.
-    pub fn workspace_root(mut self, workspace_root: impl Into<String>) -> Self {
-        self.workspace_root = Some(workspace_root.into());
         self
     }
 
@@ -211,15 +246,6 @@ impl RuntimeServicesBuilder {
             .await
             .context("opening the sqlite database")?;
 
-        let workspace_root = self
-            .workspace_root
-            .or_else(|| {
-                std::env::current_dir()
-                    .ok()
-                    .map(|p| p.display().to_string())
-            })
-            .unwrap_or_default();
-
         let config_doc = eos_config::load().context("loading runtime config")?;
         let workflow_config = match self.workflow_config {
             Some(config) => config,
@@ -284,14 +310,13 @@ impl RuntimeServicesBuilder {
             ),
         };
 
-        let needs_host_provider = self.transport.is_none() || self.provisioner.is_none();
-        let provider_registry = Arc::new(ProviderRegistry::new());
-        if needs_host_provider {
-            seed_default_sandbox_provider(&provider_registry)?;
-        }
-        let daemon_client = Arc::new(DaemonClient::new(provider_registry));
-        let transport: Arc<dyn SandboxTransport> =
-            self.transport.unwrap_or_else(|| daemon_client.clone());
+        // Sandbox transport/provisioner are injected ports. The Docker/daemon
+        // host implementation lives in `eos-sandbox-host` and is wired by the
+        // backend composition root (Phase 2 `SandboxGateway`); tests inject
+        // fakes. Without injection the placeholders error at first use.
+        let transport: Arc<dyn SandboxTransport> = self
+            .transport
+            .unwrap_or_else(|| Arc::new(UnconfiguredSandboxTransport));
         let mut tool_registry = build_default_registry(&tool_config, &CallerScope::default());
         register_plugin_tools(
             &mut tool_registry,
@@ -304,17 +329,9 @@ impl RuntimeServicesBuilder {
             validate_agent_tools(&agent_registry, &tool_registry)?;
         }
 
-        let eosd_artifact_dir = default_eosd_artifact_dir(&workspace_root);
-
-        let provisioner: Arc<dyn RequestProvisioner> = self.provisioner.unwrap_or_else(|| {
-            let lifecycle = SandboxLifecycle::new(daemon_client.clone(), eosd_artifact_dir);
-            Arc::new(RequestSandboxProvisioner::with_default_snapshot(
-                Arc::new(lifecycle),
-                // No host-side default snapshot: a fresh sandbox uses the
-                // provider default unless a request supplies an explicit id.
-                None,
-            ))
-        });
+        let provisioner: Arc<dyn RequestProvisioner> = self
+            .provisioner
+            .unwrap_or_else(|| Arc::new(UnconfiguredProvisioner));
 
         Ok(RuntimeServices {
             db: DbStoreService {
@@ -456,21 +473,6 @@ fn provider_secret<'a>(
     }
 }
 
-fn seed_default_sandbox_provider(registry: &ProviderRegistry) -> Result<()> {
-    let provider_kind = resolve_provider_kind();
-    let docker = DockerProviderAdapter::connect().context("connecting docker sandbox provider")?;
-    registry.set_default(Arc::new(docker));
-    tracing::info!(
-        sandbox_provider = provider_kind.as_str(),
-        "sandbox provider configured"
-    );
-    Ok(())
-}
-
-fn default_eosd_artifact_dir(workspace_root: &str) -> PathBuf {
-    PathBuf::from(workspace_root).join("sandbox").join("dist")
-}
-
 fn build_agent_registry(dir: Option<&std::path::Path>) -> Result<AgentRegistry> {
     let Some(dir) = dir else {
         return Ok(AgentRegistryBuilder::new().build());
@@ -520,20 +522,4 @@ fn validate_agent_tools(agents: &AgentRegistry, registry: &ToolRegistry) -> Resu
         }
     }
     Ok(())
-}
-
-#[cfg(test)]
-mod tests {
-    // Pure-logic unit test for a module-private fn (no reusable doubles defined,
-    // so I2-permitted inline). The shared Layer-A doubles moved to `eos-testkit`
-    // (`TESTING_SPEC` §7); the behavior tests live in `tests/unit/mod.rs` and pull
-    // those doubles from the `eos-testkit` dev-dep plus the local `support`
-    // module.
-    #[test]
-    fn eosd_artifact_dir_is_repo_sandbox_dist() {
-        assert_eq!(
-            super::default_eosd_artifact_dir("/repo"),
-            std::path::PathBuf::from("/repo/sandbox/dist")
-        );
-    }
 }

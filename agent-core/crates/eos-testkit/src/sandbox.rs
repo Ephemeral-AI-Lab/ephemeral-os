@@ -4,7 +4,7 @@
 //! (`TESTING_SPEC` §7 — the `eos-engine` duplicate is deleted).
 
 use async_trait::async_trait;
-use eos_sandbox_api::{DaemonOp, SandboxApiError, SandboxTransport};
+use eos_sandbox_port::{DaemonOp, SandboxPortError, SandboxTransport};
 use eos_types::{JsonObject, SandboxId};
 
 /// A `SandboxTransport` whose every call returns an empty payload.
@@ -19,7 +19,7 @@ impl SandboxTransport for FakeTransport {
         _op: DaemonOp,
         _payload: JsonObject,
         _timeout_s: u32,
-    ) -> Result<JsonObject, SandboxApiError> {
+    ) -> Result<JsonObject, SandboxPortError> {
         Ok(JsonObject::new())
     }
 }

@@ -2,8 +2,7 @@
 
 use std::sync::Arc;
 
-use eos_sandbox_api::SandboxTransport;
-use eos_sandbox_host::RequestProvisioner;
+use eos_sandbox_port::{RequestProvisioner, SandboxTransport};
 
 /// Sandbox host access for request provisioning and daemon RPC.
 #[derive(Clone)]

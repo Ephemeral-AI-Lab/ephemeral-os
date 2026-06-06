@@ -40,6 +40,6 @@ pub use runtime_services::{
     EventCallback, EventSourceFactory, RuntimeServices, RuntimeServicesBuilder,
 };
 
-// Re-export the sandbox binding value object owned upstream by `eos-sandbox-host`
-// (a parallel agent moved provisioning there); this crate references it.
-pub use eos_sandbox_host::RequestSandboxBinding;
+// Re-export the sandbox binding value object owned by the sandbox port; this
+// crate references it in its public run input/outcome surface.
+pub use eos_sandbox_port::RequestSandboxBinding;

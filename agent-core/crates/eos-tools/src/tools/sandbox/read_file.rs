@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use eos_sandbox_api::ReadFileRequest;
+use eos_sandbox_port::ReadFileRequest;
 use eos_types::JsonObject;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -87,7 +87,7 @@ impl ToolExecutor for ReadFile {
             base: request_base(ctx, &format!("read {path}"))?,
             path: path.clone(),
         };
-        let result = match eos_sandbox_api::read_file(
+        let result = match eos_sandbox_port::read_file(
             &*self.service.transport,
             sandbox_id,
             &request,

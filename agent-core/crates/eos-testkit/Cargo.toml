@@ -15,7 +15,7 @@ eos-types = { workspace = true }
 eos-agent-def = { workspace = true }
 eos-engine = { workspace = true }
 eos-llm-client = { workspace = true }
-eos-sandbox-api = { workspace = true }
+eos-sandbox-port = { workspace = true }
 # `metadata()` builds a real `eos_tools::ExecutionMetadata` over the in-memory
 # store fakes (all types are external to `eos-engine`, so engine in-crate tests
 # can consume it; the dev-only `eos-engine -> eos-testkit -> eos-engine` cycle is

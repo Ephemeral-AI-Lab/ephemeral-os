@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use eos_sandbox_api::ExecStdinRequest;
+use eos_sandbox_port::ExecStdinRequest;
 use eos_types::{CommandSessionId, JsonObject};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -88,7 +88,7 @@ impl ToolExecutor for WriteStdin {
             terminate: parsed.terminate,
         };
         let result =
-            match eos_sandbox_api::exec_stdin(&*self.service.transport, sandbox_id, &write_request)
+            match eos_sandbox_port::exec_stdin(&*self.service.transport, sandbox_id, &write_request)
                 .await
             {
                 Ok(result) => result,

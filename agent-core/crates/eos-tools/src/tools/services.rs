@@ -6,7 +6,7 @@
 use std::{fmt, sync::Arc};
 
 use async_trait::async_trait;
-use eos_sandbox_api::{DaemonOp, SandboxApiError, SandboxTransport};
+use eos_sandbox_port::{DaemonOp, SandboxPortError, SandboxTransport};
 use eos_skills::SkillRegistry;
 use eos_state::{RequestStore, TaskStore};
 use eos_types::{JsonObject, SandboxId};
@@ -190,7 +190,7 @@ impl SandboxTransport for InertSandboxTransport {
         _op: DaemonOp,
         _payload: JsonObject,
         _timeout_s: u32,
-    ) -> Result<JsonObject, SandboxApiError> {
+    ) -> Result<JsonObject, SandboxPortError> {
         Ok(JsonObject::new())
     }
 }

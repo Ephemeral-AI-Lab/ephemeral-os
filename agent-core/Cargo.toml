@@ -3,10 +3,9 @@ resolver = "2"
 members = [
   "crates/eos-types", "crates/eos-config", "crates/eos-state",
   "crates/eos-db", "crates/eos-audit", "crates/eos-llm-client",
-  "crates/eos-agent-def", "crates/eos-sandbox-api", "crates/eos-skills",
+  "crates/eos-agent-def", "crates/eos-sandbox-port", "crates/eos-skills",
   "crates/eos-tools", "crates/eos-engine", "crates/eos-workflow",
-  "crates/eos-obs-collector",
-  "crates/eos-sandbox-host", "crates/eos-plugin-catalog", "crates/eos-runtime",
+  "crates/eos-plugin-catalog", "crates/eos-runtime",
   "crates/eos-testkit",
   "workspace-guard",
 ]
@@ -49,9 +48,6 @@ bytes       = "1"
 base64      = "0.22"
 parking_lot = "0.12"
 secrecy     = "0.8"
-# eos-sandbox-host: typed async Docker Engine API client (hyper 1.x stack, already cached)
-bollard     = "0.17"
-tar         = "0.4"
 uuid        = { version = "1", features = ["v4", "serde"] }
 console-subscriber = "0.4"
 # dev
@@ -69,24 +65,17 @@ eos-db             = { path = "crates/eos-db" }
 eos-audit          = { path = "crates/eos-audit" }
 eos-llm-client     = { path = "crates/eos-llm-client" }
 eos-agent-def      = { path = "crates/eos-agent-def" }
-eos-sandbox-api    = { path = "crates/eos-sandbox-api" }
+eos-sandbox-port   = { path = "crates/eos-sandbox-port" }
 eos-skills         = { path = "crates/eos-skills" }
 eos-tools          = { path = "crates/eos-tools" }
 eos-engine         = { path = "crates/eos-engine" }
 eos-workflow       = { path = "crates/eos-workflow" }
-eos-obs-collector  = { path = "crates/eos-obs-collector" }
-eos-sandbox-host   = { path = "crates/eos-sandbox-host" }
 eos-plugin-catalog = { path = "crates/eos-plugin-catalog" }
 eos-runtime        = { path = "crates/eos-runtime" }
 # Dev-only shared test doubles (scripted LLM/EventSource, fake sandbox edges,
 # AppState builder, Layer-B workflow runners). Consumed under [dev-dependencies]
 # with the minimal feature; the resulting dev-only dep cycles are Cargo-legal.
 eos-testkit        = { path = "crates/eos-testkit" }
-# External edge into the sibling `sandbox/` workspace: the eosd wire-protocol
-# crate is the single source of truth for protocol version, field names, exit
-# codes, and reconnect schedule. Unilateral — `sandbox/` never depends back on
-# agent-core, mirroring the runtime direction (the host dials the daemon).
-eos-protocol       = { path = "../sandbox/crates/eos-protocol" }
 
 [profile.release]
 opt-level = 3

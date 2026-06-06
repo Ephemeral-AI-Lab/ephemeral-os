@@ -12,7 +12,7 @@
 use std::sync::Arc;
 use std::time::Duration;
 
-use eos_sandbox_api::{collect_command_completions, SandboxTransport};
+use eos_sandbox_port::{collect_command_completions, SandboxTransport};
 use eos_tools::NotificationSink;
 use eos_types::SandboxId;
 use serde_json::Value;

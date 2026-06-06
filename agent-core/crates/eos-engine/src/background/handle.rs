@@ -9,7 +9,7 @@
 
 use std::sync::Arc;
 
-use eos_sandbox_api::{CommandSessionCancelRequest, SandboxRequestBase, SandboxTransport};
+use eos_sandbox_port::{CommandSessionCancelRequest, SandboxRequestBase, SandboxTransport};
 use eos_tools::ports::Sealed;
 use eos_tools::{BackgroundInflightReport, WorkflowControlPort};
 use eos_types::AgentRunId;
@@ -114,7 +114,7 @@ impl BackgroundSupervisorHandle {
             command_session_id: command.command_session_id.clone(),
         };
         if let Err(err) =
-            eos_sandbox_api::cancel_command_session(&*self.transport, &command.sandbox_id, &request)
+            eos_sandbox_port::cancel_command_session(&*self.transport, &command.sandbox_id, &request)
                 .await
         {
             tracing::warn!(

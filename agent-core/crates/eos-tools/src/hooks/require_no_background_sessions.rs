@@ -138,7 +138,7 @@ pub(crate) async fn run_require_no_background_sessions(
         ));
     };
 
-    let daemon = match eos_sandbox_api::command_session_count(
+    let daemon = match eos_sandbox_port::command_session_count(
         &**transport,
         sandbox_id,
         agent_run_id.as_str(),
@@ -337,7 +337,7 @@ mod tests {
     // `daemon_unavailable_bailout`).
     #[tokio::test]
     async fn bailout_pass_carries_daemon_unavailable_reason() {
-        use eos_sandbox_api::SandboxApiError;
+        use eos_sandbox_port::SandboxPortError;
 
         use crate::support::{metadata, FakeTransport};
 
@@ -347,7 +347,7 @@ mod tests {
         // Every daemon RPC (here, command_session_count) errors.
         let services = crate::tools::HookServices::new(
             Some(Arc::new(FakeTransport::new(|_, _| {
-                Err(SandboxApiError::Transport {
+                Err(SandboxPortError::Transport {
                     code: None,
                     message: "daemon down".to_owned(),
                 })
@@ -476,7 +476,7 @@ mod tests {
 
     #[tokio::test]
     async fn enter_isolated_workspace_denies_daemon_command_sessions() {
-        use eos_sandbox_api::DaemonOp;
+        use eos_sandbox_port::DaemonOp;
 
         use crate::support::{metadata, FakeTransport};
 
@@ -517,7 +517,7 @@ mod tests {
 
     #[tokio::test]
     async fn exit_isolated_workspace_cancels_subagents_then_denies_command_sessions() {
-        use eos_sandbox_api::DaemonOp;
+        use eos_sandbox_port::DaemonOp;
 
         use crate::support::{metadata, FakeTransport};
 

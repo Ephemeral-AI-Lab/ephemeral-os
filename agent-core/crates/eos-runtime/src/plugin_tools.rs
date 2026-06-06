@@ -10,7 +10,7 @@ use std::sync::Arc;
 use async_trait::async_trait;
 use eos_llm_client::ToolSpec;
 use eos_plugin_catalog::{plugin_package_descriptor, plugin_tool_specs, PluginToolSpec};
-use eos_sandbox_api::{
+use eos_sandbox_port::{
     Intent, PluginDispatchRequest, PluginPackageDescriptor, PluginPackageEnsureRequest,
     SandboxRequestBase,
 };
@@ -103,7 +103,7 @@ impl ToolExecutor for PluginToolExecutor {
             ctx.sandbox_invocation_id.clone(),
         );
         ensure_plugin_runtime(&self.service, &self.package, &base, ctx).await?;
-        let response = eos_sandbox_api::plugin_dispatch(
+        let response = eos_sandbox_port::plugin_dispatch(
             &*self.service.transport(),
             sandbox_id,
             PluginDispatchRequest {
@@ -128,7 +128,7 @@ async fn ensure_plugin_runtime(
     ctx: &ExecutionMetadata,
 ) -> Result<(), ToolError> {
     let sandbox_id = ctx.require_sandbox_id()?;
-    eos_sandbox_api::ensure_plugin_package(
+    eos_sandbox_port::ensure_plugin_package(
         &*service.transport(),
         sandbox_id,
         PluginPackageEnsureRequest {
@@ -167,7 +167,7 @@ mod tests {
     use super::*;
     use std::sync::Mutex;
 
-    use eos_sandbox_api::{DaemonOp, SandboxApiError, SandboxTransport};
+    use eos_sandbox_port::{DaemonOp, SandboxPortError, SandboxTransport};
     use eos_types::SandboxId;
     use serde_json::json;
 
@@ -287,7 +287,7 @@ mod tests {
             op: DaemonOp,
             payload: JsonObject,
             timeout_s: u32,
-        ) -> Result<JsonObject, SandboxApiError> {
+        ) -> Result<JsonObject, SandboxPortError> {
             self.calls.lock().expect("calls lock").push(RecordedCall {
                 op: op.as_wire().to_owned(),
                 payload,
@@ -302,7 +302,7 @@ mod tests {
             op: &str,
             payload: JsonObject,
             timeout_s: u32,
-        ) -> Result<JsonObject, SandboxApiError> {
+        ) -> Result<JsonObject, SandboxPortError> {
             self.calls.lock().expect("calls lock").push(RecordedCall {
                 op: op.to_owned(),
                 payload,

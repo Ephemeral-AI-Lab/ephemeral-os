@@ -1,13 +1,13 @@
 //! [`ToolIntent`] — the tool-classification intent (read-only / write / lifecycle).
 //!
 //! `eos-tools` owns this enum (anchor §5). It shares the three values of
-//! `eos_sandbox_api::Intent` (the foreground sandbox-call intent) but is a
+//! `eos_sandbox_port::Intent` (the foreground sandbox-call intent) but is a
 //! distinct, locally-owned contract; the sandbox boundary converts via
 //! [`From`]/[`Into`] rather than aliasing another crate's type (GC: avoids an
 //! unrecorded cross-crate ownership inversion). The lifecycle-batch predicate
 //! (`runtime/dispatch.rs`) and sandbox routing both read this.
 
-use eos_sandbox_api::Intent;
+use eos_sandbox_port::Intent;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 

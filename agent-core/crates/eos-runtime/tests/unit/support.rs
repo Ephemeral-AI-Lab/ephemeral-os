@@ -15,7 +15,7 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use eos_agent_def::{AgentDefinition, AgentRegistry};
-use eos_sandbox_host::{RequestProvisioner, RequestSandboxBinding, SandboxHostError};
+use eos_sandbox_port::{RequestProvisioner, RequestSandboxBinding, SandboxProvisionError};
 use eos_testkit::FakeTransport;
 use eos_types::RequestId;
 
@@ -42,7 +42,7 @@ impl RequestProvisioner for FakeProvisioner {
         &self,
         request_id: &RequestId,
         sandbox_id: Option<&str>,
-    ) -> Result<RequestSandboxBinding, SandboxHostError> {
+    ) -> Result<RequestSandboxBinding, SandboxProvisionError> {
         let resolved = sandbox_id
             .map(str::trim)
             .filter(|s| !s.is_empty())
@@ -50,7 +50,7 @@ impl RequestProvisioner for FakeProvisioner {
         Ok(RequestSandboxBinding {
             sandbox_id: resolved
                 .parse()
-                .map_err(|_| SandboxHostError::InvalidRequest("empty sandbox id".to_owned()))?,
+                .map_err(|_| SandboxProvisionError::new("empty sandbox id"))?,
             request_id: request_id.clone(),
         })
     }
@@ -69,7 +69,6 @@ pub(crate) async fn build_test_state(
     let registry: AgentRegistry = agents.into_iter().collect();
     let mut builder = RuntimeServices::builder()
         .database_url(url)
-        .workspace_root(dir.path().display().to_string())
         .tools_root(eos_testkit::test_tools_root())
         .provisioner(Arc::new(FakeProvisioner::default()))
         .transport(Arc::new(FakeTransport))

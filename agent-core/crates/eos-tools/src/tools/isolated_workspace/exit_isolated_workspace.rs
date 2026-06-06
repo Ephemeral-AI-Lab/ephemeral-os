@@ -3,7 +3,7 @@
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use eos_sandbox_api::{ExitIsolatedWorkspaceRequest, SandboxRequestBase};
+use eos_sandbox_port::{ExitIsolatedWorkspaceRequest, SandboxRequestBase};
 use eos_types::JsonObject;
 use schemars::{schema_for, JsonSchema};
 use serde::{Deserialize, Serialize};
@@ -60,7 +60,7 @@ impl ToolExecutor for ExitIsolatedWorkspace {
             base: SandboxRequestBase::new(agent_run_id.as_str(), "exit isolated workspace", None),
             grace_s: parsed.grace_s,
         };
-        let result = match eos_sandbox_api::exit_isolated_workspace(
+        let result = match eos_sandbox_port::exit_isolated_workspace(
             &*self.service.transport,
             sandbox_id,
             &request,

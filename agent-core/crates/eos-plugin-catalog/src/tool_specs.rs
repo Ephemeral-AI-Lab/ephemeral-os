@@ -14,7 +14,7 @@
 //! stay [`JsonObject`] (the daemon-side Pyright runtime owns the full
 //! `WorkspaceEdit`/`CodeAction` schema, GC-plugin-catalog-05).
 
-use eos_sandbox_api::Intent;
+use eos_sandbox_port::Intent;
 use eos_types::JsonObject;
 use schemars::schema::RootSchema;
 use schemars::{schema_for, JsonSchema};

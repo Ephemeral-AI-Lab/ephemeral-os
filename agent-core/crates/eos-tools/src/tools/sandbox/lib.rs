@@ -1,6 +1,6 @@
 use std::collections::BTreeMap;
 
-use eos_sandbox_api::{ExecCommandResult, SandboxRequestBase};
+use eos_sandbox_port::{ExecCommandResult, SandboxRequestBase};
 use eos_types::JsonObject;
 use serde::Serialize;
 use serde_json::{json, Value};
@@ -116,7 +116,7 @@ pub(super) fn mutation_result(success: bool, output: MutationOutput) -> ToolResu
 pub(super) fn edit_output(
     ctx: &ExecutionMetadata,
     file_path: String,
-    base: &eos_sandbox_api::SandboxResultBase,
+    base: &eos_sandbox_port::SandboxResultBase,
     changed_path_kinds: BTreeMap<String, String>,
     mutation_source: String,
     applied_edits: u64,
@@ -208,7 +208,7 @@ pub(super) fn command_tool_result_from_value(result: &Value) -> ToolResult {
         .and_then(Value::as_str)
         .unwrap_or("")
         .to_owned();
-    let is_error = eos_sandbox_api::KnownCommandStatus::is_error_raw(&status);
+    let is_error = eos_sandbox_port::KnownCommandStatus::is_error_raw(&status);
     let mut output_map = BTreeMap::new();
     output_map.insert("stdout".to_owned(), stdout.clone());
     output_map.insert("stderr".to_owned(), stderr.clone());

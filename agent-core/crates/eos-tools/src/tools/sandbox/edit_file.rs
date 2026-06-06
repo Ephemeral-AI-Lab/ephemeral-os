@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use eos_sandbox_api::{EditFileRequest, SearchReplaceEdit};
+use eos_sandbox_port::{EditFileRequest, SearchReplaceEdit};
 use eos_types::JsonObject;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -69,7 +69,7 @@ impl ToolExecutor for EditFile {
                 replace_all: parsed.replace_all,
             }],
         };
-        let result = match eos_sandbox_api::edit_file(
+        let result = match eos_sandbox_port::edit_file(
             &*self.service.transport,
             sandbox_id,
             &request,

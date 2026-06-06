@@ -1,7 +1,7 @@
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
 
-use eos_sandbox_api::{DaemonOp, SandboxApiError};
+use eos_sandbox_port::{DaemonOp, SandboxPortError};
 use eos_types::JsonObject;
 use serde_json::{json, Value};
 
@@ -31,11 +31,11 @@ fn metadata() -> ExecutionMetadata {
     }
 }
 
-fn sandbox_service(transport: Arc<dyn eos_sandbox_api::SandboxTransport>) -> SandboxToolService {
+fn sandbox_service(transport: Arc<dyn eos_sandbox_port::SandboxTransport>) -> SandboxToolService {
     SandboxToolService::new(transport)
 }
 
-fn command_service(transport: Arc<dyn eos_sandbox_api::SandboxTransport>) -> CommandToolService {
+fn command_service(transport: Arc<dyn eos_sandbox_port::SandboxTransport>) -> CommandToolService {
     CommandToolService::new(transport, None)
 }
 
@@ -99,7 +99,7 @@ async fn write_stdin_ctrl_c_does_not_escalate_to_cancel() {
             cancels_seen.fetch_add(1, Ordering::SeqCst);
             Ok(obj(&[("status", json!("cancelled"))]))
         }
-        other => Err(SandboxApiError::decode(format!("unexpected op {other:?}"))),
+        other => Err(SandboxPortError::decode(format!("unexpected op {other:?}"))),
     }));
     let tool = WriteStdin::new(command_service(transport));
     let ctx = metadata();
@@ -134,7 +134,7 @@ async fn write_stdin_terminate_forwards_flag() {
                 ("output", json!({"stdout": "", "stderr": ""})),
             ]))
         }
-        other => Err(SandboxApiError::decode(format!("unexpected op {other:?}"))),
+        other => Err(SandboxPortError::decode(format!("unexpected op {other:?}"))),
     }));
     let tool = WriteStdin::new(command_service(transport));
     let ctx = metadata();
@@ -160,7 +160,7 @@ async fn write_stdin_plain_does_not_cancel() {
             ("status", json!("running")),
             ("output", json!({"stdout": "ok", "stderr": ""})),
         ])),
-        other => Err(SandboxApiError::decode(format!("unexpected op {other:?}"))),
+        other => Err(SandboxPortError::decode(format!("unexpected op {other:?}"))),
     }));
     let tool = WriteStdin::new(command_service(transport));
     let ctx = metadata();

@@ -1,6 +1,6 @@
 //! Catalog-owned plugin package descriptors.
 
-use eos_sandbox_api::{
+use eos_sandbox_port::{
     Intent, PluginDependencyScope, PluginManifestDescriptor, PluginOperationDescriptor,
     PluginPackageContract, PluginPackageDescriptor, PluginPackageFile, PluginPackageTree,
     PluginRefreshStrategy, PluginServiceDescriptor, PluginServiceMode, PluginSetupDescriptor,

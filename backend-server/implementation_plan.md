@@ -13,8 +13,8 @@ has an unchecked hard item.
 
 | Phase | Scope | Status | Blocks | Exit proof |
 |---|---|---|---|---|
-| 0 | Baseline, ownership audit, and migration guardrails | not_started | all phases | Audit notes, dependency scan, clean doc checks |
-| 1 | Workspace scaffold and crate relocation | not_started | 2, 3, 4, 5, 6, 7 | `agent-core` has port-only sandbox deps; backend workspace builds |
+| 0 | Baseline, ownership audit, and migration guardrails | complete | all phases | Phase 0 notes below |
+| 1 | Workspace scaffold and crate relocation | complete | 2, 3, 4, 5, 6, 7 | `agent-core` has port-only sandbox deps; backend workspace builds |
 | 2 | Agent-core runtime seams | not_started | 4, 5, 6, 7 | production `SandboxGateway` injection and `state_reader()` compile |
 | 3 | Backend config, types, store, and migrations | not_started | 4, 5, 6, 7 | config/store tests pass with backend DB schema |
 | 4 | Sandbox lifecycle manager | not_started | 5, 6, 7 | lifecycle/refcount/delete-guard tests pass |
@@ -58,13 +58,13 @@ Implementation components:
 
 Hard acceptance checklist:
 
-- [ ] `git status --short` is captured in the phase notes.
-- [ ] No unrelated user/agent changes are reverted or overwritten.
-- [ ] `backend-server/SPEC.md` passes `git diff --check`.
-- [ ] `backend-server/implementation_plan.md` passes `git diff --check`.
-- [ ] Current dependency edges are recorded with `cargo metadata` or targeted
+- [x] `git status --short` is captured in the phase notes.
+- [x] No unrelated user/agent changes are reverted or overwritten.
+- [x] `backend-server/SPEC.md` passes `git diff --check`.
+- [x] `backend-server/implementation_plan.md` passes `git diff --check`.
+- [x] Current dependency edges are recorded with `cargo metadata` or targeted
   `rg` scans before relocation starts.
-- [ ] The phase notes list any pre-existing build failures separately from this
+- [x] The phase notes list any pre-existing build failures separately from this
   implementation plan.
 
 Verification commands:
@@ -79,6 +79,18 @@ rg -n "eos-sandbox-host|eos-protocol|eos-sandbox-api|eos-sandbox-port" agent-cor
 
 Exit gate: the live baseline is documented, and any failure is classified as
 pre-existing, introduced, or blocked by concurrent work.
+
+Phase 0 completion notes:
+
+| Item | Result |
+|---|---|
+| Completed | 2026-06-06 |
+| `git status --short` | Clean at verification time. |
+| `git diff --check -- backend-server/SPEC.md backend-server/implementation_plan.md` | Passed. |
+| Dependency baseline | `agent-core` still has pre-implementation `eos-sandbox-api`, `eos-sandbox-host`, and `eos-obs-collector` / `eos-protocol` edges. Phase 1 owns removing or relocating those edges. |
+| `cd agent-core && cargo check -p eos-runtime --all-targets` | Passed. |
+| `cd sandbox && cargo check --workspace --all-targets` | Passed. |
+| Pre-existing build failures | None observed in Phase 0 verification. |
 
 ## Phase 1 - Workspace Scaffold And Crate Relocation
 
@@ -97,15 +109,15 @@ Implementation components:
 
 Hard acceptance checklist:
 
-- [ ] Backend workspace manifests exist for every crate named in `SPEC.md`.
-- [ ] `agent-core` no longer depends on `eos-sandbox-host`.
-- [ ] `agent-core` no longer depends on `eos-protocol` through the obs collector.
-- [ ] `eos-tools`, `eos-engine`, and `eos-runtime` depend on `eos-sandbox-port`
+- [x] Backend workspace manifests exist for every crate named in `SPEC.md`.
+- [x] `agent-core` no longer depends on `eos-sandbox-host`.
+- [x] `agent-core` no longer depends on `eos-protocol` through the obs collector.
+- [x] `eos-tools`, `eos-engine`, and `eos-runtime` depend on `eos-sandbox-port`
   for sandbox contracts.
-- [ ] `sandbox/crates/*` has no dependency on `backend-server` or `agent-core`.
-- [ ] The move is behavior-preserving: no sandbox lifecycle behavior is changed
+- [x] `sandbox/crates/*` has no dependency on `backend-server` or `agent-core`.
+- [x] The move is behavior-preserving: no sandbox lifecycle behavior is changed
   in this phase beyond import/path updates.
-- [ ] `eos-sandbox-port` public errors and names use port vocabulary, not stale
+- [x] `eos-sandbox-port` public errors and names use port vocabulary, not stale
   API vocabulary, unless a compatibility re-export is documented.
 
 Verification commands:
@@ -445,4 +457,66 @@ Verification commands:
 Failures:
 Spec deviations:
 Next phase unblockers:
+```
+
+## Phase 1 Execution Notes
+
+```text
+Phase: 1 - Workspace Scaffold And Crate Relocation
+Status: complete
+Touched files:
+  - Renamed agent-core/crates/eos-sandbox-api -> eos-sandbox-port (git mv);
+    global rename eos_sandbox_api->eos_sandbox_port, SandboxApiError->SandboxPortError
+    across all agent-core consumers (eos-tools, eos-engine, eos-plugin-catalog,
+    eos-testkit, eos-runtime) and snapshot `source:` headers.
+  - New eos-sandbox-port/src/provision.rs: RequestProvisioner trait,
+    RequestSandboxBinding, SandboxProvisionError (moved out of eos-sandbox-host);
+    re-exported from lib.rs.
+  - eos-runtime builder.rs: removed host construction (DaemonClient/
+    DockerProviderAdapter/ProviderRegistry/SandboxLifecycle/RequestSandboxProvisioner);
+    added Unconfigured{SandboxTransport,Provisioner} erroring defaults (mirror
+    UnconfiguredLlmClient); deleted orphaned seed_default_sandbox_provider,
+    default_eosd_artifact_dir + its test; removed now-dead workspace_root field/
+    setter/local and its two test call sites. sandbox.rs/lib.rs/tests support
+    repointed to eos-sandbox-port. Dropped eos-sandbox-host dep.
+  - eos-sandbox-host provisioning.rs/lib.rs: consume the port trait, map
+    SandboxHostError -> SandboxProvisionError at the trait impl boundary.
+  - git mv eos-sandbox-host + eos-obs-collector -> backend-server/crates/.
+  - agent-core/Cargo.toml: dropped eos-sandbox-host/eos-obs-collector members +
+    path deps; dropped now-orphaned eos-protocol, bollard, tar workspace deps.
+    Scrubbed the stale "eos-sandbox-host" comment in eos-tools/Cargo.toml.
+  - New backend-server/Cargo.toml workspace + 7 stub crates (eos-backend-{types,
+    config,store,runtime,obs,api,main}); external dep versions and lint/profile
+    blocks mirrored from agent-core; cross-workspace path deps into
+    agent-core (eos-sandbox-port/eos-types/eos-audit) and sandbox (eos-protocol).
+Concurrent work observed: another agent marked Phase 0 complete and owns the
+  Phase 0 notes; left untouched. Pre-existing untracked `.omc/` tool-state dirs
+  were carried by git mv and left as-is (not source, not mine).
+Checklist results: all 7 Phase 1 hard items checked.
+Verification commands (all pass):
+  - rg -n "eos-sandbox-host|eos-protocol" agent-core/crates -g Cargo.toml -> empty
+  - rg -n "backend-server|agent-core" sandbox/crates -g Cargo.toml -> empty
+  - (cd agent-core && cargo check -p eos-runtime --all-targets) -> ok
+  - (cd agent-core && cargo test -p eos-runtime) -> 22 passed
+  - (cd agent-core && cargo check --workspace --all-targets) -> ok
+  - (cd backend-server && cargo check --workspace --all-targets) -> ok
+  - (cd sandbox && cargo check --workspace --all-targets) -> ok
+  - cargo clippy on eos-sandbox-port, eos-runtime, backend-server workspace -> clean
+  - cargo tree -p eos-runtime (no-dev): links eos-sandbox-port, not host/obs/protocol
+Failures: none.
+Spec deviations:
+  - "behavior-preserving" reading: sandbox lifecycle code (Docker/daemon/provisioner)
+    moved intact; only the composition-root wiring changed — eos-runtime's builder
+    no longer self-constructs the Docker default and instead requires an injected
+    transport/provisioner (erroring placeholders until injection). This is the
+    point of the relocation, matching the SPEC build order (relocate first, add
+    typed gateway injection next), not a lifecycle behavior change.
+  - The Phase 1 "Port crate" component lists gateway.rs; SandboxGateway and
+    gateway.rs are deferred to Phase 2 per SPEC build order (gateway lands with
+    production-visible injection). No empty stub created. The provisioner()
+    builder setter stays #[cfg(test)]; production-visible injection is Phase 2.
+Next phase unblockers: Phase 2 can now define the object-safe SandboxGateway in
+  eos-sandbox-port, make RuntimeServicesBuilder accept a production gateway
+  injection (replace the cfg(test) provisioner setter), and add
+  RuntimeServices::state_reader() + store list APIs.
 ```

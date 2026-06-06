@@ -1,7 +1,7 @@
 use std::collections::BTreeMap;
 
 use async_trait::async_trait;
-use eos_sandbox_api::WriteFileRequest;
+use eos_sandbox_port::WriteFileRequest;
 use eos_types::JsonObject;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -54,7 +54,7 @@ impl ToolExecutor for WriteFile {
             overwrite: true,
         };
         let result =
-            match eos_sandbox_api::write_file(&*self.service.transport, sandbox_id, &request).await
+            match eos_sandbox_port::write_file(&*self.service.transport, sandbox_id, &request).await
             {
                 Ok(result) => result,
                 Err(err) => return Ok(ToolResult::error(err.to_string())),

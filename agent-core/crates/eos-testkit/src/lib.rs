@@ -3,7 +3,7 @@
 //! The single home for the doubles per-crate mock tests substitute at the LLM
 //! and daemon-RPC edges: the scripted [`EventSource`](eos_engine::EventSource)
 //! ([`ScriptedSource`] — the only definition in the workspace, `TESTING_SPEC` AC3),
-//! the fake [`SandboxTransport`](eos_sandbox_api::SandboxTransport)
+//! the fake [`SandboxTransport`](eos_sandbox_port::SandboxTransport)
 //! ([`FakeTransport`]), agent-definition builders, the `run_until` stream
 //! stepper, and the [`ExecutionMetadata`](eos_tools::ExecutionMetadata) fixture
 //! ([`metadata`]). Consumed as a `[dev-dependencies]` crate, so its `src/` *is*

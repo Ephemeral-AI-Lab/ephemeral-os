@@ -10,7 +10,7 @@
 //! surfaces `Err` to triage. Python returned the internal-validation branch
 //! in-band; the Rust ACs (AC-tools-02..04) encode this new boundary.
 
-use eos_sandbox_api::SandboxApiError;
+use eos_sandbox_port::SandboxPortError;
 use eos_types::CoreError;
 
 /// A framework fault during tool execution. Tool-domain failures are in-band
@@ -37,7 +37,7 @@ pub enum ToolError {
 
     /// A sandbox transport / daemon RPC failed at the framework level.
     #[error("sandbox error: {0}")]
-    Sandbox(#[from] SandboxApiError),
+    Sandbox(#[from] SandboxPortError),
 
     /// An internal invariant broke (should not happen in correct wiring).
     #[error("internal tool error: {0}")]

@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use eos_sandbox_api::ExecCommandRequest;
+use eos_sandbox_port::ExecCommandRequest;
 use eos_types::{InvocationId, JsonObject};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -81,7 +81,7 @@ impl ToolExecutor for ExecCommand {
             max_output_tokens: parsed.max_output_tokens,
         };
         let result =
-            match eos_sandbox_api::exec_command(&*self.service.transport, sandbox_id, &request)
+            match eos_sandbox_port::exec_command(&*self.service.transport, sandbox_id, &request)
                 .await
             {
                 Ok(result) => result,

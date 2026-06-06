@@ -1071,7 +1071,7 @@ mod command_session_delivery {
     use eos_agent_def::{AgentRegistry, AgentRole};
     use eos_engine::{EngineError, EngineStream, EventSource, StreamEvent};
     use eos_llm_client::{ContentBlock, LlmRequest};
-    use eos_sandbox_api::{DaemonOp, SandboxApiError, SandboxTransport};
+    use eos_sandbox_port::{DaemonOp, SandboxPortError, SandboxTransport};
     use eos_state::TaskStatus;
     use eos_types::{JsonObject, RequestId, SandboxId};
     use serde_json::json;
@@ -1097,7 +1097,7 @@ mod command_session_delivery {
             op: DaemonOp,
             _payload: JsonObject,
             _timeout_s: u32,
-        ) -> Result<JsonObject, SandboxApiError> {
+        ) -> Result<JsonObject, SandboxPortError> {
             let value = match op {
                 DaemonOp::ExecCommand => json!({
                     "status": "running",
@@ -1231,7 +1231,6 @@ mod command_session_delivery {
         let registry: AgentRegistry = vec![root, advisor].into_iter().collect();
         let state = RuntimeServices::builder()
             .database_url(url)
-            .workspace_root(dir.path().display().to_string())
             .tools_root(eos_testkit::test_tools_root())
             .provisioner(Arc::new(FakeProvisioner::default()))
             .transport(Arc::new(CommandCompletionTransport))
