@@ -37,7 +37,7 @@ mod tests;
 pub use entry::{run_request, RequestOutcome};
 pub use request_input::RequestRunInput;
 pub use runtime_services::{
-    EventCallback, EventSourceFactory, RuntimeServices, RuntimeServicesBuilder,
+    EventCallback, EventSourceFactory, RuntimeServices, RuntimeServicesBuilder, StateReader,
 };
 
 // Re-export the sandbox binding value object owned by the sandbox port; this

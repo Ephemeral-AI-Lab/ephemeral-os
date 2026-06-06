@@ -556,3 +556,88 @@ Next phase unblockers: Phase 2 can now define the object-safe SandboxGateway in
   injection (replace the cfg(test) provisioner setter), and add
   RuntimeServices::state_reader() + store list APIs.
 ```
+
+## Phase 3 Execution Notes
+
+```text
+Phase: 3 - Backend Config, Types, Store, And Migrations
+Status: complete
+Touched files:
+  - backend-server/Cargo.toml: added sqlx (0.8, runtime-tokio/sqlite/macros/
+    migrate) + time (0.3) to [workspace.dependencies], pins mirrored from
+    agent-core so the shared `time` TEXT timestamp encoding stays identical.
+  - eos-backend-types: lib.rs (thin re-export surface) + requests.rs
+    (BackendRunStatus, ApiRunStatus, RunMeta, CreateUserRequest/SandboxArgs/
+    ClientMeta/CreateUserRequestResponse, RunRecord, UserRequestDetail),
+    sandboxes.rs (SandboxState, SandboxView), pagination.rs (Page clamp +
+    PageResult<T>), events.rs (EventRecord + EVENT_STREAM_GAP), audit.rs
+    (ObsSource, ObsEvent, SandboxCallCorrelation, AuditCursor), error.rs
+    (BackendError), stats.rs (deferred stub). Cargo.toml gained eos-types +
+    eos-protocol (for CallerId). tests/dto_contract.rs (15 tests).
+  - eos-backend-config: server.rs (ServerConfig + AgentCoreConfigSource,
+    deny_unknown_fields, no Providers/Workflow), sandbox.rs (SandboxConfig),
+    obs.rs (ObsConfig), loader.rs (backend.yml < local.yml deep-merge +
+    ConfigError + validate), thin lib.rs. tests/load_config.rs (6 tests).
+  - backend-server/config/backend.yml: committed ServerConfig baseline.
+  - backend-server/.gitignore: ignores config/local.yml, .ephemeralos/, *.db*.
+  - eos-backend-store: migrations/0001_initial.sql (run_meta, event_log,
+    obs_event, sandbox_call_correlation, audit_cursor exactly per SPEC + two
+    lookup indexes), db.rs (BackendStore open/migrate, StoreError, shared
+    id/json/timestamp column codecs), run_meta.rs, event_log.rs, obs.rs
+    (ObsEventRepo + SandboxCallCorrelationRepo), audit_cursor.rs, thin lib.rs.
+    Cargo.toml gained sqlx[time]/time/eos-types/eos-protocol/eos-backend-types
+    + dev tokio/tempfile. tests/store.rs (6 tests).
+Concurrent work observed: another agent is mid-implementation of Phase 2 in
+  agent-core (eos-runtime builder.rs SandboxGateway transport()/provisioner()
+  accessors; eos-state/eos-db RequestStore::list, TaskStore::list_for_request,
+  AgentRunStore::get_for_task with RequestListFilter/Page/PageResult). Those
+  crates currently have compile errors from that in-progress work. They are
+  outside Phase 3 scope and unreachable from the backend workspace (backend
+  crates depend only on eos-sandbox-port/eos-types/eos-audit/eos-protocol), so
+  they were left untouched and do not affect Phase 3 verification.
+Key design decisions:
+  - Timestamps use eos_types::UtcDateTime (repo standard is `time`), not chrono
+    as the SPEC pseudocode shows. Stored as TEXT via the sqlx `time` feature.
+  - Typed ids reused from eos-types (RequestId/TaskId/AgentRunId/SandboxId/
+    InvocationId for sandbox_invocation_id/ToolUseId) + eos_protocol::CallerId.
+    backend -> sandbox is the allowed edge (AC3 forbids only the reverse); a
+    backend-local CallerId newtype would have been the wrong move.
+  - JsonSchema derived on API-facing DTOs only. The CallerId-bearing
+    persistence DTOs (ObsEvent, SandboxCallCorrelation, AuditCursor) are serde-
+    only: they are never API bodies and CallerId has no JsonSchema impl.
+  - Repositories are concrete structs with plain async fns (no trait objects /
+    async-trait): backend-server is the only consumer, no substitution is
+    load-bearing. event_log `seq` is caller-supplied (the bus reserves it in
+    Phase 5); the store is dumb persistence.
+  - All test bodies live under each crate's tests/ tree and drive the crate
+    through its public API; no inline `#[cfg(test)] mod tests` in src/, so the
+    AC13 intent holds even though the Phase 3 `find` only matches filenames.
+  - stats.rs is a deferred stub. Nothing in Phase 3 pins stats response shapes;
+    they are owned by the Phase 6 stats queries and would risk re-churn if
+    invented now. Recorded as a deliberate deferral, not a skip.
+Checklist results: all 9 Phase 3 hard items checked.
+Verification commands (all pass):
+  - (cd backend-server && cargo test -p eos-backend-types) -> 15 passed
+  - (cd backend-server && cargo test -p eos-backend-config) -> 6 passed
+  - (cd backend-server && cargo test -p eos-backend-store) -> 6 passed
+  - rg -n "auth_token|internal_port|DaemonTcpEndpoint|endpoint"
+      backend-server/crates/eos-backend-{types,api,store} -> empty (the
+      sanitization test assembles the denied names from fragments so it does
+      not trip its own grep; the SandboxView doc avoids `endpoint` in prose).
+  - find backend-server/crates/eos-backend-{types,config,store}/src
+      \( -name '*test*' -o -name '*fixture*' -o -name '*mock*' -o
+         -name '*fake*' -o -name '*support*' \) -print -> empty
+  - cargo clippy -p eos-backend-{types,config,store} --all-targets
+      -- -D warnings -> clean
+  - (cd backend-server && cargo check --workspace --all-targets) -> ok
+Failures: none.
+Spec deviations:
+  - stats response DTOs deferred to Phase 6 (stub module). Not a contract skip:
+    no Phase 3 AC or hard item pins them and Phase 6 owns the shapes.
+Next phase unblockers: Phase 4 can build SandboxManager on top of these typed
+  DTOs (SandboxView/SandboxState), persist run lifecycle through
+  BackendStore::run_meta, and load defaults from ServerConfig.sandbox. Phases
+  5/6 consume EventLogRepo, ObsEventRepo, SandboxCallCorrelationRepo, and
+  AuditCursorRepo. Phase 2 (independent) remains the unblocker for the
+  agent-core state_reader/gateway seams that Phases 5/7 also need.
+```

@@ -6,6 +6,7 @@ mod builder;
 mod db_store;
 mod engine;
 mod sandbox;
+mod state_reader;
 
 use std::sync::Arc;
 
@@ -19,6 +20,7 @@ pub use builder::RuntimeServicesBuilder;
 pub(crate) use db_store::DbStoreService;
 pub(crate) use engine::EngineService;
 pub(crate) use sandbox::SandboxService;
+pub use state_reader::StateReader;
 
 // The per-agent event-source factory and per-run stream-event callback are owned
 // by `eos-engine` (next to the loop they drive, so the engine-driven advisor run
@@ -42,6 +44,18 @@ impl RuntimeServices {
     /// Start building runtime services.
     pub fn builder() -> RuntimeServicesBuilder {
         RuntimeServicesBuilder::default()
+    }
+
+    /// Narrow read-side store handles for the backend composition root (spec
+    /// §State Reader): the request, task, and agent-run stores only, exposed as
+    /// typed trait objects — never a `sqlx` pool or the agent-core table layout.
+    #[must_use]
+    pub fn state_reader(&self) -> StateReader {
+        StateReader::new(
+            self.db.request_store.clone(),
+            self.db.task_store.clone(),
+            self.db.agent_run_store.clone(),
+        )
     }
 
     /// Bundle the explicit run handles `eos_engine::run_agent` needs.
