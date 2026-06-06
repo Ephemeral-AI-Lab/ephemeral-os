@@ -4,7 +4,7 @@
 //! [`AuditSink::publish`] is synchronous and borrows its [`AuditEvent`]. This sink
 //! converts the borrowed event into an **owned** [`ObsEvent`] and `try_send`s it
 //! into a bounded channel; a full queue returns [`AuditError::Backpressure`] and
-//! bumps a dropped counter — `publish` never `.await`s and never touches SQLite. A
+//! bumps a dropped counter — `publish` never `.await`s and never touches `SQLite`. A
 //! dedicated async drainer owns each payload and persists it through
 //! [`ObsEventRepo`], retrying once on a transient failure and otherwise counting a
 //! durable persist loss. The flow mirrors `eos_audit::BufferedJsonlSink` (a bounded

@@ -6,7 +6,7 @@
 //! (agent name, token count, terminal outcome) is owned by the Phase 7 read
 //! handler through `RuntimeServices::state_reader()`.
 //!
-//! These are serde-only for now; `JsonSchema`/OpenAPI pinning is owned by the
+//! These are serde-only for now; `JsonSchema`/`OpenAPI` pinning is owned by the
 //! Phase 7 API crate alongside the route shapes.
 
 use serde::{Deserialize, Serialize};

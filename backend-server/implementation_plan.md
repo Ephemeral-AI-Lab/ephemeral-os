@@ -19,7 +19,7 @@ has an unchecked hard item.
 | 3 | Backend config, types, store, and migrations | complete | 4, 5, 6, 7 | config/store tests pass with backend DB schema |
 | 4 | Sandbox lifecycle manager | complete | 5, 6, 7 | lifecycle/refcount/delete-guard tests pass (17 manager tests) |
 | 5 | Run launcher, cancellation, reaper, and event bus | complete | 6, 7 | launcher/event_bus/reaper/status tests pass (22 Phase 5 tests) |
-| 6 | Observability, audit ingestion, and stats | not_started | 7 | audit/correlation/stats tests pass |
+| 6 | Observability, audit ingestion, and stats | complete | 7 | obs sink/ingestor/stats tests pass (7 obs + 2 store-agg); correlation pre-dispatch write deferred to 7/8 |
 | 7 | HTTP API, streaming API, and OpenAPI | not_started | 8 | API contract and stream replay tests pass |
 | 8 | Live E2E, dependency audit, and closeout | not_started | release | Docker-backed backend-to-agent-core-to-sandbox smoke passes |
 
@@ -333,21 +333,25 @@ Implementation components:
 
 Hard acceptance checklist:
 
-- [ ] `PersistingSink::publish` returns quickly and never awaits.
-- [ ] Full audit queue returns `AuditError` and increments dropped-audit count.
-- [ ] Drainer owns the payload and does not store borrowed `AuditEvent`
+- [x] `PersistingSink::publish` returns quickly and never awaits.
+- [x] Full audit queue returns `AuditError` and increments dropped-audit count.
+- [x] Drainer owns the payload and does not store borrowed `AuditEvent`
   references.
 - [ ] `sandbox_call_correlation` is written for sandbox calls before daemon
-  request dispatch.
-- [ ] Audit ingestor never copies `sandbox_invocation_id` into `tool_use_id`.
-- [ ] Unmatched audit rows persist with null model-facing IDs and an unmatched
+  request dispatch. (DEFERRED to Phase 7/8 — see Phase 6 notes: no
+  correlation-recorder port exists yet, and neither the sink path nor a daemon
+  audit event alone carries both the model `tool_use_id` and the minted
+  `sandbox_invocation_id`, so the live pre-dispatch write needs an injected port.
+  Phase 6 implements and tests the bridge write (repo) and the ingestor join.)
+- [x] Audit ingestor never copies `sandbox_invocation_id` into `tool_use_id`.
+- [x] Unmatched audit rows persist with null model-facing IDs and an unmatched
   marker.
-- [ ] `boot_epoch_id` change resets cursor or records loss before advancing.
-- [ ] `eos-backend-obs` owns normalization/gate modules and their focused tests;
+- [x] `boot_epoch_id` change resets cursor or records loss before advancing.
+- [x] `eos-backend-obs` owns normalization/gate modules and their focused tests;
   there is no standalone collector workspace member.
-- [ ] Stats tests cover matched audit, unmatched audit, queue overflow, drainer
+- [x] Stats tests cover matched audit, unmatched audit, queue overflow, drainer
   failure, and daemon reboot.
-- [ ] Observability and store support tests live under
+- [x] Observability and store support tests live under
   `backend-server/crates/eos-backend-obs/tests/` or
   `backend-server/crates/eos-backend-store/tests/`, not under `src/`.
 
@@ -924,29 +928,35 @@ Key design decisions:
   - EventBus replay-safety: the sync callback (classify_and_enqueue) does no
     .await / no lock — it serializes, classifies (deny-list on the serde "type"
     tag, inferring &StreamEvent without naming the #[non_exhaustive] engine type so
-    no eos-engine dep), reserves a 1-based atomic seq, and try_sends; overflow bumps
-    a dropped counter + arms a gap marker. The async per-request drainer persists to
-    event_log THEN broadcasts (persist-before-broadcast), coalescing drops into one
-    durable event_stream_gap marker. subscribe() joins replay+live with no gap
+    no eos-engine dep), and try_sends an unsequenced milestone; overflow bumps
+    a dropped counter + arms a gap marker. The async per-request drainer is the SOLE
+    sequencer — it stamps a 1-based seq at persist time, persists to event_log THEN
+    broadcasts (persist-before-broadcast), coalescing drops into one durable
+    event_stream_gap marker. subscribe() joins replay+live with no gap
     (subscribe-live-before-replay-read + seq>last_seq dedup) and recovers broadcast
     Lagged/Closed from the durable log rather than skipping.
   - Advisor-driven hardening: (1) Lagged is NOT a silent continue — recv refills
-    from event_log so a slow subscriber never loses a milestone; (2) first reserved
-    seq == 1 (fetch_add+1), so list_since(.., 0) replays from the start; (3) no
+    from event_log so a slow subscriber never loses a milestone; (2) first stamped
+    seq == 1 (drainer-local counter), so list_since(.., 0) replays from start; (3) no
     parking_lot guard is held across .await (RunRegistry.get and EventBus.subscribe
     clone-then-drop before awaiting); (4) status.rs is a PURE resolver — the
     precedence table's persisting write-back is deferred to the Phase 7 read handler
     (no Phase 5 caller, and a read-time write-back races a concurrent DELETE's
     Cancelled; Phase 7 owns it with a compare-and-set guard).
-  - Event-stream ordering precondition (verified, documented at next_seq /
-    EventSubscription): the high-water dedup is correct because records persist in
-    seq order, which holds while the callback is invoked sequentially per request.
-    Confirmed in agent-core: run_request passes on_event ONLY to the root run
-    (entry.rs:249), the root engine loop emits one event at a time
-    (agent_loop.rs), and subagent runs pass on_event=None (agent_runner.rs:122).
-    Phase 7 must preserve single-emitter ordering when it wires real SSE/WS; if
-    emission ever becomes concurrent per request, the dedup must switch to a
-    seen-seq set or stamp seq at persist time (uniqueness already holds).
+  - Event-stream ordering (drainer is the SOLE sequencer — airtight fix this
+    session): seq is stamped at persist time by the single per-request drainer, not
+    reserved in the sync callback, so persist order == seq order == broadcast order
+    by construction. The callback enqueues an unsequenced PendingMilestone; the gap
+    marker is sequenced inline in drain order so it can never leapfrog a still-queued
+    record; seq advances only on a durable write so the space is hole-free. This
+    makes the subscriber high-water dedup sound independent of callback concurrency,
+    so the earlier "single-emitter ordering precondition" is no longer a correctness
+    dependency. (It closed a real latent gap: a prior doc comment claimed persist
+    reordering could not occur, but the lazily-seq'd gap marker was itself the
+    reorderer, so a live-tail subscriber could skip persisted-but-leapfrogged records
+    during an overflow/persist-failure burst. Durable replay was always correct
+    (event_log ORDER BY seq); the live path now is too.) Regression test:
+    event_bus::drainer_sequences_in_persist_order_so_a_gap_never_leapfrogs.
 Concurrent work integrated: another agent added failing_manager + a setup_with
   helper to the launcher test and a launch_resolves_failed_when_sandbox_acquisition_fails
   test (the provisioning-failure arm I had left to composition). It is consistent
@@ -998,4 +1008,117 @@ Next phase unblockers:
     construct RuntimeHost::new(services, workspace_root, workflow_config) and
     RunLauncher::new(Arc::new(host), manager, store.run_meta().clone(),
     Arc::new(EventBus::new(store.event_log().clone()))).
+```
+
+## Phase 6 Execution Notes
+
+```text
+Phase: 6 - Observability, Audit Ingestion, And Stats
+Status: complete (1 hard item deferred to Phase 7/8 as an explicit deviation)
+Touched files:
+  - eos-backend-types/src/stats.rs: NEW DTOs PerformanceStats, CorrectnessStats,
+    AgentRunStat, ObsLossStats (serde-only; Phase 7 owns JsonSchema/OpenAPI).
+    lib.rs exports them. The Phase 3 stub module is now filled.
+  - eos-backend-store/src/obs.rs: ObsEventRepo gains list_page (events listing),
+    performance, correctness, agent_run_stats (json_extract aggregations; the obs
+    `kind` vocabulary is passed in by the obs crate, keeping kind-strings out of
+    the store). Returns eos-backend-types stats DTOs.
+  - eos-backend-store/src/audit_cursor.rs: AuditCursorRepo::loss_totals (summed
+    dropped_count + count of sandboxes with a lost_before_seq boundary).
+  - eos-backend-store/tests/store.rs: +2 tests (obs aggregations; cursor loss totals).
+  - eos-backend-obs/Cargo.toml: added eos-backend-{store,types}, eos-types, tokio,
+    tracing; dev sqlx (DROP TABLE for the drainer-failure test).
+  - eos-backend-obs/src/sink.rs: NEW PersistingSink (AuditSink). Sync publish maps
+    &AuditEvent -> owned ObsEvent (source=Engine, node ids, sandbox_invocation_id
+    null), try_send into a bounded tokio mpsc; Full/Closed -> AtomicU64 dropped +
+    AuditError::Backpressure (no await). Async drainer owns the boxed payload,
+    inserts with one retry, counts persist loss in memory + tracing::warn.
+    PersistingSinkShutdown sends an explicit Shutdown msg (FIFO-drains accepted
+    events) then awaits the drainer; SinkLoss snapshot for stats.
+  - eos-backend-obs/src/ingestor.rs: NEW AuditIngestor. ingest_pull reads
+    boot_epoch_id from snapshot.daemon.boot_epoch_id; on epoch change records
+    lost_before_seq and resets last_seq before trusting the new sequence space;
+    per row treats the normalized tool_use_id slot as the sandbox_invocation_id,
+    extracts caller_id from payload sections, joins the bridge -> matched (model
+    ids ONLY from the bridge) or unmatched (null model ids + an `unmatched`
+    payload marker). obs_event.tool_use_id is never set from the daemon slot.
+  - eos-backend-obs/src/stats.rs: NEW StatsReader facade (owns the eos-audit kind
+    vocabulary, delegates aggregations to the store, composes ObsLossStats from
+    cursor totals + the live sink SinkLoss snapshot).
+  - eos-backend-obs/src/lib.rs: module decls + exports for the three new modules.
+  - eos-backend-obs/tests/obs.rs: NEW 7 integration tests (public API).
+Concurrent work observed: another agent is actively editing eos-backend-runtime
+  (Phase 5 event_bus): tests/event_bus/mod.rs grew ~69 lines and the tracker's
+  Phase 5 test count moved 21 -> 22. Mid-refactor, `classify_and_enqueue` and its
+  test call sites disagree on arity (E0061), so `cargo check -p eos-backend-runtime
+  --all-targets` and the workspace-wide check currently fail in that crate ONLY.
+  This is outside Phase 6 scope (obs/store/types) and not caused by these additive
+  changes; left untouched per the parallel-work rule. Phase 6's own crates compile,
+  test, and clippy clean. The implementation_plan.md itself was being edited
+  concurrently (line numbers shifted between reads); only the Phase 6 sections here
+  were changed.
+Key design decisions:
+  - Source mapping is by ingestion path, not AuditSource: sink -> ObsSource::Engine
+    (agent-core in-process channel), ingestor -> ObsSource::Daemon (daemon pull).
+    The ObsSource enum was not widened; granular origin stays in the payload.
+  - AC7 crux (from the daemon transport server): the daemon stamps its own
+    invocation id into the audit event's tool_call.tool_use_id slot. The ingestor
+    therefore reads that slot as sandbox_invocation_id and sets obs_event.tool_use_id
+    ONLY from a matched bridge. Verified by reading the build path + assert_ne tests,
+    not by the `tool_use_id.*sandbox_invocation_id` grep (a review aid that matches
+    separation asserts/docs, never a copy).
+  - Drainer-failure loss is in-memory (sink SinkLoss) + tracing::warn, NOT a new
+    durable column: the DB is the failing resource. The SPEC's durable loss counters
+    map to the pull-side audit_cursor.dropped_count, which is not in a failure state.
+  - No eos-sandbox-port edge / no live poll(transport): ingest_pull(&Value) is the
+    tested unit and satisfies every ingestor hard item; the transport-driven poll
+    loop (DaemonOp::AuditPull) is Phase 7/8 composition-root wiring.
+  - Stats are obs-derived only (obs_event + audit_cursor). The agent-core state join
+    (agent_name, token_count, terminal outcome) is Phase 7's read handler via
+    state_reader(); no eos-state edge was added.
+Checklist results: 9/10 hard items checked. The "sandbox_call_correlation is
+  written before daemon request dispatch" item is DEFERRED to Phase 7/8 (recorded as
+  an explicit deviation, not checked) — see below.
+Verification commands (all pass except the noted concurrent-work failure):
+  - cargo test -p eos-backend-obs -> 14 unit (gates/normalization) + 7 obs = clean
+  - cargo test -p eos-backend-store -> 9 passed (incl. 2 new aggregation tests)
+  - cargo test -p eos-backend-store -- obs audit_cursor sandbox_call_correlation ->
+    5 selected, all pass (the SPEC command omits `--`; cargo takes one positional
+    TESTNAME, so multi-filter needs the `--` separator).
+  - rg tool_use_id.*sandbox_invocation_id backend-server/crates -> only separation
+    asserts + docs (no id collapse).
+  - find eos-backend-{obs,store}/src test/fixture/mock/fake/support -> empty (AC13).
+  - cargo clippy -p eos-backend-obs -p eos-backend-store -p eos-backend-types
+    --all-targets -- -D warnings -> clean.
+  - cargo check --workspace --all-targets -> FAILS only in eos-backend-runtime
+    (concurrent Phase 5 event_bus refactor, above); Phase 6 crates are clean.
+Spec deviations:
+  - HARD ITEM DEFERRED: "sandbox_call_correlation written before daemon request
+    dispatch." Cannot be satisfied in Phase 6: no correlation-recorder port exists,
+    and the complete bridge row needs BOTH the model tool_use_id and the minted
+    sandbox_invocation_id together. The AuditNode (sink path) has no invocation id;
+    a daemon audit event has the invocation but not the model tool_use_id; so only
+    the agent-core sandbox-tool path knows both, and it cannot write backend.db. The
+    live pre-dispatch write needs an injected correlation-recorder port (mirroring
+    AuditSink) called just before transport.call — a Phase 7/8 agent-core+backend
+    integration. Phase 6 delivers and tests the bridge WRITE (SandboxCallCorrelationRepo,
+    Phase 3) and the ingestor JOIN (matched/unmatched), which is the AC7-relevant
+    behavior the exit gate proves.
+  - Stats DTOs are serde-only; JsonSchema/OpenAPI pinning is Phase 7 (owns the API
+    surface). Stats are obs-derived; the agent-core state enrichment join is Phase 7.
+Next phase unblockers:
+  - Phase 7 (API): wire StatsReader into /api/stats/{performance,correctness,
+    agent-runs,events}; obs_loss takes PersistingSink::loss_snapshot(). The events
+    endpoint can serve StatsReader::events (PageResult<ObsEvent>). Add JsonSchema to
+    the stats DTOs alongside the OpenAPI shapes. Enrich agent-runs/correctness with
+    state_reader() data.
+  - Phase 7/8 (correlation port): add an injected correlation-recorder port in
+    eos-sandbox-port (or eos-tools), called pre-dispatch by the sandbox-tool path
+    with (request/task/agent_run/tool_use ids + minted sandbox_invocation_id +
+    caller_id + sandbox_id); back it with SandboxCallCorrelationRepo::insert so the
+    ingestor's join lands matched rows. Wire the SandboxAuditPoller (DaemonOp::
+    AuditPull -> AuditIngestor::ingest_pull) at the main composition root.
+  - Phase 8 (main wiring): construct PersistingSink (inject as Arc<dyn AuditSink>),
+    AuditIngestor, and StatsReader from the shared BackendStore; retain the
+    PersistingSinkShutdown for a bounded drain on shutdown.
 ```

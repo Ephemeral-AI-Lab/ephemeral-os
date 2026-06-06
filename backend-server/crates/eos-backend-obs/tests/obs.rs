@@ -57,7 +57,10 @@ fn ts(s: &str) -> UtcDateTime {
 }
 
 fn obj(value: Value) -> JsonObject {
-    value.as_object().unwrap().clone()
+    match value {
+        Value::Object(map) => map,
+        other => panic!("expected a JSON object, got {other}"),
+    }
 }
 
 fn rid(s: &str) -> RequestId {
@@ -122,7 +125,7 @@ fn daemon_pull(
         "cursor": { "after_seq": cursor_after, "lost_before_seq": lost_before },
         "buffer": { "dropped_event_count": dropped, "lost_before_seq": lost_before },
         "snapshot": { "daemon": { "boot_epoch_id": boot_epoch_id, "next_seq": cursor_after + 1 } },
-        "events": events,
+        "events": Value::Array(events),
     })
 }
 

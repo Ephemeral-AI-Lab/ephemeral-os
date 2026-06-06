@@ -337,3 +337,106 @@ async fn data_persists_across_reopen() {
     let store = BackendStore::open(&path).await.unwrap();
     assert!(store.run_meta().get(&req("r-1")).await.unwrap().is_some());
 }
+
+/// Build an `obs_event` with the given kind/source and optional run/correlation ids.
+fn obs_row(
+    kind: &str,
+    agent_run: Option<&str>,
+    source: ObsSource,
+    tool_use: Option<&str>,
+    sandbox_inv: Option<&str>,
+    payload: serde_json::Value,
+) -> ObsEvent {
+    ObsEvent {
+        id: None,
+        request_id: None,
+        task_id: None,
+        agent_run_id: agent_run.map(|s| s.parse().unwrap()),
+        tool_use_id: tool_use.map(|s| s.parse().unwrap()),
+        sandbox_invocation_id: sandbox_inv.map(|s| s.parse().unwrap()),
+        sandbox_id: None,
+        source,
+        kind: kind.into(),
+        payload,
+        created_at: ts("2026-06-06T00:00:00Z"),
+    }
+}
+
+#[tokio::test]
+async fn obs_event_aggregations_summarize_kinds_runs_and_audit_split() {
+    let (store, _dir) = open_store().await;
+    let repo = store.obs_events();
+    // ar-1 engine activity: two tool calls (duration_ms, then a total_ms fallback),
+    // one resource sample, one agent-run completion.
+    repo.insert(&obs_row("tool_call.completed", Some("ar-1"), ObsSource::Engine, Some("toolu-1"), None, json!({ "tool_call": { "duration_ms": 10.0 } }))).await.unwrap();
+    repo.insert(&obs_row("tool_call.completed", Some("ar-1"), ObsSource::Engine, Some("toolu-2"), None, json!({ "tool_call": { "total_ms": 30.0 } }))).await.unwrap();
+    repo.insert(&obs_row("os_resource.sampled", Some("ar-1"), ObsSource::Engine, None, None, json!({ "os_resource": { "rss_bytes": 4096 } }))).await.unwrap();
+    repo.insert(&obs_row("agent_run.completed", Some("ar-1"), ObsSource::Engine, None, None, json!({}))).await.unwrap();
+    // Daemon audit: one matched (model tool_use_id), one unmatched (invocation only).
+    repo.insert(&obs_row("tool_call.completed", None, ObsSource::Daemon, Some("toolu-model"), Some("inv-1"), json!({}))).await.unwrap();
+    repo.insert(&obs_row("tool_call.completed", None, ObsSource::Daemon, None, Some("inv-2"), json!({ "unmatched": true }))).await.unwrap();
+
+    let perf = repo
+        .performance("tool_call.completed", "os_resource.sampled")
+        .await
+        .unwrap();
+    assert_eq!(perf.tool_call_count, 4);
+    assert_eq!(perf.tool_call_total_ms, 40.0);
+    assert_eq!(perf.tool_call_avg_ms, Some(10.0));
+    assert_eq!(perf.resource_sample_count, 1);
+    assert_eq!(perf.rss_bytes_max, Some(4096));
+
+    let correctness = repo
+        .correctness("agent_run.completed", "tool_call.completed")
+        .await
+        .unwrap();
+    assert_eq!(correctness.agent_runs_observed, 1);
+    assert_eq!(correctness.tool_calls_observed, 4);
+    assert_eq!(correctness.audit_matched, 1);
+    assert_eq!(correctness.audit_unmatched, 1);
+
+    // Per-run rollup excludes the null-run daemon rows.
+    let runs = repo
+        .agent_run_stats("tool_call.completed", "os_resource.sampled")
+        .await
+        .unwrap();
+    assert_eq!(runs.len(), 1);
+    assert_eq!(runs[0].agent_run_id.as_str(), "ar-1");
+    assert_eq!(runs[0].tool_call_count, 2);
+    assert_eq!(runs[0].tool_call_total_ms, 40.0);
+    assert_eq!(runs[0].resource_sample_count, 1);
+
+    let page = repo.list_page(Page::new(4, 0)).await.unwrap();
+    assert_eq!(page.total, 6);
+    assert_eq!(page.items.len(), 4);
+}
+
+#[tokio::test]
+async fn audit_cursor_loss_totals_sum_drops_and_count_losses() {
+    let (store, _dir) = open_store().await;
+    let repo = store.audit_cursors();
+    repo.upsert(&AuditCursor {
+        sandbox_id: SandboxId::try_from("sb-1").unwrap(),
+        last_seq: 5,
+        boot_epoch_id: 1,
+        lost_before_seq: None,
+        dropped_count: 2,
+        updated_at: ts("2026-06-06T00:00:00Z"),
+    })
+    .await
+    .unwrap();
+    repo.upsert(&AuditCursor {
+        sandbox_id: SandboxId::try_from("sb-2").unwrap(),
+        last_seq: 3,
+        boot_epoch_id: 2,
+        lost_before_seq: Some(7),
+        dropped_count: 4,
+        updated_at: ts("2026-06-06T01:00:00Z"),
+    })
+    .await
+    .unwrap();
+
+    let (dropped, with_loss) = repo.loss_totals().await.unwrap();
+    assert_eq!(dropped, 6);
+    assert_eq!(with_loss, 1);
+}

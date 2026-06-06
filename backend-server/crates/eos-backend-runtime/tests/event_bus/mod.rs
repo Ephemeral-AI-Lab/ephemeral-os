@@ -7,17 +7,21 @@
 #![allow(clippy::unwrap_used)]
 
 use std::collections::VecDeque;
-use std::sync::atomic::{AtomicBool, AtomicI64, AtomicU64};
+use std::sync::atomic::{AtomicBool, AtomicU64};
+use std::sync::Arc;
 use std::time::Duration;
 
-use tokio::sync::broadcast;
+use tokio::sync::{broadcast, mpsc};
 
 use eos_backend_types::{EventRecord, EVENT_STREAM_GAP};
 use eos_types::{RequestId, UtcDateTime};
 
 use crate::test_support::{rid, temp_store};
 
-use super::{classify_and_enqueue, milestone_kind, EventBus, EventSubscription, RequestStream};
+use super::{
+    classify_and_enqueue, drain, milestone_kind, EventBus, EventSubscription, PendingMilestone,
+    RequestStream,
+};
 
 fn milestone(seq: i64, request: &RequestId, kind: &str) -> EventRecord {
     EventRecord {
@@ -71,19 +75,68 @@ fn milestone_kind_drops_deltas_keeps_milestones_and_unknown() {
     assert_eq!(milestone_kind(&serde_json::json!({ "nope": 1 })), None);
 }
 
-#[test]
-fn request_stream_seq_starts_at_one_and_increments() {
-    let (live, _rx) = broadcast::channel::<EventRecord>(8);
-    let stream = RequestStream {
-        seq: AtomicI64::new(0),
-        gap_pending: AtomicBool::new(false),
-        dropped: AtomicU64::new(0),
+#[tokio::test]
+async fn drainer_sequences_in_persist_order_so_a_gap_never_leapfrogs() {
+    // Regression for the gap-marker leapfrog. The single drainer stamps `seq` as it
+    // persists, so a gap armed mid-backlog is sequenced *in place* — never above the
+    // records still queued behind it. Feed three milestones behind an already-armed
+    // overflow drop and assert the durable log and the live tail both come out in
+    // contiguous, strictly increasing `seq` order with the gap interleaved, not
+    // jumped ahead. Under the old lazy-`next_seq` design the gap took a seq above all
+    // three, and the live high-water dedup then skipped seq 3/4.
+    let (store, _tmp) = temp_store().await;
+    let event_log = store.event_log().clone();
+    let request = rid("req-order");
+
+    // An overflow already dropped 2 records before draining starts.
+    let (live, mut live_rx) = broadcast::channel::<EventRecord>(64);
+    let stream = Arc::new(RequestStream {
+        gap_pending: AtomicBool::new(true),
+        dropped: AtomicU64::new(2),
         live,
-    };
-    // First reserved seq must be 1 (list_since(.., 0) replays seq > 0).
-    assert_eq!(stream.next_seq(), 1);
-    assert_eq!(stream.next_seq(), 2);
-    assert_eq!(stream.next_seq(), 3);
+    });
+
+    let (tx, rx) = mpsc::channel::<PendingMilestone>(8);
+    for kind in [
+        "tool_execution_started",
+        "tool_execution_completed",
+        "system_notification",
+    ] {
+        tx.try_send(PendingMilestone {
+            kind: kind.to_owned(),
+            payload: serde_json::json!({ "type": kind }),
+            created_at: UtcDateTime::now(),
+        })
+        .unwrap();
+    }
+    drop(tx); // close the queue so `drain` returns once it has drained.
+
+    drain(rx, stream, event_log.clone(), request.clone()).await;
+
+    // Durable log: 3 reals + 1 gap, contiguous 1..=4, ascending, gap sequenced in
+    // place (right after the first record, where the drop was armed).
+    let rows = event_log.list_since(&request, 0).await.unwrap();
+    let seqs: Vec<i64> = rows.iter().map(|r| r.seq).collect();
+    assert_eq!(seqs, vec![1, 2, 3, 4], "seqs are hole-free and ascending");
+    let gap_seqs: Vec<i64> = rows
+        .iter()
+        .filter(|r| r.kind == EVENT_STREAM_GAP)
+        .map(|r| r.seq)
+        .collect();
+    assert_eq!(gap_seqs, vec![2], "one gap, sequenced in place — not leapfrogged");
+    let gap = rows.iter().find(|r| r.kind == EVENT_STREAM_GAP).unwrap();
+    assert_eq!(
+        gap.payload.get("dropped").and_then(serde_json::Value::as_u64),
+        Some(2)
+    );
+
+    // Live tail: same order, strictly increasing — the gap never jumps ahead of a
+    // record the dedup has not yet delivered.
+    let mut live_seqs = Vec::new();
+    while let Ok(record) = live_rx.try_recv() {
+        live_seqs.push(record.seq);
+    }
+    assert_eq!(live_seqs, vec![1, 2, 3, 4], "live broadcast matches seq order");
 }
 
 // --- drainer + handoff -------------------------------------------------------
@@ -97,7 +150,7 @@ async fn drainer_persists_before_broadcasting() {
 
     // Subscribe to live before any event exists (replay empty).
     let mut sub = bus.subscribe(&request, 0).await.unwrap();
-    classify_and_enqueue(&tx, &stream, &request, serde_json::json!({ "type": "assistant_message_complete" }));
+    classify_and_enqueue(&tx, &stream, serde_json::json!({ "type": "assistant_message_complete" }));
 
     // Receiving the broadcast implies it was persisted first (persist-before-
     // broadcast), so the durable row is already present.
@@ -116,15 +169,15 @@ async fn reconnect_replays_then_joins_live_with_no_gap() {
     let (tx, stream) = bus.open_stream(&request);
 
     // Two milestones persisted before the client connects.
-    classify_and_enqueue(&tx, &stream, &request, serde_json::json!({ "type": "tool_execution_started" }));
-    classify_and_enqueue(&tx, &stream, &request, serde_json::json!({ "type": "tool_execution_completed" }));
+    classify_and_enqueue(&tx, &stream, serde_json::json!({ "type": "tool_execution_started" }));
+    classify_and_enqueue(&tx, &stream, serde_json::json!({ "type": "tool_execution_completed" }));
     await_persisted(&store, &request, 2).await;
 
     // Connect: replay 1,2 then join live.
     let mut sub = bus.subscribe(&request, 0).await.unwrap();
     // A third milestone arrives after the replay snapshot — it must not fall in the
     // handoff.
-    classify_and_enqueue(&tx, &stream, &request, serde_json::json!({ "type": "system_notification" }));
+    classify_and_enqueue(&tx, &stream, serde_json::json!({ "type": "system_notification" }));
 
     let mut seen = Vec::new();
     for _ in 0..3 {
@@ -182,7 +235,6 @@ async fn bounded_queue_overflow_drops_and_emits_a_visible_gap_marker() {
         classify_and_enqueue(
             &tx,
             &stream,
-            &request,
             serde_json::json!({ "type": "tool_execution_completed", "i": i }),
         );
     }
