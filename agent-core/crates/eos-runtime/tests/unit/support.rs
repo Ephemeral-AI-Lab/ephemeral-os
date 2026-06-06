@@ -59,6 +59,42 @@ impl RequestProvisioner for FakeProvisioner {
     }
 }
 
+/// A [`SandboxGateway`] that hands back the injected transport and provisioner —
+/// the test analogue of the backend `SandboxManager`, used to drive the single
+/// `sandbox_gateway(...)` builder seam.
+pub(crate) struct FakeGateway {
+    transport: Arc<dyn SandboxTransport>,
+    provisioner: Arc<dyn RequestProvisioner>,
+}
+
+impl FakeGateway {
+    pub(crate) fn new(
+        transport: Arc<dyn SandboxTransport>,
+        provisioner: Arc<dyn RequestProvisioner>,
+    ) -> Self {
+        Self {
+            transport,
+            provisioner,
+        }
+    }
+}
+
+impl std::fmt::Debug for FakeGateway {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("FakeGateway").finish_non_exhaustive()
+    }
+}
+
+impl SandboxGateway for FakeGateway {
+    fn transport(&self) -> Arc<dyn SandboxTransport> {
+        self.transport.clone()
+    }
+
+    fn provisioner(&self) -> Arc<dyn RequestProvisioner> {
+        self.provisioner.clone()
+    }
+}
+
 /// Build fully-wired test [`RuntimeServices`] over a temp `SQLite` db, the fake
 /// provisioner, the workspace `FakeTransport`, the given agent registry, and an
 /// optional event-source factory. Returns the state and the owning temp dir
@@ -73,8 +109,10 @@ pub(crate) async fn build_test_state(
     let mut builder = RuntimeServices::builder()
         .database_url(url)
         .tools_root(eos_testkit::test_tools_root())
-        .provisioner(Arc::new(FakeProvisioner::default()))
-        .transport(Arc::new(FakeTransport))
+        .sandbox_gateway(Arc::new(FakeGateway::new(
+            Arc::new(FakeTransport),
+            Arc::new(FakeProvisioner::default()),
+        )))
         .agent_registry(Arc::new(registry));
     if let Some(factory) = factory {
         builder = builder.event_source_factory(factory);

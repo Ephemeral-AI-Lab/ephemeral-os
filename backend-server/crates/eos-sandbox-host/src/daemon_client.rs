@@ -26,7 +26,11 @@ mod codec;
 mod shell;
 mod tcp;
 
+// Test bodies live under the crate `tests/` tree (spec §Backend Test Layout);
+// included here as a private `#[cfg(test)]` submodule so they keep `super::`
+// access to the daemon-client internals they exercise.
 #[cfg(test)]
+#[path = "../../tests/daemon_client/mod.rs"]
 mod tests;
 
 pub(crate) use codec::map_host_error_to_api_error;

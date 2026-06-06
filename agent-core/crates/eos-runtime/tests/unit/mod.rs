@@ -1078,7 +1078,7 @@ mod command_session_delivery {
 
     use super::run_request;
     use crate::entry::root_task_id_for;
-    use crate::runtime_services::support::FakeProvisioner;
+    use crate::runtime_services::support::{FakeGateway, FakeProvisioner};
     use crate::runtime_services::EventSourceFactory;
     use crate::RuntimeServices;
     use eos_testkit::{agent_def, text_turn, tool_use_turn, ScriptedSource};
@@ -1232,8 +1232,10 @@ mod command_session_delivery {
         let state = RuntimeServices::builder()
             .database_url(url)
             .tools_root(eos_testkit::test_tools_root())
-            .provisioner(Arc::new(FakeProvisioner::default()))
-            .transport(Arc::new(CommandCompletionTransport))
+            .sandbox_gateway(Arc::new(FakeGateway::new(
+                Arc::new(CommandCompletionTransport),
+                Arc::new(FakeProvisioner::default()),
+            )))
             .agent_registry(Arc::new(registry))
             .event_source_factory(factory)
             .build()
