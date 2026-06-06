@@ -87,7 +87,7 @@ impl AttemptOrchestrator {
         let result: Result<()> = async {
             self.deps
                 .task_store
-                .upsert_task(&Task {
+                .insert_task(&Task {
                     id: task_id.clone(),
                     request_id: launch.request_id().clone(),
                     role: TaskRole::Planner,
@@ -291,7 +291,7 @@ impl AttemptOrchestrator {
                 .collect::<Result<Vec<_>>>()?;
             self.deps
                 .task_store
-                .upsert_task(&Task {
+                .insert_task(&Task {
                     id: id.clone(),
                     request_id: planner_task.request_id.clone(),
                     role: spec.role,
@@ -333,13 +333,20 @@ impl AttemptOrchestrator {
         let planner_result = json_object("kind", submission.plan.disposition.kind_label());
         self.deps
             .task_store
-            .set_task_status(
+            .set_task_status_if_current(
                 &submission.plan.planner_task_id,
+                TaskStatus::Running,
                 TaskStatus::Done,
                 Some(&[]),
                 Some(&planner_result),
             )
-            .await?;
+            .await?
+            .ok_or_else(|| {
+                WorkflowError::invariant(format!(
+                    "planner task {:?} is no longer running",
+                    submission.plan.planner_task_id.as_str()
+                ))
+            })?;
         self.deps
             .attempt_store
             .record_plan(&attempt.id, &submission.plan)
@@ -362,13 +369,20 @@ impl AttemptOrchestrator {
         );
         self.deps
             .task_store
-            .set_task_status(
+            .set_task_status_if_current(
                 &submission.planner_task_id,
+                TaskStatus::Running,
                 TaskStatus::Failed,
                 Some(&[]),
                 Some(&planner_result),
             )
-            .await?;
+            .await?
+            .ok_or_else(|| {
+                WorkflowError::invariant(format!(
+                    "planner task {:?} is no longer running",
+                    submission.planner_task_id.as_str()
+                ))
+            })?;
         self.close_attempt_failed(AttemptFailReason::TaskFailed)
             .await
     }
@@ -467,13 +481,20 @@ impl AttemptOrchestrator {
         );
         self.deps
             .task_store
-            .set_task_status(
+            .set_task_status_if_current(
                 &mark.task_id,
+                TaskStatus::Running,
                 task_status,
                 Some(&[result]),
                 Some(&mark.terminal_tool_result),
             )
-            .await?;
+            .await?
+            .ok_or_else(|| {
+                WorkflowError::invariant(format!(
+                    "task {:?} is no longer running",
+                    mark.task_id.as_str()
+                ))
+            })?;
         Ok(())
     }
 

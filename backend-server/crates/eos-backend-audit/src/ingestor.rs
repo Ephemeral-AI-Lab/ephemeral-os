@@ -204,7 +204,12 @@ fn next_cursor(
         // replaced (not summed or maxed); a single cursor row cannot hold a lifetime
         // total. The durable cross-epoch loss signal is `lost_before_seq` /
         // `audit_sandboxes_with_loss`, not this per-epoch count.
-        let lost = Some(max_opt(Some(prior_last), ring_lost).unwrap_or(prior_last));
+        //
+        // Only record a real (> 0) loss boundary: a degenerate reboot with
+        // `prior_last == 0` and no ring-reported loss must stay null, matching
+        // `SandboxAuditLoss::has_counted_loss` (`seq > 0`) so the two loss
+        // consumers agree on whether the row carries loss.
+        let lost = max_opt(Some(prior_last), ring_lost).filter(|&seq| seq > 0);
         (cursor_after.unwrap_or(0), lost, ring_dropped)
     } else {
         // Same epoch: never regress `last_seq`; keep the furthest loss boundary and

@@ -9,7 +9,7 @@ use crate::support::MockAdapter;
 
 fn provisioner(adapter: MockAdapter) -> RequestSandboxProvisioner {
     let registry = ProviderRegistry::new();
-    registry.set_default(Arc::new(adapter));
+    registry.seed(Arc::new(adapter));
     let lifecycle = SandboxLifecycle::new(
         Arc::new(DaemonClient::new(Arc::new(registry))),
         PathBuf::from("/nonexistent"),

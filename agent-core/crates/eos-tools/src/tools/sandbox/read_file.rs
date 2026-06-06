@@ -115,20 +115,19 @@ fn build_read_file_output(
     start_line: u32,
     end_line: u32,
 ) -> ReadFileOutput {
-    let lines: Vec<&str> = if content.is_empty() {
-        Vec::new()
-    } else {
-        content.split('\n').collect()
-    };
-    let total = lines.len() as u32;
     let start = start_line.max(1);
-    let end = end_line.min(total);
     let mut rendered = Vec::new();
-    if total > 0 && start <= end {
-        for n in start..=end {
-            rendered.push(format!("{n:4}: {}", lines[(n - 1) as usize]));
+    let mut total = 0;
+    if !content.is_empty() {
+        for (idx, line) in content.split('\n').enumerate() {
+            let n = idx as u32 + 1;
+            total = n;
+            if n >= start && n <= end_line {
+                rendered.push(format!("{n:4}: {line}"));
+            }
         }
     }
+    let end = end_line.min(total);
     ReadFileOutput {
         cwd: cwd(ctx),
         file_path: file_path.to_owned(),

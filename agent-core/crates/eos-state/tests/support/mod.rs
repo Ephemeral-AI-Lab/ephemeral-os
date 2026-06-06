@@ -39,8 +39,7 @@ impl FakeTaskStore {
 }
 
 /// Apply a status transition plus the two optional projection updates,
-/// mirroring the Rust store's set-status write shape. Shared by both
-/// `set_task_status` and `set_task_status_if_current`.
+/// mirroring the Rust store's status-transition write shape.
 fn apply_task_updates(
     task: &mut Task,
     status: TaskStatus,
@@ -60,31 +59,17 @@ impl Sealed for FakeTaskStore {}
 
 #[async_trait]
 impl TaskStore for FakeTaskStore {
-    async fn upsert_task(&self, task: &Task) -> Result<(), CoreError> {
-        self.tasks
-            .lock()
-            .expect("lock")
-            .insert(task.id.clone(), task.clone());
+    async fn insert_task(&self, task: &Task) -> Result<(), CoreError> {
+        let mut tasks = self.tasks.lock().expect("lock");
+        if tasks.contains_key(&task.id) {
+            return Err(CoreError::Store(format!("task {} already exists", task.id)));
+        }
+        tasks.insert(task.id.clone(), task.clone());
         Ok(())
     }
 
     async fn get(&self, id: &TaskId) -> Result<Option<Task>, CoreError> {
         Ok(self.tasks.lock().expect("lock").get(id).cloned())
-    }
-
-    async fn set_task_status(
-        &self,
-        id: &TaskId,
-        status: TaskStatus,
-        outcomes: Option<&[ExecutionTaskOutcome]>,
-        terminal_tool_result: Option<&JsonObject>,
-    ) -> Result<Task, CoreError> {
-        let mut guard = self.tasks.lock().expect("lock");
-        let task = guard
-            .get_mut(id)
-            .ok_or_else(|| CoreError::Store(format!("task {id} not found")))?;
-        apply_task_updates(task, status, outcomes, terminal_tool_result);
-        Ok(task.clone())
     }
 
     async fn set_task_status_if_current(

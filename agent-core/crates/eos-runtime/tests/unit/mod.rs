@@ -180,7 +180,7 @@ async fn state_reader_exposes_live_request_task_and_run_stores() {
         outcomes: Vec::new(),
         terminal_tool_result: None,
     };
-    reader.tasks().upsert_task(&task).await.unwrap();
+    reader.tasks().insert_task(&task).await.unwrap();
     let run_id: AgentRunId = "run-reader".parse().unwrap();
     reader
         .agent_runs()

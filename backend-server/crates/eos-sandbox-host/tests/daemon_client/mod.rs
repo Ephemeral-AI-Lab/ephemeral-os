@@ -46,7 +46,7 @@ fn envelope_from_command(cmd: &str) -> Value {
 fn client_with(adapter: MockAdapter) -> (DaemonClient, Arc<std::sync::Mutex<Vec<String>>>) {
     let calls = adapter.call_log();
     let registry = ProviderRegistry::new();
-    registry.set_default(Arc::new(adapter));
+    registry.seed(Arc::new(adapter));
     (DaemonClient::new(Arc::new(registry)), calls)
 }
 
@@ -265,7 +265,7 @@ async fn tcp_endpoint_singleflight_lock_order() {
     let resolves = adapter.tcp_resolve_counter();
     let registry = ProviderRegistry::new();
     let adapter_arc: Arc<dyn ProviderAdapter> = Arc::new(adapter);
-    registry.set_default(Arc::clone(&adapter_arc));
+    registry.seed(Arc::clone(&adapter_arc));
     let client = DaemonClient::new(Arc::new(registry));
 
     let id = sid();

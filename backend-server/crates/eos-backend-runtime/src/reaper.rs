@@ -65,20 +65,26 @@ impl Reaper {
             Disposition::Failed => (BackendRunStatus::Failed, None),
             Disposition::Cancelled(reason) => (BackendRunStatus::Cancelled, reason),
         };
-        if let Err(err) = self
+        // Terminal status is an idempotent keyed UPDATE, so retry once on a
+        // transient failure. This matters most for `Cancelled`: it is never
+        // written into agent-core state, so the detail handler's reconcile cannot
+        // recover it the way it self-heals `Done`/`Failed` from agent-core.
+        let finished_at = UtcDateTime::now();
+        let mut result = self
             .run_meta
-            .set_status(
-                request_id,
-                status,
-                Some(UtcDateTime::now()),
-                cancel_reason.as_deref(),
-            )
-            .await
-        {
+            .set_status(request_id, status, Some(finished_at), cancel_reason.as_deref())
+            .await;
+        if result.is_err() {
+            result = self
+                .run_meta
+                .set_status(request_id, status, Some(finished_at), cancel_reason.as_deref())
+                .await;
+        }
+        if let Err(err) = result {
             tracing::warn!(
                 request_id = request_id.as_str(),
                 error = %err,
-                "reaper could not write terminal run_meta status"
+                "reaper could not write terminal run_meta status after retry"
             );
         }
     }

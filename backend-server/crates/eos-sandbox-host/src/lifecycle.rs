@@ -84,9 +84,11 @@ impl SandboxLifecycle {
         self.daemon.registry().adapter()?.stop(id).await
     }
 
-    /// Delete a container.
+    /// Delete a container and evict its per-sandbox daemon-client state so the
+    /// endpoint cache and single-flight lock maps do not grow unbounded.
     pub async fn delete(&self, id: &SandboxId) -> Result<(), SandboxHostError> {
         self.daemon.registry().adapter()?.delete(id).await?;
+        self.daemon.forget_sandbox(id);
         Ok(())
     }
 

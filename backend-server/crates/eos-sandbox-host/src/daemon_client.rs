@@ -137,6 +137,17 @@ impl DaemonClient {
         self.tcp_cache.write().remove(sandbox_id);
     }
 
+    /// Evict all per-sandbox state for a torn-down sandbox. Unlike
+    /// [`invalidate_daemon_tcp_endpoint`](Self::invalidate_daemon_tcp_endpoint)
+    /// (which only drops the cached endpoint on a transient send failure), this
+    /// also removes the single-flight lock so neither map grows without bound over
+    /// the lifetime of a long-lived backend churning ephemeral sandboxes. Called
+    /// from the lifecycle on delete.
+    pub fn forget_sandbox(&self, sandbox_id: &SandboxId) {
+        self.tcp_cache.write().remove(sandbox_id);
+        self.tcp_locks.write().remove(sandbox_id);
+    }
+
     /// Dispatch one daemon op and return the decoded response object.
     ///
     /// `op` is the verbatim wire op string (e.g. `api.v1.read_file`,

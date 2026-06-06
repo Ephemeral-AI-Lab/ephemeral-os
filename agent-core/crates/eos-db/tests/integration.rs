@@ -122,9 +122,10 @@ async fn request_task_roundtrip() {
         .expect("some");
     assert_eq!(again.status, RequestStatus::Done);
 
-    // upsert insert then full-field update.
+    // Insert creates a task; duplicate ids are rejected instead of overwriting
+    // lifecycle-sensitive fields.
     let t = sample_task("t-1", &id, "first");
-    tasks.upsert_task(&t).await.expect("insert");
+    tasks.insert_task(&t).await.expect("insert");
     assert_eq!(
         tasks
             .get(&t.id)
@@ -134,18 +135,8 @@ async fn request_task_roundtrip() {
             .instruction,
         "first"
     );
-    let mut t2 = t.clone();
-    t2.instruction = "second".to_owned();
-    tasks.upsert_task(&t2).await.expect("update");
-    assert_eq!(
-        tasks
-            .get(&t.id)
-            .await
-            .expect("get")
-            .expect("present")
-            .instruction,
-        "second"
-    );
+    let duplicate = tasks.insert_task(&t).await;
+    assert!(duplicate.is_err());
 
     // CAS: mismatch is a no-op; match flips.
     let miss = tasks
@@ -377,7 +368,7 @@ async fn agent_run_roundtrip() {
         .await
         .expect("create");
     tasks
-        .upsert_task(&sample_task("t-5", &id, "do"))
+        .insert_task(&sample_task("t-5", &id, "do"))
         .await
         .expect("task");
 
@@ -584,7 +575,7 @@ async fn composition_root_and_cascade() {
         .await
         .expect("create");
     db.tasks()
-        .upsert_task(&sample_task("t-8", &id, "do"))
+        .insert_task(&sample_task("t-8", &id, "do"))
         .await
         .expect("task");
     let wf = db
@@ -687,15 +678,15 @@ async fn read_side_list_apis() {
     let owner = rid("req-a");
     let other = rid("req-b");
     tasks
-        .upsert_task(&sample_task("t-a1", &owner, "one"))
+        .insert_task(&sample_task("t-a1", &owner, "one"))
         .await
         .expect("t-a1");
     tasks
-        .upsert_task(&sample_task("t-a2", &owner, "two"))
+        .insert_task(&sample_task("t-a2", &owner, "two"))
         .await
         .expect("t-a2");
     tasks
-        .upsert_task(&sample_task("t-b1", &other, "x"))
+        .insert_task(&sample_task("t-b1", &other, "x"))
         .await
         .expect("t-b1");
     let owner_tasks = tasks.list_for_request(&owner).await.expect("list tasks");

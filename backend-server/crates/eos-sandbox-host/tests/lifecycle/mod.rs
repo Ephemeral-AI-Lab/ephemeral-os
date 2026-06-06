@@ -12,7 +12,7 @@ fn sid() -> SandboxId {
 
 fn lifecycle_with(adapter: MockAdapter, artifact_dir: PathBuf) -> SandboxLifecycle {
     let registry = ProviderRegistry::new();
-    registry.set_default(Arc::new(adapter));
+    registry.seed(Arc::new(adapter));
     SandboxLifecycle::new(
         Arc::new(DaemonClient::new(Arc::new(registry))),
         artifact_dir,

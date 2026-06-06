@@ -77,8 +77,17 @@ impl AttemptStageAdvancer {
                 }
                 let task = deps
                     .task_store
-                    .set_task_status(&task_id, TaskStatus::Running, None, None)
+                    .set_task_status_if_current(
+                        &task_id,
+                        TaskStatus::Pending,
+                        TaskStatus::Running,
+                        None,
+                        None,
+                    )
                     .await?;
+                let Some(task) = task else {
+                    continue;
+                };
                 self.emit_task_event(
                     TASK_LAUNCHED,
                     &task,
@@ -177,20 +186,25 @@ impl AttemptStageAdvancer {
             outcome,
         );
         let outcomes = [result];
-        self.orchestrator
+        let task = self
+            .orchestrator
             .deps()
             .task_store
-            .set_task_status(
+            .set_task_status_if_current(
                 &task.id,
+                TaskStatus::Running,
                 TaskStatus::Failed,
                 Some(&outcomes),
                 Some(&terminal_tool_result),
             )
             .await?;
+        let Some(task) = task else {
+            return Ok(());
+        };
         // D8: task_failed (running -> failed) on a launch failure.
         self.emit_task_event(
             TASK_FAILED,
-            task,
+            &task,
             &[
                 ("status_from", json!("running")),
                 ("status_to", json!("failed")),

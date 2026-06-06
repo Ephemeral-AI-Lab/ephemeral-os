@@ -109,7 +109,7 @@ async fn upload_verifies_hash_and_missing() {
     });
     let registry = ProviderRegistry::new();
     let adapter_arc: Arc<dyn ProviderAdapter> = Arc::new(adapter);
-    registry.set_default(Arc::clone(&adapter_arc));
+    registry.seed(Arc::clone(&adapter_arc));
 
     let err = ensure_daemon_bootstrap(&*adapter_arc, &sid(), &tmp)
         .await

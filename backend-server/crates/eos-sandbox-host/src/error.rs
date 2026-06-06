@@ -12,7 +12,7 @@ use eos_types::JsonObject;
 pub enum SandboxHostError {
     /// `adapter()` was called before the registry was seeded.
     #[error("no sandbox provider registered")]
-    NoDefaultProvider,
+    NoProvider,
     /// A provider `exec` returned a non-zero exit the caller treats as fatal.
     #[error("provider exec failed (exit {exit_code}): {message}")]
     ExecFailed {

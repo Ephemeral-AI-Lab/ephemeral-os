@@ -232,11 +232,11 @@ impl ProviderAdapter for DockerProviderAdapter {
             .await
             .map_err(SandboxHostError::Docker)?;
         let inspect = self.inspect(&created.id).await?;
-        Ok(serialize_container(&inspect))
+        serialize_container(&inspect)
     }
 
     async fn get(&self, id: &SandboxId) -> Result<SandboxInfo, SandboxHostError> {
-        Ok(serialize_container(&self.inspect(id.as_str()).await?))
+        serialize_container(&self.inspect(id.as_str()).await?)
     }
 
     async fn list(&self) -> Result<Vec<SandboxInfo>, SandboxHostError> {
@@ -251,7 +251,7 @@ impl ProviderAdapter for DockerProviderAdapter {
             ..Default::default()
         };
         match self.docker.list_containers(Some(options)).await {
-            Ok(summaries) => Ok(summaries.iter().map(serialize_container_summary).collect()),
+            Ok(summaries) => summaries.iter().map(serialize_container_summary).collect(),
             Err(err) => {
                 tracing::warn!(?err, "docker list_containers failed; returning empty");
                 Ok(Vec::new())
@@ -264,7 +264,7 @@ impl ProviderAdapter for DockerProviderAdapter {
             .start_container::<String>(id.as_str(), None)
             .await
             .map_err(SandboxHostError::Docker)?;
-        Ok(serialize_container(&self.inspect(id.as_str()).await?))
+        serialize_container(&self.inspect(id.as_str()).await?)
     }
 
     async fn stop(&self, id: &SandboxId) -> Result<SandboxInfo, SandboxHostError> {
@@ -272,7 +272,7 @@ impl ProviderAdapter for DockerProviderAdapter {
             .stop_container(id.as_str(), None)
             .await
             .map_err(SandboxHostError::Docker)?;
-        Ok(serialize_container(&self.inspect(id.as_str()).await?))
+        serialize_container(&self.inspect(id.as_str()).await?)
     }
 
     async fn delete(&self, id: &SandboxId) -> Result<(), SandboxHostError> {
@@ -322,7 +322,7 @@ impl ProviderAdapter for DockerProviderAdapter {
                 "docker cannot mutate labels on a live container; ignoring"
             );
         }
-        Ok(serialize_container(&inspect))
+        serialize_container(&inspect)
     }
 
     async fn signed_preview_url(
@@ -634,7 +634,9 @@ fn state_status_string(state: Option<&ContainerState>) -> Option<String> {
         .filter(|s| !s.is_empty())
 }
 
-pub(crate) fn serialize_container(inspect: &ContainerInspectResponse) -> SandboxInfo {
+pub(crate) fn serialize_container(
+    inspect: &ContainerInspectResponse,
+) -> Result<SandboxInfo, SandboxHostError> {
     let config = inspect.config.as_ref();
     let labels: Labels = config
         .and_then(|c| c.labels.clone())
@@ -656,8 +658,8 @@ pub(crate) fn serialize_container(inspect: &ContainerInspectResponse) -> Sandbox
         .or_else(|| config.and_then(|c| c.working_dir.clone()))
         .filter(|s| !s.is_empty());
     let managed_by_app = labels.get("managed_by").map(String::as_str) == Some(APP_MANAGED_BY);
-    SandboxInfo {
-        id: parse_sandbox_id(&id),
+    Ok(SandboxInfo {
+        id: parse_sandbox_id(&id)?,
         name,
         image: config.and_then(|c| c.image.clone()),
         snapshot: labels.get("snapshot").cloned(),
@@ -665,10 +667,12 @@ pub(crate) fn serialize_container(inspect: &ContainerInspectResponse) -> Sandbox
         labels,
         project_dir,
         managed_by_app,
-    }
+    })
 }
 
-fn serialize_container_summary(summary: &ContainerSummary) -> SandboxInfo {
+fn serialize_container_summary(
+    summary: &ContainerSummary,
+) -> Result<SandboxInfo, SandboxHostError> {
     let labels: Labels = summary
         .labels
         .clone()
@@ -689,8 +693,8 @@ fn serialize_container_summary(summary: &ContainerSummary) -> SandboxInfo {
         .to_ascii_lowercase();
     let project_dir = labels.get("project_dir").cloned().filter(|s| !s.is_empty());
     let managed_by_app = labels.get("managed_by").map(String::as_str) == Some(APP_MANAGED_BY);
-    SandboxInfo {
-        id: parse_sandbox_id(&id),
+    Ok(SandboxInfo {
+        id: parse_sandbox_id(&id)?,
         name,
         image: summary.image.clone(),
         snapshot: labels.get("snapshot").cloned(),
@@ -698,7 +702,7 @@ fn serialize_container_summary(summary: &ContainerSummary) -> SandboxInfo {
         labels,
         project_dir,
         managed_by_app,
-    }
+    })
 }
 
 fn serialize_image(image: &ImageSummary) -> SnapshotInfo {
@@ -768,12 +772,14 @@ fn daemon_tcp_endpoint_from_inspect(
     })
 }
 
-/// Parse a Docker id into a `SandboxId`; a malformed/empty id is unreachable from
-/// a real daemon response but is tolerated as a placeholder rather than panicking.
-fn parse_sandbox_id(id: &str) -> SandboxId {
-    id.parse().unwrap_or_else(|_| {
-        // Non-empty by construction in practice; an empty docker id cannot occur.
-        SandboxId::new_v4()
+/// Parse a Docker id into a `SandboxId`. A real daemon response always carries a
+/// non-empty id (the only value `SandboxId` rejects), so an empty/unparseable id
+/// is surfaced as an error rather than fabricating a placeholder identity.
+fn parse_sandbox_id(id: &str) -> Result<SandboxId, SandboxHostError> {
+    id.parse().map_err(|_| {
+        SandboxHostError::InvalidRequest(
+            "provider returned a container with an empty or unparseable id".to_owned(),
+        )
     })
 }
 

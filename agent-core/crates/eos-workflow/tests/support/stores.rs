@@ -422,30 +422,18 @@ impl eos_state::AttemptStore for MemoryStores {
 
 #[async_trait]
 impl eos_state::TaskStore for MemoryStores {
-    async fn upsert_task(&self, task: &Task) -> std::result::Result<(), CoreError> {
+    async fn insert_task(&self, task: &Task) -> std::result::Result<(), CoreError> {
         self.task_writes.fetch_add(1, Ordering::Relaxed);
-        self.tasks.lock().insert(task.id.clone(), task.clone());
+        let mut tasks = self.tasks.lock();
+        if tasks.contains_key(&task.id) {
+            return Err(CoreError::Store(format!("task {} already exists", task.id)));
+        }
+        tasks.insert(task.id.clone(), task.clone());
         Ok(())
     }
 
     async fn get(&self, id: &TaskId) -> std::result::Result<Option<Task>, CoreError> {
         Ok(self.tasks.lock().get(id).cloned())
-    }
-
-    async fn set_task_status(
-        &self,
-        id: &TaskId,
-        status: TaskStatus,
-        outcomes: Option<&[ExecutionTaskOutcome]>,
-        terminal_tool_result: Option<&JsonObject>,
-    ) -> std::result::Result<Task, CoreError> {
-        self.task_writes.fetch_add(1, Ordering::Relaxed);
-        let mut guard = self.tasks.lock();
-        let task = guard
-            .get_mut(id)
-            .ok_or_else(|| not_found("task", id.as_str()))?;
-        update_task(task, status, outcomes, terminal_tool_result);
-        Ok(task.clone())
     }
 
     async fn set_task_status_if_current(

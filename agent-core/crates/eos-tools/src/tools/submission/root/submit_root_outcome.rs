@@ -85,6 +85,12 @@ impl ToolExecutor for SubmitRootOutcome {
                 task_id.as_str()
             )));
         }
+        if task.status != TaskStatus::Running {
+            return Ok(ToolResult::error(format!(
+                "Root task '{}' is not running.",
+                task_id.as_str()
+            )));
+        }
 
         let task_status = match parsed.status {
             SubmissionStatus::Success => TaskStatus::Done,
@@ -100,8 +106,20 @@ impl ToolExecutor for SubmitRootOutcome {
         ]);
         service
             .task_store
-            .set_task_status(task_id, task_status, None, Some(&terminal))
-            .await?;
+            .set_task_status_if_current(
+                task_id,
+                TaskStatus::Running,
+                task_status,
+                None,
+                Some(&terminal),
+            )
+            .await?
+            .ok_or_else(|| {
+                ToolError::Internal(format!(
+                    "root task '{}' was closed before terminal submission was recorded",
+                    task_id.as_str()
+                ))
+            })?;
         service
             .request_store
             .finish_request(request_id, request_status)

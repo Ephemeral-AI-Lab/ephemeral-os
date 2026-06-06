@@ -83,34 +83,20 @@ impl Sealed for FakeTaskStore {}
 
 #[async_trait]
 impl TaskStore for FakeTaskStore {
-    async fn upsert_task(&self, task: &Task) -> Result<(), CoreError> {
-        self.put(task.clone());
+    async fn insert_task(&self, task: &Task) -> Result<(), CoreError> {
+        let mut tasks = self.tasks.lock().unwrap();
+        if tasks.contains_key(task.id.as_str()) {
+            return Err(CoreError::Store(format!(
+                "task {} already exists",
+                task.id.as_str()
+            )));
+        }
+        tasks.insert(task.id.as_str().to_owned(), task.clone());
         Ok(())
     }
 
     async fn get(&self, id: &TaskId) -> Result<Option<Task>, CoreError> {
         Ok(self.tasks.lock().unwrap().get(id.as_str()).cloned())
-    }
-
-    async fn set_task_status(
-        &self,
-        id: &TaskId,
-        status: TaskStatus,
-        outcomes: Option<&[ExecutionTaskOutcome]>,
-        terminal_tool_result: Option<&JsonObject>,
-    ) -> Result<Task, CoreError> {
-        let mut tasks = self.tasks.lock().unwrap();
-        let task = tasks
-            .get_mut(id.as_str())
-            .ok_or_else(|| CoreError::Store(format!("task {} not found", id.as_str())))?;
-        task.status = status;
-        if let Some(o) = outcomes {
-            task.outcomes = o.to_vec();
-        }
-        if let Some(t) = terminal_tool_result {
-            task.terminal_tool_result = Some(t.clone());
-        }
-        Ok(task.clone())
     }
 
     async fn set_task_status_if_current(
@@ -121,18 +107,21 @@ impl TaskStore for FakeTaskStore {
         outcomes: Option<&[ExecutionTaskOutcome]>,
         terminal_tool_result: Option<&JsonObject>,
     ) -> Result<Option<Task>, CoreError> {
-        {
-            let tasks = self.tasks.lock().unwrap();
-            match tasks.get(id.as_str()) {
-                None => return Err(CoreError::Store("task not found".to_owned())),
-                Some(task) if task.status != expected => return Ok(None),
-                Some(_) => {}
-            }
+        let mut tasks = self.tasks.lock().unwrap();
+        let task = tasks
+            .get_mut(id.as_str())
+            .ok_or_else(|| CoreError::Store("task not found".to_owned()))?;
+        if task.status != expected {
+            return Ok(None);
         }
-        Ok(Some(
-            self.set_task_status(id, status, outcomes, terminal_tool_result)
-                .await?,
-        ))
+        task.status = status;
+        if let Some(o) = outcomes {
+            task.outcomes = o.to_vec();
+        }
+        if let Some(t) = terminal_tool_result {
+            task.terminal_tool_result = Some(t.clone());
+        }
+        Ok(Some(task.clone()))
     }
 
     async fn list_for_request(&self, request_id: &RequestId) -> Result<Vec<Task>, CoreError> {

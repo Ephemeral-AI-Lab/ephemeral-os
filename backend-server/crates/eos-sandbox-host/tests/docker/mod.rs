@@ -23,7 +23,7 @@ fn serialize_container_normalizes_shape() {
         }),
         ..Default::default()
     };
-    let info = serialize_container(&inspect);
+    let info = serialize_container(&inspect).unwrap();
     assert_eq!(info.id.as_str(), "abc123");
     assert_eq!(info.name, "my-box"); // leading '/' stripped
     assert_eq!(info.image.as_deref(), Some("python:3.11"));
@@ -44,7 +44,7 @@ fn serialize_container_unmanaged_falls_back_to_working_dir() {
         }),
         ..Default::default()
     };
-    let info = serialize_container(&inspect);
+    let info = serialize_container(&inspect).unwrap();
     assert_eq!(info.project_dir.as_deref(), Some("/srv"));
     assert!(!info.managed_by_app);
     assert_eq!(info.state, ""); // no state → empty

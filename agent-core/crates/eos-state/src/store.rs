@@ -82,21 +82,11 @@ pub trait WorkflowStore: Sealed + Send + Sync {
 /// Persistence surface for request/task (Rust `TaskStoreProtocol`, task half).
 #[async_trait]
 pub trait TaskStore: Sealed + Send + Sync {
-    /// Insert when absent, full-field update when present; bumps `updated_at`.
-    async fn upsert_task(&self, task: &Task) -> Result<(), CoreError>;
+    /// Insert a fresh task row.
+    async fn insert_task(&self, task: &Task) -> Result<(), CoreError>;
 
     /// Load a task by id.
     async fn get(&self, id: &TaskId) -> Result<Option<Task>, CoreError>;
-
-    /// Set status (and optionally outcomes/terminal result). `None` for an
-    /// optional param leaves that column unchanged.
-    async fn set_task_status(
-        &self,
-        id: &TaskId,
-        status: TaskStatus,
-        outcomes: Option<&[ExecutionTaskOutcome]>,
-        terminal_tool_result: Option<&JsonObject>,
-    ) -> Result<Task, CoreError>;
 
     /// Optimistic-concurrency status flip (Rust `set_task_status_if_current`).
     /// `Ok(None)` ⇒ the current status did not match `expected`.
@@ -336,7 +326,7 @@ mod tests {
     async fn task_store_is_typed() {
         let store: &dyn TaskStore = &FakeTaskStore::new();
         let task = sample_task();
-        store.upsert_task(&task).await.expect("upsert");
+        store.insert_task(&task).await.expect("insert");
         let got = store.get(&task.id).await.expect("get").expect("present");
         assert_eq!(got, task);
     }
@@ -347,7 +337,7 @@ mod tests {
     async fn optimistic_status_flip() {
         let store = FakeTaskStore::new();
         let task = sample_task(); // status = Pending
-        store.upsert_task(&task).await.expect("upsert");
+        store.insert_task(&task).await.expect("insert");
 
         // Mismatched expectation is a no-op.
         let miss = store

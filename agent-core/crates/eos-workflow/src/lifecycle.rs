@@ -304,7 +304,7 @@ mod tests {
             .unwrap();
         // Prime the counter through the counted path so the zero *delta* below is
         // a real "close wrote no tasks", not a stuck-at-zero counter.
-        eos_state::TaskStore::upsert_task(
+        eos_state::TaskStore::insert_task(
             stores.as_ref(),
             &crate::support::root_task("parent", eos_state::TaskStatus::Running),
         )

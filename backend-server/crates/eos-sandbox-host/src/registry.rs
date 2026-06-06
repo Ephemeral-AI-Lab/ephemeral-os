@@ -43,7 +43,7 @@ impl ProviderRegistry {
 
     /// Seed the provider adapter. The first seed wins: repeat calls are no-ops,
     /// with a warning if a different provider kind tries to replace the live one.
-    pub fn set_default(&self, adapter: Arc<dyn ProviderAdapter>) {
+    pub fn seed(&self, adapter: Arc<dyn ProviderAdapter>) {
         let mut slot = self.adapter.write();
         if let Some(existing) = slot.as_ref() {
             if existing.kind() != adapter.kind() {
@@ -58,13 +58,13 @@ impl ProviderRegistry {
         *slot = Some(adapter);
     }
 
-    /// The provider adapter, or [`SandboxHostError::NoDefaultProvider`] if the
+    /// The provider adapter, or [`SandboxHostError::NoProvider`] if the
     /// registry has not been seeded.
     pub fn adapter(&self) -> Result<Arc<dyn ProviderAdapter>, SandboxHostError> {
         self.adapter
             .read()
             .clone()
-            .ok_or(SandboxHostError::NoDefaultProvider)
+            .ok_or(SandboxHostError::NoProvider)
     }
 }
 

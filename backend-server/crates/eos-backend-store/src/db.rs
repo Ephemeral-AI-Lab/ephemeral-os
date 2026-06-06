@@ -132,7 +132,12 @@ impl BackendStore {
         &self.audit_cursors
     }
 
-    /// The underlying connection pool.
+    /// The underlying connection pool. **Not part of the supported contract:** the
+    /// typed per-table repositories are the only intended SQL surface. This exists
+    /// solely so a cross-crate fault-injection test can corrupt the schema to
+    /// exercise persist-failure accounting; `#[doc(hidden)]` keeps it out of the
+    /// public API docs.
+    #[doc(hidden)]
     #[must_use]
     pub fn pool(&self) -> &SqlitePool {
         &self.pool

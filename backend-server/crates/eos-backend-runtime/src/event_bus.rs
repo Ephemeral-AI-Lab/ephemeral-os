@@ -281,7 +281,12 @@ async fn persist_and_broadcast(
         payload: pending.payload,
         created_at: pending.created_at,
     };
-    match append_with_retry(event_log, &record).await {
+    // Single append, no retry: the pool busy-timeout already absorbs SQLITE_BUSY,
+    // and a retry would reuse the identical `seq` — on a committed-but-errored
+    // first attempt it would collide on PRIMARY KEY (request_id, seq) and arm a
+    // *spurious* gap for a record that is in fact durable. A genuine append
+    // failure here is surfaced honestly as a gap marker instead.
+    match event_log.append(&record).await {
         Ok(()) => {
             // `send` errs only when there are no subscribers — expected and fine.
             let stamped = record.seq;
@@ -292,20 +297,11 @@ async fn persist_and_broadcast(
             tracing::warn!(
                 seq = record.seq,
                 error = %err,
-                "event_log append failed after retry; dropping record and marking a stream gap"
+                "event_log append failed; dropping record and marking a stream gap"
             );
             stream.note_drop();
             seq
         }
-    }
-}
-
-/// Bounded retry for a transient append failure (sqlite busy contention is already
-/// absorbed by the pool busy-timeout; this covers a single spurious error).
-async fn append_with_retry(event_log: &EventLogRepo, record: &EventRecord) -> Result<(), StoreError> {
-    match event_log.append(record).await {
-        Ok(()) => Ok(()),
-        Err(_) => event_log.append(record).await,
     }
 }
 

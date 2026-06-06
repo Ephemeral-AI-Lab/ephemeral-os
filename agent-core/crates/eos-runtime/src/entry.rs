@@ -188,7 +188,7 @@ pub async fn run_request(
     services
         .db
         .task_store
-        .upsert_task(&Task {
+        .insert_task(&Task {
             id: root_task_id.clone(),
             request_id: request_id.clone(),
             role: TaskRole::Root,

@@ -14,11 +14,11 @@ fn adapter_requires_seed() {
     let registry = ProviderRegistry::new();
     assert!(matches!(
         registry.adapter(),
-        Err(SandboxHostError::NoDefaultProvider)
+        Err(SandboxHostError::NoProvider)
     ));
 
     let adapter: Arc<dyn ProviderAdapter> = Arc::new(MockAdapter::new().with_id("docker"));
-    registry.set_default(Arc::clone(&adapter));
+    registry.seed(Arc::clone(&adapter));
     assert!(Arc::ptr_eq(&registry.adapter().unwrap(), &adapter));
 }
 
@@ -28,7 +28,7 @@ fn adapter_requires_seed() {
 fn one_adapter_serves_all_sandboxes() {
     let registry = ProviderRegistry::new();
     let adapter: Arc<dyn ProviderAdapter> = Arc::new(MockAdapter::new().with_id("docker"));
-    registry.set_default(Arc::clone(&adapter));
+    registry.seed(Arc::clone(&adapter));
     for _ in 0..5 {
         assert!(Arc::ptr_eq(&registry.adapter().unwrap(), &adapter));
     }
@@ -41,8 +41,8 @@ fn seed_is_first_call_wins() {
     let first: Arc<dyn ProviderAdapter> = Arc::new(MockAdapter::new().with_id("first"));
     let second: Arc<dyn ProviderAdapter> = Arc::new(MockAdapter::new().with_id("second"));
 
-    registry.set_default(Arc::clone(&first));
-    registry.set_default(second);
+    registry.seed(Arc::clone(&first));
+    registry.seed(second);
 
     assert!(Arc::ptr_eq(&registry.adapter().unwrap(), &first));
 }

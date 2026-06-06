@@ -45,12 +45,14 @@ impl ToolExecutor for WriteFile {
             Ok(v) => v,
             Err(err) => return Ok(err),
         };
-        let path = resolve_path(ctx, &parsed.file_path);
+        let WriteFileInput { file_path, content } = parsed;
+        let bytes = content.len() as u64;
+        let path = resolve_path(ctx, &file_path);
         let sandbox_id = ctx.require_sandbox_id()?;
         let request = WriteFileRequest {
             base: request_base(ctx, &format!("write {path}"))?,
             path: path.clone(),
-            content: parsed.content.clone(),
+            content,
             overwrite: true,
         };
         let result = match eos_sandbox_port::write_file(
@@ -63,7 +65,6 @@ impl ToolExecutor for WriteFile {
             Ok(result) => result,
             Err(err) => return Ok(ToolResult::error(err.to_string())),
         };
-        let bytes = parsed.content.len() as u64;
         let output = MutationOutput {
             cwd: cwd(ctx),
             file_path: path,

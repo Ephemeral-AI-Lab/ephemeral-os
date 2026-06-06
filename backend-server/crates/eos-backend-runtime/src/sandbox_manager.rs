@@ -382,7 +382,7 @@ impl SandboxManager {
         let registry = Arc::new(ProviderRegistry::new());
         let docker =
             DockerProviderAdapter::connect().map_err(|err| SandboxManagerError::Connect(err.to_string()))?;
-        registry.set_default(Arc::new(docker));
+        registry.seed(Arc::new(docker));
         let daemon = Arc::new(DaemonClient::new(registry));
         let lifecycle = Arc::new(SandboxLifecycle::new(daemon.clone(), eosd_artifact_dir));
         let provisioner: Arc<dyn RequestProvisioner> =
