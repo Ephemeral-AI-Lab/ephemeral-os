@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>core - eos-e2e-test</title>
+<link rel="stylesheet" href="../assets/e2e-readme.css">
+</head>
+<body data-page="module" data-module-json="readme.json">
+<div id="app"></div>
+<script type="application/json" id="readme-module-data">
+{
+  "schemaVersion": 1,
+  "name": "core",
+  "displayName": "core",
+  "cargoTestName": "core",
+  "folder": "core",
+  "path": "tests/core/mod.rs",
+  "page": "core/index.html",
+  "source": {
+    "markdown": "readme.md"
+  },
+  "overview": {
+    "summary": "`core` owns the protocol-first smoke and contract surface for live `eosd`: runtime readiness, workspace binding/base setup, direct file ops, foreground exec, envelope guards, and basic audit/metrics visibility. It exercises daemon ops including `api.runtime.ready`, `api.v1.heartbeat`, `api.workspace.binding`, `api.layer_metrics`, `api.audit.snapshot`, `api.ensure_workspace_base`, `api.build_workspace_base`, `api.commit_to_workspace`, `api.v1.read_file`, `api.v1.write_file`, `api.v1.edit_file`, `api.v1.exec_command`, and raw malformed/auth envelope paths. Module config: `crates/eos-e2e-test/tests/core/config/default.test.yml`.",
+    "moduleConfig": "crates/eos-e2e-test/tests/core/config/default.test.yml",
+    "ops": [
+      "api.runtime.ready",
+      "api.v1.heartbeat",
+      "api.workspace.binding",
+      "api.layer_metrics",
+      "api.audit.snapshot",
+      "api.ensure_workspace_base",
+      "api.build_workspace_base",
+      "api.commit_to_workspace",
+      "api.v1.read_file",
+      "api.v1.write_file",
+      "api.v1.edit_file",
+      "api.v1.exec_command"
+    ],
+    "tags": [
+      "core"
+    ]
+  },
+  "checklist": [
+    {
+      "id": "core-runtime-base",
+      "title": "Runtime Base",
+      "description": "Runtime readiness, probes, workspace binding, base-layer metrics, rebuild timing, heartbeat idle state, and base audit fields remain protocol-visible and coherent.",
+      "tags": [
+        "core"
+      ]
+    },
+    {
+      "id": "core-host-default-layer-stack-root",
+      "title": "Host Default Layer Stack Root",
+      "description": "Host and protocol workspace setup inject the LayerStack root from workspace configuration without requiring a separate caller routing parameter.",
+      "tags": [
+        "core"
+      ]
+    },
+    {
+      "id": "core-workspace-commit",
+      "title": "Workspace Commit",
+      "description": "Committing the LayerStack view to the workspace survives a base rebuild and keeps manifest audit fields aligned with the response.",
+      "tags": [
+        "core"
+      ]
+    },
+    {
+      "id": "core-envelope-guards",
+      "title": "Envelope Guards",
+      "description": "Unknown ops, malformed frames, oversized requests, bad or missing auth, and isolated-mode plugin-family ops return deterministic structured errors.",
+      "tags": [
+        "core"
+      ]
+    },
+    {
+      "id": "core-direct-file-ops",
+      "title": "Direct File Ops",
+      "description": "Direct read/write/edit paths publish through OCC, bypass overlay leasing, expose direct timing counters, and keep lease counts at zero under repeated writes.",
+      "tags": [
+        "core"
+      ]
+    },
+    {
+      "id": "core-file-error-catalog",
+      "title": "File Error Catalog",
+      "description": "Missing reads, edit anchor failures, ambiguous edit counts, create-only conflicts, and file size limits return deterministic no-publish error payloads.",
+      "tags": [
+        "core"
+      ]
+    }
+  ],
+  "test": [
+    {
+      "id": "core-runtime-and-workspace-state",
+      "name": "core-runtime-and-workspace-state",
+      "description": "Runs the unified runtime/base/workspace scenario: `setup_readiness_metrics_and_audit_are_protocol_visible`, `runtime_ready_handshake`, `ensure_base_creates_single_base_layer`, `ensure_base_idempotent`, `build_base_reset_rebuilds`, `workspace_binding_roundtrip`, `heartbeat_inflight_idle_zero`, and `commit_to_workspace_survives_protocol_rebuild` together prove readiness, base metrics, audit evidence, idle command state, and rebuild-safe workspace commits.",
+      "command": "cargo test -p eos-e2e-test --features e2e --test core -- --nocapture",
+      "checklist": [
+        "core-runtime-base",
+        "core-workspace-commit"
+      ]
+    },
+    {
+      "id": "core-envelope-and-error-catalog",
+      "name": "core-envelope-and-error-catalog",
+      "description": "Groups the protocol guard and deterministic error catalog: `unknown_op_rejected`, `bad_json_rejected`, `oversized_request_rejected`, `unauthorized_tcp_rejected`, `forbidden_in_isolated_workspace_rejected`, `read_nonexistent`, `read_nonexistent_reports_absent`, `edit_anchor_not_found`, `edit_count_mismatch`, `edit_error_catalog_anchor_not_found_and_count_mismatch`, `write_create_only_conflict`, `read_max_bytes_guard`, and `write_max_file_bytes_guard`.",
+      "command": "cargo test -p eos-e2e-test --features e2e --test core -- --nocapture",
+      "checklist": [
+        "core-envelope-guards",
+        "core-file-error-catalog",
+        "core-direct-file-ops"
+      ]
+    },
+    {
+      "id": "core-direct-file-occ-path",
+      "name": "core-direct-file-occ-path",
+      "description": "Groups direct file correctness and resource behavior: `direct_file_ops_round_trip_through_protocol`, `write_read_roundtrip`, `write_publishes_changed_paths`, `edit_search_replace_applied`, `edit_replace_all`, `fast_path_write_edit_emit_no_overlay_or_lease_audit`, `fast_path_surfaces_occ_and_read_timings`, `repeated_fast_path_writes_keep_leases_zero`, and `direct_file_ops_concurrency_ladder` cover OCC publish, timing counters, no overlay lease leakage, and concurrent readback across the configured `1/3/6/12` ladder.",
+      "command": "cargo test -p eos-e2e-test --features e2e --test core -- --nocapture",
+      "checklist": [
+        "core-direct-file-ops",
+        "core-file-error-catalog",
+        "core-runtime-base"
+      ]
+    }
+  ]
+}
+</script>
+<script src="../assets/e2e-readme.js"></script>
+</body>
+</html>

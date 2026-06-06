@@ -1,0 +1,72 @@
+{
+  "schemaVersion": 1,
+  "source": {
+    "cargoToml": "../Cargo.toml",
+    "moduleReadmes": "*/readme.md"
+  },
+  "modules": [
+    {
+      "name": "core",
+      "displayName": "core",
+      "cargoTestName": "core",
+      "path": "core/readme.json",
+      "page": "core/index.html"
+    },
+    {
+      "name": "daemon",
+      "displayName": "daemon",
+      "cargoTestName": "daemon",
+      "path": "daemon/readme.json",
+      "page": "daemon/index.html"
+    },
+    {
+      "name": "ephemeral_workspace",
+      "displayName": "ephemeral_workspace",
+      "cargoTestName": "ephemeral_workspace",
+      "path": "ephemeral_workspace/readme.json",
+      "page": "ephemeral_workspace/index.html"
+    },
+    {
+      "name": "eos-isolated-workspace",
+      "displayName": "eos-isolated-workspace",
+      "cargoTestName": "eos-isolated-workspace",
+      "path": "eos-isolated-workspace/readme.json",
+      "page": "eos-isolated-workspace/index.html"
+    },
+    {
+      "name": "eos-layerstack",
+      "displayName": "eos-layerstack",
+      "cargoTestName": "eos-layerstack",
+      "path": "eos-layerstack/readme.json",
+      "page": "eos-layerstack/index.html"
+    },
+    {
+      "name": "eos-occ",
+      "displayName": "eos-occ",
+      "cargoTestName": "eos-occ",
+      "path": "eos-occ/readme.json",
+      "page": "eos-occ/index.html"
+    },
+    {
+      "name": "eos-command-session",
+      "displayName": "eos-command-session",
+      "cargoTestName": "eos-command-session",
+      "path": "eos-command-session/readme.json",
+      "page": "eos-command-session/index.html"
+    },
+    {
+      "name": "pressure",
+      "displayName": "pressure",
+      "cargoTestName": "pressure",
+      "path": "pressure/readme.json",
+      "page": "pressure/index.html"
+    },
+    {
+      "name": "plugin",
+      "displayName": "plugin",
+      "cargoTestName": "plugin",
+      "path": "plugin/readme.json",
+      "page": "plugin/index.html"
+    }
+  ]
+}

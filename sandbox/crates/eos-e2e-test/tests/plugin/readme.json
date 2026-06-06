@@ -1,0 +1,199 @@
+{
+  "schemaVersion": 1,
+  "name": "plugin",
+  "displayName": "plugin",
+  "cargoTestName": "plugin",
+  "folder": "plugin",
+  "path": "tests/plugin/mod.rs",
+  "page": "plugin/index.html",
+  "source": {
+    "markdown": "readme.md"
+  },
+  "overview": {
+    "summary": "This module owns the unified live E2E contract for plugin package setup, daemon-hosted PPC service dispatch, workspace refresh, restart behavior, LSP dispatch, and isolated-gating coverage for the sandbox plugin subsystem. It exercises daemon ops `api.plugin.ensure`, `api.plugin.status`, dynamic plugin ops `plugin.generic.query` and `plugin.lsp.query_symbols`, plus `api.v1.write_file`, `api.v1.exec_command`, `api.isolated_workspace.enter`, and `api.isolated_workspace.exit` for fixture setup and routing gates. Module config lives at `crates/eos-e2e-test/tests/plugin/config/default.test.yml`.",
+    "moduleConfig": null,
+    "ops": [
+      "api.plugin.ensure",
+      "api.plugin.status",
+      "plugin.generic.query",
+      "plugin.lsp.query_symbols",
+      "api.v1.write_file",
+      "api.v1.exec_command",
+      "api.isolated_workspace.enter",
+      "api.isolated_workspace.exit"
+    ],
+    "tags": [
+      "plugin"
+    ]
+  },
+  "checklist": [
+    {
+      "id": "plugin-package-ensure",
+      "title": "Package Ensure",
+      "description": "Warm/cold ensure requests upload when missing, publishes digest-keyed package roots, runs setup, and creates dependency/scratch setup artifacts.",
+      "tags": [
+        "plugin"
+      ]
+    },
+    {
+      "id": "plugin-setup-idempotent",
+      "title": "Setup Idempotent",
+      "description": "Re-ensure with matching package and setup digests skips upload/setup and keeps the setup count at one.",
+      "tags": [
+        "plugin"
+      ]
+    },
+    {
+      "id": "plugin-dispatch-roundtrip",
+      "title": "Dispatch Roundtrip",
+      "description": "Dynamic daemon PPC dispatch preserves operation name, request body, success envelope, package root, and dependency root.",
+      "tags": [
+        "plugin"
+      ]
+    },
+    {
+      "id": "plugin-service-hosted",
+      "title": "Service Hosted",
+      "description": "Daemon-hosted plugin services start as live PPC workers, connect routes, and report accepted health probes.",
+      "tags": [
+        "plugin"
+      ]
+    },
+    {
+      "id": "plugin-service-cleanup",
+      "title": "Service Cleanup",
+      "description": "Reload removes old routes, PPC clients, service snapshots, staged uploads, and worker processes. Socket-path unlink is not asserted: `sandbox/crates/eos-daemon/src/services/plugins/process.rs` removes stale socket paths before bind, while `PluginServiceProcess::teardown` only terminates the child process.",
+      "tags": [
+        "plugin"
+      ]
+    },
+    {
+      "id": "plugin-refresh-remount",
+      "title": "Refresh Remount",
+      "description": "A read-only service sees the latest workspace after a LayerStack update and records bounded refresh activity.",
+      "tags": [
+        "plugin"
+      ]
+    },
+    {
+      "id": "plugin-refresh-singleflight",
+      "title": "Refresh Singleflight",
+      "description": "Concurrent refreshes after one workspace edit all observe new content while refresh counts stay bounded.",
+      "tags": [
+        "plugin"
+      ]
+    },
+    {
+      "id": "plugin-restart-policy",
+      "title": "Restart Policy",
+      "description": "The `restart_service` strategy restarts the worker process instead of remounting the workspace.",
+      "tags": [
+        "plugin"
+      ]
+    },
+    {
+      "id": "plugin-isolated-gate",
+      "title": "Isolated Gate",
+      "description": "Plugin dynamic ops are rejected while the caller is in isolated workspace mode and the handle exits cleanly.",
+      "tags": [
+        "plugin"
+      ]
+    },
+    {
+      "id": "plugin-lsp-lifecycle",
+      "title": "Lsp Lifecycle",
+      "description": "The LSP package uses the generic lifecycle, installs node/pyright dependency roots, connects `plugin.lsp.query_symbols`, and returns live workspace symbols.",
+      "tags": [
+        "plugin"
+      ]
+    },
+    {
+      "id": "plugin-write-allowed",
+      "title": "Write Allowed",
+      "description": "Write-allowed or oneshot plugin operations publish only through daemon-owned OCC paths and report changed paths.",
+      "tags": [
+        "plugin"
+      ]
+    },
+    {
+      "id": "plugin-lsp-apply-and-failures",
+      "title": "Lsp Apply And Failures",
+      "description": "LSP read-only queries, workspace edit application, stale edit conflict/retry, and structured setup failures are covered through daemon plugin/LSP flows.",
+      "tags": [
+        "plugin"
+      ]
+    },
+    {
+      "id": "plugin-intent-contract",
+      "title": "Intent Contract",
+      "description": "Missing intent, non-write caller misuse, unbootstrapped plugin calls, and foreign/lifecycle misuse fail fast with stable audit and error payloads.",
+      "tags": [
+        "plugin"
+      ]
+    }
+  ],
+  "test": [
+    {
+      "id": "plugin_package_setup_lifecycle",
+      "name": "plugin_package_setup_lifecycle",
+      "description": "Groups `host_ensure_plugin_package_installs_generic_package`, `generic_package_installs_and_sets_up`, `generic_package_reensure_is_idempotent`, and the package/setup portion of `lsp_package_uses_generic_lifecycle_and_dispatches_symbols`: missing packages request upload, staged packages publish digest roots, setup artifacts are created, and repeated ensure skips setup.",
+      "command": "cargo test -p eos-e2e-test --features e2e --test plugin -- --nocapture",
+      "checklist": [
+        "plugin-package-ensure",
+        "plugin-setup-idempotent",
+        "plugin-lsp-lifecycle"
+      ]
+    },
+    {
+      "id": "plugin_failure_contracts",
+      "name": "plugin_failure_contracts",
+      "description": "Uses `plugin_setup_and_manifest_failures_are_structured`: manifest intent validation and setup-command failures return structured daemon error envelopes with stable kind/message payloads.",
+      "command": "cargo test -p eos-e2e-test --features e2e --test plugin plugin_setup_and_manifest_failures_are_structured -- --nocapture",
+      "checklist": [
+        "plugin-lsp-apply-and-failures",
+        "plugin-intent-contract"
+      ]
+    },
+    {
+      "id": "plugin_service_dispatch_and_health",
+      "name": "plugin_service_dispatch_and_health",
+      "description": "Groups `generic_plugin_dispatch_roundtrip`, `service_health_probe_reports_connected_service`, and the LSP dispatch portion of `lsp_package_uses_generic_lifecycle_and_dispatches_symbols`: dynamic PPC routes preserve request/response envelopes, service health probes are accepted, and `plugin.lsp.query_symbols` returns live workspace symbols.",
+      "command": "cargo test -p eos-e2e-test --features e2e --test plugin -- --nocapture",
+      "checklist": [
+        "plugin-dispatch-roundtrip",
+        "plugin-service-hosted",
+        "plugin-lsp-lifecycle"
+      ]
+    },
+    {
+      "id": "plugin_workspace_refresh_and_restart",
+      "name": "plugin_workspace_refresh_and_restart",
+      "description": "Groups `generic_plugin_refreshes_after_workspace_edit`, `concurrent_plugin_refresh_singleflight`, and `restart_service_strategy_restarts_on_workspace_edit`: services must observe LayerStack updates, concurrent stale dispatch shares one daemon refresh, and `restart_service` restarts rather than remounts.",
+      "command": "cargo test -p eos-e2e-test --features e2e --test plugin -- --nocapture",
+      "checklist": [
+        "plugin-refresh-remount",
+        "plugin-refresh-singleflight",
+        "plugin-restart-policy"
+      ]
+    },
+    {
+      "id": "plugin_isolated_gate",
+      "name": "plugin_isolated_gate",
+      "description": "Uses `generic_plugin_rejected_in_isolated_workspace`: dynamic plugin operations are rejected with `forbidden_in_isolated_workspace` while the caller is isolated, and the isolated handle exits cleanly afterward.",
+      "command": "cargo test -p eos-e2e-test --features e2e --test plugin -- --nocapture",
+      "checklist": [
+        "plugin-isolated-gate"
+      ]
+    },
+    {
+      "id": "plugin_cleanup_and_write_publish",
+      "name": "plugin_cleanup_and_write_publish",
+      "description": "Groups `package_reload_reaps_old_service_and_routes` and `oneshot_overlay_plugin_write_publishes_through_occ`: package reload replaces dynamic routes, old worker processes, service status, and staged upload roots; write-allowed oneshot overlay operations publish changed paths through daemon-owned OCC. Socket unlink remains unsupported as described in `plugin-service-cleanup`.",
+      "command": "cargo test -p eos-e2e-test --features e2e --test plugin -- --nocapture",
+      "checklist": [
+        "plugin-service-cleanup",
+        "plugin-write-allowed"
+      ]
+    }
+  ]
+}
