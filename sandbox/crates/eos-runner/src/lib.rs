@@ -8,10 +8,9 @@
 //! process/thread to be the only thread in the process, or the syscall fails with
 //! `EINVAL`. Spawning this work inline in the multithreaded tokio daemon would
 //! break it; instead the daemon execs a dedicated single-threaded child whose body
-//! lives here. The R10 import discipline of the Rust helpers
-//! (`isolated_workspace/scripts/setns_exec.py:1-12`) — never pull `logging` /
-//! `asyncio` / `subprocess` before the syscall — maps in Rust to *not depending on
-//! tokio*: this crate's `Cargo.toml` deliberately omits it.
+//! lives here. The R10 import discipline of the Rust helpers — never pull
+//! `logging` / `asyncio` / `subprocess` before the syscall — maps in Rust to *not
+//! depending on tokio*: this crate's `Cargo.toml` deliberately omits it.
 //!
 //! # Two modes
 //!
@@ -26,9 +25,8 @@
 //! # Process group / cancellation
 //!
 //! Both modes start the child in its own session/process group (the equivalent of
-//! Rust `start_new_session=True`, `overlay/namespace_runner.py:250`) so the daemon
-//! can `killpg` the whole group from outside — cancel kills the entire tree, not
-//! just the immediate child.
+//! Rust `start_new_session=True`) so the daemon can `killpg` the whole group from
+//! outside — cancel kills the entire tree, not just the immediate child.
 //!
 //! # Build-time guarantee
 //!

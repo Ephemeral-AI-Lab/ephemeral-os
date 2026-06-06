@@ -91,10 +91,10 @@ pub(crate) const fn rbind_proc() {}
 /// pin the resulting `/proc/self/ns/*` FDs.
 ///
 /// This is the Rust *consolidation* of the former Rust launcher's
-/// `unshare(1)` flags. The previous path spawned `ns_holder.py` via
+/// `unshare(1)` flags. The previous path spawned the holder process via
 /// `unshare --user --map-root-user --net --pid --mount --fork --kill-child
 /// --propagation private`, so the namespaces were created by the `unshare`
-/// binary, not inside `ns_holder.py`. The Rust holder owns that step directly:
+/// binary, not inside the holder process. The Rust holder owns that step directly:
 /// `unshare(CLONE_NEWUSER | CLONE_NEWNS | CLONE_NEWPID | CLONE_NEWNET)` plus the
 /// uid/gid map writes and `MS_PRIVATE` mount-propagation, then opens its own
 /// `ns/{user,mnt,pid,net}` symlinks into a [`HeldNamespaces`].

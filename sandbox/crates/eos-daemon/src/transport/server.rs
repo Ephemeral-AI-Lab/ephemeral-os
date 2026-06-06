@@ -67,8 +67,9 @@ pub struct ServerConfig {
     pub auth_token: Option<String>,
 }
 
-/// The running daemon: the op table, audit ring, invocation registry, and the
-/// shutdown token.
+/// The running daemon: the op table, audit config, invocation registry, and the
+/// shutdown token. Audit events flow through the process-wide audit ring
+/// singleton (`audit::buffer`), not an instance field.
 ///
 /// It ORCHESTRATES but NEVER enters a namespace: namespace work is delegated to
 /// the `eosd ns-holder` / `eosd ns-runner` children it spawns; the daemon stays
@@ -76,8 +77,7 @@ pub struct ServerConfig {
 /// a userns itself.
 pub struct DaemonServer {
     config: ServerConfig,
-    op_table: OpTable,
-    audit: AuditBuffer,
+    op_table: Arc<OpTable>,
     audit_config: AuditConfig,
     invocation_registry: Arc<InFlightRegistry>,
     isolated_sweeper_interval_ms: u64,
@@ -91,8 +91,7 @@ impl DaemonServer {
     pub fn new(config: ServerConfig) -> Self {
         Self {
             config,
-            op_table: OpTable::with_builtins(),
-            audit: AuditBuffer::new(),
+            op_table: Arc::new(OpTable::with_builtins()),
             audit_config: default_audit_config(),
             invocation_registry: Arc::new(InFlightRegistry::new(
                 crate::DEFAULT_TTL_S,
@@ -119,8 +118,7 @@ impl DaemonServer {
         crate::services::occ::configure_layer_stack(&daemon_config.layer_stack);
         Self {
             config,
-            op_table: OpTable::with_builtins(),
-            audit: AuditBuffer::new(),
+            op_table: Arc::new(OpTable::with_builtins()),
             audit_config: daemon_config.audit.clone(),
             invocation_registry: Arc::new(InFlightRegistry::new(
                 daemon_config.inflight.ttl_s,
@@ -197,7 +195,6 @@ impl DaemonServer {
         };
         // Reap stale command sessions left by a prior daemon, before accepting.
         crate::services::command_session::recover_orphaned_command_sessions();
-        let _ = (&server.audit, &server.invocation_registry);
 
         if let Some(parent) = server.config.socket_path.parent() {
             tokio::fs::create_dir_all(parent).await?;
@@ -352,7 +349,6 @@ impl DaemonServer {
             .unwrap_or(false);
         let op = request.op.clone();
         let emit_tool_events = should_emit_tool_call_event(&op);
-        let started = Instant::now();
         if emit_tool_events {
             emit_tool_call_event(
                 "tool_call.started",
@@ -363,7 +359,7 @@ impl DaemonServer {
                 None,
             );
         }
-        let table = self.op_table.clone();
+        let table = Arc::clone(&self.op_table);
         let registry = Arc::clone(&self.invocation_registry);
         let task_invocation_id = invocation_id.clone();
         let task_registry = Arc::clone(&registry);
@@ -399,16 +395,10 @@ impl DaemonServer {
             ),
         };
         registry.deregister(&invocation_id);
-        if emit_tool_events {
-            emit_tool_call_event(
-                "tool_call.completed",
-                &invocation_id,
-                &op,
-                &caller_id,
-                Some(started.elapsed().as_secs_f64() * 1000.0),
-                response_status(&response),
-            );
-        }
+        // The rich `tool_call.completed` is emitted once by the dispatcher's
+        // audit pass (see `audit::events::emit_dispatch_audit`); the transport
+        // layer only opens the lifecycle with `tool_call.started` so a single
+        // `tool_call.completed` lands per op instead of two on `Lane::Normal`.
         response
     }
 
@@ -450,7 +440,10 @@ fn should_emit_tool_call_event(op: &str) -> bool {
     !op.starts_with("api.audit.")
         && !matches!(
             op,
-            "api.v1.heartbeat" | "api.v1.inflight_count" | "api.v1.command_session_count"
+            "api.runtime.ready"
+                | "api.v1.heartbeat"
+                | "api.v1.inflight_count"
+                | "api.v1.command_session_count"
         )
 }
 
@@ -479,19 +472,6 @@ fn emit_tool_call_event(
     if let Ok(section) = serde_json::to_value(section) {
         safe_emit(build_event(event_type, "tool_call", section), Lane::Normal);
     }
-}
-
-fn response_status(response: &serde_json::Value) -> Option<String> {
-    if response.get("success").and_then(serde_json::Value::as_bool) == Some(false)
-        || response.get("error").is_some_and(|error| !error.is_null())
-    {
-        return Some("error".to_owned());
-    }
-    response
-        .get("status")
-        .and_then(serde_json::Value::as_str)
-        .map(str::to_owned)
-        .or_else(|| Some("ok".to_owned()))
 }
 
 fn caller_id_from_args(args: &serde_json::Value) -> String {

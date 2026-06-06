@@ -14,7 +14,7 @@ use tower::ServiceExt;
 
 use eos_backend_runtime::{CancelOutcome, DeleteRejection, SandboxManagerError};
 use eos_backend_store::BackendStore;
-use eos_backend_types::{BackendRunStatus, RunMeta, SandboxState};
+use eos_backend_types::{BackendRunStatus, EventRecord, RunMeta, SandboxState};
 use eos_state::RequestStatus;
 use eos_types::{RequestId, SandboxId, TaskId, UtcDateTime};
 
@@ -271,6 +271,61 @@ async fn detail_unknown_is_404() {
     assert_eq!(status, StatusCode::NOT_FOUND);
 }
 
+#[tokio::test]
+async fn events_route_replays_persisted_milestones() {
+    let (store, _dir) = test_store().await;
+    let id = RequestId::new_v4();
+    seed_run(&store, &id, BackendRunStatus::Running).await;
+    for seq in 1..=2 {
+        store
+            .event_log()
+            .append(&EventRecord {
+                request_id: id.clone(),
+                seq,
+                kind: "run_progress".to_owned(),
+                payload: json!({ "n": seq }),
+                created_at: UtcDateTime::now(),
+            })
+            .await
+            .expect("seed event");
+    }
+    let app = router(
+        &store,
+        Arc::new(FakeRunControl::new(CancelOutcome::Requested)),
+        Arc::new(FakeSandboxRegistry::new(vec![])),
+        fake_reads(None, vec![], None),
+    );
+
+    // Full replay, in sequence order.
+    let (status, body) = send(
+        &app,
+        get(&format!("/api/user-requests/{}/events?after_seq=0", id.as_str())),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    let events = json_of(&body);
+    let events = events.as_array().expect("array");
+    assert_eq!(events.len(), 2);
+    assert_eq!(events[0]["seq"], json!(1));
+    assert_eq!(events[1]["seq"], json!(2));
+
+    // `after_seq` filters out already-seen records.
+    let (status, body) = send(
+        &app,
+        get(&format!("/api/user-requests/{}/events?after_seq=1", id.as_str())),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    let events = json_of(&body);
+    let events = events.as_array().expect("array");
+    assert_eq!(events.len(), 1);
+    assert_eq!(events[0]["seq"], json!(2));
+
+    // Unknown request is a 404.
+    let (status, _) = send(&app, get("/api/user-requests/missing/events")).await;
+    assert_eq!(status, StatusCode::NOT_FOUND);
+}
+
 // --- sandboxes -------------------------------------------------------------
 
 #[tokio::test]
@@ -294,6 +349,29 @@ async fn sandbox_list_is_sanitized() {
     // No daemon connection material or credentials in the serialized view (AC4).
     for denied in ["host", "port", "auth", "token", "daemon"] {
         assert!(!text.contains(denied), "sandbox response leaked {denied:?}: {text}");
+    }
+}
+
+#[tokio::test]
+async fn sandbox_detail_returns_sanitized_view() {
+    let (store, _dir) = test_store().await;
+    let sandbox_id: SandboxId = "sbx-1".parse().expect("id");
+    let app = router(
+        &store,
+        Arc::new(FakeRunControl::new(CancelOutcome::Requested)),
+        Arc::new(FakeSandboxRegistry::new(vec![make_sandbox_view(
+            &sandbox_id,
+            SandboxState::Ready,
+        )])),
+        fake_reads(None, vec![], None),
+    );
+
+    let (status, body) = send(&app, get("/api/sandboxes/sbx-1")).await;
+    assert_eq!(status, StatusCode::OK);
+    let text = String::from_utf8(body).expect("utf8");
+    assert!(text.contains("sbx-1"));
+    for denied in ["host", "port", "auth", "token", "daemon"] {
+        assert!(!text.contains(denied), "sandbox detail leaked {denied:?}: {text}");
     }
 }
 

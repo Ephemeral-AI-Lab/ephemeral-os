@@ -45,36 +45,43 @@ fn ppc_client_round_trip_requires_matching_reply() -> TestResult {
 }
 
 #[test]
-fn ppc_client_rejects_mismatched_message_id() -> TestResult {
+fn ppc_client_drops_stray_reply_without_failing_in_flight_request() -> TestResult {
     let (client_stream, mut server_stream) = UnixStream::pair()?;
     let server = thread::spawn(move || -> TestResult {
-        let _request = PpcEnvelope::decode(&read_frame(&mut server_stream)?)?;
-        let reply = PpcEnvelope {
-            message_id: "different".to_owned(),
+        let request = PpcEnvelope::decode(&read_frame(&mut server_stream)?)?;
+        assert_eq!(request.message_id, "msg-1");
+        // A reply for an id that is not in flight must be dropped, not used to
+        // cascade-fail the healthy in-flight request on the same client.
+        let stray = PpcEnvelope {
+            message_id: "ghost".to_owned(),
             direction: PpcDirection::Reply,
             op: "reply".to_owned(),
             body: "{}".to_owned(),
+        };
+        server_stream.write_all(&stray.encode()?)?;
+        let reply = PpcEnvelope {
+            message_id: "msg-1".to_owned(),
+            direction: PpcDirection::Reply,
+            op: "reply".to_owned(),
+            body: r#"{"ok":true}"#.to_owned(),
         };
         server_stream.write_all(&reply.encode()?)?;
         Ok(())
     });
 
     let client = PpcClient::new(client_stream)?;
-    let Err(err) = client.round_trip(
+    let reply = client.round_trip(
         &PpcEnvelope {
             message_id: "msg-1".to_owned(),
             direction: PpcDirection::Request,
             op: "plugin.echo.ping".to_owned(),
             body: "{}".to_owned(),
         },
-        Duration::from_secs(1),
-    ) else {
-        return Err("mismatched reply unexpectedly succeeded".into());
-    };
+        Duration::from_secs(5),
+    )?;
 
-    assert!(err
-        .to_string()
-        .contains("did not match any in-flight request"));
+    assert_eq!(reply.message_id, "msg-1");
+    assert_eq!(reply.body, r#"{"ok":true}"#);
     join_server(server)?;
     Ok(())
 }

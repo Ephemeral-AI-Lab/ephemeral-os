@@ -4,8 +4,7 @@
 //! lowercase, punctuation-free messages and `#[from]` source conversions. The
 //! kinds below mirror the active runner failure surfaces: invalid requests,
 //! child process failures, overlay mount failures, timeouts, and the syscall
-//! errnos raised by `setns` / `unshare`
-//! (`isolated_workspace/scripts/_setns_libc.py:18-25`).
+//! errnos raised by `setns` / `unshare`.
 
 use thiserror::Error;
 

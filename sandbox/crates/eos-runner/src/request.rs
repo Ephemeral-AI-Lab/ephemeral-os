@@ -1,10 +1,8 @@
 //! Owned request/result types for the namespace runner.
 //!
 //! These model the JSON payloads the Rust helpers exchange over stdin/stdout
-//! and the namespace request/result files — `to_payload()`
-//! (`shared/models.py:90-98`), the fresh-ns request file
-//! (`overlay/namespace_runner.py:84-90`), and the setns stdin payload
-//! (`isolated_workspace/scripts/setns_exec.py:14-19`). The verb-specific `args`
+//! and the namespace request/result files — the tool-call payload, the fresh-ns
+//! request file, and the setns stdin payload. The verb-specific `args`
 //! stay an opaque [`serde_json::Value`] here (the runner forwards them verbatim
 //! to the in-namespace tool primitive); the typed per-verb args/results live in
 //! `eos_protocol::models`.

@@ -20,7 +20,7 @@ has an unchecked hard item.
 | 4 | Sandbox lifecycle manager | complete | 5, 6, 7 | lifecycle/refcount/delete-guard tests pass (17 manager tests) |
 | 5 | Run launcher, cancellation, reaper, and event bus | complete | 6, 7 | launcher/event_bus/reaper/status tests pass (22 Phase 5 tests) |
 | 6 | Observability, audit ingestion, and stats | complete | 7 | obs sink/ingestor/stats tests pass (7 obs + 2 store-agg); correlation pre-dispatch write deferred to 7/8 |
-| 7 | HTTP API, streaming API, and OpenAPI | complete | 8 | 26 eos-backend-api tests pass (22 contract + 4 stream); Phase 7 notes below |
+| 7 | HTTP API, streaming API, and OpenAPI | complete | 8 | 28 eos-backend-api tests pass (24 contract + 4 stream); Phase 7 notes below |
 | 8 | Live E2E, dependency audit, and closeout | not_started | release | Docker-backed backend-to-agent-core-to-sandbox smoke passes |
 
 Status values: `not_started`, `in_progress`, `blocked`, `complete`.
@@ -1151,7 +1151,7 @@ Touched files:
     (the Phase 6-deferred OpenAPI pinning); doc updated. No shape change.
   - eos-backend-api/tests: NEW support/mod.rs (FakeRunControl, FakeSandboxRegistry,
     FakeRequest/Task/AgentRunStore over the open eos-state Sealed trait, domain
-    builders, temp-store router builder), api_contract.rs (22 tests), stream.rs
+    builders, temp-store router builder), api_contract.rs (24 tests), stream.rs
     (4 tests incl. a real-port WebSocket replay).
 Concurrent work observed: another agent's eos-workflow refactor (orchestrator*.rs,
   ports.rs, starter.rs) was transiently mid-flight (a store_planner_abort call-site
@@ -1193,9 +1193,9 @@ Key design decisions:
     axum's default 422), which is what rejects v1-deferred sandbox override fields.
 Checklist results: all 9 Phase 7 hard items checked.
 Verification commands (all pass):
-  - (cd backend-server && cargo test -p eos-backend-api) -> 22 contract + 4 stream
-    = 26 passed (lib/doctests 0).
-  - cargo test -p eos-backend-api --test api_contract -> 22 passed.
+  - (cd backend-server && cargo test -p eos-backend-api) -> 24 contract + 4 stream
+    = 28 passed (lib/doctests 0).
+  - cargo test -p eos-backend-api --test api_contract -> 24 passed.
     cargo test -p eos-backend-api --test stream -> 4 passed. (NOTE: the plan's bare
     `cargo test -p eos-backend-api api_contract` form is a NAME filter, not a target
     selector, so it runs 0 tests; the `--test <target>` form above is the intended

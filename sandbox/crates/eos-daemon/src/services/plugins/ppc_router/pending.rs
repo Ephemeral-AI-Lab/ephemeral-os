@@ -56,13 +56,15 @@ impl PendingCalls {
             Ok(pending_request) => pending_request,
             Err(_) => return,
         };
+        // A reply matching no in-flight request is a benign late/duplicate reply
+        // (its caller already timed out and `discard`ed the entry) or a stray
+        // frame. Drop it: failing the whole pending set here would cascade-fail
+        // healthy concurrent requests multiplexed on the same client. A genuinely
+        // dead connection is still surfaced by the reader loop's IO-error path,
+        // which is the only caller of `fail_all`.
         if let Some(pending_request) = pending_request {
             let _ = pending_request.reply_tx.send(Ok(frame));
-            return;
         }
-        self.fail_all(format!(
-            "plugin PPC reply message_id {message_id} did not match any in-flight request"
-        ));
     }
 
     pub(super) fn fail_one(&self, message_id: &str, message: String) {
