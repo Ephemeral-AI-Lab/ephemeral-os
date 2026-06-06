@@ -88,7 +88,11 @@ fn paths() -> Value {
             },
             "delete": {
                 "summary": "Request backend-local cancellation",
-                "responses": { "202": { "description": "cancellation requested" } },
+                "responses": {
+                    "202": { "description": "cancellation requested" },
+                    "404": { "description": "no such user request" },
+                    "409": { "description": "run already finished" },
+                },
             },
         },
         "/api/user-requests/{request_id}/events": {
@@ -158,7 +162,11 @@ fn paths() -> Value {
             },
             "delete": {
                 "summary": "Destroy a backend-owned sandbox when unreferenced",
-                "responses": { "204": { "description": "destroyed" } },
+                "responses": {
+                    "204": { "description": "destroyed" },
+                    "404": { "description": "unknown sandbox" },
+                    "409": { "description": "sandbox is referenced (active or retained)" },
+                },
             },
         },
     })

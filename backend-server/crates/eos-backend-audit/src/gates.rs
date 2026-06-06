@@ -1,3 +1,8 @@
+//! Runner audit/observability gates: evaluate normalized obs rows against the
+//! state/transcript expectations a Rust runner supplies, producing a typed
+//! [`RunnerGateReport`] of pass/fail plus metrics. Three input granularities
+//! (source → batch → rows) feed one pure evaluator.
+
 use std::collections::BTreeSet;
 
 use eos_audit::{ObsEnvelope, OS_RESOURCE_SAMPLED, TOOL_CALL_COMPLETED};
@@ -300,11 +305,11 @@ pub fn evaluate_runner_gates(input: RunnerGateInput<'_>) -> RunnerGateReport {
 
     metrics.observed_expected_tool_use_count = expected_tool_use_ids
         .iter()
-        .filter(|tool_use_id| contains_tool_use_id(&observed_tool_use_ids, tool_use_id))
+        .filter(|tool_use_id| observed_tool_use_ids.contains(**tool_use_id))
         .count();
 
-    for tool_use_id in expected_tool_use_ids {
-        if !contains_tool_use_id(&observed_tool_use_ids, tool_use_id) {
+    for tool_use_id in &expected_tool_use_ids {
+        if !observed_tool_use_ids.contains(tool_use_id) {
             failures.push(failure(
                 RunnerGateFailureKind::MissingToolObs,
                 format!("missing tool_call.completed obs row for tool_use_id={tool_use_id}"),
@@ -408,10 +413,6 @@ fn unique_tool_use_ids(ids: &[ExpectedToolUse]) -> BTreeSet<&str> {
     ids.iter()
         .map(|expected| expected.tool_use_id.as_str())
         .collect()
-}
-
-fn contains_tool_use_id(ids: &BTreeSet<&str>, needle: &str) -> bool {
-    ids.iter().any(|id| *id == needle)
 }
 
 fn valid_tool_call(row: &ObsEnvelope) -> bool {

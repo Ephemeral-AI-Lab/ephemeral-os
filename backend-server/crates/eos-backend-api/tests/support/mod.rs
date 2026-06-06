@@ -273,22 +273,12 @@ impl Sealed for FakeTaskStore {}
 
 #[async_trait]
 impl eos_state::TaskStore for FakeTaskStore {
-    async fn upsert_task(&self, _task: &Task) -> Result<(), eos_types::CoreError> {
+    async fn insert_task(&self, _task: &Task) -> Result<(), eos_types::CoreError> {
         unimplemented!("not used by api tests")
     }
 
     async fn get(&self, id: &TaskId) -> Result<Option<Task>, eos_types::CoreError> {
         Ok(self.tasks.iter().find(|task| &task.id == id).cloned())
-    }
-
-    async fn set_task_status(
-        &self,
-        _id: &TaskId,
-        _status: TaskStatus,
-        _outcomes: Option<&[ExecutionTaskOutcome]>,
-        _terminal_tool_result: Option<&JsonObject>,
-    ) -> Result<Task, eos_types::CoreError> {
-        unimplemented!("not used by api tests")
     }
 
     async fn set_task_status_if_current(

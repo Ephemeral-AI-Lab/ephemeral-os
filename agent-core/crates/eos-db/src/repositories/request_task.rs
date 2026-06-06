@@ -185,7 +185,12 @@ impl TaskStore for SqlRequestTaskStore {
         .bind(task.agent_name.as_deref())
         .bind(json_col::encode(&task.needs)?)
         .bind(json_col::encode(&task.outcomes)?)
-        .bind(task.terminal_tool_result.as_ref().map(json_col::encode).transpose()?)
+        .bind(
+            task.terminal_tool_result
+                .as_ref()
+                .map(json_col::encode)
+                .transpose()?,
+        )
         .bind(now)
         .bind(now)
         .execute(&self.pool)

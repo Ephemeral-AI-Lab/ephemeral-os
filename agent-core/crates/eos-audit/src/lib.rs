@@ -6,7 +6,7 @@
 //! writers ([`JsonlSink`] and [`BufferedJsonlSink`] +
 //! [`BufferedAuditShutdown`]).
 //!
-//! It depends only on `eos-types` among EphemeralOS crates. It does **not** own
+//! It depends only on `eos-types` among `EphemeralOS` crates. It does **not** own
 //! lifecycle policy (when events fire is producer/engine policy), does not
 //! import any downstream crate's stream types, and does no buffering/lane-routing
 //! beyond the single bounded writer thread.

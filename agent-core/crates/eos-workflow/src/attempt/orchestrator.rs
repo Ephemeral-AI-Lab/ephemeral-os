@@ -127,9 +127,9 @@ impl AttemptOrchestrator {
         // abort promptly and the task can never clear the slot before its handle is
         // stored; normal settlement clears it via `deregister` *without* aborting,
         // so the task never aborts itself while it is finishing.
-        self.deps.orchestrator_registry.store_planner_abort_with(
-            self.attempt_id.clone(),
-            || {
+        self.deps
+            .orchestrator_registry
+            .store_planner_abort_with(self.attempt_id.clone(), || {
                 tokio::spawn(async move {
                     let report = runner.run(launch.clone()).await;
                     if let Err(err) = orchestrator.settle_planner(launch, report).await {
@@ -141,8 +141,7 @@ impl AttemptOrchestrator {
                     }
                 })
                 .abort_handle()
-            },
-        );
+            });
     }
 
     /// Settle the planner run after it resolves (Path A-recording). The submit

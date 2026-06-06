@@ -349,7 +349,7 @@ pub(super) fn command_handle_from(
         scratch_dir: handle.scratch_dir,
         upperdir: handle.upperdir,
         workdir: handle.workdir,
-        layer_paths: handle.layer_paths.into_iter().map(PathBuf::from).collect(),
+        layer_paths: handle.layer_paths,
         ns_fds: handle.ns_fds,
         cgroup_path: handle.cgroup_path,
     }
