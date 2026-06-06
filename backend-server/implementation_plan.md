@@ -18,7 +18,7 @@ has an unchecked hard item.
 | 2 | Agent-core runtime seams | complete | 4, 5, 6, 7 | production `SandboxGateway` injection and `state_reader()` compile |
 | 3 | Backend config, types, store, and migrations | complete | 4, 5, 6, 7 | config/store tests pass with backend DB schema |
 | 4 | Sandbox lifecycle manager | complete | 5, 6, 7 | lifecycle/refcount/delete-guard tests pass (17 manager tests) |
-| 5 | Run launcher, cancellation, reaper, and event bus | not_started | 6, 7 | request launch and replay-safe event persistence tests pass |
+| 5 | Run launcher, cancellation, reaper, and event bus | complete | 6, 7 | launcher/event_bus/reaper/status tests pass (21 Phase 5 tests) |
 | 6 | Observability, audit ingestion, and stats | not_started | 7 | audit/correlation/stats tests pass |
 | 7 | HTTP API, streaming API, and OpenAPI | not_started | 8 | API contract and stream replay tests pass |
 | 8 | Live E2E, dependency audit, and closeout | not_started | release | Docker-backed backend-to-agent-core-to-sandbox smoke passes |
@@ -288,19 +288,19 @@ Implementation components:
 
 Hard acceptance checklist:
 
-- [ ] `POST /api/user-requests` can be backed by `RunLauncher` without direct
+- [x] `POST /api/user-requests` can be backed by `RunLauncher` without direct
   HTTP code in runtime.
-- [ ] `run_meta` is written before the runtime task starts.
-- [ ] Accepted/running/done/failed/cancelled precedence rules are tested.
-- [ ] Cancellation never writes `cancelled` into agent-core `RequestStatus`.
-- [ ] Event callback does no async SQLite writes and holds no async locks.
-- [ ] Event queue is bounded and has a visible overflow/loss policy.
-- [ ] Event drainer persists before broadcasting.
-- [ ] Reconnect tests prove no milestone event can fall between replay and live
+- [x] `run_meta` is written before the runtime task starts.
+- [x] Accepted/running/done/failed/cancelled precedence rules are tested.
+- [x] Cancellation never writes `cancelled` into agent-core `RequestStatus`.
+- [x] Event callback does no async SQLite writes and holds no async locks.
+- [x] Event queue is bounded and has a visible overflow/loss policy.
+- [x] Event drainer persists before broadcasting.
+- [x] Reconnect tests prove no milestone event can fall between replay and live
   subscription.
-- [ ] Reaper releases sandbox refs once even when runtime fails or cancellation
+- [x] Reaper releases sandbox refs once even when runtime fails or cancellation
   races with completion.
-- [ ] Launcher, event bus, and reaper tests live under
+- [x] Launcher, event bus, and reaper tests live under
   `backend-server/crates/eos-backend-runtime/tests/`, not under `src/`.
 
 Verification commands:
@@ -867,4 +867,122 @@ Phase 5 watch-item (acquire-during-teardown resurrection race): release() drops 
   reaper/launcher to drive concurrent release+acquire on one sandbox id); exactly-once
   release is unaffected. The Phase 5 reaper/launcher coordination owns closing this (e.g.,
   refuse acquire on a Destroying entry, or gate destroy under a single lock epoch).
+```
+
+## Phase 5 Execution Notes
+
+```text
+Phase: 5 - Run Launcher, Cancellation, Reaper, And Event Bus
+Status: complete
+Touched files:
+  - backend-server/Cargo.toml: added cross-workspace path deps eos-runtime/
+    eos-state/eos-config (the launcher's agent-core composition edge) + tokio-util
+    (CancellationToken). eos-obs-collector member/dep removal is a concurrent
+    agent's change, left as-is.
+  - eos-backend-runtime/Cargo.toml: added eos-backend-store/eos-runtime/eos-state/
+    eos-config, moved tokio to a normal dep, added tokio-util + serde_json; dev-dep
+    is now tempfile (temp backend.db).
+  - eos-backend-runtime/src: NEW host.rs (RunHost seam + RunOutcome + production
+    RuntimeHost over run_request), event_bus.rs (EventBus + RequestStream +
+    drainer + EventSubscription), launcher.rs (RunLauncher + RunRegistry +
+    cancellation), reaper.rs (Reaper + Disposition), status.rs (resolve_api_status).
+    lib.rs: module decls + public re-exports + a crate-internal #[cfg(test)]
+    test_support decl.
+  - eos-backend-runtime/tests: NEW support/ (manager fakes, temp_store, FakeRunHost,
+    poll helpers), status/, event_bus/, reaper/, launcher/ test modules (21 tests).
+Concurrent work observed: another agent removed eos-obs-collector from the backend
+  workspace members + deps and bumped the Phase 4 manager test count to 17; both
+  left untouched. The backend Cargo.toml was edited mid-session (re-read before
+  each write). Zero agent-core source files were modified this session — the new
+  edges are manifest-only path deps into existing agent-core crates.
+Key design decisions:
+  - RunHost seam (host.rs): the launcher depends on Arc<dyn RunHost>, not
+    run_request directly, so launcher/reaper lifecycle is tested against a
+    FakeRunHost without standing up a RuntimeServices graph (its in-memory test
+    construction is crate-local to eos-runtime, unreachable from backend). This is
+    a load-bearing dyn substitution boundary. Production RuntimeHost builds
+    RequestRunInput and calls eos_runtime::run_request, mapping TaskStatus::Done ->
+    RunOutcome::Done, else/Err -> Failed.
+  - 202-fast lifecycle: launch() writes run_meta(Accepted) BEFORE tokio::spawn,
+    registers an event-bus callback + a cancellation slot, then spawns and returns
+    the request_id. The spawned task acquires the sandbox (typed capacity/provision
+    errors), sets run_meta=Running before the agent-core row exists (avoids the
+    unlisted (Accepted, agent=Running) gap), runs the host, then reaps.
+  - Cancellation is race-free via CancellationToken + sole-finalizer: the spawned
+    task `select!`s the run future against slot.token.cancelled(), so exactly one
+    of {done, failed, cancelled} resolves and exactly one Reaper::reap runs. No
+    abort handle, no claim flag, no completion/cancel double-reap. cancel() only
+    stashes a reason + fires the token; the task finalizes Cancelled in run_meta.
+    The backend never calls any agent-core status setter, and RequestStatus has no
+    Cancelled variant, so writing `cancelled` into agent-core is type-impossible.
+  - Pre-acquire idempotence: the launcher acquires via SandboxManager and threads
+    the resolved sandbox_id into RequestRunInput; run_request's internal gateway
+    acquire then short-circuits on the manager's by_request fast-path (same Arc in
+    production), so refcount stays exactly 1. Phase 5 tests exercise the launcher's
+    single acquire + reaper release with the fake host; the production double-
+    acquire path is a Phase 8 live-E2E concern.
+  - EventBus replay-safety: the sync callback (classify_and_enqueue) does no
+    .await / no lock — it serializes, classifies (deny-list on the serde "type"
+    tag, inferring &StreamEvent without naming the #[non_exhaustive] engine type so
+    no eos-engine dep), reserves a 1-based atomic seq, and try_sends; overflow bumps
+    a dropped counter + arms a gap marker. The async per-request drainer persists to
+    event_log THEN broadcasts (persist-before-broadcast), coalescing drops into one
+    durable event_stream_gap marker. subscribe() joins replay+live with no gap
+    (subscribe-live-before-replay-read + seq>last_seq dedup) and recovers broadcast
+    Lagged/Closed from the durable log rather than skipping.
+  - Advisor-driven hardening: (1) Lagged is NOT a silent continue — recv refills
+    from event_log so a slow subscriber never loses a milestone; (2) first reserved
+    seq == 1 (fetch_add+1), so list_since(.., 0) replays from the start; (3) no
+    parking_lot guard is held across .await (RunRegistry.get and EventBus.subscribe
+    clone-then-drop before awaiting); (4) status.rs is a PURE resolver — the
+    precedence table's persisting write-back is deferred to the Phase 7 read handler
+    (no Phase 5 caller, and a read-time write-back races a concurrent DELETE's
+    Cancelled; Phase 7 owns it with a compare-and-set guard).
+Checklist results: all 10 Phase 5 hard items checked.
+Verification commands (all pass):
+  - cargo test -p eos-backend-runtime -> 37 passed (16 Phase 4 + 21 Phase 5)
+  - cargo test -p eos-backend-runtime launcher -> 6 passed
+  - cargo test -p eos-backend-runtime event_bus -> 6 passed
+  - cargo test -p eos-backend-runtime reaper -> 4 passed
+  - rg "\.await|SqlitePool" .../src/event_bus.rs -> no SqlitePool; every .await is
+    inside an async fn (subscribe/drain/persist_and_broadcast/append_with_retry/
+    emit_gap/recv), none in the sync callback or classify_and_enqueue.
+  - find .../src \( -name '*test*' -o ... \) -> empty (AC13).
+  - cargo clippy -p eos-backend-runtime --all-targets -- -D warnings -> clean
+    (incl. the await_holding_lock deny).
+  - cargo check --workspace --all-targets (backend) -> ok.
+Failures: none.
+Spec deviations / interpretations:
+  - registry.rs folded into launcher.rs (RunRegistry is a small cancellation-slot
+    index tightly coupled to launch/cancel); backend state_reader.rs deferred to
+    Phase 7 (agent-core's RuntimeServices::state_reader() suffices for Phase 5; no
+    Phase 5 caller joins agent-core read state yet). Both are SPEC-structure file
+    listings, not hard items.
+  - status.rs persisting reconcile (the table's "backend updates finished_at +
+    status" write-back) is deferred to Phase 7's read handler with a CAS guard (see
+    advisor note 4). resolve_api_status itself (the precedence policy) is
+    implemented and tested here.
+  - Milestone classification is a fail-safe deny-list (drop reasoning_delta /
+    assistant_text_delta / tool_execution_progress; keep everything else incl.
+    unknown future kinds). Documented in event_bus.rs; Phase 7 can tune it.
+  - Phase 4 watch-item (acquire-during-teardown resurrection race) remains open and
+    is NOT a Phase 5 hard item. It is not triggered by Phase 5 code paths: fresh
+    sandboxes get unique minted ids, so resurrecting a tearing-down sandbox needs an
+    explicit re-bind of that id during the brief Destroying window. Closing it is a
+    manager-internal guard (refuse acquire on a Destroying entry) on the Phase 4
+    surface; carried forward, not silently dropped.
+Next phase unblockers:
+  - Phase 6 (obs): PersistingSink/ingestor reuse eos-backend-store's
+    ObsEventRepo/SandboxCallCorrelationRepo/AuditCursorRepo; the bounded-enqueue +
+    async-drainer + loss-marker shape mirrors EventBus (a good reference).
+  - Phase 7 (API): handlers call RunLauncher::launch (POST), RunLauncher::cancel
+    (DELETE), EventBus::subscribe (SSE/WS replay + the /events endpoint reads
+    event_log directly), and resolve_api_status(run_meta.status,
+    state_reader().requests().get(id)?.status) for list/detail; the persisting
+    reconcile write-back lands here with a CAS guard.
+  - Phase 8 (main wiring): build RuntimeServices with .sandbox_gateway(manager
+    .clone()) so the gateway and the launcher/reaper share one Arc<SandboxManager>;
+    construct RuntimeHost::new(services, workspace_root, workflow_config) and
+    RunLauncher::new(Arc::new(host), manager, store.run_meta().clone(),
+    Arc::new(EventBus::new(store.event_log().clone()))).
 ```

@@ -240,7 +240,7 @@ impl ManagerInner {
         request_id: &RequestId,
         sandbox_id: Option<&str>,
     ) -> Result<RequestSandboxBinding, SandboxManagerError> {
-        let explicit = sandbox_id.map(str::trim).filter(|id| !id.is_empty());
+        let existing_sandbox_id = sandbox_id.map(str::trim).filter(|id| !id.is_empty());
 
         // Fast path: already bound (idempotent) or over the fresh-create budget.
         {
@@ -248,7 +248,7 @@ impl ManagerInner {
             if let Some(sandbox_id) = state.by_request.get(request_id) {
                 return Ok(binding(sandbox_id, request_id));
             }
-            if explicit.is_none() {
+            if existing_sandbox_id.is_none() {
                 // Best-effort fresh-create budget. This counts only *committed*
                 // owned sandboxes, so concurrent fresh acquires can each pass here
                 // before any of them commit under the bookkeeping lock and
@@ -270,7 +270,7 @@ impl ManagerInner {
         // Provision outside the lock (async host round-trip).
         let resolved = self
             .provisioner
-            .prepare_for_run(request_id, explicit)
+            .prepare_for_run(request_id, existing_sandbox_id)
             .await
             .map_err(|err: SandboxProvisionError| SandboxManagerError::Provision(err.message))?;
 
@@ -285,7 +285,7 @@ impl ManagerInner {
             .entry(resolved.sandbox_id.clone())
             .or_insert_with(|| {
                 SandboxEntry::newly_bound(
-                    explicit.is_none(),
+                    existing_sandbox_id.is_none(),
                     request_id,
                     self.destroy_on_finish,
                     now,
