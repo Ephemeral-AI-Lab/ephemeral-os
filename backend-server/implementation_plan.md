@@ -41,6 +41,7 @@ Status values: `not_started`, `in_progress`, `blocked`, `complete`.
 | AC10 v1 supports only `sandbox_id` as per-request sandbox override | 4, 7 |
 | AC11 decentralized config ownership | 3 |
 | AC12 multi-crate backend structure is preserved unless a crate lacks ownership | 1, 8 |
+| AC13 backend crate test-related files live under `backend-server/crates/<crate>/tests/`, not `src/` | 2, 3, 4, 5, 6, 7, 8 |
 
 ## Phase 0 - Baseline And Guardrails
 
@@ -147,6 +148,7 @@ Implementation components:
 | Runtime state reader | Add `RuntimeServices::state_reader()` returning narrow store handles. |
 | Store list APIs | Add `RequestStore::list`, `TaskStore::list_for_request`, and `AgentRunStore::get_for_task`. |
 | Correlation source | Ensure sandbox tool execution can persist or emit `tool_use_id`, `sandbox_invocation_id`, `caller_id`, `sandbox_id`, `request_id`, `task_id`, and `agent_run_id` without collapsing identities. |
+| Backend test layout cleanup | Move any existing backend-server crate tests, fixtures, fakes, mocks, support modules, or harnesses out of `src/` and into `backend-server/crates/<crate>/tests/`. The known Phase 1 carry-over is `backend-server/crates/eos-sandbox-host/src/daemon_client/tests/`, which must move to `backend-server/crates/eos-sandbox-host/tests/daemon_client/`. |
 
 Hard acceptance checklist:
 
@@ -160,6 +162,10 @@ Hard acceptance checklist:
 - [ ] Model-facing `tool_use_id` and daemon-facing `sandbox_invocation_id` are
   represented as separate values in the runtime/tool path.
 - [ ] Existing root request and delegated workflow behavior is unchanged.
+- [ ] No backend-server crate has test bodies or test support under `src/`.
+- [ ] `backend-server/crates/eos-sandbox-host/src/daemon_client/tests/` has
+  been moved to `backend-server/crates/eos-sandbox-host/tests/daemon_client/`
+  or removed if its tests were deleted intentionally.
 
 Verification commands:
 
@@ -169,10 +175,12 @@ Verification commands:
 (cd agent-core && cargo test -p eos-db)
 (cd agent-core && cargo test -p eos-state)
 rg -n "pub\\(crate\\).*provisioner|SqlitePool" agent-core/crates/eos-runtime/src
+find backend-server/crates \\( -path '*/src/*test*' -o -path '*/src/*fixture*' -o -path '*/src/*mock*' -o -path '*/src/*fake*' -o -path '*/src/*support*' \\) -print
 ```
 
-Exit gate: AC2, AC7, and AC9 are implementable through typed agent-core
-contracts without backend raw SQL access or host crate imports.
+Exit gate: AC2, AC7, AC9, and AC13 are implementable through typed agent-core
+contracts without backend raw SQL access, host crate imports, or backend test
+files under `src/`.
 
 ## Phase 3 - Backend Config, Types, Store, And Migrations
 
@@ -201,6 +209,9 @@ Hard acceptance checklist:
 - [ ] `audit_cursor.boot_epoch_id` is an integer column.
 - [ ] `SandboxView` has no credential-bearing fields.
 - [ ] Store tests prove round-trip persistence for every table.
+- [ ] `eos-backend-types`, `eos-backend-config`, and `eos-backend-store` keep
+  all test files, fixtures, fakes, mocks, and support modules under their crate
+  `tests/` directories.
 
 Verification commands:
 
@@ -209,10 +220,11 @@ Verification commands:
 (cd backend-server && cargo test -p eos-backend-config)
 (cd backend-server && cargo test -p eos-backend-store)
 rg -n "auth_token|internal_port|DaemonTcpEndpoint|endpoint" backend-server/crates/eos-backend-{types,api,store}
+find backend-server/crates/eos-backend-{types,config,store}/src \\( -name '*test*' -o -name '*fixture*' -o -name '*mock*' -o -name '*fake*' -o -name '*support*' \\) -print
 ```
 
-Exit gate: AC4, AC7, AC8, AC10, and AC11 are encoded in backend-owned types and
-schema before runtime/API code is built on top.
+Exit gate: AC4, AC7, AC8, AC10, AC11, and AC13 are encoded in backend-owned
+types and schema before runtime/API code is built on top.
 
 ## Phase 4 - Sandbox Lifecycle Manager
 
@@ -243,6 +255,8 @@ Hard acceptance checklist:
 - [ ] Request-scoped sandbox override accepts only `sandbox_id`.
 - [ ] Manager tests cover create, bind existing, release, delete rejection,
   destroy-on-finish, and sanitized view generation.
+- [ ] Runtime and sandbox-manager tests live under
+  `backend-server/crates/eos-backend-runtime/tests/`, not under `src/`.
 
 Verification commands:
 
@@ -250,9 +264,10 @@ Verification commands:
 (cd backend-server && cargo test -p eos-backend-runtime sandbox_manager)
 (cd backend-server && cargo check -p eos-backend-runtime --all-targets)
 rg -n "image|snapshot|project_dir" backend-server/crates/eos-backend-runtime backend-server/crates/eos-backend-api
+find backend-server/crates/eos-backend-runtime/src \\( -name '*test*' -o -name '*fixture*' -o -name '*mock*' -o -name '*fake*' -o -name '*support*' \\) -print
 ```
 
-Exit gate: AC1, AC4, AC10, and the lifecycle half of AC2 are satisfied by
+Exit gate: AC1, AC4, AC10, AC13, and the lifecycle half of AC2 are satisfied by
 backend-owned runtime code.
 
 ## Phase 5 - Run Launcher, Cancellation, Reaper, And Event Bus
@@ -285,6 +300,8 @@ Hard acceptance checklist:
   subscription.
 - [ ] Reaper releases sandbox refs once even when runtime fails or cancellation
   races with completion.
+- [ ] Launcher, event bus, and reaper tests live under
+  `backend-server/crates/eos-backend-runtime/tests/`, not under `src/`.
 
 Verification commands:
 
@@ -293,9 +310,10 @@ Verification commands:
 (cd backend-server && cargo test -p eos-backend-runtime event_bus)
 (cd backend-server && cargo test -p eos-backend-runtime reaper)
 rg -n "\\.await|SqlitePool" backend-server/crates/eos-backend-runtime/src/event_bus.rs
+find backend-server/crates/eos-backend-runtime/src \\( -name '*test*' -o -name '*fixture*' -o -name '*mock*' -o -name '*fake*' -o -name '*support*' \\) -print
 ```
 
-Exit gate: AC1 and AC5 are proven in backend runtime tests.
+Exit gate: AC1, AC5, and AC13 are proven in backend runtime tests.
 
 ## Phase 6 - Observability, Audit Ingestion, And Stats
 
@@ -326,6 +344,9 @@ Hard acceptance checklist:
 - [ ] `boot_epoch_id` change resets cursor or records loss before advancing.
 - [ ] Stats tests cover matched audit, unmatched audit, queue overflow, drainer
   failure, and daemon reboot.
+- [ ] Observability and store support tests live under
+  `backend-server/crates/eos-backend-obs/tests/` or
+  `backend-server/crates/eos-backend-store/tests/`, not under `src/`.
 
 Verification commands:
 
@@ -333,9 +354,11 @@ Verification commands:
 (cd backend-server && cargo test -p eos-backend-obs)
 (cd backend-server && cargo test -p eos-backend-store obs audit_cursor sandbox_call_correlation)
 rg -n "tool_use_id.*sandbox_invocation_id|sandbox_invocation_id.*tool_use_id" backend-server/crates
+find backend-server/crates/eos-backend-{obs,store}/src \\( -name '*test*' -o -name '*fixture*' -o -name '*mock*' -o -name '*fake*' -o -name '*support*' \\) -print
 ```
 
-Exit gate: AC6, AC7, and AC8 are proven by focused backend obs/store tests.
+Exit gate: AC6, AC7, AC8, and AC13 are proven by focused backend obs/store
+tests.
 
 ## Phase 7 - HTTP API, Streaming API, And OpenAPI
 
@@ -367,6 +390,8 @@ Hard acceptance checklist:
   replay/live handoff.
 - [ ] API errors do not expose internal daemon credentials or raw SQL errors.
 - [ ] OpenAPI/contract tests pin request/response shapes.
+- [ ] API, stream, OpenAPI, handler, fixture, and support tests live under
+  `backend-server/crates/eos-backend-api/tests/`, not under `src/`.
 
 Verification commands:
 
@@ -375,9 +400,11 @@ Verification commands:
 (cd backend-server && cargo test -p eos-backend-api api_contract)
 (cd backend-server && cargo test -p eos-backend-api stream)
 rg -n "user-request=|DaemonTcpEndpoint|auth_token|internal_port|endpoint" backend-server/crates/eos-backend-api
+find backend-server/crates/eos-backend-api/src \\( -name '*test*' -o -name '*fixture*' -o -name '*mock*' -o -name '*fake*' -o -name '*support*' \\) -print
 ```
 
-Exit gate: AC1, AC4, AC5, AC9, and AC10 are exposed through tested API routes.
+Exit gate: AC1, AC4, AC5, AC9, AC10, and AC13 are exposed through tested API
+routes.
 
 ## Phase 8 - Live E2E, Dependency Audit, And Closeout
 
@@ -407,6 +434,8 @@ Hard acceptance checklist:
 - [ ] `agent-core` dependency scan shows no backend or host implementation deps.
 - [ ] `sandbox` dependency scan shows no `agent-core` or `backend-server` deps.
 - [ ] Progress tracker is updated to `complete` for all phases that passed.
+- [ ] Final backend test-layout audit prints no paths under
+  `backend-server/crates/*/src/`.
 
 Verification commands:
 
@@ -419,9 +448,10 @@ Verification commands:
   cargo test -p eos-backend-main --test live_e2e -- --ignored)
 rg -n "eos-sandbox-host|eos-protocol|backend-server" agent-core/crates -g Cargo.toml
 rg -n "agent-core|backend-server" sandbox/crates -g Cargo.toml
+find backend-server/crates \\( -path '*/src/*test*' -o -path '*/src/*fixture*' -o -path '*/src/*mock*' -o -path '*/src/*fake*' -o -path '*/src/*support*' \\) -print
 ```
 
-Exit gate: AC1 through AC12 are either proven by tests or recorded as explicit
+Exit gate: AC1 through AC13 are either proven by tests or recorded as explicit
 spec deviations with a follow-up plan.
 
 ## Cross-Phase Rules
@@ -438,6 +468,10 @@ spec deviations with a follow-up plan.
 - Do not collapse `tool_use_id`, `sandbox_invocation_id`, `caller_id`, or
   `agent_run_id`.
 - Do not create sandbox back-dependencies into `agent-core` or backend-server.
+- Do not put backend-server tests, fixtures, fakes, mocks, support modules, or
+  harnesses under `backend-server/crates/*/src/`; use each crate's `tests/`
+  tree, with a narrow `#[path = ...]` declaration in `src/` only when private
+  module access is required.
 - Do not revert unrelated concurrent work while moving crates or updating
   manifests.
 

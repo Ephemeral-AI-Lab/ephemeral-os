@@ -554,14 +554,14 @@ EphemeralOS/
         |-- eos-sandbox-host/
         |   |-- Cargo.toml
         |   |-- src/
-        |       |-- bootstrap_artifact.rs
-        |       |-- config.rs
-        |       |-- docker.rs
-        |       |-- lib.rs
-        |       |-- lifecycle.rs
-        |       |-- provider.rs
-        |       |-- provisioning.rs
-        |       `-- registry.rs
+        |   |   |-- bootstrap_artifact.rs
+        |   |   |-- config.rs
+        |   |   |-- docker.rs
+        |   |   |-- lib.rs
+        |   |   |-- lifecycle.rs
+        |   |   |-- provider.rs
+        |   |   |-- provisioning.rs
+        |   |   `-- registry.rs
         |   `-- tests/
         |       `-- daemon_client/
         |           `-- mod.rs
@@ -569,24 +569,24 @@ EphemeralOS/
         |-- eos-obs-collector/
         |   |-- Cargo.toml
         |   |-- src/
-        |       |-- gates.rs
-        |       |-- lib.rs
-        |       |-- normalization.rs
-        |       `-- types.rs
+        |   |   |-- gates.rs
+        |   |   |-- lib.rs
+        |   |   |-- normalization.rs
+        |   |   `-- types.rs
         |   `-- tests/
         |       `-- normalization.rs
         |
         |-- eos-backend-types/
         |   |-- Cargo.toml
         |   |-- src/
-        |       |-- audit.rs
-        |       |-- error.rs
-        |       |-- events.rs
-        |       |-- lib.rs
-        |       |-- pagination.rs
-        |       |-- requests.rs
-        |       |-- sandboxes.rs
-        |       `-- stats.rs
+        |   |   |-- audit.rs
+        |   |   |-- error.rs
+        |   |   |-- events.rs
+        |   |   |-- lib.rs
+        |   |   |-- pagination.rs
+        |   |   |-- requests.rs
+        |   |   |-- sandboxes.rs
+        |   |   `-- stats.rs
         |   `-- tests/
         |       `-- dto_contract.rs
         |
