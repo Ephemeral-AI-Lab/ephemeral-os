@@ -45,8 +45,8 @@ pub(super) fn without_none(args: JsonObject) -> JsonObject {
     args.into_iter().filter(|(_, v)| !v.is_null()).collect()
 }
 
-/// Python `str(x or default)` truthiness: returns `Some(string)` for a truthy
-/// value, `None` for a falsy one (null / false / "" / 0 / empty container).
+/// Truthiness coercion to string: returns `Some(string)` for a truthy value,
+/// `None` for a falsy one (null / false / "" / 0 / empty container).
 pub(super) fn truthy_to_string(value: &Value) -> Option<String> {
     match value {
         Value::Null | Value::Bool(false) => None,
@@ -225,7 +225,7 @@ pub(super) fn is_bootstrap_ready_response(op: &str, response: &JsonObject) -> bo
         Some(Value::Array(probes)) => probes,
         _ => return false,
     };
-    // by_name: last writer wins (matches the Python dict build).
+    // by_name: last writer wins.
     let mut by_name: BTreeMap<&str, &JsonObject> = BTreeMap::new();
     for probe in probes {
         if let Value::Object(map) = probe {

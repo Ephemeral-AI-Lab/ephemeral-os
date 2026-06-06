@@ -83,7 +83,7 @@ pub(super) fn daemon_spawn_command(tcp_endpoint: Option<&DaemonTcpEndpoint>) -> 
     format!("if [ -r /etc/environment ]; then set -a; . /etc/environment; set +a; fi; {inner}")
 }
 
-/// The restart-on-signature-change shell, faithful to Python `_rust_daemon_spawn_shell`.
+/// The restart-on-signature-change shell.
 fn rust_daemon_spawn_shell(spawn_command: &str, signature: &str) -> String {
     let marker = posix_quote(EOSD_SHA_MARKER);
     let socket = posix_quote(DAEMON_SOCKET_PATH);
@@ -114,8 +114,8 @@ fn rust_daemon_spawn_shell(spawn_command: &str, signature: &str) -> String {
     .join(" ")
 }
 
-/// Daemon env signature (Python `_daemon_env_signature`). GC-04: `sandbox_runtime`
-/// collapses to `rust`; the dropped module-bundle `bundle_hash()` is replaced by
+/// Daemon env signature. GC-04: `sandbox_runtime` collapses to `rust`; the
+/// dropped module-bundle `bundle_hash()` is replaced by
 /// the pinned `EOSD_VERSION` as the `runtime_bundle_sha` identity (the binary's
 /// own digest is appended container-side from the `.eosd-sha256` marker).
 fn daemon_env_signature(tcp_endpoint: Option<&DaemonTcpEndpoint>) -> String {

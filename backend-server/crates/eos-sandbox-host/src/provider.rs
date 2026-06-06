@@ -41,8 +41,7 @@ impl ProviderKind {
     }
 }
 
-/// Arguments to [`ProviderAdapter::create`] (mirrors the Python `create(...)`
-/// kwargs; `language` defaults to `"python"`).
+/// Arguments to [`ProviderAdapter::create`]; `language` defaults to `"python"`.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub struct CreateSandboxSpec {
     /// Human/display name for the container.
@@ -129,8 +128,7 @@ pub struct DaemonTcpEndpoint {
 }
 
 /// The `ProviderAdapter::exec` return — owned here (spec §5; sandbox-api drops
-/// it as "a host concern"). Mirrors the exec-relevant fields of the Python
-/// `RawExecResult(SandboxResultBase)`.
+/// it as "a host concern").
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub struct RawExecResult {
     /// Process exit code.
@@ -169,7 +167,7 @@ pub struct ExecOpts {
     pub timeout: Option<Duration>,
 }
 
-/// Provider health snapshot (mirrors the Docker `get_health` dict).
+/// Provider health snapshot (Docker health info).
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub struct ProviderHealth {
     /// The provider name (`"docker"`).
@@ -223,7 +221,7 @@ pub struct SnapshotInfo {
 }
 
 /// The typed context-preparer fixed point (GC-07): a closed enum, **not** a new
-/// trait seam. Replaces the duck-typed Python `context_preparer(...) -> Any`.
+/// trait seam. Replaces a duck-typed `context_preparer(...) -> Any` indirection.
 #[derive(Debug, Clone)]
 #[non_exhaustive]
 pub enum ContextPreparer {
@@ -247,10 +245,10 @@ impl ContextPreparer {
 /// Deviation from spec §6 (`pub(crate)`): made `pub` with a private field +
 /// `#[non_exhaustive]` so it can sit in the public [`ContextPreparer::Docker`]
 /// variant without tripping `private_interfaces`; it remains un-constructable
-/// outside this crate. The deep container/workspace discovery the Python
-/// `DockerContextPreparer` performs lives outside the host (protocol.py: such
-/// orchestration is built on top of the provider, not inside it), so the Rust
-/// fixed point injects only `sandbox_id` + `sandbox_provider`.
+/// outside this crate. The deep container/workspace discovery a context
+/// preparer performs lives outside the host (such orchestration is built on top
+/// of the provider, not inside it), so the Rust fixed point injects only
+/// `sandbox_id` + `sandbox_provider`.
 #[derive(Debug, Clone)]
 #[non_exhaustive]
 pub struct DockerContextPreparer {
@@ -285,7 +283,7 @@ pub(crate) mod sealed {
 /// OCP/LSP seam). Sealed; `#[async_trait]` because it is stored as
 /// `Arc<dyn ProviderAdapter>` in the registry (anchor §6 object-safety note).
 ///
-/// Method-name mapping from the Python `ProviderAdapter` Protocol drops the
+/// Method names drop the
 /// `get_` prefix per Rust API guidelines C-GETTER: `health` ← `get_health`,
 /// `signed_preview_url` ← `get_signed_preview_url`, `build_logs_url` ←
 /// `get_build_logs_url`, `daemon_tcp_endpoint` ← `get_daemon_tcp_endpoint`,
@@ -357,58 +355,5 @@ pub trait ProviderAdapter: sealed::Sealed + Send + Sync + std::fmt::Debug {
 }
 
 #[cfg(test)]
-mod tests {
-    #![allow(clippy::unwrap_used)]
-    use super::*;
-
-    #[test]
-    fn provider_kind_serializes_to_docker() {
-        assert_eq!(
-            serde_json::to_value(ProviderKind::Docker).unwrap(),
-            serde_json::json!("docker")
-        );
-        assert_eq!(ProviderKind::Docker.as_str(), "docker");
-    }
-
-    #[test]
-    fn create_spec_defaults_language_to_python() {
-        let spec = CreateSandboxSpec::default();
-        assert_eq!(spec.language, "python");
-        // serde default also fills language when absent.
-        let parsed: CreateSandboxSpec = serde_json::from_value(serde_json::json!({
-            "name": "box"
-        }))
-        .unwrap();
-        assert_eq!(parsed.language, "python");
-        assert_eq!(parsed.name, "box");
-    }
-
-    #[test]
-    fn raw_exec_result_default_success_true() {
-        let r = RawExecResult::default();
-        assert!(r.success);
-        assert_eq!(r.exit_code, 0);
-        // decode default: missing `success`/`stderr` fail-open to the
-        // construction defaults (true / "").
-        let parsed: RawExecResult = serde_json::from_value(serde_json::json!({
-            "exit_code": 3,
-            "stdout": "hi"
-        }))
-        .unwrap();
-        assert_eq!(parsed.exit_code, 3);
-        assert_eq!(parsed.stdout, "hi");
-        assert!(parsed.success);
-        assert_eq!(parsed.stderr, "");
-    }
-
-    #[test]
-    fn context_preparer_injects_docker_metadata() {
-        let prep = ContextPreparer::Docker(DockerContextPreparer::new(
-            "sb-1".parse().expect("non-empty id"),
-        ));
-        let mut ctx = JsonObject::new();
-        prep.prepare_context(&mut ctx).expect("prepare");
-        assert_eq!(ctx["sandbox_id"], serde_json::json!("sb-1"));
-        assert_eq!(ctx["sandbox_provider"], serde_json::json!("docker"));
-    }
-}
+#[path = "../tests/provider/mod.rs"]
+mod tests;

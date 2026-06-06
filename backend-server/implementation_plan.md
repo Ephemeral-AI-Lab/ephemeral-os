@@ -594,7 +594,13 @@ Touched files:
     daemon_client.rs now includes it with #[cfg(test)]
     #[path = "../tests/daemon_client/mod.rs"] mod tests; (single `../` — the
     #[path] resolves relative to daemon_client.rs's own dir src/, like lib.rs's
-    existing ../tests/support include; the compiler rejected ../../).
+    existing ../tests/support include; the compiler rejected ../../). Per the
+    user's item-8 decision, ALSO relocated the 7 inline `#[cfg(test)] mod tests`
+    blocks (lifecycle, provisioning, provider, docker, registry, sandbox_upload,
+    bootstrap_artifact) to tests/<mod>/mod.rs; each src file is now a 3-line
+    #[cfg(test)] #[path="../tests/<mod>/mod.rs"] mod tests; stub. Bodies were
+    extracted verbatim then rustfmt'd per-file (NOT a crate-wide cargo fmt,
+    which would have disturbed pre-existing lib.rs:42/49 fmt drift).
 Concurrent work observed: another agent marked Phase 3 complete and owns the
   Phase 3 notes / eos-backend-{types,config,store} edits (one transient
   `mod error` not-found diagnostic in eos-backend-types is their in-progress
@@ -615,8 +621,9 @@ Verification commands (all pass):
   - cargo test -p eos-state -> 13 passed
   - cargo test -p eos-runtime -> 22 passed (UNCHANGED from Phase 1: root/
     delegated behavior preserved)
-  - cargo test -p eos-sandbox-host -> 41 passed incl. all 6
-    daemon_client::tests::* (moved tests run; super:: access preserved)
+  - cargo test -p eos-sandbox-host -> 41 passed, UNCHANGED after relocating all
+    8 test modules (daemon_client + the 7 inline blocks); super:: access
+    preserved, clippy -p eos-sandbox-host --all-targets -- -D warnings clean.
   - cargo check --workspace --all-targets (agent-core AND backend-server) -> ok
   - cargo clippy -p eos-sandbox-port -p eos-state -p eos-db --all-targets
     -- -D warnings -> clean; eos-runtime has zero own-source clippy warnings.
@@ -637,16 +644,16 @@ Spec deviations / noted interpretations:
     task tree (needs edges ride on each Task), so workflow/iteration/attempt
     stores are intentionally NOT exposed yet; add them in Phase 7 only if a task
     endpoint proves it needs them.
-  - "No test bodies/support under src/" (item 8) is verified by the path-based
-    `find` (empty) and the spec's file/dir Disallowed-Paths list; the only named
-    Phase 2 carry-over (daemon_client/tests/) is moved. Pre-existing inline
-    `#[cfg(test)] mod tests { ... }` UNIT modules remain in several
-    eos-sandbox-host src files (lifecycle/provider/docker/registry/provisioning/
-    sandbox_upload/bootstrap_artifact). They are conventional Rust unit tests,
-    not separate test files/dirs, and are NOT flagged by the verification. If
-    strict prose compliance ("only production code + a tiny cfg(test) mod
-    declaration in src/") is wanted, relocating those inline modules to tests/
-    is a separate, larger follow-up beyond the named Phase 2 scope.
+  - Item 8 ("no test bodies/support under src/") is fully satisfied: the
+    path-based `find` is empty AND, per the user's explicit decision, all 7
+    inline `#[cfg(test)] mod tests` blocks were relocated out of eos-sandbox-host
+    src into tests/<mod>/mod.rs (behavior preserved: 41 tests still pass). One
+    residual `#[cfg(test)] pub(crate) fn tar_file_at_path` stays in
+    src/sandbox_upload.rs by design: it needs PRIVATE access to that module's
+    `tar_entries`/`SandboxUploadEntry` and is shared by the docker + bootstrap
+    test modules, so relocating it would force widening production visibility — a
+    worse tradeoff than one cfg(test) helper. It is a fn, not a path-based test
+    file, so it does not trip the `find` verification.
   - Pre-existing lint noise (NOT introduced here, left per surgical scope):
     eos-audit/src/lib.rs:9 trips clippy doc_markdown on "EphemeralOS"
     (missing backticks), so a tree-wide `clippy -- -D warnings` that pulls

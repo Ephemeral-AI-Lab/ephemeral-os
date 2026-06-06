@@ -4,11 +4,12 @@
 //! These stay crate-local (not in `eos-testkit`) because they reference
 //! `eos-runtime` types — the dev-dependency two-instance rule bars an external
 //! `build_test_state`/`FakeProvisioner` from this crate's own in-crate tests
-//! (`TESTING_SPEC` §14.2). Included as a submodule of `runtime_services` via `#[path]`, so
-//! it reaches the `#[cfg(test)]`
-//! `.provisioner(...)` setter through `super::`. The cross-crate-safe doubles
-//! (`ScriptedSource`, `FakeTransport`, factories, `tool_use_turn`, `agent_def`)
-//! come from `eos-testkit`.
+//! (`TESTING_SPEC` §14.2). Included as a submodule of `runtime_services` via
+//! `#[path]`, so it can name `super::{RuntimeServices, EventSourceFactory}`; it
+//! drives the production `sandbox_gateway(...)` builder seam with a
+//! [`FakeGateway`] wrapping a fake transport and provisioner. The
+//! cross-crate-safe doubles (`ScriptedSource`, `FakeTransport`, factories,
+//! `tool_use_turn`, `agent_def`) come from `eos-testkit`.
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
 use std::sync::Arc;

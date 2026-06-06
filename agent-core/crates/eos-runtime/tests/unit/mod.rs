@@ -13,7 +13,9 @@ use eos_config::{DatabaseConfig, DatabaseUrl, ProvidersConfig, WorkflowConfig};
 use eos_db::Database;
 use eos_engine::{EngineError, EngineStream, EventSource, StreamEvent};
 use eos_llm_client::{ContentBlock, LlmClient, LlmRequest, LlmStream, ProviderError};
-use eos_state::{RequestStatus, TaskRole, TaskStatus, WorkflowStatus};
+use eos_state::{
+    AgentRunId, Page, RequestListFilter, RequestStatus, Task, TaskRole, TaskStatus, WorkflowStatus,
+};
 use eos_tools::{Hook, ToolName};
 use eos_types::RequestId;
 use serde_json::json;
@@ -147,6 +149,59 @@ async fn builder_constructs_all_stores_and_seams() {
         .await
         .unwrap();
     assert!(state.db.request_store.get(&req).await.unwrap().is_some());
+}
+
+// AC-eos-runtime / AC9: the backend composition root reads agent-core state only
+// through `RuntimeServices::state_reader()`. Prove the seam returns live store
+// handles (pointing at the runtime's own DB, not empty stubs) and exposes the
+// read-side list APIs by seeding and reading back entirely through the reader.
+#[tokio::test]
+async fn state_reader_exposes_live_request_task_and_run_stores() {
+    let (state, _dir) = build_test_state(None, vec![root_agent()]).await;
+    let reader = state.state_reader();
+
+    let request_id: RequestId = "req-reader".parse().unwrap();
+    reader
+        .requests()
+        .create_request(&request_id, "/w", None, "reader prompt")
+        .await
+        .unwrap();
+    let task = Task {
+        id: "t-reader".parse().unwrap(),
+        request_id: request_id.clone(),
+        role: TaskRole::Root,
+        instruction: "do it".to_owned(),
+        status: TaskStatus::Running,
+        workflow_id: None,
+        iteration_id: None,
+        attempt_id: None,
+        agent_name: Some("root".to_owned()),
+        needs: Vec::new(),
+        outcomes: Vec::new(),
+        terminal_tool_result: None,
+    };
+    reader.tasks().upsert_task(&task).await.unwrap();
+    let run_id: AgentRunId = "run-reader".parse().unwrap();
+    reader
+        .agent_runs()
+        .create_run(&run_id, &task.id, "root", None)
+        .await
+        .unwrap();
+
+    // Reads return through the same reader handles: request listing (with the
+    // unwindowed total), the per-request task tree, and the latest run for a task.
+    let listed = reader
+        .requests()
+        .list(RequestListFilter::default(), Page::default())
+        .await
+        .unwrap();
+    assert_eq!(listed.total, 1);
+    assert_eq!(listed.items[0].id, request_id);
+    let tasks = reader.tasks().list_for_request(&request_id).await.unwrap();
+    assert_eq!(tasks.len(), 1);
+    assert_eq!(tasks[0].id, task.id);
+    let run = reader.agent_runs().get_for_task(&task.id).await.unwrap();
+    assert_eq!(run.unwrap().id, run_id);
 }
 
 #[tokio::test]

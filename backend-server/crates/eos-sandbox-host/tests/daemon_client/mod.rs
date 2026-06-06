@@ -301,7 +301,7 @@ async fn tcp_endpoint_singleflight_lock_order() {
 }
 
 #[test]
-fn empty_response_gating_matches_python_set() {
+fn empty_response_gating_matches_expected_set() {
     for op in [
         "api.edit_file",
         "api.v1.edit_file",

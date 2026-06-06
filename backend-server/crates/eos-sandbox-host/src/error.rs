@@ -73,8 +73,7 @@ pub enum SandboxHostError {
     /// A request carried contradictory or missing required arguments (e.g. a
     /// Docker `create` with neither `image` nor `snapshot`). This is the spec
     /// enum's growth slot (`#[non_exhaustive]`) for argument-validation failures
-    /// the §5 list did not enumerate; it mirrors the Python `ValueError` raised
-    /// at those boundaries.
+    /// the §5 list did not enumerate.
     #[error("invalid sandbox request: {0}")]
     InvalidRequest(String),
     /// A `bollard` Docker Engine API call failed.

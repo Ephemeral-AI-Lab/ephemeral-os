@@ -2,11 +2,9 @@
 //! the resident in-sandbox daemon (TCP fast path or `AF_UNIX` thin client through
 //! `adapter.exec`), run the spawn/connect/empty-response recovery state machine,
 //! cache the per-sandbox TCP endpoint with single-flight, and decode typed
-//! errors. Faithful port of `sandbox/host/daemon_client.py`.
+//! errors.
 //!
-//! Per GC-04 the Rust default runtime is `eosd`; the Python-vs-`eosd` command
-//! branching collapses to the `eosd` branch (the Python launcher survives only
-//! behind the compat bridge, not implemented here).
+//! Per GC-04 the runtime is `eosd`; there is no alternate launcher branch.
 
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -75,7 +73,7 @@ const CONNECT_RETRY_DELAYS: [Duration; 4] = [
     secs_to_duration(eos_protocol::CONNECT_RETRY_DELAYS_S[3]),
 ];
 
-// --- resolved container-side paths (from sandbox/daemon/paths.py) -------------
+// --- resolved container-side paths --------------------------------------------
 
 pub(crate) const BUNDLE_REMOTE_DIR: &str = "/eos/runtime/daemon";
 /// Default `LayerStack` root injected into every envelope's `args.layer_stack_root`.
@@ -91,7 +89,7 @@ pub(crate) const EOSD_SHA_MARKER: &str = "/eos/runtime/daemon/.eosd-sha256";
 
 /// Prepend the wire protocol-version field to a payload (payload wins on a key
 /// collision). The `eos-sandbox-host` [`SandboxTransport`] impl applies this
-/// before dispatch (Python `with_daemon_protocol_version`).
+/// before dispatch.
 #[must_use]
 pub fn with_daemon_protocol_version(payload: JsonObject) -> JsonObject {
     let mut out = JsonObject::new();
@@ -134,8 +132,7 @@ impl DaemonClient {
         &self.registry
     }
 
-    /// Drop any cached TCP endpoint for `sandbox_id` (Python
-    /// `invalidate_daemon_tcp_endpoint`).
+    /// Drop any cached TCP endpoint for `sandbox_id`.
     pub fn invalidate_daemon_tcp_endpoint(&self, sandbox_id: &SandboxId) {
         self.tcp_cache.write().remove(sandbox_id);
     }
@@ -144,7 +141,7 @@ impl DaemonClient {
     ///
     /// `op` is the verbatim wire op string (e.g. `api.v1.read_file`,
     /// `api.ensure_workspace_base`). `args` are merged over the injected
-    /// `layer_stack_root`; `args` win on collision (Python `call_daemon_api`).
+    /// `layer_stack_root`; `args` win on collision.
     pub async fn call_daemon_api(
         &self,
         sandbox_id: &SandboxId,
@@ -175,11 +172,9 @@ impl DaemonClient {
         .await
     }
 
-    /// Re-spawn the resident daemon (Python `ensure_daemon_current`). The eosd
-    /// spawn restarts the daemon when its env signature changes. Note: unlike the
-    /// stale doc comment in the Python source, this does **not** invalidate the
-    /// TCP cache (invalidation is `_send_daemon_envelope`-only — see the port
-    /// discrepancy note).
+    /// Re-spawn the resident daemon. The eosd spawn restarts the daemon when its
+    /// env signature changes. This does **not** invalidate the TCP cache;
+    /// invalidation happens only on the send path.
     pub async fn ensure_daemon_current(
         &self,
         sandbox_id: &SandboxId,
@@ -244,7 +239,10 @@ impl DaemonClient {
 
     // --- recovery state machine (AC-04) ---------------------------------------
 
-    #[allow(clippy::too_many_arguments)] // a faithful port of one Python function's params
+    // one cohesive recovery-dispatch signature: the full daemon-call context
+    // (adapter, sandbox id, op, args, timeout, endpoint) threaded through the
+    // spawn/connect/empty-response state machine.
+    #[allow(clippy::too_many_arguments)]
     async fn dispatch_with_daemon_spawn_recovery(
         &self,
         adapter: &dyn ProviderAdapter,
@@ -436,7 +434,7 @@ impl DaemonClient {
     /// Resolve (and cache) the per-sandbox TCP endpoint, single-flighting
     /// concurrent callers. Returns `None` when the adapter has no TCP path; a
     /// resolver **error** returns `None` without caching (so the next call
-    /// retries — intentional asymmetry, matching Python).
+    /// retries — intentional asymmetry).
     pub(crate) async fn resolve_daemon_tcp_endpoint(
         &self,
         adapter: &dyn ProviderAdapter,

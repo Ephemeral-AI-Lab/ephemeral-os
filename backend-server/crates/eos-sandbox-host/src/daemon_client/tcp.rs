@@ -78,7 +78,7 @@ async fn call_tcp_daemon_inner(
     let exchange = async {
         stream.write_all(envelope_json.as_bytes()).await?;
         stream.write_all(b"\n").await?;
-        stream.shutdown().await?; // half-close the write side (Python write_eof)
+        stream.shutdown().await?; // half-close the write side
         let mut buf = Vec::new();
         stream.read_to_end(&mut buf).await?;
         Ok::<String, std::io::Error>(String::from_utf8_lossy(&buf).into_owned())

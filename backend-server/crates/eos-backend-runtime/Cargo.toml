@@ -4,5 +4,27 @@ version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 
+[dependencies]
+# Sandbox port contracts the manager implements / hands back (the injected
+# gateway, the daemon transport, and the request provisioner binding).
+eos-sandbox-port.workspace = true
+# Concrete Docker/daemon host the production manager composes: one registry ->
+# daemon client (transport) -> lifecycle -> request provisioner.
+eos-sandbox-host.workspace = true
+# Backend-owned DTOs (sanitized SandboxView / SandboxState) and lifecycle config.
+eos-backend-types.workspace = true
+eos-backend-config.workspace = true
+# Typed ids and timestamps used by the refcount state and bindings.
+eos-types.workspace = true
+
+async-trait.workspace = true
+parking_lot.workspace = true
+thiserror.workspace = true
+tracing.workspace = true
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }
+serde_json.workspace = true
+
 [lints]
 workspace = true
