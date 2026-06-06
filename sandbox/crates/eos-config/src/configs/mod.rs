@@ -5,6 +5,8 @@ pub mod command_session;
 
 pub mod daemon;
 
+pub mod validate;
+
 #[path = "e2e-test.rs"]
 pub mod e2e_test;
 

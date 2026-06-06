@@ -80,6 +80,33 @@ impl RunMetaRepo {
         row.as_ref().map(row_to_run_meta).transpose()
     }
 
+    /// Reconcile a still-non-terminal run to the terminal status agent-core
+    /// reports, guarded so it never clobbers a concurrently-written terminal
+    /// status (e.g. a `DELETE` that just wrote `cancelled`). The CAS matches only
+    /// `accepted`/`running` rows. `Some(updated)` ⇒ this call moved the row;
+    /// `None` ⇒ the CAS matched nothing (already terminal, or absent) and the
+    /// caller should re-read to learn the authoritative row.
+    ///
+    /// # Errors
+    /// [`StoreError`] on a query or decode failure.
+    pub async fn reconcile_terminal(
+        &self,
+        request_id: &RequestId,
+        status: BackendRunStatus,
+        finished_at: UtcDateTime,
+    ) -> Result<Option<RunMeta>, StoreError> {
+        let row = sqlx::query(&format!(
+            "UPDATE run_meta SET status = ?, finished_at = ? \
+             WHERE request_id = ? AND status IN ('accepted', 'running') RETURNING {COLUMNS}"
+        ))
+        .bind(status.as_str())
+        .bind(ts_in(finished_at))
+        .bind(request_id.as_str())
+        .fetch_optional(&self.pool)
+        .await?;
+        row.as_ref().map(row_to_run_meta).transpose()
+    }
+
     /// List runs newest-first with limit/offset pagination plus a total count.
     ///
     /// # Errors

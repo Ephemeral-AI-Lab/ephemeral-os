@@ -111,7 +111,9 @@ pub struct AuditCursor {
     pub boot_epoch_id: i64,
     /// Sequence below which events were lost (set on epoch change), if any.
     pub lost_before_seq: Option<i64>,
-    /// Count of audit events dropped for this sandbox.
+    /// Count of audit events the daemon dropped for this sandbox in the current boot
+    /// epoch (the daemon ring counter restarts on reboot, so this is not cumulative
+    /// across epochs).
     pub dropped_count: u64,
     /// When the cursor was last advanced.
     pub updated_at: UtcDateTime,

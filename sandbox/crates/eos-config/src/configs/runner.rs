@@ -4,7 +4,10 @@
 //! existing runner code until the config-infra wiring phase.
 
 use serde::Deserialize;
-use thiserror::Error;
+
+use crate::configs::validate::{
+    require_non_empty, require_non_empty_items, require_u64_at_least, ConfigFieldError,
+};
 
 #[derive(Debug, Clone, PartialEq, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -23,19 +26,12 @@ pub struct RunnerEnvConfig {
     pub git_optional_locks: bool,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Error)]
-#[error("{field}: {reason}")]
-pub struct RunnerConfigError {
-    field: &'static str,
-    reason: &'static str,
-}
-
 impl RunnerConfig {
     /// Validate semantic constraints that YAML deserialization cannot express.
     ///
     /// # Errors
     /// Returns an error when a field violates runner policy.
-    pub fn validate(&self) -> Result<(), RunnerConfigError> {
+    pub fn validate(&self) -> Result<(), ConfigFieldError> {
         require_u64_at_least(self.child_wait_poll_ms, 1, "runner.child_wait_poll_ms")?;
         require_non_empty_items(&self.env.inherit_keys, "runner.env.inherit_keys")?;
         require_non_empty_items(&self.env.restricted_keys, "runner.env.restricted_keys")?;
@@ -46,41 +42,6 @@ impl RunnerConfig {
         )?;
         Ok(())
     }
-}
-
-fn require_u64_at_least(
-    value: u64,
-    minimum: u64,
-    field: &'static str,
-) -> Result<(), RunnerConfigError> {
-    if value >= minimum {
-        Ok(())
-    } else {
-        Err(invalid(field, "must be at least 1"))
-    }
-}
-
-fn require_non_empty(value: &str, field: &'static str) -> Result<(), RunnerConfigError> {
-    if value.trim().is_empty() {
-        Err(invalid(field, "must be non-empty"))
-    } else {
-        Ok(())
-    }
-}
-
-fn require_non_empty_items(
-    values: &[String],
-    field: &'static str,
-) -> Result<(), RunnerConfigError> {
-    if values.iter().any(|value| value.trim().is_empty()) {
-        Err(invalid(field, "must not contain empty strings"))
-    } else {
-        Ok(())
-    }
-}
-
-fn invalid(field: &'static str, reason: &'static str) -> RunnerConfigError {
-    RunnerConfigError { field, reason }
 }
 
 #[cfg(test)]

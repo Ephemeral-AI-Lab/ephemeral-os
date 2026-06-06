@@ -55,9 +55,20 @@ impl AttemptOrchestratorRegistry {
         self.by_attempt_id.lock().get(attempt_id).cloned()
     }
 
-    /// Record the abort handle of an attempt's planner-driver task.
-    pub(crate) fn store_planner_abort(&self, attempt_id: AttemptId, handle: AbortHandle) {
-        self.planner_aborts.lock().insert(attempt_id, handle);
+    /// Atomically spawn-and-record an attempt's planner-driver task: `spawn` runs
+    /// (spawning the task and yielding its [`AbortHandle`]) while the abort slot is
+    /// held, so the task can never reach `deregister` and clear an empty slot
+    /// before its handle is stored. Mirrors the spawn-under-lock discipline of the
+    /// engine's background subagent supervisor. The closure does no `.await` and
+    /// only enqueues onto the runtime, so the short `parking_lot` hold is sound.
+    pub(crate) fn store_planner_abort_with(
+        &self,
+        attempt_id: AttemptId,
+        spawn: impl FnOnce() -> AbortHandle,
+    ) {
+        let mut guard = self.planner_aborts.lock();
+        let handle = spawn();
+        guard.insert(attempt_id, handle);
     }
 
     /// Abort an attempt's in-flight planner-driver task (and, transitively, its

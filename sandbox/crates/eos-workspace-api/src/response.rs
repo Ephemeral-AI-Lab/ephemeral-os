@@ -7,6 +7,22 @@ use thiserror::Error;
 /// JSON-valued timing map. Daemon adapters keep their exact timing key names.
 pub type WorkspaceTimings = BTreeMap<String, Value>;
 
+/// Saturating `u64` -> `f64` for timing/resource metric values.
+///
+/// Centralized so workspace-mode crates share one conversion. Values above
+/// `2^53` lose integer precision (acceptable for metrics) and the cast never
+/// panics; in practice these are tiny version/duration counts.
+#[must_use]
+pub fn u64_to_f64_saturating(value: u64) -> f64 {
+    value as f64
+}
+
+/// Saturating `usize` -> `f64`. See [`u64_to_f64_saturating`].
+#[must_use]
+pub fn usize_to_f64_saturating(value: usize) -> f64 {
+    u64::try_from(value).map_or(f64::MAX, u64_to_f64_saturating)
+}
+
 /// Per-path mutation kind map.
 pub type ChangedPathKinds = BTreeMap<String, String>;
 

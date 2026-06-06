@@ -31,6 +31,20 @@ pub enum OverlayPathChangeKind {
     OpaqueDir,
 }
 
+impl OverlayPathChangeKind {
+    /// Stable wire discriminator string for this change kind. Matches
+    /// [`eos_protocol::LayerChange::kind`] so capture and publish agree.
+    #[must_use]
+    pub const fn as_wire(self) -> &'static str {
+        match self {
+            Self::Write => "write",
+            Self::Delete => "delete",
+            Self::Symlink => "symlink",
+            Self::OpaqueDir => "opaque_dir",
+        }
+    }
+}
+
 /// A single change captured from the overlay upperdir.
 ///
 /// Before layer-stack policy is applied. `path` is normalized; `write`/`symlink`
@@ -48,8 +62,8 @@ pub struct OverlayPathChange {
 }
 
 impl OverlayPathChange {
-    /// Validate-and-construct exactly as Rust `OverlayPathChange.__post_init__`:
-    /// normalize the path (root allowed only for `opaque_dir`), require
+    /// Validate-and-construct: normalize the path (root allowed only for
+    /// `opaque_dir`), require
     /// `content_path`+`final_hash` for `write`/`symlink`, forbid them otherwise.
     ///
     /// # Errors

@@ -324,6 +324,19 @@ mod tests {
     }
 
     #[test]
+    fn write_file_args_omitted_overwrite_defaults_true() -> TestResult {
+        // The wire contract makes `overwrite` optional, defaulting to true.
+        let omitted: WriteFileArgs =
+            serde_json::from_value(serde_json::json!({"path": "f.txt", "content": "x"}))?;
+        assert!(omitted.overwrite);
+        let explicit: WriteFileArgs = serde_json::from_value(
+            serde_json::json!({"path": "f.txt", "content": "x", "overwrite": false}),
+        )?;
+        assert!(!explicit.overwrite);
+        Ok(())
+    }
+
+    #[test]
     fn search_replace_semantics() -> TestResult {
         assert_eq!(apply_search_replace("a b a", "a", "X", true)?, "X b X");
         assert_eq!(apply_search_replace("a b", "a", "X", false)?, "X b");

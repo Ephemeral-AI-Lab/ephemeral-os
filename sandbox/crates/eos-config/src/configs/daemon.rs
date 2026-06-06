@@ -3,10 +3,14 @@
 //! The `eosd` binary loads this section from the merged runtime YAML and injects
 //! it into daemon-owned subsystems during server startup.
 
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 use serde::Deserialize;
-use thiserror::Error;
+
+use crate::configs::validate::{
+    require_absolute, require_f64_gt, require_ratio, require_u64_at_least, require_usize_at_least,
+    ConfigFieldError,
+};
 
 pub use super::command_session::CommandSessionConfig;
 
@@ -68,19 +72,12 @@ pub struct LayerStackConfig {
     pub auto_squash_max_depth: usize,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Error)]
-#[error("{field}: {reason}")]
-pub struct DaemonConfigError {
-    field: &'static str,
-    reason: &'static str,
-}
-
 impl DaemonConfig {
     /// Validate semantic constraints that YAML deserialization cannot express.
     ///
     /// # Errors
     /// Returns an error when a field violates daemon runtime policy.
-    pub fn validate(&self) -> Result<(), DaemonConfigError> {
+    pub fn validate(&self) -> Result<(), ConfigFieldError> {
         require_absolute(&self.server.socket_path, "daemon.server.socket_path")?;
         require_absolute(&self.server.pid_path, "daemon.server.pid_path")?;
         require_usize_at_least(
@@ -176,58 +173,6 @@ impl DaemonConfig {
         )?;
         Ok(())
     }
-}
-
-fn require_absolute(path: &Path, field: &'static str) -> Result<(), DaemonConfigError> {
-    if path.is_absolute() {
-        Ok(())
-    } else {
-        Err(invalid(field, "must be an absolute path"))
-    }
-}
-
-fn require_u64_at_least(
-    value: u64,
-    minimum: u64,
-    field: &'static str,
-) -> Result<(), DaemonConfigError> {
-    if value >= minimum {
-        Ok(())
-    } else {
-        Err(invalid(field, "must be at least 1"))
-    }
-}
-
-fn require_usize_at_least(
-    value: usize,
-    minimum: usize,
-    field: &'static str,
-) -> Result<(), DaemonConfigError> {
-    if value >= minimum {
-        Ok(())
-    } else {
-        Err(invalid(field, "must be at least 1"))
-    }
-}
-
-fn require_f64_gt(value: f64, minimum: f64, field: &'static str) -> Result<(), DaemonConfigError> {
-    if value.is_finite() && value > minimum {
-        Ok(())
-    } else {
-        Err(invalid(field, "must be greater than zero"))
-    }
-}
-
-fn require_ratio(value: f64, field: &'static str) -> Result<(), DaemonConfigError> {
-    if value.is_finite() && value > 0.0 && value <= 1.0 {
-        Ok(())
-    } else {
-        Err(invalid(field, "must be greater than 0.0 and at most 1.0"))
-    }
-}
-
-fn invalid(field: &'static str, reason: &'static str) -> DaemonConfigError {
-    DaemonConfigError { field, reason }
 }
 
 #[cfg(test)]

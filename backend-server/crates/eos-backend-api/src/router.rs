@@ -1,0 +1,198 @@
+//! Shared application state, the runtime-capability ports, and the axum router.
+//!
+//! The handlers read backend lifecycle/observability state directly (concrete
+//! repositories from `eos-backend-store`/`-obs`) but reach the two stateful
+//! runtime capabilities — launching/cancelling runs and the sandbox lifecycle —
+//! through the narrow [`RunControl`] and [`SandboxRegistry`] ports. Those are
+//! `dyn` because test doubles substitute for the production `RunLauncher` /
+//! `SandboxManager` at this cross-crate boundary (the manager has no public test
+//! constructor), which is the load-bearing reason the repo reserves trait objects
+//! for. Agent-core reads ride the already-`dyn` store traits from
+//! `RuntimeServices::state_reader()`.
+
+use std::sync::Arc;
+
+use async_trait::async_trait;
+use axum::routing::{get, post};
+use axum::Router;
+
+use eos_backend_obs::StatsReader;
+use eos_backend_runtime::{
+    CancelOutcome, EventBus, LaunchError, RunLauncher, SandboxManager, SandboxManagerError,
+};
+use eos_backend_store::{EventLogRepo, RunMetaRepo};
+use eos_backend_types::{CreateUserRequest, SandboxView};
+use eos_state::{AgentRunStore, RequestStore, TaskStore};
+use eos_types::{RequestId, SandboxId};
+
+use crate::handlers;
+
+/// Launch/cancel capability the API depends on. Implemented by [`RunLauncher`];
+/// faked in API tests (the launcher needs a `SandboxManager`, which has no public
+/// test constructor, so this seam is what makes the create/cancel routes testable
+/// in isolation).
+#[async_trait]
+pub trait RunControl: Send + Sync {
+    /// Accept a user request and return the minted request id (the `202` body).
+    ///
+    /// # Errors
+    /// [`LaunchError`] when the initial lifecycle write fails.
+    async fn launch(&self, request: CreateUserRequest) -> Result<RequestId, LaunchError>;
+
+    /// Request cancellation of an in-flight run.
+    fn cancel(&self, request_id: &RequestId, reason: &str) -> CancelOutcome;
+}
+
+#[async_trait]
+impl RunControl for RunLauncher {
+    async fn launch(&self, request: CreateUserRequest) -> Result<RequestId, LaunchError> {
+        RunLauncher::launch(self, request).await
+    }
+
+    fn cancel(&self, request_id: &RequestId, reason: &str) -> CancelOutcome {
+        RunLauncher::cancel(self, request_id, reason)
+    }
+}
+
+/// Sandbox list/detail/delete capability over sanitized [`SandboxView`]s.
+/// Implemented by [`SandboxManager`]; faked in API tests.
+#[async_trait]
+pub trait SandboxRegistry: Send + Sync {
+    /// All tracked sandboxes as sanitized views, newest first.
+    fn list(&self) -> Vec<SandboxView>;
+
+    /// The sanitized view of one sandbox, if tracked.
+    fn view(&self, sandbox_id: &SandboxId) -> Option<SandboxView>;
+
+    /// Destroy a backend-owned sandbox, refused while it is referenced.
+    ///
+    /// # Errors
+    /// [`SandboxManagerError`] when the sandbox is unknown, referenced, or
+    /// teardown fails.
+    async fn delete(&self, sandbox_id: &SandboxId) -> Result<(), SandboxManagerError>;
+}
+
+#[async_trait]
+impl SandboxRegistry for SandboxManager {
+    fn list(&self) -> Vec<SandboxView> {
+        SandboxManager::list(self)
+    }
+
+    fn view(&self, sandbox_id: &SandboxId) -> Option<SandboxView> {
+        SandboxManager::view(self, sandbox_id)
+    }
+
+    async fn delete(&self, sandbox_id: &SandboxId) -> Result<(), SandboxManagerError> {
+        SandboxManager::delete(self, sandbox_id).await
+    }
+}
+
+/// The three agent-core read stores the API joins against, grouped so the
+/// composition root can hand them over from `RuntimeServices::state_reader()`
+/// while tests supply fakes.
+#[derive(Clone)]
+pub struct AgentCoreReads {
+    /// Request store (`get` for the detail status join).
+    pub requests: Arc<dyn RequestStore>,
+    /// Task store (`list_for_request` / `get` for the task routes).
+    pub tasks: Arc<dyn TaskStore>,
+    /// Agent-run store (`get_for_task` for task detail / transcript).
+    pub agent_runs: Arc<dyn AgentRunStore>,
+}
+
+impl std::fmt::Debug for AgentCoreReads {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("AgentCoreReads").finish_non_exhaustive()
+    }
+}
+
+/// Shared, cheap-to-clone application state injected into every handler.
+#[derive(Clone)]
+pub struct AppState {
+    pub(crate) runs: Arc<dyn RunControl>,
+    pub(crate) sandboxes: Arc<dyn SandboxRegistry>,
+    pub(crate) run_meta: RunMetaRepo,
+    pub(crate) event_bus: Arc<EventBus>,
+    pub(crate) event_log: EventLogRepo,
+    pub(crate) stats: StatsReader,
+    pub(crate) reads: AgentCoreReads,
+}
+
+impl std::fmt::Debug for AppState {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("AppState").finish_non_exhaustive()
+    }
+}
+
+impl AppState {
+    /// Assemble application state from the injected runtime capabilities and
+    /// backend store handles. `event_bus` must be the same instance the launcher
+    /// publishes through so the stream routes replay and tail one stream.
+    #[must_use]
+    pub fn new(
+        runs: Arc<dyn RunControl>,
+        sandboxes: Arc<dyn SandboxRegistry>,
+        run_meta: RunMetaRepo,
+        event_bus: Arc<EventBus>,
+        event_log: EventLogRepo,
+        stats: StatsReader,
+        reads: AgentCoreReads,
+    ) -> Self {
+        Self {
+            runs,
+            sandboxes,
+            run_meta,
+            event_bus,
+            event_log,
+            stats,
+            reads,
+        }
+    }
+}
+
+/// Build the backend HTTP router over [`AppState`]. Resource names are plural and
+/// id-segment paths use conventional `/collection/{id}` form (no
+/// `/collection={id}` style).
+#[must_use]
+pub fn build_router(state: AppState) -> Router {
+    Router::new()
+        .route(
+            "/api/user-requests",
+            post(handlers::user_requests::create).get(handlers::user_requests::list),
+        )
+        .route(
+            "/api/user-requests/{request_id}",
+            get(handlers::user_requests::detail).delete(handlers::user_requests::cancel),
+        )
+        .route(
+            "/api/user-requests/{request_id}/events",
+            get(handlers::user_requests::events),
+        )
+        .route(
+            "/api/user-requests/{request_id}/stream",
+            get(handlers::stream::stream),
+        )
+        .route(
+            "/api/user-requests/{request_id}/tasks",
+            get(handlers::tasks::request_tasks),
+        )
+        .route("/api/tasks/{task_id}", get(handlers::tasks::detail))
+        .route(
+            "/api/tasks/{task_id}/transcript",
+            get(handlers::tasks::transcript),
+        )
+        .route("/api/stats/performance", get(handlers::stats::performance))
+        .route("/api/stats/correctness", get(handlers::stats::correctness))
+        .route("/api/stats/agent-runs", get(handlers::stats::agent_runs))
+        .route("/api/stats/events", get(handlers::stats::events))
+        .route(
+            "/api/sandboxes",
+            get(handlers::sandboxes::list),
+        )
+        .route(
+            "/api/sandboxes/{sandbox_id}",
+            get(handlers::sandboxes::detail).delete(handlers::sandboxes::delete),
+        )
+        .route("/openapi.json", get(crate::openapi::openapi_doc))
+        .with_state(state)
+}

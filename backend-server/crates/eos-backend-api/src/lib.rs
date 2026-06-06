@@ -1,11 +1,27 @@
-//! probe
-use axum::extract::ws::WebSocketUpgrade;
-use axum::http::HeaderMap;
+//! `eos-backend-api` — the axum router, request/task/sandbox/stats handlers,
+//! SSE / `WebSocket` milestone streaming, and the `OpenAPI` document.
+//!
+//! The crate exposes one composition surface: [`AppState`] (assembled by the
+//! backend main from the runtime capabilities and store handles) and
+//! [`build_router`], which wires every route in `SPEC.md`. Two narrow ports —
+//! [`RunControl`] and [`SandboxRegistry`] — abstract the stateful runtime
+//! capabilities so the production `RunLauncher` / `SandboxManager` drive the API
+//! in deployment while test doubles drive it in the contract tests.
+//!
+//! Two contracts are load-bearing: sandbox responses ([`SandboxView`]) never
+//! carry daemon connection material or credentials (AC4), and the milestone
+//! stream replays persisted `event_log` rows before tailing live with no gap at
+//! the handoff (AC5).
+//!
+//! [`SandboxView`]: eos_backend_types::SandboxView
+#![warn(missing_docs)]
 
-#[allow(dead_code)]
-async fn probe(up: Option<WebSocketUpgrade>, _h: HeaderMap) -> axum::response::Response {
-    match up {
-        Some(u) => u.on_upgrade(|_socket| async {}),
-        None => axum::response::IntoResponse::into_response("sse"),
-    }
-}
+mod error;
+mod handlers;
+mod openapi;
+mod router;
+mod stream;
+
+pub use error::ApiError;
+pub use openapi::{document as openapi_document, openapi_doc};
+pub use router::{build_router, AgentCoreReads, AppState, RunControl, SandboxRegistry};

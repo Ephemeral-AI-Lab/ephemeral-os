@@ -3,10 +3,14 @@
 //! The daemon loads this through `eos-config` and injects it into the isolated
 //! workspace lifecycle.
 
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 use serde::Deserialize;
-use thiserror::Error;
+
+use crate::configs::validate::{
+    require_absolute, require_f64_at_least, require_f64_gt, require_non_empty, require_ratio,
+    require_u32_at_least, require_u64_at_least, ConfigFieldError,
+};
 
 #[derive(Debug, Clone, PartialEq, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -33,19 +37,12 @@ pub enum Rfc1918Egress {
     Deny,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Error)]
-#[error("{field}: {reason}")]
-pub struct IsolatedConfigError {
-    field: &'static str,
-    reason: &'static str,
-}
-
 impl IsolatedWorkspaceConfig {
     /// Validate semantic constraints that YAML deserialization cannot express.
     ///
     /// # Errors
     /// Returns an error when a field violates isolated-workspace runtime policy.
-    pub fn validate(&self) -> Result<(), IsolatedConfigError> {
+    pub fn validate(&self) -> Result<(), ConfigFieldError> {
         require_absolute(&self.scratch_root, "isolated_workspace.scratch_root")?;
         require_absolute(
             &self.audit_jsonl_path,
@@ -71,88 +68,12 @@ impl IsolatedWorkspaceConfig {
         if self.sample_interval_s.is_finite() && self.sample_interval_s >= 0.01 {
             Ok(())
         } else {
-            Err(invalid(
+            Err(ConfigFieldError::new(
                 "isolated_workspace.sample_interval_s",
                 "must be at least 0.01",
             ))
         }
     }
-}
-
-fn require_absolute(path: &Path, field: &'static str) -> Result<(), IsolatedConfigError> {
-    if path.is_absolute() {
-        Ok(())
-    } else {
-        Err(invalid(field, "must be an absolute path"))
-    }
-}
-
-fn require_non_empty(value: &str, field: &'static str) -> Result<(), IsolatedConfigError> {
-    if value.trim().is_empty() {
-        Err(invalid(field, "must be non-empty"))
-    } else {
-        Ok(())
-    }
-}
-
-fn require_u32_at_least(
-    value: u32,
-    minimum: u32,
-    field: &'static str,
-) -> Result<(), IsolatedConfigError> {
-    if value >= minimum {
-        Ok(())
-    } else {
-        Err(invalid(field, "must be at least 1"))
-    }
-}
-
-fn require_u64_at_least(
-    value: u64,
-    minimum: u64,
-    field: &'static str,
-) -> Result<(), IsolatedConfigError> {
-    if value >= minimum {
-        Ok(())
-    } else {
-        Err(invalid(field, "must be at least 1"))
-    }
-}
-
-fn require_f64_gt(
-    value: f64,
-    minimum: f64,
-    field: &'static str,
-) -> Result<(), IsolatedConfigError> {
-    if value.is_finite() && value > minimum {
-        Ok(())
-    } else {
-        Err(invalid(field, "must be greater than zero"))
-    }
-}
-
-fn require_f64_at_least(
-    value: f64,
-    minimum: f64,
-    field: &'static str,
-) -> Result<(), IsolatedConfigError> {
-    if value.is_finite() && value >= minimum {
-        Ok(())
-    } else {
-        Err(invalid(field, "must be at least zero"))
-    }
-}
-
-fn require_ratio(value: f64, field: &'static str) -> Result<(), IsolatedConfigError> {
-    if value.is_finite() && value > 0.0 && value <= 1.0 {
-        Ok(())
-    } else {
-        Err(invalid(field, "must be greater than 0.0 and at most 1.0"))
-    }
-}
-
-fn invalid(field: &'static str, reason: &'static str) -> IsolatedConfigError {
-    IsolatedConfigError { field, reason }
 }
 
 #[cfg(test)]

@@ -6,15 +6,16 @@
 //! (agent name, token count, terminal outcome) is owned by the Phase 7 read
 //! handler through `RuntimeServices::state_reader()`.
 //!
-//! These are serde-only for now; `JsonSchema`/`OpenAPI` pinning is owned by the
-//! Phase 7 API crate alongside the route shapes.
+//! The response shapes are pinned for `OpenAPI` via `JsonSchema`, alongside the
+//! API route shapes the Phase 7 crate serves.
 
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use eos_types::AgentRunId;
 
 /// Timing and resource summary derived from `obs_event` (`/api/stats/performance`).
-#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize, JsonSchema)]
 pub struct PerformanceStats {
     /// Count of `tool_call.completed` observability rows.
     pub tool_call_count: u64,
@@ -33,7 +34,7 @@ pub struct PerformanceStats {
 /// `audit_matched` vs `audit_unmatched` keep daemon rows joined through
 /// `sandbox_call_correlation` distinct from daemon rows with no bridge (AC7); an
 /// unmatched row never borrows a model-facing `tool_use_id`.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub struct CorrectnessStats {
     /// Count of `agent_run.completed` observability rows.
     pub agent_runs_observed: u64,
@@ -46,7 +47,7 @@ pub struct CorrectnessStats {
 }
 
 /// Per-agent-run rollup derived from `obs_event` (`/api/stats/agent-runs`).
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 pub struct AgentRunStat {
     /// The agent run these rows are attributed to.
     pub agent_run_id: AgentRunId,
@@ -65,13 +66,15 @@ pub struct AgentRunStat {
 /// durable, summed from `audit_cursor`.
 ///
 /// [`PersistingSink`]: ../../eos_backend_obs/struct.PersistingSink.html
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize, JsonSchema)]
 pub struct ObsLossStats {
     /// Audit events dropped at `publish` because the bounded queue was full.
     pub obs_dropped_inflight: u64,
     /// Accepted events the drainer could not durably persist after retry.
     pub obs_persist_failed: u64,
-    /// Sum of `audit_cursor.dropped_count` across sandboxes (daemon ring drops).
+    /// Sum of each sandbox's current-epoch `audit_cursor.dropped_count` (daemon ring
+    /// drops). The daemon counter restarts on reboot, so this is not a lifetime
+    /// total; `audit_sandboxes_with_loss` is the durable cross-epoch loss signal.
     pub audit_dropped: u64,
     /// Number of sandboxes whose cursor recorded a `lost_before_seq` boundary.
     pub audit_sandboxes_with_loss: u64,

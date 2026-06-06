@@ -199,6 +199,11 @@ fn next_cursor(
     let (last_seq, lost_before_seq, dropped_count) = if epoch_reset {
         // Daemon rebooted: record loss up to the old high-water mark, then reset
         // `last_seq` into the new epoch's space (do not max with the old epoch).
+        // `dropped_count` likewise tracks only the current epoch — the daemon's ring
+        // counter restarts at reboot, so the prior epoch's count is intentionally
+        // replaced (not summed or maxed); a single cursor row cannot hold a lifetime
+        // total. The durable cross-epoch loss signal is `lost_before_seq` /
+        // `audit_sandboxes_with_loss`, not this per-epoch count.
         let lost = Some(max_opt(Some(prior_last), ring_lost).unwrap_or(prior_last));
         (cursor_after.unwrap_or(0), lost, ring_dropped)
     } else {

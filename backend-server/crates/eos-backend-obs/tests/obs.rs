@@ -299,7 +299,8 @@ async fn ingest_daemon_reboot_records_loss_and_resets_cursor() {
     let sandbox = sid("sb-1");
     let ingestor = ingestor(&store);
 
-    // Epoch 1: consume two events; cursor advances to seq 2 with no loss.
+    // Epoch 1: consume two events; cursor advances to seq 2. The epoch-1 ring also
+    // reports 5 dropped events, tracked in this epoch's dropped_count.
     let pull1 = daemon_pull(
         1,
         vec![
@@ -308,13 +309,14 @@ async fn ingest_daemon_reboot_records_loss_and_resets_cursor() {
         ],
         2,
         None,
-        0,
+        5,
     );
     let first = ingestor.ingest_pull(&sandbox, &pull1).await.unwrap();
     assert!(!first.epoch_reset);
     assert_eq!(first.cursor.boot_epoch_id, 1);
     assert_eq!(first.cursor.last_seq, 2);
     assert!(first.cursor.lost_before_seq.is_none());
+    assert_eq!(first.cursor.dropped_count, 5);
 
     // Epoch 2 (daemon reboot): a fresh sequence space plus reported drops. The
     // cursor records loss for the prior epoch BEFORE resetting last_seq (AC8).
@@ -324,6 +326,8 @@ async fn ingest_daemon_reboot_records_loss_and_resets_cursor() {
     assert_eq!(second.cursor.boot_epoch_id, 2);
     assert_eq!(second.cursor.last_seq, 1);
     assert_eq!(second.cursor.lost_before_seq, Some(2));
+    // dropped_count is reset to the new epoch's ring count (4), proving the prior
+    // epoch's 5 is neither carried (5+4=9) nor maxed (max(5,4)=5): per-epoch only.
     assert_eq!(second.cursor.dropped_count, 4);
 
     // The persisted cursor carries the reset epoch/sequence and recorded loss.
@@ -337,6 +341,41 @@ async fn ingest_daemon_reboot_records_loss_and_resets_cursor() {
     let loss = stats(&store).obs_loss(SinkLoss::default()).await.unwrap();
     assert_eq!(loss.audit_sandboxes_with_loss, 1);
     assert_eq!(loss.audit_dropped, 4);
+}
+
+#[tokio::test]
+async fn ingest_same_epoch_ring_eviction_records_loss_without_resetting_cursor() {
+    let (store, _dir) = open_store().await;
+    let sandbox = sid("sb-1");
+    let ingestor = ingestor(&store);
+
+    // Pull 1 (epoch 1): consume seq 1; cursor at seq 1, no loss yet.
+    let pull1 = daemon_pull(1, vec![daemon_tool_call(1, "inv-a", "c", 1.0)], 1, None, 0);
+    let first = ingestor.ingest_pull(&sandbox, &pull1).await.unwrap();
+    assert!(!first.epoch_reset);
+    assert_eq!(first.cursor.last_seq, 1);
+    assert!(first.cursor.lost_before_seq.is_none());
+
+    // Pull 2 (SAME epoch 1): a mid-epoch ring eviction reports lost_before_seq=3 and a
+    // higher cumulative dropped count. Without a reboot, last_seq must ADVANCE to the
+    // new cursor (not reset), the loss boundary is recorded, and dropped_count tracks
+    // the daemon's cumulative ring counter via max — exercising the else-branch of
+    // next_cursor that the reboot test never reaches.
+    let pull2 = daemon_pull(1, vec![daemon_tool_call(5, "inv-b", "c", 1.0)], 5, Some(3), 2);
+    let second = ingestor.ingest_pull(&sandbox, &pull2).await.unwrap();
+    assert!(!second.epoch_reset);
+    assert_eq!(second.cursor.boot_epoch_id, 1);
+    assert_eq!(second.cursor.last_seq, 5);
+    assert_eq!(second.cursor.lost_before_seq, Some(3));
+    assert_eq!(second.cursor.dropped_count, 2);
+
+    // The same-epoch loss is durable and surfaced by stats.
+    let stored = store.audit_cursors().get(&sandbox).await.unwrap().unwrap();
+    assert_eq!(stored.last_seq, 5);
+    assert_eq!(stored.lost_before_seq, Some(3));
+    let loss = stats(&store).obs_loss(SinkLoss::default()).await.unwrap();
+    assert_eq!(loss.audit_sandboxes_with_loss, 1);
+    assert_eq!(loss.audit_dropped, 2);
 }
 
 // --- stats over engine obs rows ---

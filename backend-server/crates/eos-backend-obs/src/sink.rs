@@ -202,10 +202,11 @@ async fn append_with_retry(obs_events: &ObsEventRepo, event: &ObsEvent) -> Resul
 
 /// Shutdown guard for a [`PersistingSink`]'s drainer task.
 ///
-/// Retained by the composition root. On [`shutdown`](Self::shutdown) or `Drop` it
-/// sends [`Msg::Shutdown`], flushing every event accepted before it, then awaits
-/// the drainer. Bound the wait with `tokio::time::timeout` to honor a backend
-/// shutdown deadline.
+/// Retained by the composition root. Call [`shutdown`](Self::shutdown) to send
+/// [`Msg::Shutdown`], flush every event accepted before it, then await the drainer;
+/// bound the wait with `tokio::time::timeout` to honor a backend shutdown deadline.
+/// There is no `Drop` impl: a bare drop detaches the drainer rather than flushing
+/// (see the note below this type).
 #[derive(Debug)]
 pub struct PersistingSinkShutdown {
     ctrl_tx: Option<mpsc::Sender<Msg>>,

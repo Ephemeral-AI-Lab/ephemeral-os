@@ -27,4 +27,7 @@ pub use mutation::{
     WorkspaceMutationSink,
 };
 pub use read_view::{ResolvedWorkspacePath, WorkspaceReadBytes, WorkspaceReadView};
-pub use response::{ChangedPathKinds, WorkspaceApiError, WorkspaceConflict, WorkspaceTimings};
+pub use response::{
+    u64_to_f64_saturating, usize_to_f64_saturating, ChangedPathKinds, WorkspaceApiError,
+    WorkspaceConflict, WorkspaceTimings,
+};
