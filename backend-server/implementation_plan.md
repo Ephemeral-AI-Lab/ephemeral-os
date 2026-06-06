@@ -17,7 +17,7 @@ has an unchecked hard item.
 | 1 | Workspace scaffold and crate relocation | complete | 2, 3, 4, 5, 6, 7 | `agent-core` has port-only sandbox deps; backend workspace builds |
 | 2 | Agent-core runtime seams | complete | 4, 5, 6, 7 | production `SandboxGateway` injection and `state_reader()` compile |
 | 3 | Backend config, types, store, and migrations | complete | 4, 5, 6, 7 | config/store tests pass with backend DB schema |
-| 4 | Sandbox lifecycle manager | complete | 5, 6, 7 | lifecycle/refcount/delete-guard tests pass (14 manager tests) |
+| 4 | Sandbox lifecycle manager | complete | 5, 6, 7 | lifecycle/refcount/delete-guard tests pass (17 manager tests) |
 | 5 | Run launcher, cancellation, reaper, and event bus | not_started | 6, 7 | request launch and replay-safe event persistence tests pass |
 | 6 | Observability, audit ingestion, and stats | not_started | 7 | audit/correlation/stats tests pass |
 | 7 | HTTP API, streaming API, and OpenAPI | not_started | 8 | API contract and stream replay tests pass |
@@ -751,4 +751,107 @@ Next phase unblockers: Phase 4 can build SandboxManager on top of these typed
   5/6 consume EventLogRepo, ObsEventRepo, SandboxCallCorrelationRepo, and
   AuditCursorRepo. Phase 2 (independent) remains the unblocker for the
   agent-core state_reader/gateway seams that Phases 5/7 also need.
+```
+
+## Phase 4 Execution Notes
+
+```text
+Phase: 4 - Sandbox Lifecycle Manager
+Status: complete
+Touched files:
+  - eos-backend-runtime/Cargo.toml: added deps (eos-sandbox-port, eos-sandbox-host,
+    eos-backend-types, eos-backend-config, eos-types, async-trait, parking_lot,
+    thiserror, tracing; dev: tokio[macros,rt], serde_json). Dropped the empty-crate
+    placeholder.
+  - eos-backend-runtime/src/lib.rs: thin surface (mod sandbox_manager + pub use
+    SandboxManager/SandboxManagerError/DeleteRejection); #![warn(missing_docs)].
+  - eos-backend-runtime/src/sandbox_manager.rs: NEW. SandboxManager (Arc<ManagerInner>),
+    GatewayProvisioner, SandboxManagerError + DeleteRejection, the crate-internal
+    SandboxTeardown seam + production LifecycleTeardown, SandboxEntry/ManagerState,
+    SandboxGateway impl, with_docker (production composition) + with_seams (test).
+  - eos-backend-runtime/tests/sandbox_manager/mod.rs: NEW. 14 tests + FakeProvisioner/
+    FakeTeardown/FakeTransport, included from src via
+    #[cfg(test)] #[path="../tests/sandbox_manager/mod.rs"] mod tests; (daemon_client
+    precedent), so no test files live under src/.
+Concurrent work observed: another agent was mid-refactor of eos-sandbox-host
+  registry.rs/lifecycle.rs/error.rs during this phase — collapsing ProviderRegistry
+  from a two-mode (default + per-sandbox `bindings`) registry to a single Docker-only
+  adapter holder (adapter() now takes 0 args; register/has/dispose/default removed,
+  registry tests moved to tests/registry/mod.rs). Their host crate transiently failed
+  to compile mid-flight, then stabilized. Left untouched: my manager only calls the
+  unchanged set_default(...) + the DaemonClient/SandboxLifecycle/RequestSandboxProvisioner
+  constructors, so it is compatible with both the old and new registry shape (Docker is
+  the only adapter; no per-sandbox routing is needed). Final `cargo check --workspace
+  --all-targets` on the backend workspace is clean after their refactor landed.
+Key design decisions:
+  - Shared state: ALL refcount/lifecycle state lives in one Arc<ManagerInner>.
+    transport()/provisioner() and the backend-retained handle are clones of that
+    same Arc, because RuntimeServicesBuilder::build calls provisioner() once and
+    drops the gateway. A dedicated test (gateway_provisioner_and_manager_share_state)
+    acquires via gateway.provisioner().prepare_for_run(...) and releases/observes
+    via the manager, proving the exact Phase-5 path shares state.
+  - Acquisition == provisioner().prepare_for_run, idempotent per request_id: a request
+    already holding a ref returns its existing binding without re-provisioning or
+    double-counting; release keyed on request_id decrements exactly once (a second
+    release is a no-op). This makes refcount exact regardless of whether Phase 5's
+    launcher pre-acquires before the runtime bootstrap does. acquire() is also exposed
+    as a typed-error public method (its prepare_for_run sibling maps to SandboxProvisionError).
+  - Refcount/retention model (the spec under-specifies this; committed reading):
+    ref_count = active request refs + retained refs. Fresh (no sandbox_id) = backend-owned,
+    owner=request, destroy_on_finish=config; destroyed on last active release when
+    ephemeral. Bound pre-existing (caller sandbox_id) = NOT backend-owned: retained pin
+    (+1 retained ref), destroy_on_finish=false. State: Active (active>0) -> Retained
+    (active==0,retained>0) -> Ready (active==0,retained==0). Delete rejects Active and
+    Retained, allows Ready. Intentional v1 policy (documented on the type): a
+    caller-supplied sandbox stays Retained after its runs and is never destroyed by
+    DELETE — backend manages its binding, not its teardown (DELETE is scoped to a
+    backend-owned sandbox). No unpin API in v1.
+  - Testability seam: the host ProviderAdapter trait is sealed, so backend integration
+    tests cannot fake host internals. The manager therefore depends on ports
+    (RequestProvisioner, SandboxTransport) plus a narrow crate-internal SandboxTeardown
+    trait — all fakeable — while with_docker wires the real host. The
+    transport/provisioner "share one registry" invariant is STRUCTURAL (one
+    ProviderRegistry -> DaemonClient -> SandboxLifecycle -> all three handles), not
+    test-asserted, as flagged by review.
+  - In-memory only: Phase 4 touches no backend.db and no SandboxConfig/agent-core source.
+    run_meta/run-lifecycle persistence and the launcher/reaper wiring are Phase 5.
+  - artifact_dir is a with_docker parameter (the eosd dist dir holding eosd-linux-{arch}),
+    NOT a SandboxConfig field and NOT the layer-stack root; a later phase supplies it.
+Checklist results: all 9 Phase 4 hard items checked.
+Verification commands (all pass):
+  - cargo test -p eos-backend-runtime sandbox_manager -> 16 passed (incl. failed-acquire
+    leaks-no-state/capacity and delete-propagates-teardown-failure-keeps-entry)
+  - cargo check -p eos-backend-runtime --all-targets -> ok
+  - cargo clippy -p eos-backend-runtime --all-targets -- -D warnings -> clean
+  - rg "image|snapshot|project_dir" eos-backend-runtime eos-backend-api -> only the two
+    legitimate config.default_snapshot lines (backend-global default passed to the
+    provisioner); no per-request image/snapshot/project_dir override (AC10).
+  - find eos-backend-runtime/src -name '*test*'|'*fixture*'|'*mock*'|'*fake*'|'*support*'
+    -> empty (AC13).
+  - cargo check --workspace --all-targets (backend) -> ok (after concurrent host refactor
+    landed).
+Failures: none introduced. (The host crate's transient mid-refactor breakage was the
+  concurrent agent's work and resolved on its own; not fixed or reverted by this phase.)
+Spec deviations / noted interpretations:
+  - The refcount/retention semantics are not pinned by SPEC.md or SPEC-REVIEW.md
+    (the review explicitly treats refcount as an impl detail: "keep it thin by
+    isolating lease/refcount"). The model above is the smallest reading that makes
+    every literal hard item testable (a deletable Ready state, a non-deletable Retained
+    state, destroy-on-finish). Recorded as a deliberate decision, not a skip.
+  - SandboxConfig.startup_timeout_ms is owned by Phase 3 config and is not consumed by
+    the manager; it is a launcher-level provision timeout (Phase 5), not a manager knob.
+Next phase unblockers: Phase 5 RunLauncher injects the manager via
+  RuntimeServicesBuilder::sandbox_gateway(manager.clone()) (Arc<SandboxManager> ->
+  Arc<dyn SandboxGateway>) and retains the same Arc<SandboxManager> to drive the reaper's
+  release(request_id) and the API's delete/view/list. acquire happens automatically
+  inside eos_runtime::run_request via the injected gateway provisioner; the reaper must
+  call SandboxManager::release(request_id) exactly once per run (idempotent if it races
+  cancellation/completion).
+Phase 5 watch-item (acquire-during-teardown resurrection race): release() drops the lock
+  before the async destroy runs, leaving the entry briefly in Destroying. A concurrent
+  acquire(Some(that_id)) would find the still-present entry via or_insert_with and re-add
+  an active ref, resurrecting a sandbox being torn down. Out of Phase 4 scope (needs the
+  reaper/launcher to drive concurrent release+acquire on one sandbox id); exactly-once
+  release is unaffected. The Phase 5 reaper/launcher coordination owns closing this (e.g.,
+  refuse acquire on a Destroying entry, or gate destroy under a single lock epoch).
 ```

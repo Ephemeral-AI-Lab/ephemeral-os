@@ -249,6 +249,14 @@ impl ManagerInner {
                 return Ok(binding(sandbox_id, request_id));
             }
             if explicit.is_none() {
+                // Best-effort fresh-create budget. This counts only *committed*
+                // owned sandboxes, so concurrent fresh acquires can each pass here
+                // before any of them commit under the bookkeeping lock and
+                // transiently overshoot `max_owned_sandboxes` by the number of
+                // in-flight provisions. The cap is a guardrail against runaway
+                // creation, not a hard barrier under concurrency; tightening it to
+                // a reserved-slot barrier is deferred to Phase 5, which owns the
+                // launcher and its acquisition concurrency model.
                 let owned = state.owned_count();
                 if owned >= self.max_owned_sandboxes {
                     return Err(SandboxManagerError::CapacityExceeded {

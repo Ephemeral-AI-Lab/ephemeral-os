@@ -6,6 +6,7 @@
 //! refcount/delete logic is exercised against fakes rather than real Docker.
 #![allow(clippy::unwrap_used)]
 
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 
 use async_trait::async_trait;
@@ -23,11 +24,12 @@ use super::{DeleteRejection, SandboxManager, SandboxManagerError, SandboxTeardow
 // --- fakes -------------------------------------------------------------------
 
 /// Records its calls and mints `sb-for-<request>` for fresh acquisitions, echoing
-/// the explicit id otherwise.
+/// the explicit id otherwise. `fail` is toggleable so a test can prove a failed
+/// acquire burned no capacity by succeeding on the retry.
 #[derive(Debug, Default)]
 struct FakeProvisioner {
     calls: Mutex<Vec<(RequestId, Option<String>)>>,
-    fail: bool,
+    fail: AtomicBool,
 }
 
 #[async_trait]
@@ -40,7 +42,7 @@ impl RequestProvisioner for FakeProvisioner {
         self.calls
             .lock()
             .push((request_id.clone(), sandbox_id.map(str::to_owned)));
-        if self.fail {
+        if self.fail.load(Ordering::SeqCst) {
             return Err(SandboxProvisionError::new("provision boom"));
         }
         let sandbox_id: SandboxId = match sandbox_id {
@@ -107,7 +109,7 @@ fn harness(max_owned: usize, destroy_on_finish: bool) -> Harness {
 
 fn build(max_owned: usize, destroy_on_finish: bool, provision_fail: bool, teardown_fail: bool) -> Harness {
     let provisioner = Arc::new(FakeProvisioner {
-        fail: provision_fail,
+        fail: AtomicBool::new(provision_fail),
         ..Default::default()
     });
     let teardown = Arc::new(FakeTeardown {
@@ -234,6 +236,31 @@ async fn destroy_on_finish_tears_down_once_on_last_release() {
 }
 
 #[tokio::test]
+async fn release_swallows_teardown_failure_and_keeps_entry_for_retry() {
+    // destroy-on-finish fires on the last release, but the host teardown fails.
+    let h = build(4, true, false, true);
+    let binding = h.manager.acquire(&rid("req-1"), None).await.unwrap();
+
+    // the failure is swallowed (logged), not propagated through release; the entry
+    // is left in Destroying with no refs so a later DELETE can retry the teardown.
+    // This is the release counterpart to delete_propagates_teardown_failure: delete
+    // surfaces the error, release does not.
+    h.manager.release(&rid("req-1")).await;
+    let view = h
+        .manager
+        .view(&binding.sandbox_id)
+        .expect("entry kept for retry after destroy-on-finish teardown failure");
+    assert_eq!(view.state, SandboxState::Destroying);
+    assert_eq!(view.ref_count, 0);
+    assert_eq!(h.teardown.destroyed.lock().len(), 1);
+
+    // release stays idempotent on the failure path: the ref was already dropped,
+    // so a second release does not re-attempt teardown.
+    h.manager.release(&rid("req-1")).await;
+    assert_eq!(h.teardown.destroyed.lock().len(), 1);
+}
+
+#[tokio::test]
 async fn acquire_is_idempotent_per_request() {
     let h = harness(4, true);
     let first = h.manager.acquire(&rid("req-1"), None).await.unwrap();
@@ -262,6 +289,21 @@ async fn capacity_exceeded_for_fresh_only() {
 
     // binding an existing sandbox does not count against the owned budget.
     h.manager.acquire(&rid("req-3"), Some("ext-box")).await.unwrap();
+}
+
+#[tokio::test]
+async fn failed_acquire_leaks_no_state_or_capacity() {
+    // provisioner fails, max_owned == 1 so a leaked slot would block the retry.
+    let h = build(1, false, true, false);
+    let err = h.manager.acquire(&rid("req-1"), None).await.unwrap_err();
+    assert!(matches!(err, SandboxManagerError::Provision(_)));
+    assert!(h.manager.list().is_empty(), "failed acquire must track nothing");
+
+    // the failed attempt burned no capacity: a fresh acquire now succeeds at the
+    // budget of 1.
+    h.provisioner.fail.store(false, Ordering::SeqCst);
+    h.manager.acquire(&rid("req-2"), None).await.unwrap();
+    assert_eq!(h.manager.list().len(), 1);
 }
 
 // --- delete guards -----------------------------------------------------------
@@ -320,6 +362,23 @@ async fn delete_unknown_sandbox() {
     let h = harness(4, false);
     let err = h.manager.delete(&sid("ghost")).await.unwrap_err();
     assert!(matches!(err, SandboxManagerError::UnknownSandbox(_)));
+}
+
+#[tokio::test]
+async fn delete_propagates_teardown_failure_and_keeps_entry() {
+    let h = build(4, false, false, true); // non-ephemeral; host teardown fails
+    let binding = h.manager.acquire(&rid("req-1"), None).await.unwrap();
+    h.manager.release(&rid("req-1")).await; // -> Ready (no auto-destroy)
+
+    let err = h.manager.delete(&binding.sandbox_id).await.unwrap_err();
+    assert!(matches!(err, SandboxManagerError::Teardown(_)));
+    // the entry is kept (in Destroying) so a DELETE retry can proceed.
+    let view = h
+        .manager
+        .view(&binding.sandbox_id)
+        .expect("entry retained for retry after teardown failure");
+    assert_eq!(view.state, SandboxState::Destroying);
+    assert_eq!(h.teardown.destroyed.lock().len(), 1);
 }
 
 // --- gateway wiring + sanitization ------------------------------------------
