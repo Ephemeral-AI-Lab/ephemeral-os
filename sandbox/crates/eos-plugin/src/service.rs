@@ -42,7 +42,12 @@ pub enum RefreshStrategy {
 /// service profile digest, mode, and refresh strategy are part of the key so
 /// two payloads cannot accidentally share a process just because they use the
 /// same `LayerStack` root.
+///
+/// `#[non_exhaustive]` makes [`PluginServiceKey::new`] the only way to mint one
+/// from another crate, so the validated `Parts` -> `new` path cannot be bypassed
+/// by a struct literal; fields stay public for read-only access.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+#[non_exhaustive]
 pub struct PluginServiceKey {
     pub layer_stack_root: String,
     pub workspace_root: String,

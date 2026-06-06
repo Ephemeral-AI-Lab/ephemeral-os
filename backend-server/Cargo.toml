@@ -51,6 +51,9 @@ tar         = "0.4"
 # the hyper 1.x / http 1.x / tower 0.5 stack already resolved by bollard.
 axum        = { version = "0.8", features = ["ws"] }
 tower       = { version = "0.5", features = ["util"] }
+# WebSocket client for the eos-backend-api stream test (matches axum 0.8's pin so
+# the test shares one tungstenite copy). dev-only.
+tokio-tungstenite = "0.29"
 uuid        = { version = "1", features = ["v4", "serde"] }
 # dev
 proptest    = "1"
