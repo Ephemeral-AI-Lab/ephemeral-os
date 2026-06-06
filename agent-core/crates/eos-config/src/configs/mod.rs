@@ -1,4 +1,4 @@
-//! Typed config section schemas, one module per top-level `prd.yml` section.
+//! Typed config schemas and reusable section fragments.
 //!
 //! Each type owns its `Default` and `validate()`. These live here for now; they
 //! migrate to their owning crates' `config.rs` (`eos-db`, `eos-llm-client`,

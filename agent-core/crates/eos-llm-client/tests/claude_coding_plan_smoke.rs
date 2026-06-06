@@ -82,7 +82,15 @@ fn load_smoke_config() -> Result<Option<SmokeConfig>, ProviderError> {
         .section::<ProvidersConfig>("providers")
         .map_err(|e| ProviderError::request(format!("loading providers config failed: {e}")))?;
 
-    let model = optional_env(MODEL_ENV).unwrap_or_else(|| DEFAULT_MODEL.to_owned());
+    let model = optional_env(MODEL_ENV)
+        .or_else(|| {
+            providers
+                .claude_coding_plan
+                .models
+                .active_key()
+                .map(str::to_owned)
+        })
+        .unwrap_or_else(|| DEFAULT_MODEL.to_owned());
     if let Some(access_token) =
         optional_env(TOKEN_ENV).or_else(|| optional_env(CLAUDE_CODE_TOKEN_ENV))
     {

@@ -1,13 +1,12 @@
-//! The engine-driven `ask_advisor` run (advisor remediation plan §2a / §2d).
+//! The engine-driven `ask_advisor` run.
 //!
 //! `dispatch_assistant_tools` intercepts `ToolName::AskAdvisor` and calls
 //! [`run_advisor`], which builds the advisor's two seed user messages from the
 //! live caller transcript, resolves the `advisor` `AgentDefinition`, and drives
-//! [`run_agent`](crate::run_agent) to completion —
-//! the faithful Rust form of Python `ask_advisor.py` calling `run_agent`
-//! (the crate DAG forbids `eos-tools` from calling back into the engine, so the
-//! run is driven here, next to the loop). The advisor's `submit_advisor_feedback`
-//! verdict rides back into the caller transcript by construction (D3).
+//! [`run_agent`](crate::run_agent) to completion. The crate DAG forbids
+//! `eos-tools` from calling back into the engine, so the run is driven here,
+//! next to the loop. The advisor's `submit_advisor_feedback` verdict rides back
+//! into the caller transcript by construction.
 //!
 //! Port of `tools/ask_helper/_lib/_compose.py` + `_transcript.py` +
 //! `ask_advisor.py::_build_advisor_user_msg_2`. **Documented deviation:** Python's
@@ -31,7 +30,7 @@ use serde_json::Value;
 
 use crate::notifications::NotificationService;
 
-use super::agent_loop::{run_agent, AgentRunInput, EngineRunHandles};
+use super::{run_agent, AgentRunInput, EngineRunHandles};
 
 const MAX_TRANSCRIPT_MESSAGES: usize = 40;
 const MAX_TOOL_RESULT_CHARS: usize = 4096;
@@ -39,7 +38,7 @@ const MAX_TRANSCRIPT_BYTES: usize = 24576;
 const MAX_BASH_COMMAND_CHARS: usize = 500;
 /// Claude-Code tool names whose inputs are elided in the advisor transcript. EOS's
 /// own `write_file`/`edit_file`/`multi_edit` are deliberately NOT stripped so the
-/// advisor can audit write scope (advisor remediation plan §2d).
+/// advisor can audit write scope.
 const ADVISOR_STRIP_INPUT_TOOLS: [&str; 3] = ["Edit", "Write", "NotebookEdit"];
 
 const PROMPT_INJECTION_GUARD: &str =

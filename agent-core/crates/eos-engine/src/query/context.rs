@@ -7,7 +7,7 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use eos_audit::AuditSink;
-use eos_llm_client::{LlmRequest, ReasoningEffort};
+use eos_llm_client::LlmRequest;
 use eos_tools::{ExecutionMetadata, ToolName, ToolRegistry, ToolResult};
 use eos_types::{AgentRunId, TaskId};
 use futures::Stream;
@@ -55,8 +55,6 @@ pub struct QueryContext {
     pub system_prompt: String,
     /// Completion token cap.
     pub max_tokens: u32,
-    /// Provider reasoning-effort hint.
-    pub reasoning_effort: Option<ReasoningEffort>,
     /// Configured tool-call limit.
     pub tool_call_limit: u32,
     /// Agent profile name.
@@ -92,10 +90,10 @@ pub struct QueryContext {
     pub notifier: NotificationService,
     /// Optional agent-core observability sink.
     pub audit: Option<Arc<dyn AuditSink>>,
-    /// The explicit run handles the engine-driven advisor dispatch needs to spawn
-    /// a child `run_agent` (advisor remediation plan §2a). `None` in
-    /// tests that never exercise `ask_advisor`; the gate itself reads only the
-    /// transcript, never these handles.
+    /// The explicit run handles the engine-driven advisor dispatch needs to
+    /// spawn a child `run_agent`. `None` in tests that never exercise
+    /// `ask_advisor`; the gate itself reads only the transcript, never these
+    /// handles.
     pub run_handles: Option<EngineRunHandles>,
 }
 
@@ -105,7 +103,6 @@ impl std::fmt::Debug for QueryContext {
             .field("cwd", &self.cwd)
             .field("model", &self.model)
             .field("max_tokens", &self.max_tokens)
-            .field("reasoning_effort", &self.reasoning_effort)
             .field("tool_call_limit", &self.tool_call_limit)
             .field("agent_name", &self.agent_name)
             .field("agent_run_id", &self.agent_run_id)

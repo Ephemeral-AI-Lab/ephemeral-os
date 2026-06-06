@@ -9,9 +9,10 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use eos_agent_def::{AgentDefinition, AgentRegistry, AgentRole};
-use eos_config::{ModelsConfig, WorkflowConfig};
+use eos_config::{DatabaseConfig, DatabaseUrl, ProvidersConfig, WorkflowConfig};
+use eos_db::Database;
 use eos_engine::{EngineError, EngineStream, EventSource, StreamEvent};
-use eos_llm_client::{ContentBlock, LlmRequest};
+use eos_llm_client::{ContentBlock, LlmClient, LlmRequest, LlmStream, ProviderError};
 use eos_state::{RequestStatus, TaskRole, TaskStatus, WorkflowStatus};
 use eos_tools::{Hook, ToolName};
 use eos_types::RequestId;
@@ -44,6 +45,16 @@ fn advisor_agent() -> AgentDefinition {
         &["read_file"],
         &["submit_advisor_feedback"],
     )
+}
+
+#[derive(Debug)]
+struct NoopLlmClient;
+
+#[async_trait::async_trait]
+impl LlmClient for NoopLlmClient {
+    async fn stream_message(&self, _request: LlmRequest) -> Result<LlmStream, ProviderError> {
+        Ok(Box::pin(futures::stream::empty()))
+    }
 }
 
 fn planner_agent() -> AgentDefinition {
@@ -148,26 +159,49 @@ async fn network_database_url_fails_fast() {
     assert!(result.is_err(), "a network db url must fail fast");
 }
 
-// --- AC-eos-runtime-06: model registry seeds from config.
+// --- AC-eos-runtime-06: model registry seeds from provider-nested config.
 
 #[tokio::test]
-async fn models_config_seeds_model_registry() {
+async fn provider_models_seed_model_registry() {
     let dir = tempfile::tempdir().unwrap();
-    let models: ModelsConfig = serde_json::from_value(json!({
-        "active": "claude-sonnet-4-6"
+    let db_url = sqlite_url(dir.path());
+    let providers: ProvidersConfig = serde_json::from_value(json!({
+        "active": "codex_coding_plan",
+        "codex_coding_plan": {
+            "access_token": "unused-token",
+            "models": {
+                "active": "gpt-5.5",
+                "registrations": [
+                    { "key": "gpt-5.5", "label": "Codex GPT-5.5", "kwargs": { "reasoning_effort": "medium" } }
+                ]
+            }
+        }
     }))
     .unwrap();
 
-    let state = RuntimeServices::builder()
-        .database_url(sqlite_url(dir.path()))
+    let _state = RuntimeServices::builder()
+        .database_url(db_url.clone())
         .tools_root(test_tools_root())
-        .models_config(models)
+        .providers_config(providers)
+        .llm_client(Arc::new(NoopLlmClient))
         .build()
         .await
         .unwrap();
 
-    let active = state.db.model_store.active().await.unwrap().unwrap();
-    assert_eq!(active.model_key, "claude-sonnet-4-6");
+    let mut db_config = DatabaseConfig::default();
+    db_config.url = DatabaseUrl::parse(db_url).unwrap();
+    let db = Database::open(&db_config).await.unwrap();
+    let active = db
+        .model_registry()
+        .active_resolved()
+        .await
+        .unwrap()
+        .unwrap();
+    assert_eq!(active.model_key, "gpt-5.5");
+    assert_eq!(
+        active.kwargs.get("reasoning_effort"),
+        Some(&json!("medium"))
+    );
 }
 
 #[tokio::test]

@@ -10,14 +10,13 @@ use std::time::Duration;
 
 use eos_config::{ProviderKind, ProvidersConfig};
 use eos_llm_client::{
-    Auth, CodexCodingPlanClient, LlmClient, LlmRequest, LlmStreamEvent, Message, ProviderError,
-    ReasoningEffort, ToolChoice, ToolSpec,
+    Auth, CodexCodingPlanClient, ConfiguredLlmClient, LlmClient, LlmRequest, LlmRequestDefaults,
+    LlmStreamEvent, Message, ProviderError, ToolChoice, ToolSpec,
 };
 use eos_types::JsonObject;
 use futures::StreamExt;
 use serde_json::{json, Value};
 
-const DEFAULT_MODEL: &str = "gpt-5.5";
 const SMOKE_TOOL_NAME: &str = "codex_smoke_terminal";
 const PROVIDER_EVENT_TIMEOUT: Duration = Duration::from_secs(60);
 
@@ -37,12 +36,19 @@ async fn codex_access_token_gets_llm_client_response() -> Result<(), ProviderErr
             ProviderError::request("providers.codex_coding_plan.access_token is required")
         })?;
 
-    let client = CodexCodingPlanClient::new(
+    let model = providers.active_model_registration().ok_or_else(|| {
+        ProviderError::request("providers.codex_coding_plan.models.active is required")
+    })?;
+    let inner = Arc::new(CodexCodingPlanClient::new(
         &providers.codex_coding_plan.base_url,
         Auth::codex_access_token_from_jwt(token.expose_secret())?,
         Arc::new(providers.retry),
-    )?;
-    let request = LlmRequest::builder(DEFAULT_MODEL)
+    )?);
+    let client = ConfiguredLlmClient::new(
+        inner,
+        LlmRequestDefaults::from_model_kwargs(model.key(), &model.kwargs),
+    );
+    let request = LlmRequest::builder("")
         .system_prompt(
             "You are checking Codex access. Call the codex_smoke_terminal tool exactly once.",
         )
@@ -58,7 +64,6 @@ async fn codex_access_token_gets_llm_client_response() -> Result<(), ProviderErr
         .tool_choice(ToolChoice::Tool {
             name: SMOKE_TOOL_NAME.to_owned(),
         })
-        .reasoning_effort(ReasoningEffort::Medium)
         .max_tokens(256)
         .build();
 

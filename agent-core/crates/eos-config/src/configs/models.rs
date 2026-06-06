@@ -1,8 +1,9 @@
-//! Model registry seed configuration.
+//! Provider-scoped model registry seed configuration.
 //!
-//! `eos-runtime` reads this section at the composition root and asks `eos-db` to
-//! seed the persisted model registry. The config is the source of model
-//! registrations; runtime no longer discovers a standalone registry JSON file.
+//! Provider configs embed this shape under `providers.<provider>.models`.
+//! `eos-runtime` reads the active provider's model section at the composition
+//! root, asks `eos-db` to seed the persisted model registry for compatibility,
+//! and configures the selected LLM client with the active model defaults.
 
 use std::collections::BTreeSet;
 
@@ -21,7 +22,7 @@ pub struct ModelsConfig {
     #[serde(default)]
     pub active: Option<String>,
     /// Configured model registration rows.
-    #[serde(default, alias = "models")]
+    #[serde(default)]
     pub registrations: Vec<ModelRegistrationConfig>,
 }
 
@@ -41,19 +42,28 @@ impl ModelsConfig {
     /// Returns [`ConfigError`] when the active key is blank, a registration key is
     /// blank, or registration keys are duplicated.
     pub fn validate(&self) -> Result<(), ConfigError> {
+        self.validate_at("models")
+    }
+
+    /// Enforce config-shape constraints using a caller-supplied field prefix.
+    ///
+    /// # Errors
+    /// Returns [`ConfigError`] when the active key is blank, a registration key is
+    /// blank, or registration keys are duplicated.
+    pub fn validate_at(&self, field_prefix: &str) -> Result<(), ConfigError> {
         if self
             .active
             .as_deref()
             .is_some_and(|value| value.trim().is_empty())
         {
             return Err(ConfigError::MissingValue {
-                field: "models.active".to_owned(),
+                field: format!("{field_prefix}.active"),
             });
         }
 
         let mut keys = BTreeSet::new();
         for (idx, registration) in self.registrations.iter().enumerate() {
-            let field = format!("models.registrations[{idx}].key");
+            let field = format!("{field_prefix}.registrations[{idx}].key");
             let key = registration.key();
             if key.is_empty() {
                 return Err(ConfigError::MissingValue { field });
@@ -67,6 +77,25 @@ impl ModelsConfig {
         }
 
         Ok(())
+    }
+
+    /// Return the active registration, synthesizing one from `active` when the
+    /// active key is not explicitly listed.
+    #[must_use]
+    pub fn active_registration(&self) -> Option<ModelRegistrationConfig> {
+        let active_key = self.active_key()?;
+        self.registrations
+            .iter()
+            .find(|registration| registration.key() == active_key)
+            .cloned()
+            .or_else(|| {
+                Some(ModelRegistrationConfig {
+                    key: active_key.to_owned(),
+                    label: None,
+                    class_path: String::new(),
+                    kwargs: Map::new(),
+                })
+            })
     }
 }
 
@@ -131,11 +160,11 @@ mod tests {
     }
 
     #[test]
-    fn parses_registrations_and_models_alias() {
+    fn parses_registrations() {
         let cfg: ModelsConfig = serde_yaml::from_str(
             r#"
 active: claude-sonnet-4-6
-models:
+registrations:
   - key: claude-sonnet-4-6
     label: Claude Sonnet
     class_path: legacy.Claude
@@ -159,6 +188,10 @@ models:
 
         assert_eq!(cfg.active_key(), Some("claude-sonnet-4-6"));
         cfg.validate().unwrap();
+        assert_eq!(
+            cfg.active_registration().unwrap().key(),
+            "claude-sonnet-4-6"
+        );
     }
 
     #[test]
@@ -192,6 +225,24 @@ registrations:
         assert!(matches!(
             duplicate.validate().unwrap_err(),
             ConfigError::OutOfRange { field, .. } if field == "models.registrations[1].key"
+        ));
+    }
+
+    #[test]
+    fn validate_at_uses_nested_field_prefix() {
+        let cfg: ModelsConfig = serde_yaml::from_str(
+            r#"
+registrations:
+  - key: ''
+"#,
+        )
+        .unwrap();
+
+        assert!(matches!(
+            cfg.validate_at("providers.codex_coding_plan.models")
+                .unwrap_err(),
+            ConfigError::MissingValue { field }
+                if field == "providers.codex_coding_plan.models.registrations[0].key"
         ));
     }
 }

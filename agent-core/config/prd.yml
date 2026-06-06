@@ -12,18 +12,34 @@ providers:
     status_codes: [429, 500, 502, 503, 529]
   openai_api:
     base_url: https://api.openai.com
+    models:
+      active: default-model
+      registrations:
+        - key: default-model
+          label: Default OpenAI Model
   anthropic_api:
     base_url: https://api.anthropic.com
+    models:
+      active: default-model
+      registrations:
+        - key: default-model
+          label: Default Anthropic Model
   codex_coding_plan:
     base_url: https://chatgpt.com/backend-api/codex
+    models:
+      active: gpt-5.5
+      registrations:
+        - key: gpt-5.5
+          label: Codex GPT-5.5
+          kwargs:
+            reasoning_effort: medium
   claude_coding_plan:
     base_url: https://api.anthropic.com
-
-models:
-  active: default-model
-  registrations:
-    - key: default-model
-      label: Default Model
+    models:
+      active: claude-sonnet-4-6
+      registrations:
+        - key: claude-sonnet-4-6
+          label: Claude Sonnet 4.6
 
 workflow:
   max-depth: 2

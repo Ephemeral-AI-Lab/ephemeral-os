@@ -50,7 +50,6 @@ impl RuntimeServices {
         let plugin_sandbox_service = sandbox_service.clone();
         eos_engine::EngineRunHandles {
             agent_run_store: self.db.agent_run_store.clone(),
-            model_store: self.db.model_store.clone(),
             llm_client: self.engine.llm_client.clone(),
             event_source_factory: self.engine.event_source_factory.clone(),
             agent_registry: self.agent_core.agent_registry.clone(),

@@ -6,16 +6,18 @@
 //! async-fn-in-trait is not yet `dyn`-safe — and returns a boxed [`LlmStream`].
 
 use std::pin::Pin;
+use std::sync::Arc;
 
 use bytes::Bytes;
 use futures::stream::BoxStream;
 use futures::{Stream, StreamExt};
 use reqwest::header::HeaderMap;
+use serde_json::Value;
 
 use crate::error::ProviderError;
 use crate::events::LlmStreamEvent;
 use crate::sse::frame_stream;
-use crate::types::LlmRequest;
+use crate::types::{LlmRequest, ReasoningEffort};
 
 /// A streamed model invocation: a single linear stream of normalized events or
 /// errors. The retry gate (`retry.rs`) runs lazily inside this stream, so a
@@ -38,6 +40,108 @@ pub trait LlmClient: Send + Sync {
     /// transport, and decode errors — including a non-retryable failure on the
     /// very first attempt — surface as `Err` items of the returned stream.
     async fn stream_message(&self, request: LlmRequest) -> Result<LlmStream, ProviderError>;
+}
+
+/// Default request values attached to a configured provider client.
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[non_exhaustive]
+pub struct LlmRequestDefaults {
+    /// Model id used when the request does not carry an explicit model.
+    pub model: String,
+    /// Reasoning effort used when the request does not carry an explicit effort.
+    pub reasoning_effort: Option<ReasoningEffort>,
+}
+
+impl LlmRequestDefaults {
+    /// Construct defaults for a model id.
+    #[must_use]
+    pub fn new(model: impl Into<String>) -> Self {
+        Self {
+            model: model.into(),
+            reasoning_effort: None,
+        }
+    }
+
+    /// Construct defaults from a provider-local model registration `kwargs` map.
+    #[must_use]
+    pub fn from_model_kwargs(model: impl Into<String>, kwargs: &eos_types::JsonObject) -> Self {
+        Self {
+            model: model.into(),
+            reasoning_effort: reasoning_effort_from_kwargs(kwargs),
+        }
+    }
+
+    fn apply(&self, mut request: LlmRequest) -> LlmRequest {
+        if request.model.trim().is_empty() {
+            request.model.clone_from(&self.model);
+        }
+        if request.reasoning_effort.is_none() {
+            request.reasoning_effort = self.reasoning_effort;
+        }
+        request
+    }
+}
+
+/// Provider client wrapper that applies config-derived request defaults.
+#[derive(Clone)]
+pub struct ConfiguredLlmClient {
+    inner: Arc<dyn LlmClient>,
+    defaults: LlmRequestDefaults,
+}
+
+impl std::fmt::Debug for ConfiguredLlmClient {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("ConfiguredLlmClient")
+            .field("defaults", &self.defaults)
+            .finish_non_exhaustive()
+    }
+}
+
+impl ConfiguredLlmClient {
+    /// Wrap a concrete provider client with request defaults.
+    #[must_use]
+    pub fn new(inner: Arc<dyn LlmClient>, defaults: LlmRequestDefaults) -> Self {
+        Self { inner, defaults }
+    }
+
+    /// Borrow configured request defaults.
+    #[must_use]
+    pub fn defaults(&self) -> &LlmRequestDefaults {
+        &self.defaults
+    }
+}
+
+#[async_trait::async_trait]
+impl LlmClient for ConfiguredLlmClient {
+    async fn stream_message(&self, request: LlmRequest) -> Result<LlmStream, ProviderError> {
+        self.inner
+            .stream_message(self.defaults.apply(request))
+            .await
+    }
+}
+
+fn reasoning_effort_from_kwargs(kwargs: &eos_types::JsonObject) -> Option<ReasoningEffort> {
+    let raw = kwargs
+        .get("reasoning_effort")
+        .or_else(|| kwargs.get("effort"))
+        .and_then(Value::as_str)
+        .or_else(|| {
+            kwargs
+                .get("reasoning")
+                .and_then(|reasoning| reasoning.get("effort"))
+                .and_then(Value::as_str)
+        })?;
+    parse_reasoning_effort(raw)
+}
+
+fn parse_reasoning_effort(raw: &str) -> Option<ReasoningEffort> {
+    match raw.trim().to_ascii_lowercase().replace('-', "_").as_str() {
+        "minimal" => Some(ReasoningEffort::Minimal),
+        "low" => Some(ReasoningEffort::Low),
+        "medium" => Some(ReasoningEffort::Medium),
+        "high" => Some(ReasoningEffort::High),
+        _ => None,
+    }
 }
 
 /// Build a concrete endpoint `Url` from a base url and a path suffix, parsing
@@ -128,6 +232,7 @@ mod tests {
     use std::sync::Arc;
 
     use futures::StreamExt;
+    use serde_json::json;
 
     use super::*;
     use crate::events::LlmStreamEvent;
@@ -137,6 +242,42 @@ mod tests {
     #[derive(Debug)]
     struct MockLlmClient {
         events: Vec<LlmStreamEvent>,
+    }
+
+    #[derive(Debug)]
+    struct CaptureClient {
+        request: std::sync::Mutex<Option<LlmRequest>>,
+    }
+
+    #[async_trait::async_trait]
+    impl LlmClient for CaptureClient {
+        async fn stream_message(&self, request: LlmRequest) -> Result<LlmStream, ProviderError> {
+            *self.request.lock().unwrap() = Some(request);
+            Ok(Box::pin(futures::stream::empty()))
+        }
+    }
+
+    #[tokio::test]
+    async fn configured_client_applies_model_defaults() {
+        let capture = Arc::new(CaptureClient {
+            request: std::sync::Mutex::new(None),
+        });
+        let mut kwargs = eos_types::JsonObject::new();
+        kwargs.insert("reasoning_effort".to_owned(), json!("medium"));
+        let client = ConfiguredLlmClient::new(
+            capture.clone(),
+            LlmRequestDefaults::from_model_kwargs("gpt-5.5", &kwargs),
+        );
+
+        let stream = client
+            .stream_message(LlmRequest::builder("").build())
+            .await
+            .unwrap();
+        drop(stream);
+
+        let request = capture.request.lock().unwrap().clone().unwrap();
+        assert_eq!(request.model, "gpt-5.5");
+        assert_eq!(request.reasoning_effort, Some(ReasoningEffort::Medium));
     }
 
     #[async_trait::async_trait]

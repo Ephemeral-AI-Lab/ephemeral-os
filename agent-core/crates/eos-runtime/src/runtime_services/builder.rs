@@ -11,11 +11,13 @@ use async_trait::async_trait;
 use eos_agent_def::{load_agents_tree, AgentRegistry, AgentRegistryBuilder};
 use eos_audit::{AuditSink, BufferedAuditShutdown, BufferedJsonlSink, NoopAuditSink};
 use eos_config::{
-    DatabaseConfig, DatabaseUrl, ModelsConfig, ProviderKind, ProvidersConfig, SecretConfigValue,
-    WorkflowConfig,
+    DatabaseConfig, DatabaseUrl, ModelRegistrationConfig, ModelsConfig, ProviderKind,
+    ProvidersConfig, SecretConfigValue, WorkflowConfig,
 };
 use eos_db::Database;
-use eos_llm_client::{Auth, LlmClient, LlmRequest, LlmStream, ProviderError};
+use eos_llm_client::{
+    Auth, ConfiguredLlmClient, LlmClient, LlmRequest, LlmRequestDefaults, LlmStream, ProviderError,
+};
 use eos_sandbox_api::SandboxTransport;
 use eos_sandbox_host::{
     resolve_provider_kind, DaemonClient, DockerProviderAdapter, ProviderRegistry,
@@ -56,7 +58,6 @@ pub struct RuntimeServicesBuilder {
     database_url: Option<String>,
     workspace_root: Option<String>,
     llm_client: Option<Arc<dyn LlmClient>>,
-    models_config: Option<ModelsConfig>,
     providers_config: Option<ProvidersConfig>,
     workflow_config: Option<WorkflowConfig>,
     event_source_factory: Option<EventSourceFactory>,
@@ -98,12 +99,6 @@ impl RuntimeServicesBuilder {
     /// Inject an LLM client (an unconfigured placeholder by default).
     pub fn llm_client(mut self, client: Arc<dyn LlmClient>) -> Self {
         self.llm_client = Some(client);
-        self
-    }
-
-    /// Inject model registry config.
-    pub fn models_config(mut self, config: ModelsConfig) -> Self {
-        self.models_config = Some(config);
         self
     }
 
@@ -226,26 +221,6 @@ impl RuntimeServicesBuilder {
             .unwrap_or_default();
 
         let config_doc = eos_config::load().context("loading runtime config")?;
-        let models_config = match self.models_config {
-            Some(config) => config,
-            None => config_doc
-                .section::<ModelsConfig>("models")
-                .context("loading models config")?,
-        };
-        models_config
-            .validate()
-            .context("validating models config")?;
-        match database
-            .model_registry()
-            .sync_from_config(&models_config)
-            .await
-        {
-            Ok(count) => tracing::info!(models = count, "applied model registry config"),
-            Err(err) => {
-                tracing::warn!(error = %err, "model registry config skipped (non-fatal)");
-            }
-        }
-
         let workflow_config = match self.workflow_config {
             Some(config) => config,
             None => config_doc
@@ -256,20 +231,22 @@ impl RuntimeServicesBuilder {
             .validate()
             .context("validating workflow config")?;
 
+        let providers_config = match self.providers_config {
+            Some(config) => config,
+            None => config_doc
+                .section::<ProvidersConfig>("providers")
+                .context("loading providers config")?,
+        };
+        providers_config
+            .validate()
+            .context("validating providers config")?;
+        if let Some(provider_models) = providers_config.active_models() {
+            sync_model_registry(&database, provider_models).await;
+        }
+
         let llm_client: Arc<dyn LlmClient> = match self.llm_client {
             Some(client) => client,
-            None => {
-                let providers_config = match self.providers_config {
-                    Some(config) => config,
-                    None => config_doc
-                        .section::<ProvidersConfig>("providers")
-                        .context("loading providers config")?,
-                };
-                providers_config
-                    .validate()
-                    .context("validating providers config")?;
-                default_llm_client(&providers_config).context("configuring llm provider")?
-            }
+            None => default_llm_client(&providers_config).context("configuring llm provider")?,
         };
 
         // Audit: explicit sink wins; else a buffered JSONL sink when a path is
@@ -347,7 +324,6 @@ impl RuntimeServicesBuilder {
                 iteration_store: database.iterations(),
                 attempt_store: database.attempts(),
                 agent_run_store: database.agent_runs(),
-                model_store: database.models(),
             },
             agent_core: AgentCoreRegistryService {
                 agent_registry,
@@ -370,6 +346,19 @@ impl RuntimeServicesBuilder {
     }
 }
 
+async fn sync_model_registry(database: &Database, provider_models: &ModelsConfig) {
+    match database
+        .model_registry()
+        .sync_from_config(provider_models)
+        .await
+    {
+        Ok(count) => tracing::info!(models = count, "applied model registry config"),
+        Err(err) => {
+            tracing::warn!(error = %err, "model registry config skipped (non-fatal)");
+        }
+    }
+}
+
 /// Build the LLM client from the loaded `providers` config.
 fn default_llm_client(providers: &ProvidersConfig) -> Result<Arc<dyn LlmClient>, ProviderError> {
     use eos_llm_client::{
@@ -384,22 +373,28 @@ fn default_llm_client(providers: &ProvidersConfig) -> Result<Arc<dyn LlmClient>,
                 "providers.openai_api.api_key",
                 providers.openai_api.api_key.as_ref(),
             )?;
-            Ok(Arc::new(OpenAiApiClient::new(
-                &providers.openai_api.base_url,
-                Auth::bearer(key),
-                retry,
-            )?))
+            configured_provider_client(
+                providers,
+                Arc::new(OpenAiApiClient::new(
+                    &providers.openai_api.base_url,
+                    Auth::bearer(key),
+                    retry,
+                )?),
+            )
         }
         ProviderKind::AnthropicApi => {
             let key = provider_secret(
                 "providers.anthropic_api.api_key",
                 providers.anthropic_api.api_key.as_ref(),
             )?;
-            Ok(Arc::new(AnthropicApiClient::new(
-                &providers.anthropic_api.base_url,
-                Auth::api_key(key),
-                retry,
-            )?))
+            configured_provider_client(
+                providers,
+                Arc::new(AnthropicApiClient::new(
+                    &providers.anthropic_api.base_url,
+                    Auth::api_key(key),
+                    retry,
+                )?),
+            )
         }
         ProviderKind::CodexCodingPlan => {
             let token = provider_secret(
@@ -407,25 +402,48 @@ fn default_llm_client(providers: &ProvidersConfig) -> Result<Arc<dyn LlmClient>,
                 providers.codex_coding_plan.access_token.as_ref(),
             )?;
             let auth = Auth::codex_access_token_from_jwt(token)?;
-            Ok(Arc::new(CodexCodingPlanClient::new(
-                &providers.codex_coding_plan.base_url,
-                auth,
-                retry,
-            )?))
+            configured_provider_client(
+                providers,
+                Arc::new(CodexCodingPlanClient::new(
+                    &providers.codex_coding_plan.base_url,
+                    auth,
+                    retry,
+                )?),
+            )
         }
         ProviderKind::ClaudeCodingPlan => {
             let token = provider_secret(
                 "providers.claude_coding_plan.access_token",
                 providers.claude_coding_plan.access_token.as_ref(),
             )?;
-            Ok(Arc::new(ClaudeCodingPlanClient::new(
-                &providers.claude_coding_plan.base_url,
-                token,
-                retry,
-            )?))
+            configured_provider_client(
+                providers,
+                Arc::new(ClaudeCodingPlanClient::new(
+                    &providers.claude_coding_plan.base_url,
+                    token,
+                    retry,
+                )?),
+            )
         }
         _ => Err(ProviderError::request("unsupported providers.active value")),
     }
+}
+
+fn configured_provider_client(
+    providers: &ProvidersConfig,
+    client: Arc<dyn LlmClient>,
+) -> Result<Arc<dyn LlmClient>, ProviderError> {
+    let model = providers.active_model_registration().ok_or_else(|| {
+        ProviderError::request("active provider is missing providers.<active>.models.active")
+    })?;
+    Ok(Arc::new(ConfiguredLlmClient::new(
+        client,
+        defaults_from_model(&model),
+    )))
+}
+
+fn defaults_from_model(model: &ModelRegistrationConfig) -> LlmRequestDefaults {
+    LlmRequestDefaults::from_model_kwargs(model.key(), &model.kwargs)
 }
 
 fn provider_secret<'a>(

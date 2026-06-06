@@ -23,7 +23,7 @@ mod sse;
 mod types;
 
 pub use auth::Auth;
-pub use client::{LlmClient, LlmStream};
+pub use client::{ConfiguredLlmClient, LlmClient, LlmRequestDefaults, LlmStream};
 pub use clients::{
     AnthropicApiClient, ClaudeCodingPlanClient, CodexCodingPlanClient, OpenAiApiClient,
 };

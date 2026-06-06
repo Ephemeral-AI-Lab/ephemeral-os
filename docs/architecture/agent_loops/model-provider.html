@@ -57,9 +57,9 @@
 <h2>Package Boundary <a class="anchor" href="#package-boundary">#</a></h2>
 <div class="summary">
   <ul>
-    <li><code>providers</code> owns the LLM API client contract: request dataclasses, stream event dataclasses, error hierarchy, auth strategies, and client factory.</li>
-    <li><code>engine.agent.factory.spawn_agent()</code> constructs the provider client through <code>make_api_client()</code> unless a test or caller supplies an external <code>SupportsStreamingMessages</code> client.</li>
-    <li><code>engine.query.loop</code> consumes only the protocol and event types. It does not know whether the stream came from Anthropic-native API mode, Anthropic coding-plan mode, Codex Responses API mode, or a fake test client.</li>
+    <li><code>eos-llm-client</code> owns the LLM API client contract: neutral requests, stream events, provider errors, auth strategies, retry policy, and direct HTTP/SSE provider clients.</li>
+    <li><code>eos-runtime</code> constructs the concrete provider client from <code>providers.active</code> and wraps it in <code>ConfiguredLlmClient</code> with the active model defaults from that provider's nested <code>models</code> section.</li>
+    <li><code>eos-engine</code> consumes only <code>LlmClient</code> / <code>EventSource</code> and neutral event types. The query loop does not parse provider config or model registry kwargs.</li>
     <li><code>sandbox.provider</code> is a different provider axis: container/sandbox providers. Use <a class="wiki-link" href="provider-sandbox-bridge.html">Sandbox Tool Dispatch Path</a> for that boundary.</li>
   </ul>
 </div>
@@ -75,30 +75,30 @@
 
 <section id="active-model-resolution" data-last-reviewed-commit="e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa" data-evidence-paths="">
 <h2>Active Model Resolution <a class="anchor" href="#active-model-resolution">#</a></h2>
-<p>The active LLM model is DB-backed and seeded from the merged <code>models</code> config section at runtime startup. <code>ModelRegistration</code> stores <code>key</code>, <code>label</code>, <code>class_path</code>, JSON kwargs, active flag, and timestamps. <code>ModelStore</code> handles CRUD and active selection; <code>ModelRegistry</code> still owns environment-placeholder resolution and secret redaction for persisted kwargs.</p>
+<p>The active LLM model is provider-scoped config. Each provider owns a nested <code>models</code> section, such as <code>providers.codex_coding_plan.models.active</code> plus provider-local registrations. Runtime validates the active provider's model section, seeds the persisted <code>ModelRegistry</code> for compatibility/state inspection, and configures <code>ConfiguredLlmClient</code> with the active model id and request defaults such as <code>reasoning_effort</code>. The engine loop does not read <code>ModelStore</code> to choose a model.</p>
 <pre class="diagram" aria-label="Active model resolution sequence">
-[agent definition / models config]
+[providers.active]
         |
         v
-[agent model override or active model key]
+[providers.&lt;active&gt;.models.active + registration kwargs]
         |
         v
-[LlmRequest.model]
+[ConfiguredLlmClient defaults]
         |
         v
-[selected providers.active client]
-        |  auth, base URL, retry policy
+[selected provider client]
+        |  auth, base URL, retry policy, model defaults
         v
 [query loop consumes provider events]
 </pre>
 <div class="edge-list">
-  <div><b>External override</b><span>Injected clients bypass provider construction but still receive the resolved <code>LlmRequest.model</code> value.</span></div>
-  <div><b>Provider dispatch</b><span><code>providers.active</code> selects the concrete Rust client; model registry rows do not dispatch provider classes.</span></div>
+  <div><b>External override</b><span>Injected clients bypass provider construction; model defaults are owned by the injected client or event source.</span></div>
+  <div><b>Provider dispatch</b><span><code>providers.active</code> selects the concrete Rust client, and that provider's nested model section supplies request defaults.</span></div>
   <div><b>Config source</b><span>The committed baseline and gitignored local override merge through <code>eos-config</code>; runtime no longer scans the workspace for a model registry file.</span></div>
 </div>
 <div class="edge-list">
-  <div><b>tested by</b><span><code>test_provider_routing.py</code> covers external passthrough, explicit DB kwargs, and missing API key failures.</span></div>
-  <div><b>tested by</b><span><code>test_class_path_dispatch.py</code> covers empty class paths, legacy no-colon class paths, import failures, non-class attributes, and the coding-plan kill switch.</span></div>
+  <div><b>tested by</b><span><code>eos-config</code> provider/model unit tests cover nested provider model parsing and active model validation.</span></div>
+  <div><b>tested by</b><span><code>eos-llm-client</code> configured-client tests and the Codex smoke test cover model/default injection into provider requests.</span></div>
 </div>
 </section>
 

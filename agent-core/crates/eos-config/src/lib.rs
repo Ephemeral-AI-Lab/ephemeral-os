@@ -15,8 +15,9 @@
 //! open connections, or spawn tasks.
 //!
 //! The section schemas ([`DatabaseConfig`], [`ProvidersConfig`],
-//! [`ModelsConfig`], [`WorkflowConfig`], …) live here for now; they migrate to their owning
-//! crates' `config.rs` as those crates stabilize.
+//! [`WorkflowConfig`], …) and nested fragments such as [`ModelsConfig`] live here
+//! for now; they migrate to their owning crates' `config.rs` as those crates
+//! stabilize.
 #![forbid(unsafe_code)]
 #![warn(missing_docs)]
 

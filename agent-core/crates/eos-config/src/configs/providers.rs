@@ -6,6 +6,7 @@ use std::collections::BTreeSet;
 
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
+use super::models::{ModelRegistrationConfig, ModelsConfig};
 use crate::error::ConfigError;
 
 /// Provider retry policy.
@@ -112,7 +113,7 @@ pub enum ProviderKind {
 }
 
 /// `OpenAI` public API provider config.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 #[non_exhaustive]
 pub struct OpenAiApiConfig {
@@ -122,6 +123,9 @@ pub struct OpenAiApiConfig {
     /// API key sent as an Authorization bearer token.
     #[serde(default)]
     pub api_key: Option<SecretConfigValue>,
+    /// Models available through this provider.
+    #[serde(default)]
+    pub models: ModelsConfig,
 }
 
 impl Default for OpenAiApiConfig {
@@ -129,12 +133,13 @@ impl Default for OpenAiApiConfig {
         Self {
             base_url: default_openai_api_base_url(),
             api_key: None,
+            models: ModelsConfig::default(),
         }
     }
 }
 
 /// Anthropic public API provider config.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 #[non_exhaustive]
 pub struct AnthropicApiConfig {
@@ -144,6 +149,9 @@ pub struct AnthropicApiConfig {
     /// API key sent as `x-api-key`.
     #[serde(default)]
     pub api_key: Option<SecretConfigValue>,
+    /// Models available through this provider.
+    #[serde(default)]
+    pub models: ModelsConfig,
 }
 
 impl Default for AnthropicApiConfig {
@@ -151,12 +159,13 @@ impl Default for AnthropicApiConfig {
         Self {
             base_url: default_anthropic_api_base_url(),
             api_key: None,
+            models: ModelsConfig::default(),
         }
     }
 }
 
 /// Codex coding-plan provider config.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 #[non_exhaustive]
 pub struct CodexCodingPlanConfig {
@@ -166,6 +175,9 @@ pub struct CodexCodingPlanConfig {
     /// ChatGPT-managed Codex access token JWT.
     #[serde(default)]
     pub access_token: Option<SecretConfigValue>,
+    /// Models available through this provider.
+    #[serde(default)]
+    pub models: ModelsConfig,
 }
 
 impl Default for CodexCodingPlanConfig {
@@ -173,12 +185,13 @@ impl Default for CodexCodingPlanConfig {
         Self {
             base_url: default_codex_coding_plan_base_url(),
             access_token: None,
+            models: ModelsConfig::default(),
         }
     }
 }
 
 /// Claude coding-plan provider config.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 #[non_exhaustive]
 pub struct ClaudeCodingPlanConfig {
@@ -188,6 +201,9 @@ pub struct ClaudeCodingPlanConfig {
     /// Claude coding-plan access token.
     #[serde(default)]
     pub access_token: Option<SecretConfigValue>,
+    /// Models available through this provider.
+    #[serde(default)]
+    pub models: ModelsConfig,
 }
 
 impl Default for ClaudeCodingPlanConfig {
@@ -195,6 +211,7 @@ impl Default for ClaudeCodingPlanConfig {
         Self {
             base_url: default_anthropic_api_base_url(),
             access_token: None,
+            models: ModelsConfig::default(),
         }
     }
 }
@@ -238,6 +255,25 @@ impl Default for ProvidersConfig {
 }
 
 impl ProvidersConfig {
+    /// Borrow the model section for the active provider.
+    #[must_use]
+    pub fn active_models(&self) -> Option<&ModelsConfig> {
+        match self.active {
+            ProviderKind::Unconfigured => None,
+            ProviderKind::OpenAiApi => Some(&self.openai_api.models),
+            ProviderKind::AnthropicApi => Some(&self.anthropic_api.models),
+            ProviderKind::CodexCodingPlan => Some(&self.codex_coding_plan.models),
+            ProviderKind::ClaudeCodingPlan => Some(&self.claude_coding_plan.models),
+        }
+    }
+
+    /// Return the active provider's active model registration, synthesizing it
+    /// from the provider-local active key when no row is listed.
+    #[must_use]
+    pub fn active_model_registration(&self) -> Option<ModelRegistrationConfig> {
+        self.active_models()?.active_registration()
+    }
+
     /// Validate nested provider sections.
     ///
     /// # Errors
@@ -246,6 +282,18 @@ impl ProvidersConfig {
     /// required provider field.
     pub fn validate(&self) -> Result<(), ConfigError> {
         self.retry.validate()?;
+        self.openai_api
+            .models
+            .validate_at("providers.openai_api.models")?;
+        self.anthropic_api
+            .models
+            .validate_at("providers.anthropic_api.models")?;
+        self.codex_coding_plan
+            .models
+            .validate_at("providers.codex_coding_plan.models")?;
+        self.claude_coding_plan
+            .models
+            .validate_at("providers.claude_coding_plan.models")?;
         match self.active {
             ProviderKind::Unconfigured => Ok(()),
             ProviderKind::OpenAiApi => {
@@ -253,6 +301,10 @@ impl ProvidersConfig {
                 require_secret(
                     "providers.openai_api.api_key",
                     self.openai_api.api_key.as_ref(),
+                )?;
+                require_active_model(
+                    "providers.openai_api.models.active",
+                    &self.openai_api.models,
                 )
             }
             ProviderKind::AnthropicApi => {
@@ -263,6 +315,10 @@ impl ProvidersConfig {
                 require_secret(
                     "providers.anthropic_api.api_key",
                     self.anthropic_api.api_key.as_ref(),
+                )?;
+                require_active_model(
+                    "providers.anthropic_api.models.active",
+                    &self.anthropic_api.models,
                 )
             }
             ProviderKind::CodexCodingPlan => {
@@ -273,6 +329,10 @@ impl ProvidersConfig {
                 require_secret(
                     "providers.codex_coding_plan.access_token",
                     self.codex_coding_plan.access_token.as_ref(),
+                )?;
+                require_active_model(
+                    "providers.codex_coding_plan.models.active",
+                    &self.codex_coding_plan.models,
                 )
             }
             ProviderKind::ClaudeCodingPlan => {
@@ -283,6 +343,10 @@ impl ProvidersConfig {
                 require_secret(
                     "providers.claude_coding_plan.access_token",
                     self.claude_coding_plan.access_token.as_ref(),
+                )?;
+                require_active_model(
+                    "providers.claude_coding_plan.models.active",
+                    &self.claude_coding_plan.models,
                 )
             }
         }
@@ -317,6 +381,15 @@ fn require_secret(field: &str, value: Option<&SecretConfigValue>) -> Result<(), 
             field: field.to_owned(),
         }),
     }
+}
+
+fn require_active_model(field: &str, models: &ModelsConfig) -> Result<(), ConfigError> {
+    if models.active_key().is_some() {
+        return Ok(());
+    }
+    Err(ConfigError::MissingValue {
+        field: field.to_owned(),
+    })
 }
 
 #[cfg(test)]
@@ -363,6 +436,8 @@ mod tests {
 active: claude_coding_plan
 claude_coding_plan:
   access_token: claude-oauth-token
+  models:
+    active: claude-sonnet-4-6
 "#,
         )
         .unwrap();
@@ -381,6 +456,10 @@ claude_coding_plan:
                 .expose_secret(),
             "claude-oauth-token"
         );
+        assert_eq!(
+            config.active_model_registration().unwrap().key(),
+            "claude-sonnet-4-6"
+        );
         config.validate().unwrap();
     }
 
@@ -391,6 +470,13 @@ claude_coding_plan:
 active: codex_coding_plan
 codex_coding_plan:
   access_token: test.jwt.token
+  models:
+    active: gpt-5.5
+    registrations:
+      - key: gpt-5.5
+        label: Codex GPT-5.5
+        kwargs:
+          reasoning_effort: medium
 "#,
         )
         .unwrap();
@@ -409,6 +495,9 @@ codex_coding_plan:
                 .expose_secret(),
             "test.jwt.token"
         );
+        let model = config.active_model_registration().unwrap();
+        assert_eq!(model.key(), "gpt-5.5");
+        assert_eq!(model.kwargs["reasoning_effort"], "medium");
         config.validate().unwrap();
     }
 
@@ -423,6 +512,24 @@ codex_coding_plan:
         assert!(matches!(
             err,
             ConfigError::MissingValue { field } if field == "providers.openai_api.api_key"
+        ));
+    }
+
+    #[test]
+    fn active_provider_requires_active_model() {
+        let config: ProvidersConfig = serde_yaml::from_str(
+            r#"
+active: codex_coding_plan
+codex_coding_plan:
+  access_token: test.jwt.token
+"#,
+        )
+        .unwrap();
+
+        let err = config.validate().unwrap_err();
+        assert!(matches!(
+            err,
+            ConfigError::MissingValue { field } if field == "providers.codex_coding_plan.models.active"
         ));
     }
 
