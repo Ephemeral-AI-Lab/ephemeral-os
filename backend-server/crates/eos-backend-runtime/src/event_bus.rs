@@ -64,6 +64,18 @@ struct RequestStream {
 impl RequestStream {
     /// Reserve the next sequence (`1`-based, strictly increasing, unique even
     /// under concurrent callers).
+    ///
+    /// ORDERING PRECONDITION: the subscriber dedup ([`EventSubscription`]) assumes
+    /// records are *persisted in `seq` order*. That holds because seq is reserved
+    /// here in callback-invocation order, sent to the mpsc in that order, and a
+    /// single drainer persists in receive order. The link in the chain is that the
+    /// callback is invoked **sequentially per request** — true today: `run_request`
+    /// passes `on_event` only to the root run, whose engine loop emits one event at
+    /// a time (`agent_loop`), and subagent runs pass `None`. If a future change ever
+    /// invokes one request's callback concurrently, seq uniqueness still holds but
+    /// persist order may diverge from seq order, and the high-water dedup below
+    /// would need to become seen-seq-set based (or seq must be stamped at persist
+    /// time). See [`EventSubscription`].
     fn next_seq(&self) -> i64 {
         self.seq.fetch_add(1, Ordering::Relaxed) + 1
     }
@@ -307,6 +319,13 @@ async fn emit_gap(event_log: &EventLogRepo, stream: &RequestStream, request_id: 
 /// A replay-then-live subscription. [`EventSubscription::recv`] yields records in
 /// `seq` order with no gap and no duplicate across the replay/live handoff, and
 /// recovers broadcast lag from the durable log.
+///
+/// The dedup is a single high-water mark (`last_seq`): replay raises it, live
+/// delivers only `seq > last_seq`. This is correct only while records are persisted
+/// in `seq` order — see the ordering precondition on `RequestStream::next_seq`. It
+/// is robust to *broadcast reordering* (a slow subscriber that lags is refilled
+/// from the durable log), but not to *persist reordering*; the latter cannot occur
+/// under the current single-emitter model.
 #[derive(Debug)]
 pub struct EventSubscription {
     request_id: RequestId,

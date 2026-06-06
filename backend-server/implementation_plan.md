@@ -18,7 +18,7 @@ has an unchecked hard item.
 | 2 | Agent-core runtime seams | complete | 4, 5, 6, 7 | production `SandboxGateway` injection and `state_reader()` compile |
 | 3 | Backend config, types, store, and migrations | complete | 4, 5, 6, 7 | config/store tests pass with backend DB schema |
 | 4 | Sandbox lifecycle manager | complete | 5, 6, 7 | lifecycle/refcount/delete-guard tests pass (17 manager tests) |
-| 5 | Run launcher, cancellation, reaper, and event bus | complete | 6, 7 | launcher/event_bus/reaper/status tests pass (21 Phase 5 tests) |
+| 5 | Run launcher, cancellation, reaper, and event bus | complete | 6, 7 | launcher/event_bus/reaper/status tests pass (22 Phase 5 tests) |
 | 6 | Observability, audit ingestion, and stats | not_started | 7 | audit/correlation/stats tests pass |
 | 7 | HTTP API, streaming API, and OpenAPI | not_started | 8 | API contract and stream replay tests pass |
 | 8 | Live E2E, dependency audit, and closeout | not_started | release | Docker-backed backend-to-agent-core-to-sandbox smoke passes |
@@ -938,9 +938,22 @@ Key design decisions:
     precedence table's persisting write-back is deferred to the Phase 7 read handler
     (no Phase 5 caller, and a read-time write-back races a concurrent DELETE's
     Cancelled; Phase 7 owns it with a compare-and-set guard).
+  - Event-stream ordering precondition (verified, documented at next_seq /
+    EventSubscription): the high-water dedup is correct because records persist in
+    seq order, which holds while the callback is invoked sequentially per request.
+    Confirmed in agent-core: run_request passes on_event ONLY to the root run
+    (entry.rs:249), the root engine loop emits one event at a time
+    (agent_loop.rs), and subagent runs pass on_event=None (agent_runner.rs:122).
+    Phase 7 must preserve single-emitter ordering when it wires real SSE/WS; if
+    emission ever becomes concurrent per request, the dedup must switch to a
+    seen-seq set or stamp seq at persist time (uniqueness already holds).
+Concurrent work integrated: another agent added failing_manager + a setup_with
+  helper to the launcher test and a launch_resolves_failed_when_sandbox_acquisition_fails
+  test (the provisioning-failure arm I had left to composition). It is consistent
+  with the Disposition::Failed acquire-error path and was kept (22nd Phase 5 test).
 Checklist results: all 10 Phase 5 hard items checked.
 Verification commands (all pass):
-  - cargo test -p eos-backend-runtime -> 37 passed (16 Phase 4 + 21 Phase 5)
+  - cargo test -p eos-backend-runtime -> 38 passed (16 Phase 4 + 22 Phase 5)
   - cargo test -p eos-backend-runtime launcher -> 6 passed
   - cargo test -p eos-backend-runtime event_bus -> 6 passed
   - cargo test -p eos-backend-runtime reaper -> 4 passed
