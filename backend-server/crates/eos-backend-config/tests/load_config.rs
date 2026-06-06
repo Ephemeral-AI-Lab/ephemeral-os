@@ -88,3 +88,45 @@ fn rejects_out_of_range_max_owned_sandboxes() {
         })
     ));
 }
+
+#[test]
+fn rejects_out_of_range_startup_timeout_ms() {
+    let over = temp_yaml("timeout", "sandbox:\n  startup_timeout_ms: 0\n");
+    let result = load_from_paths(&[baseline(), over.clone()]);
+    let _ = std::fs::remove_file(&over);
+    assert!(matches!(
+        result,
+        Err(ConfigError::OutOfRange {
+            field: "sandbox.startup_timeout_ms",
+            ..
+        })
+    ));
+}
+
+#[test]
+fn rejects_out_of_range_event_queue_capacity() {
+    let over = temp_yaml("event_queue", "obs:\n  event_queue_capacity: 0\n");
+    let result = load_from_paths(&[baseline(), over.clone()]);
+    let _ = std::fs::remove_file(&over);
+    assert!(matches!(
+        result,
+        Err(ConfigError::OutOfRange {
+            field: "obs.event_queue_capacity",
+            ..
+        })
+    ));
+}
+
+#[test]
+fn rejects_out_of_range_audit_queue_capacity() {
+    let over = temp_yaml("audit_queue", "obs:\n  audit_queue_capacity: 0\n");
+    let result = load_from_paths(&[baseline(), over.clone()]);
+    let _ = std::fs::remove_file(&over);
+    assert!(matches!(
+        result,
+        Err(ConfigError::OutOfRange {
+            field: "obs.audit_queue_capacity",
+            ..
+        })
+    ));
+}

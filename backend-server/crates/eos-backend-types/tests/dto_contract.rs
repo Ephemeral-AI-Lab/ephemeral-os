@@ -4,8 +4,8 @@
 #![allow(clippy::unwrap_used)] // unwrap is permitted in tests
 
 use eos_backend_types::{
-    ApiRunStatus, AuditCursor, BackendError, BackendRunStatus, CreateUserRequest, EventRecord,
-    ObsEvent, ObsSource, Page, PageResult, RunMeta, RunRecord, SandboxArgs, SandboxCallCorrelation,
+    ApiRunStatus, AuditCursor, BackendRunStatus, CreateUserRequest, EventRecord, ObsEvent,
+    ObsSource, Page, PageResult, RunMeta, RunRecord, SandboxArgs, SandboxCallCorrelation,
     SandboxState, SandboxView, EVENT_STREAM_GAP,
 };
 use eos_protocol::CallerId;
@@ -251,17 +251,4 @@ fn audit_cursor_round_trips_with_boot_epoch() {
     assert_eq!(value["boot_epoch_id"], json!(3));
     let back: AuditCursor = serde_json::from_value(value).unwrap();
     assert_eq!(back, cursor);
-}
-
-#[test]
-fn backend_error_displays_resource_and_id() {
-    let err = BackendError::NotFound {
-        resource: "user-request",
-        id: "r-1".into(),
-    };
-    assert_eq!(err.to_string(), "user-request r-1 not found");
-    assert_eq!(
-        BackendError::BadRequest("nope".into()).to_string(),
-        "invalid request: nope"
-    );
 }

@@ -13,7 +13,6 @@
 #![warn(missing_docs)]
 
 mod audit;
-mod error;
 mod events;
 mod pagination;
 mod requests;
@@ -21,7 +20,6 @@ mod sandboxes;
 mod stats;
 
 pub use audit::{AuditCursor, ObsEvent, ObsSource, SandboxCallCorrelation};
-pub use error::BackendError;
 pub use events::{EventRecord, EVENT_STREAM_GAP};
 pub use pagination::{Page, PageResult};
 pub use requests::{

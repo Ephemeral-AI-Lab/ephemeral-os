@@ -6,8 +6,8 @@ use eos_db::Database;
 use eos_state::{
     AttemptBudget, AttemptClosure, AttemptFailReason, AttemptStage, AttemptStatus, DeferredGoal,
     ExecutionRole, ExecutionTaskOutcome, IterationCreationReason, IterationStatus, JsonObject,
-    MaterializedPlan, PlanDisposition, RequestId, RequestStatus, Task, TaskId, TaskRole,
-    TaskStatus, UtcDateTime, WorkflowStatus,
+    MaterializedPlan, Page, PlanDisposition, RequestId, RequestListFilter, RequestStatus, Task,
+    TaskId, TaskRole, TaskStatus, UtcDateTime, WorkflowStatus,
 };
 use sqlx::Row;
 
@@ -606,4 +606,117 @@ async fn composition_root_and_cascade() {
     // FK ON DELETE CASCADE removed the child rows.
     assert!(db.tasks().get(&tid("t-8")).await.expect("get").is_none());
     assert!(db.workflows().get(&wf.id).await.expect("get").is_none());
+}
+
+// Read-side store APIs the backend composition root consumes through
+// `RuntimeServices::state_reader()`: request listing with status filter +
+// pagination (total ignores the window), the per-request task tree, and the
+// latest run for a task.
+#[tokio::test]
+async fn read_side_list_apis() {
+    let (_dir, db) = open_temp().await;
+    let requests = db.requests();
+    let tasks = db.tasks();
+    let agent_runs = db.agent_runs();
+
+    // Three requests: one Done, one Failed, one left Running.
+    for (name, finish) in [
+        ("req-a", Some(RequestStatus::Done)),
+        ("req-b", Some(RequestStatus::Failed)),
+        ("req-c", None),
+    ] {
+        let id = rid(name);
+        requests
+            .create_request(&id, "/w", None, name)
+            .await
+            .expect("create");
+        if let Some(status) = finish {
+            requests.finish_request(&id, status).await.expect("finish");
+        }
+    }
+
+    // Unfiltered list returns every request; total counts all matches.
+    let all = requests
+        .list(RequestListFilter::default(), Page::default())
+        .await
+        .expect("list all");
+    assert_eq!(all.total, 3);
+    assert_eq!(all.items.len(), 3);
+
+    // The status filter narrows to the single Done request.
+    let done = requests
+        .list(
+            RequestListFilter {
+                status: Some(RequestStatus::Done),
+            },
+            Page::default(),
+        )
+        .await
+        .expect("list done");
+    assert_eq!(done.total, 1);
+    assert_eq!(done.items.len(), 1);
+    assert_eq!(done.items[0].request_prompt, "req-a");
+
+    // Pagination: a 2-row window still reports the full total.
+    let page0 = requests
+        .list(
+            RequestListFilter::default(),
+            Page {
+                limit: 2,
+                offset: 0,
+            },
+        )
+        .await
+        .expect("page0");
+    assert_eq!(page0.items.len(), 2);
+    assert_eq!(page0.total, 3);
+    let page1 = requests
+        .list(
+            RequestListFilter::default(),
+            Page {
+                limit: 2,
+                offset: 2,
+            },
+        )
+        .await
+        .expect("page1");
+    assert_eq!(page1.items.len(), 1);
+    assert_eq!(page1.total, 3);
+
+    // list_for_request returns only the owning request's tasks.
+    let owner = rid("req-a");
+    let other = rid("req-b");
+    tasks
+        .upsert_task(&sample_task("t-a1", &owner, "one"))
+        .await
+        .expect("t-a1");
+    tasks
+        .upsert_task(&sample_task("t-a2", &owner, "two"))
+        .await
+        .expect("t-a2");
+    tasks
+        .upsert_task(&sample_task("t-b1", &other, "x"))
+        .await
+        .expect("t-b1");
+    let owner_tasks = tasks.list_for_request(&owner).await.expect("list tasks");
+    assert_eq!(owner_tasks.len(), 2);
+    assert!(owner_tasks.iter().all(|task| task.request_id == owner));
+
+    // get_for_task returns the bound run, and None when a task has no run.
+    let run_id: eos_state::AgentRunId = "run-a1".parse().expect("run id");
+    agent_runs
+        .create_run(&run_id, &tid("t-a1"), "coder", None)
+        .await
+        .expect("run");
+    let got = agent_runs
+        .get_for_task(&tid("t-a1"))
+        .await
+        .expect("get_for_task")
+        .expect("some");
+    assert_eq!(got.id, run_id);
+    assert!(agent_runs
+        .get_for_task(&tid("t-a2"))
+        .await
+        .expect("none")
+        .is_none());
 }

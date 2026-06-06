@@ -88,6 +88,47 @@ async fn run_meta_round_trips_and_lists() {
 }
 
 #[tokio::test]
+async fn run_meta_list_paginates_newest_first() {
+    let (store, _dir) = open_store().await;
+    let repo = store.run_meta();
+    // Three runs with strictly increasing created_at.
+    for (id, minute) in [("r-a", "00"), ("r-b", "01"), ("r-c", "02")] {
+        repo.insert(&RunMeta {
+            request_id: req(id),
+            status: BackendRunStatus::Running,
+            label: None,
+            client_meta: json!({}),
+            created_at: ts(&format!("2026-06-06T00:{minute}:00Z")),
+            finished_at: None,
+            cancel_reason: None,
+        })
+        .await
+        .unwrap();
+    }
+    let ids = |page: &eos_backend_types::PageResult<RunMeta>| {
+        page.items
+            .iter()
+            .map(|m| m.request_id.as_str().to_owned())
+            .collect::<Vec<_>>()
+    };
+
+    // Default page returns every row, newest created_at first.
+    let all = repo.list(Page::default()).await.unwrap();
+    assert_eq!(all.total, 3);
+    assert_eq!(ids(&all), ["r-c", "r-b", "r-a"]);
+
+    // `limit` slices the newest rows; `total` still reflects the full set.
+    let first = repo.list(Page::new(2, 0)).await.unwrap();
+    assert_eq!((first.total, first.limit), (3, 2));
+    assert_eq!(ids(&first), ["r-c", "r-b"]);
+
+    // `offset` walks past the newest rows to the tail.
+    let second = repo.list(Page::new(2, 2)).await.unwrap();
+    assert_eq!((second.total, second.offset), (3, 2));
+    assert_eq!(ids(&second), ["r-a"]);
+}
+
+#[tokio::test]
 async fn event_log_appends_and_replays_by_seq() {
     let (store, _dir) = open_store().await;
     let repo = store.event_log();
@@ -228,6 +269,14 @@ async fn sandbox_call_correlation_round_trips() {
         .await
         .unwrap()
         .is_none());
+
+    // The PK is exactly (sandbox_id, caller_id, sandbox_invocation_id): re-inserting
+    // that triple collides even when a model-facing field (tool_use_id) differs.
+    let collision = SandboxCallCorrelation {
+        tool_use_id: ToolUseId::try_from("toolu_other").unwrap(),
+        ..bridge.clone()
+    };
+    assert!(repo.insert(&collision).await.is_err());
 }
 
 #[tokio::test]

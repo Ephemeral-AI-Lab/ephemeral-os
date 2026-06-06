@@ -15,7 +15,7 @@ has an unchecked hard item.
 |---|---|---|---|---|
 | 0 | Baseline, ownership audit, and migration guardrails | complete | all phases | Phase 0 notes below |
 | 1 | Workspace scaffold and crate relocation | complete | 2, 3, 4, 5, 6, 7 | `agent-core` has port-only sandbox deps; backend workspace builds |
-| 2 | Agent-core runtime seams | not_started | 4, 5, 6, 7 | production `SandboxGateway` injection and `state_reader()` compile |
+| 2 | Agent-core runtime seams | complete | 4, 5, 6, 7 | production `SandboxGateway` injection and `state_reader()` compile |
 | 3 | Backend config, types, store, and migrations | complete | 4, 5, 6, 7 | config/store tests pass with backend DB schema |
 | 4 | Sandbox lifecycle manager | not_started | 5, 6, 7 | lifecycle/refcount/delete-guard tests pass |
 | 5 | Run launcher, cancellation, reaper, and event bus | not_started | 6, 7 | request launch and replay-safe event persistence tests pass |
@@ -152,18 +152,18 @@ Implementation components:
 
 Hard acceptance checklist:
 
-- [ ] `SandboxGateway` is object-safe and lives in `eos-sandbox-port`.
-- [ ] Runtime construction can receive backend's gateway in non-test builds.
-- [ ] Runtime construction no longer relies on a `#[cfg(test)] pub(crate)`
+- [x] `SandboxGateway` is object-safe and lives in `eos-sandbox-port`.
+- [x] Runtime construction can receive backend's gateway in non-test builds.
+- [x] Runtime construction no longer relies on a `#[cfg(test)] pub(crate)`
   provisioner setter for production composition.
-- [ ] `RuntimeServices::state_reader()` is public enough for backend use and
+- [x] `RuntimeServices::state_reader()` is public enough for backend use and
   returns store traits, not `sqlx::SqlitePool`.
-- [ ] Store list/query APIs are implemented in `eos-state` and `eos-db`.
-- [ ] Model-facing `tool_use_id` and daemon-facing `sandbox_invocation_id` are
+- [x] Store list/query APIs are implemented in `eos-state` and `eos-db`.
+- [x] Model-facing `tool_use_id` and daemon-facing `sandbox_invocation_id` are
   represented as separate values in the runtime/tool path.
-- [ ] Existing root request and delegated workflow behavior is unchanged.
-- [ ] No backend-server crate has test bodies or test support under `src/`.
-- [ ] `backend-server/crates/eos-sandbox-host/src/daemon_client/tests/` has
+- [x] Existing root request and delegated workflow behavior is unchanged.
+- [x] No backend-server crate has test bodies or test support under `src/`.
+- [x] `backend-server/crates/eos-sandbox-host/src/daemon_client/tests/` has
   been moved to `backend-server/crates/eos-sandbox-host/tests/daemon_client/`
   or removed if its tests were deleted intentionally.
 
@@ -557,6 +557,108 @@ Next phase unblockers: Phase 2 can now define the object-safe SandboxGateway in
   RuntimeServices::state_reader() + store list APIs.
 ```
 
+## Phase 2 Execution Notes
+
+```text
+Phase: 2 - Agent-Core Runtime Seams
+Status: complete
+Touched files:
+  - agent-core/crates/eos-sandbox-port: NEW gateway.rs (object-safe
+    SandboxGateway trait with transport()/provisioner() accessors); lib.rs
+    mod + pub use + doc bullet.
+  - agent-core/crates/eos-state: NEW pagination.rs (Page, PageResult<T>,
+    RequestListFilter); store.rs added RequestStore::list,
+    TaskStore::list_for_request, AgentRunStore::get_for_task (signatures take
+    &RequestId/&TaskId to match sibling methods); lib.rs mod + pub use;
+    tests/support/mod.rs FakeTaskStore::list_for_request.
+  - agent-core/crates/eos-db: request_task.rs implements RequestStore::list
+    (status filter via `(? IS NULL OR status = ?)`, ORDER BY created_at DESC,
+    LIMIT/OFFSET, COUNT(*) total) and TaskStore::list_for_request; agent_run.rs
+    implements AgentRunStore::get_for_task (latest run by created_at);
+    tests/integration.rs NEW read_side_list_apis round-trip test.
+  - agent-core/crates/eos-runtime: builder.rs replaced the `.transport()` +
+    `#[cfg(test)] pub(crate) .provisioner()` setters with one production
+    `.sandbox_gateway(Arc<dyn SandboxGateway>)` setter; build() resolves
+    (transport, provisioner) from the gateway or the Unconfigured* placeholders.
+    NEW runtime_services/state_reader.rs (StateReader over request/task/
+    agent-run stores); mod.rs adds RuntimeServices::state_reader() + exports;
+    lib.rs re-exports StateReader. Test support: tests/unit/support.rs gains a
+    FakeGateway and routes build_test_state through .sandbox_gateway(...);
+    tests/unit/mod.rs background test updated likewise.
+  - agent-core/crates/eos-tools/tests/support/mod.rs: FakeTaskStore::
+    list_for_request + FakeRequestStore::list (empty page).
+  - agent-core/crates/eos-workflow/tests/support/stores.rs: MemoryStores
+    TaskStore::list_for_request.
+  - backend-server/crates/eos-sandbox-host: git mv
+    src/daemon_client/tests/mod.rs -> tests/daemon_client/mod.rs; src/
+    daemon_client.rs now includes it with #[cfg(test)]
+    #[path = "../tests/daemon_client/mod.rs"] mod tests; (single `../` — the
+    #[path] resolves relative to daemon_client.rs's own dir src/, like lib.rs's
+    existing ../tests/support include; the compiler rejected ../../).
+Concurrent work observed: another agent marked Phase 3 complete and owns the
+  Phase 3 notes / eos-backend-{types,config,store} edits (one transient
+  `mod error` not-found diagnostic in eos-backend-types is their in-progress
+  work, left untouched). Phase 3 surfaces are disjoint from Phase 2.
+Checklist results: all 9 Phase 2 hard items checked.
+  - "Correlation source" / separate tool_use_id vs sandbox_invocation_id is
+    satisfied by EXISTING structure, not new code: ToolUseId (no-mint, from the
+    provider stream) and InvocationId (minted) are distinct eos-types newtypes
+    held in distinct ExecutionMetadata fields; the engine stamps tool_use_id per
+    call (tool_call/dispatch.rs) while each sandbox tool mints/threads its own
+    invocation_id. No identity collapse anywhere. Surfacing invocation_id into
+    audit/correlation rows is deferred to Phase 6 (its owner); adding it to
+    AuditNode now would be over-building.
+Verification commands (all pass):
+  - cargo check -p eos-sandbox-port --all-targets -> ok
+  - cargo check -p eos-runtime --all-targets -> ok
+  - cargo test -p eos-db -> 14 unit + 8 integration (incl. read_side_list_apis)
+  - cargo test -p eos-state -> 13 passed
+  - cargo test -p eos-runtime -> 22 passed (UNCHANGED from Phase 1: root/
+    delegated behavior preserved)
+  - cargo test -p eos-sandbox-host -> 41 passed incl. all 6
+    daemon_client::tests::* (moved tests run; super:: access preserved)
+  - cargo check --workspace --all-targets (agent-core AND backend-server) -> ok
+  - cargo clippy -p eos-sandbox-port -p eos-state -p eos-db --all-targets
+    -- -D warnings -> clean; eos-runtime has zero own-source clippy warnings.
+  - rg "pub\(crate\).*provisioner|SqlitePool" eos-runtime/src -> one expected
+    residual: the internal SandboxService.provisioner FIELD (not a setter); the
+    #[cfg(test)] pub(crate) provisioner SETTER is removed. No SqlitePool.
+  - find backend-server/crates .../src/*{test,fixture,mock,fake,support}* ->
+    empty.
+Failures: none introduced.
+Spec deviations / noted interpretations:
+  - Store list APIs return the existing domain DTOs (Request/Task/AgentRun), not
+    the spec snippet's illustrative RequestRow/TaskRow/AgentRunRow names, to
+    match the established eos-state/eos-db surface. PageResult<T>/Page/
+    RequestListFilter are the only new value objects; RequestListFilter carries a
+    single optional `status` (the natural, non-speculative request filter).
+  - StateReader exposes exactly the three read stores the spec State Reader
+    section names (requests/tasks/agent-runs). list_for_request returns the full
+    task tree (needs edges ride on each Task), so workflow/iteration/attempt
+    stores are intentionally NOT exposed yet; add them in Phase 7 only if a task
+    endpoint proves it needs them.
+  - "No test bodies/support under src/" (item 8) is verified by the path-based
+    `find` (empty) and the spec's file/dir Disallowed-Paths list; the only named
+    Phase 2 carry-over (daemon_client/tests/) is moved. Pre-existing inline
+    `#[cfg(test)] mod tests { ... }` UNIT modules remain in several
+    eos-sandbox-host src files (lifecycle/provider/docker/registry/provisioning/
+    sandbox_upload/bootstrap_artifact). They are conventional Rust unit tests,
+    not separate test files/dirs, and are NOT flagged by the verification. If
+    strict prose compliance ("only production code + a tiny cfg(test) mod
+    declaration in src/") is wanted, relocating those inline modules to tests/
+    is a separate, larger follow-up beyond the named Phase 2 scope.
+  - Pre-existing lint noise (NOT introduced here, left per surgical scope):
+    eos-audit/src/lib.rs:9 trips clippy doc_markdown on "EphemeralOS"
+    (missing backticks), so a tree-wide `clippy -- -D warnings` that pulls
+    eos-audit fails on that line alone.
+Next phase unblockers: Phase 4 SandboxManager implements SandboxGateway and is
+  injected via RuntimeServicesBuilder::sandbox_gateway(Arc::new(manager)); its
+  transport()/provisioner() ARE the gateway's two accessors (no separate
+  gateway() method — the manager IS the gateway), and must share one
+  registry/lifecycle. Backend reads agent-core state via
+  RuntimeServices::state_reader().{requests,tasks,agent_runs}().
+```
+
 ## Phase 3 Execution Notes
 
 ```text
@@ -571,9 +673,11 @@ Touched files:
     ClientMeta/CreateUserRequestResponse, RunRecord, UserRequestDetail),
     sandboxes.rs (SandboxState, SandboxView), pagination.rs (Page clamp +
     PageResult<T>), events.rs (EventRecord + EVENT_STREAM_GAP), audit.rs
-    (ObsSource, ObsEvent, SandboxCallCorrelation, AuditCursor), error.rs
-    (BackendError), stats.rs (deferred stub). Cargo.toml gained eos-types +
-    eos-protocol (for CallerId). tests/dto_contract.rs (15 tests).
+    (ObsSource, ObsEvent, SandboxCallCorrelation, AuditCursor), stats.rs
+    (deferred stub). Cargo.toml gained eos-types + eos-protocol (for CallerId).
+    tests/dto_contract.rs. (Review pass: removed the unused/misplaced
+    `BackendError` + error.rs and the now-orphaned `thiserror` dep; HTTP error
+    mapping is owned by Phase 7's eos-backend-api/error.rs, not the DTO crate.)
   - eos-backend-config: server.rs (ServerConfig + AgentCoreConfigSource,
     deny_unknown_fields, no Providers/Workflow), sandbox.rs (SandboxConfig),
     obs.rs (ObsConfig), loader.rs (backend.yml < local.yml deep-merge +
