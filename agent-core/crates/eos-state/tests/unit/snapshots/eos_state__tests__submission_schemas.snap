@@ -7,7 +7,7 @@ expression: schemas
   "ExecutionTaskOutcome": {
     "$schema": "http://json-schema.org/draft-07/schema#",
     "title": "ExecutionTaskOutcome",
-    "description": "One generator/reducer task's terminal execution evidence (Python `ExecutionTaskOutcome`). Bounded to a single persisted task.",
+    "description": "One generator/reducer task's terminal execution evidence (Rust `ExecutionTaskOutcome`). Bounded to a single persisted task.",
     "type": "object",
     "required": [
       "outcome",
@@ -43,7 +43,7 @@ expression: schemas
     },
     "definitions": {
       "ExecutionRole": {
-        "description": "The execution role an outcome belongs to (Python `ExecutionRole`). Only `generator`/`reducer` execution evidence ever appears in outcomes.",
+        "description": "The execution role an outcome belongs to (Rust `ExecutionRole`). Only `generator`/`reducer` execution evidence ever appears in outcomes.",
         "oneOf": [
           {
             "description": "A generator (execution) task.",
@@ -62,7 +62,7 @@ expression: schemas
         ]
       },
       "TaskOutcomeStatus": {
-        "description": "Binary status of one execution outcome (Python `TaskOutcomeStatus`).",
+        "description": "Binary status of one execution outcome (Rust `TaskOutcomeStatus`).",
         "oneOf": [
           {
             "description": "The task completed successfully.",
@@ -85,7 +85,7 @@ expression: schemas
   "PlannerSubmission": {
     "$schema": "http://json-schema.org/draft-07/schema#",
     "title": "PlannerSubmission",
-    "description": "Validated planner submission from a full or partial plan tool (Python `PlannerSubmission`).",
+    "description": "Validated planner submission from a full or partial plan tool (Rust `PlannerSubmission`).",
     "type": "object",
     "required": [
       "attempt_id",
@@ -174,7 +174,7 @@ expression: schemas
   "PlannerFailureSubmission": {
     "$schema": "http://json-schema.org/draft-07/schema#",
     "title": "PlannerFailureSubmission",
-    "description": "Runtime-synthesized planner failure (Python `PlannerFailureSubmission`).",
+    "description": "Runtime-synthesized planner failure (Rust `PlannerFailureSubmission`).",
     "type": "object",
     "required": [
       "attempt_id",
@@ -201,7 +201,7 @@ expression: schemas
     },
     "definitions": {
       "PlannerFailReason": {
-        "description": "Why a planner submission failed (Python `Literal[\"run_exhausted\"]`). Distinct from `AttemptFailReason` (spec §6.10).",
+        "description": "Why a planner submission failed (Rust `Literal[\"run_exhausted\"]`). Distinct from `AttemptFailReason` (spec §6.10).",
         "oneOf": [
           {
             "description": "The attempt's run budget was exhausted.",
@@ -217,7 +217,7 @@ expression: schemas
   "GeneratorSubmission": {
     "$schema": "http://json-schema.org/draft-07/schema#",
     "title": "GeneratorSubmission",
-    "description": "Validated terminal outcome for one generator task (Python `GeneratorSubmission`).",
+    "description": "Validated terminal outcome for one generator task (Rust `GeneratorSubmission`).",
     "type": "object",
     "required": [
       "attempt_id",
@@ -255,7 +255,7 @@ expression: schemas
     },
     "definitions": {
       "TaskOutcomeStatus": {
-        "description": "Binary status of one execution outcome (Python `TaskOutcomeStatus`).",
+        "description": "Binary status of one execution outcome (Rust `TaskOutcomeStatus`).",
         "oneOf": [
           {
             "description": "The task completed successfully.",
@@ -278,7 +278,7 @@ expression: schemas
   "ReducerSubmission": {
     "$schema": "http://json-schema.org/draft-07/schema#",
     "title": "ReducerSubmission",
-    "description": "Validated terminal outcome for one reducer task (Python `ReducerSubmission`).",
+    "description": "Validated terminal outcome for one reducer task (Rust `ReducerSubmission`).",
     "type": "object",
     "required": [
       "attempt_id",
@@ -316,7 +316,7 @@ expression: schemas
     },
     "definitions": {
       "TaskOutcomeStatus": {
-        "description": "Binary status of one execution outcome (Python `TaskOutcomeStatus`).",
+        "description": "Binary status of one execution outcome (Rust `TaskOutcomeStatus`).",
         "oneOf": [
           {
             "description": "The task completed successfully.",
