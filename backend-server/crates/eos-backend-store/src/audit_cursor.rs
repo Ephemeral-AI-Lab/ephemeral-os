@@ -61,6 +61,26 @@ impl AuditCursorRepo {
         .await?;
         row.as_ref().map(row_to_cursor).transpose()
     }
+
+    /// Durable daemon-audit loss totals across all sandboxes: the summed
+    /// `dropped_count` and the number of sandboxes whose cursor recorded a
+    /// `lost_before_seq` boundary (an epoch reset or ring eviction).
+    ///
+    /// # Errors
+    /// [`StoreError`] on a query failure.
+    pub async fn loss_totals(&self) -> Result<(u64, u64), StoreError> {
+        let row = sqlx::query(
+            "SELECT \
+               CAST(COALESCE(SUM(dropped_count), 0) AS INTEGER) AS dropped, \
+               COUNT(CASE WHEN lost_before_seq IS NOT NULL THEN 1 END) AS with_loss \
+             FROM audit_cursor",
+        )
+        .fetch_one(&self.pool)
+        .await?;
+        let dropped: i64 = row.try_get("dropped")?;
+        let with_loss: i64 = row.try_get("with_loss")?;
+        Ok((dropped.max(0) as u64, with_loss.max(0) as u64))
+    }
 }
 
 fn row_to_cursor(row: &SqliteRow) -> Result<AuditCursor, StoreError> {

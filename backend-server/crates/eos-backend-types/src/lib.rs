@@ -27,3 +27,4 @@ pub use requests::{
     RunMeta, RunRecord, SandboxArgs, UserRequestDetail,
 };
 pub use sandboxes::{SandboxState, SandboxView};
+pub use stats::{AgentRunStat, CorrectnessStats, ObsLossStats, PerformanceStats};

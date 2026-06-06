@@ -186,9 +186,7 @@ async fn bounded_queue_overflow_drops_and_emits_a_visible_gap_marker() {
             serde_json::json!({ "type": "tool_execution_completed", "i": i }),
         );
     }
-    // One buffered, four dropped.
-    assert_eq!(bus.dropped_count(&request), 4);
-
+    // One buffered, four dropped — asserted below via the gap marker's count.
     // Close the queue and let the drainer flush the buffered record + the gap.
     drop(tx);
     let mut rows = Vec::new();

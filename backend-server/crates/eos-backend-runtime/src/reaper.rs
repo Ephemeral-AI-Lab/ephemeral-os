@@ -30,7 +30,7 @@ pub(crate) enum Disposition {
 
 /// Run finalizer: shares the manager, run-meta repo, and event bus with the
 /// launcher (all cheap `Arc`/pool clones over the same state).
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub(crate) struct Reaper {
     manager: Arc<SandboxManager>,
     run_meta: RunMetaRepo,

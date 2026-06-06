@@ -60,26 +60,6 @@ struct RunSlot {
     reason: Mutex<Option<String>>,
 }
 
-/// In-flight run index keyed by request id (cancellation slots only).
-#[derive(Debug, Default)]
-struct RunRegistry {
-    slots: Mutex<HashMap<RequestId, Arc<RunSlot>>>,
-}
-
-impl RunRegistry {
-    fn insert(&self, request_id: RequestId, slot: Arc<RunSlot>) {
-        self.slots.lock().insert(request_id, slot);
-    }
-
-    fn get(&self, request_id: &RequestId) -> Option<Arc<RunSlot>> {
-        self.slots.lock().get(request_id).cloned()
-    }
-
-    fn remove(&self, request_id: &RequestId) {
-        self.slots.lock().remove(request_id);
-    }
-}
-
 /// Shared launcher state behind an `Arc` so the spawned run task can drive it.
 struct LauncherInner {
     host: Arc<dyn RunHost>,
@@ -87,7 +67,9 @@ struct LauncherInner {
     run_meta: RunMetaRepo,
     event_bus: Arc<EventBus>,
     reaper: Reaper,
-    registry: RunRegistry,
+    /// In-flight runs keyed by request id, holding each run's cancellation slot.
+    /// Registered before the run task spawns so `cancel` can never miss it.
+    runs: Mutex<HashMap<RequestId, Arc<RunSlot>>>,
 }
 
 // `RunHost` has no `Debug` supertrait, so this cannot derive.
@@ -158,7 +140,7 @@ impl LauncherInner {
             disposition = work => disposition,
         };
         self.reaper.reap(&request_id, disposition).await;
-        self.registry.remove(&request_id);
+        self.runs.lock().remove(&request_id);
     }
 }
 
@@ -186,7 +168,7 @@ impl RunLauncher {
                 run_meta,
                 event_bus,
                 reaper,
-                registry: RunRegistry::default(),
+                runs: Mutex::new(HashMap::new()),
             }),
         }
     }
@@ -230,7 +212,7 @@ impl RunLauncher {
             reason: Mutex::new(None),
         });
         // Registered before spawn so `cancel` can never miss an in-flight run.
-        self.inner.registry.insert(request_id.clone(), slot.clone());
+        self.inner.runs.lock().insert(request_id.clone(), slot.clone());
 
         let sandbox_id = sandbox_args.and_then(|args| args.sandbox_id);
         let inner = self.inner.clone();
@@ -250,7 +232,7 @@ impl RunLauncher {
     /// [`CancelOutcome::NotFound`].
     #[must_use]
     pub fn cancel(&self, request_id: &RequestId, reason: impl Into<String>) -> CancelOutcome {
-        let Some(slot) = self.inner.registry.get(request_id) else {
+        let Some(slot) = self.inner.runs.lock().get(request_id).cloned() else {
             return CancelOutcome::NotFound;
         };
         // Reason before token so the finalizing task observes it.
