@@ -83,8 +83,13 @@ impl ToolExecutor for ExecCommand {
             (&ctx.command_session_supervisor, &result.command_session_id)
         {
             if result.is_running() {
-                port.register(session_id, sandbox_id, ctx.require_agent_run_id()?, &command)
-                    .await;
+                port.register(
+                    session_id,
+                    sandbox_id,
+                    ctx.require_agent_run_id()?,
+                    &command,
+                )
+                .await;
             }
         }
         Ok(command_tool_result(&result))

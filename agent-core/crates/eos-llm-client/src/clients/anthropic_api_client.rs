@@ -35,27 +35,51 @@ use crate::types::{LlmRequest, ToolChoice, ToolSpec, UsageSnapshot};
 const ANTHROPIC_VERSION: &str = "2023-06-01";
 /// The Messages streaming endpoint path.
 const MESSAGES_PATH: &str = "/v1/messages";
+/// The Messages beta endpoint path used by OAuth-backed Claude Code transport.
+const MESSAGES_BETA_PATH: &str = "/v1/messages?beta=true";
 
 /// The Anthropic-native streaming client.
 #[derive(Debug)]
-pub struct AnthropicClient {
+pub struct AnthropicApiClient {
     http: reqwest::Client,
     endpoint: reqwest::Url,
     auth: Arc<Auth>,
     retry: Arc<RetryConfig>,
+    beta_header: Option<HeaderValue>,
 }
 
-impl AnthropicClient {
+impl AnthropicApiClient {
     /// Construct a client for `base_url` (e.g. `https://api.anthropic.com`).
     ///
     /// Returns the outer `Err` only on a malformed base url
     /// (`api-parse-dont-validate`).
     pub fn new(base_url: &str, auth: Auth, retry: Arc<RetryConfig>) -> Result<Self, ProviderError> {
+        Self::new_with_options(base_url, MESSAGES_PATH, auth, retry, None)
+    }
+
+    /// Construct a client for Claude coding-plan OAuth access tokens.
+    pub(crate) fn new_claude_coding_plan(
+        base_url: &str,
+        auth: Auth,
+        retry: Arc<RetryConfig>,
+        beta_header: HeaderValue,
+    ) -> Result<Self, ProviderError> {
+        Self::new_with_options(base_url, MESSAGES_BETA_PATH, auth, retry, Some(beta_header))
+    }
+
+    fn new_with_options(
+        base_url: &str,
+        path: &str,
+        auth: Auth,
+        retry: Arc<RetryConfig>,
+        beta_header: Option<HeaderValue>,
+    ) -> Result<Self, ProviderError> {
         Ok(Self {
             http: reqwest::Client::new(),
-            endpoint: build_endpoint(base_url, MESSAGES_PATH)?,
+            endpoint: build_endpoint(base_url, path)?,
             auth: Arc::new(auth),
             retry,
+            beta_header,
         })
     }
 
@@ -67,13 +91,16 @@ impl AnthropicClient {
             HeaderName::from_static("anthropic-version"),
             HeaderValue::from_static(ANTHROPIC_VERSION),
         );
+        if let Some(beta) = &self.beta_header {
+            headers.insert(HeaderName::from_static("anthropic-beta"), beta.clone());
+        }
         self.auth.apply(&mut headers)?;
         Ok(headers)
     }
 }
 
 #[async_trait::async_trait]
-impl LlmClient for AnthropicClient {
+impl LlmClient for AnthropicApiClient {
     async fn stream_message(&self, request: LlmRequest) -> Result<LlmStream, ProviderError> {
         // Synchronous build — the only outer-`Err` path (§5).
         let body = serde_json::to_vec(&encode_anthropic_body(&request)).map_err(|e| {
@@ -353,7 +380,8 @@ fn encode_anthropic_tool_choice(choice: &ToolChoice) -> Value {
 }
 
 /// Decode an Anthropic SSE frame stream to events for cross-provider
-/// substitutability tests (AC-llm-client-10, exercised from `openai.rs`).
+/// substitutability tests (AC-llm-client-10, exercised from
+/// `openai_api_client.rs`).
 #[cfg(test)]
 #[allow(clippy::unwrap_used)]
 pub(crate) async fn decode_anthropic_for_test(
@@ -390,7 +418,7 @@ mod tests {
     #[tokio::test]
     async fn decodes_anthropic_sse_fixture() {
         let events: Vec<LlmStreamEvent> =
-            decode_fixture(include_str!("../tests/fixtures/anthropic/full.sse"))
+            decode_fixture(include_str!("../../tests/fixtures/anthropic/full.sse"))
                 .await
                 .into_iter()
                 .map(Result::unwrap)
@@ -570,13 +598,36 @@ mod tests {
         );
     }
 
+    #[test]
+    fn claude_coding_plan_uses_oauth_beta_endpoint_and_headers() {
+        let client = AnthropicApiClient::new_claude_coding_plan(
+            "https://api.anthropic.com",
+            Auth::bearer("oauth-token"),
+            Arc::new(RetryConfig::default()),
+            HeaderValue::from_static("oauth-2025-04-20"),
+        )
+        .unwrap();
+
+        assert_eq!(
+            client.endpoint.as_str(),
+            "https://api.anthropic.com/v1/messages?beta=true"
+        );
+        let headers = client.build_headers().unwrap();
+        assert_eq!(headers.get("anthropic-beta").unwrap(), "oauth-2025-04-20");
+        assert_eq!(
+            headers.get("authorization").unwrap().to_str().unwrap(),
+            "Bearer oauth-token"
+        );
+        assert!(headers.get("x-api-key").is_none());
+    }
+
     // AC-llm-client-05: a forced SSE parse failure logs without echoing frame
     // content (no secrets/system_prompt/tool input in the log fields).
     #[tokio::test]
     #[traced_test]
     async fn parse_error_log_omits_secrets() {
         let results =
-            decode_fixture(include_str!("../tests/fixtures/anthropic/malformed.sse")).await;
+            decode_fixture(include_str!("../../tests/fixtures/anthropic/malformed.sse")).await;
         // The stream ends with exactly one Decode error item that preserves the
         // captured request-id (§8.8).
         let last = results.last().expect("at least one item");

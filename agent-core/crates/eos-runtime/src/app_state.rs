@@ -12,7 +12,9 @@ use anyhow::{Context, Result};
 use async_trait::async_trait;
 use eos_agent_def::{load_agents_tree, AgentRegistry, AgentRegistryBuilder};
 use eos_audit::{AuditSink, BufferedAuditShutdown, BufferedJsonlSink, NoopAuditSink};
-use eos_config::{AttemptConfig, DatabaseConfig, DatabaseUrl, RetryConfig};
+use eos_config::{
+    DatabaseConfig, DatabaseUrl, ProviderKind, ProvidersConfig, SecretConfigValue, WorkflowConfig,
+};
 use eos_db::Database;
 use eos_llm_client::{Auth, LlmClient, LlmRequest, LlmStream, ProviderError};
 use eos_sandbox_api::SandboxTransport;
@@ -78,9 +80,9 @@ impl RequestProvisioner for HostProvisioner {
     }
 }
 
-/// Placeholder client used when no provider credentials are configured and no
+/// Placeholder client used when no provider is selected and no
 /// `event_source_factory` is set. Streaming always errors; production wires a
-/// real provider from env, and tests set `event_source_factory`.
+/// real provider from `providers.active`, and tests set `event_source_factory`.
 #[derive(Debug, Default)]
 struct UnconfiguredLlmClient;
 
@@ -88,7 +90,7 @@ struct UnconfiguredLlmClient;
 impl LlmClient for UnconfiguredLlmClient {
     async fn stream_message(&self, _request: LlmRequest) -> Result<LlmStream, ProviderError> {
         Err(ProviderError::transport(
-            "no llm provider configured (set an api key or inject an event_source_factory)",
+            "no llm provider configured (set providers.active in local.yml or inject an event_source_factory)",
         ))
     }
 }
@@ -98,7 +100,7 @@ impl LlmClient for UnconfiguredLlmClient {
 #[derive(Clone)]
 #[non_exhaustive]
 pub struct AppState {
-    pub(crate) attempt: AttemptConfig,
+    pub(crate) workflow: WorkflowConfig,
     pub(crate) cwd: String,
     pub(crate) repo_root: String,
     pub(crate) task_store: Arc<dyn TaskStore>,
@@ -173,6 +175,8 @@ pub struct AppStateBuilder {
     database_url: Option<String>,
     cwd: Option<String>,
     llm_client: Option<Arc<dyn LlmClient>>,
+    providers_config: Option<ProvidersConfig>,
+    workflow_config: Option<WorkflowConfig>,
     event_source_factory: Option<EventSourceFactory>,
     audit: Option<Arc<dyn AuditSink>>,
     audit_path: Option<PathBuf>,
@@ -213,6 +217,19 @@ impl AppStateBuilder {
     /// Inject an LLM client (an unconfigured placeholder by default).
     pub fn llm_client(mut self, client: Arc<dyn LlmClient>) -> Self {
         self.llm_client = Some(client);
+        self
+    }
+
+    /// Inject provider config used to construct the default LLM client.
+    pub fn providers_config(mut self, config: ProvidersConfig) -> Self {
+        self.providers_config = Some(config);
+        self
+    }
+
+    /// Inject workflow config used to wire attempt and planner-depth runtime
+    /// tunables.
+    pub fn workflow_config(mut self, config: WorkflowConfig) -> Self {
+        self.workflow_config = Some(config);
         self
     }
 
@@ -349,7 +366,32 @@ impl AppStateBuilder {
             }
         }
 
-        let llm_client: Arc<dyn LlmClient> = self.llm_client.unwrap_or_else(default_llm_client);
+        let config_doc = eos_config::load().context("loading runtime config")?;
+        let workflow_config = match self.workflow_config {
+            Some(config) => config,
+            None => config_doc
+                .section::<WorkflowConfig>("workflow")
+                .context("loading workflow config")?,
+        };
+        workflow_config
+            .validate()
+            .context("validating workflow config")?;
+
+        let llm_client: Arc<dyn LlmClient> = match self.llm_client {
+            Some(client) => client,
+            None => {
+                let providers_config = match self.providers_config {
+                    Some(config) => config,
+                    None => config_doc
+                        .section::<ProvidersConfig>("providers")
+                        .context("loading providers config")?,
+                };
+                providers_config
+                    .validate()
+                    .context("validating providers config")?;
+                default_llm_client(&providers_config).context("configuring llm provider")?
+            }
+        };
 
         // Audit: explicit sink wins; else a buffered JSONL sink when a path is
         // configured; else a no-op sink.
@@ -375,8 +417,15 @@ impl AppStateBuilder {
         };
 
         let tool_config = match self.tool_config {
-            Some(config) => config,
-            None => Arc::new(build_tool_config(self.tools_root.as_deref())?),
+            Some(config) => Arc::new(
+                (*config)
+                    .clone()
+                    .with_workflow_max_depth(workflow_config.max_depth),
+            ),
+            None => Arc::new(
+                build_tool_config(self.tools_root.as_deref())?
+                    .with_workflow_max_depth(workflow_config.max_depth),
+            ),
         };
 
         let mut tool_registry = build_default_registry(&tool_config, &CallerScope::default());
@@ -413,7 +462,7 @@ impl AppStateBuilder {
         });
 
         Ok(AppState {
-            attempt: AttemptConfig::default(),
+            workflow: workflow_config,
             cwd,
             repo_root,
             task_store: database.tasks(),
@@ -437,30 +486,77 @@ impl AppStateBuilder {
     }
 }
 
-/// Build the LLM client from env credentials, falling back to an unconfigured
-/// placeholder (Phase-6 tests inject an `event_source_factory`; real provider
-/// selection is a cutover concern).
-fn default_llm_client() -> Arc<dyn LlmClient> {
-    use eos_llm_client::{AnthropicClient, OpenAiClient};
-    let retry = Arc::new(RetryConfig::default());
-    if let Ok(key) = std::env::var("ANTHROPIC_API_KEY") {
-        if let Ok(client) =
-            AnthropicClient::new("https://api.anthropic.com", Auth::api_key(key), retry)
-        {
-            return Arc::new(client);
+/// Build the LLM client from the loaded `providers` config.
+fn default_llm_client(providers: &ProvidersConfig) -> Result<Arc<dyn LlmClient>, ProviderError> {
+    use eos_llm_client::{
+        AnthropicApiClient, ClaudeCodingPlanClient, CodexCodingPlanClient, OpenAiApiClient,
+    };
+
+    let retry = Arc::new(providers.retry.clone());
+    match providers.active {
+        ProviderKind::Unconfigured => Ok(Arc::new(UnconfiguredLlmClient)),
+        ProviderKind::OpenAiApi => {
+            let key = provider_secret(
+                "providers.openai_api.api_key",
+                providers.openai_api.api_key.as_ref(),
+            )?;
+            Ok(Arc::new(OpenAiApiClient::new(
+                &providers.openai_api.base_url,
+                Auth::bearer(key),
+                retry,
+            )?))
         }
-    } else if let Ok(key) = std::env::var("OPENAI_API_KEY") {
-        if let Ok(client) = OpenAiClient::new("https://api.openai.com", Auth::bearer(key), retry) {
-            return Arc::new(client);
+        ProviderKind::AnthropicApi => {
+            let key = provider_secret(
+                "providers.anthropic_api.api_key",
+                providers.anthropic_api.api_key.as_ref(),
+            )?;
+            Ok(Arc::new(AnthropicApiClient::new(
+                &providers.anthropic_api.base_url,
+                Auth::api_key(key),
+                retry,
+            )?))
         }
+        ProviderKind::CodexCodingPlan => {
+            let token = provider_secret(
+                "providers.codex_coding_plan.access_token",
+                providers.codex_coding_plan.access_token.as_ref(),
+            )?;
+            let auth = Auth::codex_access_token_from_jwt(token)?;
+            Ok(Arc::new(CodexCodingPlanClient::new(
+                &providers.codex_coding_plan.base_url,
+                auth,
+                retry,
+            )?))
+        }
+        ProviderKind::ClaudeCodingPlan => {
+            let token = provider_secret(
+                "providers.claude_coding_plan.access_token",
+                providers.claude_coding_plan.access_token.as_ref(),
+            )?;
+            Ok(Arc::new(ClaudeCodingPlanClient::new(
+                &providers.claude_coding_plan.base_url,
+                token,
+                retry,
+            )?))
+        }
+        _ => Err(ProviderError::request("unsupported providers.active value")),
     }
-    Arc::new(UnconfiguredLlmClient)
+}
+
+fn provider_secret<'a>(
+    field: &str,
+    value: Option<&'a SecretConfigValue>,
+) -> Result<&'a str, ProviderError> {
+    match value {
+        Some(value) if !value.is_empty() => Ok(value.expose_secret()),
+        _ => Err(ProviderError::request(format!("{field} is required"))),
+    }
 }
 
 fn seed_default_sandbox_provider(registry: &ProviderRegistry) -> Result<()> {
     let provider_kind = resolve_provider_kind();
-    let docker =
-        DockerProviderAdapter::connect().context("connecting docker sandbox provider")?;
+    let docker = DockerProviderAdapter::connect().context("connecting docker sandbox provider")?;
     registry.set_default(Arc::new(docker));
     tracing::info!(
         sandbox_provider = provider_kind.as_str(),

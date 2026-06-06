@@ -31,24 +31,65 @@ use crate::types::{LlmRequest, ToolChoice, ToolSpec, UsageSnapshot};
 
 /// The Responses streaming endpoint path.
 const RESPONSES_PATH: &str = "/v1/responses";
+/// The ChatGPT-backed Codex Responses endpoint path.
+const CODEX_RESPONSES_PATH: &str = "/responses";
 
 /// The `OpenAI` Responses streaming client.
 #[derive(Debug)]
-pub struct OpenAiClient {
+pub struct OpenAiApiClient {
     http: reqwest::Client,
     endpoint: reqwest::Url,
     auth: Arc<Auth>,
     retry: Arc<RetryConfig>,
+    request_dialect: OpenAiRequestDialect,
 }
 
-impl OpenAiClient {
+#[derive(Debug, Clone, Copy)]
+enum OpenAiRequestDialect {
+    PublicResponses,
+    CodexResponses,
+}
+
+impl OpenAiApiClient {
     /// Construct a client for `base_url` (e.g. `https://api.openai.com`).
     pub fn new(base_url: &str, auth: Auth, retry: Arc<RetryConfig>) -> Result<Self, ProviderError> {
+        Self::new_with_path(
+            base_url,
+            RESPONSES_PATH,
+            OpenAiRequestDialect::PublicResponses,
+            auth,
+            retry,
+        )
+    }
+
+    /// Construct a client for the ChatGPT-backed Codex endpoint.
+    pub(crate) fn new_codex_backend(
+        base_url: &str,
+        auth: Auth,
+        retry: Arc<RetryConfig>,
+    ) -> Result<Self, ProviderError> {
+        Self::new_with_path(
+            base_url,
+            CODEX_RESPONSES_PATH,
+            OpenAiRequestDialect::CodexResponses,
+            auth,
+            retry,
+        )
+    }
+
+    fn new_with_path(
+        base_url: &str,
+        path: &str,
+        request_dialect: OpenAiRequestDialect,
+        auth: Auth,
+        retry: Arc<RetryConfig>,
+    ) -> Result<Self, ProviderError> {
         Ok(Self {
             http: reqwest::Client::new(),
-            endpoint: build_endpoint(base_url, RESPONSES_PATH)?,
+            endpoint: build_endpoint(base_url, path)?,
             auth: Arc::new(auth),
             retry,
+            request_dialect,
         })
     }
 
@@ -62,11 +103,13 @@ impl OpenAiClient {
 }
 
 #[async_trait::async_trait]
-impl LlmClient for OpenAiClient {
+impl LlmClient for OpenAiApiClient {
     async fn stream_message(&self, request: LlmRequest) -> Result<LlmStream, ProviderError> {
-        let body = serde_json::to_vec(&encode_openai_body(&request)).map_err(|e| {
-            ProviderError::request(format!("request body serialization failed: {e}"))
-        })?;
+        let body = serde_json::to_vec(&encode_openai_body_with_dialect(
+            &request,
+            self.request_dialect,
+        ))
+        .map_err(|e| ProviderError::request(format!("request body serialization failed: {e}")))?;
         let body = Bytes::from(body);
         let headers = self.build_headers()?;
         let http = self.http.clone();
@@ -224,7 +267,12 @@ where
 }
 
 /// Encode an [`LlmRequest`] into an `OpenAI` `/v1/responses` request body.
+#[cfg(test)]
 pub(crate) fn encode_openai_body(request: &LlmRequest) -> Value {
+    encode_openai_body_with_dialect(request, OpenAiRequestDialect::PublicResponses)
+}
+
+fn encode_openai_body_with_dialect(request: &LlmRequest, dialect: OpenAiRequestDialect) -> Value {
     let input: Vec<Value> = request
         .messages
         .iter()
@@ -234,9 +282,14 @@ pub(crate) fn encode_openai_body(request: &LlmRequest) -> Value {
     let mut body = json!({
         "model": request.model,
         "input": input,
-        "max_output_tokens": request.max_tokens,
         "stream": true,
+        "store": false,
+        "parallel_tool_calls": false,
+        "include": [],
     });
+    if matches!(dialect, OpenAiRequestDialect::PublicResponses) {
+        body["max_output_tokens"] = json!(request.max_tokens);
+    }
     if let Some(system) = &request.system_prompt {
         body["instructions"] = json!(system);
     }
@@ -244,7 +297,7 @@ pub(crate) fn encode_openai_body(request: &LlmRequest) -> Value {
         body["tools"] = Value::Array(request.tools.iter().map(serialize_openai_tool).collect());
     }
     if let Some(choice) = &request.tool_choice {
-        body["tool_choice"] = encode_openai_tool_choice(choice);
+        body["tool_choice"] = encode_openai_tool_choice(choice, dialect);
     }
     body
 }
@@ -317,11 +370,14 @@ fn serialize_openai_tool(spec: &ToolSpec) -> Value {
     tool
 }
 
-fn encode_openai_tool_choice(choice: &ToolChoice) -> Value {
+fn encode_openai_tool_choice(choice: &ToolChoice, dialect: OpenAiRequestDialect) -> Value {
     match choice {
         ToolChoice::Auto => json!("auto"),
         ToolChoice::Any => json!("required"),
-        ToolChoice::Tool { name } => json!({ "type": "function", "name": name }),
+        ToolChoice::Tool { name } => match dialect {
+            OpenAiRequestDialect::PublicResponses => json!({ "type": "function", "name": name }),
+            OpenAiRequestDialect::CodexResponses => json!("required"),
+        },
     }
 }
 
@@ -358,7 +414,7 @@ mod tests {
     // Anthropic path (LSP substitutability).
     #[tokio::test]
     async fn decodes_openai_responses_fixture() {
-        let events = decode_fixture(include_str!("../tests/fixtures/openai/full.sse")).await;
+        let events = decode_fixture(include_str!("../../tests/fixtures/openai/full.sse")).await;
 
         assert_eq!(
             events[0],
@@ -393,10 +449,14 @@ mod tests {
         // Variant sequence matches the Anthropic text+tool path.
         let openai_seq: Vec<_> = events.iter().map(discriminant).collect();
         let anthropic_events: Vec<LlmStreamEvent> = {
-            let bytes =
-                Bytes::from(include_str!("../tests/fixtures/anthropic/text_tool.sse").to_owned());
+            let bytes = Bytes::from(
+                include_str!("../../tests/fixtures/anthropic/text_tool.sse").to_owned(),
+            );
             let byte_stream = futures::stream::iter(vec![Ok::<Bytes, ProviderError>(bytes)]);
-            crate::anthropic::decode_anthropic_for_test(frame_stream(byte_stream)).await
+            crate::clients::anthropic_api_client::decode_anthropic_for_test(frame_stream(
+                byte_stream,
+            ))
+            .await
         };
         let anthropic_seq: Vec<_> = anthropic_events.iter().map(discriminant).collect();
         assert_eq!(
@@ -431,5 +491,31 @@ mod tests {
             "openai maps output_schema"
         );
         assert_eq!(body["stream"], json!(true));
+        assert_eq!(body["store"], json!(false));
+        assert_eq!(body["parallel_tool_calls"], json!(false));
+        assert_eq!(body["include"], json!([]));
+        assert_eq!(body["max_output_tokens"], json!(request.max_tokens));
+    }
+
+    #[test]
+    fn encode_codex_response_body_uses_chatgpt_backend_shape() {
+        let mut input_schema = JsonObject::new();
+        input_schema.insert("type".into(), json!("object"));
+        let spec = ToolSpec::new("smoke", "Smoke tool", input_schema, None);
+
+        let request = LlmRequest::builder("gpt-5.5")
+            .tools(vec![spec])
+            .tool_choice(ToolChoice::Tool {
+                name: "smoke".to_owned(),
+            })
+            .max_tokens(256)
+            .build();
+        let body = encode_openai_body_with_dialect(&request, OpenAiRequestDialect::CodexResponses);
+
+        assert!(body.get("max_output_tokens").is_none());
+        assert_eq!(body["store"], json!(false));
+        assert_eq!(body["tool_choice"], json!("required"));
+        assert_eq!(body["parallel_tool_calls"], json!(false));
+        assert_eq!(body["include"], json!([]));
     }
 }

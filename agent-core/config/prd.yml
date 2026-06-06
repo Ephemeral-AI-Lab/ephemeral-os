@@ -1,23 +1,25 @@
-# agent-core/config/prd.yml — committed baseline configuration (no secrets).
+# agent-core/config/prd.yml — committed baseline placeholder (no secrets).
 #
-# Loaded first by `eos_config::load()`. A gitignored `agent-core/config/local.yml`
-# is merged over it (objects recurse, scalars/arrays replace) for secrets and
-# per-deployment overrides. There is no environment-variable or CLI selection:
-# config is chosen by file.
-
-database:
-  url: "sqlite:///./.ephemeralos/ephemeralos.db"
-  pool_size: 5
-  busy_timeout_ms: 5000
-  wal: true
-  foreign_keys: true
+# Runtime values have been moved to the gitignored agent-core/config/local.yml.
+# `eos_config::load()` still loads this path first, then merges local.yml over it.
 
 providers:
+  active: unconfigured
   retry:
     max_retries: 3
     base_delay_s: 1.0
     max_delay_s: 30.0
     status_codes: [429, 500, 502, 503, 529]
+  openai_api:
+    base_url: https://api.openai.com
+  anthropic_api:
+    base_url: https://api.anthropic.com
+  codex_coding_plan:
+    base_url: https://chatgpt.com/backend-api/codex
+  claude_coding_plan:
+    base_url: https://api.anthropic.com
 
-attempt:
-  max_concurrent_task_runs: 8
+workflow:
+  max-depth: 2
+  attempt:
+    max_concurrent_task_runs: 8

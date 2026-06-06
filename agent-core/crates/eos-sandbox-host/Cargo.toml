@@ -11,7 +11,6 @@ docker = []
 
 [dependencies]
 eos-sandbox-api.workspace = true
-eos-config.workspace = true
 # Direct edge: this crate names eos_types items (SandboxId, JsonObject, Clock,
 # CoreError, RequestId, InvocationId) in its own signatures — see
 # impl-eos-sandbox-host.md §2. eos-sandbox-api does not re-export them.

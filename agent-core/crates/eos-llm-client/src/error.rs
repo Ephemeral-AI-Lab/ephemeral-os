@@ -1,29 +1,24 @@
 //! The single `thiserror` error enum for the provider boundary.
 //!
-//! Per spec-conventions §8 this crate owns exactly one error type. The Python
-//! `EphemeralOSApiError` subclass hierarchy (`AuthenticationFailure`,
-//! `RateLimitFailure`, `RequestFailure`) collapses into one [`ProviderError`]
-//! struct carrying a [`ProviderErrorKind`], so callers branch on the typed kind
-//! without re-deriving the category by message-substring matching
-//! (`providers/errors.py`, `anthropic_native.py::_translate_error`/`_categorize`).
+//! This crate owns exactly one provider error type. Callers branch on
+//! [`ProviderErrorKind`] instead of re-deriving the category from message text.
 
 /// The category of a provider failure.
 ///
 /// Derived from HTTP status by [`ProviderError::from_status`]. `Transport` and
-/// `Decode` are SDK-free additions with no Python source: they let the retry
-/// gate (`retry.rs`) treat a connect/timeout failure as retryable and a stream
-/// parse failure as fatal, without inspecting a status code that does not exist
-/// on those paths.
+/// `Decode` let the retry gate (`retry.rs`) treat connect/timeout failures as
+/// retryable and stream parse failures as fatal, without inventing a status code
+/// for paths that do not have one.
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[non_exhaustive]
 pub enum ProviderErrorKind {
-    /// 401/403 — credentials rejected (`AuthenticationFailure`).
+    /// 401/403 — credentials rejected.
     Authentication,
-    /// 429 — upstream rate limit (`RateLimitFailure`).
+    /// 429 — upstream rate limit.
     RateLimit,
     /// 500/502/503/529 — transient upstream server failure.
     Server,
-    /// Other HTTP / generic request failure (`RequestFailure`).
+    /// Other HTTP / generic request failure.
     Request,
     /// `reqwest` connect/timeout — no HTTP status.
     Transport,
@@ -34,9 +29,8 @@ pub enum ProviderErrorKind {
 /// A normalized upstream provider failure.
 ///
 /// `request_id` is the provider's opaque HTTP `request-id`/`x-request-id` header
-/// (`errors.py::EphemeralOSApiError.request_id`), **not** the internal
-/// `eos_types::RequestId`. It is captured before the response body is consumed
-/// so it survives the streaming error path.
+/// **not** the internal `eos_types::RequestId`. It is captured before the
+/// response body is consumed so it survives the streaming error path.
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
 #[error("{kind:?} provider error (status {status_code:?}, request {request_id:?}): {message}")]
 #[non_exhaustive]
@@ -55,10 +49,8 @@ impl ProviderError {
     /// Map an HTTP status to a [`ProviderError`], preserving `status_code` and
     /// `request_id`.
     ///
-    /// Combines `_translate_error` (401/403→`Authentication`, 429→`RateLimit`,
-    /// else→`Request`) with `_categorize`'s 5xx grouping
-    /// ({500,502,503,529}→`Server`). A 5xx outside that set (e.g. 504) maps to
-    /// `Request`, matching the Python `unknown`/`RequestFailure` fall-through.
+    /// Maps 401/403 to `Authentication`, 429 to `RateLimit`, selected 5xx
+    /// statuses to `Server`, and all other HTTP statuses to `Request`.
     #[must_use]
     pub fn from_status(
         status: u16,

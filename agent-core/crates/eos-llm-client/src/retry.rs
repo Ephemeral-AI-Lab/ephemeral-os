@@ -1,14 +1,12 @@
 //! The visible-output retry gate.
 //!
-//! Source: `anthropic_native.py::stream_message` retry loop, unified onto
-//! `eos_config::RetryConfig` (the crate keeps no local retry constants —
-//! GC-eos-config-04). [`retry_stream`] is an **outer** generator that re-invokes
-//! a per-attempt stream factory across retries while tracking a single
+//! The retry policy is unified onto `eos_config::RetryConfig`; this crate keeps
+//! no local retry constants. [`retry_stream`] is an outer generator that
+//! re-invokes a per-attempt stream factory across retries while tracking a single
 //! `emitted_visible` flag: once any visible event (`AssistantTextDelta` /
 //! `ReasoningDelta` / `ToolUseDelta`) is forwarded, a later failure fails fast
-//! (re-running would duplicate text deltas and double-dispatch `tool_use_id`s
-//! downstream — plan §"API Client Layer"). The Python refresh-on-401 retry is
-//! dropped with the OAuth strategy.
+//! because re-running would duplicate text deltas and double-dispatch
+//! `tool_use_id`s downstream.
 
 use std::time::Duration;
 
@@ -107,7 +105,7 @@ fn is_visible(event: &LlmStreamEvent) -> bool {
     )
 }
 
-/// Sleep `min(base_delay_s * 2^attempt, max_delay_s)` (Python parity).
+/// Sleep `min(base_delay_s * 2^attempt, max_delay_s)`.
 async fn backoff(cfg: &RetryConfig, attempt: u32) {
     let delay = (cfg.base_delay_s * 2f64.powi(attempt as i32)).min(cfg.max_delay_s);
     // Fallible construction: a non-finite or overflowing delay (reachable from an

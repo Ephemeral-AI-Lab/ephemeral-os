@@ -28,6 +28,12 @@ pub enum ConfigError {
         /// The range constraint that was violated (e.g. `must be >= 1`).
         detail: String,
     },
+    /// A required config value is absent or empty.
+    #[error("config value '{field}' is required")]
+    MissingValue {
+        /// Dotted config path of the missing value.
+        field: String,
+    },
     /// A config file could not be read from disk.
     #[error("failed to read config file")]
     ReadFile(#[source] std::io::Error),

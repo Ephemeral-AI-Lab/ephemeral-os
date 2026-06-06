@@ -1,9 +1,7 @@
 //! Neutral request-side value types: token usage, the model-facing tool
 //! declaration, the tool-choice control, and the request itself.
 //!
-//! Source: `providers/types.py` (`UsageSnapshot`, `MessageRequest`). The
-//! provider-specific wire projection of these types lives in `anthropic.rs` /
-//! `openai.rs`, never here (GC-llm-client-02).
+//! Provider-specific wire projection lives under `clients/`, never here.
 
 use eos_types::JsonObject;
 use schemars::JsonSchema;
@@ -13,8 +11,6 @@ use crate::message::Message;
 
 /// Token usage reported by a model provider.
 ///
-/// Source: `types.py::UsageSnapshot`. The Python `total_tokens` `@property`
-/// becomes [`UsageSnapshot::total_tokens`] (`name-no-get-prefix`).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize, JsonSchema)]
 pub struct UsageSnapshot {
     /// Prompt tokens consumed.
@@ -33,9 +29,9 @@ impl UsageSnapshot {
 
 /// A neutral tool declaration sent to the model.
 ///
-/// Owned here (anchor §5a); `eos-tools` depends on this crate to author it from
-/// `schemars`-generated input/output schemas. The provider encoders project it:
-/// Anthropic drops `output_schema`, `OpenAI` maps it (GC-llm-client-02).
+/// Owned here; `eos-tools` depends on this crate to author it from
+/// `schemars`-generated input/output schemas. The provider encoders project it
+/// into each upstream wire shape.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[non_exhaustive]
 pub struct ToolSpec {
@@ -71,8 +67,7 @@ impl ToolSpec {
 
 /// How the model should choose among the offered tools.
 ///
-/// Replaces the raw `tool_choice: dict` (`type-no-stringly`). The per-provider
-/// wire shape is produced by the provider encoders.
+/// The per-provider wire shape is produced by the provider encoders.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum ToolChoice {

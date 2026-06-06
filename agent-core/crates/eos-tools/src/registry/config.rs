@@ -94,6 +94,23 @@ impl ToolConfigSet {
             .get(&name)
             .expect("ToolConfigSet validated at load: every ToolName is present")
     }
+
+    /// Return a config set whose planner-deferral depth hooks use the workflow
+    /// runtime depth bound.
+    #[must_use]
+    pub fn with_workflow_max_depth(mut self, max_depth: u32) -> Self {
+        for config in self.configs.values_mut() {
+            for hook in &mut config.hooks {
+                if let Hook::DisallowNestedPlannerDeferral {
+                    max_depth: depth, ..
+                } = hook
+                {
+                    *depth = max_depth;
+                }
+            }
+        }
+        self
+    }
 }
 
 /// A failure loading or validating the tool config tree.
@@ -506,6 +523,27 @@ mod tests {
                 tool: name,
                 max_depth: DEFAULT_MAX_WORKFLOW_DEPTH,
             }
+        );
+    }
+
+    #[test]
+    fn workflow_max_depth_overrides_deferral_hooks() {
+        let cfg = parse_tool_config(
+            ToolName::SubmitPlannerOutcome,
+            "---\nintent: read_only\nterminal: true\nhooks: [{disallow_nested_planner_deferral: {max_depth: 1}}]\n---\nSubmit plan.\n",
+        )
+        .unwrap();
+        let set = ToolConfigSet {
+            configs: HashMap::from([(ToolName::SubmitPlannerOutcome, cfg)]),
+        }
+        .with_workflow_max_depth(2);
+
+        assert_eq!(
+            set.get(ToolName::SubmitPlannerOutcome).hooks,
+            vec![Hook::DisallowNestedPlannerDeferral {
+                tool: ToolName::SubmitPlannerOutcome,
+                max_depth: 2,
+            }]
         );
     }
 }

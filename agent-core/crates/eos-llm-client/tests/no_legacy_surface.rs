@@ -1,34 +1,40 @@
 //! AC-llm-client-09: the crate must not port the dropped legacy surface.
 //!
-//! Asserts (a) no `src/*.rs` source mentions a `coding_plan`, `class_path`, or
+//! Asserts (a) no `src/**/*.rs` source mentions a `class_path` or
 //! credential-store symbol, and (b) `Cargo.toml` pulls in no provider SDK. These
 //! are the absence guarantees behind GC-llm-client-05 (anchor §2): no
-//! coding-plan clients, no `class_path` importlib dispatch, no OAuth
-//! credential-store strategy, and direct `reqwest` only.
+//! `class_path` importlib dispatch, no OAuth credential-store strategy, and
+//! direct `reqwest` only.
 
 use std::fs;
 use std::path::Path;
 
 /// Lowercase symbols that must never appear in this crate's source.
-const FORBIDDEN_SYMBOLS: &[&str] = &["coding_plan", "class_path", "keychain"];
+const FORBIDDEN_SYMBOLS: &[&str] = &["class_path", "keychain"];
 
 /// Provider SDK crate names that must never appear as dependencies.
 const FORBIDDEN_DEPS: &[&str] = &["anthropic", "async-openai", "async_openai"];
 
 fn read_rust_sources(dir: &Path) -> Vec<(String, String)> {
     let mut out = Vec::new();
+    read_rust_sources_into(dir, dir, &mut out);
+    out
+}
+
+fn read_rust_sources_into(root: &Path, dir: &Path, out: &mut Vec<(String, String)>) {
     for entry in fs::read_dir(dir).expect("read src dir") {
         let path = entry.expect("dir entry").path();
-        if path.extension().is_some_and(|ext| ext == "rs") {
+        if path.is_dir() {
+            read_rust_sources_into(root, &path, out);
+        } else if path.extension().is_some_and(|ext| ext == "rs") {
             let name = path
-                .file_name()
-                .expect("source path has a file name")
-                .to_string_lossy()
-                .into_owned();
+                .strip_prefix(root)
+                .expect("source is under src root")
+                .display()
+                .to_string();
             out.push((name, fs::read_to_string(&path).expect("read source")));
         }
     }
-    out
 }
 
 #[test]

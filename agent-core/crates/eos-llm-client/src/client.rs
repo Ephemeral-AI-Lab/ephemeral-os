@@ -25,8 +25,10 @@ pub type LlmStream = Pin<Box<dyn Stream<Item = Result<LlmStreamEvent, ProviderEr
 
 /// The provider-neutral streaming client seam.
 ///
-/// Implementors: `AnthropicClient`, `OpenAiClient`, and test mocks. Every event
-/// is a neutral [`LlmStreamEvent`], so the implementors are substitutable (LSP).
+/// Implementors: `AnthropicApiClient`, `OpenAiApiClient`,
+/// `CodexCodingPlanClient`, `ClaudeCodingPlanClient`, and test mocks. Every
+/// event is a neutral [`LlmStreamEvent`], so the implementors are substitutable
+/// (LSP).
 #[async_trait::async_trait]
 pub trait LlmClient: Send + Sync {
     /// Open a streaming model invocation.
@@ -73,7 +75,7 @@ pub(crate) fn error_detail(body: &str) -> String {
 /// consumed (§8.8), map a non-2xx status, stamp the request-id onto mid-stream
 /// transport errors, then decode the SSE frames via the provider-specific
 /// `decode` closure. This is plumbing, not projection: the per-provider encode
-/// and SSE→event mapping stay in `anthropic.rs`/`openai.rs`.
+/// and SSE→event mapping stay under `clients/`.
 pub(crate) async fn open_stream<D, R>(
     http: reqwest::Client,
     url: reqwest::Url,

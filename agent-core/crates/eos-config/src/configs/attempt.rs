@@ -2,8 +2,8 @@
 //! in an Attempt's RUN stage.
 //!
 //! `eos-workflow` has no `eos-config` edge, so the value does not flow directly:
-//! `eos-runtime` reads `attempt.max_concurrent_task_runs` and injects it into the
-//! per-attempt deps as a plain `usize`.
+//! `eos-runtime` reads `workflow.attempt.max_concurrent_task_runs` and injects it
+//! into the per-attempt deps as a plain `usize`.
 
 use serde::{Deserialize, Serialize};
 
@@ -33,9 +33,13 @@ impl AttemptConfig {
     /// # Errors
     /// Returns [`ConfigError::OutOfRange`] when `max_concurrent_task_runs < 1`.
     pub fn validate(&self) -> Result<(), ConfigError> {
+        self.validate_with_field("attempt.max_concurrent_task_runs")
+    }
+
+    pub(crate) fn validate_with_field(&self, field: &str) -> Result<(), ConfigError> {
         if self.max_concurrent_task_runs < 1 {
             return Err(ConfigError::OutOfRange {
-                field: "attempt.max_concurrent_task_runs".to_owned(),
+                field: field.to_owned(),
                 detail: "must be >= 1".to_owned(),
             });
         }

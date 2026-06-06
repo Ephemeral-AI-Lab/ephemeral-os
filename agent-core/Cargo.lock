@@ -582,6 +582,7 @@ version = "0.1.0"
 dependencies = [
  "async-stream",
  "async-trait",
+ "base64 0.22.1",
  "bytes",
  "eos-config",
  "eos-types",
@@ -684,7 +685,6 @@ dependencies = [
  "async-trait",
  "bollard",
  "bytes",
- "eos-config",
  "eos-protocol",
  "eos-sandbox-api",
  "eos-types",

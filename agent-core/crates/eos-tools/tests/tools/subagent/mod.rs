@@ -84,7 +84,12 @@ impl BackgroundSupervisorPort for FakeBackgroundSupervisor {
         }
     }
 
-    async fn register_workflow(&self, _agent_run_id: &AgentRunId, _workflow: &StartedWorkflowHandle) {}
+    async fn register_workflow(
+        &self,
+        _agent_run_id: &AgentRunId,
+        _workflow: &StartedWorkflowHandle,
+    ) {
+    }
 
     async fn cancel_workflow_record(
         &self,

@@ -9,20 +9,22 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use eos_agent_def::{AgentDefinition, AgentRegistry, AgentRole};
+use eos_config::WorkflowConfig;
 use eos_engine::{EngineError, EngineStream, EventSource, StreamEvent};
 use eos_llm_client::{ContentBlock, LlmRequest};
 use eos_state::{RequestStatus, TaskRole, TaskStatus, WorkflowStatus};
+use eos_tools::{Hook, ToolName};
 use eos_types::RequestId;
 use serde_json::json;
 
-use eos_testkit::{
-    agent_def, factory_by_agent, factory_from, factory_root_blocks_after, test_tools_root,
-    tool_use_turn,
-};
 use crate::app_state::support::build_test_state;
 use crate::app_state::EventSourceFactory;
 use crate::entry::root_task_id_for;
 use crate::{run_request, AppState};
+use eos_testkit::{
+    agent_def, factory_by_agent, factory_from, factory_root_blocks_after, test_tools_root,
+    tool_use_turn,
+};
 
 fn root_agent() -> AgentDefinition {
     agent_def(
@@ -141,6 +143,33 @@ async fn missing_model_registry_does_not_fail_startup() {
         state.is_ok(),
         "missing model registry json must be non-fatal"
     );
+}
+
+#[tokio::test]
+async fn workflow_config_wires_attempt_and_planner_depth() {
+    let dir = tempfile::tempdir().unwrap();
+    let mut workflow = WorkflowConfig::default();
+    workflow.max_depth = 3;
+    workflow.attempt.max_concurrent_task_runs = 5;
+
+    let state = AppState::builder()
+        .database_url(sqlite_url(dir.path()))
+        .tools_root(test_tools_root())
+        .workflow_config(workflow)
+        .build()
+        .await
+        .unwrap();
+
+    assert_eq!(state.workflow.max_depth, 3);
+    assert_eq!(state.workflow.attempt.max_concurrent_task_runs, 5);
+    assert!(state
+        .tool_config
+        .get(ToolName::SubmitPlannerOutcome)
+        .hooks
+        .contains(&Hook::DisallowNestedPlannerDeferral {
+            tool: ToolName::SubmitPlannerOutcome,
+            max_depth: 3,
+        }));
 }
 
 // --- AC-eos-runtime-09: unknown profile tool fails startup (unless compat mode).
@@ -820,9 +849,15 @@ async fn root_delegates_waits_and_submits_terminal() {
     .await;
     let request_id = RequestId::new_v4();
     let root_task_id = root_task_id_for(&request_id);
-    run_request(&state, &request_id, "delegate then finish", Some("sb-1"), None)
-        .await
-        .unwrap();
+    run_request(
+        &state,
+        &request_id,
+        "delegate then finish",
+        Some("sb-1"),
+        None,
+    )
+    .await
+    .unwrap();
 
     let workflows = state
         .workflow_store
@@ -881,12 +916,7 @@ async fn provisioning_binds_request_sandbox() {
     run_request(&state, &auto_id, "task", None, None)
         .await
         .unwrap();
-    let request = state
-        .request_store
-        .get(&auto_id)
-        .await
-        .unwrap()
-        .unwrap();
+    let request = state.request_store.get(&auto_id).await.unwrap().unwrap();
     assert_eq!(
         request
             .sandbox_id
@@ -919,11 +949,11 @@ mod command_session_delivery {
     use eos_types::{JsonObject, RequestId, SandboxId};
     use serde_json::json;
 
-    use eos_testkit::{agent_def, text_turn, tool_use_turn, ScriptedSource};
     use crate::app_state::support::FakeProvisioner;
     use crate::app_state::EventSourceFactory;
     use crate::entry::root_task_id_for;
     use crate::{run_request, AppState};
+    use eos_testkit::{agent_def, text_turn, tool_use_turn, ScriptedSource};
 
     /// A fake daemon transport: `exec_command` starts a backgrounded session
     /// `cmd_1`, `collect_completed` parks a successful completion for it, and the
@@ -1126,11 +1156,11 @@ mod subagent_lifecycle {
     use eos_types::RequestId;
     use serde_json::json;
 
-    use eos_testkit::{agent_def, tool_use_turn, ScriptedSource};
     use crate::app_state::support::build_test_state;
     use crate::app_state::EventSourceFactory;
     use crate::entry::root_task_id_for;
     use crate::run_request;
+    use eos_testkit::{agent_def, tool_use_turn, ScriptedSource};
 
     fn stream_of(events: Vec<StreamEvent>) -> EngineStream {
         Box::pin(futures::stream::iter(events.into_iter().map(Ok)))

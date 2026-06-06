@@ -15,8 +15,8 @@
 //! connections, or spawn tasks.
 //!
 //! The section schemas ([`DatabaseConfig`], [`ProvidersConfig`],
-//! [`AttemptConfig`], …) live here for now; they migrate to their owning crates'
-//! `config.rs` as those crates stabilize.
+//! [`WorkflowConfig`], …) live here for now; they migrate to their owning
+//! crates' `config.rs` as those crates stabilize.
 #![forbid(unsafe_code)]
 #![warn(missing_docs)]
 
@@ -27,8 +27,9 @@ mod loader;
 mod markdown;
 
 pub use configs::{
-    AttemptConfig, DatabaseConfig, DatabaseUrl, ProvidersConfig, RetryConfig,
-    DEFAULT_SQLITE_DATABASE_URL,
+    AnthropicApiConfig, AttemptConfig, ClaudeCodingPlanConfig, CodexCodingPlanConfig,
+    DatabaseConfig, DatabaseUrl, OpenAiApiConfig, ProviderKind, ProvidersConfig, RetryConfig,
+    SecretConfigValue, WorkflowConfig, DEFAULT_SQLITE_DATABASE_URL, DEFAULT_WORKFLOW_MAX_DEPTH,
 };
 pub use document::ConfigDocument;
 pub use error::ConfigError;

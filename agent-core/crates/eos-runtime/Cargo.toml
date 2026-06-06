@@ -22,7 +22,6 @@ eos-audit.workspace = true
 anyhow.workspace = true
 tokio.workspace = true
 async-trait.workspace = true
-futures.workspace = true
 serde_json.workspace = true
 tracing.workspace = true
 tracing-subscriber.workspace = true
@@ -30,6 +29,7 @@ console-subscriber = { workspace = true, optional = true }
 
 [dev-dependencies]
 tempfile.workspace = true
+futures.workspace = true
 # Layer-A scripted-LLM/EventSource doubles + fake transport (TESTING_SPEC §11).
 # `build_test_state`/`FakeProvisioner` stay crate-local (tests/unit/support.rs):
 # they are `eos-runtime` types, so the dev-dep two-instance rule bars consuming

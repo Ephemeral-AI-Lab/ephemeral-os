@@ -9,7 +9,12 @@
 mod attempt;
 mod database;
 mod providers;
+mod workflow;
 
 pub use attempt::AttemptConfig;
 pub use database::{DatabaseConfig, DatabaseUrl, DEFAULT_SQLITE_DATABASE_URL};
-pub use providers::{ProvidersConfig, RetryConfig};
+pub use providers::{
+    AnthropicApiConfig, ClaudeCodingPlanConfig, CodexCodingPlanConfig, OpenAiApiConfig,
+    ProviderKind, ProvidersConfig, RetryConfig, SecretConfigValue,
+};
+pub use workflow::{WorkflowConfig, DEFAULT_WORKFLOW_MAX_DEPTH};

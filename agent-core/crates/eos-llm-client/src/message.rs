@@ -1,21 +1,17 @@
 //! The provider-neutral conversation vocabulary: [`Message`], [`MessageRole`],
 //! and the [`ContentBlock`] discriminated union.
 //!
-//! Source: `message/message.py`. This is the **neutral** (transcript/audit)
-//! representation — the shape persisted to JSONL, matching Python `model_dump`.
-//! It is NOT the provider wire format: `serialize_content_block` /
-//! `parse_assistant_message` are dropped here and re-expressed as per-provider
-//! encode/decode in `anthropic.rs` / `openai.rs` (GC-llm-client-02).
+//! This is the neutral transcript/audit representation, not the provider wire
+//! format. Provider-specific encode/decode lives in the provider client files.
 
 use eos_types::{JsonObject, ToolUseId};
 use serde::{Deserialize, Serialize};
 
 /// The role of a conversation message.
 ///
-/// Source: `Message.role = Literal["user","assistant"]`. There is deliberately
-/// **no `System` variant** — the system prompt is the `LlmRequest.system_prompt`
-/// request field, never a message (GC-llm-client-03). Deserializing `"system"`
-/// therefore fails.
+/// There is deliberately no `System` variant: the system prompt is the
+/// `LlmRequest.system_prompt` request field, never a message. Deserializing
+/// `"system"` therefore fails.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum MessageRole {
@@ -37,10 +33,8 @@ impl MessageRole {
 
 /// A single content block within a [`Message`].
 ///
-/// Source: the `message.py::ContentBlock` discriminated union. The Python
-/// `ThinkingBlock` is renamed to [`ContentBlock::Reasoning`] (GC-llm-client-01);
-/// a `#[serde(alias = "thinking")]` keeps legacy JSONL transcripts decodable
-/// while serialization always emits the new `"reasoning"` tag.
+/// The `#[serde(alias = "thinking")]` compatibility alias keeps older JSONL
+/// transcripts decodable while serialization always emits the `"reasoning"` tag.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
 #[non_exhaustive]
@@ -59,7 +53,7 @@ pub enum ContentBlock {
         /// The tool arguments.
         input: JsonObject,
     },
-    /// Model reasoning / chain-of-thought content (Python `ThinkingBlock`).
+    /// Model reasoning content.
     #[serde(alias = "thinking")]
     Reasoning {
         /// The reasoning text.

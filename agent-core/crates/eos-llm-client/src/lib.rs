@@ -12,24 +12,24 @@
 #![forbid(unsafe_code)]
 #![warn(missing_docs)]
 
-mod anthropic;
 mod auth;
 mod client;
+mod clients;
 mod error;
 mod events;
 mod message;
-mod openai;
 mod retry;
 mod sse;
 mod types;
 
-pub use anthropic::AnthropicClient;
 pub use auth::Auth;
 pub use client::{LlmClient, LlmStream};
+pub use clients::{
+    AnthropicApiClient, ClaudeCodingPlanClient, CodexCodingPlanClient, OpenAiApiClient,
+};
 pub use error::{ProviderError, ProviderErrorKind};
 pub use events::{LlmStreamEvent, StopReason};
 pub use message::{ContentBlock, Message, MessageRole};
-pub use openai::OpenAiClient;
 pub use types::{
     LlmRequest, LlmRequestBuilder, ToolChoice, ToolSpec, UsageSnapshot, DEFAULT_MAX_TOKENS,
 };
