@@ -25,13 +25,13 @@ impl ObsConfig {
     /// # Errors
     /// [`ConfigError::OutOfRange`] when either queue capacity is zero.
     pub fn validate(&self) -> Result<(), ConfigError> {
-        if self.event_queue_capacity < 1 {
+        if self.event_queue_capacity == 0 {
             return Err(ConfigError::OutOfRange {
                 field: "obs.event_queue_capacity",
                 detail: "must be >= 1",
             });
         }
-        if self.audit_queue_capacity < 1 {
+        if self.audit_queue_capacity == 0 {
             return Err(ConfigError::OutOfRange {
                 field: "obs.audit_queue_capacity",
                 detail: "must be >= 1",

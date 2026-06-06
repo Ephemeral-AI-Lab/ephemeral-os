@@ -27,13 +27,13 @@ impl SandboxConfig {
     /// [`ConfigError::OutOfRange`] when `max_owned_sandboxes` or
     /// `startup_timeout_ms` is zero.
     pub fn validate(&self) -> Result<(), ConfigError> {
-        if self.max_owned_sandboxes < 1 {
+        if self.max_owned_sandboxes == 0 {
             return Err(ConfigError::OutOfRange {
                 field: "sandbox.max_owned_sandboxes",
                 detail: "must be >= 1",
             });
         }
-        if self.startup_timeout_ms < 1 {
+        if self.startup_timeout_ms == 0 {
             return Err(ConfigError::OutOfRange {
                 field: "sandbox.startup_timeout_ms",
                 detail: "must be >= 1",

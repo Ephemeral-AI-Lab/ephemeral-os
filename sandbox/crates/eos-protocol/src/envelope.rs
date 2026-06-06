@@ -119,7 +119,19 @@ pub fn encode(envelope: &Envelope) -> Result<Vec<u8>, ProtocolError> {
 /// Returns [`ProtocolError::BadJson`] for invalid JSON and
 /// [`ProtocolError::NotAnObject`] when the decoded value is not a JSON object.
 pub fn decode(bytes: &[u8]) -> Result<Envelope, ProtocolError> {
-    let value: Value = serde_json::from_slice(bytes)?;
+    decode_value(serde_json::from_slice(bytes)?)
+}
+
+/// Disambiguate an already-parsed JSON value into an [`Envelope`].
+///
+/// Lets a caller that already holds a [`Value`] (e.g. after stripping a
+/// transport auth field) avoid re-serializing and re-parsing the payload.
+///
+/// # Errors
+///
+/// Returns [`ProtocolError::NotAnObject`] when `value` is not a JSON object, or
+/// [`ProtocolError::BadJson`] when a request/error envelope fails to deserialize.
+pub fn decode_value(value: Value) -> Result<Envelope, ProtocolError> {
     // Disambiguate so a request never deserializes as a bare `Response(Value)`.
     let Some(obj) = value.as_object() else {
         return Err(ProtocolError::NotAnObject);

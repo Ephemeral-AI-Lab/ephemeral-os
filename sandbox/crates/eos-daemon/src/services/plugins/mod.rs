@@ -50,7 +50,8 @@ use service::{
     service_status_mut,
 };
 use service::{
-    insert_started_service_processes, running_process_values, service_specs_to_start,
+    insert_started_service_processes, reap_exited_processes, running_process_values,
+    service_specs_to_start,
     spawn_service_processes, stop_plugin_service_processes,
     stop_services_for_layer_stack_root as stop_services_for_layer_stack_root_in_state,
 };
@@ -209,7 +210,7 @@ pub fn op_status(args: &Value, _context: DispatchContext<'_>) -> Result<Value, D
     );
     let probe_targets = {
         let mut state = lock_state()?;
-        let _ = running_process_values(&mut state);
+        reap_exited_processes(&mut state);
         if probe_services {
             service_health_probe_targets(&state)
         } else {

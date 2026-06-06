@@ -7,13 +7,13 @@ use eos_types::{RequestId, SandboxId, UtcDateTime};
 
 /// Coarse backend-tracked lifecycle phase of a sandbox.
 ///
-/// The authoritative owner is Phase 4's `SandboxManager`; these variants may be
-/// refined when the manager lands.
+/// These are exactly the states `SandboxManager` constructs and exposes through
+/// the sanitized [`SandboxView`]; transient `Provisioning` (held under the
+/// acquire lock, never observable) and post-teardown `Destroyed` (the entry is
+/// dropped, not re-stated) are intentionally absent from the public surface.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum SandboxState {
-    /// Being provisioned; not yet usable.
-    Provisioning,
     /// Provisioned and idle (no active run).
     Ready,
     /// Bound to at least one active run.
@@ -22,8 +22,6 @@ pub enum SandboxState {
     Retained,
     /// Teardown in progress.
     Destroying,
-    /// Torn down.
-    Destroyed,
 }
 
 /// Sanitized public view of a backend-owned sandbox.

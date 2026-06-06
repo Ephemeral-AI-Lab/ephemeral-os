@@ -251,15 +251,33 @@ pub(super) fn running_process_values(state: &mut DaemonPluginState) -> Vec<Value
         }
         values.push(status);
     }
+    remove_service_instances(state, &closed);
+    values
+}
+
+/// Reap service processes whose child has exited — the teardown half of
+/// [`running_process_values`], for callers that only need the side effect.
+pub(super) fn reap_exited_processes(state: &mut DaemonPluginState) {
+    let mut closed = Vec::new();
+    for (service_instance_id, process) in &mut state.service_processes {
+        if process.status_json()["running"] != true {
+            closed.push(service_instance_id.clone());
+        }
+    }
+    remove_service_instances(state, &closed);
+}
+
+/// Stop tracking each given service instance and release the snapshot lease it
+/// held.
+fn remove_service_instances(state: &mut DaemonPluginState, closed: &[String]) {
     for service_instance_id in closed {
-        state.service_processes.remove(&service_instance_id);
-        state.service_ppc_clients.remove(&service_instance_id);
-        if let Some(snapshot) = state.service_snapshots.remove(&service_instance_id) {
+        state.service_processes.remove(service_instance_id);
+        state.service_ppc_clients.remove(service_instance_id);
+        if let Some(snapshot) = state.service_snapshots.remove(service_instance_id) {
             release_service_snapshot(&snapshot);
         }
-        mark_service_stopped(state, &service_instance_id);
+        mark_service_stopped(state, service_instance_id);
     }
-    values
 }
 
 fn service_snapshot_from_lease(layer_stack_root: &str, lease: Lease) -> PluginServiceSnapshot {

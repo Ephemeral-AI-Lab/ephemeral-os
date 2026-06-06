@@ -174,8 +174,7 @@ impl PluginProcessSpec {
     }
 
     pub(crate) fn spawn(&self) -> Result<PluginServiceProcess, DaemonError> {
-        let mut env = self.environment();
-        env.insert(ENV_PLUGIN_WORKSPACE_MOUNTED, "0".to_owned());
+        let env = self.environment();
         self.spawn_command(&self.command, env)
     }
 
@@ -517,10 +516,10 @@ fn socket_path_for_key(key: &PluginServiceKey, socket_root: &Path) -> PathBuf {
     hasher.update(b"\0");
     hasher.update(key.plugin_digest.as_bytes());
     let digest = hasher.finalize();
-    socket_root.join(format!("{}.sock", lower_hex_16(&digest[..16])))
+    socket_root.join(format!("{}.sock", lower_hex(&digest[..16])))
 }
 
-fn lower_hex_16(bytes: &[u8]) -> String {
+fn lower_hex(bytes: &[u8]) -> String {
     const HEX: &[u8; 16] = b"0123456789abcdef";
     let mut out = String::with_capacity(bytes.len() * 2);
     for byte in bytes {

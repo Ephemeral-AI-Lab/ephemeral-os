@@ -1,5 +1,5 @@
 [package]
-name = "eos-backend-obs"
+name = "eos-backend-audit"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true

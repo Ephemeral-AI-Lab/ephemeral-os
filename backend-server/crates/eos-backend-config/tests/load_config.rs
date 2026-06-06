@@ -55,8 +55,8 @@ fn rejects_providers_section() {
     let _ = std::fs::remove_file(&over);
 
     let err = result.unwrap_err();
-    assert!(matches!(err, ConfigError::ParseYaml(_)));
-    assert!(err.to_string().contains("parse"), "{err}");
+    assert!(matches!(err, ConfigError::Schema(_)));
+    assert!(err.to_string().contains("schema"), "{err}");
 }
 
 #[test]
@@ -64,7 +64,7 @@ fn rejects_workflow_section() {
     let over = temp_yaml("workflow", "workflow:\n  max_depth: 3\n");
     let result = load_from_paths(&[baseline(), over.clone()]);
     let _ = std::fs::remove_file(&over);
-    assert!(matches!(result, Err(ConfigError::ParseYaml(_))));
+    assert!(matches!(result, Err(ConfigError::Schema(_))));
 }
 
 #[test]
@@ -72,7 +72,20 @@ fn rejects_unknown_field() {
     let over = temp_yaml("unknown", "bogus: 1\n");
     let result = load_from_paths(&[baseline(), over.clone()]);
     let _ = std::fs::remove_file(&over);
-    assert!(matches!(result, Err(ConfigError::ParseYaml(_))));
+    assert!(matches!(result, Err(ConfigError::Schema(_))));
+}
+
+#[test]
+fn rejects_empty_agent_core_database_url() {
+    let over = temp_yaml("empty_db", "agent_core:\n  database_url: \"\"\n");
+    let result = load_from_paths(&[baseline(), over.clone()]);
+    let _ = std::fs::remove_file(&over);
+    assert!(matches!(
+        result,
+        Err(ConfigError::Empty {
+            field: "agent_core.database_url"
+        })
+    ));
 }
 
 #[test]

@@ -16,11 +16,26 @@ use crate::server::ServerConfig;
 #[non_exhaustive]
 pub enum ConfigError {
     /// A config file could not be read.
-    #[error("failed to read config file")]
-    ReadFile(#[source] std::io::Error),
-    /// A config file was not valid YAML or did not match `ServerConfig`.
-    #[error("failed to parse config yaml")]
-    ParseYaml(#[from] serde_yaml::Error),
+    #[error("failed to read config file {}", .path.display())]
+    ReadFile {
+        /// The file that could not be read.
+        path: PathBuf,
+        /// The underlying I/O failure.
+        #[source]
+        source: std::io::Error,
+    },
+    /// A config file was not valid YAML.
+    #[error("failed to parse config file {}", .path.display())]
+    ParseFile {
+        /// The file that failed to parse.
+        path: PathBuf,
+        /// The underlying YAML parse failure.
+        #[source]
+        source: serde_yaml::Error,
+    },
+    /// The merged config document did not match the expected schema.
+    #[error("merged config did not match the expected schema")]
+    Schema(#[from] serde_yaml::Error),
     /// A numeric field was outside its accepted range.
     #[error("config field {field} out of range: {detail}")]
     OutOfRange {
@@ -28,6 +43,12 @@ pub enum ConfigError {
         field: &'static str,
         /// Why it was rejected.
         detail: &'static str,
+    },
+    /// A required string/path field was empty.
+    #[error("config field {field} must not be empty")]
+    Empty {
+        /// The offending field path.
+        field: &'static str,
     },
 }
 
@@ -81,8 +102,14 @@ fn read_yaml(path: &Path) -> Result<Option<Value>, ConfigError> {
     if !path.exists() {
         return Ok(None);
     }
-    let text = std::fs::read_to_string(path).map_err(ConfigError::ReadFile)?;
-    let doc: Value = serde_yaml::from_str(&text)?;
+    let text = std::fs::read_to_string(path).map_err(|source| ConfigError::ReadFile {
+        path: path.to_owned(),
+        source,
+    })?;
+    let doc: Value = serde_yaml::from_str(&text).map_err(|source| ConfigError::ParseFile {
+        path: path.to_owned(),
+        source,
+    })?;
     Ok((!doc.is_null()).then_some(doc))
 }
 

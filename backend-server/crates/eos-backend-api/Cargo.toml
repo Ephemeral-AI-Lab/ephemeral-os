@@ -21,7 +21,7 @@ eos-state.workspace = true
 eos-backend-types.workspace = true
 eos-backend-store.workspace = true
 eos-backend-runtime.workspace = true
-eos-backend-obs.workspace = true
+eos-backend-audit.workspace = true
 
 [dev-dependencies]
 tokio.workspace = true

@@ -249,11 +249,14 @@ impl DaemonContainer {
         )
         .with_context(|| format!("Docker put_archive merged config into {config_dir}"))?;
 
-        // Detached foreground daemon (no --spawn needed: `exec -d` backgrounds it).
+        // Spawn the daemon detached: `--spawn` re-execs a foreground child with
+        // stdout/stderr redirected to `--log-file`, so bringup diagnostics land in
+        // runtime.log (a plain foreground daemon parses but ignores `--log-file`).
         self.exec(&[
             "-d",
             &remote_eosd_path,
             "daemon",
+            "--spawn",
             "--socket",
             &format!("{daemon_dir}/runtime.sock"),
             "--pid-file",

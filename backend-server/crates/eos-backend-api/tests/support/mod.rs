@@ -12,7 +12,7 @@ use axum::Router;
 use tempfile::TempDir;
 
 use eos_backend_api::{AgentCoreReads, AppState, RunControl, SandboxRegistry};
-use eos_backend_obs::StatsReader;
+use eos_backend_audit::StatsReader;
 use eos_backend_runtime::{CancelOutcome, EventBus, LaunchError, SandboxManagerError};
 use eos_backend_store::BackendStore;
 use eos_backend_types::{CreateUserRequest, SandboxState, SandboxView};

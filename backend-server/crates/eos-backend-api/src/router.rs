@@ -1,7 +1,7 @@
 //! Shared application state, the runtime-capability ports, and the axum router.
 //!
 //! The handlers read backend lifecycle/observability state directly (concrete
-//! repositories from `eos-backend-store`/`-obs`) but reach the two stateful
+//! repositories from `eos-backend-store`/`-audit`) but reach the two stateful
 //! runtime capabilities — launching/cancelling runs and the sandbox lifecycle —
 //! through the narrow [`RunControl`] and [`SandboxRegistry`] ports. Those are
 //! `dyn` because test doubles substitute for the production `RunLauncher` /
@@ -16,7 +16,7 @@ use async_trait::async_trait;
 use axum::routing::{get, post};
 use axum::Router;
 
-use eos_backend_obs::StatsReader;
+use eos_backend_audit::StatsReader;
 use eos_backend_runtime::{
     CancelOutcome, EventBus, LaunchError, RunLauncher, SandboxManager, SandboxManagerError,
 };

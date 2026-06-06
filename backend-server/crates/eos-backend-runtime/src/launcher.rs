@@ -90,37 +90,46 @@ impl LauncherInner {
         callback: EventCallback,
         slot: Arc<RunSlot>,
     ) {
+        // Acquire to completion BEFORE racing cancellation. `acquire` provisions a
+        // fresh container outside the manager lock and only records the binding on
+        // return; racing the token against that window could drop the future with a
+        // container live in the host but untracked by the manager, which `release`
+        // (keyed on a recorded binding) would never tear down. So provisioning is
+        // non-cancellable — only the run itself races the token below.
+        let binding = match self
+            .manager
+            .acquire(&request_id, sandbox_id.as_ref().map(SandboxId::as_str))
+            .await
+        {
+            Ok(binding) => binding,
+            Err(err) => {
+                tracing::warn!(
+                    request_id = request_id.as_str(),
+                    error = %err,
+                    "sandbox acquisition failed; run resolves as failed"
+                );
+                self.reaper.reap(&request_id, Disposition::Failed).await;
+                self.runs.lock().remove(&request_id);
+                return;
+            }
+        };
+        // Mark Running once the sandbox is bound — before the agent-core request
+        // row exists — so the API never observes (Accepted, agent=Running).
+        if let Err(err) = self
+            .run_meta
+            .set_status(&request_id, BackendRunStatus::Running, None, None)
+            .await
+        {
+            tracing::warn!(
+                request_id = request_id.as_str(),
+                error = %err,
+                "failed to mark run running"
+            );
+        }
+
         let inner = self.clone();
         let run_request_id = request_id.clone();
-        let work = async move {
-            let binding = match inner
-                .manager
-                .acquire(&run_request_id, sandbox_id.as_ref().map(SandboxId::as_str))
-                .await
-            {
-                Ok(binding) => binding,
-                Err(err) => {
-                    tracing::warn!(
-                        request_id = run_request_id.as_str(),
-                        error = %err,
-                        "sandbox acquisition failed; run resolves as failed"
-                    );
-                    return Disposition::Failed;
-                }
-            };
-            // Mark Running once the sandbox is bound — before the agent-core request
-            // row exists — so the API never observes (Accepted, agent=Running).
-            if let Err(err) = inner
-                .run_meta
-                .set_status(&run_request_id, BackendRunStatus::Running, None, None)
-                .await
-            {
-                tracing::warn!(
-                    request_id = run_request_id.as_str(),
-                    error = %err,
-                    "failed to mark run running"
-                );
-            }
+        let run = async move {
             match inner
                 .host
                 .run(run_request_id, prompt, binding.sandbox_id, Some(callback))
@@ -134,10 +143,12 @@ impl LauncherInner {
         // The task is the sole finalizer: whichever arm wins, exactly one reap runs.
         // `biased` checks cancellation first, so a pending cancel deterministically
         // wins and the run future is dropped (cancel-safe at its `.await` points).
+        // The binding is already recorded, so a cancel here reaps -> release ->
+        // teardown with no leak.
         let disposition = tokio::select! {
             biased;
             () = slot.token.cancelled() => Disposition::Cancelled(slot.reason.lock().clone()),
-            disposition = work => disposition,
+            disposition = run => disposition,
         };
         self.reaper.reap(&request_id, disposition).await;
         self.runs.lock().remove(&request_id);

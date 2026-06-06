@@ -26,7 +26,7 @@ use std::path::PathBuf;
 use std::sync::{mpsc as std_mpsc, Arc};
 use std::time::{Duration, Instant};
 
-use tokio::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt};
+use tokio::io::{AsyncBufReadExt, AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt, BufReader};
 use tokio::net::{TcpListener, UnixListener};
 use tokio::time::timeout;
 use tokio_util::sync::CancellationToken;
@@ -37,7 +37,7 @@ use eos_config::configs::{
 };
 use eos_protocol::{
     audit::{build_event, Lane, ToolCallSection},
-    decode, encode, Envelope, ErrorKind, Request,
+    decode_value, encode, Envelope, ErrorKind, Request,
 };
 
 use crate::audit::buffer::safe_emit;
@@ -310,9 +310,19 @@ impl DaemonServer {
         is_tcp: bool,
         read_request_s: f64,
     ) -> serde_json::Value {
-        let bytes = if is_tcp {
-            match self.strip_tcp_auth(&bytes) {
-                Ok(bytes) => bytes,
+        let value = match serde_json::from_slice::<serde_json::Value>(&bytes) {
+            Ok(value) => value,
+            Err(err) => {
+                return crate::dispatcher::error_envelope(
+                    ErrorKind::BadJson,
+                    &eos_protocol::ProtocolError::from(err).to_string(),
+                    serde_json::json!({}),
+                );
+            }
+        };
+        let value = if is_tcp {
+            match self.strip_tcp_auth(value) {
+                Ok(value) => value,
                 Err(err) => {
                     return crate::dispatcher::error_envelope(
                         err.wire_kind(),
@@ -322,9 +332,9 @@ impl DaemonServer {
                 }
             }
         } else {
-            bytes
+            value
         };
-        match decode(&bytes) {
+        match decode_value(value) {
             Ok(Envelope::Request(request)) => self.dispatch_request(request, read_request_s).await,
             Ok(_) => crate::dispatcher::error_envelope(
                 ErrorKind::InvalidEnvelope,
@@ -400,17 +410,18 @@ impl DaemonServer {
         response
     }
 
-    fn strip_tcp_auth(&self, bytes: &[u8]) -> Result<Vec<u8>, DaemonError> {
+    fn strip_tcp_auth(
+        &self,
+        mut value: serde_json::Value,
+    ) -> Result<serde_json::Value, DaemonError> {
         let Some(expected) = self
             .config
             .auth_token
             .as_deref()
             .filter(|token| !token.is_empty())
         else {
-            return Ok(bytes.to_vec());
+            return Ok(value);
         };
-        let mut value: serde_json::Value =
-            serde_json::from_slice(bytes).map_err(eos_protocol::ProtocolError::from)?;
         let token = value
             .as_object_mut()
             .and_then(|object| object.remove(eos_protocol::DAEMON_AUTH_FIELD))
@@ -418,9 +429,7 @@ impl DaemonServer {
         if token.as_deref() != Some(expected) {
             return Err(DaemonError::Unauthorized);
         }
-        let mut encoded = serde_json::to_vec(&value).map_err(eos_protocol::ProtocolError::from)?;
-        encoded.push(b'\n');
-        Ok(encoded)
+        Ok(value)
     }
 }
 
@@ -485,23 +494,20 @@ where
     R: AsyncRead + Unpin,
 {
     let mut buf = Vec::new();
-    let mut byte = [0_u8; 1];
     let timeout_duration = Duration::from_secs_f64(REQUEST_READ_TIMEOUT_S);
     let read = async {
-        loop {
-            let n = reader.read(&mut byte).await?;
-            if n == 0 {
-                break;
-            }
-            buf.push(byte[0]);
-            if buf.len() > MAX_REQUEST_BYTES {
-                return Err(DaemonError::RequestTooLarge {
-                    limit: MAX_REQUEST_BYTES,
-                });
-            }
-            if byte[0] == b'\n' {
-                break;
-            }
+        // Bound the buffered read to one byte past the cap so a frame without a
+        // newline cannot grow `buf` without limit (a no-newline flood OOM); the
+        // explicit length check below preserves the existing `RequestTooLarge`.
+        let limit = u64::try_from(MAX_REQUEST_BYTES)
+            .unwrap_or(u64::MAX)
+            .saturating_add(1);
+        let mut limited = BufReader::new(reader.take(limit));
+        limited.read_until(b'\n', &mut buf).await?;
+        if buf.len() > MAX_REQUEST_BYTES {
+            return Err(DaemonError::RequestTooLarge {
+                limit: MAX_REQUEST_BYTES,
+            });
         }
         Ok::<(), DaemonError>(())
     };

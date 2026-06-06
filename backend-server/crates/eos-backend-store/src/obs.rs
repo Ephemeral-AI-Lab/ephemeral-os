@@ -110,7 +110,7 @@ impl ObsEventRepo {
     }
 
     /// Timing and resource summary across all obs events. The caller supplies the
-    /// canonical obs `kind` vocabulary (owned by `eos-backend-obs` / `eos-audit`).
+    /// canonical obs `kind` vocabulary (owned by `eos-backend-audit` / `eos-audit`).
     ///
     /// # Errors
     /// [`StoreError`] on a query failure.

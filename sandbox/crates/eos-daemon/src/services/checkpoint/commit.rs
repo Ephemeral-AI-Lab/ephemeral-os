@@ -14,6 +14,7 @@ use serde_json::{json, Value};
 
 use crate::error::DaemonError;
 use crate::request_args::{require_string, timings_to_value_map};
+use crate::response_timings::usize_to_f64_saturating;
 
 pub(crate) fn commit_to_workspace(args: &Value) -> Result<Value, DaemonError> {
     let total_start = Instant::now();
@@ -99,11 +100,11 @@ pub(crate) fn commit_to_git(args: &Value) -> Result<Value, DaemonError> {
         (Ok(mut response), Ok(_)) => {
             timings.insert(
                 "resource.layer_stack.manifest_depth".to_owned(),
-                manifest_depth as f64,
+                usize_to_f64_saturating(manifest_depth),
             );
             timings.insert(
                 "resource.layer_stack.manifest_path_count".to_owned(),
-                manifest_path_count as f64,
+                usize_to_f64_saturating(manifest_path_count),
             );
             record_elapsed(&mut timings, "api.commit_to_git.total_s", total_start);
             response["timings"] = Value::Object(timings_to_value_map(&timings));

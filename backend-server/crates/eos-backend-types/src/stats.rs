@@ -1,7 +1,7 @@
 //! Stats response DTOs.
 //!
 //! The `/api/stats/*` shapes are owned here and assembled by the Phase 6 stats
-//! queries in `eos-backend-obs`, which read `obs_event` and `audit_cursor`. They
+//! queries in `eos-backend-audit`, which read `obs_event` and `audit_cursor`. They
 //! are derived from observability rows only: the richer agent-core state join
 //! (agent name, token count, terminal outcome) is owned by the Phase 7 read
 //! handler through `RuntimeServices::state_reader()`.
@@ -61,11 +61,9 @@ pub struct AgentRunStat {
 
 /// Loss accounting across the observability pipeline.
 ///
-/// The two `obs_*` counters are the live [`PersistingSink`] in-memory tallies
-/// (enqueue overflow and drainer write failures); the two `audit_*` counters are
-/// durable, summed from `audit_cursor`.
-///
-/// [`PersistingSink`]: ../../eos_backend_obs/struct.PersistingSink.html
+/// The two `obs_*` counters are the live in-memory tallies of the
+/// `PersistingSink` in `eos-backend-audit` (enqueue overflow and drainer write
+/// failures); the two `audit_*` counters are durable, summed from `audit_cursor`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize, JsonSchema)]
 pub struct ObsLossStats {
     /// Audit events dropped at `publish` because the bounded queue was full.

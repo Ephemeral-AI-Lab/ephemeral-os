@@ -6,7 +6,7 @@ members = [
   "crates/eos-backend-config",
   "crates/eos-backend-store",
   "crates/eos-backend-runtime",
-  "crates/eos-backend-obs",
+  "crates/eos-backend-audit",
   "crates/eos-backend-api",
   "crates/eos-backend-main",
 ]
@@ -79,7 +79,7 @@ eos-backend-types   = { path = "crates/eos-backend-types" }
 eos-backend-config  = { path = "crates/eos-backend-config" }
 eos-backend-store   = { path = "crates/eos-backend-store" }
 eos-backend-runtime = { path = "crates/eos-backend-runtime" }
-eos-backend-obs     = { path = "crates/eos-backend-obs" }
+eos-backend-audit   = { path = "crates/eos-backend-audit" }
 eos-backend-api     = { path = "crates/eos-backend-api" }
 eos-backend-main    = { path = "crates/eos-backend-main" }
 

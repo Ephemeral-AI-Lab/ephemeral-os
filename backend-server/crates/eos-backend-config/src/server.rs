@@ -33,13 +33,36 @@ pub struct ServerConfig {
 }
 
 impl ServerConfig {
-    /// Validate nested numeric ranges. Call after deserializing.
+    /// Validate nested fields. Call after deserializing.
     ///
     /// # Errors
-    /// Propagates [`ConfigError::OutOfRange`] from the sandbox/obs sections.
+    /// Propagates [`ConfigError::OutOfRange`] from the sandbox/obs sections and
+    /// [`ConfigError::Empty`] from the agent-core source.
     pub fn validate(&self) -> Result<(), ConfigError> {
+        self.agent_core.validate()?;
         self.sandbox.validate()?;
         self.obs.validate()?;
+        Ok(())
+    }
+}
+
+impl AgentCoreConfigSource {
+    /// Reject empty required-identity fields, which would otherwise fail much
+    /// later at DB-connect time with an opaque error.
+    ///
+    /// # Errors
+    /// [`ConfigError::Empty`] when `config_dir` or `database_url` is empty.
+    pub fn validate(&self) -> Result<(), ConfigError> {
+        if self.config_dir.as_os_str().is_empty() {
+            return Err(ConfigError::Empty {
+                field: "agent_core.config_dir",
+            });
+        }
+        if self.database_url.trim().is_empty() {
+            return Err(ConfigError::Empty {
+                field: "agent_core.database_url",
+            });
+        }
         Ok(())
     }
 }

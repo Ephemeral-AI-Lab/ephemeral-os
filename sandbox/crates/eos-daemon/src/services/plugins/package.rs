@@ -58,12 +58,9 @@ pub(super) fn ensure_package(
     }
 
     let paths = PackagePaths::new(args, manifest)?;
-    let staged_package_root = staged_package_root(args)?;
-    if staged_package_root.is_none() {
+    let Some(staged_package_root) = staged_package_root(args)? else {
         return Ok(warm_probe(manifest, &paths));
-    }
-
-    let staged_package_root = staged_package_root.expect("checked is_some");
+    };
     validate_staged_package_root(&staged_package_root, &paths.upload_digest_root)?;
     validate_staged_package(manifest, &staged_package_root)?;
 

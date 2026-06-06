@@ -186,7 +186,7 @@ fn no_publish_result(
 
 fn run_auto_squash(stack: &mut LayerStack) -> BTreeMap<String, f64> {
     let mut timings = BTreeMap::new();
-    let Some(active) = stack.read_active_manifest().ok() else {
+    let Ok(active) = stack.read_active_manifest() else {
         return timings;
     };
     let max_depth = auto_squash_max_depth();

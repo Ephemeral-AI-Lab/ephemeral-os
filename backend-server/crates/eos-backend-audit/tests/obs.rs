@@ -14,7 +14,7 @@ use eos_audit::{
     AuditEvent, AuditNode, AuditSink, AuditSource, AGENT_RUN_COMPLETED, OS_RESOURCE_SAMPLED,
     TOOL_CALL_COMPLETED,
 };
-use eos_backend_obs::{AuditIngestor, PersistingSink, SinkLoss, StatsReader, UNMATCHED_MARKER};
+use eos_backend_audit::{AuditIngestor, PersistingSink, SinkLoss, StatsReader, UNMATCHED_MARKER};
 use eos_backend_store::BackendStore;
 use eos_backend_types::{ObsSource, Page, SandboxCallCorrelation};
 use eos_protocol::audit::SCHEMA_VERSION;

@@ -26,7 +26,9 @@ pub use cas::{
     aggregate_layer_changes, layer_digest, manifest_root_hash, CasError, LayerChange, LayerPath,
     LayerRef, Manifest,
 };
-pub use envelope::{decode, encode, Envelope, ErrorEnvelope, ErrorKind, ProtocolError, Request};
+pub use envelope::{
+    decode, decode_value, encode, Envelope, ErrorEnvelope, ErrorKind, ProtocolError, Request,
+};
 pub use ids::{CallerId, InvocationId, WorkspaceHandleId};
 pub use models::{
     apply_search_replace, CommandOutput, CommandSessionCancelArgs, CommandSessionWriteArgs,
