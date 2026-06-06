@@ -150,7 +150,7 @@ fn commit_refuses_active_snapshot_lease_then_succeeds_after_release() -> Result<
         ops::API_COMMIT_TO_WORKSPACE,
         json!({"workspace_root": lease.workspace_root()}),
     )?;
-    let outcome: Result<()> = (|| {
+    let outcome: Result<()> = {
         assert_eq!(
             blocked.get("success").and_then(Value::as_bool),
             Some(false),
@@ -166,7 +166,7 @@ fn commit_refuses_active_snapshot_lease_then_succeeds_after_release() -> Result<
             "active-lease rejection should identify the guard: {blocked}"
         );
         Ok(())
-    })();
+    };
 
     lease.call_ok(ops::API_ISOLATED_WORKSPACE_EXIT, json!({}))?;
     let released = wait_for_active_leases(&lease, 0)?;

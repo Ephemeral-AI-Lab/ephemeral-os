@@ -32,6 +32,8 @@ where
     let path_kinds = path_changes_to_wire(&finalize.capture.path_kinds);
     let changed_path_kinds = path_kinds.into_iter().collect::<ChangedPathKinds>();
     let first_conflict = files.iter().find(|file| !status_is_success(&file.status));
+    let command_success = request.command_succeeded();
+    let publish_success = files.iter().all(|file| status_is_success(&file.status));
     let mut timings = context.base_timings;
     timings.insert(
         "resource.command_exec.changed_path_count".to_owned(),
@@ -60,7 +62,7 @@ where
 
     Ok(WorkspaceCommandOutcome {
         mode: WorkspaceMode::Ephemeral,
-        success: files.iter().all(|file| status_is_success(&file.status)),
+        success: command_success && publish_success,
         status: request.status,
         exit_code: request.exit_code,
         stdout: request.stdout,

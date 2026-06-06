@@ -485,7 +485,7 @@ mod tests {
         ) -> Result<WorkspaceCommandOutcome, WorkspaceApiError> {
             Ok(WorkspaceCommandOutcome {
                 mode: WorkspaceMode::default(),
-                success: request.status == "ok",
+                success: request.command_succeeded(),
                 status: request.status,
                 exit_code: request.exit_code,
                 stdout: request.stdout,

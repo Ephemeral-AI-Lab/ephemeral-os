@@ -46,6 +46,7 @@ where
         "api.exec_command.dispatch_total_s".to_owned(),
         json!(request.command_elapsed_s),
     );
+    let command_success = request.command_succeeded();
     let exit_code = request.exit_code.unwrap_or(1);
     let duration_ms = request.command_elapsed_s * 1000.0;
     let status = request.status;
@@ -57,7 +58,7 @@ where
     let manifest_root_hash = context.manifest_root_hash;
     Ok(WorkspaceCommandOutcome {
         mode: WorkspaceMode::Isolated,
-        success: true,
+        success: command_success,
         status: status.clone(),
         exit_code: Some(exit_code),
         stdout: request.stdout,
@@ -103,9 +104,7 @@ fn workspace_api_error(error: impl std::fmt::Display) -> WorkspaceApiError {
 fn path_changes_to_wire(changes: &[LayerChange]) -> Vec<(String, String)> {
     changes
         .iter()
-        .map(|change| {
-            (change.path().as_str().to_owned(), change.kind().to_owned())
-        })
+        .map(|change| (change.path().as_str().to_owned(), change.kind().to_owned()))
         .collect()
 }
 
@@ -222,8 +221,7 @@ mod tests {
     }
 
     #[test]
-    fn finalize_marks_failed_command_unsuccessful(
-    ) -> Result<(), Box<dyn std::error::Error>> {
+    fn finalize_marks_failed_command_unsuccessful() -> Result<(), Box<dyn std::error::Error>> {
         let root = std::env::temp_dir().join(format!(
             "eos-isolated-command-finalize-failed-{}",
             std::process::id()

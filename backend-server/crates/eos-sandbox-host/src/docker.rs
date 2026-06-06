@@ -276,24 +276,19 @@ impl ProviderAdapter for DockerProviderAdapter {
     }
 
     async fn delete(&self, id: &SandboxId) -> Result<(), SandboxHostError> {
-        // Both steps swallow errors (the adapter delete is container removal only;
-        // registry dispose + plugin-cache cleanup live in lifecycle.rs).
         let options = RemoveContainerOptions {
             force: true,
             ..Default::default()
         };
-        if let Err(err) = self
+        match self
             .docker
             .remove_container(id.as_str(), Some(options))
             .await
         {
-            tracing::warn!(
-                ?err,
-                sandbox = id.as_str(),
-                "docker remove_container failed"
-            );
+            Ok(()) => Ok(()),
+            Err(err) if is_docker_not_found(&err) => Ok(()),
+            Err(err) => Err(SandboxHostError::Docker(err)),
         }
-        Ok(())
     }
 
     async fn set_labels(
@@ -624,6 +619,16 @@ fn is_image_not_found(err: &bollard::errors::Error) -> bool {
             || lower.contains("image not found");
     }
     false
+}
+
+fn is_docker_not_found(err: &bollard::errors::Error) -> bool {
+    matches!(
+        err,
+        bollard::errors::Error::DockerResponseServerError {
+            status_code: 404,
+            ..
+        }
+    )
 }
 
 fn state_status_string(state: Option<&ContainerState>) -> Option<String> {

@@ -51,8 +51,7 @@ use service::{
 };
 use service::{
     insert_started_service_processes, reap_exited_processes, running_process_values,
-    service_specs_to_start,
-    spawn_service_processes, stop_plugin_service_processes,
+    service_specs_to_start, spawn_service_processes, stop_plugin_service_processes,
     stop_services_for_layer_stack_root as stop_services_for_layer_stack_root_in_state,
 };
 #[cfg(test)]

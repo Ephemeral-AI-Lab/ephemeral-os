@@ -123,3 +123,18 @@ fn image_not_found_detection() {
     };
     assert!(!is_image_not_found(&other));
 }
+
+#[test]
+fn docker_not_found_detection_is_status_based() {
+    let missing = bollard::errors::Error::DockerResponseServerError {
+        status_code: 404,
+        message: "No such container: gone".to_owned(),
+    };
+    assert!(is_docker_not_found(&missing));
+
+    let failed = bollard::errors::Error::DockerResponseServerError {
+        status_code: 500,
+        message: "remove failed".to_owned(),
+    };
+    assert!(!is_docker_not_found(&failed));
+}

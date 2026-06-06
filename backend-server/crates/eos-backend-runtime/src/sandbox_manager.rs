@@ -197,6 +197,7 @@ impl SandboxEntry {
 struct ManagerState {
     sandboxes: HashMap<SandboxId, SandboxEntry>,
     by_request: HashMap<RequestId, SandboxId>,
+    pending_owned: usize,
 }
 
 impl ManagerState {
@@ -205,6 +206,58 @@ impl ManagerState {
             .values()
             .filter(|entry| entry.owner_request_id.is_some())
             .count()
+    }
+
+    fn owned_or_pending_count(&self) -> usize {
+        self.owned_count() + self.pending_owned
+    }
+
+    fn reserve_owned_slot(
+        &mut self,
+        max_owned_sandboxes: usize,
+    ) -> Result<(), SandboxManagerError> {
+        let current = self.owned_or_pending_count();
+        if current >= max_owned_sandboxes {
+            return Err(SandboxManagerError::CapacityExceeded {
+                current,
+                max: max_owned_sandboxes,
+            });
+        }
+        self.pending_owned += 1;
+        Ok(())
+    }
+
+    fn release_owned_slot(&mut self) {
+        self.pending_owned = self.pending_owned.saturating_sub(1);
+    }
+}
+
+struct OwnedSlotReservation<'a> {
+    state: &'a Mutex<ManagerState>,
+    active: bool,
+}
+
+impl<'a> OwnedSlotReservation<'a> {
+    fn new(state: &'a Mutex<ManagerState>) -> Self {
+        Self {
+            state,
+            active: true,
+        }
+    }
+
+    fn release_with(&mut self, state: &mut ManagerState) {
+        if self.active {
+            state.release_owned_slot();
+            self.active = false;
+        }
+    }
+}
+
+impl Drop for OwnedSlotReservation<'_> {
+    fn drop(&mut self) {
+        if self.active {
+            self.state.lock().release_owned_slot();
+        }
     }
 }
 
@@ -241,63 +294,85 @@ impl ManagerInner {
         sandbox_id: Option<&str>,
     ) -> Result<RequestSandboxBinding, SandboxManagerError> {
         let existing_sandbox_id = sandbox_id.map(str::trim).filter(|id| !id.is_empty());
+        let reserve_owned = existing_sandbox_id.is_none();
+        let mut reservation = None;
 
-        // Fast path: already bound (idempotent) or over the fresh-create budget.
+        // Fast path: already bound (idempotent), destroying explicit sandbox, or
+        // over the fresh-create budget. A fresh create reserves capacity before
+        // the async host round-trip so the cap is a real upper bound under
+        // concurrent provisions.
         {
-            let state = self.state.lock();
+            let mut state = self.state.lock();
             if let Some(sandbox_id) = state.by_request.get(request_id) {
                 return Ok(binding(sandbox_id, request_id));
             }
-            if existing_sandbox_id.is_none() {
-                // Best-effort fresh-create budget. This counts only *committed*
-                // owned sandboxes, so concurrent fresh acquires can each pass here
-                // before any of them commit under the bookkeeping lock and
-                // transiently overshoot `max_owned_sandboxes` by the number of
-                // in-flight provisions. The cap is a guardrail against runaway
-                // creation, not a hard barrier under concurrency; tightening it to
-                // a reserved-slot barrier is deferred to Phase 5, which owns the
-                // launcher and its acquisition concurrency model.
-                let owned = state.owned_count();
-                if owned >= self.max_owned_sandboxes {
-                    return Err(SandboxManagerError::CapacityExceeded {
-                        current: owned,
-                        max: self.max_owned_sandboxes,
-                    });
-                }
+            if let Some(id) = existing_sandbox_id.and_then(parse_sandbox_id) {
+                reject_destroying(&state, &id)?;
+            }
+            if reserve_owned {
+                state.reserve_owned_slot(self.max_owned_sandboxes)?;
+                reservation = Some(OwnedSlotReservation::new(&self.state));
             }
         }
 
         // Provision outside the lock (async host round-trip).
-        let resolved = self
+        let resolved = match self
             .provisioner
             .prepare_for_run(request_id, existing_sandbox_id)
             .await
-            .map_err(|err: SandboxProvisionError| SandboxManagerError::Provision(err.message))?;
+        {
+            Ok(binding) => binding,
+            Err(err) => {
+                return Err(SandboxManagerError::Provision(err.message));
+            }
+        };
 
         // Bookkeeping under the lock (no await).
-        let mut state = self.state.lock();
-        if let Some(sandbox_id) = state.by_request.get(request_id) {
-            return Ok(binding(sandbox_id, request_id));
+        let mut orphaned_fresh = None;
+        let committed = {
+            let mut state = self.state.lock();
+            if let Some(reservation) = reservation.as_mut() {
+                reservation.release_with(&mut state);
+            }
+            if let Some(sandbox_id) = state.by_request.get(request_id) {
+                if reserve_owned && *sandbox_id != resolved.sandbox_id {
+                    orphaned_fresh = Some(resolved.sandbox_id.clone());
+                }
+                binding(sandbox_id, request_id)
+            } else {
+                reject_destroying(&state, &resolved.sandbox_id)?;
+                let now = UtcDateTime::now();
+                let entry = state
+                    .sandboxes
+                    .entry(resolved.sandbox_id.clone())
+                    .or_insert_with(|| {
+                        SandboxEntry::newly_bound(
+                            reserve_owned,
+                            request_id,
+                            self.destroy_on_finish,
+                            now,
+                        )
+                    });
+                entry.active.insert(request_id.clone());
+                entry.last_used_at = now;
+                entry.state = SandboxState::Active;
+                state
+                    .by_request
+                    .insert(request_id.clone(), resolved.sandbox_id.clone());
+                resolved
+            }
+        };
+        if let Some(sandbox_id) = orphaned_fresh {
+            if let Err(err) = self.teardown.destroy(&sandbox_id).await {
+                tracing::warn!(
+                    sandbox = sandbox_id.as_str(),
+                    request_id = request_id.as_str(),
+                    %err,
+                    "duplicate fresh acquire created an untracked sandbox; teardown failed"
+                );
+            }
         }
-        let now = UtcDateTime::now();
-        let entry = state
-            .sandboxes
-            .entry(resolved.sandbox_id.clone())
-            .or_insert_with(|| {
-                SandboxEntry::newly_bound(
-                    existing_sandbox_id.is_none(),
-                    request_id,
-                    self.destroy_on_finish,
-                    now,
-                )
-            });
-        entry.active.insert(request_id.clone());
-        entry.last_used_at = now;
-        entry.state = SandboxState::Active;
-        state
-            .by_request
-            .insert(request_id.clone(), resolved.sandbox_id.clone());
-        Ok(resolved)
+        Ok(committed)
     }
 
     /// Release a request's ref exactly once and, when its sandbox falls idle and
@@ -354,6 +429,26 @@ fn binding(sandbox_id: &SandboxId, request_id: &RequestId) -> RequestSandboxBind
     }
 }
 
+fn parse_sandbox_id(value: &str) -> Option<SandboxId> {
+    value.parse().ok()
+}
+
+fn reject_destroying(
+    state: &ManagerState,
+    sandbox_id: &SandboxId,
+) -> Result<(), SandboxManagerError> {
+    if matches!(
+        state.sandboxes.get(sandbox_id).map(|entry| entry.state),
+        Some(SandboxState::Destroying)
+    ) {
+        return Err(SandboxManagerError::Provision(format!(
+            "sandbox {} is being destroyed",
+            sandbox_id.as_str()
+        )));
+    }
+    Ok(())
+}
+
 /// Backend-owned sandbox lifecycle manager and [`SandboxGateway`] implementation.
 ///
 /// Construct the production manager with [`SandboxManager::with_docker`], inject
@@ -380,8 +475,8 @@ impl SandboxManager {
         eosd_artifact_dir: PathBuf,
     ) -> Result<Self, SandboxManagerError> {
         let registry = Arc::new(ProviderRegistry::new());
-        let docker =
-            DockerProviderAdapter::connect().map_err(|err| SandboxManagerError::Connect(err.to_string()))?;
+        let docker = DockerProviderAdapter::connect()
+            .map_err(|err| SandboxManagerError::Connect(err.to_string()))?;
         registry.seed(Arc::new(docker));
         let daemon = Arc::new(DaemonClient::new(registry));
         let lifecycle = Arc::new(SandboxLifecycle::new(daemon.clone(), eosd_artifact_dir));

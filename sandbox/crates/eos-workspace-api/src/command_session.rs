@@ -48,6 +48,14 @@ pub struct FinalizeCommandRequest {
     pub command_session_id: Option<String>,
 }
 
+impl FinalizeCommandRequest {
+    /// True only when the runner reports an explicitly successful command.
+    #[must_use]
+    pub fn command_succeeded(&self) -> bool {
+        self.status == "ok" && self.exit_code == Some(0)
+    }
+}
+
 /// Normalized command outcome before daemon persistence/parking.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct WorkspaceCommandOutcome {

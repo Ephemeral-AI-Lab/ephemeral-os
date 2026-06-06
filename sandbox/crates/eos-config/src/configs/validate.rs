@@ -50,7 +50,10 @@ pub fn require_non_empty_items(
     field: &'static str,
 ) -> Result<(), ConfigFieldError> {
     if values.iter().any(|value| value.trim().is_empty()) {
-        Err(ConfigFieldError::new(field, "must not contain empty strings"))
+        Err(ConfigFieldError::new(
+            field,
+            "must not contain empty strings",
+        ))
     } else {
         Ok(())
     }
@@ -65,7 +68,10 @@ pub fn require_u32_at_least(
     if value >= minimum {
         Ok(())
     } else {
-        Err(ConfigFieldError::new(field, format!("must be at least {minimum}")))
+        Err(ConfigFieldError::new(
+            field,
+            format!("must be at least {minimum}"),
+        ))
     }
 }
 
@@ -78,7 +84,10 @@ pub fn require_u64_at_least(
     if value >= minimum {
         Ok(())
     } else {
-        Err(ConfigFieldError::new(field, format!("must be at least {minimum}")))
+        Err(ConfigFieldError::new(
+            field,
+            format!("must be at least {minimum}"),
+        ))
     }
 }
 
@@ -91,7 +100,10 @@ pub fn require_usize_at_least(
     if value >= minimum {
         Ok(())
     } else {
-        Err(ConfigFieldError::new(field, format!("must be at least {minimum}")))
+        Err(ConfigFieldError::new(
+            field,
+            format!("must be at least {minimum}"),
+        ))
     }
 }
 
