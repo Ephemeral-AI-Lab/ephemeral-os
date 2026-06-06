@@ -14,6 +14,38 @@ contract.
 
 ---
 
+## ✅ Resolution status — ALL findings fixed & verified
+
+Every finding below has been fixed. Final verification: **166 workspace tests
+pass, 0 failures; `cargo clippy --workspace --all-targets` clean.**
+
+| ID | Fix | Where |
+|---|---|---|
+| **M1** | Acquire the sandbox to completion *before* the `select!`; only the run races cancellation (provision is non-cancellable → no orphaned container) | `runtime/launcher.rs` |
+| **M2** | Added `DaemonClient::forget_sandbox` (evicts both `tcp_cache`+`tcp_locks`); called from `SandboxLifecycle::delete` | `sandbox-host/daemon_client.rs`, `lifecycle.rs` |
+| **M3** | Epoch-reset loss boundary filtered to `> 0` (no spurious `Some(0)` on a zero-boundary reboot) | `audit/ingestor.rs` |
+| **M4** | `BackendStore::pool()` marked `#[doc(hidden)]` + test-seam comment (narrowed contract without breaking the cross-crate fault-injection test) | `store/db.rs` |
+| **M5** | `ConfigError` split into path-carrying `ReadFile`/`ParseFile` + pathless `Schema`; loader attaches the offending file path | `config/loader.rs` |
+| **M6** | `AgentCoreConfigSource::validate` rejects empty `config_dir`/`database_url`; new negative test | `config/server.rs`, `tests/load_config.rs` |
+| **M7** | Removed unconstructed `SandboxState::Provisioning`/`Destroyed` from the public view | `types/sandboxes.rs` |
+| **M8** | (already removed by concurrent work — verified absent) | `api/Cargo.toml` |
+| **M9** | Reaper retries the terminal `set_status` once (idempotent UPDATE; matters for `Cancelled`) | `runtime/reaper.rs` |
+| **N1** | Dropped the seq-colliding append retry; a transient failure now surfaces as an honest gap | `runtime/event_bus.rs` |
+| **N2** | `BTreeSet::contains` replaces the linear-scan helper; added the missing module doc | `audit/gates.rs` |
+| **N3** | OpenAPI delete ops now document `404`/`409` | `api/openapi.rs` |
+| **N4** | `set_default`→`seed`, `NoDefaultProvider`→`NoProvider` | `sandbox-host/registry.rs`, `error.rs` + call sites |
+| **N5** | Replaced the unchecked cross-crate rustdoc HTML link with prose | `types/stats.rs` |
+| **N6** | `< 1` → `== 0` on unsigned validators | `config/sandbox.rs`, `obs.rs` |
+| **N7** | `parse_sandbox_id` surfaces an error instead of fabricating a random id (threaded `Result` through the serializers) | `sandbox-host/docker.rs` |
+
+> Note: this work ran alongside concurrent agents (an `eos-backend-obs`→
+> `eos-backend-audit` crate rename and an `eos_state::TaskStore` trait refactor).
+> Per the project's parallel-work rules, the one cross-cutting touch was aligning
+> the api test fake (`tests/support/mod.rs`) to the new `TaskStore` signature so
+> the workspace compiles — no other agent's work was reverted.
+
+---
+
 ## 1. High-Level Summary
 
 This is **high-quality, idiomatic Rust** — among the cleaner multi-crate

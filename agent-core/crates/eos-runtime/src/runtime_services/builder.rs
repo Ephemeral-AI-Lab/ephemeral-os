@@ -111,13 +111,11 @@ pub struct RuntimeServicesBuilder {
     skill_registry: Option<Arc<SkillRegistry>>,
     skill_root: Option<PathBuf>,
     gateway: Option<Arc<dyn SandboxGateway>>,
-    compatibility_mode: bool,
 }
 
 impl std::fmt::Debug for RuntimeServicesBuilder {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("RuntimeServicesBuilder")
-            .field("compatibility_mode", &self.compatibility_mode)
             .finish_non_exhaustive()
     }
 }
@@ -214,21 +212,14 @@ impl RuntimeServicesBuilder {
         self
     }
 
-    /// Allow agent profiles to name tools absent from the registry (skip-unknown
-    /// compatibility instead of failing startup).
-    pub fn compatibility_mode(mut self, enabled: bool) -> Self {
-        self.compatibility_mode = enabled;
-        self
-    }
-
     /// Construct the runtime graph: build the `SQLite` pool (fail fast on a network
     /// URL), construct every store and seam, apply the model registry config,
     /// and validate agent profile tool names against the registry.
     ///
     /// # Errors
     /// Returns an error if the DB URL is non-local, the pool/migrations fail, a
-    /// configured agent/skill/plugin root cannot be loaded, or (without
-    /// compatibility mode) an agent names an unknown tool.
+    /// configured agent/skill/plugin root cannot be loaded, or an agent names an
+    /// unknown tool.
     pub async fn build(self) -> Result<RuntimeServices> {
         // Database: a network URL fails fast at parse (GC: SQLite-only).
         // `DatabaseConfig` is `#[non_exhaustive]`, so override the url by mutation
@@ -325,11 +316,8 @@ impl RuntimeServicesBuilder {
             &SandboxToolService::new(transport.clone()),
         );
 
-        // Cross-registry validation: unknown agent tool names fail fast unless
-        // compatibility mode is enabled (anchor §10 / AC-eos-runtime-09).
-        if !self.compatibility_mode {
-            validate_agent_tools(&agent_registry, &tool_registry)?;
-        }
+        // Cross-registry validation: unknown agent tool names fail fast.
+        validate_agent_tools(&agent_registry, &tool_registry)?;
 
         Ok(RuntimeServices {
             db: DbStoreService {
@@ -512,7 +500,7 @@ fn validate_agent_tools(agents: &AgentRegistry, registry: &ToolRegistry) -> Resu
             let known = ToolKey::from_wire(tool).is_some_and(|name| registry.get(name).is_some());
             if !known {
                 anyhow::bail!(
-                    "agent profile {:?} names unknown tool {:?}; enable compatibility mode to skip",
+                    "agent profile {:?} names unknown tool {:?}",
                     def.name.as_str(),
                     tool
                 );

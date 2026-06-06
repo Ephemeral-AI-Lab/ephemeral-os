@@ -285,7 +285,7 @@ async fn workflow_config_wires_attempt_and_planner_depth() {
         }));
 }
 
-// --- AC-eos-runtime-09: unknown profile tool fails startup (unless compat mode).
+// --- AC-eos-runtime-09: unknown profile tool fails startup.
 
 #[tokio::test]
 async fn unknown_profile_tool_fails_startup() {
@@ -297,7 +297,7 @@ async fn unknown_profile_tool_fails_startup() {
     );
     let dir = tempfile::tempdir().unwrap();
 
-    let registry: AgentRegistry = vec![bad.clone()].into_iter().collect();
+    let registry: AgentRegistry = vec![bad].into_iter().collect();
     let result = RuntimeServices::builder()
         .database_url(sqlite_url(dir.path()))
         .tools_root(test_tools_root())
@@ -305,19 +305,6 @@ async fn unknown_profile_tool_fails_startup() {
         .build()
         .await;
     assert!(result.is_err(), "an unknown tool name must fail startup");
-
-    let registry: AgentRegistry = vec![bad].into_iter().collect();
-    let ok = RuntimeServices::builder()
-        .database_url(sqlite_url(dir.path()))
-        .tools_root(test_tools_root())
-        .agent_registry(Arc::new(registry))
-        .compatibility_mode(true)
-        .build()
-        .await;
-    assert!(
-        ok.is_ok(),
-        "compatibility mode must skip unknown-tool validation"
-    );
 }
 
 #[tokio::test]
@@ -339,7 +326,7 @@ async fn plugin_profile_tool_passes_startup_validation() {
         .await;
     assert!(
         state.is_ok(),
-        "catalog plugin tools must be registered without compatibility mode"
+        "catalog plugin tools must be registered during startup validation"
     );
 }
 
@@ -347,15 +334,15 @@ async fn plugin_profile_tool_passes_startup_validation() {
 // `agents_dir` so `root` resolves (the shipped-binary seam, exercised without the
 // `agent_registry` injection every other test uses). A synthetic profile keeps
 // this decoupled from the bundled `.eos-agents` tree and lets the real
-// `validate_agent_tools` run (no compatibility_mode).
+// `validate_agent_tools` run.
 
 #[tokio::test]
 async fn agents_dir_seeds_registry_so_root_resolves() {
     let dir = tempfile::tempdir().unwrap();
     let profiles = dir.path().join("profiles");
     std::fs::create_dir_all(&profiles).unwrap();
-    // A minimal root profile naming only Rust-registered tools, so no
-    // compatibility_mode is needed and the real tool validation still runs.
+    // A minimal root profile naming only Rust-registered tools, so the real tool
+    // validation still runs.
     std::fs::write(
         profiles.join("root.md"),
         "---\nname: root\ndescription: d\ntool_call_limit: 5\nrole: root\nagent_type: agent\nallowed_tools: [read_file]\nterminals: [submit_root_outcome]\n---\nroot body\n",
