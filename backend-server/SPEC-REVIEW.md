@@ -45,18 +45,10 @@ scope."* Honest framing, same conclusion.
 
 ## B. Factual corrections (the spec states these; code disagrees)
 
-1. **`eos-protocol` is NOT "consumed only by `eos-sandbox-host`."** `eos-obs-collector`
-   (an agent-core crate) also depends on and imports it (`gates.rs`,
-   `normalization.rs`). This contradicts R4 ("remove the now-unused `eos-protocol`
-   path-dep — only the host crate consumed it") and §2.3's "agent-core depends on no
-   sandbox crate at all, not even `eos-protocol`." **The good news:** I confirmed
-   `eos-obs-collector` has **zero consumers inside agent-core** (no Cargo.toml
-   depends on it, no `.rs` imports it) — it's already an orphan workspace member. So
-   the fix is free: **relocate `eos-obs-collector` to `backend-server/crates/`**
-   alongside the host. The backend is its only real consumer anyway (`eos-backend-obs`
-   uses `normalize_sandbox_pull_response`). After that move the spec's "zero wire
-   deps in agent-core" claim becomes *actually true* instead of aspirational. Upgrade
-   this from a follow-up to a v1 R-item (R8).
+1. **Resolved: `eos-protocol` is no longer pulled into `agent-core` by obs
+   normalization.** The former standalone collector normalization/gate modules
+   now live in `eos-backend-obs`, beside their only backend consumer. The spec's
+   "zero wire deps in agent-core" claim is now backed by the workspace shape.
 
 2. **The port's deps are not "only `eos-types` + `tokio`"** (§6, ~line 708).
    `eos-sandbox-api` has 6 production deps: `eos-types, serde, serde_json, schemars,
@@ -85,7 +77,7 @@ scope."* Honest framing, same conclusion.
 | # | Your criterion | Verdict | Note |
 |---|---|---|---|
 | 1 | backend = bridge + convenient user API | ✅ Met | Bridge role is the spine; `/api/user-request` + stats/sandbox endpoints cover it. SSE/WS reconnect-replay is the riskiest hand-rolled piece (seq-dedup + `Lagged` re-replay) — call it out as the test-heavy area. |
-| 2 | sandbox code out of agent-core, keep `eos-sandbox-port` | ✅ Met, w/ B1 | Option C is right and back-edge-free. **But** it isn't complete until `eos-obs-collector` also moves (B1) — otherwise agent-core still pulls `eos-protocol`. |
+| 2 | sandbox code out of agent-core, keep `eos-sandbox-port` | ✅ Met | Option C is right and back-edge-free; obs normalization now lives in `eos-backend-obs`, so agent-core does not keep a sandbox wire dependency for that path. |
 | 3 | sandbox independent of backend + agent-core | ✅ Met | Verified: no `sandbox/crates/*` imports `eos_runtime`/`eos_sandbox_host`/any backend crate. Coupling is one-way (backend → sandbox wire), as drawn. |
 | 4 | backend owns sandbox lifecycle, wires into agent-core | ◑ Met, w/ C1+C3 | Ownership model is correct (SandboxManager → lifecycle, single provisioner S1). Blockers are the `provisioner()` visibility (C1) and the rich-args mismatch (C3), not the design. |
 | 5 | naming consistency | ◑ Mostly | See §F. `eos-sandbox-api → eos-sandbox-port` rename is a real win; finish it (`SandboxApiError → SandboxPortError`). `={id}` path style is unsubstantiated. |
@@ -97,11 +89,10 @@ scope."* Honest framing, same conclusion.
 
 ## E. Simplification (#8) — tiered by how sure I am
 
-**Free win (do it):**
-- **Relocate `eos-obs-collector` to backend-server (B1).** Zero consumers in
-  agent-core → zero breakage. Removes agent-core's last `eos-protocol` edge, makes
-  the spec's headline claim true, and co-locates wire-normalization with its only
-  consumer. Net: −1 stray cross-workspace wire dep, −0 risk.
+**Free win (done):**
+- **Merge obs normalization into `eos-backend-obs` (B1).** Zero consumers remained
+  in agent-core, so the merge removes the stray cross-workspace wire dependency
+  and co-locates wire normalization with its backend owner.
 
 **Question the spec must answer (don't cut blind):**
 - **What does v1 actually surface from the audit *PULL* path?** The four stats

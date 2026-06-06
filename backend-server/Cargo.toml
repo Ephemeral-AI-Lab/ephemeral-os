@@ -40,6 +40,10 @@ tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt", "json"]
 async-trait = "0.1"
 bytes       = "1"
 parking_lot = "0.12"
+# cooperative run cancellation: the launcher signals a CancellationToken and the
+# spawned run task is the sole finalizer (select! on the token). Pin/feature
+# mirror agent-core and sandbox so the shared 0.7.x resolves identically.
+tokio-util  = { version = "0.7", features = ["rt"] }
 # eos-sandbox-host: typed async Docker Engine API client (hyper 1.x stack).
 bollard     = "0.17"
 tar         = "0.4"
@@ -55,6 +59,12 @@ eos-sandbox-port   = { path = "../agent-core/crates/eos-sandbox-port" }
 eos-types          = { path = "../agent-core/crates/eos-types" }
 eos-audit          = { path = "../agent-core/crates/eos-audit" }
 eos-protocol       = { path = "../sandbox/crates/eos-protocol" }
+# the run launcher drives agent-core to completion: eos-runtime is the narrow
+# composition entry (run_request / RuntimeServices / EventCallback); eos-state
+# and eos-config name the RequestStatus / WorkflowConfig values it joins or passes.
+eos-runtime        = { path = "../agent-core/crates/eos-runtime" }
+eos-state          = { path = "../agent-core/crates/eos-state" }
+eos-config         = { path = "../agent-core/crates/eos-config" }
 
 # internal backend crates — these path edges are the backend dependency DAG.
 eos-sandbox-host   = { path = "crates/eos-sandbox-host" }

@@ -11,20 +11,36 @@ eos-sandbox-port.workspace = true
 # Concrete Docker/daemon host the production manager composes: one registry ->
 # daemon client (transport) -> lifecycle -> request provisioner.
 eos-sandbox-host.workspace = true
-# Backend-owned DTOs (sanitized SandboxView / SandboxState) and lifecycle config.
+# Backend-owned DTOs (sanitized SandboxView / SandboxState, RunMeta, EventRecord)
+# and lifecycle config.
 eos-backend-types.workspace = true
 eos-backend-config.workspace = true
-# Typed ids and timestamps used by the refcount state and bindings.
+# backend.db persistence: run_meta + event_log repositories the launcher, reaper,
+# and event bus write through (never a raw pool).
+eos-backend-store.workspace = true
+# agent-core composition entry the launcher drives to completion, plus the values
+# the host seam / status resolver name (RequestStatus, WorkflowConfig, TaskStatus).
+eos-runtime.workspace = true
+eos-state.workspace = true
+eos-config.workspace = true
+# Typed ids and timestamps used by the refcount state, bindings, and run lifecycle.
 eos-types.workspace = true
 
 async-trait.workspace = true
 parking_lot.workspace = true
 thiserror.workspace = true
 tracing.workspace = true
+# tokio drives the spawned run task and the event-bus channels (mpsc/broadcast);
+# tokio-util's CancellationToken is the cooperative cancel signal.
+tokio.workspace = true
+tokio-util.workspace = true
+# the event-bus callback classifies StreamEvents and builds owned EventRecord
+# payloads (serde_json::to_value); also serializes the client_meta blob.
+serde_json.workspace = true
 
 [dev-dependencies]
-tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }
-serde_json.workspace = true
+# temp backend.db files for launcher/reaper/event-bus persistence tests.
+tempfile.workspace = true
 
 [lints]
 workspace = true

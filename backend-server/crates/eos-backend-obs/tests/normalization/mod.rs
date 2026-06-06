@@ -79,7 +79,7 @@ fn sandbox_pull_rejects_wrong_schema() {
     let response = json!({"schema":"wrong","events":[]});
 
     match normalize_sandbox_pull_response(&response) {
-        Err(ObsCollectorError::SandboxSchema) => {}
+        Err(ObsNormalizationError::SandboxSchema) => {}
         other => panic!("expected schema error, got {other:?}"),
     }
 }

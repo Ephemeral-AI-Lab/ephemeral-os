@@ -44,7 +44,7 @@ structure work:
 | Backend is the composition root | It owns axum, backend config, backend DB, sandbox lifecycle, runtime launch, event streaming, and observability persistence. |
 | Agent-core is port-only for sandbox access | `eos-runtime`, `eos-engine`, and `eos-tools` compile against `eos-sandbox-port`, not Docker, daemon bootstrap, or backend crates. |
 | Sandbox host implementation moves out of agent-core | `eos-sandbox-host` lives under `backend-server/crates/` and owns Docker provider, daemon client, bootstrap artifact, provisioning, lifecycle, and registry. |
-| Obs normalization is backend-owned | `eos-backend-obs` owns collector normalization, runner gates, sink, ingestor, and stats; there is no long-lived standalone `eos-obs-collector` crate. This keeps the `eos-protocol` edge in the backend obs crate and out of `agent-core`. |
+| Obs normalization is backend-owned | `eos-backend-obs` owns collector normalization, runner gates, sink, ingestor, and stats; there is no long-lived standalone collector crate. This keeps the `eos-protocol` edge in the backend obs crate and out of `agent-core`. |
 | Sandbox remains independent | `sandbox/crates/*` does not depend on `backend-server` or `agent-core`; it only owns daemon/runtime/protocol implementation. |
 | Backend state is separate from agent-core state | `backend.db` stores backend lifecycle, event-log, audit cursor, and stats rows. Agent-core DB remains the writer for request/task/workflow state. |
 | Backend crates stay split for v1 | The current multi-crate structure is kept because it matches real ownership boundaries: types, config, store, runtime, obs, API, and main. |
@@ -673,7 +673,7 @@ EphemeralOS/
 
 | Phase | Work | Verification |
 |---|---|---|
-| 0 | Relocate `eos-sandbox-host`, add `eos-sandbox-port`, merge obs collector normalization/gates into `eos-backend-obs`, and remove sandbox implementation deps from `agent-core`. | `cd agent-core && cargo check -p eos-runtime --all-targets`; dependency scan for `eos-sandbox-host` and `eos-protocol` in agent-core crates. |
+| 0 | Relocate `eos-sandbox-host`, add `eos-sandbox-port`, merge obs normalization/gates into `eos-backend-obs`, and remove sandbox implementation deps from `agent-core`. | `cd agent-core && cargo check -p eos-runtime --all-targets`; dependency scan for `eos-sandbox-host` and `eos-protocol` in agent-core crates. |
 | 1 | Add production-visible `SandboxGateway` / provisioner injection and `RuntimeServices::state_reader()`. | Compile agent-core runtime and store crates with targeted tests. |
 | 2 | Implement backend config and store crates, including migrations for `run_meta`, `event_log`, `obs_event`, `sandbox_call_correlation`, and `audit_cursor`. | `cargo test -p eos-backend-config`; `cargo test -p eos-backend-store`. |
 | 3 | Implement `SandboxManager` lifecycle, refcounting, sanitized listing, and delete guards. | `cargo test -p eos-backend-runtime sandbox_manager`. |

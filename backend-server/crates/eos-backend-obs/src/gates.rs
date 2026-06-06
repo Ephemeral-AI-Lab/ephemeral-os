@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 use crate::{
-    normalize_agent_core_jsonl_line, normalize_sandbox_pull_response, ObsCollectorError,
+    normalize_agent_core_jsonl_line, normalize_sandbox_pull_response, ObsNormalizationError,
     SandboxAuditLoss, SandboxPullBatch,
 };
 
@@ -382,7 +382,7 @@ pub fn evaluate_runner_gate_batches(input: RunnerGateBatchInput<'_>) -> RunnerGa
 /// invalid.
 pub fn evaluate_runner_gate_sources(
     input: RunnerGateSourceInput<'_>,
-) -> Result<RunnerGateReport, ObsCollectorError> {
+) -> Result<RunnerGateReport, ObsNormalizationError> {
     let agent_core_rows = input
         .agent_core_jsonl
         .lines()

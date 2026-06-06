@@ -88,7 +88,7 @@ Phase 0 completion notes:
 | Completed | 2026-06-06 |
 | `git status --short` | Clean at verification time. |
 | `git diff --check -- backend-server/SPEC.md backend-server/implementation_plan.md` | Passed. |
-| Dependency baseline | `agent-core` still has pre-implementation `eos-sandbox-api`, `eos-sandbox-host`, and `eos-obs-collector` / `eos-protocol` edges. Phase 1 owns removing or relocating those edges. |
+| Dependency baseline | `agent-core` still has pre-implementation `eos-sandbox-api`, `eos-sandbox-host`, and obs-normalization / `eos-protocol` edges. Phase 1 owns removing or relocating those edges. |
 | `cd agent-core && cargo check -p eos-runtime --all-targets` | Passed. |
 | `cd sandbox && cargo check --workspace --all-targets` | Passed. |
 | Pre-existing build failures | None observed in Phase 0 verification. |
@@ -105,14 +105,14 @@ Implementation components:
 | Backend workspace | Add `backend-server/Cargo.toml` and crate manifests for `eos-backend-types`, `eos-backend-config`, `eos-backend-store`, `eos-backend-runtime`, `eos-backend-obs`, `eos-backend-api`, and `eos-backend-main`. |
 | Port crate | Add or rename to `agent-core/crates/eos-sandbox-port` with `gateway.rs`, `transport.rs`, `provision.rs`, and `tool_api.rs`. |
 | Host relocation | Move `eos-sandbox-host` under `backend-server/crates/` without behavior changes. |
-| Obs collector merge | Move collector normalization and runner gates into `eos-backend-obs` so `agent-core` no longer needs `eos-protocol` for obs normalization and no standalone obs collector crate remains. |
+| Obs normalization merge | Move normalization and runner gates into `eos-backend-obs` so `agent-core` no longer needs `eos-protocol` for obs normalization and no standalone collector crate remains. |
 | Dependency repair | Update workspace manifests and imports while preserving Rust 2021 / `rust-version = "1.85"`. |
 
 Hard acceptance checklist:
 
 - [x] Backend workspace manifests exist for every crate named in `SPEC.md`.
 - [x] `agent-core` no longer depends on `eos-sandbox-host`.
-- [x] `agent-core` no longer depends on `eos-protocol` through the obs collector.
+- [x] `agent-core` no longer depends on `eos-protocol` through obs normalization.
 - [x] `eos-tools`, `eos-engine`, and `eos-runtime` depend on `eos-sandbox-port`
   for sandbox contracts.
 - [x] `sandbox/crates/*` has no dependency on `backend-server` or `agent-core`.
@@ -343,8 +343,8 @@ Hard acceptance checklist:
 - [ ] Unmatched audit rows persist with null model-facing IDs and an unmatched
   marker.
 - [ ] `boot_epoch_id` change resets cursor or records loss before advancing.
-- [ ] `eos-backend-obs` owns collector normalization/gate modules and their
-  focused tests; there is no standalone `eos-obs-collector` workspace member.
+- [ ] `eos-backend-obs` owns normalization/gate modules and their focused tests;
+  there is no standalone collector workspace member.
 - [ ] Stats tests cover matched audit, unmatched audit, queue overflow, drainer
   failure, and daemon reboot.
 - [ ] Observability and store support tests live under
@@ -520,10 +520,10 @@ Touched files:
     repointed to eos-sandbox-port. Dropped eos-sandbox-host dep.
   - eos-sandbox-host provisioning.rs/lib.rs: consume the port trait, map
     SandboxHostError -> SandboxProvisionError at the trait impl boundary.
-  - git mv eos-sandbox-host -> backend-server/crates/. The obs collector was
-    moved out of agent-core during scaffold work and is now merged into
+  - git mv eos-sandbox-host -> backend-server/crates/. The obs normalization code
+    was moved out of agent-core during scaffold work and is now merged into
     eos-backend-obs before Phase 6 implementation.
-  - agent-core/Cargo.toml: dropped eos-sandbox-host/obs collector members +
+  - agent-core/Cargo.toml: dropped eos-sandbox-host/obs normalization members +
     path deps; dropped now-orphaned eos-protocol, bollard, tar workspace deps.
     Scrubbed the stale "eos-sandbox-host" comment in eos-tools/Cargo.toml.
   - New backend-server/Cargo.toml workspace + 7 stub crates (eos-backend-{types,

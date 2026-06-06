@@ -45,9 +45,9 @@ impl SandboxAuditLoss {
     }
 }
 
-/// Errors reported while normalizing collector inputs.
+/// Errors reported while normalizing backend observability inputs.
 #[derive(Debug, thiserror::Error)]
-pub enum ObsCollectorError {
+pub enum ObsNormalizationError {
     /// A normalized agent-core JSONL row could not be parsed.
     #[error("agent-core obs JSONL row is invalid")]
     AgentCoreJsonl(#[source] serde_json::Error),
@@ -69,10 +69,10 @@ pub enum ObsCollectorError {
 ///
 /// # Errors
 ///
-/// Returns [`ObsCollectorError::AgentCoreJsonl`] when the line is not a valid
+/// Returns [`ObsNormalizationError::AgentCoreJsonl`] when the line is not a valid
 /// [`ObsEnvelope`] JSON object.
-pub fn normalize_agent_core_jsonl_line(line: &str) -> Result<ObsEnvelope, ObsCollectorError> {
-    from_jsonl_line(line).map_err(ObsCollectorError::AgentCoreJsonl)
+pub fn normalize_agent_core_jsonl_line(line: &str) -> Result<ObsEnvelope, ObsNormalizationError> {
+    from_jsonl_line(line).map_err(ObsNormalizationError::AgentCoreJsonl)
 }
 
 /// Normalize a complete `api.audit.pull` response.
@@ -83,14 +83,14 @@ pub fn normalize_agent_core_jsonl_line(line: &str) -> Result<ObsEnvelope, ObsCol
 /// any contained event cannot be normalized.
 pub fn normalize_sandbox_pull_response(
     response: &Value,
-) -> Result<SandboxPullBatch, ObsCollectorError> {
+) -> Result<SandboxPullBatch, ObsNormalizationError> {
     if response.get("schema").and_then(Value::as_str) != Some(eos_protocol::audit::SCHEMA_VERSION) {
-        return Err(ObsCollectorError::SandboxSchema);
+        return Err(ObsNormalizationError::SandboxSchema);
     }
     let events = response
         .get("events")
         .and_then(Value::as_array)
-        .ok_or(ObsCollectorError::MissingEvents)?;
+        .ok_or(ObsNormalizationError::MissingEvents)?;
     let rows = events
         .iter()
         .map(normalize_sandbox_event)
@@ -106,15 +106,15 @@ pub fn normalize_sandbox_pull_response(
 /// # Errors
 ///
 /// Returns an error when `type` is absent or `payload` is not an object.
-pub fn normalize_sandbox_event(event: &Value) -> Result<ObsEnvelope, ObsCollectorError> {
+pub fn normalize_sandbox_event(event: &Value) -> Result<ObsEnvelope, ObsNormalizationError> {
     let event_type = event
         .get("type")
         .and_then(Value::as_str)
-        .ok_or(ObsCollectorError::MissingEventType)?;
+        .ok_or(ObsNormalizationError::MissingEventType)?;
     let payload = match event.get("payload") {
         None => JsonObject::new(),
         Some(Value::Object(payload)) => payload.clone(),
-        Some(_) => return Err(ObsCollectorError::NonObjectPayload),
+        Some(_) => return Err(ObsNormalizationError::NonObjectPayload),
     };
 
     let mut row = ObsEnvelope::new(ObsSource::Sandbox, event_type)

@@ -20,5 +20,5 @@ pub use gates::{
 };
 pub use normalization::{
     normalize_agent_core_jsonl_line, normalize_sandbox_event, normalize_sandbox_pull_response,
-    ObsCollectorError, SandboxAuditLoss, SandboxPullBatch,
+    ObsNormalizationError, SandboxAuditLoss, SandboxPullBatch,
 };
