@@ -204,15 +204,19 @@ impl RuntimeServicesBuilder {
         self
     }
 
-    /// Inject a request provisioner (a host-backed provisioner by default).
+    /// Inject a request provisioner. Without injection an erroring placeholder
+    /// is used until the backend composition root injects a host-backed
+    /// provisioner (Phase 2 `SandboxGateway`); tests inject a fake.
     #[cfg(test)]
     pub(crate) fn provisioner(mut self, provisioner: Arc<dyn RequestProvisioner>) -> Self {
         self.provisioner = Some(provisioner);
         self
     }
 
-    /// Inject the sandbox transport (a daemon client over the provider registry
-    /// by default). Tests inject a fake transport to avoid a live daemon.
+    /// Inject the sandbox transport. Without injection an erroring placeholder
+    /// is used until the backend composition root injects the daemon-backed
+    /// transport (Phase 2 `SandboxGateway`); tests inject a fake transport to
+    /// avoid a live daemon.
     pub fn transport(mut self, transport: Arc<dyn SandboxTransport>) -> Self {
         self.transport = Some(transport);
         self

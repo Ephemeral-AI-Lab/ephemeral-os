@@ -473,6 +473,8 @@ CREATE TABLE audit_cursor (
 
 All backend-server crate test files live under each crate's `tests/` directory,
 not under `src/`.
+In this checkout, the required absolute prefix is
+`/Users/yifanxu/machine_learning/LoVC/EphemeralOS/backend-server/crates/<crate>/tests/`.
 
 Rules:
 

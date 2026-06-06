@@ -4,5 +4,16 @@ version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
+schemars.workspace = true
+thiserror.workspace = true
+# Typed cross-cutting ids and the UTC timestamp wrapper (agent-core leaf crate).
+eos-types.workspace = true
+# Daemon-supplied `CallerId` for the audit/correlation bridge. backend -> sandbox
+# is the allowed dependency direction (AC3 only forbids the reverse).
+eos-protocol.workspace = true
+
 [lints]
 workspace = true

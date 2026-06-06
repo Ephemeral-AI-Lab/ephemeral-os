@@ -1,0 +1,5 @@
+/config/local.yml
+/.ephemeralos/
+*.db
+*.db-shm
+*.db-wal

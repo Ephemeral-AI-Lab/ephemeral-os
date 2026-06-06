@@ -174,8 +174,8 @@ Verification commands:
 (cd agent-core && cargo check -p eos-runtime --all-targets)
 (cd agent-core && cargo test -p eos-db)
 (cd agent-core && cargo test -p eos-state)
-rg -n "pub\\(crate\\).*provisioner|SqlitePool" agent-core/crates/eos-runtime/src
-find backend-server/crates \\( -path '*/src/*test*' -o -path '*/src/*fixture*' -o -path '*/src/*mock*' -o -path '*/src/*fake*' -o -path '*/src/*support*' \\) -print
+rg -n "pub\(crate\).*provisioner|SqlitePool" agent-core/crates/eos-runtime/src
+find backend-server/crates \( -path '*/src/*test*' -o -path '*/src/*fixture*' -o -path '*/src/*mock*' -o -path '*/src/*fake*' -o -path '*/src/*support*' \) -print
 ```
 
 Exit gate: AC2, AC7, AC9, and AC13 are implementable through typed agent-core
@@ -220,7 +220,7 @@ Verification commands:
 (cd backend-server && cargo test -p eos-backend-config)
 (cd backend-server && cargo test -p eos-backend-store)
 rg -n "auth_token|internal_port|DaemonTcpEndpoint|endpoint" backend-server/crates/eos-backend-{types,api,store}
-find backend-server/crates/eos-backend-{types,config,store}/src \\( -name '*test*' -o -name '*fixture*' -o -name '*mock*' -o -name '*fake*' -o -name '*support*' \\) -print
+find backend-server/crates/eos-backend-{types,config,store}/src \( -name '*test*' -o -name '*fixture*' -o -name '*mock*' -o -name '*fake*' -o -name '*support*' \) -print
 ```
 
 Exit gate: AC4, AC7, AC8, AC10, AC11, and AC13 are encoded in backend-owned
@@ -264,7 +264,7 @@ Verification commands:
 (cd backend-server && cargo test -p eos-backend-runtime sandbox_manager)
 (cd backend-server && cargo check -p eos-backend-runtime --all-targets)
 rg -n "image|snapshot|project_dir" backend-server/crates/eos-backend-runtime backend-server/crates/eos-backend-api
-find backend-server/crates/eos-backend-runtime/src \\( -name '*test*' -o -name '*fixture*' -o -name '*mock*' -o -name '*fake*' -o -name '*support*' \\) -print
+find backend-server/crates/eos-backend-runtime/src \( -name '*test*' -o -name '*fixture*' -o -name '*mock*' -o -name '*fake*' -o -name '*support*' \) -print
 ```
 
 Exit gate: AC1, AC4, AC10, AC13, and the lifecycle half of AC2 are satisfied by
@@ -310,7 +310,7 @@ Verification commands:
 (cd backend-server && cargo test -p eos-backend-runtime event_bus)
 (cd backend-server && cargo test -p eos-backend-runtime reaper)
 rg -n "\\.await|SqlitePool" backend-server/crates/eos-backend-runtime/src/event_bus.rs
-find backend-server/crates/eos-backend-runtime/src \\( -name '*test*' -o -name '*fixture*' -o -name '*mock*' -o -name '*fake*' -o -name '*support*' \\) -print
+find backend-server/crates/eos-backend-runtime/src \( -name '*test*' -o -name '*fixture*' -o -name '*mock*' -o -name '*fake*' -o -name '*support*' \) -print
 ```
 
 Exit gate: AC1, AC5, and AC13 are proven in backend runtime tests.
@@ -354,7 +354,7 @@ Verification commands:
 (cd backend-server && cargo test -p eos-backend-obs)
 (cd backend-server && cargo test -p eos-backend-store obs audit_cursor sandbox_call_correlation)
 rg -n "tool_use_id.*sandbox_invocation_id|sandbox_invocation_id.*tool_use_id" backend-server/crates
-find backend-server/crates/eos-backend-{obs,store}/src \\( -name '*test*' -o -name '*fixture*' -o -name '*mock*' -o -name '*fake*' -o -name '*support*' \\) -print
+find backend-server/crates/eos-backend-{obs,store}/src \( -name '*test*' -o -name '*fixture*' -o -name '*mock*' -o -name '*fake*' -o -name '*support*' \) -print
 ```
 
 Exit gate: AC6, AC7, AC8, and AC13 are proven by focused backend obs/store
@@ -400,7 +400,7 @@ Verification commands:
 (cd backend-server && cargo test -p eos-backend-api api_contract)
 (cd backend-server && cargo test -p eos-backend-api stream)
 rg -n "user-request=|DaemonTcpEndpoint|auth_token|internal_port|endpoint" backend-server/crates/eos-backend-api
-find backend-server/crates/eos-backend-api/src \\( -name '*test*' -o -name '*fixture*' -o -name '*mock*' -o -name '*fake*' -o -name '*support*' \\) -print
+find backend-server/crates/eos-backend-api/src \( -name '*test*' -o -name '*fixture*' -o -name '*mock*' -o -name '*fake*' -o -name '*support*' \) -print
 ```
 
 Exit gate: AC1, AC4, AC5, AC9, AC10, and AC13 are exposed through tested API
@@ -448,7 +448,7 @@ Verification commands:
   cargo test -p eos-backend-main --test live_e2e -- --ignored)
 rg -n "eos-sandbox-host|eos-protocol|backend-server" agent-core/crates -g Cargo.toml
 rg -n "agent-core|backend-server" sandbox/crates -g Cargo.toml
-find backend-server/crates \\( -path '*/src/*test*' -o -path '*/src/*fixture*' -o -path '*/src/*mock*' -o -path '*/src/*fake*' -o -path '*/src/*support*' \\) -print
+find backend-server/crates \( -path '*/src/*test*' -o -path '*/src/*fixture*' -o -path '*/src/*mock*' -o -path '*/src/*fake*' -o -path '*/src/*support*' \) -print
 ```
 
 Exit gate: AC1 through AC13 are either proven by tests or recorded as explicit
@@ -472,6 +472,8 @@ spec deviations with a follow-up plan.
   harnesses under `backend-server/crates/*/src/`; use each crate's `tests/`
   tree, with a narrow `#[path = ...]` declaration in `src/` only when private
   module access is required.
+  In this checkout, the required absolute prefix is
+  `/Users/yifanxu/machine_learning/LoVC/EphemeralOS/backend-server/crates/<crate>/tests/`.
 - Do not revert unrelated concurrent work while moving crates or updating
   manifests.
 
@@ -540,7 +542,7 @@ Verification commands (all pass):
 Failures: none.
 Spec deviations:
   - "behavior-preserving" reading: sandbox lifecycle code (Docker/daemon/provisioner)
-    moved intact; only the composition-root wiring changed — eos-runtime's builder
+    moved intact; only the composition-root wiring changed - eos-runtime's builder
     no longer self-constructs the Docker default and instead requires an injected
     transport/provisioner (erroring placeholders until injection). This is the
     point of the relocation, matching the SPEC build order (relocate first, add

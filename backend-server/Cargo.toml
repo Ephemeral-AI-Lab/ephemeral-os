@@ -29,6 +29,10 @@ serde       = { version = "1", features = ["derive"] }
 serde_json  = { version = "1", features = ["preserve_order"] }
 serde_yaml  = "0.9"
 schemars    = "0.8"
+# backend.db persistence (eos-backend-store). Pins mirror agent-core's so the
+# shared `time` TEXT timestamp encoding stays byte-identical across both DBs.
+sqlx        = { version = "0.8", default-features = false, features = ["runtime-tokio", "sqlite", "macros", "migrate"] }
+time        = { version = "0.3", features = ["serde", "formatting", "parsing", "macros"] }
 sha2        = "0.10"
 thiserror   = "2"
 anyhow      = "1"
