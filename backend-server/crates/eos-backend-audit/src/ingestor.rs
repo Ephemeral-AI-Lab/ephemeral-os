@@ -276,3 +276,7 @@ fn max_opt(left: Option<i64>, right: Option<i64>) -> Option<i64> {
         (None, None) => None,
     }
 }
+
+#[cfg(test)]
+#[path = "../tests/ingestor/mod.rs"]
+mod tests;

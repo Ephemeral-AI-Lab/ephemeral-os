@@ -12,7 +12,8 @@ use eos_backend_types::{BackendRunStatus, CreateUserRequest, SandboxArgs};
 use crate::event_bus::EventBus;
 use crate::host::RunOutcome;
 use crate::test_support::{
-    await_host_started, await_run_finished, failing_manager, manager, temp_store, FakeRunHost,
+    await_host_started, await_run_finished, failing_manager, gated_manager, manager, temp_store,
+    FakeRunHost,
 };
 
 use super::{CancelOutcome, RunLauncher};
@@ -111,6 +112,35 @@ async fn launch_resolves_failed() {
     let meta = await_run_finished(&h.store, &request_id).await;
 
     assert_eq!(meta.status, BackendRunStatus::Failed);
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn cancel_during_acquire_still_tears_down_the_sandbox() {
+    // Regression for the cancel-during-provision leak (M1): if cancellation could
+    // interrupt the acquire phase, a freshly created sandbox would be live in the
+    // host but never recorded by the manager, so `release` would be a no-op and the
+    // container would leak. The launcher acquires to completion before racing the
+    // cancellation token, so the binding is always recorded and the reaper tears it
+    // down even when the cancel arrives mid-provision.
+    let host = FakeRunHost::resolving(RunOutcome::Done);
+    let (mgr, teardown, gate) = gated_manager(4, true);
+    let h = setup_with(host, (mgr, teardown)).await;
+
+    let request_id = h.launcher.launch(request("go", None)).await.unwrap();
+    // Wait until the run task is parked inside provisioning, then cancel.
+    gate.entered.notified().await;
+    assert_eq!(
+        h.launcher.cancel(&request_id, "stop"),
+        CancelOutcome::Requested
+    );
+    // Let the (non-cancellable) provision finish; the cancel is observed next.
+    gate.release.notify_one();
+
+    let meta = await_run_finished(&h.store, &request_id).await;
+    assert_eq!(meta.status, BackendRunStatus::Cancelled);
+    assert_eq!(meta.cancel_reason.as_deref(), Some("stop"));
+    // The bound sandbox was recorded and torn down exactly once — no leak.
+    assert_eq!(h.teardown.destroyed.lock().len(), 1);
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]

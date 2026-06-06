@@ -379,4 +379,68 @@ mod tests {
         let _ = std::fs::remove_dir_all(root);
         Ok(())
     }
+
+    #[test]
+    fn finalize_marks_failed_command_unsuccessful_even_when_publish_succeeds(
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        let root = std::env::temp_dir().join(format!(
+            "eos-ephemeral-command-finalize-failed-{}",
+            std::process::id()
+        ));
+        let _ = std::fs::remove_dir_all(&root);
+        let upperdir = root.join("upper");
+        let workdir = root.join("work");
+        let run_dir = root.join("run");
+        std::fs::create_dir_all(&upperdir)?;
+        std::fs::create_dir_all(&workdir)?;
+        std::fs::create_dir_all(&run_dir)?;
+        std::fs::write(upperdir.join("result.txt"), b"ok")?;
+        let context = EphemeralCommandFinalizeContext {
+            workspace: EphemeralWorkspace {
+                layer_stack_root: WorkspaceRoot(PathBuf::from("/layers")),
+                workspace_root: PathBuf::from("/workspace"),
+                caller_id: CallerId("caller-1".to_owned()),
+                invocation_id: InvocationId("cmd-1".to_owned()),
+                snapshot: EphemeralSnapshot {
+                    lease_id: "lease-1".to_owned(),
+                    manifest_version: 7,
+                    manifest_root_hash: "hash".to_owned(),
+                    layer_paths: vec![PathBuf::from("/lower/a")],
+                },
+                dirs: EphemeralRunDirs {
+                    run_dir,
+                    upperdir,
+                    workdir,
+                    output_path: root.join("runner-result.json"),
+                    final_path: root.join("final.json"),
+                    request_path: Some(root.join("runner-request.json")),
+                    result_path: None,
+                },
+            },
+            base_timings: BTreeMap::new(),
+        };
+
+        let outcome = finalize_command_workspace(
+            &FakePort,
+            context,
+            FinalizeCommandRequest {
+                runner_result: None,
+                command_elapsed_s: 1.5,
+                spool_truncated: false,
+                status: "error".to_owned(),
+                exit_code: Some(2),
+                stdout: String::new(),
+                stderr: "failed".to_owned(),
+                command_session_id: Some("cmd-1".to_owned()),
+            },
+        )?;
+
+        assert!(!outcome.success);
+        assert_eq!(outcome.status, "error");
+        assert_eq!(outcome.exit_code, Some(2));
+        assert_eq!(outcome.changed_paths, vec!["result.txt"]);
+
+        let _ = std::fs::remove_dir_all(root);
+        Ok(())
+    }
 }

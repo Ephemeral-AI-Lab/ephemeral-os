@@ -220,4 +220,57 @@ mod tests {
         let _ = std::fs::remove_dir_all(root);
         Ok(())
     }
+
+    #[test]
+    fn finalize_marks_failed_command_unsuccessful(
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        let root = std::env::temp_dir().join(format!(
+            "eos-isolated-command-finalize-failed-{}",
+            std::process::id()
+        ));
+        let _ = std::fs::remove_dir_all(&root);
+        let upperdir = root.join("upper");
+        std::fs::create_dir_all(&upperdir)?;
+        std::fs::write(upperdir.join("private.txt"), b"private")?;
+        let port = FakePort {
+            context: IsolatedCommandFinalizeContext {
+                caller_id: "caller-1".to_owned(),
+                workspace_handle_id: "iws-1".to_owned(),
+                manifest_version: 7,
+                manifest_root_hash: "hash".to_owned(),
+                upperdir,
+                base_timings: BTreeMap::new(),
+            },
+        };
+
+        let outcome = finalize_command_workspace(
+            &port,
+            FinalizeCommandRequest {
+                runner_result: Some(json!({
+                    "tool_result": {
+                        "timings": {
+                            "workspace.mount_s": 0.1,
+                            "workspace.tool_s": 0.2,
+                        }
+                    },
+                    "exit_code": 2,
+                })),
+                command_elapsed_s: 1.25,
+                spool_truncated: false,
+                status: "error".to_owned(),
+                exit_code: Some(2),
+                stdout: String::new(),
+                stderr: "failed".to_owned(),
+                command_session_id: Some("cmd-1".to_owned()),
+            },
+        )?;
+
+        assert!(!outcome.success);
+        assert_eq!(outcome.status, "error");
+        assert_eq!(outcome.exit_code, Some(2));
+        assert_eq!(outcome.metadata["audit"]["status"], "error");
+
+        let _ = std::fs::remove_dir_all(root);
+        Ok(())
+    }
 }

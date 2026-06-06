@@ -26,11 +26,21 @@ use crate::sandbox_manager::{SandboxManager, SandboxManagerError, SandboxTeardow
 
 // --- sandbox host fakes ------------------------------------------------------
 
+/// A provision gate: `prepare_for_run` signals `entered` then parks on `release`,
+/// so a test can fire cancellation deterministically while a provision is in
+/// flight (the acquire phase), reproducing the cancel-during-acquire race.
+#[derive(Debug, Clone, Default)]
+pub struct ProvisionGate {
+    pub entered: Arc<Notify>,
+    pub release: Arc<Notify>,
+}
+
 /// Mints `sb-for-<request>` for a fresh acquisition, echoes the explicit id
-/// otherwise.
+/// otherwise. An optional [`ProvisionGate`] parks the provision mid-flight.
 #[derive(Debug, Default)]
 pub struct FakeProvisioner {
     pub fail: bool,
+    pub gate: Option<ProvisionGate>,
 }
 
 #[async_trait]
@@ -42,6 +52,11 @@ impl RequestProvisioner for FakeProvisioner {
     ) -> Result<RequestSandboxBinding, SandboxProvisionError> {
         if self.fail {
             return Err(SandboxProvisionError::new("provision boom"));
+        }
+        // Simulate a slow host create that a test can cancel during.
+        if let Some(gate) = &self.gate {
+            gate.entered.notify_one();
+            gate.release.notified().await;
         }
         let sandbox_id: SandboxId = match sandbox_id {
             Some(id) => id.parse().unwrap(),
@@ -93,13 +108,31 @@ pub fn manager(
     manager_with(FakeProvisioner::default(), max_owned, destroy_on_finish)
 }
 
+/// Build a manager whose provisioner parks mid-provision on the returned gate, so
+/// a test can fire cancellation during the acquire phase (M1 leak regression).
+pub fn gated_manager(
+    max_owned: usize,
+    destroy_on_finish: bool,
+) -> (Arc<SandboxManager>, Arc<FakeTeardown>, ProvisionGate) {
+    let gate = ProvisionGate::default();
+    let (manager, teardown) = manager_with(
+        FakeProvisioner {
+            fail: false,
+            gate: Some(gate.clone()),
+        },
+        max_owned,
+        destroy_on_finish,
+    );
+    (manager, teardown, gate)
+}
+
 /// Build a manager whose provisioner always fails, so a test can drive the
 /// launcher's sandbox-acquisition-failure arm.
 pub fn failing_manager(
     max_owned: usize,
     destroy_on_finish: bool,
 ) -> (Arc<SandboxManager>, Arc<FakeTeardown>) {
-    manager_with(FakeProvisioner { fail: true }, max_owned, destroy_on_finish)
+    manager_with(FakeProvisioner { fail: true, gate: None }, max_owned, destroy_on_finish)
 }
 
 fn manager_with(

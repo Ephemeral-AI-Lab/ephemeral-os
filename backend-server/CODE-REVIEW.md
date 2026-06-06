@@ -16,8 +16,11 @@ contract.
 
 ## ✅ Resolution status — ALL findings fixed & verified
 
-Every finding below has been fixed. Final verification: **166 workspace tests
-pass, 0 failures; `cargo clippy --workspace --all-targets` clean.**
+Every finding below has been fixed. Final verification: **169 workspace tests
+pass, 0 failures; `cargo clippy --workspace --all-targets` clean.** Three new
+regression tests pin the two behavioral fixes: `cancel_during_acquire_still_tears_down_the_sandbox`
+(M1 — no orphaned sandbox when cancel races provisioning) and two `next_cursor`
+epoch-reset cases (M3 — `lost_before_seq` stays `None` on a zero-boundary reboot).
 
 | ID | Fix | Where |
 |---|---|---|

@@ -169,6 +169,7 @@ impl OpTable {
                 dispatch_start.elapsed().as_secs_f64(),
                 context.read_request_s.unwrap_or(0.0),
             );
+            emit_dispatch_audit(request, &response, dispatch_start.elapsed().as_secs_f64());
             return response;
         }
         if !request.args.is_object() {
@@ -183,6 +184,7 @@ impl OpTable {
                 dispatch_start.elapsed().as_secs_f64(),
                 context.read_request_s.unwrap_or(0.0),
             );
+            emit_dispatch_audit(request, &response, dispatch_start.elapsed().as_secs_f64());
             return response;
         }
         let Some(handler) = self.handlers.get(&request.op) else {
@@ -216,6 +218,7 @@ impl OpTable {
                 dispatch_start.elapsed().as_secs_f64(),
                 context.read_request_s.unwrap_or(0.0),
             );
+            emit_dispatch_audit(request, &response, dispatch_start.elapsed().as_secs_f64());
             return response;
         };
         let mut response = match handler(&request.args, context) {

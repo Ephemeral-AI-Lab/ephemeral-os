@@ -76,7 +76,7 @@
     <tr>
       <td>Request bootstrap and root agent</td>
       <td><span class="file-ref">agent-core/crates/eos-runtime</span></td>
-      <td><span class="file-ref">agent-core/crates/eos-runtime/src/entry.rs</span>, <span class="file-ref">agent-core/crates/eos-runtime/src/root_agent.rs</span></td>
+      <td><span class="file-ref">agent-core/crates/eos-runtime/src/entry.rs</span></td>
       <td>Parity: a request creates a root <code>Task(role=root, workflow_id=None)</code> and runs it directly. Optimization: Rust wires per-request workflow ports, background supervisor, command-session heartbeat, and unfinished-root CAS guard as typed dependencies.</td>
     </tr>
     <tr>
@@ -142,7 +142,7 @@
     <tr>
       <td>Isolated workspace lifecycle</td>
       <td><span class="file-ref">sandbox/crates/eos-isolated-workspace</span>, <span class="file-ref">agent-core/crates/eos-tools/src/tools/isolated_workspace</span></td>
-      <td><span class="file-ref">agent-core/crates/eos-tools/src/tools/isolated_workspace</span>, <span class="file-ref">agent-core/crates/eos-tools/src/hooks/require_no_background_sessions.rs</span>, <span class="file-ref">agent-core/crates/eos-runtime/src/isolated_workspace.rs</span>, <span class="file-ref">agent-core/crates/eos-sandbox-api/src/tool_api/isolated.rs</span>, <span class="file-ref">sandbox/crates/eos-daemon/src/services/isolated_workspace/mod.rs</span>, <span class="file-ref">sandbox/crates/eos-isolated-workspace</span></td>
+      <td><span class="file-ref">agent-core/crates/eos-tools/src/tools/isolated_workspace</span>, <span class="file-ref">agent-core/crates/eos-tools/src/hooks/require_no_background_sessions.rs</span>, <span class="file-ref">agent-core/crates/eos-sandbox-port/src/tool_api/isolated.rs</span>, <span class="file-ref">sandbox/crates/eos-daemon/src/services/isolated_workspace/mod.rs</span>, <span class="file-ref">sandbox/crates/eos-isolated-workspace</span></td>
       <td>Parity: explicit enter/exit, per-agent private namespace, background gate, plugin/LSP block, audit-only writes, and teardown remain. Optimization: public routing uses the active sandbox <code>caller_id</code> isolated handle, not a public isolated workspace id parameter.</td>
     </tr>
     <tr>
@@ -162,11 +162,11 @@
 </div>
 </section>
 
-<section id="workflow-parity" data-last-reviewed-commit="HEAD-plus-worktree" data-evidence-paths="agent-core/crates/eos-runtime/src/entry.rs agent-core/crates/eos-runtime/src/root_agent.rs agent-core/crates/eos-workflow/src agent-core/crates/eos-engine/src agent-core/crates/eos-tools/src">
+<section id="workflow-parity" data-last-reviewed-commit="HEAD-plus-worktree" data-evidence-paths="agent-core/crates/eos-runtime/src/entry.rs agent-core/crates/eos-workflow/src agent-core/crates/eos-engine/src agent-core/crates/eos-tools/src">
 <h2>Workflow Parity <a class="anchor" href="#workflow-parity">#</a></h2>
 <div class="sequence" aria-label="Rust runtime preserves Python workflow shape">
   <ol>
-    <li><span><strong>Request starts.</strong> Rust runtime provisions the sandbox, inserts a request row, mints a root task, and runs the root agent directly through <code>run_ephemeral_agent</code>. This preserves Python's Task-first request model and removes the old synthetic root workflow claim.</span></li>
+    <li><span><strong>Request starts.</strong> Rust runtime provisions the sandbox, inserts a request row, mints a root task, and runs the root agent directly through <code>eos_engine::run_agent</code>. This preserves Python's Task-first request model and removes the old synthetic root workflow claim.</span></li>
     <li><span><strong>Root may delegate.</strong> <code>delegate_workflow</code> is non-terminal. It creates delegated workflow state and returns a handle; the parent remains running and must inspect/cancel/finish explicitly.</span></li>
     <li><span><strong>Workflow decomposes.</strong> <code>WorkflowLifecycle</code> creates iterations, handles retry/deferral, and closes the workflow without mutating the parent task.</span></li>
     <li><span><strong>Attempt plans and runs.</strong> <code>AttemptOrchestrator</code> materializes a planner-authored generator/reducer DAG, then the RUN stage schedules ready tasks to quiescence. Reducers are ordinary plan tasks and the exit gate.</span></li>
