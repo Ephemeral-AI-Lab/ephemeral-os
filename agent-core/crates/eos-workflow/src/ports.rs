@@ -286,6 +286,10 @@ impl WorkflowControlAdapter {
                 if attempt.is_closed() {
                     continue;
                 }
+                // Abort the in-flight planner-driver task (and its RUN-stage
+                // JoinSet) before finalizing cancelled state, so it stops issuing
+                // provider calls promptly instead of running to natural completion.
+                self.starter.orchestrator_registry().abort_planner(&attempt.id);
                 for task_id in attempt
                     .planner_task_id()
                     .into_iter()

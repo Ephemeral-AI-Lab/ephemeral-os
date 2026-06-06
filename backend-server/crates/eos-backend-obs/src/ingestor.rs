@@ -62,17 +62,13 @@ pub enum IngestError {
 /// Outcome of ingesting one pull response, for loss accounting and tests.
 #[derive(Debug, Clone, PartialEq)]
 pub struct IngestReport {
-    /// Daemon boot epoch the response was anchored to.
-    pub boot_epoch_id: i64,
     /// Whether this pull observed a daemon reboot (epoch change).
     pub epoch_reset: bool,
-    /// Obs rows persisted from this pull.
-    pub persisted: u64,
     /// Daemon rows joined to a correlation bridge.
     pub matched: u64,
     /// Daemon rows with an invocation id but no bridge.
     pub unmatched: u64,
-    /// The cursor persisted after this pull.
+    /// The cursor persisted after this pull (carries `boot_epoch_id` and loss).
     pub cursor: AuditCursor,
 }
 
@@ -119,7 +115,6 @@ impl AuditIngestor {
             .as_ref()
             .is_some_and(|cursor| cursor.boot_epoch_id != boot_epoch_id);
 
-        let mut persisted = 0;
         let mut matched = 0;
         let mut unmatched = 0;
         for row in &batch.rows {
@@ -140,15 +135,12 @@ impl AuditIngestor {
             }
             let obs = build_obs_event(sandbox_id, row, invocation.as_ref(), bridge.as_ref());
             self.obs_events.insert(&obs).await?;
-            persisted += 1;
         }
 
         let cursor = next_cursor(sandbox_id, boot_epoch_id, epoch_reset, prior.as_ref(), &batch);
         self.cursors.upsert(&cursor).await?;
         Ok(IngestReport {
-            boot_epoch_id,
             epoch_reset,
-            persisted,
             matched,
             unmatched,
             cursor,
@@ -169,47 +161,24 @@ fn build_obs_event(
     bridge: Option<&SandboxCallCorrelation>,
 ) -> ObsEvent {
     let mut payload = row.payload.clone();
-    let model = match bridge {
-        Some(bridge) => ModelIds::from_bridge(bridge),
-        None => {
-            if invocation.is_some() {
-                payload.insert(UNMATCHED_MARKER.to_owned(), Value::Bool(true));
-            }
-            ModelIds::default()
-        }
-    };
+    // A row with an invocation id but no bridge is unmatched: mark it and keep model
+    // ids null. The model ids are lifted ONLY from the bridge (`Option<&_>` is `Copy`),
+    // so the daemon invocation never lands in `tool_use_id` (AC7).
+    if bridge.is_none() && invocation.is_some() {
+        payload.insert(UNMATCHED_MARKER.to_owned(), Value::Bool(true));
+    }
     ObsEvent {
         id: None,
-        request_id: model.request_id,
-        task_id: model.task_id,
-        agent_run_id: model.agent_run_id,
-        tool_use_id: model.tool_use_id,
+        request_id: bridge.map(|bridge| bridge.request_id.clone()),
+        task_id: bridge.map(|bridge| bridge.task_id.clone()),
+        agent_run_id: bridge.map(|bridge| bridge.agent_run_id.clone()),
+        tool_use_id: bridge.map(|bridge| bridge.tool_use_id.clone()),
         sandbox_invocation_id: invocation.cloned(),
         sandbox_id: Some(sandbox_id.clone()),
         source: ObsSource::Daemon,
         kind: row.event_type.clone(),
         payload: Value::Object(payload),
         created_at: UtcDateTime::now(),
-    }
-}
-
-/// Model-facing ids lifted from a correlation bridge (all null when unmatched).
-#[derive(Default)]
-struct ModelIds {
-    request_id: Option<eos_types::RequestId>,
-    task_id: Option<eos_types::TaskId>,
-    agent_run_id: Option<eos_types::AgentRunId>,
-    tool_use_id: Option<eos_types::ToolUseId>,
-}
-
-impl ModelIds {
-    fn from_bridge(bridge: &SandboxCallCorrelation) -> Self {
-        Self {
-            request_id: Some(bridge.request_id.clone()),
-            task_id: Some(bridge.task_id.clone()),
-            agent_run_id: Some(bridge.agent_run_id.clone()),
-            tool_use_id: Some(bridge.tool_use_id.clone()),
-        }
     }
 }
 
