@@ -2,7 +2,6 @@
 resolver = "2"
 members = [
   "crates/eos-sandbox-host",
-  "crates/eos-obs-collector",
   "crates/eos-backend-types",
   "crates/eos-backend-config",
   "crates/eos-backend-store",
@@ -59,7 +58,6 @@ eos-protocol       = { path = "../sandbox/crates/eos-protocol" }
 
 # internal backend crates — these path edges are the backend dependency DAG.
 eos-sandbox-host   = { path = "crates/eos-sandbox-host" }
-eos-obs-collector  = { path = "crates/eos-obs-collector" }
 eos-backend-types   = { path = "crates/eos-backend-types" }
 eos-backend-config  = { path = "crates/eos-backend-config" }
 eos-backend-store   = { path = "crates/eos-backend-store" }

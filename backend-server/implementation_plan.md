@@ -105,7 +105,7 @@ Implementation components:
 | Backend workspace | Add `backend-server/Cargo.toml` and crate manifests for `eos-backend-types`, `eos-backend-config`, `eos-backend-store`, `eos-backend-runtime`, `eos-backend-obs`, `eos-backend-api`, and `eos-backend-main`. |
 | Port crate | Add or rename to `agent-core/crates/eos-sandbox-port` with `gateway.rs`, `transport.rs`, `provision.rs`, and `tool_api.rs`. |
 | Host relocation | Move `eos-sandbox-host` under `backend-server/crates/` without behavior changes. |
-| Obs collector relocation | Move `eos-obs-collector` under `backend-server/crates/` so `agent-core` no longer needs `eos-protocol` for obs normalization. |
+| Obs collector merge | Move collector normalization and runner gates into `eos-backend-obs` so `agent-core` no longer needs `eos-protocol` for obs normalization and no standalone obs collector crate remains. |
 | Dependency repair | Update workspace manifests and imports while preserving Rust 2021 / `rust-version = "1.85"`. |
 
 Hard acceptance checklist:
@@ -325,6 +325,7 @@ Implementation components:
 | Component | Work |
 |---|---|
 | `PersistingSink` | Implement `AuditSink` with owned bounded enqueue and async drainer. |
+| Collector normalization/gates | Keep sandbox pull normalization and runner audit/observability gates in `eos-backend-obs` beside the sink, ingestor, and stats code. |
 | Correlation writer | Persist `sandbox_call_correlation` before or atomically with sandbox tool calls. |
 | Audit ingestor | Pull daemon audit, track `boot_epoch_id`, reset/mark loss on epoch change, and persist unmatched events safely. |
 | Stats queries | Implement performance, correctness, agent-runs, and events stats over backend DB plus `state_reader()` data. |
@@ -342,6 +343,8 @@ Hard acceptance checklist:
 - [ ] Unmatched audit rows persist with null model-facing IDs and an unmatched
   marker.
 - [ ] `boot_epoch_id` change resets cursor or records loss before advancing.
+- [ ] `eos-backend-obs` owns collector normalization/gate modules and their
+  focused tests; there is no standalone `eos-obs-collector` workspace member.
 - [ ] Stats tests cover matched audit, unmatched audit, queue overflow, drainer
   failure, and daemon reboot.
 - [ ] Observability and store support tests live under
@@ -517,8 +520,10 @@ Touched files:
     repointed to eos-sandbox-port. Dropped eos-sandbox-host dep.
   - eos-sandbox-host provisioning.rs/lib.rs: consume the port trait, map
     SandboxHostError -> SandboxProvisionError at the trait impl boundary.
-  - git mv eos-sandbox-host + eos-obs-collector -> backend-server/crates/.
-  - agent-core/Cargo.toml: dropped eos-sandbox-host/eos-obs-collector members +
+  - git mv eos-sandbox-host -> backend-server/crates/. The obs collector was
+    moved out of agent-core during scaffold work and is now merged into
+    eos-backend-obs before Phase 6 implementation.
+  - agent-core/Cargo.toml: dropped eos-sandbox-host/obs collector members +
     path deps; dropped now-orphaned eos-protocol, bollard, tar workspace deps.
     Scrubbed the stale "eos-sandbox-host" comment in eos-tools/Cargo.toml.
   - New backend-server/Cargo.toml workspace + 7 stub crates (eos-backend-{types,
@@ -819,8 +824,9 @@ Key design decisions:
     NOT a SandboxConfig field and NOT the layer-stack root; a later phase supplies it.
 Checklist results: all 9 Phase 4 hard items checked.
 Verification commands (all pass):
-  - cargo test -p eos-backend-runtime sandbox_manager -> 16 passed (incl. failed-acquire
-    leaks-no-state/capacity and delete-propagates-teardown-failure-keeps-entry)
+  - cargo test -p eos-backend-runtime sandbox_manager -> 17 passed (incl. failed-acquire
+    leaks-no-state/capacity, delete-propagates-teardown-failure-keeps-entry, and
+    release-swallows-teardown-failure-keeps-entry-for-retry)
   - cargo check -p eos-backend-runtime --all-targets -> ok
   - cargo clippy -p eos-backend-runtime --all-targets -- -D warnings -> clean
   - rg "image|snapshot|project_dir" eos-backend-runtime eos-backend-api -> only the two
@@ -840,6 +846,13 @@ Spec deviations / noted interpretations:
     state, destroy-on-finish). Recorded as a deliberate decision, not a skip.
   - SandboxConfig.startup_timeout_ms is owned by Phase 3 config and is not consumed by
     the manager; it is a launcher-level provision timeout (Phase 5), not a manager knob.
+  - max_owned_sandboxes is enforced best-effort: the fresh-create budget check reads only
+    committed owned sandboxes, and the async host provision runs outside the bookkeeping
+    lock, so a burst of concurrent fresh acquires can each pass the check before any
+    commits and transiently overshoot the cap by the number of in-flight provisions. It
+    is a runaway-creation guardrail, not a hard barrier under concurrency; a reserved-slot
+    barrier is deferred to Phase 5, which owns the launcher and its acquisition
+    concurrency model. Documented at the check site in sandbox_manager.rs::acquire.
 Next phase unblockers: Phase 5 RunLauncher injects the manager via
   RuntimeServicesBuilder::sandbox_gateway(manager.clone()) (Arc<SandboxManager> ->
   Arc<dyn SandboxGateway>) and retains the same Arc<SandboxManager> to drive the reaper's

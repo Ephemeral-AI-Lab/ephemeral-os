@@ -365,6 +365,13 @@ version = "0.1.0"
 [[package]]
 name = "eos-backend-obs"
 version = "0.1.0"
+dependencies = [
+ "eos-audit",
+ "eos-protocol",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.18",
+]
 
 [[package]]
 name = "eos-backend-runtime"
@@ -408,17 +415,6 @@ dependencies = [
  "schemars 0.8.22",
  "serde",
  "serde_json",
-]
-
-[[package]]
-name = "eos-obs-collector"
-version = "0.1.0"
-dependencies = [
- "eos-audit",
- "eos-protocol",
- "serde",
- "serde_json",
- "thiserror 2.0.18",
 ]
 
 [[package]]
