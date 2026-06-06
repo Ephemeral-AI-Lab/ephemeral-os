@@ -111,7 +111,7 @@ pub fn setns_overlay_mount(request: &RunRequest) -> Result<(), RunnerError> {
     let guard = eos_overlay::mount_overlay(&request.workspace_root.0, &handle)?;
     // The setns mount helper is a one-shot process. The mounted overlay must
     // outlive this helper and remain pinned by the target mount namespace until
-    // isolated teardown, matching the Python helper that exits after mounting.
+    // isolated teardown, matching the Rust helper that exits after mounting.
     std::mem::forget(guard);
     Ok(())
 }
@@ -359,7 +359,7 @@ mod tests {
     }
 
     #[test]
-    fn namespace_order_matches_python_helper_and_skips_missing_fds() {
+    fn namespace_order_matches_rust_helper_and_skips_missing_fds() {
         let ns_fds = NsFds {
             user: Some(Fd(10)),
             mnt: Some(Fd(11)),
@@ -382,7 +382,7 @@ mod tests {
     }
 
     #[test]
-    fn dns_fallback_detection_matches_python_helper() {
+    fn dns_fallback_detection_matches_rust_helper() {
         let content = "search local\nnameserver 127.0.0.53\nnameserver 8.8.8.8\n";
         let nameserver = first_nameserver(content);
         assert_eq!(nameserver, Some("127.0.0.53"));

@@ -4,7 +4,7 @@ use thiserror::Error;
 
 /// Failures surfaced by plugin contracts and the PPC channel.
 ///
-/// The Python side raises bare `PluginOpRegistrationError` / `PluginOpConflictError`
+/// The Rust side raises bare `PluginOpRegistrationError` / `PluginOpConflictError`
 /// / `PluginEnsureError` / `RuntimeError` at the same boundaries; this enum
 /// reproduces those failure classes as a typed surface the daemon translates into
 /// the wire error envelope. Concrete overlay/OCC failures are daemon-owned.

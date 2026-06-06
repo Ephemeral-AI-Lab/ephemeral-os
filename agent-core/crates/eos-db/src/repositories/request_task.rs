@@ -1,4 +1,4 @@
-//! `SqlRequestTaskStore` — the requests + tasks repository (Python `task_store.py`).
+//! `SqlRequestTaskStore` — the requests + tasks repository (Rust `task_store.py`).
 
 use async_trait::async_trait;
 use sqlx::{Sqlite, SqlitePool};

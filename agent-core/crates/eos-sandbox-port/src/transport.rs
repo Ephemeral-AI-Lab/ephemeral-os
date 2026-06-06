@@ -69,7 +69,7 @@ pub(crate) mod mock {
     //! An in-memory `SandboxTransport` returning a canned outcome, used by the
     //! `tool_api` conflict tests.
 
-    use super::{async_trait, DaemonOp, JsonObject, SandboxPortError, SandboxId, SandboxTransport};
+    use super::{async_trait, DaemonOp, JsonObject, SandboxId, SandboxPortError, SandboxTransport};
 
     pub(crate) struct MockTransport {
         outcome: Result<JsonObject, SandboxPortError>,

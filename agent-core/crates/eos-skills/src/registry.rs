@@ -1,7 +1,7 @@
 //! [`SkillRegistry`] — an immutable, name-keyed skill lookup over a `BTreeMap`.
 //!
 //! The `BTreeMap<SkillName, _>` makes `list_skills` ordering an invariant of the
-//! data structure rather than a per-call sort (Python `registry.py` sorts on
+//! data structure rather than a per-call sort (Rust `registry.py` sorts on
 //! every `list_skills`). The filesystem constructor lives in
 //! [`crate::loader`]; this module owns the in-memory contract only.
 
@@ -24,7 +24,7 @@ impl SkillRegistry {
     }
 
     /// Insert one skill, replacing any same-named entry (last-wins, matching the
-    /// Python dict assignment `self._skills[skill.name] = skill`).
+    /// Rust dict assignment `self._skills[skill.name] = skill`).
     pub fn register(&mut self, skill: SkillDefinition) {
         self.skills.insert(skill.name.clone(), skill);
     }

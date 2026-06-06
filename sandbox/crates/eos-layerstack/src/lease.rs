@@ -30,7 +30,7 @@ pub struct LayerStackLeaseRecord {
 
 /// Tracks active snapshot leases and the layers they retain on disk.
 ///
-/// Python guards this with a `threading.RLock` and a `Counter[LayerRef]`
+/// Rust guards this with a `threading.RLock` and a `Counter[LayerRef]`
 /// refcount; the Rust port keeps the same refcount semantics.
 #[derive(Debug, Default)]
 pub struct LeaseRegistry {

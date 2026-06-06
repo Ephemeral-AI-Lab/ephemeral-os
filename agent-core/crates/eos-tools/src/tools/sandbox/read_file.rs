@@ -87,16 +87,12 @@ impl ToolExecutor for ReadFile {
             base: request_base(ctx, &format!("read {path}"))?,
             path: path.clone(),
         };
-        let result = match eos_sandbox_port::read_file(
-            &*self.service.transport,
-            sandbox_id,
-            &request,
-        )
-        .await
-        {
-            Ok(result) => result,
-            Err(err) => return Ok(ToolResult::error(err.to_string())),
-        };
+        let result =
+            match eos_sandbox_port::read_file(&*self.service.transport, sandbox_id, &request).await
+            {
+                Ok(result) => result,
+                Err(err) => return Ok(ToolResult::error(err.to_string())),
+            };
         if !result.base.success {
             return Ok(ToolResult::error(format!("Failed to read file: {path}")));
         }

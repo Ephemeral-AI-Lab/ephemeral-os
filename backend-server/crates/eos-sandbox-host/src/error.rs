@@ -1,6 +1,6 @@
 //! The single `thiserror` error enum for this crate (spec-conventions §8).
 
-use eos_types::{JsonObject, SandboxId};
+use eos_types::JsonObject;
 
 /// Every fallible operation in `eos-sandbox-host` returns this one error enum.
 ///
@@ -10,13 +10,9 @@ use eos_types::{JsonObject, SandboxId};
 #[derive(Debug, thiserror::Error)]
 #[non_exhaustive]
 pub enum SandboxHostError {
-    /// `default()` was called before `set_default` seeded the registry.
-    #[error("no default sandbox provider registered")]
+    /// `adapter()` was called before the registry was seeded.
+    #[error("no sandbox provider registered")]
     NoDefaultProvider,
-    /// A typed lookup wanted an adapter for a sandbox with no binding and no
-    /// default fallback available.
-    #[error("no adapter for sandbox {0}")]
-    UnknownSandbox(SandboxId),
     /// A provider `exec` returned a non-zero exit the caller treats as fatal.
     #[error("provider exec failed (exit {exit_code}): {message}")]
     ExecFailed {

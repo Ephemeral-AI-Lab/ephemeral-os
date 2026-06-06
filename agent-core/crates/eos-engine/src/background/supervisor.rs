@@ -190,7 +190,7 @@ impl BackgroundTaskSupervisor {
     }
 
     /// Settle a subagent record to a terminal status with its result, gated by the
-    /// precedence latch (Python `_done_callback` / `_apply_terminal_status_transition`):
+    /// precedence latch (Rust `_done_callback` / `_apply_terminal_status_transition`):
     /// a higher-precedence outcome wins, so a finish racing a cancel resolves to
     /// `Completed`. This is the single on-completion routine for the subagent
     /// driver — the status is classified by terminal *presence* (Completed when a
@@ -210,7 +210,7 @@ impl BackgroundTaskSupervisor {
     }
 
     /// Cancel one tracked subagent, settling it `Cancelled`. Returns `false` for
-    /// an unknown or already-settled session (Python `cancel_subagent_session`).
+    /// an unknown or already-settled session (Rust `cancel_subagent_session`).
     pub fn cancel_subagent(
         &mut self,
         subagent_session_id: &SubagentSessionId,

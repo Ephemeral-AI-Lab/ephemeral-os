@@ -1,7 +1,7 @@
 //! [`TerminalTool`] — the closed set of terminal tools — and the **total**
 //! descriptor catalog.
 //!
-//! Ports `_terminals/registry.py`. The Python registry has only 4 of 6
+//! Ports `_terminals/registry.py`. The Rust registry has only 4 of 6
 //! descriptors (advisor + exploration rely on `render_terminal_catalog`'s generic
 //! fallback). Resolution (GC-tools-03): the Rust domain is **all six**
 //! `is_terminal_tool=True` tools; the advisor + exploration descriptors are
@@ -69,7 +69,7 @@ impl TerminalTool {
     }
 }
 
-/// A terminal tool's catalog entry (Python `TerminalToolDescriptor`).
+/// A terminal tool's catalog entry (Rust `TerminalToolDescriptor`).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct TerminalDescriptor {
     /// The submitting tool name.
@@ -105,7 +105,7 @@ pub const fn descriptor(terminal: TerminalTool) -> TerminalDescriptor {
             selection_guidance: "Call with status=\"success\" when the assigned reducer work is finished from `<dependencies>` context; call with status=\"failed\" when the reducer work cannot be completed from the current context. The outcome must summarize the result or blocker.",
             advisor_review_focus: "Verify the chosen status matches `<assigned_task>` and `<dependencies>`. For success, confirm the assigned reducer work is actually complete. For failure, confirm the blocker prevents completion and is specific enough for retry or replanning.",
         },
-        // -- Authored to close the GC-tools-03 gap (the 2 the Python registry
+        // -- Authored to close the GC-tools-03 gap (the 2 the Rust registry
         //    leaves to the generic fallback). --
         TerminalTool::AdvisorFeedback => TerminalDescriptor {
             name: ToolName::SubmitAdvisorFeedback,
@@ -120,7 +120,7 @@ pub const fn descriptor(terminal: TerminalTool) -> TerminalDescriptor {
     }
 }
 
-/// Which descriptor field a rendered terminal catalog presents (Python
+/// Which descriptor field a rendered terminal catalog presents (Rust
 /// `CatalogFocus = Literal["selection_guidance", "advisor_review_focus"]`).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ToolInstructions {

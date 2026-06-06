@@ -20,7 +20,7 @@ use crate::store::TaskStore;
 /// engine so the prompt-facing wording has one source of truth.
 pub const NO_OUTCOME: &str = "(no outcome recorded)";
 
-/// Binary status of one execution outcome (Python `TaskOutcomeStatus`).
+/// Binary status of one execution outcome (Rust `TaskOutcomeStatus`).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum TaskOutcomeStatus {
@@ -42,7 +42,7 @@ impl TaskOutcomeStatus {
     }
 }
 
-/// The execution role an outcome belongs to (Python `ExecutionRole`). Only
+/// The execution role an outcome belongs to (Rust `ExecutionRole`). Only
 /// `generator`/`reducer` execution evidence ever appears in outcomes.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
@@ -65,7 +65,7 @@ impl ExecutionRole {
 }
 
 /// One generator/reducer task's terminal execution evidence
-/// (Python `ExecutionTaskOutcome`). Bounded to a single persisted task.
+/// (Rust `ExecutionTaskOutcome`). Bounded to a single persisted task.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub struct ExecutionTaskOutcome {
     /// Whether the task succeeded or failed.
@@ -79,7 +79,7 @@ pub struct ExecutionTaskOutcome {
 }
 
 /// Fill a *missing* per-record status from the owning task's raw status string
-/// (Python `present_status`): `"done"` → `Success`, everything else → `Failed`.
+/// (Rust `present_status`): `"done"` → `Success`, everything else → `Failed`.
 ///
 /// Do **not** apply this to a record status that is already present — that path
 /// uses `_normalize_status` at the `eos-db` boundary, where `"done"` → `Failed`
@@ -94,7 +94,7 @@ pub fn present_status(raw_status: &str) -> TaskOutcomeStatus {
 }
 
 /// Construct one execution outcome for a terminal submission
-/// (Python `execution_outcome_for_submission`).
+/// (Rust `execution_outcome_for_submission`).
 #[must_use]
 pub fn execution_outcome_for_submission(
     task_id: TaskId,
@@ -110,7 +110,7 @@ pub fn execution_outcome_for_submission(
     }
 }
 
-/// The latest iteration by `sequence_no` (Python `workflow_outcomes` selection
+/// The latest iteration by `sequence_no` (Rust `workflow_outcomes` selection
 /// half). `sequence_no` is unique per workflow, so there is never a tie.
 #[must_use]
 pub fn latest_iteration(
@@ -120,7 +120,7 @@ pub fn latest_iteration(
 }
 
 /// Project generator/reducer execution outcomes for one attempt
-/// (Python `project_attempt_outcomes`). With no store, return the attempt's
+/// (Rust `project_attempt_outcomes`). With no store, return the attempt's
 /// persisted typed outcomes; otherwise collect each generator/reducer task's
 /// pre-normalized outcomes from the store.
 ///
@@ -147,7 +147,7 @@ pub async fn project_attempt_outcomes(
 }
 
 /// Persisted attempt outcomes when present, else recompute from task rows
-/// (Python `attempt_execution_outcomes`).
+/// (Rust `attempt_execution_outcomes`).
 ///
 /// # Errors
 /// Propagates any [`TaskStore::get`] failure from [`project_attempt_outcomes`].
@@ -162,7 +162,7 @@ pub async fn attempt_execution_outcomes(
 }
 
 /// Execution evidence for the iteration's **closing attempt only**
-/// (Python `project_iteration_outcomes`).
+/// (Rust `project_iteration_outcomes`).
 ///
 /// On a passing close, the closing attempt's successful reducer outcomes; on a
 /// failed close, that attempt's failed generator/reducer tasks. Reducer
@@ -283,7 +283,7 @@ mod tests {
     }
 
     // AC-eos-state-09: project_attempt_outcomes over an already-normalized
-    // Task.outcomes matches Python (the eos-db boundary pre-normalizes records).
+    // Task.outcomes matches Rust (the eos-db boundary pre-normalizes records).
     #[tokio::test]
     async fn project_attempt_outcomes_pre_normalized() {
         let store = FakeTaskStore::new();

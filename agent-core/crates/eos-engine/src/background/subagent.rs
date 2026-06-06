@@ -49,7 +49,7 @@ fn build_explorer_launch_prompt() -> String {
         .to_owned()
 }
 
-/// Python `AgentType.value` (`'agent'` / `'subagent'`) for the error text.
+/// Rust `AgentType.value` (`'agent'` / `'subagent'`) for the error text.
 const fn agent_type_value(agent_type: AgentType) -> &'static str {
     match agent_type {
         AgentType::Agent => "agent",
@@ -68,7 +68,7 @@ const fn terminal_event_type(status: BackgroundTaskStatus) -> &'static str {
     }
 }
 
-/// Python `BackgroundTaskStatus.value` (lowercase) for diagnostics.
+/// Rust `BackgroundTaskStatus.value` (lowercase) for diagnostics.
 const fn status_value(status: BackgroundTaskStatus) -> &'static str {
     match status {
         BackgroundTaskStatus::Running => "running",
@@ -105,7 +105,7 @@ fn trace_background_tool(
 /// Classify a finished agent run into a settled `(status, result, exit_code)`
 /// — port of `run_subagent.py:231-251`. Terminal present → `Completed` + the
 /// terminal verbatim (incl. its `is_error`) + `subagent_terminal_called:true`;
-/// crash / no-terminal → `Failed` with the distinct Python messages +
+/// crash / no-terminal → `Failed` with the distinct Rust messages +
 /// `subagent_terminal_called:false`.
 fn classify_run(run: AgentRunResult) -> (BackgroundTaskStatus, ToolResult, i64) {
     match run.terminal_result {
@@ -265,7 +265,7 @@ impl BackgroundSupervisorPort for BackgroundSupervisorHandle {
             // run: the driver cannot acquire the lock to settle + emit its terminal
             // event until this block releases, so `started` strictly precedes any
             // terminal emit and the supervisor stays the single, ordered emitter
-            // (D8). Mirrors Python emitting `started` synchronously inside launch().
+            // (D8). Mirrors Rust emitting `started` synchronously inside launch().
             trace_background_tool(
                 "background_tool.started",
                 &task_id,

@@ -1,4 +1,4 @@
-//! `ModelRegistration` DTO (Python `db/models/model_registration.py`).
+//! `ModelRegistration` DTO (Rust `db/models/model_registration.py`).
 //!
 //! `class_path` survives **only as migration data** (anchor §2 non-goal): final
 //! dispatch is typed by `llm_provider` + `model_key` downstream. This DTO keeps
@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 
 use eos_types::UtcDateTime;
 
-/// Immutable view of a persisted model registration (Python
+/// Immutable view of a persisted model registration (Rust
 /// `ModelRegistrationRecord`).
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 pub struct ModelRegistration {

@@ -9,7 +9,7 @@
 //! into the caller transcript by construction.
 //!
 //! Port of `tools/ask_helper/_lib/_compose.py` + `_transcript.py` +
-//! `ask_advisor.py::_build_advisor_user_msg_2`. **Documented deviation:** Python's
+//! `ask_advisor.py::_build_advisor_user_msg_2`. **Documented deviation:** Rust's
 //! `build_helper_messages` hard-errors unless the caller has ≥2 non-empty *user*
 //! messages (its `ContextEngine` seeds `user_msg_1` + `user_msg_2` as two messages).
 //! The Rust runtime seeds every agent with a *single* user message, so this
@@ -180,7 +180,7 @@ fn advisor_metadata(ctx: &ExecutionMetadata, agent_run_id: &AgentRunId) -> Execu
 fn build_advisor_user_msg_1(messages: &[Message], parent_def: Option<&AgentDefinition>) -> String {
     let parent_user_msg_1 = messages.first().map(extract_text).unwrap_or_default();
     // The Rust runtime seeds every agent with a single user message, so the parent's
-    // role instruction stands in for Python's user_msg_2 and the transcript starts at
+    // role instruction stands in for Rust's user_msg_2 and the transcript starts at
     // `messages[1:]` (see the module header for the two-message contract this degrades).
     let parent_user_msg_2 = role_instruction(parent_def);
     let transcript = build_parent_transcript(messages);
@@ -268,7 +268,7 @@ fn render_pending_submission(tool_name: &str, tool_payload: &JsonObject) -> Stri
 /// `build_parent_transcript`: drop the leading seed message (shown verbatim as
 /// the parent's original context), keep the last [`MAX_TRANSCRIPT_MESSAGES`],
 /// render each block, then byte-cap. Returns `None` when there is nothing to show.
-/// (Rust messages carry no `system` role, so the Python system-filter is a no-op;
+/// (Rust messages carry no `system` role, so the Rust system-filter is a no-op;
 /// the first message must still be `user`.)
 fn build_parent_transcript(messages: &[Message]) -> Option<String> {
     if messages.is_empty() {
@@ -361,7 +361,7 @@ fn extract_text(msg: &Message) -> String {
 }
 
 /// The parent's role instruction for the single-seed degradation: its system
-/// prompt, else a stub. Python's `user_msg_2` was the role instruction + catalog;
+/// prompt, else a stub. Rust's `user_msg_2` was the role instruction + catalog;
 /// the Rust runtime delivers the role instruction as a system prompt.
 fn role_instruction(parent_def: Option<&AgentDefinition>) -> String {
     parent_def
@@ -409,7 +409,7 @@ fn apply_byte_cap(rendered: &[String]) -> String {
 
 /// `json.dumps(value, indent=2, sort_keys=True)` — recursively sort object keys,
 /// then pretty-print with two-space indent. Divergence (acceptable for advisor-facing
-/// prose): Python defaults to `ensure_ascii=True` (`\uXXXX`-escaping non-ASCII), whereas
+/// prose): Rust defaults to `ensure_ascii=True` (`\uXXXX`-escaping non-ASCII), whereas
 /// serde keeps non-ASCII
 /// scalars as UTF-8. The output is advisor-facing prose read by an LLM, so UTF-8 is
 /// equivalent (more readable) and at most shifts the *soft* [`apply_byte_cap`] elision

@@ -8,7 +8,7 @@
 //! `tool_api` helpers build each daemon payload field-by-field — so the derived
 //! serde shape only backs schema snapshots and round-trip tests.
 //!
-//! Source-driven cleanup from the Python module: one-field identity wrappers and
+//! Source-driven cleanup from the Rust module: one-field identity wrappers and
 //! `RawExecResult` are dropped; daemon requests carry a direct, opaque
 //! `caller_id`.
 

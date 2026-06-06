@@ -1,7 +1,7 @@
 //! The skill value type and its validated newtypes.
 //!
-//! A [`SkillDefinition`] is a faithful, immutable port of the Python
-//! `@dataclass(frozen=True)` (`skills/core/types.py`): the same six fields, with
+//! A [`SkillDefinition`] is a faithful, immutable port of the Rust
+//! `@DTO(frozen=True)` (`skills/core/types.py`): the same six fields, with
 //! the stringly `source` lifted to a [`SkillSource`] enum and the name / reference
 //! keys lifted to validated newtypes ([`SkillName`], [`ReferenceName`]).
 
@@ -20,7 +20,7 @@ fn validate_name(value: &str) -> bool {
 }
 
 /// A skill name: the parsed name (frontmatter `name`, else the directory name)
-/// and the registry key, a 1:1 port of Python `registry.py`'s `skill.name` key.
+/// and the registry key, a 1:1 port of Rust `registry.py`'s `skill.name` key.
 ///
 /// The traversal-safety guarantee is that names are used **only as map keys**
 /// (never path-joined); this newtype's separator/`..`/NUL rejection is
@@ -54,7 +54,7 @@ impl SkillName {
 /// A reference name: a skill's `references/*.md` file **stem** and its map key.
 ///
 /// Same shape and validation as [`SkillName`]; accepts dotted stems like
-/// `api.v2` (matching Python `ref_file.stem`).
+/// `api.v2` (matching Rust `ref_file.stem`).
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize)]
 #[serde(transparent)]
 pub struct ReferenceName(String);
@@ -81,7 +81,7 @@ impl ReferenceName {
     }
 }
 
-/// Where a skill was loaded from. Replaces the Python free `source: str`.
+/// Where a skill was loaded from. Replaces the Rust free `source: str`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "snake_case")]
 #[non_exhaustive]

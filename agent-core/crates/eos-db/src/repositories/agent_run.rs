@@ -1,4 +1,4 @@
-//! `SqlAgentRunStore` — the agent-run repository (Python `agent_run_store.py`).
+//! `SqlAgentRunStore` — the agent-run repository (Rust `agent_run_store.py`).
 //!
 //! Two-phase: `create_run` sets only the create-time fields; the nullable JSON
 //! columns stay NULL until `finish_run` writes them (null-preserving).

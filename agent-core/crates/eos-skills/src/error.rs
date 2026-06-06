@@ -4,7 +4,7 @@ use std::path::PathBuf;
 
 /// Failures raised while loading skills from the configured skill root.
 ///
-/// There is deliberately **no** malformed-frontmatter variant: matching Python's
+/// There is deliberately **no** malformed-frontmatter variant: matching Rust's
 /// `parse_markdown_frontmatter`, broken YAML is swallowed and the loader falls
 /// back to the heading/first-paragraph metadata scan rather than failing the load.
 #[derive(Debug, thiserror::Error)]

@@ -106,7 +106,7 @@ fn metadata_for_call(
 ) -> ExecutionMetadata {
     let mut metadata = ctx.tool_metadata.clone();
     metadata.tool_use_id = Some(tool_use_id.clone());
-    // Per-turn transcript snapshot (port of Python `context.conversation_messages`),
+    // Per-turn transcript snapshot (port of Rust `context.conversation_messages`),
     // read by the stateless advisor-approval gate. Cheap Arc clone, not a copy.
     metadata.conversation = conversation.clone();
     metadata
@@ -226,7 +226,7 @@ async fn dispatch_foreground_tools(
 /// Run an `ask_advisor` call: its pre-hooks (e.g. `BlockInIsolatedMode`) gate the
 /// call, then — if they pass — the engine drives an advisor agent
 /// (`advisor::run_advisor`). The advisor run is an engine primitive, so this is
-/// the faithful Rust form of Python `ask_advisor` calling `run_agent`.
+/// the faithful Rust form of Rust `ask_advisor` calling `run_agent`.
 async fn run_advisor_call(
     ctx: &QueryContext,
     conversation: &Arc<[Message]>,

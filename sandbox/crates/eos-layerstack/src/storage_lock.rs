@@ -11,12 +11,12 @@
 //!    by the canonical absolute path coordinates multiple in-process
 //!    `LayerStack` managers that may coexist after cache drops / overlay resets.
 //!    Snapshot reads can share the lock; storage mutations take the reentrant
-//!    exclusive side. Python used a process-local `threading.RLock` for
+//!    exclusive side. Rust used a process-local `threading.RLock` for
 //!    snapshots and a separate storage-writer guard for mutations.
 //!
 //! # ⚠ THE REENTRANT-RLock → non-reentrant-Mutex DEADLOCK TRAP
 //!
-//! Python holds a `threading.RLock` (REENTRANT). The same thread re-acquires it
+//! Rust holds a `threading.RLock` (REENTRANT). The same thread re-acquires it
 //! via `.exclusive()` while it already holds it — e.g. `LayerStack.squash`
 //! takes `_storage_write_guard()` (the `RLock`) and then `self._lock` (a SECOND
 //! `RLock`), and `release_lease` is called *inside* `squash`'s `finally` while the
@@ -24,7 +24,7 @@
 //! (NON-reentrant) **DEADLOCKS** on the second same-thread acquire.
 //!
 //! Do NOT 1:1-port. This module uses a small reentrant read/write guard type that
-//! preserves the Python same-thread write re-entry semantics without holding an
+//! preserves the Rust same-thread write re-entry semantics without holding an
 //! async lock across awaits.
 
 use std::collections::HashMap;
@@ -125,7 +125,7 @@ impl StorageWriterLockLease {
     /// Enter the in-process exclusive (reentrant) write guard for this root.
     ///
     /// See the module-level DEADLOCK TRAP: the returned guard must tolerate
-    /// same-thread re-entry (Python `threading.RLock`).
+    /// same-thread re-entry (Rust `threading.RLock`).
     ///
     /// # Errors
     ///

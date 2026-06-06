@@ -14,7 +14,7 @@ use crate::attempt::{AgentLaunch, AgentLaunchFactory, AgentRunReport, AttemptDep
 use crate::util::json_object;
 use crate::{Result, WorkflowError};
 
-/// Workflow diagnostic event-type constants (Python `workflow._core.audit`).
+/// Workflow diagnostic event-type constants (Rust `workflow._core.audit`).
 const TASK_READY: &str = "workflow.task.ready";
 const TASK_LAUNCHED: &str = "workflow.task.launched";
 const TASK_FAILED: &str = "workflow.task.failed";
@@ -244,7 +244,7 @@ impl AttemptStageAdvancer {
     /// Settle a RUN-stage task after its run resolves (Path A-recording). The
     /// submit tool already recorded the agent's outcome (task Done/Failed) via
     /// the recording port *during* the run, so the loop's only post-join job is
-    /// Python's still-RUNNING exhaustion guard: a task still `Running` means the
+    /// Rust's still-RUNNING exhaustion guard: a task still `Running` means the
     /// agent died without submitting -> synthesize `run_exhausted`. A recorded
     /// task is a no-op (the tool already wrote it).
     async fn settle_run_task(
@@ -314,7 +314,7 @@ impl AttemptStageAdvancer {
     }
 }
 
-/// The lowercase role label used in `workflow.task.*` audit payloads (Python
+/// The lowercase role label used in `workflow.task.*` audit payloads (Rust
 /// persists `task.role` as a lowercase string).
 fn task_role_label(role: TaskRole) -> &'static str {
     match role {

@@ -87,7 +87,9 @@ pub fn factory_root_blocks_after(root_turns: Vec<Vec<StreamEvent>>) -> EventSour
 /// A factory that dispatches scripted turns by agent name; an agent absent from
 /// the map gets an empty (first-turn-erroring) source.
 #[must_use]
-pub fn factory_by_agent(by_agent: Vec<(&'static str, Vec<Vec<StreamEvent>>)>) -> EventSourceFactory {
+pub fn factory_by_agent(
+    by_agent: Vec<(&'static str, Vec<Vec<StreamEvent>>)>,
+) -> EventSourceFactory {
     let scripts: HashMap<String, Vec<Vec<StreamEvent>>> = by_agent
         .into_iter()
         .map(|(name, turns)| (name.to_owned(), turns))
@@ -101,7 +103,11 @@ pub fn factory_by_agent(by_agent: Vec<(&'static str, Vec<Vec<StreamEvent>>)>) ->
 /// One model turn that calls `tool_name` with `input` (a non-object `input`
 /// lowers to an empty object).
 #[must_use]
-pub fn tool_use_turn(tool_use_id: &str, tool_name: &str, input: serde_json::Value) -> Vec<StreamEvent> {
+pub fn tool_use_turn(
+    tool_use_id: &str,
+    tool_name: &str,
+    input: serde_json::Value,
+) -> Vec<StreamEvent> {
     let input = match input {
         serde_json::Value::Object(map) => map,
         _ => eos_types::JsonObject::new(),

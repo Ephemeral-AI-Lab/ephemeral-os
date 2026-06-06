@@ -172,9 +172,7 @@ mod tests {
     };
 
     use super::*;
-    use crate::support::{
-        agent_registry_without_planner, root_task, MemoryStores, QueueRunner,
-    };
+    use crate::support::{agent_registry_without_planner, root_task, MemoryStores, QueueRunner};
 
     // AC-eos-workflow-01: starting from a running parent creates
     // workflow + iteration (seq 1, goal = prompt) + first attempt and leaves
@@ -214,7 +212,7 @@ mod tests {
     // AC-eos-workflow-02: start rejects a blank prompt, a missing/non-running
     // parent, and a parent with an open delegated child, each as a distinct
     // error. (A "missing request id" is unrepresentable: `Task.request_id` is a
-    // non-optional `RequestId`, eliminating the Python defensive branch.)
+    // non-optional `RequestId`, eliminating the Rust defensive branch.)
     #[tokio::test]
     async fn start_rejects_invalid_parent() {
         let stores = Arc::new(MemoryStores::default());

@@ -12,7 +12,7 @@ use eos_types::{AttemptId, IterationId, TaskId, UtcDateTime, WorkflowId};
 use crate::outcomes::ExecutionTaskOutcome;
 use crate::plan::{DeferredGoal, MaterializedPlan};
 
-/// Stage of an [`Attempt`] (Python `AttemptStage`).
+/// Stage of an [`Attempt`] (Rust `AttemptStage`).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum AttemptStage {
@@ -24,7 +24,7 @@ pub enum AttemptStage {
     Closed,
 }
 
-/// Outcome status of an [`Attempt`] (Python `AttemptStatus`).
+/// Outcome status of an [`Attempt`] (Rust `AttemptStatus`).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum AttemptStatus {
@@ -48,7 +48,7 @@ impl AttemptStatus {
     }
 }
 
-/// Why an attempt failed (Python `AttemptFailReason`). Distinct from
+/// Why an attempt failed (Rust `AttemptFailReason`). Distinct from
 /// `PlannerFailReason` (spec §6.10).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
@@ -202,7 +202,7 @@ impl AttemptState {
     }
 }
 
-/// Immutable view of a persisted Attempt (Python `state.py:Attempt`).
+/// Immutable view of a persisted Attempt (Rust `state.py:Attempt`).
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 pub struct Attempt {
     /// Attempt identifier.

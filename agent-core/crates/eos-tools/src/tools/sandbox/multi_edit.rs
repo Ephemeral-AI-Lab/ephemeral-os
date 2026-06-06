@@ -76,16 +76,12 @@ impl ToolExecutor for MultiEdit {
                 })
                 .collect(),
         };
-        let result = match eos_sandbox_port::edit_file(
-            &*self.service.transport,
-            sandbox_id,
-            &request,
-        )
-        .await
-        {
-            Ok(result) => result,
-            Err(err) => return Ok(ToolResult::error(err.to_string())),
-        };
+        let result =
+            match eos_sandbox_port::edit_file(&*self.service.transport, sandbox_id, &request).await
+            {
+                Ok(result) => result,
+                Err(err) => return Ok(ToolResult::error(err.to_string())),
+            };
         // multi_edit reports the count of edits submitted (not result.applied_edits).
         let applied = if result.base.success { count } else { 0 };
         Ok(edit_output(

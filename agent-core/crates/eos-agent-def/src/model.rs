@@ -2,7 +2,7 @@
 //! vocabularies, the `AgentName` newtype, and the `AgentDefinition` value type
 //! with its construction-time invariants.
 //!
-//! Pydantic-era validators become parse-don't-validate construction (`api-parse-dont-validate`):
+//! typed schema-era validators become parse-don't-validate construction (`api-parse-dont-validate`):
 //! the serde DTO [`RawAgentDefinition`] funnels through
 //! [`AgentDefinition::from_frontmatter`], so an invalid definition is
 //! unrepresentable.
@@ -80,7 +80,7 @@ impl fmt::Display for AgentRole {
 /// A registry key / dispatchable name, validated non-empty after trimming.
 ///
 /// Format-only newtype (`type-newtype-ids`): it does **not** check membership
-/// against any catalog. Empty-rejection is a Rust hardening of the Python model
+/// against any catalog. Empty-rejection is a Rust hardening of the Rust model
 /// (which has no name validator); the loader applies the `path.stem` default
 /// before construction so the newtype only ever sees a resolved stem on the
 /// file-parse path.
@@ -309,7 +309,7 @@ mod tests {
         assert_eq!(def.notification_triggers, vec!["keep".to_owned()]);
     }
 
-    // AC-eos-agent-def-06 (enum-value half): serde values match the Python schema.
+    // AC-eos-agent-def-06 (enum-value half): serde values match the Rust schema.
     #[test]
     fn role_and_type_serde_values() {
         let role = serde_json::to_value(AgentRole::Generator).unwrap();

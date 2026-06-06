@@ -15,7 +15,7 @@
 //! (eos-daemon) is what guarantees one queue per root.
 //!
 //! ## Threading model (per RUST-GUIDANCE §5)
-//! The Python uses `threading.Thread` + `queue.Queue` + `concurrent.futures`,
+//! The Rust uses `threading.Thread` + `queue.Queue` + `concurrent.futures`,
 //! NOT asyncio, for the queue itself (eos-occ has no tokio dep). The Rust port
 //! is an `mpsc` work queue with one dedicated consumer thread named
 //! `occ-commit-queue`; each work item carries a `std::sync::mpsc` reply sender
@@ -60,7 +60,7 @@ pub struct PreparedChangeset {
     pub path_groups: Vec<PublishDecision>,
     /// Typed mutations (CAS-hashed by the layer-stack publisher).
     pub changes: Vec<LayerChange>,
-    /// All-or-nothing publish (Python default `True`).
+    /// All-or-nothing publish (Rust default `True`).
     pub atomic: bool,
 }
 
@@ -141,7 +141,7 @@ impl<T: CommitTransactionPort + 'static> CommitQueue<T> {
 
     /// Build a queue with explicit batching/retry tuning.
     ///
-    /// Clamps to match Python: `max_batch_size >= 1`, `batch_window_s >= 0.0`,
+    /// Clamps to match Rust: `max_batch_size >= 1`, `batch_window_s >= 0.0`,
     /// `max_cas_retries >= 1`.
     pub fn with_config(
         transaction: T,

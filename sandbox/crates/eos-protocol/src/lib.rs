@@ -3,7 +3,7 @@
 //! Invariant: this crate is the source of truth and depends on nothing internal.
 //! It owns the two correctness-bearing hashes (`manifest_root_hash`,
 //! `layer_digest`) and the framed envelope encode/decode that must reproduce the
-//! live Python byte-for-byte (at the AV-1c byte-identity bar for the CAS hashes
+//! live Rust byte-for-byte (at the AV-1c byte-identity bar for the CAS hashes
 //! and request/error envelopes; the AV-1 canonical-equal bar for responses).
 #![forbid(unsafe_code)]
 

@@ -2,7 +2,7 @@
 use std::sync::Arc;
 
 use super::*;
-use crate::provider::{ProviderAdapter, RawExecResult};
+use crate::provider::RawExecResult;
 use crate::registry::ProviderRegistry;
 use crate::support::MockAdapter;
 
@@ -19,10 +19,10 @@ fn lifecycle_with(adapter: MockAdapter, artifact_dir: PathBuf) -> SandboxLifecyc
     )
 }
 
-// create registers the adapter; with no project_dir the setup sequence is a
-// no-op (every step guards on a non-empty workspace).
+// create returns the provider's SandboxInfo; with no project_dir the setup
+// sequence is a no-op (every step guards on a non-empty workspace).
 #[tokio::test]
-async fn create_registers_and_setup_noops_without_workspace() {
+async fn create_setup_noops_without_workspace() {
     let lifecycle = lifecycle_with(
         MockAdapter::new().with_id("box"),
         PathBuf::from("/nonexistent"),
@@ -35,7 +35,6 @@ async fn create_registers_and_setup_noops_without_workspace() {
         .await
         .unwrap();
     assert_eq!(info.id.as_str(), "box");
-    assert!(lifecycle.daemon.registry().has(&info.id));
 }
 
 // ensure_running returns early when the probe is healthy (no setup).
@@ -56,20 +55,14 @@ async fn ensure_running_healthy_returns_early() {
     assert_eq!(info.id.as_str(), "box");
 }
 
-// delete disposes the registry binding.
+// delete routes through the provider adapter's delete.
 #[tokio::test]
-async fn delete_disposes_binding() {
-    let registry = ProviderRegistry::new();
-    let adapter: Arc<dyn ProviderAdapter> = Arc::new(MockAdapter::new().with_id("box"));
-    registry.set_default(Arc::clone(&adapter));
-    registry.register(&sid(), Arc::clone(&adapter));
-    let lifecycle = SandboxLifecycle::new(
-        Arc::new(DaemonClient::new(Arc::new(registry))),
+async fn delete_calls_provider_delete() {
+    let lifecycle = lifecycle_with(
+        MockAdapter::new().with_id("box"),
         PathBuf::from("/nonexistent"),
     );
-    assert!(lifecycle.daemon.registry().has(&sid()));
     lifecycle.delete(&sid()).await.unwrap();
-    assert!(!lifecycle.daemon.registry().has(&sid()));
 }
 
 // ensure_git: git already present → early return; install failure → fail-open.

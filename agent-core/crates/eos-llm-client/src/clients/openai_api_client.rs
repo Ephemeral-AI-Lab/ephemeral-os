@@ -3,7 +3,7 @@
 //! [`LlmStreamEvent`] variants as the Anthropic path (LSP substitutability), and
 //! wrap attempts in the retry gate.
 //!
-//! No Python source — this is the SDK-free Responses-API counterpart. Decode
+//! No Rust source — this is the SDK-free Responses-API counterpart. Decode
 //! normalizes `response.output_text.delta` → `AssistantTextDelta` and
 //! function-call argument deltas → a single `ToolUseDelta` per call at
 //! `response.function_call_arguments.done` (keyed by `call_id`, not `item_id`).

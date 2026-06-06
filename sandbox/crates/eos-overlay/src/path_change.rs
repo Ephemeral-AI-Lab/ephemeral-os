@@ -48,7 +48,7 @@ pub struct OverlayPathChange {
 }
 
 impl OverlayPathChange {
-    /// Validate-and-construct exactly as Python `OverlayPathChange.__post_init__`:
+    /// Validate-and-construct exactly as Rust `OverlayPathChange.__post_init__`:
     /// normalize the path (root allowed only for `opaque_dir`), require
     /// `content_path`+`final_hash` for `write`/`symlink`, forbid them otherwise.
     ///

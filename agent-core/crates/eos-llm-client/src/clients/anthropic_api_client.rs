@@ -7,7 +7,7 @@
 //! lives here (GC-llm-client-02): Anthropic encode drops `Reasoning` blocks and
 //! `ToolSpec.output_schema`, and omits `metadata`/`is_terminal` from
 //! `tool_result` wire bodies. Tool-use blocks are emitted mid-stream at
-//! `content_block_stop` (the Python advantage). Decode is a pure
+//! `content_block_stop` (the Rust advantage). Decode is a pure
 //! frame-stream → event-stream function, independent of `reqwest`, so fixtures
 //! replay through it with no HTTP.
 
@@ -252,7 +252,7 @@ where
                             "tool_use" => {
                                 let input = parse_tool_args(&block.input_json);
                                 // An empty/missing tool-use id is a malformed
-                                // stream here, not a tolerated default. Python
+                                // stream here, not a tolerated default. Rust
                                 // passed the empty id through / synthesized a
                                 // `toolu_<uuid>`, but the `ToolUseId` newtype
                                 // rejects empty and the spec states default-id

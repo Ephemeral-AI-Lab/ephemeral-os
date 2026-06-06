@@ -1,6 +1,6 @@
 //! Read-only agent lookup table (`agents/definition/registry.py`).
 //!
-//! The Python global mutable `_DEFINITIONS` dict (mutated only by `test_runner`)
+//! The Rust global mutable `_DEFINITIONS` dict (mutated only by `test_runner`)
 //! is dropped (§7, YAGNI). `eos-runtime` builds the registry once at startup via
 //! [`AgentRegistryBuilder`] and stores `Arc<AgentRegistry>` in `AppState`; reads
 //! are lock-free `&self` lookups. No runtime mutation seam (anchor §2).
@@ -12,7 +12,7 @@ use crate::model::{AgentDefinition, AgentName, AgentType};
 
 /// Accumulates definitions, then finalizes an immutable [`AgentRegistry`].
 ///
-/// `add` overwrites a same-named entry, preserving Python's "register or
+/// `add` overwrites a same-named entry, preserving Rust's "register or
 /// replace" semantics (`registry.py:register_definition`).
 #[derive(Debug, Default)]
 #[must_use]

@@ -24,7 +24,7 @@ pub enum LlmStreamEvent {
         /// The text fragment.
         text: String,
     },
-    /// Incremental model reasoning (Python `ThinkingDeltaEvent`).
+    /// Incremental model reasoning (Rust `ThinkingDeltaEvent`).
     ReasoningDelta {
         /// The reasoning fragment.
         text: String,

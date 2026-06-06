@@ -124,7 +124,7 @@ pub fn mount_overlay(workspace_root: &Path, handle: &OverlayHandle) -> Result<Ov
 
 /// Unmount every overlay stacked at `workspace_root`.
 ///
-/// A single `umount` peels only the top mount. This helper mirrors Python's
+/// A single `umount` peels only the top mount. This helper mirrors Rust's
 /// teardown contract by looping until `workspace_root` is no longer a
 /// mountpoint. If a normal unmount fails, it falls back to `MNT_DETACH` so
 /// long-lived services with open descriptors can be refreshed safely.

@@ -1,7 +1,7 @@
 //! Shared verb request/response wire models + the search/replace primitive.
 //!
 //! Invariant: these model the WIRE shape (the daemon's recursive `asdict`
-//! response), NOT the Python dataclass front door. Field order/name/type follow
+//! response), NOT the Rust DTO front door. Field order/name/type follow
 //! the §6 serialization in `docs/contract/04-shared-models.md`. Two
 //! representations of the same types, kept canonically-equal by fixtures.
 
@@ -55,7 +55,7 @@ impl ConflictInfo {
 }
 
 // ---------------------------------------------------------------------------
-// Verb request-args models (the WIRE `args` shape, NOT the Python dataclass).
+// Verb request-args models (the WIRE `args` shape, NOT the Rust DTO).
 //
 // These carry only the verb-specific keys the daemon primitive reads out of
 // `args`; the identity envelope (`caller_id`/`caller`/`invocation_id`) and the
@@ -205,7 +205,7 @@ pub enum SearchReplaceError {
 
 /// Apply one search/replace edit.
 ///
-/// Pure; mirrors Python `apply_search_replace` including non-overlapping
+/// Pure; mirrors Rust `apply_search_replace` including non-overlapping
 /// `str.count` semantics and exact error messages.
 ///
 /// # Errors
@@ -223,7 +223,7 @@ pub fn apply_search_replace(
     if old.is_empty() {
         return Err(SearchReplaceError::EmptyAnchor);
     }
-    // Python str.count = number of non-overlapping occurrences.
+    // Rust str.count = number of non-overlapping occurrences.
     let count = text.matches(old).count();
     if replace_all {
         if count == 0 {
@@ -347,7 +347,7 @@ mod tests {
     fn read_file_result_superset_of_fixture() -> TestResult {
         // The read_file_response fixture is the minimal OCC fast-path dispatch
         // dict (dispatch.py:302-318): success/workspace/content/exists/encoding
-        // + timings. Our typed model is the FULL dataclass asdict (doc 04 §6),
+        // + timings. Our typed model is the FULL DTO asdict (doc 04 §6),
         // which is a superset. Assert the typed model carries every fixture key
         // (minus timings) with the same value — not the reverse.
         const FIXTURE: &str = include_str!(concat!(

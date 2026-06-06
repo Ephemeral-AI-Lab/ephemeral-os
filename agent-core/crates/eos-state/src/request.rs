@@ -1,4 +1,4 @@
-//! `Request` DTO — one top-level user request (Python `db/models/request.py`).
+//! `Request` DTO — one top-level user request (Rust `db/models/request.py`).
 
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -25,7 +25,7 @@ impl RequestStatus {
     }
 }
 
-/// Immutable view of a persisted request row (Python `RequestRecord`).
+/// Immutable view of a persisted request row (Rust `RequestRecord`).
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 pub struct Request {
     /// Request identifier.

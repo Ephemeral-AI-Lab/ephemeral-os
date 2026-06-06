@@ -65,12 +65,12 @@ impl ToolResult {
     }
 }
 
-/// The declared shape of a tool's successful output (Python `output_model`).
+/// The declared shape of a tool's successful output (Rust `output_model`).
 /// Carried on each `RegisteredTool` so the pipeline can validate output without
 /// a per-tool `match` (`validate_tool_output`).
 #[derive(Clone)]
 pub enum OutputShape {
-    /// Plain text — any non-error output is valid (Python `TextToolOutput`,
+    /// Plain text — any non-error output is valid (Rust `TextToolOutput`,
     /// a `RootModel[str]`).
     Text,
     /// Structured JSON that must deserialize into the named model.

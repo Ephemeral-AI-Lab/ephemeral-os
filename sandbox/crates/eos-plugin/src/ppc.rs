@@ -1,5 +1,5 @@
 //! PPC (plugin-process channel): the bidirectional message-id'd request/reply
-//! channel that replaces the in-process importlib handler call.
+//! channel that replaces the in-process dynamic loading handler call.
 //!
 //! # Invariant
 //!

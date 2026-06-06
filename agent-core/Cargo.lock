@@ -611,8 +611,6 @@ dependencies = [
  "eos-engine",
  "eos-llm-client",
  "eos-sandbox-port",
- "eos-skills",
- "eos-state",
  "eos-tools",
  "eos-types",
  "futures",

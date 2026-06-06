@@ -192,7 +192,7 @@ impl ContextEngine {
             .iteration_store
             .list_for_workflow(workflow_id)
             .await?;
-        // Match Python `sorted(iterations, key=sequence_no)` (engine.py:208) rather
+        // Match Rust `sorted(iterations, key=sequence_no)` (engine.py:208) rather
         // than relying on an unstated store ordering contract.
         iterations.sort_by_key(|iteration| iteration.sequence_no);
         let mut sections = Vec::new();
@@ -225,7 +225,7 @@ impl ContextEngine {
             .attempt_store
             .list_for_iteration(&current.iteration_id)
             .await?;
-        // Match Python `sorted(attempts, key=attempt_sequence_no)` (engine.py:231)
+        // Match Rust `sorted(attempts, key=attempt_sequence_no)` (engine.py:231)
         // rather than relying on an unstated store ordering contract.
         attempts.sort_by_key(|attempt| attempt.attempt_sequence_no);
         let mut sections = Vec::new();

@@ -1,6 +1,6 @@
 // AC-sandbox-api-01: the schemars JSON schema for each request DTO is frozen by
-// a crate-owned insta snapshot (the Python source is a frozen `@dataclass` with
-// no `model_json_schema()`, so this snapshot — not a Python golden — is the
+// a crate-owned insta snapshot (the Rust source is a frozen `@DTO` with
+// no `model_json_schema()`, so this snapshot — not a Rust golden — is the
 // wire-shape contract; see the parity README). A change to a request DTO's
 // field names / optionality / defaults fails the snapshot until reviewed.
 

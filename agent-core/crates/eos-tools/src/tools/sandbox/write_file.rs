@@ -53,12 +53,16 @@ impl ToolExecutor for WriteFile {
             content: parsed.content.clone(),
             overwrite: true,
         };
-        let result =
-            match eos_sandbox_port::write_file(&*self.service.transport, sandbox_id, &request).await
-            {
-                Ok(result) => result,
-                Err(err) => return Ok(ToolResult::error(err.to_string())),
-            };
+        let result = match eos_sandbox_port::write_file(
+            &*self.service.transport,
+            sandbox_id,
+            &request,
+        )
+        .await
+        {
+            Ok(result) => result,
+            Err(err) => return Ok(ToolResult::error(err.to_string())),
+        };
         let bytes = parsed.content.len() as u64;
         let output = MutationOutput {
             cwd: cwd(ctx),

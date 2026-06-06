@@ -1,6 +1,6 @@
 //! JSON-column codec: serialize/deserialize TEXT-of-validated-JSON columns.
 //!
-//! There are two decode paths because the Python stores disagree on NULL
+//! There are two decode paths because the Rust stores disagree on NULL
 //! handling (impl-eos-db.md §6/§8): [`decode_default`] mirrors `task_store`'s
 //! `record.x or []` coercion (NULL/empty → `T::default()`); [`decode_opt`]
 //! mirrors `agent_run_store`'s nullable columns that must preserve `None`.

@@ -28,7 +28,7 @@ pub fn public_op_name(plugin_name: &str, op_name: &str) -> String {
 
 /// One pending plugin-op registration.
 ///
-/// The Rust daemon never holds a Python callable; the importlib path is replaced
+/// The Rust daemon never holds a Rust callable; the dynamic loading path is replaced
 /// by a PPC service process.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PluginOpRegistration {
@@ -84,7 +84,7 @@ impl PluginOpRegistration {
     }
 }
 
-/// Whether `name` matches the Python `_PLUGIN_NAME_RE` (`^[A-Za-z_][A-Za-z0-9_]*$`).
+/// Whether `name` matches the Rust `_PLUGIN_NAME_RE` (`^[A-Za-z_][A-Za-z0-9_]*$`).
 pub(crate) fn is_valid_plugin_name(name: &str) -> bool {
     let mut chars = name.chars();
     match chars.next() {

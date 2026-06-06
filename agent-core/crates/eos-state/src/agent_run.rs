@@ -1,11 +1,11 @@
-//! `AgentRun` DTO — one agent execution for one task (Python `db/models/agent_run.py`).
+//! `AgentRun` DTO — one agent execution for one task (Rust `db/models/agent_run.py`).
 
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use eos_types::{AgentRunId, JsonObject, TaskId, UtcDateTime};
 
-/// Immutable view of a persisted agent-run row (Python `AgentRunRecord`).
+/// Immutable view of a persisted agent-run row (Rust `AgentRunRecord`).
 ///
 /// `initial_messages`/`message_history` stay as provider-neutral `JsonObject`
 /// blocks; typed `Message` modeling is owned by `eos-llm-client` (lifting it

@@ -2,7 +2,7 @@
 //! `context_recipe` role-gating precheck (`resolved_validation.py:42`) and the
 //! skill-file terminal-silence scanner (`skills/loader.py`).
 //!
-//! The cyclic edges in the Python source are broken by relocation and injection
+//! The cyclic edges in the Rust source are broken by relocation and injection
 //! (GC-eos-agent-def-05): the recipe *catalog* check (`validate_context_recipe`)
 //! lives in `eos-workflow`; the terminal keys are passed into the scanner as data
 //! rather than imported from `eos-tools`.

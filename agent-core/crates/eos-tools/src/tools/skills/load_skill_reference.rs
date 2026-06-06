@@ -262,7 +262,7 @@ mod tests {
     }
 
     // D7: a skill-less agent (empty allowlist) is a no-op tool — every call errors
-    // with an empty `available` (Python `allowed_slugs=[]`).
+    // with an empty `available` (Rust `allowed_slugs=[]`).
     #[tokio::test]
     async fn skill_less_agent_has_empty_allowlist() {
         let scratch = Scratch::new("d7-noskill");

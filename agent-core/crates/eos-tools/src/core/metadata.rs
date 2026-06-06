@@ -41,7 +41,7 @@ pub struct ExecutionMetadata {
     /// Request-visible workspace root. Relative sandbox paths resolve under this
     /// one root; there is no separate `cwd` / `repo_root` / `exec_cwd` fact.
     pub workspace_root: String,
-    /// Per-turn snapshot of the live conversation transcript (port of Python
+    /// Per-turn snapshot of the live conversation transcript (port of Rust
     /// `context.conversation_messages`). Stamped by the engine dispatch per call;
     /// read by the stateless advisor-approval pre-hook to infer the verdict.
     pub conversation: Arc<[Message]>,
@@ -68,7 +68,7 @@ impl std::fmt::Debug for ExecutionMetadata {
 }
 
 impl ExecutionMetadata {
-    /// The calling agent's sandbox id as a string, or `""` when unbound (Python
+    /// The calling agent's sandbox id as a string, or `""` when unbound (Rust
     /// `resolve_sandbox_id`).
     #[must_use]
     pub fn sandbox_id_str(&self) -> &str {

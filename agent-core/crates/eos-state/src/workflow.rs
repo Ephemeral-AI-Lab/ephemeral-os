@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 
 use eos_types::{IterationId, RequestId, TaskId, UtcDateTime, WorkflowId};
 
-/// Lifecycle status of a [`Workflow`] (Python `WorkflowStatus`).
+/// Lifecycle status of a [`Workflow`] (Rust `WorkflowStatus`).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum WorkflowStatus {
@@ -49,7 +49,7 @@ impl WorkflowOutcome {
     }
 }
 
-/// Immutable view of a persisted Workflow (Python `state.py:Workflow`).
+/// Immutable view of a persisted Workflow (Rust `state.py:Workflow`).
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 pub struct Workflow {
     /// Workflow identifier.

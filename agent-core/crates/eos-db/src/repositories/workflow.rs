@@ -1,4 +1,4 @@
-//! `SqlWorkflowStore` — the workflow repository (Python `workflow_store.py`).
+//! `SqlWorkflowStore` — the workflow repository (Rust `workflow_store.py`).
 
 use async_trait::async_trait;
 use sqlx::{Sqlite, SqlitePool};

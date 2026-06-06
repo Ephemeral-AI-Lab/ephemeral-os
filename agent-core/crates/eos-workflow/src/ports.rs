@@ -234,7 +234,7 @@ impl WorkflowControlPort for WorkflowControlAdapter {
     async fn workflow_depth(&self, workflow_id: &WorkflowId) -> Result<u32, ToolError> {
         // Walk delegation ancestry via each workflow's parent task's owning
         // workflow (`task.workflow_id`), counting hops; 1 = top-level. The `seen`
-        // guard stops a malformed cycle from looping forever (Python parity).
+        // guard stops a malformed cycle from looping forever (Rust parity).
         let mut depth: u32 = 1;
         let mut current = workflow_id.clone();
         let mut seen = std::collections::HashSet::new();

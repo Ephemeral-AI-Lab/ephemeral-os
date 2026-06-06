@@ -2,7 +2,7 @@
 //!
 //! The serialized row adds a top-level `schema_version` (new in the Rust port)
 //! and stamps `ts` exactly once from an injected [`Clock`] (GC-audit-01),
-//! collapsing Python's double `ts` stamping. The `type` key maps to the Rust
+//! collapsing Rust's double `ts` stamping. The `type` key maps to the Rust
 //! field `event_type` (`type` is a keyword).
 
 use eos_types::{Clock, JsonObject, UtcDateTime};
@@ -17,7 +17,7 @@ pub const SCHEMA_VERSION: u32 = 1;
 
 /// The behavior-owning package that emitted an event.
 ///
-/// Serializes to the exact Python `Literal` strings: `"workflow"`, `"engine"`,
+/// Serializes to the exact Rust `Literal` strings: `"workflow"`, `"engine"`,
 /// `"sandbox"`, `"live_e2e"`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
@@ -135,7 +135,7 @@ mod tests {
         TestClock::new(UtcDateTime::parse_rfc3339("2026-06-02T19:47:00Z").unwrap())
     }
 
-    // AC-audit-01: round-trip serde with skip-if-none and the exact Python keys
+    // AC-audit-01: round-trip serde with skip-if-none and the exact Rust keys
     // (`type`, nested `node`, nested `payload`).
     #[test]
     fn node_event_serde_roundtrip() {

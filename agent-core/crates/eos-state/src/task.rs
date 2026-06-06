@@ -11,7 +11,7 @@ use eos_types::{AttemptId, IterationId, JsonObject, RequestId, TaskId, WorkflowI
 
 use crate::outcomes::ExecutionTaskOutcome;
 
-/// Lifecycle status of a persisted [`Task`] (Python `TaskStatus`).
+/// Lifecycle status of a persisted [`Task`] (Rust `TaskStatus`).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum TaskStatus {
@@ -29,14 +29,14 @@ pub enum TaskStatus {
 
 impl TaskStatus {
     /// Whether this is a terminal generator status
-    /// (Python `TERMINAL_GENERATOR_STATUSES`).
+    /// (Rust `TERMINAL_GENERATOR_STATUSES`).
     #[must_use]
     pub const fn is_terminal_generator(self) -> bool {
         matches!(self, Self::Done | Self::Failed | Self::Blocked)
     }
 }
 
-/// The four persisted task roles (Python `TASK_AGENT_ROLES`). The execution
+/// The four persisted task roles (Rust `TASK_AGENT_ROLES`). The execution
 /// state role is `Generator`; no profile-alias role enters persisted state
 /// (anchor §4, GC-eos-state-02).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, JsonSchema)]
@@ -52,7 +52,7 @@ pub enum TaskRole {
     Reducer,
 }
 
-/// The four persisted task roles, mirroring Python `TASK_AGENT_ROLES`.
+/// The four persisted task roles, mirroring Rust `TASK_AGENT_ROLES`.
 pub const TASK_AGENT_ROLES: [TaskRole; 4] = [
     TaskRole::Root,
     TaskRole::Planner,
@@ -60,7 +60,7 @@ pub const TASK_AGENT_ROLES: [TaskRole; 4] = [
     TaskRole::Reducer,
 ];
 
-/// Immutable view of a persisted task (Python `task/task.py:Task`).
+/// Immutable view of a persisted task (Rust `task/task.py:Task`).
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 pub struct Task {
     /// Task identifier.

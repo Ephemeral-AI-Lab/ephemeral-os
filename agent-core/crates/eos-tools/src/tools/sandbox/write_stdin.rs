@@ -87,13 +87,16 @@ impl ToolExecutor for WriteStdin {
             max_output_tokens: parsed.max_output_tokens,
             terminate: parsed.terminate,
         };
-        let result =
-            match eos_sandbox_port::exec_stdin(&*self.service.transport, sandbox_id, &write_request)
-                .await
-            {
-                Ok(result) => result,
-                Err(err) => return Ok(ToolResult::error(err.to_string())),
-            };
+        let result = match eos_sandbox_port::exec_stdin(
+            &*self.service.transport,
+            sandbox_id,
+            &write_request,
+        )
+        .await
+        {
+            Ok(result) => result,
+            Err(err) => return Ok(ToolResult::error(err.to_string())),
+        };
         // If the daemon already lost the live session, surface the supervisor's
         // stored terminal; otherwise, once a terminal status is observed inline,
         // latch it as delivered so the heartbeat never re-notifies the same result.

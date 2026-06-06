@@ -1,13 +1,13 @@
 //! [`ToolError`] — the single framework-fault error enum (`err-thiserror-lib`).
 //!
-//! **Err vs in-band (§8.2, a deliberate divergence from Python).** `ToolError`
+//! **Err vs in-band (§8.2, a deliberate divergence from Rust).** `ToolError`
 //! (`Result::Err`) is reserved for **framework faults**: an unknown tool, a
 //! required port not wired, a missing required execution-context id, an upstream
 //! store/sandbox transport failure, or an internal invariant break. Tool-domain
 //! failures — bad arguments, a hook `Deny`, or a tool that "said no" — are
 //! **in-band** [`ToolResult`](crate::ToolResult) values with `is_error = true`,
 //! returned as `Ok`. The engine renders in-band errors back to the model and
-//! surfaces `Err` to triage. Python returned the internal-validation branch
+//! surfaces `Err` to triage. Rust returned the internal-validation branch
 //! in-band; the Rust ACs (AC-tools-02..04) encode this new boundary.
 
 use eos_sandbox_port::SandboxPortError;

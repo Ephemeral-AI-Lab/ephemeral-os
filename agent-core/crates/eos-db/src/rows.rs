@@ -49,7 +49,7 @@ pub(crate) struct TaskRow {
     pub outcomes: String,
     pub terminal_tool_result: Option<String>,
     // `created_at`/`updated_at` columns exist but the `Task` DTO has no timestamp
-    // fields (matching Python); `FromRow` ignores the extra columns.
+    // fields (matching Rust); `FromRow` ignores the extra columns.
 }
 
 #[derive(Debug, Clone, sqlx::FromRow)]
@@ -177,10 +177,10 @@ fn record_str<'a>(record: &'a serde_json::Map<String, JsonValue>, key: &str) -> 
     record.get(key).and_then(JsonValue::as_str)
 }
 
-/// Build one typed outcome from a raw record (Python `_outcomes_from_record`).
+/// Build one typed outcome from a raw record (Rust `_outcomes_from_record`).
 /// `status` is resolved by the caller (the task/attempt columns fill a missing
 /// status differently). A record whose task id is empty/unparseable is dropped
-/// (the empty `TaskId` Python would emit is unrepresentable, and our own
+/// (the empty `TaskId` Rust would emit is unrepresentable, and our own
 /// serializer never writes one).
 fn outcome_from_record(
     record: &serde_json::Map<String, JsonValue>,
@@ -207,7 +207,7 @@ fn outcome_from_record(
     })
 }
 
-/// Normalize a task row's `outcomes` (Python `task_outcomes_from_row`): a
+/// Normalize a task row's `outcomes` (Rust `task_outcomes_from_row`): a
 /// *missing* per-record status is filled from the task status via
 /// `present_status` (`"done"` → success); a *present* status uses
 /// `normalize_status` (`"done"` → failed). Role falls back to the task's role,
@@ -233,7 +233,7 @@ pub(crate) fn normalize_task_outcomes(
         .collect()
 }
 
-/// Normalize an attempt row's `outcomes` (Python `parse_outcomes_record`): no
+/// Normalize an attempt row's `outcomes` (Rust `parse_outcomes_record`): no
 /// status fill (missing → failed), no role fallback (missing → generator), task
 /// id from the record only.
 pub(crate) fn normalize_attempt_outcomes(records: &[JsonValue]) -> Vec<ExecutionTaskOutcome> {
@@ -481,7 +481,7 @@ pub(crate) fn row_to_agent_run(r: AgentRunRow) -> Result<AgentRun, DbError> {
 }
 
 // Statically guard that the iteration outcome enums map to the same wire values
-// Python used (defends the `_normalize_status` vs `present_status` split).
+// Rust used (defends the `_normalize_status` vs `present_status` split).
 #[cfg(test)]
 mod tests {
     use super::*;

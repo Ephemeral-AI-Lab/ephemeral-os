@@ -2,7 +2,7 @@
 //!
 //! `UtcDateTime` wraps `OffsetDateTime` with the invariant that the offset is
 //! always UTC, so Anthropic/OpenAI/DB timestamps are substitutable (LSP). RFC
-//! 3339 is the single wire format, matching Python's `datetime.now(UTC)`
+//! 3339 is the single wire format, matching Rust's `datetime.now(UTC)`
 //! isoformat persistence. `Clock` is the DIP seam: inject it instead of reading
 //! the global wall clock so tests are deterministic.
 
@@ -161,7 +161,7 @@ mod tests {
     fn utc_datetime_rfc3339_roundtrip() {
         let s = "2026-06-02T19:47:00Z";
         let dt = UtcDateTime::parse_rfc3339(s).expect("parse");
-        // `time` emits the UTC offset as `Z`; Python isoformat uses `+00:00`.
+        // `time` emits the UTC offset as `Z`; Rust isoformat uses `+00:00`.
         // Both are valid RFC 3339 and parse to the same instant.
         let formatted = dt.to_rfc3339();
         let reparsed = UtcDateTime::parse_rfc3339(&formatted).expect("reparse");
@@ -205,7 +205,7 @@ mod tests {
     }
 
     // The serde wire form is a bare RFC 3339 string (transparent). The exact
-    // bytes are the canonical UTC `Z` form; full byte-parity with Python's
+    // bytes are the canonical UTC `Z` form; full byte-parity with Rust's
     // variable-precision `+00:00` isoformat is a cutover/Phase-0-harness concern.
     #[test]
     fn serde_is_transparent_rfc3339_string() {

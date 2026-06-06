@@ -8,17 +8,17 @@
 //! *loop*). The unexercised post-hook stage is dropped (every wired hook is a
 //! pre-hook).
 //!
-//! ## Pre-hook input order — intentional divergence from Python (NF1)
+//! ## Pre-hook input order — intentional divergence from Rust (NF1)
 //!
-//! Python parses input into the validated model *first*, then runs pre-hooks on
+//! Rust parses input into the validated model *first*, then runs pre-hooks on
 //! that model (`tool_call.py:157` then `:163`). This generic pipeline instead runs
 //! pre-hooks on the **raw** [`JsonObject`] and parses inside each executor body
 //! (`execute` → [`parse_input`]). A hook author must know two consequences:
 //!
 //! 1. **Pre-hooks see raw, pre-`serde`-default input** — a `#[serde(default)]`
-//!    field is observed *absent* here, where Python shows the default-applied value.
+//!    field is observed *absent* here, where Rust shows the default-applied value.
 //! 2. **A pre-hook `Deny` precedes a parse error** — for input that is both
-//!    malformed *and* hook-denied, this pipeline returns the `Deny`; Python returns
+//!    malformed *and* hook-denied, this pipeline returns the `Deny`; Rust returns
 //!    the parse error first.
 //!
 //! This is behavior-equivalent for every wired hook: all read **required** fields
@@ -78,7 +78,7 @@ pub async fn execute_tool_once(
 }
 
 /// Run a tool's ordered pre-hooks against `raw_input`/`ctx`. Returns
-/// `Some(in-band error result)` on the first Deny (the Python
+/// `Some(in-band error result)` on the first Deny (the Rust
 /// `_build_hook_failure_result` shape, carrying the accumulated pass-trace), or
 /// `None` if every hook passes.
 ///
@@ -94,7 +94,7 @@ pub async fn run_pre_hooks(
     ctx: &crate::core::metadata::ExecutionMetadata,
 ) -> Result<Option<ToolResult>, ToolError> {
     // Passing hooks accumulate into the trace a later denial reports (the denier
-    // itself is recorded in `hook_failure`, not the trace — Python parity).
+    // itself is recorded in `hook_failure`, not the trace — Rust parity).
     let mut hook_trace: Vec<Value> = Vec::new();
     for &hook in &tool.hooks {
         match hook.run(raw_input, ctx, &tool.hook_services).await? {
@@ -162,7 +162,7 @@ fn stamp_terminal(tool: &RegisteredTool, result: ToolResult) -> ToolResult {
     }
 }
 
-/// Parse-and-validate raw tool input into a typed DTO, rendering the Python
+/// Parse-and-validate raw tool input into a typed DTO, rendering the Rust
 /// "Invalid input for X" in-band message on failure (the executor returns the
 /// `Err` value as `Ok(ToolResult)`). Constraint validation beyond serde defaults
 /// lives in each DTO's own `validate` step.
@@ -306,7 +306,7 @@ mod tests {
             "carries hook_failure metadata"
         );
         assert_eq!(res.metadata["policy"], json!("destructive_shell"));
-        // Python `_build_hook_failure_result` shape: the denier is the first/only
+        // Rust `_build_hook_failure_result` shape: the denier is the first/only
         // hook, so no hooks passed before it — the trace is present but empty, and
         // the effective input that reached the hook is echoed back.
         assert_eq!(res.metadata["hook_trace"], json!([]));
@@ -318,7 +318,7 @@ mod tests {
     }
 
     // hook_trace records each PASSING hook (not the denier) in order — the
-    // accumulate-on-pass / emit-on-deny half of the Python pipeline shape.
+    // accumulate-on-pass / emit-on-deny half of the Rust pipeline shape.
     #[tokio::test]
     async fn hook_trace_records_passing_hooks() {
         // No sandbox_id → BlockInIsolatedMode fails open (Pass) before the
@@ -474,7 +474,7 @@ mod tests {
     // NF1: an input that is BOTH hook-denied (destructive `cmd`) AND unparseable by
     // the body's DTO (missing required `needed`). Pre-hooks run on the raw input
     // first, so the Deny wins and the body never parses — locking the documented
-    // precedence (Python surfaces the parse error first; this pipeline does not).
+    // precedence (Rust surfaces the parse error first; this pipeline does not).
     #[tokio::test]
     async fn pre_hook_denies_before_parse() {
         let ctx = metadata();

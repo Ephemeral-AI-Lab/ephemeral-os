@@ -3,7 +3,7 @@
 //! Asserts (a) no `src/**/*.rs` source mentions a `class_path` or
 //! credential-store symbol, and (b) `Cargo.toml` pulls in no provider SDK. These
 //! are the absence guarantees behind GC-llm-client-05 (anchor §2): no
-//! `class_path` importlib dispatch, no OAuth credential-store strategy, and
+//! `class_path` dynamic loading dispatch, no OAuth credential-store strategy, and
 //! direct `reqwest` only.
 
 use std::fs;

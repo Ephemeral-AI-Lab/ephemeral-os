@@ -2,11 +2,11 @@
 //! surface.
 //!
 //! Invariant: [`manifest_root_hash`] and [`layer_digest`] must reproduce the
-//! live Python hashes BYTE-FOR-BYTE. A single wrong byte is a silent data
+//! live Rust hashes BYTE-FOR-BYTE. A single wrong byte is a silent data
 //! divergence that passes every ASCII test. The two hashes are deliberately
 //! OPPOSITE on non-ASCII handling:
 //!
-//! - `manifest_root_hash` serializes via Python `json.dumps(..., ensure_ascii=
+//! - `manifest_root_hash` serializes via Rust `json.dumps(..., ensure_ascii=
 //!   True)` — non-ASCII is `\uXXXX`-escaped (hand-built here; `serde_json` emits
 //!   raw UTF-8 and would diverge).
 //! - `layer_digest` hashes RAW UTF-8 path/source bytes with NUL framing.
@@ -42,7 +42,7 @@ pub enum CasError {
 pub struct LayerPath(String);
 
 impl LayerPath {
-    /// Normalize a raw path string exactly as Python `normalize_layer_path`:
+    /// Normalize a raw path string exactly as Rust `normalize_layer_path`:
     /// `\` -> `/`, strip surrounding whitespace, drop empty / `.` segments,
     /// reject absolute / `..` / NUL / empty-result.
     ///
@@ -107,7 +107,7 @@ pub struct Manifest {
 
 impl Manifest {
     /// Construct a manifest, rejecting an unsupported `schema_version` exactly
-    /// as Python `Manifest.__post_init__`.
+    /// as Rust `Manifest.__post_init__`.
     ///
     /// # Errors
     ///
@@ -131,8 +131,8 @@ impl Manifest {
     }
 }
 
-/// Append the Python `json.dumps(ensure_ascii=True)` escaping of `s` (without
-/// surrounding quotes) to `out`. Matches `CPython`'s
+/// Append the Rust `json.dumps(ensure_ascii=True)` escaping of `s` (without
+/// surrounding quotes) to `out`. Matches `CRust`'s
 /// `c_encode_basestring_ascii`.
 ///
 fn push_json_ascii_escaped(out: &mut String, s: &str) {
@@ -286,7 +286,7 @@ pub fn layer_digest(changes: &[LayerChange]) -> String {
     hex_lower(&hasher.finalize())
 }
 
-/// Lowercase hex of a digest, matching Python `hexdigest()`.
+/// Lowercase hex of a digest, matching Rust `hexdigest()`.
 fn hex_lower(bytes: &[u8]) -> String {
     let mut s = String::with_capacity(bytes.len() * 2);
     for &b in bytes {

@@ -475,7 +475,12 @@ Pyright-backed Python language tools.
         ));
 
         // Fenced but malformed YAML -> Frontmatter (manifest.py 96-99).
-        let d8 = make_plugin(&root, "badyaml", Some("---\nname: [unterminated\n---\n"), &[]);
+        let d8 = make_plugin(
+            &root,
+            "badyaml",
+            Some("---\nname: [unterminated\n---\n"),
+            &[],
+        );
         assert!(matches!(
             parse_plugin_manifest(&d8),
             Err(PluginCatalogError::Frontmatter { .. })
@@ -514,13 +519,23 @@ Pyright-backed Python language tools.
         let d_unset = make_plugin(&root, "k", Some(&manifest("")), &["tools/x.py"]);
         assert_eq!(parse_plugin_manifest(&d_unset).expect("parses").kind, None);
 
-        let d_known = make_plugin(&root, "k", Some(&manifest("kind: formatter\n")), &["tools/x.py"]);
+        let d_known = make_plugin(
+            &root,
+            "k",
+            Some(&manifest("kind: formatter\n")),
+            &["tools/x.py"],
+        );
         assert_eq!(
             parse_plugin_manifest(&d_known).expect("parses").kind,
             Some(PluginKind::Formatter)
         );
 
-        let d_unknown = make_plugin(&root, "k", Some(&manifest("kind: wizard\n")), &["tools/x.py"]);
+        let d_unknown = make_plugin(
+            &root,
+            "k",
+            Some(&manifest("kind: wizard\n")),
+            &["tools/x.py"],
+        );
         assert!(matches!(
             parse_plugin_manifest(&d_unknown),
             Err(PluginCatalogError::UnknownKind(_))

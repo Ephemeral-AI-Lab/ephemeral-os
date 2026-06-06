@@ -30,7 +30,7 @@ mod tests {
     use super::*;
 
     // AC-sandbox-api-07: dispatch arithmetic and per-verb constants equal the
-    // Python values.
+    // Rust values.
     #[test]
     fn dispatch_and_constants() {
         assert_eq!(exec_dispatch_timeout(None), 90);

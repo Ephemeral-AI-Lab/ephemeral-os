@@ -270,7 +270,7 @@ mod tests {
         json!({
             "command_session_id": id,
             "agent_run_id": agent,
-            "command": "pytest -q",
+            "command": "cargo test -q",
             "result": {
                 "status": status,
                 "exit_code": if status == "ok" { 0 } else { 1 },
@@ -295,7 +295,12 @@ mod tests {
     fn register_pull_completed_flips_count_and_renders_once() {
         let mut supervisor = BackgroundTaskSupervisor::new();
         let agent_run = arid("agent-a");
-        supervisor.register_command_session(&csid("cmd_1"), &sbid("sb"), &agent_run, "pytest -q");
+        supervisor.register_command_session(
+            &csid("cmd_1"),
+            &sbid("sb"),
+            &agent_run,
+            "cargo test -q",
+        );
         assert_eq!(supervisor.count_commands_by_run(Some(&agent_run)), 1);
 
         supervisor.ingest_completion(&completion("cmd_1", "agent-a", "ok", "3 passed"));

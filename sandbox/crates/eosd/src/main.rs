@@ -10,7 +10,7 @@
 //! - `eosd ns-holder`  -> the single-threaded namespace holder in `eos-ns-holder`.
 //!
 //! Three real processes, one static binary. This is the Rust replacement for
-//! the Python launcher chain: `daemon` owns the RPC server, `ns-runner` owns
+//! the Rust launcher chain: `daemon` owns the RPC server, `ns-runner` owns
 //! fresh/setns tool execution, and `ns-holder` owns the persistent isolated
 //! namespace holder lifecycle.
 //!
@@ -67,7 +67,7 @@ fn main() -> Result<()> {
 /// control_fd)`, and its lib doc sanctions keeping the argv -> FD parsing here.
 /// We parse the two positional FD ints and dispatch; the holder's typed errors
 /// carry exit codes (`1` / `2` / `7`) that we map onto the process status so the
-/// daemon-side crash-recovery sees the same codes as the Python holder.
+/// daemon-side crash-recovery sees the same codes as the Rust holder.
 fn run_ns_holder(mut args: std::env::Args) -> Result<()> {
     let readiness_fd = parse_fd(args.next(), "readiness_fd")?;
     let control_fd = parse_fd(args.next(), "control_fd")?;
@@ -85,12 +85,12 @@ fn run_ns_holder(mut args: std::env::Args) -> Result<()> {
                 eos_ns_holder::NsHolderError::TestCrash => {
                     eos_ns_holder::NsHolderError::TEST_CRASH_EXIT
                 }
-                // Unshare / pipe-i/o failures have no dedicated Python exit code;
+                // Unshare / pipe-i/o failures have no dedicated Rust exit code;
                 // surface the message and fall through to the generic status.
                 _ => return Err(anyhow::Error::new(err).context("ns-holder failed")),
             };
             // The holder reached a defined non-zero terminal state; reproduce the
-            // exact Python exit code (1 / 2) instead of anyhow's generic 1.
+            // exact Rust exit code (1 / 2) instead of anyhow's generic 1.
             std::process::exit(code);
         }
     }

@@ -1,7 +1,7 @@
 //! Pure daemon control RPCs: invocation cancel/heartbeat and the in-flight /
 //! command-session / isolated-status counts. Ported from
 //! `sandbox/api/daemon_invocations.py`. These do not carry caller identity and
-//! use a fixed control timeout (`_CONTROL_TIMEOUT_S` in Python, lifted here).
+//! use a fixed control timeout (`_CONTROL_TIMEOUT_S` in Rust, lifted here).
 
 use eos_types::{InvocationId, JsonObject, SandboxId};
 use serde_json::Value;
@@ -10,7 +10,7 @@ use crate::error::SandboxPortError;
 use crate::ops::DaemonOp;
 use crate::transport::SandboxTransport;
 
-/// Control-RPC timeout, seconds (Python `daemon_invocations._CONTROL_TIMEOUT_S`).
+/// Control-RPC timeout, seconds (Rust `daemon_invocations._CONTROL_TIMEOUT_S`).
 pub(crate) const CONTROL_TIMEOUT_S: u32 = 15;
 
 /// Cancel an in-flight daemon invocation by id. Returns the raw daemon response.

@@ -1587,7 +1587,7 @@ mod subagent_lifecycle {
     }
 
     /// Replays scripted root turns, capturing any `run_subagent` rejection text
-    /// from the transcript so the test can assert the Python error message.
+    /// from the transcript so the test can assert the Rust error message.
     struct RejectionProbe {
         turns: std::sync::Mutex<Vec<Vec<StreamEvent>>>,
         rejection: Arc<std::sync::Mutex<Option<String>>>,
@@ -1613,7 +1613,7 @@ mod subagent_lifecycle {
         }
     }
 
-    // D2: an unknown dispatch is rejected in-band with the Python message and
+    // D2: an unknown dispatch is rejected in-band with the Rust message and
     // mints no record, while the root still completes (the rejection is an
     // in-band tool error, not a wedge).
     #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
@@ -1660,7 +1660,7 @@ mod subagent_lifecycle {
         assert_eq!(
             captured.as_deref(),
             Some("run_subagent: agent 'explorer' is not registered."),
-            "an unregistered agent is rejected with the Python error text"
+            "an unregistered agent is rejected with the Rust error text"
         );
         let task = state
             .db

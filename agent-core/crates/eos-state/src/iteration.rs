@@ -9,7 +9,7 @@ use eos_types::{AttemptId, IterationId, UtcDateTime, WorkflowId};
 
 use crate::plan::{AttemptBudget, DeferredGoal};
 
-/// Lifecycle status of an [`Iteration`] (Python `IterationStatus`).
+/// Lifecycle status of an [`Iteration`] (Rust `IterationStatus`).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum IterationStatus {
@@ -23,7 +23,7 @@ pub enum IterationStatus {
     Cancelled,
 }
 
-/// Why an iteration was created (Python `IterationCreationReason`).
+/// Why an iteration was created (Rust `IterationCreationReason`).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum IterationCreationReason {
@@ -53,7 +53,7 @@ pub enum IterationOutcome {
     },
 }
 
-/// Immutable view of a persisted Iteration (Python `state.py:Iteration`).
+/// Immutable view of a persisted Iteration (Rust `state.py:Iteration`).
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 pub struct Iteration {
     /// Iteration identifier.

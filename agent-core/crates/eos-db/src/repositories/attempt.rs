@@ -1,4 +1,4 @@
-//! `SqlAttemptStore` — the attempt repository (Python `attempt_store.py`).
+//! `SqlAttemptStore` — the attempt repository (Rust `attempt_store.py`).
 
 use async_trait::async_trait;
 use sqlx::{Sqlite, SqlitePool};

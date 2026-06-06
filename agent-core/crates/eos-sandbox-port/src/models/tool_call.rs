@@ -9,7 +9,7 @@ use super::common::Intent;
 ///
 /// `invocation_id` is the typed [`InvocationId`]; [`Self::from_payload`] parses
 /// it at the boundary and is fallible (a spec-sanctioned tightening of the
-/// Python path, which tolerated an empty id string).
+/// Rust path, which tolerated an empty id string).
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 pub struct ToolCallRequest {
     /// Correlation id for this invocation.

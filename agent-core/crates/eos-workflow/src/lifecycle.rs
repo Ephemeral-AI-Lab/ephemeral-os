@@ -167,7 +167,7 @@ impl WorkflowLifecycle {
             .await?
             .ok_or_else(|| WorkflowError::not_found("iteration", closed.iteration_id.as_str()))?;
         // The closed iteration's coordinator has finished its job; release it up
-        // front so no early return below can leak it (mirrors Python's `finally`).
+        // front so no early return below can leak it (mirrors Rust's `finally`).
         self.iteration_coordinators.deregister(&iteration.id);
 
         match closed.outcome {
@@ -187,13 +187,13 @@ impl WorkflowLifecycle {
     }
 
     /// Start the deferred-goal continuation iteration, compensating on a
-    /// first-attempt start failure (parity with Python `_start_deferred_iteration`).
+    /// first-attempt start failure (parity with Rust `_start_deferred_iteration`).
     async fn start_iteration_with_deferred_goal(&self, workflow_id: &WorkflowId) -> Result<()> {
         let (next, coordinator) = self.create_iteration_with_coordinator(workflow_id).await?;
         if let Err(err) = coordinator.create_and_start_first_attempt().await {
             // Continuation could not start: cancel the new iteration, release its
             // coordinator, and fail the workflow. The original error is swallowed
-            // after compensation, exactly as Python's `except` does — but log it
+            // after compensation, exactly as Rust's `except` does — but log it
             // first (parity with `_start_deferred_iteration`'s `logger.exception`),
             // since the FAILED workflow status is otherwise the only trace.
             tracing::warn!(
@@ -276,9 +276,7 @@ mod tests {
     use eos_state::{DeferredGoal, IterationOutcome, WorkflowOutcome, WorkflowStatus};
 
     use super::*;
-    use crate::support::{
-        agent_registry_without_planner, root_task, MemoryStores, QueueRunner,
-    };
+    use crate::support::{agent_registry_without_planner, root_task, MemoryStores, QueueRunner};
 
     // AC-eos-workflow-05 / GC-eos-workflow-01: close_workflow sets the workflow
     // status + outcomes and performs ZERO TaskStore writes (the parent task is
@@ -330,7 +328,7 @@ mod tests {
     // continuation whose first attempt fails to START runs the compensation saga
     // — new iteration CANCELLED, workflow FAILED, and BOTH coordinators
     // deregistered (the new one is FP1's leak, the old one FP2's) — and never
-    // mutates the parent. The error is swallowed (Ok), matching Python's
+    // mutates the parent. The error is swallowed (Ok), matching Rust's
     // `except`. The deferred-path analogue of starter::compensation_rolls_back.
     #[tokio::test]
     async fn continuation_start_failure_compensates() {

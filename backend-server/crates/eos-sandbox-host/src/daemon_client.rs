@@ -157,7 +157,7 @@ impl DaemonClient {
         );
         daemon_args.extend(args);
 
-        let adapter = self.registry.adapter(sandbox_id)?;
+        let adapter = self.registry.adapter()?;
         let tcp_endpoint = self
             .resolve_daemon_tcp_endpoint(&*adapter, sandbox_id)
             .await;
@@ -180,7 +180,7 @@ impl DaemonClient {
         sandbox_id: &SandboxId,
         timeout_s: u32,
     ) -> Result<(), SandboxHostError> {
-        let adapter = self.registry.adapter(sandbox_id)?;
+        let adapter = self.registry.adapter()?;
         let tcp_endpoint = self
             .resolve_daemon_tcp_endpoint(&*adapter, sandbox_id)
             .await;

@@ -1,15 +1,15 @@
 //! Pre-execution hooks — a **sealed, closed** set (GC-tools-06), not an open
 //! trait pipeline.
 //!
-//! The Python open `pre_hook` abstraction (not on the anchor §6 seam map) becomes
-//! a sealed [`Hook`] enum the pipeline matches exhaustively. The six wired Python
+//! The Rust open `pre_hook` abstraction (not on the anchor §6 seam map) becomes
+//! a sealed [`Hook`] enum the pipeline matches exhaustively. The six wired Rust
 //! hooks map one-to-one; `DestructiveGitShell` and `DestructiveShell` are distinct
 //! (different match logic, message, and `policy`). All six are pre-phase (every
-//! wired Python hook is a `pre_hook`; the unexercised post-hook stage is dropped),
+//! wired Rust hook is a `pre_hook`; the unexercised post-hook stage is dropped),
 //! so the enum carries no pre/post discriminator.
 //!
 //! A `Deny` becomes an in-band [`ToolResult`]`{is_error:true}` carrying the
-//! `hook_failure` metadata shape the Python pipeline emits (`hook_pipeline.py`
+//! `hook_failure` metadata shape the Rust pipeline emits (`hook_pipeline.py`
 //! `_build_hook_failure_result`).
 
 use std::sync::LazyLock;
@@ -38,14 +38,14 @@ pub enum Hook {
         /// The protected tool.
         tool: ToolName,
     },
-    /// Refuse a main-role terminal that lacks prior advisor approval (Python
+    /// Refuse a main-role terminal that lacks prior advisor approval (Rust
     /// `AdvisorApprovalPreHook`).
     AdvisorApproval {
         /// The protected tool.
         tool: ToolName,
     },
     /// Refuse a planner that sets a deferred goal while its workflow depth
-    /// exceeds `max_depth` (Python `DisallowNestedPlannerDeferral`).
+    /// exceeds `max_depth` (Rust `DisallowNestedPlannerDeferral`).
     DisallowNestedPlannerDeferral {
         /// The protected tool.
         tool: ToolName,
@@ -54,20 +54,20 @@ pub enum Hook {
         /// `.eos-agents/tools/<wire>.md` `hooks:` entry.
         max_depth: u32,
     },
-    /// Refuse git working-tree / metadata mutation shell commands (Python
+    /// Refuse git working-tree / metadata mutation shell commands (Rust
     /// `DestructiveGitShellPreHook`).
     DestructiveGitShell {
         /// The protected tool.
         tool: ToolName,
     },
-    /// Refuse destructive filesystem shell commands (Python
+    /// Refuse destructive filesystem shell commands (Rust
     /// `DestructiveShellPreHook`).
     DestructiveShell {
         /// The protected tool.
         tool: ToolName,
     },
     /// Refuse a read-only helper (`ask_advisor`) while an isolated workspace is
-    /// open (Python `BlockInIsolatedMode`).
+    /// open (Rust `BlockInIsolatedMode`).
     BlockInIsolatedMode {
         /// The protected tool.
         tool: ToolName,
@@ -78,7 +78,7 @@ pub enum Hook {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum HookOutcome {
     /// The hook passed; execution proceeds. Carries the pass-phase metadata the
-    /// Python `HookResult.pass_(value, metadata=...)` records in the `hook_trace`
+    /// Rust `HookResult.pass_(value, metadata=...)` records in the `hook_trace`
     /// (empty for most hooks; the daemon-unavailable bailout stamps a `reason`).
     Pass(JsonObject),
     /// The hook denied execution; the pipeline returns an in-band error.
@@ -93,7 +93,7 @@ impl HookOutcome {
 }
 
 /// A hook denial: the model-facing message plus the audit/policy metadata the
-/// Python `HookResult.fail(...)` carries.
+/// Rust `HookResult.fail(...)` carries.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct HookDenial {
     /// The model-facing block message.
@@ -157,7 +157,7 @@ impl Hook {
         }
     }
 
-    /// The Python hook `name` (used in the `hook_failure` trace).
+    /// The Rust hook `name` (used in the `hook_failure` trace).
     #[must_use]
     pub fn hook_name(self) -> String {
         let tool = self.tool().as_str();
@@ -207,7 +207,7 @@ impl Hook {
     }
 }
 
-/// Build the in-band `hook_failure` [`ToolResult`] (Python
+/// Build the in-band `hook_failure` [`ToolResult`] (Rust
 /// `_build_hook_failure_result`, pre-phase). `hook_trace` is the
 /// already-accumulated trace of the hooks that *passed* before this denial (the
 /// denier is recorded in `hook_failure`, not the trace); `raw_input` is the
@@ -254,7 +254,7 @@ pub(crate) fn hook_failure_result(
     for (k, v) in &denial.extra {
         metadata.insert(k.clone(), v.clone());
     }
-    // The Python `_build_hook_failure_result` shape also carries the accumulated
+    // The Rust `_build_hook_failure_result` shape also carries the accumulated
     // trace of passing hooks and the effective input (`hook_pipeline.py`).
     metadata.insert("hook_trace".to_owned(), Value::Array(hook_trace.to_vec()));
     metadata.insert(
@@ -345,7 +345,7 @@ const BLOCKED_GIT_SUBCOMMANDS: &[&str] = &[
     "update-ref",
     "worktree",
 ];
-/// git clean short flags that may legitimately appear alongside `-n` (Python
+/// git clean short flags that may legitimately appear alongside `-n` (Rust
 /// `_GIT_CLEAN_SHORT_FLAGS = frozenset("ndfxXqi")`).
 const GIT_CLEAN_SHORT_FLAGS: &[char] = &['n', 'd', 'f', 'x', 'X', 'q', 'i'];
 
@@ -373,7 +373,7 @@ fn deferred_goal(raw_input: &JsonObject) -> Option<&str> {
         .filter(|goal| !goal.is_empty())
 }
 
-/// Faithful port of `_split_git_args`. Python prefers `shlex.split` (falling
+/// Faithful port of `_split_git_args`. Rust prefers `shlex.split` (falling
 /// back to `str.split`); this uses whitespace splitting (the fallback path) —
 /// quote handling is best-effort and the prehook is explicitly not the
 /// authoritative isolation boundary (see [`DESTRUCTIVE_GIT_MESSAGE`]).
@@ -492,7 +492,7 @@ fn run_destructive_shell(raw_input: &JsonObject) -> HookOutcome {
 
 const BLOCK_IN_ISOLATED_MESSAGE: &str = "BLOCKED: ask_advisor is unavailable inside an isolated workspace; call exit_isolated_workspace first, then ask_advisor and submit your terminal.";
 
-/// `BlockInIsolatedMode`: fail-OPEN on any daemon RPC error (Python parity).
+/// `BlockInIsolatedMode`: fail-OPEN on any daemon RPC error (Rust parity).
 async fn run_block_in_isolated_mode(ctx: &ExecutionMetadata) -> Result<HookOutcome, ToolError> {
     if ctx.is_isolated_workspace_mode {
         Ok(HookOutcome::Deny(

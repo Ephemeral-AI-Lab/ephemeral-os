@@ -2,7 +2,7 @@
 //!
 //! A changeset is split into disjoint normalized paths; each path is routed to
 //! exactly one of four destinations and, after the publish transaction, lands a
-//! per-path [`OccStatus`]. These mirror the Python `RouteDecision` /
+//! per-path [`OccStatus`]. These mirror the Rust `RouteDecision` /
 //! `FileStatus` enums byte-for-byte (the `str` values are part of the wire
 //! contract, so the `serde` rename strings below are load-bearing).
 
@@ -115,7 +115,7 @@ pub struct FileResult {
     pub path: LayerPath,
     /// Terminal status.
     pub status: OccStatus,
-    /// Diagnostic message (empty by default, mirrors Python).
+    /// Diagnostic message (empty by default, mirrors Rust).
     pub message: String,
 }
 
@@ -138,7 +138,7 @@ pub struct ChangesetResult {
     pub files: Vec<FileResult>,
     /// Manifest version produced, or `None` if nothing landed.
     pub published_manifest_version: Option<u64>,
-    /// Per-commit phase timings keyed with the Python-compatible `occ.commit.*`
+    /// Per-commit phase timings keyed with the Rust-compatible `occ.commit.*`
     /// names.
     pub timings: BTreeMap<String, f64>,
 }

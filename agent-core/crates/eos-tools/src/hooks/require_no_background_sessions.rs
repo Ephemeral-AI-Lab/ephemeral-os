@@ -33,7 +33,7 @@ fn cancels_inflight_subagents(tool: ToolName) -> bool {
 }
 
 /// Whether this submission is a "bailout" that fails-open on a daemon error
-/// (Python `_is_bailout_submission`).
+/// (Rust `_is_bailout_submission`).
 fn is_bailout_submission(tool: ToolName, raw_input: &JsonObject) -> bool {
     match tool {
         ToolName::SubmitPlannerOutcome => deferred_goal(raw_input).is_some(),
@@ -150,7 +150,7 @@ pub(crate) async fn run_require_no_background_sessions(
             if is_bailout_submission(tool, raw_input) {
                 // Fail-OPEN: stamp the override reason in the pass-phase
                 // metadata so the audit trail distinguishes a bailout from a
-                // normal pass (Python `daemon_unavailable_bailout`).
+                // normal pass (Rust `daemon_unavailable_bailout`).
                 let mut meta = JsonObject::new();
                 meta.insert("policy".to_owned(), json!("no_background_sessions"));
                 meta.insert("reason".to_owned(), json!("daemon_unavailable_bailout"));
@@ -333,7 +333,7 @@ mod tests {
     }
 
     // A daemon-count failure on a *bailout* submission fails OPEN, and the
-    // pass-phase metadata records the override reason (Python parity:
+    // pass-phase metadata records the override reason (Rust parity:
     // `daemon_unavailable_bailout`).
     #[tokio::test]
     async fn bailout_pass_carries_daemon_unavailable_reason() {

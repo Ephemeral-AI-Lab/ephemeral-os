@@ -1,5 +1,5 @@
 //! `ModelRegistry` — model-registration CRUD, secret redaction, env-placeholder
-//! resolution, and config-driven registration sync (Python `model_store.py`).
+//! resolution, and config-driven registration sync (Rust `model_store.py`).
 //!
 //! `class_path` is carried verbatim and never used to import or dispatch
 //! (anchor §2, GC-eos-db-01).
@@ -25,7 +25,7 @@ const SECRET_MARKERS: [&str; 6] = [
 ];
 
 /// The active registration with its kwargs parsed and env-placeholders resolved
-/// (Python `get_active_resolved`). Returned by [`ModelRegistry::active_resolved`].
+/// (Rust `get_active_resolved`). Returned by [`ModelRegistry::active_resolved`].
 #[derive(Debug, Clone, PartialEq)]
 pub struct ResolvedModel {
     /// Normalized model key.
@@ -228,7 +228,7 @@ impl ModelStore for ModelRegistry {
 }
 
 /// Map a row to the DTO, optionally redacting secret kwargs (`redact` mirrors the
-/// Python `_to_dict(redact=...)` default: `True` for `get`/`active`, `False` for
+/// Rust `_to_dict(redact=...)` default: `True` for `get`/`active`, `False` for
 /// `register`). The `key` column maps to the domain `model_key` (anchor §4).
 fn row_to_model(row: ModelRegistrationRow, redact: bool) -> ModelRegistration {
     let kwargs_json = if redact {
@@ -286,7 +286,7 @@ fn resolved_kwargs(kwargs_json: &str, lookup: &dyn Fn(&str) -> Option<String>) -
     }
 }
 
-/// Resolve `env:VAR`, `${VAR}`, and `$VAR` placeholders recursively (Python
+/// Resolve `env:VAR`, `${VAR}`, and `$VAR` placeholders recursively (Rust
 /// `_resolve_env_placeholders`). Unset variables resolve to `""`.
 fn resolve_placeholders(value: &Value, lookup: &dyn Fn(&str) -> Option<String>) -> Value {
     match value {
@@ -314,8 +314,8 @@ fn resolve_placeholders(value: &Value, lookup: &dyn Fn(&str) -> Option<String>) 
     }
 }
 
-/// Match a full `${VAR}` or `$VAR` placeholder (Python `re.fullmatch(r"\$\{(\w+)\}|\$(\w+)")`).
-/// `is_word` uses Unicode `is_alphanumeric` (not ASCII-only) to match Python's
+/// Match a full `${VAR}` or `$VAR` placeholder (Rust `re.fullmatch(r"\$\{(\w+)\}|\$(\w+)")`).
+/// `is_word` uses Unicode `is_alphanumeric` (not ASCII-only) to match Rust's
 /// Unicode `\w` on a `str` (e.g. a `${VÄR}` placeholder resolves identically).
 fn parse_dollar_var(s: &str) -> Option<&str> {
     let is_word = |v: &str| !v.is_empty() && v.chars().all(|c| c.is_alphanumeric() || c == '_');
@@ -363,7 +363,7 @@ mod tests {
         assert_eq!(parse_dollar_var("${}"), None);
         assert_eq!(parse_dollar_var("$"), None);
         assert_eq!(parse_dollar_var("plain"), None);
-        // Unicode word chars match Python's `\w` (not ASCII-only).
+        // Unicode word chars match Rust's `\w` (not ASCII-only).
         assert_eq!(parse_dollar_var("${VÄR}"), Some("VÄR"));
     }
 

@@ -1,6 +1,6 @@
 //! Envelope wire fixtures: byte-stable round-trip for requests/errors,
 //! canonical-equal (drop timings) for responses. Fixtures are immutable ground
-//! truth from the live Python (`json.dumps(separators=(",",":")) + "\n"`).
+//! truth from the live Rust (`json.dumps(separators=(",",":")) + "\n"`).
 
 use base64 as _;
 use eos_protocol::canonical::canonicalize;

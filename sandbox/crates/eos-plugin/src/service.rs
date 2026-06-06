@@ -214,7 +214,7 @@ mod tests {
     }
 
     #[test]
-    fn plugin_id_uses_python_name_rule() {
+    fn plugin_id_uses_rust_name_rule() {
         assert!(validate_plugin_id("plugin_id", "_ok").is_ok());
         assert!(validate_plugin_id("plugin_id", "Generic").is_ok());
         assert!(matches!(

@@ -1,5 +1,5 @@
 //! The advisor-approval pre-hook — a **stateless** gate that infers the verdict
-//! from the conversation transcript (verbatim port of Python
+//! from the conversation transcript (verbatim port of Rust
 //! `tools/_hooks/advisor_approval.py`).
 //!
 //! There is no port and no engine/agent state: the verdict exists only as a
@@ -35,7 +35,7 @@ fn blocked_message(tool: ToolName) -> String {
 
 /// `AdvisorApprovalPreHook.run`: scan the transcript, classify, deny or pass. The
 /// missing-conversation case (no advisor result) classifies `missing` and denies,
-/// matching Python's "no conversation → reason `missing`".
+/// matching Rust's "no conversation → reason `missing`".
 pub(crate) async fn run_advisor_approval(
     tool: ToolName,
     ctx: &ExecutionMetadata,

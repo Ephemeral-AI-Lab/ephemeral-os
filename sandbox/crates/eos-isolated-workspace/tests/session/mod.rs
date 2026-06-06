@@ -23,7 +23,7 @@ fn parses_memavailable_from_proc_meminfo() {
 }
 
 #[test]
-fn host_capacity_budget_matches_python_floor() {
+fn host_capacity_budget_matches_rust_floor() {
     assert_eq!(
         host_capacity_budget_bytes_from_memavailable_kib(1_001, 0.5),
         512_512

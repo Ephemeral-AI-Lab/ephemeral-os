@@ -88,7 +88,7 @@ pub(crate) fn is_edit_conflict(err: &SandboxPortError) -> bool {
 // Field coercion helpers
 // ---------------------------------------------------------------------------
 
-/// Python `str(value)` for the values that can appear in a daemon collection.
+/// Rust `str(value)` for the values that can appear in a daemon collection.
 fn py_str(value: &Value) -> String {
     match value {
         Value::String(s) => s.clone(),
@@ -100,8 +100,8 @@ fn py_str(value: &Value) -> String {
     }
 }
 
-/// Python `str(value or "")` — the falsy-collapse used by the path/kind filters.
-/// Note: a literal numeric `0` collapses to `""` in Python; that path-element
+/// Rust `str(value or "")` — the falsy-collapse used by the path/kind filters.
+/// Note: a literal numeric `0` collapses to `""` in Rust; that path-element
 /// edge never occurs for daemon path lists and is treated the same here.
 fn py_truthy_str(value: &Value) -> String {
     match value {
@@ -125,7 +125,7 @@ fn get_bool(map: &JsonObject, key: &str) -> bool {
 }
 
 /// `str(response.get(key, default))` for the common string-or-default case. A
-/// JSON null or absent key yields `default` (Python's `str(None)` quirk on an
+/// JSON null or absent key yields `default` (Rust's `str(None)` quirk on an
 /// explicit null is not reproduced — daemon never sends null here).
 fn get_string(map: &JsonObject, key: &str, default: &str) -> String {
     match map.get(key) {
@@ -265,7 +265,7 @@ fn error_object(value: Option<&Value>) -> Option<JsonObject> {
 /// `normalize_timing_map`: object keys are kept verbatim and values coerced to
 /// `f64`. Keys are already plain strings over JSON — `TimingKey` is a
 /// `str`-subclass enum, so its members serialize as their value, never the
-/// `TimingKey.*` repr; the prefix branch in Python's `_timing_key_text` is dead
+/// `TimingKey.*` repr; the prefix branch in Rust's `_timing_key_text` is dead
 /// at this boundary and is deliberately not ported (it would require coupling to
 /// the daemon-internal enum). Non-numeric values are skipped defensively.
 fn parse_timing_map(value: Option<&Value>) -> BTreeMap<String, f64> {
@@ -389,7 +389,7 @@ pub(crate) fn parse_exec_command_result(
         stderr: get_string(map, "stderr", ""),
     });
 
-    // `int(exit_code) if isinstance(exit_code, int) else None` — Python's
+    // `int(exit_code) if isinstance(exit_code, int) else None` — Rust's
     // isinstance(bool, int) is true, so a JSON bool maps to 0/1.
     let exit_code = match response.get("exit_code") {
         Some(Value::Number(number)) => number.as_i64().map(|value| value as i32),
@@ -485,7 +485,7 @@ mod tests {
     }
 
     // AC-sandbox-api-03: blank/whitespace path entries and blank kind pairs are
-    // filtered by the guarded parser, replicating the Python filters.
+    // filtered by the guarded parser, replicating the Rust filters.
     #[test]
     fn parse_drops_blank_paths_and_kinds() {
         let response = obj(serde_json::json!({
@@ -594,7 +594,7 @@ mod tests {
 
     #[test]
     fn guarded_mutation_source_collapses_falsy() {
-        // Python `str(response.get("mutation_source") or "")`: a falsy value
+        // Rust `str(response.get("mutation_source") or "")`: a falsy value
         // collapses to "" (not "False"/"0"); a truthy string is kept.
         for falsy in [
             serde_json::json!(false),

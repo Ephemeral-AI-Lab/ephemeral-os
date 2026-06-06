@@ -208,7 +208,7 @@ impl AttemptOrchestrator {
         // Validate every plan agent (registry / D6 role / task-spec presence)
         // BEFORE writing any task row, so a rejected plan never leaves orphan
         // Pending rows. Mirrors PLAN §3 ("validate shape / acyclic / ROLE, then
-        // materialize") and Python `build_planner_submission`, which resolves all
+        // materialize") and Rust `build_planner_submission`, which resolves all
         // agents up front before creating tasks.
         validate_plan_agents(plan, &self.deps.agent_registry)?;
         let mut local_to_task = BTreeMap::new();

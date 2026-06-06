@@ -48,7 +48,7 @@ pub trait Sealed {}
 pub struct StartedWorkflowHandle {
     /// The persisted workflow id.
     pub workflow_id: WorkflowId,
-    /// The agent-facing background handle (`wf_<n>`, Python `workflow_task_id`).
+    /// The agent-facing background handle (`wf_<n>`, Rust `workflow_task_id`).
     pub workflow_task_id: WorkflowSessionId,
 }
 
@@ -101,7 +101,7 @@ pub trait WorkflowControlPort: Sealed + Send + Sync {
 
     /// The delegation-ancestry depth of `workflow_id` (1 = top-level, 2 = nested
     /// once, ...). Read by the `DisallowNestedPlannerDeferral` pre-hook to compare
-    /// against its configured `max_depth` (Python `workflow_depth`).
+    /// against its configured `max_depth` (Rust `workflow_depth`).
     async fn workflow_depth(&self, workflow_id: &WorkflowId) -> Result<u32, ToolError>;
 }
 
@@ -157,7 +157,7 @@ pub struct PlannerPlan {
 }
 
 /// The result of applying a terminal submission: accepted, or rejected with a
-/// model-facing message (the Python `AttemptSubmissionContextError` /
+/// model-facing message (the Rust `AttemptSubmissionContextError` /
 /// `WorkflowInvariantViolation` in-band path). `Err(ToolError)` stays reserved
 /// for genuine framework faults.
 #[derive(Debug, Clone, PartialEq, Eq)]

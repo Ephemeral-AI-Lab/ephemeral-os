@@ -46,7 +46,7 @@ pub(crate) async fn open_pool(config: &DatabaseConfig) -> Result<SqlitePool, DbE
         options = options.journal_mode(SqliteJournalMode::Wal);
     }
 
-    // Mirror the Python `mkdir(parents=True, exist_ok=True)` for non-:memory: dbs.
+    // Mirror the Rust `mkdir(parents=True, exist_ok=True)` for non-:memory: dbs.
     let filename = options.get_filename().to_path_buf();
     if filename != std::path::Path::new(":memory:") {
         if let Some(parent) = filename.parent() {

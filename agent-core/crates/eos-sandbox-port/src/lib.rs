@@ -32,7 +32,6 @@ mod transport;
 
 pub use error::SandboxPortError;
 pub use gateway::SandboxGateway;
-pub use provision::{RequestProvisioner, RequestSandboxBinding, SandboxProvisionError};
 pub use models::{
     CommandOutput, CommandSessionCancelRequest, CommandStatusView, ConflictInfo, EditFileRequest,
     EditFileResult, EnterIsolatedWorkspaceRequest, EnterIsolatedWorkspaceResult,
@@ -42,6 +41,7 @@ pub use models::{
     ToolCallRequest, Workspace, WriteFileRequest, WriteFileResult,
 };
 pub use ops::DaemonOp;
+pub use provision::{RequestProvisioner, RequestSandboxBinding, SandboxProvisionError};
 pub use timeouts::{
     exec_dispatch_timeout, EDIT_FILE_TIMEOUT_S, EXEC_DEFAULT_COMMAND_TIMEOUT_S,
     EXEC_DISPATCH_GRACE_S, READ_FILE_TIMEOUT_S, WRITE_FILE_TIMEOUT_S,

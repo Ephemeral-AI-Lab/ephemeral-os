@@ -387,7 +387,7 @@ const fn search_replace_message(err: &SearchReplaceError) -> &'static str {
     }
 }
 
-/// Apply one search/replace edit with Python `str.count` semantics.
+/// Apply one search/replace edit with Rust `str.count` semantics.
 ///
 /// # Errors
 ///

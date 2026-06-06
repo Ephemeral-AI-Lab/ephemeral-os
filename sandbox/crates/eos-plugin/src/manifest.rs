@@ -359,7 +359,7 @@ mod tests {
     }
 
     #[test]
-    fn plugin_id_matches_python_name_rule() {
+    fn plugin_id_matches_rust_name_rule() {
         let mut valid_manifest = manifest();
         valid_manifest.plugin_id = "_Lsp9".to_owned();
         assert!(valid_manifest.validate().is_ok());

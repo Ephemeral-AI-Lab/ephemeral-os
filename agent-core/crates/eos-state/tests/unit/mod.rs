@@ -21,9 +21,9 @@ fn crate_src_files() -> Vec<(PathBuf, String)> {
     files
 }
 
-// AC-eos-state-03: every enum serializes to the exact Python wire string.
+// AC-eos-state-03: every enum serializes to the exact Rust wire string.
 #[test]
-fn serde_wire_values_match_python() {
+fn serde_wire_values_match_rust() {
     assert_eq!(json!(TaskStatus::Pending), json!("pending"));
     assert_eq!(json!(TaskStatus::Blocked), json!("blocked"));
     assert_eq!(json!(RequestStatus::Running), json!("running"));
@@ -125,8 +125,8 @@ proptest! {
 }
 
 // AC-eos-state-04: a Rust-side drift-guard snapshot of the submission +
-// outcome schemas. (Type-level Pydantic parity is deferred to cutover, as
-// there is no recorded Python golden — consistent with eos-config's note.)
+// outcome schemas. (Type-level typed schema parity is deferred to cutover, as
+// there is no recorded Rust golden — consistent with eos-config's note.)
 #[test]
 fn submission_schema_snapshot() {
     let schemas = json!({

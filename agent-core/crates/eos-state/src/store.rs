@@ -41,7 +41,7 @@ pub type StoreError = CoreError;
 #[doc(hidden)]
 pub trait Sealed {}
 
-/// Persistence surface for [`Workflow`] (Python `WorkflowStoreProtocol`).
+/// Persistence surface for [`Workflow`] (Rust `WorkflowStoreProtocol`).
 #[async_trait]
 pub trait WorkflowStore: Sealed + Send + Sync {
     /// Insert a fresh open workflow and return it.
@@ -79,7 +79,7 @@ pub trait WorkflowStore: Sealed + Send + Sync {
     ) -> Result<Vec<Workflow>, CoreError>;
 }
 
-/// Persistence surface for request/task (Python `TaskStoreProtocol`, task half).
+/// Persistence surface for request/task (Rust `TaskStoreProtocol`, task half).
 #[async_trait]
 pub trait TaskStore: Sealed + Send + Sync {
     /// Insert when absent, full-field update when present; bumps `updated_at`.
@@ -98,7 +98,7 @@ pub trait TaskStore: Sealed + Send + Sync {
         terminal_tool_result: Option<&JsonObject>,
     ) -> Result<Task, CoreError>;
 
-    /// Optimistic-concurrency status flip (Python `set_task_status_if_current`).
+    /// Optimistic-concurrency status flip (Rust `set_task_status_if_current`).
     /// `Ok(None)` ⇒ the current status did not match `expected`.
     async fn set_task_status_if_current(
         &self,
@@ -115,7 +115,7 @@ pub trait TaskStore: Sealed + Send + Sync {
     async fn list_for_request(&self, request_id: &RequestId) -> Result<Vec<Task>, CoreError>;
 }
 
-/// Persistence surface for [`Iteration`] (Python `IterationStoreProtocol`).
+/// Persistence surface for [`Iteration`] (Rust `IterationStoreProtocol`).
 #[async_trait]
 pub trait IterationStore: Sealed + Send + Sync {
     /// Insert a fresh open iteration and return it.
@@ -170,7 +170,7 @@ pub trait IterationStore: Sealed + Send + Sync {
     ) -> Result<Vec<Iteration>, CoreError>;
 }
 
-/// Persistence surface for [`Attempt`] (Python `AttemptStoreProtocol`).
+/// Persistence surface for [`Attempt`] (Rust `AttemptStoreProtocol`).
 #[async_trait]
 pub trait AttemptStore: Sealed + Send + Sync {
     /// Insert a fresh attempt (`stage=plan`, `status=running`) and return it.
@@ -208,7 +208,7 @@ pub trait AttemptStore: Sealed + Send + Sync {
     ) -> Result<Vec<Attempt>, CoreError>;
 }
 
-/// Persistence surface for requests (Python `TaskStoreProtocol`, request half,
+/// Persistence surface for requests (Rust `TaskStoreProtocol`, request half,
 /// split out per ISP).
 #[async_trait]
 pub trait RequestStore: Sealed + Send + Sync {
@@ -251,7 +251,7 @@ pub trait RequestStore: Sealed + Send + Sync {
     ) -> Result<PageResult<Request>, CoreError>;
 }
 
-/// Persistence surface for [`AgentRun`] (Python `AgentRunStore`).
+/// Persistence surface for [`AgentRun`] (Rust `AgentRunStore`).
 #[async_trait]
 pub trait AgentRunStore: Sealed + Send + Sync {
     /// Create a run row with only the create-time fields set.
@@ -282,7 +282,7 @@ pub trait AgentRunStore: Sealed + Send + Sync {
     async fn get_for_task(&self, task_id: &TaskId) -> Result<Option<AgentRun>, CoreError>;
 }
 
-/// Persistence surface for [`ModelRegistration`] (Python `ModelStore`).
+/// Persistence surface for [`ModelRegistration`] (Rust `ModelStore`).
 #[async_trait]
 pub trait ModelStore: Sealed + Send + Sync {
     /// Create or update a registration. `kwargs` is serialized to `kwargs_json`

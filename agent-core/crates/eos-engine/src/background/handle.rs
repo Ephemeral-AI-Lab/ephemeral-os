@@ -113,9 +113,12 @@ impl BackgroundSupervisorHandle {
             ),
             command_session_id: command.command_session_id.clone(),
         };
-        if let Err(err) =
-            eos_sandbox_port::cancel_command_session(&*self.transport, &command.sandbox_id, &request)
-                .await
+        if let Err(err) = eos_sandbox_port::cancel_command_session(
+            &*self.transport,
+            &command.sandbox_id,
+            &request,
+        )
+        .await
         {
             tracing::warn!(
                 error = %err,

@@ -10,8 +10,8 @@ use std::sync::{Arc, Mutex};
 use async_trait::async_trait;
 use eos_sandbox_port::{DaemonOp, SandboxPortError, SandboxTransport};
 use eos_state::{
-    ExecutionTaskOutcome, Page, PageResult, Request, RequestListFilter, RequestStatus, RequestStore,
-    Sealed, Task, TaskStatus, TaskStore,
+    ExecutionTaskOutcome, Page, PageResult, Request, RequestListFilter, RequestStatus,
+    RequestStore, Sealed, Task, TaskStatus, TaskStore,
 };
 use eos_types::{AgentRunId, CoreError, JsonObject, RequestId, SandboxId, TaskId, UtcDateTime};
 

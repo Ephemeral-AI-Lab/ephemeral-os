@@ -59,13 +59,8 @@ impl SandboxLifecycle {
     /// Create a container, register it under the default adapter, and run
     /// post-create setup.
     pub async fn create(&self, spec: &CreateSandboxSpec) -> Result<SandboxInfo, SandboxHostError> {
-        let provider = self.daemon.registry().default()?;
+        let provider = self.daemon.registry().adapter()?;
         let info = provider.create(spec).await?;
-        // No `sandbox_id` presence check is needed here: `SandboxInfo.id` is a
-        // non-empty `SandboxId` by construction.
-        self.daemon
-            .registry()
-            .register(&info.id, Arc::clone(&provider));
         self.setup_post_lifecycle(
             &info.id,
             info.project_dir.as_deref(),
@@ -77,7 +72,7 @@ impl SandboxLifecycle {
 
     /// Start a container and run post-start setup.
     pub async fn start(&self, id: &SandboxId) -> Result<SandboxInfo, SandboxHostError> {
-        let adapter = self.daemon.registry().adapter(id)?;
+        let adapter = self.daemon.registry().adapter()?;
         let info = adapter.start(id).await?;
         self.setup_post_lifecycle(id, info.project_dir.as_deref(), LifecyclePhase::Start)
             .await?;
@@ -86,15 +81,12 @@ impl SandboxLifecycle {
 
     /// Stop a container (pure delegation, no setup/cleanup).
     pub async fn stop(&self, id: &SandboxId) -> Result<SandboxInfo, SandboxHostError> {
-        self.daemon.registry().adapter(id)?.stop(id).await
+        self.daemon.registry().adapter()?.stop(id).await
     }
 
-    /// Delete a container and dispose its registry binding.
+    /// Delete a container.
     pub async fn delete(&self, id: &SandboxId) -> Result<(), SandboxHostError> {
-        self.daemon.registry().adapter(id)?.delete(id).await?;
-        // No host-process plugin-cache cleanup runs here: the host owns no
-        // plugin internals (GC-03). dispose removes the binding.
-        self.daemon.registry().dispose(id);
+        self.daemon.registry().adapter()?.delete(id).await?;
         Ok(())
     }
 
@@ -106,14 +98,14 @@ impl SandboxLifecycle {
     ) -> Result<SandboxInfo, SandboxHostError> {
         self.daemon
             .registry()
-            .adapter(id)?
+            .adapter()?
             .set_labels(id, labels)
             .await
     }
 
     /// Best-effort recovery: probe the sandbox, restart + re-setup if unhealthy.
     pub async fn ensure_running(&self, id: &SandboxId) -> Result<SandboxInfo, SandboxHostError> {
-        let adapter = self.daemon.registry().adapter(id)?;
+        let adapter = self.daemon.registry().adapter()?;
         let info = adapter.get(id).await?;
         match adapter
             .exec(id, "pwd", &probe_opts(ENSURE_RUNNING_PROBE_TIMEOUT_S))
@@ -184,7 +176,7 @@ impl SandboxLifecycle {
         let artifact_dir = self.artifact_dir.clone();
         let id = id.clone();
         Some(tokio::spawn(async move {
-            let adapter = daemon.registry().adapter(&id)?;
+            let adapter = daemon.registry().adapter()?;
             ensure_daemon_bootstrap(&*adapter, &id, &artifact_dir).await
         }))
     }
@@ -202,7 +194,7 @@ impl SandboxLifecycle {
             );
             return Ok(());
         }
-        let adapter = self.daemon.registry().adapter(id)?;
+        let adapter = self.daemon.registry().adapter()?;
         ensure_daemon_bootstrap(&*adapter, id, &self.artifact_dir).await
     }
 
@@ -277,7 +269,7 @@ impl SandboxLifecycle {
         if id.as_str().is_empty() {
             return Ok(());
         }
-        let adapter = self.daemon.registry().adapter(id)?;
+        let adapter = self.daemon.registry().adapter()?;
         let probe = adapter
             .exec(
                 id,

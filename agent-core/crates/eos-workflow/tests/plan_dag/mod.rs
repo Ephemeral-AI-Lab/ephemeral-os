@@ -59,7 +59,9 @@ async fn plan_dag_materializes_and_parks_at_run_without_closing() {
         AttemptStage::Run,
         "the attempt advanced PLAN->RUN once the plan was recorded"
     );
-    let plan = attempt.materialized_plan().expect("plan materialized into the attempt");
+    let plan = attempt
+        .materialized_plan()
+        .expect("plan materialized into the attempt");
     let generator_id = generator_task_id(&started.attempt_id, &node("g1")).unwrap();
     assert_eq!(
         plan.generator_task_ids,

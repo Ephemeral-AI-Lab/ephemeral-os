@@ -41,7 +41,7 @@ pub(crate) async fn ensure_plugin_package(
     let staged_package_root = format!("{upload_root}/package");
     let adapter = daemon
         .registry()
-        .adapter(sandbox_id)
+        .adapter()
         .map_err(map_host_error_to_api_error)?;
 
     if let Err(err) = stage_package_tree(

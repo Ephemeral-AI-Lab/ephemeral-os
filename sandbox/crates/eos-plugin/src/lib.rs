@@ -3,7 +3,7 @@
 //!
 //! # Invariant this crate owns
 //!
-//! The Python path loaded a plugin handler with `importlib.import_module(...)`
+//! The Rust path loaded a plugin handler with `dynamic loading.import_module(...)`
 //! in-process per call. The Rust path replaces that with daemon-owned service
 //! processes connected over a bidirectional PPC channel on an `AF_UNIX` socket.
 //! This crate deliberately owns only the pure contract pieces: plugin manifests,

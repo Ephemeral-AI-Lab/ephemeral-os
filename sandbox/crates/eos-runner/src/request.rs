@@ -1,6 +1,6 @@
 //! Owned request/result types for the namespace runner.
 //!
-//! These model the JSON payloads the Python helpers exchange over stdin/stdout
+//! These model the JSON payloads the Rust helpers exchange over stdin/stdout
 //! and the namespace request/result files — `to_payload()`
 //! (`shared/models.py:90-98`), the fresh-ns request file
 //! (`overlay/namespace_runner.py:84-90`), and the setns stdin payload
@@ -169,7 +169,7 @@ pub struct RunRequest {
 /// The runner's result.
 ///
 /// Contains the in-namespace tool result JSON plus the child's exit code. The
-/// Python helpers return the tool primitive's `asdict` dict verbatim
+/// Rust helpers return the tool primitive's `asdict` dict verbatim
 /// (defaulting `workspace`), which the runner forwards opaquely as [`Value`].
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct RunResult {

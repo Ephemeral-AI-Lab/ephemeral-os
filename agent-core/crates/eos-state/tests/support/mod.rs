@@ -2,7 +2,7 @@
 //!
 //! `FakeTaskStore` is an in-memory [`TaskStore`] used by the outcome-projection
 //! and store-contract tests to prove trait substitutability without sqlx
-//! (`test-mock-traits`). It mirrors the Python store semantics for the methods
+//! (`test-mock-traits`). It mirrors the Rust store semantics for the methods
 //! the tests exercise.
 #![allow(clippy::unwrap_used)]
 
@@ -39,7 +39,7 @@ impl FakeTaskStore {
 }
 
 /// Apply a status transition plus the two optional projection updates,
-/// mirroring the Python store's set-status write shape. Shared by both
+/// mirroring the Rust store's set-status write shape. Shared by both
 /// `set_task_status` and `set_task_status_if_current`.
 fn apply_task_updates(
     task: &mut Task,

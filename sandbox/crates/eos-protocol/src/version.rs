@@ -1,6 +1,6 @@
 //! Frozen wire/protocol constants.
 //!
-//! Invariant: these values mirror the live Python daemon byte-for-byte. The
+//! Invariant: these values mirror the live Rust daemon byte-for-byte. The
 //! protocol-version field is carried INSIDE `args` and the daemon never reads
 //! it (an inert versioning hook) — see [`crate::envelope`].
 
@@ -38,7 +38,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn constants_match_python() {
+    fn constants_match_rust() {
         assert_eq!(DAEMON_PROTOCOL_VERSION, 1);
         assert_eq!(DAEMON_PROTOCOL_FIELD, "_eos_daemon_protocol_version");
         assert_eq!(DAEMON_AUTH_FIELD, "_eos_daemon_auth_token");

@@ -1,4 +1,4 @@
-//! `SqlIterationStore` — the iteration repository (Python `iteration_store.py`).
+//! `SqlIterationStore` — the iteration repository (Rust `iteration_store.py`).
 
 use async_trait::async_trait;
 use sqlx::{Sqlite, SqlitePool};

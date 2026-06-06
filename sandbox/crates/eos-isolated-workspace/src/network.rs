@@ -8,7 +8,7 @@
 //!
 //! # IPv6 hardening — shell-free port
 //!
-//! The Python holder shells out (`sysctl`, `ip -6 route flush`, `ip link set lo
+//! The Rust holder shells out (`sysctl`, `ip -6 route flush`, `ip link set lo
 //! up`) to purge IPv6 default routes and disable router-advertisement
 //! acceptance so the v4-only MASQUERADE rule stays the sole egress. The Rust
 //! port replaces those binaries with `rtnetlink` (`RTM_DELROUTE` for the IPv6
@@ -73,7 +73,7 @@ pub struct VethAllocation {
 /// suffix (1) = 15 exactly. Host ends in `h`, peer ends in `n`.
 #[must_use]
 pub fn veth_names(workspace_handle_id: &str) -> (String, String) {
-    // Python `_veth_names` takes the FIRST 6 chars (`workspace_handle_id[:6]`);
+    // Rust `_veth_names` takes the FIRST 6 chars (`workspace_handle_id[:6]`);
     // reproduce that exactly so the interface naming is parity-equal.
     let short: String = workspace_handle_id.chars().take(6).collect();
     (
@@ -144,7 +144,7 @@ impl BridgeAddressPool {
 
 /// Owns the `eos-shared0` bridge + static nft rules + per-workspace veth wiring.
 ///
-/// The Python implementation shells out to `ip`/`nft`; the Rust port replaces
+/// The Rust implementation shells out to `ip`/`nft`; the Rust port replaces
 /// the bridge/veth path with `rtnetlink` link/address operations and the static
 /// NAT/filter path with `NETLINK_NETFILTER` messages — NO `ip`/`nft` binaries.
 #[derive(Debug)]
@@ -172,7 +172,7 @@ impl IsolatedNetwork {
     }
 
     /// Install the bridge + MASQUERADE + IMDS drop (+ optional RFC1918 deny).
-    /// Idempotent for table/chain creation; rule insertion mirrors Python's
+    /// Idempotent for table/chain creation; rule insertion mirrors Rust's
     /// sequential `nft add rule` calls.
     ///
     /// # Errors

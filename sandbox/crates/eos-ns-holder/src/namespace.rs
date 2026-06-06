@@ -64,7 +64,7 @@ impl Drop for PidNamespaceInit {
 /// Recursively bind the parent's `/proc` over the inherited `/proc` so setns'd
 /// shells inside the new mount namespace see a usable `/proc/self`.
 ///
-/// Best-effort, shell-free: replaces the Python `subprocess.run(["mount",
+/// Best-effort, shell-free: replaces the Rust `subprocess.run(["mount",
 /// "--rbind", "/proc", "/proc"], check=False)` with a raw `mount(MS_BIND |
 /// MS_REC)` syscall. Failure must NOT abort the holder.
 #[cfg(target_os = "linux")]
@@ -72,7 +72,7 @@ pub(crate) fn rbind_proc() {
     let proc = b"/proc\0";
     // SAFETY: both source and target are static NUL-terminated strings, the
     // filesystem type and data pointers are null as required for a bind
-    // mount, and failure is intentionally ignored to preserve Python's
+    // mount, and failure is intentionally ignored to preserve Rust's
     // best-effort `mount --rbind /proc /proc` behavior.
     let _ = unsafe {
         libc::mount(
@@ -91,7 +91,7 @@ pub(crate) const fn rbind_proc() {}
 /// `unshare` the full namespace stack on the calling (single-threaded) task and
 /// pin the resulting `/proc/self/ns/*` FDs.
 ///
-/// This is the Rust *consolidation* of the former Python launcher's
+/// This is the Rust *consolidation* of the former Rust launcher's
 /// `unshare(1)` flags. The previous path spawned `ns_holder.py` via
 /// `unshare --user --map-root-user --net --pid --mount --fork --kill-child
 /// --propagation private`, so the namespaces were created by the `unshare`

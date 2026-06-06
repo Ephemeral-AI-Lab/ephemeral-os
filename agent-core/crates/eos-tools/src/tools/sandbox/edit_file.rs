@@ -69,16 +69,12 @@ impl ToolExecutor for EditFile {
                 replace_all: parsed.replace_all,
             }],
         };
-        let result = match eos_sandbox_port::edit_file(
-            &*self.service.transport,
-            sandbox_id,
-            &request,
-        )
-        .await
-        {
-            Ok(result) => result,
-            Err(err) => return Ok(ToolResult::error(err.to_string())),
-        };
+        let result =
+            match eos_sandbox_port::edit_file(&*self.service.transport, sandbox_id, &request).await
+            {
+                Ok(result) => result,
+                Err(err) => return Ok(ToolResult::error(err.to_string())),
+            };
         let applied = if result.base.success {
             u64::from(result.applied_edits)
         } else {

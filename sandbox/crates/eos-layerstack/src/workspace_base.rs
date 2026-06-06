@@ -15,7 +15,7 @@ use crate::stack::{read_manifest, write_atomic, write_manifest, LayerStack};
 use crate::workspace_binding::{read_workspace_binding, WorkspaceBinding, WORKSPACE_BINDING_FILE};
 use crate::{ACTIVE_MANIFEST_FILE, LAYERS_DIR, LAYER_METADATA_DIR, STAGING_DIR};
 
-/// The immutable base-layer id used by the Python implementation.
+/// The immutable base-layer id used by the Rust implementation.
 pub const WORKSPACE_BASE_LAYER_ID: &str = "B000001-base";
 
 /// Build result: binding plus phase timings.

@@ -42,7 +42,7 @@ pub(crate) fn render_section(section: &ContextSection) -> String {
 }
 
 fn escape(s: &str) -> String {
-    // Matches Python `html.escape(s, quote=True)` (xml.py): `&` first, then the
+    // Matches Rust `html.escape(s, quote=True)` (xml.py): `&` first, then the
     // angle brackets, then both quote forms (`"` -> `&quot;`, `'` -> `&#x27;`).
     s.replace('&', "&amp;")
         .replace('<', "&lt;")

@@ -1,7 +1,7 @@
 //! Fresh-namespace mode: `unshare` → `uid_map` → mount overlay → spawn tool.
 //!
-//! This is the daemon's standard per-tool-call path. The Python target spawns
-//! `unshare -Urm python -m sandbox.overlay.namespace_entrypoint <payload>` with
+//! This is the daemon's standard per-tool-call path. The Rust target spawns
+//! `unshare -Urm rust -m sandbox.overlay.namespace_entrypoint <payload>` with
 //! `start_new_session=True`; the Rust port does the `unshare(CLONE_NEWUSER|
 //! CLONE_NEWNS)` itself in this single-threaded child, writes the uid/gid maps,
 //! mounts the overlay, then spawns the tool in its own process group so timeout

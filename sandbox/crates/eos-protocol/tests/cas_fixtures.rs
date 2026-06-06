@@ -1,6 +1,6 @@
 //! Golden CAS byte-identity fixtures (AV-1c). ALL 18 cases must pass; the
 //! unicode cases prove the `ensure_ascii=True` escaper. Fixtures are immutable
-//! ground truth produced by the live Python — never edit them to match code.
+//! ground truth produced by the live Rust — never edit them to match code.
 
 use base64::Engine as _;
 use eos_protocol::cas::{

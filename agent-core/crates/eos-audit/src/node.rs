@@ -3,7 +3,7 @@
 //! Producers populate only the identifiers they already know; the collector
 //! never back-fills a missing id from payload text (the preserved invariant
 //! from `audit/base.py`). All fields are `Option` and omitted from the wire form
-//! when `None`, matching Python's omit-when-`None` shape.
+//! when `None`, matching Rust's omit-when-`None` shape.
 
 use eos_types::{
     AgentRunId, AttemptId, IterationId, RequestId, SandboxId, TaskId, ToolUseId, WorkflowId,

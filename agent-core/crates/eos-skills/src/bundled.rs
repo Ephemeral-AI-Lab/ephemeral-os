@@ -118,7 +118,7 @@ fn parse_skill_metadata(default_name: &str, content: &str) -> (String, String) {
     (name, description)
 }
 
-/// A frontmatter string field, treating empty as absent (Python's `... or`).
+/// A frontmatter string field, treating empty as absent (Rust's `... or`).
 fn frontmatter_str<'a>(frontmatter: &'a serde_yaml::Mapping, key: &str) -> Option<&'a str> {
     frontmatter
         .get(key)
@@ -137,7 +137,7 @@ fn extension(path: &Path) -> Option<&str> {
     path.extension().and_then(|e| e.to_str())
 }
 
-/// List a directory's entries as paths, sorted (parity with Python `sorted(...)`).
+/// List a directory's entries as paths, sorted (parity with Rust `sorted(...)`).
 fn read_dir_sorted(dir: &Path) -> Result<Vec<PathBuf>, SkillLoadError> {
     let mut paths = Vec::new();
     let entries = fs::read_dir(dir).map_err(|cause| SkillLoadError::ReadDir {
@@ -243,7 +243,7 @@ mod tests {
     }
 
     // A present-but-empty frontmatter `name` falls back to the directory name
-    // (Python `str(frontmatter.get("name") or default_name)`). This guards the
+    // (Rust `str(frontmatter.get("name") or default_name)`). This guards the
     // load-bearing `frontmatter_str` empty-string filter: without it,
     // `SkillName::parse("")` would abort the whole load with `InvalidName`.
     #[test]
@@ -258,7 +258,7 @@ mod tests {
     }
 
     // A subdirectory lacking `SKILL.md` is skipped without error (spec §8.1;
-    // Python `if skill_md.exists()`), leaving sibling skills intact.
+    // Rust `if skill_md.exists()`), leaving sibling skills intact.
     #[test]
     fn skill_dir_without_skill_md_is_skipped_without_error() {
         let scratch = Scratch::new("missing-skill-md");

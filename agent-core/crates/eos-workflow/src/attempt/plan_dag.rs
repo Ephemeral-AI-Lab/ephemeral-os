@@ -254,7 +254,7 @@ pub(crate) fn validate_plan_agents(plan: &PlannerPlan, registry: &AgentRegistry)
             ))
         })?;
         // D6: a generator task must be bound to a generator-capable profile
-        // (Python `_schemas.py` requires `AgentRole.GENERATOR`).
+        // (Rust `_schemas.py` requires `AgentRole.GENERATOR`).
         if agent_def.role != AgentRole::Generator {
             return Err(WorkflowError::invariant(format!(
                 "generator task {:?} is bound to agent {:?} with role {:?}, expected generator",

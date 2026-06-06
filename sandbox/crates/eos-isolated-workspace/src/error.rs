@@ -1,13 +1,13 @@
 //! Isolated-workspace lifecycle error type.
 //!
-//! `kind()` maps onto the daemon RPC wire error kind, mirroring the Python
+//! `kind()` maps onto the daemon RPC wire error kind, mirroring the Rust
 //! `IsolatedWorkspaceError.kind` string (`_control_plane/types.py:87-97`).
 
 use std::path::PathBuf;
 
 /// Lifecycle error for the enter/exit isolated-workspace flow.
 ///
-/// Each variant's `kind()` reproduces the Python `kind` string fed onto the
+/// Each variant's `kind()` reproduces the Rust `kind` string fed onto the
 /// daemon RPC response envelope.
 #[derive(Debug, thiserror::Error)]
 #[non_exhaustive]

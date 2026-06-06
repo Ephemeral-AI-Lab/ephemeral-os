@@ -30,7 +30,7 @@ impl ToolRegistry {
     }
 
     /// Register a tool. Re-registering a name replaces it **in place** (keeping
-    /// its position), mirroring the Python dict assignment.
+    /// its position), mirroring the Rust dict assignment.
     pub fn register(&mut self, tool: RegisteredTool) {
         if let Some(&idx) = self.index.get(&tool.name) {
             self.tools[idx] = tool;

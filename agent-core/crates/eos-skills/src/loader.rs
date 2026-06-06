@@ -1,6 +1,6 @@
 //! Config-rooted load orchestration (`skills/core/loader.py`).
 //!
-//! Adds the filesystem constructor [`SkillRegistry::load_from_dir`]. The Python
+//! Adds the filesystem constructor [`SkillRegistry::load_from_dir`]. The Rust
 //! `cwd` parameter is **dropped** (it was always ignored, `del cwd`); the root
 //! is the explicit `skill_root` passed in by `eos-config` resolution
 //! (GC-skills-01).
@@ -15,7 +15,7 @@ impl SkillRegistry {
     /// Load a registry from an explicit skill root — the seam's only filesystem
     /// constructor.
     ///
-    /// A **missing** root yields an empty registry (Python returns `[]` when the
+    /// A **missing** root yields an empty registry (Rust returns `[]` when the
     /// content dir does not exist). A root that exists but is **not a directory**
     /// is a config error and yields [`SkillLoadError::RootNotDir`].
     ///

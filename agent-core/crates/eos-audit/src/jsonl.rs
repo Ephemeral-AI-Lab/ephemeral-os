@@ -1,7 +1,7 @@
 //! Append-only `JSONL` sinks.
 //!
 //! [`JsonlSink`] opens, appends one canonical `JSON` line, and closes on every
-//! `publish` (append-mode write is the atomicity story, mirroring Python's
+//! `publish` (append-mode write is the atomicity story, mirroring Rust's
 //! `os.open(..., O_APPEND)`); it suits tests and low-volume paths.
 //! [`BufferedJsonlSink`] is the production sink: `publish` hands the event to a
 //! bounded channel and a dedicated writer thread owns the open file handle, so
@@ -218,10 +218,8 @@ mod tests {
         let path = dir.path.join("nested/audit.jsonl");
         let sink = JsonlSink::new(&path);
 
-        sink.publish(&event(crate::AGENT_RUN_COMPLETED))
-            .unwrap();
-        sink.publish(&event(crate::TOOL_CALL_COMPLETED))
-            .unwrap();
+        sink.publish(&event(crate::AGENT_RUN_COMPLETED)).unwrap();
+        sink.publish(&event(crate::TOOL_CALL_COMPLETED)).unwrap();
 
         let contents = std::fs::read_to_string(&path).unwrap();
         let lines: Vec<&str> = contents.lines().collect();
@@ -245,8 +243,7 @@ mod tests {
 
         const N: usize = 20;
         for _ in 0..N {
-            sink.publish(&event(crate::TOOL_CALL_COMPLETED))
-                .unwrap();
+            sink.publish(&event(crate::TOOL_CALL_COMPLETED)).unwrap();
         }
         shutdown.shutdown();
 
