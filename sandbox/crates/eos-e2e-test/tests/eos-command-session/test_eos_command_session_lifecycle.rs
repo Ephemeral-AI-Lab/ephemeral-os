@@ -37,7 +37,10 @@ fn cancel_session(lease: &eos_e2e_test::NodeLease<'_>, id: &str) -> Result<Value
 }
 
 fn process_marker() -> String {
-    format!("eos_e2e_core_{}", unique_suffix().replace('-', "_"))
+    format!(
+        "eos_e2e_command_session_{}",
+        unique_suffix().replace('-', "_")
+    )
 }
 
 #[test]

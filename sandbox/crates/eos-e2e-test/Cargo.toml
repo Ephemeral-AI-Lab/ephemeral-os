@@ -35,16 +35,20 @@ name = "ephemeral_workspace"
 path = "tests/ephemeral_workspace/mod.rs"
 
 [[test]]
-name = "isolated_workspace"
-path = "tests/isolated_workspace/mod.rs"
+name = "eos-isolated-workspace"
+path = "tests/eos-isolated-workspace/mod.rs"
 
 [[test]]
-name = "layerstack"
-path = "tests/layerstack/mod.rs"
+name = "eos-layerstack"
+path = "tests/eos-layerstack/mod.rs"
 
 [[test]]
-name = "occ"
-path = "tests/occ/mod.rs"
+name = "eos-occ"
+path = "tests/eos-occ/mod.rs"
+
+[[test]]
+name = "eos-command-session"
+path = "tests/eos-command-session/mod.rs"
 
 [[test]]
 name = "pressure"

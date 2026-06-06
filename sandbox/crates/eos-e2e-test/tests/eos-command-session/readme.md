@@ -1,0 +1,24 @@
+# eos-command-session
+
+## Overview
+
+`eos-command-session` owns explicit live E2E coverage for the command-session daemon contract across protocol smoke, core lifecycle, ephemeral workspace process-group behavior, and isolated workspace command cleanup. It exercises `api.v1.exec_command`, `api.v1.write_stdin`, `api.v1.command.collect_completed`, `api.v1.command.cancel`, `api.v1.command_session_count`, `api.v1.cancel`, and `api.layer_metrics`. Module config lives at `crates/eos-e2e-test/tests/eos-command-session/config/default.test.yml`.
+
+## Checklist
+
+- [ ] eos-command-session-lifecycle: `exec_command`, `write_stdin`, collect-completed, cancel, timeout, session count, and output cap behavior are coherent for running and completed sessions.
+- [ ] eos-command-session-cursors: Command output cursors advance without replaying previously consumed output across repeated polls or stdin writes.
+- [ ] eos-command-session-terminate-kills-group: Command termination cancels the owned process group, drains command sessions, releases leases, and leaves no descendant marker processes.
+- [ ] eos-command-session-detached-child-contract: `nohup` and `setsid nohup` descendants have an explicit tested contract instead of an accidental leak policy.
+- [ ] eos-command-session-ephemeral-process-group: Ephemeral workspace command sessions stay running until all same-pgid subprocesses exit and collect exactly one terminal result.
+- [ ] eos-command-session-isolated-cleanup: Isolated workspace command cancellation and exit discard mode make same-port re-entry reusable.
+
+## Test Case
+
+| Test name | Test description | Command to run | Checklist item |
+|---|---|---|---|
+| `eos-command-session-protocol-smoke` | Groups `command_sessions_accept_stdin_and_release_on_cancel` and `command_sessions_cancel_cleans_descendant_processes`: stdin echo, cancel cleanup, lease release, and descendant process cleanup remain visible through the raw protocol. | `cargo test -p eos-e2e-test --features e2e --test eos-command-session protocol_smoke -- --nocapture` | `eos-command-session-lifecycle`, `eos-command-session-terminate-kills-group` |
+| `eos-command-session-core-lifecycle` | Groups `exec_returns_session_id`, `write_stdin_echo`, `collect_completed_drains`, `cancel_unblocks`, `session_count_accuracy`, `exec_timeout`, `output_token_cap`, and `cancel_by_invocation_id_reports_already_done_for_idle_id`: command-session handles, stdin, completion drain, timeout, output caps, and cancel status remain coherent. | `cargo test -p eos-e2e-test --features e2e --test eos-command-session lifecycle -- --nocapture` | `eos-command-session-lifecycle` |
+| `eos-command-session-output-and-detached-process-contract` | Groups `command_session_output_cursor_no_replay`, `write_stdin_terminate_reaps_marker_process`, `nohup_child_keeps_session_running`, and `setsid_nohup_contract`: output cursors do not replay, termination reaps same-pgid marker children, plain `nohup` keeps the session running, and `setsid nohup` is accepted as an escaped detached child. | `cargo test -p eos-e2e-test --features e2e --test eos-command-session nohup -- --nocapture` | `eos-command-session-cursors`, `eos-command-session-terminate-kills-group`, `eos-command-session-detached-child-contract` |
+| `eos-command-session-ephemeral-workspace-process-group` | Groups `exec_simple`, `lingering_child_keeps_session_running`, `session_completes_only_after_all_subprocesses_exit`, `write_stdin_terminate_kills_whole_session`, and `cancel_reaps_lingering_descendant`: ephemeral workspace commands honor process-group completion and termination semantics. | `cargo test -p eos-e2e-test --features e2e --test eos-command-session ephemeral_workspace -- --nocapture` | `eos-command-session-ephemeral-process-group`, `eos-command-session-terminate-kills-group` |
+| `eos-command-session-isolated-workspace-reentry` | Uses `iws_same_port_discard`: an isolated command is cancelled, exit discards the namespace state, and re-entering isolated mode can bind the same port cleanly. | `cargo test -p eos-e2e-test --features e2e --test eos-command-session iws_same_port_discard -- --nocapture` | `eos-command-session-isolated-cleanup` |

@@ -236,7 +236,7 @@
 
 <div class="callout">
   <span class="label">Depth math: heads plus runs</span>
-  A <strong>run</strong> is a contiguous sequence of active-manifest layers that is not a lease-head barrier. Squash walks the active manifest newest-first, flushes the current run whenever it reaches a lease head, keeps that head as a passthrough layer, and then starts the next run. The resulting depth is therefore <code>distinct lease heads + emitted runs</code>, not just the number of leases plus one. Four distinct lease heads yield depth 5 only when there is a single foldable non-head run; if the heads are spread through the stack with one run above, three runs between heads, and one run below, the post-squash depth is <code>4 + 5 = 9</code>. The workspace-base live scenario <code>s7_four_lease_heads_create_nine_entry_squash</code> fixes this case: pre-squash depth 14, four distinct lease heads, five non-head runs, post-squash depth 9, and a later no-lease squash back to depth 1 <span class="file-ref">sandbox/crates/eos-e2e-test/tests/layerstack</span>.
+  A <strong>run</strong> is a contiguous sequence of active-manifest layers that is not a lease-head barrier. Squash walks the active manifest newest-first, flushes the current run whenever it reaches a lease head, keeps that head as a passthrough layer, and then starts the next run. The resulting depth is therefore <code>distinct lease heads + emitted runs</code>, not just the number of leases plus one. Four distinct lease heads yield depth 5 only when there is a single foldable non-head run; if the heads are spread through the stack with one run above, three runs between heads, and one run below, the post-squash depth is <code>4 + 5 = 9</code>. The workspace-base live scenario <code>s7_four_lease_heads_create_nine_entry_squash</code> fixes this case: pre-squash depth 14, four distinct lease heads, five non-head runs, post-squash depth 9, and a later no-lease squash back to depth 1 <span class="file-ref">sandbox/crates/eos-e2e-test/tests/eos-layerstack</span>.
 </div>
 
 <p><strong>Algorithm.</strong> <code>LayerStack.squash(max_depth=...)</code> takes the storage-writer guard, reads the active manifest under the lock, asks the squasher for a plan using <code>lease_head_layers=self._leases.lease_head_layers()</code>, and refuses if the plan is <code>None</code> <span class="file-ref">sandbox/crates/eos-layerstack/src/stack.rs</span>. Plan acceptance criteria <span class="file-ref">sandbox/crates/eos-layerstack/src/squash.rs</span>:</p>
@@ -314,7 +314,7 @@ _remove_layers(removable): rm -rf layer dirs + digest sidecars + evict view cach
 
 <p><strong>Concurrency invariants.</strong> Storage-writer exclusive guard held end-to-end; manifest-version compare between plan and publish via <code>manifest_prefix_before_plan</code> makes squash OCC-safe against concurrent <code>LayerPublisher.publish_layer</code>; synthetic squash lease prevents <code>_unreferenced_layers</code> from racing the checkpoint build window <span class="file-ref">sandbox/crates/eos-layerstack/src/stack.rs</span>.</p>
 
-<p><strong>Autosquash audit.</strong> OCC post-publish maintenance runs through <code>AutoSquashMaintenancePolicy</code>, which serializes autosquash attempts with a policy-local lock so at most one squash worker enters <code>LayerStack.squash()</code> at a time. The daemon runtime passes <code>emit_squash_event</code> into that policy, so every actual autosquash attempt emits focused critical-lane audit events: <code>layer_stack.squash_triggered</code> with <code>squash_trigger_reason=post_publish_depth</code> and input depth, then <code>layer_stack.squash_completed</code> with input depth, result depth, and manifest root hash, or <code>layer_stack.squash_failed</code> for a raced/aborted plan <span class="file-ref">sandbox/crates/eos-layerstack/src/squash.rs</span>, <span class="file-ref">sandbox/crates/eos-daemon/src/services/occ/mod.rs</span>. The public edge-case suite asserts these audit events together with <code>layer_stack.auto_squash.*</code> timings, post-squash depth, and orphan/missing layer counters under complex-project, background-shell-lease, and isolated-workspace-lease conditions <span class="file-ref">sandbox/crates/eos-e2e-test/tests/layerstack</span>.</p>
+<p><strong>Autosquash audit.</strong> OCC post-publish maintenance runs through <code>AutoSquashMaintenancePolicy</code>, which serializes autosquash attempts with a policy-local lock so at most one squash worker enters <code>LayerStack.squash()</code> at a time. The daemon runtime passes <code>emit_squash_event</code> into that policy, so every actual autosquash attempt emits focused critical-lane audit events: <code>layer_stack.squash_triggered</code> with <code>squash_trigger_reason=post_publish_depth</code> and input depth, then <code>layer_stack.squash_completed</code> with input depth, result depth, and manifest root hash, or <code>layer_stack.squash_failed</code> for a raced/aborted plan <span class="file-ref">sandbox/crates/eos-layerstack/src/squash.rs</span>, <span class="file-ref">sandbox/crates/eos-daemon/src/services/occ/mod.rs</span>. The public edge-case suite asserts these audit events together with <code>layer_stack.auto_squash.*</code> timings, post-squash depth, and orphan/missing layer counters under complex-project, background-shell-lease, and isolated-workspace-lease conditions <span class="file-ref">sandbox/crates/eos-e2e-test/tests/eos-layerstack</span>.</p>
 
 </section>
 <section id="layerstack-evidence-refresh"
@@ -345,15 +345,15 @@ _remove_layers(removable): rm -rf layer dirs + digest sidecars + evict view cach
   <div class="evidence-card">
     <h4>Tests</h4>
     <ul>
-      <li><span class="file-ref">sandbox/crates/eos-e2e-test/tests/layerstack</span></li>
-      <li><span class="file-ref">sandbox/crates/eos-e2e-test/tests/layerstack/squash.rs</span></li>
-      <li><span class="file-ref">sandbox/crates/eos-e2e-test/tests/layerstack</span></li>
-      <li><span class="file-ref">sandbox/crates/eos-e2e-test/tests/layerstack</span></li>
+      <li><span class="file-ref">sandbox/crates/eos-e2e-test/tests/eos-layerstack</span></li>
+      <li><span class="file-ref">sandbox/crates/eos-e2e-test/tests/eos-layerstack/squash.rs</span></li>
+      <li><span class="file-ref">sandbox/crates/eos-e2e-test/tests/eos-layerstack</span></li>
+      <li><span class="file-ref">sandbox/crates/eos-e2e-test/tests/eos-layerstack</span></li>
     </ul>
   </div>
   <div class="evidence-card">
     <h4>Artifacts</h4>
-    <p>Live-suite reports under <span class="file-ref">sandbox/crates/eos-e2e-test/tests/layerstack</span> and <span class="file-ref">sandbox/crates/eos-e2e-test/tests/layerstack</span> record workspace-base and layer-stack coverage.</p>
+    <p>Live-suite reports under <span class="file-ref">sandbox/crates/eos-e2e-test/tests/eos-layerstack</span> and <span class="file-ref">sandbox/crates/eos-e2e-test/tests/eos-layerstack</span> record workspace-base and layer-stack coverage.</p>
   </div>
 </div>
 <div class="refresh-list">

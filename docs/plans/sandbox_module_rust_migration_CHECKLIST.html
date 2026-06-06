@@ -445,7 +445,7 @@
         <tr><td>G0: host/API surface</td><td><code>cd agent-core &amp;&amp; cargo check -p eos-sandbox-api -p eos-sandbox-host --all-targets</code><br><code>cd agent-core &amp;&amp; cargo test -p eos-sandbox-api -p eos-sandbox-host --all-targets</code></td><td>Typed op enum/schema snapshots, daemon client recovery, Docker provider registry, bootstrap/upload helpers, and sandbox host public APIs.</td></tr>
         <tr><td>G1: package daemon binary</td><td><code>cd sandbox &amp;&amp; cargo run -p xtask -- package --target x86_64-unknown-linux-musl --out-dir dist</code></td><td>Build <code>dist/eosd-linux-amd64</code>, protocol version file, checksum file, and manifest consumed by live Docker tests.</td></tr>
         <tr><td>G2: focused live suite</td><td><code>cd sandbox &amp;&amp; cargo test -p eos-e2e-test --features e2e --test core -- --nocapture</code></td><td>Start with core live <code>eosd</code> readiness, direct file ops, command sessions, envelope guards, and audit/metrics.</td></tr>
-        <tr><td>G2: subsystem live suites</td><td><code>cd sandbox &amp;&amp; cargo test -p eos-e2e-test --features e2e --test daemon -- --nocapture</code><br><code>cd sandbox &amp;&amp; cargo test -p eos-e2e-test --features e2e --test ephemeral_workspace -- --nocapture</code><br><code>cd sandbox &amp;&amp; cargo test -p eos-e2e-test --features e2e --test isolated_workspace -- --nocapture</code><br><code>cd sandbox &amp;&amp; cargo test -p eos-e2e-test --features e2e --test layerstack -- --nocapture</code><br><code>cd sandbox &amp;&amp; cargo test -p eos-e2e-test --features e2e --test occ -- --nocapture</code><br><code>cd sandbox &amp;&amp; cargo test -p eos-e2e-test --features e2e --test plugin -- --nocapture</code></td><td>Run each sandbox subsystem against live Docker with module-specific config overlays.</td></tr>
+        <tr><td>G2: subsystem live suites</td><td><code>cd sandbox &amp;&amp; cargo test -p eos-e2e-test --features e2e --test daemon -- --nocapture</code><br><code>cd sandbox &amp;&amp; cargo test -p eos-e2e-test --features e2e --test ephemeral_workspace -- --nocapture</code><br><code>cd sandbox &amp;&amp; cargo test -p eos-e2e-test --features e2e --test eos-isolated-workspace -- --nocapture</code><br><code>cd sandbox &amp;&amp; cargo test -p eos-e2e-test --features e2e --test eos-layerstack -- --nocapture</code><br><code>cd sandbox &amp;&amp; cargo test -p eos-e2e-test --features e2e --test eos-occ -- --nocapture</code><br><code>cd sandbox &amp;&amp; cargo test -p eos-e2e-test --features e2e --test plugin -- --nocapture</code></td><td>Run each sandbox subsystem against live Docker with module-specific config overlays.</td></tr>
         <tr><td>G3: pressure and full closure</td><td><code>cd sandbox &amp;&amp; cargo test -p eos-e2e-test --features e2e --test pressure -- --nocapture</code><br><code>cd sandbox &amp;&amp; cargo clippy --workspace --all-targets -- -D warnings</code><br><code>git diff --check</code></td><td>Stress concurrency, cleanup, resource reports, plus lint and diff hygiene before calling the sandbox migration closed.</td></tr>
       </tbody>
     </table>
@@ -535,7 +535,7 @@
         <span>
           <span class="item-title"><span class="id">SRC-10</span><span class="tag p1">P1</span><span class="tag src">SOURCE</span>LayerStack squash target remains operationally distinct.</span>
           <span class="item-body">Default <code>auto_squash_max_depth</code> is 100 in config, while local E2E overrides may lower it for pressure tests. Do not reintroduce a runtime <code>OVL_MAX_STACK_GUARD</code> claim.</span>
-          <span class="item-source">Evidence: <code>sandbox/config/prd.yml</code>, <code>eos-layerstack/src/lib.rs</code>, <code>eos-e2e-test/tests/layerstack/config/default.test.yml</code>.</span>
+          <span class="item-source">Evidence: <code>sandbox/config/prd.yml</code>, <code>eos-layerstack/src/lib.rs</code>, <code>eos-e2e-test/tests/eos-layerstack/config/default.test.yml</code>.</span>
         </span>
       </label>
       <label class="item" data-priority="p0" data-kind="source">
@@ -543,7 +543,7 @@
         <span>
           <span class="item-title"><span class="id">SRC-11</span><span class="tag p0">P0</span><span class="tag src">SOURCE</span>OCC routes direct, gated, dropped, and conflict outcomes explicitly.</span>
           <span class="item-body">Tracked paths are gated; gitignored paths can route direct; <code>.git/**</code> writes are dropped; edit conflicts and stale-base conflicts produce stable result statuses and reasons.</span>
-          <span class="item-source">Evidence: <code>eos-occ</code>, <code>eos-daemon/tests/dispatcher</code>, <code>eos-e2e-test/tests/occ</code>.</span>
+          <span class="item-source">Evidence: <code>eos-occ</code>, <code>eos-daemon/tests/dispatcher</code>, <code>eos-e2e-test/tests/eos-occ</code>.</span>
         </span>
       </label>
       <label class="item" data-priority="p0" data-kind="source">
@@ -628,7 +628,7 @@
     </details>
 
     <details class="suite" open>
-      <summary><span class="suite-name">isolated_workspace</span><span class="suite-meta"><code>cargo test -p eos-e2e-test --features e2e --test isolated_workspace -- --nocapture</code></span></summary>
+      <summary><span class="suite-name">eos-isolated-workspace</span><span class="suite-meta"><code>cargo test -p eos-e2e-test --features e2e --test eos-isolated-workspace -- --nocapture</code></span></summary>
       <div class="suite-body checklist">
         <label class="item" data-priority="p0" data-kind="live"><input type="checkbox"><span><span class="item-title"><span class="id">IWS-01</span><span class="tag p0">P0</span><span class="tag live">LIVE</span>Lifecycle pins and releases manifest lease</span><span class="item-body">Enter and status expose the same manifest pin, and exit unregisters the handle, releases the lease, and reports holder/cgroup teardown.</span></span></label>
         <label class="item" data-priority="p0" data-kind="live"><input type="checkbox"><span><span class="item-title"><span class="id">IWS-02</span><span class="tag p0">P0</span><span class="tag live">LIVE</span>Private state persists while open</span><span class="item-body">Isolated writes and reads persist across tool calls while the handle is open and report isolated workspace/mutation fields.</span></span></label>
@@ -643,7 +643,7 @@
     </details>
 
     <details class="suite" open>
-      <summary><span class="suite-name">layerstack</span><span class="suite-meta"><code>cargo test -p eos-e2e-test --features e2e --test layerstack -- --nocapture</code></span></summary>
+      <summary><span class="suite-name">eos-layerstack</span><span class="suite-meta"><code>cargo test -p eos-e2e-test --features e2e --test eos-layerstack -- --nocapture</code></span></summary>
       <div class="suite-body checklist">
         <label class="item" data-priority="p0" data-kind="live"><input type="checkbox"><span><span class="item-title"><span class="id">LS-01</span><span class="tag p0">P0</span><span class="tag live">LIVE</span>Base rebuild materializes merged view</span><span class="item-body">Workspace base rebuild after commit is idempotent, materializes the merged view, and is visible through LayerStack metrics.</span></span></label>
         <label class="item" data-priority="p0" data-kind="live"><input type="checkbox"><span><span class="item-title"><span class="id">LS-02</span><span class="tag p0">P0</span><span class="tag live">LIVE</span>Enter and exit open and close leases</span><span class="item-body">Isolated workspace enter and exit acquire and release active LayerStack leases with coherent status and audit signals.</span></span></label>
@@ -660,7 +660,7 @@
     </details>
 
     <details class="suite" open>
-      <summary><span class="suite-name">occ</span><span class="suite-meta"><code>cargo test -p eos-e2e-test --features e2e --test occ -- --nocapture</code></span></summary>
+      <summary><span class="suite-name">eos-occ</span><span class="suite-meta"><code>cargo test -p eos-e2e-test --features e2e --test eos-occ -- --nocapture</code></span></summary>
       <div class="suite-body checklist">
         <label class="item" data-priority="p0" data-kind="live"><input type="checkbox"><span><span class="item-title"><span class="id">OCC-01</span><span class="tag p0">P0</span><span class="tag live">LIVE</span><code>.git/**</code> writes drop cleanly</span><span class="item-body"><code>.git/**</code> writes return committed success without published paths, stay unreadable, and do not advance manifest-visible state.</span></span></label>
         <label class="item" data-priority="p0" data-kind="live"><input type="checkbox"><span><span class="item-title"><span class="id">OCC-02</span><span class="tag p0">P0</span><span class="tag live">LIVE</span>Gitignored paths route direct</span><span class="item-body">Gitignored paths route direct, bypass stale-base gated checks, and remain whole-payload safe under same-path direct-write races.</span></span></label>
@@ -718,8 +718,8 @@
         <tbody>
           <tr><td><code>core</code></td><td><code>cargo test -p eos-e2e-test --features e2e --test core command_sessions -- --nocapture</code></td><td>Command lifecycle, output cursor, termination, detached-process contract.</td></tr>
           <tr><td><code>daemon</code></td><td><code>cargo test -p eos-e2e-test --features e2e --test daemon audit_pull_paginates_and_reset_floor_is_enabled_by_config -- --nocapture</code><br><code>cargo test -p eos-e2e-test --features e2e --test daemon inflight_ttl_reaper_cleanup -- --nocapture</code><br><code>cargo test -p eos-e2e-test --features e2e --test daemon background_plugin_operation_control -- --nocapture</code></td><td>Audit pagination/reset, TTL reaping, plugin background control.</td></tr>
-          <tr><td><code>layerstack</code></td><td><code>cargo test -p eos-e2e-test --features e2e --test layerstack lease -- --nocapture</code><br><code>cargo test -p eos-e2e-test --features e2e --test layerstack commit -- --nocapture</code><br><code>cargo test -p eos-e2e-test --features e2e --test layerstack squash -- --nocapture</code></td><td>Lease lifecycle, base/commit behavior, squash integrity, bounded storage.</td></tr>
-          <tr><td><code>occ</code></td><td><code>cargo test -p eos-e2e-test --features e2e --test occ gating -- --nocapture</code><br><code>cargo test -p eos-e2e-test --features e2e --test occ merge -- --nocapture</code></td><td>Git/drop/direct/gated routes, disjoint merge, same-path conflict, edit conflicts.</td></tr>
+          <tr><td><code>eos-layerstack</code></td><td><code>cargo test -p eos-e2e-test --features e2e --test eos-layerstack lease -- --nocapture</code><br><code>cargo test -p eos-e2e-test --features e2e --test eos-layerstack commit -- --nocapture</code><br><code>cargo test -p eos-e2e-test --features e2e --test eos-layerstack squash -- --nocapture</code></td><td>Lease lifecycle, base/commit behavior, squash integrity, bounded storage.</td></tr>
+          <tr><td><code>eos-occ</code></td><td><code>cargo test -p eos-e2e-test --features e2e --test eos-occ gating -- --nocapture</code><br><code>cargo test -p eos-e2e-test --features e2e --test eos-occ merge -- --nocapture</code></td><td>Git/drop/direct/gated routes, disjoint merge, same-path conflict, edit conflicts.</td></tr>
           <tr><td><code>plugin</code></td><td><code>cargo test -p eos-e2e-test --features e2e --test plugin generic_plugin_rejected_in_isolated_workspace -- --nocapture</code><br><code>cargo test -p eos-e2e-test --features e2e --test plugin lsp_package_uses_generic_lifecycle_and_dispatches_symbols -- --nocapture</code></td><td>Isolated gate and LSP generic lifecycle. Run the full plugin suite for package reload, refresh, restart, and write-publish closure.</td></tr>
           <tr><td><code>pressure</code></td><td><code>cargo test -p eos-e2e-test --features e2e --test pressure file_ops_ladder_1_3_6_12 -- --nocapture</code><br><code>cargo test -p eos-e2e-test --features e2e --test pressure occ_ladder_1_3_6_12 -- --nocapture</code><br><code>cargo test -p eos-e2e-test --features e2e --test pressure command_sessions_ladder_1_3_6_12 -- --nocapture</code><br><code>cargo test -p eos-e2e-test --features e2e --test pressure plugin_isolated -- --nocapture</code><br><code>cargo test -p eos-e2e-test --features e2e --test pressure resource_report_smoke -- --nocapture</code></td><td>Concurrency ladders, cleanup/recovery, plugin/isolated cap pressure, resource report.</td></tr>
         </tbody>
