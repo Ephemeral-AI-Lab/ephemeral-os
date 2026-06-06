@@ -67,9 +67,9 @@ where
             phase_start.elapsed().as_secs_f64() * 1000.0,
         );
         // signal_net_ready runs UNTIMED between the configure_dns and
-        // create_cgroup phase measures, matching Rust
-        // workspace_handle_lifecycle.py:189 (called outside any t.measure block)
-        // so the configure_dns phase budget is not inflated by the net-ready wait.
+        // create_cgroup phase measures (it is deliberately called outside any
+        // phase-timer block) so the configure_dns phase budget is not inflated
+        // by the net-ready wait.
         self.runtime
             .signal_net_ready(handle, self.caps.setup_timeout_s)?;
         phase_start = Instant::now();

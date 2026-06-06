@@ -9,7 +9,7 @@ use crate::{HeldNamespaces, NsHolderError, NET_READY, NS_UP, READY, TEST_HOLDER_
 
 /// Where the handshake driver currently is.
 ///
-/// Mirrors the linear flow in `ns_holder.py:main` (`:89-115`). The transitions
+/// The holder's handshake driver advances linearly. The transitions
 /// are total and ordered:
 /// `Unshared → ProcBound → NsUpSent → NetReadyReceived → Ready → Paused`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -127,9 +127,8 @@ impl Handshake {
 
 /// Holder entry point.
 ///
-/// Mirrors `ns_holder.py:main(argv)` but takes the two already-parsed pipe FDs
-/// (argv → FD parsing stays in `eosd`'s `main`, per the lib/main split).
-/// Returns once `SIGTERM` is received.
+/// Takes the two already-parsed pipe FDs (argv → FD parsing stays in `eosd`'s
+/// `main`, per the lib/main split). Returns once `SIGTERM` is received.
 ///
 /// Sequence: [`unshare_namespace_stack`] → [`rbind_proc`] → write [`NS_UP`] →
 /// (test-crash knob) → await [`NET_READY`] → best-effort network hardening →

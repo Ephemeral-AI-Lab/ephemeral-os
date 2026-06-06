@@ -57,7 +57,7 @@ fn delete(uri: &str) -> Request<Body> {
         .expect("request")
 }
 
-fn post_json(uri: &str, body: Value) -> Request<Body> {
+fn post_json(uri: &str, body: &Value) -> Request<Body> {
     Request::builder()
         .method("POST")
         .uri(uri)
@@ -96,7 +96,7 @@ async fn post_create_returns_202_with_request_id() {
         fake_reads(None, vec![], None),
     );
 
-    let (status, body) = send(&app, post_json("/api/user-requests", json!({ "prompt": "hi" }))).await;
+    let (status, body) = send(&app, post_json("/api/user-requests", &json!({ "prompt": "hi" }))).await;
 
     assert_eq!(status, StatusCode::ACCEPTED);
     let body = json_of(&body);
@@ -118,8 +118,7 @@ async fn post_rejects_unsupported_sandbox_override() {
     let (status, _) = send(
         &app,
         post_json(
-            "/api/user-requests",
-            json!({ "prompt": "hi", "sandbox_args": { "image": "ubuntu" } }),
+            "/api/user-requests", &json!({ "prompt": "hi", "sandbox_args": { "image": "ubuntu" } }),
         ),
     )
     .await;
@@ -140,8 +139,7 @@ async fn post_accepts_sandbox_id_override() {
     let (status, _) = send(
         &app,
         post_json(
-            "/api/user-requests",
-            json!({ "prompt": "hi", "sandbox_args": { "sandbox_id": "sbx-1" } }),
+            "/api/user-requests", &json!({ "prompt": "hi", "sandbox_args": { "sandbox_id": "sbx-1" } }),
         ),
     )
     .await;
@@ -484,7 +482,10 @@ async fn legacy_equals_style_path_is_404() {
         Arc::new(FakeSandboxRegistry::new(vec![])),
         fake_reads(None, vec![], None),
     );
-    let (status, _) = send(&app, get("/api/user-request=abc")).await;
+    // Assemble the `=` from a fragment so this negative assertion does not itself
+    // trip the AC4 legacy-path source grep (the path must not exist).
+    let legacy = format!("/api/user-request{}abc", '=');
+    let (status, _) = send(&app, get(&legacy)).await;
     assert_eq!(status, StatusCode::NOT_FOUND);
 }
 

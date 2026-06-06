@@ -153,7 +153,6 @@ impl AppState {
 /// Build the backend HTTP router over [`AppState`]. Resource names are plural and
 /// id-segment paths use conventional `/collection/{id}` form (no
 /// `/collection={id}` style).
-#[must_use]
 pub fn build_router(state: AppState) -> Router {
     Router::new()
         .route(

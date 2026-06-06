@@ -75,7 +75,7 @@ pub fn run_setns(_request: &RunRequest) -> Result<RunResult, RunnerError> {
 /// The runner `setns`es into the holder's `user` then `mnt` FDs, gaining
 /// `CAP_SYS_ADMIN` in that namespace before calling [`eos_overlay::mount_overlay`].
 ///
-/// # Safety (future)
+/// # Invariant
 ///
 /// Calls `setns(2)` twice (`user`, then `mnt`) before the mount; must run on a
 /// single-threaded caller until both setns calls complete.

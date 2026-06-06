@@ -2,8 +2,8 @@ use serde_json::{json, Value};
 
 use eos_protocol::LayerChange;
 use eos_workspace_api::{
-    ChangedPathKinds, FinalizeCommandRequest, WorkspaceApiError, WorkspaceCommandOutcome,
-    WorkspaceMode, WorkspaceTimings,
+    usize_to_f64_saturating, ChangedPathKinds, FinalizeCommandRequest, WorkspaceApiError,
+    WorkspaceCommandOutcome, WorkspaceMode, WorkspaceTimings,
 };
 
 use super::types::IsolatedCommandSessionPort;
@@ -104,21 +104,9 @@ fn path_changes_to_wire(changes: &[LayerChange]) -> Vec<(String, String)> {
     changes
         .iter()
         .map(|change| {
-            (
-                change.path().as_str().to_owned(),
-                layer_change_kind(change).to_owned(),
-            )
+            (change.path().as_str().to_owned(), change.kind().to_owned())
         })
         .collect()
-}
-
-const fn layer_change_kind(change: &LayerChange) -> &'static str {
-    match change {
-        LayerChange::Write { .. } => "write",
-        LayerChange::Delete { .. } => "delete",
-        LayerChange::Symlink { .. } => "symlink",
-        LayerChange::OpaqueDir { .. } => "opaque_dir",
-    }
 }
 
 fn merge_runner_timings(timings: &mut WorkspaceTimings, runner_result: Option<&Value>) {
@@ -142,14 +130,6 @@ fn merge_runner_timings(timings: &mut WorkspaceTimings, runner_result: Option<&V
             .entry("command_exec.run_command_s".to_owned())
             .or_insert(value);
     }
-}
-
-fn usize_to_f64_saturating(value: usize) -> f64 {
-    u64::try_from(value).map_or(f64::MAX, u64_to_f64_saturating)
-}
-
-fn u64_to_f64_saturating(value: u64) -> f64 {
-    value.to_string().parse::<f64>().unwrap_or(f64::MAX)
 }
 
 #[cfg(test)]

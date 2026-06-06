@@ -88,6 +88,70 @@ async fn run_meta_round_trips_and_lists() {
 }
 
 #[tokio::test]
+async fn reconcile_terminal_is_cas_guarded() {
+    let (store, _dir) = open_store().await;
+    let repo = store.run_meta();
+    let running = RunMeta {
+        request_id: req("r-cas"),
+        status: BackendRunStatus::Running,
+        label: None,
+        client_meta: json!({}),
+        created_at: ts("2026-06-06T00:00:00Z"),
+        finished_at: None,
+        cancel_reason: None,
+    };
+    repo.insert(&running).await.unwrap();
+
+    // A non-terminal row is moved and returned with finished_at stamped.
+    let moved = repo
+        .reconcile_terminal(&req("r-cas"), BackendRunStatus::Done, ts("2026-06-06T00:05:00Z"))
+        .await
+        .unwrap()
+        .unwrap();
+    assert_eq!(moved.status, BackendRunStatus::Done);
+    assert_eq!(moved.finished_at, Some(ts("2026-06-06T00:05:00Z")));
+
+    // A second reconcile finds no accepted/running row: returns None, no clobber.
+    assert!(repo
+        .reconcile_terminal(&req("r-cas"), BackendRunStatus::Failed, ts("2026-06-06T01:00:00Z"))
+        .await
+        .unwrap()
+        .is_none());
+    assert_eq!(
+        repo.get(&req("r-cas")).await.unwrap().unwrap().status,
+        BackendRunStatus::Done
+    );
+
+    // A cancelled (terminal) row is never reconciled to done/failed.
+    let cancelled = RunMeta {
+        request_id: req("r-cancel"),
+        status: BackendRunStatus::Cancelled,
+        label: None,
+        client_meta: json!({}),
+        created_at: ts("2026-06-06T00:00:00Z"),
+        finished_at: None,
+        cancel_reason: Some("user aborted".into()),
+    };
+    repo.insert(&cancelled).await.unwrap();
+    assert!(repo
+        .reconcile_terminal(&req("r-cancel"), BackendRunStatus::Done, ts("2026-06-06T02:00:00Z"))
+        .await
+        .unwrap()
+        .is_none());
+    assert_eq!(
+        repo.get(&req("r-cancel")).await.unwrap().unwrap().status,
+        BackendRunStatus::Cancelled
+    );
+
+    // An absent run yields None, not an error.
+    assert!(repo
+        .reconcile_terminal(&req("ghost"), BackendRunStatus::Done, ts("2026-06-06T03:00:00Z"))
+        .await
+        .unwrap()
+        .is_none());
+}
+
+#[tokio::test]
 async fn run_meta_list_paginates_newest_first() {
     let (store, _dir) = open_store().await;
     let repo = store.run_meta();

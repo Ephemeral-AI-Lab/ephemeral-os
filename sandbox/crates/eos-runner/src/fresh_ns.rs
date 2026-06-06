@@ -53,7 +53,7 @@ use command::*;
 
 /// Run one tool call in a freshly-unshared namespace.
 ///
-/// # Safety (future)
+/// # Invariant
 ///
 /// Will call `setsid(2)` and `unshare(2)`, then spawn a child in the new
 /// namespace. The namespace syscalls require the process to be single-threaded

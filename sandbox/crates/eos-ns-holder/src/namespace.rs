@@ -25,8 +25,7 @@ use crate::NsHolderError;
 /// when the holder process exits the kernel tears the namespaces down once the
 /// last referencing FD (and the holder task) is gone. The daemon reads the
 /// matching `/proc/{holder_pid}/ns/*` symlinks while this struct keeps the
-/// holder alive. PORT `_control_plane/namespace_runtime.py:118` (`open_ns_fds`,
-/// the daemon side that opens these symlinks against the live holder).
+/// holder alive; the daemon side opens these symlinks against the live holder.
 #[derive(Debug)]
 pub struct HeldNamespaces {
     /// User namespace FD (`/proc/self/ns/user`).
@@ -214,9 +213,12 @@ fn fork_pid_namespace_init(
 
 #[cfg(target_os = "linux")]
 fn run_pid_namespace_init(readiness_fd: RawFd, control_fd: RawFd) -> ! {
-    // SAFETY: The child does not participate in the handshake and must not keep
-    // inherited pipe descriptors open; closing the standard descriptors is not
-    // necessary because the daemon starts ns-holder with stdio redirected.
+    // SAFETY: runs in the freshly-forked, single-threaded child; `readiness_fd`
+    // and `control_fd` are inherited raw fds valid to close here, and
+    // `prctl`/`getppid`/`_exit` take no Rust references. The child does not
+    // participate in the handshake and must not keep inherited pipe descriptors
+    // open; closing the standard descriptors is not necessary because the daemon
+    // starts ns-holder with stdio redirected.
     unsafe {
         libc::close(readiness_fd);
         libc::close(control_fd);

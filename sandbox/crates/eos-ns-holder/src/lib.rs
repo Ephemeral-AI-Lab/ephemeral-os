@@ -23,7 +23,7 @@
 //! choice. Linux-only at runtime; non-Linux hosts still compile the crate because
 //! Linux syscall bodies are gated by `cfg(target_os = "linux")`.
 //!
-//! # Handshake (1:1 with `ns_holder.py`)
+//! # Handshake
 //!
 //! 1. write [`NS_UP`] (`"ns-up\n"`) to the readiness FD once we are inside the
 //!    new namespace stack; the daemon then opens our ns symlinks and wires the
@@ -45,8 +45,8 @@ mod network;
 pub use handshake::{run, Handshake, HandshakeState};
 pub use namespace::HeldNamespaces;
 
-/// Readiness handshake token written to the readiness FD once the holder is
-/// inside the new namespace stack. PORT `ns_holder.py:94` (`b"ns-up\n"`).
+/// Readiness handshake token (`b"ns-up\n"`) written to the readiness FD once the
+/// holder is inside the new namespace stack.
 pub const NS_UP: &[u8] = b"ns-up\n";
 
 /// Control-pipe token the daemon writes once the network is wired.
@@ -55,8 +55,8 @@ pub const NS_UP: &[u8] = b"ns-up\n";
 /// prefix; it is a `startswith` check, not an equality compare.
 pub const NET_READY: &[u8] = b"net-ready";
 
-/// Final readiness token written to the readiness FD after the current
-/// best-effort network hardening hooks. PORT `ns_holder.py:111` (`b"ready\n"`).
+/// Final readiness token (`b"ready\n"`) written to the readiness FD after the
+/// current best-effort network hardening hooks.
 pub const READY: &[u8] = b"ready\n";
 
 /// Test-only holder crash knob.
@@ -77,8 +77,7 @@ pub const FALLBACK_IPV6_CONF_INTERFACES: [&str; 4] = ["all", "default", "lo", "e
 ///
 /// The variants carry the holder's exit-code contract so the daemon-side
 /// recovery logic (and `eosd`'s `main`) can map them to process exit codes
-/// without re-deriving them. PORT `ns_holder.py:98/104/107` (the `return 7/1/2`
-/// arms) and `ns_holder.py:113-114` (`SIGTERM` → `sys.exit(0)`).
+/// without re-deriving them: the exit codes below, plus `SIGTERM` exiting 0.
 #[derive(Debug, thiserror::Error)]
 #[non_exhaustive]
 pub enum NsHolderError {

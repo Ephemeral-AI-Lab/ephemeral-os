@@ -1,8 +1,8 @@
 use serde_json::{json, Value};
 
 use eos_workspace_api::{
-    ChangedPathKinds, FinalizeCommandRequest, WorkspaceApiError, WorkspaceCommandOutcome,
-    WorkspaceConflict, WorkspaceMode, WorkspaceTimings,
+    u64_to_f64_saturating, usize_to_f64_saturating, ChangedPathKinds, FinalizeCommandRequest,
+    WorkspaceApiError, WorkspaceCommandOutcome, WorkspaceConflict, WorkspaceMode, WorkspaceTimings,
 };
 
 use super::types::{EphemeralCommandFinalizeContext, EphemeralCommandSessionPort};
@@ -113,6 +113,10 @@ fn workspace_api_error(error: impl std::fmt::Display) -> WorkspaceApiError {
     WorkspaceApiError::new("ephemeral_command_finalize_failed", error.to_string())
 }
 
+// Hand-parses the publisher port's untyped `PublishOutcome.raw` JSON. It depends
+// on the `{ "files": [ { "path": str, "status": str, "message"?: str } ] }`
+// contract the publisher emits: `path`/`status` are required strings, `message`
+// is optional. When `files` is absent, it falls back to `published_paths`.
 fn publish_files(outcome: &PublishOutcome) -> Result<Vec<PublishFile>, WorkspaceApiError> {
     let Some(files) = outcome.raw.get("files").and_then(Value::as_array) else {
         return Ok(outcome
@@ -240,14 +244,6 @@ fn insert_upperdir_resource_timings(timings: &mut WorkspaceTimings, stats: &Tree
 
 fn insert_resource_timing(timings: &mut WorkspaceTimings, key: &str, value: u64) {
     timings.insert(key.to_owned(), json!(u64_to_f64_saturating(value)));
-}
-
-fn usize_to_f64_saturating(value: usize) -> f64 {
-    u64::try_from(value).map_or(f64::MAX, u64_to_f64_saturating)
-}
-
-fn u64_to_f64_saturating(value: u64) -> f64 {
-    value.to_string().parse::<f64>().unwrap_or(f64::MAX)
 }
 
 #[cfg(test)]

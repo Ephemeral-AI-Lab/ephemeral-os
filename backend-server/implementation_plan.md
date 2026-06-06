@@ -20,7 +20,7 @@ has an unchecked hard item.
 | 4 | Sandbox lifecycle manager | complete | 5, 6, 7 | lifecycle/refcount/delete-guard tests pass (17 manager tests) |
 | 5 | Run launcher, cancellation, reaper, and event bus | complete | 6, 7 | launcher/event_bus/reaper/status tests pass (22 Phase 5 tests) |
 | 6 | Observability, audit ingestion, and stats | complete | 7 | obs sink/ingestor/stats tests pass (7 obs + 2 store-agg); correlation pre-dispatch write deferred to 7/8 |
-| 7 | HTTP API, streaming API, and OpenAPI | not_started | 8 | API contract and stream replay tests pass |
+| 7 | HTTP API, streaming API, and OpenAPI | complete | 8 | 26 eos-backend-api tests pass (22 contract + 4 stream); Phase 7 notes below |
 | 8 | Live E2E, dependency audit, and closeout | not_started | release | Docker-backed backend-to-agent-core-to-sandbox smoke passes |
 
 Status values: `not_started`, `in_progress`, `blocked`, `complete`.
@@ -385,19 +385,19 @@ Implementation components:
 
 Hard acceptance checklist:
 
-- [ ] Every path in `SPEC.md` exists with plural conventional resource names.
-- [ ] No route uses `/api/user-request={id}` style paths.
-- [ ] `POST /api/user-requests` accepts only v1 sandbox override
+- [x] Every path in `SPEC.md` exists with plural conventional resource names.
+- [x] No route uses `/api/user-request={id}` style paths.
+- [x] `POST /api/user-requests` accepts only v1 sandbox override
   `sandbox_args.sandbox_id`.
-- [ ] `/api/sandboxes/*` cannot serialize daemon host, port, internal port,
+- [x] `/api/sandboxes/*` cannot serialize daemon host, port, internal port,
   endpoint, auth token, or daemon env.
-- [ ] User request detail joins backend lifecycle with agent-core state through
+- [x] User request detail joins backend lifecycle with agent-core state through
   `RuntimeServices::state_reader()`.
-- [ ] SSE and WebSocket replay use persisted events and cannot miss events at
+- [x] SSE and WebSocket replay use persisted events and cannot miss events at
   replay/live handoff.
-- [ ] API errors do not expose internal daemon credentials or raw SQL errors.
-- [ ] OpenAPI/contract tests pin request/response shapes.
-- [ ] API, stream, OpenAPI, handler, fixture, and support tests live under
+- [x] API errors do not expose internal daemon credentials or raw SQL errors.
+- [x] OpenAPI/contract tests pin request/response shapes.
+- [x] API, stream, OpenAPI, handler, fixture, and support tests live under
   `backend-server/crates/eos-backend-api/tests/`, not under `src/`.
 
 Verification commands:
@@ -1121,4 +1121,122 @@ Next phase unblockers:
   - Phase 8 (main wiring): construct PersistingSink (inject as Arc<dyn AuditSink>),
     AuditIngestor, and StatsReader from the shared BackendStore; retain the
     PersistingSinkShutdown for a bounded drain on shutdown.
+```
+
+## Phase 7 Execution Notes
+
+```text
+Phase: 7 - HTTP API, Streaming API, And OpenAPI
+Status: complete
+Touched files:
+  - backend-server/Cargo.toml: added axum 0.8 (features=["ws"]) + tower 0.5
+    (util) + tokio-tungstenite 0.29 (dev WS client, matches axum's pin) to
+    [workspace.dependencies]. Versions ride the hyper 1.x / http 1.x / tower 0.5
+    stack already resolved by bollard; the whole backend graph stays on one
+    schemars 0.8.22 (verified) so cross-crate JsonSchema (eos-backend-types +
+    eos-state DTOs) composes in the OpenAPI generator.
+  - eos-backend-api: filled the Phase 1 stub. NEW src/error.rs (ApiError +
+    sanitized IntoResponse; From<StoreError>/<CoreError>/<SandboxManagerError>),
+    src/router.rs (AppState + build_router + the two consumer-owned ports
+    RunControl/SandboxRegistry with prod impls for RunLauncher/SandboxManager +
+    AgentCoreReads), src/handlers/{mod,user_requests,tasks,sandboxes,stats,
+    stream}.rs, src/stream/{mod,sse,ws}.rs, src/openapi.rs. Cargo.toml deps
+    (axum/tokio/serde/serde_json/schemars/futures/async-trait/thiserror/tracing +
+    eos-types/eos-state/eos-backend-{types,store,runtime,obs}); dev-deps add
+    tokio-tungstenite (others ride normal deps, available to integration tests).
+  - eos-backend-store/src/run_meta.rs: NEW RunMetaRepo::reconcile_terminal — the
+    CAS-guarded write-back deferred from Phase 5 (UPDATE ... WHERE status IN
+    ('accepted','running')). tests/store.rs: +1 test (reconcile_terminal_is_cas_guarded).
+  - eos-backend-types/src/stats.rs: added JsonSchema derive to the four stats DTOs
+    (the Phase 6-deferred OpenAPI pinning); doc updated. No shape change.
+  - eos-backend-api/tests: NEW support/mod.rs (FakeRunControl, FakeSandboxRegistry,
+    FakeRequest/Task/AgentRunStore over the open eos-state Sealed trait, domain
+    builders, temp-store router builder), api_contract.rs (22 tests), stream.rs
+    (4 tests incl. a real-port WebSocket replay).
+Concurrent work observed: another agent's eos-workflow refactor (orchestrator*.rs,
+  ports.rs, starter.rs) was transiently mid-flight (a store_planner_abort call-site
+  rename) and briefly broke `cargo check` through the eos-runtime dep; it stabilized
+  on its own within the session and was left untouched (not my files, not my task).
+  Phase 6's eos-backend-obs/src/ingestor.rs edit also showed dirty; untouched.
+Key design decisions:
+  - Two consumer-owned ports (RunControl, SandboxRegistry) abstract the stateful
+    runtime capabilities at the api->runtime cross-crate boundary. dyn is
+    load-bearing here: the production RunLauncher/SandboxManager drive deployment,
+    test doubles drive the contract tests (SandboxManager has no public test
+    constructor; with_seams is pub(crate)). Agent-core reads ride the already-dyn
+    eos-state store traits (Arc<dyn RequestStore/TaskStore/AgentRunStore>), grouped
+    in AgentCoreReads; production fills them from RuntimeServices::state_reader(),
+    tests from fakes (the Sealed supertrait is open, so fakes impl it freely).
+  - Detail status write-back: resolve_api_status + reconcile_terminal under a CAS
+    (status IN accepted/running). If the CAS matches nothing (a concurrent DELETE
+    wrote Cancelled between read and update), the handler re-reads run_meta and
+    resolves from the authoritative row, so detail never reports done/failed over a
+    just-written cancelled. Proven by detail_joins_and_persists_terminal_outcome +
+    detail_cancelled_is_not_clobbered_by_agent_terminal.
+  - List resolves status from run_meta alone (resolve_api_status(.., None)) — the
+    reaper finalizes run_meta on completion, so per-row agent-core joins (N+1) are
+    a detail-route concern only. Spec mandates the join on detail, not list.
+  - One /stream route serves SSE and WebSocket. axum 0.8 has no
+    OptionalFromRequestParts for WebSocketUpgrade, so a small MaybeWs wrapper does
+    the optional extraction (Some => WS, None => SSE). Both transports go through
+    EventBus::subscribe(after_seq) — the Phase 5 replay/live no-gap handoff — so the
+    api layer only forwards records; the SSE Last-Event-ID header overrides ?last_seq.
+  - OpenAPI is built from the DTO JsonSchema derives via one schemars openapi3
+    generator (no utoipa, no re-annotating DTOs); components.schemas come from
+    generator.definitions(), paths are a static table mirroring build_router.
+    Contract test pins every path + the core component schema names.
+  - Error sanitization: StoreError/CoreError and internal SandboxManagerError
+    variants (Teardown/Provision/Capacity/Connect) collapse to a generic 500 with
+    the source logged via tracing, never returned; DeleteRejected => 409,
+    UnknownSandbox => 404, bad input/ids => 400. Proven by internal_error_is_not_leaked.
+  - ValidatedJson extractor maps a deny_unknown_fields/parse rejection to 400 (not
+    axum's default 422), which is what rejects v1-deferred sandbox override fields.
+Checklist results: all 9 Phase 7 hard items checked.
+Verification commands (all pass):
+  - (cd backend-server && cargo test -p eos-backend-api) -> 22 contract + 4 stream
+    = 26 passed (lib/doctests 0).
+  - cargo test -p eos-backend-api --test api_contract -> 22 passed.
+    cargo test -p eos-backend-api --test stream -> 4 passed. (NOTE: the plan's bare
+    `cargo test -p eos-backend-api api_contract` form is a NAME filter, not a target
+    selector, so it runs 0 tests; the `--test <target>` form above is the intended
+    selection — same cargo-arg nuance Phase 6 documented for its `--` separator.)
+  - rg -n "user-request=|DaemonTcpEndpoint|auth_token|internal_port|endpoint"
+    backend-server/crates/eos-backend-api -> CLEAN (the legacy-path negative test
+    assembles its `=` from a fragment so it does not trip its own guard; the AC4
+    sanitization test checks short fragments host/port/auth/token/daemon that never
+    form the denied joined literals).
+  - find backend-server/crates/eos-backend-api/src ...test/fixture/mock/fake/support
+    -> empty (AC13).
+  - cargo clippy --workspace --all-targets -- -D warnings (backend) -> clean.
+  - cargo check --workspace --all-targets (backend) -> ok.
+  - cargo test -p eos-backend-store -> 10 passed (incl. reconcile CAS test);
+    cargo test -p eos-backend-obs -> 22 passed; cargo test -p eos-backend-types ->
+    14 passed (stats JsonSchema additive).
+Failures: none.
+Spec deviations / interpretations:
+  - eos-backend-main wiring (app.rs/main.rs assembling AppState from real
+    RuntimeServices + SandboxManager + RunLauncher + PersistingSink) is NOT in
+    Phase 7: the binary-start and live-E2E hard items live in Phase 8, which owns
+    the composition root (consistent with Phase 5/6 deferring main wiring). The api
+    crate exposes the full surface Phase 8 needs: AppState::new, build_router,
+    AgentCoreReads, and `impl RunControl for RunLauncher` / `impl SandboxRegistry
+    for SandboxManager`.
+  - /stream emits SSE events as (id=seq, event=kind, data=payload) and WS frames as
+    the full EventRecord JSON; both replay-safe. There is no /api/stats/loss route
+    (the spec stats table has only performance/correctness/agent-runs/events), so
+    ObsLossStats/StatsReader::obs_loss is wired in the facade but not a v1 route.
+  - Task detail / transcript response DTOs (TaskDetail, TranscriptResponse) are
+    api-crate-local (Serialize only), embedding eos-state Task/AgentRun (which the
+    OpenAPI components include); transcript messages are Vec<serde_json::Value>
+    (from the run's JsonObject message history).
+Next phase unblockers (Phase 8):
+  - Build RuntimeServices with .sandbox_gateway(manager.clone()); construct
+    RuntimeHost + RunLauncher sharing that Arc<SandboxManager>; assemble AppState via
+    AppState::new(Arc::new(launcher), manager, store.run_meta().clone(),
+    Arc::new(EventBus::new(store.event_log().clone())), store.event_log().clone(),
+    StatsReader::new(store.obs_events().clone(), store.audit_cursors().clone()),
+    AgentCoreReads { requests: sr.requests(), tasks: sr.tasks(), agent_runs:
+    sr.agent_runs() }) where sr = services.state_reader(); serve build_router(state)
+    with axum::serve in eos-backend-main. Wire PersistingSink as the AuditSink and
+    the SandboxAuditPoller for live obs.
 ```

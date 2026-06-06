@@ -5,9 +5,9 @@ pub const PERSISTED_HANDLES_SCHEMA_VERSION: u32 = 1;
 
 /// Per-workspace handle / veth name prefix.
 ///
-/// This single literal is shared by both `HANDLE_PREFIX` (`types.py:19`) and
-/// `VETH_PREFIX` (`network.py:34`); the contract requires one source of truth
-/// (06-crate-map §D.2 — duplicate-literal drift risk).
+/// This single literal is the one source of truth for both the workspace-handle
+/// id seed and the veth name prefix; the contract requires they share one
+/// constant (06-crate-map §D.2 — duplicate-literal drift risk).
 pub const HANDLE_PREFIX: &str = "eos-iws-";
 
 /// cgroup root the per-workspace cgroup is created under.

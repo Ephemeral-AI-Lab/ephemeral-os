@@ -23,6 +23,12 @@ pub struct SnapshotLease {
 }
 
 /// Per-workspace state. Not a subclass of any overlay handle (C1).
+///
+/// FD-ownership invariant: the raw FDs below (`ns_fds`, `readiness_fd`,
+/// `control_fd`) are owned by the holder process and closed exactly once at
+/// teardown via `close_handle_fds`. Because this type is `Clone` and has no
+/// `Drop`, a clone holds FD *aliases*, not independent owners — never close
+/// those FDs from a clone.
 #[derive(Debug, Clone)]
 pub struct WorkspaceHandle {
     /// Stable handle id (also the scratch dir / veth-name seed).

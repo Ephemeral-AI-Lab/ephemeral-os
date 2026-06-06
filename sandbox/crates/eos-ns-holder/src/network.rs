@@ -238,12 +238,12 @@ pub(crate) const fn flush_ipv6_default_route() {}
 
 #[cfg(target_os = "linux")]
 fn netlink_request_flags() -> Option<u16> {
-    libc_c_int_to_u16(libc::NLM_F_REQUEST | libc::NLM_F_ACK)
+    libc_c_int_to_u16(libc::NLM_F_REQUEST)
 }
 
 #[cfg(target_os = "linux")]
 fn netlink_create_flags() -> Option<u16> {
-    libc_c_int_to_u16(libc::NLM_F_REQUEST | libc::NLM_F_ACK | libc::NLM_F_CREATE | libc::NLM_F_EXCL)
+    libc_c_int_to_u16(libc::NLM_F_REQUEST | libc::NLM_F_CREATE | libc::NLM_F_EXCL)
 }
 
 #[cfg(target_os = "linux")]
@@ -340,8 +340,10 @@ fn send_netlink_message_with_attrs<T>(
 
 #[cfg(target_os = "linux")]
 fn append_struct_bytes<T>(buffer: &mut Vec<u8>, value: &T) {
-    // SAFETY: `value` is valid for `size_of::<T>()` bytes, and the bytes are
-    // copied immediately into `buffer` without outliving `value`.
+    // SAFETY: every caller passes a fully-initialized, padding-free `#[repr(C)]`
+    // netlink struct, so all `size_of::<T>()` bytes are initialized and reading
+    // them as `u8` is sound. The bytes are copied into `buffer` before `value`
+    // is dropped. Callers MUST NOT pass a type with compiler-inserted padding.
     let bytes = unsafe {
         std::slice::from_raw_parts(
             std::ptr::from_ref(value).cast::<u8>(),
