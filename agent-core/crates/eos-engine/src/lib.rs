@@ -1,5 +1,5 @@
 //! `eos-engine` — one agent query loop, tool dispatch, background
-//! supervision, notifications, prompt reports, and the event-source seam.
+//! session accounting, notifications, prompt reports, and the event-source seam.
 #![forbid(unsafe_code)]
 
 pub mod agent;
@@ -14,10 +14,8 @@ pub mod tool_call;
 
 pub use agent::{build_query_context, BuildQueryContextInput};
 pub use background::{
-    BackgroundCompletion, BackgroundNotificationEmitter, BackgroundSupervisorFactory,
-    BackgroundSupervisorHandle, BackgroundTaskStatus, BackgroundTaskSupervisor,
-    CommandSessionHandle, CommandSessionRecord, SubagentHandle, SubagentRecord, WorkflowBackgroundRecord,
-    WorkflowHandle,
+    BackgroundCompletion, BackgroundNotificationEmitter, BackgroundSessionFactory,
+    BackgroundSessionService, BackgroundSessionStatus,
 };
 pub use notifications::{make_default_notification_rules, NotificationRule, NotificationService};
 pub use query::{

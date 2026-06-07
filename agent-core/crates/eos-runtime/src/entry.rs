@@ -13,7 +13,7 @@ use anyhow::{Context, Result};
 use eos_agent_def::{AgentDefinition, AgentName};
 use eos_agent_message_records::AgentRunRecordKind;
 use eos_engine::{
-    run_agent, AgentRunControlFactory, AgentRunInput, AgentRunRegistry, BackgroundSupervisorFactory,
+    run_agent, AgentRunControlFactory, AgentRunInput, AgentRunRegistry, BackgroundSessionFactory,
     EngineCancelPort, ForegroundExecutorFactory,
 };
 use eos_llm_client::Message;
@@ -118,7 +118,7 @@ pub async fn run_request(
     // makes live runs addressable for recursive cancellation.
     let control_factory = Arc::new(AgentRunControlFactory::new(
         ForegroundExecutorFactory,
-        BackgroundSupervisorFactory::new(
+        BackgroundSessionFactory::new(
             services.engine_run_handles(&workspace_root),
             services.sandbox.transport.clone(),
             services.engine.command_session_completion_poll_interval(),

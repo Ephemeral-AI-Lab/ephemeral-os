@@ -2040,8 +2040,8 @@ globalResults.hidden = true;
 document.querySelector(".toolbar")?.after(globalResults);
 
 if (refreshButton && window.location.protocol === "file:") {
-  refreshButton.textContent = "Reload";
-  refreshButton.title = "Chrome cannot run local commands from file://. Click to copy the refresh command.";
+  refreshButton.textContent = "Copy refresh command";
+  refreshButton.title = "Local files cannot run commands. Copy the command, run it in a terminal, then reload this page.";
 }
 
 function applyFilter() {
@@ -2213,12 +2213,11 @@ refreshButton?.addEventListener("click", async () => {
     const command = refreshButton.dataset.refreshCommand || "";
     try {
       await navigator.clipboard.writeText(command);
-      if (refreshStatus) refreshStatus.textContent = "Copied; reloading";
+      if (refreshStatus) refreshStatus.textContent = "Copied command; run it, then reload this page";
     } catch (error) {
-      window.prompt("Run this command, then reload this HTML file:", command);
-      if (refreshStatus) refreshStatus.textContent = "Reloading";
+      window.prompt("Copy and run this command, then reload this HTML file:", command);
+      if (refreshStatus) refreshStatus.textContent = "Run command, then reload this page";
     }
-    window.setTimeout(() => window.location.reload(), 900);
     return;
   }
   refreshButton.disabled = true;

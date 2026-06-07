@@ -10,7 +10,7 @@ use eos_agent_message_records::{AgentMessageRecords, AgentRunRecordKind};
 use eos_audit::NoopAuditSink;
 use eos_engine::{
     run_agent, AgentRunControlFactory, AgentRunInput, AgentRunRegistry, AgentRunResult,
-    BackgroundSupervisorFactory, EngineRunHandles, EventCallback, EventSourceFactory,
+    BackgroundSessionFactory, EngineRunHandles, EventCallback, EventSourceFactory,
     ForegroundExecutorFactory, StreamEvent, ToolRegistryExtender,
 };
 use eos_llm_client::{LlmClient, LlmRequest, LlmStream, ProviderError, ToolSpec};
@@ -729,7 +729,7 @@ fn control_factory_for(handles: EngineRunHandles) -> AgentRunControlFactory {
         ForegroundExecutorFactory,
         // A long interval keeps the per-run heartbeat idle for the duration of
         // the test (no command sessions → no RPC); the control's drop aborts it.
-        BackgroundSupervisorFactory::new(
+        BackgroundSessionFactory::new(
             handles,
             Arc::new(FakeTransport),
             std::time::Duration::from_secs(3600),

@@ -5,7 +5,7 @@
 //! composition and reused. It holds only immutable construction capability
 //! (the foreground and background factories) and must never retain a live
 //! `AgentRunControl`, `NotificationService`, `ForegroundExecutor`,
-//! `BackgroundSupervisorHandle`, or lane records. Each call mints a fresh
+//! `BackgroundSessionService`, or manager state. Each call mints a fresh
 //! notification service, foreground executor, background supervisor, and
 //! command-completion heartbeat.
 
@@ -13,7 +13,7 @@ use std::sync::Arc;
 
 use eos_types::{AgentRunId, TaskId};
 
-use crate::background::BackgroundSupervisorFactory;
+use crate::background::BackgroundSessionFactory;
 use crate::notifications::NotificationService;
 
 use super::control::{AgentRunControl, AgentRunControlParts, AgentRunPersistence};
@@ -23,7 +23,7 @@ use super::foreground::ForegroundExecutorFactory;
 #[derive(Clone)]
 pub struct AgentRunControlFactory {
     foreground: ForegroundExecutorFactory,
-    background: BackgroundSupervisorFactory,
+    background: BackgroundSessionFactory,
 }
 
 impl std::fmt::Debug for AgentRunControlFactory {
@@ -36,7 +36,7 @@ impl AgentRunControlFactory {
     /// Compose the factory from the per-request foreground and background
     /// builders.
     #[must_use]
-    pub fn new(foreground: ForegroundExecutorFactory, background: BackgroundSupervisorFactory) -> Self {
+    pub fn new(foreground: ForegroundExecutorFactory, background: BackgroundSessionFactory) -> Self {
         Self {
             foreground,
             background,

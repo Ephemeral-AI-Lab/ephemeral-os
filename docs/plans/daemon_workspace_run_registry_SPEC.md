@@ -1,6 +1,6 @@
 # Daemon Workspace-Run Registry — Migration SPEC
 
-Status: in progress — Phases 1–7 landed; Phase 8 superseded by the divergence (see Progress tracker below)
+Status: complete — Phases 1–8 landed. Phase 8 was completed via the full §3.4 migration (not the earlier re-keyed-in-place divergence): the caller-keyed registry + manager were relocated from `eos-command-session` into `eos-daemon/src/services/workspace_run/`, `CommandSession` was reduced to a pure PTY substrate (`reap`/`persist_final`, no policy) with the publish-vs-discard decision lifted into the daemon-side run, `command_session/` + `isolated_workspace/` were merged under `services/workspace_run/`, and `OnceLock<CommandSessionManager>` became the daemon-owned `OnceLock<WorkspaceRunManager>`. Wire-op strings and the `cancel_workspace_runs[_by_caller_id]` coordinator are unchanged. (See Progress tracker below.)
 Owner: sandbox (daemon substrate)
 Scope: `sandbox/crates/eos-daemon`, `eos-command-session`,
 `eos-ephemeral-workspace`, `eos-isolated-workspace`, `eos-workspace-api`
@@ -60,28 +60,24 @@ clean run.
 | 5 — re-home isolated | ✅ done — `active_command_sessions` side-map dropped (`register/unregister_command_session` removed); the caller-keyed command-session registry is the sole owner of isolated sessions, and `ttl_sweep` + the rebind gate consult it. Namespace teardown stays delegated to `IsolatedSession::exit` (divergence). |
 | 6 — re-point completion/sweep onto runs | ✅ done (`107eec33b`) |
 | 7 — cancel surface (`cancel_all_workspace_runs_by_caller_id` / `_runs`) | ✅ done — `services/workspace_run.rs` coordinator + wire ops `api.v1.cancel_workspace_runs_by_caller_id` and `api.v1.cancel_workspace_runs`; `op_exit` routes through the per-caller coordinator. E2E (real `eosd` in Docker): cancel-by-caller discards owner runs + spares siblings + parks no completion; the **cancel-mid-write test asserts the shared LayerStack `manifest_version` is unchanged and the write stays unpublished** (the OCC-discard invariant); whole-sandbox sweep tears down every caller. |
-| 8 — remove flat manager / merge services | ⚪ superseded — the registry stays re-keyed in `eos-command-session` per the advisor-vetted divergence; the flat manager was re-keyed (not removed) and services were not merged into a `workspace_run/` tree. Only the daemon-side coordinator + wire ops live in `eos-daemon/src/services/workspace_run.rs`. |
+| 8 — remove flat manager / merge services | ✅ done — full §3.4 migration (supersedes the earlier divergence). `CommandSession` is now a pure PTY substrate (`reap → ReapedCommand`, `persist_final`; no `policy`/`finalized`); the publish-vs-discard decision lives in the daemon-side run (`RunSession{session, policy}`). The caller-keyed registry + manager moved from `eos-command-session` into `eos-daemon/src/services/workspace_run/` (`registry.rs` = `WorkspaceRunRegistry`, `manager.rs` = `WorkspaceRunManager`); `command_session/` + `isolated_workspace/` merged under `workspace_run/` (`commands.rs`, `config.rs`, `wire.rs`, `ports/`, `cancel.rs`, `isolated/`); `OnceLock<CommandSessionManager>` → daemon-owned `OnceLock<WorkspaceRunManager>`. `eos-command-session` is now substrate-only (`CommandSessionCompletion` moved to its `response.rs`). Wire-op strings + the `cancel_workspace_runs[_by_caller_id]` coordinator fns are byte-stable. Verify (real `eosd` rebuilt, Docker): `eos-command-session` E2E **44/63 pass** with all **registry-correctness** tests green — incl. `cancel_workspace_runs_by_caller_id_discards_overlay_writes` (the §9 cancel-never-OCC-publishes invariant on the relocated registry), `collect_completed_drains`, `session_count_accuracy`; the 19 failures are all in the documented process/signal/PTY/setsid/output/parallel/network emulation-flake set (top of the spec's ~14–19/60 baseline). Isolated E2E 16/20 (the 4 failures are PTY-output-timing + netns + ephemeral scratch-visibility in untouched namespace/overlay/runner code). macOS + `x86_64-unknown-linux-musl` clippy clean (`-D warnings`); daemon + `eos-command-session` unit suites green (manager/registry scaffold tests moved with the code). |
 
-**Implementation divergences from the §3.2/§5.3 sketch (deliberate, advisor-vetted):**
-the caller-keyed registry currently lives **in `eos-command-session`** (the
-re-keyed `CommandSessionRegistry`/`CommandSessionManager`), not a new
-`eos-daemon/services/workspace_run/` — this avoids `CommandSession→pub` + relocating
-the reaper/completion plumbing, adds no cross-crate edges, and keeps the daemon
-calling in as before. Isolated namespace teardown stays delegated to
-`IsolatedSession` (via `op_exit`), not folded into the run. The ephemeral overlay
-lease/dirs still live in the session's policy (the §3.3 policy-ectomy was not
-needed — Phase 2 already makes cancel→discard structural). These can be revisited in
-Phases 5/7/8 if a later need (e.g. namespace re-homing) justifies it.
-
-Phases 5 and 7 now landed within this divergence: the cancel surface is a thin
-`eos-daemon/src/services/workspace_run.rs` coordinator (not the full §3.4
-`workspace_run/` service tree), composing the existing command-session manager +
-`IsolatedSession::exit`. Phase 5 dropped the `active_command_sessions` side-map so the
-caller-keyed command-session registry is the sole owner of isolated sessions; the
-isolated **rebind gate** is now keyed on open isolated callers alone (an isolated
-session always belongs to an open caller, so this preserves the old gate while no
-longer letting an unrelated ephemeral session block a rebind). Phase 8's flat-manager
-removal / service merge stays superseded.
+**Historical note — the Phases 1–7 divergence (now superseded by Phase 8):**
+Phases 1–7 originally landed as a re-keyed-in-place divergence: the caller-keyed
+registry lived **in `eos-command-session`** (the re-keyed
+`CommandSessionRegistry`/`CommandSessionManager`), the §3.3 policy-ectomy was skipped
+(the ephemeral overlay lease/dirs stayed in the session's policy), and the cancel
+surface was a thin `eos-daemon/src/services/workspace_run.rs` coordinator rather than
+the full §3.4 `workspace_run/` service tree. **Phase 8 reverted this divergence and
+completed the full §3.4 migration**: the registry + manager relocated into
+`eos-daemon/src/services/workspace_run/`, the policy-ectomy landed (`CommandSession`
+is substrate-only; the run owns publish-vs-discard), and `command_session/` +
+`isolated_workspace/` merged under `workspace_run/`. The Phase-5 behaviors carry over
+unchanged: the caller-keyed registry is the sole owner of command sessions (no
+`active_command_sessions` side-map), and the isolated **rebind gate** is keyed on open
+isolated callers (consulting `active_command_sessions_for_caller`). Isolated namespace
+teardown is still delegated to `IsolatedSession::exit` via `op_exit`, which now routes
+through the per-caller `cancel_workspace_runs_by_caller_id` coordinator.
 
 ## 1. Why this migration
 

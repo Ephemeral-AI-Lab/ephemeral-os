@@ -9219,15 +9219,15 @@
       "name": "eos-engine",
       "path": "crates/eos-engine",
       "stats": {
-        "modules": 47,
-        "items": 314,
-        "structs": 65,
-        "enums": 7,
-        "traits": 2,
-        "functions": 159,
-        "impls": 75,
-        "fields": 272,
-        "methods": 187
+        "modules": 62,
+        "items": 410,
+        "structs": 87,
+        "enums": 8,
+        "traits": 5,
+        "functions": 187,
+        "impls": 114,
+        "fields": 332,
+        "methods": 305
       },
       "modules": [
         {
@@ -9669,9 +9669,9 @@
           "items": [
             {
               "kind": "struct",
-              "name": "BackgroundSupervisorFactory",
+              "name": "BackgroundSessionFactory",
               "visibility": "pub",
-              "signature": "pub struct BackgroundSupervisorFactory",
+              "signature": "pub struct BackgroundSessionFactory",
               "fields": [
                 {
                   "name": "handles",
@@ -9687,6 +9687,11 @@
                   "name": "completion_poll_interval",
                   "visibility": "private",
                   "ty": "Duration"
+                },
+                {
+                  "name": "workflow_control",
+                  "visibility": "private",
+                  "ty": "WorkflowControlCell"
                 }
               ],
               "variants": [],
@@ -9699,13 +9704,13 @@
               ],
               "file": "crates/eos-engine/src/background/factory.rs",
               "module": "background::factory",
-              "line": 22
+              "line": 24
             },
             {
               "kind": "impl",
-              "name": "impl std :: fmt :: Debug for BackgroundSupervisorFactory",
+              "name": "impl std :: fmt :: Debug for BackgroundSessionFactory",
               "visibility": "private",
-              "signature": "impl std :: fmt :: Debug for BackgroundSupervisorFactory",
+              "signature": "impl std :: fmt :: Debug for BackgroundSessionFactory",
               "fields": [],
               "variants": [],
               "methods": [
@@ -9714,10 +9719,10 @@
                   "signature": "fn fmt (& self , f : & mut std :: fmt :: Formatter < '_ >) -> std :: fmt :: Result",
                   "kind": "method",
                   "docs": null,
-                  "line": 31
+                  "line": 37
                 }
               ],
-              "impl_target": "BackgroundSupervisorFactory",
+              "impl_target": "BackgroundSessionFactory",
               "trait_name": "std :: fmt :: Debug",
               "docs": null,
               "tags": [
@@ -9726,39 +9731,39 @@
               ],
               "file": "crates/eos-engine/src/background/factory.rs",
               "module": "background::factory",
-              "line": 30
+              "line": 36
             },
             {
               "kind": "impl",
-              "name": "impl BackgroundSupervisorFactory",
+              "name": "impl BackgroundSessionFactory",
               "visibility": "private",
-              "signature": "impl BackgroundSupervisorFactory",
+              "signature": "impl BackgroundSessionFactory",
               "fields": [],
               "variants": [],
               "methods": [
                 {
                   "name": "new",
-                  "signature": "pub fn new (handles : EngineRunHandles , transport : Arc < dyn SandboxTransport > , completion_poll_interval : Duration ,) -> Self",
+                  "signature": "pub fn new (handles : EngineRunHandles , transport : Arc < dyn SandboxTransport > , completion_poll_interval : Duration , workflow_control : Arc < OnceLock < Arc < dyn WorkflowControlPort > > > ,) -> Self",
                   "kind": "constructor",
-                  "docs": "Build the factory from the immutable per-request construction inputs.",
-                  "line": 39
+                  "docs": "Build the factory from the immutable per-request construction inputs.\n`workflow_control` is the request's late-bound control cell (it may be\nunset at construction; each run's poller reads it once it is wired).",
+                  "line": 45
                 },
                 {
                   "name": "create",
-                  "signature": "pub fn create (& self , owner_agent_run_id : AgentRunId , notifications : NotificationService , control_factory : AgentRunControlFactory ,) -> BackgroundSupervisorHandle",
+                  "signature": "pub fn create (& self , agent_run_id : AgentRunId , notifications : NotificationService , control_factory : AgentRunControlFactory ,) -> BackgroundSessionService",
                   "kind": "method",
-                  "docs": "Mint a fresh per-agent-run background supervisor handle (empty ledger).\n`owner_agent_run_id` is the run that owns the handle (`== caller_id` for\ndaemon calls); `notifications` is this run's queue (the handle wraps it so\nbackground completions surface to the owning run, spec §8.4); and\n`control_factory` lets `spawn` give each subagent its own ephemeral control\n(spec §8.1/§11.3). Must be called within a Tokio runtime — the command lane\nspawns this run's heartbeat.",
-                  "line": 53
+                  "docs": "Mint a fresh per-agent-run background session service (empty managers).\n`agent_run_id` is the run that owns the service (`== caller_id` for\ndaemon calls); `notifications` is this run's queue (the service wraps it so\nbackground completions surface to the owning run, spec §8.4); and\n`control_factory` lets `spawn` give each subagent its own ephemeral control\n(spec §8.1/§11.3). Must be called within a Tokio runtime — the command lane\nspawns this run's heartbeat.",
+                  "line": 63
                 },
                 {
                   "name": "agent_run_store",
                   "signature": "pub(crate) fn agent_run_store (& self) -> Arc < dyn eos_state :: AgentRunStore >",
                   "kind": "method",
                   "docs": "The durable agent-run store, used by a control's finalization to finish a\npersisted run as cancelled.",
-                  "line": 77
+                  "line": 88
                 }
               ],
-              "impl_target": "BackgroundSupervisorFactory",
+              "impl_target": "BackgroundSessionFactory",
               "trait_name": null,
               "docs": null,
               "tags": [
@@ -9766,7 +9771,7 @@
               ],
               "file": "crates/eos-engine/src/background/factory.rs",
               "module": "background::factory",
-              "line": 38
+              "line": 44
             }
           ]
         },
@@ -9809,6 +9814,11 @@
                   "name": "notifications",
                   "visibility": "pub(super)",
                   "ty": "BackgroundNotificationEmitter"
+                },
+                {
+                  "name": "_workflow_poll",
+                  "visibility": "private",
+                  "ty": "WorkflowCompletionPoller"
                 }
               ],
               "variants": [],
@@ -9819,7 +9829,7 @@
               "tags": [],
               "file": "crates/eos-engine/src/background/handle.rs",
               "module": "background::handle",
-              "line": 28
+              "line": 29
             },
             {
               "kind": "struct",
@@ -9843,7 +9853,7 @@
               ],
               "file": "crates/eos-engine/src/background/handle.rs",
               "module": "background::handle",
-              "line": 49
+              "line": 53
             },
             {
               "kind": "impl",
@@ -9858,7 +9868,7 @@
                   "signature": "fn fmt (& self , f : & mut std :: fmt :: Formatter < '_ >) -> std :: fmt :: Result",
                   "kind": "method",
                   "docs": null,
-                  "line": 56
+                  "line": 60
                 }
               ],
               "impl_target": "BackgroundSupervisorHandle",
@@ -9870,7 +9880,7 @@
               ],
               "file": "crates/eos-engine/src/background/handle.rs",
               "module": "background::handle",
-              "line": 55
+              "line": 59
             },
             {
               "kind": "impl",
@@ -9882,73 +9892,73 @@
               "methods": [
                 {
                   "name": "new",
-                  "signature": "pub fn new (owner_agent_run_id : AgentRunId , handles : EngineRunHandles , transport : Arc < dyn SandboxTransport > , completion_poll_interval : Duration , notifications : NotificationService , control_factory : AgentRunControlFactory ,) -> Self",
+                  "signature": "pub fn new (owner_agent_run_id : AgentRunId , handles : EngineRunHandles , transport : Arc < dyn SandboxTransport > , completion_poll_interval : Duration , notifications : NotificationService , control_factory : AgentRunControlFactory , workflow_control : & Arc < OnceLock < Arc < dyn WorkflowControlPort > > > ,) -> Self",
                   "kind": "constructor",
                   "docs": "Create the per-agent-run supervisor and spawn its command-completion\nheartbeat against `notifications` (this run's own queue). Must be called\nwithin a Tokio runtime.",
-                  "line": 64
+                  "line": 68
                 },
                 {
                   "name": "owner_agent_run_id",
                   "signature": "pub fn owner_agent_run_id (& self) -> & AgentRunId",
                   "kind": "method",
                   "docs": "The agent run that owns this supervisor.",
-                  "line": 95
+                  "line": 110
                 },
                 {
                   "name": "inner",
                   "signature": "pub fn inner (& self) -> Arc < Mutex < BackgroundTaskSupervisor > >",
                   "kind": "method",
                   "docs": "The shared subagent+workflow ledger (for the subagent driver settle path).",
-                  "line": 101
+                  "line": 116
                 },
                 {
                   "name": "commands",
                   "signature": "pub(super) fn commands (& self) -> & CommandSessionLane",
                   "kind": "method",
                   "docs": "The command-session lane (register / recover / cancel-all surface).",
-                  "line": 107
+                  "line": 122
                 },
                 {
                   "name": "handles",
                   "signature": "pub(super) fn handles (& self) -> & EngineRunHandles",
                   "kind": "method",
                   "docs": "The engine run handles the subagent driver needs.",
-                  "line": 112
+                  "line": 127
                 },
                 {
                   "name": "control_factory",
                   "signature": "pub(super) fn control_factory (& self) -> & AgentRunControlFactory",
                   "kind": "method",
                   "docs": "The control factory used to mint each subagent its own ephemeral control.",
-                  "line": 117
+                  "line": 132
                 },
                 {
                   "name": "notifications",
                   "signature": "pub(super) fn notifications (& self) -> & BackgroundNotificationEmitter",
                   "kind": "method",
                   "docs": "This agent run's background-completion emitter (its own notifier).",
-                  "line": 122
+                  "line": 137
                 },
                 {
                   "name": "running_background_tasks",
                   "signature": "pub async fn running_background_tasks (& self) -> RunningBackgroundTasks",
                   "kind": "method",
                   "docs": "This run's in-flight background report (Running-only) across all three lanes.",
-                  "line": 127
+                  "line": 142
                 },
                 {
                   "name": "cancel_subagents",
                   "signature": "pub async fn cancel_subagents (& self , reason : & str) -> RunningBackgroundTasks",
                   "kind": "method",
                   "docs": "Settle this run's in-flight subagents (`Cancelled` + abort) and return the\npost-cancel report — the terminal/exit prehook entry point.",
-                  "line": 145
+                  "line": 160
                 },
                 {
                   "name": "teardown",
                   "signature": "pub async fn teardown (& self , workflow_control : Option < Arc < dyn WorkflowControlPort > > , reason : & str ,) -> RunningBackgroundTasks",
                   "kind": "method",
                   "docs": "Tear down all background work owned by this agent run (spec §8.2): settle +\nabort subagents, cancel delegated workflows through the optional\nworkflow-control port (a missing port still settles the in-memory record),\nand cancel all command sessions in one per-caller daemon RPC (§9.3).",
-                  "line": 152
+                  "line": 167
                 }
               ],
               "impl_target": "BackgroundSupervisorHandle",
@@ -9959,7 +9969,7 @@
               ],
               "file": "crates/eos-engine/src/background/handle.rs",
               "module": "background::handle",
-              "line": 63
+              "line": 67
             },
             {
               "kind": "impl",
@@ -9978,7 +9988,7 @@
               ],
               "file": "crates/eos-engine/src/background/handle.rs",
               "module": "background::handle",
-              "line": 191
+              "line": 206
             },
             {
               "kind": "fn",
@@ -9994,7 +10004,7 @@
               "tags": [],
               "file": "crates/eos-engine/src/background/handle.rs",
               "module": "background::handle::tests",
-              "line": 219
+              "line": 234
             },
             {
               "kind": "fn",
@@ -10010,7 +10020,7 @@
               "tags": [],
               "file": "crates/eos-engine/src/background/handle.rs",
               "module": "background::handle::tests",
-              "line": 230
+              "line": 246
             },
             {
               "kind": "struct",
@@ -10029,7 +10039,7 @@
               ],
               "file": "crates/eos-engine/src/background/handle.rs",
               "module": "background::handle::tests",
-              "line": 244
+              "line": 261
             },
             {
               "kind": "impl",
@@ -10044,7 +10054,7 @@
                   "signature": "async fn stream_message (& self , _request : LlmRequest) -> Result < LlmStream , ProviderError >",
                   "kind": "method",
                   "docs": null,
-                  "line": 249
+                  "line": 266
                 }
               ],
               "impl_target": "NoopLlmClient",
@@ -10057,7 +10067,7 @@
               ],
               "file": "crates/eos-engine/src/background/handle.rs",
               "module": "background::handle::tests",
-              "line": 247
+              "line": 264
             },
             {
               "kind": "struct",
@@ -10076,7 +10086,7 @@
               ],
               "file": "crates/eos-engine/src/background/handle.rs",
               "module": "background::handle::tests",
-              "line": 254
+              "line": 271
             },
             {
               "kind": "impl",
@@ -10095,7 +10105,7 @@
               ],
               "file": "crates/eos-engine/src/background/handle.rs",
               "module": "background::handle::tests",
-              "line": 257
+              "line": 274
             },
             {
               "kind": "impl",
@@ -10110,28 +10120,28 @@
                   "signature": "async fn create_run (& self , agent_run_id : & AgentRunId , task_id : & TaskId , agent_name : & str , initial_messages : Option < & [JsonObject] > ,) -> Result < AgentRun , CoreError >",
                   "kind": "method",
                   "docs": null,
-                  "line": 261
+                  "line": 278
                 },
                 {
                   "name": "finish_run",
                   "signature": "async fn finish_run (& self , _agent_run_id : & AgentRunId , _message_history : Option < & [JsonObject] > , _terminal_tool_result : Option < & JsonObject > , _token_count : i64 , _error : Option < & str > ,) -> Result < Option < AgentRun > , CoreError >",
                   "kind": "method",
                   "docs": null,
-                  "line": 282
+                  "line": 299
                 },
                 {
                   "name": "get",
                   "signature": "async fn get (& self , _agent_run_id : & AgentRunId) -> Result < Option < AgentRun > , CoreError >",
                   "kind": "method",
                   "docs": null,
-                  "line": 293
+                  "line": 310
                 },
                 {
                   "name": "get_for_task",
                   "signature": "async fn get_for_task (& self , _task_id : & TaskId) -> Result < Option < AgentRun > , CoreError >",
                   "kind": "method",
                   "docs": null,
-                  "line": 297
+                  "line": 314
                 }
               ],
               "impl_target": "NoopAgentRunStore",
@@ -10144,7 +10154,7 @@
               ],
               "file": "crates/eos-engine/src/background/handle.rs",
               "module": "background::handle::tests",
-              "line": 259
+              "line": 276
             },
             {
               "kind": "struct",
@@ -10170,7 +10180,7 @@
               ],
               "file": "crates/eos-engine/src/background/handle.rs",
               "module": "background::handle::tests",
-              "line": 302
+              "line": 319
             },
             {
               "kind": "impl",
@@ -10185,7 +10195,7 @@
                   "signature": "fn calls (& self) -> Vec < (SandboxId , DaemonOp , JsonObject) >",
                   "kind": "method",
                   "docs": null,
-                  "line": 308
+                  "line": 325
                 }
               ],
               "impl_target": "RecordingTransport",
@@ -10196,7 +10206,7 @@
               ],
               "file": "crates/eos-engine/src/background/handle.rs",
               "module": "background::handle::tests",
-              "line": 307
+              "line": 324
             },
             {
               "kind": "impl",
@@ -10211,7 +10221,7 @@
                   "signature": "async fn call (& self , sandbox_id : & SandboxId , op : DaemonOp , payload : JsonObject , _timeout_s : u32 ,) -> Result < JsonObject , SandboxPortError >",
                   "kind": "method",
                   "docs": null,
-                  "line": 315
+                  "line": 332
                 }
               ],
               "impl_target": "RecordingTransport",
@@ -10224,7 +10234,7 @@
               ],
               "file": "crates/eos-engine/src/background/handle.rs",
               "module": "background::handle::tests",
-              "line": 313
+              "line": 330
             },
             {
               "kind": "struct",
@@ -10249,7 +10259,7 @@
               ],
               "file": "crates/eos-engine/src/background/handle.rs",
               "module": "background::handle::tests",
-              "line": 337
+              "line": 354
             },
             {
               "kind": "impl",
@@ -10264,7 +10274,7 @@
                   "signature": "fn cancels (& self) -> Vec < (WorkflowSessionId , String) >",
                   "kind": "method",
                   "docs": null,
-                  "line": 343
+                  "line": 360
                 }
               ],
               "impl_target": "RecordingWorkflowControl",
@@ -10275,7 +10285,7 @@
               ],
               "file": "crates/eos-engine/src/background/handle.rs",
               "module": "background::handle::tests",
-              "line": 342
+              "line": 359
             },
             {
               "kind": "impl",
@@ -10294,7 +10304,7 @@
               ],
               "file": "crates/eos-engine/src/background/handle.rs",
               "module": "background::handle::tests",
-              "line": 348
+              "line": 365
             },
             {
               "kind": "impl",
@@ -10309,35 +10319,35 @@
                   "signature": "async fn start (& self , _parent_task_id : & TaskId , _agent_run_id : & AgentRunId , _workflow_goal : & str ,) -> Result < StartedWorkflowHandle , ToolError >",
                   "kind": "method",
                   "docs": null,
-                  "line": 352
+                  "line": 369
                 },
                 {
                   "name": "status",
                   "signature": "async fn status (& self , _workflow_id : & WorkflowId , _workflow_task_id : Option < & WorkflowSessionId > ,) -> Result < String , ToolError >",
                   "kind": "method",
                   "docs": null,
-                  "line": 364
+                  "line": 381
                 },
                 {
                   "name": "cancel",
                   "signature": "async fn cancel (& self , workflow_task_id : & WorkflowSessionId , reason : & str ,) -> Result < String , ToolError >",
                   "kind": "method",
                   "docs": null,
-                  "line": 372
+                  "line": 389
                 },
                 {
                   "name": "find_outstanding",
                   "signature": "async fn find_outstanding (& self , _parent_task_id : & TaskId , _agent_run_id : & AgentRunId ,) -> Result < Vec < OutstandingWorkflow > , ToolError >",
                   "kind": "method",
                   "docs": null,
-                  "line": 384
+                  "line": 401
                 },
                 {
                   "name": "workflow_depth",
                   "signature": "async fn workflow_depth (& self , _workflow_id : & WorkflowId) -> Result < u32 , ToolError >",
                   "kind": "method",
                   "docs": null,
-                  "line": 392
+                  "line": 409
                 }
               ],
               "impl_target": "RecordingWorkflowControl",
@@ -10350,7 +10360,7 @@
               ],
               "file": "crates/eos-engine/src/background/handle.rs",
               "module": "background::handle::tests",
-              "line": 350
+              "line": 367
             },
             {
               "kind": "fn",
@@ -10366,7 +10376,7 @@
               "tags": [],
               "file": "crates/eos-engine/src/background/handle.rs",
               "module": "background::handle::tests",
-              "line": 397
+              "line": 414
             },
             {
               "kind": "fn",
@@ -10385,7 +10395,7 @@
               ],
               "file": "crates/eos-engine/src/background/handle.rs",
               "module": "background::handle::tests",
-              "line": 418
+              "line": 435
             },
             {
               "kind": "fn",
@@ -10404,7 +10414,7 @@
               ],
               "file": "crates/eos-engine/src/background/handle.rs",
               "module": "background::handle::tests",
-              "line": 453
+              "line": 470
             }
           ]
         },
@@ -10725,7 +10735,7 @@
                   "name": "spawn",
                   "signature": "fn spawn (owner_agent_run_id : AgentRunId , records : Weak < Mutex < CommandSessionRecords > > , notifications : BackgroundNotificationEmitter , transport : Arc < dyn SandboxTransport > , interval : Duration ,) -> Self",
                   "kind": "associated-fn",
-                  "docs": "Spawn the heartbeat. `records` is a `Weak` to the lane's shared records — a\nstrong capture would form a cycle (task → records-owner → JoinHandle) so the\n`JoinHandle` would never drop and never abort the task.",
+                  "docs": "Spawn the heartbeat. `records` is a `Weak` to the lane's shared records — a\nstrong capture would form a cycle (task -> records-owner -> `JoinHandle`) so\nthe `JoinHandle` would never drop and never abort the task.",
                   "line": 282
                 }
               ],
@@ -10754,6 +10764,213 @@
               "file": "crates/eos-engine/src/background/lanes/command_session.rs",
               "module": "background::lanes::command_session",
               "line": 336
+            },
+            {
+              "kind": "struct",
+              "name": "RecordingTransport",
+              "visibility": "private",
+              "signature": "struct RecordingTransport",
+              "fields": [
+                {
+                  "name": "calls",
+                  "visibility": "private",
+                  "ty": "StdMutex < Vec < (DaemonOp , JsonObject) > >"
+                },
+                {
+                  "name": "collect_responses",
+                  "visibility": "private",
+                  "ty": "StdMutex < VecDeque < JsonObject > >"
+                }
+              ],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": null,
+              "tags": [
+                "derive: Debug",
+                "derive: Default",
+                "port/service"
+              ],
+              "file": "crates/eos-engine/src/background/lanes/command_session.rs",
+              "module": "background::lanes::command_session::tests",
+              "line": 367
+            },
+            {
+              "kind": "impl",
+              "name": "impl RecordingTransport",
+              "visibility": "private",
+              "signature": "impl RecordingTransport",
+              "fields": [],
+              "variants": [],
+              "methods": [
+                {
+                  "name": "with_collect",
+                  "signature": "fn with_collect (responses : impl IntoIterator < Item = JsonObject >) -> Self",
+                  "kind": "constructor",
+                  "docs": null,
+                  "line": 374
+                },
+                {
+                  "name": "ops",
+                  "signature": "fn ops (& self) -> Vec < DaemonOp >",
+                  "kind": "method",
+                  "docs": null,
+                  "line": 381
+                },
+                {
+                  "name": "payloads",
+                  "signature": "fn payloads (& self , op : DaemonOp) -> Vec < JsonObject >",
+                  "kind": "method",
+                  "docs": null,
+                  "line": 390
+                }
+              ],
+              "impl_target": "RecordingTransport",
+              "trait_name": null,
+              "docs": null,
+              "tags": [
+                "impl"
+              ],
+              "file": "crates/eos-engine/src/background/lanes/command_session.rs",
+              "module": "background::lanes::command_session::tests",
+              "line": 373
+            },
+            {
+              "kind": "impl",
+              "name": "impl SandboxTransport for RecordingTransport",
+              "visibility": "private",
+              "signature": "impl SandboxTransport for RecordingTransport",
+              "fields": [],
+              "variants": [],
+              "methods": [
+                {
+                  "name": "call",
+                  "signature": "async fn call (& self , _sandbox_id : & SandboxId , op : DaemonOp , payload : JsonObject , _timeout_s : u32 ,) -> Result < JsonObject , SandboxPortError >",
+                  "kind": "method",
+                  "docs": null,
+                  "line": 403
+                }
+              ],
+              "impl_target": "RecordingTransport",
+              "trait_name": "SandboxTransport",
+              "docs": null,
+              "tags": [
+                "async_trait",
+                "impl",
+                "trait-impl"
+              ],
+              "file": "crates/eos-engine/src/background/lanes/command_session.rs",
+              "module": "background::lanes::command_session::tests",
+              "line": 401
+            },
+            {
+              "kind": "fn",
+              "name": "completion",
+              "visibility": "private",
+              "signature": "fn completion (id : & str , status : & str , stdout : & str) -> JsonObject",
+              "fields": [],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": null,
+              "tags": [],
+              "file": "crates/eos-engine/src/background/lanes/command_session.rs",
+              "module": "background::lanes::command_session::tests",
+              "line": 424
+            },
+            {
+              "kind": "fn",
+              "name": "lane",
+              "visibility": "private",
+              "signature": "fn lane (owner : & str , notifier : & NotificationService , transport : Arc < dyn SandboxTransport > , interval : Duration ,) -> CommandSessionLane",
+              "fields": [],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": null,
+              "tags": [],
+              "file": "crates/eos-engine/src/background/lanes/command_session.rs",
+              "module": "background::lanes::command_session::tests",
+              "line": 440
+            },
+            {
+              "kind": "fn",
+              "name": "heartbeat_with_no_sessions_makes_no_rpc",
+              "visibility": "private",
+              "signature": "async fn heartbeat_with_no_sessions_makes_no_rpc ()",
+              "fields": [],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": null,
+              "tags": [
+                "async",
+                "tokio::test"
+              ],
+              "file": "crates/eos-engine/src/background/lanes/command_session.rs",
+              "module": "background::lanes::command_session::tests",
+              "line": 455
+            },
+            {
+              "kind": "fn",
+              "name": "heartbeat_polls_and_emits_into_own_notifier",
+              "visibility": "private",
+              "signature": "async fn heartbeat_polls_and_emits_into_own_notifier ()",
+              "fields": [],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": null,
+              "tags": [
+                "async",
+                "tokio::test"
+              ],
+              "file": "crates/eos-engine/src/background/lanes/command_session.rs",
+              "module": "background::lanes::command_session::tests",
+              "line": 470
+            },
+            {
+              "kind": "fn",
+              "name": "dropping_lane_aborts_heartbeat",
+              "visibility": "private",
+              "signature": "async fn dropping_lane_aborts_heartbeat ()",
+              "fields": [],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": null,
+              "tags": [
+                "async",
+                "tokio::test"
+              ],
+              "file": "crates/eos-engine/src/background/lanes/command_session.rs",
+              "module": "background::lanes::command_session::tests",
+              "line": 511
+            },
+            {
+              "kind": "fn",
+              "name": "cancel_all_issues_one_per_caller_rpc",
+              "visibility": "private",
+              "signature": "async fn cancel_all_issues_one_per_caller_rpc ()",
+              "fields": [],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": null,
+              "tags": [
+                "async",
+                "tokio::test"
+              ],
+              "file": "crates/eos-engine/src/background/lanes/command_session.rs",
+              "module": "background::lanes::command_session::tests",
+              "line": 545
             }
           ]
         },
@@ -10818,13 +11035,6 @@
                   "kind": "method",
                   "docs": "Terminal precedence; higher status wins when cancel/finish events race.",
                   "line": 31
-                },
-                {
-                  "name": "is_fresh_terminal",
-                  "signature": "pub const fn is_fresh_terminal (self) -> bool",
-                  "kind": "method",
-                  "docs": "Whether this status is a terminal, result-bearing outcome (not `Running`\nand not the already-`Delivered` latch).",
-                  "line": 43
                 }
               ],
               "impl_target": "BackgroundTaskStatus",
@@ -11179,46 +11389,39 @@
                   "line": 52
                 },
                 {
-                  "name": "get",
-                  "signature": "pub(crate) fn get (& self , workflow_task_id : & WorkflowSessionId) -> Option < & WorkflowBackgroundRecord >",
-                  "kind": "method",
-                  "docs": "Borrow a workflow record.",
-                  "line": 66
-                },
-                {
                   "name": "cancel_record",
                   "signature": "pub(crate) fn cancel_record (& mut self , workflow_task_id : & WorkflowSessionId) -> bool",
                   "kind": "method",
                   "docs": "Mark one tracked workflow cancelled in the ledger.",
-                  "line": 72
+                  "line": 66
                 },
                 {
-                  "name": "settle",
-                  "signature": "pub(crate) fn settle (& mut self , workflow_task_id : & WorkflowSessionId , status : BackgroundTaskStatus ,) -> Option < WorkflowHandle >",
+                  "name": "settle_running",
+                  "signature": "pub(crate) fn settle_running (& mut self , workflow_task_id : & WorkflowSessionId , status : BackgroundTaskStatus ,) -> Option < WorkflowHandle >",
                   "kind": "method",
-                  "docs": "Settle one workflow to a terminal status, gated by the precedence latch so a\nterminal observation does not re-open a cancelled record. Returns the handle\nwhen the transition is a fresh terminal (for completion-notification emit).",
-                  "line": 79
+                  "docs": "Settle one running workflow to a terminal status (the completion-poll path).\nOnly a still-`Running` record transitions, so a cancelled or already-settled\nrecord is never re-opened. Returns the handle on the fresh transition so the\npoll can emit exactly one completion.",
+                  "line": 73
                 },
                 {
-                  "name": "mark_delivered",
-                  "signature": "pub(crate) fn mark_delivered (& mut self , workflow_task_id : & WorkflowSessionId)",
+                  "name": "running_handles",
+                  "signature": "pub(crate) fn running_handles (& self) -> Vec < WorkflowHandle >",
                   "kind": "method",
-                  "docs": "Latch a workflow to `Delivered` after its completion notification is sent\n(exactly-once).",
-                  "line": 96
+                  "docs": "Running workflow handles (both ids), used by the completion poll to query\nstatus through [`WorkflowControlPort`](eos_tools::WorkflowControlPort).",
+                  "line": 91
                 },
                 {
                   "name": "running_ids",
                   "signature": "pub(crate) fn running_ids (& self) -> Vec < WorkflowSessionId >",
                   "kind": "method",
-                  "docs": "Running workflow handle ids, used by parent-exit cleanup and the completion\npoll.",
-                  "line": 104
+                  "docs": "Running workflow handle ids, used by parent-exit cleanup.",
+                  "line": 102
                 },
                 {
                   "name": "count_running",
                   "signature": "pub(crate) fn count_running (& self) -> usize",
                   "kind": "method",
                   "docs": "Count still-running workflows.",
-                  "line": 115
+                  "line": 112
                 }
               ],
               "impl_target": "WorkflowLane",
@@ -11239,8 +11442,8 @@
           "items": []
         },
         {
-          "path": "crates/eos-engine/src/background/notifications.rs",
-          "module": "background::notifications",
+          "path": "crates/eos-engine/src/background/notification.rs",
+          "module": "background::notification",
           "items": [
             {
               "kind": "enum",
@@ -11260,7 +11463,7 @@
                     {
                       "name": "status",
                       "visibility": "private",
-                      "ty": "BackgroundTaskStatus"
+                      "ty": "BackgroundSessionStatus"
                     },
                     {
                       "name": "result",
@@ -11285,7 +11488,7 @@
                     {
                       "name": "status",
                       "visibility": "private",
-                      "ty": "BackgroundTaskStatus"
+                      "ty": "BackgroundSessionStatus"
                     }
                   ]
                 },
@@ -11305,7 +11508,7 @@
                     {
                       "name": "status",
                       "visibility": "private",
-                      "ty": "BackgroundTaskStatus"
+                      "ty": "BackgroundSessionStatus"
                     },
                     {
                       "name": "result",
@@ -11323,8 +11526,8 @@
                 "derive: Clone",
                 "derive: Debug"
               ],
-              "file": "crates/eos-engine/src/background/notifications.rs",
-              "module": "background::notifications",
+              "file": "crates/eos-engine/src/background/notification.rs",
+              "module": "background::notification",
               "line": 21
             },
             {
@@ -11356,15 +11559,15 @@
               "tags": [
                 "impl"
               ],
-              "file": "crates/eos-engine/src/background/notifications.rs",
-              "module": "background::notifications",
+              "file": "crates/eos-engine/src/background/notification.rs",
+              "module": "background::notification",
               "line": 55
             },
             {
               "kind": "fn",
               "name": "status_token",
               "visibility": "private",
-              "signature": "fn status_token (status : BackgroundTaskStatus) -> & 'static str",
+              "signature": "fn status_token (status : BackgroundSessionStatus) -> & 'static str",
               "fields": [],
               "variants": [],
               "methods": [],
@@ -11372,8 +11575,8 @@
               "trait_name": null,
               "docs": null,
               "tags": [],
-              "file": "crates/eos-engine/src/background/notifications.rs",
-              "module": "background::notifications",
+              "file": "crates/eos-engine/src/background/notification.rs",
+              "module": "background::notification",
               "line": 123
             },
             {
@@ -11398,8 +11601,8 @@
                 "derive: Debug",
                 "derive: Default"
               ],
-              "file": "crates/eos-engine/src/background/notifications.rs",
-              "module": "background::notifications",
+              "file": "crates/eos-engine/src/background/notification.rs",
+              "module": "background::notification",
               "line": 133
             },
             {
@@ -11438,8 +11641,8 @@
               "tags": [
                 "impl"
               ],
-              "file": "crates/eos-engine/src/background/notifications.rs",
-              "module": "background::notifications",
+              "file": "crates/eos-engine/src/background/notification.rs",
+              "module": "background::notification",
               "line": 139
             },
             {
@@ -11457,8 +11660,8 @@
                 "async",
                 "tokio::test"
               ],
-              "file": "crates/eos-engine/src/background/notifications.rs",
-              "module": "background::notifications::tests",
+              "file": "crates/eos-engine/src/background/notification.rs",
+              "module": "background::notification::tests",
               "line": 170
             }
           ]
@@ -11736,6 +11939,2437 @@
               "file": "crates/eos-engine/src/background/parent_exit.rs",
               "module": "background::parent_exit::tests",
               "line": 177
+            }
+          ]
+        },
+        {
+          "path": "crates/eos-engine/src/background/session_managers/command/manager.rs",
+          "module": "background::session_managers::command::manager",
+          "items": [
+            {
+              "kind": "type",
+              "name": "CommandSessions",
+              "visibility": "private",
+              "signature": "type CommandSessions = HashMap < CommandSessionId , CommandSession >",
+              "fields": [],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": null,
+              "tags": [],
+              "file": "crates/eos-engine/src/background/session_managers/command/manager.rs",
+              "module": "background::session_managers::command::manager",
+              "line": 16
+            },
+            {
+              "kind": "struct",
+              "name": "CommandCompletion",
+              "visibility": "pub(crate :: background)",
+              "signature": "pub(crate :: background) struct CommandCompletion",
+              "fields": [
+                {
+                  "name": "command_session_id",
+                  "visibility": "pub(super)",
+                  "ty": "CommandSessionId"
+                },
+                {
+                  "name": "sandbox_id",
+                  "visibility": "pub(super)",
+                  "ty": "SandboxId"
+                },
+                {
+                  "name": "status",
+                  "visibility": "pub(super)",
+                  "ty": "BackgroundSessionStatus"
+                },
+                {
+                  "name": "result",
+                  "visibility": "pub(super)",
+                  "ty": "Value"
+                }
+              ],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": null,
+              "tags": [
+                "derive: Clone",
+                "derive: Debug"
+              ],
+              "file": "crates/eos-engine/src/background/session_managers/command/manager.rs",
+              "module": "background::session_managers::command::manager",
+              "line": 18
+            },
+            {
+              "kind": "struct",
+              "name": "CommandSessionManager",
+              "visibility": "pub(crate :: background)",
+              "signature": "pub(crate :: background) struct CommandSessionManager",
+              "fields": [
+                {
+                  "name": "sessions",
+                  "visibility": "private",
+                  "ty": "Arc < Mutex < CommandSessions > >"
+                },
+                {
+                  "name": "agent_run_id",
+                  "visibility": "private",
+                  "ty": "AgentRunId"
+                },
+                {
+                  "name": "command_port",
+                  "visibility": "private",
+                  "ty": "Arc < dyn SandboxTransport >"
+                },
+                {
+                  "name": "notification",
+                  "visibility": "private",
+                  "ty": "BackgroundNotificationEmitter"
+                }
+              ],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": "Tracks sandbox command sessions for one agent run.",
+              "tags": [
+                "derive: Clone"
+              ],
+              "file": "crates/eos-engine/src/background/session_managers/command/manager.rs",
+              "module": "background::session_managers::command::manager",
+              "line": 26
+            },
+            {
+              "kind": "impl",
+              "name": "impl std :: fmt :: Debug for CommandSessionManager",
+              "visibility": "private",
+              "signature": "impl std :: fmt :: Debug for CommandSessionManager",
+              "fields": [],
+              "variants": [],
+              "methods": [
+                {
+                  "name": "fmt",
+                  "signature": "fn fmt (& self , f : & mut std :: fmt :: Formatter < '_ >) -> std :: fmt :: Result",
+                  "kind": "method",
+                  "docs": null,
+                  "line": 36
+                }
+              ],
+              "impl_target": "CommandSessionManager",
+              "trait_name": "std :: fmt :: Debug",
+              "docs": null,
+              "tags": [
+                "impl",
+                "trait-impl"
+              ],
+              "file": "crates/eos-engine/src/background/session_managers/command/manager.rs",
+              "module": "background::session_managers::command::manager",
+              "line": 35
+            },
+            {
+              "kind": "impl",
+              "name": "impl CommandSessionManager",
+              "visibility": "private",
+              "signature": "impl CommandSessionManager",
+              "fields": [],
+              "variants": [],
+              "methods": [
+                {
+                  "name": "new",
+                  "signature": "pub(super) fn new (agent_run_id : AgentRunId , command_port : Arc < dyn SandboxTransport > , notification : BackgroundNotificationEmitter ,) -> Self",
+                  "kind": "constructor",
+                  "docs": null,
+                  "line": 44
+                },
+                {
+                  "name": "register",
+                  "signature": "pub(super) async fn register (& self , command_session_id : & CommandSessionId , sandbox_id : & SandboxId , command : & str ,)",
+                  "kind": "method",
+                  "docs": null,
+                  "line": 57
+                },
+                {
+                  "name": "command_session_result",
+                  "signature": "pub(super) async fn command_session_result (& self , command_session_id : & CommandSessionId ,) -> Option < Value >",
+                  "kind": "method",
+                  "docs": null,
+                  "line": 75
+                },
+                {
+                  "name": "mark_command_session_reported",
+                  "signature": "pub(super) async fn mark_command_session_reported (& self , command_session_id : & CommandSessionId , result : Value ,)",
+                  "kind": "method",
+                  "docs": null,
+                  "line": 87
+                },
+                {
+                  "name": "command_session_already_reported",
+                  "signature": "pub(super) async fn command_session_already_reported (& self , command_session_id : & CommandSessionId ,) -> bool",
+                  "kind": "method",
+                  "docs": null,
+                  "line": 97
+                },
+                {
+                  "name": "running_by_sandbox",
+                  "signature": "fn running_by_sandbox (sessions : & CommandSessions) -> Vec < (SandboxId , Vec < String >) >",
+                  "kind": "associated-fn",
+                  "docs": null,
+                  "line": 108
+                },
+                {
+                  "name": "running_sandboxes",
+                  "signature": "fn running_sandboxes (sessions : & CommandSessions) -> Vec < SandboxId >",
+                  "kind": "associated-fn",
+                  "docs": null,
+                  "line": 121
+                },
+                {
+                  "name": "ingest_completions",
+                  "signature": "fn ingest_completions (sessions : & mut CommandSessions , completions : & [eos_types :: JsonObject] ,) -> Vec < CommandCompletion >",
+                  "kind": "associated-fn",
+                  "docs": null,
+                  "line": 131
+                }
+              ],
+              "impl_target": "CommandSessionManager",
+              "trait_name": null,
+              "docs": null,
+              "tags": [
+                "impl"
+              ],
+              "file": "crates/eos-engine/src/background/session_managers/command/manager.rs",
+              "module": "background::session_managers::command::manager",
+              "line": 43
+            },
+            {
+              "kind": "impl",
+              "name": "impl BackgroundSessionManager for CommandSessionManager",
+              "visibility": "private",
+              "signature": "impl BackgroundSessionManager for CommandSessionManager",
+              "fields": [],
+              "variants": [],
+              "methods": [
+                {
+                  "name": "insert",
+                  "signature": "async fn insert (& self , session : Self :: Session)",
+                  "kind": "method",
+                  "docs": null,
+                  "line": 168
+                },
+                {
+                  "name": "count",
+                  "signature": "async fn count (& self) -> usize",
+                  "kind": "method",
+                  "docs": null,
+                  "line": 175
+                },
+                {
+                  "name": "poll",
+                  "signature": "async fn poll (& self) -> Vec < Self :: Completion >",
+                  "kind": "method",
+                  "docs": null,
+                  "line": 184
+                },
+                {
+                  "name": "finish",
+                  "signature": "async fn finish (& self , completion : Self :: Completion)",
+                  "kind": "method",
+                  "docs": null,
+                  "line": 210
+                },
+                {
+                  "name": "cancel",
+                  "signature": "async fn cancel (& self , reason : & str)",
+                  "kind": "method",
+                  "docs": null,
+                  "line": 222
+                }
+              ],
+              "impl_target": "CommandSessionManager",
+              "trait_name": "BackgroundSessionManager",
+              "docs": null,
+              "tags": [
+                "async_trait",
+                "impl",
+                "trait-impl"
+              ],
+              "file": "crates/eos-engine/src/background/session_managers/command/manager.rs",
+              "module": "background::session_managers::command::manager",
+              "line": 163
+            },
+            {
+              "kind": "struct",
+              "name": "RecordingTransport",
+              "visibility": "private",
+              "signature": "struct RecordingTransport",
+              "fields": [
+                {
+                  "name": "calls",
+                  "visibility": "private",
+                  "ty": "StdMutex < Vec < (DaemonOp , JsonObject) > >"
+                },
+                {
+                  "name": "collect_responses",
+                  "visibility": "private",
+                  "ty": "StdMutex < VecDeque < JsonObject > >"
+                }
+              ],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": null,
+              "tags": [
+                "derive: Debug",
+                "derive: Default",
+                "port/service"
+              ],
+              "file": "crates/eos-engine/src/background/session_managers/command/manager.rs",
+              "module": "background::session_managers::command::manager::tests",
+              "line": 268
+            },
+            {
+              "kind": "impl",
+              "name": "impl RecordingTransport",
+              "visibility": "private",
+              "signature": "impl RecordingTransport",
+              "fields": [],
+              "variants": [],
+              "methods": [
+                {
+                  "name": "with_collect",
+                  "signature": "fn with_collect (responses : impl IntoIterator < Item = JsonObject >) -> Self",
+                  "kind": "constructor",
+                  "docs": null,
+                  "line": 275
+                },
+                {
+                  "name": "payloads",
+                  "signature": "fn payloads (& self , op : DaemonOp) -> Vec < JsonObject >",
+                  "kind": "method",
+                  "docs": null,
+                  "line": 282
+                }
+              ],
+              "impl_target": "RecordingTransport",
+              "trait_name": null,
+              "docs": null,
+              "tags": [
+                "impl"
+              ],
+              "file": "crates/eos-engine/src/background/session_managers/command/manager.rs",
+              "module": "background::session_managers::command::manager::tests",
+              "line": 274
+            },
+            {
+              "kind": "impl",
+              "name": "impl SandboxTransport for RecordingTransport",
+              "visibility": "private",
+              "signature": "impl SandboxTransport for RecordingTransport",
+              "fields": [],
+              "variants": [],
+              "methods": [
+                {
+                  "name": "call",
+                  "signature": "async fn call (& self , _sandbox_id : & SandboxId , op : DaemonOp , payload : JsonObject , _timeout_s : u32 ,) -> Result < JsonObject , SandboxPortError >",
+                  "kind": "method",
+                  "docs": null,
+                  "line": 295
+                }
+              ],
+              "impl_target": "RecordingTransport",
+              "trait_name": "SandboxTransport",
+              "docs": null,
+              "tags": [
+                "async_trait",
+                "impl",
+                "trait-impl"
+              ],
+              "file": "crates/eos-engine/src/background/session_managers/command/manager.rs",
+              "module": "background::session_managers::command::manager::tests",
+              "line": 293
+            },
+            {
+              "kind": "fn",
+              "name": "completion",
+              "visibility": "private",
+              "signature": "fn completion (id : & str , status : & str , stdout : & str) -> JsonObject",
+              "fields": [],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": null,
+              "tags": [],
+              "file": "crates/eos-engine/src/background/session_managers/command/manager.rs",
+              "module": "background::session_managers::command::manager::tests",
+              "line": 316
+            },
+            {
+              "kind": "fn",
+              "name": "manager",
+              "visibility": "private",
+              "signature": "fn manager (owner : & str , notifier : & NotificationService , transport : Arc < dyn SandboxTransport > ,) -> CommandSessionManager",
+              "fields": [],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": null,
+              "tags": [],
+              "file": "crates/eos-engine/src/background/session_managers/command/manager.rs",
+              "module": "background::session_managers::command::manager::tests",
+              "line": 332
+            },
+            {
+              "kind": "fn",
+              "name": "monitor_polls_and_emits_into_own_notifier",
+              "visibility": "private",
+              "signature": "async fn monitor_polls_and_emits_into_own_notifier ()",
+              "fields": [],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": null,
+              "tags": [
+                "async",
+                "tokio::test"
+              ],
+              "file": "crates/eos-engine/src/background/session_managers/command/manager.rs",
+              "module": "background::session_managers::command::manager::tests",
+              "line": 344
+            },
+            {
+              "kind": "fn",
+              "name": "cancel_issues_one_per_caller_rpc",
+              "visibility": "private",
+              "signature": "async fn cancel_issues_one_per_caller_rpc ()",
+              "fields": [],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": null,
+              "tags": [
+                "async",
+                "tokio::test"
+              ],
+              "file": "crates/eos-engine/src/background/session_managers/command/manager.rs",
+              "module": "background::session_managers::command::manager::tests",
+              "line": 384
+            }
+          ]
+        },
+        {
+          "path": "crates/eos-engine/src/background/session_managers/command/mod.rs",
+          "module": "background::session_managers::command",
+          "items": []
+        },
+        {
+          "path": "crates/eos-engine/src/background/session_managers/command/monitor.rs",
+          "module": "background::session_managers::command::monitor",
+          "items": [
+            {
+              "kind": "struct",
+              "name": "CommandSessionMonitor",
+              "visibility": "pub(crate :: background)",
+              "signature": "pub(crate :: background) struct CommandSessionMonitor",
+              "fields": [
+                {
+                  "name": "join",
+                  "visibility": "private",
+                  "ty": "JoinHandle < () >"
+                }
+              ],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": "Polls command sessions through the shared monitor loop.",
+              "tags": [],
+              "file": "crates/eos-engine/src/background/session_managers/command/monitor.rs",
+              "module": "background::session_managers::command::monitor",
+              "line": 8
+            },
+            {
+              "kind": "impl",
+              "name": "impl Drop for CommandSessionMonitor",
+              "visibility": "private",
+              "signature": "impl Drop for CommandSessionMonitor",
+              "fields": [],
+              "variants": [],
+              "methods": [
+                {
+                  "name": "drop",
+                  "signature": "fn drop (& mut self)",
+                  "kind": "method",
+                  "docs": null,
+                  "line": 14
+                }
+              ],
+              "impl_target": "CommandSessionMonitor",
+              "trait_name": "Drop",
+              "docs": null,
+              "tags": [
+                "impl",
+                "trait-impl"
+              ],
+              "file": "crates/eos-engine/src/background/session_managers/command/monitor.rs",
+              "module": "background::session_managers::command::monitor",
+              "line": 13
+            },
+            {
+              "kind": "impl",
+              "name": "impl BackgroundSessionMonitor for CommandSessionMonitor",
+              "visibility": "private",
+              "signature": "impl BackgroundSessionMonitor for CommandSessionMonitor",
+              "fields": [],
+              "variants": [],
+              "methods": [
+                {
+                  "name": "spawn",
+                  "signature": "fn spawn (manager : Self :: Manager , interval : Duration) -> Self",
+                  "kind": "associated-fn",
+                  "docs": null,
+                  "line": 22
+                }
+              ],
+              "impl_target": "CommandSessionMonitor",
+              "trait_name": "BackgroundSessionMonitor",
+              "docs": null,
+              "tags": [
+                "impl",
+                "trait-impl"
+              ],
+              "file": "crates/eos-engine/src/background/session_managers/command/monitor.rs",
+              "module": "background::session_managers::command::monitor",
+              "line": 19
+            }
+          ]
+        },
+        {
+          "path": "crates/eos-engine/src/background/session_managers/command/session.rs",
+          "module": "background::session_managers::command::session",
+          "items": [
+            {
+              "kind": "struct",
+              "name": "CommandSession",
+              "visibility": "pub(super)",
+              "signature": "pub(super) struct CommandSession",
+              "fields": [
+                {
+                  "name": "id",
+                  "visibility": "private",
+                  "ty": "CommandSessionId"
+                },
+                {
+                  "name": "sandbox_id",
+                  "visibility": "private",
+                  "ty": "SandboxId"
+                },
+                {
+                  "name": "command",
+                  "visibility": "private",
+                  "ty": "String"
+                },
+                {
+                  "name": "status",
+                  "visibility": "private",
+                  "ty": "BackgroundSessionStatus"
+                },
+                {
+                  "name": "result",
+                  "visibility": "private",
+                  "ty": "Option < Value >"
+                }
+              ],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": "One tracked background command session.",
+              "tags": [
+                "derive: Clone",
+                "derive: Debug"
+              ],
+              "file": "crates/eos-engine/src/background/session_managers/command/session.rs",
+              "module": "background::session_managers::command::session",
+              "line": 6
+            },
+            {
+              "kind": "impl",
+              "name": "impl CommandSession",
+              "visibility": "private",
+              "signature": "impl CommandSession",
+              "fields": [],
+              "variants": [],
+              "methods": [
+                {
+                  "name": "running",
+                  "signature": "pub(super) fn running (id : CommandSessionId , sandbox_id : SandboxId , command : String) -> Self",
+                  "kind": "associated-fn",
+                  "docs": null,
+                  "line": 17
+                },
+                {
+                  "name": "sandbox_id",
+                  "signature": "pub(super) fn sandbox_id (& self) -> & SandboxId",
+                  "kind": "method",
+                  "docs": null,
+                  "line": 27
+                },
+                {
+                  "name": "command",
+                  "signature": "pub(super) fn command (& self) -> & str",
+                  "kind": "method",
+                  "docs": null,
+                  "line": 31
+                },
+                {
+                  "name": "status",
+                  "signature": "pub(super) const fn status (& self) -> BackgroundSessionStatus",
+                  "kind": "method",
+                  "docs": null,
+                  "line": 35
+                },
+                {
+                  "name": "result",
+                  "signature": "pub(super) fn result (& self) -> Option < & Value >",
+                  "kind": "method",
+                  "docs": null,
+                  "line": 39
+                },
+                {
+                  "name": "deliver",
+                  "signature": "pub(super) fn deliver (& mut self , result : Value) -> BackgroundSessionStatus",
+                  "kind": "method",
+                  "docs": null,
+                  "line": 43
+                },
+                {
+                  "name": "mark_reported",
+                  "signature": "pub(super) fn mark_reported (& mut self , result : Value)",
+                  "kind": "method",
+                  "docs": null,
+                  "line": 50
+                },
+                {
+                  "name": "cancel",
+                  "signature": "pub(super) fn cancel (& mut self)",
+                  "kind": "method",
+                  "docs": null,
+                  "line": 55
+                }
+              ],
+              "impl_target": "CommandSession",
+              "trait_name": null,
+              "docs": null,
+              "tags": [
+                "impl"
+              ],
+              "file": "crates/eos-engine/src/background/session_managers/command/session.rs",
+              "module": "background::session_managers::command::session",
+              "line": 16
+            },
+            {
+              "kind": "impl",
+              "name": "impl BackgroundSession for CommandSession",
+              "visibility": "private",
+              "signature": "impl BackgroundSession for CommandSession",
+              "fields": [],
+              "variants": [],
+              "methods": [
+                {
+                  "name": "id",
+                  "signature": "fn id (& self) -> & Self :: Id",
+                  "kind": "method",
+                  "docs": null,
+                  "line": 70
+                }
+              ],
+              "impl_target": "CommandSession",
+              "trait_name": "BackgroundSession",
+              "docs": null,
+              "tags": [
+                "impl",
+                "trait-impl"
+              ],
+              "file": "crates/eos-engine/src/background/session_managers/command/session.rs",
+              "module": "background::session_managers::command::session",
+              "line": 67
+            },
+            {
+              "kind": "fn",
+              "name": "command_completion_status",
+              "visibility": "private",
+              "signature": "fn command_completion_status (result : Option < & Value >) -> BackgroundSessionStatus",
+              "fields": [],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": null,
+              "tags": [],
+              "file": "crates/eos-engine/src/background/session_managers/command/session.rs",
+              "module": "background::session_managers::command::session",
+              "line": 75
+            }
+          ]
+        },
+        {
+          "path": "crates/eos-engine/src/background/session_managers/mod.rs",
+          "module": "background::session_managers",
+          "items": [
+            {
+              "kind": "enum",
+              "name": "BackgroundSessionStatus",
+              "visibility": "pub",
+              "signature": "pub enum BackgroundSessionStatus",
+              "fields": [],
+              "variants": [
+                {
+                  "name": "Running",
+                  "fields": []
+                },
+                {
+                  "name": "Completed",
+                  "fields": []
+                },
+                {
+                  "name": "Failed",
+                  "fields": []
+                },
+                {
+                  "name": "Cancelled",
+                  "fields": []
+                },
+                {
+                  "name": "Delivered",
+                  "fields": []
+                }
+              ],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": "Lifecycle status for one tracked background session.",
+              "tags": [
+                "derive: Clone",
+                "derive: Copy",
+                "derive: Debug",
+                "derive: Eq",
+                "derive: PartialEq"
+              ],
+              "file": "crates/eos-engine/src/background/session_managers/mod.rs",
+              "module": "background::session_managers",
+              "line": 13
+            },
+            {
+              "kind": "impl",
+              "name": "impl BackgroundSessionStatus",
+              "visibility": "private",
+              "signature": "impl BackgroundSessionStatus",
+              "fields": [],
+              "variants": [],
+              "methods": [
+                {
+                  "name": "precedence",
+                  "signature": "pub const fn precedence (self) -> u8",
+                  "kind": "method",
+                  "docs": "Terminal precedence; higher status wins when cancel/finish events race.",
+                  "line": 29
+                }
+              ],
+              "impl_target": "BackgroundSessionStatus",
+              "trait_name": null,
+              "docs": null,
+              "tags": [
+                "impl"
+              ],
+              "file": "crates/eos-engine/src/background/session_managers/mod.rs",
+              "module": "background::session_managers",
+              "line": 28
+            },
+            {
+              "kind": "trait",
+              "name": "BackgroundSession",
+              "visibility": "pub(super)",
+              "signature": "pub(super) trait BackgroundSession",
+              "fields": [],
+              "variants": [],
+              "methods": [
+                {
+                  "name": "id",
+                  "signature": "fn id (& self) -> & Self :: Id",
+                  "kind": "required",
+                  "docs": null,
+                  "line": 45
+                }
+              ],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": null,
+              "tags": [],
+              "file": "crates/eos-engine/src/background/session_managers/mod.rs",
+              "module": "background::session_managers",
+              "line": 42
+            },
+            {
+              "kind": "trait",
+              "name": "BackgroundSessionManager",
+              "visibility": "pub(super)",
+              "signature": "pub(super) trait BackgroundSessionManager",
+              "fields": [],
+              "variants": [],
+              "methods": [
+                {
+                  "name": "insert",
+                  "signature": "async fn insert (& self , session : Self :: Session)",
+                  "kind": "required",
+                  "docs": null,
+                  "line": 53
+                },
+                {
+                  "name": "count",
+                  "signature": "async fn count (& self) -> usize",
+                  "kind": "required",
+                  "docs": null,
+                  "line": 54
+                },
+                {
+                  "name": "poll",
+                  "signature": "async fn poll (& self) -> Vec < Self :: Completion >",
+                  "kind": "required",
+                  "docs": null,
+                  "line": 55
+                },
+                {
+                  "name": "finish",
+                  "signature": "async fn finish (& self , completion : Self :: Completion)",
+                  "kind": "required",
+                  "docs": null,
+                  "line": 56
+                },
+                {
+                  "name": "cancel",
+                  "signature": "async fn cancel (& self , reason : & str)",
+                  "kind": "required",
+                  "docs": null,
+                  "line": 57
+                }
+              ],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": null,
+              "tags": [
+                "async_trait"
+              ],
+              "file": "crates/eos-engine/src/background/session_managers/mod.rs",
+              "module": "background::session_managers",
+              "line": 48
+            },
+            {
+              "kind": "trait",
+              "name": "BackgroundSessionMonitor",
+              "visibility": "pub(super)",
+              "signature": "pub(super) trait BackgroundSessionMonitor",
+              "fields": [],
+              "variants": [],
+              "methods": [
+                {
+                  "name": "spawn",
+                  "signature": "fn spawn (manager : Self :: Manager , interval : Duration) -> Self",
+                  "kind": "required",
+                  "docs": null,
+                  "line": 63
+                }
+              ],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": null,
+              "tags": [],
+              "file": "crates/eos-engine/src/background/session_managers/mod.rs",
+              "module": "background::session_managers",
+              "line": 60
+            },
+            {
+              "kind": "fn",
+              "name": "spawn_monitor_loop",
+              "visibility": "pub(super)",
+              "signature": "pub(super) fn spawn_monitor_loop < M > (manager : M , interval : Duration) -> JoinHandle < () > where M : BackgroundSessionManager + Clone + Send + Sync + 'static , M :: Completion : Send + 'static ,",
+              "fields": [],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": null,
+              "tags": [],
+              "file": "crates/eos-engine/src/background/session_managers/mod.rs",
+              "module": "background::session_managers",
+              "line": 66
+            }
+          ]
+        },
+        {
+          "path": "crates/eos-engine/src/background/session_managers/subagent/manager.rs",
+          "module": "background::session_managers::subagent::manager",
+          "items": [
+            {
+              "kind": "struct",
+              "name": "SubagentCompletion",
+              "visibility": "pub(crate :: background)",
+              "signature": "pub(crate :: background) struct SubagentCompletion",
+              "fields": [
+                {
+                  "name": "subagent_session_id",
+                  "visibility": "pub(super)",
+                  "ty": "SubagentSessionId"
+                },
+                {
+                  "name": "status",
+                  "visibility": "pub(super)",
+                  "ty": "BackgroundSessionStatus"
+                },
+                {
+                  "name": "result",
+                  "visibility": "pub(super)",
+                  "ty": "ToolResult"
+                }
+              ],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": null,
+              "tags": [
+                "derive: Clone",
+                "derive: Debug"
+              ],
+              "file": "crates/eos-engine/src/background/session_managers/subagent/manager.rs",
+              "module": "background::session_managers::subagent::manager",
+              "line": 25
+            },
+            {
+              "kind": "struct",
+              "name": "SubagentProgressSnapshot",
+              "visibility": "pub(crate :: background)",
+              "signature": "pub(crate :: background) struct SubagentProgressSnapshot",
+              "fields": [
+                {
+                  "name": "status",
+                  "visibility": "pub(crate :: background)",
+                  "ty": "BackgroundSessionStatus"
+                },
+                {
+                  "name": "result",
+                  "visibility": "pub(crate :: background)",
+                  "ty": "Option < ToolResult >"
+                },
+                {
+                  "name": "agent_name",
+                  "visibility": "pub(crate :: background)",
+                  "ty": "String"
+                }
+              ],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": null,
+              "tags": [
+                "derive: Clone",
+                "derive: Debug"
+              ],
+              "file": "crates/eos-engine/src/background/session_managers/subagent/manager.rs",
+              "module": "background::session_managers::subagent::manager",
+              "line": 32
+            },
+            {
+              "kind": "struct",
+              "name": "SubagentSessionState",
+              "visibility": "private",
+              "signature": "struct SubagentSessionState",
+              "fields": [
+                {
+                  "name": "next_session_seq",
+                  "visibility": "private",
+                  "ty": "u64"
+                },
+                {
+                  "name": "sessions",
+                  "visibility": "private",
+                  "ty": "HashMap < SubagentSessionId , SubagentSession >"
+                }
+              ],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": null,
+              "tags": [
+                "derive: Default"
+              ],
+              "file": "crates/eos-engine/src/background/session_managers/subagent/manager.rs",
+              "module": "background::session_managers::subagent::manager",
+              "line": 39
+            },
+            {
+              "kind": "struct",
+              "name": "SubagentSessionManager",
+              "visibility": "pub(crate :: background)",
+              "signature": "pub(crate :: background) struct SubagentSessionManager",
+              "fields": [
+                {
+                  "name": "sessions",
+                  "visibility": "private",
+                  "ty": "Arc < Mutex < SubagentSessionState > >"
+                },
+                {
+                  "name": "handles",
+                  "visibility": "private",
+                  "ty": "EngineRunHandles"
+                },
+                {
+                  "name": "control_factory",
+                  "visibility": "private",
+                  "ty": "AgentRunControlFactory"
+                },
+                {
+                  "name": "notification",
+                  "visibility": "private",
+                  "ty": "BackgroundNotificationEmitter"
+                }
+              ],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": "Tracks subagent background sessions for one agent run.",
+              "tags": [
+                "derive: Clone"
+              ],
+              "file": "crates/eos-engine/src/background/session_managers/subagent/manager.rs",
+              "module": "background::session_managers::subagent::manager",
+              "line": 45
+            },
+            {
+              "kind": "impl",
+              "name": "impl std :: fmt :: Debug for SubagentSessionManager",
+              "visibility": "private",
+              "signature": "impl std :: fmt :: Debug for SubagentSessionManager",
+              "fields": [],
+              "variants": [],
+              "methods": [
+                {
+                  "name": "fmt",
+                  "signature": "fn fmt (& self , f : & mut std :: fmt :: Formatter < '_ >) -> std :: fmt :: Result",
+                  "kind": "method",
+                  "docs": null,
+                  "line": 55
+                }
+              ],
+              "impl_target": "SubagentSessionManager",
+              "trait_name": "std :: fmt :: Debug",
+              "docs": null,
+              "tags": [
+                "impl",
+                "trait-impl"
+              ],
+              "file": "crates/eos-engine/src/background/session_managers/subagent/manager.rs",
+              "module": "background::session_managers::subagent::manager",
+              "line": 54
+            },
+            {
+              "kind": "impl",
+              "name": "impl SubagentSessionManager",
+              "visibility": "private",
+              "signature": "impl SubagentSessionManager",
+              "fields": [],
+              "variants": [],
+              "methods": [
+                {
+                  "name": "new",
+                  "signature": "pub(crate :: background) fn new (handles : EngineRunHandles , control_factory : AgentRunControlFactory , notification : BackgroundNotificationEmitter ,) -> Self",
+                  "kind": "constructor",
+                  "docs": null,
+                  "line": 62
+                },
+                {
+                  "name": "spawn",
+                  "signature": "pub(crate :: background) async fn spawn (& self , ctx : & ExecutionMetadata , agent_name : & str , prompt : & str ,) -> Result < SpawnedSubagent , ToolError >",
+                  "kind": "method",
+                  "docs": null,
+                  "line": 75
+                },
+                {
+                  "name": "progress_snapshot",
+                  "signature": "pub(crate :: background) async fn progress_snapshot (& self , subagent_session_id : & SubagentSessionId ,) -> Option < SubagentProgressSnapshot >",
+                  "kind": "method",
+                  "docs": null,
+                  "line": 190
+                },
+                {
+                  "name": "cancel_one",
+                  "signature": "pub(crate :: background) async fn cancel_one (& self , subagent_session_id : & SubagentSessionId , reason : & str ,) -> bool",
+                  "kind": "method",
+                  "docs": null,
+                  "line": 209
+                },
+                {
+                  "name": "next_session_id",
+                  "signature": "async fn next_session_id (& self) -> SubagentSessionId",
+                  "kind": "method",
+                  "docs": null,
+                  "line": 221
+                },
+                {
+                  "name": "settle",
+                  "signature": "pub(super) async fn settle (& self , subagent_session_id : & SubagentSessionId , status : BackgroundSessionStatus , result : ToolResult ,) -> Option < SubagentCompletion >",
+                  "kind": "method",
+                  "docs": null,
+                  "line": 230
+                }
+              ],
+              "impl_target": "SubagentSessionManager",
+              "trait_name": null,
+              "docs": null,
+              "tags": [
+                "impl"
+              ],
+              "file": "crates/eos-engine/src/background/session_managers/subagent/manager.rs",
+              "module": "background::session_managers::subagent::manager",
+              "line": 61
+            },
+            {
+              "kind": "impl",
+              "name": "impl BackgroundSessionManager for SubagentSessionManager",
+              "visibility": "private",
+              "signature": "impl BackgroundSessionManager for SubagentSessionManager",
+              "fields": [],
+              "variants": [],
+              "methods": [
+                {
+                  "name": "insert",
+                  "signature": "async fn insert (& self , session : Self :: Session)",
+                  "kind": "method",
+                  "docs": null,
+                  "line": 252
+                },
+                {
+                  "name": "count",
+                  "signature": "async fn count (& self) -> usize",
+                  "kind": "method",
+                  "docs": null,
+                  "line": 260
+                },
+                {
+                  "name": "poll",
+                  "signature": "async fn poll (& self) -> Vec < Self :: Completion >",
+                  "kind": "method",
+                  "docs": null,
+                  "line": 270
+                },
+                {
+                  "name": "finish",
+                  "signature": "async fn finish (& self , completion : Self :: Completion)",
+                  "kind": "method",
+                  "docs": null,
+                  "line": 274
+                },
+                {
+                  "name": "cancel",
+                  "signature": "async fn cancel (& self , reason : & str)",
+                  "kind": "method",
+                  "docs": null,
+                  "line": 285
+                }
+              ],
+              "impl_target": "SubagentSessionManager",
+              "trait_name": "BackgroundSessionManager",
+              "docs": null,
+              "tags": [
+                "async_trait",
+                "impl",
+                "trait-impl"
+              ],
+              "file": "crates/eos-engine/src/background/session_managers/subagent/manager.rs",
+              "module": "background::session_managers::subagent::manager",
+              "line": 247
+            },
+            {
+              "kind": "fn",
+              "name": "build_explorer_launch_prompt",
+              "visibility": "private",
+              "signature": "fn build_explorer_launch_prompt () -> String",
+              "fields": [],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": "Port of `explorer_guidance.py::build_explorer_launch_prompt`.",
+              "tags": [],
+              "file": "crates/eos-engine/src/background/session_managers/subagent/manager.rs",
+              "module": "background::session_managers::subagent::manager",
+              "line": 292
+            },
+            {
+              "kind": "fn",
+              "name": "agent_type_value",
+              "visibility": "private",
+              "signature": "const fn agent_type_value (agent_type : AgentType) -> & 'static str",
+              "fields": [],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": null,
+              "tags": [],
+              "file": "crates/eos-engine/src/background/session_managers/subagent/manager.rs",
+              "module": "background::session_managers::subagent::manager",
+              "line": 310
+            },
+            {
+              "kind": "fn",
+              "name": "terminal_event_type",
+              "visibility": "private",
+              "signature": "const fn terminal_event_type (status : BackgroundSessionStatus) -> & 'static str",
+              "fields": [],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": null,
+              "tags": [],
+              "file": "crates/eos-engine/src/background/session_managers/subagent/manager.rs",
+              "module": "background::session_managers::subagent::manager",
+              "line": 317
+            },
+            {
+              "kind": "fn",
+              "name": "status_value",
+              "visibility": "private",
+              "signature": "const fn status_value (status : BackgroundSessionStatus) -> & 'static str",
+              "fields": [],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": null,
+              "tags": [],
+              "file": "crates/eos-engine/src/background/session_managers/subagent/manager.rs",
+              "module": "background::session_managers::subagent::manager",
+              "line": 327
+            },
+            {
+              "kind": "fn",
+              "name": "trace_background_tool",
+              "visibility": "private",
+              "signature": "fn trace_background_tool (event_type : & str , background_task_id : & SubagentSessionId , agent_run_id : & AgentRunId , status : BackgroundSessionStatus , exit_code : Option < i64 > ,)",
+              "fields": [],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": null,
+              "tags": [],
+              "file": "crates/eos-engine/src/background/session_managers/subagent/manager.rs",
+              "module": "background::session_managers::subagent::manager",
+              "line": 337
+            },
+            {
+              "kind": "fn",
+              "name": "classify_run",
+              "visibility": "pub(super)",
+              "signature": "pub(super) fn classify_run (run : AgentRunResult) -> (BackgroundSessionStatus , ToolResult , i64)",
+              "fields": [],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": null,
+              "tags": [],
+              "file": "crates/eos-engine/src/background/session_managers/subagent/manager.rs",
+              "module": "background::session_managers::subagent::manager",
+              "line": 357
+            },
+            {
+              "kind": "fn",
+              "name": "terminal_called",
+              "visibility": "private",
+              "signature": "fn terminal_called (result : Option < & ToolResult >) -> bool",
+              "fields": [],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": null,
+              "tags": [],
+              "file": "crates/eos-engine/src/background/session_managers/subagent/manager.rs",
+              "module": "background::session_managers::subagent::manager",
+              "line": 384
+            },
+            {
+              "kind": "fn",
+              "name": "subagent_status_and_result",
+              "visibility": "pub(crate :: background)",
+              "signature": "pub(crate :: background) fn subagent_status_and_result (status : BackgroundSessionStatus , result : Option < & ToolResult > ,) -> (& 'static str , String)",
+              "fields": [],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": null,
+              "tags": [],
+              "file": "crates/eos-engine/src/background/session_managers/subagent/manager.rs",
+              "module": "background::session_managers::subagent::manager",
+              "line": 391
+            },
+            {
+              "kind": "fn",
+              "name": "terminal_with_error_settles_completed_and_finished",
+              "visibility": "private",
+              "signature": "fn terminal_with_error_settles_completed_and_finished ()",
+              "fields": [],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": null,
+              "tags": [
+                "test"
+              ],
+              "file": "crates/eos-engine/src/background/session_managers/subagent/manager.rs",
+              "module": "background::session_managers::subagent::manager::tests",
+              "line": 428
+            },
+            {
+              "kind": "fn",
+              "name": "no_terminal_settles_failed",
+              "visibility": "private",
+              "signature": "fn no_terminal_settles_failed ()",
+              "fields": [],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": null,
+              "tags": [
+                "test"
+              ],
+              "file": "crates/eos-engine/src/background/session_managers/subagent/manager.rs",
+              "module": "background::session_managers::subagent::manager::tests",
+              "line": 443
+            }
+          ]
+        },
+        {
+          "path": "crates/eos-engine/src/background/session_managers/subagent/mod.rs",
+          "module": "background::session_managers::subagent",
+          "items": []
+        },
+        {
+          "path": "crates/eos-engine/src/background/session_managers/subagent/monitor.rs",
+          "module": "background::session_managers::subagent::monitor",
+          "items": [
+            {
+              "kind": "struct",
+              "name": "SubagentSessionMonitor",
+              "visibility": "pub(crate :: background)",
+              "signature": "pub(crate :: background) struct SubagentSessionMonitor",
+              "fields": [
+                {
+                  "name": "join",
+                  "visibility": "private",
+                  "ty": "JoinHandle < () >"
+                }
+              ],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": "Polls subagent sessions through the shared monitor loop.",
+              "tags": [],
+              "file": "crates/eos-engine/src/background/session_managers/subagent/monitor.rs",
+              "module": "background::session_managers::subagent::monitor",
+              "line": 8
+            },
+            {
+              "kind": "impl",
+              "name": "impl Drop for SubagentSessionMonitor",
+              "visibility": "private",
+              "signature": "impl Drop for SubagentSessionMonitor",
+              "fields": [],
+              "variants": [],
+              "methods": [
+                {
+                  "name": "drop",
+                  "signature": "fn drop (& mut self)",
+                  "kind": "method",
+                  "docs": null,
+                  "line": 14
+                }
+              ],
+              "impl_target": "SubagentSessionMonitor",
+              "trait_name": "Drop",
+              "docs": null,
+              "tags": [
+                "impl",
+                "trait-impl"
+              ],
+              "file": "crates/eos-engine/src/background/session_managers/subagent/monitor.rs",
+              "module": "background::session_managers::subagent::monitor",
+              "line": 13
+            },
+            {
+              "kind": "impl",
+              "name": "impl BackgroundSessionMonitor for SubagentSessionMonitor",
+              "visibility": "private",
+              "signature": "impl BackgroundSessionMonitor for SubagentSessionMonitor",
+              "fields": [],
+              "variants": [],
+              "methods": [
+                {
+                  "name": "spawn",
+                  "signature": "fn spawn (manager : Self :: Manager , interval : Duration) -> Self",
+                  "kind": "associated-fn",
+                  "docs": null,
+                  "line": 22
+                }
+              ],
+              "impl_target": "SubagentSessionMonitor",
+              "trait_name": "BackgroundSessionMonitor",
+              "docs": null,
+              "tags": [
+                "impl",
+                "trait-impl"
+              ],
+              "file": "crates/eos-engine/src/background/session_managers/subagent/monitor.rs",
+              "module": "background::session_managers::subagent::monitor",
+              "line": 19
+            }
+          ]
+        },
+        {
+          "path": "crates/eos-engine/src/background/session_managers/subagent/session.rs",
+          "module": "background::session_managers::subagent::session",
+          "items": [
+            {
+              "kind": "struct",
+              "name": "SubagentSession",
+              "visibility": "pub(super)",
+              "signature": "pub(super) struct SubagentSession",
+              "fields": [
+                {
+                  "name": "id",
+                  "visibility": "private",
+                  "ty": "SubagentSessionId"
+                },
+                {
+                  "name": "agent_run_id",
+                  "visibility": "private",
+                  "ty": "AgentRunId"
+                },
+                {
+                  "name": "driver_abort",
+                  "visibility": "private",
+                  "ty": "AbortHandle"
+                },
+                {
+                  "name": "tool_input",
+                  "visibility": "private",
+                  "ty": "JsonObject"
+                },
+                {
+                  "name": "status",
+                  "visibility": "private",
+                  "ty": "BackgroundSessionStatus"
+                },
+                {
+                  "name": "result",
+                  "visibility": "private",
+                  "ty": "Option < ToolResult >"
+                }
+              ],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": "One tracked subagent run owned by an agent run's background session runtime.",
+              "tags": [
+                "derive: Clone",
+                "derive: Debug"
+              ],
+              "file": "crates/eos-engine/src/background/session_managers/subagent/session.rs",
+              "module": "background::session_managers::subagent::session",
+              "line": 7
+            },
+            {
+              "kind": "impl",
+              "name": "impl SubagentSession",
+              "visibility": "private",
+              "signature": "impl SubagentSession",
+              "fields": [],
+              "variants": [],
+              "methods": [
+                {
+                  "name": "running",
+                  "signature": "pub(super) fn running (id : SubagentSessionId , agent_run_id : AgentRunId , driver_abort : AbortHandle , tool_input : JsonObject ,) -> Self",
+                  "kind": "associated-fn",
+                  "docs": null,
+                  "line": 19
+                },
+                {
+                  "name": "agent_run_id",
+                  "signature": "pub(super) fn agent_run_id (& self) -> & AgentRunId",
+                  "kind": "method",
+                  "docs": null,
+                  "line": 35
+                },
+                {
+                  "name": "tool_input",
+                  "signature": "pub(super) fn tool_input (& self) -> & JsonObject",
+                  "kind": "method",
+                  "docs": null,
+                  "line": 39
+                },
+                {
+                  "name": "status",
+                  "signature": "pub(super) const fn status (& self) -> BackgroundSessionStatus",
+                  "kind": "method",
+                  "docs": null,
+                  "line": 43
+                },
+                {
+                  "name": "result",
+                  "signature": "pub(super) fn result (& self) -> Option < & ToolResult >",
+                  "kind": "method",
+                  "docs": null,
+                  "line": 47
+                },
+                {
+                  "name": "cancel",
+                  "signature": "pub(super) fn cancel (& mut self , reason : & str) -> bool",
+                  "kind": "method",
+                  "docs": null,
+                  "line": 51
+                },
+                {
+                  "name": "settle",
+                  "signature": "pub(super) fn settle (& mut self , status : BackgroundSessionStatus , result : ToolResult ,) -> Option < ToolResult >",
+                  "kind": "method",
+                  "docs": null,
+                  "line": 64
+                }
+              ],
+              "impl_target": "SubagentSession",
+              "trait_name": null,
+              "docs": null,
+              "tags": [
+                "impl"
+              ],
+              "file": "crates/eos-engine/src/background/session_managers/subagent/session.rs",
+              "module": "background::session_managers::subagent::session",
+              "line": 18
+            },
+            {
+              "kind": "impl",
+              "name": "impl BackgroundSession for SubagentSession",
+              "visibility": "private",
+              "signature": "impl BackgroundSession for SubagentSession",
+              "fields": [],
+              "variants": [],
+              "methods": [
+                {
+                  "name": "id",
+                  "signature": "fn id (& self) -> & Self :: Id",
+                  "kind": "method",
+                  "docs": null,
+                  "line": 80
+                }
+              ],
+              "impl_target": "SubagentSession",
+              "trait_name": "BackgroundSession",
+              "docs": null,
+              "tags": [
+                "impl",
+                "trait-impl"
+              ],
+              "file": "crates/eos-engine/src/background/session_managers/subagent/session.rs",
+              "module": "background::session_managers::subagent::session",
+              "line": 77
+            }
+          ]
+        },
+        {
+          "path": "crates/eos-engine/src/background/session_managers/workflow/manager.rs",
+          "module": "background::session_managers::workflow::manager",
+          "items": [
+            {
+              "kind": "type",
+              "name": "WorkflowControlCell",
+              "visibility": "pub(crate :: background)",
+              "signature": "pub(crate :: background) type WorkflowControlCell = Arc < OnceLock < Arc < dyn WorkflowControlPort > > >",
+              "fields": [],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": null,
+              "tags": [],
+              "file": "crates/eos-engine/src/background/session_managers/workflow/manager.rs",
+              "module": "background::session_managers::workflow::manager",
+              "line": 13
+            },
+            {
+              "kind": "struct",
+              "name": "WorkflowCompletion",
+              "visibility": "pub(crate :: background)",
+              "signature": "pub(crate :: background) struct WorkflowCompletion",
+              "fields": [
+                {
+                  "name": "workflow_task_id",
+                  "visibility": "pub(super)",
+                  "ty": "WorkflowSessionId"
+                },
+                {
+                  "name": "workflow_id",
+                  "visibility": "pub(super)",
+                  "ty": "WorkflowId"
+                },
+                {
+                  "name": "status",
+                  "visibility": "pub(super)",
+                  "ty": "BackgroundSessionStatus"
+                }
+              ],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": null,
+              "tags": [
+                "derive: Clone",
+                "derive: Debug"
+              ],
+              "file": "crates/eos-engine/src/background/session_managers/workflow/manager.rs",
+              "module": "background::session_managers::workflow::manager",
+              "line": 15
+            },
+            {
+              "kind": "struct",
+              "name": "WorkflowSessionManager",
+              "visibility": "pub(crate :: background)",
+              "signature": "pub(crate :: background) struct WorkflowSessionManager",
+              "fields": [
+                {
+                  "name": "sessions",
+                  "visibility": "private",
+                  "ty": "Arc < Mutex < HashMap < WorkflowSessionId , WorkflowSession > > >"
+                },
+                {
+                  "name": "workflow_port",
+                  "visibility": "private",
+                  "ty": "WorkflowControlCell"
+                },
+                {
+                  "name": "notification",
+                  "visibility": "private",
+                  "ty": "BackgroundNotificationEmitter"
+                }
+              ],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": "Tracks delegated workflow sessions for one agent run.",
+              "tags": [
+                "derive: Clone"
+              ],
+              "file": "crates/eos-engine/src/background/session_managers/workflow/manager.rs",
+              "module": "background::session_managers::workflow::manager",
+              "line": 22
+            },
+            {
+              "kind": "impl",
+              "name": "impl std :: fmt :: Debug for WorkflowSessionManager",
+              "visibility": "private",
+              "signature": "impl std :: fmt :: Debug for WorkflowSessionManager",
+              "fields": [],
+              "variants": [],
+              "methods": [
+                {
+                  "name": "fmt",
+                  "signature": "fn fmt (& self , f : & mut std :: fmt :: Formatter < '_ >) -> std :: fmt :: Result",
+                  "kind": "method",
+                  "docs": null,
+                  "line": 31
+                }
+              ],
+              "impl_target": "WorkflowSessionManager",
+              "trait_name": "std :: fmt :: Debug",
+              "docs": null,
+              "tags": [
+                "impl",
+                "trait-impl"
+              ],
+              "file": "crates/eos-engine/src/background/session_managers/workflow/manager.rs",
+              "module": "background::session_managers::workflow::manager",
+              "line": 30
+            },
+            {
+              "kind": "impl",
+              "name": "impl WorkflowSessionManager",
+              "visibility": "private",
+              "signature": "impl WorkflowSessionManager",
+              "fields": [],
+              "variants": [],
+              "methods": [
+                {
+                  "name": "new",
+                  "signature": "pub(crate :: background) fn new (workflow_port : WorkflowControlCell , notification : BackgroundNotificationEmitter ,) -> Self",
+                  "kind": "constructor",
+                  "docs": null,
+                  "line": 38
+                },
+                {
+                  "name": "register",
+                  "signature": "pub(crate :: background) async fn register (& self , workflow : & StartedWorkflowHandle)",
+                  "kind": "method",
+                  "docs": null,
+                  "line": 49
+                },
+                {
+                  "name": "cancel_record",
+                  "signature": "pub(crate :: background) async fn cancel_record (& self , workflow_task_id : & WorkflowSessionId ,) -> bool",
+                  "kind": "method",
+                  "docs": null,
+                  "line": 57
+                },
+                {
+                  "name": "cancel_with_port",
+                  "signature": "pub(crate :: background) async fn cancel_with_port (& self , workflow_port : Option < Arc < dyn WorkflowControlPort > > , reason : & str ,)",
+                  "kind": "method",
+                  "docs": null,
+                  "line": 68
+                },
+                {
+                  "name": "running_ids",
+                  "signature": "pub(super) async fn running_ids (& self) -> Vec < WorkflowSessionId >",
+                  "kind": "method",
+                  "docs": null,
+                  "line": 89
+                },
+                {
+                  "name": "running_sessions",
+                  "signature": "async fn running_sessions (& self) -> Vec < WorkflowSession >",
+                  "kind": "method",
+                  "docs": null,
+                  "line": 99
+                },
+                {
+                  "name": "settle_running",
+                  "signature": "async fn settle_running (& self , workflow_task_id : & WorkflowSessionId , status : BackgroundSessionStatus ,) -> Option < WorkflowCompletion >",
+                  "kind": "method",
+                  "docs": null,
+                  "line": 109
+                }
+              ],
+              "impl_target": "WorkflowSessionManager",
+              "trait_name": null,
+              "docs": null,
+              "tags": [
+                "impl"
+              ],
+              "file": "crates/eos-engine/src/background/session_managers/workflow/manager.rs",
+              "module": "background::session_managers::workflow::manager",
+              "line": 37
+            },
+            {
+              "kind": "impl",
+              "name": "impl BackgroundSessionManager for WorkflowSessionManager",
+              "visibility": "private",
+              "signature": "impl BackgroundSessionManager for WorkflowSessionManager",
+              "fields": [],
+              "variants": [],
+              "methods": [
+                {
+                  "name": "insert",
+                  "signature": "async fn insert (& self , session : Self :: Session)",
+                  "kind": "method",
+                  "docs": null,
+                  "line": 132
+                },
+                {
+                  "name": "count",
+                  "signature": "async fn count (& self) -> usize",
+                  "kind": "method",
+                  "docs": null,
+                  "line": 139
+                },
+                {
+                  "name": "poll",
+                  "signature": "async fn poll (& self) -> Vec < Self :: Completion >",
+                  "kind": "method",
+                  "docs": null,
+                  "line": 148
+                },
+                {
+                  "name": "finish",
+                  "signature": "async fn finish (& self , completion : Self :: Completion)",
+                  "kind": "method",
+                  "docs": null,
+                  "line": 171
+                },
+                {
+                  "name": "cancel",
+                  "signature": "async fn cancel (& self , reason : & str)",
+                  "kind": "method",
+                  "docs": null,
+                  "line": 182
+                }
+              ],
+              "impl_target": "WorkflowSessionManager",
+              "trait_name": "BackgroundSessionManager",
+              "docs": null,
+              "tags": [
+                "async_trait",
+                "impl",
+                "trait-impl"
+              ],
+              "file": "crates/eos-engine/src/background/session_managers/workflow/manager.rs",
+              "module": "background::session_managers::workflow::manager",
+              "line": 127
+            },
+            {
+              "kind": "fn",
+              "name": "terminal_status",
+              "visibility": "pub(super)",
+              "signature": "pub(super) fn terminal_status (status_text : & str) -> Option < BackgroundSessionStatus >",
+              "fields": [],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": null,
+              "tags": [],
+              "file": "crates/eos-engine/src/background/session_managers/workflow/manager.rs",
+              "module": "background::session_managers::workflow::manager",
+              "line": 187
+            },
+            {
+              "kind": "fn",
+              "name": "terminal_status_parses_renderings",
+              "visibility": "private",
+              "signature": "fn terminal_status_parses_renderings ()",
+              "fields": [],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": null,
+              "tags": [
+                "test"
+              ],
+              "file": "crates/eos-engine/src/background/session_managers/workflow/manager.rs",
+              "module": "background::session_managers::workflow::manager::tests",
+              "line": 203
+            }
+          ]
+        },
+        {
+          "path": "crates/eos-engine/src/background/session_managers/workflow/mod.rs",
+          "module": "background::session_managers::workflow",
+          "items": []
+        },
+        {
+          "path": "crates/eos-engine/src/background/session_managers/workflow/monitor.rs",
+          "module": "background::session_managers::workflow::monitor",
+          "items": [
+            {
+              "kind": "struct",
+              "name": "WorkflowSessionMonitor",
+              "visibility": "pub(crate :: background)",
+              "signature": "pub(crate :: background) struct WorkflowSessionMonitor",
+              "fields": [
+                {
+                  "name": "join",
+                  "visibility": "private",
+                  "ty": "JoinHandle < () >"
+                }
+              ],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": "Polls delegated workflow sessions through the shared monitor loop.",
+              "tags": [],
+              "file": "crates/eos-engine/src/background/session_managers/workflow/monitor.rs",
+              "module": "background::session_managers::workflow::monitor",
+              "line": 8
+            },
+            {
+              "kind": "impl",
+              "name": "impl Drop for WorkflowSessionMonitor",
+              "visibility": "private",
+              "signature": "impl Drop for WorkflowSessionMonitor",
+              "fields": [],
+              "variants": [],
+              "methods": [
+                {
+                  "name": "drop",
+                  "signature": "fn drop (& mut self)",
+                  "kind": "method",
+                  "docs": null,
+                  "line": 14
+                }
+              ],
+              "impl_target": "WorkflowSessionMonitor",
+              "trait_name": "Drop",
+              "docs": null,
+              "tags": [
+                "impl",
+                "trait-impl"
+              ],
+              "file": "crates/eos-engine/src/background/session_managers/workflow/monitor.rs",
+              "module": "background::session_managers::workflow::monitor",
+              "line": 13
+            },
+            {
+              "kind": "impl",
+              "name": "impl BackgroundSessionMonitor for WorkflowSessionMonitor",
+              "visibility": "private",
+              "signature": "impl BackgroundSessionMonitor for WorkflowSessionMonitor",
+              "fields": [],
+              "variants": [],
+              "methods": [
+                {
+                  "name": "spawn",
+                  "signature": "fn spawn (manager : Self :: Manager , interval : Duration) -> Self",
+                  "kind": "associated-fn",
+                  "docs": null,
+                  "line": 22
+                }
+              ],
+              "impl_target": "WorkflowSessionMonitor",
+              "trait_name": "BackgroundSessionMonitor",
+              "docs": null,
+              "tags": [
+                "impl",
+                "trait-impl"
+              ],
+              "file": "crates/eos-engine/src/background/session_managers/workflow/monitor.rs",
+              "module": "background::session_managers::workflow::monitor",
+              "line": 19
+            }
+          ]
+        },
+        {
+          "path": "crates/eos-engine/src/background/session_managers/workflow/session.rs",
+          "module": "background::session_managers::workflow::session",
+          "items": [
+            {
+              "kind": "struct",
+              "name": "WorkflowSession",
+              "visibility": "pub(super)",
+              "signature": "pub(super) struct WorkflowSession",
+              "fields": [
+                {
+                  "name": "id",
+                  "visibility": "private",
+                  "ty": "WorkflowSessionId"
+                },
+                {
+                  "name": "workflow_id",
+                  "visibility": "private",
+                  "ty": "WorkflowId"
+                },
+                {
+                  "name": "status",
+                  "visibility": "private",
+                  "ty": "BackgroundSessionStatus"
+                }
+              ],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": "One delegated workflow tracked as background work for the owning agent run.",
+              "tags": [
+                "derive: Clone",
+                "derive: Debug",
+                "derive: Eq",
+                "derive: PartialEq"
+              ],
+              "file": "crates/eos-engine/src/background/session_managers/workflow/session.rs",
+              "module": "background::session_managers::workflow::session",
+              "line": 5
+            },
+            {
+              "kind": "impl",
+              "name": "impl WorkflowSession",
+              "visibility": "private",
+              "signature": "impl WorkflowSession",
+              "fields": [],
+              "variants": [],
+              "methods": [
+                {
+                  "name": "running",
+                  "signature": "pub(super) fn running (id : WorkflowSessionId , workflow_id : WorkflowId) -> Self",
+                  "kind": "associated-fn",
+                  "docs": null,
+                  "line": 14
+                },
+                {
+                  "name": "workflow_id",
+                  "signature": "pub(super) fn workflow_id (& self) -> & WorkflowId",
+                  "kind": "method",
+                  "docs": null,
+                  "line": 22
+                },
+                {
+                  "name": "status",
+                  "signature": "pub(super) const fn status (& self) -> BackgroundSessionStatus",
+                  "kind": "method",
+                  "docs": null,
+                  "line": 26
+                },
+                {
+                  "name": "cancel",
+                  "signature": "pub(super) fn cancel (& mut self) -> bool",
+                  "kind": "method",
+                  "docs": null,
+                  "line": 30
+                },
+                {
+                  "name": "settle_running",
+                  "signature": "pub(super) fn settle_running (& mut self , status : BackgroundSessionStatus) -> bool",
+                  "kind": "method",
+                  "docs": null,
+                  "line": 38
+                }
+              ],
+              "impl_target": "WorkflowSession",
+              "trait_name": null,
+              "docs": null,
+              "tags": [
+                "impl"
+              ],
+              "file": "crates/eos-engine/src/background/session_managers/workflow/session.rs",
+              "module": "background::session_managers::workflow::session",
+              "line": 13
+            },
+            {
+              "kind": "impl",
+              "name": "impl BackgroundSession for WorkflowSession",
+              "visibility": "private",
+              "signature": "impl BackgroundSession for WorkflowSession",
+              "fields": [],
+              "variants": [],
+              "methods": [
+                {
+                  "name": "id",
+                  "signature": "fn id (& self) -> & Self :: Id",
+                  "kind": "method",
+                  "docs": null,
+                  "line": 50
+                }
+              ],
+              "impl_target": "WorkflowSession",
+              "trait_name": "BackgroundSession",
+              "docs": null,
+              "tags": [
+                "impl",
+                "trait-impl"
+              ],
+              "file": "crates/eos-engine/src/background/session_managers/workflow/session.rs",
+              "module": "background::session_managers::workflow::session",
+              "line": 47
+            }
+          ]
+        },
+        {
+          "path": "crates/eos-engine/src/background/session_runtime.rs",
+          "module": "background::session_runtime",
+          "items": [
+            {
+              "kind": "struct",
+              "name": "BackgroundSessionRuntime",
+              "visibility": "pub(super)",
+              "signature": "pub(super) struct BackgroundSessionRuntime",
+              "fields": [
+                {
+                  "name": "agent_run_id",
+                  "visibility": "private",
+                  "ty": "AgentRunId"
+                },
+                {
+                  "name": "subagent_session_manager",
+                  "visibility": "private",
+                  "ty": "SubagentSessionManager"
+                },
+                {
+                  "name": "workflow_session_manager",
+                  "visibility": "private",
+                  "ty": "WorkflowSessionManager"
+                },
+                {
+                  "name": "command_session_manager",
+                  "visibility": "private",
+                  "ty": "CommandSessionManager"
+                },
+                {
+                  "name": "_subagent_monitor",
+                  "visibility": "private",
+                  "ty": "SubagentSessionMonitor"
+                },
+                {
+                  "name": "_workflow_monitor",
+                  "visibility": "private",
+                  "ty": "WorkflowSessionMonitor"
+                },
+                {
+                  "name": "_command_monitor",
+                  "visibility": "private",
+                  "ty": "CommandSessionMonitor"
+                }
+              ],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": "Per-agent-run aggregate for background session accounting and lifecycle.",
+              "tags": [],
+              "file": "crates/eos-engine/src/background/session_runtime.rs",
+              "module": "background::session_runtime",
+              "line": 29
+            },
+            {
+              "kind": "impl",
+              "name": "impl BackgroundSessionRuntime",
+              "visibility": "private",
+              "signature": "impl BackgroundSessionRuntime",
+              "fields": [],
+              "variants": [],
+              "methods": [
+                {
+                  "name": "new",
+                  "signature": "pub(super) fn new (agent_run_id : AgentRunId , handles : EngineRunHandles , command_port : Arc < dyn SandboxTransport > , completion_poll_interval : Duration , notifications : NotificationService , control_factory : AgentRunControlFactory , workflow_port : WorkflowControlCell ,) -> Self",
+                  "kind": "constructor",
+                  "docs": null,
+                  "line": 41
+                },
+                {
+                  "name": "agent_run_id",
+                  "signature": "pub(super) fn agent_run_id (& self) -> & AgentRunId",
+                  "kind": "method",
+                  "docs": null,
+                  "line": 74
+                },
+                {
+                  "name": "subagent_session_manager",
+                  "signature": "pub(super) fn subagent_session_manager (& self) -> & SubagentSessionManager",
+                  "kind": "method",
+                  "docs": null,
+                  "line": 78
+                },
+                {
+                  "name": "workflow_session_manager",
+                  "signature": "pub(super) fn workflow_session_manager (& self) -> & WorkflowSessionManager",
+                  "kind": "method",
+                  "docs": null,
+                  "line": 82
+                },
+                {
+                  "name": "command_session_manager",
+                  "signature": "pub(super) fn command_session_manager (& self) -> & CommandSessionManager",
+                  "kind": "method",
+                  "docs": null,
+                  "line": 86
+                },
+                {
+                  "name": "count",
+                  "signature": "pub(super) async fn count (& self) -> RunningBackgroundTasks",
+                  "kind": "method",
+                  "docs": null,
+                  "line": 90
+                },
+                {
+                  "name": "cancel",
+                  "signature": "pub(super) async fn cancel (& self , reason : & str) -> RunningBackgroundTasks",
+                  "kind": "method",
+                  "docs": null,
+                  "line": 102
+                }
+              ],
+              "impl_target": "BackgroundSessionRuntime",
+              "trait_name": null,
+              "docs": null,
+              "tags": [
+                "impl"
+              ],
+              "file": "crates/eos-engine/src/background/session_runtime.rs",
+              "module": "background::session_runtime",
+              "line": 40
+            },
+            {
+              "kind": "struct",
+              "name": "BackgroundSessionService",
+              "visibility": "pub",
+              "signature": "pub struct BackgroundSessionService",
+              "fields": [
+                {
+                  "name": "runtime",
+                  "visibility": "private",
+                  "ty": "Arc < BackgroundSessionRuntime >"
+                }
+              ],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": "Cloneable port-facing service for one agent run's background session runtime.",
+              "tags": [
+                "derive: Clone",
+                "port/service"
+              ],
+              "file": "crates/eos-engine/src/background/session_runtime.rs",
+              "module": "background::session_runtime",
+              "line": 110
+            },
+            {
+              "kind": "impl",
+              "name": "impl std :: fmt :: Debug for BackgroundSessionService",
+              "visibility": "private",
+              "signature": "impl std :: fmt :: Debug for BackgroundSessionService",
+              "fields": [],
+              "variants": [],
+              "methods": [
+                {
+                  "name": "fmt",
+                  "signature": "fn fmt (& self , f : & mut std :: fmt :: Formatter < '_ >) -> std :: fmt :: Result",
+                  "kind": "method",
+                  "docs": null,
+                  "line": 117
+                }
+              ],
+              "impl_target": "BackgroundSessionService",
+              "trait_name": "std :: fmt :: Debug",
+              "docs": null,
+              "tags": [
+                "impl",
+                "trait-impl"
+              ],
+              "file": "crates/eos-engine/src/background/session_runtime.rs",
+              "module": "background::session_runtime",
+              "line": 116
+            },
+            {
+              "kind": "impl",
+              "name": "impl BackgroundSessionService",
+              "visibility": "private",
+              "signature": "impl BackgroundSessionService",
+              "fields": [],
+              "variants": [],
+              "methods": [
+                {
+                  "name": "new",
+                  "signature": "pub fn new (agent_run_id : AgentRunId , handles : EngineRunHandles , command_port : Arc < dyn SandboxTransport > , completion_poll_interval : Duration , notifications : NotificationService , control_factory : AgentRunControlFactory , workflow_port : & Arc < OnceLock < Arc < dyn WorkflowControlPort > > > ,) -> Self",
+                  "kind": "constructor",
+                  "docs": null,
+                  "line": 125
+                },
+                {
+                  "name": "agent_run_id",
+                  "signature": "pub fn agent_run_id (& self) -> & AgentRunId",
+                  "kind": "method",
+                  "docs": null,
+                  "line": 148
+                },
+                {
+                  "name": "command_session_manager",
+                  "signature": "pub(super) fn command_session_manager (& self) -> & CommandSessionManager",
+                  "kind": "method",
+                  "docs": null,
+                  "line": 153
+                },
+                {
+                  "name": "running_background_tasks",
+                  "signature": "pub async fn running_background_tasks (& self) -> RunningBackgroundTasks",
+                  "kind": "method",
+                  "docs": null,
+                  "line": 157
+                },
+                {
+                  "name": "cancel_subagents",
+                  "signature": "pub async fn cancel_subagents (& self , reason : & str) -> RunningBackgroundTasks",
+                  "kind": "method",
+                  "docs": null,
+                  "line": 161
+                },
+                {
+                  "name": "teardown",
+                  "signature": "pub async fn teardown (& self , workflow_control : Option < Arc < dyn WorkflowControlPort > > , reason : & str ,) -> RunningBackgroundTasks",
+                  "kind": "method",
+                  "docs": null,
+                  "line": 166
+                }
+              ],
+              "impl_target": "BackgroundSessionService",
+              "trait_name": null,
+              "docs": null,
+              "tags": [
+                "impl"
+              ],
+              "file": "crates/eos-engine/src/background/session_runtime.rs",
+              "module": "background::session_runtime",
+              "line": 124
+            },
+            {
+              "kind": "impl",
+              "name": "impl eos_tools :: ports :: Sealed for BackgroundSessionService",
+              "visibility": "private",
+              "signature": "impl eos_tools :: ports :: Sealed for BackgroundSessionService",
+              "fields": [],
+              "variants": [],
+              "methods": [],
+              "impl_target": "BackgroundSessionService",
+              "trait_name": "eos_tools :: ports :: Sealed",
+              "docs": null,
+              "tags": [
+                "impl",
+                "trait-impl"
+              ],
+              "file": "crates/eos-engine/src/background/session_runtime.rs",
+              "module": "background::session_runtime",
+              "line": 181
+            },
+            {
+              "kind": "impl",
+              "name": "impl BackgroundSupervisorPort for BackgroundSessionService",
+              "visibility": "private",
+              "signature": "impl BackgroundSupervisorPort for BackgroundSessionService",
+              "fields": [],
+              "variants": [],
+              "methods": [
+                {
+                  "name": "spawn",
+                  "signature": "async fn spawn (& self , ctx : & ExecutionMetadata , agent_name : & str , prompt : & str ,) -> Result < SpawnedSubagent , ToolError >",
+                  "kind": "method",
+                  "docs": null,
+                  "line": 185
+                },
+                {
+                  "name": "progress",
+                  "signature": "async fn progress (& self , subagent_session_id : & SubagentSessionId , _last_n_messages : u8 ,) -> Result < ToolResult , ToolError >",
+                  "kind": "method",
+                  "docs": null,
+                  "line": 197
+                },
+                {
+                  "name": "cancel",
+                  "signature": "async fn cancel (& self , subagent_session_id : & SubagentSessionId , reason : & str ,) -> Result < ToolResult , ToolError >",
+                  "kind": "method",
+                  "docs": null,
+                  "line": 232
+                },
+                {
+                  "name": "running_background_tasks",
+                  "signature": "async fn running_background_tasks (& self) -> RunningBackgroundTasks",
+                  "kind": "method",
+                  "docs": null,
+                  "line": 260
+                },
+                {
+                  "name": "cancel_subagents",
+                  "signature": "async fn cancel_subagents (& self) -> RunningBackgroundTasks",
+                  "kind": "method",
+                  "docs": null,
+                  "line": 264
+                },
+                {
+                  "name": "register_workflow",
+                  "signature": "async fn register_workflow (& self , workflow : & StartedWorkflowHandle)",
+                  "kind": "method",
+                  "docs": null,
+                  "line": 268
+                },
+                {
+                  "name": "cancel_workflow_record",
+                  "signature": "async fn cancel_workflow_record (& self , workflow_task_id : & WorkflowSessionId , _reason : & str ,) -> bool",
+                  "kind": "method",
+                  "docs": null,
+                  "line": 272
+                },
+                {
+                  "name": "teardown",
+                  "signature": "async fn teardown (& self , workflow_control : Option < Arc < dyn WorkflowControlPort > > , reason : & str ,) -> RunningBackgroundTasks",
+                  "kind": "method",
+                  "docs": null,
+                  "line": 283
+                }
+              ],
+              "impl_target": "BackgroundSessionService",
+              "trait_name": "BackgroundSupervisorPort",
+              "docs": null,
+              "tags": [
+                "async_trait",
+                "impl",
+                "trait-impl"
+              ],
+              "file": "crates/eos-engine/src/background/session_runtime.rs",
+              "module": "background::session_runtime",
+              "line": 183
+            },
+            {
+              "kind": "impl",
+              "name": "impl CommandSessionSupervisorPort for BackgroundSessionService",
+              "visibility": "private",
+              "signature": "impl CommandSessionSupervisorPort for BackgroundSessionService",
+              "fields": [],
+              "variants": [],
+              "methods": [
+                {
+                  "name": "register",
+                  "signature": "async fn register (& self , command_session_id : & CommandSessionId , sandbox_id : & SandboxId , command : & str ,)",
+                  "kind": "method",
+                  "docs": null,
+                  "line": 294
+                },
+                {
+                  "name": "command_session_result",
+                  "signature": "async fn command_session_result (& self , command_session_id : & CommandSessionId) -> Option < Value >",
+                  "kind": "method",
+                  "docs": null,
+                  "line": 305
+                },
+                {
+                  "name": "mark_command_session_reported",
+                  "signature": "async fn mark_command_session_reported (& self , command_session_id : & CommandSessionId , result : Value ,)",
+                  "kind": "method",
+                  "docs": null,
+                  "line": 311
+                },
+                {
+                  "name": "command_session_already_reported",
+                  "signature": "async fn command_session_already_reported (& self , command_session_id : & CommandSessionId ,) -> bool",
+                  "kind": "method",
+                  "docs": null,
+                  "line": 321
+                }
+              ],
+              "impl_target": "BackgroundSessionService",
+              "trait_name": "CommandSessionSupervisorPort",
+              "docs": null,
+              "tags": [
+                "async_trait",
+                "impl",
+                "trait-impl"
+              ],
+              "file": "crates/eos-engine/src/background/session_runtime.rs",
+              "module": "background::session_runtime",
+              "line": 292
             }
           ]
         },
@@ -12144,7 +14778,7 @@
               "tags": [],
               "file": "crates/eos-engine/src/background/subagent.rs",
               "module": "background::subagent::tests",
-              "line": 568
+              "line": 569
             },
             {
               "kind": "fn",
@@ -12160,7 +14794,7 @@
               "tags": [],
               "file": "crates/eos-engine/src/background/subagent.rs",
               "module": "background::subagent::tests",
-              "line": 580
+              "line": 582
             },
             {
               "kind": "fn",
@@ -12176,7 +14810,7 @@
               "tags": [],
               "file": "crates/eos-engine/src/background/subagent.rs",
               "module": "background::subagent::tests",
-              "line": 587
+              "line": 589
             },
             {
               "kind": "fn",
@@ -12194,7 +14828,7 @@
               ],
               "file": "crates/eos-engine/src/background/subagent.rs",
               "module": "background::subagent::tests",
-              "line": 596
+              "line": 598
             },
             {
               "kind": "fn",
@@ -12212,7 +14846,7 @@
               ],
               "file": "crates/eos-engine/src/background/subagent.rs",
               "module": "background::subagent::tests",
-              "line": 615
+              "line": 617
             },
             {
               "kind": "fn",
@@ -12230,7 +14864,7 @@
               ],
               "file": "crates/eos-engine/src/background/subagent.rs",
               "module": "background::subagent::tests",
-              "line": 632
+              "line": 634
             },
             {
               "kind": "fn",
@@ -12248,7 +14882,7 @@
               ],
               "file": "crates/eos-engine/src/background/subagent.rs",
               "module": "background::subagent::tests",
-              "line": 651
+              "line": 653
             },
             {
               "kind": "fn",
@@ -12266,7 +14900,7 @@
               ],
               "file": "crates/eos-engine/src/background/subagent.rs",
               "module": "background::subagent::tests",
-              "line": 663
+              "line": 665
             },
             {
               "kind": "fn",
@@ -12284,7 +14918,7 @@
               ],
               "file": "crates/eos-engine/src/background/subagent.rs",
               "module": "background::subagent::tests",
-              "line": 678
+              "line": 680
             },
             {
               "kind": "fn",
@@ -12302,7 +14936,7 @@
               ],
               "file": "crates/eos-engine/src/background/subagent.rs",
               "module": "background::subagent::tests",
-              "line": 687
+              "line": 689
             },
             {
               "kind": "fn",
@@ -12321,7 +14955,7 @@
               ],
               "file": "crates/eos-engine/src/background/subagent.rs",
               "module": "background::subagent::tests",
-              "line": 695
+              "line": 697
             },
             {
               "kind": "fn",
@@ -12340,7 +14974,7 @@
               ],
               "file": "crates/eos-engine/src/background/subagent.rs",
               "module": "background::subagent::tests",
-              "line": 735
+              "line": 737
             }
           ]
         },
@@ -12403,6 +15037,249 @@
               "file": "crates/eos-engine/src/background/supervisor.rs",
               "module": "background::supervisor",
               "line": 23
+            }
+          ]
+        },
+        {
+          "path": "crates/eos-engine/src/background/workflow_poll.rs",
+          "module": "background::workflow_poll",
+          "items": [
+            {
+              "kind": "type",
+              "name": "WorkflowControlCell",
+              "visibility": "pub(super)",
+              "signature": "pub(super) type WorkflowControlCell = Arc < OnceLock < Arc < dyn WorkflowControlPort > > >",
+              "fields": [],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": "The late-bound workflow-control cell shared with `eos-runtime`.",
+              "tags": [],
+              "file": "crates/eos-engine/src/background/workflow_poll.rs",
+              "module": "background::workflow_poll",
+              "line": 32
+            },
+            {
+              "kind": "fn",
+              "name": "terminal_status",
+              "visibility": "private",
+              "signature": "fn terminal_status (status_text : & str) -> Option < BackgroundTaskStatus >",
+              "fields": [],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": "Map a `WorkflowControlPort::status` rendering to a terminal status, or `None`\nwhile the workflow is still open / the string is not a recognized terminal.",
+              "tags": [],
+              "file": "crates/eos-engine/src/background/workflow_poll.rs",
+              "module": "background::workflow_poll",
+              "line": 35
+            },
+            {
+              "kind": "struct",
+              "name": "WorkflowCompletionPoller",
+              "visibility": "pub(super)",
+              "signature": "pub(super) struct WorkflowCompletionPoller",
+              "fields": [
+                {
+                  "name": "join",
+                  "visibility": "private",
+                  "ty": "JoinHandle < () >"
+                }
+              ],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": "RAII poller: `Drop` aborts the task when the supervisor runtime drops.",
+              "tags": [],
+              "file": "crates/eos-engine/src/background/workflow_poll.rs",
+              "module": "background::workflow_poll",
+              "line": 49
+            },
+            {
+              "kind": "impl",
+              "name": "impl Drop for WorkflowCompletionPoller",
+              "visibility": "private",
+              "signature": "impl Drop for WorkflowCompletionPoller",
+              "fields": [],
+              "variants": [],
+              "methods": [
+                {
+                  "name": "drop",
+                  "signature": "fn drop (& mut self)",
+                  "kind": "method",
+                  "docs": null,
+                  "line": 55
+                }
+              ],
+              "impl_target": "WorkflowCompletionPoller",
+              "trait_name": "Drop",
+              "docs": null,
+              "tags": [
+                "impl",
+                "trait-impl"
+              ],
+              "file": "crates/eos-engine/src/background/workflow_poll.rs",
+              "module": "background::workflow_poll",
+              "line": 54
+            },
+            {
+              "kind": "impl",
+              "name": "impl WorkflowCompletionPoller",
+              "visibility": "private",
+              "signature": "impl WorkflowCompletionPoller",
+              "fields": [],
+              "variants": [],
+              "methods": [
+                {
+                  "name": "spawn",
+                  "signature": "pub(super) fn spawn (inner : Weak < Mutex < BackgroundTaskSupervisor > > , control_cell : Weak < OnceLock < Arc < dyn WorkflowControlPort > > > , notifications : BackgroundNotificationEmitter , interval : Duration ,) -> Self",
+                  "kind": "associated-fn",
+                  "docs": "Spawn the poll. `inner` and `control_cell` are `Weak` (cycle rule); the\ntask exits when either is gone. Must be called within a Tokio runtime.",
+                  "line": 61
+                }
+              ],
+              "impl_target": "WorkflowCompletionPoller",
+              "trait_name": null,
+              "docs": null,
+              "tags": [
+                "impl"
+              ],
+              "file": "crates/eos-engine/src/background/workflow_poll.rs",
+              "module": "background::workflow_poll",
+              "line": 60
+            },
+            {
+              "kind": "struct",
+              "name": "AlwaysSucceededControl",
+              "visibility": "private",
+              "signature": "struct AlwaysSucceededControl",
+              "fields": [],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": null,
+              "tags": [
+                "derive: Debug"
+              ],
+              "file": "crates/eos-engine/src/background/workflow_poll.rs",
+              "module": "background::workflow_poll::tests",
+              "line": 131
+            },
+            {
+              "kind": "impl",
+              "name": "impl eos_tools :: ports :: Sealed for AlwaysSucceededControl",
+              "visibility": "private",
+              "signature": "impl eos_tools :: ports :: Sealed for AlwaysSucceededControl",
+              "fields": [],
+              "variants": [],
+              "methods": [],
+              "impl_target": "AlwaysSucceededControl",
+              "trait_name": "eos_tools :: ports :: Sealed",
+              "docs": null,
+              "tags": [
+                "impl",
+                "trait-impl"
+              ],
+              "file": "crates/eos-engine/src/background/workflow_poll.rs",
+              "module": "background::workflow_poll::tests",
+              "line": 134
+            },
+            {
+              "kind": "impl",
+              "name": "impl WorkflowControlPort for AlwaysSucceededControl",
+              "visibility": "private",
+              "signature": "impl WorkflowControlPort for AlwaysSucceededControl",
+              "fields": [],
+              "variants": [],
+              "methods": [
+                {
+                  "name": "start",
+                  "signature": "async fn start (& self , _parent_task_id : & TaskId , _agent_run_id : & AgentRunId , _workflow_goal : & str ,) -> Result < StartedWorkflowHandle , ToolError >",
+                  "kind": "method",
+                  "docs": null,
+                  "line": 138
+                },
+                {
+                  "name": "status",
+                  "signature": "async fn status (& self , workflow_id : & WorkflowId , workflow_task_id : Option < & WorkflowSessionId > ,) -> Result < String , ToolError >",
+                  "kind": "method",
+                  "docs": null,
+                  "line": 147
+                },
+                {
+                  "name": "cancel",
+                  "signature": "async fn cancel (& self , _workflow_task_id : & WorkflowSessionId , _reason : & str ,) -> Result < String , ToolError >",
+                  "kind": "method",
+                  "docs": null,
+                  "line": 158
+                },
+                {
+                  "name": "find_outstanding",
+                  "signature": "async fn find_outstanding (& self , _parent_task_id : & TaskId , _agent_run_id : & AgentRunId ,) -> Result < Vec < OutstandingWorkflow > , ToolError >",
+                  "kind": "method",
+                  "docs": null,
+                  "line": 166
+                },
+                {
+                  "name": "workflow_depth",
+                  "signature": "async fn workflow_depth (& self , _workflow_id : & WorkflowId) -> Result < u32 , ToolError >",
+                  "kind": "method",
+                  "docs": null,
+                  "line": 174
+                }
+              ],
+              "impl_target": "AlwaysSucceededControl",
+              "trait_name": "WorkflowControlPort",
+              "docs": null,
+              "tags": [
+                "async_trait",
+                "impl",
+                "trait-impl"
+              ],
+              "file": "crates/eos-engine/src/background/workflow_poll.rs",
+              "module": "background::workflow_poll::tests",
+              "line": 136
+            },
+            {
+              "kind": "fn",
+              "name": "workflow_completion_pushes_one_notification",
+              "visibility": "private",
+              "signature": "async fn workflow_completion_pushes_one_notification ()",
+              "fields": [],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": null,
+              "tags": [
+                "async",
+                "tokio::test"
+              ],
+              "file": "crates/eos-engine/src/background/workflow_poll.rs",
+              "module": "background::workflow_poll::tests",
+              "line": 182
+            },
+            {
+              "kind": "fn",
+              "name": "terminal_status_parses_renderings",
+              "visibility": "private",
+              "signature": "fn terminal_status_parses_renderings ()",
+              "fields": [],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": null,
+              "tags": [
+                "test"
+              ],
+              "file": "crates/eos-engine/src/background/workflow_poll.rs",
+              "module": "background::workflow_poll::tests",
+              "line": 231
             }
           ]
         },
@@ -14923,7 +17800,7 @@
                 {
                   "name": "background",
                   "visibility": "private",
-                  "ty": "BackgroundSupervisorHandle"
+                  "ty": "BackgroundSessionService"
                 },
                 {
                   "name": "finalization",
@@ -14935,7 +17812,7 @@
               "methods": [],
               "impl_target": null,
               "trait_name": null,
-              "docs": "The live object for one agent run (spec §6.3).\n\nThe run's command-completion heartbeat is owned by the\n`CommandSessionLane` inside `background`, so dropping this control (the last\nhandle clone) drops the lane and aborts the heartbeat (RAII) — no separate\nguard is held here.",
+              "docs": "The live object for one agent run (spec §6.3).\n\nThe run's command-completion heartbeat is owned by the\n`CommandSessionMonitor` inside `background`, so dropping this control (the\nlast service clone) drops the runtime and aborts the monitors (RAII) — no\nseparate guard is held here.",
               "tags": [],
               "file": "crates/eos-engine/src/runtime/control.rs",
               "module": "runtime::control",
@@ -15006,9 +17883,9 @@
                 },
                 {
                   "name": "background",
-                  "signature": "pub fn background (& self) -> BackgroundSupervisorHandle",
+                  "signature": "pub fn background (& self) -> BackgroundSessionService",
                   "kind": "method",
-                  "docs": "A clone of the run's background supervisor handle.",
+                  "docs": "A clone of the run's background session service.",
                   "line": 240
                 },
                 {
@@ -15077,7 +17954,7 @@
                 {
                   "name": "background",
                   "visibility": "pub(super)",
-                  "ty": "BackgroundSupervisorHandle"
+                  "ty": "BackgroundSessionService"
                 }
               ],
               "variants": [],
@@ -15110,7 +17987,7 @@
                 {
                   "name": "background",
                   "visibility": "private",
-                  "ty": "BackgroundSupervisorFactory"
+                  "ty": "BackgroundSessionFactory"
                 }
               ],
               "variants": [],
@@ -15162,7 +18039,7 @@
               "methods": [
                 {
                   "name": "new",
-                  "signature": "pub fn new (foreground : ForegroundExecutorFactory , background : BackgroundSupervisorFactory) -> Self",
+                  "signature": "pub fn new (foreground : ForegroundExecutorFactory , background : BackgroundSessionFactory) -> Self",
                   "kind": "constructor",
                   "docs": "Compose the factory from the per-request foreground and background\nbuilders.",
                   "line": 36
@@ -15423,6 +18300,165 @@
               "file": "crates/eos-engine/src/runtime/foreground.rs",
               "module": "runtime::foreground",
               "line": 64
+            },
+            {
+              "kind": "struct",
+              "name": "RecordingCancelPort",
+              "visibility": "private",
+              "signature": "struct RecordingCancelPort",
+              "fields": [
+                {
+                  "name": "cancelled_runs",
+                  "visibility": "private",
+                  "ty": "StdMutex < Vec < String > >"
+                }
+              ],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": null,
+              "tags": [
+                "derive: Debug",
+                "derive: Default",
+                "port/service"
+              ],
+              "file": "crates/eos-engine/src/runtime/foreground.rs",
+              "module": "runtime::foreground::tests",
+              "line": 144
+            },
+            {
+              "kind": "impl",
+              "name": "impl RecordingCancelPort",
+              "visibility": "private",
+              "signature": "impl RecordingCancelPort",
+              "fields": [],
+              "variants": [],
+              "methods": [
+                {
+                  "name": "cancelled_runs",
+                  "signature": "fn cancelled_runs (& self) -> Vec < String >",
+                  "kind": "method",
+                  "docs": null,
+                  "line": 150
+                }
+              ],
+              "impl_target": "RecordingCancelPort",
+              "trait_name": null,
+              "docs": null,
+              "tags": [
+                "impl"
+              ],
+              "file": "crates/eos-engine/src/runtime/foreground.rs",
+              "module": "runtime::foreground::tests",
+              "line": 149
+            },
+            {
+              "kind": "impl",
+              "name": "impl CancelPort for RecordingCancelPort",
+              "visibility": "private",
+              "signature": "impl CancelPort for RecordingCancelPort",
+              "fields": [],
+              "variants": [],
+              "methods": [
+                {
+                  "name": "cancel_task",
+                  "signature": "async fn cancel_task (& self , _task_id : & TaskId , _reason : & str) -> Result < () , ToolError >",
+                  "kind": "method",
+                  "docs": null,
+                  "line": 157
+                },
+                {
+                  "name": "cancel_agent_run",
+                  "signature": "async fn cancel_agent_run (& self , agent_run_id : & AgentRunId , _reason : & str ,) -> Result < () , ToolError >",
+                  "kind": "method",
+                  "docs": null,
+                  "line": 161
+                }
+              ],
+              "impl_target": "RecordingCancelPort",
+              "trait_name": "CancelPort",
+              "docs": null,
+              "tags": [
+                "async_trait",
+                "impl",
+                "trait-impl"
+              ],
+              "file": "crates/eos-engine/src/runtime/foreground.rs",
+              "module": "runtime::foreground::tests",
+              "line": 155
+            },
+            {
+              "kind": "struct",
+              "name": "RecordingResource",
+              "visibility": "private",
+              "signature": "struct RecordingResource",
+              "fields": [
+                {
+                  "name": "torn_down",
+                  "visibility": "private",
+                  "ty": "StdMutex < bool >"
+                }
+              ],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": null,
+              "tags": [
+                "derive: Debug",
+                "derive: Default"
+              ],
+              "file": "crates/eos-engine/src/runtime/foreground.rs",
+              "module": "runtime::foreground::tests",
+              "line": 174
+            },
+            {
+              "kind": "impl",
+              "name": "impl CancelableResource for RecordingResource",
+              "visibility": "private",
+              "signature": "impl CancelableResource for RecordingResource",
+              "fields": [],
+              "variants": [],
+              "methods": [
+                {
+                  "name": "teardown",
+                  "signature": "async fn teardown (& self , _reason : & str) -> Result < () , ToolError >",
+                  "kind": "method",
+                  "docs": null,
+                  "line": 181
+                }
+              ],
+              "impl_target": "RecordingResource",
+              "trait_name": "CancelableResource",
+              "docs": null,
+              "tags": [
+                "async_trait",
+                "impl",
+                "trait-impl"
+              ],
+              "file": "crates/eos-engine/src/runtime/foreground.rs",
+              "module": "runtime::foreground::tests",
+              "line": 179
+            },
+            {
+              "kind": "fn",
+              "name": "teardown_cancels_inline_advisor_run_and_resources",
+              "visibility": "private",
+              "signature": "async fn teardown_cancels_inline_advisor_run_and_resources ()",
+              "fields": [],
+              "variants": [],
+              "methods": [],
+              "impl_target": null,
+              "trait_name": null,
+              "docs": null,
+              "tags": [
+                "async",
+                "tokio::test"
+              ],
+              "file": "crates/eos-engine/src/runtime/foreground.rs",
+              "module": "runtime::foreground::tests",
+              "line": 191
             }
           ]
         },
@@ -24109,7 +27145,7 @@
               "tags": [],
               "file": "crates/eos-runtime/src/entry.rs",
               "module": "entry",
-              "line": 316
+              "line": 319
             },
             {
               "kind": "fn",
@@ -24127,7 +27163,7 @@
               ],
               "file": "crates/eos-runtime/src/entry.rs",
               "module": "entry",
-              "line": 327
+              "line": 330
             }
           ]
         },

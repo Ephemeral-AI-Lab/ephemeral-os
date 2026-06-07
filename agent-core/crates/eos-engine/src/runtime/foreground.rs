@@ -11,7 +11,7 @@
 //! `exec_command` is deliberately **not** a foreground `CancelableResource`: its
 //! active future is dropped by the foreground `JoinSet` abort on cancel, and a
 //! daemon-owned running command session is torn down by the
-//! `CommandSessionLane`'s one per-caller daemon RPC, not a per-invocation
+//! `CommandSessionManager`'s one per-caller daemon RPC, not a per-invocation
 //! resource.
 
 use std::collections::HashMap;

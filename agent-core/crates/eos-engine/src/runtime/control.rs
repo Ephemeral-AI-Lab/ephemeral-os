@@ -13,7 +13,7 @@ use eos_types::{AgentRunId, JsonObject, TaskId};
 use tokio::sync::Notify;
 
 use super::foreground::ForegroundExecutor;
-use crate::background::BackgroundSupervisorHandle;
+use crate::background::BackgroundSessionService;
 use crate::notifications::NotificationService;
 use crate::EngineError;
 
@@ -173,15 +173,15 @@ impl AgentRunFinalization {
 /// The live object for one agent run (spec §6.3).
 ///
 /// The run's command-completion heartbeat is owned by the
-/// `CommandSessionLane` inside `background`, so dropping this control (the last
-/// handle clone) drops the lane and aborts the heartbeat (RAII) — no separate
-/// guard is held here.
+/// `CommandSessionMonitor` inside `background`, so dropping this control (the
+/// last service clone) drops the runtime and aborts the monitors (RAII) — no
+/// separate guard is held here.
 pub struct AgentRunControl {
     agent_run_id: AgentRunId,
     cancellation: AgentRunCancellation,
     foreground: Arc<ForegroundExecutor>,
     notifications: NotificationService,
-    background: BackgroundSupervisorHandle,
+    background: BackgroundSessionService,
     finalization: AgentRunFinalization,
 }
 
@@ -237,9 +237,9 @@ impl AgentRunControl {
         self.cancellation.clone()
     }
 
-    /// A clone of the run's background supervisor handle.
+    /// A clone of the run's background session service.
     #[must_use]
-    pub fn background(&self) -> BackgroundSupervisorHandle {
+    pub fn background(&self) -> BackgroundSessionService {
         self.background.clone()
     }
 
@@ -270,5 +270,5 @@ pub(super) struct AgentRunControlParts {
     pub(super) agent_run_store: Arc<dyn AgentRunStore>,
     pub(super) foreground: Arc<ForegroundExecutor>,
     pub(super) notifications: NotificationService,
-    pub(super) background: BackgroundSupervisorHandle,
+    pub(super) background: BackgroundSessionService,
 }

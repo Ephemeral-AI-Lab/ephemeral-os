@@ -10,12 +10,12 @@
 //! data out from under any lane lock and drop the lock *before* awaiting `emit`.
 
 use eos_tools::SystemNotification as ToolNotification;
+use eos_tools::ToolResult;
 use eos_tools::ToolError;
 use eos_types::{CommandSessionId, SandboxId, SubagentSessionId, WorkflowId, WorkflowSessionId};
-use eos_tools::ToolResult;
 use serde_json::Value;
 
-use super::lanes::BackgroundTaskStatus;
+use super::session_managers::BackgroundSessionStatus;
 use crate::notifications::NotificationService;
 
 /// A terminal background transition to surface to the owning agent run.
@@ -26,7 +26,7 @@ pub enum BackgroundCompletion {
         /// Agent-facing subagent handle id.
         subagent_session_id: SubagentSessionId,
         /// Terminal status.
-        status: BackgroundTaskStatus,
+        status: BackgroundSessionStatus,
         /// The subagent's terminal result.
         result: ToolResult,
     },
@@ -37,7 +37,7 @@ pub enum BackgroundCompletion {
         /// The persisted workflow id.
         workflow_id: WorkflowId,
         /// Terminal status.
-        status: BackgroundTaskStatus,
+        status: BackgroundSessionStatus,
     },
     /// A background command session completed (the owner run is the target).
     CommandSession {
@@ -46,7 +46,7 @@ pub enum BackgroundCompletion {
         /// Owning sandbox.
         sandbox_id: SandboxId,
         /// Terminal status.
-        status: BackgroundTaskStatus,
+        status: BackgroundSessionStatus,
         /// The daemon completion `result` payload.
         result: Value,
     },
@@ -120,13 +120,13 @@ impl BackgroundCompletion {
     }
 }
 
-fn status_token(status: BackgroundTaskStatus) -> &'static str {
+fn status_token(status: BackgroundSessionStatus) -> &'static str {
     match status {
-        BackgroundTaskStatus::Running => "running",
-        BackgroundTaskStatus::Completed => "completed",
-        BackgroundTaskStatus::Failed => "failed",
-        BackgroundTaskStatus::Cancelled => "cancelled",
-        BackgroundTaskStatus::Delivered => "delivered",
+        BackgroundSessionStatus::Running => "running",
+        BackgroundSessionStatus::Completed => "completed",
+        BackgroundSessionStatus::Failed => "failed",
+        BackgroundSessionStatus::Cancelled => "cancelled",
+        BackgroundSessionStatus::Delivered => "delivered",
     }
 }
 
@@ -179,7 +179,7 @@ mod tests {
         emitter
             .emit(BackgroundCompletion::Subagent {
                 subagent_session_id: "subagent_1".parse().expect("id"),
-                status: BackgroundTaskStatus::Completed,
+                status: BackgroundSessionStatus::Completed,
                 result: ToolResult::ok("did the work"),
             })
             .await
