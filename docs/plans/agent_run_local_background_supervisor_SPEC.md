@@ -38,23 +38,36 @@ The target design is agent-run local management:
 - each agent run owns its own `StopSignal`,
 - each agent run owns its own lightweight foreground executor,
 - each agent run owns its own `BackgroundSupervisorHandle`,
-- each background supervisor owns its own notification manager,
-- each background supervisor owns its own command-completion heartbeat runner,
+- each agent run owns its own `NotificationService`; the query loop and all of
+  that run's background lanes share clones of this same queue,
+- subagents, workflows, and command sessions all enqueue completion
+  notifications into the owner run's `NotificationService`,
+- each agent run's `CommandSessionLane` owns its own command-completion heartbeat
+  runner, which sends completions to that run's notification service,
 - workflows, command sessions, and subagents all use the same record pattern:
   `handle + status + result/progress metadata`,
+- command-session **cancellation** is delegated to the daemon with one per-caller
+  RPC `cancel_all_workspace_runs_by_caller_id(agent_run_id)` — the PTYs are
+  daemon-owned, keyed by `caller_id == agent_run_id` (see
+  `daemon_workspace_run_registry_SPEC.md`). The agent-core `CommandSessionLane` still
+  tracks command sessions for completion delivery; it just no longer cancels them
+  per-session,
 - cancellation reduces to two recursive agent-core primitives:
   `cancel_task(task_id, reason)` and `cancel_agent_run(agent_run_id, reason)`.
 
 ## 2. Goals
 
 - Move mutable background state from request scope to agent-run scope.
-- Make `BackgroundSupervisorHandle` the object-oriented owner of:
-  - the per-agent background ledger,
-  - the per-agent `NotificationService`,
-  - the per-agent command-completion heartbeat.
+- Make `AgentRunControl` the object-oriented owner of the per-agent
+  `NotificationService`.
+- Make `BackgroundSupervisorHandle` the object-oriented owner of the per-agent
+  background ledger and lane wiring; it only holds clones of the run-local
+  notification service.
+- Make the per-agent `CommandSessionLane` the owner of the command-completion
+  heartbeat, which sends completions to that run's `NotificationService`.
 - Add `AgentRunControl` as the object-oriented owner of one live agent run:
-  `StopSignal`, foreground executor, background supervisor, and finalization
-  handles.
+  `StopSignal`, foreground executor, background supervisor, notification queue,
+  and finalization handles.
 - Add `AgentRunRegistry` so live runs and task-to-run ownership are addressable
   without backend future dropping.
 - Replace request-wide cleanup with explicit, awaited cancellation.
@@ -62,8 +75,10 @@ The target design is agent-run local management:
   every record contains a first-class handle object.
 - Remove in-memory `agent_run_id` filtering from background records once the
   supervisor itself is per-agent.
-- Make command sessions cancelable from creation, not only after
-  `yield_time_ms`.
+- Cancel command sessions via the single per-caller daemon RPC
+  `cancel_all_workspace_runs_by_caller_id(agent_run_id)` — one call tears down all of
+  the caller's daemon-owned PTYs; the `CommandSessionLane` no longer issues
+  per-session cancels. Cancelable-from-creation is a daemon-side guarantee.
 - Keep request/workflow composition shared only where it is truly shared:
   stores, workflow control, attempt registries, agent registry, tool config,
   sandbox transport, and immutable engine handles.
@@ -101,18 +116,27 @@ Request runtime
 Agent run
   owns one AgentRunControl
     ├─ agent_run_id
-    ├─ task_id
+    ├─ task_id                 (only for persisted runs)
     ├─ StopSignal
     ├─ ForegroundExecutor
+    ├─ NotificationService     (owned here; cloned into query loop + lanes)
     ├─ BackgroundSupervisorHandle
     │    ├─ owner_agent_run_id
-    │    ├─ NotificationService
-    │    ├─ CommandCompletionHeartbeat
+    │    ├─ BackgroundNotificationEmitter
     │    └─ BackgroundTaskSupervisor
-    │         ├─ SubagentLane
-    │         ├─ WorkflowLane
+    │         ├─ SubagentLane          (completion → NotificationService)
+    │         ├─ WorkflowLane          (completion → NotificationService)
     │         └─ CommandSessionLane
+    │              ├─ records                      (completion tracking)
+    │              └─ CommandCompletionHeartbeat   (polls daemon → NotificationService; cancels via one per-caller RPC)
     └─ finalization handles
+
+Command-session PTYs are owned by the daemon's WorkspaceRunRegistry (keyed by
+caller_id == agent_run_id; see daemon_workspace_run_registry_SPEC.md). The
+agent-core CommandSessionLane mirrors them for completion delivery — its heartbeat
+polls the daemon and sends results to this run's NotificationService — and cancels
+them all with one cancel_all_workspace_runs_by_caller_id(agent_run_id) RPC instead of
+per-session.
 ```
 
 The request may create factories once, but it must not own mutable per-agent
@@ -135,6 +159,7 @@ agent-core/crates/eos-engine/src/
     factory.rs             # new: builds one supervisor handle per agent run
     handle.rs              # BackgroundSupervisorHandle and runtime owner
     heartbeat.rs           # CommandCompletionHeartbeat RAII runner
+    notifications.rs       # new: BackgroundNotificationEmitter + render helpers
     supervisor.rs          # BackgroundTaskSupervisor lane container
     lanes/
       mod.rs
@@ -225,9 +250,9 @@ The live object for one agent run.
 ```rust
 pub struct AgentRunControl {
     agent_run_id: AgentRunId,
-    task_id: Option<TaskId>,
     stop: StopSignal,
     foreground: ForegroundExecutor,
+    notifications: NotificationService,
     background: BackgroundSupervisorHandle,
     finalization: AgentRunFinalization,
 }
@@ -236,11 +261,29 @@ pub struct AgentRunControl {
 Finalization data:
 
 ```rust
+pub enum AgentRunPersistence {
+    Persisted { task_id: TaskId },
+    Ephemeral,
+}
+
 pub struct AgentRunFinalization {
-    persist_agent_run: bool,
+    persistence: AgentRunPersistence,
     message_record: Mutex<Option<AgentRunRecordHandle>>,
 }
+
+impl AgentRunFinalization {
+    pub fn persisted(task_id: TaskId) -> Self;
+    pub fn ephemeral() -> Self;
+    pub fn task_id(&self) -> Option<&TaskId>;
+    pub async fn finish_cancelled(&self, reason: &str) -> Result<(), EngineError>;
+}
 ```
+
+`Persisted` is for task-backed root and workflow agent runs. It owns the
+durable `AgentRunStore` completion obligation. `Ephemeral` is for live-only
+subagent runs that still need local cancellation, background cleanup, and
+message-record finalization, but must not create or finish an `AgentRunStore`
+row.
 
 Methods:
 
@@ -277,8 +320,13 @@ pub struct AgentRunRegistry {
 }
 
 struct AgentRunRegistryState {
-    by_run_id: HashMap<AgentRunId, Arc<AgentRunControl>>,
+    by_run_id: HashMap<AgentRunId, AgentRunEntry>,
     by_task_id: HashMap<TaskId, AgentRunId>,
+}
+
+enum AgentRunEntry {
+    Running(Arc<AgentRunControl>),
+    Cancelling,
 }
 ```
 
@@ -289,13 +337,19 @@ impl AgentRunRegistry {
     pub fn insert(&self, control: Arc<AgentRunControl>);
     pub fn get(&self, agent_run_id: &AgentRunId) -> Option<Arc<AgentRunControl>>;
     pub fn agent_run_for_task(&self, task_id: &TaskId) -> Option<AgentRunId>;
-    pub fn remove(&self, agent_run_id: &AgentRunId);
+    pub fn begin_cancel(&self, agent_run_id: &AgentRunId) -> Option<Arc<AgentRunControl>>;
+    pub fn finish_cancel(&self, agent_run_id: &AgentRunId);
 }
 ```
 
 Rules:
 
-- Registry presence is part of cancellation idempotency.
+- `insert` indexes `by_task_id` only when `control.task_id()` returns `Some`.
+- `get` returns a control only for `AgentRunEntry::Running`; cancellation callers
+  must use `begin_cancel`.
+- `begin_cancel` changes `AgentRunEntry::Running` to
+  `AgentRunEntry::Cancelling` under the registry lock before any awaited
+  teardown. Repeated cancellation calls see `Cancelling` and become no-ops.
 - A missing run means it already finished or was never live in this process.
 - Persisted `AgentRunStore::get_for_task` may be used as a fallback for reporting,
   but live teardown uses this registry.
@@ -347,10 +401,11 @@ Rules:
 - `ForegroundExecutor` is not a mirror supervisor.
 - `ask_advisor` registers an inline child agent run; teardown calls
   `cancel_agent_run(child)`.
-- `exec_command` registers a daemon invocation cancel resource before the
-  sandbox RPC starts. If the daemon returns a running `command_session_id`, the
-  resource is upgraded or re-registered as a `CommandSessionHandle` in the
-  background lane.
+- `exec_command` is NOT a foreground `CancelableResource`. Its in-flight future is
+  dropped by the foreground `JoinSet` abort on cancel; if the daemon returns a running
+  `command_session_id`, the session is recorded in the `CommandSessionLane` and the
+  PTY is torn down by the lane's one per-caller daemon RPC
+  (`cancel_all_workspace_runs_by_caller_id`), not by a per-invocation resource.
 
 ## 7. Shared Cancellation Ports
 
@@ -369,11 +424,14 @@ Implementations:
 
 | Resource | Teardown |
 | --- | --- |
-| `CommandInvocationHandle` | `api.v1.cancel` by sandbox invocation id |
-| `CommandSessionHandle` | `api.v1.command.cancel` by `command_session_id` |
 | `WorkflowHandle` | `WorkflowControlPort::cancel(workflow_task_id, reason)` |
-| `SubagentHandle` | `CancelPort::cancel_agent_run(child_agent_run_id)`, then `driver_abort.abort()` as a backstop |
+| `SubagentHandle` | `CancelPort::cancel_agent_run(sub_agent_run_id)`, then `driver_abort.abort()` as a backstop |
 | `InlineAgentRunHandle` | `CancelPort::cancel_agent_run(agent_run_id)` |
+
+Command sessions are **not** per-resource `CancelableResource`s. They are
+daemon-owned; the `CommandSessionLane` cancels them all with one
+`cancel_all_workspace_runs_by_caller_id(owner_agent_run_id)` daemon RPC (§9.3), not a
+per-session teardown.
 
 ### 7.2 CancelPort
 
@@ -426,7 +484,11 @@ impl BackgroundSupervisorFactory {
         completion_poll_interval: Duration,
     ) -> Self;
 
-    pub fn create(&self, owner_agent_run_id: AgentRunId) -> BackgroundSupervisorHandle;
+    pub fn create(
+        &self,
+        owner_agent_run_id: AgentRunId,
+        notifications: NotificationService,
+    ) -> BackgroundSupervisorHandle;
 }
 ```
 
@@ -453,8 +515,11 @@ struct BackgroundSupervisorRuntime {
     handles: EngineRunHandles,
     transport: Arc<dyn SandboxTransport>,
     completion_poll_interval: Duration,
-    notifications: NotificationService,
-    completion_heartbeat: CommandCompletionHeartbeat,
+    notifications: BackgroundNotificationEmitter,
+    // NOTE: the command-completion heartbeat is NOT here — it is owned by the
+    // CommandSessionLane (§9.3). At construction the runtime threads
+    // owner_agent_run_id + transport + a BackgroundNotificationEmitter clone +
+    // interval into the lane so the lane can spawn its own heartbeat.
 }
 ```
 
@@ -467,6 +532,7 @@ impl BackgroundSupervisorHandle {
         handles: EngineRunHandles,
         transport: Arc<dyn SandboxTransport>,
         completion_poll_interval: Duration,
+        notifications: NotificationService,
     ) -> Self;
 
     pub fn owner_agent_run_id(&self) -> &AgentRunId;
@@ -484,18 +550,25 @@ impl BackgroundSupervisorHandle {
 
 Rules:
 
-- `BackgroundSupervisorHandle` owns `CommandCompletionHeartbeat`.
+- The `CommandSessionLane` owns `CommandCompletionHeartbeat` (§9.3); the runtime
+  threads `owner_agent_run_id` + `transport` + a `BackgroundNotificationEmitter`
+  clone + `interval` into the lane at construction.
 - `BackgroundSupervisorHandle::notifications()` returns the exact
-  `NotificationService` clone that `run_agent` must pass into `AgentRunInput`.
-- The heartbeat writes into the same `NotificationService` that the agent query
-  loop drains.
+  `NotificationService` owned by `AgentRunControl` and passed into `AgentRunInput`.
+  Subagent, workflow, and command-session lanes send completion messages through
+  clones of that same service.
 - `owner_agent_run_id` is stored once on the runtime and must not be duplicated
   on every background record.
-- `teardown` replaces `cancel_for_parent_exit`.
+- `teardown` replaces `cancel_for_parent_exit`. It cancels subagents
+  (`cancel_agent_run` each), workflows (`cancel_workflow` each), and command sessions
+  (one `CommandSessionLane::cancel_all_command_sessions()`, which delegates to the
+  daemon `cancel_all_workspace_runs_by_caller_id` — not per-session).
 
 ### 8.3 CommandCompletionHeartbeat
 
-The heartbeat is an RAII runner owned by `BackgroundSupervisorHandle`.
+The heartbeat is an RAII runner **owned by `CommandSessionLane`** (§9.3). It polls
+the daemon for this caller's command-session completions and sends them to the
+agent run's `NotificationService`.
 
 ```rust
 pub(super) struct CommandCompletionHeartbeat {
@@ -508,9 +581,9 @@ Methods:
 ```rust
 impl CommandCompletionHeartbeat {
     pub(super) fn spawn(
-        owner_agent_run_id: AgentRunId,
-        inner: Arc<Mutex<BackgroundTaskSupervisor>>,
-        notifications: NotificationService,
+        owner_agent_run_id: AgentRunId,            // == caller_id for daemon collection
+        records: Weak<Mutex<CommandSessionRecords>>, // the lane's shared records (Weak — see cycle rule)
+        notifications: BackgroundNotificationEmitter, // clone of the agent run's notifier
         transport: Arc<dyn SandboxTransport>,
         interval: Duration,
     ) -> Self;
@@ -523,35 +596,88 @@ impl Drop for CommandCompletionHeartbeat {
 }
 ```
 
-Reference-cycle rule:
+Reference-cycle rule (important — the `JoinHandle` now lives inside the lane, which
+lives inside `Arc<Mutex<BackgroundTaskSupervisor>>`):
 
-- The heartbeat task must not capture `Arc<BackgroundSupervisorRuntime>`.
-- It may capture only:
-  - `owner_agent_run_id`,
-  - `inner`,
-  - `notifications`,
-  - `transport`,
-  - `interval`.
+- The heartbeat task must capture a **`Weak`** to the lane's records, never a strong
+  `Arc<Mutex<BackgroundTaskSupervisor>>` / `Arc<BackgroundSupervisorRuntime>`. A
+  strong capture would form a cycle (task → supervisor → lane → JoinHandle) so the
+  `JoinHandle` would never drop and never abort the task.
+- Each tick `upgrade()`s the `Weak`; if it is gone, the task exits.
+- It may also capture `owner_agent_run_id`, the notification emitter, `transport`,
+  and `interval`.
 
 Idle behavior:
 
-- The heartbeat wakes every configured interval.
-- It locks the local `BackgroundTaskSupervisor`.
-- It asks for running command sessions grouped by sandbox.
-- If no command sessions are running, it makes no sandbox RPC.
-- It sleeps and repeats until the owning `BackgroundSupervisorHandle` runtime is
-  dropped, at which point `Drop` aborts the task.
+- The heartbeat wakes every configured interval and upgrades its `Weak` records.
+- It reads running command-session ids grouped by sandbox from the lane records.
+- If none are running, it makes no sandbox RPC.
+- Otherwise it calls `api.v1.command.collect_completed(caller_id = owner_agent_run_id,
+  ids)`, ingests completions into the lane records, and **enqueues command-session
+  completion notifications through `BackgroundNotificationEmitter`**.
+- It sleeps and repeats until the lane (and its `JoinHandle`) is dropped, at which
+  point `Drop` aborts the task.
 
-### 8.4 BackgroundTaskSupervisor
+### 8.4 BackgroundNotificationEmitter
+
+Centralized renderer and delivery adapter for model-visible background
+completion messages.
+
+```rust
+#[derive(Clone, Debug, Default)]
+pub struct BackgroundNotificationEmitter {
+    notifications: NotificationService,
+}
+
+pub enum BackgroundCompletion {
+    Subagent {
+        subagent_session_id: SubagentSessionId,
+        status: BackgroundTaskStatus,
+        result: ToolResult,
+    },
+    Workflow {
+        workflow_task_id: WorkflowSessionId,
+        workflow_id: WorkflowId,
+        status: BackgroundTaskStatus,
+    },
+    CommandSession {
+        command_session_id: CommandSessionId,
+        sandbox_id: SandboxId,
+        status: BackgroundTaskStatus,
+        result: Value,
+    },
+}
+
+impl BackgroundNotificationEmitter {
+    pub fn new(notifications: NotificationService) -> Self;
+    pub fn notifications(&self) -> NotificationService;
+    pub async fn emit(&self, completion: BackgroundCompletion) -> Result<(), ToolError>;
+}
+```
+
+Rules:
+
+- `BackgroundNotificationEmitter` wraps the exact `NotificationService` owned by
+  `AgentRunControl`.
+- Subagent, workflow, and command-session terminal transitions all produce one
+  `BackgroundCompletion`.
+- The lane mutates its record under its own lock, clones the terminal data needed
+  for the `BackgroundCompletion`, drops the lock, then awaits `emit`. No
+  notification send may hold the supervisor or lane record lock across `.await`.
+- The rendered message prefix remains `[BACKGROUND COMPLETED]`; the payload names
+  the background kind and typed handle id so the model can call the matching
+  progress/check tool for details if needed.
+
+### 8.5 BackgroundTaskSupervisor
 
 The per-agent ledger. It is not a request-global map.
 
 ```rust
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub struct BackgroundTaskSupervisor {
     subagents: SubagentLane,
     workflows: WorkflowLane,
-    commands: CommandSessionLane,
+    commands: CommandSessionLane,   // owns its own heartbeat → not Default
 }
 ```
 
@@ -559,15 +685,23 @@ Methods:
 
 ```rust
 impl BackgroundTaskSupervisor {
-    pub fn new() -> Self;
-    pub fn inflight_report(&self) -> BackgroundInflightReport;
-    pub fn drain_command_session_notifications(&mut self) -> Vec<SystemNotification>;
+    // Builds the CommandSessionLane, which spawns its heartbeat against this agent
+    // run's notifier (params threaded from BackgroundSupervisorRuntime).
+    pub fn new(
+        owner_agent_run_id: AgentRunId,
+        notifications: BackgroundNotificationEmitter,
+        transport: Arc<dyn SandboxTransport>,
+        interval: Duration,
+    ) -> Self;
 
-    pub fn running_command_session_ids_by_sandbox(
-        &self,
-    ) -> Vec<(SandboxId, Vec<CommandSessionId>)>;
+    pub fn inflight_report(&self) -> BackgroundInflightReport;
 }
 ```
+
+`drain_command_session_notifications` / `running_command_session_ids_by_sandbox` are
+**no longer supervisor methods** — completion polling and notification enqueue are
+internal to the `CommandSessionLane` heartbeat, which writes through the shared
+`BackgroundNotificationEmitter`.
 
 Rules:
 
@@ -588,12 +722,13 @@ owns local identity generation and a local abort backstop.
 pub struct SubagentLane {
     next_session_seq: u64,
     records: HashMap<SubagentSessionId, SubagentRecord>,
+    notifications: BackgroundNotificationEmitter,
 }
 
 #[derive(Debug, Clone)]
 pub struct SubagentHandle {
     pub subagent_session_id: SubagentSessionId,
-    pub child_agent_run_id: AgentRunId,
+    pub sub_agent_run_id: AgentRunId,
     pub driver_abort: AbortHandle,
 }
 
@@ -612,7 +747,10 @@ Rules:
   `subagent_session_id`.
 - The child agent run itself gets its own `AgentRunControl` and
   `BackgroundSupervisorHandle`.
-- Cancellation calls `cancel_agent_run(child_agent_run_id)` first and uses
+- When the subagent driver settles a terminal `SubagentRecord`, it emits one
+  subagent completion notification into the parent agent run's
+  `NotificationService` through `BackgroundNotificationEmitter`.
+- Cancellation calls `cancel_agent_run(sub_agent_run_id)` first and uses
   `driver_abort` only as a runaway-driver backstop.
 
 ### 9.2 WorkflowLane
@@ -624,6 +762,7 @@ stores the public workflow handle and status, not a local Tokio abort handle.
 #[derive(Debug, Default)]
 pub struct WorkflowLane {
     records: HashMap<WorkflowSessionId, WorkflowBackgroundRecord>,
+    notifications: BackgroundNotificationEmitter,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -644,17 +783,40 @@ Rules:
 - Cancellation dispatches through `cancel_workflow`.
 - The workflow's durable lifecycle remains owned by `eos-workflow`.
 - The supervisor record owns in-flight accounting and parent-exit cleanup state.
+- Workflow completion/cancellation observation emits one workflow completion
+  notification into the parent agent run's `NotificationService` through
+  `BackgroundNotificationEmitter`.
 
 ### 9.3 CommandSessionLane
 
-Command sessions are created by sandbox/eos-command-session. The supervisor
-stores the public command-session handle, sandbox routing facts, status, and
-completion result latch.
+The command-session subsystem for one agent run. Command-session **PTYs are
+daemon-owned** (`WorkspaceRunRegistry`, keyed by `caller_id == agent_run_id`); the
+lane is the agent-core mirror that (a) tracks records for completion delivery,
+(b) **owns the `CommandCompletionHeartbeat`** that polls the daemon and sends
+completions to the run's `NotificationService`, and (c) cancels via one per-caller
+daemon RPC.
 
 ```rust
-#[derive(Debug, Default)]
 pub struct CommandSessionLane {
-    records: HashMap<CommandSessionId, CommandSessionRecord>,
+    owner_agent_run_id: AgentRunId,          // bound to one agent run (== caller_id)
+    transport: Arc<dyn SandboxTransport>,    // for the daemon cancel + heartbeat RPCs
+    notifications: BackgroundNotificationEmitter,
+    // shared so the heartbeat task can hold a Weak to it (see §8.3 cycle rule)
+    records: Arc<Mutex<CommandSessionRecords>>,
+    heartbeat: CommandCompletionHeartbeat,   // owned here; spawned at construction
+}
+
+type CommandSessionRecords = HashMap<CommandSessionId, CommandSessionRecord>;
+
+impl CommandSessionLane {
+    // The supervisor passes these through from BackgroundSupervisorRuntime so the
+    // lane can spawn its own heartbeat against the agent run's notifier.
+    pub fn new(
+        owner_agent_run_id: AgentRunId,
+        notifications: BackgroundNotificationEmitter,
+        transport: Arc<dyn SandboxTransport>,
+        interval: Duration,
+    ) -> Self;   // spawns CommandCompletionHeartbeat::spawn(owner_agent_run_id, Arc::downgrade(&records), notifications.clone(), transport, interval)
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -672,18 +834,40 @@ pub struct CommandSessionRecord {
 }
 ```
 
+Cancellation method (one daemon RPC, not per-session):
+
+```rust
+impl CommandSessionLane {
+    // Cancel ALL of this lane's command sessions in one call. The lane is bound to one
+    // agent run, so it loads owner_agent_run_id (== caller_id) from self — no param.
+    // The PTYs are daemon-owned (WorkspaceRunRegistry), so this delegates to the daemon
+    // instead of iterating per-session cancels.
+    async fn cancel_all_command_sessions(&mut self, reason: &str) -> Result<(), ToolError>;
+    // → daemon op: cancel_all_workspace_runs_by_caller_id(self.owner_agent_run_id)
+}
+```
+
 Rules:
 
 - `exec_command` registers a background command-session record when the daemon
   returns `status=running` and a `command_session_id`.
 - This means the command did not finish within `yield_time_ms`; it is not an
   `exec_command` failure.
-- The foreground daemon invocation is still cancelable before the response
-  returns through `CommandInvocationHandle`.
-- Completion collection dispatches through sandbox RPC
-  `api.v1.command.collect_completed`.
-- The heartbeat uses `owner_agent_run_id.as_str()` as the sandbox `caller_id`
-  for collection.
+- **Cancellation is lane-level, not per-session.** The lane calls
+  `cancel_all_command_sessions()` once (loading `owner_agent_run_id` from `self`),
+  which delegates to the daemon `cancel_all_workspace_runs_by_caller_id`; the daemon
+  tears down the caller's whole workspace run (all its PTYs + overlay). There is no
+  per-session `api.v1.command.cancel` from agent-core on the cancel path.
+- A foreground `exec_command` still mid-`yield_time_ms` is handled by the
+  `ForegroundExecutor` aborting its in-flight future; the daemon PTY is killed by the
+  same lane-level RPC. No separate `CommandInvocationHandle` resource is needed.
+- The lane keeps `records` for **completion delivery** and **owns the
+  `CommandCompletionHeartbeat`** (§8.3). The heartbeat polls
+  `api.v1.command.collect_completed(caller_id = owner_agent_run_id, ids)`, ingests
+  completions into `records`, and emits command-session completion notifications
+  through `BackgroundNotificationEmitter`.
+- The heartbeat task holds a `Weak` to `records` (cycle rule, §8.3) and aborts when
+  the lane is dropped.
 
 ## 10. Port Signatures
 
@@ -793,12 +977,13 @@ let background_factory = Arc::new(BackgroundSupervisorFactory::new(
 When the root `AgentRunId` is minted:
 
 ```rust
-let background = background_factory.create(agent_run_id.clone());
+let notifications = NotificationService::new();
+let background = background_factory.create(agent_run_id.clone(), notifications.clone());
 let control = AgentRunControl::new(
     agent_run_id.clone(),
-    Some(root_task_id.clone()),
+    notifications,
     background,
-    AgentRunFinalization::persisted(),
+    AgentRunFinalization::persisted(root_task_id.clone()),
 );
 agent_run_registry.insert(control.clone());
 
@@ -854,12 +1039,15 @@ Inside each `run()`:
 
 ```rust
 let agent_run_id = AgentRunId::new_v4();
-let background = self.background_factory.create(agent_run_id.clone());
+let notifications = NotificationService::new();
+let background = self
+    .background_factory
+    .create(agent_run_id.clone(), notifications.clone());
 let control = AgentRunControl::new(
     agent_run_id.clone(),
-    Some(launch.task_id().clone()),
+    notifications,
     background,
-    AgentRunFinalization::persisted(),
+    AgentRunFinalization::persisted(launch.task_id().clone()),
 );
 self.agent_run_registry.insert(control.clone());
 
@@ -891,23 +1079,25 @@ Subagents follow the same per-agent runtime rule.
 When `BackgroundSupervisorPort::spawn` launches a child run:
 
 ```rust
-let child_agent_run_id = AgentRunId::new_v4();
+let sub_agent_run_id = AgentRunId::new_v4();
+let child_notifications = NotificationService::new();
 let child_background = BackgroundSupervisorHandle::new(
-    child_agent_run_id.clone(),
+    sub_agent_run_id.clone(),
     self.runtime.handles.clone(),
     self.runtime.transport.clone(),
     self.runtime.completion_poll_interval,
+    child_notifications.clone(),
 );
 let child_control = AgentRunControl::new(
-    child_agent_run_id.clone(),
-    None,
+    sub_agent_run_id.clone(),
+    child_notifications,
     child_background,
     AgentRunFinalization::ephemeral(),
 );
 agent_run_registry.insert(child_control.clone());
 
 let run_input = AgentRunInput {
-    agent_run_id: child_agent_run_id.clone(),
+    agent_run_id: sub_agent_run_id.clone(),
     background_supervisor: Some(child_control.background()),
     command_session_supervisor: Some(child_control.background()),
     notifier: child_control.notifications(),
@@ -974,20 +1164,28 @@ Rules:
 
 ```text
 cancel_agent_run(agent_run_id, reason)
-  ├─ control = AgentRunRegistry::get(agent_run_id)
+  ├─ control = AgentRunRegistry::begin_cancel(agent_run_id)
   ├─ control.stop.request(reason)
   ├─ control.foreground.teardown(cancel_port, reason)
   ├─ control.background.teardown(cancel_port, workflow_control, reason)
-  ├─ finish_agent_run(Cancelled) + message_record.finish(Cancelled)
-  └─ AgentRunRegistry::remove(agent_run_id)
+  ├─ control.finalization.finish_cancelled(reason)
+  └─ AgentRunRegistry::finish_cancel(agent_run_id)
 ```
 
 Rules:
 
 - This is awaited end-to-end.
+- Persisted finalization finishes the durable agent-run row and the
+  message-record handle.
+- Ephemeral finalization skips durable agent-run completion and still finishes
+  any message-record handle it owns.
+- `control.background.teardown` cancels subagents (`cancel_agent_run` each), workflows
+  (`cancel_workflow` each), and command sessions (one
+  `CommandSessionLane::cancel_all_command_sessions()`, §8.2/§9.3).
 - No cleanup path may rely on `Drop`.
 - No cleanup path may spawn untracked fire-and-forget tasks.
-- Idempotency is registry presence plus task/request status CAS.
+- Idempotency is `AgentRunEntry::Running -> AgentRunEntry::Cancelling` plus
+  task/request status CAS.
 
 ### 12.4 Workflow Decomposition
 
@@ -1018,35 +1216,74 @@ Rules:
 
 ## 13. Heartbeat and Notification Flow
 
-### 13.1 Heartbeat
+### 13.1 Background Completion Producers
+
+All model-visible background completions go through the same run-local
+`NotificationService` owned by `AgentRunControl`.
 
 ```text
+Subagent driver completion
+  ├─ settle SubagentRecord under SubagentLane lock
+  ├─ clone terminal ToolResult/status into BackgroundCompletion::Subagent
+  ├─ drop the lane/supervisor lock
+  └─ BackgroundNotificationEmitter::emit(completion)
+
+Workflow completion observation
+  ├─ observe terminal workflow state through WorkflowControlPort / workflow status path
+  ├─ settle WorkflowBackgroundRecord under WorkflowLane lock
+  ├─ clone workflow handle/status into BackgroundCompletion::Workflow
+  ├─ drop the lane/supervisor lock
+  └─ BackgroundNotificationEmitter::emit(completion)
+
 CommandCompletionHeartbeat tick
-  ├─ lock per-agent BackgroundTaskSupervisor
-  ├─ collect running command sessions grouped by sandbox
+  ├─ collect daemon command-session completions
+  ├─ ingest CommandSessionRecord terminal state under CommandSessionLane records lock
+  ├─ clone terminal result/status into BackgroundCompletion::CommandSession
+  ├─ drop the records lock
+  └─ BackgroundNotificationEmitter::emit(completion)
+```
+
+Invariant:
+
+- Every background completion visible to the model is enqueued into the
+  `NotificationService` owned by that background record's parent `AgentRunControl`.
+- The parent agent run is the notification target for subagent and workflow
+  completions; the command-session owner agent run is the notification target for
+  command-session completions.
+- No background lane sends directly to another agent run's notifier.
+- No notification send may hold a supervisor/lane lock across `.await`.
+
+### 13.2 Command-Session Heartbeat
+
+```text
+CommandCompletionHeartbeat tick   (owned by CommandSessionLane, §8.3/§9.3)
+  ├─ upgrade Weak<CommandSessionRecords>; if gone, exit the task
+  ├─ collect running command-session ids grouped by sandbox from the lane records
   ├─ if empty: no sandbox RPC
   ├─ for each sandbox group:
   │    └─ api.v1.command.collect_completed(
   │         caller_id = owner_agent_run_id.as_str(),
   │         command_session_ids = ids
   │       )
-  ├─ ingest returned completions into local CommandSessionLane
-  ├─ render [BACKGROUND COMPLETED] notifications
-  └─ enqueue into this handle's NotificationService
+  ├─ ingest returned completions into the lane records
+  ├─ render BackgroundCompletion::CommandSession values
+  └─ emit through the lane's BackgroundNotificationEmitter clone
 ```
 
 Invariant:
 
-- The heartbeat producer and query-loop consumer share the same
-  `NotificationService` instance for exactly one agent run.
+- The heartbeat (owned by the `CommandSessionLane`) and the query-loop consumer share
+  the same `NotificationService` instance for exactly one agent run.
+- The heartbeat task holds a `Weak` to the lane records, never a strong `Arc` to the
+  supervisor that transitively owns its `JoinHandle` (§8.3 cycle rule).
 
-### 13.2 Notifications
+### 13.3 Query-Loop Notification Drain
 
 ```text
 Query loop top of turn
   ├─ evaluate per-run NotificationRule values
   ├─ enqueue rule notifications into ctx.notifier
-  ├─ heartbeat may also enqueue command-completion notifications
+  ├─ background lanes may also enqueue completion notifications
   ├─ drain ctx.notifier
   ├─ append notifications as provider-visible user message blocks
   └─ emit StreamEvent::SystemNotification
@@ -1085,8 +1322,8 @@ Cancelled task terminal payload:
 | Current Item | Target |
 | --- | --- |
 | request-scoped `BackgroundSupervisorHandle` in `entry.rs` | per-agent `AgentRunControl.background` |
-| request-scoped `NotificationService` | per-agent `BackgroundSupervisorHandle.notifications` |
-| request-scoped heartbeat | per-agent `CommandCompletionHeartbeat` owned by the handle |
+| request-scoped `NotificationService` | per-agent `AgentRunControl.notifications` cloned into query loop and background lanes |
+| request-scoped heartbeat | per-agent `CommandCompletionHeartbeat` owned by the `CommandSessionLane`, sending through `BackgroundNotificationEmitter` |
 | `BackgroundRunFinalizer` normal cleanup | explicit awaited `AgentRunControl::teardown` |
 | `BackgroundSupervisorPort::cancel_for_parent_exit` | internal concrete `BackgroundSupervisorHandle::teardown` |
 | `inflight_report(Option<&AgentRunId>)` | per-agent no-arg `inflight_report()` |
@@ -1096,7 +1333,7 @@ Cancelled task terminal payload:
 | `CommandSessionRecord { command_session_id, sandbox_id, agent_run_id }` | `CommandSessionRecord { handle: CommandSessionHandle, command, status, result }` |
 | backend future drop as cancel | backend calls `cancel_agent_core_user_request`; see backend spec |
 | workflow-specific shallow cancel helpers | `cancel_workflow -> cancel_iteration -> cancel_attempt -> cancel_task` |
-| command session cancelable only after yielded background response | foreground `CommandInvocationHandle` plus background `CommandSessionHandle` |
+| per-session command-session cancel from agent-core | one `CommandSessionLane::cancel_all_command_sessions()` (delegates to daemon `cancel_all_workspace_runs_by_caller_id`); the lane keeps records for completion only |
 
 ## 16. Implementation Phases
 
@@ -1131,7 +1368,12 @@ Verification:
 
 - Add `BackgroundSupervisorFactory`.
 - Change `BackgroundSupervisorHandle` to wrap `BackgroundSupervisorRuntime`.
-- Move `NotificationService` and `CommandCompletionHeartbeat` into the runtime.
+- Move `NotificationService` into `AgentRunControl`; pass clones into
+  `AgentRunInput`, `BackgroundSupervisorHandle`, and the background lanes.
+- Add `BackgroundNotificationEmitter` so subagent, workflow, and command-session
+  completion messages all render and enqueue through one path.
+- Move `CommandCompletionHeartbeat` into the `CommandSessionLane` (it sends
+  completions to that run's `NotificationService` through the emitter).
 - Make root/workflow/subagent runs create local handles.
 - Remove request-level supervisor/notifier/heartbeat.
 
@@ -1147,13 +1389,18 @@ Verification:
 - Move every record to `handle + status + metadata`.
 - Remove record-level `agent_run_id`.
 - Remove optional `agent_run_id` filters from per-agent supervisor methods.
+- `CommandSessionLane` owns the `CommandCompletionHeartbeat` (Weak-records cycle rule)
+  and exposes `cancel_all_command_sessions()` (loads `owner_agent_run_id` from `self`)
+  for cancellation.
 
 ### Phase 5: CancelableResource and CancelPort
 
-- Add `CancelableResource`.
+- Add `CancelableResource` (workflow / subagent / inline-agent-run only — command
+  sessions are not per-resource).
 - Add `CancelPort`.
 - Implement `cancel_task`.
-- Implement `cancel_agent_run`.
+- Implement `cancel_agent_run` (command sessions cancelled via the lane's one
+  per-caller daemon RPC).
 - Replace `BackgroundRunFinalizer` normal cleanup with explicit awaited teardown.
 
 ### Phase 6: Workflow Cancellation Decomposition
@@ -1182,6 +1429,8 @@ Verification:
 - Workflow agent A cannot drain workflow agent B's command completion.
 - `RuntimeAgentRunner` does not store a shared `NotificationService`.
 - Request teardown does not call request-wide `cancel_for_parent_exit(None, ...)`.
+- `AgentRunControl::notifications()` returns the same queue passed to
+  `AgentRunInput.notifier` and cloned into the background lanes.
 
 ### Heartbeat
 
@@ -1189,8 +1438,20 @@ Verification:
 - Heartbeat with a running command session calls
   `api.v1.command.collect_completed` using `owner_agent_run_id`.
 - A completion is enqueued into the same notifier passed to that agent's
-  `AgentRunInput`.
-- Dropping the last `BackgroundSupervisorHandle` aborts the heartbeat task.
+  `AgentRunInput` (the `CommandSessionLane`'s heartbeat sends to it directly).
+- Dropping the `CommandSessionLane` (with the supervisor) aborts the heartbeat task;
+  the heartbeat holds only a `Weak` to the lane records (no cycle).
+
+### Background Notifications
+
+- Subagent completion enqueues exactly one `[BACKGROUND COMPLETED]` notification
+  into the parent agent run's notifier.
+- Workflow completion/cancellation observation enqueues exactly one
+  `[BACKGROUND COMPLETED]` notification into the parent agent run's notifier.
+- Command-session completion enqueues exactly one `[BACKGROUND COMPLETED]`
+  notification into the owning agent run's notifier.
+- Notification emission does not hold the supervisor, lane, or command records
+  lock across `.await`.
 
 ### Cancellation
 
@@ -1201,8 +1462,11 @@ Verification:
 - Nested `delegate_workflow` cancellation reaches every open generator/reducer
   task.
 - `ask_advisor` cancellation cancels the inline child run.
-- `exec_command` is cancelable during the foreground `yield_time_ms` wait through
-  `CommandInvocationHandle`.
+- `exec_command` mid-`yield_time_ms` is cancelable: the foreground future is aborted
+  and the PTY is killed by the lane's `cancel_all_command_sessions()`.
+- command-session cancellation issues ONE `cancel_all_command_sessions()` (which
+  delegates to the daemon `cancel_all_workspace_runs_by_caller_id` using the lane's
+  own `owner_agent_run_id`), not per-session cancels.
 
 ### Lanes
 
@@ -1217,7 +1481,9 @@ Verification:
 
 - Per-agent teardown cancels only that handle's subagents, workflows, and command
   sessions.
-- Command-session cancellation uses `owner_agent_run_id` as sandbox caller id.
+- Command-session cancellation is one `cancel_all_command_sessions()` per lane, which
+  loads `owner_agent_run_id` from `self` and delegates to the daemon
+  `cancel_all_workspace_runs_by_caller_id`.
 - Workflow cancellation dispatches through workflow cancellation decomposition.
 - Calling cancel twice is a no-op.
 
@@ -1253,9 +1519,15 @@ Replace stale wording:
 
 - Every root/workflow/subagent run receives a fresh `AgentRunControl`.
 - Every `AgentRunControl` owns a fresh `BackgroundSupervisorHandle`.
-- `BackgroundSupervisorHandle` owns `NotificationService`.
-- `BackgroundSupervisorHandle` owns `CommandCompletionHeartbeat`.
-- The heartbeat does not capture `Arc<BackgroundSupervisorRuntime>`.
+- Every `AgentRunControl` owns the run-local `NotificationService`; its query
+  loop, background handle, and lanes share clones of that same queue.
+- Subagent, workflow, and command-session terminal background transitions enqueue
+  exactly one completion notification into the owning/parent run's
+  `NotificationService`.
+- The `CommandSessionLane` owns `CommandCompletionHeartbeat` and the heartbeat
+  sends completions through `BackgroundNotificationEmitter`.
+- The heartbeat captures only a `Weak` to the lane records (no
+  `Arc<BackgroundSupervisorRuntime>` / supervisor strong ref).
 - The heartbeat makes no sandbox RPC while no command sessions are running.
 - `RuntimeAgentRunner` stores no per-agent mutable notifier or supervisor.
 - The background ledger is split into subagent, workflow, and command-session
@@ -1268,4 +1540,5 @@ Replace stale wording:
 - Workflow cancellation decomposes through workflow -> iteration -> attempt ->
   task.
 - Cancellation is awaited end-to-end inside agent-core.
-- Tests prove command-completion notifications cannot cross agent-run queues.
+- Tests prove subagent, workflow, and command-session completion notifications
+  cannot cross agent-run queues.

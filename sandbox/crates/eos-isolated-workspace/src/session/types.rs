@@ -7,20 +7,9 @@ pub use eos_protocol::{CallerId, WorkspaceHandleId};
 
 /// A snapshot lease borrowed from the layer stack (snapshot/lease HINGE only).
 ///
-/// Mirrors the `acquire_snapshot` result the isolated pipeline consumes; it
-/// carries the lease id, manifest coordinates, and the lower-layer paths the
-/// overlay mounts. NEVER a publish transaction.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct SnapshotLease {
-    /// Lease id to release on exit/rollback.
-    pub lease_id: String,
-    /// Active manifest version captured at acquire time.
-    pub manifest_version: i64,
-    /// Active manifest root hash captured at acquire time.
-    pub manifest_root_hash: String,
-    /// Lower-layer paths to feed the overlay mount (newest-first).
-    pub layer_paths: Vec<PathBuf>,
-}
+/// Shared value object owned by `eos-workspace-api`; carries the lease id,
+/// manifest coordinates, and lower-layer paths. NEVER a publish transaction.
+pub use eos_workspace_api::SnapshotLease;
 
 /// Per-workspace state. Not a subclass of any overlay handle (C1).
 ///

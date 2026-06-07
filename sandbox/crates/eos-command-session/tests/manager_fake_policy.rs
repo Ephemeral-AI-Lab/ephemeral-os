@@ -14,6 +14,7 @@ use serde_json::{json, Value};
 #[derive(Clone)]
 struct FakePolicy {
     finalize_calls: Arc<Mutex<Vec<FinalizeCommandRequest>>>,
+    discard_calls: Arc<Mutex<Vec<FinalizeCommandRequest>>>,
     started_calls: Arc<Mutex<Vec<(String, String)>>>,
     finished_calls: Arc<Mutex<Vec<(String, String, String)>>>,
 }
@@ -22,6 +23,7 @@ impl FakePolicy {
     fn new() -> Self {
         Self {
             finalize_calls: Arc::new(Mutex::new(Vec::new())),
+            discard_calls: Arc::new(Mutex::new(Vec::new())),
             started_calls: Arc::new(Mutex::new(Vec::new())),
             finished_calls: Arc::new(Mutex::new(Vec::new())),
         }
@@ -85,6 +87,20 @@ impl CommandWorkspacePolicy for FakePolicy {
             metadata: Value::Null,
         })
     }
+
+    fn discard_command_workspace(
+        &self,
+        request: FinalizeCommandRequest,
+    ) -> Result<WorkspaceCommandOutcome, WorkspaceApiError> {
+        self.discard_calls
+            .lock()
+            .map_err(|error| WorkspaceApiError::new("test_mutex_poisoned", error.to_string()))?
+            .push(request.clone());
+        Ok(WorkspaceCommandOutcome::discarded(
+            WorkspaceMode::default(),
+            request,
+        ))
+    }
 }
 
 #[test]
@@ -108,8 +124,7 @@ fn manager_starts_boxed_policy_and_counts_by_caller() -> Result<(), Box<dyn std:
 }
 
 #[test]
-fn ctrl_c_finalizes_through_policy_and_parks_completion() -> Result<(), Box<dyn std::error::Error>>
-{
+fn ctrl_c_discards_through_policy_and_parks_completion() -> Result<(), Box<dyn std::error::Error>> {
     let policy = FakePolicy::new();
     let manager = CommandSessionManager::new(CommandSessionConfig::default());
     let started = manager.start(start_request("caller-1", "cat"), policy.clone())?;
@@ -128,7 +143,10 @@ fn ctrl_c_finalizes_through_policy_and_parks_completion() -> Result<(), Box<dyn 
     assert_eq!(response.stdout, "");
     assert_eq!(response.workspace_mode, Some(WorkspaceMode::default()));
     assert_eq!(manager.count_by_caller(Some("caller-1")), 0);
-    assert_eq!(lock(&policy.finalize_calls)?.len(), 1);
+    // The invariant: cancel routes to discard and NEVER reaches publish, so a
+    // cancelled command can never merge into the shared workspace.
+    assert_eq!(lock(&policy.discard_calls)?.len(), 1);
+    assert_eq!(lock(&policy.finalize_calls)?.len(), 0);
     assert_eq!(lock(&policy.started_calls)?.len(), 1);
     assert_eq!(lock(&policy.finished_calls)?.len(), 1);
 

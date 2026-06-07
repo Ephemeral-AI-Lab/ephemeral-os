@@ -2,7 +2,7 @@ use std::sync::{Mutex, MutexGuard, PoisonError};
 
 use eos_workspace_api::{
     CommandWorkspacePolicy, FinalizeCommandRequest, PrepareCommandRequest,
-    PreparedCommandWorkspace, WorkspaceApiError, WorkspaceCommandOutcome,
+    PreparedCommandWorkspace, WorkspaceApiError, WorkspaceCommandOutcome, WorkspaceMode,
 };
 use serde_json::Value;
 
@@ -81,6 +81,20 @@ where
             serde_json::json!(outcome.changed_paths),
         ));
         Ok(outcome)
+    }
+
+    fn discard_command_workspace(
+        &self,
+        request: FinalizeCommandRequest,
+    ) -> Result<WorkspaceCommandOutcome, WorkspaceApiError> {
+        // A cancelled isolated command skips capture and audit entirely; the
+        // isolated upperdir is never published and is torn down with the
+        // namespace when the isolated session exits.
+        *lock(&self.prepared) = false;
+        Ok(WorkspaceCommandOutcome::discarded(
+            WorkspaceMode::Isolated,
+            request,
+        ))
     }
 }
 

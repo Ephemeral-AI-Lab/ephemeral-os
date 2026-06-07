@@ -84,6 +84,31 @@ pub struct WorkspaceCommandOutcome {
     pub metadata: Value,
 }
 
+impl WorkspaceCommandOutcome {
+    /// Outcome for a discarded (cancelled) command workspace: it carries the
+    /// command's status and output but no published paths, because a cancelled
+    /// command never merges into the shared workspace.
+    #[must_use]
+    pub fn discarded(mode: WorkspaceMode, request: FinalizeCommandRequest) -> Self {
+        Self {
+            mode,
+            success: false,
+            status: request.status,
+            exit_code: request.exit_code,
+            stdout: request.stdout,
+            stderr: request.stderr,
+            command_session_id: request.command_session_id,
+            changed_paths: Vec::new(),
+            changed_path_kinds: ChangedPathKinds::default(),
+            mutation_source: String::new(),
+            conflict: None,
+            conflict_reason: None,
+            timings: WorkspaceTimings::default(),
+            metadata: Value::Null,
+        }
+    }
+}
+
 /// Mode-specific command workspace policy. Daemon-owned PTY/process/session
 /// registry behavior stays outside this trait.
 pub trait CommandWorkspacePolicy: Send + Sync {
@@ -101,6 +126,16 @@ pub trait CommandWorkspacePolicy: Send + Sync {
     }
 
     fn finalize_command_workspace(
+        &self,
+        request: FinalizeCommandRequest,
+    ) -> Result<WorkspaceCommandOutcome, WorkspaceApiError>;
+
+    /// Discard a prepared command workspace WITHOUT publishing: release the
+    /// snapshot lease and remove the run dirs, then report a cancelled outcome
+    /// carrying no changed paths. This is the cancel branch of session
+    /// settlement; because it never reaches the publish/OCC merge, a cancelled
+    /// command can never modify the shared workspace.
+    fn discard_command_workspace(
         &self,
         request: FinalizeCommandRequest,
     ) -> Result<WorkspaceCommandOutcome, WorkspaceApiError>;

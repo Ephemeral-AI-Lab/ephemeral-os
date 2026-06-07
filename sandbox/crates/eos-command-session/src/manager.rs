@@ -438,7 +438,7 @@ impl CommandSessionManager {
         exit_code: Option<i64>,
         include_session_id: bool,
     ) -> Result<CommandResponse, CommandSessionError> {
-        let result = session.finalize(status, exit_code, include_session_id)?;
+        let result = session.settle_cancelled(status, exit_code, include_session_id)?;
         Ok(self.finish_completed(session, result, true))
     }
 
@@ -540,6 +540,16 @@ mod tests {
                 timings: Default::default(),
                 metadata: Value::Null,
             })
+        }
+
+        fn discard_command_workspace(
+            &self,
+            request: FinalizeCommandRequest,
+        ) -> Result<WorkspaceCommandOutcome, WorkspaceApiError> {
+            Ok(WorkspaceCommandOutcome::discarded(
+                WorkspaceMode::default(),
+                request,
+            ))
         }
     }
 

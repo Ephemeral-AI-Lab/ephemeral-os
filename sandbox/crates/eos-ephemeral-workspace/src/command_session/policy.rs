@@ -3,7 +3,7 @@ use std::sync::{Mutex, MutexGuard, PoisonError};
 
 use eos_workspace_api::{
     CommandWorkspacePolicy, FinalizeCommandRequest, PrepareCommandRequest,
-    PreparedCommandWorkspace, WorkspaceApiError, WorkspaceCommandOutcome,
+    PreparedCommandWorkspace, WorkspaceApiError, WorkspaceCommandOutcome, WorkspaceMode,
 };
 
 use super::types::{EphemeralCommandFinalizeContext, EphemeralCommandSessionPort};
@@ -111,6 +111,21 @@ where
         let outcome = finalize::finalize_command_workspace(&self.port, context, request);
         self.cleanup_workspace(workspace);
         outcome
+    }
+
+    fn discard_command_workspace(
+        &self,
+        request: FinalizeCommandRequest,
+    ) -> Result<WorkspaceCommandOutcome, WorkspaceApiError> {
+        if let Some(workspace) = lock(&self.state).take() {
+            // Remove the run dirs and release the lease WITHOUT capturing or
+            // publishing: a cancelled command never merges its upperdir.
+            self.cleanup_workspace(workspace);
+        }
+        Ok(WorkspaceCommandOutcome::discarded(
+            WorkspaceMode::Ephemeral,
+            request,
+        ))
     }
 }
 

@@ -8,6 +8,7 @@
 
 pub mod command_session;
 pub mod file_ops;
+pub mod lease;
 pub mod mode;
 pub mod mutation;
 pub mod read_view;
@@ -21,6 +22,7 @@ pub use file_ops::{
     EditFileOutcome, EditFileRequest, ReadFileOutcome, ReadFileRequest, SearchReplaceEdit,
     SearchReplaceError, WorkspaceFileOps, WriteFileOutcome, WriteFileRequest,
 };
+pub use lease::{Lifecycle, SnapshotLease};
 pub use mode::WorkspaceMode;
 pub use mutation::{
     WorkspaceMutationKind, WorkspaceMutationOutcome, WorkspaceMutationRequest,

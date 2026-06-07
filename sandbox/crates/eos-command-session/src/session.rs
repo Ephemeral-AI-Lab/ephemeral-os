@@ -211,23 +211,31 @@ impl CommandSession {
         now.duration_since(self.started_at) >= timeout
     }
 
+    /// The non-Linux scaffold has no real process or overlay, so its only
+    /// settle path is cancel, which discards (never publishes).
     #[cfg(not(target_os = "linux"))]
-    pub(crate) fn finalize(
+    pub(crate) fn settle_cancelled(
         &self,
         status: &str,
         exit_code: Option<i64>,
         include_session_id: bool,
     ) -> Result<CommandResponse, CommandSessionError> {
-        self.finalize_with_output(status, exit_code, None, String::new(), include_session_id)
+        self.settle_with_output(status, exit_code, None, String::new(), include_session_id, true)
     }
 
-    fn finalize_with_output(
+    /// Settle the session exactly once, building the final response by either
+    /// publishing (normal completion) or discarding (cancel). Routing cancel to
+    /// `discard_command_workspace` is the structural guarantee that a cancelled
+    /// command never reaches the OCC merge, so it can never modify the shared
+    /// workspace.
+    fn settle_with_output(
         &self,
         status: &str,
         exit_code: Option<i64>,
         runner_result: Option<Value>,
         stdout: String,
         include_session_id: bool,
+        cancelled: bool,
     ) -> Result<CommandResponse, CommandSessionError> {
         let mut finalized = lock(&self.finalized);
         if let Some(response) = finalized.as_ref() {
@@ -237,7 +245,7 @@ impl CommandSession {
         let policy = policy.as_ref().ok_or_else(|| {
             CommandSessionError::Unsupported("command session has no workspace policy".to_owned())
         })?;
-        let outcome = policy.finalize_command_workspace(FinalizeCommandRequest {
+        let request = FinalizeCommandRequest {
             runner_result,
             command_elapsed_s: self.started_at.elapsed().as_secs_f64(),
             status: status.to_owned(),
@@ -245,7 +253,12 @@ impl CommandSession {
             stdout,
             stderr: String::new(),
             command_session_id: include_session_id.then(|| self.id.clone()),
-        })?;
+        };
+        let outcome = if cancelled {
+            policy.discard_command_workspace(request)?
+        } else {
+            policy.finalize_command_workspace(request)?
+        };
         let response = CommandResponse::from_workspace_outcome(outcome);
         *finalized = Some(response.clone());
         Ok(response)
@@ -276,12 +289,13 @@ impl CommandSession {
             runner.as_ref(),
             cancelled,
         );
-        let response = self.finalize_with_output(
+        let response = self.settle_with_output(
             completion.status(),
             Some(completion.exit_code()),
             runner.map(|runner| runner.value().clone()),
             self.final_stdout(),
             true,
+            cancelled,
         );
         if let Ok(response) = response.as_ref() {
             if let Err(error) = write_final_response(&self.final_path, response) {
@@ -395,6 +409,14 @@ mod tests {
         {
             unreachable!("session test does not finalize")
         }
+
+        fn discard_command_workspace(
+            &self,
+            _request: eos_workspace_api::FinalizeCommandRequest,
+        ) -> Result<eos_workspace_api::WorkspaceCommandOutcome, eos_workspace_api::WorkspaceApiError>
+        {
+            unreachable!("session test does not discard")
+        }
     }
 
     #[test]
@@ -451,6 +473,14 @@ mod tests {
                 timings: Default::default(),
                 metadata: serde_json::Value::Null,
             })
+        }
+
+        fn discard_command_workspace(
+            &self,
+            _request: eos_workspace_api::FinalizeCommandRequest,
+        ) -> Result<eos_workspace_api::WorkspaceCommandOutcome, eos_workspace_api::WorkspaceApiError>
+        {
+            unreachable!("finalization test does not discard")
         }
     }
 

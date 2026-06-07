@@ -11,13 +11,10 @@ pub use eos_protocol::{CallerId, InvocationId};
 pub struct WorkspaceRoot(pub PathBuf);
 
 /// Snapshot lease material needed to mount a fresh overlay.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct EphemeralSnapshot {
-    pub lease_id: String,
-    pub manifest_version: i64,
-    pub manifest_root_hash: String,
-    pub layer_paths: Vec<PathBuf>,
-}
+///
+/// Shared value object owned by `eos-workspace-api`; kept under the
+/// `EphemeralSnapshot` name during the workspace-run migration.
+pub use eos_workspace_api::SnapshotLease as EphemeralSnapshot;
 
 /// Fresh writable paths allocated for one operation.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
