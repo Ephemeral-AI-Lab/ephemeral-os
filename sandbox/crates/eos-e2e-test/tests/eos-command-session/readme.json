@@ -32,15 +32,15 @@
     {
       "id": "eos-command-session-lifecycle",
       "title": "Lifecycle",
-      "description": "`exec_command`, `write_stdin`, collect-completed, cancel, timeout, session count, and output cap behavior are coherent for running and completed sessions.",
+      "description": "`exec_command`, `write_stdin`, collect-completed, cancel, timeout, session count, and timestamped transcript behavior are coherent for running and completed sessions.",
       "tags": [
         "eos-command-session"
       ]
     },
     {
-      "id": "eos-command-session-cursors",
+      "id": "eos-command-session-transcript-progress",
       "title": "Cursors",
-      "description": "Command output cursors advance without replaying previously consumed output across repeated polls or stdin writes.",
+      "description": "Timestamped transcript progress remains observable through read_progress and operation-scoped stdin responses.",
       "tags": [
         "eos-command-session"
       ]
@@ -104,7 +104,7 @@
     {
       "id": "eos-command-session-prompt-read-cancel",
       "title": "Prompt Read Cancel",
-      "description": "Prompt-style stdin input, empty cursor polling, collect-completed reads, and cancellation behave coherently without replaying consumed output.",
+      "description": "Prompt-style stdin input, read_progress tail reads, collect-completed reads, and cancellation behave coherently without replaying consumed output.",
       "tags": [
         "eos-command-session"
       ]
@@ -144,7 +144,7 @@
     {
       "id": "eos-command-session-parallel-prompt-load",
       "title": "Parallel Prompt Load",
-      "description": "Prompt-style command sessions run at the configured `1/3/6/12` ladder with isolated stdin payloads, no cursor replay, clean cancellation, and zero leaked sessions or leases.",
+      "description": "Prompt-style command sessions run at the configured `1/3/6/12` ladder with isolated stdin payloads, transcript-scoped replies, clean cancellation, and zero leaked sessions or leases.",
       "tags": [
         "eos-command-session"
       ]
@@ -160,7 +160,7 @@
     {
       "id": "eos-command-session-output-backpressure",
       "title": "Output Backpressure",
-      "description": "Large PTY output bursts honor `max_output_tokens`, preserve UTF-8 boundaries across cursor polls, and remain cancellable without leaked sessions or leases.",
+      "description": "Large PTY output bursts stay timestamped in the transcript-backed stream and remain cancellable without leaked sessions or leases.",
       "tags": [
         "eos-command-session"
       ]
@@ -197,7 +197,7 @@
     {
       "id": "eos-command-session-core-lifecycle",
       "name": "eos-command-session-core-lifecycle",
-      "description": "Groups `exec_returns_session_id`, `write_stdin_echo`, `collect_completed_drains`, `finite_exec_before_yield_recycles_transient_transcript_file`, `completed_session_removes_transcript_file`, `cancel_unblocks`, `session_count_accuracy`, `exec_timeout`, `output_token_cap`, `cancel_by_invocation_id_reports_already_done_for_idle_id`, and `sigint_char_interrupts_foreground`: command-session handles, stdin, completion drain, finite pre-yield transcript recycling, long-running transcript removal, timeout, output caps, Ctrl-C/SIGINT interruption, and cancel status remain coherent.",
+      "description": "Groups `exec_returns_session_id`, `write_stdin_echo`, `collect_completed_drains`, `finite_exec_before_yield_recycles_transient_transcript_file`, `completed_session_removes_transcript_file`, `cancel_unblocks`, `session_count_accuracy`, `exec_timeout`, `output_transcript_timestamp`, `cancel_by_invocation_id_reports_already_done_for_idle_id`, and `sigint_char_interrupts_foreground`: command-session handles, stdin, completion drain, finite pre-yield transcript recycling, long-running transcript removal, timeout, timestamped transcript output, Ctrl-C/SIGINT interruption, and cancel status remain coherent.",
       "command": "cargo test -p eos-e2e-test --features e2e --test eos-command-session lifecycle -- --nocapture",
       "checklist": [
         "eos-command-session-lifecycle",
@@ -208,10 +208,10 @@
     {
       "id": "eos-command-session-output-and-detached-process-contract",
       "name": "eos-command-session-output-and-detached-process-contract",
-      "description": "Groups `command_session_output_cursor_no_replay`, `write_stdin_terminate_reaps_marker_process`, `nohup_child_keeps_session_running`, and `setsid_nohup_contract`: output cursors do not replay, termination reaps same-pgid marker children and removes transcript logs, plain `nohup` keeps the session running, and `setsid nohup` is accepted as an escaped detached child.",
+      "description": "Groups `command_session_transcript_progress_no_replay`, `write_stdin_terminate_reaps_marker_process`, `nohup_child_keeps_session_running`, and `setsid_nohup_contract`: operation-scoped stdin responses do not replay, termination reaps same-pgid marker children and removes transcript logs, plain `nohup` keeps the session running, and `setsid nohup` is accepted as an escaped detached child.",
       "command": "cargo test -p eos-e2e-test --features e2e --test eos-command-session nohup -- --nocapture",
       "checklist": [
-        "eos-command-session-cursors",
+        "eos-command-session-transcript-progress",
         "eos-command-session-transcript-recycling",
         "eos-command-session-terminate-kills-group",
         "eos-command-session-detached-child-contract"
@@ -254,13 +254,13 @@
     {
       "id": "eos-command-session-command-matrix-and-load",
       "name": "eos-command-session-command-matrix-and-load",
-      "description": "Groups twelve runner-visible `command_matrix_*_variants` tests, `command_matrix_inventory_covers_ten_shell_families`, `stdin_prompt_cursor_collect_and_cancel_variants`, and `parallel_command_matrix_load_stays_bounded`: each command family has multiple variants, finite command transcript recycling, prompt/stdin cursor polling, collect-completed reads, cancellation, and the configured `1/3/6/12` parallel load ladder with resource bounds.",
+      "description": "Groups twelve runner-visible `command_matrix_*_variants` tests, `command_matrix_inventory_covers_ten_shell_families`, `stdin_prompt_progress_collect_and_cancel_variants`, and `parallel_command_matrix_load_stays_bounded`: each command family has multiple variants, finite command transcript recycling, prompt/stdin transcript progress, collect-completed reads, cancellation, and the configured `1/3/6/12` parallel load ladder with resource bounds.",
       "command": "cargo test -p eos-e2e-test --features e2e --test eos-command-session command_matrix -- --nocapture",
       "checklist": [
         "eos-command-session-command-matrix",
         "eos-command-session-prompt-read-cancel",
         "eos-command-session-parallel-load",
-        "eos-command-session-cursors",
+        "eos-command-session-transcript-progress",
         "eos-command-session-transcript-recycling",
         "eos-command-session-lifecycle"
       ]
@@ -275,13 +275,13 @@
         "eos-command-session-prompt-read-cancel",
         "eos-command-session-parallel-load",
         "eos-command-session-transcript-recycling",
-        "eos-command-session-cursors"
+        "eos-command-session-transcript-progress"
       ]
     },
     {
       "id": "eos-command-session-negative-invalid-and-backpressure",
       "name": "eos-command-session-negative-invalid-and-backpressure",
-      "description": "Groups `nonzero_exit_and_stderr_are_structured`, `stderr_and_stdin_output_keep_long_lived_session_running`, `missing_command_and_invalid_session_ids_are_structured`, `output_backpressure_preserves_utf8_and_drains_on_cancel`, and `stdin_to_non_reading_consumer_stays_bounded_and_cancellable`: nonzero shell exits, long-lived stderr/stdin sessions, missing commands, unknown session ids, empty collect-completed reads, capped large output, UTF-8-safe cursor chunks, bounded stdin pressure, post-pressure cancellation, transcript recycling, and resource drain all return coherent protocol payloads.",
+      "description": "Groups `nonzero_exit_and_stderr_are_structured`, `stderr_and_stdin_output_keep_long_lived_session_running`, `missing_command_and_invalid_session_ids_are_structured`, `output_backpressure_preserves_utf8_and_drains_on_cancel`, and `stdin_to_non_reading_consumer_stays_bounded_and_cancellable`: nonzero shell exits, long-lived stderr/stdin sessions, missing commands, unknown session ids, empty collect-completed reads, timestamped large output and UTF-8-safe transcript reads, bounded stdin pressure, post-pressure cancellation, transcript recycling, and resource drain all return coherent protocol payloads.",
       "command": "cargo test -p eos-e2e-test --features e2e --test eos-command-session error_and_backpressure -- --nocapture",
       "checklist": [
         "eos-command-session-negative-invalid",
@@ -290,7 +290,7 @@
         "eos-command-session-stdin-backpressure",
         "eos-command-session-lifecycle",
         "eos-command-session-transcript-recycling",
-        "eos-command-session-cursors"
+        "eos-command-session-transcript-progress"
       ]
     },
     {
@@ -303,7 +303,7 @@
         "eos-command-session-isolated-cleanup",
         "eos-command-session-prompt-read-cancel",
         "eos-command-session-transcript-recycling",
-        "eos-command-session-cursors"
+        "eos-command-session-transcript-progress"
       ]
     }
   ]

@@ -97,9 +97,7 @@ fn enter_rejects_active_command_session_and_repeated_enter_reports_already_open(
         json!({
             "cmd": "bash -lc 'printf ACTIVE; sleep 30'",
             "yield_time_ms": 500,
-            "timeout_seconds": 60,
-            "max_output_tokens": 1000
-        }),
+            "timeout_seconds": 60,}),
     )?;
     assert_eq!(as_str(&exec, "status")?, "running", "{exec}");
     assert!(stdout(&exec).contains("ACTIVE"), "{exec}");
@@ -132,7 +130,7 @@ fn enter_rejects_active_command_session_and_repeated_enter_reports_already_open(
 
         lease.call(
             ops::API_V1_COMMAND_CANCEL,
-            json!({"command_session_id": session_id, "max_output_tokens": 1000}),
+            json!({"command_session_id": session_id}),
         )?;
         wait_for_session_count(&lease, 0)?;
 
@@ -162,7 +160,7 @@ fn enter_rejects_active_command_session_and_repeated_enter_reports_already_open(
     if body.is_err() {
         let _ = lease.call(
             ops::API_V1_COMMAND_CANCEL,
-            json!({"command_session_id": session_id, "max_output_tokens": 1000}),
+            json!({"command_session_id": session_id}),
         );
         let _ = lease.call(ops::API_ISOLATED_WORKSPACE_EXIT, json!({"grace_s": 0.0}));
         let _ = wait_for_session_count(&lease, 0);
@@ -203,9 +201,7 @@ fn isolated_workspace_jsonl_records_lifecycle_and_tool_call_fields() -> Result<(
         json!({
             "cmd": "cat /eos/scratch/isolated/audit.jsonl",
             "yield_time_ms": 1000,
-            "timeout_seconds": 10,
-            "max_output_tokens": 20000
-        }),
+            "timeout_seconds": 10,}),
     )?;
     assert_eq!(
         as_str(&audit_file, "status")?,

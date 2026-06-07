@@ -1,6 +1,5 @@
 #[cfg(target_os = "linux")]
 use std::path::{Path, PathBuf};
-use std::sync::Arc;
 use std::sync::{Mutex, MutexGuard, PoisonError};
 use std::time::{Duration, Instant};
 
@@ -12,20 +11,17 @@ use crate::process::{
     CommandCompletionStatus, CommandRunnerResult, CommandSessionProcess, ProcessReap,
 };
 #[cfg(target_os = "linux")]
+use crate::transcript::{read_transcript_since, read_transcript_stdout, read_transcript_tail};
+#[cfg(target_os = "linux")]
 use crate::wait::CommandSessionWaitTarget;
 #[cfg(any(not(target_os = "linux"), test))]
 use crate::CommandSessionConfig;
-use crate::{
-    CommandResponse, CommandSessionError, CommandSessionOutput, CommandSessionOutputCursor,
-    DynCommandWorkspacePolicy,
-};
+use crate::{CommandResponse, CommandSessionError, DynCommandWorkspacePolicy};
 
 pub(crate) struct CommandSession {
     id: String,
     caller_id: String,
     command: String,
-    output: Arc<CommandSessionOutput>,
-    model_cursor: Mutex<CommandSessionOutputCursor>,
     policy: Mutex<Option<DynCommandWorkspacePolicy>>,
     #[cfg(target_os = "linux")]
     process: CommandSessionProcess,
@@ -54,7 +50,6 @@ pub(crate) struct CommandSessionSpec {
 #[cfg(target_os = "linux")]
 pub(crate) struct RunningCommandSessionParts {
     pub process: CommandSessionProcess,
-    pub output: Arc<CommandSessionOutput>,
     pub output_path: PathBuf,
     pub final_path: PathBuf,
     pub transcript_path: PathBuf,
@@ -69,12 +64,7 @@ impl CommandSession {
         policy: DynCommandWorkspacePolicy,
         config: &CommandSessionConfig,
     ) -> Self {
-        Self::new_scaffold(
-            spec,
-            policy,
-            Arc::new(CommandSessionOutput::new(config)),
-            config.output_drain_grace_ms,
-        )
+        Self::new_scaffold(spec, policy, config.output_drain_grace_ms)
     }
 
     #[cfg(target_os = "linux")]
@@ -84,25 +74,21 @@ impl CommandSession {
         policy: DynCommandWorkspacePolicy,
         parts: RunningCommandSessionParts,
     ) -> Self {
-        let output = Arc::clone(&parts.output);
-        Self::new_with_process(spec, policy, output, parts)
+        Self::new_with_process(spec, policy, parts)
     }
 
     #[cfg(any(not(target_os = "linux"), test))]
     fn new_scaffold(
         spec: CommandSessionSpec,
         policy: DynCommandWorkspacePolicy,
-        output: Arc<CommandSessionOutput>,
         _output_drain_grace_ms: u64,
     ) -> Self {
         #[cfg(target_os = "linux")]
-        let inactive = inactive_process_parts(Arc::clone(&output), _output_drain_grace_ms);
+        let inactive = inactive_process_parts(_output_drain_grace_ms);
         Self {
             id: spec.id,
             caller_id: spec.caller_id,
             command: spec.command,
-            output,
-            model_cursor: Mutex::new(CommandSessionOutputCursor::default()),
             policy: Mutex::new(Some(policy)),
             #[cfg(target_os = "linux")]
             process: inactive.process,
@@ -126,15 +112,12 @@ impl CommandSession {
     fn new_with_process(
         spec: CommandSessionSpec,
         policy: DynCommandWorkspacePolicy,
-        output: Arc<CommandSessionOutput>,
         running: RunningCommandSessionParts,
     ) -> Self {
         Self {
             id: spec.id,
             caller_id: spec.caller_id,
             command: spec.command,
-            output,
-            model_cursor: Mutex::new(CommandSessionOutputCursor::default()),
             policy: Mutex::new(Some(policy)),
             process: running.process,
             output_path: running.output_path,
@@ -169,11 +152,6 @@ impl CommandSession {
         *lock(&self.cancelled)
     }
 
-    #[cfg(not(target_os = "linux"))]
-    pub(crate) fn append_output(&self, text: String) {
-        self.output.append(text);
-    }
-
     #[cfg(target_os = "linux")]
     pub(crate) fn write_process_stdin(&self, chars: &str) -> Result<(), CommandSessionError> {
         self.process.write_stdin(chars.as_bytes())?;
@@ -187,14 +165,28 @@ impl CommandSession {
     }
 
     #[must_use]
-    pub(crate) fn read_model_output(&self, max_tokens: Option<u64>) -> String {
-        let mut cursor = lock(&self.model_cursor);
-        self.output.read_since(&mut cursor, max_tokens)
+    pub(crate) fn read_recent_output(&self, last_n_lines: usize) -> String {
+        #[cfg(target_os = "linux")]
+        {
+            read_transcript_tail(&self.transcript_path, last_n_lines)
+        }
+        #[cfg(not(target_os = "linux"))]
+        {
+            let _ = last_n_lines;
+            String::new()
+        }
     }
 
     #[must_use]
-    pub(crate) fn read_recent_output(&self, last_n_lines: usize) -> String {
-        self.output.last_lines(last_n_lines)
+    #[cfg(target_os = "linux")]
+    pub(crate) fn read_output_since(&self, start_offset: u64) -> String {
+        read_transcript_since(&self.transcript_path, start_offset)
+    }
+
+    #[must_use]
+    #[cfg(target_os = "linux")]
+    pub(crate) fn transcript_len(&self) -> u64 {
+        transcript_len(&self.transcript_path)
     }
 
     #[cfg(test)]
@@ -226,13 +218,7 @@ impl CommandSession {
         exit_code: Option<i64>,
         include_session_id: bool,
     ) -> Result<CommandResponse, CommandSessionError> {
-        self.finalize_with_output(
-            status,
-            exit_code,
-            None,
-            self.output.all_recent(None),
-            include_session_id,
-        )
+        self.finalize_with_output(status, exit_code, None, String::new(), include_session_id)
     }
 
     fn finalize_with_output(
@@ -254,7 +240,6 @@ impl CommandSession {
         let outcome = policy.finalize_command_workspace(FinalizeCommandRequest {
             runner_result,
             command_elapsed_s: self.started_at.elapsed().as_secs_f64(),
-            spool_truncated: self.output.spool_truncated(),
             status: status.to_owned(),
             exit_code,
             stdout,
@@ -319,25 +304,16 @@ impl CommandSession {
 
     #[cfg(target_os = "linux")]
     fn final_stdout(&self) -> String {
-        let Some(stdout) =
-            read_transcript_stdout(&self.transcript_path, self.output.next_byte_offset())
-        else {
-            return self.output.all_recent(None);
-        };
-        stdout
+        read_transcript_stdout(&self.transcript_path)
     }
 }
 
 #[cfg(target_os = "linux")]
-fn read_transcript_stdout(path: &Path, output_bytes: u64) -> Option<String> {
+fn transcript_len(path: &Path) -> u64 {
     if path.as_os_str().is_empty() {
-        return None;
+        return 0;
     }
-    let bytes = std::fs::read(path).ok()?;
-    if bytes.is_empty() && output_bytes > 0 {
-        return None;
-    }
-    Some(String::from_utf8_lossy(&bytes).into_owned())
+    std::fs::metadata(path).map_or(0, |metadata| metadata.len())
 }
 
 #[cfg(target_os = "linux")]
@@ -364,12 +340,12 @@ impl CommandSessionWaitTarget<Result<CommandResponse, CommandSessionError>> for 
         self.try_finalize_process()
     }
 
-    fn next_output_byte_offset(&self) -> u64 {
-        self.output.next_byte_offset()
+    fn transcript_len(&self) -> u64 {
+        Self::transcript_len(self)
     }
 
-    fn read_model_output(&self, max_tokens: Option<u64>) -> String {
-        Self::read_model_output(self, max_tokens)
+    fn read_output_since(&self, start_offset: u64) -> String {
+        Self::read_output_since(self, start_offset)
     }
 }
 
@@ -382,10 +358,7 @@ fn duration_from_secs_f64(seconds: f64) -> Option<Duration> {
 }
 
 #[cfg(all(target_os = "linux", test))]
-fn inactive_process_parts(
-    output: Arc<CommandSessionOutput>,
-    output_drain_grace_ms: u64,
-) -> RunningCommandSessionParts {
+fn inactive_process_parts(output_drain_grace_ms: u64) -> RunningCommandSessionParts {
     let writer = std::fs::OpenOptions::new()
         .read(true)
         .write(true)
@@ -393,7 +366,6 @@ fn inactive_process_parts(
         .expect("open /dev/null for inactive command session process");
     RunningCommandSessionParts {
         process: CommandSessionProcess::inactive(writer),
-        output,
         output_path: PathBuf::new(),
         final_path: PathBuf::new(),
         transcript_path: PathBuf::new(),
@@ -501,9 +473,6 @@ mod tests {
         let final_path = root.join("final.json");
         std::fs::write(&transcript_path, b"captured transcript output")?;
 
-        let config = CommandSessionConfig::default();
-        let output = Arc::new(CommandSessionOutput::new(&config));
-        output.append("ring output".to_owned());
         let writer = std::fs::OpenOptions::new()
             .read(true)
             .write(true)
@@ -518,7 +487,6 @@ mod tests {
             Box::new(FinalizingPolicy),
             RunningCommandSessionParts {
                 process: crate::process::CommandSessionProcess::inactive(writer),
-                output,
                 output_path: root.join("runner-result.json"),
                 final_path: final_path.clone(),
                 transcript_path: transcript_path.clone(),

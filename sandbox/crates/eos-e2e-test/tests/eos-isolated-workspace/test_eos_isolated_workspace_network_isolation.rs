@@ -41,9 +41,7 @@ fn start_server(
     let mut args = json!({
         "cmd": cmd,
         "yield_time_ms": 400,
-        "timeout_seconds": 60,
-        "max_output_tokens": 500
-    });
+        "timeout_seconds": 60,});
     if let Some(caller) = caller_id {
         args["caller_id"] = json!(caller);
     }
@@ -62,14 +60,12 @@ fn start_bound_socket(
             "caller_id": caller_id,
             "cmd": format!("python3 -c \"import socket,time;s=socket.socket();s.bind(('0.0.0.0',{port}));s.listen(1);print('BOUND-{label}',flush=True);time.sleep(20)\""),
             "yield_time_ms": 600,
-            "timeout_seconds": 60,
-            "max_output_tokens": 500
-        }),
+            "timeout_seconds": 60,}),
     )
 }
 
 fn cancel(lease: &eos_e2e_test::NodeLease<'_>, caller_id: Option<&str>, id: &str) {
-    let mut args = json!({"command_session_id": id, "max_output_tokens": 200});
+    let mut args = json!({"command_session_id": id});
     if let Some(caller) = caller_id {
         args["caller_id"] = json!(caller);
     }
@@ -91,14 +87,12 @@ fn wait_for_output(
     loop {
         let mut poll_args = json!({
             "command_session_id": session_id,
-            "chars": "",
-            "yield_time_ms": 250,
-            "max_output_tokens": 1000
+            "last_n_lines": 8,
         });
         if let Some(caller) = caller_id {
             poll_args["caller_id"] = json!(caller);
         }
-        if let Ok(poll) = lease.call_ok(ops::API_V1_WRITE_STDIN, poll_args) {
+        if let Ok(poll) = lease.call_ok(ops::API_V1_COMMAND_READ_PROGRESS, poll_args) {
             if stdout(&poll).contains(marker) {
                 return Ok(());
             }
@@ -210,9 +204,7 @@ fn cross_mode_same_port_no_conflict() -> Result<()> {
                 "caller_id": caller_b,
                 "cmd": format!("python3 -c \"import socket,time;s=socket.socket();s.bind(('0.0.0.0',{port}));print('BOUND',flush=True);time.sleep(20)\""),
                 "yield_time_ms": 600,
-                "timeout_seconds": 60,
-                "max_output_tokens": 500
-            }),
+                "timeout_seconds": 60,}),
         )?;
         ensure!(
             as_str(&bind_b, "status")? == "running",
@@ -260,9 +252,7 @@ fn same_mode_same_port_conflicts() -> Result<()> {
             json!({
                 "cmd": bind_probe_command(port, "BOUND"),
                 "yield_time_ms": 2000,
-                "timeout_seconds": 30,
-                "max_output_tokens": 500
-            }),
+                "timeout_seconds": 30,}),
         )?;
         wait_for_output(&lease, None, &bind, "EADDRINUSE").with_context(|| {
             format!("a second ephemeral bind on the same port must fail: {bind}")
@@ -309,9 +299,7 @@ fn isolated_loopback_service_is_not_reachable_from_peer_session() -> Result<()> 
                 "caller_id": caller_a,
                 "cmd": loopback_server_command(port, &marker),
                 "yield_time_ms": 600,
-                "timeout_seconds": 60,
-                "max_output_tokens": 1000
-            }),
+                "timeout_seconds": 60,}),
         )?;
         ensure!(
             as_str(&server_a, "status")? == "running",
@@ -329,9 +317,7 @@ fn isolated_loopback_service_is_not_reachable_from_peer_session() -> Result<()> 
                 "caller_id": caller_a,
                 "cmd": loopback_probe_command(port, &marker),
                 "yield_time_ms": 2000,
-                "timeout_seconds": 10,
-                "max_output_tokens": 1000
-            }),
+                "timeout_seconds": 10,}),
         )?;
         wait_for_output(&lease, Some(&caller_a), &own_probe, &marker).with_context(|| {
             format!("caller A should reach its own loopback service: {own_probe}")
@@ -343,9 +329,7 @@ fn isolated_loopback_service_is_not_reachable_from_peer_session() -> Result<()> 
                 "caller_id": caller_b,
                 "cmd": loopback_probe_command(port, &marker),
                 "yield_time_ms": 2000,
-                "timeout_seconds": 10,
-                "max_output_tokens": 1000
-            }),
+                "timeout_seconds": 10,}),
         )?;
         wait_for_output(&lease, Some(&caller_b), &peer_probe, "PEER_BLOCKED").with_context(
             || format!("caller B must not reach caller A's loopback service: {peer_probe}"),
@@ -458,9 +442,7 @@ fn isolated_to_isolated_same_port_matrix() -> Result<()> {
                 "caller_id": caller_a,
                 "cmd": bind_probe_command(port, "SAME_CALLER_BOUND"),
                 "yield_time_ms": 2000,
-                "timeout_seconds": 30,
-                "max_output_tokens": 500
-            }),
+                "timeout_seconds": 30,}),
         )?;
         wait_for_output(&lease, Some(&caller_a), &same_namespace, "EADDRINUSE").with_context(
             || format!("a second bind inside caller A's isolated netns must conflict: {same_namespace}"),

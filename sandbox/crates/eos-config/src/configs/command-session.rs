@@ -12,8 +12,7 @@ pub struct CommandSessionConfig {
     pub cancel_wait_ms: u64,
     pub output_drain_grace_ms: u64,
     pub max_session_s: u64,
-    pub output_ring_max_bytes: usize,
-    pub output_spool_max_bytes: u64,
+    pub transcript_timestamp_timezone: String,
 }
 
 impl Default for CommandSessionConfig {
@@ -26,8 +25,7 @@ impl Default for CommandSessionConfig {
             cancel_wait_ms: 500,
             output_drain_grace_ms: 500,
             max_session_s: 6 * 60 * 60,
-            output_ring_max_bytes: 1024 * 1024,
-            output_spool_max_bytes: 32 * 1024 * 1024,
+            transcript_timestamp_timezone: "UTC".to_owned(),
         }
     }
 }

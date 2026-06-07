@@ -20,9 +20,7 @@ fn overlay_exec_publishes_file_back_to_layerstack() -> Result<()> {
         json!({
             "cmd": "mkdir -p e2e_overlay && printf overlay-ok > e2e_overlay/from_exec.txt",
             "yield_time_ms": 1000,
-            "timeout_seconds": 10,
-            "max_output_tokens": 2000
-        }),
+            "timeout_seconds": 10,}),
     )?;
     assert_eq!(as_str(&exec, "status")?, "ok");
     assert_eq!(as_i64(&exec, "exit_code")?, 0);
@@ -71,9 +69,7 @@ fn ephemeral_exec_ladder_1_3_6_12() -> Result<()> {
                                 "mkdir -p pressure/ladder/exec/level-{level} && printf 'exec-level-{level}-item-{index}\\n' > pressure/ladder/exec/level-{level}/item-{index}.txt"
                             ),
                             "yield_time_ms": 1000,
-                            "timeout_seconds": timeout_s,
-                            "max_output_tokens": 2000
-                        }),
+                            "timeout_seconds": timeout_s,}),
                     )
                 })
             })

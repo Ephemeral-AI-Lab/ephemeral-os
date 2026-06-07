@@ -52,7 +52,7 @@ fn external_sigterm_child_finalizes_via_collect_completed() -> Result<()> {
 }
 
 #[test]
-fn external_sigkill_process_group_is_observed_by_write_stdin() -> Result<()> {
+fn external_sigkill_process_group_is_observed_by_read_progress() -> Result<()> {
     let Some(pool) = live_pool_or_skip()? else {
         return Ok(());
     };
@@ -64,10 +64,11 @@ fn external_sigkill_process_group_is_observed_by_write_stdin() -> Result<()> {
         signal_marker(&lease, &session.marker, "KILL", SignalTarget::ProcessGroup)?;
         wait_for_marker_count(&lease, &session.marker, 0, Duration::from_secs(3))?;
 
-        let terminal = wait_for_write_stdin_terminal(&lease, &session.id, Duration::from_secs(6))?;
+        let terminal =
+            wait_for_read_progress_terminal(&lease, &session.id, Duration::from_secs(6))?;
         ensure!(
             matches!(as_str(&terminal, "status")?, "error" | "cancelled"),
-            "write_stdin should observe externally killed process group as terminal: {terminal}"
+            "read_progress should observe externally killed process group as terminal: {terminal}"
         );
         wait_for_session_count(&lease, 0)?;
         wait_for_active_leases(&lease, 0)?;
@@ -106,22 +107,20 @@ fn silent_redirected_subprocess_keeps_session_running() -> Result<()> {
             "silent same-pgid subprocess must not be finalized early: {not_done}"
         );
 
-        let quiet = lease.call_ok(
-            ops::API_V1_WRITE_STDIN,
+        let progress = lease.call_ok(
+            ops::API_V1_COMMAND_READ_PROGRESS,
             json!({
                 "command_session_id": &session.id,
-                "chars": "",
-                "yield_time_ms": 250,
-                "max_output_tokens": 1000
+                "last_n_lines": 4,
             }),
         )?;
         ensure!(
-            as_str(&quiet, "status")? == "running",
-            "empty stdin poll should still see the silent subprocess running: {quiet}"
+            as_str(&progress, "status")? == "running",
+            "read_progress should still see the silent subprocess running: {progress}"
         );
         ensure!(
-            !stdout(&quiet).contains("silent-parent-done"),
-            "empty stdin poll must not replay consumed foreground output: {quiet}"
+            stdout(&progress).contains("silent-parent-done"),
+            "read_progress should expose the transcript tail for the running session: {progress}"
         );
 
         cancel_session(&lease, &session.id)?;
@@ -180,9 +179,7 @@ fn start_marker_session(
         json!({
             "cmd": cmd.into(),
             "yield_time_ms": 700,
-            "timeout_seconds": 120,
-            "max_output_tokens": 2000
-        }),
+            "timeout_seconds": 120,}),
     )?;
     ensure!(
         as_str(&started, "status")? == "running",
@@ -240,15 +237,13 @@ fn wait_for_session_stdout_contains(
 fn poll_session_output(
     lease: &NodeLease<'_>,
     session_id: &str,
-    yield_time_ms: u64,
+    last_n_lines: u64,
 ) -> Result<Value> {
     lease.call_ok(
-        ops::API_V1_WRITE_STDIN,
+        ops::API_V1_COMMAND_READ_PROGRESS,
         json!({
             "command_session_id": session_id,
-            "chars": "",
-            "yield_time_ms": yield_time_ms,
-            "max_output_tokens": 2000
+            "last_n_lines": last_n_lines,
         }),
     )
 }
@@ -353,7 +348,7 @@ fn wait_for_completion(
     }
 }
 
-fn wait_for_write_stdin_terminal(
+fn wait_for_read_progress_terminal(
     lease: &NodeLease<'_>,
     session_id: &str,
     timeout: Duration,
@@ -362,19 +357,17 @@ fn wait_for_write_stdin_terminal(
     let mut last = None;
     loop {
         let response = lease.call(
-            ops::API_V1_WRITE_STDIN,
+            ops::API_V1_COMMAND_READ_PROGRESS,
             json!({
                 "command_session_id": session_id,
-                "chars": "",
-                "yield_time_ms": 250,
-                "max_output_tokens": 2000
+                "last_n_lines": 8,
             }),
         )?;
         if as_str(&response, "status").unwrap_or_default() != "running" {
             return Ok(response);
         }
         if Instant::now() >= deadline {
-            bail!("write_stdin never observed terminal state; last: {last:?}");
+            bail!("read_progress never observed terminal state; last: {last:?}");
         }
         last = Some(response);
         thread::sleep(Duration::from_millis(50));
@@ -441,7 +434,7 @@ fn wait_for_marker_count(
 fn cancel_session(lease: &NodeLease<'_>, id: &str) -> Result<Value> {
     let cancelled = lease.call(
         ops::API_V1_COMMAND_CANCEL,
-        json!({"command_session_id": id, "max_output_tokens": 1000}),
+        json!({"command_session_id": id}),
     )?;
     wait_for_command_session_transcript_recycled(lease, id)?;
     Ok(cancelled)

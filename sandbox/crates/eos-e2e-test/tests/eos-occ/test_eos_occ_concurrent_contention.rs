@@ -43,9 +43,7 @@ fn single_overlay_exec_batches_multi_file_writes_into_one_layer() -> Result<()> 
         json!({
             "cmd": cmd,
             "yield_time_ms": 1000,
-            "timeout_seconds": 30,
-            "max_output_tokens": 2000
-        }),
+            "timeout_seconds": 30,}),
     )?;
     assert_eq!(as_str(&exec, "status")?, "ok", "{exec}");
     assert_eq!(as_i64(&exec, "exit_code")?, 0, "{exec}");

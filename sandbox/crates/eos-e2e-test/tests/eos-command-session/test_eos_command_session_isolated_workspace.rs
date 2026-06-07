@@ -26,9 +26,7 @@ fn iws_same_port_discard() -> Result<()> {
         json!({
             "cmd": server_cmd,
             "yield_time_ms": 100,
-            "timeout_seconds": 120,
-            "max_output_tokens": 500
-        }),
+            "timeout_seconds": 120,}),
     )?;
     assert_eq!(
         as_str(&first, "status")?,
@@ -50,9 +48,7 @@ fn iws_same_port_discard() -> Result<()> {
         json!({
             "cmd": server_cmd,
             "yield_time_ms": 100,
-            "timeout_seconds": 120,
-            "max_output_tokens": 500
-        }),
+            "timeout_seconds": 120,}),
     )?;
     assert_eq!(
         as_str(&second, "status")?,
@@ -101,9 +97,7 @@ time.sleep(60)'"
         json!({
             "cmd": cmd,
             "yield_time_ms": 500,
-            "timeout_seconds": 120,
-            "max_output_tokens": 1000
-        }),
+            "timeout_seconds": 120,}),
     )?;
     ensure!(
         as_str(&started, "status")? == "running" && stdout(&started).contains("iws-prompt"),
@@ -119,22 +113,19 @@ time.sleep(60)'"
             json!({
                 "command_session_id": session_id,
                 "chars": "private-payload\n",
-                "yield_time_ms": 1500,
-                "max_output_tokens": 1000
-            }),
+                "yield_time_ms": 1500,}),
         )?;
         ensure!(
             !stdout(&answered).contains("iws-prompt"),
-            "stdin cursor must not replay the already-consumed prompt: {answered}"
+            "stdin output should be scoped to text produced after the write: {answered}"
         );
         let reply = if stdout(&answered).contains("iws-wrote:private-payload") {
             answered
         } else {
-            poll_stdin_cursor_until_stdout_contains(
+            poll_read_progress_until_stdout_contains(
                 &lease,
                 &session_id,
                 "iws-wrote:private-payload",
-                "iws-prompt",
                 Instant::now() + Duration::from_secs(15),
             )?
         };
@@ -153,18 +144,16 @@ time.sleep(60)'"
             "isolated command-session write should be visible while open: {read_private}"
         );
 
-        let quiet = lease.call_ok(
-            ops::API_V1_WRITE_STDIN,
+        let progress = lease.call_ok(
+            ops::API_V1_COMMAND_READ_PROGRESS,
             json!({
                 "command_session_id": session_id,
-                "chars": "",
-                "yield_time_ms": 250,
-                "max_output_tokens": 1000
+                "last_n_lines": 8,
             }),
         )?;
         ensure!(
-            !stdout(&quiet).contains("iws-wrote:private-payload"),
-            "empty poll must not replay consumed isolated command output: {quiet}"
+            stdout(&progress).contains("iws-wrote:private-payload"),
+            "read_progress should expose isolated command transcript tail: {progress}"
         );
 
         let not_done = lease.call_ok(
@@ -178,7 +167,7 @@ time.sleep(60)'"
 
         let cancelled = lease.call(
             ops::API_V1_COMMAND_CANCEL,
-            json!({"command_session_id": &session_id, "max_output_tokens": 1000}),
+            json!({"command_session_id": &session_id}),
         )?;
         ensure!(
             matches!(as_str(&cancelled, "status")?, "cancelled" | "ok" | "error"),
@@ -192,7 +181,7 @@ time.sleep(60)'"
     if body.is_err() {
         let _ = lease.call(
             ops::API_V1_COMMAND_CANCEL,
-            json!({"command_session_id": &session_id, "max_output_tokens": 1000}),
+            json!({"command_session_id": &session_id}),
         );
     }
     let exit = lease.call_ok(ops::API_ISOLATED_WORKSPACE_EXIT, json!({"grace_s": 0.1}));
@@ -212,34 +201,27 @@ time.sleep(60)'"
     Ok(())
 }
 
-fn poll_stdin_cursor_until_stdout_contains(
+fn poll_read_progress_until_stdout_contains(
     lease: &NodeLease<'_>,
     session_id: &str,
     needle: &str,
-    forbidden_replay: &str,
     deadline: Instant,
 ) -> Result<Value> {
     let mut last = None;
     while Instant::now() < deadline {
         let poll = lease.call_ok(
-            ops::API_V1_WRITE_STDIN,
+            ops::API_V1_COMMAND_READ_PROGRESS,
             json!({
                 "command_session_id": session_id,
-                "chars": "",
-                "yield_time_ms": 250,
-                "max_output_tokens": 1000
+                "last_n_lines": 8,
             }),
         )?;
-        ensure!(
-            !stdout(&poll).contains(forbidden_replay),
-            "stdin cursor poll must not replay isolated prompt output: {poll}"
-        );
         if stdout(&poll).contains(needle) {
             return Ok(poll);
         }
         last = Some(poll);
     }
-    bail!("stdin cursor did not surface {needle:?} before deadline; last poll: {last:?}");
+    bail!("read_progress did not surface {needle:?} before deadline; last poll: {last:?}");
 }
 
 #[test]
@@ -268,9 +250,7 @@ fn setsid_descendant_reaped_on_isolated_exit() -> Result<()> {
                     "bash -lc 'setsid bash -c \"exec -a {marker} sleep 30\" >/dev/null 2>&1 & echo iws-escaped-ready'"
                 ),
                 "yield_time_ms": 1500,
-                "timeout_seconds": 60,
-                "max_output_tokens": 1000
-            }),
+                "timeout_seconds": 60,}),
         )?;
         ensure!(
             as_str(&completed, "status")? == "ok",

@@ -7,6 +7,8 @@ mod registry;
 mod request;
 mod response;
 mod session;
+#[cfg(target_os = "linux")]
+mod transcript;
 #[cfg(any(target_os = "linux", test))]
 mod wait;
 
@@ -20,9 +22,7 @@ pub mod config {
 pub use config::CommandSessionConfig;
 pub use error::CommandSessionError;
 pub use manager::{CommandSessionManager, SweepReport};
-pub use output::{
-    tail_lines, utf8_consumable_prefix_len, CommandSessionOutput, CommandSessionOutputCursor,
-};
+pub use output::tail_lines;
 pub use registry::CommandSessionCompletion;
 pub use request::{
     CancelCommandSession, CollectCompleted, ReadCommandProgress, StartCommandSession, WriteStdin,

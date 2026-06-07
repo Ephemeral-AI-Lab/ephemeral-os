@@ -48,9 +48,7 @@ fn lingering_child_keeps_session_running() -> Result<()> {
         json!({
             "cmd": "sh -c 'echo up; sleep 30 & echo done'",
             "yield_time_ms": 1000,
-            "timeout_seconds": 120,
-            "max_output_tokens": 1000
-        }),
+            "timeout_seconds": 120,}),
     )?;
     assert_eq!(
         as_str(&exec, "status")?,
@@ -90,9 +88,7 @@ fn session_completes_only_after_all_subprocesses_exit() -> Result<()> {
         json!({
             "cmd": "sh -c 'sleep 3 & echo started'",
             "yield_time_ms": 800,
-            "timeout_seconds": 60,
-            "max_output_tokens": 1000
-        }),
+            "timeout_seconds": 60,}),
     )?;
     assert_eq!(as_str(&exec, "status")?, "running", "{exec}");
     let id = as_str(&exec, "command_session_id")?.to_owned();
@@ -141,9 +137,7 @@ fn write_stdin_terminate_kills_whole_session() -> Result<()> {
         json!({
             "cmd": "sh -c 'sleep 60 & python3 -u -c \"import sys; print(\\\"ready\\\", flush=True); sys.stdin.readline(); import time; time.sleep(60)\"'",
             "yield_time_ms": 1500,
-            "timeout_seconds": 120,
-            "max_output_tokens": 1000
-        }),
+            "timeout_seconds": 120,}),
     )?;
     assert_eq!(as_str(&exec, "status")?, "running", "{exec}");
     let id = as_str(&exec, "command_session_id")?.to_owned();
@@ -151,14 +145,8 @@ fn write_stdin_terminate_kills_whole_session() -> Result<()> {
     // Terminate kills the whole session, so its hardened outcome is
     // success:false; use `call` to read the terminal envelope, not `call_ok`.
     let terminated = lease.call(
-        ops::API_V1_WRITE_STDIN,
-        json!({
-            "command_session_id": id,
-            "chars": "",
-            "terminate": true,
-            "yield_time_ms": 2000,
-            "max_output_tokens": 1000
-        }),
+        ops::API_V1_COMMAND_CANCEL,
+        json!({"command_session_id": &id}),
     )?;
     assert!(
         matches!(as_str(&terminated, "status")?, "cancelled" | "ok" | "error"),
@@ -181,9 +169,7 @@ fn cancel_reaps_lingering_descendant() -> Result<()> {
         json!({
             "cmd": format!("bash -lc 'bash -c \"exec -a {marker} sleep 60\" & echo descendant-ready; wait'"),
             "yield_time_ms": 500,
-            "timeout_seconds": 120,
-            "max_output_tokens": 1000
-        }),
+            "timeout_seconds": 120,}),
     )?;
     assert_eq!(as_str(&exec, "status")?, "running", "{exec}");
     let id = as_str(&exec, "command_session_id")?.to_owned();
@@ -201,7 +187,7 @@ fn cancel_reaps_lingering_descendant() -> Result<()> {
 fn cancel(lease: &NodeLease<'_>, id: &str) -> Result<()> {
     lease.call(
         ops::API_V1_COMMAND_CANCEL,
-        json!({"command_session_id": id, "max_output_tokens": 1000}),
+        json!({"command_session_id": id}),
     )?;
     wait_for_command_session_transcript_recycled(lease, id)?;
     Ok(())
@@ -281,16 +267,14 @@ fn live_background_emitter_keeps_session_running() -> Result<()> {
     };
     let lease = pool.acquire()?;
     // The foreground exits after backgrounding a same-pgid child that KEEPS
-    // emitting. The session must stay running, and cursor polls must surface NEW
-    // output progressively without replaying already-consumed output.
+    // emitting. The session must stay running, and read_progress must surface
+    // output progressively from the timestamped transcript.
     let exec = lease.call_ok(
         ops::API_V1_EXEC_COMMAND,
         json!({
             "cmd": "sh -c 'echo fg-start; (for i in $(seq 1 12); do echo tick-$i; sleep 0.3; done) & echo fg-done'",
             "yield_time_ms": 800,
-            "timeout_seconds": 60,
-            "max_output_tokens": 4000
-        }),
+            "timeout_seconds": 60,}),
     )?;
     assert_eq!(as_str(&exec, "status")?, "running", "{exec}");
     assert!(
@@ -303,19 +287,13 @@ fn live_background_emitter_keeps_session_running() -> Result<()> {
     let deadline = Instant::now() + Duration::from_secs(8);
     while seen_max < 6 && Instant::now() < deadline {
         let poll = lease.call_ok(
-            ops::API_V1_WRITE_STDIN,
+            ops::API_V1_COMMAND_READ_PROGRESS,
             json!({
-                "command_session_id": id,
-                "chars": "",
-                "yield_time_ms": 400,
-                "max_output_tokens": 4000
+                "command_session_id": &id,
+                "last_n_lines": 8,
             }),
         )?;
         let out = stdout(&poll);
-        assert!(
-            !out.contains("fg-done"),
-            "cursor poll must not replay already-consumed foreground output: {poll}"
-        );
         for tick in 1..=12 {
             if out.contains(&format!("tick-{tick}")) {
                 seen_max = seen_max.max(tick);
@@ -324,7 +302,7 @@ fn live_background_emitter_keeps_session_running() -> Result<()> {
     }
     assert!(
         seen_max >= 6,
-        "cursor polls should surface progressive background output; reached tick {seen_max}"
+        "read_progress should surface progressive background output; reached tick {seen_max}"
     );
 
     let cdeadline = Instant::now() + Duration::from_secs(8);
@@ -363,9 +341,7 @@ fn running_stderr_only_emitter_is_visible() -> Result<()> {
         json!({
             "cmd": "python3 -u -c 'import sys,time; print(\"err-only-line\", file=sys.stderr, flush=True); time.sleep(60)'",
             "yield_time_ms": 1000,
-            "timeout_seconds": 120,
-            "max_output_tokens": 1000
-        }),
+            "timeout_seconds": 120,}),
     )?;
     assert_eq!(
         as_str(&exec, "status")?,
@@ -412,9 +388,7 @@ fn setsid_descendant_escapes_and_leaks_in_ephemeral() -> Result<()> {
                 "bash -lc 'setsid bash -c \"exec -a {marker} sleep 30\" >/dev/null 2>&1 & echo escaped-ready'"
             ),
             "yield_time_ms": 1500,
-            "timeout_seconds": 60,
-            "max_output_tokens": 1000
-        }),
+            "timeout_seconds": 60,}),
     )?;
     assert_eq!(
         as_str(&completed, "status")?,
@@ -457,9 +431,7 @@ fn nonsetsid_detach_vectors_stay_tracked() -> Result<()> {
             json!({
                 "cmd": cmd,
                 "yield_time_ms": 800,
-                "timeout_seconds": 60,
-                "max_output_tokens": 1000
-            }),
+                "timeout_seconds": 60,}),
         )?;
         assert_eq!(
             as_str(&exec, "status")?,

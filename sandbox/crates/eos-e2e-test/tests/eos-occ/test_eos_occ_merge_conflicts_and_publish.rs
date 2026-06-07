@@ -251,9 +251,7 @@ fn atomic_overlay_changeset_drops_all_paths_on_stale_conflict() -> Result<()> {
         json!({
             "cmd": format!("bash -lc 'printf SNAPSHOT_READY; sleep 2; mkdir -p {dir}; printf stale > {conflicted}; printf sibling > {sibling}'"),
             "yield_time_ms": 500,
-            "timeout_seconds": 30,
-            "max_output_tokens": 1000
-        }),
+            "timeout_seconds": 30,}),
     )?;
     assert_eq!(as_str(&exec, "status")?, "running", "{exec}");
     assert!(stdout(&exec).contains("SNAPSHOT_READY"), "{exec}");
@@ -302,7 +300,7 @@ fn atomic_overlay_changeset_drops_all_paths_on_stale_conflict() -> Result<()> {
     if body.is_err() {
         let _ = lease.call(
             ops::API_V1_COMMAND_CANCEL,
-            json!({"command_session_id": session_id, "max_output_tokens": 1000}),
+            json!({"command_session_id": session_id}),
         );
         let _ = wait_for_session_count(&lease, 0);
     }

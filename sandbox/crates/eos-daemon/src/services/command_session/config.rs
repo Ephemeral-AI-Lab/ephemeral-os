@@ -45,7 +45,6 @@ fn default_command_session_config() -> CommandSessionConfig {
         cancel_wait_ms: 500,
         output_drain_grace_ms: 500,
         max_session_s: 6 * 60 * 60,
-        output_ring_max_bytes: 1024 * 1024,
-        output_spool_max_bytes: 32 * 1024 * 1024,
+        transcript_timestamp_timezone: "UTC".to_owned(),
     }
 }

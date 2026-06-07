@@ -70,9 +70,7 @@ fn command_sessions_accept_stdin_and_release_on_cancel() -> Result<()> {
         json!({
             "cmd": "python3 -u -c 'import sys,time; print(\"ready\", flush=True); line=sys.stdin.readline().strip(); print(\"got:\" + line, flush=True); time.sleep(60)'",
             "yield_time_ms": 500,
-            "timeout_seconds": 120,
-            "max_output_tokens": 2000
-        }),
+            "timeout_seconds": 120,}),
     )?;
     assert_eq!(as_str(&started, "status")?, "running");
     let session_id = as_str(&started, "command_session_id")?.to_owned();
@@ -94,9 +92,7 @@ fn command_sessions_accept_stdin_and_release_on_cancel() -> Result<()> {
         json!({
             "command_session_id": session_id,
             "chars": "line-one\n",
-            "yield_time_ms": 2000,
-            "max_output_tokens": 2000
-        }),
+            "yield_time_ms": 2000,}),
     )?;
     if as_str(&stdin, "status")? != "running" {
         bail!("expected session to keep running after stdin write: {stdin}");
@@ -111,7 +107,7 @@ fn command_sessions_accept_stdin_and_release_on_cancel() -> Result<()> {
 
     let cancel = lease.call(
         ops::API_V1_COMMAND_CANCEL,
-        json!({"command_session_id": &session_id, "max_output_tokens": 2000}),
+        json!({"command_session_id": &session_id}),
     )?;
     assert!(matches!(
         as_str(&cancel, "status")?,
@@ -142,9 +138,7 @@ fn command_sessions_cancel_cleans_descendant_processes() -> Result<()> {
         json!({
             "cmd": format!("bash -lc 'bash -c \"exec -a {marker} sleep 60\" & echo descendant-ready; wait'"),
             "yield_time_ms": 500,
-            "timeout_seconds": 120,
-            "max_output_tokens": 1000
-        }),
+            "timeout_seconds": 120,}),
     )?;
     assert_eq!(as_str(&started, "status")?, "running");
     assert!(
@@ -163,7 +157,7 @@ fn command_sessions_cancel_cleans_descendant_processes() -> Result<()> {
 
     let cancel = lease.call(
         ops::API_V1_COMMAND_CANCEL,
-        json!({"command_session_id": &session_id, "max_output_tokens": 1000}),
+        json!({"command_session_id": &session_id}),
     )?;
     assert!(matches!(
         as_str(&cancel, "status")?,

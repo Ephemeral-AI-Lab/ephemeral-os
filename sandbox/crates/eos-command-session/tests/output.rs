@@ -1,49 +1,10 @@
-use eos_command_session::{
-    utf8_consumable_prefix_len, CommandSessionConfig, CommandSessionOutput,
-    CommandSessionOutputCursor,
-};
+use eos_command_session::tail_lines;
 
 #[test]
-fn utf8_carry_over_excludes_split_multibyte_tail() {
-    let euro = [0xE2, 0x82, 0xAC];
-    let mut first = b"ab".to_vec();
-    first.extend_from_slice(&euro[..1]);
-    let consume = utf8_consumable_prefix_len(&first);
-    assert_eq!(consume, 2);
-    assert_eq!(&first[..consume], b"ab");
-
-    let mut completed = first[consume..].to_vec();
-    completed.extend_from_slice(&euro[1..]);
-    assert_eq!(utf8_consumable_prefix_len(&completed), completed.len());
-    assert_eq!(String::from_utf8_lossy(&completed), "\u{20AC}");
-    assert_eq!(utf8_consumable_prefix_len(b"plain ascii"), 11);
-}
-
-#[test]
-fn utf8_consumable_prefix_consumes_invalid_bytes_so_the_buffer_never_wedges() {
-    let invalid = [b'a', 0xFF, b'b'];
-    assert_eq!(utf8_consumable_prefix_len(&invalid), 3);
-    assert_eq!(String::from_utf8_lossy(&invalid), "a\u{FFFD}b");
-
-    let mut mixed = vec![0xFF];
-    mixed.extend_from_slice(&[0xE2]);
-    assert_eq!(utf8_consumable_prefix_len(&mixed), 1);
-
-    assert_eq!(utf8_consumable_prefix_len(&[0x80]), 1);
-}
-
-#[test]
-fn output_cursor_reads_incrementally_without_consuming_other_cursors() {
-    let output = CommandSessionOutput::new(&CommandSessionConfig::default());
-    let mut model_cursor = CommandSessionOutputCursor::default();
-    let mut notification_cursor = CommandSessionOutputCursor::default();
-
-    output.append("hello".to_owned());
-    assert_eq!(output.read_since(&mut model_cursor, None), "hello");
-    assert_eq!(output.read_since(&mut notification_cursor, None), "hello");
-    assert_eq!(output.read_since(&mut model_cursor, None), "");
-
-    output.append(" world".to_owned());
-    assert_eq!(output.read_since(&mut model_cursor, None), " world");
-    assert_eq!(output.read_since(&mut notification_cursor, None), " world");
+fn tail_lines_returns_requested_suffix_without_cursor_state() {
+    assert_eq!(tail_lines("a\nb\nc\n", 2), "b\nc\n");
+    assert_eq!(tail_lines("a\nb\nc", 1), "c");
+    assert_eq!(tail_lines("a\nb\nc", 10), "a\nb\nc");
+    assert_eq!(tail_lines("", 10), "");
+    assert_eq!(tail_lines("a\nb", 0), "");
 }

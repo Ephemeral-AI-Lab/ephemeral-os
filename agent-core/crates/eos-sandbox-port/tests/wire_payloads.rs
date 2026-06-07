@@ -231,10 +231,6 @@ async fn exec_command_payload_includes_set_options_and_omits_unset() {
     assert_eq!(payload["cmd"], json!("ls"));
     assert_eq!(payload["yield_time_ms"], json!(500));
     assert_eq!(payload["timeout"], json!(30));
-    assert!(
-        !payload.contains_key("max_output_tokens"),
-        "an unset option is omitted from the payload"
-    );
     // Dispatch timeout is derived from the command timeout.
     assert_eq!(timeout_s, exec_dispatch_timeout(Some(30)));
 }
@@ -266,7 +262,6 @@ async fn exec_stdin_payload_is_input_only_and_keeps_invocation() {
     assert_eq!(payload["yield_time_ms"], json!(250));
     assert_eq!(payload["invocation_id"], json!("inv-9"));
     assert!(!payload.contains_key("terminate"));
-    assert!(!payload.contains_key("max_output_tokens"));
 }
 
 #[tokio::test]

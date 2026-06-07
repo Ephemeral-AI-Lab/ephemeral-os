@@ -8,8 +8,8 @@ use std::path::PathBuf;
 use serde::Deserialize;
 
 use crate::configs::validate::{
-    require_absolute, require_f64_gt, require_ratio, require_u64_at_least, require_usize_at_least,
-    ConfigFieldError,
+    require_absolute, require_f64_gt, require_ratio, require_timestamp_timezone,
+    require_u64_at_least, require_usize_at_least, ConfigFieldError,
 };
 
 pub use super::command_session::CommandSessionConfig;
@@ -154,15 +154,9 @@ impl DaemonConfig {
             1,
             "daemon.command_sessions.max_session_s",
         )?;
-        require_usize_at_least(
-            self.command_sessions.output_ring_max_bytes,
-            1,
-            "daemon.command_sessions.output_ring_max_bytes",
-        )?;
-        require_u64_at_least(
-            self.command_sessions.output_spool_max_bytes,
-            1,
-            "daemon.command_sessions.output_spool_max_bytes",
+        require_timestamp_timezone(
+            &self.command_sessions.transcript_timestamp_timezone,
+            "daemon.command_sessions.transcript_timestamp_timezone",
         )?;
         require_u64_at_least(
             self.isolated_sweeper.ttl_sweep_interval_ms,

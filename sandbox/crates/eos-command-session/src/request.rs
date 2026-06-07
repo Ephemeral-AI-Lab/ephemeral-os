@@ -38,7 +38,6 @@ pub struct ReadCommandProgress {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CancelCommandSession {
     pub command_session_id: String,
-    pub max_output_tokens: Option<u64>,
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Eq)]

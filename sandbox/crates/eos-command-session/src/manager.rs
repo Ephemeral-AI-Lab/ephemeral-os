@@ -5,14 +5,14 @@ use std::time::Instant;
 
 use eos_workspace_api::CommandWorkspacePolicy;
 
+#[cfg(target_os = "linux")]
+use crate::process::spawn_current_exe_ns_runner;
 use crate::registry::{CommandSessionCompletion, CommandSessionRegistry};
 #[cfg(target_os = "linux")]
 use crate::session::RunningCommandSessionParts;
 use crate::session::{CommandSession, CommandSessionSpec};
 #[cfg(target_os = "linux")]
 use crate::wait::{wait_for_yield, WaitOutcome};
-#[cfg(target_os = "linux")]
-use crate::{process::spawn_current_exe_ns_runner, CommandSessionOutput};
 use crate::{
     CancelCommandSession, CollectCompleted, CollectCompletedResponse, CommandResponse,
     CommandSessionConfig, CommandSessionError, DynCommandWorkspacePolicy, ReadCommandProgress,
@@ -86,10 +86,7 @@ impl CommandSessionManager {
             &self.config,
         ));
         self.registry.insert(Arc::clone(&session));
-        Ok(CommandResponse::running(
-            id,
-            session.read_model_output(None),
-        ))
+        Ok(CommandResponse::running(id, String::new()))
     }
 
     #[cfg(target_os = "linux")]
@@ -105,13 +102,12 @@ impl CommandSessionManager {
         }
         let id = self.registry.next_id();
         let prepared = policy.prepare_command_workspace(request.prepare_request(id.clone()))?;
-        let output = Arc::new(CommandSessionOutput::new(&self.config));
         let process = spawn_current_exe_ns_runner(
             &prepared.request_path,
             &prepared.run_request,
             &prepared.output_path,
             prepared.transcript_path.clone(),
-            Arc::clone(&output),
+            &self.config.transcript_timestamp_timezone,
         )?;
         let caller_id = request.caller_id;
         let command = request.cmd;
@@ -126,7 +122,6 @@ impl CommandSessionManager {
             policy,
             RunningCommandSessionParts {
                 process,
-                output,
                 output_path: prepared.output_path,
                 final_path: prepared.final_path,
                 transcript_path: prepared.transcript_path,
@@ -134,7 +129,7 @@ impl CommandSessionManager {
             },
         ));
         self.registry.insert(Arc::clone(&session));
-        match wait_for_yield(session.as_ref(), &self.config, request.yield_time_ms, None) {
+        match wait_for_yield(session.as_ref(), &self.config, request.yield_time_ms, 0) {
             WaitOutcome::Completed(result) => {
                 let response = result?;
                 Ok(self.finish_completed(session, response, false))
@@ -162,7 +157,6 @@ impl CommandSessionManager {
         if is_teardown_control(&request.chars) {
             return self.cancel(CancelCommandSession {
                 command_session_id: request.command_session_id,
-                max_output_tokens: None,
             });
         }
         if contains_teardown_control(&request.chars) {
@@ -178,12 +172,10 @@ impl CommandSessionManager {
                 "chars must be non-empty".to_owned(),
             ));
         }
-        let yield_time_ms = request.yield_time_ms;
-        session.append_output(request.chars);
-        let _ = yield_time_ms;
+        let _ = (session, request.yield_time_ms);
         Ok(CommandResponse::running(
             request.command_session_id,
-            session.read_model_output(None),
+            String::new(),
         ))
     }
 
@@ -195,7 +187,6 @@ impl CommandSessionManager {
         if is_teardown_control(&request.chars) {
             return self.cancel(CancelCommandSession {
                 command_session_id: request.command_session_id,
-                max_output_tokens: None,
             });
         }
         if contains_teardown_control(&request.chars) {
@@ -212,8 +203,14 @@ impl CommandSessionManager {
             ));
         }
         let command_session_id = request.command_session_id.clone();
+        let start_offset = session.transcript_len();
         session.write_process_stdin(&request.chars)?;
-        match wait_for_yield(session.as_ref(), &self.config, request.yield_time_ms, None) {
+        match wait_for_yield(
+            session.as_ref(),
+            &self.config,
+            request.yield_time_ms,
+            start_offset,
+        ) {
             WaitOutcome::Completed(result) => {
                 let response = result?;
                 Ok(self.finish_completed(session, response, false))
@@ -242,11 +239,10 @@ impl CommandSessionManager {
         };
         #[cfg(target_os = "linux")]
         if let Some(result) = session.try_finalize_process() {
-            let stdout = session.read_recent_output(request.last_n_lines);
             let response = result?;
-            let mut response = self.finish_completed(session, response, false);
-            response.stdout = stdout;
-            return Ok(response);
+            return Ok(self
+                .finish_completed(session, response, false)
+                .with_last_lines(request.last_n_lines));
         }
         Ok(CommandResponse::running(
             request.command_session_id,
@@ -279,7 +275,6 @@ impl CommandSessionManager {
                 .take_completed_result(&request.command_session_id)
                 .ok_or(CommandSessionError::NotFound(request.command_session_id));
         };
-        let _ = request.max_output_tokens;
         self.finish_session(session, "cancelled", Some(130), true)
     }
 
@@ -294,12 +289,13 @@ impl CommandSessionManager {
                 .take_completed_result(&request.command_session_id)
                 .ok_or(CommandSessionError::NotFound(request.command_session_id));
         };
+        let start_offset = session.transcript_len();
         session.cancel_process();
         match wait_for_yield(
             session.as_ref(),
             &self.config,
             self.config.cancel_wait_ms,
-            request.max_output_tokens,
+            start_offset,
         ) {
             WaitOutcome::Completed(result) => {
                 let response = result?;
@@ -452,11 +448,7 @@ impl CommandSessionManager {
         result: CommandResponse,
         publish_completion: bool,
     ) -> CommandResponse {
-        let result_for_completion = if publish_completion {
-            result.clone().with_stdout(session.read_model_output(None))
-        } else {
-            result.clone()
-        };
+        let result_for_completion = result.clone();
         let notification_result = result.clone();
         let command_session_id = session.id().to_owned();
         let caller_id = session.caller_id().to_owned();

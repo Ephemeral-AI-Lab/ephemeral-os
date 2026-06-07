@@ -20,9 +20,7 @@ fn nonzero_exit_and_stderr_are_structured() -> Result<()> {
         json!({
             "cmd": "sh -c 'printf stdout-before; printf stderr-before >&2; exit 42'",
             "yield_time_ms": 1000,
-            "timeout_seconds": 10,
-            "max_output_tokens": 2000
-        }),
+            "timeout_seconds": 10,}),
     )?;
     ensure!(
         as_str(&failed, "status")? == "error",
@@ -57,9 +55,7 @@ fn stderr_and_stdin_output_keep_long_lived_session_running() -> Result<()> {
         json!({
             "cmd": "python3 -u -c 'import sys,time; print(\"stderr-ready\", file=sys.stderr, flush=True); payload=sys.stdin.readline().strip(); print(\"stderr-reply:\" + payload, file=sys.stderr, flush=True); time.sleep(60)'",
             "yield_time_ms": 500,
-            "timeout_seconds": 120,
-            "max_output_tokens": 2000
-        }),
+            "timeout_seconds": 120,}),
     )?;
     ensure!(
         as_str(&started, "status")? == "running",
@@ -81,9 +77,7 @@ fn stderr_and_stdin_output_keep_long_lived_session_running() -> Result<()> {
             json!({
                 "command_session_id": &session_id,
                 "chars": "payload\n",
-                "yield_time_ms": 1500,
-                "max_output_tokens": 2000
-            }),
+                "yield_time_ms": 1500,}),
         )?;
         ensure!(
             as_str(&answered, "status")? == "running",
@@ -91,16 +85,15 @@ fn stderr_and_stdin_output_keep_long_lived_session_running() -> Result<()> {
         );
         ensure!(
             !stdout(&answered).contains("stderr-ready"),
-            "stdin output cursor must not replay initial stderr output: {answered}"
+            "stdin output should be scoped to text produced after the write: {answered}"
         );
         let reply = if stdout(&answered).contains("stderr-reply:payload") {
             answered
         } else {
-            poll_stdin_cursor_until_stdout_contains(
+            poll_read_progress_until_stdout_contains(
                 &lease,
                 &session_id,
                 "stderr-reply:payload",
-                "stderr-ready",
                 Instant::now() + Duration::from_secs(10),
             )?
         };
@@ -120,7 +113,7 @@ fn stderr_and_stdin_output_keep_long_lived_session_running() -> Result<()> {
 
         let cancelled = lease.call(
             ops::API_V1_COMMAND_CANCEL,
-            json!({"command_session_id": &session_id, "max_output_tokens": 2000}),
+            json!({"command_session_id": &session_id}),
         )?;
         ensure!(
             matches!(as_str(&cancelled, "status")?, "cancelled" | "ok" | "error"),
@@ -135,7 +128,7 @@ fn stderr_and_stdin_output_keep_long_lived_session_running() -> Result<()> {
     if body.is_err() {
         let _ = lease.call(
             ops::API_V1_COMMAND_CANCEL,
-            json!({"command_session_id": &session_id, "max_output_tokens": 2000}),
+            json!({"command_session_id": &session_id}),
         );
         let _ = wait_for_session_count(&lease, 0);
     }
@@ -153,9 +146,7 @@ fn missing_command_and_invalid_session_ids_are_structured() -> Result<()> {
         json!({
             "cmd": "definitely_missing_eos_e2e_command",
             "yield_time_ms": 1000,
-            "timeout_seconds": 10,
-            "max_output_tokens": 2000
-        }),
+            "timeout_seconds": 10,}),
     )?;
     ensure!(
         as_str(&missing, "status")? == "error",
@@ -179,9 +170,7 @@ fn missing_command_and_invalid_session_ids_are_structured() -> Result<()> {
         json!({
             "command_session_id": bogus,
             "chars": "ignored\n",
-            "yield_time_ms": 100,
-            "max_output_tokens": 200
-        }),
+            "yield_time_ms": 100,}),
     )?;
     ensure!(
         as_str(&stdin, "status")? == "error",
@@ -194,7 +183,7 @@ fn missing_command_and_invalid_session_ids_are_structured() -> Result<()> {
 
     let cancel = lease.call(
         ops::API_V1_COMMAND_CANCEL,
-        json!({"command_session_id": bogus, "max_output_tokens": 200}),
+        json!({"command_session_id": bogus}),
     )?;
     ensure!(
         as_str(&cancel, "status")? == "error",
@@ -229,17 +218,15 @@ fn output_backpressure_preserves_utf8_and_drains_on_cancel() -> Result<()> {
         json!({
             "cmd": "python3 -u - <<'PY'\nimport sys, time\nsys.stdout.write('Ω' * 20000)\nsys.stdout.flush()\ntime.sleep(60)\nPY",
             "yield_time_ms": 500,
-            "timeout_seconds": 120,
-            "max_output_tokens": 24
-        }),
+            "timeout_seconds": 120,}),
     )?;
     ensure!(
         as_str(&started, "status")? == "running",
-        "large-output command should stay running for cursor/backpressure checks: {started}"
+        "large-output command should stay running for transcript/backpressure checks: {started}"
     );
     ensure!(
-        stdout(&started).len() < 20_000,
-        "initial output should be capped instead of returning the full burst: {started}"
+        stdout(&started).contains('Ω'),
+        "initial output should expose the timestamped transcript burst: {started}"
     );
     ensure_valid_utf8_prefix(&started)?;
     let session_id = as_str(&started, "command_session_id")?.to_owned();
@@ -247,23 +234,21 @@ fn output_backpressure_preserves_utf8_and_drains_on_cancel() -> Result<()> {
     let body = (|| -> Result<()> {
         for _ in 0..2 {
             let poll = lease.call_ok(
-                ops::API_V1_WRITE_STDIN,
+                ops::API_V1_COMMAND_READ_PROGRESS,
                 json!({
                     "command_session_id": &session_id,
-                    "chars": "",
-                    "yield_time_ms": 150,
-                    "max_output_tokens": 24
+                    "last_n_lines": 1,
                 }),
             )?;
             ensure!(
-                stdout(&poll).len() < 20_000,
-                "cursor poll should remain output-capped under backpressure: {poll}"
+                stdout(&poll).contains('Ω'),
+                "read_progress should return the timestamped transcript tail under backpressure: {poll}"
             );
             ensure_valid_utf8_prefix(&poll)?;
         }
         let cancelled = lease.call(
             ops::API_V1_COMMAND_CANCEL,
-            json!({"command_session_id": &session_id, "max_output_tokens": 200}),
+            json!({"command_session_id": &session_id}),
         )?;
         ensure!(
             matches!(as_str(&cancelled, "status")?, "cancelled" | "ok" | "error"),
@@ -278,7 +263,7 @@ fn output_backpressure_preserves_utf8_and_drains_on_cancel() -> Result<()> {
     if body.is_err() {
         let _ = lease.call(
             ops::API_V1_COMMAND_CANCEL,
-            json!({"command_session_id": &session_id, "max_output_tokens": 200}),
+            json!({"command_session_id": &session_id}),
         );
         let _ = wait_for_session_count(&lease, 0);
     }
@@ -296,34 +281,27 @@ fn ensure_valid_utf8_prefix(response: &Value) -> Result<()> {
     Ok(())
 }
 
-fn poll_stdin_cursor_until_stdout_contains(
+fn poll_read_progress_until_stdout_contains(
     lease: &eos_e2e_test::NodeLease<'_>,
     session_id: &str,
     needle: &str,
-    forbidden_replay: &str,
     deadline: Instant,
 ) -> Result<Value> {
     let mut last = None;
     while Instant::now() < deadline {
         let poll = lease.call_ok(
-            ops::API_V1_WRITE_STDIN,
+            ops::API_V1_COMMAND_READ_PROGRESS,
             json!({
                 "command_session_id": session_id,
-                "chars": "",
-                "yield_time_ms": 250,
-                "max_output_tokens": 2000
+                "last_n_lines": 8,
             }),
         )?;
-        ensure!(
-            !stdout(&poll).contains(forbidden_replay),
-            "stdin cursor poll must not replay initial stderr output: {poll}"
-        );
         if stdout(&poll).contains(needle) {
             return Ok(poll);
         }
         last = Some(poll);
     }
-    bail!("stdin cursor did not surface {needle:?} before deadline; last poll: {last:?}");
+    bail!("read_progress did not surface {needle:?} before deadline; last poll: {last:?}");
 }
 
 fn stderr(value: &Value) -> &str {
@@ -351,9 +329,7 @@ fn stdin_to_non_reading_consumer_stays_bounded_and_cancellable() -> Result<()> {
         json!({
             "cmd": "sh -c 'echo no-read-ready; sleep 60'",
             "yield_time_ms": 800,
-            "timeout_seconds": 120,
-            "max_output_tokens": 1000
-        }),
+            "timeout_seconds": 120,}),
     )?;
     ensure!(
         as_str(&started, "status")? == "running",
@@ -368,9 +344,7 @@ fn stdin_to_non_reading_consumer_stays_bounded_and_cancellable() -> Result<()> {
         json!({
             "command_session_id": &id,
             "chars": payload,
-            "yield_time_ms": 300,
-            "max_output_tokens": 1000
-        }),
+            "yield_time_ms": 300,}),
     )?;
     ensure!(
         as_str(&wrote, "status")? == "running",
@@ -384,7 +358,7 @@ fn stdin_to_non_reading_consumer_stays_bounded_and_cancellable() -> Result<()> {
 
     let cancelled = lease.call(
         ops::API_V1_COMMAND_CANCEL,
-        json!({"command_session_id": &id, "max_output_tokens": 200}),
+        json!({"command_session_id": &id}),
     )?;
     ensure!(
         matches!(as_str(&cancelled, "status")?, "cancelled" | "ok" | "error"),

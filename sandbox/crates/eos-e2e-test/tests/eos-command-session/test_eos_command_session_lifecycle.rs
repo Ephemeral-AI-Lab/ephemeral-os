@@ -108,6 +108,42 @@ fn assert_teardown_control_reaps_marker_process(
     Ok(())
 }
 
+fn assert_timestamped_lines(output: &str, context: &Value) {
+    let normalized = output.replace('\r', "");
+    let lines = normalized
+        .lines()
+        .filter(|line| !line.is_empty())
+        .collect::<Vec<_>>();
+    assert!(!lines.is_empty(), "expected timestamped output: {context}");
+    for line in lines {
+        assert!(
+            has_timestamp_prefix(line),
+            "output line should start with timestamp prefix, got {line:?}: {context}"
+        );
+    }
+}
+
+fn has_timestamp_prefix(line: &str) -> bool {
+    let bytes = line.as_bytes();
+    if bytes.len() < 27 {
+        return false;
+    }
+    let fixed = bytes[0] == b'['
+        && bytes[5] == b'-'
+        && bytes[8] == b'-'
+        && bytes[11] == b'T'
+        && bytes[14] == b':'
+        && bytes[17] == b':'
+        && bytes[20] == b'.';
+    fixed
+        && ((bytes[24] == b'Z' && bytes[25] == b']' && bytes[26] == b' ')
+            || (bytes.len() >= 32
+                && matches!(bytes[24], b'+' | b'-')
+                && bytes[27] == b':'
+                && bytes[30] == b']'
+                && bytes[31] == b' '))
+}
+
 #[test]
 fn exec_returns_session_id() -> Result<()> {
     let Some(pool) = live_pool_or_skip()? else {
@@ -117,6 +153,31 @@ fn exec_returns_session_id() -> Result<()> {
     let id = start_sleeping_session(&lease, "session-started")?;
     assert!(!id.is_empty());
     cancel_session(&lease, &id)?;
+    Ok(())
+}
+
+#[test]
+fn exec_command_outputs_timestamped_transcript_lines() -> Result<()> {
+    let Some(pool) = live_pool_or_skip()? else {
+        return Ok(());
+    };
+    let lease = pool.acquire()?;
+    let completed = lease.call_ok(
+        ops::API_V1_EXEC_COMMAND,
+        json!({
+            "cmd": "printf 'stamp-one\\nstamp-two\\n'",
+            "yield_time_ms": 2000,
+            "timeout_seconds": 30
+        }),
+    )?;
+    assert_eq!(as_str(&completed, "status")?, "ok", "{completed}");
+    assert!(
+        stdout(&completed).contains("stamp-one") && stdout(&completed).contains("stamp-two"),
+        "completed command should return its transcript output: {completed}"
+    );
+    assert_timestamped_lines(stdout(&completed), &completed);
+    wait_for_session_count(&lease, 0)?;
+    wait_for_active_leases(&lease, 0)?;
     Ok(())
 }
 
@@ -154,6 +215,7 @@ fn write_stdin_echo() -> Result<()> {
         stdout(&stdin).contains("ready") && stdout(&stdin).contains("got:payload"),
         "stdin-triggered completion should return the full captured output: {stdin}"
     );
+    assert_timestamped_lines(stdout(&stdin), &stdin);
     wait_for_session_count(&lease, 0)?;
     wait_for_container_path(&lease, &transcript_path, false, Duration::from_secs(3))?;
     wait_for_active_leases(&lease, 0)?;
@@ -169,14 +231,14 @@ fn read_command_progress_returns_stateless_tail_snapshot() -> Result<()> {
     let started = lease.call_ok(
         ops::API_V1_EXEC_COMMAND,
         json!({
-            "cmd": "python3 -u -c 'import sys,time; print(\"cursor-first\", flush=True); line=sys.stdin.readline().strip(); print(\"cursor-second:\" + line, flush=True); time.sleep(60)'",
+            "cmd": "python3 -u -c 'import sys,time; print(\"progress-first\", flush=True); line=sys.stdin.readline().strip(); print(\"progress-second:\" + line, flush=True); time.sleep(60)'",
             "yield_time_ms": 500,
             "timeout_seconds": 120
         }),
     )?;
     assert_eq!(as_str(&started, "status")?, "running");
     assert!(
-        stdout(&started).contains("cursor-first"),
+        stdout(&started).contains("progress-first"),
         "initial poll should return first output: {started}"
     );
     let id = as_str(&started, "command_session_id")?.to_owned();
@@ -190,11 +252,11 @@ fn read_command_progress_returns_stateless_tail_snapshot() -> Result<()> {
         }),
     )?;
     assert!(
-        stdout(&second).contains("cursor-second:payload"),
+        stdout(&second).contains("progress-second:payload"),
         "stdin write should return newly produced output: {second}"
     );
     assert!(
-        !stdout(&second).contains("cursor-first"),
+        !stdout(&second).contains("progress-first"),
         "stdin write must not replay already consumed output: {second}"
     );
 
@@ -206,9 +268,9 @@ fn read_command_progress_returns_stateless_tail_snapshot() -> Result<()> {
         }),
     )?;
     assert!(
-        stdout(&progress).contains("cursor-first")
-            && stdout(&progress).contains("cursor-second:payload"),
-        "progress reads are stateless tail snapshots, not cursor polls: {progress}"
+        stdout(&progress).contains("progress-first")
+            && stdout(&progress).contains("progress-second:payload"),
+        "progress reads are stateless tail snapshots: {progress}"
     );
     let tail = lease.call_ok(
         ops::API_V1_COMMAND_READ_PROGRESS,
@@ -218,7 +280,8 @@ fn read_command_progress_returns_stateless_tail_snapshot() -> Result<()> {
         }),
     )?;
     assert!(
-        stdout(&tail).contains("cursor-second:payload") && !stdout(&tail).contains("cursor-first"),
+        stdout(&tail).contains("progress-second:payload")
+            && !stdout(&tail).contains("progress-first"),
         "last_n_lines should bound the read-progress tail without consuming state: {tail}"
     );
     cancel_session(&lease, &id)?;
@@ -320,17 +383,17 @@ fn collect_completed_drains() -> Result<()> {
 }
 
 #[test]
-fn collect_completed_preserves_transcript_after_ring_eviction() -> Result<()> {
+fn collect_completed_preserves_full_timestamped_transcript() -> Result<()> {
     let Some(pool) = live_pool_or_skip()? else {
         return Ok(());
     };
     let lease = pool.acquire()?;
     let first = format!(
-        "transcript-spool-first-{}",
+        "transcript-full-first-{}",
         eos_e2e_test::unique_suffix().replace('-', "_")
     );
     let last = format!(
-        "transcript-spool-last-{}",
+        "transcript-full-last-{}",
         eos_e2e_test::unique_suffix().replace('-', "_")
     );
     let cmd = format!(
@@ -356,12 +419,12 @@ fn collect_completed_preserves_transcript_after_ring_eviction() -> Result<()> {
     let output = stdout(result);
     assert!(
         output.contains(&first),
-        "completion stdout lost transcript prefix after ring eviction; bytes={}",
+        "completion stdout lost transcript prefix; bytes={}",
         output.len()
     );
     assert!(
         output.contains(&last),
-        "completion stdout lost transcript suffix after ring eviction; bytes={}",
+        "completion stdout lost transcript suffix; bytes={}",
         output.len()
     );
     wait_for_command_session_transcript_recycled(&lease, &id)?;
@@ -519,7 +582,7 @@ fn exec_timeout() -> Result<()> {
 }
 
 #[test]
-fn output_burst_returns_default_window_without_token_cap() -> Result<()> {
+fn output_burst_returns_full_timestamped_transcript() -> Result<()> {
     let Some(pool) = live_pool_or_skip()? else {
         return Ok(());
     };
@@ -535,9 +598,10 @@ fn output_burst_returns_default_window_without_token_cap() -> Result<()> {
     assert_eq!(as_str(&exec, "status")?, "running");
     assert!(
         stdout(&exec).len() >= 20_000,
-        "exec_command should no longer expose a token cap; returned {} bytes",
+        "exec_command should expose transcript-backed output; returned {} bytes",
         stdout(&exec).len()
     );
+    assert_timestamped_lines(stdout(&exec), &exec);
     let id = as_str(&exec, "command_session_id")?;
     cancel_session(&lease, id)?;
     Ok(())

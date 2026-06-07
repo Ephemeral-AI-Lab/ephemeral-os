@@ -47,9 +47,7 @@ fn resource_report_smoke() -> Result<()> {
             json!({
                 "cmd": format!("mkdir -p pressure/resource && printf exec-{sample} > pressure/resource/exec-{sample}.txt"),
                 "yield_time_ms": 1000,
-                "timeout_seconds": timeout_s,
-                "max_output_tokens": 2000
-            }),
+                "timeout_seconds": timeout_s,}),
         )?;
         assert_eq!(as_str(&exec, "status")?, "ok", "{exec}");
         assert_eq!(as_i64(&exec, "exit_code")?, 0, "{exec}");
@@ -76,9 +74,7 @@ fn resource_report_smoke() -> Result<()> {
             json!({
                 "cmd": format!("sh -c 'echo resource-report-{sample}; sleep 60'"),
                 "yield_time_ms": 100,
-                "timeout_seconds": timeout_s,
-                "max_output_tokens": 500
-            }),
+                "timeout_seconds": timeout_s,}),
         )?;
         assert_eq!(as_str(&session, "status")?, "running", "{session}");
         // COMMAND_CANCEL returns the cancelled command's own outcome, whose
@@ -183,9 +179,7 @@ fn large_base_overlay_keeps_memory_bounded() -> Result<()> {
         json!({
             "cmd": "printf TINY > pressure/mem/delta.txt",
             "yield_time_ms": 1000,
-            "timeout_seconds": 30,
-            "max_output_tokens": 1000
-        }),
+            "timeout_seconds": 30,}),
     )?;
     assert_eq!(as_str(&exec, "status")?, "ok", "{exec}");
     // Memory gauges land on the fast-path file response; sample one after the op.

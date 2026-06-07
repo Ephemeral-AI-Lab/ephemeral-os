@@ -68,9 +68,7 @@ fn spawn_long_background_exec(
                 "background": true,
                 "cmd": "sleep 30",
                 "yield_time_ms": 15000,
-                "timeout_seconds": 60,
-                "max_output_tokens": 200
-            }),
+                "timeout_seconds": 60,}),
         )
     })
 }

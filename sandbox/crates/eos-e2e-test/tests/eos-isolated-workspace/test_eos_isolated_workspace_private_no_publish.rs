@@ -101,9 +101,7 @@ fn isolated_exec_write_is_private_and_discarded() -> Result<()> {
             json!({
                 "cmd": format!("mkdir -p iso-exec && printf isolated-exec > {path}"),
                 "yield_time_ms": 2000,
-                "timeout_seconds": 10,
-                "max_output_tokens": 1000
-            }),
+                "timeout_seconds": 10,}),
         )?;
         assert_eq!(as_str(&exec, "status")?, "ok", "{exec}");
         assert_eq!(as_str(&exec, "workspace")?, "isolated", "{exec}");

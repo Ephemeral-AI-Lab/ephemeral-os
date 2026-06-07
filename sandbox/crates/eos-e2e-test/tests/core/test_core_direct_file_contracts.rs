@@ -181,9 +181,7 @@ fn read_max_bytes_guard() -> Result<()> {
         json!({
             "cmd": format!("mkdir -p tool && python3 - <<'PY'\nopen('tool/too-big-read.txt', 'wb').write(b'x' * {})\nPY", MAX_READ_BYTES + 1),
             "yield_time_ms": 1000,
-            "timeout_seconds": 20,
-            "max_output_tokens": 1000
-        }),
+            "timeout_seconds": 20,}),
     )?;
     assert_eq!(
         as_str(&exec, "status")?,
@@ -263,9 +261,7 @@ fn foreground_exec_emits_lease_and_overlay_audit() -> Result<()> {
         json!({
             "cmd": "mkdir -p fastpath && printf hi > fastpath/exec.txt",
             "yield_time_ms": 1000,
-            "timeout_seconds": 20,
-            "max_output_tokens": 1000
-        }),
+            "timeout_seconds": 20,}),
     )?;
     assert_eq!(as_str(&exec, "status")?, "ok", "exec must complete: {exec}");
     assert!(

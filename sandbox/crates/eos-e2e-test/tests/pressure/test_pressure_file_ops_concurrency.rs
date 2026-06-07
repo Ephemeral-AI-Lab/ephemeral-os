@@ -227,9 +227,7 @@ fn concurrent_overlay_execs_share_lowerdir_storage_is_o1() -> Result<()> {
                     json!({
                         "cmd": format!("mkdir -p pressure/o1 && printf d{index} > pressure/o1/delta-{index}.txt"),
                         "yield_time_ms": 1000,
-                        "timeout_seconds": 30,
-                        "max_output_tokens": 1000
-                    }),
+                        "timeout_seconds": 30,}),
                 )
             })
         })

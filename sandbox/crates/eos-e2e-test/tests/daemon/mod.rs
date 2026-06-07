@@ -53,9 +53,7 @@ fn spawn_inflight_exec(lease: &NodeLease<'_>, invocation_id: &str) -> JoinHandle
                 "background": true,
                 "cmd": "sleep 8",
                 "yield_time_ms": 5000,
-                "timeout_seconds": 120,
-                "max_output_tokens": 200
-            }),
+                "timeout_seconds": 120,}),
         )
     })
 }

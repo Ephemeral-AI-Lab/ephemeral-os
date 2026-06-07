@@ -168,9 +168,7 @@ fn protocol_only_bundled_sandbox_capstone() -> Result<()> {
         json!({
             "cmd": "mkdir -p capstone && printf exec > capstone/exec.txt",
             "yield_time_ms": 1000,
-            "timeout_seconds": 10,
-            "max_output_tokens": 1000
-        }),
+            "timeout_seconds": 10,}),
     )?;
     assert_eq!(as_str(&exec, "status")?, "ok", "{exec}");
 

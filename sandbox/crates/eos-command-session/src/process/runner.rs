@@ -9,7 +9,7 @@ use std::time::Duration;
 
 use serde_json::Value;
 
-use crate::{utf8_consumable_prefix_len, CommandSessionOutput};
+use crate::transcript::TranscriptTimestampPrefixer;
 
 use super::{interrupt_process_group, open_pty_pair, terminate_process_group};
 
@@ -202,7 +202,7 @@ pub fn spawn_current_exe_ns_runner(
     run_request: &Value,
     output_path: &Path,
     transcript_path: PathBuf,
-    output: std::sync::Arc<CommandSessionOutput>,
+    transcript_timestamp_timezone: &str,
 ) -> io::Result<CommandSessionProcess> {
     write_run_request(request_path, run_request)?;
     let (master, slave) = open_pty_pair()?;
@@ -225,7 +225,14 @@ pub fn spawn_current_exe_ns_runner(
         )
     })?;
     let writer = master.try_clone()?;
-    let reader_done = spawn_command_output_reader(master, output, transcript_path);
+    let transcript_prefixer = TranscriptTimestampPrefixer::new(transcript_timestamp_timezone)
+        .map_err(|error| {
+            io::Error::new(
+                io::ErrorKind::InvalidInput,
+                format!("invalid transcript timestamp timezone: {error}"),
+            )
+        })?;
+    let reader_done = spawn_command_output_reader(master, transcript_path, transcript_prefixer);
 
     Ok(CommandSessionProcess {
         pgid: Some(pgid),
@@ -237,8 +244,8 @@ pub fn spawn_current_exe_ns_runner(
 
 fn spawn_command_output_reader(
     mut master: File,
-    output: std::sync::Arc<CommandSessionOutput>,
     transcript_path: PathBuf,
+    mut transcript_prefixer: TranscriptTimestampPrefixer,
 ) -> mpsc::Receiver<()> {
     let (done_tx, done_rx) = mpsc::channel();
     thread::spawn(move || {
@@ -248,29 +255,20 @@ fn spawn_command_output_reader(
             .open(transcript_path)
             .ok();
         let mut buf = [0_u8; 8192];
-        let mut carry: Vec<u8> = Vec::new();
         loop {
             match master.read(&mut buf) {
                 Ok(0) => break,
                 Ok(n) => {
-                    if output.note_spooled(u64::try_from(n).unwrap_or(u64::MAX)) {
-                        if let Some(file) = transcript.as_mut() {
-                            let _ = file.write_all(&buf[..n]);
+                    let transcript_bytes = transcript_prefixer.prefix(&buf[..n]);
+                    if let Some(file) = transcript.as_mut() {
+                        if file.write_all(&transcript_bytes).is_err() {
+                            transcript = None;
                         }
-                    }
-                    carry.extend_from_slice(&buf[..n]);
-                    let consume = utf8_consumable_prefix_len(&carry);
-                    if consume > 0 {
-                        output.append(String::from_utf8_lossy(&carry[..consume]).into_owned());
-                        carry.drain(..consume);
                     }
                 }
                 Err(err) if err.kind() == io::ErrorKind::Interrupted => {}
                 Err(_) => break,
             }
-        }
-        if !carry.is_empty() {
-            output.append(String::from_utf8_lossy(&carry).into_owned());
         }
         let _ = done_tx.send(());
     });

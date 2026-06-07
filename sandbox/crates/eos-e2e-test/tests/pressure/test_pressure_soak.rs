@@ -67,9 +67,7 @@ fn mixed_workload_soak_keeps_counters_and_storage_bounded() -> Result<()> {
             json!({
                 "cmd": "mkdir -p soak && printf exec > soak/exec.txt",
                 "yield_time_ms": 1000,
-                "timeout_seconds": 20,
-                "max_output_tokens": 1000
-            }),
+                "timeout_seconds": 20,}),
         )?;
         assert_eq!(as_str(&exec, "status")?, "ok", "{exec}");
 
@@ -79,9 +77,7 @@ fn mixed_workload_soak_keeps_counters_and_storage_bounded() -> Result<()> {
             json!({
                 "cmd": format!("sh -c 'echo soak-{round}; sleep 60'"),
                 "yield_time_ms": 100,
-                "timeout_seconds": 120,
-                "max_output_tokens": 500
-            }),
+                "timeout_seconds": 120,}),
         )?;
         assert_eq!(as_str(&session, "status")?, "running", "{session}");
         lease.call(

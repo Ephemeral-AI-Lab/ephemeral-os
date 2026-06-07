@@ -38,9 +38,7 @@ fn exec_multi_path_route_timings_and_read_intent_no_publish() -> Result<()> {
         json!({
             "cmd": format!("mkdir -p {dir}/nested && printf first > {first} && printf second > {second}"),
             "yield_time_ms": 1000,
-            "timeout_seconds": 10,
-            "max_output_tokens": 1000
-        }),
+            "timeout_seconds": 10,}),
     )?;
     assert_eq!(as_str(&exec, "status")?, "ok", "{exec}");
     let changed = array(&exec, "changed_paths")?;
@@ -65,9 +63,7 @@ fn exec_multi_path_route_timings_and_read_intent_no_publish() -> Result<()> {
         json!({
             "cmd": format!("cat {first} {second}"),
             "yield_time_ms": 1000,
-            "timeout_seconds": 10,
-            "max_output_tokens": 1000
-        }),
+            "timeout_seconds": 10,}),
     )?;
     assert_eq!(as_str(&read_only, "status")?, "ok", "{read_only}");
     assert_eq!(stdout(&read_only), "firstsecond", "{read_only}");
@@ -90,9 +86,7 @@ fn exec_write_outside_workspace_is_not_captured() -> Result<()> {
         json!({
             "cmd": format!("mkdir -p scope_in && printf inside > scope_in/inside.txt && printf outside > {marker}"),
             "yield_time_ms": 1000,
-            "timeout_seconds": 10,
-            "max_output_tokens": 1000
-        }),
+            "timeout_seconds": 10,}),
     )?;
     assert_eq!(as_str(&exec, "status")?, "ok", "{exec}");
     // The overlay captures only the upperdir over workspace_root: the in-workspace
@@ -175,9 +169,7 @@ printf 'extra_fs=%s\n' "$(mount_fstype /tmp/eos-mask-test)"
 printf 'extra_state=%s\n' "$(dir_state /tmp/eos-mask-test)"
 "#,
             "yield_time_ms": 1000,
-            "timeout_seconds": 10,
-            "max_output_tokens": 2000
-        }),
+            "timeout_seconds": 10,}),
     )?;
     assert_eq!(as_str(&exec, "status")?, "ok", "{exec}");
     let output = stdout(&exec);
@@ -220,9 +212,7 @@ fn foreground_exec_recycles_overlay_scratch() -> Result<()> {
         json!({
             "cmd": "mkdir -p auditscope && printf x > auditscope/a.txt",
             "yield_time_ms": 1000,
-            "timeout_seconds": 10,
-            "max_output_tokens": 1000
-        }),
+            "timeout_seconds": 10,}),
     )?;
     assert_eq!(as_str(&exec, "status")?, "ok", "{exec}");
     assert!(exec.get("command_session_id").is_none(), "{exec}");
@@ -276,9 +266,7 @@ fn overlay_delete_replacement_write_and_foreign_publish_are_readable() -> Result
         json!({
             "cmd": format!("rm -f {deleted} {old} && mkdir -p {replaced} && printf new > {replacement}"),
             "yield_time_ms": 1000,
-            "timeout_seconds": 10,
-            "max_output_tokens": 1000
-        }),
+            "timeout_seconds": 10,}),
     )?;
     assert_eq!(as_str(&overlay, "status")?, "ok", "{overlay}");
     let changed = array(&overlay, "changed_paths")?;
@@ -350,9 +338,7 @@ fn exec_upperdir_captures_only_the_delta() -> Result<()> {
         json!({
             "cmd": "printf SMALL > perf/delta.txt",
             "yield_time_ms": 1000,
-            "timeout_seconds": 10,
-            "max_output_tokens": 1000
-        }),
+            "timeout_seconds": 10,}),
     )?;
     assert_eq!(as_str(&exec, "status")?, "ok", "{exec}");
     let upperdir_bytes = timing_f64(&exec, "resource.command_exec.upperdir_tree_bytes")
@@ -395,9 +381,7 @@ fn exec_upperdir_is_flat_across_base_sizes() -> Result<()> {
             json!({
                 "cmd": format!("printf SMALL > perf/flat/delta-{index}.txt"),
                 "yield_time_ms": 1000,
-                "timeout_seconds": 15,
-                "max_output_tokens": 1000
-            }),
+                "timeout_seconds": 15,}),
         )?;
         assert_eq!(as_str(&exec, "status")?, "ok", "{exec}");
         let upperdir_bytes = timing_f64(&exec, "resource.command_exec.upperdir_tree_bytes")
@@ -434,9 +418,7 @@ fn exec_run_dir_scratch_stays_bounded() -> Result<()> {
         json!({
             "cmd": "printf TINY > perf/scratch/delta.txt",
             "yield_time_ms": 1000,
-            "timeout_seconds": 10,
-            "max_output_tokens": 1000
-        }),
+            "timeout_seconds": 10,}),
     )?;
     assert_eq!(as_str(&exec, "status")?, "ok", "{exec}");
     let run_dir_bytes = timing_f64(&exec, "resource.command_exec.run_dir_tree_bytes")
@@ -467,9 +449,7 @@ fn cancelled_background_exec_does_not_publish_partial_workspace_mutation() -> Re
         json!({
             "cmd": format!("bash -lc 'printf READY; sleep 30; mkdir -p cancel-no-partial; printf partial > {path}'"),
             "yield_time_ms": 500,
-            "timeout_seconds": 60,
-            "max_output_tokens": 1000
-        }),
+            "timeout_seconds": 60,}),
     )?;
     assert_eq!(as_str(&exec, "status")?, "running", "{exec}");
     assert!(
@@ -479,7 +459,7 @@ fn cancelled_background_exec_does_not_publish_partial_workspace_mutation() -> Re
     let session_id = as_str(&exec, "command_session_id")?.to_owned();
     lease.call(
         ops::API_V1_COMMAND_CANCEL,
-        json!({"command_session_id": session_id, "max_output_tokens": 1000}),
+        json!({"command_session_id": session_id}),
     )?;
     wait_for_session_count(&lease, 0)?;
     let metrics = wait_for_active_leases(&lease, 0)?;
@@ -504,9 +484,7 @@ fn exec_overlay_mount_publishes_changed_paths() -> Result<()> {
         json!({
             "cmd": "mkdir -p overlay && printf from-overlay > overlay/exec.txt",
             "yield_time_ms": 1000,
-            "timeout_seconds": 10,
-            "max_output_tokens": 1000
-        }),
+            "timeout_seconds": 10,}),
     )?;
     assert_eq!(as_str(&exec, "status")?, "ok");
     assert_eq!(as_i64(&exec, "exit_code")?, 0);
@@ -538,9 +516,7 @@ fn long_running_exec_conflicts_after_direct_write() -> Result<()> {
         json!({
             "cmd": format!("bash -lc 'printf SNAPSHOT_READY; sleep 2; printf stale-session > {path}'"),
             "yield_time_ms": 500,
-            "timeout_seconds": 30,
-            "max_output_tokens": 1000
-        }),
+            "timeout_seconds": 30,}),
     )?;
     assert_eq!(
         as_str(&exec, "status")?,
@@ -601,7 +577,7 @@ fn long_running_exec_conflicts_after_direct_write() -> Result<()> {
     if body.is_err() {
         let _ = lease.call(
             ops::API_V1_COMMAND_CANCEL,
-            json!({"command_session_id": session_id, "max_output_tokens": 1000}),
+            json!({"command_session_id": session_id}),
         );
         let _ = wait_for_session_count(&lease, 0);
     }

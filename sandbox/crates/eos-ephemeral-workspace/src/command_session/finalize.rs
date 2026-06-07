@@ -88,9 +88,7 @@ where
         conflict: first_conflict.map(conflict_from_file),
         conflict_reason: first_conflict.map(|file| conflict_message(file).to_owned()),
         timings,
-        metadata: json!({
-            "spool_truncated": request.spool_truncated,
-        }),
+        metadata: Value::Null,
     })
 }
 
@@ -364,7 +362,6 @@ mod tests {
             FinalizeCommandRequest {
                 runner_result: None,
                 command_elapsed_s: 1.5,
-                spool_truncated: true,
                 status: "ok".to_owned(),
                 exit_code: Some(0),
                 stdout: "done".to_owned(),
@@ -378,7 +375,6 @@ mod tests {
         assert_eq!(outcome.changed_paths, vec!["result.txt"]);
         assert_eq!(outcome.changed_path_kinds["result.txt"], "write");
         assert_eq!(outcome.timings["command_exec.occ_apply_s"], 0.25);
-        assert_eq!(outcome.metadata["spool_truncated"], true);
 
         let _ = std::fs::remove_dir_all(root);
         Ok(())
@@ -430,7 +426,6 @@ mod tests {
             FinalizeCommandRequest {
                 runner_result: None,
                 command_elapsed_s: 1.5,
-                spool_truncated: false,
                 status: "error".to_owned(),
                 exit_code: Some(2),
                 stdout: String::new(),

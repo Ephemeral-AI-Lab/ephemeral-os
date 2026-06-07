@@ -16,9 +16,7 @@ fn start_sleep(lease: &eos_e2e_test::NodeLease<'_>, marker: &str) -> Result<Stri
         json!({
             "cmd": format!("sh -c 'echo {marker}; sleep 60'"),
             "yield_time_ms": 100,
-            "timeout_seconds": 120,
-            "max_output_tokens": 500
-        }),
+            "timeout_seconds": 120,}),
     )?;
     assert_eq!(as_str(&started, "status")?, "running");
     Ok(as_str(&started, "command_session_id")?.to_owned())
@@ -109,9 +107,7 @@ fn command_sessions_ladder_1_3_6_12() -> Result<()> {
                         json!({
                             "cmd": format!("sh -c 'echo command-ladder-{level}-{index}; sleep 60'"),
                             "yield_time_ms": 100,
-                            "timeout_seconds": timeout_s,
-                            "max_output_tokens": 500
-                        }),
+                            "timeout_seconds": timeout_s,}),
                     )
                 })
             })

@@ -448,7 +448,6 @@ Public command output payload.
 | `cmd` | `String` | `pub` |
 | `yield_time_ms` | `Option<u64>` | `pub` |
 | `timeout_seconds` | `Option<u64>` | `pub` |
-| `max_output_tokens` | `Option<u64>` | `pub` |
 
 #### `ExecCommandResult`  ·  _struct_  ·  derives: `Debug, Clone, PartialEq, Eq, Serialize, Deserialize`  ·  [L120]
 
@@ -474,7 +473,6 @@ Public `exec_command` / command-session result payload.
 | `command_session_id` | `String` | `pub` |
 | `chars` | `String` | `pub` |
 | `yield_time_ms` | `Option<u64>` | `pub` |
-| `max_output_tokens` | `Option<u64>` | `pub` |
 
 #### `CommandSessionCancelArgs`  ·  _struct_  ·  derives: `Debug, Clone, PartialEq, Eq, Serialize, Deserialize`  ·  [L141]
 

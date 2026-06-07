@@ -79,7 +79,6 @@ where
                 "published": false,
             },
             "warnings": [],
-            "spool_truncated": request.spool_truncated,
             "audit": {
                 "workspace_handle_id": workspace_handle_id,
                 "exit_code": exit_code,
@@ -197,7 +196,6 @@ mod tests {
                     "exit_code": 0,
                 })),
                 command_elapsed_s: 1.25,
-                spool_truncated: true,
                 status: "ok".to_owned(),
                 exit_code: Some(0),
                 stdout: "done".to_owned(),
@@ -214,7 +212,6 @@ mod tests {
         assert_eq!(outcome.timings["command_exec.mount_workspace_s"], 0.1);
         assert_eq!(outcome.metadata["isolated_workspace"]["published"], false);
         assert_eq!(outcome.metadata["audit"]["published"], false);
-        assert_eq!(outcome.metadata["spool_truncated"], true);
 
         let _ = std::fs::remove_dir_all(root);
         Ok(())
@@ -254,7 +251,6 @@ mod tests {
                     "exit_code": 2,
                 })),
                 command_elapsed_s: 1.25,
-                spool_truncated: false,
                 status: "error".to_owned(),
                 exit_code: Some(2),
                 stdout: String::new(),

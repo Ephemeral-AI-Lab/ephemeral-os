@@ -93,9 +93,7 @@ fn run_command_family(family_name: &str) -> Result<()> {
             json!({
                 "cmd": variant.cmd,
                 "yield_time_ms": 1000,
-                "timeout_seconds": timeout_s,
-                "max_output_tokens": 6000
-            }),
+                "timeout_seconds": timeout_s,}),
         )?;
         let elapsed = call_started.elapsed();
         assert_command_ok(&response, family.name, variant.name)?;
@@ -133,7 +131,7 @@ fn run_command_family(family_name: &str) -> Result<()> {
 }
 
 #[test]
-fn stdin_prompt_cursor_collect_and_cancel_variants() -> Result<()> {
+fn stdin_prompt_progress_collect_and_cancel_variants() -> Result<()> {
     let Some(pool) = live_pool_or_skip()? else {
         return Ok(());
     };
@@ -154,9 +152,7 @@ fn stdin_prompt_cursor_collect_and_cancel_variants() -> Result<()> {
         json!({
             "cmd": prompt_cmd,
             "yield_time_ms": 500,
-            "timeout_seconds": workload_timeout_s(&pool) + 60,
-            "max_output_tokens": 2000
-        }),
+            "timeout_seconds": workload_timeout_s(&pool) + 60,}),
     )?;
     ensure!(
         output_contains(&started, "prompt:one"),
@@ -170,9 +166,7 @@ fn stdin_prompt_cursor_collect_and_cancel_variants() -> Result<()> {
             json!({
                 "command_session_id": &session_id,
                 "chars": "alpha payload\n",
-                "yield_time_ms": 1500,
-                "max_output_tokens": 2000
-            }),
+                "yield_time_ms": 1500,}),
         )?;
         ensure!(
             output_contains(&first, "reply:one:alpha payload")
@@ -181,24 +175,19 @@ fn stdin_prompt_cursor_collect_and_cancel_variants() -> Result<()> {
         );
         ensure!(
             !output_contains(&first, "prompt:one"),
-            "stdin output cursor must not replay the first prompt: {first}"
+            "stdin output should be scoped to text produced after the write: {first}"
         );
 
-        // The command-session read surface is cursor polling with an empty
-        // `write_stdin`, plus `collect_completed` for terminal messages.
-        let quiet_poll = lease.call_ok(
-            ops::API_V1_WRITE_STDIN,
+        let progress = lease.call_ok(
+            ops::API_V1_COMMAND_READ_PROGRESS,
             json!({
                 "command_session_id": &session_id,
-                "chars": "",
-                "yield_time_ms": 250,
-                "max_output_tokens": 2000
+                "last_n_lines": 4,
             }),
         )?;
         ensure!(
-            !output_contains(&quiet_poll, "reply:one")
-                && !output_contains(&quiet_poll, "prompt:two"),
-            "empty cursor poll must not replay consumed prompt output: {quiet_poll}"
+            output_contains(&progress, "prompt:two"),
+            "read_progress should expose the current transcript tail: {progress}"
         );
 
         let second = lease.call_ok(
@@ -206,9 +195,7 @@ fn stdin_prompt_cursor_collect_and_cancel_variants() -> Result<()> {
             json!({
                 "command_session_id": &session_id,
                 "chars": "beta payload\n",
-                "yield_time_ms": 1500,
-                "max_output_tokens": 2000
-            }),
+                "yield_time_ms": 1500,}),
         )?;
         ensure!(
             output_contains(&second, "reply:two:beta payload"),
@@ -230,7 +217,7 @@ fn stdin_prompt_cursor_collect_and_cancel_variants() -> Result<()> {
 
         let cancel = lease.call(
             ops::API_V1_COMMAND_CANCEL,
-            json!({"command_session_id": &session_id, "max_output_tokens": 2000}),
+            json!({"command_session_id": &session_id}),
         )?;
         ensure_terminalish_status(&cancel)?;
         wait_for_session_count(&lease, 0)?;
@@ -242,7 +229,7 @@ fn stdin_prompt_cursor_collect_and_cancel_variants() -> Result<()> {
     if body.is_err() {
         let _ = lease.call(
             ops::API_V1_COMMAND_CANCEL,
-            json!({"command_session_id": &session_id, "max_output_tokens": 2000}),
+            json!({"command_session_id": &session_id}),
         );
         let _ = wait_for_session_count(&lease, 0);
     }
@@ -287,9 +274,7 @@ fn parallel_command_matrix_load_stays_bounded() -> Result<()> {
                         json!({
                             "cmd": cmd,
                             "yield_time_ms": 1000,
-                            "timeout_seconds": timeout_s,
-                            "max_output_tokens": 3000
-                        }),
+                            "timeout_seconds": timeout_s,}),
                     )?;
                     Ok((index, response, started.elapsed()))
                 })
@@ -375,9 +360,7 @@ time.sleep(60)'"
                         json!({
                             "cmd": prompt_cmd,
                             "yield_time_ms": 500,
-                            "timeout_seconds": timeout_s + 60,
-                            "max_output_tokens": 2000
-                        }),
+                            "timeout_seconds": timeout_s + 60,}),
                     )?;
                     ensure!(
                         as_str(&started, "status")? == "running",
@@ -399,24 +382,21 @@ time.sleep(60)'"
                         json!({
                             "command_session_id": &session_id,
                             "chars": format!("payload-{level}-{index}\n"),
-                            "yield_time_ms": 1500,
-                            "max_output_tokens": 2000
-                        }),
+                            "yield_time_ms": 1500,}),
                     )?;
                     ensure!(
                         !output_contains(&answered, &prompt_needle),
-                        "parallel prompt stdin cursor must not replay prompt output: {answered}"
+                        "parallel prompt stdin output should be scoped after the write: {answered}"
                     );
                     let reply = if output_contains(&answered, &reply_needle) {
                         answered
                     } else {
-                        poll_stdin_cursor_until_contains(
+                        poll_read_progress_until_contains(
                             &client,
                             &root,
                             &caller_id,
                             &session_id,
                             &reply_needle,
-                            &prompt_needle,
                             Instant::now() + Duration::from_secs(timeout_s.min(15)),
                         )?
                     };
@@ -425,21 +405,19 @@ time.sleep(60)'"
                         "parallel prompt worker should echo its own payload: {reply}"
                     );
 
-                    let quiet = request_with_identity(
+                    let progress = request_with_identity(
                         &client,
-                        ops::API_V1_WRITE_STDIN,
+                        ops::API_V1_COMMAND_READ_PROGRESS,
                         &root,
                         &caller_id,
                         json!({
                             "command_session_id": &session_id,
-                            "chars": "",
-                            "yield_time_ms": 250,
-                            "max_output_tokens": 2000
+                            "last_n_lines": 4,
                         }),
                     )?;
                     ensure!(
-                        !output_contains(&quiet, &format!("reply:{marker}:payload")),
-                        "parallel prompt empty poll must not replay consumed output: {quiet}"
+                        output_contains(&progress, &reply_needle),
+                        "parallel prompt read_progress should expose the transcript tail: {progress}"
                     );
 
                     let cancel = request_with_identity(
@@ -447,7 +425,7 @@ time.sleep(60)'"
                         ops::API_V1_COMMAND_CANCEL,
                         &root,
                         &caller_id,
-                        json!({"command_session_id": &session_id, "max_output_tokens": 2000}),
+                        json!({"command_session_id": &session_id}),
                     )?;
                     ensure_terminalish_status(&cancel)?;
                     Ok(())
@@ -475,39 +453,32 @@ time.sleep(60)'"
     Ok(())
 }
 
-fn poll_stdin_cursor_until_contains(
+fn poll_read_progress_until_contains(
     client: &eos_e2e_test::client::ProtocolClient,
     root: &str,
     caller_id: &str,
     session_id: &str,
     needle: &str,
-    forbidden_replay: &str,
     deadline: Instant,
 ) -> Result<Value> {
     let mut last = None;
     while Instant::now() < deadline {
         let poll = request_with_identity(
             client,
-            ops::API_V1_WRITE_STDIN,
+            ops::API_V1_COMMAND_READ_PROGRESS,
             root,
             caller_id,
             json!({
                 "command_session_id": session_id,
-                "chars": "",
-                "yield_time_ms": 250,
-                "max_output_tokens": 2000
+                "last_n_lines": 8,
             }),
         )?;
-        ensure!(
-            !output_contains(&poll, forbidden_replay),
-            "stdin cursor poll must not replay prompt output: {poll}"
-        );
         if output_contains(&poll, needle) {
             return Ok(poll);
         }
         last = Some(poll);
     }
-    bail!("stdin cursor did not surface {needle:?} before deadline; last poll: {last:?}");
+    bail!("read_progress did not surface {needle:?} before deadline; last poll: {last:?}");
 }
 
 fn command_families(dir: &str) -> Vec<CommandFamily> {

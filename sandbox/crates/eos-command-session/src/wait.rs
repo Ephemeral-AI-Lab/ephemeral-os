@@ -5,8 +5,8 @@ use crate::CommandSessionConfig;
 
 pub(crate) trait CommandSessionWaitTarget<T> {
     fn try_finalize(&self, publish_completion: bool) -> Option<T>;
-    fn next_output_byte_offset(&self) -> u64;
-    fn read_model_output(&self, max_tokens: Option<u64>) -> String;
+    fn transcript_len(&self) -> u64;
+    fn read_output_since(&self, start_offset: u64) -> String;
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -19,28 +19,27 @@ pub(crate) fn wait_for_yield<T, S>(
     session: &S,
     config: &CommandSessionConfig,
     yield_time_ms: u64,
-    max_tokens: Option<u64>,
+    start_offset: u64,
 ) -> WaitOutcome<T>
 where
     S: CommandSessionWaitTarget<T> + ?Sized,
 {
     let deadline = Instant::now() + Duration::from_millis(yield_time_ms);
-    let start_off = session.next_output_byte_offset();
-    let (mut last_off, mut last_change) = (start_off, Instant::now());
+    let (mut last_off, mut last_change) = (start_offset, Instant::now());
     loop {
         if let Some(result) = session.try_finalize(false) {
             return WaitOutcome::Completed(result);
         }
-        let off = session.next_output_byte_offset();
+        let off = session.transcript_len();
         if off != last_off {
             last_off = off;
             last_change = Instant::now();
         }
-        if off > start_off && last_change.elapsed() >= Duration::from_millis(config.quiet_ms) {
-            return WaitOutcome::Running(session.read_model_output(max_tokens));
+        if off > start_offset && last_change.elapsed() >= Duration::from_millis(config.quiet_ms) {
+            return WaitOutcome::Running(session.read_output_since(start_offset));
         }
         if Instant::now() >= deadline {
-            return WaitOutcome::Running(session.read_model_output(max_tokens));
+            return WaitOutcome::Running(session.read_output_since(start_offset));
         }
         thread::sleep(Duration::from_millis(5));
     }
@@ -63,7 +62,7 @@ mod tests {
             None
         }
 
-        fn next_output_byte_offset(&self) -> u64 {
+        fn transcript_len(&self) -> u64 {
             self.offsets
                 .lock()
                 .unwrap_or_else(std::sync::PoisonError::into_inner)
@@ -71,7 +70,7 @@ mod tests {
                 .unwrap_or(1)
         }
 
-        fn read_model_output(&self, _max_tokens: Option<u64>) -> String {
+        fn read_output_since(&self, _start_offset: u64) -> String {
             self.output
                 .lock()
                 .unwrap_or_else(std::sync::PoisonError::into_inner)
@@ -90,7 +89,7 @@ mod tests {
             ..CommandSessionConfig::default()
         };
 
-        let result = wait_for_yield(&target, &config, 100, None);
+        let result = wait_for_yield(&target, &config, 100, 0);
 
         assert_eq!(result, WaitOutcome::Running("ready\n".to_owned()));
     }

@@ -337,7 +337,6 @@ pub const fn active_command_sessions_for_caller(_caller_id: &str) -> usize {
 pub(crate) fn command_session_cancel(args: &Value) -> Result<Value, DaemonError> {
     let request = CancelCommandSession {
         command_session_id: require_command_string(args, "command_session_id")?,
-        max_output_tokens: optional_u64(args, "max_output_tokens"),
     };
     command_session_response_to_wire(command_session_manager().cancel(request))
 }

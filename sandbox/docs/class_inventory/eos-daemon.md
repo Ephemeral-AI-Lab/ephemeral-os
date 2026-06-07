@@ -14,7 +14,7 @@
 ## Contents
 
 - **`eos-daemon/src/audit_buffer.rs`** — `BufferedEvent`, `LaneCounters`, `AuditBuffer`, `RingState`
-- **`eos-daemon/src/command.rs`** — `CommandSessionOutput`, `CommandSessionOutputChunk`, `CommandSessionOutputCursor`, `CommandSession`, `CommandSessionRegistry`, `CompletedCommandSession`, `CommandWorkspace`, `IsolatedCommandWorkspace`, `CommandSessionStartSpec`, `CommandSessionFinalizer`, `IsolatedCommandSessionFinalizer`
+- **`eos-daemon/src/command.rs`** — `CommandSession`, `CommandSessionRegistry`, `CompletedCommandSession`, `CommandWorkspace`, `IsolatedCommandWorkspace`, `CommandSessionStartSpec`, `CommandSessionFinalizer`, `IsolatedCommandSessionFinalizer`
 - **`eos-daemon/src/dispatcher.rs`** — `DispatchContext`, `OpTable`, `PluginOverlayCommand`, `LayerStackCommitTransaction`, `PluginOverlayRunOutcome`, `OccRouteMetrics`, `TreeResourceStats`, `RunDirCleanup`, `PublishedCommitTimings`, `LayerStackRouteProvider`, `OccServiceLookup`, `OccServiceCacheStats`, `OccServiceCache`
 - **`eos-daemon/src/error.rs`** — `DaemonError`, `Result`
 - **`eos-daemon/src/invocation_registry.rs`** — `InFlightInvocation`, `InFlightRegistry`, `RegistryState`, `ActiveCallGuard`
@@ -94,52 +94,9 @@ The mutex-guarded ring state. Held synchronously only; never across `.await`.
 
 ## `eos-daemon/src/command.rs`
 
-#### `CommandSessionOutput`  ·  _struct_  ·  [L293]
-
-Bounded ring + spool bookkeeping for one command session's combined stdout/stderr stream (Linux only).
-
-**Fields**
-
-| name | type | vis |
-|------|------|-----|
-| `chunks` | `Mutex<VecDeque<CommandSessionOutputChunk>>` |  |
-| `bytes` | `Mutex<usize>` |  |
-| `next_byte_offset` | `Mutex<u64>` |  |
-| `spool_bytes` | `Mutex<u64>` |  |
-| `spool_truncated` | `Mutex<bool>` |  |
-
-<details><summary>Methods (6)</summary>
-
-`new`, `append`, `read_since`, `all_recent`, `note_spooled`, `spool_truncated`
-
-</details>
-
-#### `CommandSessionOutputChunk`  ·  _struct_  ·  [L302]
-
-One contiguous output chunk with its byte-offset window into the session stream.
-
-**Fields**
-
-| name | type | vis |
-|------|------|-----|
-| `start` | `u64` |  |
-| `end` | `u64` |  |
-| `text` | `String` |  |
-
-#### `CommandSessionOutputCursor`  ·  _struct_  ·  derives: `Clone, Copy, Default`  ·  [L310]
-
-A per-consumer read cursor (model vs. notification) over the session output stream.
-
-**Fields**
-
-| name | type | vis |
-|------|------|-----|
-| `next_seq` | `u64` |  |
-| `next_byte_offset` | `u64` |  |
-
 #### `CommandSession`  ·  _struct_  ·  [L454]
 
-A live command session: its pty writer, output ring, reader-done channel, and cancel/interrupt + per-consumer cursors.
+A live command session: its pty writer, timestamped transcript, reader-done channel, and cancel/interrupt lifecycle.
 
 **Fields**
 
@@ -151,18 +108,9 @@ A live command session: its pty writer, output ring, reader-done channel, and ca
 | `started_at` | `Instant` |  |
 | `pgid` | `i32` |  |
 | `writer` | `Mutex<File>` |  |
-| `output` | `Arc<CommandSessionOutput>` |  |
 | `reader_done` | `Mutex<Option<std_mpsc::Receiver<()>>>` |  |
 | `cancelled` | `Mutex<bool>` |  |
 | `interrupted` | `Mutex<bool>` |  |
-| `model_cursor` | `Mutex<CommandSessionOutputCursor>` |  |
-| `notification_cursor` | `Mutex<CommandSessionOutputCursor>` |  |
-
-<details><summary>Methods (2)</summary>
-
-`read_model_output`, `read_notification_output`
-
-</details>
 
 #### `CommandSessionRegistry`  ·  _struct_  ·  [L483]
 

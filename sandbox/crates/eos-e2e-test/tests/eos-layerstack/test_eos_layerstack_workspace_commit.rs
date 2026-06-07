@@ -212,9 +212,7 @@ fn commit_projects_delete_symlink_and_replacement_write() -> Result<()> {
         json!({
             "cmd": format!("rm -f {deleted} {old} && mkdir -p {dir}/replace && printf new > {new} && ln -s target.txt {link}"),
             "yield_time_ms": 1000,
-            "timeout_seconds": 10,
-            "max_output_tokens": 1000
-        }),
+            "timeout_seconds": 10,}),
     )?;
     assert_eq!(as_str(&overlay, "status")?, "ok", "{overlay}");
 
@@ -238,9 +236,7 @@ fn commit_projects_delete_symlink_and_replacement_write() -> Result<()> {
                 "test ! -e {deleted} && test ! -e {old} && test -f {new} && test -L {link} && test \"$(readlink {link})\" = target.txt"
             ),
             "yield_time_ms": 1000,
-            "timeout_seconds": 10,
-            "max_output_tokens": 1000
-        }),
+            "timeout_seconds": 10,}),
     )?;
     assert_eq!(
         as_str(&check, "status")?,

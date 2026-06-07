@@ -50,8 +50,8 @@ case wedges the daemon).
 
 | Question | Verdict | Evidence (existing tests) | Gap |
 |---|---|---|---|
-| Good coverage of `exec_command`? | **Mostly yes** | `exec_simple`, `exec_returns_session_id`, `exec_timeout`, `output_token_cap`, `nonzero_exit_and_stderr_are_structured`, `missing_command_*`, 12 `command_matrix_*` families | No external-kill/signal family; matrix is all clean-exit foreground |
-| Good coverage of `write_stdin`? | **Mostly yes** | `write_stdin_echo`, `command_session_output_cursor_no_replay`, `command_sessions_accept_stdin_and_release_on_cancel`, terminate tests, prompt/backpressure polls | No write to a completed session; no large-stdin backpressure; no SIGINT-char path |
+| Good coverage of `exec_command`? | **Mostly yes** | `exec_simple`, `exec_returns_session_id`, `exec_timeout`, `output_transcript_timestamp`, `nonzero_exit_and_stderr_are_structured`, `missing_command_*`, 12 `command_matrix_*` families | No external-kill/signal family; matrix is all clean-exit foreground |
+| Good coverage of `write_stdin`? | **Mostly yes** | `write_stdin_echo`, `command_session_transcript_progress_no_replay`, `command_sessions_accept_stdin_and_release_on_cancel`, terminate tests, prompt/backpressure polls | No write to a completed session; no large-stdin backpressure; no SIGINT-char path |
 | Natural return of a session? | **Covered** | `exec_simple` (exit 0), `collect_completed_drains`, `session_completes_only_after_all_subprocesses_exit` | — |
 | Killed through `write_stdin` (terminate)? | **Covered** | `write_stdin_terminate_reaps_marker_process`, `write_stdin_terminate_kills_whole_session`, `command_sessions_cancel_cleans_descendant_processes` | — |
 | Killed by **other** process (external signal)? | **NOT covered** | none — only the API-driven cancel/terminate path is tested | **Headline gap A** |
@@ -115,7 +115,7 @@ external kill are all unverified. Includes self-kill (`kill -9 $$`), a second
 ### B — Long-lived background **emitter** (incl. stderr-only)
 Every "stays running" test uses a **silent** sleeper. Missing: a foreground that
 exits after backgrounding a same-pgid child that **keeps printing**, proving
-(1) the session stays `running`, (2) later empty-`write_stdin` cursor polls
+(1) the session stays `running`, (2) later empty-`write_stdin` read_progress reads
 surface the *new* output without replay, (3) the final completion carries the
 late output. And the literal phrasing "returns a stderr but remains running":
 a never-exiting stderr-only emitter should show its stderr in the merged
@@ -209,7 +209,7 @@ Drafted tests:
 Checklist:
 - [ ] `eos-command-session-live-background-emitter`: A same-pgid child that keeps
   emitting after the foreground exits keeps the session `running`, surfaces new
-  output on cursor polls without replay, and delivers late output in the final
+  output on read_progress reads without replay, and delivers late output in the final
   completion.
 - [ ] `eos-command-session-running-stderr-visibility`: A still-running
   stderr-only emitter surfaces its stderr in merged `output.stdout` (stderr field

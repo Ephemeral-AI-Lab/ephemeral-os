@@ -116,7 +116,6 @@ async fn exec_command_builds_payload_and_uses_exec_timeout() {
     assert_eq!(calls[0].payload["cmd"], json!("printf ok"));
     assert_eq!(calls[0].payload["yield_time_ms"], json!(25));
     assert_eq!(calls[0].payload["timeout"], json!(7));
-    assert!(!calls[0].payload.contains_key("max_output_tokens"));
 }
 
 #[tokio::test]
@@ -140,7 +139,6 @@ async fn exec_stdin_builds_input_only_payload() {
     assert_eq!(calls[0].payload["chars"], json!("input"));
     assert_eq!(calls[0].payload["yield_time_ms"], json!(10));
     assert!(!calls[0].payload.contains_key("terminate"));
-    assert!(!calls[0].payload.contains_key("max_output_tokens"));
 }
 
 #[tokio::test]
