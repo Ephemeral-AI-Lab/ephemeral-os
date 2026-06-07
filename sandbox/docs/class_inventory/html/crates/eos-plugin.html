@@ -8,8 +8,16 @@
 </head>
 <body>
   <header>
-    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
-    <h1>eos-plugin File Inventory</h1>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>eos-plugin File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS/sandbox &amp;&amp; cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
   </header>
   <a class="back-link" href="../index.html">sandbox</a>
 <section class="summary">
@@ -47,29 +55,90 @@
       <span>0 methods</span>
     </div>
   </div>
-  <div class="items"><div class="group-label">File-Owned Types</div><article class="type-card" data-kind="enum" data-kind-list="enum field type-model" data-filter-text="enum PluginError pub pub enum PluginError crates/eos-plugin/src/error.rs  ">
+  <div class="items"><div class="group-label">File-Owned Types</div><article id="item-enum-PluginError-5" class="type-card" data-kind="enum" data-kind-list="enum field type-model" data-filter-text="enum PluginError pub pub enum PluginError crates/eos-plugin/src/error.rs  ">
   <div class="item-head">
     <span class="kind">enum</span>
     <h3>PluginError</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub enum PluginError</code>
-  <div class="tags"><span>error</span></div>
+  <code class="signature">pub enum <a class="symbol-link" href="eos-plugin.html#item-enum-PluginError-5">PluginError</a></code>
+  <p class="docstring">Failures surfaced by plugin contracts and the PPC channel.<br>The Rust side raises bare `PluginOpRegistrationError` / `PluginOpConflictError`<br>/ `PluginEnsureError` / `RuntimeError` at the same boundaries; this enum<br>reproduces those failure classes as a typed surface the daemon translates into<br>the wire error envelope. Concrete overlay/OCC failures are daemon-owned.</p>
+  <div class="tags"><span>derive: Debug</span><span>derive: Error</span><span>error</span><span>non_exhaustive</span></div>
   <h4>Variants</h4><table><tbody><tr><td>Registration</td><td><code>0: String</code></td></tr><tr><td>Conflict</td><td><code>0: String</code></td></tr><tr><td>Ensure</td><td><code>0: String</code></td></tr><tr><td>Manifest</td><td><code>0: String</code></td></tr><tr><td>ProjectionStale</td><td><code>0: String</code></td></tr><tr><td>Ppc</td><td><code>0: String</code></td></tr><tr><td>ForbiddenInIsolatedWorkspace</td><td><code></code></td></tr></tbody></table>
+
   <p class="source">crates/eos-plugin/src/error.rs:5</p>
-</article><div class="group-label">Aliases</div><article class="item-card" data-kind="type" data-kind-list="type" data-filter-text="type Result pub pub type Result&lt; T &gt; = core :: result :: Result &lt; T , PluginError &gt; crates/eos-plugin/src/error.rs  ">
+</article><div class="group-label">Aliases</div><article id="item-type-Result-49" class="item-card" data-kind="type" data-kind-list="type" data-filter-text="type Result pub pub type Result&lt; T &gt; = core :: result :: Result &lt; T , PluginError &gt; crates/eos-plugin/src/error.rs  ">
   <div class="item-head">
     <span class="kind">type</span>
     <h3>Result</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub type Result&lt; T &gt; = core :: result :: Result &lt; T , PluginError &gt;</code>
+  <code class="signature">pub type <a class="symbol-link" href="eos-plugin.html#item-type-Result-49">Result</a>&lt; T &gt; = core :: result :: <a class="symbol-link" href="eos-plugin.html#item-type-Result-49">Result</a> &lt; T , <a class="symbol-link" href="eos-plugin.html#item-enum-PluginError-5">PluginError</a> &gt;</code>
+  <p class="docstring">Convenience alias for fallible plugin operations.</p>
   <div class="tags"></div>
 
   <p class="source">crates/eos-plugin/src/error.rs:49</p>
 </article></div>
 </section></div>
 </main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/eos-plugin/src/error.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-comment">//! Error type for plugin registration, manifests, service state, and PPC framing.</span>
+
+<span class="rs-kw">use</span> thiserror::<span class="rs-type">Error</span>;
+
+<span class="rs-comment">/// Failures surfaced by plugin contracts and the PPC channel.</span>
+<span class="rs-comment">///</span>
+<span class="rs-comment">/// The Rust side raises bare `PluginOpRegistrationError` / `PluginOpConflictError`</span>
+<span class="rs-comment">/// / `PluginEnsureError` / `RuntimeError` at the same boundaries; this enum</span>
+<span class="rs-comment">/// reproduces those failure classes as a typed surface the daemon translates into</span>
+<span class="rs-comment">/// the wire error envelope. Concrete overlay/OCC failures are daemon-owned.</span>
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Error</span>)]
+#[non_exhaustive]
+<span class="rs-kw">pub</span> <span class="rs-kw">enum</span> <a class="symbol-link rs-type" href="eos-plugin.html#item-enum-PluginError-5">PluginError</a> {
+    <span class="rs-comment">/// `register_plugin_op` got an invalid plugin name or empty op name, or was</span>
+    <span class="rs-comment">/// invoked from outside the `plugins.catalog.&lt;plugin&gt;.*` namespace, or with</span>
+    <span class="rs-comment">/// `Intent::Lifecycle` (reserved for sandbox lifecycle ops, not plugin tools).</span>
+    #[error(&quot;plugin op registration error: {0}&quot;)]
+    <span class="rs-type">Registration</span>(<span class="rs-type">String</span>),
+
+    <span class="rs-comment">/// Two distinct handlers tried to register the same `(plugin, op)` pair.</span>
+    #[error(&quot;plugin op {0} already has a different handler registered&quot;)]
+    <span class="rs-type">Conflict</span>(<span class="rs-type">String</span>),
+
+    <span class="rs-comment">/// `api.plugin.ensure` failed to load or warm a plugin runtime, or the</span>
+    <span class="rs-comment">/// `layer_stack_root` was missing / mismatched against the workspace binding.</span>
+    #[error(&quot;plugin ensure failed: {0}&quot;)]
+    <span class="rs-type">Ensure</span>(<span class="rs-type">String</span>),
+
+    <span class="rs-comment">/// A plugin/service manifest or service key was malformed.</span>
+    #[error(&quot;plugin manifest error: {0}&quot;)]
+    <span class="rs-type">Manifest</span>(<span class="rs-type">String</span>),
+
+    <span class="rs-comment">/// A read-only plugin service tried to answer from an old projection.</span>
+    #[error(&quot;plugin projection stale: {0}&quot;)]
+    <span class="rs-type">ProjectionStale</span>(<span class="rs-type">String</span>),
+
+    <span class="rs-comment">/// A PPC envelope could not be framed/parsed, or the service process reply</span>
+    <span class="rs-comment">/// carried an unknown / unmatched message id.</span>
+    #[error(&quot;ppc channel error: {0}&quot;)]
+    <span class="rs-type">Ppc</span>(<span class="rs-type">String</span>),
+
+    <span class="rs-comment">/// Plugin dispatch was refused because an isolated workspace is active for</span>
+    <span class="rs-comment">/// this agent (maps to `ErrorKind::ForbiddenInIsolatedWorkspace`). Plugin /</span>
+    <span class="rs-comment">/// LSP operations are blocked while isolated mode is active.</span>
+    #[error(&quot;plugin operations are forbidden <span class="rs-kw">while</span> an isolated workspace is active&quot;)]
+    <span class="rs-type">ForbiddenInIsolatedWorkspace</span>,
+}
+
+<span class="rs-comment">/// Convenience alias for fallible plugin operations.</span>
+<span class="rs-kw">pub</span> <span class="rs-kw">type</span> <a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>&lt;<span class="rs-type">T</span>&gt; = core::result::<a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>&lt;<span class="rs-type">T</span>, <a class="symbol-link rs-type" href="eos-plugin.html#item-enum-PluginError-5">PluginError</a>&gt;;
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
   <script src="../assets/inventory.js"></script>
 </body>
 </html>

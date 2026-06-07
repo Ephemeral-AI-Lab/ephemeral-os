@@ -8,8 +8,16 @@
 </head>
 <body>
   <header>
-    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
-    <h1>eos-skills File Inventory</h1>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>eos-skills File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS/agent-core &amp;&amp; cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
   </header>
   <a class="back-link" href="../index.html">agent-core</a>
 <section class="summary">
@@ -47,149 +55,708 @@
       <span>0 methods</span>
     </div>
   </div>
-  <div class="items"><div class="group-label">Standalone Functions</div><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn load_bundled_skills pub(crate) pub(crate) fn load_bundled_skills (content_dir : &amp; Path ,) -&gt; Result &lt; Vec &lt; SkillDefinition &gt; , SkillLoadError &gt; crates/eos-skills/src/bundled.rs  ">
+  <div class="items"><div class="group-label">Standalone Functions</div><article id="item-fn-load-bundled-skills-23" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn load_bundled_skills pub(crate) pub(crate) fn load_bundled_skills (content_dir : &amp; Path ,) -&gt; Result &lt; Vec &lt; SkillDefinition &gt; , SkillLoadError &gt; crates/eos-skills/src/bundled.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>load_bundled_skills</h3>
     <span class="visibility">pub(crate)</span>
   </div>
-  <code class="signature">pub(crate) fn load_bundled_skills (content_dir : &amp; Path ,) -&gt; Result &lt; Vec &lt; SkillDefinition &gt; , SkillLoadError &gt;</code>
+  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-skills.html#item-fn-load-bundled-skills-23">load_bundled_skills</a> (content_dir : &amp; Path ,) -&gt; Result &lt; Vec &lt; <a class="symbol-link" href="eos-skills--src-definition-rs.html#item-struct-SkillDefinition-93">SkillDefinition</a> &gt; , <a class="symbol-link" href="eos-skills--src-error-rs.html#item-enum-SkillLoadError-5">SkillLoadError</a> &gt;</code>
+  <p class="docstring">Load every directory skill under `content_dir` in sorted order.<br>The caller ([`crate::loader`]) guarantees `content_dir` is an existing<br>directory; here it is walked one level deep, requiring `SKILL.md` per skill.</p>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-comment">/// Load every directory skill under `content_dir` in sorted order.</span>
+<span class="rs-comment">///</span>
+<span class="rs-comment">/// The caller ([`crate::loader`]) guarantees `content_dir` is an existing</span>
+<span class="rs-comment">/// directory; here it is walked one level deep, requiring `SKILL.md` per skill.</span>
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-skills.html#item-fn-load-bundled-skills-23">load_bundled_skills</a>(
+    content_dir: &amp;<span class="rs-type">Path</span>,
+) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;<a class="symbol-link rs-type" href="eos-skills--src-definition-rs.html#item-struct-SkillDefinition-93">SkillDefinition</a>&gt;, <a class="symbol-link rs-type" href="eos-skills--src-error-rs.html#item-enum-SkillLoadError-5">SkillLoadError</a>&gt; {
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> skills = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-skills--src-registry-rs.html#method-new-20">new</a>();
+    <span class="rs-kw">for</span> skill_dir <span class="rs-kw">in</span> <a class="symbol-link rs-fn" href="eos-skills.html#item-fn-read-dir-sorted-140">read_dir_sorted</a>(content_dir)? {
+        <span class="rs-kw">if</span> !skill_dir.is_dir() {
+            <span class="rs-kw">continue</span>;
+        }
+        <span class="rs-kw">let</span> skill_md = skill_dir.join(<span class="rs-type">SKILL_FILE</span>);
+        <span class="rs-kw">if</span> !skill_md.is_file() {
+            <span class="rs-kw">continue</span>;
+        }
+        <span class="rs-kw">let</span> content = <a class="symbol-link rs-fn" href="eos-skills.html#item-fn-read-file-158">read_file</a>(&amp;skill_md)?;
+        <span class="rs-kw">let</span> (name, description) = <a class="symbol-link rs-fn" href="eos-skills.html#item-fn-parse-skill-metadata-76">parse_skill_metadata</a>(&amp;<a class="symbol-link rs-fn" href="eos-skills.html#item-fn-dir-name-129">dir_name</a>(&amp;skill_dir), &amp;content);
+        <span class="rs-kw">let</span> references = <a class="symbol-link rs-fn" href="eos-skills.html#item-fn-discover-references-54">discover_references</a>(&amp;skill_dir)?;
+        skills.push(<a class="symbol-link rs-type" href="eos-skills--src-definition-rs.html#item-struct-SkillDefinition-93">SkillDefinition</a> {
+            name: <a class="symbol-link rs-type" href="eos-skills--src-definition-rs.html#item-struct-SkillName-22">SkillName</a>::<a class="symbol-link rs-fn" href="eos-skills--src-definition-rs.html#method-parse-33">parse</a>(name)?,
+            description,
+            content,
+            source: <a class="symbol-link rs-type" href="eos-skills--src-definition-rs.html#item-enum-SkillSource-84">SkillSource</a>::<span class="rs-type">Bundled</span>,
+            path: <span class="rs-type">Some</span>(skill_dir),
+            references,
+        });
+    }
+    <span class="rs-type">Ok</span>(skills)
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-skills/src/bundled.rs:23</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn discover_references private fn discover_references (skill_dir : &amp; Path ,) -&gt; Result &lt; BTreeMap &lt; ReferenceName , String &gt; , SkillLoadError &gt; crates/eos-skills/src/bundled.rs  ">
+</article><article id="item-fn-discover-references-54" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn discover_references private fn discover_references (skill_dir : &amp; Path ,) -&gt; Result &lt; BTreeMap &lt; ReferenceName , String &gt; , SkillLoadError &gt; crates/eos-skills/src/bundled.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>discover_references</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn discover_references (skill_dir : &amp; Path ,) -&gt; Result &lt; BTreeMap &lt; ReferenceName , String &gt; , SkillLoadError &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-skills.html#item-fn-discover-references-54">discover_references</a> (skill_dir : &amp; Path ,) -&gt; Result &lt; BTreeMap &lt; <a class="symbol-link" href="eos-skills--src-definition-rs.html#item-struct-ReferenceName-54">ReferenceName</a> , String &gt; , <a class="symbol-link" href="eos-skills--src-error-rs.html#item-enum-SkillLoadError-5">SkillLoadError</a> &gt;</code>
+  <p class="docstring">Read `references/*.md` keyed by file stem (`__init__.py` lines 29-34).</p>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-comment">/// Read `references/*.md` keyed by file stem (`__init__.py` lines 29-34).</span>
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-skills.html#item-fn-discover-references-54">discover_references</a>(
+    skill_dir: &amp;<span class="rs-type">Path</span>,
+) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">BTreeMap</span>&lt;<a class="symbol-link rs-type" href="eos-skills--src-definition-rs.html#item-struct-ReferenceName-54">ReferenceName</a>, <span class="rs-type">String</span>&gt;, <a class="symbol-link rs-type" href="eos-skills--src-error-rs.html#item-enum-SkillLoadError-5">SkillLoadError</a>&gt; {
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> references = <span class="rs-type">BTreeMap</span>::<a class="symbol-link rs-fn" href="eos-skills--src-registry-rs.html#method-new-20">new</a>();
+    <span class="rs-kw">let</span> refs_dir = skill_dir.join(<span class="rs-type">REFERENCES_DIR</span>);
+    <span class="rs-kw">if</span> !refs_dir.is_dir() {
+        <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(references);
+    }
+    <span class="rs-kw">for</span> ref_file <span class="rs-kw">in</span> <a class="symbol-link rs-fn" href="eos-skills.html#item-fn-read-dir-sorted-140">read_dir_sorted</a>(&amp;refs_dir)? {
+        <span class="rs-kw">if</span> !ref_file.is_file() || <a class="symbol-link rs-fn" href="eos-skills.html#item-fn-extension-136">extension</a>(&amp;ref_file) != <span class="rs-type">Some</span>(&quot;md&quot;) {
+            <span class="rs-kw">continue</span>;
+        }
+        <span class="rs-kw">let</span> <span class="rs-type">Some</span>(stem) = ref_file.file_stem().and_then(|s| s.to_str()) <span class="rs-kw">else</span> {
+            <span class="rs-kw">continue</span>;
+        };
+        <span class="rs-kw">let</span> content = <a class="symbol-link rs-fn" href="eos-skills.html#item-fn-read-file-158">read_file</a>(&amp;ref_file)?;
+        references.insert(<a class="symbol-link rs-type" href="eos-skills--src-definition-rs.html#item-struct-ReferenceName-54">ReferenceName</a>::<a class="symbol-link rs-fn" href="eos-skills--src-definition-rs.html#method-parse-33">parse</a>(stem)?, content);
+    }
+    <span class="rs-type">Ok</span>(references)
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-skills/src/bundled.rs:54</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn parse_skill_metadata private fn parse_skill_metadata (default_name : &amp; str , content : &amp; str) -&gt; (String , String) crates/eos-skills/src/bundled.rs  ">
+</article><article id="item-fn-parse-skill-metadata-76" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn parse_skill_metadata private fn parse_skill_metadata (default_name : &amp; str , content : &amp; str) -&gt; (String , String) crates/eos-skills/src/bundled.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>parse_skill_metadata</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn parse_skill_metadata (default_name : &amp; str , content : &amp; str) -&gt; (String , String)</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-skills.html#item-fn-parse-skill-metadata-76">parse_skill_metadata</a> (default_name : &amp; str , content : &amp; str) -&gt; (String , String)</code>
+  <p class="docstring">Extract `(name, description)` from a skill markdown file (`__init__.py` 49-67).<br>Frontmatter `name`/`description` win; otherwise scan the **full content**<br>(not the post-frontmatter body) for a `# ` heading (used as `name` iff `name`<br>is still the default) and the first non-blank line that starts with neither<br>`#` nor `---`, truncated to [`DESCRIPTION_MAX_CHARS`]; the final fallback is<br>`"Bundled skill: {name}"`.</p>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-comment">/// Extract `(name, description)` from a skill markdown file (`__init__.py` 49-67).</span>
+<span class="rs-comment">///</span>
+<span class="rs-comment">/// Frontmatter `name`/`description` win; otherwise scan the **full content**</span>
+<span class="rs-comment">/// (not the post-frontmatter body) for a `# ` heading (used as `name` iff `name`</span>
+<span class="rs-comment">/// is still the default) and the first non-blank line that starts with neither</span>
+<span class="rs-comment">/// `#` nor `---`, truncated to [`DESCRIPTION_MAX_CHARS`]; the final fallback is</span>
+<span class="rs-comment">/// `"Bundled skill: {name}"`.</span>
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-skills.html#item-fn-parse-skill-metadata-76">parse_skill_metadata</a>(default_name: &amp;str, content: &amp;str) -&gt; (<span class="rs-type">String</span>, <span class="rs-type">String</span>) {
+    <span class="rs-kw">let</span> (frontmatter, _body) = parse_markdown_frontmatter(content);
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> name = <a class="symbol-link rs-fn" href="eos-skills.html#item-fn-frontmatter-str-121">frontmatter_str</a>(&amp;frontmatter, &quot;name&quot;)
+        .unwrap_or(default_name)
+        .to_owned();
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> description = <a class="symbol-link rs-fn" href="eos-skills.html#item-fn-frontmatter-str-121">frontmatter_str</a>(&amp;frontmatter, &quot;description&quot;)
+        .unwrap_or_default()
+        .to_owned();
+
+    <span class="rs-kw">if</span> description.is_empty() {
+        <span class="rs-kw">for</span> line <span class="rs-kw">in</span> content.lines() {
+            <span class="rs-kw">let</span> stripped = line.trim();
+            <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(heading) = stripped.strip_prefix(&quot;# &quot;) {
+                <span class="rs-kw">if</span> name.is_empty() || name == default_name {
+                    <span class="rs-kw">let</span> heading = heading.trim();
+                    name = <span class="rs-kw">if</span> heading.is_empty() {
+                        default_name.to_owned()
+                    } <span class="rs-kw">else</span> {
+                        heading.to_owned()
+                    };
+                }
+                <span class="rs-kw">continue</span>;
+            }
+            <span class="rs-kw">if</span> !stripped.is_empty() &amp;&amp; !stripped.starts_with(&quot;---&quot;) &amp;&amp; !stripped.starts_with(&#x27;#&#x27;) {
+                description = stripped.chars().take(<span class="rs-type">DESCRIPTION_MAX_CHARS</span>).collect();
+                <span class="rs-kw">break</span>;
+            }
+        }
+    }
+
+    <span class="rs-kw">let</span> description = <span class="rs-kw">if</span> description.is_empty() {
+        format!(&quot;<span class="rs-type">Bundled</span> skill: {name}&quot;)
+    } <span class="rs-kw">else</span> {
+        description
+    };
+    (name, description)
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-skills/src/bundled.rs:76</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn frontmatter_str private fn frontmatter_str &lt; 'a &gt; (frontmatter : &amp; 'a serde_yaml :: Mapping , key : &amp; str) -&gt; Option &lt; &amp; 'a str &gt; crates/eos-skills/src/bundled.rs  ">
+</article><article id="item-fn-frontmatter-str-121" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn frontmatter_str private fn frontmatter_str &lt; 'a &gt; (frontmatter : &amp; 'a serde_yaml :: Mapping , key : &amp; str) -&gt; Option &lt; &amp; 'a str &gt; crates/eos-skills/src/bundled.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>frontmatter_str</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn frontmatter_str &lt; 'a &gt; (frontmatter : &amp; 'a serde_yaml :: Mapping , key : &amp; str) -&gt; Option &lt; &amp; 'a str &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-skills.html#item-fn-frontmatter-str-121">frontmatter_str</a> &lt; &#x27;a &gt; (frontmatter : &amp; &#x27;a serde_yaml :: Mapping , key : &amp; str) -&gt; Option &lt; &amp; &#x27;a str &gt;</code>
+  <p class="docstring">A frontmatter string field, treating empty as absent (Rust's `... or`).</p>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-comment">/// A frontmatter string field, treating empty as absent (Rust's `... or`).</span>
+<span class="rs-kw">fn</span> frontmatter_str&lt;&#x27;a&gt;(frontmatter: &amp;&#x27;a serde_yaml::<span class="rs-type">Mapping</span>, key: &amp;str) -&gt; <span class="rs-type">Option</span>&lt;&amp;&#x27;a str&gt; {
+    frontmatter
+        .<a class="symbol-link rs-fn" href="eos-skills--src-registry-rs.html#method-get-32">get</a>(key)
+        .and_then(<span class="rs-type">Value</span>::as_str)
+        .filter(|value| !value.is_empty())
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-skills/src/bundled.rs:121</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn dir_name private fn dir_name (path : &amp; Path) -&gt; String crates/eos-skills/src/bundled.rs  ">
+</article><article id="item-fn-dir-name-129" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn dir_name private fn dir_name (path : &amp; Path) -&gt; String crates/eos-skills/src/bundled.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>dir_name</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn dir_name (path : &amp; Path) -&gt; String</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-skills.html#item-fn-dir-name-129">dir_name</a> (path : &amp; Path) -&gt; String</code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-skills.html#item-fn-dir-name-129">dir_name</a>(path: &amp;<span class="rs-type">Path</span>) -&gt; <span class="rs-type">String</span> {
+    path.file_name()
+        .and_then(|n| n.to_str())
+        .unwrap_or_default()
+        .to_owned()
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-skills/src/bundled.rs:129</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn extension private fn extension (path : &amp; Path) -&gt; Option &lt; &amp; str &gt; crates/eos-skills/src/bundled.rs  ">
+</article><article id="item-fn-extension-136" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn extension private fn extension (path : &amp; Path) -&gt; Option &lt; &amp; str &gt; crates/eos-skills/src/bundled.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>extension</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn extension (path : &amp; Path) -&gt; Option &lt; &amp; str &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-skills.html#item-fn-extension-136">extension</a> (path : &amp; Path) -&gt; Option &lt; &amp; str &gt;</code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-skills.html#item-fn-extension-136">extension</a>(path: &amp;<span class="rs-type">Path</span>) -&gt; <span class="rs-type">Option</span>&lt;&amp;str&gt; {
+    path.<a class="symbol-link rs-fn" href="eos-skills.html#item-fn-extension-136">extension</a>().and_then(|e| e.to_str())
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-skills/src/bundled.rs:136</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn read_dir_sorted private fn read_dir_sorted (dir : &amp; Path) -&gt; Result &lt; Vec &lt; PathBuf &gt; , SkillLoadError &gt; crates/eos-skills/src/bundled.rs  ">
+</article><article id="item-fn-read-dir-sorted-140" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn read_dir_sorted private fn read_dir_sorted (dir : &amp; Path) -&gt; Result &lt; Vec &lt; PathBuf &gt; , SkillLoadError &gt; crates/eos-skills/src/bundled.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>read_dir_sorted</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn read_dir_sorted (dir : &amp; Path) -&gt; Result &lt; Vec &lt; PathBuf &gt; , SkillLoadError &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-skills.html#item-fn-read-dir-sorted-140">read_dir_sorted</a> (dir : &amp; Path) -&gt; Result &lt; Vec &lt; PathBuf &gt; , <a class="symbol-link" href="eos-skills--src-error-rs.html#item-enum-SkillLoadError-5">SkillLoadError</a> &gt;</code>
+  <p class="docstring">List a directory's entries as paths, sorted (parity with Rust `sorted(...)`).</p>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-comment">/// List a directory's entries as paths, sorted (parity with Rust `sorted(...)`).</span>
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-skills.html#item-fn-read-dir-sorted-140">read_dir_sorted</a>(dir: &amp;<span class="rs-type">Path</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;<span class="rs-type">PathBuf</span>&gt;, <a class="symbol-link rs-type" href="eos-skills--src-error-rs.html#item-enum-SkillLoadError-5">SkillLoadError</a>&gt; {
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> paths = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-skills--src-registry-rs.html#method-new-20">new</a>();
+    <span class="rs-kw">let</span> entries = fs::read_dir(dir).map_err(|cause| <a class="symbol-link rs-type" href="eos-skills--src-error-rs.html#item-enum-SkillLoadError-5">SkillLoadError</a>::<span class="rs-type">ReadDir</span> {
+        path: dir.to_owned(),
+        cause,
+    })?;
+    <span class="rs-kw">for</span> entry <span class="rs-kw">in</span> entries {
+        <span class="rs-kw">let</span> entry = entry.map_err(|cause| <a class="symbol-link rs-type" href="eos-skills--src-error-rs.html#item-enum-SkillLoadError-5">SkillLoadError</a>::<span class="rs-type">ReadDir</span> {
+            path: dir.to_owned(),
+            cause,
+        })?;
+        paths.push(entry.path());
+    }
+    paths.sort();
+    <span class="rs-type">Ok</span>(paths)
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-skills/src/bundled.rs:140</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn read_file private fn read_file (path : &amp; Path) -&gt; Result &lt; String , SkillLoadError &gt; crates/eos-skills/src/bundled.rs  ">
+</article><article id="item-fn-read-file-158" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn read_file private fn read_file (path : &amp; Path) -&gt; Result &lt; String , SkillLoadError &gt; crates/eos-skills/src/bundled.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>read_file</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn read_file (path : &amp; Path) -&gt; Result &lt; String , SkillLoadError &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-skills.html#item-fn-read-file-158">read_file</a> (path : &amp; Path) -&gt; Result &lt; String , <a class="symbol-link" href="eos-skills--src-error-rs.html#item-enum-SkillLoadError-5">SkillLoadError</a> &gt;</code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-skills.html#item-fn-read-file-158">read_file</a>(path: &amp;<span class="rs-type">Path</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">String</span>, <a class="symbol-link rs-type" href="eos-skills--src-error-rs.html#item-enum-SkillLoadError-5">SkillLoadError</a>&gt; {
+    fs::read_to_string(path).map_err(|cause| <a class="symbol-link rs-type" href="eos-skills--src-error-rs.html#item-enum-SkillLoadError-5">SkillLoadError</a>::<span class="rs-type">ReadFile</span> {
+        path: path.to_owned(),
+        cause,
+    })
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-skills/src/bundled.rs:158</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn discovers_only_md_references_keyed_by_stem private fn discovers_only_md_references_keyed_by_stem () crates/eos-skills/src/bundled.rs  ">
+</article><article id="item-fn-discovers-only-md-references-keyed-by-stem-172" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn discovers_only_md_references_keyed_by_stem private fn discovers_only_md_references_keyed_by_stem () crates/eos-skills/src/bundled.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>discovers_only_md_references_keyed_by_stem</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn discovers_only_md_references_keyed_by_stem ()</code>
-  <div class="tags"></div>
+  <code class="signature">fn <a class="symbol-link" href="eos-skills.html#item-fn-discovers-only-md-references-keyed-by-stem-172">discovers_only_md_references_keyed_by_stem</a> ()</code>
+  <div class="tags"><span>test</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-skills.html#item-fn-discovers-only-md-references-keyed-by-stem-172">discovers_only_md_references_keyed_by_stem</a>() {
+        <span class="rs-kw">let</span> scratch = <span class="rs-type">Scratch</span>::<a class="symbol-link rs-fn" href="eos-skills--src-registry-rs.html#method-new-20">new</a>(&quot;refs-by-stem&quot;);
+        scratch.write(&quot;skill/<span class="rs-type">SKILL</span>.md&quot;, &quot;---\nname: skill\ndescription: d\n---\n&quot;);
+        scratch.write(&quot;skill/references/rubric.md&quot;, &quot;<span class="rs-type">RUBRIC</span>&quot;);
+        scratch.write(&quot;skill/references/checklist.md&quot;, &quot;<span class="rs-type">CHECKLIST</span>&quot;);
+        scratch.write(&quot;skill/references/.gitkeep&quot;, &quot;&quot;);
+        scratch.write(&quot;skill/references/notes.txt&quot;, &quot;<span class="rs-type">NOTES</span>&quot;);
+
+        <span class="rs-kw">let</span> skills = <a class="symbol-link rs-fn" href="eos-skills.html#item-fn-load-bundled-skills-23">load_bundled_skills</a>(scratch.path()).unwrap();
+        assert_eq!(skills.len(), 1);
+        <span class="rs-kw">let</span> references = &amp;skills[0].references;
+
+        <span class="rs-kw">let</span> keys: <span class="rs-type">Vec</span>&lt;&amp;str&gt; = references.keys().map(<a class="symbol-link rs-type" href="eos-skills--src-definition-rs.html#item-struct-ReferenceName-54">ReferenceName</a>::as_str).collect();
+        assert_eq!(keys, vec![&quot;checklist&quot;, &quot;rubric&quot;]);
+        assert_eq!(
+            references
+                .<a class="symbol-link rs-fn" href="eos-skills--src-registry-rs.html#method-get-32">get</a>(&amp;<a class="symbol-link rs-type" href="eos-skills--src-definition-rs.html#item-struct-ReferenceName-54">ReferenceName</a>::<a class="symbol-link rs-fn" href="eos-skills--src-definition-rs.html#method-parse-33">parse</a>(&quot;checklist&quot;).unwrap())
+                .map(<span class="rs-type">String</span>::as_str),
+            <span class="rs-type">Some</span>(&quot;<span class="rs-type">CHECKLIST</span>&quot;)
+        );
+    }
+</code></pre>
+</details>
 
   <p class="source">crates/eos-skills/src/bundled.rs:172</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn malformed_frontmatter_uses_fallback_description private fn malformed_frontmatter_uses_fallback_description () crates/eos-skills/src/bundled.rs  ">
+</article><article id="item-fn-malformed-frontmatter-uses-fallback-description-197" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn malformed_frontmatter_uses_fallback_description private fn malformed_frontmatter_uses_fallback_description () crates/eos-skills/src/bundled.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>malformed_frontmatter_uses_fallback_description</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn malformed_frontmatter_uses_fallback_description ()</code>
-  <div class="tags"></div>
+  <code class="signature">fn <a class="symbol-link" href="eos-skills.html#item-fn-malformed-frontmatter-uses-fallback-description-197">malformed_frontmatter_uses_fallback_description</a> ()</code>
+  <div class="tags"><span>test</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-skills.html#item-fn-malformed-frontmatter-uses-fallback-description-197">malformed_frontmatter_uses_fallback_description</a>() {
+        <span class="rs-kw">let</span> scratch = <span class="rs-type">Scratch</span>::<a class="symbol-link rs-fn" href="eos-skills--src-registry-rs.html#method-new-20">new</a>(&quot;malformed-fm&quot;);
+        <span class="rs-comment">// An unterminated quoted scalar is invalid YAML -&gt; swallowed -&gt; empty.</span>
+        scratch.write(&quot;broken/<span class="rs-type">SKILL</span>.md&quot;, &quot;---\nname: \&quot;unterminated\n---\nbody\n&quot;);
+
+        <span class="rs-kw">let</span> result = <a class="symbol-link rs-fn" href="eos-skills.html#item-fn-load-bundled-skills-23">load_bundled_skills</a>(scratch.path());
+        assert!(
+            result.is_ok(),
+            &quot;malformed frontmatter must not fail the load&quot;
+        );
+        <span class="rs-kw">let</span> skills = result.unwrap();
+        assert_eq!(skills.len(), 1);
+        <span class="rs-comment">// Frontmatter swallowed -&gt; name defaults to the directory name.</span>
+        assert_eq!(skills[0].name.<a class="symbol-link rs-fn" href="eos-skills--src-definition-rs.html#method-as-str-47">as_str</a>(), &quot;broken&quot;);
+        <span class="rs-comment">// Description = first non-blank line that is not `#`/`---` (the fm line).</span>
+        assert_eq!(skills[0].description, &quot;name: \&quot;unterminated&quot;);
+    }
+</code></pre>
+</details>
 
   <p class="source">crates/eos-skills/src/bundled.rs:197</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn description_falls_back_to_full_content_lines private fn description_falls_back_to_full_content_lines () crates/eos-skills/src/bundled.rs  ">
+</article><article id="item-fn-description-falls-back-to-full-content-lines-218" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn description_falls_back_to_full_content_lines private fn description_falls_back_to_full_content_lines () crates/eos-skills/src/bundled.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>description_falls_back_to_full_content_lines</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn description_falls_back_to_full_content_lines ()</code>
-  <div class="tags"></div>
+  <code class="signature">fn <a class="symbol-link" href="eos-skills.html#item-fn-description-falls-back-to-full-content-lines-218">description_falls_back_to_full_content_lines</a> ()</code>
+  <div class="tags"><span>test</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-skills.html#item-fn-description-falls-back-to-full-content-lines-218">description_falls_back_to_full_content_lines</a>() {
+        <span class="rs-kw">let</span> scratch = <span class="rs-type">Scratch</span>::<a class="symbol-link rs-fn" href="eos-skills--src-registry-rs.html#method-new-20">new</a>(&quot;fullscan-desc&quot;);
+        scratch.write(&quot;planner/<span class="rs-type">SKILL</span>.md&quot;, &quot;---\nname: planner\n---\n&quot;);
+
+        <span class="rs-kw">let</span> skills = <a class="symbol-link rs-fn" href="eos-skills.html#item-fn-load-bundled-skills-23">load_bundled_skills</a>(scratch.path()).unwrap();
+        assert_eq!(skills[0].name.<a class="symbol-link rs-fn" href="eos-skills--src-definition-rs.html#method-as-str-47">as_str</a>(), &quot;planner&quot;);
+        assert_eq!(skills[0].description, &quot;name: planner&quot;);
+    }
+</code></pre>
+</details>
 
   <p class="source">crates/eos-skills/src/bundled.rs:218</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn dotted_reference_stem_is_keyed private fn dotted_reference_stem_is_keyed () crates/eos-skills/src/bundled.rs  ">
+</article><article id="item-fn-dotted-reference-stem-is-keyed-229" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn dotted_reference_stem_is_keyed private fn dotted_reference_stem_is_keyed () crates/eos-skills/src/bundled.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>dotted_reference_stem_is_keyed</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn dotted_reference_stem_is_keyed ()</code>
-  <div class="tags"></div>
+  <code class="signature">fn <a class="symbol-link" href="eos-skills.html#item-fn-dotted-reference-stem-is-keyed-229">dotted_reference_stem_is_keyed</a> ()</code>
+  <div class="tags"><span>test</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-skills.html#item-fn-dotted-reference-stem-is-keyed-229">dotted_reference_stem_is_keyed</a>() {
+        <span class="rs-kw">let</span> scratch = <span class="rs-type">Scratch</span>::<a class="symbol-link rs-fn" href="eos-skills--src-registry-rs.html#method-new-20">new</a>(&quot;dotted-stem&quot;);
+        scratch.write(&quot;skill/<span class="rs-type">SKILL</span>.md&quot;, &quot;---\nname: skill\ndescription: d\n---\n&quot;);
+        scratch.write(&quot;skill/references/api.v2.md&quot;, &quot;<span class="rs-type">V2</span> <span class="rs-type">CONTENT</span>&quot;);
+
+        <span class="rs-kw">let</span> skills = <a class="symbol-link rs-fn" href="eos-skills.html#item-fn-load-bundled-skills-23">load_bundled_skills</a>(scratch.path()).unwrap();
+        assert_eq!(
+            skills[0]
+                .references
+                .<a class="symbol-link rs-fn" href="eos-skills--src-registry-rs.html#method-get-32">get</a>(&amp;<a class="symbol-link rs-type" href="eos-skills--src-definition-rs.html#item-struct-ReferenceName-54">ReferenceName</a>::<a class="symbol-link rs-fn" href="eos-skills--src-definition-rs.html#method-parse-33">parse</a>(&quot;api.v2&quot;).unwrap())
+                .map(<span class="rs-type">String</span>::as_str),
+            <span class="rs-type">Some</span>(&quot;<span class="rs-type">V2</span> <span class="rs-type">CONTENT</span>&quot;)
+        );
+    }
+</code></pre>
+</details>
 
   <p class="source">crates/eos-skills/src/bundled.rs:229</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn empty_frontmatter_name_falls_back_to_dir_name private fn empty_frontmatter_name_falls_back_to_dir_name () crates/eos-skills/src/bundled.rs  ">
+</article><article id="item-fn-empty-frontmatter-name-falls-back-to-dir-name-249" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn empty_frontmatter_name_falls_back_to_dir_name private fn empty_frontmatter_name_falls_back_to_dir_name () crates/eos-skills/src/bundled.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>empty_frontmatter_name_falls_back_to_dir_name</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn empty_frontmatter_name_falls_back_to_dir_name ()</code>
-  <div class="tags"></div>
+  <code class="signature">fn <a class="symbol-link" href="eos-skills.html#item-fn-empty-frontmatter-name-falls-back-to-dir-name-249">empty_frontmatter_name_falls_back_to_dir_name</a> ()</code>
+  <div class="tags"><span>test</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-skills.html#item-fn-empty-frontmatter-name-falls-back-to-dir-name-249">empty_frontmatter_name_falls_back_to_dir_name</a>() {
+        <span class="rs-kw">let</span> scratch = <span class="rs-type">Scratch</span>::<a class="symbol-link rs-fn" href="eos-skills--src-registry-rs.html#method-new-20">new</a>(&quot;empty-name&quot;);
+        scratch.write(&quot;skill/<span class="rs-type">SKILL</span>.md&quot;, &quot;---\nname: \&quot;\&quot;\ndescription: d\n---\n&quot;);
+
+        <span class="rs-kw">let</span> skills = <a class="symbol-link rs-fn" href="eos-skills.html#item-fn-load-bundled-skills-23">load_bundled_skills</a>(scratch.path()).unwrap();
+        assert_eq!(skills.len(), 1);
+        assert_eq!(skills[0].name.<a class="symbol-link rs-fn" href="eos-skills--src-definition-rs.html#method-as-str-47">as_str</a>(), &quot;skill&quot;);
+        assert_eq!(skills[0].description, &quot;d&quot;);
+    }
+</code></pre>
+</details>
 
   <p class="source">crates/eos-skills/src/bundled.rs:249</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn skill_dir_without_skill_md_is_skipped_without_error private fn skill_dir_without_skill_md_is_skipped_without_error () crates/eos-skills/src/bundled.rs  ">
+</article><article id="item-fn-skill-dir-without-skill-md-is-skipped-without-error-262" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn skill_dir_without_skill_md_is_skipped_without_error private fn skill_dir_without_skill_md_is_skipped_without_error () crates/eos-skills/src/bundled.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>skill_dir_without_skill_md_is_skipped_without_error</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn skill_dir_without_skill_md_is_skipped_without_error ()</code>
-  <div class="tags"></div>
+  <code class="signature">fn <a class="symbol-link" href="eos-skills.html#item-fn-skill-dir-without-skill-md-is-skipped-without-error-262">skill_dir_without_skill_md_is_skipped_without_error</a> ()</code>
+  <div class="tags"><span>test</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-skills.html#item-fn-skill-dir-without-skill-md-is-skipped-without-error-262">skill_dir_without_skill_md_is_skipped_without_error</a>() {
+        <span class="rs-kw">let</span> scratch = <span class="rs-type">Scratch</span>::<a class="symbol-link rs-fn" href="eos-skills--src-registry-rs.html#method-new-20">new</a>(&quot;missing-skill-md&quot;);
+        scratch.write(&quot;good/<span class="rs-type">SKILL</span>.md&quot;, &quot;---\nname: good\ndescription: d\n---\n&quot;);
+        scratch.write(&quot;half_built/notes.txt&quot;, &quot;<span class="rs-type">WIP</span>&quot;); <span class="rs-comment">// dir exists, no SKILL.md</span>
+
+        <span class="rs-kw">let</span> skills = <a class="symbol-link rs-fn" href="eos-skills.html#item-fn-load-bundled-skills-23">load_bundled_skills</a>(scratch.path()).unwrap();
+        assert_eq!(skills.len(), 1);
+        assert_eq!(skills[0].name.<a class="symbol-link rs-fn" href="eos-skills--src-definition-rs.html#method-as-str-47">as_str</a>(), &quot;good&quot;);
+    }
+</code></pre>
+</details>
 
   <p class="source">crates/eos-skills/src/bundled.rs:262</p>
 </article></div>
 </section></div>
 </main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/eos-skills/src/bundled.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-comment">//! Directory-based skill loading (`skills/bundled/__init__.py`).</span>
+<span class="rs-comment">//!</span>
+<span class="rs-comment">//! Each skill is a subdirectory of the configured root containing a `SKILL.md`</span>
+<span class="rs-comment">//! (with optional `---` YAML frontmatter) and an optional `references/` directory</span>
+<span class="rs-comment">//! of `*.md` files. The `---` split itself is **not** re-implemented here: it is</span>
+<span class="rs-comment">//! the shared [`eos_config::parse_markdown_frontmatter`] helper. Only the</span>
+<span class="rs-comment">//! skills-specific `name`/`description` fallback lives in this module.</span>
+
+<span class="rs-kw">use</span> std::collections::<span class="rs-type">BTreeMap</span>;
+<span class="rs-kw">use</span> std::fs;
+<span class="rs-kw">use</span> std::path::{<span class="rs-type">Path</span>, <span class="rs-type">PathBuf</span>};
+
+<span class="rs-kw">use</span> eos_config::parse_markdown_frontmatter;
+<span class="rs-kw">use</span> serde_yaml::<span class="rs-type">Value</span>;
+
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::definition::{<a class="symbol-link rs-type" href="eos-skills--src-definition-rs.html#item-struct-ReferenceName-54">ReferenceName</a>, <a class="symbol-link rs-type" href="eos-skills--src-definition-rs.html#item-struct-SkillDefinition-93">SkillDefinition</a>, <a class="symbol-link rs-type" href="eos-skills--src-definition-rs.html#item-struct-SkillName-22">SkillName</a>, <a class="symbol-link rs-type" href="eos-skills--src-definition-rs.html#item-enum-SkillSource-84">SkillSource</a>};
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::error::<a class="symbol-link rs-type" href="eos-skills--src-error-rs.html#item-enum-SkillLoadError-5">SkillLoadError</a>;
+
+<span class="rs-kw">const</span> <span class="rs-type">SKILL_FILE</span>: &amp;str = &quot;<span class="rs-type">SKILL</span>.md&quot;;
+<span class="rs-kw">const</span> <span class="rs-type">REFERENCES_DIR</span>: &amp;str = &quot;references&quot;;
+<span class="rs-kw">const</span> <span class="rs-type">DESCRIPTION_MAX_CHARS</span>: usize = 200;
+
+<span class="rs-comment">/// Load every directory skill under `content_dir` in sorted order.</span>
+<span class="rs-comment">///</span>
+<span class="rs-comment">/// The caller ([`crate::loader`]) guarantees `content_dir` is an existing</span>
+<span class="rs-comment">/// directory; here it is walked one level deep, requiring `SKILL.md` per skill.</span>
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-skills.html#item-fn-load-bundled-skills-23">load_bundled_skills</a>(
+    content_dir: &amp;<span class="rs-type">Path</span>,
+) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;<a class="symbol-link rs-type" href="eos-skills--src-definition-rs.html#item-struct-SkillDefinition-93">SkillDefinition</a>&gt;, <a class="symbol-link rs-type" href="eos-skills--src-error-rs.html#item-enum-SkillLoadError-5">SkillLoadError</a>&gt; {
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> skills = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-skills--src-registry-rs.html#method-new-20">new</a>();
+    <span class="rs-kw">for</span> skill_dir <span class="rs-kw">in</span> <a class="symbol-link rs-fn" href="eos-skills.html#item-fn-read-dir-sorted-140">read_dir_sorted</a>(content_dir)? {
+        <span class="rs-kw">if</span> !skill_dir.is_dir() {
+            <span class="rs-kw">continue</span>;
+        }
+        <span class="rs-kw">let</span> skill_md = skill_dir.join(<span class="rs-type">SKILL_FILE</span>);
+        <span class="rs-kw">if</span> !skill_md.is_file() {
+            <span class="rs-kw">continue</span>;
+        }
+        <span class="rs-kw">let</span> content = <a class="symbol-link rs-fn" href="eos-skills.html#item-fn-read-file-158">read_file</a>(&amp;skill_md)?;
+        <span class="rs-kw">let</span> (name, description) = <a class="symbol-link rs-fn" href="eos-skills.html#item-fn-parse-skill-metadata-76">parse_skill_metadata</a>(&amp;<a class="symbol-link rs-fn" href="eos-skills.html#item-fn-dir-name-129">dir_name</a>(&amp;skill_dir), &amp;content);
+        <span class="rs-kw">let</span> references = <a class="symbol-link rs-fn" href="eos-skills.html#item-fn-discover-references-54">discover_references</a>(&amp;skill_dir)?;
+        skills.push(<a class="symbol-link rs-type" href="eos-skills--src-definition-rs.html#item-struct-SkillDefinition-93">SkillDefinition</a> {
+            name: <a class="symbol-link rs-type" href="eos-skills--src-definition-rs.html#item-struct-SkillName-22">SkillName</a>::<a class="symbol-link rs-fn" href="eos-skills--src-definition-rs.html#method-parse-33">parse</a>(name)?,
+            description,
+            content,
+            source: <a class="symbol-link rs-type" href="eos-skills--src-definition-rs.html#item-enum-SkillSource-84">SkillSource</a>::<span class="rs-type">Bundled</span>,
+            path: <span class="rs-type">Some</span>(skill_dir),
+            references,
+        });
+    }
+    <span class="rs-type">Ok</span>(skills)
+}
+
+<span class="rs-comment">/// Read `references/*.md` keyed by file stem (`__init__.py` lines 29-34).</span>
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-skills.html#item-fn-discover-references-54">discover_references</a>(
+    skill_dir: &amp;<span class="rs-type">Path</span>,
+) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">BTreeMap</span>&lt;<a class="symbol-link rs-type" href="eos-skills--src-definition-rs.html#item-struct-ReferenceName-54">ReferenceName</a>, <span class="rs-type">String</span>&gt;, <a class="symbol-link rs-type" href="eos-skills--src-error-rs.html#item-enum-SkillLoadError-5">SkillLoadError</a>&gt; {
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> references = <span class="rs-type">BTreeMap</span>::<a class="symbol-link rs-fn" href="eos-skills--src-registry-rs.html#method-new-20">new</a>();
+    <span class="rs-kw">let</span> refs_dir = skill_dir.join(<span class="rs-type">REFERENCES_DIR</span>);
+    <span class="rs-kw">if</span> !refs_dir.is_dir() {
+        <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(references);
+    }
+    <span class="rs-kw">for</span> ref_file <span class="rs-kw">in</span> <a class="symbol-link rs-fn" href="eos-skills.html#item-fn-read-dir-sorted-140">read_dir_sorted</a>(&amp;refs_dir)? {
+        <span class="rs-kw">if</span> !ref_file.is_file() || <a class="symbol-link rs-fn" href="eos-skills.html#item-fn-extension-136">extension</a>(&amp;ref_file) != <span class="rs-type">Some</span>(&quot;md&quot;) {
+            <span class="rs-kw">continue</span>;
+        }
+        <span class="rs-kw">let</span> <span class="rs-type">Some</span>(stem) = ref_file.file_stem().and_then(|s| s.to_str()) <span class="rs-kw">else</span> {
+            <span class="rs-kw">continue</span>;
+        };
+        <span class="rs-kw">let</span> content = <a class="symbol-link rs-fn" href="eos-skills.html#item-fn-read-file-158">read_file</a>(&amp;ref_file)?;
+        references.insert(<a class="symbol-link rs-type" href="eos-skills--src-definition-rs.html#item-struct-ReferenceName-54">ReferenceName</a>::<a class="symbol-link rs-fn" href="eos-skills--src-definition-rs.html#method-parse-33">parse</a>(stem)?, content);
+    }
+    <span class="rs-type">Ok</span>(references)
+}
+
+<span class="rs-comment">/// Extract `(name, description)` from a skill markdown file (`__init__.py` 49-67).</span>
+<span class="rs-comment">///</span>
+<span class="rs-comment">/// Frontmatter `name`/`description` win; otherwise scan the **full content**</span>
+<span class="rs-comment">/// (not the post-frontmatter body) for a `# ` heading (used as `name` iff `name`</span>
+<span class="rs-comment">/// is still the default) and the first non-blank line that starts with neither</span>
+<span class="rs-comment">/// `#` nor `---`, truncated to [`DESCRIPTION_MAX_CHARS`]; the final fallback is</span>
+<span class="rs-comment">/// `"Bundled skill: {name}"`.</span>
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-skills.html#item-fn-parse-skill-metadata-76">parse_skill_metadata</a>(default_name: &amp;str, content: &amp;str) -&gt; (<span class="rs-type">String</span>, <span class="rs-type">String</span>) {
+    <span class="rs-kw">let</span> (frontmatter, _body) = parse_markdown_frontmatter(content);
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> name = <a class="symbol-link rs-fn" href="eos-skills.html#item-fn-frontmatter-str-121">frontmatter_str</a>(&amp;frontmatter, &quot;name&quot;)
+        .unwrap_or(default_name)
+        .to_owned();
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> description = <a class="symbol-link rs-fn" href="eos-skills.html#item-fn-frontmatter-str-121">frontmatter_str</a>(&amp;frontmatter, &quot;description&quot;)
+        .unwrap_or_default()
+        .to_owned();
+
+    <span class="rs-kw">if</span> description.is_empty() {
+        <span class="rs-kw">for</span> line <span class="rs-kw">in</span> content.lines() {
+            <span class="rs-kw">let</span> stripped = line.trim();
+            <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(heading) = stripped.strip_prefix(&quot;# &quot;) {
+                <span class="rs-kw">if</span> name.is_empty() || name == default_name {
+                    <span class="rs-kw">let</span> heading = heading.trim();
+                    name = <span class="rs-kw">if</span> heading.is_empty() {
+                        default_name.to_owned()
+                    } <span class="rs-kw">else</span> {
+                        heading.to_owned()
+                    };
+                }
+                <span class="rs-kw">continue</span>;
+            }
+            <span class="rs-kw">if</span> !stripped.is_empty() &amp;&amp; !stripped.starts_with(&quot;---&quot;) &amp;&amp; !stripped.starts_with(&#x27;#&#x27;) {
+                description = stripped.chars().take(<span class="rs-type">DESCRIPTION_MAX_CHARS</span>).collect();
+                <span class="rs-kw">break</span>;
+            }
+        }
+    }
+
+    <span class="rs-kw">let</span> description = <span class="rs-kw">if</span> description.is_empty() {
+        format!(&quot;<span class="rs-type">Bundled</span> skill: {name}&quot;)
+    } <span class="rs-kw">else</span> {
+        description
+    };
+    (name, description)
+}
+
+<span class="rs-comment">/// A frontmatter string field, treating empty as absent (Rust's `... or`).</span>
+<span class="rs-kw">fn</span> frontmatter_str&lt;&#x27;a&gt;(frontmatter: &amp;&#x27;a serde_yaml::<span class="rs-type">Mapping</span>, key: &amp;str) -&gt; <span class="rs-type">Option</span>&lt;&amp;&#x27;a str&gt; {
+    frontmatter
+        .<a class="symbol-link rs-fn" href="eos-skills--src-registry-rs.html#method-get-32">get</a>(key)
+        .and_then(<span class="rs-type">Value</span>::as_str)
+        .filter(|value| !value.is_empty())
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-skills.html#item-fn-dir-name-129">dir_name</a>(path: &amp;<span class="rs-type">Path</span>) -&gt; <span class="rs-type">String</span> {
+    path.file_name()
+        .and_then(|n| n.to_str())
+        .unwrap_or_default()
+        .to_owned()
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-skills.html#item-fn-extension-136">extension</a>(path: &amp;<span class="rs-type">Path</span>) -&gt; <span class="rs-type">Option</span>&lt;&amp;str&gt; {
+    path.<a class="symbol-link rs-fn" href="eos-skills.html#item-fn-extension-136">extension</a>().and_then(|e| e.to_str())
+}
+
+<span class="rs-comment">/// List a directory's entries as paths, sorted (parity with Rust `sorted(...)`).</span>
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-skills.html#item-fn-read-dir-sorted-140">read_dir_sorted</a>(dir: &amp;<span class="rs-type">Path</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;<span class="rs-type">PathBuf</span>&gt;, <a class="symbol-link rs-type" href="eos-skills--src-error-rs.html#item-enum-SkillLoadError-5">SkillLoadError</a>&gt; {
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> paths = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-skills--src-registry-rs.html#method-new-20">new</a>();
+    <span class="rs-kw">let</span> entries = fs::read_dir(dir).map_err(|cause| <a class="symbol-link rs-type" href="eos-skills--src-error-rs.html#item-enum-SkillLoadError-5">SkillLoadError</a>::<span class="rs-type">ReadDir</span> {
+        path: dir.to_owned(),
+        cause,
+    })?;
+    <span class="rs-kw">for</span> entry <span class="rs-kw">in</span> entries {
+        <span class="rs-kw">let</span> entry = entry.map_err(|cause| <a class="symbol-link rs-type" href="eos-skills--src-error-rs.html#item-enum-SkillLoadError-5">SkillLoadError</a>::<span class="rs-type">ReadDir</span> {
+            path: dir.to_owned(),
+            cause,
+        })?;
+        paths.push(entry.path());
+    }
+    paths.sort();
+    <span class="rs-type">Ok</span>(paths)
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-skills.html#item-fn-read-file-158">read_file</a>(path: &amp;<span class="rs-type">Path</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">String</span>, <a class="symbol-link rs-type" href="eos-skills--src-error-rs.html#item-enum-SkillLoadError-5">SkillLoadError</a>&gt; {
+    fs::read_to_string(path).map_err(|cause| <a class="symbol-link rs-type" href="eos-skills--src-error-rs.html#item-enum-SkillLoadError-5">SkillLoadError</a>::<span class="rs-type">ReadFile</span> {
+        path: path.to_owned(),
+        cause,
+    })
+}
+
+#[cfg(test)]
+<span class="rs-kw">mod</span> tests {
+    #![allow(clippy::unwrap_used)] <span class="rs-comment">// unwrap is permitted in tests (err-no-unwrap-prod)</span>
+    <span class="rs-kw">use</span> <span class="rs-kw">super</span>::*;
+    <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::support::<span class="rs-type">Scratch</span>;
+
+    <span class="rs-comment">// AC-skills-02: only *.md references are kept, keyed by stem, in sorted order.</span>
+    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-skills.html#item-fn-discovers-only-md-references-keyed-by-stem-172">discovers_only_md_references_keyed_by_stem</a>() {
+        <span class="rs-kw">let</span> scratch = <span class="rs-type">Scratch</span>::<a class="symbol-link rs-fn" href="eos-skills--src-registry-rs.html#method-new-20">new</a>(&quot;refs-by-stem&quot;);
+        scratch.write(&quot;skill/<span class="rs-type">SKILL</span>.md&quot;, &quot;---\nname: skill\ndescription: d\n---\n&quot;);
+        scratch.write(&quot;skill/references/rubric.md&quot;, &quot;<span class="rs-type">RUBRIC</span>&quot;);
+        scratch.write(&quot;skill/references/checklist.md&quot;, &quot;<span class="rs-type">CHECKLIST</span>&quot;);
+        scratch.write(&quot;skill/references/.gitkeep&quot;, &quot;&quot;);
+        scratch.write(&quot;skill/references/notes.txt&quot;, &quot;<span class="rs-type">NOTES</span>&quot;);
+
+        <span class="rs-kw">let</span> skills = <a class="symbol-link rs-fn" href="eos-skills.html#item-fn-load-bundled-skills-23">load_bundled_skills</a>(scratch.path()).unwrap();
+        assert_eq!(skills.len(), 1);
+        <span class="rs-kw">let</span> references = &amp;skills[0].references;
+
+        <span class="rs-kw">let</span> keys: <span class="rs-type">Vec</span>&lt;&amp;str&gt; = references.keys().map(<a class="symbol-link rs-type" href="eos-skills--src-definition-rs.html#item-struct-ReferenceName-54">ReferenceName</a>::as_str).collect();
+        assert_eq!(keys, vec![&quot;checklist&quot;, &quot;rubric&quot;]);
+        assert_eq!(
+            references
+                .<a class="symbol-link rs-fn" href="eos-skills--src-registry-rs.html#method-get-32">get</a>(&amp;<a class="symbol-link rs-type" href="eos-skills--src-definition-rs.html#item-struct-ReferenceName-54">ReferenceName</a>::<a class="symbol-link rs-fn" href="eos-skills--src-definition-rs.html#method-parse-33">parse</a>(&quot;checklist&quot;).unwrap())
+                .map(<span class="rs-type">String</span>::as_str),
+            <span class="rs-type">Some</span>(&quot;<span class="rs-type">CHECKLIST</span>&quot;)
+        );
+    }
+
+    <span class="rs-comment">// AC-skills-09: malformed frontmatter is swallowed; the load still succeeds</span>
+    <span class="rs-comment">// and the description comes from the full-content fallback scan.</span>
+    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-skills.html#item-fn-malformed-frontmatter-uses-fallback-description-197">malformed_frontmatter_uses_fallback_description</a>() {
+        <span class="rs-kw">let</span> scratch = <span class="rs-type">Scratch</span>::<a class="symbol-link rs-fn" href="eos-skills--src-registry-rs.html#method-new-20">new</a>(&quot;malformed-fm&quot;);
+        <span class="rs-comment">// An unterminated quoted scalar is invalid YAML -&gt; swallowed -&gt; empty.</span>
+        scratch.write(&quot;broken/<span class="rs-type">SKILL</span>.md&quot;, &quot;---\nname: \&quot;unterminated\n---\nbody\n&quot;);
+
+        <span class="rs-kw">let</span> result = <a class="symbol-link rs-fn" href="eos-skills.html#item-fn-load-bundled-skills-23">load_bundled_skills</a>(scratch.path());
+        assert!(
+            result.is_ok(),
+            &quot;malformed frontmatter must not fail the load&quot;
+        );
+        <span class="rs-kw">let</span> skills = result.unwrap();
+        assert_eq!(skills.len(), 1);
+        <span class="rs-comment">// Frontmatter swallowed -&gt; name defaults to the directory name.</span>
+        assert_eq!(skills[0].name.<a class="symbol-link rs-fn" href="eos-skills--src-definition-rs.html#method-as-str-47">as_str</a>(), &quot;broken&quot;);
+        <span class="rs-comment">// Description = first non-blank line that is not `#`/`---` (the fm line).</span>
+        assert_eq!(skills[0].description, &quot;name: \&quot;unterminated&quot;);
+    }
+
+    <span class="rs-comment">// AC-skills-10: name present + description absent + no heading -&gt; the</span>
+    <span class="rs-comment">// description is the first frontmatter key line of the full content.</span>
+    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-skills.html#item-fn-description-falls-back-to-full-content-lines-218">description_falls_back_to_full_content_lines</a>() {
+        <span class="rs-kw">let</span> scratch = <span class="rs-type">Scratch</span>::<a class="symbol-link rs-fn" href="eos-skills--src-registry-rs.html#method-new-20">new</a>(&quot;fullscan-desc&quot;);
+        scratch.write(&quot;planner/<span class="rs-type">SKILL</span>.md&quot;, &quot;---\nname: planner\n---\n&quot;);
+
+        <span class="rs-kw">let</span> skills = <a class="symbol-link rs-fn" href="eos-skills.html#item-fn-load-bundled-skills-23">load_bundled_skills</a>(scratch.path()).unwrap();
+        assert_eq!(skills[0].name.<a class="symbol-link rs-fn" href="eos-skills--src-definition-rs.html#method-as-str-47">as_str</a>(), &quot;planner&quot;);
+        assert_eq!(skills[0].description, &quot;name: planner&quot;);
+    }
+
+    <span class="rs-comment">// AC-skills-11: a dotted reference stem round-trips as its key.</span>
+    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-skills.html#item-fn-dotted-reference-stem-is-keyed-229">dotted_reference_stem_is_keyed</a>() {
+        <span class="rs-kw">let</span> scratch = <span class="rs-type">Scratch</span>::<a class="symbol-link rs-fn" href="eos-skills--src-registry-rs.html#method-new-20">new</a>(&quot;dotted-stem&quot;);
+        scratch.write(&quot;skill/<span class="rs-type">SKILL</span>.md&quot;, &quot;---\nname: skill\ndescription: d\n---\n&quot;);
+        scratch.write(&quot;skill/references/api.v2.md&quot;, &quot;<span class="rs-type">V2</span> <span class="rs-type">CONTENT</span>&quot;);
+
+        <span class="rs-kw">let</span> skills = <a class="symbol-link rs-fn" href="eos-skills.html#item-fn-load-bundled-skills-23">load_bundled_skills</a>(scratch.path()).unwrap();
+        assert_eq!(
+            skills[0]
+                .references
+                .<a class="symbol-link rs-fn" href="eos-skills--src-registry-rs.html#method-get-32">get</a>(&amp;<a class="symbol-link rs-type" href="eos-skills--src-definition-rs.html#item-struct-ReferenceName-54">ReferenceName</a>::<a class="symbol-link rs-fn" href="eos-skills--src-definition-rs.html#method-parse-33">parse</a>(&quot;api.v2&quot;).unwrap())
+                .map(<span class="rs-type">String</span>::as_str),
+            <span class="rs-type">Some</span>(&quot;<span class="rs-type">V2</span> <span class="rs-type">CONTENT</span>&quot;)
+        );
+    }
+
+    <span class="rs-comment">// A present-but-empty frontmatter `name` falls back to the directory name</span>
+    <span class="rs-comment">// (Rust `str(frontmatter.get("name") or default_name)`). This guards the</span>
+    <span class="rs-comment">// load-bearing `frontmatter_str` empty-string filter: without it,</span>
+    <span class="rs-comment">// `SkillName::parse("")` would abort the whole load with `InvalidName`.</span>
+    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-skills.html#item-fn-empty-frontmatter-name-falls-back-to-dir-name-249">empty_frontmatter_name_falls_back_to_dir_name</a>() {
+        <span class="rs-kw">let</span> scratch = <span class="rs-type">Scratch</span>::<a class="symbol-link rs-fn" href="eos-skills--src-registry-rs.html#method-new-20">new</a>(&quot;empty-name&quot;);
+        scratch.write(&quot;skill/<span class="rs-type">SKILL</span>.md&quot;, &quot;---\nname: \&quot;\&quot;\ndescription: d\n---\n&quot;);
+
+        <span class="rs-kw">let</span> skills = <a class="symbol-link rs-fn" href="eos-skills.html#item-fn-load-bundled-skills-23">load_bundled_skills</a>(scratch.path()).unwrap();
+        assert_eq!(skills.len(), 1);
+        assert_eq!(skills[0].name.<a class="symbol-link rs-fn" href="eos-skills--src-definition-rs.html#method-as-str-47">as_str</a>(), &quot;skill&quot;);
+        assert_eq!(skills[0].description, &quot;d&quot;);
+    }
+
+    <span class="rs-comment">// A subdirectory lacking `SKILL.md` is skipped without error (spec §8.1;</span>
+    <span class="rs-comment">// Rust `if skill_md.exists()`), leaving sibling skills intact.</span>
+    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-skills.html#item-fn-skill-dir-without-skill-md-is-skipped-without-error-262">skill_dir_without_skill_md_is_skipped_without_error</a>() {
+        <span class="rs-kw">let</span> scratch = <span class="rs-type">Scratch</span>::<a class="symbol-link rs-fn" href="eos-skills--src-registry-rs.html#method-new-20">new</a>(&quot;missing-skill-md&quot;);
+        scratch.write(&quot;good/<span class="rs-type">SKILL</span>.md&quot;, &quot;---\nname: good\ndescription: d\n---\n&quot;);
+        scratch.write(&quot;half_built/notes.txt&quot;, &quot;<span class="rs-type">WIP</span>&quot;); <span class="rs-comment">// dir exists, no SKILL.md</span>
+
+        <span class="rs-kw">let</span> skills = <a class="symbol-link rs-fn" href="eos-skills.html#item-fn-load-bundled-skills-23">load_bundled_skills</a>(scratch.path()).unwrap();
+        assert_eq!(skills.len(), 1);
+        assert_eq!(skills[0].name.<a class="symbol-link rs-fn" href="eos-skills--src-definition-rs.html#method-as-str-47">as_str</a>(), &quot;good&quot;);
+    }
+}
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
   <script src="../assets/inventory.js"></script>
 </body>
 </html>

@@ -8,8 +8,16 @@
 </head>
 <body>
   <header>
-    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
-    <h1>eos-daemon File Inventory</h1>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>eos-daemon File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS/sandbox &amp;&amp; cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
   </header>
   <a class="back-link" href="../index.html">sandbox</a>
 <section class="summary">
@@ -50,6 +58,21 @@
   <div class="items"></div>
 </section></div>
 </main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/eos-daemon/src/services/workspace/mod.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-comment">//! Daemon-owned adapters for neutral workspace-mode traits.</span>
+
+<span class="rs-kw">mod</span> file_ports;
+
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">use</span> file_ports::<a class="symbol-link rs-type" href="eos-daemon--src-services-workspace-file-ports-rs.html#item-struct-EphemeralFilePorts-49">EphemeralFilePorts</a>;
+#[cfg(target_os = &quot;linux&quot;)]
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">use</span> file_ports::<a class="symbol-link rs-type" href="eos-daemon--src-services-workspace-file-ports-rs.html#item-struct-IsolatedFilePorts-172">IsolatedFilePorts</a>;
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
   <script src="../assets/inventory.js"></script>
 </body>
 </html>

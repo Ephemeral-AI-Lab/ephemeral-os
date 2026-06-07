@@ -8,8 +8,16 @@
 </head>
 <body>
   <header>
-    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
-    <h1>eos-layerstack File Inventory</h1>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>eos-layerstack File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS/sandbox &amp;&amp; cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
   </header>
   <a class="back-link" href="../index.html">sandbox</a>
 <section class="summary">
@@ -47,19 +55,87 @@
       <span>0 methods</span>
     </div>
   </div>
-  <div class="items"><div class="group-label">File-Owned Types</div><article class="type-card" data-kind="enum" data-kind-list="enum field type-model" data-filter-text="enum LayerStackError pub pub enum LayerStackError crates/eos-layerstack/src/error.rs  ">
+  <div class="items"><div class="group-label">File-Owned Types</div><article id="item-enum-LayerStackError-7" class="type-card" data-kind="enum" data-kind-list="enum field type-model" data-filter-text="enum LayerStackError pub pub enum LayerStackError crates/eos-layerstack/src/error.rs  ">
   <div class="item-head">
     <span class="kind">enum</span>
     <h3>LayerStackError</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub enum LayerStackError</code>
-  <div class="tags"><span>error</span></div>
-  <h4>Variants</h4><table><tbody><tr><td>ManifestConflict</td><td><code>expected: i64, found: i64</code></td></tr><tr><td>StorageRootOwned</td><td><code>0: String</code></td></tr><tr><td>StorageWriterLockClosed</td><td><code></code></td></tr><tr><td>InvalidLeaseOwner</td><td><code>0: String</code></td></tr><tr><td>LockPoisoned</td><td><code>0: &amp; 'static str</code></td></tr><tr><td>InvalidSquashPlan</td><td><code>0: String</code></td></tr><tr><td>LayerIdAllocation</td><td><code></code></td></tr><tr><td>Manifest</td><td><code>0: String</code></td></tr><tr><td>WorkspaceBinding</td><td><code>0: String</code></td></tr><tr><td>Storage</td><td><code>0: String</code></td></tr><tr><td>Cas</td><td><code>0: CasError</code></td></tr><tr><td>Io</td><td><code>0: std :: io :: Error</code></td></tr></tbody></table>
+  <code class="signature">pub enum <a class="symbol-link" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a></code>
+  <p class="docstring">Errors raised by the durable layer-stack storage layer.</p>
+  <div class="tags"><span>derive: Debug</span><span>derive: Error</span><span>error</span><span>non_exhaustive</span></div>
+  <h4>Variants</h4><table><tbody><tr><td>ManifestConflict</td><td><code>expected: i64, found: i64</code></td></tr><tr><td>StorageRootOwned</td><td><code>0: String</code></td></tr><tr><td>StorageWriterLockClosed</td><td><code></code></td></tr><tr><td>InvalidLeaseOwner</td><td><code>0: String</code></td></tr><tr><td>LockPoisoned</td><td><code>0: &amp; &#x27;static str</code></td></tr><tr><td>InvalidSquashPlan</td><td><code>0: String</code></td></tr><tr><td>LayerIdAllocation</td><td><code></code></td></tr><tr><td>Manifest</td><td><code>0: String</code></td></tr><tr><td>WorkspaceBinding</td><td><code>0: String</code></td></tr><tr><td>Storage</td><td><code>0: String</code></td></tr><tr><td>Cas</td><td><code>0: CasError</code></td></tr><tr><td>Io</td><td><code>0: std :: io :: Error</code></td></tr></tbody></table>
+
   <p class="source">crates/eos-layerstack/src/error.rs:7</p>
 </article></div>
 </section></div>
 </main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/eos-layerstack/src/error.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-comment">//! Layer-stack error algebra.</span>
+
+<span class="rs-kw">use</span> thiserror::<span class="rs-type">Error</span>;
+
+<span class="rs-kw">use</span> eos_protocol::<span class="rs-type">CasError</span>;
+
+<span class="rs-comment">/// Errors raised by the durable layer-stack storage layer.</span>
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Error</span>)]
+#[non_exhaustive]
+<span class="rs-kw">pub</span> <span class="rs-kw">enum</span> <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a> {
+    <span class="rs-comment">/// The active manifest changed under a publish/squash transaction (CAS lost).</span>
+    #[error(&quot;active manifest changed: expected version {expected}, found version {found}&quot;)]
+    <span class="rs-type">ManifestConflict</span> { expected: i64, found: i64 },
+
+    <span class="rs-comment">/// The storage root is already owned by another daemon process (flock held).</span>
+    #[error(&quot;layer-stack storage root is already owned by another process: {0}&quot;)]
+    <span class="rs-type">StorageRootOwned</span>(<span class="rs-type">String</span>),
+
+    <span class="rs-comment">/// The storage-writer lock lease has been closed.</span>
+    #[error(&quot;layer-stack storage writer lock is closed&quot;)]
+    <span class="rs-type">StorageWriterLockClosed</span>,
+
+    <span class="rs-comment">/// A caller supplied an invalid snapshot lease owner.</span>
+    #[error(&quot;invalid lease owner: {0}&quot;)]
+    <span class="rs-type">InvalidLeaseOwner</span>(<span class="rs-type">String</span>),
+
+    <span class="rs-comment">/// A process-local storage lock was poisoned by a panic in another holder.</span>
+    #[error(&quot;layer-stack lock poisoned: {0}&quot;)]
+    <span class="rs-type">LockPoisoned</span>(&amp;&#x27;<span class="rs-kw">static</span> str),
+
+    <span class="rs-comment">/// A squash/checkpoint plan invariant was violated (e.g. &lt;2-layer segment).</span>
+    #[error(&quot;invalid squash plan: {0}&quot;)]
+    <span class="rs-type">InvalidSquashPlan</span>(<span class="rs-type">String</span>),
+
+    <span class="rs-comment">/// Could not allocate a unique layer id within the attempt budget.</span>
+    #[error(&quot;could not allocate a unique layer id&quot;)]
+    <span class="rs-type">LayerIdAllocation</span>,
+
+    <span class="rs-comment">/// The active manifest could not be parsed or violated storage invariants.</span>
+    #[error(&quot;manifest error: {0}&quot;)]
+    <span class="rs-type">Manifest</span>(<span class="rs-type">String</span>),
+
+    <span class="rs-comment">/// The layer-stack workspace binding is missing or invalid.</span>
+    #[error(&quot;workspace binding error: {0}&quot;)]
+    <a class="symbol-link rs-type" href="eos-layerstack--src-workspace-binding-rs.html#item-struct-WorkspaceBinding-14">WorkspaceBinding</a>(<span class="rs-type">String</span>),
+
+    <span class="rs-comment">/// A manifest-referenced layer no longer contains the requested data.</span>
+    #[error(&quot;layer-stack storage error: {0}&quot;)]
+    <span class="rs-type">Storage</span>(<span class="rs-type">String</span>),
+
+    <span class="rs-comment">/// A CAS path / manifest value failed to parse or validate.</span>
+    #[error(transparent)]
+    <span class="rs-type">Cas</span>(#[from] <span class="rs-type">CasError</span>),
+
+    <span class="rs-comment">/// An underlying filesystem operation failed.</span>
+    #[error(&quot;layer-stack io error: {0}&quot;)]
+    <span class="rs-type">Io</span>(#[from] std::io::<span class="rs-type">Error</span>),
+}
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
   <script src="../assets/inventory.js"></script>
 </body>
 </html>

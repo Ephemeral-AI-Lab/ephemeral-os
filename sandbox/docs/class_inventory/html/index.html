@@ -8,14 +8,22 @@
 </head>
 <body>
   <header>
-    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
-    <h1>sandbox Rust Inventory</h1>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>sandbox Rust Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS/sandbox &amp;&amp; cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
   </header>
   <section class="summary">
   <div><b>16</b><span>crates</span></div>
   <div><b>192</b><span>modules</span></div>
   <div><b>1609</b><span>items</span></div>
-  <div><b>600</b><span>methods</span></div>
+  <div><b>595</b><span>methods</span></div>
 </section>
 <section class="toolbar">
   <input id="filter" type="search" placeholder="Filter crates" autofocus>
@@ -23,7 +31,7 @@
 <section class="crate-grid" id="filter-root"><a class="crate-card" href="crates/eos-command-session.html">
   <strong>eos-command-session</strong>
   <span>crates/eos-command-session</span>
-  <small>32 types · 34 fns · 109 methods · 14 modules</small>
+  <small>32 types · 34 fns · 104 methods · 14 modules</small>
 </a><a class="crate-card" href="crates/eos-config.html">
   <strong>eos-config</strong>
   <span>crates/eos-config</span>
@@ -85,6 +93,7 @@
   <span>xtask</span>
   <small>1 types · 16 fns · 1 methods · 1 modules</small>
 </a></section>
+  <script src="assets/inventory-data.js"></script>
   <script src="assets/inventory.js"></script>
 </body>
 </html>

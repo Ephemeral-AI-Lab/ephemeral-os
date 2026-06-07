@@ -8,8 +8,16 @@
 </head>
 <body>
   <header>
-    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
-    <h1>eos-llm-client File Inventory</h1>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>eos-llm-client File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS/agent-core &amp;&amp; cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
   </header>
   <a class="back-link" href="../index.html">agent-core</a>
 <section class="summary">
@@ -47,169 +55,1244 @@
       <span>5 methods</span>
     </div>
   </div>
-  <div class="items"><div class="group-label">File-Owned Types</div><article class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct OpenAiApiClient pub pub struct OpenAiApiClient crates/eos-llm-client/src/clients/openai_api_client.rs http reqwest :: Client endpoint reqwest :: Url auth Arc &lt; Auth &gt; retry Arc &lt; RetryConfig &gt; request_dialect OpenAiRequestDialect ">
+  <div class="items"><div class="group-label">File-Owned Types</div><article id="item-struct-OpenAiApiClient-37" class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct OpenAiApiClient pub pub struct OpenAiApiClient crates/eos-llm-client/src/clients/openai_api_client.rs http reqwest :: Client endpoint reqwest :: Url auth Arc &lt; Auth &gt; retry Arc &lt; RetryConfig &gt; request_dialect OpenAiRequestDialect ">
   <div class="item-head">
     <span class="kind">struct</span>
     <h3>OpenAiApiClient</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub struct OpenAiApiClient</code>
-  <div class="tags"><span>port/service</span></div>
-  <h4>Fields</h4><table><tbody><tr><td>private</td><td>http</td><td><code>reqwest :: Client</code></td></tr><tr><td>private</td><td>endpoint</td><td><code>reqwest :: Url</code></td></tr><tr><td>private</td><td>auth</td><td><code>Arc &lt; Auth &gt;</code></td></tr><tr><td>private</td><td>retry</td><td><code>Arc &lt; RetryConfig &gt;</code></td></tr><tr><td>private</td><td>request_dialect</td><td><code>OpenAiRequestDialect</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr><td>constructor</td><td>new</td><td><code>pub fn new (base_url : &amp; str , auth : Auth , retry : Arc &lt; RetryConfig &gt;) -&gt; Result &lt; Self , ProviderError &gt;</code></td></tr><tr><td>method</td><td>build_headers</td><td><code>fn build_headers (&amp; self) -&gt; Result &lt; HeaderMap , ProviderError &gt;</code></td></tr><tr><td>associated-fn</td><td>new_codex_backend</td><td><code>pub(crate) fn new_codex_backend (base_url : &amp; str , auth : Auth , retry : Arc &lt; RetryConfig &gt; ,) -&gt; Result &lt; Self , ProviderError &gt;</code></td></tr><tr><td>associated-fn</td><td>new_with_path</td><td><code>fn new_with_path (base_url : &amp; str , path : &amp; str , request_dialect : OpenAiRequestDialect , auth : Auth , retry : Arc &lt; RetryConfig &gt; ,) -&gt; Result &lt; Self , ProviderError &gt;</code></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl LlmClient for OpenAiApiClient</code></summary><table><tbody><tr><td>method</td><td>stream_message</td><td><code>async fn stream_message (&amp; self , request : LlmRequest) -&gt; Result &lt; LlmStream , ProviderError &gt;</code></td></tr></tbody></table></details></div>
+  <code class="signature">pub struct <a class="symbol-link" href="eos-llm-client--src-clients-openai-api-client-rs.html#item-struct-OpenAiApiClient-37">OpenAiApiClient</a></code>
+  <p class="docstring">The `OpenAI` Responses streaming client.</p>
+  <div class="tags"><span>derive: Debug</span><span>port/service</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>http</td><td><code>reqwest :: Client</code></td></tr><tr><td>private</td><td>endpoint</td><td><code>reqwest :: Url</code></td></tr><tr><td>private</td><td>auth</td><td><code>Arc &lt; <a class="symbol-link" href="eos-llm-client.html#item-enum-Auth-38">Auth</a> &gt;</code></td></tr><tr><td>private</td><td>retry</td><td><code>Arc &lt; RetryConfig &gt;</code></td></tr><tr><td>private</td><td>request_dialect</td><td><code><a class="symbol-link" href="eos-llm-client--src-clients-openai-api-client-rs.html#item-enum-OpenAiRequestDialect-47">OpenAiRequestDialect</a></code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-54"><td>constructor</td><td>new</td><td><code>pub fn <a class="symbol-link" href="eos-llm-client--src-client-rs.html#method-new-56">new</a> (base_url : &amp; str , auth : <a class="symbol-link" href="eos-llm-client.html#item-enum-Auth-38">Auth</a> , retry : Arc &lt; RetryConfig &gt;) -&gt; Result &lt; Self , <a class="symbol-link" href="eos-llm-client--src-error-rs.html#item-struct-ProviderError-29">ProviderError</a> &gt;</code><p class="docstring">Construct a client for `base_url` (e.g. `https://api.openai.com`).</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Construct a client for `base_url` (e.g. `https://api.openai.com`).</span>
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-llm-client--src-client-rs.html#method-new-56">new</a>(base_url: &amp;str, auth: <a class="symbol-link rs-type" href="eos-llm-client.html#item-enum-Auth-38">Auth</a>, retry: <span class="rs-type">Arc</span>&lt;<span class="rs-type">RetryConfig</span>&gt;) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-self">Self</span>, <a class="symbol-link rs-type" href="eos-llm-client--src-error-rs.html#item-struct-ProviderError-29">ProviderError</a>&gt; {
+        <span class="rs-self">Self</span>::<a class="symbol-link rs-fn" href="eos-llm-client--src-clients-openai-api-client-rs.html#method-new-with-path-80">new_with_path</a>(
+            base_url,
+            <span class="rs-type">RESPONSES_PATH</span>,
+            <a class="symbol-link rs-type" href="eos-llm-client--src-clients-openai-api-client-rs.html#item-enum-OpenAiRequestDialect-47">OpenAiRequestDialect</a>::<span class="rs-type">PublicResponses</span>,
+            auth,
+            retry,
+        )
+    }
+</code></pre>
+</details></td></tr><tr id="method-build-headers-96"><td>method</td><td>build_headers</td><td><code>fn <a class="symbol-link" href="eos-llm-client--src-clients-anthropic-api-client-rs.html#method-build-headers-99">build_headers</a> (&amp; self) -&gt; Result &lt; HeaderMap , <a class="symbol-link" href="eos-llm-client--src-error-rs.html#item-struct-ProviderError-29">ProviderError</a> &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-llm-client--src-clients-anthropic-api-client-rs.html#method-build-headers-99">build_headers</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">HeaderMap</span>, <a class="symbol-link rs-type" href="eos-llm-client--src-error-rs.html#item-struct-ProviderError-29">ProviderError</a>&gt; {
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> headers = <span class="rs-type">HeaderMap</span>::<a class="symbol-link rs-fn" href="eos-llm-client--src-client-rs.html#method-new-56">new</a>();
+        headers.insert(<span class="rs-type">CONTENT_TYPE</span>, <span class="rs-type">HeaderValue</span>::from_static(&quot;application/json&quot;));
+        headers.insert(<span class="rs-type">ACCEPT</span>, <span class="rs-type">HeaderValue</span>::from_static(&quot;text/event-stream&quot;));
+        <span class="rs-self">self</span>.auth.<a class="symbol-link rs-fn" href="eos-llm-client.html#method-apply-105">apply</a>(&amp;<span class="rs-kw">mut</span> headers)?;
+        <span class="rs-type">Ok</span>(headers)
+    }
+</code></pre>
+</details></td></tr><tr id="method-new-codex-backend-65"><td>associated-fn</td><td>new_codex_backend</td><td><code>pub(crate) fn <a class="symbol-link" href="eos-llm-client--src-clients-openai-api-client-rs.html#method-new-codex-backend-65">new_codex_backend</a> (base_url : &amp; str , auth : <a class="symbol-link" href="eos-llm-client.html#item-enum-Auth-38">Auth</a> , retry : Arc &lt; RetryConfig &gt; ,) -&gt; Result &lt; Self , <a class="symbol-link" href="eos-llm-client--src-error-rs.html#item-struct-ProviderError-29">ProviderError</a> &gt;</code><p class="docstring">Construct a client for the ChatGPT-backed Codex endpoint.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Construct a client for the ChatGPT-backed Codex endpoint.</span>
+    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-llm-client--src-clients-openai-api-client-rs.html#method-new-codex-backend-65">new_codex_backend</a>(
+        base_url: &amp;str,
+        auth: <a class="symbol-link rs-type" href="eos-llm-client.html#item-enum-Auth-38">Auth</a>,
+        retry: <span class="rs-type">Arc</span>&lt;<span class="rs-type">RetryConfig</span>&gt;,
+    ) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-self">Self</span>, <a class="symbol-link rs-type" href="eos-llm-client--src-error-rs.html#item-struct-ProviderError-29">ProviderError</a>&gt; {
+        <span class="rs-self">Self</span>::<a class="symbol-link rs-fn" href="eos-llm-client--src-clients-openai-api-client-rs.html#method-new-with-path-80">new_with_path</a>(
+            base_url,
+            <span class="rs-type">CODEX_RESPONSES_PATH</span>,
+            <a class="symbol-link rs-type" href="eos-llm-client--src-clients-openai-api-client-rs.html#item-enum-OpenAiRequestDialect-47">OpenAiRequestDialect</a>::<span class="rs-type">CodexResponses</span>,
+            auth,
+            retry,
+        )
+    }
+</code></pre>
+</details></td></tr><tr id="method-new-with-path-80"><td>associated-fn</td><td>new_with_path</td><td><code>fn <a class="symbol-link" href="eos-llm-client--src-clients-openai-api-client-rs.html#method-new-with-path-80">new_with_path</a> (base_url : &amp; str , path : &amp; str , request_dialect : <a class="symbol-link" href="eos-llm-client--src-clients-openai-api-client-rs.html#item-enum-OpenAiRequestDialect-47">OpenAiRequestDialect</a> , auth : <a class="symbol-link" href="eos-llm-client.html#item-enum-Auth-38">Auth</a> , retry : Arc &lt; RetryConfig &gt; ,) -&gt; Result &lt; Self , <a class="symbol-link" href="eos-llm-client--src-error-rs.html#item-struct-ProviderError-29">ProviderError</a> &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-llm-client--src-clients-openai-api-client-rs.html#method-new-with-path-80">new_with_path</a>(
+        base_url: &amp;str,
+        path: &amp;str,
+        request_dialect: <a class="symbol-link rs-type" href="eos-llm-client--src-clients-openai-api-client-rs.html#item-enum-OpenAiRequestDialect-47">OpenAiRequestDialect</a>,
+        auth: <a class="symbol-link rs-type" href="eos-llm-client.html#item-enum-Auth-38">Auth</a>,
+        retry: <span class="rs-type">Arc</span>&lt;<span class="rs-type">RetryConfig</span>&gt;,
+    ) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-self">Self</span>, <a class="symbol-link rs-type" href="eos-llm-client--src-error-rs.html#item-struct-ProviderError-29">ProviderError</a>&gt; {
+        <span class="rs-type">Ok</span>(<span class="rs-self">Self</span> {
+            http: reqwest::<span class="rs-type">Client</span>::<a class="symbol-link rs-fn" href="eos-llm-client--src-client-rs.html#method-new-56">new</a>(),
+            endpoint: <a class="symbol-link rs-fn" href="eos-llm-client--src-client-rs.html#item-fn-build-endpoint-147">build_endpoint</a>(base_url, path)?,
+            auth: <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-llm-client--src-client-rs.html#method-new-56">new</a>(auth),
+            retry,
+            request_dialect,
+        })
+    }
+</code></pre>
+</details></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl <a class="symbol-link" href="eos-llm-client--src-client-rs.html#item-trait-LlmClient-28">LlmClient</a> for <a class="symbol-link" href="eos-llm-client--src-clients-openai-api-client-rs.html#item-struct-OpenAiApiClient-37">OpenAiApiClient</a></code></summary><table><tbody><tr id="method-stream-message-107"><td>method</td><td>stream_message</td><td><code>async fn <a class="symbol-link" href="eos-llm-client--src-client-rs.html#method-stream-message-36">stream_message</a> (&amp; self , request : <a class="symbol-link" href="eos-llm-client--src-types-rs.html#item-struct-LlmRequest-113">LlmRequest</a>) -&gt; Result &lt; <a class="symbol-link" href="eos-llm-client--src-client-rs.html#item-type-LlmStream-22">LlmStream</a> , <a class="symbol-link" href="eos-llm-client--src-error-rs.html#item-struct-ProviderError-29">ProviderError</a> &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-llm-client--src-client-rs.html#method-stream-message-36">stream_message</a>(&amp;<span class="rs-self">self</span>, request: <a class="symbol-link rs-type" href="eos-llm-client--src-types-rs.html#item-struct-LlmRequest-113">LlmRequest</a>) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-llm-client--src-client-rs.html#item-type-LlmStream-22">LlmStream</a>, <a class="symbol-link rs-type" href="eos-llm-client--src-error-rs.html#item-struct-ProviderError-29">ProviderError</a>&gt; {
+        <span class="rs-kw">let</span> body = serde_json::to_vec(&amp;<a class="symbol-link rs-fn" href="eos-llm-client--src-clients-openai-api-client-rs.html#item-fn-encode-openai-body-with-dialect-275">encode_openai_body_with_dialect</a>(
+            &amp;request,
+            <span class="rs-self">self</span>.request_dialect,
+        ))
+        .map_err(|e| <a class="symbol-link rs-type" href="eos-llm-client--src-error-rs.html#item-struct-ProviderError-29">ProviderError</a>::<a class="symbol-link rs-fn" href="eos-llm-client--src-error-rs.html#method-request-96">request</a>(format!(&quot;request body serialization failed: {e}&quot;)))?;
+        <span class="rs-kw">let</span> body = <span class="rs-type">Bytes</span>::from(body);
+        <span class="rs-kw">let</span> headers = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-llm-client--src-clients-anthropic-api-client-rs.html#method-build-headers-99">build_headers</a>()?;
+        <span class="rs-kw">let</span> http = <span class="rs-self">self</span>.http.clone();
+        <span class="rs-kw">let</span> url = <span class="rs-self">self</span>.endpoint.clone();
+
+        <span class="rs-kw">let</span> factory = <span class="rs-kw">move</span> || {
+            <span class="rs-kw">let</span> http = http.clone();
+            <span class="rs-kw">let</span> url = url.clone();
+            <span class="rs-kw">let</span> headers = headers.clone();
+            <span class="rs-kw">let</span> body = body.clone();
+            <span class="rs-type">Box</span>::pin(<a class="symbol-link rs-fn" href="eos-llm-client--src-client-rs.html#item-fn-open-stream-177">open_stream</a>(http, url, headers, body, |frames, rid| {
+                <a class="symbol-link rs-fn" href="eos-llm-client--src-clients-openai-api-client-rs.html#item-fn-decode-openai-151">decode_openai</a>(frames, rid)
+            })) <span class="rs-kw">as</span> <span class="rs-type">BoxFuture</span>&lt;&#x27;<span class="rs-kw">static</span>, <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-llm-client--src-client-rs.html#item-type-LlmStream-22">LlmStream</a>, <a class="symbol-link rs-type" href="eos-llm-client--src-error-rs.html#item-struct-ProviderError-29">ProviderError</a>&gt;&gt;
+        };
+        <span class="rs-type">Ok</span>(<a class="symbol-link rs-fn" href="eos-llm-client--src-retry-rs.html#item-fn-retry-stream-21">retry_stream</a>((*<span class="rs-self">self</span>.retry).clone(), factory))
+    }
+</code></pre>
+</details></td></tr></tbody></table></details></div>
+
   <p class="source">crates/eos-llm-client/src/clients/openai_api_client.rs:37</p>
-</article><article class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct ToolItem private struct ToolItem crates/eos-llm-client/src/clients/openai_api_client.rs call_id String name String arguments String ">
+</article><article id="item-struct-ToolItem-131" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct ToolItem private struct ToolItem crates/eos-llm-client/src/clients/openai_api_client.rs call_id String name String arguments String ">
   <div class="item-head">
     <span class="kind">struct</span>
     <h3>ToolItem</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">struct ToolItem</code>
-  <div class="tags"></div>
+  <code class="signature">struct <a class="symbol-link" href="eos-llm-client--src-clients-openai-api-client-rs.html#item-struct-ToolItem-131">ToolItem</a></code>
+  <p class="docstring">In-flight reassembly state for one function-call item.</p>
+  <div class="tags"><span>derive: Debug</span></div>
   <h4>Fields</h4><table><tbody><tr><td>private</td><td>call_id</td><td><code>String</code></td></tr><tr><td>private</td><td>name</td><td><code>String</code></td></tr><tr><td>private</td><td>arguments</td><td><code>String</code></td></tr></tbody></table>
+
   <p class="source">crates/eos-llm-client/src/clients/openai_api_client.rs:131</p>
-</article><article class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct OpenAiState private struct OpenAiState crates/eos-llm-client/src/clients/openai_api_client.rs text String items HashMap &lt; String , ToolItem &gt; tools Vec &lt; ContentBlock &gt; ">
+</article><article id="item-struct-OpenAiState-139" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct OpenAiState private struct OpenAiState crates/eos-llm-client/src/clients/openai_api_client.rs text String items HashMap &lt; String , ToolItem &gt; tools Vec &lt; ContentBlock &gt; ">
   <div class="item-head">
     <span class="kind">struct</span>
     <h3>OpenAiState</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">struct OpenAiState</code>
-  <div class="tags"></div>
-  <h4>Fields</h4><table><tbody><tr><td>private</td><td>text</td><td><code>String</code></td></tr><tr><td>private</td><td>items</td><td><code>HashMap &lt; String , ToolItem &gt;</code></td></tr><tr><td>private</td><td>tools</td><td><code>Vec &lt; ContentBlock &gt;</code></td></tr></tbody></table>
+  <code class="signature">struct <a class="symbol-link" href="eos-llm-client--src-clients-openai-api-client-rs.html#item-struct-OpenAiState-139">OpenAiState</a></code>
+  <p class="docstring">Decoder state across the whole response stream. Usage and stop reason are<br>read directly from the `response.completed` payload, so they are not held<br>here.</p>
+  <div class="tags"><span>derive: Debug</span><span>derive: Default</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>text</td><td><code>String</code></td></tr><tr><td>private</td><td>items</td><td><code>HashMap &lt; String , <a class="symbol-link" href="eos-llm-client--src-clients-openai-api-client-rs.html#item-struct-ToolItem-131">ToolItem</a> &gt;</code></td></tr><tr><td>private</td><td>tools</td><td><code>Vec &lt; <a class="symbol-link" href="eos-llm-client--src-message-rs.html#item-enum-ContentBlock-34">ContentBlock</a> &gt;</code></td></tr></tbody></table>
+
   <p class="source">crates/eos-llm-client/src/clients/openai_api_client.rs:139</p>
-</article><article class="type-card" data-kind="enum" data-kind-list="enum field type-model" data-filter-text="enum OpenAiRequestDialect private enum OpenAiRequestDialect crates/eos-llm-client/src/clients/openai_api_client.rs  ">
+</article><article id="item-enum-OpenAiRequestDialect-47" class="type-card" data-kind="enum" data-kind-list="enum field type-model" data-filter-text="enum OpenAiRequestDialect private enum OpenAiRequestDialect crates/eos-llm-client/src/clients/openai_api_client.rs  ">
   <div class="item-head">
     <span class="kind">enum</span>
     <h3>OpenAiRequestDialect</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">enum OpenAiRequestDialect</code>
-  <div class="tags"><span>dto</span></div>
+  <code class="signature">enum <a class="symbol-link" href="eos-llm-client--src-clients-openai-api-client-rs.html#item-enum-OpenAiRequestDialect-47">OpenAiRequestDialect</a></code>
+  <div class="tags"><span>derive: Clone</span><span>derive: Copy</span><span>derive: Debug</span><span>dto</span></div>
   <h4>Variants</h4><table><tbody><tr><td>PublicResponses</td><td><code></code></td></tr><tr><td>CodexResponses</td><td><code></code></td></tr></tbody></table>
+
   <p class="source">crates/eos-llm-client/src/clients/openai_api_client.rs:47</p>
-</article><div class="group-label">Standalone Functions</div><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn encode_openai_body pub(crate) pub(crate) fn encode_openai_body (request : &amp; LlmRequest) -&gt; Value crates/eos-llm-client/src/clients/openai_api_client.rs  ">
+</article><div class="group-label">Standalone Functions</div><article id="item-fn-encode-openai-body-269" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn encode_openai_body pub(crate) pub(crate) fn encode_openai_body (request : &amp; LlmRequest) -&gt; Value crates/eos-llm-client/src/clients/openai_api_client.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>encode_openai_body</h3>
     <span class="visibility">pub(crate)</span>
   </div>
-  <code class="signature">pub(crate) fn encode_openai_body (request : &amp; LlmRequest) -&gt; Value</code>
-  <div class="tags"></div>
+  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-llm-client--src-clients-openai-api-client-rs.html#item-fn-encode-openai-body-269">encode_openai_body</a> (request : &amp; <a class="symbol-link" href="eos-llm-client--src-types-rs.html#item-struct-LlmRequest-113">LlmRequest</a>) -&gt; Value</code>
+  <p class="docstring">Encode an [`LlmRequest`] into an `OpenAI` `/v1/responses` request body.</p>
+  <div class="tags"><span>cfg: test</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-comment">/// Encode an [`LlmRequest`] into an `OpenAI` `/v1/responses` request body.</span>
+#[cfg(test)]
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-llm-client--src-clients-openai-api-client-rs.html#item-fn-encode-openai-body-269">encode_openai_body</a>(request: &amp;<a class="symbol-link rs-type" href="eos-llm-client--src-types-rs.html#item-struct-LlmRequest-113">LlmRequest</a>) -&gt; <span class="rs-type">Value</span> {
+    <a class="symbol-link rs-fn" href="eos-llm-client--src-clients-openai-api-client-rs.html#item-fn-encode-openai-body-with-dialect-275">encode_openai_body_with_dialect</a>(request, <a class="symbol-link rs-type" href="eos-llm-client--src-clients-openai-api-client-rs.html#item-enum-OpenAiRequestDialect-47">OpenAiRequestDialect</a>::<span class="rs-type">PublicResponses</span>)
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-llm-client/src/clients/openai_api_client.rs:269</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn decode_openai private fn decode_openai &lt; S &gt; (frames : S , request_id : Option &lt; String &gt; ,) -&gt; impl Stream &lt; Item = Result &lt; LlmStreamEvent , ProviderError &gt; &gt; + Send where S : Stream &lt; Item = Result &lt; String , ProviderError &gt; &gt; + Send , crates/eos-llm-client/src/clients/openai_api_client.rs  ">
+</article><article id="item-fn-decode-openai-151" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn decode_openai private fn decode_openai &lt; S &gt; (frames : S , request_id : Option &lt; String &gt; ,) -&gt; impl Stream &lt; Item = Result &lt; LlmStreamEvent , ProviderError &gt; &gt; + Send where S : Stream &lt; Item = Result &lt; String , ProviderError &gt; &gt; + Send , crates/eos-llm-client/src/clients/openai_api_client.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>decode_openai</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn decode_openai &lt; S &gt; (frames : S , request_id : Option &lt; String &gt; ,) -&gt; impl Stream &lt; Item = Result &lt; LlmStreamEvent , ProviderError &gt; &gt; + Send where S : Stream &lt; Item = Result &lt; String , ProviderError &gt; &gt; + Send ,</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-llm-client--src-clients-openai-api-client-rs.html#item-fn-decode-openai-151">decode_openai</a> &lt; S &gt; (frames : S , request_id : Option &lt; String &gt; ,) -&gt; impl Stream &lt; Item = Result &lt; <a class="symbol-link" href="eos-llm-client--src-events-rs.html#item-enum-LlmStreamEvent-15">LlmStreamEvent</a> , <a class="symbol-link" href="eos-llm-client--src-error-rs.html#item-struct-ProviderError-29">ProviderError</a> &gt; &gt; + Send where S : Stream &lt; Item = Result &lt; String , <a class="symbol-link" href="eos-llm-client--src-error-rs.html#item-struct-ProviderError-29">ProviderError</a> &gt; &gt; + Send ,</code>
+  <p class="docstring">Decode an `OpenAI` Responses SSE frame stream into normalized events.</p>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-comment">/// Decode an `OpenAI` Responses SSE frame stream into normalized events.</span>
+<span class="rs-kw">fn</span> decode_openai&lt;<span class="rs-type">S</span>&gt;(
+    frames: <span class="rs-type">S</span>,
+    request_id: <span class="rs-type">Option</span>&lt;<span class="rs-type">String</span>&gt;,
+) -&gt; <span class="rs-kw">impl</span> <span class="rs-type">Stream</span>&lt;<span class="rs-type">Item</span> = <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-llm-client--src-events-rs.html#item-enum-LlmStreamEvent-15">LlmStreamEvent</a>, <a class="symbol-link rs-type" href="eos-llm-client--src-error-rs.html#item-struct-ProviderError-29">ProviderError</a>&gt;&gt; + <span class="rs-type">Send</span>
+<span class="rs-kw">where</span>
+    <span class="rs-type">S</span>: <span class="rs-type">Stream</span>&lt;<span class="rs-type">Item</span> = <span class="rs-type">Result</span>&lt;<span class="rs-type">String</span>, <a class="symbol-link rs-type" href="eos-llm-client--src-error-rs.html#item-struct-ProviderError-29">ProviderError</a>&gt;&gt; + <span class="rs-type">Send</span>,
+{
+    async_stream::stream! {
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> state = <a class="symbol-link rs-type" href="eos-llm-client--src-clients-openai-api-client-rs.html#item-struct-OpenAiState-139">OpenAiState</a>::default();
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> frame_index: usize = 0;
+        futures::pin_mut!(frames);
+        <span class="rs-kw">while</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(frame) = frames.next().<span class="rs-kw">await</span> {
+            frame_index += 1;
+            <span class="rs-kw">let</span> frame = <span class="rs-kw">match</span> frame {
+                <span class="rs-type">Ok</span>(frame) =&gt; frame,
+                <span class="rs-type">Err</span>(err) =&gt; {
+                    yield <span class="rs-type">Err</span>(err);
+                    <span class="rs-kw">return</span>;
+                }
+            };
+            <span class="rs-kw">let</span> value = <span class="rs-kw">match</span> <a class="symbol-link rs-fn" href="eos-llm-client--src-sse-rs.html#item-fn-parse-sse-value-106">parse_sse_value</a>(&amp;frame, &amp;request_id, &quot;openai&quot;, frame_index) {
+                <span class="rs-type">Ok</span>(<span class="rs-type">Some</span>(value)) =&gt; value,
+                <span class="rs-type">Ok</span>(<span class="rs-type">None</span>) =&gt; <span class="rs-kw">continue</span>,
+                <span class="rs-type">Err</span>(err) =&gt; {
+                    yield <span class="rs-type">Err</span>(err);
+                    <span class="rs-kw">return</span>;
+                }
+            };
+
+            <span class="rs-kw">match</span> value.get(&quot;<span class="rs-kw">type</span>&quot;).and_then(<span class="rs-type">Value</span>::as_str) {
+                <span class="rs-type">Some</span>(&quot;response.output_text.delta&quot;) =&gt; {
+                    <span class="rs-kw">let</span> text = <a class="symbol-link rs-fn" href="eos-llm-client--src-sse-rs.html#item-fn-json-str-182">json_str</a>(&amp;value, &amp;[&quot;delta&quot;]);
+                    state.text.push_str(&amp;text);
+                    yield <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-llm-client--src-events-rs.html#item-enum-LlmStreamEvent-15">LlmStreamEvent</a>::<span class="rs-type">AssistantTextDelta</span> { text });
+                }
+                <span class="rs-type">Some</span>(&quot;response.output_item.added&quot;) =&gt; {
+                    <span class="rs-kw">let</span> item = &amp;value[&quot;item&quot;];
+                    <span class="rs-kw">if</span> item.get(&quot;<span class="rs-kw">type</span>&quot;).and_then(<span class="rs-type">Value</span>::as_str) == <span class="rs-type">Some</span>(&quot;function_call&quot;) {
+                        <span class="rs-kw">let</span> item_id = <a class="symbol-link rs-fn" href="eos-llm-client--src-sse-rs.html#item-fn-json-str-182">json_str</a>(item, &amp;[&quot;id&quot;]);
+                        state.items.insert(
+                            item_id,
+                            <a class="symbol-link rs-type" href="eos-llm-client--src-clients-openai-api-client-rs.html#item-struct-ToolItem-131">ToolItem</a> {
+                                call_id: <a class="symbol-link rs-fn" href="eos-llm-client--src-sse-rs.html#item-fn-json-str-182">json_str</a>(item, &amp;[&quot;call_id&quot;]),
+                                name: <a class="symbol-link rs-fn" href="eos-llm-client--src-sse-rs.html#item-fn-json-str-182">json_str</a>(item, &amp;[&quot;name&quot;]),
+                                arguments: <span class="rs-type">String</span>::<a class="symbol-link rs-fn" href="eos-llm-client--src-client-rs.html#method-new-56">new</a>(),
+                            },
+                        );
+                    }
+                }
+                <span class="rs-type">Some</span>(&quot;response.function_call_arguments.delta&quot;) =&gt; {
+                    <span class="rs-kw">let</span> item_id = <a class="symbol-link rs-fn" href="eos-llm-client--src-sse-rs.html#item-fn-json-str-182">json_str</a>(&amp;value, &amp;[&quot;item_id&quot;]);
+                    <span class="rs-kw">let</span> delta = <a class="symbol-link rs-fn" href="eos-llm-client--src-sse-rs.html#item-fn-json-str-182">json_str</a>(&amp;value, &amp;[&quot;delta&quot;]);
+                    <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(item) = state.items.get_mut(&amp;item_id) {
+                        item.arguments.push_str(&amp;delta);
+                    }
+                }
+                <span class="rs-type">Some</span>(&quot;response.function_call_arguments.done&quot;) =&gt; {
+                    <span class="rs-kw">let</span> item_id = <a class="symbol-link rs-fn" href="eos-llm-client--src-sse-rs.html#item-fn-json-str-182">json_str</a>(&amp;value, &amp;[&quot;item_id&quot;]);
+                    <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(item) = state.items.remove(&amp;item_id) {
+                        <span class="rs-kw">let</span> input = <a class="symbol-link rs-fn" href="eos-llm-client--src-sse-rs.html#item-fn-parse-tool-args-201">parse_tool_args</a>(&amp;item.arguments);
+                        <span class="rs-kw">let</span> tool_use_id = <span class="rs-kw">match</span> <span class="rs-type">ToolUseId</span>::try_from(item.call_id.as_str()) {
+                            <span class="rs-type">Ok</span>(id) =&gt; id,
+                            <span class="rs-type">Err</span>(_) =&gt; {
+                                yield <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-llm-client--src-error-rs.html#item-struct-ProviderError-29">ProviderError</a>::<a class="symbol-link rs-fn" href="eos-llm-client--src-error-rs.html#method-decode-85">decode</a>(
+                                    request_id.clone(),
+                                    &quot;function call missing call_id&quot;,
+                                ));
+                                <span class="rs-kw">return</span>;
+                            }
+                        };
+                        state.tools.<a class="symbol-link rs-fn" href="eos-llm-client--src-sse-rs.html#method-push-36">push</a>(<a class="symbol-link rs-type" href="eos-llm-client--src-message-rs.html#item-enum-ContentBlock-34">ContentBlock</a>::<span class="rs-type">ToolUse</span> {
+                            tool_use_id: tool_use_id.clone(),
+                            name: item.name.clone(),
+                            input: input.clone(),
+                        });
+                        yield <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-llm-client--src-events-rs.html#item-enum-LlmStreamEvent-15">LlmStreamEvent</a>::<span class="rs-type">ToolUseDelta</span> {
+                            tool_use_id,
+                            name: item.name,
+                            input,
+                        });
+                    }
+                }
+                <span class="rs-type">Some</span>(&quot;response.completed&quot;) =&gt; {
+                    <span class="rs-kw">let</span> response = &amp;value[&quot;response&quot;];
+                    <span class="rs-kw">let</span> usage = <a class="symbol-link rs-type" href="eos-llm-client--src-types-rs.html#item-struct-UsageSnapshot-12">UsageSnapshot</a> {
+                        input_tokens: <a class="symbol-link rs-fn" href="eos-llm-client--src-sse-rs.html#item-fn-json-u32-187">json_u32</a>(response, &amp;[&quot;usage&quot;, &quot;input_tokens&quot;]),
+                        output_tokens: <a class="symbol-link rs-fn" href="eos-llm-client--src-sse-rs.html#item-fn-json-u32-187">json_u32</a>(response, &amp;[&quot;usage&quot;, &quot;output_tokens&quot;]),
+                    };
+                    <span class="rs-kw">let</span> stop_reason = response
+                        .get(&quot;stop_reason&quot;)
+                        .and_then(<span class="rs-type">Value</span>::as_str)
+                        .map(<a class="symbol-link rs-type" href="eos-llm-client--src-events-rs.html#item-enum-StopReason-53">StopReason</a>::parse);
+
+                    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> content = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-llm-client--src-client-rs.html#method-new-56">new</a>();
+                    <span class="rs-kw">if</span> !state.text.is_empty() {
+                        content.<a class="symbol-link rs-fn" href="eos-llm-client--src-sse-rs.html#method-push-36">push</a>(<a class="symbol-link rs-type" href="eos-llm-client--src-message-rs.html#item-enum-ContentBlock-34">ContentBlock</a>::<span class="rs-type">Text</span> {
+                            text: std::mem::take(&amp;<span class="rs-kw">mut</span> state.text),
+                        });
+                    }
+                    content.append(&amp;<span class="rs-kw">mut</span> state.tools);
+
+                    yield <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-llm-client--src-events-rs.html#item-enum-LlmStreamEvent-15">LlmStreamEvent</a>::<span class="rs-type">AssistantMessageComplete</span> {
+                        message: <a class="symbol-link rs-type" href="eos-llm-client--src-message-rs.html#item-struct-Message-88">Message</a> {
+                            role: <a class="symbol-link rs-type" href="eos-llm-client--src-message-rs.html#item-enum-MessageRole-10">MessageRole</a>::<span class="rs-type">Assistant</span>,
+                            content,
+                        },
+                        usage,
+                        stop_reason,
+                    });
+                    <span class="rs-kw">return</span>;
+                }
+                _ =&gt; {}
+            }
+        }
+    }
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-llm-client/src/clients/openai_api_client.rs:151</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn encode_openai_body_with_dialect private fn encode_openai_body_with_dialect (request : &amp; LlmRequest , dialect : OpenAiRequestDialect) -&gt; Value crates/eos-llm-client/src/clients/openai_api_client.rs  ">
+</article><article id="item-fn-encode-openai-body-with-dialect-275" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn encode_openai_body_with_dialect private fn encode_openai_body_with_dialect (request : &amp; LlmRequest , dialect : OpenAiRequestDialect) -&gt; Value crates/eos-llm-client/src/clients/openai_api_client.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>encode_openai_body_with_dialect</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn encode_openai_body_with_dialect (request : &amp; LlmRequest , dialect : OpenAiRequestDialect) -&gt; Value</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-llm-client--src-clients-openai-api-client-rs.html#item-fn-encode-openai-body-with-dialect-275">encode_openai_body_with_dialect</a> (request : &amp; <a class="symbol-link" href="eos-llm-client--src-types-rs.html#item-struct-LlmRequest-113">LlmRequest</a> , dialect : <a class="symbol-link" href="eos-llm-client--src-clients-openai-api-client-rs.html#item-enum-OpenAiRequestDialect-47">OpenAiRequestDialect</a>) -&gt; Value</code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-llm-client--src-clients-openai-api-client-rs.html#item-fn-encode-openai-body-with-dialect-275">encode_openai_body_with_dialect</a>(request: &amp;<a class="symbol-link rs-type" href="eos-llm-client--src-types-rs.html#item-struct-LlmRequest-113">LlmRequest</a>, dialect: <a class="symbol-link rs-type" href="eos-llm-client--src-clients-openai-api-client-rs.html#item-enum-OpenAiRequestDialect-47">OpenAiRequestDialect</a>) -&gt; <span class="rs-type">Value</span> {
+    <span class="rs-kw">let</span> input: <span class="rs-type">Vec</span>&lt;<span class="rs-type">Value</span>&gt; = request
+        .messages
+        .iter()
+        .flat_map(serialize_openai_message)
+        .collect();
+
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> body = json!({
+        &quot;model&quot;: request.model,
+        &quot;input&quot;: input,
+        &quot;stream&quot;: <span class="rs-kw">true</span>,
+        &quot;store&quot;: <span class="rs-kw">false</span>,
+        &quot;parallel_tool_calls&quot;: <span class="rs-kw">false</span>,
+        &quot;include&quot;: [],
+    });
+    <span class="rs-kw">if</span> matches!(dialect, <a class="symbol-link rs-type" href="eos-llm-client--src-clients-openai-api-client-rs.html#item-enum-OpenAiRequestDialect-47">OpenAiRequestDialect</a>::<span class="rs-type">PublicResponses</span>) {
+        body[&quot;max_output_tokens&quot;] = json!(request.max_tokens);
+    }
+    <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(system) = &amp;request.system_prompt {
+        body[&quot;instructions&quot;] = json!(system);
+    }
+    <span class="rs-kw">if</span> !request.tools.is_empty() {
+        body[&quot;tools&quot;] = <span class="rs-type">Value</span>::<span class="rs-type">Array</span>(request.tools.iter().map(serialize_openai_tool).collect());
+    }
+    <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(choice) = &amp;request.tool_choice {
+        body[&quot;tool_choice&quot;] = <a class="symbol-link rs-fn" href="eos-llm-client--src-clients-openai-api-client-rs.html#item-fn-encode-openai-tool-choice-376">encode_openai_tool_choice</a>(choice, dialect);
+    }
+    <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(effort) = request.reasoning_effort {
+        body[&quot;reasoning&quot;] = json!({ &quot;effort&quot;: effort.<a class="symbol-link rs-fn" href="eos-llm-client--src-message-rs.html#method-as-wire-25">as_wire</a>() });
+    }
+    body
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-llm-client/src/clients/openai_api_client.rs:275</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn serialize_openai_message private fn serialize_openai_message (message : &amp; Message) -&gt; Vec &lt; Value &gt; crates/eos-llm-client/src/clients/openai_api_client.rs  ">
+</article><article id="item-fn-serialize-openai-message-308" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn serialize_openai_message private fn serialize_openai_message (message : &amp; Message) -&gt; Vec &lt; Value &gt; crates/eos-llm-client/src/clients/openai_api_client.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>serialize_openai_message</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn serialize_openai_message (message : &amp; Message) -&gt; Vec &lt; Value &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-llm-client--src-clients-openai-api-client-rs.html#item-fn-serialize-openai-message-308">serialize_openai_message</a> (message : &amp; <a class="symbol-link" href="eos-llm-client--src-message-rs.html#item-struct-Message-88">Message</a>) -&gt; Vec &lt; Value &gt;</code>
+  <p class="docstring">Project one neutral message to Responses-API input items: a `message` item<br>for its text parts (if any), plus `function_call` / `function_call_output`<br>items for tool calls and results. `Reasoning` is dropped (managed by the<br>provider).</p>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-comment">/// Project one neutral message to Responses-API input items: a `message` item</span>
+<span class="rs-comment">/// for its text parts (if any), plus `function_call` / `function_call_output`</span>
+<span class="rs-comment">/// items for tool calls and results. `Reasoning` is dropped (managed by the</span>
+<span class="rs-comment">/// provider).</span>
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-llm-client--src-clients-openai-api-client-rs.html#item-fn-serialize-openai-message-308">serialize_openai_message</a>(message: &amp;<a class="symbol-link rs-type" href="eos-llm-client--src-message-rs.html#item-struct-Message-88">Message</a>) -&gt; <span class="rs-type">Vec</span>&lt;<span class="rs-type">Value</span>&gt; {
+    <span class="rs-kw">let</span> text_type = <span class="rs-kw">match</span> message.role {
+        <a class="symbol-link rs-type" href="eos-llm-client--src-message-rs.html#item-enum-MessageRole-10">MessageRole</a>::<span class="rs-type">User</span> =&gt; &quot;input_text&quot;,
+        <a class="symbol-link rs-type" href="eos-llm-client--src-message-rs.html#item-enum-MessageRole-10">MessageRole</a>::<span class="rs-type">Assistant</span> =&gt; &quot;output_text&quot;,
+    };
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> items = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-llm-client--src-client-rs.html#method-new-56">new</a>();
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> text_parts = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-llm-client--src-client-rs.html#method-new-56">new</a>();
+    <span class="rs-kw">for</span> block <span class="rs-kw">in</span> &amp;message.content {
+        <span class="rs-kw">match</span> block {
+            <a class="symbol-link rs-type" href="eos-llm-client--src-message-rs.html#item-enum-ContentBlock-34">ContentBlock</a>::<span class="rs-type">Text</span> { text } =&gt; {
+                text_parts.<a class="symbol-link rs-fn" href="eos-llm-client--src-sse-rs.html#method-push-36">push</a>(json!({ &quot;<span class="rs-kw">type</span>&quot;: text_type, &quot;text&quot;: text }));
+            }
+            <a class="symbol-link rs-type" href="eos-llm-client--src-message-rs.html#item-enum-ContentBlock-34">ContentBlock</a>::<span class="rs-type">SystemNotification</span> { text } =&gt; {
+                text_parts.<a class="symbol-link rs-fn" href="eos-llm-client--src-sse-rs.html#method-push-36">push</a>(json!({
+                    &quot;<span class="rs-kw">type</span>&quot;: text_type,
+                    &quot;text&quot;: format!(&quot;&lt;system-reminder&gt;\n{text}\n&lt;/system-reminder&gt;&quot;),
+                }));
+            }
+            <a class="symbol-link rs-type" href="eos-llm-client--src-message-rs.html#item-enum-ContentBlock-34">ContentBlock</a>::<span class="rs-type">ToolUse</span> {
+                tool_use_id,
+                name,
+                input,
+            } =&gt; items.<a class="symbol-link rs-fn" href="eos-llm-client--src-sse-rs.html#method-push-36">push</a>(json!({
+                &quot;<span class="rs-kw">type</span>&quot;: &quot;function_call&quot;,
+                &quot;call_id&quot;: tool_use_id,
+                &quot;name&quot;: name,
+                &quot;arguments&quot;: serde_json::to_string(input).unwrap_or_else(|_| &quot;{}&quot;.to_owned()),
+            })),
+            <a class="symbol-link rs-type" href="eos-llm-client--src-message-rs.html#item-enum-ContentBlock-34">ContentBlock</a>::<span class="rs-type">ToolResult</span> {
+                tool_use_id,
+                content,
+                ..
+            } =&gt; items.<a class="symbol-link rs-fn" href="eos-llm-client--src-sse-rs.html#method-push-36">push</a>(json!({
+                &quot;<span class="rs-kw">type</span>&quot;: &quot;function_call_output&quot;,
+                &quot;call_id&quot;: tool_use_id,
+                &quot;output&quot;: content,
+            })),
+            <a class="symbol-link rs-type" href="eos-llm-client--src-message-rs.html#item-enum-ContentBlock-34">ContentBlock</a>::<span class="rs-type">Reasoning</span> { .. } =&gt; {}
+        }
+    }
+    <span class="rs-kw">if</span> !text_parts.is_empty() {
+        items.insert(
+            0,
+            json!({ &quot;<span class="rs-kw">type</span>&quot;: &quot;message&quot;, &quot;role&quot;: message.role.<a class="symbol-link rs-fn" href="eos-llm-client--src-message-rs.html#method-as-wire-25">as_wire</a>(), &quot;content&quot;: text_parts }),
+        );
+    }
+    items
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-llm-client/src/clients/openai_api_client.rs:308</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn serialize_openai_tool private fn serialize_openai_tool (spec : &amp; ToolSpec) -&gt; Value crates/eos-llm-client/src/clients/openai_api_client.rs  ">
+</article><article id="item-fn-serialize-openai-tool-361" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn serialize_openai_tool private fn serialize_openai_tool (spec : &amp; ToolSpec) -&gt; Value crates/eos-llm-client/src/clients/openai_api_client.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>serialize_openai_tool</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn serialize_openai_tool (spec : &amp; ToolSpec) -&gt; Value</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-llm-client--src-clients-openai-api-client-rs.html#item-fn-serialize-openai-tool-361">serialize_openai_tool</a> (spec : &amp; <a class="symbol-link" href="eos-llm-client--src-types-rs.html#item-struct-ToolSpec-30">ToolSpec</a>) -&gt; Value</code>
+  <p class="docstring">Project a tool spec to a Responses function tool entry, mapping<br>`output_schema` when present (GC-llm-client-02).</p>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-comment">/// Project a tool spec to a Responses function tool entry, mapping</span>
+<span class="rs-comment">/// `output_schema` when present (GC-llm-client-02).</span>
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-llm-client--src-clients-openai-api-client-rs.html#item-fn-serialize-openai-tool-361">serialize_openai_tool</a>(spec: &amp;<a class="symbol-link rs-type" href="eos-llm-client--src-types-rs.html#item-struct-ToolSpec-30">ToolSpec</a>) -&gt; <span class="rs-type">Value</span> {
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> tool = json!({
+        &quot;<span class="rs-kw">type</span>&quot;: &quot;function&quot;,
+        &quot;name&quot;: spec.name,
+        &quot;description&quot;: spec.description,
+        &quot;parameters&quot;: spec.input_schema,
+    });
+    <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(output_schema) = &amp;spec.output_schema {
+        tool[&quot;output_schema&quot;] = json!(output_schema);
+    }
+    tool
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-llm-client/src/clients/openai_api_client.rs:361</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn encode_openai_tool_choice private fn encode_openai_tool_choice (choice : &amp; ToolChoice , dialect : OpenAiRequestDialect) -&gt; Value crates/eos-llm-client/src/clients/openai_api_client.rs  ">
+</article><article id="item-fn-encode-openai-tool-choice-376" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn encode_openai_tool_choice private fn encode_openai_tool_choice (choice : &amp; ToolChoice , dialect : OpenAiRequestDialect) -&gt; Value crates/eos-llm-client/src/clients/openai_api_client.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>encode_openai_tool_choice</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn encode_openai_tool_choice (choice : &amp; ToolChoice , dialect : OpenAiRequestDialect) -&gt; Value</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-llm-client--src-clients-openai-api-client-rs.html#item-fn-encode-openai-tool-choice-376">encode_openai_tool_choice</a> (choice : &amp; <a class="symbol-link" href="eos-llm-client--src-types-rs.html#item-enum-ToolChoice-68">ToolChoice</a> , dialect : <a class="symbol-link" href="eos-llm-client--src-clients-openai-api-client-rs.html#item-enum-OpenAiRequestDialect-47">OpenAiRequestDialect</a>) -&gt; Value</code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-llm-client--src-clients-openai-api-client-rs.html#item-fn-encode-openai-tool-choice-376">encode_openai_tool_choice</a>(choice: &amp;<a class="symbol-link rs-type" href="eos-llm-client--src-types-rs.html#item-enum-ToolChoice-68">ToolChoice</a>, dialect: <a class="symbol-link rs-type" href="eos-llm-client--src-clients-openai-api-client-rs.html#item-enum-OpenAiRequestDialect-47">OpenAiRequestDialect</a>) -&gt; <span class="rs-type">Value</span> {
+    <span class="rs-kw">match</span> choice {
+        <a class="symbol-link rs-type" href="eos-llm-client--src-types-rs.html#item-enum-ToolChoice-68">ToolChoice</a>::<span class="rs-type">Auto</span> =&gt; json!(&quot;auto&quot;),
+        <a class="symbol-link rs-type" href="eos-llm-client--src-types-rs.html#item-enum-ToolChoice-68">ToolChoice</a>::<span class="rs-type">Any</span> =&gt; json!(&quot;required&quot;),
+        <a class="symbol-link rs-type" href="eos-llm-client--src-types-rs.html#item-enum-ToolChoice-68">ToolChoice</a>::<span class="rs-type">Tool</span> { name } =&gt; <span class="rs-kw">match</span> dialect {
+            <a class="symbol-link rs-type" href="eos-llm-client--src-clients-openai-api-client-rs.html#item-enum-OpenAiRequestDialect-47">OpenAiRequestDialect</a>::<span class="rs-type">PublicResponses</span> =&gt; json!({ &quot;<span class="rs-kw">type</span>&quot;: &quot;function&quot;, &quot;name&quot;: name }),
+            <a class="symbol-link rs-type" href="eos-llm-client--src-clients-openai-api-client-rs.html#item-enum-OpenAiRequestDialect-47">OpenAiRequestDialect</a>::<span class="rs-type">CodexResponses</span> =&gt; json!(&quot;required&quot;),
+        },
+    }
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-llm-client/src/clients/openai_api_client.rs:376</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn discriminant private fn discriminant (event : &amp; LlmStreamEvent) -&gt; &amp; 'static str crates/eos-llm-client/src/clients/openai_api_client.rs  ">
+</article><article id="item-fn-discriminant-395" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn discriminant private fn discriminant (event : &amp; LlmStreamEvent) -&gt; &amp; 'static str crates/eos-llm-client/src/clients/openai_api_client.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>discriminant</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn discriminant (event : &amp; LlmStreamEvent) -&gt; &amp; 'static str</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-llm-client--src-clients-openai-api-client-rs.html#item-fn-discriminant-395">discriminant</a> (event : &amp; <a class="symbol-link" href="eos-llm-client--src-events-rs.html#item-enum-LlmStreamEvent-15">LlmStreamEvent</a>) -&gt; &amp; &#x27;static str</code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-llm-client--src-clients-openai-api-client-rs.html#item-fn-discriminant-395">discriminant</a>(event: &amp;<a class="symbol-link rs-type" href="eos-llm-client--src-events-rs.html#item-enum-LlmStreamEvent-15">LlmStreamEvent</a>) -&gt; &amp;&#x27;<span class="rs-kw">static</span> str {
+        <span class="rs-kw">match</span> event {
+            <a class="symbol-link rs-type" href="eos-llm-client--src-events-rs.html#item-enum-LlmStreamEvent-15">LlmStreamEvent</a>::<span class="rs-type">AssistantTextDelta</span> { .. } =&gt; &quot;text&quot;,
+            <a class="symbol-link rs-type" href="eos-llm-client--src-events-rs.html#item-enum-LlmStreamEvent-15">LlmStreamEvent</a>::<span class="rs-type">ReasoningDelta</span> { .. } =&gt; &quot;reasoning&quot;,
+            <a class="symbol-link rs-type" href="eos-llm-client--src-events-rs.html#item-enum-LlmStreamEvent-15">LlmStreamEvent</a>::<span class="rs-type">ToolUseDelta</span> { .. } =&gt; &quot;tool_use&quot;,
+            <a class="symbol-link rs-type" href="eos-llm-client--src-events-rs.html#item-enum-LlmStreamEvent-15">LlmStreamEvent</a>::<span class="rs-type">AssistantMessageComplete</span> { .. } =&gt; &quot;complete&quot;,
+        }
+    }
+</code></pre>
+</details>
 
   <p class="source">crates/eos-llm-client/src/clients/openai_api_client.rs:395</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn decode_fixture private async fn decode_fixture (raw : &amp; str) -&gt; Vec &lt; LlmStreamEvent &gt; crates/eos-llm-client/src/clients/openai_api_client.rs  ">
+</article><article id="item-fn-decode-fixture-404" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn decode_fixture private async fn decode_fixture (raw : &amp; str) -&gt; Vec &lt; LlmStreamEvent &gt; crates/eos-llm-client/src/clients/openai_api_client.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>decode_fixture</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">async fn decode_fixture (raw : &amp; str) -&gt; Vec &lt; LlmStreamEvent &gt;</code>
+  <code class="signature">async fn <a class="symbol-link" href="eos-llm-client--src-clients-anthropic-api-client-rs.html#item-fn-decode-fixture-444">decode_fixture</a> (raw : &amp; str) -&gt; Vec &lt; <a class="symbol-link" href="eos-llm-client--src-events-rs.html#item-enum-LlmStreamEvent-15">LlmStreamEvent</a> &gt;</code>
   <div class="tags"><span>async</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-llm-client--src-clients-anthropic-api-client-rs.html#item-fn-decode-fixture-444">decode_fixture</a>(raw: &amp;str) -&gt; <span class="rs-type">Vec</span>&lt;<a class="symbol-link rs-type" href="eos-llm-client--src-events-rs.html#item-enum-LlmStreamEvent-15">LlmStreamEvent</a>&gt; {
+        <span class="rs-kw">let</span> bytes = <span class="rs-type">Bytes</span>::from(raw.to_owned());
+        <span class="rs-kw">let</span> byte_stream = futures::stream::iter(vec![<span class="rs-type">Ok</span>::&lt;<span class="rs-type">Bytes</span>, <a class="symbol-link rs-type" href="eos-llm-client--src-error-rs.html#item-struct-ProviderError-29">ProviderError</a>&gt;(bytes)]);
+        <a class="symbol-link rs-fn" href="eos-llm-client--src-clients-openai-api-client-rs.html#item-fn-decode-openai-151">decode_openai</a>(<a class="symbol-link rs-fn" href="eos-llm-client--src-sse-rs.html#item-fn-frame-stream-139">frame_stream</a>(byte_stream), <span class="rs-type">Some</span>(&quot;req-test&quot;.to_owned()))
+            .collect::&lt;<span class="rs-type">Vec</span>&lt;_&gt;&gt;()
+            .<span class="rs-kw">await</span>
+            .into_iter()
+            .map(<span class="rs-type">Result</span>::unwrap)
+            .collect()
+    }
+</code></pre>
+</details>
 
   <p class="source">crates/eos-llm-client/src/clients/openai_api_client.rs:404</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn in_stream_error_event_is_swallowed_at_decoder_level private async fn in_stream_error_event_is_swallowed_at_decoder_level () crates/eos-llm-client/src/clients/openai_api_client.rs  ">
+</article><article id="item-fn-in-stream-error-event-is-swallowed-at-decoder-level-423" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn in_stream_error_event_is_swallowed_at_decoder_level private async fn in_stream_error_event_is_swallowed_at_decoder_level () crates/eos-llm-client/src/clients/openai_api_client.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>in_stream_error_event_is_swallowed_at_decoder_level</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">async fn in_stream_error_event_is_swallowed_at_decoder_level ()</code>
-  <div class="tags"><span>async</span></div>
+  <code class="signature">async fn <a class="symbol-link" href="eos-llm-client--src-clients-openai-api-client-rs.html#item-fn-in-stream-error-event-is-swallowed-at-decoder-level-423">in_stream_error_event_is_swallowed_at_decoder_level</a> ()</code>
+  <div class="tags"><span>async</span><span>tokio::test</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[tokio::test]
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-llm-client--src-clients-openai-api-client-rs.html#item-fn-in-stream-error-event-is-swallowed-at-decoder-level-423">in_stream_error_event_is_swallowed_at_decoder_level</a>() {
+        <span class="rs-kw">let</span> sse = concat!(
+            &quot;data: {\&quot;<span class="rs-kw">type</span>\&quot;: \&quot;response.output_text.delta\&quot;, \&quot;delta\&quot;: \&quot;<span class="rs-type">Hi</span>\&quot;}\n&quot;,
+            &quot;\n&quot;,
+            &quot;data: {\&quot;<span class="rs-kw">type</span>\&quot;: \&quot;error\&quot;, \&quot;error\&quot;: {\&quot;message\&quot;: \&quot;boom\&quot;}}\n&quot;,
+        );
+        <span class="rs-kw">let</span> events = <a class="symbol-link rs-fn" href="eos-llm-client--src-clients-anthropic-api-client-rs.html#item-fn-decode-fixture-444">decode_fixture</a>(sse).<span class="rs-kw">await</span>;
+        assert!(events.iter().any(|event| matches!(
+            event,
+            <a class="symbol-link rs-type" href="eos-llm-client--src-events-rs.html#item-enum-LlmStreamEvent-15">LlmStreamEvent</a>::<span class="rs-type">AssistantTextDelta</span> { text } <span class="rs-kw">if</span> text == &quot;<span class="rs-type">Hi</span>&quot;
+        )));
+        assert!(
+            !events
+                .iter()
+                .any(|event| matches!(event, <a class="symbol-link rs-type" href="eos-llm-client--src-events-rs.html#item-enum-LlmStreamEvent-15">LlmStreamEvent</a>::<span class="rs-type">AssistantMessageComplete</span> { .. })),
+            &quot;no completion is emitted <span class="rs-kw">for</span> an error-terminated stream&quot;
+        );
+    }
+</code></pre>
+</details>
 
   <p class="source">crates/eos-llm-client/src/clients/openai_api_client.rs:423</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn decodes_openai_responses_fixture private async fn decodes_openai_responses_fixture () crates/eos-llm-client/src/clients/openai_api_client.rs  ">
+</article><article id="item-fn-decodes-openai-responses-fixture-446" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn decodes_openai_responses_fixture private async fn decodes_openai_responses_fixture () crates/eos-llm-client/src/clients/openai_api_client.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>decodes_openai_responses_fixture</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">async fn decodes_openai_responses_fixture ()</code>
-  <div class="tags"><span>async</span></div>
+  <code class="signature">async fn <a class="symbol-link" href="eos-llm-client--src-clients-openai-api-client-rs.html#item-fn-decodes-openai-responses-fixture-446">decodes_openai_responses_fixture</a> ()</code>
+  <div class="tags"><span>async</span><span>tokio::test</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[tokio::test]
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-llm-client--src-clients-openai-api-client-rs.html#item-fn-decodes-openai-responses-fixture-446">decodes_openai_responses_fixture</a>() {
+        <span class="rs-kw">let</span> events = <a class="symbol-link rs-fn" href="eos-llm-client--src-clients-anthropic-api-client-rs.html#item-fn-decode-fixture-444">decode_fixture</a>(include_str!(&quot;../../tests/fixtures/openai/full.sse&quot;)).<span class="rs-kw">await</span>;
+
+        assert_eq!(
+            events[0],
+            <a class="symbol-link rs-type" href="eos-llm-client--src-events-rs.html#item-enum-LlmStreamEvent-15">LlmStreamEvent</a>::<span class="rs-type">AssistantTextDelta</span> { text: &quot;<span class="rs-type">Hi</span>&quot;.into() }
+        );
+        <span class="rs-kw">match</span> &amp;events[1] {
+            <a class="symbol-link rs-type" href="eos-llm-client--src-events-rs.html#item-enum-LlmStreamEvent-15">LlmStreamEvent</a>::<span class="rs-type">ToolUseDelta</span> {
+                tool_use_id,
+                name,
+                input,
+            } =&gt; {
+                assert_eq!(tool_use_id.as_str(), &quot;call_9&quot;);
+                assert_eq!(name, &quot;read_file&quot;);
+                assert_eq!(input.get(&quot;path&quot;).and_then(<span class="rs-type">Value</span>::as_str), <span class="rs-type">Some</span>(&quot;foo.txt&quot;));
+            }
+            other =&gt; panic!(&quot;expected tool_use delta, got {other:?}&quot;),
+        }
+        <span class="rs-kw">match</span> &amp;events[2] {
+            <a class="symbol-link rs-type" href="eos-llm-client--src-events-rs.html#item-enum-LlmStreamEvent-15">LlmStreamEvent</a>::<span class="rs-type">AssistantMessageComplete</span> {
+                usage,
+                stop_reason,
+                message,
+            } =&gt; {
+                assert_eq!(usage.input_tokens, 5);
+                assert_eq!(usage.output_tokens, 4);
+                assert_eq!(*stop_reason, <span class="rs-type">Some</span>(<a class="symbol-link rs-type" href="eos-llm-client--src-events-rs.html#item-enum-StopReason-53">StopReason</a>::<span class="rs-type">ToolUse</span>));
+                assert_eq!(message.content.len(), 2); <span class="rs-comment">// Text + ToolUse</span>
+            }
+            other =&gt; panic!(&quot;expected complete, got {other:?}&quot;),
+        }
+
+        <span class="rs-comment">// Variant sequence matches the Anthropic text+tool path.</span>
+        <span class="rs-kw">let</span> openai_seq: <span class="rs-type">Vec</span>&lt;_&gt; = events.iter().map(discriminant).collect();
+        <span class="rs-kw">let</span> anthropic_events: <span class="rs-type">Vec</span>&lt;<a class="symbol-link rs-type" href="eos-llm-client--src-events-rs.html#item-enum-LlmStreamEvent-15">LlmStreamEvent</a>&gt; = {
+            <span class="rs-kw">let</span> bytes = <span class="rs-type">Bytes</span>::from(
+                include_str!(&quot;../../tests/fixtures/anthropic/text_tool.sse&quot;).to_owned(),
+            );
+            <span class="rs-kw">let</span> byte_stream = futures::stream::iter(vec![<span class="rs-type">Ok</span>::&lt;<span class="rs-type">Bytes</span>, <a class="symbol-link rs-type" href="eos-llm-client--src-error-rs.html#item-struct-ProviderError-29">ProviderError</a>&gt;(bytes)]);
+            <span class="rs-kw">crate</span>::clients::anthropic_api_client::<a class="symbol-link rs-fn" href="eos-llm-client--src-clients-anthropic-api-client-rs.html#item-fn-decode-anthropic-for-test-419">decode_anthropic_for_test</a>(<a class="symbol-link rs-fn" href="eos-llm-client--src-sse-rs.html#item-fn-frame-stream-139">frame_stream</a>(
+                byte_stream,
+            ))
+            .<span class="rs-kw">await</span>
+        };
+        <span class="rs-kw">let</span> anthropic_seq: <span class="rs-type">Vec</span>&lt;_&gt; = anthropic_events.iter().map(discriminant).collect();
+        assert_eq!(
+            openai_seq, anthropic_seq,
+            &quot;providers are variant-substitutable&quot;
+        );
+    }
+</code></pre>
+</details>
 
   <p class="source">crates/eos-llm-client/src/clients/openai_api_client.rs:446</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn encode_projects_tools_per_provider private fn encode_projects_tools_per_provider () crates/eos-llm-client/src/clients/openai_api_client.rs  ">
+</article><article id="item-fn-encode-projects-tools-per-provider-501" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn encode_projects_tools_per_provider private fn encode_projects_tools_per_provider () crates/eos-llm-client/src/clients/openai_api_client.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>encode_projects_tools_per_provider</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn encode_projects_tools_per_provider ()</code>
-  <div class="tags"></div>
+  <code class="signature">fn <a class="symbol-link" href="eos-llm-client--src-clients-anthropic-api-client-rs.html#item-fn-encode-projects-tools-per-provider-584">encode_projects_tools_per_provider</a> ()</code>
+  <div class="tags"><span>test</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-llm-client--src-clients-anthropic-api-client-rs.html#item-fn-encode-projects-tools-per-provider-584">encode_projects_tools_per_provider</a>() {
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> input_schema = <span class="rs-type">JsonObject</span>::<a class="symbol-link rs-fn" href="eos-llm-client--src-client-rs.html#method-new-56">new</a>();
+        input_schema.insert(&quot;<span class="rs-kw">type</span>&quot;.into(), json!(&quot;object&quot;));
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> output_schema = <span class="rs-type">JsonObject</span>::<a class="symbol-link rs-fn" href="eos-llm-client--src-client-rs.html#method-new-56">new</a>();
+        output_schema.insert(&quot;<span class="rs-kw">type</span>&quot;.into(), json!(&quot;string&quot;));
+        <span class="rs-kw">let</span> spec = <a class="symbol-link rs-type" href="eos-llm-client--src-types-rs.html#item-struct-ToolSpec-30">ToolSpec</a>::<a class="symbol-link rs-fn" href="eos-llm-client--src-client-rs.html#method-new-56">new</a>(
+            &quot;read_file&quot;,
+            &quot;<span class="rs-type">Read</span> a file&quot;,
+            input_schema,
+            <span class="rs-type">Some</span>(output_schema),
+        );
+
+        <span class="rs-kw">let</span> request = <a class="symbol-link rs-type" href="eos-llm-client--src-types-rs.html#item-struct-LlmRequest-113">LlmRequest</a>::<a class="symbol-link rs-fn" href="eos-llm-client--src-types-rs.html#method-builder-140">builder</a>(&quot;gpt&quot;).<a class="symbol-link rs-fn" href="eos-llm-client--src-types-rs.html#method-tools-192">tools</a>(vec![spec]).<a class="symbol-link rs-fn" href="eos-llm-client--src-types-rs.html#method-build-210">build</a>();
+        <span class="rs-kw">let</span> body = <a class="symbol-link rs-fn" href="eos-llm-client--src-clients-openai-api-client-rs.html#item-fn-encode-openai-body-269">encode_openai_body</a>(&amp;request);
+        <span class="rs-kw">let</span> tool = &amp;body[&quot;tools&quot;][0];
+        assert_eq!(tool[&quot;<span class="rs-kw">type</span>&quot;], json!(&quot;function&quot;));
+        assert_eq!(tool[&quot;name&quot;], json!(&quot;read_file&quot;));
+        assert!(tool.get(&quot;parameters&quot;).is_some());
+        assert!(
+            tool.get(&quot;output_schema&quot;).is_some(),
+            &quot;openai maps output_schema&quot;
+        );
+        assert_eq!(body[&quot;stream&quot;], json!(<span class="rs-kw">true</span>));
+        assert_eq!(body[&quot;store&quot;], json!(<span class="rs-kw">false</span>));
+        assert_eq!(body[&quot;parallel_tool_calls&quot;], json!(<span class="rs-kw">false</span>));
+        assert_eq!(body[&quot;include&quot;], json!([]));
+        assert_eq!(body[&quot;max_output_tokens&quot;], json!(request.max_tokens));
+    }
+</code></pre>
+</details>
 
   <p class="source">crates/eos-llm-client/src/clients/openai_api_client.rs:501</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn encode_codex_response_body_uses_chatgpt_backend_shape private fn encode_codex_response_body_uses_chatgpt_backend_shape () crates/eos-llm-client/src/clients/openai_api_client.rs  ">
+</article><article id="item-fn-encode-codex-response-body-uses-chatgpt-backend-shape-531" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn encode_codex_response_body_uses_chatgpt_backend_shape private fn encode_codex_response_body_uses_chatgpt_backend_shape () crates/eos-llm-client/src/clients/openai_api_client.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>encode_codex_response_body_uses_chatgpt_backend_shape</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn encode_codex_response_body_uses_chatgpt_backend_shape ()</code>
-  <div class="tags"></div>
+  <code class="signature">fn <a class="symbol-link" href="eos-llm-client--src-clients-openai-api-client-rs.html#item-fn-encode-codex-response-body-uses-chatgpt-backend-shape-531">encode_codex_response_body_uses_chatgpt_backend_shape</a> ()</code>
+  <div class="tags"><span>test</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-llm-client--src-clients-openai-api-client-rs.html#item-fn-encode-codex-response-body-uses-chatgpt-backend-shape-531">encode_codex_response_body_uses_chatgpt_backend_shape</a>() {
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> input_schema = <span class="rs-type">JsonObject</span>::<a class="symbol-link rs-fn" href="eos-llm-client--src-client-rs.html#method-new-56">new</a>();
+        input_schema.insert(&quot;<span class="rs-kw">type</span>&quot;.into(), json!(&quot;object&quot;));
+        <span class="rs-kw">let</span> spec = <a class="symbol-link rs-type" href="eos-llm-client--src-types-rs.html#item-struct-ToolSpec-30">ToolSpec</a>::<a class="symbol-link rs-fn" href="eos-llm-client--src-client-rs.html#method-new-56">new</a>(&quot;smoke&quot;, &quot;<span class="rs-type">Smoke</span> tool&quot;, input_schema, <span class="rs-type">None</span>);
+
+        <span class="rs-kw">let</span> request = <a class="symbol-link rs-type" href="eos-llm-client--src-types-rs.html#item-struct-LlmRequest-113">LlmRequest</a>::<a class="symbol-link rs-fn" href="eos-llm-client--src-types-rs.html#method-builder-140">builder</a>(&quot;gpt-5.5&quot;)
+            .<a class="symbol-link rs-fn" href="eos-llm-client--src-types-rs.html#method-tools-192">tools</a>(vec![spec])
+            .<a class="symbol-link rs-fn" href="eos-llm-client--src-types-rs.html#method-tool-choice-198">tool_choice</a>(<a class="symbol-link rs-type" href="eos-llm-client--src-types-rs.html#item-enum-ToolChoice-68">ToolChoice</a>::<span class="rs-type">Tool</span> {
+                name: &quot;smoke&quot;.to_owned(),
+            })
+            .<a class="symbol-link rs-fn" href="eos-llm-client--src-types-rs.html#method-reasoning-effort-204">reasoning_effort</a>(<span class="rs-kw">crate</span>::types::<a class="symbol-link rs-type" href="eos-llm-client--src-types-rs.html#item-enum-ReasoningEffort-85">ReasoningEffort</a>::<span class="rs-type">Medium</span>)
+            .<a class="symbol-link rs-fn" href="eos-llm-client--src-types-rs.html#method-max-tokens-186">max_tokens</a>(256)
+            .<a class="symbol-link rs-fn" href="eos-llm-client--src-types-rs.html#method-build-210">build</a>();
+        <span class="rs-kw">let</span> body = <a class="symbol-link rs-fn" href="eos-llm-client--src-clients-openai-api-client-rs.html#item-fn-encode-openai-body-with-dialect-275">encode_openai_body_with_dialect</a>(&amp;request, <a class="symbol-link rs-type" href="eos-llm-client--src-clients-openai-api-client-rs.html#item-enum-OpenAiRequestDialect-47">OpenAiRequestDialect</a>::<span class="rs-type">CodexResponses</span>);
+
+        assert!(body.get(&quot;max_output_tokens&quot;).is_none());
+        assert_eq!(body[&quot;store&quot;], json!(<span class="rs-kw">false</span>));
+        assert_eq!(body[&quot;tool_choice&quot;], json!(&quot;required&quot;));
+        assert_eq!(body[&quot;parallel_tool_calls&quot;], json!(<span class="rs-kw">false</span>));
+        assert_eq!(body[&quot;include&quot;], json!([]));
+        assert_eq!(body[&quot;reasoning&quot;], json!({ &quot;effort&quot;: &quot;medium&quot; }));
+    }
+</code></pre>
+</details>
 
   <p class="source">crates/eos-llm-client/src/clients/openai_api_client.rs:531</p>
 </article></div>
 </section></div>
 </main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/eos-llm-client/src/clients/openai_api_client.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-comment">//! The `OpenAI` Responses client: encode an [`LlmRequest`] to `/v1/responses`</span>
+<span class="rs-comment">//! (`stream: true`), decode the SSE response into the **same** normalized</span>
+<span class="rs-comment">//! [`LlmStreamEvent`] variants as the Anthropic path (LSP substitutability), and</span>
+<span class="rs-comment">//! wrap attempts in the retry gate.</span>
+<span class="rs-comment">//!</span>
+<span class="rs-comment">//! No Rust source — this is the SDK-free Responses-API counterpart. Decode</span>
+<span class="rs-comment">//! normalizes `response.output_text.delta` → `AssistantTextDelta` and</span>
+<span class="rs-comment">//! function-call argument deltas → a single `ToolUseDelta` per call at</span>
+<span class="rs-comment">//! `response.function_call_arguments.done` (keyed by `call_id`, not `item_id`).</span>
+<span class="rs-comment">//! Encode maps `ToolSpec.output_schema` when present (GC-llm-client-02).</span>
+
+<span class="rs-kw">use</span> std::collections::<span class="rs-type">HashMap</span>;
+<span class="rs-kw">use</span> std::sync::<span class="rs-type">Arc</span>;
+
+<span class="rs-kw">use</span> bytes::<span class="rs-type">Bytes</span>;
+<span class="rs-kw">use</span> eos_config::<span class="rs-type">RetryConfig</span>;
+<span class="rs-kw">use</span> eos_types::<span class="rs-type">ToolUseId</span>;
+<span class="rs-kw">use</span> futures::future::<span class="rs-type">BoxFuture</span>;
+<span class="rs-kw">use</span> futures::{<span class="rs-type">Stream</span>, <span class="rs-type">StreamExt</span>};
+<span class="rs-kw">use</span> reqwest::header::{<span class="rs-type">HeaderMap</span>, <span class="rs-type">HeaderValue</span>, <span class="rs-type">ACCEPT</span>, <span class="rs-type">CONTENT_TYPE</span>};
+<span class="rs-kw">use</span> serde_json::{json, <span class="rs-type">Value</span>};
+
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::auth::<a class="symbol-link rs-type" href="eos-llm-client.html#item-enum-Auth-38">Auth</a>;
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::client::{build_endpoint, open_stream, <a class="symbol-link rs-type" href="eos-llm-client--src-client-rs.html#item-trait-LlmClient-28">LlmClient</a>, <a class="symbol-link rs-type" href="eos-llm-client--src-client-rs.html#item-type-LlmStream-22">LlmStream</a>};
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::error::<a class="symbol-link rs-type" href="eos-llm-client--src-error-rs.html#item-struct-ProviderError-29">ProviderError</a>;
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::events::{<a class="symbol-link rs-type" href="eos-llm-client--src-events-rs.html#item-enum-LlmStreamEvent-15">LlmStreamEvent</a>, <a class="symbol-link rs-type" href="eos-llm-client--src-events-rs.html#item-enum-StopReason-53">StopReason</a>};
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::message::{<a class="symbol-link rs-type" href="eos-llm-client--src-message-rs.html#item-enum-ContentBlock-34">ContentBlock</a>, <a class="symbol-link rs-type" href="eos-llm-client--src-message-rs.html#item-struct-Message-88">Message</a>, <a class="symbol-link rs-type" href="eos-llm-client--src-message-rs.html#item-enum-MessageRole-10">MessageRole</a>};
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::retry::retry_stream;
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::sse::{json_str, json_u32, parse_sse_value, parse_tool_args};
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::types::{<a class="symbol-link rs-type" href="eos-llm-client--src-types-rs.html#item-struct-LlmRequest-113">LlmRequest</a>, <a class="symbol-link rs-type" href="eos-llm-client--src-types-rs.html#item-enum-ToolChoice-68">ToolChoice</a>, <a class="symbol-link rs-type" href="eos-llm-client--src-types-rs.html#item-struct-ToolSpec-30">ToolSpec</a>, <a class="symbol-link rs-type" href="eos-llm-client--src-types-rs.html#item-struct-UsageSnapshot-12">UsageSnapshot</a>};
+
+<span class="rs-comment">/// The Responses streaming endpoint path.</span>
+<span class="rs-kw">const</span> <span class="rs-type">RESPONSES_PATH</span>: &amp;str = &quot;/v1/responses&quot;;
+<span class="rs-comment">/// The ChatGPT-backed Codex Responses endpoint path.</span>
+<span class="rs-kw">const</span> <span class="rs-type">CODEX_RESPONSES_PATH</span>: &amp;str = &quot;/responses&quot;;
+
+<span class="rs-comment">/// The `OpenAI` Responses streaming client.</span>
+#[derive(<span class="rs-type">Debug</span>)]
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-llm-client--src-clients-openai-api-client-rs.html#item-struct-OpenAiApiClient-37">OpenAiApiClient</a> {
+    http: reqwest::<span class="rs-type">Client</span>,
+    endpoint: reqwest::<span class="rs-type">Url</span>,
+    auth: <span class="rs-type">Arc</span>&lt;<a class="symbol-link rs-type" href="eos-llm-client.html#item-enum-Auth-38">Auth</a>&gt;,
+    retry: <span class="rs-type">Arc</span>&lt;<span class="rs-type">RetryConfig</span>&gt;,
+    request_dialect: <a class="symbol-link rs-type" href="eos-llm-client--src-clients-openai-api-client-rs.html#item-enum-OpenAiRequestDialect-47">OpenAiRequestDialect</a>,
+}
+
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">Copy</span>)]
+<span class="rs-kw">enum</span> <a class="symbol-link rs-type" href="eos-llm-client--src-clients-openai-api-client-rs.html#item-enum-OpenAiRequestDialect-47">OpenAiRequestDialect</a> {
+    <span class="rs-type">PublicResponses</span>,
+    <span class="rs-type">CodexResponses</span>,
+}
+
+<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-llm-client--src-clients-openai-api-client-rs.html#item-struct-OpenAiApiClient-37">OpenAiApiClient</a> {
+    <span class="rs-comment">/// Construct a client for `base_url` (e.g. `https://api.openai.com`).</span>
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-llm-client--src-client-rs.html#method-new-56">new</a>(base_url: &amp;str, auth: <a class="symbol-link rs-type" href="eos-llm-client.html#item-enum-Auth-38">Auth</a>, retry: <span class="rs-type">Arc</span>&lt;<span class="rs-type">RetryConfig</span>&gt;) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-self">Self</span>, <a class="symbol-link rs-type" href="eos-llm-client--src-error-rs.html#item-struct-ProviderError-29">ProviderError</a>&gt; {
+        <span class="rs-self">Self</span>::<a class="symbol-link rs-fn" href="eos-llm-client--src-clients-openai-api-client-rs.html#method-new-with-path-80">new_with_path</a>(
+            base_url,
+            <span class="rs-type">RESPONSES_PATH</span>,
+            <a class="symbol-link rs-type" href="eos-llm-client--src-clients-openai-api-client-rs.html#item-enum-OpenAiRequestDialect-47">OpenAiRequestDialect</a>::<span class="rs-type">PublicResponses</span>,
+            auth,
+            retry,
+        )
+    }
+
+    <span class="rs-comment">/// Construct a client for the ChatGPT-backed Codex endpoint.</span>
+    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-llm-client--src-clients-openai-api-client-rs.html#method-new-codex-backend-65">new_codex_backend</a>(
+        base_url: &amp;str,
+        auth: <a class="symbol-link rs-type" href="eos-llm-client.html#item-enum-Auth-38">Auth</a>,
+        retry: <span class="rs-type">Arc</span>&lt;<span class="rs-type">RetryConfig</span>&gt;,
+    ) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-self">Self</span>, <a class="symbol-link rs-type" href="eos-llm-client--src-error-rs.html#item-struct-ProviderError-29">ProviderError</a>&gt; {
+        <span class="rs-self">Self</span>::<a class="symbol-link rs-fn" href="eos-llm-client--src-clients-openai-api-client-rs.html#method-new-with-path-80">new_with_path</a>(
+            base_url,
+            <span class="rs-type">CODEX_RESPONSES_PATH</span>,
+            <a class="symbol-link rs-type" href="eos-llm-client--src-clients-openai-api-client-rs.html#item-enum-OpenAiRequestDialect-47">OpenAiRequestDialect</a>::<span class="rs-type">CodexResponses</span>,
+            auth,
+            retry,
+        )
+    }
+
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-llm-client--src-clients-openai-api-client-rs.html#method-new-with-path-80">new_with_path</a>(
+        base_url: &amp;str,
+        path: &amp;str,
+        request_dialect: <a class="symbol-link rs-type" href="eos-llm-client--src-clients-openai-api-client-rs.html#item-enum-OpenAiRequestDialect-47">OpenAiRequestDialect</a>,
+        auth: <a class="symbol-link rs-type" href="eos-llm-client.html#item-enum-Auth-38">Auth</a>,
+        retry: <span class="rs-type">Arc</span>&lt;<span class="rs-type">RetryConfig</span>&gt;,
+    ) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-self">Self</span>, <a class="symbol-link rs-type" href="eos-llm-client--src-error-rs.html#item-struct-ProviderError-29">ProviderError</a>&gt; {
+        <span class="rs-type">Ok</span>(<span class="rs-self">Self</span> {
+            http: reqwest::<span class="rs-type">Client</span>::<a class="symbol-link rs-fn" href="eos-llm-client--src-client-rs.html#method-new-56">new</a>(),
+            endpoint: <a class="symbol-link rs-fn" href="eos-llm-client--src-client-rs.html#item-fn-build-endpoint-147">build_endpoint</a>(base_url, path)?,
+            auth: <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-llm-client--src-client-rs.html#method-new-56">new</a>(auth),
+            retry,
+            request_dialect,
+        })
+    }
+
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-llm-client--src-clients-anthropic-api-client-rs.html#method-build-headers-99">build_headers</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">HeaderMap</span>, <a class="symbol-link rs-type" href="eos-llm-client--src-error-rs.html#item-struct-ProviderError-29">ProviderError</a>&gt; {
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> headers = <span class="rs-type">HeaderMap</span>::<a class="symbol-link rs-fn" href="eos-llm-client--src-client-rs.html#method-new-56">new</a>();
+        headers.insert(<span class="rs-type">CONTENT_TYPE</span>, <span class="rs-type">HeaderValue</span>::from_static(&quot;application/json&quot;));
+        headers.insert(<span class="rs-type">ACCEPT</span>, <span class="rs-type">HeaderValue</span>::from_static(&quot;text/event-stream&quot;));
+        <span class="rs-self">self</span>.auth.<a class="symbol-link rs-fn" href="eos-llm-client.html#method-apply-105">apply</a>(&amp;<span class="rs-kw">mut</span> headers)?;
+        <span class="rs-type">Ok</span>(headers)
+    }
+}
+
+#[async_trait::async_trait]
+<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-llm-client--src-client-rs.html#item-trait-LlmClient-28">LlmClient</a> <span class="rs-kw">for</span> <a class="symbol-link rs-type" href="eos-llm-client--src-clients-openai-api-client-rs.html#item-struct-OpenAiApiClient-37">OpenAiApiClient</a> {
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-llm-client--src-client-rs.html#method-stream-message-36">stream_message</a>(&amp;<span class="rs-self">self</span>, request: <a class="symbol-link rs-type" href="eos-llm-client--src-types-rs.html#item-struct-LlmRequest-113">LlmRequest</a>) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-llm-client--src-client-rs.html#item-type-LlmStream-22">LlmStream</a>, <a class="symbol-link rs-type" href="eos-llm-client--src-error-rs.html#item-struct-ProviderError-29">ProviderError</a>&gt; {
+        <span class="rs-kw">let</span> body = serde_json::to_vec(&amp;<a class="symbol-link rs-fn" href="eos-llm-client--src-clients-openai-api-client-rs.html#item-fn-encode-openai-body-with-dialect-275">encode_openai_body_with_dialect</a>(
+            &amp;request,
+            <span class="rs-self">self</span>.request_dialect,
+        ))
+        .map_err(|e| <a class="symbol-link rs-type" href="eos-llm-client--src-error-rs.html#item-struct-ProviderError-29">ProviderError</a>::<a class="symbol-link rs-fn" href="eos-llm-client--src-error-rs.html#method-request-96">request</a>(format!(&quot;request body serialization failed: {e}&quot;)))?;
+        <span class="rs-kw">let</span> body = <span class="rs-type">Bytes</span>::from(body);
+        <span class="rs-kw">let</span> headers = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-llm-client--src-clients-anthropic-api-client-rs.html#method-build-headers-99">build_headers</a>()?;
+        <span class="rs-kw">let</span> http = <span class="rs-self">self</span>.http.clone();
+        <span class="rs-kw">let</span> url = <span class="rs-self">self</span>.endpoint.clone();
+
+        <span class="rs-kw">let</span> factory = <span class="rs-kw">move</span> || {
+            <span class="rs-kw">let</span> http = http.clone();
+            <span class="rs-kw">let</span> url = url.clone();
+            <span class="rs-kw">let</span> headers = headers.clone();
+            <span class="rs-kw">let</span> body = body.clone();
+            <span class="rs-type">Box</span>::pin(<a class="symbol-link rs-fn" href="eos-llm-client--src-client-rs.html#item-fn-open-stream-177">open_stream</a>(http, url, headers, body, |frames, rid| {
+                <a class="symbol-link rs-fn" href="eos-llm-client--src-clients-openai-api-client-rs.html#item-fn-decode-openai-151">decode_openai</a>(frames, rid)
+            })) <span class="rs-kw">as</span> <span class="rs-type">BoxFuture</span>&lt;&#x27;<span class="rs-kw">static</span>, <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-llm-client--src-client-rs.html#item-type-LlmStream-22">LlmStream</a>, <a class="symbol-link rs-type" href="eos-llm-client--src-error-rs.html#item-struct-ProviderError-29">ProviderError</a>&gt;&gt;
+        };
+        <span class="rs-type">Ok</span>(<a class="symbol-link rs-fn" href="eos-llm-client--src-retry-rs.html#item-fn-retry-stream-21">retry_stream</a>((*<span class="rs-self">self</span>.retry).clone(), factory))
+    }
+}
+
+<span class="rs-comment">/// In-flight reassembly state for one function-call item.</span>
+#[derive(<span class="rs-type">Debug</span>)]
+<span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-llm-client--src-clients-openai-api-client-rs.html#item-struct-ToolItem-131">ToolItem</a> {
+    call_id: <span class="rs-type">String</span>,
+    name: <span class="rs-type">String</span>,
+    arguments: <span class="rs-type">String</span>,
+}
+
+<span class="rs-comment">/// Decoder state across the whole response stream. Usage and stop reason are</span>
+<span class="rs-comment">/// read directly from the `response.completed` payload, so they are not held</span>
+<span class="rs-comment">/// here.</span>
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Default</span>)]
+<span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-llm-client--src-clients-openai-api-client-rs.html#item-struct-OpenAiState-139">OpenAiState</a> {
+    text: <span class="rs-type">String</span>,
+    <span class="rs-comment">/// `item_id` → in-progress function call.</span>
+    items: <span class="rs-type">HashMap</span>&lt;<span class="rs-type">String</span>, <a class="symbol-link rs-type" href="eos-llm-client--src-clients-openai-api-client-rs.html#item-struct-ToolItem-131">ToolItem</a>&gt;,
+    <span class="rs-comment">/// Finalized tool-use blocks in completion order.</span>
+    tools: <span class="rs-type">Vec</span>&lt;<a class="symbol-link rs-type" href="eos-llm-client--src-message-rs.html#item-enum-ContentBlock-34">ContentBlock</a>&gt;,
+}
+
+<span class="rs-comment">/// Decode an `OpenAI` Responses SSE frame stream into normalized events.</span>
+<span class="rs-kw">fn</span> decode_openai&lt;<span class="rs-type">S</span>&gt;(
+    frames: <span class="rs-type">S</span>,
+    request_id: <span class="rs-type">Option</span>&lt;<span class="rs-type">String</span>&gt;,
+) -&gt; <span class="rs-kw">impl</span> <span class="rs-type">Stream</span>&lt;<span class="rs-type">Item</span> = <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-llm-client--src-events-rs.html#item-enum-LlmStreamEvent-15">LlmStreamEvent</a>, <a class="symbol-link rs-type" href="eos-llm-client--src-error-rs.html#item-struct-ProviderError-29">ProviderError</a>&gt;&gt; + <span class="rs-type">Send</span>
+<span class="rs-kw">where</span>
+    <span class="rs-type">S</span>: <span class="rs-type">Stream</span>&lt;<span class="rs-type">Item</span> = <span class="rs-type">Result</span>&lt;<span class="rs-type">String</span>, <a class="symbol-link rs-type" href="eos-llm-client--src-error-rs.html#item-struct-ProviderError-29">ProviderError</a>&gt;&gt; + <span class="rs-type">Send</span>,
+{
+    async_stream::stream! {
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> state = <a class="symbol-link rs-type" href="eos-llm-client--src-clients-openai-api-client-rs.html#item-struct-OpenAiState-139">OpenAiState</a>::default();
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> frame_index: usize = 0;
+        futures::pin_mut!(frames);
+        <span class="rs-kw">while</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(frame) = frames.next().<span class="rs-kw">await</span> {
+            frame_index += 1;
+            <span class="rs-kw">let</span> frame = <span class="rs-kw">match</span> frame {
+                <span class="rs-type">Ok</span>(frame) =&gt; frame,
+                <span class="rs-type">Err</span>(err) =&gt; {
+                    yield <span class="rs-type">Err</span>(err);
+                    <span class="rs-kw">return</span>;
+                }
+            };
+            <span class="rs-kw">let</span> value = <span class="rs-kw">match</span> <a class="symbol-link rs-fn" href="eos-llm-client--src-sse-rs.html#item-fn-parse-sse-value-106">parse_sse_value</a>(&amp;frame, &amp;request_id, &quot;openai&quot;, frame_index) {
+                <span class="rs-type">Ok</span>(<span class="rs-type">Some</span>(value)) =&gt; value,
+                <span class="rs-type">Ok</span>(<span class="rs-type">None</span>) =&gt; <span class="rs-kw">continue</span>,
+                <span class="rs-type">Err</span>(err) =&gt; {
+                    yield <span class="rs-type">Err</span>(err);
+                    <span class="rs-kw">return</span>;
+                }
+            };
+
+            <span class="rs-kw">match</span> value.get(&quot;<span class="rs-kw">type</span>&quot;).and_then(<span class="rs-type">Value</span>::as_str) {
+                <span class="rs-type">Some</span>(&quot;response.output_text.delta&quot;) =&gt; {
+                    <span class="rs-kw">let</span> text = <a class="symbol-link rs-fn" href="eos-llm-client--src-sse-rs.html#item-fn-json-str-182">json_str</a>(&amp;value, &amp;[&quot;delta&quot;]);
+                    state.text.push_str(&amp;text);
+                    yield <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-llm-client--src-events-rs.html#item-enum-LlmStreamEvent-15">LlmStreamEvent</a>::<span class="rs-type">AssistantTextDelta</span> { text });
+                }
+                <span class="rs-type">Some</span>(&quot;response.output_item.added&quot;) =&gt; {
+                    <span class="rs-kw">let</span> item = &amp;value[&quot;item&quot;];
+                    <span class="rs-kw">if</span> item.get(&quot;<span class="rs-kw">type</span>&quot;).and_then(<span class="rs-type">Value</span>::as_str) == <span class="rs-type">Some</span>(&quot;function_call&quot;) {
+                        <span class="rs-kw">let</span> item_id = <a class="symbol-link rs-fn" href="eos-llm-client--src-sse-rs.html#item-fn-json-str-182">json_str</a>(item, &amp;[&quot;id&quot;]);
+                        state.items.insert(
+                            item_id,
+                            <a class="symbol-link rs-type" href="eos-llm-client--src-clients-openai-api-client-rs.html#item-struct-ToolItem-131">ToolItem</a> {
+                                call_id: <a class="symbol-link rs-fn" href="eos-llm-client--src-sse-rs.html#item-fn-json-str-182">json_str</a>(item, &amp;[&quot;call_id&quot;]),
+                                name: <a class="symbol-link rs-fn" href="eos-llm-client--src-sse-rs.html#item-fn-json-str-182">json_str</a>(item, &amp;[&quot;name&quot;]),
+                                arguments: <span class="rs-type">String</span>::<a class="symbol-link rs-fn" href="eos-llm-client--src-client-rs.html#method-new-56">new</a>(),
+                            },
+                        );
+                    }
+                }
+                <span class="rs-type">Some</span>(&quot;response.function_call_arguments.delta&quot;) =&gt; {
+                    <span class="rs-kw">let</span> item_id = <a class="symbol-link rs-fn" href="eos-llm-client--src-sse-rs.html#item-fn-json-str-182">json_str</a>(&amp;value, &amp;[&quot;item_id&quot;]);
+                    <span class="rs-kw">let</span> delta = <a class="symbol-link rs-fn" href="eos-llm-client--src-sse-rs.html#item-fn-json-str-182">json_str</a>(&amp;value, &amp;[&quot;delta&quot;]);
+                    <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(item) = state.items.get_mut(&amp;item_id) {
+                        item.arguments.push_str(&amp;delta);
+                    }
+                }
+                <span class="rs-type">Some</span>(&quot;response.function_call_arguments.done&quot;) =&gt; {
+                    <span class="rs-kw">let</span> item_id = <a class="symbol-link rs-fn" href="eos-llm-client--src-sse-rs.html#item-fn-json-str-182">json_str</a>(&amp;value, &amp;[&quot;item_id&quot;]);
+                    <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(item) = state.items.remove(&amp;item_id) {
+                        <span class="rs-kw">let</span> input = <a class="symbol-link rs-fn" href="eos-llm-client--src-sse-rs.html#item-fn-parse-tool-args-201">parse_tool_args</a>(&amp;item.arguments);
+                        <span class="rs-kw">let</span> tool_use_id = <span class="rs-kw">match</span> <span class="rs-type">ToolUseId</span>::try_from(item.call_id.as_str()) {
+                            <span class="rs-type">Ok</span>(id) =&gt; id,
+                            <span class="rs-type">Err</span>(_) =&gt; {
+                                yield <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-llm-client--src-error-rs.html#item-struct-ProviderError-29">ProviderError</a>::<a class="symbol-link rs-fn" href="eos-llm-client--src-error-rs.html#method-decode-85">decode</a>(
+                                    request_id.clone(),
+                                    &quot;function call missing call_id&quot;,
+                                ));
+                                <span class="rs-kw">return</span>;
+                            }
+                        };
+                        state.tools.<a class="symbol-link rs-fn" href="eos-llm-client--src-sse-rs.html#method-push-36">push</a>(<a class="symbol-link rs-type" href="eos-llm-client--src-message-rs.html#item-enum-ContentBlock-34">ContentBlock</a>::<span class="rs-type">ToolUse</span> {
+                            tool_use_id: tool_use_id.clone(),
+                            name: item.name.clone(),
+                            input: input.clone(),
+                        });
+                        yield <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-llm-client--src-events-rs.html#item-enum-LlmStreamEvent-15">LlmStreamEvent</a>::<span class="rs-type">ToolUseDelta</span> {
+                            tool_use_id,
+                            name: item.name,
+                            input,
+                        });
+                    }
+                }
+                <span class="rs-type">Some</span>(&quot;response.completed&quot;) =&gt; {
+                    <span class="rs-kw">let</span> response = &amp;value[&quot;response&quot;];
+                    <span class="rs-kw">let</span> usage = <a class="symbol-link rs-type" href="eos-llm-client--src-types-rs.html#item-struct-UsageSnapshot-12">UsageSnapshot</a> {
+                        input_tokens: <a class="symbol-link rs-fn" href="eos-llm-client--src-sse-rs.html#item-fn-json-u32-187">json_u32</a>(response, &amp;[&quot;usage&quot;, &quot;input_tokens&quot;]),
+                        output_tokens: <a class="symbol-link rs-fn" href="eos-llm-client--src-sse-rs.html#item-fn-json-u32-187">json_u32</a>(response, &amp;[&quot;usage&quot;, &quot;output_tokens&quot;]),
+                    };
+                    <span class="rs-kw">let</span> stop_reason = response
+                        .get(&quot;stop_reason&quot;)
+                        .and_then(<span class="rs-type">Value</span>::as_str)
+                        .map(<a class="symbol-link rs-type" href="eos-llm-client--src-events-rs.html#item-enum-StopReason-53">StopReason</a>::parse);
+
+                    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> content = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-llm-client--src-client-rs.html#method-new-56">new</a>();
+                    <span class="rs-kw">if</span> !state.text.is_empty() {
+                        content.<a class="symbol-link rs-fn" href="eos-llm-client--src-sse-rs.html#method-push-36">push</a>(<a class="symbol-link rs-type" href="eos-llm-client--src-message-rs.html#item-enum-ContentBlock-34">ContentBlock</a>::<span class="rs-type">Text</span> {
+                            text: std::mem::take(&amp;<span class="rs-kw">mut</span> state.text),
+                        });
+                    }
+                    content.append(&amp;<span class="rs-kw">mut</span> state.tools);
+
+                    yield <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-llm-client--src-events-rs.html#item-enum-LlmStreamEvent-15">LlmStreamEvent</a>::<span class="rs-type">AssistantMessageComplete</span> {
+                        message: <a class="symbol-link rs-type" href="eos-llm-client--src-message-rs.html#item-struct-Message-88">Message</a> {
+                            role: <a class="symbol-link rs-type" href="eos-llm-client--src-message-rs.html#item-enum-MessageRole-10">MessageRole</a>::<span class="rs-type">Assistant</span>,
+                            content,
+                        },
+                        usage,
+                        stop_reason,
+                    });
+                    <span class="rs-kw">return</span>;
+                }
+                _ =&gt; {}
+            }
+        }
+    }
+}
+
+<span class="rs-comment">/// Encode an [`LlmRequest`] into an `OpenAI` `/v1/responses` request body.</span>
+#[cfg(test)]
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-llm-client--src-clients-openai-api-client-rs.html#item-fn-encode-openai-body-269">encode_openai_body</a>(request: &amp;<a class="symbol-link rs-type" href="eos-llm-client--src-types-rs.html#item-struct-LlmRequest-113">LlmRequest</a>) -&gt; <span class="rs-type">Value</span> {
+    <a class="symbol-link rs-fn" href="eos-llm-client--src-clients-openai-api-client-rs.html#item-fn-encode-openai-body-with-dialect-275">encode_openai_body_with_dialect</a>(request, <a class="symbol-link rs-type" href="eos-llm-client--src-clients-openai-api-client-rs.html#item-enum-OpenAiRequestDialect-47">OpenAiRequestDialect</a>::<span class="rs-type">PublicResponses</span>)
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-llm-client--src-clients-openai-api-client-rs.html#item-fn-encode-openai-body-with-dialect-275">encode_openai_body_with_dialect</a>(request: &amp;<a class="symbol-link rs-type" href="eos-llm-client--src-types-rs.html#item-struct-LlmRequest-113">LlmRequest</a>, dialect: <a class="symbol-link rs-type" href="eos-llm-client--src-clients-openai-api-client-rs.html#item-enum-OpenAiRequestDialect-47">OpenAiRequestDialect</a>) -&gt; <span class="rs-type">Value</span> {
+    <span class="rs-kw">let</span> input: <span class="rs-type">Vec</span>&lt;<span class="rs-type">Value</span>&gt; = request
+        .messages
+        .iter()
+        .flat_map(serialize_openai_message)
+        .collect();
+
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> body = json!({
+        &quot;model&quot;: request.model,
+        &quot;input&quot;: input,
+        &quot;stream&quot;: <span class="rs-kw">true</span>,
+        &quot;store&quot;: <span class="rs-kw">false</span>,
+        &quot;parallel_tool_calls&quot;: <span class="rs-kw">false</span>,
+        &quot;include&quot;: [],
+    });
+    <span class="rs-kw">if</span> matches!(dialect, <a class="symbol-link rs-type" href="eos-llm-client--src-clients-openai-api-client-rs.html#item-enum-OpenAiRequestDialect-47">OpenAiRequestDialect</a>::<span class="rs-type">PublicResponses</span>) {
+        body[&quot;max_output_tokens&quot;] = json!(request.max_tokens);
+    }
+    <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(system) = &amp;request.system_prompt {
+        body[&quot;instructions&quot;] = json!(system);
+    }
+    <span class="rs-kw">if</span> !request.tools.is_empty() {
+        body[&quot;tools&quot;] = <span class="rs-type">Value</span>::<span class="rs-type">Array</span>(request.tools.iter().map(serialize_openai_tool).collect());
+    }
+    <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(choice) = &amp;request.tool_choice {
+        body[&quot;tool_choice&quot;] = <a class="symbol-link rs-fn" href="eos-llm-client--src-clients-openai-api-client-rs.html#item-fn-encode-openai-tool-choice-376">encode_openai_tool_choice</a>(choice, dialect);
+    }
+    <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(effort) = request.reasoning_effort {
+        body[&quot;reasoning&quot;] = json!({ &quot;effort&quot;: effort.<a class="symbol-link rs-fn" href="eos-llm-client--src-message-rs.html#method-as-wire-25">as_wire</a>() });
+    }
+    body
+}
+
+<span class="rs-comment">/// Project one neutral message to Responses-API input items: a `message` item</span>
+<span class="rs-comment">/// for its text parts (if any), plus `function_call` / `function_call_output`</span>
+<span class="rs-comment">/// items for tool calls and results. `Reasoning` is dropped (managed by the</span>
+<span class="rs-comment">/// provider).</span>
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-llm-client--src-clients-openai-api-client-rs.html#item-fn-serialize-openai-message-308">serialize_openai_message</a>(message: &amp;<a class="symbol-link rs-type" href="eos-llm-client--src-message-rs.html#item-struct-Message-88">Message</a>) -&gt; <span class="rs-type">Vec</span>&lt;<span class="rs-type">Value</span>&gt; {
+    <span class="rs-kw">let</span> text_type = <span class="rs-kw">match</span> message.role {
+        <a class="symbol-link rs-type" href="eos-llm-client--src-message-rs.html#item-enum-MessageRole-10">MessageRole</a>::<span class="rs-type">User</span> =&gt; &quot;input_text&quot;,
+        <a class="symbol-link rs-type" href="eos-llm-client--src-message-rs.html#item-enum-MessageRole-10">MessageRole</a>::<span class="rs-type">Assistant</span> =&gt; &quot;output_text&quot;,
+    };
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> items = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-llm-client--src-client-rs.html#method-new-56">new</a>();
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> text_parts = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-llm-client--src-client-rs.html#method-new-56">new</a>();
+    <span class="rs-kw">for</span> block <span class="rs-kw">in</span> &amp;message.content {
+        <span class="rs-kw">match</span> block {
+            <a class="symbol-link rs-type" href="eos-llm-client--src-message-rs.html#item-enum-ContentBlock-34">ContentBlock</a>::<span class="rs-type">Text</span> { text } =&gt; {
+                text_parts.<a class="symbol-link rs-fn" href="eos-llm-client--src-sse-rs.html#method-push-36">push</a>(json!({ &quot;<span class="rs-kw">type</span>&quot;: text_type, &quot;text&quot;: text }));
+            }
+            <a class="symbol-link rs-type" href="eos-llm-client--src-message-rs.html#item-enum-ContentBlock-34">ContentBlock</a>::<span class="rs-type">SystemNotification</span> { text } =&gt; {
+                text_parts.<a class="symbol-link rs-fn" href="eos-llm-client--src-sse-rs.html#method-push-36">push</a>(json!({
+                    &quot;<span class="rs-kw">type</span>&quot;: text_type,
+                    &quot;text&quot;: format!(&quot;&lt;system-reminder&gt;\n{text}\n&lt;/system-reminder&gt;&quot;),
+                }));
+            }
+            <a class="symbol-link rs-type" href="eos-llm-client--src-message-rs.html#item-enum-ContentBlock-34">ContentBlock</a>::<span class="rs-type">ToolUse</span> {
+                tool_use_id,
+                name,
+                input,
+            } =&gt; items.<a class="symbol-link rs-fn" href="eos-llm-client--src-sse-rs.html#method-push-36">push</a>(json!({
+                &quot;<span class="rs-kw">type</span>&quot;: &quot;function_call&quot;,
+                &quot;call_id&quot;: tool_use_id,
+                &quot;name&quot;: name,
+                &quot;arguments&quot;: serde_json::to_string(input).unwrap_or_else(|_| &quot;{}&quot;.to_owned()),
+            })),
+            <a class="symbol-link rs-type" href="eos-llm-client--src-message-rs.html#item-enum-ContentBlock-34">ContentBlock</a>::<span class="rs-type">ToolResult</span> {
+                tool_use_id,
+                content,
+                ..
+            } =&gt; items.<a class="symbol-link rs-fn" href="eos-llm-client--src-sse-rs.html#method-push-36">push</a>(json!({
+                &quot;<span class="rs-kw">type</span>&quot;: &quot;function_call_output&quot;,
+                &quot;call_id&quot;: tool_use_id,
+                &quot;output&quot;: content,
+            })),
+            <a class="symbol-link rs-type" href="eos-llm-client--src-message-rs.html#item-enum-ContentBlock-34">ContentBlock</a>::<span class="rs-type">Reasoning</span> { .. } =&gt; {}
+        }
+    }
+    <span class="rs-kw">if</span> !text_parts.is_empty() {
+        items.insert(
+            0,
+            json!({ &quot;<span class="rs-kw">type</span>&quot;: &quot;message&quot;, &quot;role&quot;: message.role.<a class="symbol-link rs-fn" href="eos-llm-client--src-message-rs.html#method-as-wire-25">as_wire</a>(), &quot;content&quot;: text_parts }),
+        );
+    }
+    items
+}
+
+<span class="rs-comment">/// Project a tool spec to a Responses function tool entry, mapping</span>
+<span class="rs-comment">/// `output_schema` when present (GC-llm-client-02).</span>
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-llm-client--src-clients-openai-api-client-rs.html#item-fn-serialize-openai-tool-361">serialize_openai_tool</a>(spec: &amp;<a class="symbol-link rs-type" href="eos-llm-client--src-types-rs.html#item-struct-ToolSpec-30">ToolSpec</a>) -&gt; <span class="rs-type">Value</span> {
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> tool = json!({
+        &quot;<span class="rs-kw">type</span>&quot;: &quot;function&quot;,
+        &quot;name&quot;: spec.name,
+        &quot;description&quot;: spec.description,
+        &quot;parameters&quot;: spec.input_schema,
+    });
+    <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(output_schema) = &amp;spec.output_schema {
+        tool[&quot;output_schema&quot;] = json!(output_schema);
+    }
+    tool
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-llm-client--src-clients-openai-api-client-rs.html#item-fn-encode-openai-tool-choice-376">encode_openai_tool_choice</a>(choice: &amp;<a class="symbol-link rs-type" href="eos-llm-client--src-types-rs.html#item-enum-ToolChoice-68">ToolChoice</a>, dialect: <a class="symbol-link rs-type" href="eos-llm-client--src-clients-openai-api-client-rs.html#item-enum-OpenAiRequestDialect-47">OpenAiRequestDialect</a>) -&gt; <span class="rs-type">Value</span> {
+    <span class="rs-kw">match</span> choice {
+        <a class="symbol-link rs-type" href="eos-llm-client--src-types-rs.html#item-enum-ToolChoice-68">ToolChoice</a>::<span class="rs-type">Auto</span> =&gt; json!(&quot;auto&quot;),
+        <a class="symbol-link rs-type" href="eos-llm-client--src-types-rs.html#item-enum-ToolChoice-68">ToolChoice</a>::<span class="rs-type">Any</span> =&gt; json!(&quot;required&quot;),
+        <a class="symbol-link rs-type" href="eos-llm-client--src-types-rs.html#item-enum-ToolChoice-68">ToolChoice</a>::<span class="rs-type">Tool</span> { name } =&gt; <span class="rs-kw">match</span> dialect {
+            <a class="symbol-link rs-type" href="eos-llm-client--src-clients-openai-api-client-rs.html#item-enum-OpenAiRequestDialect-47">OpenAiRequestDialect</a>::<span class="rs-type">PublicResponses</span> =&gt; json!({ &quot;<span class="rs-kw">type</span>&quot;: &quot;function&quot;, &quot;name&quot;: name }),
+            <a class="symbol-link rs-type" href="eos-llm-client--src-clients-openai-api-client-rs.html#item-enum-OpenAiRequestDialect-47">OpenAiRequestDialect</a>::<span class="rs-type">CodexResponses</span> =&gt; json!(&quot;required&quot;),
+        },
+    }
+}
+
+#[cfg(test)]
+<span class="rs-kw">mod</span> tests {
+    #![allow(clippy::unwrap_used)]
+    <span class="rs-kw">use</span> <span class="rs-kw">super</span>::*;
+    <span class="rs-kw">use</span> eos_types::<span class="rs-type">JsonObject</span>;
+
+    <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::sse::frame_stream;
+
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-llm-client--src-clients-openai-api-client-rs.html#item-fn-discriminant-395">discriminant</a>(event: &amp;<a class="symbol-link rs-type" href="eos-llm-client--src-events-rs.html#item-enum-LlmStreamEvent-15">LlmStreamEvent</a>) -&gt; &amp;&#x27;<span class="rs-kw">static</span> str {
+        <span class="rs-kw">match</span> event {
+            <a class="symbol-link rs-type" href="eos-llm-client--src-events-rs.html#item-enum-LlmStreamEvent-15">LlmStreamEvent</a>::<span class="rs-type">AssistantTextDelta</span> { .. } =&gt; &quot;text&quot;,
+            <a class="symbol-link rs-type" href="eos-llm-client--src-events-rs.html#item-enum-LlmStreamEvent-15">LlmStreamEvent</a>::<span class="rs-type">ReasoningDelta</span> { .. } =&gt; &quot;reasoning&quot;,
+            <a class="symbol-link rs-type" href="eos-llm-client--src-events-rs.html#item-enum-LlmStreamEvent-15">LlmStreamEvent</a>::<span class="rs-type">ToolUseDelta</span> { .. } =&gt; &quot;tool_use&quot;,
+            <a class="symbol-link rs-type" href="eos-llm-client--src-events-rs.html#item-enum-LlmStreamEvent-15">LlmStreamEvent</a>::<span class="rs-type">AssistantMessageComplete</span> { .. } =&gt; &quot;complete&quot;,
+        }
+    }
+
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-llm-client--src-clients-anthropic-api-client-rs.html#item-fn-decode-fixture-444">decode_fixture</a>(raw: &amp;str) -&gt; <span class="rs-type">Vec</span>&lt;<a class="symbol-link rs-type" href="eos-llm-client--src-events-rs.html#item-enum-LlmStreamEvent-15">LlmStreamEvent</a>&gt; {
+        <span class="rs-kw">let</span> bytes = <span class="rs-type">Bytes</span>::from(raw.to_owned());
+        <span class="rs-kw">let</span> byte_stream = futures::stream::iter(vec![<span class="rs-type">Ok</span>::&lt;<span class="rs-type">Bytes</span>, <a class="symbol-link rs-type" href="eos-llm-client--src-error-rs.html#item-struct-ProviderError-29">ProviderError</a>&gt;(bytes)]);
+        <a class="symbol-link rs-fn" href="eos-llm-client--src-clients-openai-api-client-rs.html#item-fn-decode-openai-151">decode_openai</a>(<a class="symbol-link rs-fn" href="eos-llm-client--src-sse-rs.html#item-fn-frame-stream-139">frame_stream</a>(byte_stream), <span class="rs-type">Some</span>(&quot;req-test&quot;.to_owned()))
+            .collect::&lt;<span class="rs-type">Vec</span>&lt;_&gt;&gt;()
+            .<span class="rs-kw">await</span>
+            .into_iter()
+            .map(<span class="rs-type">Result</span>::unwrap)
+            .collect()
+    }
+
+    <span class="rs-comment">// NOTE (flagged in the coverage review): like the Anthropic decoder,</span>
+    <span class="rs-comment">// `decode_openai`'s `match value.get("type")` has no "error" arm, so an</span>
+    <span class="rs-comment">// in-stream provider error event yields no completion and no `Err` at the</span>
+    <span class="rs-comment">// decoder boundary (`decode_fixture`'s unwrap would panic if an Err were</span>
+    <span class="rs-comment">// produced). The loop later maps the missing completion to a generic</span>
+    <span class="rs-comment">// stream-ended error, so the cost is the lost provider error text (degraded</span>
+    <span class="rs-comment">// diagnostics), not a swallowed failure. Pins decoder-level behavior; update</span>
+    <span class="rs-comment">// if a fix surfaces the provider error.</span>
+    #[tokio::test]
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-llm-client--src-clients-openai-api-client-rs.html#item-fn-in-stream-error-event-is-swallowed-at-decoder-level-423">in_stream_error_event_is_swallowed_at_decoder_level</a>() {
+        <span class="rs-kw">let</span> sse = concat!(
+            &quot;data: {\&quot;<span class="rs-kw">type</span>\&quot;: \&quot;response.output_text.delta\&quot;, \&quot;delta\&quot;: \&quot;<span class="rs-type">Hi</span>\&quot;}\n&quot;,
+            &quot;\n&quot;,
+            &quot;data: {\&quot;<span class="rs-kw">type</span>\&quot;: \&quot;error\&quot;, \&quot;error\&quot;: {\&quot;message\&quot;: \&quot;boom\&quot;}}\n&quot;,
+        );
+        <span class="rs-kw">let</span> events = <a class="symbol-link rs-fn" href="eos-llm-client--src-clients-anthropic-api-client-rs.html#item-fn-decode-fixture-444">decode_fixture</a>(sse).<span class="rs-kw">await</span>;
+        assert!(events.iter().any(|event| matches!(
+            event,
+            <a class="symbol-link rs-type" href="eos-llm-client--src-events-rs.html#item-enum-LlmStreamEvent-15">LlmStreamEvent</a>::<span class="rs-type">AssistantTextDelta</span> { text } <span class="rs-kw">if</span> text == &quot;<span class="rs-type">Hi</span>&quot;
+        )));
+        assert!(
+            !events
+                .iter()
+                .any(|event| matches!(event, <a class="symbol-link rs-type" href="eos-llm-client--src-events-rs.html#item-enum-LlmStreamEvent-15">LlmStreamEvent</a>::<span class="rs-type">AssistantMessageComplete</span> { .. })),
+            &quot;no completion is emitted <span class="rs-kw">for</span> an error-terminated stream&quot;
+        );
+    }
+
+    <span class="rs-comment">// AC-llm-client-10: an `OpenAI` fixture (text delta + function-call argument</span>
+    <span class="rs-comment">// deltas + response.completed) decodes into the same variant sequence as the</span>
+    <span class="rs-comment">// Anthropic path (LSP substitutability).</span>
+    #[tokio::test]
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-llm-client--src-clients-openai-api-client-rs.html#item-fn-decodes-openai-responses-fixture-446">decodes_openai_responses_fixture</a>() {
+        <span class="rs-kw">let</span> events = <a class="symbol-link rs-fn" href="eos-llm-client--src-clients-anthropic-api-client-rs.html#item-fn-decode-fixture-444">decode_fixture</a>(include_str!(&quot;../../tests/fixtures/openai/full.sse&quot;)).<span class="rs-kw">await</span>;
+
+        assert_eq!(
+            events[0],
+            <a class="symbol-link rs-type" href="eos-llm-client--src-events-rs.html#item-enum-LlmStreamEvent-15">LlmStreamEvent</a>::<span class="rs-type">AssistantTextDelta</span> { text: &quot;<span class="rs-type">Hi</span>&quot;.into() }
+        );
+        <span class="rs-kw">match</span> &amp;events[1] {
+            <a class="symbol-link rs-type" href="eos-llm-client--src-events-rs.html#item-enum-LlmStreamEvent-15">LlmStreamEvent</a>::<span class="rs-type">ToolUseDelta</span> {
+                tool_use_id,
+                name,
+                input,
+            } =&gt; {
+                assert_eq!(tool_use_id.as_str(), &quot;call_9&quot;);
+                assert_eq!(name, &quot;read_file&quot;);
+                assert_eq!(input.get(&quot;path&quot;).and_then(<span class="rs-type">Value</span>::as_str), <span class="rs-type">Some</span>(&quot;foo.txt&quot;));
+            }
+            other =&gt; panic!(&quot;expected tool_use delta, got {other:?}&quot;),
+        }
+        <span class="rs-kw">match</span> &amp;events[2] {
+            <a class="symbol-link rs-type" href="eos-llm-client--src-events-rs.html#item-enum-LlmStreamEvent-15">LlmStreamEvent</a>::<span class="rs-type">AssistantMessageComplete</span> {
+                usage,
+                stop_reason,
+                message,
+            } =&gt; {
+                assert_eq!(usage.input_tokens, 5);
+                assert_eq!(usage.output_tokens, 4);
+                assert_eq!(*stop_reason, <span class="rs-type">Some</span>(<a class="symbol-link rs-type" href="eos-llm-client--src-events-rs.html#item-enum-StopReason-53">StopReason</a>::<span class="rs-type">ToolUse</span>));
+                assert_eq!(message.content.len(), 2); <span class="rs-comment">// Text + ToolUse</span>
+            }
+            other =&gt; panic!(&quot;expected complete, got {other:?}&quot;),
+        }
+
+        <span class="rs-comment">// Variant sequence matches the Anthropic text+tool path.</span>
+        <span class="rs-kw">let</span> openai_seq: <span class="rs-type">Vec</span>&lt;_&gt; = events.iter().map(discriminant).collect();
+        <span class="rs-kw">let</span> anthropic_events: <span class="rs-type">Vec</span>&lt;<a class="symbol-link rs-type" href="eos-llm-client--src-events-rs.html#item-enum-LlmStreamEvent-15">LlmStreamEvent</a>&gt; = {
+            <span class="rs-kw">let</span> bytes = <span class="rs-type">Bytes</span>::from(
+                include_str!(&quot;../../tests/fixtures/anthropic/text_tool.sse&quot;).to_owned(),
+            );
+            <span class="rs-kw">let</span> byte_stream = futures::stream::iter(vec![<span class="rs-type">Ok</span>::&lt;<span class="rs-type">Bytes</span>, <a class="symbol-link rs-type" href="eos-llm-client--src-error-rs.html#item-struct-ProviderError-29">ProviderError</a>&gt;(bytes)]);
+            <span class="rs-kw">crate</span>::clients::anthropic_api_client::<a class="symbol-link rs-fn" href="eos-llm-client--src-clients-anthropic-api-client-rs.html#item-fn-decode-anthropic-for-test-419">decode_anthropic_for_test</a>(<a class="symbol-link rs-fn" href="eos-llm-client--src-sse-rs.html#item-fn-frame-stream-139">frame_stream</a>(
+                byte_stream,
+            ))
+            .<span class="rs-kw">await</span>
+        };
+        <span class="rs-kw">let</span> anthropic_seq: <span class="rs-type">Vec</span>&lt;_&gt; = anthropic_events.iter().map(discriminant).collect();
+        assert_eq!(
+            openai_seq, anthropic_seq,
+            &quot;providers are variant-substitutable&quot;
+        );
+    }
+
+    <span class="rs-comment">// AC-llm-client-06 (openai side): encode retains output_schema in the</span>
+    <span class="rs-comment">// function tool entry (spec-named proving test).</span>
+    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-llm-client--src-clients-anthropic-api-client-rs.html#item-fn-encode-projects-tools-per-provider-584">encode_projects_tools_per_provider</a>() {
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> input_schema = <span class="rs-type">JsonObject</span>::<a class="symbol-link rs-fn" href="eos-llm-client--src-client-rs.html#method-new-56">new</a>();
+        input_schema.insert(&quot;<span class="rs-kw">type</span>&quot;.into(), json!(&quot;object&quot;));
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> output_schema = <span class="rs-type">JsonObject</span>::<a class="symbol-link rs-fn" href="eos-llm-client--src-client-rs.html#method-new-56">new</a>();
+        output_schema.insert(&quot;<span class="rs-kw">type</span>&quot;.into(), json!(&quot;string&quot;));
+        <span class="rs-kw">let</span> spec = <a class="symbol-link rs-type" href="eos-llm-client--src-types-rs.html#item-struct-ToolSpec-30">ToolSpec</a>::<a class="symbol-link rs-fn" href="eos-llm-client--src-client-rs.html#method-new-56">new</a>(
+            &quot;read_file&quot;,
+            &quot;<span class="rs-type">Read</span> a file&quot;,
+            input_schema,
+            <span class="rs-type">Some</span>(output_schema),
+        );
+
+        <span class="rs-kw">let</span> request = <a class="symbol-link rs-type" href="eos-llm-client--src-types-rs.html#item-struct-LlmRequest-113">LlmRequest</a>::<a class="symbol-link rs-fn" href="eos-llm-client--src-types-rs.html#method-builder-140">builder</a>(&quot;gpt&quot;).<a class="symbol-link rs-fn" href="eos-llm-client--src-types-rs.html#method-tools-192">tools</a>(vec![spec]).<a class="symbol-link rs-fn" href="eos-llm-client--src-types-rs.html#method-build-210">build</a>();
+        <span class="rs-kw">let</span> body = <a class="symbol-link rs-fn" href="eos-llm-client--src-clients-openai-api-client-rs.html#item-fn-encode-openai-body-269">encode_openai_body</a>(&amp;request);
+        <span class="rs-kw">let</span> tool = &amp;body[&quot;tools&quot;][0];
+        assert_eq!(tool[&quot;<span class="rs-kw">type</span>&quot;], json!(&quot;function&quot;));
+        assert_eq!(tool[&quot;name&quot;], json!(&quot;read_file&quot;));
+        assert!(tool.get(&quot;parameters&quot;).is_some());
+        assert!(
+            tool.get(&quot;output_schema&quot;).is_some(),
+            &quot;openai maps output_schema&quot;
+        );
+        assert_eq!(body[&quot;stream&quot;], json!(<span class="rs-kw">true</span>));
+        assert_eq!(body[&quot;store&quot;], json!(<span class="rs-kw">false</span>));
+        assert_eq!(body[&quot;parallel_tool_calls&quot;], json!(<span class="rs-kw">false</span>));
+        assert_eq!(body[&quot;include&quot;], json!([]));
+        assert_eq!(body[&quot;max_output_tokens&quot;], json!(request.max_tokens));
+    }
+
+    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-llm-client--src-clients-openai-api-client-rs.html#item-fn-encode-codex-response-body-uses-chatgpt-backend-shape-531">encode_codex_response_body_uses_chatgpt_backend_shape</a>() {
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> input_schema = <span class="rs-type">JsonObject</span>::<a class="symbol-link rs-fn" href="eos-llm-client--src-client-rs.html#method-new-56">new</a>();
+        input_schema.insert(&quot;<span class="rs-kw">type</span>&quot;.into(), json!(&quot;object&quot;));
+        <span class="rs-kw">let</span> spec = <a class="symbol-link rs-type" href="eos-llm-client--src-types-rs.html#item-struct-ToolSpec-30">ToolSpec</a>::<a class="symbol-link rs-fn" href="eos-llm-client--src-client-rs.html#method-new-56">new</a>(&quot;smoke&quot;, &quot;<span class="rs-type">Smoke</span> tool&quot;, input_schema, <span class="rs-type">None</span>);
+
+        <span class="rs-kw">let</span> request = <a class="symbol-link rs-type" href="eos-llm-client--src-types-rs.html#item-struct-LlmRequest-113">LlmRequest</a>::<a class="symbol-link rs-fn" href="eos-llm-client--src-types-rs.html#method-builder-140">builder</a>(&quot;gpt-5.5&quot;)
+            .<a class="symbol-link rs-fn" href="eos-llm-client--src-types-rs.html#method-tools-192">tools</a>(vec![spec])
+            .<a class="symbol-link rs-fn" href="eos-llm-client--src-types-rs.html#method-tool-choice-198">tool_choice</a>(<a class="symbol-link rs-type" href="eos-llm-client--src-types-rs.html#item-enum-ToolChoice-68">ToolChoice</a>::<span class="rs-type">Tool</span> {
+                name: &quot;smoke&quot;.to_owned(),
+            })
+            .<a class="symbol-link rs-fn" href="eos-llm-client--src-types-rs.html#method-reasoning-effort-204">reasoning_effort</a>(<span class="rs-kw">crate</span>::types::<a class="symbol-link rs-type" href="eos-llm-client--src-types-rs.html#item-enum-ReasoningEffort-85">ReasoningEffort</a>::<span class="rs-type">Medium</span>)
+            .<a class="symbol-link rs-fn" href="eos-llm-client--src-types-rs.html#method-max-tokens-186">max_tokens</a>(256)
+            .<a class="symbol-link rs-fn" href="eos-llm-client--src-types-rs.html#method-build-210">build</a>();
+        <span class="rs-kw">let</span> body = <a class="symbol-link rs-fn" href="eos-llm-client--src-clients-openai-api-client-rs.html#item-fn-encode-openai-body-with-dialect-275">encode_openai_body_with_dialect</a>(&amp;request, <a class="symbol-link rs-type" href="eos-llm-client--src-clients-openai-api-client-rs.html#item-enum-OpenAiRequestDialect-47">OpenAiRequestDialect</a>::<span class="rs-type">CodexResponses</span>);
+
+        assert!(body.get(&quot;max_output_tokens&quot;).is_none());
+        assert_eq!(body[&quot;store&quot;], json!(<span class="rs-kw">false</span>));
+        assert_eq!(body[&quot;tool_choice&quot;], json!(&quot;required&quot;));
+        assert_eq!(body[&quot;parallel_tool_calls&quot;], json!(<span class="rs-kw">false</span>));
+        assert_eq!(body[&quot;include&quot;], json!([]));
+        assert_eq!(body[&quot;reasoning&quot;], json!({ &quot;effort&quot;: &quot;medium&quot; }));
+    }
+}
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
   <script src="../assets/inventory.js"></script>
 </body>
 </html>

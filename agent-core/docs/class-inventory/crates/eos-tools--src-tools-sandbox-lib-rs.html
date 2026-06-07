@@ -8,8 +8,16 @@
 </head>
 <body>
   <header>
-    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
-    <h1>eos-tools File Inventory</h1>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>eos-tools File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS/agent-core &amp;&amp; cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
   </header>
   <a class="back-link" href="../index.html">agent-core</a>
 <section class="summary">
@@ -47,189 +55,770 @@
       <span>0 methods</span>
     </div>
   </div>
-  <div class="items"><div class="group-label">Standalone Functions</div><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn register pub(super) pub(super) fn register (registry : &amp; mut crate :: registry :: ToolRegistry , config : &amp; crate :: registry :: config :: ToolConfigSet , sandbox_service : super :: super :: SandboxToolService , command_service : super :: super :: CommandToolService ,) crates/eos-tools/src/tools/sandbox/lib.rs  ">
+  <div class="items"><div class="group-label">Standalone Functions</div><article id="item-fn-register-25" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn register pub(super) pub(super) fn register (registry : &amp; mut crate :: registry :: ToolRegistry , config : &amp; crate :: registry :: config :: ToolConfigSet , sandbox_service : super :: super :: SandboxToolService , command_service : super :: super :: CommandToolService ,) crates/eos-tools/src/tools/sandbox/lib.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>register</h3>
     <span class="visibility">pub(super)</span>
   </div>
-  <code class="signature">pub(super) fn register (registry : &amp; mut crate :: registry :: ToolRegistry , config : &amp; crate :: registry :: config :: ToolConfigSet , sandbox_service : super :: super :: SandboxToolService , command_service : super :: super :: CommandToolService ,)</code>
+  <code class="signature">pub(super) fn <a class="symbol-link" href="eos-tools--src-ports-mod-rs.html#method-register-322">register</a> (registry : &amp; mut crate :: registry :: <a class="symbol-link" href="eos-tools--src-registry-tool-registry-rs.html#item-struct-ToolRegistry-18">ToolRegistry</a> , config : &amp; crate :: registry :: config :: <a class="symbol-link" href="eos-tools--src-registry-config-rs.html#item-struct-ToolConfigSet-45">ToolConfigSet</a> , sandbox_service : super :: super :: <a class="symbol-link" href="eos-tools--src-tools-services-rs.html#item-struct-SandboxToolService-65">SandboxToolService</a> , command_service : super :: super :: <a class="symbol-link" href="eos-tools--src-tools-services-rs.html#item-struct-CommandToolService-91">CommandToolService</a> ,)</code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-ports-mod-rs.html#method-register-322">register</a>(
+    registry: &amp;<span class="rs-kw">mut</span> <span class="rs-kw">crate</span>::registry::<a class="symbol-link rs-type" href="eos-tools--src-registry-tool-registry-rs.html#item-struct-ToolRegistry-18">ToolRegistry</a>,
+    config: &amp;<span class="rs-kw">crate</span>::registry::config::<a class="symbol-link rs-type" href="eos-tools--src-registry-config-rs.html#item-struct-ToolConfigSet-45">ToolConfigSet</a>,
+    sandbox_service: <span class="rs-kw">super</span>::<span class="rs-kw">super</span>::<a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-SandboxToolService-65">SandboxToolService</a>,
+    command_service: <span class="rs-kw">super</span>::<span class="rs-kw">super</span>::<a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-CommandToolService-91">CommandToolService</a>,
+) {
+    registration::<a class="symbol-link rs-fn" href="eos-tools--src-ports-mod-rs.html#method-register-322">register</a>(registry, config, sandbox_service, command_service);
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-tools/src/tools/sandbox/lib.rs:25</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn request_base pub(super) pub(super) fn request_base (ctx : &amp; ExecutionMetadata , description : &amp; str ,) -&gt; Result &lt; SandboxRequestBase , ToolError &gt; crates/eos-tools/src/tools/sandbox/lib.rs  ">
+</article><article id="item-fn-request-base-34" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn request_base pub(super) pub(super) fn request_base (ctx : &amp; ExecutionMetadata , description : &amp; str ,) -&gt; Result &lt; SandboxRequestBase , ToolError &gt; crates/eos-tools/src/tools/sandbox/lib.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>request_base</h3>
     <span class="visibility">pub(super)</span>
   </div>
-  <code class="signature">pub(super) fn request_base (ctx : &amp; ExecutionMetadata , description : &amp; str ,) -&gt; Result &lt; SandboxRequestBase , ToolError &gt;</code>
+  <code class="signature">pub(super) fn <a class="symbol-link" href="eos-tools--src-tools-sandbox-lib-rs.html#item-fn-request-base-34">request_base</a> (ctx : &amp; <a class="symbol-link" href="eos-tools--src-core-metadata-rs.html#item-struct-ExecutionMetadata-17">ExecutionMetadata</a> , description : &amp; str ,) -&gt; Result &lt; SandboxRequestBase , <a class="symbol-link" href="eos-tools.html#item-enum-ToolError-16">ToolError</a> &gt;</code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-tools-sandbox-lib-rs.html#item-fn-request-base-34">request_base</a>(
+    ctx: &amp;<a class="symbol-link rs-type" href="eos-tools--src-core-metadata-rs.html#item-struct-ExecutionMetadata-17">ExecutionMetadata</a>,
+    description: &amp;str,
+) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">SandboxRequestBase</span>, <a class="symbol-link rs-type" href="eos-tools.html#item-enum-ToolError-16">ToolError</a>&gt; {
+    <span class="rs-kw">let</span> agent_run_id = ctx.<a class="symbol-link rs-fn" href="eos-tools--src-core-metadata-rs.html#method-require-agent-run-id-108">require_agent_run_id</a>()?;
+    <span class="rs-type">Ok</span>(<span class="rs-type">SandboxRequestBase</span>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(
+        agent_run_id.<a class="symbol-link rs-fn" href="eos-tools--src-core-intent-rs.html#method-as-str-42">as_str</a>(),
+        description,
+        ctx.sandbox_invocation_id.clone(),
+    ))
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-tools/src/tools/sandbox/lib.rs:34</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn resolve_path pub(super) pub(super) fn resolve_path (ctx : &amp; ExecutionMetadata , path : &amp; str) -&gt; String crates/eos-tools/src/tools/sandbox/lib.rs  ">
+</article><article id="item-fn-resolve-path-46" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn resolve_path pub(super) pub(super) fn resolve_path (ctx : &amp; ExecutionMetadata , path : &amp; str) -&gt; String crates/eos-tools/src/tools/sandbox/lib.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>resolve_path</h3>
     <span class="visibility">pub(super)</span>
   </div>
-  <code class="signature">pub(super) fn resolve_path (ctx : &amp; ExecutionMetadata , path : &amp; str) -&gt; String</code>
+  <code class="signature">pub(super) fn <a class="symbol-link" href="eos-tools--src-tools-sandbox-lib-rs.html#item-fn-resolve-path-46">resolve_path</a> (ctx : &amp; <a class="symbol-link" href="eos-tools--src-core-metadata-rs.html#item-struct-ExecutionMetadata-17">ExecutionMetadata</a> , path : &amp; str) -&gt; String</code>
+  <p class="docstring">Absolute paths pass through; relative paths resolve under `workspace_root`.</p>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-comment">/// Absolute paths pass through; relative paths resolve under `workspace_root`.</span>
+<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-tools-sandbox-lib-rs.html#item-fn-resolve-path-46">resolve_path</a>(ctx: &amp;<a class="symbol-link rs-type" href="eos-tools--src-core-metadata-rs.html#item-struct-ExecutionMetadata-17">ExecutionMetadata</a>, path: &amp;str) -&gt; <span class="rs-type">String</span> {
+    <span class="rs-kw">if</span> path.starts_with(&#x27;/&#x27;) {
+        <span class="rs-kw">return</span> path.to_owned();
+    }
+    <span class="rs-kw">let</span> workspace_root = ctx.workspace_root.trim();
+    <span class="rs-kw">if</span> workspace_root.<a class="symbol-link rs-fn" href="eos-tools--src-registry-tool-registry-rs.html#method-is-empty-96">is_empty</a>() {
+        path.to_owned()
+    } <span class="rs-kw">else</span> {
+        format!(&quot;{}/{path}&quot;, workspace_root.trim_end_matches(&#x27;/&#x27;))
+    }
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-tools/src/tools/sandbox/lib.rs:46</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn cwd pub(super) pub(super) fn cwd (ctx : &amp; ExecutionMetadata) -&gt; String crates/eos-tools/src/tools/sandbox/lib.rs  ">
+</article><article id="item-fn-cwd-59" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn cwd pub(super) pub(super) fn cwd (ctx : &amp; ExecutionMetadata) -&gt; String crates/eos-tools/src/tools/sandbox/lib.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>cwd</h3>
     <span class="visibility">pub(super)</span>
   </div>
-  <code class="signature">pub(super) fn cwd (ctx : &amp; ExecutionMetadata) -&gt; String</code>
+  <code class="signature">pub(super) fn <a class="symbol-link" href="eos-tools--src-tools-sandbox-lib-rs.html#item-fn-cwd-59">cwd</a> (ctx : &amp; <a class="symbol-link" href="eos-tools--src-core-metadata-rs.html#item-struct-ExecutionMetadata-17">ExecutionMetadata</a>) -&gt; String</code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-tools-sandbox-lib-rs.html#item-fn-cwd-59">cwd</a>(ctx: &amp;<a class="symbol-link rs-type" href="eos-tools--src-core-metadata-rs.html#item-struct-ExecutionMetadata-17">ExecutionMetadata</a>) -&gt; <span class="rs-type">String</span> {
+    ctx.workspace_root.trim().to_owned()
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-tools/src/tools/sandbox/lib.rs:59</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn serialize_output pub(super) pub(super) fn serialize_output &lt; T : Serialize &gt; (value : &amp; T) -&gt; Result &lt; String , ToolResult &gt; crates/eos-tools/src/tools/sandbox/lib.rs  ">
+</article><article id="item-fn-serialize-output-63" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn serialize_output pub(super) pub(super) fn serialize_output &lt; T : Serialize &gt; (value : &amp; T) -&gt; Result &lt; String , ToolResult &gt; crates/eos-tools/src/tools/sandbox/lib.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>serialize_output</h3>
     <span class="visibility">pub(super)</span>
   </div>
-  <code class="signature">pub(super) fn serialize_output &lt; T : Serialize &gt; (value : &amp; T) -&gt; Result &lt; String , ToolResult &gt;</code>
+  <code class="signature">pub(super) fn <a class="symbol-link" href="eos-tools--src-tools-sandbox-lib-rs.html#item-fn-serialize-output-63">serialize_output</a> &lt; T : Serialize &gt; (value : &amp; T) -&gt; Result &lt; String , <a class="symbol-link" href="eos-tools--src-core-result-rs.html#item-struct-ToolResult-12">ToolResult</a> &gt;</code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> serialize_output&lt;<span class="rs-type">T</span>: <span class="rs-type">Serialize</span>&gt;(value: &amp;<span class="rs-type">T</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">String</span>, <a class="symbol-link rs-type" href="eos-tools--src-core-result-rs.html#item-struct-ToolResult-12">ToolResult</a>&gt; {
+    serde_json::to_string(value)
+        .map_err(|err| <a class="symbol-link rs-type" href="eos-tools--src-core-result-rs.html#item-struct-ToolResult-12">ToolResult</a>::<a class="symbol-link rs-fn" href="eos-tools--src-core-result-rs.html#method-error-42">error</a>(format!(&quot;failed to serialize tool output: {err}&quot;)))
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-tools/src/tools/sandbox/lib.rs:63</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn ok_json pub(super) pub(super) fn ok_json &lt; T : Serialize &gt; (value : &amp; T) -&gt; ToolResult crates/eos-tools/src/tools/sandbox/lib.rs  ">
+</article><article id="item-fn-ok-json-68" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn ok_json pub(super) pub(super) fn ok_json &lt; T : Serialize &gt; (value : &amp; T) -&gt; ToolResult crates/eos-tools/src/tools/sandbox/lib.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>ok_json</h3>
     <span class="visibility">pub(super)</span>
   </div>
-  <code class="signature">pub(super) fn ok_json &lt; T : Serialize &gt; (value : &amp; T) -&gt; ToolResult</code>
+  <code class="signature">pub(super) fn <a class="symbol-link" href="eos-tools--src-tools-sandbox-lib-rs.html#item-fn-ok-json-68">ok_json</a> &lt; T : Serialize &gt; (value : &amp; T) -&gt; <a class="symbol-link" href="eos-tools--src-core-result-rs.html#item-struct-ToolResult-12">ToolResult</a></code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> ok_json&lt;<span class="rs-type">T</span>: <span class="rs-type">Serialize</span>&gt;(value: &amp;<span class="rs-type">T</span>) -&gt; <a class="symbol-link rs-type" href="eos-tools--src-core-result-rs.html#item-struct-ToolResult-12">ToolResult</a> {
+    <span class="rs-kw">match</span> <a class="symbol-link rs-fn" href="eos-tools--src-tools-sandbox-lib-rs.html#item-fn-serialize-output-63">serialize_output</a>(value) {
+        <span class="rs-type">Ok</span>(output) =&gt; <a class="symbol-link rs-type" href="eos-tools--src-core-result-rs.html#item-struct-ToolResult-12">ToolResult</a>::<a class="symbol-link rs-fn" href="eos-tools--src-core-result-rs.html#method-ok-31">ok</a>(output),
+        <span class="rs-type">Err</span>(result) =&gt; result,
+    }
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-tools/src/tools/sandbox/lib.rs:68</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn invalid_input pub(super) pub(super) fn invalid_input (tool : ToolName , message : impl std :: fmt :: Display) -&gt; ToolResult crates/eos-tools/src/tools/sandbox/lib.rs  ">
+</article><article id="item-fn-invalid-input-75" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn invalid_input pub(super) pub(super) fn invalid_input (tool : ToolName , message : impl std :: fmt :: Display) -&gt; ToolResult crates/eos-tools/src/tools/sandbox/lib.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>invalid_input</h3>
     <span class="visibility">pub(super)</span>
   </div>
-  <code class="signature">pub(super) fn invalid_input (tool : ToolName , message : impl std :: fmt :: Display) -&gt; ToolResult</code>
+  <code class="signature">pub(super) fn <a class="symbol-link" href="eos-tools--src-tools-sandbox-lib-rs.html#item-fn-invalid-input-75">invalid_input</a> (tool : <a class="symbol-link" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a> , message : impl std :: fmt :: Display) -&gt; <a class="symbol-link" href="eos-tools--src-core-result-rs.html#item-struct-ToolResult-12">ToolResult</a></code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-tools-sandbox-lib-rs.html#item-fn-invalid-input-75">invalid_input</a>(tool: <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>, message: <span class="rs-kw">impl</span> std::fmt::<span class="rs-type">Display</span>) -&gt; <a class="symbol-link rs-type" href="eos-tools--src-core-result-rs.html#item-struct-ToolResult-12">ToolResult</a> {
+    <a class="symbol-link rs-type" href="eos-tools--src-core-result-rs.html#item-struct-ToolResult-12">ToolResult</a>::<a class="symbol-link rs-fn" href="eos-tools--src-core-result-rs.html#method-error-42">error</a>(format!(
+        &quot;<span class="rs-type">Invalid</span> input <span class="rs-kw">for</span> {}: {message}. <span class="rs-type">Please</span> retry the tool call with valid arguments.&quot;,
+        tool.<a class="symbol-link rs-fn" href="eos-tools--src-core-intent-rs.html#method-as-str-42">as_str</a>()
+    ))
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-tools/src/tools/sandbox/lib.rs:75</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn failure_status pub(super) pub(super) fn failure_status (conflict_reason : Option &lt; &amp; str &gt;) -&gt; String crates/eos-tools/src/tools/sandbox/lib.rs  ">
+</article><article id="item-fn-failure-status-82" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn failure_status pub(super) pub(super) fn failure_status (conflict_reason : Option &lt; &amp; str &gt;) -&gt; String crates/eos-tools/src/tools/sandbox/lib.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>failure_status</h3>
     <span class="visibility">pub(super)</span>
   </div>
-  <code class="signature">pub(super) fn failure_status (conflict_reason : Option &lt; &amp; str &gt;) -&gt; String</code>
+  <code class="signature">pub(super) fn <a class="symbol-link" href="eos-tools--src-tools-sandbox-lib-rs.html#item-fn-failure-status-82">failure_status</a> (conflict_reason : Option &lt; &amp; str &gt;) -&gt; String</code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-tools-sandbox-lib-rs.html#item-fn-failure-status-82">failure_status</a>(conflict_reason: <span class="rs-type">Option</span>&lt;&amp;str&gt;) -&gt; <span class="rs-type">String</span> {
+    <span class="rs-kw">match</span> conflict_reason {
+        <span class="rs-type">Some</span>(&quot;base_mismatch&quot; | &quot;version_conflict&quot; | &quot;drift&quot;) =&gt; &quot;aborted_version&quot;,
+        <span class="rs-type">Some</span>(&quot;lock_conflict&quot; | &quot;locked&quot;) =&gt; &quot;aborted_lock&quot;,
+        <span class="rs-type">Some</span>(&quot;not_found&quot; | &quot;missing&quot;) =&gt; &quot;not_found&quot;,
+        _ =&gt; &quot;failed&quot;,
+    }
+    .to_owned()
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-tools/src/tools/sandbox/lib.rs:82</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn default_false pub(super) pub(super) fn default_false () -&gt; bool crates/eos-tools/src/tools/sandbox/lib.rs  ">
+</article><article id="item-fn-default-false-92" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn default_false pub(super) pub(super) fn default_false () -&gt; bool crates/eos-tools/src/tools/sandbox/lib.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>default_false</h3>
     <span class="visibility">pub(super)</span>
   </div>
-  <code class="signature">pub(super) fn default_false () -&gt; bool</code>
+  <code class="signature">pub(super) fn <a class="symbol-link" href="eos-tools--src-tools-sandbox-lib-rs.html#item-fn-default-false-92">default_false</a> () -&gt; bool</code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-tools-sandbox-lib-rs.html#item-fn-default-false-92">default_false</a>() -&gt; bool {
+    <span class="rs-kw">false</span>
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-tools/src/tools/sandbox/lib.rs:92</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn default_empty pub(super) pub(super) fn default_empty () -&gt; String crates/eos-tools/src/tools/sandbox/lib.rs  ">
+</article><article id="item-fn-default-empty-96" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn default_empty pub(super) pub(super) fn default_empty () -&gt; String crates/eos-tools/src/tools/sandbox/lib.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>default_empty</h3>
     <span class="visibility">pub(super)</span>
   </div>
-  <code class="signature">pub(super) fn default_empty () -&gt; String</code>
+  <code class="signature">pub(super) fn <a class="symbol-link" href="eos-tools--src-tools-sandbox-lib-rs.html#item-fn-default-empty-96">default_empty</a> () -&gt; String</code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-tools-sandbox-lib-rs.html#item-fn-default-empty-96">default_empty</a>() -&gt; <span class="rs-type">String</span> {
+    <span class="rs-type">String</span>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>()
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-tools/src/tools/sandbox/lib.rs:96</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn mutation_result pub(super) pub(super) fn mutation_result (success : bool , output : MutationOutput) -&gt; ToolResult crates/eos-tools/src/tools/sandbox/lib.rs  ">
+</article><article id="item-fn-mutation-result-100" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn mutation_result pub(super) pub(super) fn mutation_result (success : bool , output : MutationOutput) -&gt; ToolResult crates/eos-tools/src/tools/sandbox/lib.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>mutation_result</h3>
     <span class="visibility">pub(super)</span>
   </div>
-  <code class="signature">pub(super) fn mutation_result (success : bool , output : MutationOutput) -&gt; ToolResult</code>
+  <code class="signature">pub(super) fn <a class="symbol-link" href="eos-tools--src-tools-sandbox-lib-rs.html#item-fn-mutation-result-100">mutation_result</a> (success : bool , output : <a class="symbol-link" href="eos-tools--src-tools-sandbox-lib-outputs-rs.html#item-struct-MutationOutput-18">MutationOutput</a>) -&gt; <a class="symbol-link" href="eos-tools--src-core-result-rs.html#item-struct-ToolResult-12">ToolResult</a></code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-tools-sandbox-lib-rs.html#item-fn-mutation-result-100">mutation_result</a>(success: bool, output: <a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-lib-outputs-rs.html#item-struct-MutationOutput-18">MutationOutput</a>) -&gt; <a class="symbol-link rs-type" href="eos-tools--src-core-result-rs.html#item-struct-ToolResult-12">ToolResult</a> {
+    <span class="rs-kw">let</span> serialized = <span class="rs-kw">match</span> <a class="symbol-link rs-fn" href="eos-tools--src-tools-sandbox-lib-rs.html#item-fn-serialize-output-63">serialize_output</a>(&amp;output) {
+        <span class="rs-type">Ok</span>(output) =&gt; output,
+        <span class="rs-type">Err</span>(result) =&gt; <span class="rs-kw">return</span> result,
+    };
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> result = <span class="rs-kw">if</span> success {
+        <a class="symbol-link rs-type" href="eos-tools--src-core-result-rs.html#item-struct-ToolResult-12">ToolResult</a>::<a class="symbol-link rs-fn" href="eos-tools--src-core-result-rs.html#method-ok-31">ok</a>(serialized)
+    } <span class="rs-kw">else</span> {
+        <a class="symbol-link rs-type" href="eos-tools--src-core-result-rs.html#item-struct-ToolResult-12">ToolResult</a>::<a class="symbol-link rs-fn" href="eos-tools--src-core-result-rs.html#method-error-42">error</a>(serialized)
+    };
+    result
+        .metadata
+        .insert(&quot;status&quot;.to_owned(), <span class="rs-type">Value</span>::<span class="rs-type">String</span>(output.status));
+    result
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-tools/src/tools/sandbox/lib.rs:100</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn edit_output pub(super) pub(super) fn edit_output (ctx : &amp; ExecutionMetadata , file_path : String , base : &amp; eos_sandbox_port :: SandboxResultBase , changed_path_kinds : BTreeMap &lt; String , String &gt; , mutation_source : String , applied_edits : u64 ,) -&gt; ToolResult crates/eos-tools/src/tools/sandbox/lib.rs  ">
+</article><article id="item-fn-edit-output-116" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn edit_output pub(super) pub(super) fn edit_output (ctx : &amp; ExecutionMetadata , file_path : String , base : &amp; eos_sandbox_port :: SandboxResultBase , changed_path_kinds : BTreeMap &lt; String , String &gt; , mutation_source : String , applied_edits : u64 ,) -&gt; ToolResult crates/eos-tools/src/tools/sandbox/lib.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>edit_output</h3>
     <span class="visibility">pub(super)</span>
   </div>
-  <code class="signature">pub(super) fn edit_output (ctx : &amp; ExecutionMetadata , file_path : String , base : &amp; eos_sandbox_port :: SandboxResultBase , changed_path_kinds : BTreeMap &lt; String , String &gt; , mutation_source : String , applied_edits : u64 ,) -&gt; ToolResult</code>
+  <code class="signature">pub(super) fn <a class="symbol-link" href="eos-tools--src-tools-sandbox-lib-rs.html#item-fn-edit-output-116">edit_output</a> (ctx : &amp; <a class="symbol-link" href="eos-tools--src-core-metadata-rs.html#item-struct-ExecutionMetadata-17">ExecutionMetadata</a> , file_path : String , base : &amp; eos_sandbox_port :: SandboxResultBase , changed_path_kinds : BTreeMap &lt; String , String &gt; , mutation_source : String , applied_edits : u64 ,) -&gt; <a class="symbol-link" href="eos-tools--src-core-result-rs.html#item-struct-ToolResult-12">ToolResult</a></code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-tools-sandbox-lib-rs.html#item-fn-edit-output-116">edit_output</a>(
+    ctx: &amp;<a class="symbol-link rs-type" href="eos-tools--src-core-metadata-rs.html#item-struct-ExecutionMetadata-17">ExecutionMetadata</a>,
+    file_path: <span class="rs-type">String</span>,
+    base: &amp;eos_sandbox_port::<span class="rs-type">SandboxResultBase</span>,
+    changed_path_kinds: <span class="rs-type">BTreeMap</span>&lt;<span class="rs-type">String</span>, <span class="rs-type">String</span>&gt;,
+    mutation_source: <span class="rs-type">String</span>,
+    applied_edits: u64,
+) -&gt; <a class="symbol-link rs-type" href="eos-tools--src-core-result-rs.html#item-struct-ToolResult-12">ToolResult</a> {
+    <span class="rs-kw">let</span> output = <a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-lib-outputs-rs.html#item-struct-MutationOutput-18">MutationOutput</a> {
+        cwd: <a class="symbol-link rs-fn" href="eos-tools--src-tools-sandbox-lib-rs.html#item-fn-cwd-59">cwd</a>(ctx),
+        file_path,
+        status: <span class="rs-kw">if</span> base.success {
+            &quot;edited&quot;.to_owned()
+        } <span class="rs-kw">else</span> {
+            <a class="symbol-link rs-fn" href="eos-tools--src-tools-sandbox-lib-rs.html#item-fn-failure-status-82">failure_status</a>(base.conflict_reason.as_deref())
+        },
+        changed_paths: base.changed_paths.clone(),
+        changed_path_kinds,
+        mutation_source,
+        conflict_reason: base.conflict_reason.clone(),
+        error: base.error.clone().unwrap_or_default(),
+        extra: <span class="rs-type">BTreeMap</span>::<a class="symbol-link rs-fn" href="eos-tools--src-core-intent-rs.html#method-from-63">from</a>([(&quot;applied_edits&quot;.to_owned(), json!(applied_edits))]),
+    };
+    <a class="symbol-link rs-fn" href="eos-tools--src-tools-sandbox-lib-rs.html#item-fn-mutation-result-100">mutation_result</a>(base.success, output)
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-tools/src/tools/sandbox/lib.rs:116</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn default_yield_ms pub(super) pub(super) fn default_yield_ms () -&gt; u32 crates/eos-tools/src/tools/sandbox/lib.rs  ">
+</article><article id="item-fn-default-yield-ms-142" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn default_yield_ms pub(super) pub(super) fn default_yield_ms () -&gt; u32 crates/eos-tools/src/tools/sandbox/lib.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>default_yield_ms</h3>
     <span class="visibility">pub(super)</span>
   </div>
-  <code class="signature">pub(super) fn default_yield_ms () -&gt; u32</code>
+  <code class="signature">pub(super) fn <a class="symbol-link" href="eos-tools--src-tools-sandbox-lib-rs.html#item-fn-default-yield-ms-142">default_yield_ms</a> () -&gt; u32</code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-tools-sandbox-lib-rs.html#item-fn-default-yield-ms-142">default_yield_ms</a>() -&gt; u32 {
+    1000
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-tools/src/tools/sandbox/lib.rs:142</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn validate_command_timing pub(super) pub(super) fn validate_command_timing (tool : ToolName , yield_time_ms : u32 , timeout : Option &lt; u32 &gt; ,) -&gt; Option &lt; ToolResult &gt; crates/eos-tools/src/tools/sandbox/lib.rs  ">
+</article><article id="item-fn-validate-command-timing-146" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn validate_command_timing pub(super) pub(super) fn validate_command_timing (tool : ToolName , yield_time_ms : u32 , timeout : Option &lt; u32 &gt; ,) -&gt; Option &lt; ToolResult &gt; crates/eos-tools/src/tools/sandbox/lib.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>validate_command_timing</h3>
     <span class="visibility">pub(super)</span>
   </div>
-  <code class="signature">pub(super) fn validate_command_timing (tool : ToolName , yield_time_ms : u32 , timeout : Option &lt; u32 &gt; ,) -&gt; Option &lt; ToolResult &gt;</code>
+  <code class="signature">pub(super) fn <a class="symbol-link" href="eos-tools--src-tools-sandbox-lib-rs.html#item-fn-validate-command-timing-146">validate_command_timing</a> (tool : <a class="symbol-link" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a> , yield_time_ms : u32 , timeout : Option &lt; u32 &gt; ,) -&gt; Option &lt; <a class="symbol-link" href="eos-tools--src-core-result-rs.html#item-struct-ToolResult-12">ToolResult</a> &gt;</code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-tools-sandbox-lib-rs.html#item-fn-validate-command-timing-146">validate_command_timing</a>(
+    tool: <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>,
+    yield_time_ms: u32,
+    timeout: <span class="rs-type">Option</span>&lt;u32&gt;,
+) -&gt; <span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-tools--src-core-result-rs.html#item-struct-ToolResult-12">ToolResult</a>&gt; {
+    <span class="rs-kw">if</span> yield_time_ms &gt; <span class="rs-type">MAX_YIELD_TIME_MS</span> {
+        <span class="rs-kw">return</span> <span class="rs-type">Some</span>(<a class="symbol-link rs-fn" href="eos-tools--src-tools-sandbox-lib-rs.html#item-fn-invalid-input-75">invalid_input</a>(
+            tool,
+            format!(&quot;yield_time_ms must be &lt;= {<span class="rs-type">MAX_YIELD_TIME_MS</span>}&quot;),
+        ));
+    }
+    <span class="rs-kw">if</span> timeout == <span class="rs-type">Some</span>(0) {
+        <span class="rs-kw">return</span> <span class="rs-type">Some</span>(<a class="symbol-link rs-fn" href="eos-tools--src-tools-sandbox-lib-rs.html#item-fn-invalid-input-75">invalid_input</a>(tool, &quot;timeout must be &gt;= 1&quot;));
+    }
+    <span class="rs-type">None</span>
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-tools/src/tools/sandbox/lib.rs:146</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn is_command_session_not_found pub(super) pub(super) fn is_command_session_not_found (result : &amp; ExecCommandResult) -&gt; bool crates/eos-tools/src/tools/sandbox/lib.rs  ">
+</article><article id="item-fn-is-command-session-not-found-163" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn is_command_session_not_found pub(super) pub(super) fn is_command_session_not_found (result : &amp; ExecCommandResult) -&gt; bool crates/eos-tools/src/tools/sandbox/lib.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>is_command_session_not_found</h3>
     <span class="visibility">pub(super)</span>
   </div>
-  <code class="signature">pub(super) fn is_command_session_not_found (result : &amp; ExecCommandResult) -&gt; bool</code>
+  <code class="signature">pub(super) fn <a class="symbol-link" href="eos-tools--src-tools-sandbox-lib-rs.html#item-fn-is-command-session-not-found-163">is_command_session_not_found</a> (result : &amp; ExecCommandResult) -&gt; bool</code>
+  <p class="docstring">Whether the daemon says the live session is gone, so the supervisor's stored<br>terminal result can be recovered.</p>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-comment">/// Whether the daemon says the live session is gone, so the supervisor's stored</span>
+<span class="rs-comment">/// terminal result can be recovered.</span>
+<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-tools-sandbox-lib-rs.html#item-fn-is-command-session-not-found-163">is_command_session_not_found</a>(result: &amp;<span class="rs-type">ExecCommandResult</span>) -&gt; bool {
+    result.is_session_not_found()
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-tools/src/tools/sandbox/lib.rs:163</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn command_result_value pub(super) pub(super) fn command_result_value (result : &amp; ExecCommandResult) -&gt; Value crates/eos-tools/src/tools/sandbox/lib.rs  ">
+</article><article id="item-fn-command-result-value-169" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn command_result_value pub(super) pub(super) fn command_result_value (result : &amp; ExecCommandResult) -&gt; Value crates/eos-tools/src/tools/sandbox/lib.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>command_result_value</h3>
     <span class="visibility">pub(super)</span>
   </div>
-  <code class="signature">pub(super) fn command_result_value (result : &amp; ExecCommandResult) -&gt; Value</code>
+  <code class="signature">pub(super) fn <a class="symbol-link" href="eos-tools--src-tools-sandbox-lib-rs.html#item-fn-command-result-value-169">command_result_value</a> (result : &amp; ExecCommandResult) -&gt; Value</code>
+  <p class="docstring">Project an [`ExecCommandResult`] into the completion payload the supervisor<br>stores.</p>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-comment">/// Project an [`ExecCommandResult`] into the completion payload the supervisor</span>
+<span class="rs-comment">/// stores.</span>
+<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-tools-sandbox-lib-rs.html#item-fn-command-result-value-169">command_result_value</a>(result: &amp;<span class="rs-type">ExecCommandResult</span>) -&gt; <span class="rs-type">Value</span> {
+    json!({
+        &quot;status&quot;: result.status,
+        &quot;exit_code&quot;: result.exit_code,
+        &quot;output&quot;: {
+            &quot;stdout&quot;: result.output.stdout,
+            &quot;stderr&quot;: result.output.stderr,
+        },
+    })
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-tools/src/tools/sandbox/lib.rs:169</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn command_tool_result_from_value pub(super) pub(super) fn command_tool_result_from_value (result : &amp; Value) -&gt; ToolResult crates/eos-tools/src/tools/sandbox/lib.rs  ">
+</article><article id="item-fn-command-tool-result-from-value-182" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn command_tool_result_from_value pub(super) pub(super) fn command_tool_result_from_value (result : &amp; Value) -&gt; ToolResult crates/eos-tools/src/tools/sandbox/lib.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>command_tool_result_from_value</h3>
     <span class="visibility">pub(super)</span>
   </div>
-  <code class="signature">pub(super) fn command_tool_result_from_value (result : &amp; Value) -&gt; ToolResult</code>
+  <code class="signature">pub(super) fn <a class="symbol-link" href="eos-tools--src-tools-sandbox-lib-rs.html#item-fn-command-tool-result-from-value-182">command_tool_result_from_value</a> (result : &amp; Value) -&gt; <a class="symbol-link" href="eos-tools--src-core-result-rs.html#item-struct-ToolResult-12">ToolResult</a></code>
+  <p class="docstring">Render a supervisor-stored terminal `result` value into the tool output DTO<br>(the recover-race return path).</p>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-comment">/// Render a supervisor-stored terminal `result` value into the tool output DTO</span>
+<span class="rs-comment">/// (the recover-race return path).</span>
+<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-tools-sandbox-lib-rs.html#item-fn-command-tool-result-from-value-182">command_tool_result_from_value</a>(result: &amp;<span class="rs-type">Value</span>) -&gt; <a class="symbol-link rs-type" href="eos-tools--src-core-result-rs.html#item-struct-ToolResult-12">ToolResult</a> {
+    <span class="rs-kw">let</span> status = result
+        .<a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#method-get-89">get</a>(&quot;status&quot;)
+        .and_then(<span class="rs-type">Value</span>::as_str)
+        .unwrap_or(&quot;ok&quot;)
+        .to_owned();
+    <span class="rs-kw">let</span> exit_code = result
+        .<a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#method-get-89">get</a>(&quot;exit_code&quot;)
+        .and_then(<span class="rs-type">Value</span>::as_i64)
+        .map(|code| code <span class="rs-kw">as</span> i32);
+    <span class="rs-kw">let</span> stdout = result
+        .<a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#method-get-89">get</a>(&quot;output&quot;)
+        .and_then(|output| output.<a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#method-get-89">get</a>(&quot;stdout&quot;))
+        .and_then(<span class="rs-type">Value</span>::as_str)
+        .or_else(|| result.<a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#method-get-89">get</a>(&quot;stdout&quot;).and_then(<span class="rs-type">Value</span>::as_str))
+        .unwrap_or(&quot;&quot;)
+        .to_owned();
+    <span class="rs-kw">let</span> stderr = result
+        .<a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#method-get-89">get</a>(&quot;output&quot;)
+        .and_then(|output| output.<a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#method-get-89">get</a>(&quot;stderr&quot;))
+        .and_then(<span class="rs-type">Value</span>::as_str)
+        .unwrap_or(&quot;&quot;)
+        .to_owned();
+    <span class="rs-kw">let</span> is_error = eos_sandbox_port::<span class="rs-type">KnownCommandStatus</span>::is_error_raw(&amp;status);
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> output_map = <span class="rs-type">BTreeMap</span>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>();
+    output_map.insert(&quot;stdout&quot;.to_owned(), stdout.clone());
+    output_map.insert(&quot;stderr&quot;.to_owned(), stderr.clone());
+    <span class="rs-kw">let</span> payload = <a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-lib-outputs-rs.html#item-struct-CommandToolOutput-33">CommandToolOutput</a> {
+        status: status.clone(),
+        exit_code,
+        output: output_map,
+        command_session_id: <span class="rs-type">None</span>,
+        stdout,
+        stderr,
+        changed_paths: <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(),
+        changed_path_kinds: <span class="rs-type">BTreeMap</span>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(),
+        mutation_source: <span class="rs-type">String</span>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(),
+        conflict_reason: <span class="rs-type">None</span>,
+        error: <span class="rs-type">None</span>,
+    };
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> metadata = <span class="rs-type">JsonObject</span>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>();
+    metadata.insert(&quot;status&quot;.to_owned(), json!(status));
+    <a class="symbol-link rs-type" href="eos-tools--src-core-result-rs.html#item-struct-ToolResult-12">ToolResult</a> {
+        output: <span class="rs-kw">match</span> <a class="symbol-link rs-fn" href="eos-tools--src-tools-sandbox-lib-rs.html#item-fn-serialize-output-63">serialize_output</a>(&amp;payload) {
+            <span class="rs-type">Ok</span>(output) =&gt; output,
+            <span class="rs-type">Err</span>(result) =&gt; <span class="rs-kw">return</span> result,
+        },
+        is_error,
+        metadata,
+        is_terminal: <span class="rs-kw">false</span>,
+    }
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-tools/src/tools/sandbox/lib.rs:182</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn command_tool_result pub(super) pub(super) fn command_tool_result (result : &amp; ExecCommandResult) -&gt; ToolResult crates/eos-tools/src/tools/sandbox/lib.rs  ">
+</article><article id="item-fn-command-tool-result-237" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn command_tool_result pub(super) pub(super) fn command_tool_result (result : &amp; ExecCommandResult) -&gt; ToolResult crates/eos-tools/src/tools/sandbox/lib.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>command_tool_result</h3>
     <span class="visibility">pub(super)</span>
   </div>
-  <code class="signature">pub(super) fn command_tool_result (result : &amp; ExecCommandResult) -&gt; ToolResult</code>
+  <code class="signature">pub(super) fn <a class="symbol-link" href="eos-tools--src-tools-sandbox-lib-rs.html#item-fn-command-tool-result-237">command_tool_result</a> (result : &amp; ExecCommandResult) -&gt; <a class="symbol-link" href="eos-tools--src-core-result-rs.html#item-struct-ToolResult-12">ToolResult</a></code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-tools-sandbox-lib-rs.html#item-fn-command-tool-result-237">command_tool_result</a>(result: &amp;<span class="rs-type">ExecCommandResult</span>) -&gt; <a class="symbol-link rs-type" href="eos-tools--src-core-result-rs.html#item-struct-ToolResult-12">ToolResult</a> {
+    <span class="rs-kw">let</span> is_error = result.is_error_status();
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> output_map = <span class="rs-type">BTreeMap</span>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>();
+    output_map.insert(&quot;stdout&quot;.to_owned(), result.output.stdout.clone());
+    output_map.insert(&quot;stderr&quot;.to_owned(), result.output.stderr.clone());
+    <span class="rs-kw">let</span> payload = <a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-lib-outputs-rs.html#item-struct-CommandToolOutput-33">CommandToolOutput</a> {
+        status: result.status.clone(),
+        exit_code: result.exit_code,
+        output: output_map,
+        command_session_id: result.command_session_id.clone(),
+        stdout: result.output.stdout.clone(),
+        stderr: result.output.stderr.clone(),
+        changed_paths: result.base.changed_paths.clone(),
+        changed_path_kinds: result.changed_path_kinds.clone(),
+        mutation_source: result.mutation_source.clone(),
+        conflict_reason: result.base.conflict_reason.clone(),
+        error: result.base.error.clone(),
+    };
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> metadata = <span class="rs-type">JsonObject</span>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>();
+    metadata.insert(&quot;status&quot;.to_owned(), json!(result.status));
+    <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(id) = &amp;result.command_session_id {
+        metadata.insert(&quot;command_session_id&quot;.to_owned(), json!(id));
+    }
+    <a class="symbol-link rs-type" href="eos-tools--src-core-result-rs.html#item-struct-ToolResult-12">ToolResult</a> {
+        output: <span class="rs-kw">match</span> <a class="symbol-link rs-fn" href="eos-tools--src-tools-sandbox-lib-rs.html#item-fn-serialize-output-63">serialize_output</a>(&amp;payload) {
+            <span class="rs-type">Ok</span>(output) =&gt; output,
+            <span class="rs-type">Err</span>(result) =&gt; <span class="rs-kw">return</span> result,
+        },
+        is_error,
+        metadata,
+        is_terminal: <span class="rs-kw">false</span>,
+    }
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-tools/src/tools/sandbox/lib.rs:237</p>
 </article></div>
 </section></div>
 </main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/eos-tools/src/tools/sandbox/lib.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-kw">use</span> std::collections::<span class="rs-type">BTreeMap</span>;
+
+<span class="rs-kw">use</span> eos_sandbox_port::{<span class="rs-type">ExecCommandResult</span>, <span class="rs-type">SandboxRequestBase</span>};
+<span class="rs-kw">use</span> eos_types::<span class="rs-type">JsonObject</span>;
+<span class="rs-kw">use</span> serde::<span class="rs-type">Serialize</span>;
+<span class="rs-kw">use</span> serde_json::{json, <span class="rs-type">Value</span>};
+
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::core::error::<a class="symbol-link rs-type" href="eos-tools.html#item-enum-ToolError-16">ToolError</a>;
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::core::metadata::<a class="symbol-link rs-type" href="eos-tools--src-core-metadata-rs.html#item-struct-ExecutionMetadata-17">ExecutionMetadata</a>;
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::core::name::<a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>;
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::core::result::<a class="symbol-link rs-type" href="eos-tools--src-core-result-rs.html#item-struct-ToolResult-12">ToolResult</a>;
+
+<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">mod</span> outputs;
+<span class="rs-kw">mod</span> registration;
+
+#[cfg(test)]
+#[path = &quot;../../../tests/tools/sandbox/<span class="rs-kw">mod</span>.rs&quot;]
+<span class="rs-kw">mod</span> tests;
+
+<span class="rs-kw">use</span> outputs::{<a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-lib-outputs-rs.html#item-struct-CommandToolOutput-33">CommandToolOutput</a>, <a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-lib-outputs-rs.html#item-struct-MutationOutput-18">MutationOutput</a>};
+
+<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">const</span> <span class="rs-type">MAX_READ_FILE_LINES</span>: u32 = 200;
+<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">const</span> <span class="rs-type">MAX_YIELD_TIME_MS</span>: u32 = 30_000;
+
+<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-ports-mod-rs.html#method-register-322">register</a>(
+    registry: &amp;<span class="rs-kw">mut</span> <span class="rs-kw">crate</span>::registry::<a class="symbol-link rs-type" href="eos-tools--src-registry-tool-registry-rs.html#item-struct-ToolRegistry-18">ToolRegistry</a>,
+    config: &amp;<span class="rs-kw">crate</span>::registry::config::<a class="symbol-link rs-type" href="eos-tools--src-registry-config-rs.html#item-struct-ToolConfigSet-45">ToolConfigSet</a>,
+    sandbox_service: <span class="rs-kw">super</span>::<span class="rs-kw">super</span>::<a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-SandboxToolService-65">SandboxToolService</a>,
+    command_service: <span class="rs-kw">super</span>::<span class="rs-kw">super</span>::<a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-CommandToolService-91">CommandToolService</a>,
+) {
+    registration::<a class="symbol-link rs-fn" href="eos-tools--src-ports-mod-rs.html#method-register-322">register</a>(registry, config, sandbox_service, command_service);
+}
+
+<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-tools-sandbox-lib-rs.html#item-fn-request-base-34">request_base</a>(
+    ctx: &amp;<a class="symbol-link rs-type" href="eos-tools--src-core-metadata-rs.html#item-struct-ExecutionMetadata-17">ExecutionMetadata</a>,
+    description: &amp;str,
+) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">SandboxRequestBase</span>, <a class="symbol-link rs-type" href="eos-tools.html#item-enum-ToolError-16">ToolError</a>&gt; {
+    <span class="rs-kw">let</span> agent_run_id = ctx.<a class="symbol-link rs-fn" href="eos-tools--src-core-metadata-rs.html#method-require-agent-run-id-108">require_agent_run_id</a>()?;
+    <span class="rs-type">Ok</span>(<span class="rs-type">SandboxRequestBase</span>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(
+        agent_run_id.<a class="symbol-link rs-fn" href="eos-tools--src-core-intent-rs.html#method-as-str-42">as_str</a>(),
+        description,
+        ctx.sandbox_invocation_id.clone(),
+    ))
+}
+
+<span class="rs-comment">/// Absolute paths pass through; relative paths resolve under `workspace_root`.</span>
+<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-tools-sandbox-lib-rs.html#item-fn-resolve-path-46">resolve_path</a>(ctx: &amp;<a class="symbol-link rs-type" href="eos-tools--src-core-metadata-rs.html#item-struct-ExecutionMetadata-17">ExecutionMetadata</a>, path: &amp;str) -&gt; <span class="rs-type">String</span> {
+    <span class="rs-kw">if</span> path.starts_with(&#x27;/&#x27;) {
+        <span class="rs-kw">return</span> path.to_owned();
+    }
+    <span class="rs-kw">let</span> workspace_root = ctx.workspace_root.trim();
+    <span class="rs-kw">if</span> workspace_root.<a class="symbol-link rs-fn" href="eos-tools--src-registry-tool-registry-rs.html#method-is-empty-96">is_empty</a>() {
+        path.to_owned()
+    } <span class="rs-kw">else</span> {
+        format!(&quot;{}/{path}&quot;, workspace_root.trim_end_matches(&#x27;/&#x27;))
+    }
+}
+
+<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-tools-sandbox-lib-rs.html#item-fn-cwd-59">cwd</a>(ctx: &amp;<a class="symbol-link rs-type" href="eos-tools--src-core-metadata-rs.html#item-struct-ExecutionMetadata-17">ExecutionMetadata</a>) -&gt; <span class="rs-type">String</span> {
+    ctx.workspace_root.trim().to_owned()
+}
+
+<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> serialize_output&lt;<span class="rs-type">T</span>: <span class="rs-type">Serialize</span>&gt;(value: &amp;<span class="rs-type">T</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">String</span>, <a class="symbol-link rs-type" href="eos-tools--src-core-result-rs.html#item-struct-ToolResult-12">ToolResult</a>&gt; {
+    serde_json::to_string(value)
+        .map_err(|err| <a class="symbol-link rs-type" href="eos-tools--src-core-result-rs.html#item-struct-ToolResult-12">ToolResult</a>::<a class="symbol-link rs-fn" href="eos-tools--src-core-result-rs.html#method-error-42">error</a>(format!(&quot;failed to serialize tool output: {err}&quot;)))
+}
+
+<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> ok_json&lt;<span class="rs-type">T</span>: <span class="rs-type">Serialize</span>&gt;(value: &amp;<span class="rs-type">T</span>) -&gt; <a class="symbol-link rs-type" href="eos-tools--src-core-result-rs.html#item-struct-ToolResult-12">ToolResult</a> {
+    <span class="rs-kw">match</span> <a class="symbol-link rs-fn" href="eos-tools--src-tools-sandbox-lib-rs.html#item-fn-serialize-output-63">serialize_output</a>(value) {
+        <span class="rs-type">Ok</span>(output) =&gt; <a class="symbol-link rs-type" href="eos-tools--src-core-result-rs.html#item-struct-ToolResult-12">ToolResult</a>::<a class="symbol-link rs-fn" href="eos-tools--src-core-result-rs.html#method-ok-31">ok</a>(output),
+        <span class="rs-type">Err</span>(result) =&gt; result,
+    }
+}
+
+<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-tools-sandbox-lib-rs.html#item-fn-invalid-input-75">invalid_input</a>(tool: <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>, message: <span class="rs-kw">impl</span> std::fmt::<span class="rs-type">Display</span>) -&gt; <a class="symbol-link rs-type" href="eos-tools--src-core-result-rs.html#item-struct-ToolResult-12">ToolResult</a> {
+    <a class="symbol-link rs-type" href="eos-tools--src-core-result-rs.html#item-struct-ToolResult-12">ToolResult</a>::<a class="symbol-link rs-fn" href="eos-tools--src-core-result-rs.html#method-error-42">error</a>(format!(
+        &quot;<span class="rs-type">Invalid</span> input <span class="rs-kw">for</span> {}: {message}. <span class="rs-type">Please</span> retry the tool call with valid arguments.&quot;,
+        tool.<a class="symbol-link rs-fn" href="eos-tools--src-core-intent-rs.html#method-as-str-42">as_str</a>()
+    ))
+}
+
+<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-tools-sandbox-lib-rs.html#item-fn-failure-status-82">failure_status</a>(conflict_reason: <span class="rs-type">Option</span>&lt;&amp;str&gt;) -&gt; <span class="rs-type">String</span> {
+    <span class="rs-kw">match</span> conflict_reason {
+        <span class="rs-type">Some</span>(&quot;base_mismatch&quot; | &quot;version_conflict&quot; | &quot;drift&quot;) =&gt; &quot;aborted_version&quot;,
+        <span class="rs-type">Some</span>(&quot;lock_conflict&quot; | &quot;locked&quot;) =&gt; &quot;aborted_lock&quot;,
+        <span class="rs-type">Some</span>(&quot;not_found&quot; | &quot;missing&quot;) =&gt; &quot;not_found&quot;,
+        _ =&gt; &quot;failed&quot;,
+    }
+    .to_owned()
+}
+
+<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-tools-sandbox-lib-rs.html#item-fn-default-false-92">default_false</a>() -&gt; bool {
+    <span class="rs-kw">false</span>
+}
+
+<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-tools-sandbox-lib-rs.html#item-fn-default-empty-96">default_empty</a>() -&gt; <span class="rs-type">String</span> {
+    <span class="rs-type">String</span>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>()
+}
+
+<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-tools-sandbox-lib-rs.html#item-fn-mutation-result-100">mutation_result</a>(success: bool, output: <a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-lib-outputs-rs.html#item-struct-MutationOutput-18">MutationOutput</a>) -&gt; <a class="symbol-link rs-type" href="eos-tools--src-core-result-rs.html#item-struct-ToolResult-12">ToolResult</a> {
+    <span class="rs-kw">let</span> serialized = <span class="rs-kw">match</span> <a class="symbol-link rs-fn" href="eos-tools--src-tools-sandbox-lib-rs.html#item-fn-serialize-output-63">serialize_output</a>(&amp;output) {
+        <span class="rs-type">Ok</span>(output) =&gt; output,
+        <span class="rs-type">Err</span>(result) =&gt; <span class="rs-kw">return</span> result,
+    };
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> result = <span class="rs-kw">if</span> success {
+        <a class="symbol-link rs-type" href="eos-tools--src-core-result-rs.html#item-struct-ToolResult-12">ToolResult</a>::<a class="symbol-link rs-fn" href="eos-tools--src-core-result-rs.html#method-ok-31">ok</a>(serialized)
+    } <span class="rs-kw">else</span> {
+        <a class="symbol-link rs-type" href="eos-tools--src-core-result-rs.html#item-struct-ToolResult-12">ToolResult</a>::<a class="symbol-link rs-fn" href="eos-tools--src-core-result-rs.html#method-error-42">error</a>(serialized)
+    };
+    result
+        .metadata
+        .insert(&quot;status&quot;.to_owned(), <span class="rs-type">Value</span>::<span class="rs-type">String</span>(output.status));
+    result
+}
+
+<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-tools-sandbox-lib-rs.html#item-fn-edit-output-116">edit_output</a>(
+    ctx: &amp;<a class="symbol-link rs-type" href="eos-tools--src-core-metadata-rs.html#item-struct-ExecutionMetadata-17">ExecutionMetadata</a>,
+    file_path: <span class="rs-type">String</span>,
+    base: &amp;eos_sandbox_port::<span class="rs-type">SandboxResultBase</span>,
+    changed_path_kinds: <span class="rs-type">BTreeMap</span>&lt;<span class="rs-type">String</span>, <span class="rs-type">String</span>&gt;,
+    mutation_source: <span class="rs-type">String</span>,
+    applied_edits: u64,
+) -&gt; <a class="symbol-link rs-type" href="eos-tools--src-core-result-rs.html#item-struct-ToolResult-12">ToolResult</a> {
+    <span class="rs-kw">let</span> output = <a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-lib-outputs-rs.html#item-struct-MutationOutput-18">MutationOutput</a> {
+        cwd: <a class="symbol-link rs-fn" href="eos-tools--src-tools-sandbox-lib-rs.html#item-fn-cwd-59">cwd</a>(ctx),
+        file_path,
+        status: <span class="rs-kw">if</span> base.success {
+            &quot;edited&quot;.to_owned()
+        } <span class="rs-kw">else</span> {
+            <a class="symbol-link rs-fn" href="eos-tools--src-tools-sandbox-lib-rs.html#item-fn-failure-status-82">failure_status</a>(base.conflict_reason.as_deref())
+        },
+        changed_paths: base.changed_paths.clone(),
+        changed_path_kinds,
+        mutation_source,
+        conflict_reason: base.conflict_reason.clone(),
+        error: base.error.clone().unwrap_or_default(),
+        extra: <span class="rs-type">BTreeMap</span>::<a class="symbol-link rs-fn" href="eos-tools--src-core-intent-rs.html#method-from-63">from</a>([(&quot;applied_edits&quot;.to_owned(), json!(applied_edits))]),
+    };
+    <a class="symbol-link rs-fn" href="eos-tools--src-tools-sandbox-lib-rs.html#item-fn-mutation-result-100">mutation_result</a>(base.success, output)
+}
+
+<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-tools-sandbox-lib-rs.html#item-fn-default-yield-ms-142">default_yield_ms</a>() -&gt; u32 {
+    1000
+}
+
+<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-tools-sandbox-lib-rs.html#item-fn-validate-command-timing-146">validate_command_timing</a>(
+    tool: <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>,
+    yield_time_ms: u32,
+    timeout: <span class="rs-type">Option</span>&lt;u32&gt;,
+) -&gt; <span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-tools--src-core-result-rs.html#item-struct-ToolResult-12">ToolResult</a>&gt; {
+    <span class="rs-kw">if</span> yield_time_ms &gt; <span class="rs-type">MAX_YIELD_TIME_MS</span> {
+        <span class="rs-kw">return</span> <span class="rs-type">Some</span>(<a class="symbol-link rs-fn" href="eos-tools--src-tools-sandbox-lib-rs.html#item-fn-invalid-input-75">invalid_input</a>(
+            tool,
+            format!(&quot;yield_time_ms must be &lt;= {<span class="rs-type">MAX_YIELD_TIME_MS</span>}&quot;),
+        ));
+    }
+    <span class="rs-kw">if</span> timeout == <span class="rs-type">Some</span>(0) {
+        <span class="rs-kw">return</span> <span class="rs-type">Some</span>(<a class="symbol-link rs-fn" href="eos-tools--src-tools-sandbox-lib-rs.html#item-fn-invalid-input-75">invalid_input</a>(tool, &quot;timeout must be &gt;= 1&quot;));
+    }
+    <span class="rs-type">None</span>
+}
+
+<span class="rs-comment">/// Whether the daemon says the live session is gone, so the supervisor's stored</span>
+<span class="rs-comment">/// terminal result can be recovered.</span>
+<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-tools-sandbox-lib-rs.html#item-fn-is-command-session-not-found-163">is_command_session_not_found</a>(result: &amp;<span class="rs-type">ExecCommandResult</span>) -&gt; bool {
+    result.is_session_not_found()
+}
+
+<span class="rs-comment">/// Project an [`ExecCommandResult`] into the completion payload the supervisor</span>
+<span class="rs-comment">/// stores.</span>
+<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-tools-sandbox-lib-rs.html#item-fn-command-result-value-169">command_result_value</a>(result: &amp;<span class="rs-type">ExecCommandResult</span>) -&gt; <span class="rs-type">Value</span> {
+    json!({
+        &quot;status&quot;: result.status,
+        &quot;exit_code&quot;: result.exit_code,
+        &quot;output&quot;: {
+            &quot;stdout&quot;: result.output.stdout,
+            &quot;stderr&quot;: result.output.stderr,
+        },
+    })
+}
+
+<span class="rs-comment">/// Render a supervisor-stored terminal `result` value into the tool output DTO</span>
+<span class="rs-comment">/// (the recover-race return path).</span>
+<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-tools-sandbox-lib-rs.html#item-fn-command-tool-result-from-value-182">command_tool_result_from_value</a>(result: &amp;<span class="rs-type">Value</span>) -&gt; <a class="symbol-link rs-type" href="eos-tools--src-core-result-rs.html#item-struct-ToolResult-12">ToolResult</a> {
+    <span class="rs-kw">let</span> status = result
+        .<a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#method-get-89">get</a>(&quot;status&quot;)
+        .and_then(<span class="rs-type">Value</span>::as_str)
+        .unwrap_or(&quot;ok&quot;)
+        .to_owned();
+    <span class="rs-kw">let</span> exit_code = result
+        .<a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#method-get-89">get</a>(&quot;exit_code&quot;)
+        .and_then(<span class="rs-type">Value</span>::as_i64)
+        .map(|code| code <span class="rs-kw">as</span> i32);
+    <span class="rs-kw">let</span> stdout = result
+        .<a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#method-get-89">get</a>(&quot;output&quot;)
+        .and_then(|output| output.<a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#method-get-89">get</a>(&quot;stdout&quot;))
+        .and_then(<span class="rs-type">Value</span>::as_str)
+        .or_else(|| result.<a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#method-get-89">get</a>(&quot;stdout&quot;).and_then(<span class="rs-type">Value</span>::as_str))
+        .unwrap_or(&quot;&quot;)
+        .to_owned();
+    <span class="rs-kw">let</span> stderr = result
+        .<a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#method-get-89">get</a>(&quot;output&quot;)
+        .and_then(|output| output.<a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#method-get-89">get</a>(&quot;stderr&quot;))
+        .and_then(<span class="rs-type">Value</span>::as_str)
+        .unwrap_or(&quot;&quot;)
+        .to_owned();
+    <span class="rs-kw">let</span> is_error = eos_sandbox_port::<span class="rs-type">KnownCommandStatus</span>::is_error_raw(&amp;status);
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> output_map = <span class="rs-type">BTreeMap</span>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>();
+    output_map.insert(&quot;stdout&quot;.to_owned(), stdout.clone());
+    output_map.insert(&quot;stderr&quot;.to_owned(), stderr.clone());
+    <span class="rs-kw">let</span> payload = <a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-lib-outputs-rs.html#item-struct-CommandToolOutput-33">CommandToolOutput</a> {
+        status: status.clone(),
+        exit_code,
+        output: output_map,
+        command_session_id: <span class="rs-type">None</span>,
+        stdout,
+        stderr,
+        changed_paths: <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(),
+        changed_path_kinds: <span class="rs-type">BTreeMap</span>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(),
+        mutation_source: <span class="rs-type">String</span>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(),
+        conflict_reason: <span class="rs-type">None</span>,
+        error: <span class="rs-type">None</span>,
+    };
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> metadata = <span class="rs-type">JsonObject</span>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>();
+    metadata.insert(&quot;status&quot;.to_owned(), json!(status));
+    <a class="symbol-link rs-type" href="eos-tools--src-core-result-rs.html#item-struct-ToolResult-12">ToolResult</a> {
+        output: <span class="rs-kw">match</span> <a class="symbol-link rs-fn" href="eos-tools--src-tools-sandbox-lib-rs.html#item-fn-serialize-output-63">serialize_output</a>(&amp;payload) {
+            <span class="rs-type">Ok</span>(output) =&gt; output,
+            <span class="rs-type">Err</span>(result) =&gt; <span class="rs-kw">return</span> result,
+        },
+        is_error,
+        metadata,
+        is_terminal: <span class="rs-kw">false</span>,
+    }
+}
+
+<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-tools-sandbox-lib-rs.html#item-fn-command-tool-result-237">command_tool_result</a>(result: &amp;<span class="rs-type">ExecCommandResult</span>) -&gt; <a class="symbol-link rs-type" href="eos-tools--src-core-result-rs.html#item-struct-ToolResult-12">ToolResult</a> {
+    <span class="rs-kw">let</span> is_error = result.is_error_status();
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> output_map = <span class="rs-type">BTreeMap</span>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>();
+    output_map.insert(&quot;stdout&quot;.to_owned(), result.output.stdout.clone());
+    output_map.insert(&quot;stderr&quot;.to_owned(), result.output.stderr.clone());
+    <span class="rs-kw">let</span> payload = <a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-lib-outputs-rs.html#item-struct-CommandToolOutput-33">CommandToolOutput</a> {
+        status: result.status.clone(),
+        exit_code: result.exit_code,
+        output: output_map,
+        command_session_id: result.command_session_id.clone(),
+        stdout: result.output.stdout.clone(),
+        stderr: result.output.stderr.clone(),
+        changed_paths: result.base.changed_paths.clone(),
+        changed_path_kinds: result.changed_path_kinds.clone(),
+        mutation_source: result.mutation_source.clone(),
+        conflict_reason: result.base.conflict_reason.clone(),
+        error: result.base.error.clone(),
+    };
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> metadata = <span class="rs-type">JsonObject</span>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>();
+    metadata.insert(&quot;status&quot;.to_owned(), json!(result.status));
+    <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(id) = &amp;result.command_session_id {
+        metadata.insert(&quot;command_session_id&quot;.to_owned(), json!(id));
+    }
+    <a class="symbol-link rs-type" href="eos-tools--src-core-result-rs.html#item-struct-ToolResult-12">ToolResult</a> {
+        output: <span class="rs-kw">match</span> <a class="symbol-link rs-fn" href="eos-tools--src-tools-sandbox-lib-rs.html#item-fn-serialize-output-63">serialize_output</a>(&amp;payload) {
+            <span class="rs-type">Ok</span>(output) =&gt; output,
+            <span class="rs-type">Err</span>(result) =&gt; <span class="rs-kw">return</span> result,
+        },
+        is_error,
+        metadata,
+        is_terminal: <span class="rs-kw">false</span>,
+    }
+}
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
   <script src="../assets/inventory.js"></script>
 </body>
 </html>

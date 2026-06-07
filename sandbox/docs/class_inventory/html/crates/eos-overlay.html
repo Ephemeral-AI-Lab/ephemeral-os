@@ -8,8 +8,16 @@
 </head>
 <body>
   <header>
-    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
-    <h1>eos-overlay File Inventory</h1>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>eos-overlay File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS/sandbox &amp;&amp; cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
   </header>
   <a class="back-link" href="../index.html">sandbox</a>
 <section class="summary">
@@ -47,29 +55,91 @@
       <span>0 methods</span>
     </div>
   </div>
-  <div class="items"><div class="group-label">File-Owned Types</div><article class="type-card" data-kind="enum" data-kind-list="enum field type-model" data-filter-text="enum OverlayError pub pub enum OverlayError crates/eos-overlay/src/error.rs  ">
+  <div class="items"><div class="group-label">File-Owned Types</div><article id="item-enum-OverlayError-8" class="type-card" data-kind="enum" data-kind-list="enum field type-model" data-filter-text="enum OverlayError pub pub enum OverlayError crates/eos-overlay/src/error.rs  ">
   <div class="item-head">
     <span class="kind">enum</span>
     <h3>OverlayError</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub enum OverlayError</code>
-  <div class="tags"><span>error</span></div>
-  <h4>Variants</h4><table><tbody><tr><td>WritableRootUnavailable</td><td><code>0: String</code></td></tr><tr><td>InvalidMountInput</td><td><code>0: String</code></td></tr><tr><td>MountSyscall</td><td><code>context: &amp; 'static str, source: io :: Error</code></td></tr><tr><td>Capture</td><td><code>0: io :: Error</code></td></tr><tr><td>Path</td><td><code>0: CasError</code></td></tr><tr><td>InvalidPathChange</td><td><code>0: String</code></td></tr><tr><td>Unsupported</td><td><code></code></td></tr></tbody></table>
+  <code class="signature">pub enum <a class="symbol-link" href="eos-overlay.html#item-enum-OverlayError-8">OverlayError</a></code>
+  <p class="docstring">Failures raised by the overlay kernel-mount and upper-dir capture paths.</p>
+  <div class="tags"><span>derive: Debug</span><span>derive: Error</span><span>error</span><span>non_exhaustive</span></div>
+  <h4>Variants</h4><table><tbody><tr><td>WritableRootUnavailable</td><td><code>0: String</code></td></tr><tr><td>InvalidMountInput</td><td><code>0: String</code></td></tr><tr><td>MountSyscall</td><td><code>context: &amp; &#x27;static str, source: io :: Error</code></td></tr><tr><td>Capture</td><td><code>0: io :: Error</code></td></tr><tr><td>Path</td><td><code>0: CasError</code></td></tr><tr><td>InvalidPathChange</td><td><code>0: String</code></td></tr><tr><td>Unsupported</td><td><code></code></td></tr></tbody></table>
+
   <p class="source">crates/eos-overlay/src/error.rs:8</p>
-</article><div class="group-label">Aliases</div><article class="item-card" data-kind="type" data-kind-list="type" data-filter-text="type Result pub pub type Result&lt; T &gt; = std :: result :: Result &lt; T , OverlayError &gt; crates/eos-overlay/src/error.rs  ">
+</article><div class="group-label">Aliases</div><article id="item-type-Result-50" class="item-card" data-kind="type" data-kind-list="type" data-filter-text="type Result pub pub type Result&lt; T &gt; = std :: result :: Result &lt; T , OverlayError &gt; crates/eos-overlay/src/error.rs  ">
   <div class="item-head">
     <span class="kind">type</span>
     <h3>Result</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub type Result&lt; T &gt; = std :: result :: Result &lt; T , OverlayError &gt;</code>
+  <code class="signature">pub type <a class="symbol-link" href="eos-overlay.html#item-type-Result-50">Result</a>&lt; T &gt; = std :: result :: <a class="symbol-link" href="eos-overlay.html#item-type-Result-50">Result</a> &lt; T , <a class="symbol-link" href="eos-overlay.html#item-enum-OverlayError-8">OverlayError</a> &gt;</code>
+  <p class="docstring">Crate result alias.</p>
   <div class="tags"></div>
 
   <p class="source">crates/eos-overlay/src/error.rs:50</p>
 </article></div>
 </section></div>
 </main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/eos-overlay/src/error.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-comment">//! Crate error type.</span>
+
+<span class="rs-kw">use</span> std::io;
+
+<span class="rs-kw">use</span> eos_protocol::<span class="rs-type">CasError</span>;
+<span class="rs-kw">use</span> thiserror::<span class="rs-type">Error</span>;
+
+<span class="rs-comment">/// Failures raised by the overlay kernel-mount and upper-dir capture paths.</span>
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Error</span>)]
+#[non_exhaustive]
+<span class="rs-kw">pub</span> <span class="rs-kw">enum</span> <a class="symbol-link rs-type" href="eos-overlay.html#item-enum-OverlayError-8">OverlayError</a> {
+    <span class="rs-comment">/// The canonical writable root (`/eos/scratch/overlay`)</span>
+    <span class="rs-comment">/// is missing and could not be created. There is intentionally no fallback.</span>
+    #[error(&quot;overlay writable root is missing: {0}&quot;)]
+    <span class="rs-type">WritableRootUnavailable</span>(<span class="rs-type">String</span>),
+
+    <span class="rs-comment">/// A path failed `O_DIRECTORY|O_NOFOLLOW` validation (symlink, missing, or</span>
+    <span class="rs-comment">/// not a directory) before being handed to the mount syscalls.</span>
+    #[error(&quot;invalid mount input: {0}&quot;)]
+    <span class="rs-type">InvalidMountInput</span>(<span class="rs-type">String</span>),
+
+    <span class="rs-comment">/// A raw mount syscall (`fsopen`/`fsconfig`/`fsmount`/`move_mount`) or an</span>
+    <span class="rs-comment">/// `umount` failed.</span>
+    #[error(&quot;overlay mount syscall failed at {context}: {source}&quot;)]
+    <span class="rs-type">MountSyscall</span> {
+        context: &amp;&#x27;<span class="rs-kw">static</span> str,
+        #[source]
+        source: io::<span class="rs-type">Error</span>,
+    },
+
+    <span class="rs-comment">/// An upper-dir walk / capture I/O error.</span>
+    #[error(&quot;upperdir capture failed: {0}&quot;)]
+    <span class="rs-type">Capture</span>(#[source] io::<span class="rs-type">Error</span>),
+
+    <span class="rs-comment">/// A captured overlay path did not normalize to a valid relative layer path.</span>
+    #[error(transparent)]
+    <span class="rs-type">Path</span>(#[from] <span class="rs-type">CasError</span>),
+
+    <span class="rs-comment">/// A captured overlay path change violated the per-kind field contract.</span>
+    #[error(&quot;invalid overlay path change: {0}&quot;)]
+    <span class="rs-type">InvalidPathChange</span>(<span class="rs-type">String</span>),
+
+    <span class="rs-comment">/// The current target OS provides no overlayfs mount syscalls. Returned by</span>
+    <span class="rs-comment">/// the `#[cfg(not(target_os = "linux"))]` arms so non-Linux `cargo check`</span>
+    <span class="rs-comment">/// stays green while the real syscall path is Linux-only.</span>
+    #[error(&quot;overlay mounts are only supported on linux&quot;)]
+    <span class="rs-type">Unsupported</span>,
+}
+
+<span class="rs-comment">/// Crate result alias.</span>
+<span class="rs-kw">pub</span> <span class="rs-kw">type</span> <a class="symbol-link rs-type" href="eos-overlay.html#item-type-Result-50">Result</a>&lt;<span class="rs-type">T</span>&gt; = std::result::<a class="symbol-link rs-type" href="eos-overlay.html#item-type-Result-50">Result</a>&lt;<span class="rs-type">T</span>, <a class="symbol-link rs-type" href="eos-overlay.html#item-enum-OverlayError-8">OverlayError</a>&gt;;
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
   <script src="../assets/inventory.js"></script>
 </body>
 </html>

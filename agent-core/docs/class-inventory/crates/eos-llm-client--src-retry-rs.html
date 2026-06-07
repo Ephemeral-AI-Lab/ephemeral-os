@@ -8,8 +8,16 @@
 </head>
 <body>
   <header>
-    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
-    <h1>eos-llm-client File Inventory</h1>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>eos-llm-client File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS/agent-core &amp;&amp; cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
   </header>
   <a class="back-link" href="../index.html">agent-core</a>
 <section class="summary">
@@ -47,169 +55,795 @@
       <span>0 methods</span>
     </div>
   </div>
-  <div class="items"><div class="group-label">File-Owned Types</div><article class="type-card" data-kind="enum" data-kind-list="enum field type-model" data-filter-text="enum Attempt private enum Attempt crates/eos-llm-client/src/retry.rs  ">
+  <div class="items"><div class="group-label">File-Owned Types</div><article id="item-enum-Attempt-132" class="type-card" data-kind="enum" data-kind-list="enum field type-model" data-filter-text="enum Attempt private enum Attempt crates/eos-llm-client/src/retry.rs  ">
   <div class="item-head">
     <span class="kind">enum</span>
     <h3>Attempt</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">enum Attempt</code>
+  <code class="signature">enum <a class="symbol-link" href="eos-llm-client--src-retry-rs.html#item-enum-Attempt-132">Attempt</a></code>
+  <p class="docstring">One scripted attempt outcome.</p>
   <div class="tags"></div>
-  <h4>Variants</h4><table><tbody><tr><td>OpenErr</td><td><code>0: ProviderError</code></td></tr><tr><td>Stream</td><td><code>0: Vec &lt; Result &lt; LlmStreamEvent , ProviderError &gt; &gt;</code></td></tr></tbody></table>
+  <h4>Variants</h4><table><tbody><tr><td>OpenErr</td><td><code>0: <a class="symbol-link" href="eos-llm-client--src-error-rs.html#item-struct-ProviderError-29">ProviderError</a></code></td></tr><tr><td>Stream</td><td><code>0: Vec &lt; Result &lt; <a class="symbol-link" href="eos-llm-client--src-events-rs.html#item-enum-LlmStreamEvent-15">LlmStreamEvent</a> , <a class="symbol-link" href="eos-llm-client--src-error-rs.html#item-struct-ProviderError-29">ProviderError</a> &gt; &gt;</code></td></tr></tbody></table>
+
   <p class="source">crates/eos-llm-client/src/retry.rs:132</p>
-</article><div class="group-label">Standalone Functions</div><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn retry_stream pub(crate) pub(crate) fn retry_stream &lt; F &gt; (cfg : RetryConfig , mut factory : F) -&gt; LlmStream where F : FnMut () -&gt; BoxFuture &lt; 'static , Result &lt; LlmStream , ProviderError &gt; &gt; + Send + 'static , crates/eos-llm-client/src/retry.rs  ">
+</article><div class="group-label">Standalone Functions</div><article id="item-fn-retry-stream-21" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn retry_stream pub(crate) pub(crate) fn retry_stream &lt; F &gt; (cfg : RetryConfig , mut factory : F) -&gt; LlmStream where F : FnMut () -&gt; BoxFuture &lt; 'static , Result &lt; LlmStream , ProviderError &gt; &gt; + Send + 'static , crates/eos-llm-client/src/retry.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>retry_stream</h3>
     <span class="visibility">pub(crate)</span>
   </div>
-  <code class="signature">pub(crate) fn retry_stream &lt; F &gt; (cfg : RetryConfig , mut factory : F) -&gt; LlmStream where F : FnMut () -&gt; BoxFuture &lt; 'static , Result &lt; LlmStream , ProviderError &gt; &gt; + Send + 'static ,</code>
+  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-llm-client--src-retry-rs.html#item-fn-retry-stream-21">retry_stream</a> &lt; F &gt; (cfg : RetryConfig , mut factory : F) -&gt; <a class="symbol-link" href="eos-llm-client--src-client-rs.html#item-type-LlmStream-22">LlmStream</a> where F : FnMut () -&gt; BoxFuture &lt; &#x27;static , Result &lt; <a class="symbol-link" href="eos-llm-client--src-client-rs.html#item-type-LlmStream-22">LlmStream</a> , <a class="symbol-link" href="eos-llm-client--src-error-rs.html#item-struct-ProviderError-29">ProviderError</a> &gt; &gt; + Send + &#x27;static ,</code>
+  <p class="docstring">Wrap a per-attempt factory in the retry gate, returning a single linear<br>[`LlmStream`]. `cfg` is taken **by value**: the returned stream is `'static`<br>and cannot borrow the caller's config for its lifetime.</p>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-comment">/// Wrap a per-attempt factory in the retry gate, returning a single linear</span>
+<span class="rs-comment">/// [`LlmStream`]. `cfg` is taken **by value**: the returned stream is `'static`</span>
+<span class="rs-comment">/// and cannot borrow the caller's config for its lifetime.</span>
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> retry_stream&lt;<span class="rs-type">F</span>&gt;(cfg: <span class="rs-type">RetryConfig</span>, <span class="rs-kw">mut</span> factory: <span class="rs-type">F</span>) -&gt; <a class="symbol-link rs-type" href="eos-llm-client--src-client-rs.html#item-type-LlmStream-22">LlmStream</a>
+<span class="rs-kw">where</span>
+    <span class="rs-type">F</span>: <span class="rs-type">FnMut</span>() -&gt; <span class="rs-type">BoxFuture</span>&lt;&#x27;<span class="rs-kw">static</span>, <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-llm-client--src-client-rs.html#item-type-LlmStream-22">LlmStream</a>, <a class="symbol-link rs-type" href="eos-llm-client--src-error-rs.html#item-struct-ProviderError-29">ProviderError</a>&gt;&gt; + <span class="rs-type">Send</span> + &#x27;<span class="rs-kw">static</span>,
+{
+    <span class="rs-type">Box</span>::pin(async_stream::stream! {
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> emitted_visible = <span class="rs-kw">false</span>;
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> attempt: u32 = 0;
+        loop {
+            <span class="rs-kw">match</span> factory().<span class="rs-kw">await</span> {
+                <span class="rs-type">Err</span>(err) =&gt; {
+                    <span class="rs-kw">if</span> <a class="symbol-link rs-fn" href="eos-llm-client--src-retry-rs.html#item-fn-can-retry-77">can_retry</a>(&amp;cfg, &amp;err, emitted_visible, attempt) {
+                        <a class="symbol-link rs-fn" href="eos-llm-client--src-retry-rs.html#item-fn-backoff-108">backoff</a>(&amp;cfg, attempt).<span class="rs-kw">await</span>;
+                        attempt += 1;
+                        <span class="rs-kw">continue</span>;
+                    }
+                    yield <span class="rs-type">Err</span>(err);
+                    <span class="rs-kw">return</span>;
+                }
+                <span class="rs-type">Ok</span>(stream) =&gt; {
+                    futures::pin_mut!(stream);
+                    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> completed = <span class="rs-kw">true</span>;
+                    <span class="rs-kw">while</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(item) = stream.next().<span class="rs-kw">await</span> {
+                        <span class="rs-kw">match</span> item {
+                            <span class="rs-type">Ok</span>(event) =&gt; {
+                                <span class="rs-kw">if</span> <a class="symbol-link rs-fn" href="eos-llm-client--src-retry-rs.html#item-fn-is-visible-98">is_visible</a>(&amp;event) {
+                                    emitted_visible = <span class="rs-kw">true</span>;
+                                }
+                                yield <span class="rs-type">Ok</span>(event);
+                            }
+                            <span class="rs-type">Err</span>(err) =&gt; {
+                                <span class="rs-kw">if</span> <a class="symbol-link rs-fn" href="eos-llm-client--src-retry-rs.html#item-fn-can-retry-77">can_retry</a>(&amp;cfg, &amp;err, emitted_visible, attempt) {
+                                    completed = <span class="rs-kw">false</span>;
+                                    <span class="rs-kw">break</span>;
+                                }
+                                yield <span class="rs-type">Err</span>(err);
+                                <span class="rs-kw">return</span>;
+                            }
+                        }
+                    }
+                    <span class="rs-kw">if</span> completed {
+                        <span class="rs-comment">// Stream ended cleanly (AssistantMessageComplete or an</span>
+                        <span class="rs-comment">// empty stream); nothing more to do.</span>
+                        <span class="rs-kw">return</span>;
+                    }
+                }
+            }
+            <span class="rs-comment">// Reached only on a retryable failure with budget remaining.</span>
+            <a class="symbol-link rs-fn" href="eos-llm-client--src-retry-rs.html#item-fn-backoff-108">backoff</a>(&amp;cfg, attempt).<span class="rs-kw">await</span>;
+            attempt += 1;
+        }
+    })
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-llm-client/src/retry.rs:21</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn can_retry private fn can_retry (cfg : &amp; RetryConfig , err : &amp; ProviderError , emitted_visible : bool , attempt : u32) -&gt; bool crates/eos-llm-client/src/retry.rs  ">
+</article><article id="item-fn-can-retry-77" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn can_retry private fn can_retry (cfg : &amp; RetryConfig , err : &amp; ProviderError , emitted_visible : bool , attempt : u32) -&gt; bool crates/eos-llm-client/src/retry.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>can_retry</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn can_retry (cfg : &amp; RetryConfig , err : &amp; ProviderError , emitted_visible : bool , attempt : u32) -&gt; bool</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-llm-client--src-retry-rs.html#item-fn-can-retry-77">can_retry</a> (cfg : &amp; RetryConfig , err : &amp; <a class="symbol-link" href="eos-llm-client--src-error-rs.html#item-struct-ProviderError-29">ProviderError</a> , emitted_visible : bool , attempt : u32) -&gt; bool</code>
+  <p class="docstring">Whether a fresh attempt is permitted: no visible output yet, budget left, and<br>a retryable kind (status-gated for HTTP).</p>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-comment">/// Whether a fresh attempt is permitted: no visible output yet, budget left, and</span>
+<span class="rs-comment">/// a retryable kind (status-gated for HTTP).</span>
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-llm-client--src-retry-rs.html#item-fn-can-retry-77">can_retry</a>(cfg: &amp;<span class="rs-type">RetryConfig</span>, err: &amp;<a class="symbol-link rs-type" href="eos-llm-client--src-error-rs.html#item-struct-ProviderError-29">ProviderError</a>, emitted_visible: bool, attempt: u32) -&gt; bool {
+    !emitted_visible &amp;&amp; attempt &lt; cfg.max_retries &amp;&amp; <a class="symbol-link rs-fn" href="eos-llm-client--src-retry-rs.html#item-fn-is-retryable-83">is_retryable</a>(cfg, err)
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-llm-client/src/retry.rs:77</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn is_retryable private fn is_retryable (cfg : &amp; RetryConfig , err : &amp; ProviderError) -&gt; bool crates/eos-llm-client/src/retry.rs  ">
+</article><article id="item-fn-is-retryable-83" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn is_retryable private fn is_retryable (cfg : &amp; RetryConfig , err : &amp; ProviderError) -&gt; bool crates/eos-llm-client/src/retry.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>is_retryable</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn is_retryable (cfg : &amp; RetryConfig , err : &amp; ProviderError) -&gt; bool</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-llm-client--src-retry-rs.html#item-fn-is-retryable-83">is_retryable</a> (cfg : &amp; RetryConfig , err : &amp; <a class="symbol-link" href="eos-llm-client--src-error-rs.html#item-struct-ProviderError-29">ProviderError</a>) -&gt; bool</code>
+  <p class="docstring">Retryable iff `RateLimit`/`Server` with a status in `cfg.status_codes`, or a<br>`Transport` (connect/timeout) failure. `Decode`/`Authentication`/`Request`<br>are never retried.</p>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-comment">/// Retryable iff `RateLimit`/`Server` with a status in `cfg.status_codes`, or a</span>
+<span class="rs-comment">/// `Transport` (connect/timeout) failure. `Decode`/`Authentication`/`Request`</span>
+<span class="rs-comment">/// are never retried.</span>
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-llm-client--src-retry-rs.html#item-fn-is-retryable-83">is_retryable</a>(cfg: &amp;<span class="rs-type">RetryConfig</span>, err: &amp;<a class="symbol-link rs-type" href="eos-llm-client--src-error-rs.html#item-struct-ProviderError-29">ProviderError</a>) -&gt; bool {
+    <span class="rs-kw">match</span> err.kind {
+        <a class="symbol-link rs-type" href="eos-llm-client--src-error-rs.html#item-enum-ProviderErrorKind-6">ProviderErrorKind</a>::<span class="rs-type">RateLimit</span> | <a class="symbol-link rs-type" href="eos-llm-client--src-error-rs.html#item-enum-ProviderErrorKind-6">ProviderErrorKind</a>::<span class="rs-type">Server</span> =&gt; err
+            .status_code
+            .is_some_and(|s| cfg.status_codes.contains(&amp;s)),
+        <a class="symbol-link rs-type" href="eos-llm-client--src-error-rs.html#item-enum-ProviderErrorKind-6">ProviderErrorKind</a>::<span class="rs-type">Transport</span> =&gt; <span class="rs-kw">true</span>,
+        <a class="symbol-link rs-type" href="eos-llm-client--src-error-rs.html#item-enum-ProviderErrorKind-6">ProviderErrorKind</a>::<span class="rs-type">Authentication</span>
+        | <a class="symbol-link rs-type" href="eos-llm-client--src-error-rs.html#item-enum-ProviderErrorKind-6">ProviderErrorKind</a>::<span class="rs-type">Request</span>
+        | <a class="symbol-link rs-type" href="eos-llm-client--src-error-rs.html#item-enum-ProviderErrorKind-6">ProviderErrorKind</a>::<span class="rs-type">Decode</span> =&gt; <span class="rs-kw">false</span>,
+    }
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-llm-client/src/retry.rs:83</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn is_visible private fn is_visible (event : &amp; LlmStreamEvent) -&gt; bool crates/eos-llm-client/src/retry.rs  ">
+</article><article id="item-fn-is-visible-98" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn is_visible private fn is_visible (event : &amp; LlmStreamEvent) -&gt; bool crates/eos-llm-client/src/retry.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>is_visible</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn is_visible (event : &amp; LlmStreamEvent) -&gt; bool</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-llm-client--src-retry-rs.html#item-fn-is-visible-98">is_visible</a> (event : &amp; <a class="symbol-link" href="eos-llm-client--src-events-rs.html#item-enum-LlmStreamEvent-15">LlmStreamEvent</a>) -&gt; bool</code>
+  <p class="docstring">Whether an event counts as visible output for the gate.</p>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-comment">/// Whether an event counts as visible output for the gate.</span>
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-llm-client--src-retry-rs.html#item-fn-is-visible-98">is_visible</a>(event: &amp;<a class="symbol-link rs-type" href="eos-llm-client--src-events-rs.html#item-enum-LlmStreamEvent-15">LlmStreamEvent</a>) -&gt; bool {
+    matches!(
+        event,
+        <a class="symbol-link rs-type" href="eos-llm-client--src-events-rs.html#item-enum-LlmStreamEvent-15">LlmStreamEvent</a>::<span class="rs-type">AssistantTextDelta</span> { .. }
+            | <a class="symbol-link rs-type" href="eos-llm-client--src-events-rs.html#item-enum-LlmStreamEvent-15">LlmStreamEvent</a>::<span class="rs-type">ReasoningDelta</span> { .. }
+            | <a class="symbol-link rs-type" href="eos-llm-client--src-events-rs.html#item-enum-LlmStreamEvent-15">LlmStreamEvent</a>::<span class="rs-type">ToolUseDelta</span> { .. }
+    )
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-llm-client/src/retry.rs:98</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn backoff private async fn backoff (cfg : &amp; RetryConfig , attempt : u32) crates/eos-llm-client/src/retry.rs  ">
+</article><article id="item-fn-backoff-108" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn backoff private async fn backoff (cfg : &amp; RetryConfig , attempt : u32) crates/eos-llm-client/src/retry.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>backoff</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">async fn backoff (cfg : &amp; RetryConfig , attempt : u32)</code>
+  <code class="signature">async fn <a class="symbol-link" href="eos-llm-client--src-retry-rs.html#item-fn-backoff-108">backoff</a> (cfg : &amp; RetryConfig , attempt : u32)</code>
+  <p class="docstring">Sleep `min(base_delay_s * 2^attempt, max_delay_s)`.</p>
   <div class="tags"><span>async</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-comment">/// Sleep `min(base_delay_s * 2^attempt, max_delay_s)`.</span>
+<span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-llm-client--src-retry-rs.html#item-fn-backoff-108">backoff</a>(cfg: &amp;<span class="rs-type">RetryConfig</span>, attempt: u32) {
+    <span class="rs-kw">let</span> delay = (cfg.base_delay_s * 2f64.powi(attempt <span class="rs-kw">as</span> i32)).min(cfg.max_delay_s);
+    <span class="rs-comment">// Fallible construction: a non-finite or overflowing delay (reachable from an</span>
+    <span class="rs-comment">// unvalidated `+inf`/huge `max_delay_s`, since eos-config only rejects</span>
+    <span class="rs-comment">// negatives) must skip the sleep rather than panic (`err-result-over-panic`).</span>
+    <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Ok</span>(duration) = <span class="rs-type">Duration</span>::try_from_secs_f64(delay) {
+        <span class="rs-kw">if</span> duration &gt; <span class="rs-type">Duration</span>::<span class="rs-type">ZERO</span> {
+            tokio::time::sleep(duration).<span class="rs-kw">await</span>;
+        }
+    }
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-llm-client/src/retry.rs:108</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn scripted private fn scripted (attempts : Vec &lt; Attempt &gt; ,) -&gt; (impl FnMut () -&gt; BoxFuture &lt; 'static , Result &lt; LlmStream , ProviderError &gt; &gt; + Send + 'static , Arc &lt; Mutex &lt; usize &gt; &gt; ,) crates/eos-llm-client/src/retry.rs  ">
+</article><article id="item-fn-scripted-140" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn scripted private fn scripted (attempts : Vec &lt; Attempt &gt; ,) -&gt; (impl FnMut () -&gt; BoxFuture &lt; 'static , Result &lt; LlmStream , ProviderError &gt; &gt; + Send + 'static , Arc &lt; Mutex &lt; usize &gt; &gt; ,) crates/eos-llm-client/src/retry.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>scripted</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn scripted (attempts : Vec &lt; Attempt &gt; ,) -&gt; (impl FnMut () -&gt; BoxFuture &lt; 'static , Result &lt; LlmStream , ProviderError &gt; &gt; + Send + 'static , Arc &lt; Mutex &lt; usize &gt; &gt; ,)</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-llm-client--src-retry-rs.html#item-fn-scripted-140">scripted</a> (attempts : Vec &lt; <a class="symbol-link" href="eos-llm-client--src-retry-rs.html#item-enum-Attempt-132">Attempt</a> &gt; ,) -&gt; (impl FnMut () -&gt; BoxFuture &lt; &#x27;static , Result &lt; <a class="symbol-link" href="eos-llm-client--src-client-rs.html#item-type-LlmStream-22">LlmStream</a> , <a class="symbol-link" href="eos-llm-client--src-error-rs.html#item-struct-ProviderError-29">ProviderError</a> &gt; &gt; + Send + &#x27;static , Arc &lt; Mutex &lt; usize &gt; &gt; ,)</code>
+  <p class="docstring">Build a `Send + 'static` factory that replays scripted attempts in order<br>and counts its invocations.</p>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Build a `Send + 'static` factory that replays scripted attempts in order</span>
+    <span class="rs-comment">/// and counts its invocations.</span>
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-llm-client--src-retry-rs.html#item-fn-scripted-140">scripted</a>(
+        attempts: <span class="rs-type">Vec</span>&lt;<a class="symbol-link rs-type" href="eos-llm-client--src-retry-rs.html#item-enum-Attempt-132">Attempt</a>&gt;,
+    ) -&gt; (
+        <span class="rs-kw">impl</span> <span class="rs-type">FnMut</span>() -&gt; <span class="rs-type">BoxFuture</span>&lt;&#x27;<span class="rs-kw">static</span>, <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-llm-client--src-client-rs.html#item-type-LlmStream-22">LlmStream</a>, <a class="symbol-link rs-type" href="eos-llm-client--src-error-rs.html#item-struct-ProviderError-29">ProviderError</a>&gt;&gt; + <span class="rs-type">Send</span> + &#x27;<span class="rs-kw">static</span>,
+        <span class="rs-type">Arc</span>&lt;<span class="rs-type">Mutex</span>&lt;usize&gt;&gt;,
+    ) {
+        <span class="rs-kw">let</span> calls = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-llm-client--src-client-rs.html#method-new-56">new</a>(<span class="rs-type">Mutex</span>::<a class="symbol-link rs-fn" href="eos-llm-client--src-client-rs.html#method-new-56">new</a>(0usize));
+        <span class="rs-kw">let</span> calls_ret = <span class="rs-type">Arc</span>::clone(&amp;calls);
+        <span class="rs-kw">let</span> script = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-llm-client--src-client-rs.html#method-new-56">new</a>(<span class="rs-type">Mutex</span>::<a class="symbol-link rs-fn" href="eos-llm-client--src-client-rs.html#method-new-56">new</a>(attempts.into_iter().collect::&lt;<span class="rs-type">Vec</span>&lt;_&gt;&gt;()));
+        <span class="rs-kw">let</span> factory = <span class="rs-kw">move</span> || {
+            *calls.lock().unwrap() += 1;
+            <span class="rs-kw">let</span> <span class="rs-kw">mut</span> script = script.lock().unwrap();
+            <span class="rs-kw">let</span> outcome = <span class="rs-kw">if</span> script.is_empty() {
+                <a class="symbol-link rs-type" href="eos-llm-client--src-retry-rs.html#item-enum-Attempt-132">Attempt</a>::<span class="rs-type">OpenErr</span>(<a class="symbol-link rs-type" href="eos-llm-client--src-error-rs.html#item-struct-ProviderError-29">ProviderError</a>::<a class="symbol-link rs-fn" href="eos-llm-client--src-error-rs.html#method-transport-74">transport</a>(&quot;script exhausted&quot;))
+            } <span class="rs-kw">else</span> {
+                script.remove(0)
+            };
+            <span class="rs-kw">let</span> fut: <span class="rs-type">BoxFuture</span>&lt;&#x27;<span class="rs-kw">static</span>, <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-llm-client--src-client-rs.html#item-type-LlmStream-22">LlmStream</a>, <a class="symbol-link rs-type" href="eos-llm-client--src-error-rs.html#item-struct-ProviderError-29">ProviderError</a>&gt;&gt; = <span class="rs-kw">match</span> outcome {
+                <a class="symbol-link rs-type" href="eos-llm-client--src-retry-rs.html#item-enum-Attempt-132">Attempt</a>::<span class="rs-type">OpenErr</span>(e) =&gt; <span class="rs-type">Box</span>::pin(<span class="rs-kw">async</span> <span class="rs-kw">move</span> { <span class="rs-type">Err</span>(e) }),
+                <a class="symbol-link rs-type" href="eos-llm-client--src-retry-rs.html#item-enum-Attempt-132">Attempt</a>::<span class="rs-type">Stream</span>(items) =&gt; <span class="rs-type">Box</span>::pin(<span class="rs-kw">async</span> <span class="rs-kw">move</span> {
+                    <span class="rs-kw">let</span> s: <a class="symbol-link rs-type" href="eos-llm-client--src-client-rs.html#item-type-LlmStream-22">LlmStream</a> = <span class="rs-type">Box</span>::pin(futures::stream::iter(items));
+                    <span class="rs-type">Ok</span>(s)
+                }),
+            };
+            fut
+        };
+        (factory, calls_ret)
+    }
+</code></pre>
+</details>
 
   <p class="source">crates/eos-llm-client/src/retry.rs:140</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn fast_cfg private fn fast_cfg () -&gt; RetryConfig crates/eos-llm-client/src/retry.rs  ">
+</article><article id="item-fn-fast-cfg-171" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn fast_cfg private fn fast_cfg () -&gt; RetryConfig crates/eos-llm-client/src/retry.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>fast_cfg</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn fast_cfg () -&gt; RetryConfig</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-llm-client--src-retry-rs.html#item-fn-fast-cfg-171">fast_cfg</a> () -&gt; RetryConfig</code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-llm-client--src-retry-rs.html#item-fn-fast-cfg-171">fast_cfg</a>() -&gt; <span class="rs-type">RetryConfig</span> {
+        <span class="rs-comment">// Zero delay so the retry loop does not actually sleep in tests.</span>
+        <span class="rs-comment">// `RetryConfig` is `#[non_exhaustive]`, so it is built by deserialization</span>
+        <span class="rs-comment">// rather than a struct literal.</span>
+        serde_json::from_value(serde_json::json!({
+            &quot;max_retries&quot;: 3,
+            &quot;base_delay_s&quot;: 0.0,
+            &quot;max_delay_s&quot;: 0.0,
+            &quot;status_codes&quot;: [429, 500, 502, 503, 529],
+        }))
+        .unwrap()
+    }
+</code></pre>
+</details>
 
   <p class="source">crates/eos-llm-client/src/retry.rs:171</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn text private fn text (s : &amp; str) -&gt; LlmStreamEvent crates/eos-llm-client/src/retry.rs  ">
+</article><article id="item-fn-text-184" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn text private fn text (s : &amp; str) -&gt; LlmStreamEvent crates/eos-llm-client/src/retry.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>text</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn text (s : &amp; str) -&gt; LlmStreamEvent</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-llm-client--src-retry-rs.html#item-fn-text-184">text</a> (s : &amp; str) -&gt; <a class="symbol-link" href="eos-llm-client--src-events-rs.html#item-enum-LlmStreamEvent-15">LlmStreamEvent</a></code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-llm-client--src-retry-rs.html#item-fn-text-184">text</a>(s: &amp;str) -&gt; <a class="symbol-link rs-type" href="eos-llm-client--src-events-rs.html#item-enum-LlmStreamEvent-15">LlmStreamEvent</a> {
+        <a class="symbol-link rs-type" href="eos-llm-client--src-events-rs.html#item-enum-LlmStreamEvent-15">LlmStreamEvent</a>::<span class="rs-type">AssistantTextDelta</span> { text: s.into() }
+    }
+</code></pre>
+</details>
 
   <p class="source">crates/eos-llm-client/src/retry.rs:184</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn complete private fn complete () -&gt; LlmStreamEvent crates/eos-llm-client/src/retry.rs  ">
+</article><article id="item-fn-complete-188" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn complete private fn complete () -&gt; LlmStreamEvent crates/eos-llm-client/src/retry.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>complete</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn complete () -&gt; LlmStreamEvent</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-llm-client--src-retry-rs.html#item-fn-complete-188">complete</a> () -&gt; <a class="symbol-link" href="eos-llm-client--src-events-rs.html#item-enum-LlmStreamEvent-15">LlmStreamEvent</a></code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-llm-client--src-retry-rs.html#item-fn-complete-188">complete</a>() -&gt; <a class="symbol-link rs-type" href="eos-llm-client--src-events-rs.html#item-enum-LlmStreamEvent-15">LlmStreamEvent</a> {
+        <a class="symbol-link rs-type" href="eos-llm-client--src-events-rs.html#item-enum-LlmStreamEvent-15">LlmStreamEvent</a>::<span class="rs-type">AssistantMessageComplete</span> {
+            message: <span class="rs-kw">crate</span>::message::<a class="symbol-link rs-type" href="eos-llm-client--src-message-rs.html#item-struct-Message-88">Message</a>::<a class="symbol-link rs-fn" href="eos-llm-client--src-message-rs.html#method-from-user-text-101">from_user_text</a>(&quot;&quot;),
+            usage: <span class="rs-kw">crate</span>::types::<a class="symbol-link rs-type" href="eos-llm-client--src-types-rs.html#item-struct-UsageSnapshot-12">UsageSnapshot</a>::default(),
+            stop_reason: <span class="rs-type">None</span>,
+        }
+    }
+</code></pre>
+</details>
 
   <p class="source">crates/eos-llm-client/src/retry.rs:188</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn fails_fast_after_visible_output private async fn fails_fast_after_visible_output () crates/eos-llm-client/src/retry.rs  ">
+</article><article id="item-fn-fails-fast-after-visible-output-198" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn fails_fast_after_visible_output private async fn fails_fast_after_visible_output () crates/eos-llm-client/src/retry.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>fails_fast_after_visible_output</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">async fn fails_fast_after_visible_output ()</code>
-  <div class="tags"><span>async</span></div>
+  <code class="signature">async fn <a class="symbol-link" href="eos-llm-client--src-retry-rs.html#item-fn-fails-fast-after-visible-output-198">fails_fast_after_visible_output</a> ()</code>
+  <div class="tags"><span>async</span><span>tokio::test</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[tokio::test]
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-llm-client--src-retry-rs.html#item-fn-fails-fast-after-visible-output-198">fails_fast_after_visible_output</a>() {
+        <span class="rs-kw">let</span> (factory, calls) = <a class="symbol-link rs-fn" href="eos-llm-client--src-retry-rs.html#item-fn-scripted-140">scripted</a>(vec![<a class="symbol-link rs-type" href="eos-llm-client--src-retry-rs.html#item-enum-Attempt-132">Attempt</a>::<span class="rs-type">Stream</span>(vec![
+            <span class="rs-type">Ok</span>(<a class="symbol-link rs-fn" href="eos-llm-client--src-retry-rs.html#item-fn-text-184">text</a>(&quot;hello&quot;)),
+            <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-llm-client--src-error-rs.html#item-struct-ProviderError-29">ProviderError</a>::<a class="symbol-link rs-fn" href="eos-llm-client--src-error-rs.html#method-transport-74">transport</a>(&quot;dropped&quot;)),
+        ])]);
+        <span class="rs-kw">let</span> stream = <a class="symbol-link rs-fn" href="eos-llm-client--src-retry-rs.html#item-fn-retry-stream-21">retry_stream</a>(<a class="symbol-link rs-fn" href="eos-llm-client--src-retry-rs.html#item-fn-fast-cfg-171">fast_cfg</a>(), factory);
+        <span class="rs-kw">let</span> items: <span class="rs-type">Vec</span>&lt;_&gt; = stream.collect().<span class="rs-kw">await</span>;
+
+        assert_eq!(items.len(), 2);
+        assert!(matches!(
+            items[0],
+            <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-llm-client--src-events-rs.html#item-enum-LlmStreamEvent-15">LlmStreamEvent</a>::<span class="rs-type">AssistantTextDelta</span> { .. })
+        ));
+        assert!(matches!(items[1], <span class="rs-type">Err</span>(<span class="rs-kw">ref</span> e) <span class="rs-kw">if</span> e.kind == <a class="symbol-link rs-type" href="eos-llm-client--src-error-rs.html#item-enum-ProviderErrorKind-6">ProviderErrorKind</a>::<span class="rs-type">Transport</span>));
+        assert_eq!(*calls.lock().unwrap(), 1, &quot;no retry after visible output&quot;);
+    }
+</code></pre>
+</details>
 
   <p class="source">crates/eos-llm-client/src/retry.rs:198</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn retries_only_before_visible_output private async fn retries_only_before_visible_output () crates/eos-llm-client/src/retry.rs  ">
+</article><article id="item-fn-retries-only-before-visible-output-218" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn retries_only_before_visible_output private async fn retries_only_before_visible_output () crates/eos-llm-client/src/retry.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>retries_only_before_visible_output</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">async fn retries_only_before_visible_output ()</code>
-  <div class="tags"><span>async</span></div>
+  <code class="signature">async fn <a class="symbol-link" href="eos-llm-client--src-retry-rs.html#item-fn-retries-only-before-visible-output-218">retries_only_before_visible_output</a> ()</code>
+  <div class="tags"><span>async</span><span>tokio::test</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[tokio::test]
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-llm-client--src-retry-rs.html#item-fn-retries-only-before-visible-output-218">retries_only_before_visible_output</a>() {
+        <span class="rs-kw">let</span> (factory, calls) = <a class="symbol-link rs-fn" href="eos-llm-client--src-retry-rs.html#item-fn-scripted-140">scripted</a>(vec![
+            <a class="symbol-link rs-type" href="eos-llm-client--src-retry-rs.html#item-enum-Attempt-132">Attempt</a>::<span class="rs-type">Stream</span>(vec![<span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-llm-client--src-error-rs.html#item-struct-ProviderError-29">ProviderError</a>::<a class="symbol-link rs-fn" href="eos-llm-client--src-error-rs.html#method-from-status-49">from_status</a>(
+                429,
+                <span class="rs-type">None</span>,
+                &quot;slow down&quot;,
+            ))]),
+            <a class="symbol-link rs-type" href="eos-llm-client--src-retry-rs.html#item-enum-Attempt-132">Attempt</a>::<span class="rs-type">OpenErr</span>(<a class="symbol-link rs-type" href="eos-llm-client--src-error-rs.html#item-struct-ProviderError-29">ProviderError</a>::<a class="symbol-link rs-fn" href="eos-llm-client--src-error-rs.html#method-from-status-49">from_status</a>(503, <span class="rs-type">None</span>, &quot;unavailable&quot;)),
+            <a class="symbol-link rs-type" href="eos-llm-client--src-retry-rs.html#item-enum-Attempt-132">Attempt</a>::<span class="rs-type">Stream</span>(vec![<span class="rs-type">Ok</span>(<a class="symbol-link rs-fn" href="eos-llm-client--src-retry-rs.html#item-fn-text-184">text</a>(&quot;a&quot;)), <span class="rs-type">Ok</span>(<a class="symbol-link rs-fn" href="eos-llm-client--src-retry-rs.html#item-fn-text-184">text</a>(&quot;b&quot;)), <span class="rs-type">Ok</span>(<a class="symbol-link rs-fn" href="eos-llm-client--src-retry-rs.html#item-fn-complete-188">complete</a>())]),
+        ]);
+        <span class="rs-kw">let</span> stream = <a class="symbol-link rs-fn" href="eos-llm-client--src-retry-rs.html#item-fn-retry-stream-21">retry_stream</a>(<a class="symbol-link rs-fn" href="eos-llm-client--src-retry-rs.html#item-fn-fast-cfg-171">fast_cfg</a>(), factory);
+        <span class="rs-kw">let</span> items: <span class="rs-type">Vec</span>&lt;_&gt; = stream.collect().<span class="rs-kw">await</span>;
+
+        assert!(items.iter().all(<span class="rs-type">Result</span>::is_ok), &quot;no error should surface&quot;);
+        assert_eq!(items.len(), 3);
+        assert_eq!(*calls.lock().unwrap(), 3, &quot;two retries then success&quot;);
+    }
+</code></pre>
+</details>
 
   <p class="source">crates/eos-llm-client/src/retry.rs:218</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn does_not_retry_non_retryable_open_error private async fn does_not_retry_non_retryable_open_error () crates/eos-llm-client/src/retry.rs  ">
+</article><article id="item-fn-does-not-retry-non-retryable-open-error-237" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn does_not_retry_non_retryable_open_error private async fn does_not_retry_non_retryable_open_error () crates/eos-llm-client/src/retry.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>does_not_retry_non_retryable_open_error</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">async fn does_not_retry_non_retryable_open_error ()</code>
-  <div class="tags"><span>async</span></div>
+  <code class="signature">async fn <a class="symbol-link" href="eos-llm-client--src-retry-rs.html#item-fn-does-not-retry-non-retryable-open-error-237">does_not_retry_non_retryable_open_error</a> ()</code>
+  <div class="tags"><span>async</span><span>tokio::test</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[tokio::test]
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-llm-client--src-retry-rs.html#item-fn-does-not-retry-non-retryable-open-error-237">does_not_retry_non_retryable_open_error</a>() {
+        <span class="rs-kw">let</span> (factory, calls) = <a class="symbol-link rs-fn" href="eos-llm-client--src-retry-rs.html#item-fn-scripted-140">scripted</a>(vec![<a class="symbol-link rs-type" href="eos-llm-client--src-retry-rs.html#item-enum-Attempt-132">Attempt</a>::<span class="rs-type">OpenErr</span>(<a class="symbol-link rs-type" href="eos-llm-client--src-error-rs.html#item-struct-ProviderError-29">ProviderError</a>::<a class="symbol-link rs-fn" href="eos-llm-client--src-error-rs.html#method-from-status-49">from_status</a>(
+            401, <span class="rs-type">None</span>, &quot;bad key&quot;,
+        ))]);
+        <span class="rs-kw">let</span> stream = <a class="symbol-link rs-fn" href="eos-llm-client--src-retry-rs.html#item-fn-retry-stream-21">retry_stream</a>(<a class="symbol-link rs-fn" href="eos-llm-client--src-retry-rs.html#item-fn-fast-cfg-171">fast_cfg</a>(), factory);
+        <span class="rs-kw">let</span> items: <span class="rs-type">Vec</span>&lt;_&gt; = stream.collect().<span class="rs-kw">await</span>;
+
+        assert_eq!(items.len(), 1);
+        assert!(matches!(items[0], <span class="rs-type">Err</span>(<span class="rs-kw">ref</span> e) <span class="rs-kw">if</span> e.kind == <a class="symbol-link rs-type" href="eos-llm-client--src-error-rs.html#item-enum-ProviderErrorKind-6">ProviderErrorKind</a>::<span class="rs-type">Authentication</span>));
+        assert_eq!(*calls.lock().unwrap(), 1, &quot;auth failure is not retried&quot;);
+    }
+</code></pre>
+</details>
 
   <p class="source">crates/eos-llm-client/src/retry.rs:237</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn exhausts_retry_budget_then_fails private async fn exhausts_retry_budget_then_fails () crates/eos-llm-client/src/retry.rs  ">
+</article><article id="item-fn-exhausts-retry-budget-then-fails-250" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn exhausts_retry_budget_then_fails private async fn exhausts_retry_budget_then_fails () crates/eos-llm-client/src/retry.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>exhausts_retry_budget_then_fails</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">async fn exhausts_retry_budget_then_fails ()</code>
-  <div class="tags"><span>async</span></div>
+  <code class="signature">async fn <a class="symbol-link" href="eos-llm-client--src-retry-rs.html#item-fn-exhausts-retry-budget-then-fails-250">exhausts_retry_budget_then_fails</a> ()</code>
+  <div class="tags"><span>async</span><span>tokio::test</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[tokio::test]
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-llm-client--src-retry-rs.html#item-fn-exhausts-retry-budget-then-fails-250">exhausts_retry_budget_then_fails</a>() {
+        <span class="rs-comment">// max_retries = 3 → 4 attempts total, all 429, all pre-visible.</span>
+        <span class="rs-kw">let</span> attempts = (0..5)
+            .map(|_| <a class="symbol-link rs-type" href="eos-llm-client--src-retry-rs.html#item-enum-Attempt-132">Attempt</a>::<span class="rs-type">OpenErr</span>(<a class="symbol-link rs-type" href="eos-llm-client--src-error-rs.html#item-struct-ProviderError-29">ProviderError</a>::<a class="symbol-link rs-fn" href="eos-llm-client--src-error-rs.html#method-from-status-49">from_status</a>(429, <span class="rs-type">None</span>, &quot;rl&quot;)))
+            .collect();
+        <span class="rs-kw">let</span> (factory, calls) = <a class="symbol-link rs-fn" href="eos-llm-client--src-retry-rs.html#item-fn-scripted-140">scripted</a>(attempts);
+        <span class="rs-kw">let</span> stream = <a class="symbol-link rs-fn" href="eos-llm-client--src-retry-rs.html#item-fn-retry-stream-21">retry_stream</a>(<a class="symbol-link rs-fn" href="eos-llm-client--src-retry-rs.html#item-fn-fast-cfg-171">fast_cfg</a>(), factory);
+        <span class="rs-kw">let</span> items: <span class="rs-type">Vec</span>&lt;_&gt; = stream.collect().<span class="rs-kw">await</span>;
+
+        assert_eq!(items.len(), 1);
+        assert!(matches!(items[0], <span class="rs-type">Err</span>(<span class="rs-kw">ref</span> e) <span class="rs-kw">if</span> e.kind == <a class="symbol-link rs-type" href="eos-llm-client--src-error-rs.html#item-enum-ProviderErrorKind-6">ProviderErrorKind</a>::<span class="rs-type">RateLimit</span>));
+        assert_eq!(*calls.lock().unwrap(), 4, &quot;1 initial + 3 retries&quot;);
+    }
+</code></pre>
+</details>
 
   <p class="source">crates/eos-llm-client/src/retry.rs:250</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn tool_use_delta_counts_as_visible private async fn tool_use_delta_counts_as_visible () crates/eos-llm-client/src/retry.rs  ">
+</article><article id="item-fn-tool-use-delta-counts-as-visible-265" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn tool_use_delta_counts_as_visible private async fn tool_use_delta_counts_as_visible () crates/eos-llm-client/src/retry.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>tool_use_delta_counts_as_visible</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">async fn tool_use_delta_counts_as_visible ()</code>
-  <div class="tags"><span>async</span></div>
+  <code class="signature">async fn <a class="symbol-link" href="eos-llm-client--src-retry-rs.html#item-fn-tool-use-delta-counts-as-visible-265">tool_use_delta_counts_as_visible</a> ()</code>
+  <div class="tags"><span>async</span><span>tokio::test</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[tokio::test]
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-llm-client--src-retry-rs.html#item-fn-tool-use-delta-counts-as-visible-265">tool_use_delta_counts_as_visible</a>() {
+        <span class="rs-kw">let</span> tool = <a class="symbol-link rs-type" href="eos-llm-client--src-events-rs.html#item-enum-LlmStreamEvent-15">LlmStreamEvent</a>::<span class="rs-type">ToolUseDelta</span> {
+            tool_use_id: &quot;toolu_1&quot;.<a class="symbol-link rs-fn" href="eos-llm-client--src-events-rs.html#method-parse-70">parse</a>().unwrap(),
+            name: &quot;read&quot;.into(),
+            input: <span class="rs-type">JsonObject</span>::<a class="symbol-link rs-fn" href="eos-llm-client--src-client-rs.html#method-new-56">new</a>(),
+        };
+        <span class="rs-kw">let</span> (factory, calls) = <a class="symbol-link rs-fn" href="eos-llm-client--src-retry-rs.html#item-fn-scripted-140">scripted</a>(vec![<a class="symbol-link rs-type" href="eos-llm-client--src-retry-rs.html#item-enum-Attempt-132">Attempt</a>::<span class="rs-type">Stream</span>(vec![
+            <span class="rs-type">Ok</span>(tool),
+            <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-llm-client--src-error-rs.html#item-struct-ProviderError-29">ProviderError</a>::<a class="symbol-link rs-fn" href="eos-llm-client--src-error-rs.html#method-from-status-49">from_status</a>(503, <span class="rs-type">None</span>, &quot;server&quot;)),
+        ])]);
+        <span class="rs-kw">let</span> stream = <a class="symbol-link rs-fn" href="eos-llm-client--src-retry-rs.html#item-fn-retry-stream-21">retry_stream</a>(<a class="symbol-link rs-fn" href="eos-llm-client--src-retry-rs.html#item-fn-fast-cfg-171">fast_cfg</a>(), factory);
+        <span class="rs-kw">let</span> items: <span class="rs-type">Vec</span>&lt;_&gt; = stream.collect().<span class="rs-kw">await</span>;
+
+        assert_eq!(items.len(), 2);
+        assert!(items[1].is_err());
+        assert_eq!(*calls.lock().unwrap(), 1, &quot;tool_use delta blocks retry&quot;);
+    }
+</code></pre>
+</details>
 
   <p class="source">crates/eos-llm-client/src/retry.rs:265</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn backoff_does_not_panic_on_overflowing_delay private async fn backoff_does_not_panic_on_overflowing_delay () crates/eos-llm-client/src/retry.rs  ">
+</article><article id="item-fn-backoff-does-not-panic-on-overflowing-delay-288" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn backoff_does_not_panic_on_overflowing_delay private async fn backoff_does_not_panic_on_overflowing_delay () crates/eos-llm-client/src/retry.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>backoff_does_not_panic_on_overflowing_delay</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">async fn backoff_does_not_panic_on_overflowing_delay ()</code>
-  <div class="tags"><span>async</span></div>
+  <code class="signature">async fn <a class="symbol-link" href="eos-llm-client--src-retry-rs.html#item-fn-backoff-does-not-panic-on-overflowing-delay-288">backoff_does_not_panic_on_overflowing_delay</a> ()</code>
+  <div class="tags"><span>async</span><span>tokio::test</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[tokio::test]
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-llm-client--src-retry-rs.html#item-fn-backoff-does-not-panic-on-overflowing-delay-288">backoff_does_not_panic_on_overflowing_delay</a>() {
+        <span class="rs-kw">let</span> cfg: <span class="rs-type">RetryConfig</span> = serde_json::from_value(serde_json::json!({
+            &quot;max_retries&quot;: 1,
+            &quot;base_delay_s&quot;: f64::<span class="rs-type">MAX</span>,
+            &quot;max_delay_s&quot;: f64::<span class="rs-type">MAX</span>,
+            &quot;status_codes&quot;: [503],
+        }))
+        .unwrap();
+        <span class="rs-kw">let</span> (factory, calls) = <a class="symbol-link rs-fn" href="eos-llm-client--src-retry-rs.html#item-fn-scripted-140">scripted</a>(vec![
+            <a class="symbol-link rs-type" href="eos-llm-client--src-retry-rs.html#item-enum-Attempt-132">Attempt</a>::<span class="rs-type">OpenErr</span>(<a class="symbol-link rs-type" href="eos-llm-client--src-error-rs.html#item-struct-ProviderError-29">ProviderError</a>::<a class="symbol-link rs-fn" href="eos-llm-client--src-error-rs.html#method-from-status-49">from_status</a>(503, <span class="rs-type">None</span>, &quot;server&quot;)),
+            <a class="symbol-link rs-type" href="eos-llm-client--src-retry-rs.html#item-enum-Attempt-132">Attempt</a>::<span class="rs-type">Stream</span>(vec![<span class="rs-type">Ok</span>(<a class="symbol-link rs-fn" href="eos-llm-client--src-retry-rs.html#item-fn-text-184">text</a>(&quot;ok&quot;))]),
+        ]);
+        <span class="rs-kw">let</span> items: <span class="rs-type">Vec</span>&lt;_&gt; = <a class="symbol-link rs-fn" href="eos-llm-client--src-retry-rs.html#item-fn-retry-stream-21">retry_stream</a>(cfg, factory).collect().<span class="rs-kw">await</span>;
+
+        assert!(items.iter().all(<span class="rs-type">Result</span>::is_ok));
+        assert_eq!(*calls.lock().unwrap(), 2, &quot;retried once without panicking&quot;);
+    }
+</code></pre>
+</details>
 
   <p class="source">crates/eos-llm-client/src/retry.rs:288</p>
 </article></div>
 </section></div>
 </main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/eos-llm-client/src/retry.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-comment">//! The visible-output retry gate.</span>
+<span class="rs-comment">//!</span>
+<span class="rs-comment">//! The retry policy is unified onto `eos_config::RetryConfig`; this crate keeps</span>
+<span class="rs-comment">//! no local retry constants. [`retry_stream`] is an outer generator that</span>
+<span class="rs-comment">//! re-invokes a per-attempt stream factory across retries while tracking a single</span>
+<span class="rs-comment">//! `emitted_visible` flag: once any visible event (`AssistantTextDelta` /</span>
+<span class="rs-comment">//! `ReasoningDelta` / `ToolUseDelta`) is forwarded, a later failure fails fast</span>
+<span class="rs-comment">//! because re-running would duplicate text deltas and double-dispatch</span>
+<span class="rs-comment">//! `tool_use_id`s downstream.</span>
+
+<span class="rs-kw">use</span> std::time::<span class="rs-type">Duration</span>;
+
+<span class="rs-kw">use</span> eos_config::<span class="rs-type">RetryConfig</span>;
+<span class="rs-kw">use</span> futures::future::<span class="rs-type">BoxFuture</span>;
+<span class="rs-kw">use</span> futures::<span class="rs-type">StreamExt</span>;
+
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::client::<a class="symbol-link rs-type" href="eos-llm-client--src-client-rs.html#item-type-LlmStream-22">LlmStream</a>;
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::error::{<a class="symbol-link rs-type" href="eos-llm-client--src-error-rs.html#item-struct-ProviderError-29">ProviderError</a>, <a class="symbol-link rs-type" href="eos-llm-client--src-error-rs.html#item-enum-ProviderErrorKind-6">ProviderErrorKind</a>};
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::events::<a class="symbol-link rs-type" href="eos-llm-client--src-events-rs.html#item-enum-LlmStreamEvent-15">LlmStreamEvent</a>;
+
+<span class="rs-comment">/// Wrap a per-attempt factory in the retry gate, returning a single linear</span>
+<span class="rs-comment">/// [`LlmStream`]. `cfg` is taken **by value**: the returned stream is `'static`</span>
+<span class="rs-comment">/// and cannot borrow the caller's config for its lifetime.</span>
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> retry_stream&lt;<span class="rs-type">F</span>&gt;(cfg: <span class="rs-type">RetryConfig</span>, <span class="rs-kw">mut</span> factory: <span class="rs-type">F</span>) -&gt; <a class="symbol-link rs-type" href="eos-llm-client--src-client-rs.html#item-type-LlmStream-22">LlmStream</a>
+<span class="rs-kw">where</span>
+    <span class="rs-type">F</span>: <span class="rs-type">FnMut</span>() -&gt; <span class="rs-type">BoxFuture</span>&lt;&#x27;<span class="rs-kw">static</span>, <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-llm-client--src-client-rs.html#item-type-LlmStream-22">LlmStream</a>, <a class="symbol-link rs-type" href="eos-llm-client--src-error-rs.html#item-struct-ProviderError-29">ProviderError</a>&gt;&gt; + <span class="rs-type">Send</span> + &#x27;<span class="rs-kw">static</span>,
+{
+    <span class="rs-type">Box</span>::pin(async_stream::stream! {
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> emitted_visible = <span class="rs-kw">false</span>;
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> attempt: u32 = 0;
+        loop {
+            <span class="rs-kw">match</span> factory().<span class="rs-kw">await</span> {
+                <span class="rs-type">Err</span>(err) =&gt; {
+                    <span class="rs-kw">if</span> <a class="symbol-link rs-fn" href="eos-llm-client--src-retry-rs.html#item-fn-can-retry-77">can_retry</a>(&amp;cfg, &amp;err, emitted_visible, attempt) {
+                        <a class="symbol-link rs-fn" href="eos-llm-client--src-retry-rs.html#item-fn-backoff-108">backoff</a>(&amp;cfg, attempt).<span class="rs-kw">await</span>;
+                        attempt += 1;
+                        <span class="rs-kw">continue</span>;
+                    }
+                    yield <span class="rs-type">Err</span>(err);
+                    <span class="rs-kw">return</span>;
+                }
+                <span class="rs-type">Ok</span>(stream) =&gt; {
+                    futures::pin_mut!(stream);
+                    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> completed = <span class="rs-kw">true</span>;
+                    <span class="rs-kw">while</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(item) = stream.next().<span class="rs-kw">await</span> {
+                        <span class="rs-kw">match</span> item {
+                            <span class="rs-type">Ok</span>(event) =&gt; {
+                                <span class="rs-kw">if</span> <a class="symbol-link rs-fn" href="eos-llm-client--src-retry-rs.html#item-fn-is-visible-98">is_visible</a>(&amp;event) {
+                                    emitted_visible = <span class="rs-kw">true</span>;
+                                }
+                                yield <span class="rs-type">Ok</span>(event);
+                            }
+                            <span class="rs-type">Err</span>(err) =&gt; {
+                                <span class="rs-kw">if</span> <a class="symbol-link rs-fn" href="eos-llm-client--src-retry-rs.html#item-fn-can-retry-77">can_retry</a>(&amp;cfg, &amp;err, emitted_visible, attempt) {
+                                    completed = <span class="rs-kw">false</span>;
+                                    <span class="rs-kw">break</span>;
+                                }
+                                yield <span class="rs-type">Err</span>(err);
+                                <span class="rs-kw">return</span>;
+                            }
+                        }
+                    }
+                    <span class="rs-kw">if</span> completed {
+                        <span class="rs-comment">// Stream ended cleanly (AssistantMessageComplete or an</span>
+                        <span class="rs-comment">// empty stream); nothing more to do.</span>
+                        <span class="rs-kw">return</span>;
+                    }
+                }
+            }
+            <span class="rs-comment">// Reached only on a retryable failure with budget remaining.</span>
+            <a class="symbol-link rs-fn" href="eos-llm-client--src-retry-rs.html#item-fn-backoff-108">backoff</a>(&amp;cfg, attempt).<span class="rs-kw">await</span>;
+            attempt += 1;
+        }
+    })
+}
+
+<span class="rs-comment">/// Whether a fresh attempt is permitted: no visible output yet, budget left, and</span>
+<span class="rs-comment">/// a retryable kind (status-gated for HTTP).</span>
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-llm-client--src-retry-rs.html#item-fn-can-retry-77">can_retry</a>(cfg: &amp;<span class="rs-type">RetryConfig</span>, err: &amp;<a class="symbol-link rs-type" href="eos-llm-client--src-error-rs.html#item-struct-ProviderError-29">ProviderError</a>, emitted_visible: bool, attempt: u32) -&gt; bool {
+    !emitted_visible &amp;&amp; attempt &lt; cfg.max_retries &amp;&amp; <a class="symbol-link rs-fn" href="eos-llm-client--src-retry-rs.html#item-fn-is-retryable-83">is_retryable</a>(cfg, err)
+}
+
+<span class="rs-comment">/// Retryable iff `RateLimit`/`Server` with a status in `cfg.status_codes`, or a</span>
+<span class="rs-comment">/// `Transport` (connect/timeout) failure. `Decode`/`Authentication`/`Request`</span>
+<span class="rs-comment">/// are never retried.</span>
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-llm-client--src-retry-rs.html#item-fn-is-retryable-83">is_retryable</a>(cfg: &amp;<span class="rs-type">RetryConfig</span>, err: &amp;<a class="symbol-link rs-type" href="eos-llm-client--src-error-rs.html#item-struct-ProviderError-29">ProviderError</a>) -&gt; bool {
+    <span class="rs-kw">match</span> err.kind {
+        <a class="symbol-link rs-type" href="eos-llm-client--src-error-rs.html#item-enum-ProviderErrorKind-6">ProviderErrorKind</a>::<span class="rs-type">RateLimit</span> | <a class="symbol-link rs-type" href="eos-llm-client--src-error-rs.html#item-enum-ProviderErrorKind-6">ProviderErrorKind</a>::<span class="rs-type">Server</span> =&gt; err
+            .status_code
+            .is_some_and(|s| cfg.status_codes.contains(&amp;s)),
+        <a class="symbol-link rs-type" href="eos-llm-client--src-error-rs.html#item-enum-ProviderErrorKind-6">ProviderErrorKind</a>::<span class="rs-type">Transport</span> =&gt; <span class="rs-kw">true</span>,
+        <a class="symbol-link rs-type" href="eos-llm-client--src-error-rs.html#item-enum-ProviderErrorKind-6">ProviderErrorKind</a>::<span class="rs-type">Authentication</span>
+        | <a class="symbol-link rs-type" href="eos-llm-client--src-error-rs.html#item-enum-ProviderErrorKind-6">ProviderErrorKind</a>::<span class="rs-type">Request</span>
+        | <a class="symbol-link rs-type" href="eos-llm-client--src-error-rs.html#item-enum-ProviderErrorKind-6">ProviderErrorKind</a>::<span class="rs-type">Decode</span> =&gt; <span class="rs-kw">false</span>,
+    }
+}
+
+<span class="rs-comment">/// Whether an event counts as visible output for the gate.</span>
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-llm-client--src-retry-rs.html#item-fn-is-visible-98">is_visible</a>(event: &amp;<a class="symbol-link rs-type" href="eos-llm-client--src-events-rs.html#item-enum-LlmStreamEvent-15">LlmStreamEvent</a>) -&gt; bool {
+    matches!(
+        event,
+        <a class="symbol-link rs-type" href="eos-llm-client--src-events-rs.html#item-enum-LlmStreamEvent-15">LlmStreamEvent</a>::<span class="rs-type">AssistantTextDelta</span> { .. }
+            | <a class="symbol-link rs-type" href="eos-llm-client--src-events-rs.html#item-enum-LlmStreamEvent-15">LlmStreamEvent</a>::<span class="rs-type">ReasoningDelta</span> { .. }
+            | <a class="symbol-link rs-type" href="eos-llm-client--src-events-rs.html#item-enum-LlmStreamEvent-15">LlmStreamEvent</a>::<span class="rs-type">ToolUseDelta</span> { .. }
+    )
+}
+
+<span class="rs-comment">/// Sleep `min(base_delay_s * 2^attempt, max_delay_s)`.</span>
+<span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-llm-client--src-retry-rs.html#item-fn-backoff-108">backoff</a>(cfg: &amp;<span class="rs-type">RetryConfig</span>, attempt: u32) {
+    <span class="rs-kw">let</span> delay = (cfg.base_delay_s * 2f64.powi(attempt <span class="rs-kw">as</span> i32)).min(cfg.max_delay_s);
+    <span class="rs-comment">// Fallible construction: a non-finite or overflowing delay (reachable from an</span>
+    <span class="rs-comment">// unvalidated `+inf`/huge `max_delay_s`, since eos-config only rejects</span>
+    <span class="rs-comment">// negatives) must skip the sleep rather than panic (`err-result-over-panic`).</span>
+    <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Ok</span>(duration) = <span class="rs-type">Duration</span>::try_from_secs_f64(delay) {
+        <span class="rs-kw">if</span> duration &gt; <span class="rs-type">Duration</span>::<span class="rs-type">ZERO</span> {
+            tokio::time::sleep(duration).<span class="rs-kw">await</span>;
+        }
+    }
+}
+
+#[cfg(test)]
+<span class="rs-kw">mod</span> tests {
+    #![allow(clippy::unwrap_used)]
+    <span class="rs-kw">use</span> std::sync::{<span class="rs-type">Arc</span>, <span class="rs-type">Mutex</span>};
+
+    <span class="rs-kw">use</span> eos_types::<span class="rs-type">JsonObject</span>;
+    <span class="rs-kw">use</span> futures::<span class="rs-type">StreamExt</span>;
+
+    <span class="rs-kw">use</span> <span class="rs-kw">super</span>::*;
+    <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::events::<a class="symbol-link rs-type" href="eos-llm-client--src-events-rs.html#item-enum-LlmStreamEvent-15">LlmStreamEvent</a>;
+
+    <span class="rs-comment">/// One scripted attempt outcome.</span>
+    <span class="rs-kw">enum</span> <a class="symbol-link rs-type" href="eos-llm-client--src-retry-rs.html#item-enum-Attempt-132">Attempt</a> {
+        <span class="rs-comment">/// Opening the attempt fails before any stream (connect / status).</span>
+        <span class="rs-type">OpenErr</span>(<a class="symbol-link rs-type" href="eos-llm-client--src-error-rs.html#item-struct-ProviderError-29">ProviderError</a>),
+        <span class="rs-comment">/// The attempt opens and yields these items.</span>
+        <span class="rs-type">Stream</span>(<span class="rs-type">Vec</span>&lt;<span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-llm-client--src-events-rs.html#item-enum-LlmStreamEvent-15">LlmStreamEvent</a>, <a class="symbol-link rs-type" href="eos-llm-client--src-error-rs.html#item-struct-ProviderError-29">ProviderError</a>&gt;&gt;),
+    }
+
+    <span class="rs-comment">/// Build a `Send + 'static` factory that replays scripted attempts in order</span>
+    <span class="rs-comment">/// and counts its invocations.</span>
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-llm-client--src-retry-rs.html#item-fn-scripted-140">scripted</a>(
+        attempts: <span class="rs-type">Vec</span>&lt;<a class="symbol-link rs-type" href="eos-llm-client--src-retry-rs.html#item-enum-Attempt-132">Attempt</a>&gt;,
+    ) -&gt; (
+        <span class="rs-kw">impl</span> <span class="rs-type">FnMut</span>() -&gt; <span class="rs-type">BoxFuture</span>&lt;&#x27;<span class="rs-kw">static</span>, <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-llm-client--src-client-rs.html#item-type-LlmStream-22">LlmStream</a>, <a class="symbol-link rs-type" href="eos-llm-client--src-error-rs.html#item-struct-ProviderError-29">ProviderError</a>&gt;&gt; + <span class="rs-type">Send</span> + &#x27;<span class="rs-kw">static</span>,
+        <span class="rs-type">Arc</span>&lt;<span class="rs-type">Mutex</span>&lt;usize&gt;&gt;,
+    ) {
+        <span class="rs-kw">let</span> calls = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-llm-client--src-client-rs.html#method-new-56">new</a>(<span class="rs-type">Mutex</span>::<a class="symbol-link rs-fn" href="eos-llm-client--src-client-rs.html#method-new-56">new</a>(0usize));
+        <span class="rs-kw">let</span> calls_ret = <span class="rs-type">Arc</span>::clone(&amp;calls);
+        <span class="rs-kw">let</span> script = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-llm-client--src-client-rs.html#method-new-56">new</a>(<span class="rs-type">Mutex</span>::<a class="symbol-link rs-fn" href="eos-llm-client--src-client-rs.html#method-new-56">new</a>(attempts.into_iter().collect::&lt;<span class="rs-type">Vec</span>&lt;_&gt;&gt;()));
+        <span class="rs-kw">let</span> factory = <span class="rs-kw">move</span> || {
+            *calls.lock().unwrap() += 1;
+            <span class="rs-kw">let</span> <span class="rs-kw">mut</span> script = script.lock().unwrap();
+            <span class="rs-kw">let</span> outcome = <span class="rs-kw">if</span> script.is_empty() {
+                <a class="symbol-link rs-type" href="eos-llm-client--src-retry-rs.html#item-enum-Attempt-132">Attempt</a>::<span class="rs-type">OpenErr</span>(<a class="symbol-link rs-type" href="eos-llm-client--src-error-rs.html#item-struct-ProviderError-29">ProviderError</a>::<a class="symbol-link rs-fn" href="eos-llm-client--src-error-rs.html#method-transport-74">transport</a>(&quot;script exhausted&quot;))
+            } <span class="rs-kw">else</span> {
+                script.remove(0)
+            };
+            <span class="rs-kw">let</span> fut: <span class="rs-type">BoxFuture</span>&lt;&#x27;<span class="rs-kw">static</span>, <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-llm-client--src-client-rs.html#item-type-LlmStream-22">LlmStream</a>, <a class="symbol-link rs-type" href="eos-llm-client--src-error-rs.html#item-struct-ProviderError-29">ProviderError</a>&gt;&gt; = <span class="rs-kw">match</span> outcome {
+                <a class="symbol-link rs-type" href="eos-llm-client--src-retry-rs.html#item-enum-Attempt-132">Attempt</a>::<span class="rs-type">OpenErr</span>(e) =&gt; <span class="rs-type">Box</span>::pin(<span class="rs-kw">async</span> <span class="rs-kw">move</span> { <span class="rs-type">Err</span>(e) }),
+                <a class="symbol-link rs-type" href="eos-llm-client--src-retry-rs.html#item-enum-Attempt-132">Attempt</a>::<span class="rs-type">Stream</span>(items) =&gt; <span class="rs-type">Box</span>::pin(<span class="rs-kw">async</span> <span class="rs-kw">move</span> {
+                    <span class="rs-kw">let</span> s: <a class="symbol-link rs-type" href="eos-llm-client--src-client-rs.html#item-type-LlmStream-22">LlmStream</a> = <span class="rs-type">Box</span>::pin(futures::stream::iter(items));
+                    <span class="rs-type">Ok</span>(s)
+                }),
+            };
+            fut
+        };
+        (factory, calls_ret)
+    }
+
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-llm-client--src-retry-rs.html#item-fn-fast-cfg-171">fast_cfg</a>() -&gt; <span class="rs-type">RetryConfig</span> {
+        <span class="rs-comment">// Zero delay so the retry loop does not actually sleep in tests.</span>
+        <span class="rs-comment">// `RetryConfig` is `#[non_exhaustive]`, so it is built by deserialization</span>
+        <span class="rs-comment">// rather than a struct literal.</span>
+        serde_json::from_value(serde_json::json!({
+            &quot;max_retries&quot;: 3,
+            &quot;base_delay_s&quot;: 0.0,
+            &quot;max_delay_s&quot;: 0.0,
+            &quot;status_codes&quot;: [429, 500, 502, 503, 529],
+        }))
+        .unwrap()
+    }
+
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-llm-client--src-retry-rs.html#item-fn-text-184">text</a>(s: &amp;str) -&gt; <a class="symbol-link rs-type" href="eos-llm-client--src-events-rs.html#item-enum-LlmStreamEvent-15">LlmStreamEvent</a> {
+        <a class="symbol-link rs-type" href="eos-llm-client--src-events-rs.html#item-enum-LlmStreamEvent-15">LlmStreamEvent</a>::<span class="rs-type">AssistantTextDelta</span> { text: s.into() }
+    }
+
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-llm-client--src-retry-rs.html#item-fn-complete-188">complete</a>() -&gt; <a class="symbol-link rs-type" href="eos-llm-client--src-events-rs.html#item-enum-LlmStreamEvent-15">LlmStreamEvent</a> {
+        <a class="symbol-link rs-type" href="eos-llm-client--src-events-rs.html#item-enum-LlmStreamEvent-15">LlmStreamEvent</a>::<span class="rs-type">AssistantMessageComplete</span> {
+            message: <span class="rs-kw">crate</span>::message::<a class="symbol-link rs-type" href="eos-llm-client--src-message-rs.html#item-struct-Message-88">Message</a>::<a class="symbol-link rs-fn" href="eos-llm-client--src-message-rs.html#method-from-user-text-101">from_user_text</a>(&quot;&quot;),
+            usage: <span class="rs-kw">crate</span>::types::<a class="symbol-link rs-type" href="eos-llm-client--src-types-rs.html#item-struct-UsageSnapshot-12">UsageSnapshot</a>::default(),
+            stop_reason: <span class="rs-type">None</span>,
+        }
+    }
+
+    <span class="rs-comment">// AC-llm-client-02 (fail-fast): after a visible delta an injected transport</span>
+    <span class="rs-comment">// error yields the delta then exactly one Err and ends; factory invoked once.</span>
+    #[tokio::test]
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-llm-client--src-retry-rs.html#item-fn-fails-fast-after-visible-output-198">fails_fast_after_visible_output</a>() {
+        <span class="rs-kw">let</span> (factory, calls) = <a class="symbol-link rs-fn" href="eos-llm-client--src-retry-rs.html#item-fn-scripted-140">scripted</a>(vec![<a class="symbol-link rs-type" href="eos-llm-client--src-retry-rs.html#item-enum-Attempt-132">Attempt</a>::<span class="rs-type">Stream</span>(vec![
+            <span class="rs-type">Ok</span>(<a class="symbol-link rs-fn" href="eos-llm-client--src-retry-rs.html#item-fn-text-184">text</a>(&quot;hello&quot;)),
+            <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-llm-client--src-error-rs.html#item-struct-ProviderError-29">ProviderError</a>::<a class="symbol-link rs-fn" href="eos-llm-client--src-error-rs.html#method-transport-74">transport</a>(&quot;dropped&quot;)),
+        ])]);
+        <span class="rs-kw">let</span> stream = <a class="symbol-link rs-fn" href="eos-llm-client--src-retry-rs.html#item-fn-retry-stream-21">retry_stream</a>(<a class="symbol-link rs-fn" href="eos-llm-client--src-retry-rs.html#item-fn-fast-cfg-171">fast_cfg</a>(), factory);
+        <span class="rs-kw">let</span> items: <span class="rs-type">Vec</span>&lt;_&gt; = stream.collect().<span class="rs-kw">await</span>;
+
+        assert_eq!(items.len(), 2);
+        assert!(matches!(
+            items[0],
+            <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-llm-client--src-events-rs.html#item-enum-LlmStreamEvent-15">LlmStreamEvent</a>::<span class="rs-type">AssistantTextDelta</span> { .. })
+        ));
+        assert!(matches!(items[1], <span class="rs-type">Err</span>(<span class="rs-kw">ref</span> e) <span class="rs-kw">if</span> e.kind == <a class="symbol-link rs-type" href="eos-llm-client--src-error-rs.html#item-enum-ProviderErrorKind-6">ProviderErrorKind</a>::<span class="rs-type">Transport</span>));
+        assert_eq!(*calls.lock().unwrap(), 1, &quot;no retry after visible output&quot;);
+    }
+
+    <span class="rs-comment">// AC-llm-client-02 (retry-then-succeed): a pre-visible RateLimit re-invokes</span>
+    <span class="rs-comment">// the factory; the caller sees a clean delta stream with no Err item.</span>
+    #[tokio::test]
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-llm-client--src-retry-rs.html#item-fn-retries-only-before-visible-output-218">retries_only_before_visible_output</a>() {
+        <span class="rs-kw">let</span> (factory, calls) = <a class="symbol-link rs-fn" href="eos-llm-client--src-retry-rs.html#item-fn-scripted-140">scripted</a>(vec![
+            <a class="symbol-link rs-type" href="eos-llm-client--src-retry-rs.html#item-enum-Attempt-132">Attempt</a>::<span class="rs-type">Stream</span>(vec![<span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-llm-client--src-error-rs.html#item-struct-ProviderError-29">ProviderError</a>::<a class="symbol-link rs-fn" href="eos-llm-client--src-error-rs.html#method-from-status-49">from_status</a>(
+                429,
+                <span class="rs-type">None</span>,
+                &quot;slow down&quot;,
+            ))]),
+            <a class="symbol-link rs-type" href="eos-llm-client--src-retry-rs.html#item-enum-Attempt-132">Attempt</a>::<span class="rs-type">OpenErr</span>(<a class="symbol-link rs-type" href="eos-llm-client--src-error-rs.html#item-struct-ProviderError-29">ProviderError</a>::<a class="symbol-link rs-fn" href="eos-llm-client--src-error-rs.html#method-from-status-49">from_status</a>(503, <span class="rs-type">None</span>, &quot;unavailable&quot;)),
+            <a class="symbol-link rs-type" href="eos-llm-client--src-retry-rs.html#item-enum-Attempt-132">Attempt</a>::<span class="rs-type">Stream</span>(vec![<span class="rs-type">Ok</span>(<a class="symbol-link rs-fn" href="eos-llm-client--src-retry-rs.html#item-fn-text-184">text</a>(&quot;a&quot;)), <span class="rs-type">Ok</span>(<a class="symbol-link rs-fn" href="eos-llm-client--src-retry-rs.html#item-fn-text-184">text</a>(&quot;b&quot;)), <span class="rs-type">Ok</span>(<a class="symbol-link rs-fn" href="eos-llm-client--src-retry-rs.html#item-fn-complete-188">complete</a>())]),
+        ]);
+        <span class="rs-kw">let</span> stream = <a class="symbol-link rs-fn" href="eos-llm-client--src-retry-rs.html#item-fn-retry-stream-21">retry_stream</a>(<a class="symbol-link rs-fn" href="eos-llm-client--src-retry-rs.html#item-fn-fast-cfg-171">fast_cfg</a>(), factory);
+        <span class="rs-kw">let</span> items: <span class="rs-type">Vec</span>&lt;_&gt; = stream.collect().<span class="rs-kw">await</span>;
+
+        assert!(items.iter().all(<span class="rs-type">Result</span>::is_ok), &quot;no error should surface&quot;);
+        assert_eq!(items.len(), 3);
+        assert_eq!(*calls.lock().unwrap(), 3, &quot;two retries then success&quot;);
+    }
+
+    #[tokio::test]
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-llm-client--src-retry-rs.html#item-fn-does-not-retry-non-retryable-open-error-237">does_not_retry_non_retryable_open_error</a>() {
+        <span class="rs-kw">let</span> (factory, calls) = <a class="symbol-link rs-fn" href="eos-llm-client--src-retry-rs.html#item-fn-scripted-140">scripted</a>(vec![<a class="symbol-link rs-type" href="eos-llm-client--src-retry-rs.html#item-enum-Attempt-132">Attempt</a>::<span class="rs-type">OpenErr</span>(<a class="symbol-link rs-type" href="eos-llm-client--src-error-rs.html#item-struct-ProviderError-29">ProviderError</a>::<a class="symbol-link rs-fn" href="eos-llm-client--src-error-rs.html#method-from-status-49">from_status</a>(
+            401, <span class="rs-type">None</span>, &quot;bad key&quot;,
+        ))]);
+        <span class="rs-kw">let</span> stream = <a class="symbol-link rs-fn" href="eos-llm-client--src-retry-rs.html#item-fn-retry-stream-21">retry_stream</a>(<a class="symbol-link rs-fn" href="eos-llm-client--src-retry-rs.html#item-fn-fast-cfg-171">fast_cfg</a>(), factory);
+        <span class="rs-kw">let</span> items: <span class="rs-type">Vec</span>&lt;_&gt; = stream.collect().<span class="rs-kw">await</span>;
+
+        assert_eq!(items.len(), 1);
+        assert!(matches!(items[0], <span class="rs-type">Err</span>(<span class="rs-kw">ref</span> e) <span class="rs-kw">if</span> e.kind == <a class="symbol-link rs-type" href="eos-llm-client--src-error-rs.html#item-enum-ProviderErrorKind-6">ProviderErrorKind</a>::<span class="rs-type">Authentication</span>));
+        assert_eq!(*calls.lock().unwrap(), 1, &quot;auth failure is not retried&quot;);
+    }
+
+    #[tokio::test]
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-llm-client--src-retry-rs.html#item-fn-exhausts-retry-budget-then-fails-250">exhausts_retry_budget_then_fails</a>() {
+        <span class="rs-comment">// max_retries = 3 → 4 attempts total, all 429, all pre-visible.</span>
+        <span class="rs-kw">let</span> attempts = (0..5)
+            .map(|_| <a class="symbol-link rs-type" href="eos-llm-client--src-retry-rs.html#item-enum-Attempt-132">Attempt</a>::<span class="rs-type">OpenErr</span>(<a class="symbol-link rs-type" href="eos-llm-client--src-error-rs.html#item-struct-ProviderError-29">ProviderError</a>::<a class="symbol-link rs-fn" href="eos-llm-client--src-error-rs.html#method-from-status-49">from_status</a>(429, <span class="rs-type">None</span>, &quot;rl&quot;)))
+            .collect();
+        <span class="rs-kw">let</span> (factory, calls) = <a class="symbol-link rs-fn" href="eos-llm-client--src-retry-rs.html#item-fn-scripted-140">scripted</a>(attempts);
+        <span class="rs-kw">let</span> stream = <a class="symbol-link rs-fn" href="eos-llm-client--src-retry-rs.html#item-fn-retry-stream-21">retry_stream</a>(<a class="symbol-link rs-fn" href="eos-llm-client--src-retry-rs.html#item-fn-fast-cfg-171">fast_cfg</a>(), factory);
+        <span class="rs-kw">let</span> items: <span class="rs-type">Vec</span>&lt;_&gt; = stream.collect().<span class="rs-kw">await</span>;
+
+        assert_eq!(items.len(), 1);
+        assert!(matches!(items[0], <span class="rs-type">Err</span>(<span class="rs-kw">ref</span> e) <span class="rs-kw">if</span> e.kind == <a class="symbol-link rs-type" href="eos-llm-client--src-error-rs.html#item-enum-ProviderErrorKind-6">ProviderErrorKind</a>::<span class="rs-type">RateLimit</span>));
+        assert_eq!(*calls.lock().unwrap(), 4, &quot;1 initial + 3 retries&quot;);
+    }
+
+    #[tokio::test]
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-llm-client--src-retry-rs.html#item-fn-tool-use-delta-counts-as-visible-265">tool_use_delta_counts_as_visible</a>() {
+        <span class="rs-kw">let</span> tool = <a class="symbol-link rs-type" href="eos-llm-client--src-events-rs.html#item-enum-LlmStreamEvent-15">LlmStreamEvent</a>::<span class="rs-type">ToolUseDelta</span> {
+            tool_use_id: &quot;toolu_1&quot;.<a class="symbol-link rs-fn" href="eos-llm-client--src-events-rs.html#method-parse-70">parse</a>().unwrap(),
+            name: &quot;read&quot;.into(),
+            input: <span class="rs-type">JsonObject</span>::<a class="symbol-link rs-fn" href="eos-llm-client--src-client-rs.html#method-new-56">new</a>(),
+        };
+        <span class="rs-kw">let</span> (factory, calls) = <a class="symbol-link rs-fn" href="eos-llm-client--src-retry-rs.html#item-fn-scripted-140">scripted</a>(vec![<a class="symbol-link rs-type" href="eos-llm-client--src-retry-rs.html#item-enum-Attempt-132">Attempt</a>::<span class="rs-type">Stream</span>(vec![
+            <span class="rs-type">Ok</span>(tool),
+            <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-llm-client--src-error-rs.html#item-struct-ProviderError-29">ProviderError</a>::<a class="symbol-link rs-fn" href="eos-llm-client--src-error-rs.html#method-from-status-49">from_status</a>(503, <span class="rs-type">None</span>, &quot;server&quot;)),
+        ])]);
+        <span class="rs-kw">let</span> stream = <a class="symbol-link rs-fn" href="eos-llm-client--src-retry-rs.html#item-fn-retry-stream-21">retry_stream</a>(<a class="symbol-link rs-fn" href="eos-llm-client--src-retry-rs.html#item-fn-fast-cfg-171">fast_cfg</a>(), factory);
+        <span class="rs-kw">let</span> items: <span class="rs-type">Vec</span>&lt;_&gt; = stream.collect().<span class="rs-kw">await</span>;
+
+        assert_eq!(items.len(), 2);
+        assert!(items[1].is_err());
+        assert_eq!(*calls.lock().unwrap(), 1, &quot;tool_use delta blocks retry&quot;);
+    }
+
+    <span class="rs-comment">// A delay that overflows `Duration` (reachable from a huge/`+inf` max_delay_s</span>
+    <span class="rs-comment">// that eos-config does not reject) must skip the sleep, not panic the live</span>
+    <span class="rs-comment">// stream task (`err-result-over-panic`). Without `try_from_secs_f64` this</span>
+    <span class="rs-comment">// test would abort inside `backoff`.</span>
+    #[tokio::test]
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-llm-client--src-retry-rs.html#item-fn-backoff-does-not-panic-on-overflowing-delay-288">backoff_does_not_panic_on_overflowing_delay</a>() {
+        <span class="rs-kw">let</span> cfg: <span class="rs-type">RetryConfig</span> = serde_json::from_value(serde_json::json!({
+            &quot;max_retries&quot;: 1,
+            &quot;base_delay_s&quot;: f64::<span class="rs-type">MAX</span>,
+            &quot;max_delay_s&quot;: f64::<span class="rs-type">MAX</span>,
+            &quot;status_codes&quot;: [503],
+        }))
+        .unwrap();
+        <span class="rs-kw">let</span> (factory, calls) = <a class="symbol-link rs-fn" href="eos-llm-client--src-retry-rs.html#item-fn-scripted-140">scripted</a>(vec![
+            <a class="symbol-link rs-type" href="eos-llm-client--src-retry-rs.html#item-enum-Attempt-132">Attempt</a>::<span class="rs-type">OpenErr</span>(<a class="symbol-link rs-type" href="eos-llm-client--src-error-rs.html#item-struct-ProviderError-29">ProviderError</a>::<a class="symbol-link rs-fn" href="eos-llm-client--src-error-rs.html#method-from-status-49">from_status</a>(503, <span class="rs-type">None</span>, &quot;server&quot;)),
+            <a class="symbol-link rs-type" href="eos-llm-client--src-retry-rs.html#item-enum-Attempt-132">Attempt</a>::<span class="rs-type">Stream</span>(vec![<span class="rs-type">Ok</span>(<a class="symbol-link rs-fn" href="eos-llm-client--src-retry-rs.html#item-fn-text-184">text</a>(&quot;ok&quot;))]),
+        ]);
+        <span class="rs-kw">let</span> items: <span class="rs-type">Vec</span>&lt;_&gt; = <a class="symbol-link rs-fn" href="eos-llm-client--src-retry-rs.html#item-fn-retry-stream-21">retry_stream</a>(cfg, factory).collect().<span class="rs-kw">await</span>;
+
+        assert!(items.iter().all(<span class="rs-type">Result</span>::is_ok));
+        assert_eq!(*calls.lock().unwrap(), 2, &quot;retried once without panicking&quot;);
+    }
+}
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
   <script src="../assets/inventory.js"></script>
 </body>
 </html>

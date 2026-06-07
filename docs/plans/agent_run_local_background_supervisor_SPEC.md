@@ -1424,13 +1424,54 @@ Status values: `Not started`, `In progress`, `Blocked`, `Done`.
 | 0. Contract alignment | Done | tracks daemon registry work | agent-core scope and sandbox assumptions are explicit |
 | 1. State variants | Done | none | cancelled state compiles and persists |
 | 2. Run control and registry | Done | none | each run can own cancellation, foreground, notifications, and finalization |
-| 3. Local supervisor composition | In progress | none | factories create per-run background handles and notifiers |
-| 4. Lane handles and heartbeat | Not started | completion collection interface only | lanes own records, handles, and heartbeat wiring |
+| 3. Local supervisor composition | Done (BackgroundNotificationEmitter + subagent completion push; command/workflow emitter routing folds into Phase 4) | none | factories create per-run background handles and notifiers |
+| 4. Lane handles and heartbeat | Not started (structural reorg: split BackgroundTaskSupervisor into the three lanes, move heartbeat into CommandSessionLane with the Weak cycle, drop record-level agent_run_id) | completion collection interface only | lanes own records, handles, and heartbeat wiring |
 | 5. Sandbox registry integration | Blocked on sandbox work | requires daemon registry implementation | one per-caller cancel RPC is wired and tested |
-| 6. Agent-core cancellation ports | In progress | Phase 5 for command-session teardown proof | `cancel_task` and `cancel_agent_run` are awaited and idempotent |
-| 7. Workflow cancellation decomposition | Not started | none | workflow cancellation decomposes through task state |
-| 8. Request cancellation entry | Not started | Phase 6 | backend-facing request cancellation entry exists |
-| 9. Tests and documentation | Not started | all prior phases | docs, tests, and architecture pages match the final design |
+| 6. Agent-core cancellation ports | Done (interim per-session command cancel until Phase 5) | Phase 5 for command-session teardown proof | `cancel_task` and `cancel_agent_run` are awaited and idempotent |
+| 7. Workflow cancellation decomposition | Done | none | workflow cancellation decomposes through task state |
+| 8. Request cancellation entry | Done | Phase 6 | backend-facing request cancellation entry exists |
+| 9. Tests and documentation | In progress (per-phase tests landed; architecture stale-claims refreshed; full doc sweep pending) | all prior phases | docs, tests, and architecture pages match the final design |
+
+### Implementation Progress Note (current state)
+
+**Spec goals met (functional, done + tested):** ownership inversion (each
+root/workflow/subagent run owns its own `AgentRunControl` → notifier, foreground
+executor, background supervisor, command-completion heartbeat, cancellation) and
+the two recursive cancellation primitives (`cancel_task` / `cancel_agent_run`,
+workflow decomposition, request entry). Gate tests:
+`per_run_controls_own_independent_notifiers`, `registry_claim_is_one_shot...`,
+`concurrent_cancel_and_run_finalize_exactly_once`,
+`workflow_control_..._cancels_child_state`, `cancel_request_reaches_live_port...`,
+`cancel_finished_request_is_noop`, `emits_subagent_completion_into_its_own_notifier`.
+The subagent §11.3 fix (subagent owns an ephemeral control + its command
+sessions) is done. The `BackgroundNotificationEmitter` exists and the subagent
+`[BACKGROUND COMPLETED]` push routes through it.
+
+**Spec target code-shape NOT fully met (deferred, behavior-equivalent):**
+- The background ledger is **not** split into the three lane structs (records
+  still live on `BackgroundTaskSupervisor`); records still carry `agent_run_id`.
+  Per §5 the lane file-split is **explicitly optional**.
+- The heartbeat is owned by `AgentRunControl` (its `JoinHandle` outside the
+  supervisor), **not** by a `CommandSessionLane`. This is deliberate: it avoids
+  the §8.3 reference cycle entirely, so the `Weak`-records dance is unnecessary.
+  Moving it into the lane would re-introduce that cycle for zero behavior change.
+  Dropping record-level `agent_run_id` is coupled to this (the heartbeat reads it
+  as the `collect_completed` caller_id), so both are deferred as one unit.
+
+**Open behavior items (not yet implemented):**
+- **Workflow completion push (§9.2/§19):** subagent completions push to the
+  parent notifier; delegated-workflow terminal transitions do **not** yet — the
+  parent still learns via `check_workflow_status` polling. Needs a design choice
+  (a `WorkflowLane` status poll vs. a workflow lifecycle callback) before wiring.
+- **Phase 5 (blocked):** command-session cancel is interim per-session today;
+  the one per-caller `cancel_all_workspace_runs_by_caller_id` RPC lands when the
+  sandbox daemon workspace-run registry is implemented (under construction).
+
+**Verification caveat (Phase 7):** nested (2-level) delegated-workflow
+cancellation is verified by **composition** of unit tests (handle-level
+parent-exit teardown + single-attempt `cancel_attempt` decomposition + structural
+recursion guards), **not** an end-to-end nested-cancel test. An E2E nested test
+needs the full runtime harness with real `delegate_workflow` runs.
 
 ### Phase 0: Contract Alignment
 

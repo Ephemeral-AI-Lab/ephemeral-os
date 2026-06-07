@@ -8,8 +8,16 @@
 </head>
 <body>
   <header>
-    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
-    <h1>eos-config File Inventory</h1>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>eos-config File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS/agent-core &amp;&amp; cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
   </header>
   <a class="back-link" href="../index.html">agent-core</a>
 <section class="summary">
@@ -47,129 +55,456 @@
       <span>0 methods</span>
     </div>
   </div>
-  <div class="items"><div class="group-label">Standalone Functions</div><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn load pub pub fn load () -&gt; Result &lt; ConfigDocument , ConfigError &gt; crates/eos-config/src/loader.rs  ">
+  <div class="items"><div class="group-label">Standalone Functions</div><article id="item-fn-load-16" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn load pub pub fn load () -&gt; Result &lt; ConfigDocument , ConfigError &gt; crates/eos-config/src/loader.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>load</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub fn load () -&gt; Result &lt; ConfigDocument , ConfigError &gt;</code>
+  <code class="signature">pub fn <a class="symbol-link" href="eos-config--src-loader-rs.html#item-fn-load-16">load</a> () -&gt; Result &lt; <a class="symbol-link" href="eos-config--src-document-rs.html#item-struct-ConfigDocument-11">ConfigDocument</a> , <a class="symbol-link" href="eos-config--src-error-rs.html#item-enum-ConfigError-3">ConfigError</a> &gt;</code>
+  <p class="docstring">Load the merged config document from the committed baseline<br>`agent-core/config/prd.yml` overlaid by the gitignored<br>`agent-core/config/local.yml` when present. Missing files are skipped.<br># Errors<br>Returns [`ConfigError`] on an unreadable or invalid YAML file.</p>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-comment">/// Load the merged config document from the committed baseline</span>
+<span class="rs-comment">/// `agent-core/config/prd.yml` overlaid by the gitignored</span>
+<span class="rs-comment">/// `agent-core/config/local.yml` when present. Missing files are skipped.</span>
+<span class="rs-comment">///</span>
+<span class="rs-comment">/// # Errors</span>
+<span class="rs-comment">/// Returns [`ConfigError`] on an unreadable or invalid YAML file.</span>
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-config--src-loader-rs.html#item-fn-load-16">load</a>() -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-config--src-document-rs.html#item-struct-ConfigDocument-11">ConfigDocument</a>, <a class="symbol-link rs-type" href="eos-config--src-error-rs.html#item-enum-ConfigError-3">ConfigError</a>&gt; {
+    <a class="symbol-link rs-fn" href="eos-config--src-loader-rs.html#item-fn-load-layers-53">load_layers</a>(&amp;[<a class="symbol-link rs-fn" href="eos-config--src-loader-rs.html#item-fn-baseline-path-34">baseline_path</a>(), <a class="symbol-link rs-fn" href="eos-config--src-loader-rs.html#item-fn-local-override-path-39">local_override_path</a>()])
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-config/src/loader.rs:16</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn load_with_override pub pub fn load_with_override (override_path : impl AsRef &lt; Path &gt;) -&gt; Result &lt; ConfigDocument , ConfigError &gt; crates/eos-config/src/loader.rs  ">
+</article><article id="item-fn-load-with-override-26" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn load_with_override pub pub fn load_with_override (override_path : impl AsRef &lt; Path &gt;) -&gt; Result &lt; ConfigDocument , ConfigError &gt; crates/eos-config/src/loader.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>load_with_override</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub fn load_with_override (override_path : impl AsRef &lt; Path &gt;) -&gt; Result &lt; ConfigDocument , ConfigError &gt;</code>
+  <code class="signature">pub fn <a class="symbol-link" href="eos-config--src-loader-rs.html#item-fn-load-with-override-26">load_with_override</a> (override_path : impl AsRef &lt; Path &gt;) -&gt; Result &lt; <a class="symbol-link" href="eos-config--src-document-rs.html#item-struct-ConfigDocument-11">ConfigDocument</a> , <a class="symbol-link" href="eos-config--src-error-rs.html#item-enum-ConfigError-3">ConfigError</a> &gt;</code>
+  <p class="docstring">Load the baseline merged with an explicit override file (the test/local seam).<br># Errors<br>See [`load`].</p>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-comment">/// Load the baseline merged with an explicit override file (the test/local seam).</span>
+<span class="rs-comment">///</span>
+<span class="rs-comment">/// # Errors</span>
+<span class="rs-comment">/// See [`load`].</span>
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-config--src-loader-rs.html#item-fn-load-with-override-26">load_with_override</a>(override_path: <span class="rs-kw">impl</span> <span class="rs-type">AsRef</span>&lt;<span class="rs-type">Path</span>&gt;) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-config--src-document-rs.html#item-struct-ConfigDocument-11">ConfigDocument</a>, <a class="symbol-link rs-type" href="eos-config--src-error-rs.html#item-enum-ConfigError-3">ConfigError</a>&gt; {
+    <a class="symbol-link rs-fn" href="eos-config--src-loader-rs.html#item-fn-load-layers-53">load_layers</a>(&amp;[<a class="symbol-link rs-fn" href="eos-config--src-loader-rs.html#item-fn-baseline-path-34">baseline_path</a>(), override_path.as_ref().to_path_buf()])
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-config/src/loader.rs:26</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn baseline_path private fn baseline_path () -&gt; PathBuf crates/eos-config/src/loader.rs  ">
+</article><article id="item-fn-baseline-path-34" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn baseline_path private fn baseline_path () -&gt; PathBuf crates/eos-config/src/loader.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>baseline_path</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn baseline_path () -&gt; PathBuf</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-config--src-loader-rs.html#item-fn-baseline-path-34">baseline_path</a> () -&gt; PathBuf</code>
+  <p class="docstring">The committed baseline path `agent-core/config/prd.yml`.</p>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-comment">/// The committed baseline path `agent-core/config/prd.yml`.</span>
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-config--src-loader-rs.html#item-fn-baseline-path-34">baseline_path</a>() -&gt; <span class="rs-type">PathBuf</span> {
+    <a class="symbol-link rs-fn" href="eos-config--src-loader-rs.html#item-fn-config-dir-44">config_dir</a>().join(&quot;prd.yml&quot;)
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-config/src/loader.rs:34</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn local_override_path private fn local_override_path () -&gt; PathBuf crates/eos-config/src/loader.rs  ">
+</article><article id="item-fn-local-override-path-39" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn local_override_path private fn local_override_path () -&gt; PathBuf crates/eos-config/src/loader.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>local_override_path</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn local_override_path () -&gt; PathBuf</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-config--src-loader-rs.html#item-fn-local-override-path-39">local_override_path</a> () -&gt; PathBuf</code>
+  <p class="docstring">The gitignored production override path `agent-core/config/local.yml`.</p>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-comment">/// The gitignored production override path `agent-core/config/local.yml`.</span>
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-config--src-loader-rs.html#item-fn-local-override-path-39">local_override_path</a>() -&gt; <span class="rs-type">PathBuf</span> {
+    <a class="symbol-link rs-fn" href="eos-config--src-loader-rs.html#item-fn-config-dir-44">config_dir</a>().join(&quot;local.yml&quot;)
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-config/src/loader.rs:39</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn config_dir private fn config_dir () -&gt; PathBuf crates/eos-config/src/loader.rs  ">
+</article><article id="item-fn-config-dir-44" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn config_dir private fn config_dir () -&gt; PathBuf crates/eos-config/src/loader.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>config_dir</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn config_dir () -&gt; PathBuf</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-config--src-loader-rs.html#item-fn-config-dir-44">config_dir</a> () -&gt; PathBuf</code>
+  <p class="docstring">`agent-core/config` resolved from the crate layout (this crate lives at<br>`agent-core/crates/eos-config`).</p>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-comment">/// `agent-core/config` resolved from the crate layout (this crate lives at</span>
+<span class="rs-comment">/// `agent-core/crates/eos-config`).</span>
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-config--src-loader-rs.html#item-fn-config-dir-44">config_dir</a>() -&gt; <span class="rs-type">PathBuf</span> {
+    <span class="rs-type">Path</span>::<a class="symbol-link rs-fn" href="eos-config--src-configs-runtime-rs.html#method-new-17">new</a>(env!(&quot;<span class="rs-type">CARGO_MANIFEST_DIR</span>&quot;))
+        .ancestors()
+        .nth(2)
+        .map_or_else(|| <span class="rs-type">PathBuf</span>::from(&quot;config&quot;), |root| root.join(&quot;config&quot;))
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-config/src/loader.rs:44</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn load_layers private fn load_layers (paths : &amp; [PathBuf]) -&gt; Result &lt; ConfigDocument , ConfigError &gt; crates/eos-config/src/loader.rs  ">
+</article><article id="item-fn-load-layers-53" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn load_layers private fn load_layers (paths : &amp; [PathBuf]) -&gt; Result &lt; ConfigDocument , ConfigError &gt; crates/eos-config/src/loader.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>load_layers</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn load_layers (paths : &amp; [PathBuf]) -&gt; Result &lt; ConfigDocument , ConfigError &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-config--src-loader-rs.html#item-fn-load-layers-53">load_layers</a> (paths : &amp; [PathBuf]) -&gt; Result &lt; <a class="symbol-link" href="eos-config--src-document-rs.html#item-struct-ConfigDocument-11">ConfigDocument</a> , <a class="symbol-link" href="eos-config--src-error-rs.html#item-enum-ConfigError-3">ConfigError</a> &gt;</code>
+  <p class="docstring">Fold `paths[0] &lt; paths[1] &lt; ...`, skipping files that do not exist. An empty<br>or all-absent set yields an empty document (every `section()` then misses).</p>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-comment">/// Fold `paths[0] &lt; paths[1] &lt; ...`, skipping files that do not exist. An empty</span>
+<span class="rs-comment">/// or all-absent set yields an empty document (every `section()` then misses).</span>
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-config--src-loader-rs.html#item-fn-load-layers-53">load_layers</a>(paths: &amp;[<span class="rs-type">PathBuf</span>]) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-config--src-document-rs.html#item-struct-ConfigDocument-11">ConfigDocument</a>, <a class="symbol-link rs-type" href="eos-config--src-error-rs.html#item-enum-ConfigError-3">ConfigError</a>&gt; {
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> merged = <span class="rs-type">Value</span>::<span class="rs-type">Mapping</span>(serde_yaml::<span class="rs-type">Mapping</span>::<a class="symbol-link rs-fn" href="eos-config--src-configs-runtime-rs.html#method-new-17">new</a>());
+    <span class="rs-kw">for</span> path <span class="rs-kw">in</span> paths {
+        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(doc) = <a class="symbol-link rs-fn" href="eos-config--src-loader-rs.html#item-fn-read-yaml-65">read_yaml</a>(path)? {
+            <a class="symbol-link rs-fn" href="eos-config--src-loader-rs.html#item-fn-deep-merge-75">deep_merge</a>(&amp;<span class="rs-kw">mut</span> merged, doc);
+        }
+    }
+    <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-config--src-document-rs.html#item-struct-ConfigDocument-11">ConfigDocument</a>::<a class="symbol-link rs-fn" href="eos-config--src-document-rs.html#method-from-value-19">from_value</a>(merged))
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-config/src/loader.rs:53</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn read_yaml private fn read_yaml (path : &amp; Path) -&gt; Result &lt; Option &lt; Value &gt; , ConfigError &gt; crates/eos-config/src/loader.rs  ">
+</article><article id="item-fn-read-yaml-65" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn read_yaml private fn read_yaml (path : &amp; Path) -&gt; Result &lt; Option &lt; Value &gt; , ConfigError &gt; crates/eos-config/src/loader.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>read_yaml</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn read_yaml (path : &amp; Path) -&gt; Result &lt; Option &lt; Value &gt; , ConfigError &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-config--src-loader-rs.html#item-fn-read-yaml-65">read_yaml</a> (path : &amp; Path) -&gt; Result &lt; Option &lt; Value &gt; , <a class="symbol-link" href="eos-config--src-error-rs.html#item-enum-ConfigError-3">ConfigError</a> &gt;</code>
+  <p class="docstring">Read and parse a YAML file, returning `None` when it is absent or empty.</p>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-comment">/// Read and parse a YAML file, returning `None` when it is absent or empty.</span>
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-config--src-loader-rs.html#item-fn-read-yaml-65">read_yaml</a>(path: &amp;<span class="rs-type">Path</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Option</span>&lt;<span class="rs-type">Value</span>&gt;, <a class="symbol-link rs-type" href="eos-config--src-error-rs.html#item-enum-ConfigError-3">ConfigError</a>&gt; {
+    <span class="rs-kw">if</span> !path.exists() {
+        <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<span class="rs-type">None</span>);
+    }
+    <span class="rs-kw">let</span> text = std::fs::read_to_string(path).map_err(<a class="symbol-link rs-type" href="eos-config--src-error-rs.html#item-enum-ConfigError-3">ConfigError</a>::<span class="rs-type">ReadFile</span>)?;
+    <span class="rs-kw">let</span> doc: <span class="rs-type">Value</span> = serde_yaml::from_str(&amp;text).map_err(<a class="symbol-link rs-type" href="eos-config--src-error-rs.html#item-enum-ConfigError-3">ConfigError</a>::<span class="rs-type">ParseYaml</span>)?;
+    <span class="rs-type">Ok</span>((!doc.is_null()).then_some(doc))
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-config/src/loader.rs:65</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn deep_merge private fn deep_merge (base : &amp; mut Value , overlay : Value) crates/eos-config/src/loader.rs  ">
+</article><article id="item-fn-deep-merge-75" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn deep_merge private fn deep_merge (base : &amp; mut Value , overlay : Value) crates/eos-config/src/loader.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>deep_merge</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn deep_merge (base : &amp; mut Value , overlay : Value)</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-config--src-loader-rs.html#item-fn-deep-merge-75">deep_merge</a> (base : &amp; mut Value , overlay : Value)</code>
+  <p class="docstring">Recursively merge `overlay` into `base`: two mappings merge key-by-key, any<br>other overlay node replaces the base node.</p>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-comment">/// Recursively merge `overlay` into `base`: two mappings merge key-by-key, any</span>
+<span class="rs-comment">/// other overlay node replaces the base node.</span>
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-config--src-loader-rs.html#item-fn-deep-merge-75">deep_merge</a>(base: &amp;<span class="rs-kw">mut</span> <span class="rs-type">Value</span>, overlay: <span class="rs-type">Value</span>) {
+    <span class="rs-kw">match</span> (base, overlay) {
+        (<span class="rs-type">Value</span>::<span class="rs-type">Mapping</span>(base_map), <span class="rs-type">Value</span>::<span class="rs-type">Mapping</span>(overlay_map)) =&gt; {
+            <span class="rs-kw">for</span> (key, value) <span class="rs-kw">in</span> overlay_map {
+                <span class="rs-kw">match</span> base_map.get_mut(&amp;key) {
+                    <span class="rs-type">Some</span>(existing) =&gt; <a class="symbol-link rs-fn" href="eos-config--src-loader-rs.html#item-fn-deep-merge-75">deep_merge</a>(existing, value),
+                    <span class="rs-type">None</span> =&gt; {
+                        base_map.insert(key, value);
+                    }
+                }
+            }
+        }
+        (slot, overlay) =&gt; *slot = overlay,
+    }
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-config/src/loader.rs:75</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn temp_yaml private fn temp_yaml (name : &amp; str , content : &amp; str) -&gt; PathBuf crates/eos-config/src/loader.rs  ">
+</article><article id="item-fn-temp-yaml-99" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn temp_yaml private fn temp_yaml (name : &amp; str , content : &amp; str) -&gt; PathBuf crates/eos-config/src/loader.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>temp_yaml</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn temp_yaml (name : &amp; str , content : &amp; str) -&gt; PathBuf</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-config--src-loader-rs.html#item-fn-temp-yaml-99">temp_yaml</a> (name : &amp; str , content : &amp; str) -&gt; PathBuf</code>
+  <p class="docstring">Write a uniquely-named temp YAML file (no external tempfile dep).</p>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Write a uniquely-named temp YAML file (no external tempfile dep).</span>
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-config--src-loader-rs.html#item-fn-temp-yaml-99">temp_yaml</a>(name: &amp;str, content: &amp;str) -&gt; <span class="rs-type">PathBuf</span> {
+        <span class="rs-kw">let</span> path = std::env::temp_dir().join(name);
+        std::fs::write(&amp;path, content).unwrap();
+        path
+    }
+</code></pre>
+</details>
 
   <p class="source">crates/eos-config/src/loader.rs:99</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn test_override_merges_then_section_deserializes private fn test_override_merges_then_section_deserializes () crates/eos-config/src/loader.rs  ">
+</article><article id="item-fn-test-override-merges-then-section-deserializes-109" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn test_override_merges_then_section_deserializes private fn test_override_merges_then_section_deserializes () crates/eos-config/src/loader.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>test_override_merges_then_section_deserializes</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn test_override_merges_then_section_deserializes ()</code>
-  <div class="tags"></div>
+  <code class="signature">fn <a class="symbol-link" href="eos-config--src-loader-rs.html#item-fn-test-override-merges-then-section-deserializes-109">test_override_merges_then_section_deserializes</a> ()</code>
+  <div class="tags"><span>test</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-config--src-loader-rs.html#item-fn-test-override-merges-then-section-deserializes-109">test_override_merges_then_section_deserializes</a>() {
+        <span class="rs-kw">let</span> baseline = <a class="symbol-link rs-fn" href="eos-config--src-loader-rs.html#item-fn-temp-yaml-99">temp_yaml</a>(
+            &quot;eos_config_baseline.yaml&quot;,
+            &quot;database:\n  url: \&quot;sqlite:<span class="rs-comment">///./x.db\"\n  pool_size: 10\n  busy_timeout_ms: 20\n  wal: true\n  foreign_keys: true\n",</span>
+        );
+        <span class="rs-kw">let</span> over = <a class="symbol-link rs-fn" href="eos-config--src-loader-rs.html#item-fn-temp-yaml-99">temp_yaml</a>(&quot;eos_config_override.yaml&quot;, &quot;database:\n  pool_size: 40\n&quot;);
+
+        <span class="rs-kw">let</span> doc = <a class="symbol-link rs-fn" href="eos-config--src-loader-rs.html#item-fn-load-layers-53">load_layers</a>(&amp;[baseline.clone(), over.clone()]).unwrap();
+        <span class="rs-kw">let</span> db: <a class="symbol-link rs-type" href="eos-config--src-configs-database-rs.html#item-struct-DatabaseConfig-62">DatabaseConfig</a> = doc.<a class="symbol-link rs-fn" href="eos-config--src-document-rs.html#method-section-24">section</a>(&quot;database&quot;).unwrap();
+
+        assert_eq!(db.pool_size, 40, &quot;override wins&quot;);
+        assert_eq!(db.busy_timeout_ms, 20, &quot;baseline-only field survives&quot;);
+        assert!(db.wal);
+
+        <span class="rs-kw">let</span> _ = std::fs::remove_file(&amp;baseline);
+        <span class="rs-kw">let</span> _ = std::fs::remove_file(&amp;over);
+    }
+</code></pre>
+</details>
 
   <p class="source">crates/eos-config/src/loader.rs:109</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn test_missing_section_errors private fn test_missing_section_errors () crates/eos-config/src/loader.rs  ">
+</article><article id="item-fn-test-missing-section-errors-129" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn test_missing_section_errors private fn test_missing_section_errors () crates/eos-config/src/loader.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>test_missing_section_errors</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn test_missing_section_errors ()</code>
-  <div class="tags"></div>
+  <code class="signature">fn <a class="symbol-link" href="eos-config--src-loader-rs.html#item-fn-test-missing-section-errors-129">test_missing_section_errors</a> ()</code>
+  <div class="tags"><span>test</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-config--src-loader-rs.html#item-fn-test-missing-section-errors-129">test_missing_section_errors</a>() {
+        <span class="rs-kw">let</span> absent = std::env::temp_dir().join(&quot;eos_config_intentionally_absent.yaml&quot;);
+        <span class="rs-kw">let</span> _ = std::fs::remove_file(&amp;absent);
+        <span class="rs-kw">let</span> doc = <a class="symbol-link rs-fn" href="eos-config--src-loader-rs.html#item-fn-load-layers-53">load_layers</a>(&amp;[absent]).unwrap();
+        <span class="rs-kw">let</span> result: <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-config--src-configs-database-rs.html#item-struct-DatabaseConfig-62">DatabaseConfig</a>, _&gt; = doc.<a class="symbol-link rs-fn" href="eos-config--src-document-rs.html#method-section-24">section</a>(&quot;database&quot;);
+        assert!(matches!(result, <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-config--src-error-rs.html#item-enum-ConfigError-3">ConfigError</a>::<span class="rs-type">MissingSection</span> { .. })));
+    }
+</code></pre>
+</details>
 
   <p class="source">crates/eos-config/src/loader.rs:129</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn test_unknown_field_rejected private fn test_unknown_field_rejected () crates/eos-config/src/loader.rs  ">
+</article><article id="item-fn-test-unknown-field-rejected-139" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn test_unknown_field_rejected private fn test_unknown_field_rejected () crates/eos-config/src/loader.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>test_unknown_field_rejected</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn test_unknown_field_rejected ()</code>
-  <div class="tags"></div>
+  <code class="signature">fn <a class="symbol-link" href="eos-config--src-loader-rs.html#item-fn-test-unknown-field-rejected-139">test_unknown_field_rejected</a> ()</code>
+  <div class="tags"><span>test</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-config--src-loader-rs.html#item-fn-test-unknown-field-rejected-139">test_unknown_field_rejected</a>() {
+        <span class="rs-kw">let</span> bad = <a class="symbol-link rs-fn" href="eos-config--src-loader-rs.html#item-fn-temp-yaml-99">temp_yaml</a>(
+            &quot;eos_config_unknown_field.yaml&quot;,
+            &quot;database:\n  url: \&quot;sqlite:<span class="rs-comment">///./x.db\"\n  pool_size: 5\n  busy_timeout_ms: 5000\n  wal: true\n  foreign_keys: true\n  bogus: 1\n",</span>
+        );
+        <span class="rs-kw">let</span> doc = <a class="symbol-link rs-fn" href="eos-config--src-loader-rs.html#item-fn-load-layers-53">load_layers</a>(std::slice::from_ref(&amp;bad)).unwrap();
+        <span class="rs-kw">let</span> result: <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-config--src-configs-database-rs.html#item-struct-DatabaseConfig-62">DatabaseConfig</a>, _&gt; = doc.<a class="symbol-link rs-fn" href="eos-config--src-document-rs.html#method-section-24">section</a>(&quot;database&quot;);
+        <span class="rs-kw">let</span> _ = std::fs::remove_file(&amp;bad);
+        assert!(matches!(result, <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-config--src-error-rs.html#item-enum-ConfigError-3">ConfigError</a>::<span class="rs-type">ParseYaml</span>(_))));
+    }
+</code></pre>
+</details>
 
   <p class="source">crates/eos-config/src/loader.rs:139</p>
 </article></div>
 </section></div>
 </main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/eos-config/src/loader.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-comment">//! File-only config loading: `prd.yml &lt; local override`. No env, no CLI</span>
+<span class="rs-comment">//! selection — config is chosen by *file*, mirroring the sandbox config model.</span>
+<span class="rs-comment">//! The committed `agent-core/config/prd.yml` is the baseline; a gitignored</span>
+<span class="rs-comment">//! `agent-core/config/local.yml` (or, in tests, an explicit override file) is</span>
+<span class="rs-comment">//! merged over it (objects recurse, scalars/arrays replace). The result is a</span>
+<span class="rs-comment">//! [`ConfigDocument`]; each crate deserializes its section via</span>
+<span class="rs-comment">//! [`ConfigDocument::section`].</span>
+
+<span class="rs-kw">use</span> std::path::{<span class="rs-type">Path</span>, <span class="rs-type">PathBuf</span>};
+
+<span class="rs-kw">use</span> serde_yaml::<span class="rs-type">Value</span>;
+
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::document::<a class="symbol-link rs-type" href="eos-config--src-document-rs.html#item-struct-ConfigDocument-11">ConfigDocument</a>;
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::error::<a class="symbol-link rs-type" href="eos-config--src-error-rs.html#item-enum-ConfigError-3">ConfigError</a>;
+
+<span class="rs-comment">/// Load the merged config document from the committed baseline</span>
+<span class="rs-comment">/// `agent-core/config/prd.yml` overlaid by the gitignored</span>
+<span class="rs-comment">/// `agent-core/config/local.yml` when present. Missing files are skipped.</span>
+<span class="rs-comment">///</span>
+<span class="rs-comment">/// # Errors</span>
+<span class="rs-comment">/// Returns [`ConfigError`] on an unreadable or invalid YAML file.</span>
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-config--src-loader-rs.html#item-fn-load-16">load</a>() -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-config--src-document-rs.html#item-struct-ConfigDocument-11">ConfigDocument</a>, <a class="symbol-link rs-type" href="eos-config--src-error-rs.html#item-enum-ConfigError-3">ConfigError</a>&gt; {
+    <a class="symbol-link rs-fn" href="eos-config--src-loader-rs.html#item-fn-load-layers-53">load_layers</a>(&amp;[<a class="symbol-link rs-fn" href="eos-config--src-loader-rs.html#item-fn-baseline-path-34">baseline_path</a>(), <a class="symbol-link rs-fn" href="eos-config--src-loader-rs.html#item-fn-local-override-path-39">local_override_path</a>()])
+}
+
+<span class="rs-comment">/// Load the baseline merged with an explicit override file (the test/local seam).</span>
+<span class="rs-comment">///</span>
+<span class="rs-comment">/// # Errors</span>
+<span class="rs-comment">/// See [`load`].</span>
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-config--src-loader-rs.html#item-fn-load-with-override-26">load_with_override</a>(override_path: <span class="rs-kw">impl</span> <span class="rs-type">AsRef</span>&lt;<span class="rs-type">Path</span>&gt;) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-config--src-document-rs.html#item-struct-ConfigDocument-11">ConfigDocument</a>, <a class="symbol-link rs-type" href="eos-config--src-error-rs.html#item-enum-ConfigError-3">ConfigError</a>&gt; {
+    <a class="symbol-link rs-fn" href="eos-config--src-loader-rs.html#item-fn-load-layers-53">load_layers</a>(&amp;[<a class="symbol-link rs-fn" href="eos-config--src-loader-rs.html#item-fn-baseline-path-34">baseline_path</a>(), override_path.as_ref().to_path_buf()])
+}
+
+<span class="rs-comment">/// The committed baseline path `agent-core/config/prd.yml`.</span>
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-config--src-loader-rs.html#item-fn-baseline-path-34">baseline_path</a>() -&gt; <span class="rs-type">PathBuf</span> {
+    <a class="symbol-link rs-fn" href="eos-config--src-loader-rs.html#item-fn-config-dir-44">config_dir</a>().join(&quot;prd.yml&quot;)
+}
+
+<span class="rs-comment">/// The gitignored production override path `agent-core/config/local.yml`.</span>
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-config--src-loader-rs.html#item-fn-local-override-path-39">local_override_path</a>() -&gt; <span class="rs-type">PathBuf</span> {
+    <a class="symbol-link rs-fn" href="eos-config--src-loader-rs.html#item-fn-config-dir-44">config_dir</a>().join(&quot;local.yml&quot;)
+}
+
+<span class="rs-comment">/// `agent-core/config` resolved from the crate layout (this crate lives at</span>
+<span class="rs-comment">/// `agent-core/crates/eos-config`).</span>
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-config--src-loader-rs.html#item-fn-config-dir-44">config_dir</a>() -&gt; <span class="rs-type">PathBuf</span> {
+    <span class="rs-type">Path</span>::<a class="symbol-link rs-fn" href="eos-config--src-configs-runtime-rs.html#method-new-17">new</a>(env!(&quot;<span class="rs-type">CARGO_MANIFEST_DIR</span>&quot;))
+        .ancestors()
+        .nth(2)
+        .map_or_else(|| <span class="rs-type">PathBuf</span>::from(&quot;config&quot;), |root| root.join(&quot;config&quot;))
+}
+
+<span class="rs-comment">/// Fold `paths[0] &lt; paths[1] &lt; ...`, skipping files that do not exist. An empty</span>
+<span class="rs-comment">/// or all-absent set yields an empty document (every `section()` then misses).</span>
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-config--src-loader-rs.html#item-fn-load-layers-53">load_layers</a>(paths: &amp;[<span class="rs-type">PathBuf</span>]) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-config--src-document-rs.html#item-struct-ConfigDocument-11">ConfigDocument</a>, <a class="symbol-link rs-type" href="eos-config--src-error-rs.html#item-enum-ConfigError-3">ConfigError</a>&gt; {
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> merged = <span class="rs-type">Value</span>::<span class="rs-type">Mapping</span>(serde_yaml::<span class="rs-type">Mapping</span>::<a class="symbol-link rs-fn" href="eos-config--src-configs-runtime-rs.html#method-new-17">new</a>());
+    <span class="rs-kw">for</span> path <span class="rs-kw">in</span> paths {
+        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(doc) = <a class="symbol-link rs-fn" href="eos-config--src-loader-rs.html#item-fn-read-yaml-65">read_yaml</a>(path)? {
+            <a class="symbol-link rs-fn" href="eos-config--src-loader-rs.html#item-fn-deep-merge-75">deep_merge</a>(&amp;<span class="rs-kw">mut</span> merged, doc);
+        }
+    }
+    <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-config--src-document-rs.html#item-struct-ConfigDocument-11">ConfigDocument</a>::<a class="symbol-link rs-fn" href="eos-config--src-document-rs.html#method-from-value-19">from_value</a>(merged))
+}
+
+<span class="rs-comment">/// Read and parse a YAML file, returning `None` when it is absent or empty.</span>
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-config--src-loader-rs.html#item-fn-read-yaml-65">read_yaml</a>(path: &amp;<span class="rs-type">Path</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Option</span>&lt;<span class="rs-type">Value</span>&gt;, <a class="symbol-link rs-type" href="eos-config--src-error-rs.html#item-enum-ConfigError-3">ConfigError</a>&gt; {
+    <span class="rs-kw">if</span> !path.exists() {
+        <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<span class="rs-type">None</span>);
+    }
+    <span class="rs-kw">let</span> text = std::fs::read_to_string(path).map_err(<a class="symbol-link rs-type" href="eos-config--src-error-rs.html#item-enum-ConfigError-3">ConfigError</a>::<span class="rs-type">ReadFile</span>)?;
+    <span class="rs-kw">let</span> doc: <span class="rs-type">Value</span> = serde_yaml::from_str(&amp;text).map_err(<a class="symbol-link rs-type" href="eos-config--src-error-rs.html#item-enum-ConfigError-3">ConfigError</a>::<span class="rs-type">ParseYaml</span>)?;
+    <span class="rs-type">Ok</span>((!doc.is_null()).then_some(doc))
+}
+
+<span class="rs-comment">/// Recursively merge `overlay` into `base`: two mappings merge key-by-key, any</span>
+<span class="rs-comment">/// other overlay node replaces the base node.</span>
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-config--src-loader-rs.html#item-fn-deep-merge-75">deep_merge</a>(base: &amp;<span class="rs-kw">mut</span> <span class="rs-type">Value</span>, overlay: <span class="rs-type">Value</span>) {
+    <span class="rs-kw">match</span> (base, overlay) {
+        (<span class="rs-type">Value</span>::<span class="rs-type">Mapping</span>(base_map), <span class="rs-type">Value</span>::<span class="rs-type">Mapping</span>(overlay_map)) =&gt; {
+            <span class="rs-kw">for</span> (key, value) <span class="rs-kw">in</span> overlay_map {
+                <span class="rs-kw">match</span> base_map.get_mut(&amp;key) {
+                    <span class="rs-type">Some</span>(existing) =&gt; <a class="symbol-link rs-fn" href="eos-config--src-loader-rs.html#item-fn-deep-merge-75">deep_merge</a>(existing, value),
+                    <span class="rs-type">None</span> =&gt; {
+                        base_map.insert(key, value);
+                    }
+                }
+            }
+        }
+        (slot, overlay) =&gt; *slot = overlay,
+    }
+}
+
+#[cfg(test)]
+<span class="rs-kw">mod</span> tests {
+    #![allow(clippy::unwrap_used)]
+    <span class="rs-kw">use</span> <span class="rs-kw">super</span>::*;
+    <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::<a class="symbol-link rs-type" href="eos-config--src-configs-database-rs.html#item-struct-DatabaseConfig-62">DatabaseConfig</a>;
+
+    <span class="rs-comment">/// Write a uniquely-named temp YAML file (no external tempfile dep).</span>
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-config--src-loader-rs.html#item-fn-temp-yaml-99">temp_yaml</a>(name: &amp;str, content: &amp;str) -&gt; <span class="rs-type">PathBuf</span> {
+        <span class="rs-kw">let</span> path = std::env::temp_dir().join(name);
+        std::fs::write(&amp;path, content).unwrap();
+        path
+    }
+
+    <span class="rs-comment">// A complete baseline section deserializes via `section()`; an override</span>
+    <span class="rs-comment">// merges over it at the value level (override field wins, baseline fields</span>
+    <span class="rs-comment">// survive) before deserialization.</span>
+    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-config--src-loader-rs.html#item-fn-test-override-merges-then-section-deserializes-109">test_override_merges_then_section_deserializes</a>() {
+        <span class="rs-kw">let</span> baseline = <a class="symbol-link rs-fn" href="eos-config--src-loader-rs.html#item-fn-temp-yaml-99">temp_yaml</a>(
+            &quot;eos_config_baseline.yaml&quot;,
+            &quot;database:\n  url: \&quot;sqlite:<span class="rs-comment">///./x.db\"\n  pool_size: 10\n  busy_timeout_ms: 20\n  wal: true\n  foreign_keys: true\n",</span>
+        );
+        <span class="rs-kw">let</span> over = <a class="symbol-link rs-fn" href="eos-config--src-loader-rs.html#item-fn-temp-yaml-99">temp_yaml</a>(&quot;eos_config_override.yaml&quot;, &quot;database:\n  pool_size: 40\n&quot;);
+
+        <span class="rs-kw">let</span> doc = <a class="symbol-link rs-fn" href="eos-config--src-loader-rs.html#item-fn-load-layers-53">load_layers</a>(&amp;[baseline.clone(), over.clone()]).unwrap();
+        <span class="rs-kw">let</span> db: <a class="symbol-link rs-type" href="eos-config--src-configs-database-rs.html#item-struct-DatabaseConfig-62">DatabaseConfig</a> = doc.<a class="symbol-link rs-fn" href="eos-config--src-document-rs.html#method-section-24">section</a>(&quot;database&quot;).unwrap();
+
+        assert_eq!(db.pool_size, 40, &quot;override wins&quot;);
+        assert_eq!(db.busy_timeout_ms, 20, &quot;baseline-only field survives&quot;);
+        assert!(db.wal);
+
+        <span class="rs-kw">let</span> _ = std::fs::remove_file(&amp;baseline);
+        <span class="rs-kw">let</span> _ = std::fs::remove_file(&amp;over);
+    }
+
+    <span class="rs-comment">// A missing section is reported as MissingSection.</span>
+    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-config--src-loader-rs.html#item-fn-test-missing-section-errors-129">test_missing_section_errors</a>() {
+        <span class="rs-kw">let</span> absent = std::env::temp_dir().join(&quot;eos_config_intentionally_absent.yaml&quot;);
+        <span class="rs-kw">let</span> _ = std::fs::remove_file(&amp;absent);
+        <span class="rs-kw">let</span> doc = <a class="symbol-link rs-fn" href="eos-config--src-loader-rs.html#item-fn-load-layers-53">load_layers</a>(&amp;[absent]).unwrap();
+        <span class="rs-kw">let</span> result: <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-config--src-configs-database-rs.html#item-struct-DatabaseConfig-62">DatabaseConfig</a>, _&gt; = doc.<a class="symbol-link rs-fn" href="eos-config--src-document-rs.html#method-section-24">section</a>(&quot;database&quot;);
+        assert!(matches!(result, <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-config--src-error-rs.html#item-enum-ConfigError-3">ConfigError</a>::<span class="rs-type">MissingSection</span> { .. })));
+    }
+
+    <span class="rs-comment">// An unknown field within a section fails deserialization (deny_unknown_fields).</span>
+    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-config--src-loader-rs.html#item-fn-test-unknown-field-rejected-139">test_unknown_field_rejected</a>() {
+        <span class="rs-kw">let</span> bad = <a class="symbol-link rs-fn" href="eos-config--src-loader-rs.html#item-fn-temp-yaml-99">temp_yaml</a>(
+            &quot;eos_config_unknown_field.yaml&quot;,
+            &quot;database:\n  url: \&quot;sqlite:<span class="rs-comment">///./x.db\"\n  pool_size: 5\n  busy_timeout_ms: 5000\n  wal: true\n  foreign_keys: true\n  bogus: 1\n",</span>
+        );
+        <span class="rs-kw">let</span> doc = <a class="symbol-link rs-fn" href="eos-config--src-loader-rs.html#item-fn-load-layers-53">load_layers</a>(std::slice::from_ref(&amp;bad)).unwrap();
+        <span class="rs-kw">let</span> result: <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-config--src-configs-database-rs.html#item-struct-DatabaseConfig-62">DatabaseConfig</a>, _&gt; = doc.<a class="symbol-link rs-fn" href="eos-config--src-document-rs.html#method-section-24">section</a>(&quot;database&quot;);
+        <span class="rs-kw">let</span> _ = std::fs::remove_file(&amp;bad);
+        assert!(matches!(result, <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-config--src-error-rs.html#item-enum-ConfigError-3">ConfigError</a>::<span class="rs-type">ParseYaml</span>(_))));
+    }
+}
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
   <script src="../assets/inventory.js"></script>
 </body>
 </html>

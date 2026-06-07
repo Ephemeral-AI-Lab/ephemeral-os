@@ -8,8 +8,16 @@
 </head>
 <body>
   <header>
-    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
-    <h1>eos-tools File Inventory</h1>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>eos-tools File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS/agent-core &amp;&amp; cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
   </header>
   <a class="back-link" href="../index.html">agent-core</a>
 <section class="summary">
@@ -47,119 +55,635 @@
       <span>0 methods</span>
     </div>
   </div>
-  <div class="items"><div class="group-label">Standalone Functions</div><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn run_advisor_approval pub(crate) pub(crate) async fn run_advisor_approval (tool : ToolName , ctx : &amp; ExecutionMetadata ,) -&gt; Result &lt; HookOutcome , ToolError &gt; crates/eos-tools/src/hooks/advisor_approval.rs  ">
+  <div class="items"><div class="group-label">Standalone Functions</div><article id="item-fn-run-advisor-approval-36" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn run_advisor_approval pub(crate) pub(crate) async fn run_advisor_approval (tool : ToolName , ctx : &amp; ExecutionMetadata ,) -&gt; Result &lt; HookOutcome , ToolError &gt; crates/eos-tools/src/hooks/advisor_approval.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>run_advisor_approval</h3>
     <span class="visibility">pub(crate)</span>
   </div>
-  <code class="signature">pub(crate) async fn run_advisor_approval (tool : ToolName , ctx : &amp; ExecutionMetadata ,) -&gt; Result &lt; HookOutcome , ToolError &gt;</code>
+  <code class="signature">pub(crate) async fn <a class="symbol-link" href="eos-tools--src-hooks-advisor-approval-rs.html#item-fn-run-advisor-approval-36">run_advisor_approval</a> (tool : <a class="symbol-link" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a> , ctx : &amp; <a class="symbol-link" href="eos-tools--src-core-metadata-rs.html#item-struct-ExecutionMetadata-17">ExecutionMetadata</a> ,) -&gt; Result &lt; <a class="symbol-link" href="eos-tools--src-hooks-mod-rs.html#item-enum-HookOutcome-77">HookOutcome</a> , <a class="symbol-link" href="eos-tools.html#item-enum-ToolError-16">ToolError</a> &gt;</code>
+  <p class="docstring">`AdvisorApprovalPreHook.run`: scan the transcript, classify, deny or pass. The<br>missing-conversation case (no advisor result) classifies `missing` and denies,<br>matching Rust's "no conversation → reason `missing`".</p>
   <div class="tags"><span>async</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-comment">/// `AdvisorApprovalPreHook.run`: scan the transcript, classify, deny or pass. The</span>
+<span class="rs-comment">/// missing-conversation case (no advisor result) classifies `missing` and denies,</span>
+<span class="rs-comment">/// matching Rust's "no conversation → reason `missing`".</span>
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-hooks-advisor-approval-rs.html#item-fn-run-advisor-approval-36">run_advisor_approval</a>(
+    tool: <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>,
+    ctx: &amp;<a class="symbol-link rs-type" href="eos-tools--src-core-metadata-rs.html#item-struct-ExecutionMetadata-17">ExecutionMetadata</a>,
+) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-tools--src-hooks-mod-rs.html#item-enum-HookOutcome-77">HookOutcome</a>, <a class="symbol-link rs-type" href="eos-tools.html#item-enum-ToolError-16">ToolError</a>&gt; {
+    <span class="rs-kw">let</span> (result, originating) = <a class="symbol-link rs-fn" href="eos-tools--src-hooks-advisor-approval-rs.html#item-fn-find-latest-advisor-pair-52">find_latest_advisor_pair</a>(&amp;ctx.conversation);
+    <span class="rs-kw">match</span> <a class="symbol-link rs-fn" href="eos-tools--src-hooks-advisor-approval-rs.html#item-fn-classify-advisor-approval-106">classify_advisor_approval</a>(result, originating, tool) {
+        <span class="rs-type">None</span> =&gt; <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-tools--src-hooks-mod-rs.html#item-enum-HookOutcome-77">HookOutcome</a>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-pass-89">pass</a>()),
+        <span class="rs-type">Some</span>(reason) =&gt; <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-tools--src-hooks-mod-rs.html#item-enum-HookOutcome-77">HookOutcome</a>::<span class="rs-type">Deny</span>(
+            <a class="symbol-link rs-type" href="eos-tools--src-hooks-mod-rs.html#item-struct-HookDenial-95">HookDenial</a>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(<a class="symbol-link rs-fn" href="eos-tools--src-hooks-advisor-approval-rs.html#item-fn-blocked-message-29">blocked_message</a>(tool), &quot;advisor_approval&quot;).<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-with-reason-119">with_reason</a>(reason),
+        )),
+    }
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-tools/src/hooks/advisor_approval.rs:36</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn blocked_message private fn blocked_message (tool : ToolName) -&gt; String crates/eos-tools/src/hooks/advisor_approval.rs  ">
+</article><article id="item-fn-blocked-message-29" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn blocked_message private fn blocked_message (tool : ToolName) -&gt; String crates/eos-tools/src/hooks/advisor_approval.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>blocked_message</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn blocked_message (tool : ToolName) -&gt; String</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-tools--src-hooks-advisor-approval-rs.html#item-fn-blocked-message-29">blocked_message</a> (tool : <a class="symbol-link" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>) -&gt; String</code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-hooks-advisor-approval-rs.html#item-fn-blocked-message-29">blocked_message</a>(tool: <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>) -&gt; <span class="rs-type">String</span> {
+    format!(
+        &quot;{<span class="rs-type">ADVISOR_APPROVAL_MESSAGE_PREFIX</span>}{}{<span class="rs-type">ADVISOR_APPROVAL_MESSAGE_SUFFIX</span>}&quot;,
+        tool.<a class="symbol-link rs-fn" href="eos-tools--src-core-intent-rs.html#method-as-str-42">as_str</a>()
+    )
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-tools/src/hooks/advisor_approval.rs:29</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn find_latest_advisor_pair private fn find_latest_advisor_pair (messages : &amp; [Message] ,) -&gt; (Option &lt; &amp; ContentBlock &gt; , Option &lt; &amp; ContentBlock &gt;) crates/eos-tools/src/hooks/advisor_approval.rs  ">
+</article><article id="item-fn-find-latest-advisor-pair-52" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn find_latest_advisor_pair private fn find_latest_advisor_pair (messages : &amp; [Message] ,) -&gt; (Option &lt; &amp; ContentBlock &gt; , Option &lt; &amp; ContentBlock &gt;) crates/eos-tools/src/hooks/advisor_approval.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>find_latest_advisor_pair</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn find_latest_advisor_pair (messages : &amp; [Message] ,) -&gt; (Option &lt; &amp; ContentBlock &gt; , Option &lt; &amp; ContentBlock &gt;)</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-tools--src-hooks-advisor-approval-rs.html#item-fn-find-latest-advisor-pair-52">find_latest_advisor_pair</a> (messages : &amp; [Message] ,) -&gt; (Option &lt; &amp; ContentBlock &gt; , Option &lt; &amp; ContentBlock &gt;)</code>
+  <p class="docstring">Reverse-walk `User` messages for the latest `tool_result` block whose metadata<br>carries `helper_role == "advisor"`; pair it with the originating `ask_advisor`<br>tool-use (matched by `tool_use_id`). Port of `_find_latest_advisor_pair`.</p>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-comment">/// Reverse-walk `User` messages for the latest `tool_result` block whose metadata</span>
+<span class="rs-comment">/// carries `helper_role == "advisor"`; pair it with the originating `ask_advisor`</span>
+<span class="rs-comment">/// tool-use (matched by `tool_use_id`). Port of `_find_latest_advisor_pair`.</span>
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-hooks-advisor-approval-rs.html#item-fn-find-latest-advisor-pair-52">find_latest_advisor_pair</a>(
+    messages: &amp;[<span class="rs-type">Message</span>],
+) -&gt; (<span class="rs-type">Option</span>&lt;&amp;<span class="rs-type">ContentBlock</span>&gt;, <span class="rs-type">Option</span>&lt;&amp;<span class="rs-type">ContentBlock</span>&gt;) {
+    <span class="rs-kw">for</span> msg <span class="rs-kw">in</span> messages.iter().rev() {
+        <span class="rs-kw">if</span> msg.role != <span class="rs-type">MessageRole</span>::<span class="rs-type">User</span> {
+            <span class="rs-kw">continue</span>;
+        }
+        <span class="rs-kw">for</span> block <span class="rs-kw">in</span> msg.content.iter().rev() {
+            <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">ContentBlock</span>::<a class="symbol-link rs-type" href="eos-tools--src-core-result-rs.html#item-struct-ToolResult-12">ToolResult</a> {
+                tool_use_id,
+                metadata,
+                ..
+            } = block
+            {
+                <span class="rs-kw">if</span> metadata.<a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#method-get-89">get</a>(&quot;helper_role&quot;).and_then(|v| v.<a class="symbol-link rs-fn" href="eos-tools--src-core-intent-rs.html#method-as-str-42">as_str</a>()) == <span class="rs-type">Some</span>(<span class="rs-type">ADVISOR_HELPER_ROLE</span>)
+                {
+                    <span class="rs-kw">let</span> originating = <a class="symbol-link rs-fn" href="eos-tools--src-hooks-advisor-approval-rs.html#item-fn-find-originating-ask-advisor-80">find_originating_ask_advisor</a>(messages, tool_use_id);
+                    <span class="rs-kw">return</span> (<span class="rs-type">Some</span>(block), originating);
+                }
+            }
+        }
+    }
+    (<span class="rs-type">None</span>, <span class="rs-type">None</span>)
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-tools/src/hooks/advisor_approval.rs:52</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn find_originating_ask_advisor private fn find_originating_ask_advisor &lt; 'a &gt; (messages : &amp; 'a [Message] , tool_use_id : &amp; ToolUseId ,) -&gt; Option &lt; &amp; 'a ContentBlock &gt; crates/eos-tools/src/hooks/advisor_approval.rs  ">
+</article><article id="item-fn-find-originating-ask-advisor-80" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn find_originating_ask_advisor private fn find_originating_ask_advisor &lt; 'a &gt; (messages : &amp; 'a [Message] , tool_use_id : &amp; ToolUseId ,) -&gt; Option &lt; &amp; 'a ContentBlock &gt; crates/eos-tools/src/hooks/advisor_approval.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>find_originating_ask_advisor</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn find_originating_ask_advisor &lt; 'a &gt; (messages : &amp; 'a [Message] , tool_use_id : &amp; ToolUseId ,) -&gt; Option &lt; &amp; 'a ContentBlock &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-tools--src-hooks-advisor-approval-rs.html#item-fn-find-originating-ask-advisor-80">find_originating_ask_advisor</a> &lt; &#x27;a &gt; (messages : &amp; &#x27;a [Message] , tool_use_id : &amp; ToolUseId ,) -&gt; Option &lt; &amp; &#x27;a ContentBlock &gt;</code>
+  <p class="docstring">Forward-walk `Assistant` messages for the `ask_advisor` tool-use with the given<br>id. Port of `_find_originating_ask_advisor`.</p>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-comment">/// Forward-walk `Assistant` messages for the `ask_advisor` tool-use with the given</span>
+<span class="rs-comment">/// id. Port of `_find_originating_ask_advisor`.</span>
+<span class="rs-kw">fn</span> find_originating_ask_advisor&lt;&#x27;a&gt;(
+    messages: &amp;&#x27;a [<span class="rs-type">Message</span>],
+    tool_use_id: &amp;<span class="rs-type">ToolUseId</span>,
+) -&gt; <span class="rs-type">Option</span>&lt;&amp;&#x27;a <span class="rs-type">ContentBlock</span>&gt; {
+    <span class="rs-kw">for</span> msg <span class="rs-kw">in</span> messages {
+        <span class="rs-kw">if</span> msg.role != <span class="rs-type">MessageRole</span>::<span class="rs-type">Assistant</span> {
+            <span class="rs-kw">continue</span>;
+        }
+        <span class="rs-kw">for</span> block <span class="rs-kw">in</span> &amp;msg.content {
+            <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">ContentBlock</span>::<span class="rs-type">ToolUse</span> {
+                tool_use_id: id,
+                name,
+                ..
+            } = block
+            {
+                <span class="rs-kw">if</span> id == tool_use_id &amp;&amp; name == &quot;ask_advisor&quot; {
+                    <span class="rs-kw">return</span> <span class="rs-type">Some</span>(block);
+                }
+            }
+        }
+    }
+    <span class="rs-type">None</span>
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-tools/src/hooks/advisor_approval.rs:80</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn classify_advisor_approval private fn classify_advisor_approval (result : Option &lt; &amp; ContentBlock &gt; , originating : Option &lt; &amp; ContentBlock &gt; , target_tool : ToolName ,) -&gt; Option &lt; &amp; 'static str &gt; crates/eos-tools/src/hooks/advisor_approval.rs  ">
+</article><article id="item-fn-classify-advisor-approval-106" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn classify_advisor_approval private fn classify_advisor_approval (result : Option &lt; &amp; ContentBlock &gt; , originating : Option &lt; &amp; ContentBlock &gt; , target_tool : ToolName ,) -&gt; Option &lt; &amp; 'static str &gt; crates/eos-tools/src/hooks/advisor_approval.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>classify_advisor_approval</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn classify_advisor_approval (result : Option &lt; &amp; ContentBlock &gt; , originating : Option &lt; &amp; ContentBlock &gt; , target_tool : ToolName ,) -&gt; Option &lt; &amp; 'static str &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-tools--src-hooks-advisor-approval-rs.html#item-fn-classify-advisor-approval-106">classify_advisor_approval</a> (result : Option &lt; &amp; ContentBlock &gt; , originating : Option &lt; &amp; ContentBlock &gt; , target_tool : <a class="symbol-link" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a> ,) -&gt; Option &lt; &amp; &#x27;static str &gt;</code>
+  <p class="docstring">Classify the advisor pair against `target_tool`. `Some(tag)` denies; `None`<br>passes. Order (verbatim `_classify`): `missing` → `advisor_failed` →<br>`structural` → `rejected` → `unpaired` → `wrong_tool` → pass.</p>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-comment">/// Classify the advisor pair against `target_tool`. `Some(tag)` denies; `None`</span>
+<span class="rs-comment">/// passes. Order (verbatim `_classify`): `missing` → `advisor_failed` →</span>
+<span class="rs-comment">/// `structural` → `rejected` → `unpaired` → `wrong_tool` → pass.</span>
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-hooks-advisor-approval-rs.html#item-fn-classify-advisor-approval-106">classify_advisor_approval</a>(
+    result: <span class="rs-type">Option</span>&lt;&amp;<span class="rs-type">ContentBlock</span>&gt;,
+    originating: <span class="rs-type">Option</span>&lt;&amp;<span class="rs-type">ContentBlock</span>&gt;,
+    target_tool: <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>,
+) -&gt; <span class="rs-type">Option</span>&lt;&amp;&#x27;<span class="rs-kw">static</span> str&gt; {
+    <span class="rs-kw">let</span> <span class="rs-type">Some</span>(<span class="rs-type">ContentBlock</span>::<a class="symbol-link rs-type" href="eos-tools--src-core-result-rs.html#item-struct-ToolResult-12">ToolResult</a> {
+        is_error, metadata, ..
+    }) = result
+    <span class="rs-kw">else</span> {
+        <span class="rs-kw">return</span> <span class="rs-type">Some</span>(&quot;missing&quot;);
+    };
+    <span class="rs-kw">if</span> *is_error {
+        <span class="rs-kw">return</span> <span class="rs-type">Some</span>(&quot;advisor_failed&quot;);
+    }
+    <span class="rs-kw">let</span> <span class="rs-type">Some</span>(verdict) = metadata
+        .<a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#method-get-89">get</a>(&quot;verdict&quot;)
+        .and_then(|v| v.<a class="symbol-link rs-fn" href="eos-tools--src-core-intent-rs.html#method-as-str-42">as_str</a>())
+        .filter(|v| <span class="rs-type">VALID_VERDICTS</span>.contains(v))
+    <span class="rs-kw">else</span> {
+        <span class="rs-kw">return</span> <span class="rs-type">Some</span>(&quot;structural&quot;);
+    };
+    <span class="rs-kw">if</span> verdict == &quot;reject&quot; {
+        <span class="rs-kw">return</span> <span class="rs-type">Some</span>(&quot;rejected&quot;);
+    }
+    <span class="rs-comment">// verdict == "approve" — require the originating ask_advisor to target this terminal.</span>
+    <span class="rs-kw">let</span> <span class="rs-type">Some</span>(<span class="rs-type">ContentBlock</span>::<span class="rs-type">ToolUse</span> { input, .. }) = originating <span class="rs-kw">else</span> {
+        <span class="rs-kw">return</span> <span class="rs-type">Some</span>(&quot;unpaired&quot;);
+    };
+    <span class="rs-kw">if</span> input.<a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#method-get-89">get</a>(&quot;tool_name&quot;).and_then(|v| v.<a class="symbol-link rs-fn" href="eos-tools--src-core-intent-rs.html#method-as-str-42">as_str</a>()) != <span class="rs-type">Some</span>(target_tool.<a class="symbol-link rs-fn" href="eos-tools--src-core-intent-rs.html#method-as-str-42">as_str</a>()) {
+        <span class="rs-kw">return</span> <span class="rs-type">Some</span>(&quot;wrong_tool&quot;);
+    }
+    <span class="rs-type">None</span>
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-tools/src/hooks/advisor_approval.rs:106</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn ask_advisor_turn private fn ask_advisor_turn (tool_use_id : &amp; str , target_tool : &amp; str) -&gt; Message crates/eos-tools/src/hooks/advisor_approval.rs  ">
+</article><article id="item-fn-ask-advisor-turn-150" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn ask_advisor_turn private fn ask_advisor_turn (tool_use_id : &amp; str , target_tool : &amp; str) -&gt; Message crates/eos-tools/src/hooks/advisor_approval.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>ask_advisor_turn</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn ask_advisor_turn (tool_use_id : &amp; str , target_tool : &amp; str) -&gt; Message</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-tools--src-hooks-advisor-approval-rs.html#item-fn-ask-advisor-turn-150">ask_advisor_turn</a> (tool_use_id : &amp; str , target_tool : &amp; str) -&gt; Message</code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-hooks-advisor-approval-rs.html#item-fn-ask-advisor-turn-150">ask_advisor_turn</a>(tool_use_id: &amp;str, target_tool: &amp;str) -&gt; <span class="rs-type">Message</span> {
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> input = <span class="rs-type">JsonObject</span>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>();
+        input.insert(&quot;tool_name&quot;.to_owned(), json!(target_tool));
+        <span class="rs-type">Message</span> {
+            role: <span class="rs-type">MessageRole</span>::<span class="rs-type">Assistant</span>,
+            content: vec![<span class="rs-type">ContentBlock</span>::<span class="rs-type">ToolUse</span> {
+                tool_use_id: tool_use_id.parse::&lt;<span class="rs-type">ToolUseId</span>&gt;().expect(&quot;id&quot;),
+                name: &quot;ask_advisor&quot;.to_owned(),
+                input,
+            }],
+        }
+    }
+</code></pre>
+</details>
 
   <p class="source">crates/eos-tools/src/hooks/advisor_approval.rs:150</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn advisor_result private fn advisor_result (tool_use_id : &amp; str , verdict : Option &lt; &amp; str &gt; , is_error : bool) -&gt; Message crates/eos-tools/src/hooks/advisor_approval.rs  ">
+</article><article id="item-fn-advisor-result-163" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn advisor_result private fn advisor_result (tool_use_id : &amp; str , verdict : Option &lt; &amp; str &gt; , is_error : bool) -&gt; Message crates/eos-tools/src/hooks/advisor_approval.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>advisor_result</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn advisor_result (tool_use_id : &amp; str , verdict : Option &lt; &amp; str &gt; , is_error : bool) -&gt; Message</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-tools--src-hooks-advisor-approval-rs.html#item-fn-advisor-result-163">advisor_result</a> (tool_use_id : &amp; str , verdict : Option &lt; &amp; str &gt; , is_error : bool) -&gt; Message</code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-hooks-advisor-approval-rs.html#item-fn-advisor-result-163">advisor_result</a>(tool_use_id: &amp;str, verdict: <span class="rs-type">Option</span>&lt;&amp;str&gt;, is_error: bool) -&gt; <span class="rs-type">Message</span> {
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> metadata = <span class="rs-type">JsonObject</span>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>();
+        metadata.insert(&quot;helper_role&quot;.to_owned(), json!(&quot;advisor&quot;));
+        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(v) = verdict {
+            metadata.insert(&quot;verdict&quot;.to_owned(), json!(v));
+        }
+        <span class="rs-type">Message</span> {
+            role: <span class="rs-type">MessageRole</span>::<span class="rs-type">User</span>,
+            content: vec![<span class="rs-type">ContentBlock</span>::<a class="symbol-link rs-type" href="eos-tools--src-core-result-rs.html#item-struct-ToolResult-12">ToolResult</a> {
+                tool_use_id: tool_use_id.parse::&lt;<span class="rs-type">ToolUseId</span>&gt;().expect(&quot;id&quot;),
+                content: &quot;review&quot;.to_owned(),
+                is_error,
+                metadata,
+                is_terminal: <span class="rs-kw">false</span>,
+            }],
+        }
+    }
+</code></pre>
+</details>
 
   <p class="source">crates/eos-tools/src/hooks/advisor_approval.rs:163</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn classify private fn classify (messages : &amp; [Message] , target : ToolName) -&gt; Option &lt; &amp; 'static str &gt; crates/eos-tools/src/hooks/advisor_approval.rs  ">
+</article><article id="item-fn-classify-181" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn classify private fn classify (messages : &amp; [Message] , target : ToolName) -&gt; Option &lt; &amp; 'static str &gt; crates/eos-tools/src/hooks/advisor_approval.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>classify</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn classify (messages : &amp; [Message] , target : ToolName) -&gt; Option &lt; &amp; 'static str &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-tools--src-hooks-advisor-approval-rs.html#item-fn-classify-181">classify</a> (messages : &amp; [Message] , target : <a class="symbol-link" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>) -&gt; Option &lt; &amp; &#x27;static str &gt;</code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-hooks-advisor-approval-rs.html#item-fn-classify-181">classify</a>(messages: &amp;[<span class="rs-type">Message</span>], target: <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>) -&gt; <span class="rs-type">Option</span>&lt;&amp;&#x27;<span class="rs-kw">static</span> str&gt; {
+        <span class="rs-kw">let</span> (result, originating) = <a class="symbol-link rs-fn" href="eos-tools--src-hooks-advisor-approval-rs.html#item-fn-find-latest-advisor-pair-52">find_latest_advisor_pair</a>(messages);
+        <a class="symbol-link rs-fn" href="eos-tools--src-hooks-advisor-approval-rs.html#item-fn-classify-advisor-approval-106">classify_advisor_approval</a>(result, originating, target)
+    }
+</code></pre>
+</details>
 
   <p class="source">crates/eos-tools/src/hooks/advisor_approval.rs:181</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn missing_when_no_advisor_result private fn missing_when_no_advisor_result () crates/eos-tools/src/hooks/advisor_approval.rs  ">
+</article><article id="item-fn-missing-when-no-advisor-result-186" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn missing_when_no_advisor_result private fn missing_when_no_advisor_result () crates/eos-tools/src/hooks/advisor_approval.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>missing_when_no_advisor_result</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn missing_when_no_advisor_result ()</code>
-  <div class="tags"></div>
+  <code class="signature">fn <a class="symbol-link" href="eos-tools--src-hooks-advisor-approval-rs.html#item-fn-missing-when-no-advisor-result-186">missing_when_no_advisor_result</a> ()</code>
+  <div class="tags"><span>test</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-hooks-advisor-approval-rs.html#item-fn-missing-when-no-advisor-result-186">missing_when_no_advisor_result</a>() {
+        <span class="rs-kw">let</span> msgs = [<span class="rs-type">Message</span>::from_user_text(&quot;hi&quot;)];
+        assert_eq!(
+            <a class="symbol-link rs-fn" href="eos-tools--src-hooks-advisor-approval-rs.html#item-fn-classify-181">classify</a>(&amp;msgs, <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-submission-root-submit-root-outcome-rs.html#item-struct-SubmitRootOutcome-31">SubmitRootOutcome</a>),
+            <span class="rs-type">Some</span>(&quot;missing&quot;)
+        );
+    }
+</code></pre>
+</details>
 
   <p class="source">crates/eos-tools/src/hooks/advisor_approval.rs:186</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn approve_paired_to_target_passes private fn approve_paired_to_target_passes () crates/eos-tools/src/hooks/advisor_approval.rs  ">
+</article><article id="item-fn-approve-paired-to-target-passes-195" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn approve_paired_to_target_passes private fn approve_paired_to_target_passes () crates/eos-tools/src/hooks/advisor_approval.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>approve_paired_to_target_passes</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn approve_paired_to_target_passes ()</code>
-  <div class="tags"></div>
+  <code class="signature">fn <a class="symbol-link" href="eos-tools--src-hooks-advisor-approval-rs.html#item-fn-approve-paired-to-target-passes-195">approve_paired_to_target_passes</a> ()</code>
+  <div class="tags"><span>test</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-hooks-advisor-approval-rs.html#item-fn-approve-paired-to-target-passes-195">approve_paired_to_target_passes</a>() {
+        <span class="rs-kw">let</span> msgs = [
+            <a class="symbol-link rs-fn" href="eos-tools--src-hooks-advisor-approval-rs.html#item-fn-ask-advisor-turn-150">ask_advisor_turn</a>(&quot;t1&quot;, &quot;submit_root_outcome&quot;),
+            <a class="symbol-link rs-fn" href="eos-tools--src-hooks-advisor-approval-rs.html#item-fn-advisor-result-163">advisor_result</a>(&quot;t1&quot;, <span class="rs-type">Some</span>(&quot;approve&quot;), <span class="rs-kw">false</span>),
+        ];
+        assert_eq!(<a class="symbol-link rs-fn" href="eos-tools--src-hooks-advisor-approval-rs.html#item-fn-classify-181">classify</a>(&amp;msgs, <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-submission-root-submit-root-outcome-rs.html#item-struct-SubmitRootOutcome-31">SubmitRootOutcome</a>), <span class="rs-type">None</span>);
+    }
+</code></pre>
+</details>
 
   <p class="source">crates/eos-tools/src/hooks/advisor_approval.rs:195</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn classification_order_covers_each_tag private fn classification_order_covers_each_tag () crates/eos-tools/src/hooks/advisor_approval.rs  ">
+</article><article id="item-fn-classification-order-covers-each-tag-204" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn classification_order_covers_each_tag private fn classification_order_covers_each_tag () crates/eos-tools/src/hooks/advisor_approval.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>classification_order_covers_each_tag</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn classification_order_covers_each_tag ()</code>
-  <div class="tags"></div>
+  <code class="signature">fn <a class="symbol-link" href="eos-tools--src-hooks-advisor-approval-rs.html#item-fn-classification-order-covers-each-tag-204">classification_order_covers_each_tag</a> ()</code>
+  <div class="tags"><span>test</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-hooks-advisor-approval-rs.html#item-fn-classification-order-covers-each-tag-204">classification_order_covers_each_tag</a>() {
+        <span class="rs-comment">// advisor_failed: result is an error.</span>
+        <span class="rs-kw">let</span> failed = [
+            <a class="symbol-link rs-fn" href="eos-tools--src-hooks-advisor-approval-rs.html#item-fn-ask-advisor-turn-150">ask_advisor_turn</a>(&quot;t1&quot;, &quot;submit_root_outcome&quot;),
+            <a class="symbol-link rs-fn" href="eos-tools--src-hooks-advisor-approval-rs.html#item-fn-advisor-result-163">advisor_result</a>(&quot;t1&quot;, <span class="rs-type">Some</span>(&quot;approve&quot;), <span class="rs-kw">true</span>),
+        ];
+        assert_eq!(
+            <a class="symbol-link rs-fn" href="eos-tools--src-hooks-advisor-approval-rs.html#item-fn-classify-181">classify</a>(&amp;failed, <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-submission-root-submit-root-outcome-rs.html#item-struct-SubmitRootOutcome-31">SubmitRootOutcome</a>),
+            <span class="rs-type">Some</span>(&quot;advisor_failed&quot;)
+        );
+
+        <span class="rs-comment">// structural: verdict not in the valid set.</span>
+        <span class="rs-kw">let</span> structural = [
+            <a class="symbol-link rs-fn" href="eos-tools--src-hooks-advisor-approval-rs.html#item-fn-ask-advisor-turn-150">ask_advisor_turn</a>(&quot;t1&quot;, &quot;submit_root_outcome&quot;),
+            <a class="symbol-link rs-fn" href="eos-tools--src-hooks-advisor-approval-rs.html#item-fn-advisor-result-163">advisor_result</a>(&quot;t1&quot;, <span class="rs-type">None</span>, <span class="rs-kw">false</span>),
+        ];
+        assert_eq!(
+            <a class="symbol-link rs-fn" href="eos-tools--src-hooks-advisor-approval-rs.html#item-fn-classify-181">classify</a>(&amp;structural, <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-submission-root-submit-root-outcome-rs.html#item-struct-SubmitRootOutcome-31">SubmitRootOutcome</a>),
+            <span class="rs-type">Some</span>(&quot;structural&quot;)
+        );
+
+        <span class="rs-comment">// rejected.</span>
+        <span class="rs-kw">let</span> rejected = [
+            <a class="symbol-link rs-fn" href="eos-tools--src-hooks-advisor-approval-rs.html#item-fn-ask-advisor-turn-150">ask_advisor_turn</a>(&quot;t1&quot;, &quot;submit_root_outcome&quot;),
+            <a class="symbol-link rs-fn" href="eos-tools--src-hooks-advisor-approval-rs.html#item-fn-advisor-result-163">advisor_result</a>(&quot;t1&quot;, <span class="rs-type">Some</span>(&quot;reject&quot;), <span class="rs-kw">false</span>),
+        ];
+        assert_eq!(
+            <a class="symbol-link rs-fn" href="eos-tools--src-hooks-advisor-approval-rs.html#item-fn-classify-181">classify</a>(&amp;rejected, <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-submission-root-submit-root-outcome-rs.html#item-struct-SubmitRootOutcome-31">SubmitRootOutcome</a>),
+            <span class="rs-type">Some</span>(&quot;rejected&quot;)
+        );
+
+        <span class="rs-comment">// unpaired: an advisor result with no originating ask_advisor.</span>
+        <span class="rs-kw">let</span> unpaired = [<a class="symbol-link rs-fn" href="eos-tools--src-hooks-advisor-approval-rs.html#item-fn-advisor-result-163">advisor_result</a>(&quot;t1&quot;, <span class="rs-type">Some</span>(&quot;approve&quot;), <span class="rs-kw">false</span>)];
+        assert_eq!(
+            <a class="symbol-link rs-fn" href="eos-tools--src-hooks-advisor-approval-rs.html#item-fn-classify-181">classify</a>(&amp;unpaired, <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-submission-root-submit-root-outcome-rs.html#item-struct-SubmitRootOutcome-31">SubmitRootOutcome</a>),
+            <span class="rs-type">Some</span>(&quot;unpaired&quot;)
+        );
+
+        <span class="rs-comment">// wrong_tool: ask_advisor targeted a different terminal.</span>
+        <span class="rs-kw">let</span> wrong = [
+            <a class="symbol-link rs-fn" href="eos-tools--src-hooks-advisor-approval-rs.html#item-fn-ask-advisor-turn-150">ask_advisor_turn</a>(&quot;t1&quot;, &quot;submit_planner_outcome&quot;),
+            <a class="symbol-link rs-fn" href="eos-tools--src-hooks-advisor-approval-rs.html#item-fn-advisor-result-163">advisor_result</a>(&quot;t1&quot;, <span class="rs-type">Some</span>(&quot;approve&quot;), <span class="rs-kw">false</span>),
+        ];
+        assert_eq!(
+            <a class="symbol-link rs-fn" href="eos-tools--src-hooks-advisor-approval-rs.html#item-fn-classify-181">classify</a>(&amp;wrong, <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-submission-root-submit-root-outcome-rs.html#item-struct-SubmitRootOutcome-31">SubmitRootOutcome</a>),
+            <span class="rs-type">Some</span>(&quot;wrong_tool&quot;)
+        );
+    }
+</code></pre>
+</details>
 
   <p class="source">crates/eos-tools/src/hooks/advisor_approval.rs:204</p>
 </article></div>
 </section></div>
 </main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/eos-tools/src/hooks/advisor_approval.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-comment">//! The advisor-approval pre-hook — a **stateless** gate that infers the verdict</span>
+<span class="rs-comment">//! from the conversation transcript (verbatim port of Rust</span>
+<span class="rs-comment">//! `tools/_hooks/advisor_approval.py`).</span>
+<span class="rs-comment">//!</span>
+<span class="rs-comment">//! There is no port and no engine/agent state: the verdict exists only as a</span>
+<span class="rs-comment">//! `submit_advisor_feedback` result block in the transcript, surfaced as the</span>
+<span class="rs-comment">//! `ask_advisor` result. The gate reverse-walks [`ExecutionMetadata::conversation`]</span>
+<span class="rs-comment">//! for the latest advisor result, pairs it to the originating `ask_advisor`</span>
+<span class="rs-comment">//! tool-use, and classifies — re-deriving the decision on demand, never reading a</span>
+<span class="rs-comment">//! cached verdict (advisor remediation plan §2b / §9).</span>
+
+<span class="rs-kw">use</span> eos_llm_client::{<span class="rs-type">ContentBlock</span>, <span class="rs-type">Message</span>, <span class="rs-type">MessageRole</span>};
+<span class="rs-kw">use</span> eos_types::<span class="rs-type">ToolUseId</span>;
+
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::core::error::<a class="symbol-link rs-type" href="eos-tools.html#item-enum-ToolError-16">ToolError</a>;
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::core::metadata::<a class="symbol-link rs-type" href="eos-tools--src-core-metadata-rs.html#item-struct-ExecutionMetadata-17">ExecutionMetadata</a>;
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::core::name::<a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>;
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::hooks::{<a class="symbol-link rs-type" href="eos-tools--src-hooks-mod-rs.html#item-struct-HookDenial-95">HookDenial</a>, <a class="symbol-link rs-type" href="eos-tools--src-hooks-mod-rs.html#item-enum-HookOutcome-77">HookOutcome</a>};
+
+<span class="rs-kw">const</span> <span class="rs-type">ADVISOR_HELPER_ROLE</span>: &amp;str = &quot;advisor&quot;;
+<span class="rs-kw">const</span> <span class="rs-type">VALID_VERDICTS</span>: [&amp;str; 2] = [&quot;approve&quot;, &quot;reject&quot;];
+
+<span class="rs-kw">const</span> <span class="rs-type">ADVISOR_APPROVAL_MESSAGE_PREFIX</span>: &amp;str =
+    &quot;<span class="rs-type">BLOCKED</span>: <span class="rs-type">You</span> must get approval from advisor before submitting this terminal. \
+     <span class="rs-type">Call</span> ask_advisor(tool_name=\&quot;&quot;;
+<span class="rs-kw">const</span> <span class="rs-type">ADVISOR_APPROVAL_MESSAGE_SUFFIX</span>: &amp;str =
+    &quot;\&quot;, tool_payload=...) and resubmit only after the advisor returns verdict=\&quot;approve\&quot;.&quot;;
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-hooks-advisor-approval-rs.html#item-fn-blocked-message-29">blocked_message</a>(tool: <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>) -&gt; <span class="rs-type">String</span> {
+    format!(
+        &quot;{<span class="rs-type">ADVISOR_APPROVAL_MESSAGE_PREFIX</span>}{}{<span class="rs-type">ADVISOR_APPROVAL_MESSAGE_SUFFIX</span>}&quot;,
+        tool.<a class="symbol-link rs-fn" href="eos-tools--src-core-intent-rs.html#method-as-str-42">as_str</a>()
+    )
+}
+
+<span class="rs-comment">/// `AdvisorApprovalPreHook.run`: scan the transcript, classify, deny or pass. The</span>
+<span class="rs-comment">/// missing-conversation case (no advisor result) classifies `missing` and denies,</span>
+<span class="rs-comment">/// matching Rust's "no conversation → reason `missing`".</span>
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-hooks-advisor-approval-rs.html#item-fn-run-advisor-approval-36">run_advisor_approval</a>(
+    tool: <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>,
+    ctx: &amp;<a class="symbol-link rs-type" href="eos-tools--src-core-metadata-rs.html#item-struct-ExecutionMetadata-17">ExecutionMetadata</a>,
+) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-tools--src-hooks-mod-rs.html#item-enum-HookOutcome-77">HookOutcome</a>, <a class="symbol-link rs-type" href="eos-tools.html#item-enum-ToolError-16">ToolError</a>&gt; {
+    <span class="rs-kw">let</span> (result, originating) = <a class="symbol-link rs-fn" href="eos-tools--src-hooks-advisor-approval-rs.html#item-fn-find-latest-advisor-pair-52">find_latest_advisor_pair</a>(&amp;ctx.conversation);
+    <span class="rs-kw">match</span> <a class="symbol-link rs-fn" href="eos-tools--src-hooks-advisor-approval-rs.html#item-fn-classify-advisor-approval-106">classify_advisor_approval</a>(result, originating, tool) {
+        <span class="rs-type">None</span> =&gt; <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-tools--src-hooks-mod-rs.html#item-enum-HookOutcome-77">HookOutcome</a>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-pass-89">pass</a>()),
+        <span class="rs-type">Some</span>(reason) =&gt; <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-tools--src-hooks-mod-rs.html#item-enum-HookOutcome-77">HookOutcome</a>::<span class="rs-type">Deny</span>(
+            <a class="symbol-link rs-type" href="eos-tools--src-hooks-mod-rs.html#item-struct-HookDenial-95">HookDenial</a>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(<a class="symbol-link rs-fn" href="eos-tools--src-hooks-advisor-approval-rs.html#item-fn-blocked-message-29">blocked_message</a>(tool), &quot;advisor_approval&quot;).<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-with-reason-119">with_reason</a>(reason),
+        )),
+    }
+}
+
+<span class="rs-comment">/// Reverse-walk `User` messages for the latest `tool_result` block whose metadata</span>
+<span class="rs-comment">/// carries `helper_role == "advisor"`; pair it with the originating `ask_advisor`</span>
+<span class="rs-comment">/// tool-use (matched by `tool_use_id`). Port of `_find_latest_advisor_pair`.</span>
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-hooks-advisor-approval-rs.html#item-fn-find-latest-advisor-pair-52">find_latest_advisor_pair</a>(
+    messages: &amp;[<span class="rs-type">Message</span>],
+) -&gt; (<span class="rs-type">Option</span>&lt;&amp;<span class="rs-type">ContentBlock</span>&gt;, <span class="rs-type">Option</span>&lt;&amp;<span class="rs-type">ContentBlock</span>&gt;) {
+    <span class="rs-kw">for</span> msg <span class="rs-kw">in</span> messages.iter().rev() {
+        <span class="rs-kw">if</span> msg.role != <span class="rs-type">MessageRole</span>::<span class="rs-type">User</span> {
+            <span class="rs-kw">continue</span>;
+        }
+        <span class="rs-kw">for</span> block <span class="rs-kw">in</span> msg.content.iter().rev() {
+            <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">ContentBlock</span>::<a class="symbol-link rs-type" href="eos-tools--src-core-result-rs.html#item-struct-ToolResult-12">ToolResult</a> {
+                tool_use_id,
+                metadata,
+                ..
+            } = block
+            {
+                <span class="rs-kw">if</span> metadata.<a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#method-get-89">get</a>(&quot;helper_role&quot;).and_then(|v| v.<a class="symbol-link rs-fn" href="eos-tools--src-core-intent-rs.html#method-as-str-42">as_str</a>()) == <span class="rs-type">Some</span>(<span class="rs-type">ADVISOR_HELPER_ROLE</span>)
+                {
+                    <span class="rs-kw">let</span> originating = <a class="symbol-link rs-fn" href="eos-tools--src-hooks-advisor-approval-rs.html#item-fn-find-originating-ask-advisor-80">find_originating_ask_advisor</a>(messages, tool_use_id);
+                    <span class="rs-kw">return</span> (<span class="rs-type">Some</span>(block), originating);
+                }
+            }
+        }
+    }
+    (<span class="rs-type">None</span>, <span class="rs-type">None</span>)
+}
+
+<span class="rs-comment">/// Forward-walk `Assistant` messages for the `ask_advisor` tool-use with the given</span>
+<span class="rs-comment">/// id. Port of `_find_originating_ask_advisor`.</span>
+<span class="rs-kw">fn</span> find_originating_ask_advisor&lt;&#x27;a&gt;(
+    messages: &amp;&#x27;a [<span class="rs-type">Message</span>],
+    tool_use_id: &amp;<span class="rs-type">ToolUseId</span>,
+) -&gt; <span class="rs-type">Option</span>&lt;&amp;&#x27;a <span class="rs-type">ContentBlock</span>&gt; {
+    <span class="rs-kw">for</span> msg <span class="rs-kw">in</span> messages {
+        <span class="rs-kw">if</span> msg.role != <span class="rs-type">MessageRole</span>::<span class="rs-type">Assistant</span> {
+            <span class="rs-kw">continue</span>;
+        }
+        <span class="rs-kw">for</span> block <span class="rs-kw">in</span> &amp;msg.content {
+            <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">ContentBlock</span>::<span class="rs-type">ToolUse</span> {
+                tool_use_id: id,
+                name,
+                ..
+            } = block
+            {
+                <span class="rs-kw">if</span> id == tool_use_id &amp;&amp; name == &quot;ask_advisor&quot; {
+                    <span class="rs-kw">return</span> <span class="rs-type">Some</span>(block);
+                }
+            }
+        }
+    }
+    <span class="rs-type">None</span>
+}
+
+<span class="rs-comment">/// Classify the advisor pair against `target_tool`. `Some(tag)` denies; `None`</span>
+<span class="rs-comment">/// passes. Order (verbatim `_classify`): `missing` → `advisor_failed` →</span>
+<span class="rs-comment">/// `structural` → `rejected` → `unpaired` → `wrong_tool` → pass.</span>
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-hooks-advisor-approval-rs.html#item-fn-classify-advisor-approval-106">classify_advisor_approval</a>(
+    result: <span class="rs-type">Option</span>&lt;&amp;<span class="rs-type">ContentBlock</span>&gt;,
+    originating: <span class="rs-type">Option</span>&lt;&amp;<span class="rs-type">ContentBlock</span>&gt;,
+    target_tool: <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>,
+) -&gt; <span class="rs-type">Option</span>&lt;&amp;&#x27;<span class="rs-kw">static</span> str&gt; {
+    <span class="rs-kw">let</span> <span class="rs-type">Some</span>(<span class="rs-type">ContentBlock</span>::<a class="symbol-link rs-type" href="eos-tools--src-core-result-rs.html#item-struct-ToolResult-12">ToolResult</a> {
+        is_error, metadata, ..
+    }) = result
+    <span class="rs-kw">else</span> {
+        <span class="rs-kw">return</span> <span class="rs-type">Some</span>(&quot;missing&quot;);
+    };
+    <span class="rs-kw">if</span> *is_error {
+        <span class="rs-kw">return</span> <span class="rs-type">Some</span>(&quot;advisor_failed&quot;);
+    }
+    <span class="rs-kw">let</span> <span class="rs-type">Some</span>(verdict) = metadata
+        .<a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#method-get-89">get</a>(&quot;verdict&quot;)
+        .and_then(|v| v.<a class="symbol-link rs-fn" href="eos-tools--src-core-intent-rs.html#method-as-str-42">as_str</a>())
+        .filter(|v| <span class="rs-type">VALID_VERDICTS</span>.contains(v))
+    <span class="rs-kw">else</span> {
+        <span class="rs-kw">return</span> <span class="rs-type">Some</span>(&quot;structural&quot;);
+    };
+    <span class="rs-kw">if</span> verdict == &quot;reject&quot; {
+        <span class="rs-kw">return</span> <span class="rs-type">Some</span>(&quot;rejected&quot;);
+    }
+    <span class="rs-comment">// verdict == "approve" — require the originating ask_advisor to target this terminal.</span>
+    <span class="rs-kw">let</span> <span class="rs-type">Some</span>(<span class="rs-type">ContentBlock</span>::<span class="rs-type">ToolUse</span> { input, .. }) = originating <span class="rs-kw">else</span> {
+        <span class="rs-kw">return</span> <span class="rs-type">Some</span>(&quot;unpaired&quot;);
+    };
+    <span class="rs-kw">if</span> input.<a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#method-get-89">get</a>(&quot;tool_name&quot;).and_then(|v| v.<a class="symbol-link rs-fn" href="eos-tools--src-core-intent-rs.html#method-as-str-42">as_str</a>()) != <span class="rs-type">Some</span>(target_tool.<a class="symbol-link rs-fn" href="eos-tools--src-core-intent-rs.html#method-as-str-42">as_str</a>()) {
+        <span class="rs-kw">return</span> <span class="rs-type">Some</span>(&quot;wrong_tool&quot;);
+    }
+    <span class="rs-type">None</span>
+}
+
+#[cfg(test)]
+<span class="rs-kw">mod</span> tests {
+    <span class="rs-kw">use</span> eos_types::{<span class="rs-type">JsonObject</span>, <span class="rs-type">ToolUseId</span>};
+    <span class="rs-kw">use</span> serde_json::json;
+
+    <span class="rs-kw">use</span> <span class="rs-kw">super</span>::*;
+
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-hooks-advisor-approval-rs.html#item-fn-ask-advisor-turn-150">ask_advisor_turn</a>(tool_use_id: &amp;str, target_tool: &amp;str) -&gt; <span class="rs-type">Message</span> {
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> input = <span class="rs-type">JsonObject</span>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>();
+        input.insert(&quot;tool_name&quot;.to_owned(), json!(target_tool));
+        <span class="rs-type">Message</span> {
+            role: <span class="rs-type">MessageRole</span>::<span class="rs-type">Assistant</span>,
+            content: vec![<span class="rs-type">ContentBlock</span>::<span class="rs-type">ToolUse</span> {
+                tool_use_id: tool_use_id.parse::&lt;<span class="rs-type">ToolUseId</span>&gt;().expect(&quot;id&quot;),
+                name: &quot;ask_advisor&quot;.to_owned(),
+                input,
+            }],
+        }
+    }
+
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-hooks-advisor-approval-rs.html#item-fn-advisor-result-163">advisor_result</a>(tool_use_id: &amp;str, verdict: <span class="rs-type">Option</span>&lt;&amp;str&gt;, is_error: bool) -&gt; <span class="rs-type">Message</span> {
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> metadata = <span class="rs-type">JsonObject</span>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>();
+        metadata.insert(&quot;helper_role&quot;.to_owned(), json!(&quot;advisor&quot;));
+        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(v) = verdict {
+            metadata.insert(&quot;verdict&quot;.to_owned(), json!(v));
+        }
+        <span class="rs-type">Message</span> {
+            role: <span class="rs-type">MessageRole</span>::<span class="rs-type">User</span>,
+            content: vec![<span class="rs-type">ContentBlock</span>::<a class="symbol-link rs-type" href="eos-tools--src-core-result-rs.html#item-struct-ToolResult-12">ToolResult</a> {
+                tool_use_id: tool_use_id.parse::&lt;<span class="rs-type">ToolUseId</span>&gt;().expect(&quot;id&quot;),
+                content: &quot;review&quot;.to_owned(),
+                is_error,
+                metadata,
+                is_terminal: <span class="rs-kw">false</span>,
+            }],
+        }
+    }
+
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-hooks-advisor-approval-rs.html#item-fn-classify-181">classify</a>(messages: &amp;[<span class="rs-type">Message</span>], target: <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>) -&gt; <span class="rs-type">Option</span>&lt;&amp;&#x27;<span class="rs-kw">static</span> str&gt; {
+        <span class="rs-kw">let</span> (result, originating) = <a class="symbol-link rs-fn" href="eos-tools--src-hooks-advisor-approval-rs.html#item-fn-find-latest-advisor-pair-52">find_latest_advisor_pair</a>(messages);
+        <a class="symbol-link rs-fn" href="eos-tools--src-hooks-advisor-approval-rs.html#item-fn-classify-advisor-approval-106">classify_advisor_approval</a>(result, originating, target)
+    }
+
+    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-hooks-advisor-approval-rs.html#item-fn-missing-when-no-advisor-result-186">missing_when_no_advisor_result</a>() {
+        <span class="rs-kw">let</span> msgs = [<span class="rs-type">Message</span>::from_user_text(&quot;hi&quot;)];
+        assert_eq!(
+            <a class="symbol-link rs-fn" href="eos-tools--src-hooks-advisor-approval-rs.html#item-fn-classify-181">classify</a>(&amp;msgs, <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-submission-root-submit-root-outcome-rs.html#item-struct-SubmitRootOutcome-31">SubmitRootOutcome</a>),
+            <span class="rs-type">Some</span>(&quot;missing&quot;)
+        );
+    }
+
+    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-hooks-advisor-approval-rs.html#item-fn-approve-paired-to-target-passes-195">approve_paired_to_target_passes</a>() {
+        <span class="rs-kw">let</span> msgs = [
+            <a class="symbol-link rs-fn" href="eos-tools--src-hooks-advisor-approval-rs.html#item-fn-ask-advisor-turn-150">ask_advisor_turn</a>(&quot;t1&quot;, &quot;submit_root_outcome&quot;),
+            <a class="symbol-link rs-fn" href="eos-tools--src-hooks-advisor-approval-rs.html#item-fn-advisor-result-163">advisor_result</a>(&quot;t1&quot;, <span class="rs-type">Some</span>(&quot;approve&quot;), <span class="rs-kw">false</span>),
+        ];
+        assert_eq!(<a class="symbol-link rs-fn" href="eos-tools--src-hooks-advisor-approval-rs.html#item-fn-classify-181">classify</a>(&amp;msgs, <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-submission-root-submit-root-outcome-rs.html#item-struct-SubmitRootOutcome-31">SubmitRootOutcome</a>), <span class="rs-type">None</span>);
+    }
+
+    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-hooks-advisor-approval-rs.html#item-fn-classification-order-covers-each-tag-204">classification_order_covers_each_tag</a>() {
+        <span class="rs-comment">// advisor_failed: result is an error.</span>
+        <span class="rs-kw">let</span> failed = [
+            <a class="symbol-link rs-fn" href="eos-tools--src-hooks-advisor-approval-rs.html#item-fn-ask-advisor-turn-150">ask_advisor_turn</a>(&quot;t1&quot;, &quot;submit_root_outcome&quot;),
+            <a class="symbol-link rs-fn" href="eos-tools--src-hooks-advisor-approval-rs.html#item-fn-advisor-result-163">advisor_result</a>(&quot;t1&quot;, <span class="rs-type">Some</span>(&quot;approve&quot;), <span class="rs-kw">true</span>),
+        ];
+        assert_eq!(
+            <a class="symbol-link rs-fn" href="eos-tools--src-hooks-advisor-approval-rs.html#item-fn-classify-181">classify</a>(&amp;failed, <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-submission-root-submit-root-outcome-rs.html#item-struct-SubmitRootOutcome-31">SubmitRootOutcome</a>),
+            <span class="rs-type">Some</span>(&quot;advisor_failed&quot;)
+        );
+
+        <span class="rs-comment">// structural: verdict not in the valid set.</span>
+        <span class="rs-kw">let</span> structural = [
+            <a class="symbol-link rs-fn" href="eos-tools--src-hooks-advisor-approval-rs.html#item-fn-ask-advisor-turn-150">ask_advisor_turn</a>(&quot;t1&quot;, &quot;submit_root_outcome&quot;),
+            <a class="symbol-link rs-fn" href="eos-tools--src-hooks-advisor-approval-rs.html#item-fn-advisor-result-163">advisor_result</a>(&quot;t1&quot;, <span class="rs-type">None</span>, <span class="rs-kw">false</span>),
+        ];
+        assert_eq!(
+            <a class="symbol-link rs-fn" href="eos-tools--src-hooks-advisor-approval-rs.html#item-fn-classify-181">classify</a>(&amp;structural, <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-submission-root-submit-root-outcome-rs.html#item-struct-SubmitRootOutcome-31">SubmitRootOutcome</a>),
+            <span class="rs-type">Some</span>(&quot;structural&quot;)
+        );
+
+        <span class="rs-comment">// rejected.</span>
+        <span class="rs-kw">let</span> rejected = [
+            <a class="symbol-link rs-fn" href="eos-tools--src-hooks-advisor-approval-rs.html#item-fn-ask-advisor-turn-150">ask_advisor_turn</a>(&quot;t1&quot;, &quot;submit_root_outcome&quot;),
+            <a class="symbol-link rs-fn" href="eos-tools--src-hooks-advisor-approval-rs.html#item-fn-advisor-result-163">advisor_result</a>(&quot;t1&quot;, <span class="rs-type">Some</span>(&quot;reject&quot;), <span class="rs-kw">false</span>),
+        ];
+        assert_eq!(
+            <a class="symbol-link rs-fn" href="eos-tools--src-hooks-advisor-approval-rs.html#item-fn-classify-181">classify</a>(&amp;rejected, <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-submission-root-submit-root-outcome-rs.html#item-struct-SubmitRootOutcome-31">SubmitRootOutcome</a>),
+            <span class="rs-type">Some</span>(&quot;rejected&quot;)
+        );
+
+        <span class="rs-comment">// unpaired: an advisor result with no originating ask_advisor.</span>
+        <span class="rs-kw">let</span> unpaired = [<a class="symbol-link rs-fn" href="eos-tools--src-hooks-advisor-approval-rs.html#item-fn-advisor-result-163">advisor_result</a>(&quot;t1&quot;, <span class="rs-type">Some</span>(&quot;approve&quot;), <span class="rs-kw">false</span>)];
+        assert_eq!(
+            <a class="symbol-link rs-fn" href="eos-tools--src-hooks-advisor-approval-rs.html#item-fn-classify-181">classify</a>(&amp;unpaired, <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-submission-root-submit-root-outcome-rs.html#item-struct-SubmitRootOutcome-31">SubmitRootOutcome</a>),
+            <span class="rs-type">Some</span>(&quot;unpaired&quot;)
+        );
+
+        <span class="rs-comment">// wrong_tool: ask_advisor targeted a different terminal.</span>
+        <span class="rs-kw">let</span> wrong = [
+            <a class="symbol-link rs-fn" href="eos-tools--src-hooks-advisor-approval-rs.html#item-fn-ask-advisor-turn-150">ask_advisor_turn</a>(&quot;t1&quot;, &quot;submit_planner_outcome&quot;),
+            <a class="symbol-link rs-fn" href="eos-tools--src-hooks-advisor-approval-rs.html#item-fn-advisor-result-163">advisor_result</a>(&quot;t1&quot;, <span class="rs-type">Some</span>(&quot;approve&quot;), <span class="rs-kw">false</span>),
+        ];
+        assert_eq!(
+            <a class="symbol-link rs-fn" href="eos-tools--src-hooks-advisor-approval-rs.html#item-fn-classify-181">classify</a>(&amp;wrong, <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-submission-root-submit-root-outcome-rs.html#item-struct-SubmitRootOutcome-31">SubmitRootOutcome</a>),
+            <span class="rs-type">Some</span>(&quot;wrong_tool&quot;)
+        );
+    }
+}
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
   <script src="../assets/inventory.js"></script>
 </body>
 </html>

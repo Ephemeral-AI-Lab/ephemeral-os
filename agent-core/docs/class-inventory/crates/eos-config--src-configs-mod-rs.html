@@ -8,8 +8,16 @@
 </head>
 <body>
   <header>
-    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
-    <h1>eos-config File Inventory</h1>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>eos-config File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS/agent-core &amp;&amp; cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
   </header>
   <a class="back-link" href="../index.html">agent-core</a>
 <section class="summary">
@@ -50,6 +58,38 @@
   <div class="items"></div>
 </section></div>
 </main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/eos-config/src/configs/mod.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-comment">//! Typed config schemas and reusable section fragments.</span>
+<span class="rs-comment">//!</span>
+<span class="rs-comment">//! Each type owns its validation. These live here for now; they migrate to their</span>
+<span class="rs-comment">//! owning crates' `config.rs` (`eos-db`, `eos-llm-client`, `eos-workflow`) as</span>
+<span class="rs-comment">//! those crates stabilize. There is no aggregate struct — consumers deserialize</span>
+<span class="rs-comment">//! one section at a time via</span>
+<span class="rs-comment">//! [`ConfigDocument::section`](crate::ConfigDocument::section).</span>
+
+<span class="rs-kw">mod</span> attempt;
+<span class="rs-kw">mod</span> database;
+<span class="rs-kw">mod</span> models;
+<span class="rs-kw">mod</span> providers;
+<span class="rs-kw">mod</span> runtime;
+<span class="rs-kw">mod</span> workflow;
+
+<span class="rs-kw">pub</span> <span class="rs-kw">use</span> attempt::<a class="symbol-link rs-type" href="eos-config.html#item-struct-AttemptConfig-12">AttemptConfig</a>;
+<span class="rs-kw">pub</span> <span class="rs-kw">use</span> database::{<a class="symbol-link rs-type" href="eos-config--src-configs-database-rs.html#item-struct-DatabaseConfig-62">DatabaseConfig</a>, <a class="symbol-link rs-type" href="eos-config--src-configs-database-rs.html#item-struct-DatabaseUrl-13">DatabaseUrl</a>, <span class="rs-type">DEFAULT_SQLITE_DATABASE_URL</span>};
+<span class="rs-kw">pub</span> <span class="rs-kw">use</span> models::{<a class="symbol-link rs-type" href="eos-config--src-configs-models-rs.html#item-struct-ModelRegistrationConfig-102">ModelRegistrationConfig</a>, <a class="symbol-link rs-type" href="eos-config--src-configs-models-rs.html#item-struct-ModelsConfig-15">ModelsConfig</a>};
+<span class="rs-kw">pub</span> <span class="rs-kw">use</span> providers::{
+    <a class="symbol-link rs-type" href="eos-config--src-configs-providers-rs.html#item-struct-AnthropicApiConfig-141">AnthropicApiConfig</a>, <a class="symbol-link rs-type" href="eos-config--src-configs-providers-rs.html#item-struct-ClaudeCodingPlanConfig-193">ClaudeCodingPlanConfig</a>, <a class="symbol-link rs-type" href="eos-config--src-configs-providers-rs.html#item-struct-CodexCodingPlanConfig-167">CodexCodingPlanConfig</a>, <a class="symbol-link rs-type" href="eos-config--src-configs-providers-rs.html#item-struct-OpenAiApiConfig-115">OpenAiApiConfig</a>,
+    <a class="symbol-link rs-type" href="eos-config--src-configs-providers-rs.html#item-enum-ProviderKind-97">ProviderKind</a>, <a class="symbol-link rs-type" href="eos-config--src-configs-providers-rs.html#item-struct-ProvidersConfig-219">ProvidersConfig</a>, <a class="symbol-link rs-type" href="eos-config--src-configs-providers-rs.html#item-struct-RetryConfig-12">RetryConfig</a>, <a class="symbol-link rs-type" href="eos-config--src-configs-providers-rs.html#item-struct-SecretConfigValue-55">SecretConfigValue</a>,
+};
+<span class="rs-kw">pub</span> <span class="rs-kw">use</span> runtime::<a class="symbol-link rs-type" href="eos-config--src-configs-runtime-rs.html#item-struct-RuntimeConfig-7">RuntimeConfig</a>;
+<span class="rs-kw">pub</span> <span class="rs-kw">use</span> workflow::{<a class="symbol-link rs-type" href="eos-config--src-configs-workflow-rs.html#item-struct-WorkflowConfig-15">WorkflowConfig</a>, <span class="rs-type">DEFAULT_WORKFLOW_MAX_DEPTH</span>};
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
   <script src="../assets/inventory.js"></script>
 </body>
 </html>

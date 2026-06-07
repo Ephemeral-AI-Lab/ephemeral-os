@@ -8,8 +8,16 @@
 </head>
 <body>
   <header>
-    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
-    <h1>eos-types File Inventory</h1>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>eos-types File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS/agent-core &amp;&amp; cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
   </header>
   <a class="back-link" href="../index.html">agent-core</a>
 <section class="summary">
@@ -47,19 +55,38 @@
       <span>0 methods</span>
     </div>
   </div>
-  <div class="items"><div class="group-label">Aliases</div><article class="item-card" data-kind="type" data-kind-list="type" data-filter-text="type JsonObject pub pub type JsonObject = serde_json :: Map &lt; String , serde_json :: Value &gt; crates/eos-types/src/json.rs  ">
+  <div class="items"><div class="group-label">Aliases</div><article id="item-type-JsonObject-8" class="item-card" data-kind="type" data-kind-list="type" data-filter-text="type JsonObject pub pub type JsonObject = serde_json :: Map &lt; String , serde_json :: Value &gt; crates/eos-types/src/json.rs  ">
   <div class="item-head">
     <span class="kind">type</span>
     <h3>JsonObject</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub type JsonObject = serde_json :: Map &lt; String , serde_json :: Value &gt;</code>
+  <code class="signature">pub type <a class="symbol-link" href="eos-types--src-json-rs.html#item-type-JsonObject-8">JsonObject</a> = serde_json :: Map &lt; String , serde_json :: Value &gt;</code>
+  <p class="docstring">Untyped JSON object map used for transitional metadata (plan §1). The owned<br>transitional-metadata contract enumerated in spec-conventions §5.</p>
   <div class="tags"></div>
 
   <p class="source">crates/eos-types/src/json.rs:8</p>
 </article></div>
 </section></div>
 </main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/eos-types/src/json.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-comment">//! Transitional JSON container aliases.</span>
+<span class="rs-comment">//!</span>
+<span class="rs-comment">//! These are deliberately *untyped* transitional containers (`audit` metadata,</span>
+<span class="rs-comment">//! tool args) that downstream crates parse into typed shapes at their</span>
+<span class="rs-comment">//! boundaries (`api-parse-dont-validate`). They are aliases, not newtypes</span>
+<span class="rs-comment">//! (YAGNI — no wrapper methods until a caller needs one).</span>
+
+<span class="rs-comment">/// Untyped JSON object map used for transitional metadata (plan §1). The owned</span>
+<span class="rs-comment">/// transitional-metadata contract enumerated in spec-conventions §5.</span>
+<span class="rs-kw">pub</span> <span class="rs-kw">type</span> <a class="symbol-link rs-type" href="eos-types--src-json-rs.html#item-type-JsonObject-8">JsonObject</a> = serde_json::<span class="rs-type">Map</span>&lt;<span class="rs-type">String</span>, serde_json::<span class="rs-type">Value</span>&gt;;
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
   <script src="../assets/inventory.js"></script>
 </body>
 </html>

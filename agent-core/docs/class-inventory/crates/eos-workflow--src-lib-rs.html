@@ -8,15 +8,23 @@
 </head>
 <body>
   <header>
-    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
-    <h1>eos-workflow File Inventory</h1>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>eos-workflow File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS/agent-core &amp;&amp; cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
   </header>
   <a class="back-link" href="../index.html">agent-core</a>
 <section class="summary">
   <div><b>20</b><span>modules</span></div>
-  <div><b>136</b><span>items</span></div>
-  <div><b>129</b><span>fields</span></div>
-  <div><b>138</b><span>methods</span></div>
+  <div><b>137</b><span>items</span></div>
+  <div><b>131</b><span>fields</span></div>
+  <div><b>140</b><span>methods</span></div>
 </section>
 <section class="toolbar">
   <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
@@ -32,7 +40,7 @@
   </select>
 </section>
 <main class="crate-layout">
-  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><span class="folder">attempt</span><ul class="file-tree"><li><a class="file-link" href="eos-workflow.html"><span>launch.rs</span><small>8/0</small></a></li><li><a class="file-link" href="eos-workflow--src-attempt-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-workflow--src-attempt-orchestrator-rs.html"><span>orchestrator.rs</span><small>3/0</small></a></li><li><a class="file-link" href="eos-workflow--src-attempt-orchestrator-registry-rs.html"><span>orchestrator_registry.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-workflow--src-attempt-plan-dag-rs.html"><span>plan_dag.rs</span><small>1/19</small></a></li><li><a class="file-link" href="eos-workflow--src-attempt-run-stage-rs.html"><span>run_stage.rs</span><small>1/8</small></a></li></ul></li><li><span class="folder">context</span><ul class="file-tree"><li><a class="file-link" href="eos-workflow--src-context-composer-rs.html"><span>composer.rs</span><small>2/12</small></a></li><li><a class="file-link" href="eos-workflow--src-context-engine-rs.html"><span>engine.rs</span><small>2/3</small></a></li><li><a class="file-link" href="eos-workflow--src-context-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-workflow--src-context-scope-rs.html"><span>scope.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-workflow--src-context-section-rs.html"><span>section.rs</span><small>3/0</small></a></li><li><a class="file-link" href="eos-workflow--src-context-xml-rs.html"><span>xml.rs</span><small>0/4</small></a></li></ul></li><li><a class="file-link" href="eos-workflow--src-error-rs.html"><span>error.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-workflow--src-ids-rs.html"><span>ids.rs</span><small>1/3</small></a></li><li><span class="folder">iteration</span><ul class="file-tree"><li><a class="file-link" href="eos-workflow--src-iteration-mod-rs.html"><span>mod.rs</span><small>3/1</small></a></li></ul></li><li><a class="file-link active" href="eos-workflow--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-workflow--src-lifecycle-rs.html"><span>lifecycle.rs</span><small>1/3</small></a></li><li><a class="file-link" href="eos-workflow--src-ports-rs.html"><span>ports.rs</span><small>4/4</small></a></li><li><a class="file-link" href="eos-workflow--src-starter-rs.html"><span>starter.rs</span><small>2/3</small></a></li><li><a class="file-link" href="eos-workflow--src-util-rs.html"><span>util.rs</span><small>0/1</small></a></li></ul></li></ul></nav>
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><span class="folder">attempt</span><ul class="file-tree"><li><a class="file-link" href="eos-workflow.html"><span>launch.rs</span><small>8/0</small></a></li><li><a class="file-link" href="eos-workflow--src-attempt-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-workflow--src-attempt-orchestrator-rs.html"><span>orchestrator.rs</span><small>3/0</small></a></li><li><a class="file-link" href="eos-workflow--src-attempt-orchestrator-registry-rs.html"><span>orchestrator_registry.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-workflow--src-attempt-plan-dag-rs.html"><span>plan_dag.rs</span><small>1/19</small></a></li><li><a class="file-link" href="eos-workflow--src-attempt-run-stage-rs.html"><span>run_stage.rs</span><small>1/8</small></a></li></ul></li><li><span class="folder">context</span><ul class="file-tree"><li><a class="file-link" href="eos-workflow--src-context-composer-rs.html"><span>composer.rs</span><small>2/12</small></a></li><li><a class="file-link" href="eos-workflow--src-context-engine-rs.html"><span>engine.rs</span><small>2/3</small></a></li><li><a class="file-link" href="eos-workflow--src-context-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-workflow--src-context-scope-rs.html"><span>scope.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-workflow--src-context-section-rs.html"><span>section.rs</span><small>3/0</small></a></li><li><a class="file-link" href="eos-workflow--src-context-xml-rs.html"><span>xml.rs</span><small>0/4</small></a></li></ul></li><li><a class="file-link" href="eos-workflow--src-error-rs.html"><span>error.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-workflow--src-ids-rs.html"><span>ids.rs</span><small>1/3</small></a></li><li><span class="folder">iteration</span><ul class="file-tree"><li><a class="file-link" href="eos-workflow--src-iteration-mod-rs.html"><span>mod.rs</span><small>3/1</small></a></li></ul></li><li><a class="file-link active" href="eos-workflow--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-workflow--src-lifecycle-rs.html"><span>lifecycle.rs</span><small>1/3</small></a></li><li><a class="file-link" href="eos-workflow--src-ports-rs.html"><span>ports.rs</span><small>5/3</small></a></li><li><a class="file-link" href="eos-workflow--src-starter-rs.html"><span>starter.rs</span><small>2/3</small></a></li><li><a class="file-link" href="eos-workflow--src-util-rs.html"><span>util.rs</span><small>0/1</small></a></li></ul></li></ul></nav>
   <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="lib crates/eos-workflow/src/lib.rs ">
   <div class="module-head">
     <div>
@@ -50,6 +58,55 @@
   <div class="items"></div>
 </section></div>
 </main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/eos-workflow/src/lib.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-comment">//! `eos-workflow` — delegated workflow lifecycle, per-attempt orchestration,</span>
+<span class="rs-comment">//! run-stage scheduling, launch context composition, and workflow-context</span>
+<span class="rs-comment">//! packets.</span>
+<span class="rs-comment">//!</span>
+<span class="rs-comment">//! The crate depends on store traits and downstream-state ports, not concrete</span>
+<span class="rs-comment">//! persistence or engine crates. It owns only delegated workflow state; root</span>
+<span class="rs-comment">//! requests remain direct root tasks.</span>
+#![forbid(unsafe_code)]
+
+<span class="rs-kw">mod</span> attempt;
+<span class="rs-kw">mod</span> context;
+<span class="rs-kw">mod</span> error;
+<span class="rs-kw">mod</span> ids;
+<span class="rs-kw">mod</span> iteration;
+<span class="rs-kw">mod</span> lifecycle;
+<span class="rs-kw">mod</span> ports;
+<span class="rs-kw">mod</span> starter;
+<span class="rs-kw">mod</span> util;
+
+<span class="rs-comment">// Layer-B doubles (in-memory stores + `AgentRunner` doubles + `wait_until`).</span>
+<span class="rs-comment">// Kept crate-local under `tests/` (not `eos-testkit`): they are single-consumer</span>
+<span class="rs-comment">// `eos-workflow` types, so the dev-dep two-instance rule bars consuming them</span>
+<span class="rs-comment">// from this crate's own in-crate tests (`TESTING_SPEC` §14.2). Named `support` so</span>
+<span class="rs-comment">// the AC2 `mod (testsupport|test_support|…)` grep stays clean.</span>
+#[cfg(test)]
+#[path = &quot;../tests/support/<span class="rs-kw">mod</span>.rs&quot;]
+<span class="rs-kw">mod</span> support;
+
+<span class="rs-kw">pub</span> <span class="rs-kw">use</span> attempt::{
+    <a class="symbol-link rs-type" href="eos-workflow.html#item-enum-AgentLaunch-56">AgentLaunch</a>, <a class="symbol-link rs-type" href="eos-workflow.html#item-struct-AgentRunReport-17">AgentRunReport</a>, <a class="symbol-link rs-type" href="eos-workflow.html#item-trait-AgentRunner-49">AgentRunner</a>, <a class="symbol-link rs-type" href="eos-workflow.html#item-struct-AttemptDeps-223">AttemptDeps</a>, <a class="symbol-link rs-type" href="eos-workflow--src-attempt-orchestrator-registry-rs.html#item-struct-AttemptOrchestratorRegistry-12">AttemptOrchestratorRegistry</a>,
+    <a class="symbol-link rs-type" href="eos-workflow.html#item-struct-ExecutionLaunch-92">ExecutionLaunch</a>, <a class="symbol-link rs-type" href="eos-workflow.html#item-struct-PlannerLaunch-67">PlannerLaunch</a>,
+};
+<span class="rs-kw">pub</span> <span class="rs-kw">use</span> context::{
+    render_context_xml, render_task_guidance, <a class="symbol-link rs-type" href="eos-workflow--src-context-section-rs.html#item-struct-AgentContext-78">AgentContext</a>, <a class="symbol-link rs-type" href="eos-workflow--src-context-composer-rs.html#item-struct-AgentEntryComposer-25">AgentEntryComposer</a>, <a class="symbol-link rs-type" href="eos-workflow--src-context-composer-rs.html#item-struct-AgentEntryMessages-12">AgentEntryMessages</a>,
+    <a class="symbol-link rs-type" href="eos-workflow--src-context-engine-rs.html#item-struct-ContextEngine-33">ContextEngine</a>, <a class="symbol-link rs-type" href="eos-workflow--src-context-engine-rs.html#item-struct-ContextEngineDeps-14">ContextEngineDeps</a>, <a class="symbol-link rs-type" href="eos-workflow--src-context-section-rs.html#item-enum-ContextRole-4">ContextRole</a>, <a class="symbol-link rs-type" href="eos-workflow--src-context-scope-rs.html#item-enum-ContextScope-5">ContextScope</a>, <a class="symbol-link rs-type" href="eos-workflow--src-context-section-rs.html#item-struct-ContextSection-28">ContextSection</a>,
+};
+<span class="rs-kw">pub</span> <span class="rs-kw">use</span> error::{<a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a>, <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>};
+<span class="rs-kw">pub</span> <span class="rs-kw">use</span> ids::{generator_task_id, planner_task_id, reducer_task_id, <a class="symbol-link rs-type" href="eos-workflow--src-ids-rs.html#item-struct-WorkflowLifecycleConfig-5">WorkflowLifecycleConfig</a>};
+<span class="rs-kw">pub</span> <span class="rs-kw">use</span> iteration::<a class="symbol-link rs-type" href="eos-workflow--src-iteration-mod-rs.html#item-struct-OpenIterationCoordinatorRegistry-308">OpenIterationCoordinatorRegistry</a>;
+<span class="rs-kw">pub</span> <span class="rs-kw">use</span> ports::{<a class="symbol-link rs-type" href="eos-workflow--src-ports-rs.html#item-struct-AttemptSubmissionAdapter-20">AttemptSubmissionAdapter</a>, <a class="symbol-link rs-type" href="eos-workflow--src-ports-rs.html#item-struct-WorkflowControlAdapter-100">WorkflowControlAdapter</a>};
+<span class="rs-kw">pub</span> <span class="rs-kw">use</span> starter::{<a class="symbol-link rs-type" href="eos-workflow--src-starter-rs.html#item-struct-StartedWorkflow-9">StartedWorkflow</a>, <a class="symbol-link rs-type" href="eos-workflow--src-starter-rs.html#item-struct-WorkflowStarter-24">WorkflowStarter</a>};
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
   <script src="../assets/inventory.js"></script>
 </body>
 </html>

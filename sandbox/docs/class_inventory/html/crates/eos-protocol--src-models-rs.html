@@ -8,8 +8,16 @@
 </head>
 <body>
   <header>
-    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
-    <h1>eos-protocol File Inventory</h1>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>eos-protocol File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS/sandbox &amp;&amp; cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
   </header>
   <a class="back-link" href="../index.html">sandbox</a>
 <section class="summary">
@@ -47,39 +55,125 @@
       <span>0 methods</span>
     </div>
   </div>
-  <div class="items"><div class="group-label">File-Owned Types</div><article class="type-card" data-kind="enum" data-kind-list="enum field type-model" data-filter-text="enum Intent pub pub enum Intent crates/eos-protocol/src/models.rs  ">
+  <div class="items"><div class="group-label">File-Owned Types</div><article id="item-enum-Intent-21" class="type-card" data-kind="enum" data-kind-list="enum field type-model" data-filter-text="enum Intent pub pub enum Intent crates/eos-protocol/src/models.rs  ">
   <div class="item-head">
     <span class="kind">enum</span>
     <h3>Intent</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub enum Intent</code>
-  <div class="tags"><span>serde</span></div>
+  <code class="signature">pub enum <a class="symbol-link" href="eos-protocol--src-models-rs.html#item-enum-Intent-21">Intent</a></code>
+  <p class="docstring">The single enum in the verb model; serialized as its `.value` string.</p>
+  <div class="tags"><span>derive: Clone</span><span>derive: Copy</span><span>derive: Debug</span><span>derive: Deserialize</span><span>derive: Eq</span><span>derive: PartialEq</span><span>derive: Serialize</span><span>serde</span><span>serde: rename_all</span></div>
   <h4>Variants</h4><table><tbody><tr><td>ReadOnly</td><td><code></code></td></tr><tr><td>WriteAllowed</td><td><code></code></td></tr><tr><td>Lifecycle</td><td><code></code></td></tr></tbody></table>
+
   <p class="source">crates/eos-protocol/src/models.rs:21</p>
-</article><div class="group-label">Aliases</div><article class="item-card" data-kind="type" data-kind-list="type" data-filter-text="type TestResult private type TestResult&lt; T = () &gt; = Result &lt; T , Box &lt; dyn std :: error :: Error + Send + Sync &gt; &gt; crates/eos-protocol/src/models.rs  ">
+</article><div class="group-label">Aliases</div><article id="item-type-TestResult-38" class="item-card" data-kind="type" data-kind-list="type" data-filter-text="type TestResult private type TestResult&lt; T = () &gt; = Result &lt; T , Box &lt; dyn std :: error :: Error + Send + Sync &gt; &gt; crates/eos-protocol/src/models.rs  ">
   <div class="item-head">
     <span class="kind">type</span>
     <h3>TestResult</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">type TestResult&lt; T = () &gt; = Result &lt; T , Box &lt; dyn std :: error :: Error + Send + Sync &gt; &gt;</code>
+  <code class="signature">type <a class="symbol-link" href="eos-protocol.html#item-type-TestResult-272">TestResult</a>&lt; T = () &gt; = Result &lt; T , Box &lt; dyn std :: error :: Error + Send + Sync &gt; &gt;</code>
   <div class="tags"></div>
 
   <p class="source">crates/eos-protocol/src/models.rs:38</p>
-</article><div class="group-label">Standalone Functions</div><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn intent_wire_values private fn intent_wire_values () -&gt; TestResult crates/eos-protocol/src/models.rs  ">
+</article><div class="group-label">Standalone Functions</div><article id="item-fn-intent-wire-values-40" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn intent_wire_values private fn intent_wire_values () -&gt; TestResult crates/eos-protocol/src/models.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>intent_wire_values</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn intent_wire_values () -&gt; TestResult</code>
-  <div class="tags"></div>
+  <code class="signature">fn <a class="symbol-link" href="eos-protocol--src-models-rs.html#item-fn-intent-wire-values-40">intent_wire_values</a> () -&gt; <a class="symbol-link" href="eos-protocol.html#item-type-TestResult-272">TestResult</a></code>
+  <div class="tags"><span>test</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-protocol--src-models-rs.html#item-fn-intent-wire-values-40">intent_wire_values</a>() -&gt; <a class="symbol-link rs-type" href="eos-protocol.html#item-type-TestResult-272">TestResult</a> {
+        assert_eq!(
+            serde_json::to_value(<a class="symbol-link rs-type" href="eos-protocol--src-models-rs.html#item-enum-Intent-21">Intent</a>::<span class="rs-type">ReadOnly</span>)?,
+            <span class="rs-type">Value</span>::<span class="rs-type">String</span>(&quot;read_only&quot;.to_owned())
+        );
+        assert_eq!(
+            serde_json::to_value(<a class="symbol-link rs-type" href="eos-protocol--src-models-rs.html#item-enum-Intent-21">Intent</a>::<span class="rs-type">WriteAllowed</span>)?,
+            <span class="rs-type">Value</span>::<span class="rs-type">String</span>(&quot;write_allowed&quot;.to_owned())
+        );
+        assert_eq!(
+            serde_json::to_value(<a class="symbol-link rs-type" href="eos-protocol--src-models-rs.html#item-enum-Intent-21">Intent</a>::<span class="rs-type">Lifecycle</span>)?,
+            <span class="rs-type">Value</span>::<span class="rs-type">String</span>(&quot;lifecycle&quot;.to_owned())
+        );
+        <span class="rs-type">Ok</span>(())
+    }
+</code></pre>
+</details>
 
   <p class="source">crates/eos-protocol/src/models.rs:40</p>
 </article></div>
 </section></div>
 </main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/eos-protocol/src/models.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-comment">//! Shared verb intent + file-size caps for the wire protocol.</span>
+<span class="rs-comment">//!</span>
+<span class="rs-comment">//! [`Intent`] is the single verb-classification enum (serialized as its</span>
+<span class="rs-comment">//! snake_case `.value`); the byte caps bound `read_file`/`write_file`/`edit_file`</span>
+<span class="rs-comment">//! payloads. The typed request/response DTOs that used to live here were</span>
+<span class="rs-comment">//! superseded by the daemon decoding raw `Value` into `eos-workspace-api` and</span>
+<span class="rs-comment">//! `eos-command-session` types, and were removed as dead duplicates.</span>
+
+<span class="rs-kw">use</span> serde::{<span class="rs-type">Deserialize</span>, <span class="rs-type">Serialize</span>};
+
+<span class="rs-comment">/// Default `read_file` cap (over it raises `ValueError`). The daemon may</span>
+<span class="rs-comment">/// override this via `daemon.files.max_read_bytes`; this constant is the</span>
+<span class="rs-comment">/// fallback used when no runtime config is threaded.</span>
+<span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-type">MAX_READ_BYTES</span>: usize = 16 * 1024 * 1024;
+<span class="rs-comment">/// Default per-file `write_file` / `edit_file` cap. The daemon may override this</span>
+<span class="rs-comment">/// via `daemon.files.max_write_bytes`; this constant is the fallback used when</span>
+<span class="rs-comment">/// no runtime config is threaded. Kept below the 16 MiB request frame so a</span>
+<span class="rs-comment">/// single file payload fits one envelope.</span>
+<span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-type">MAX_FILE_BYTES</span>: usize = 8 * 1024 * 1024;
+
+<span class="rs-comment">/// The single enum in the verb model; serialized as its `.value` string.</span>
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">Copy</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Eq</span>, <span class="rs-type">Serialize</span>, <span class="rs-type">Deserialize</span>)]
+#[serde(rename_all = &quot;snake_case&quot;)]
+<span class="rs-kw">pub</span> <span class="rs-kw">enum</span> <a class="symbol-link rs-type" href="eos-protocol--src-models-rs.html#item-enum-Intent-21">Intent</a> {
+    <span class="rs-comment">/// `"read_only"`</span>
+    <span class="rs-type">ReadOnly</span>,
+    <span class="rs-comment">/// `"write_allowed"`</span>
+    <span class="rs-type">WriteAllowed</span>,
+    <span class="rs-comment">/// `"lifecycle"`</span>
+    <span class="rs-type">Lifecycle</span>,
+}
+
+#[cfg(test)]
+<span class="rs-kw">mod</span> tests {
+    <span class="rs-kw">use</span> <span class="rs-kw">super</span>::*;
+    <span class="rs-kw">use</span> serde_json::<span class="rs-type">Value</span>;
+
+    <span class="rs-kw">type</span> <a class="symbol-link rs-type" href="eos-protocol.html#item-type-TestResult-272">TestResult</a>&lt;<span class="rs-type">T</span> = ()&gt; = <span class="rs-type">Result</span>&lt;<span class="rs-type">T</span>, <span class="rs-type">Box</span>&lt;<span class="rs-kw">dyn</span> std::error::<span class="rs-type">Error</span> + <span class="rs-type">Send</span> + <span class="rs-type">Sync</span>&gt;&gt;;
+
+    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-protocol--src-models-rs.html#item-fn-intent-wire-values-40">intent_wire_values</a>() -&gt; <a class="symbol-link rs-type" href="eos-protocol.html#item-type-TestResult-272">TestResult</a> {
+        assert_eq!(
+            serde_json::to_value(<a class="symbol-link rs-type" href="eos-protocol--src-models-rs.html#item-enum-Intent-21">Intent</a>::<span class="rs-type">ReadOnly</span>)?,
+            <span class="rs-type">Value</span>::<span class="rs-type">String</span>(&quot;read_only&quot;.to_owned())
+        );
+        assert_eq!(
+            serde_json::to_value(<a class="symbol-link rs-type" href="eos-protocol--src-models-rs.html#item-enum-Intent-21">Intent</a>::<span class="rs-type">WriteAllowed</span>)?,
+            <span class="rs-type">Value</span>::<span class="rs-type">String</span>(&quot;write_allowed&quot;.to_owned())
+        );
+        assert_eq!(
+            serde_json::to_value(<a class="symbol-link rs-type" href="eos-protocol--src-models-rs.html#item-enum-Intent-21">Intent</a>::<span class="rs-type">Lifecycle</span>)?,
+            <span class="rs-type">Value</span>::<span class="rs-type">String</span>(&quot;lifecycle&quot;.to_owned())
+        );
+        <span class="rs-type">Ok</span>(())
+    }
+}
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
   <script src="../assets/inventory.js"></script>
 </body>
 </html>

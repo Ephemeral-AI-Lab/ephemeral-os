@@ -8,8 +8,16 @@
 </head>
 <body>
   <header>
-    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
-    <h1>eos-layerstack File Inventory</h1>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>eos-layerstack File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS/sandbox &amp;&amp; cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
   </header>
   <a class="back-link" href="../index.html">sandbox</a>
 <section class="summary">
@@ -47,89 +55,392 @@
       <span>0 methods</span>
     </div>
   </div>
-  <div class="items"><div class="group-label">Standalone Functions</div><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn replace_workspace_contents pub(super) pub(super) fn replace_workspace_contents (destination : &amp; Path , source : &amp; Path ,) -&gt; Result &lt; () , LayerStackError &gt; crates/eos-layerstack/src/stack/fs.rs  ">
+  <div class="items"><div class="group-label">Standalone Functions</div><article id="item-fn-replace-workspace-contents-10" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn replace_workspace_contents pub(super) pub(super) fn replace_workspace_contents (destination : &amp; Path , source : &amp; Path ,) -&gt; Result &lt; () , LayerStackError &gt; crates/eos-layerstack/src/stack/fs.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>replace_workspace_contents</h3>
     <span class="visibility">pub(super)</span>
   </div>
-  <code class="signature">pub(super) fn replace_workspace_contents (destination : &amp; Path , source : &amp; Path ,) -&gt; Result &lt; () , LayerStackError &gt;</code>
+  <code class="signature">pub(super) fn <a class="symbol-link" href="eos-layerstack--src-stack-fs-rs.html#item-fn-replace-workspace-contents-10">replace_workspace_contents</a> (destination : &amp; Path , source : &amp; Path ,) -&gt; Result &lt; () , <a class="symbol-link" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a> &gt;</code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-fs-rs.html#item-fn-replace-workspace-contents-10">replace_workspace_contents</a>(
+    destination: &amp;<span class="rs-type">Path</span>,
+    source: &amp;<span class="rs-type">Path</span>,
+) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>&gt; {
+    std::fs::create_dir_all(destination)?;
+    <span class="rs-kw">for</span> child <span class="rs-kw">in</span> std::fs::read_dir(destination)? {
+        <a class="symbol-link rs-fn" href="eos-layerstack--src-fsutil-rs.html#item-fn-remove-path-8">remove_path</a>(&amp;child?.<a class="symbol-link rs-fn" href="eos-layerstack--src-workspace-base-rs.html#method-path-46">path</a>())?;
+    }
+    <span class="rs-kw">for</span> child <span class="rs-kw">in</span> std::fs::read_dir(source)? {
+        <span class="rs-kw">let</span> child = child?;
+        <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-fs-rs.html#item-fn-move-path-25">move_path</a>(&amp;child.<a class="symbol-link rs-fn" href="eos-layerstack--src-workspace-base-rs.html#method-path-46">path</a>(), &amp;destination.join(child.file_name()))?;
+    }
+    <span class="rs-type">Ok</span>(())
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-layerstack/src/stack/fs.rs:10</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn clear_storage_root_preserving_lock pub(super) pub(super) fn clear_storage_root_preserving_lock (storage_root : &amp; Path ,) -&gt; Result &lt; () , LayerStackError &gt; crates/eos-layerstack/src/stack/fs.rs  ">
+</article><article id="item-fn-clear-storage-root-preserving-lock-61" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn clear_storage_root_preserving_lock pub(super) pub(super) fn clear_storage_root_preserving_lock (storage_root : &amp; Path ,) -&gt; Result &lt; () , LayerStackError &gt; crates/eos-layerstack/src/stack/fs.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>clear_storage_root_preserving_lock</h3>
     <span class="visibility">pub(super)</span>
   </div>
-  <code class="signature">pub(super) fn clear_storage_root_preserving_lock (storage_root : &amp; Path ,) -&gt; Result &lt; () , LayerStackError &gt;</code>
+  <code class="signature">pub(super) fn <a class="symbol-link" href="eos-layerstack--src-stack-fs-rs.html#item-fn-clear-storage-root-preserving-lock-61">clear_storage_root_preserving_lock</a> (storage_root : &amp; Path ,) -&gt; Result &lt; () , <a class="symbol-link" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a> &gt;</code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-fs-rs.html#item-fn-clear-storage-root-preserving-lock-61">clear_storage_root_preserving_lock</a>(
+    storage_root: &amp;<span class="rs-type">Path</span>,
+) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>&gt; {
+    std::fs::create_dir_all(storage_root)?;
+    <span class="rs-kw">for</span> child <span class="rs-kw">in</span> std::fs::read_dir(storage_root)? {
+        <span class="rs-kw">let</span> child = child?;
+        <span class="rs-kw">if</span> child.file_name() == <span class="rs-type">STORAGE_WRITER_LOCK_FILE</span> {
+            <span class="rs-kw">continue</span>;
+        }
+        <a class="symbol-link rs-fn" href="eos-layerstack--src-fsutil-rs.html#item-fn-remove-path-8">remove_path</a>(&amp;child.<a class="symbol-link rs-fn" href="eos-layerstack--src-workspace-base-rs.html#method-path-46">path</a>())?;
+    }
+    <span class="rs-type">Ok</span>(())
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-layerstack/src/stack/fs.rs:61</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn write_atomic pub(crate) pub(crate) fn write_atomic (path : impl AsRef &lt; Path &gt; , bytes : &amp; [u8]) -&gt; Result &lt; () , LayerStackError &gt; crates/eos-layerstack/src/stack/fs.rs  ">
+</article><article id="item-fn-write-atomic-75" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn write_atomic pub(crate) pub(crate) fn write_atomic (path : impl AsRef &lt; Path &gt; , bytes : &amp; [u8]) -&gt; Result &lt; () , LayerStackError &gt; crates/eos-layerstack/src/stack/fs.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>write_atomic</h3>
     <span class="visibility">pub(crate)</span>
   </div>
-  <code class="signature">pub(crate) fn write_atomic (path : impl AsRef &lt; Path &gt; , bytes : &amp; [u8]) -&gt; Result &lt; () , LayerStackError &gt;</code>
+  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-layerstack--src-stack-fs-rs.html#item-fn-write-atomic-75">write_atomic</a> (path : impl AsRef &lt; Path &gt; , bytes : &amp; [u8]) -&gt; Result &lt; () , <a class="symbol-link" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a> &gt;</code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-fs-rs.html#item-fn-write-atomic-75">write_atomic</a>(path: <span class="rs-kw">impl</span> <span class="rs-type">AsRef</span>&lt;<span class="rs-type">Path</span>&gt;, bytes: &amp;[u8]) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>&gt; {
+    <span class="rs-kw">let</span> path = path.as_ref();
+    <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(parent) = path.parent() {
+        std::fs::create_dir_all(parent)?;
+    }
+    <span class="rs-kw">let</span> tmp = path.with_file_name(format!(
+        &quot;.{}.{}.{}.tmp&quot;,
+        path.file_name()
+            .and_then(|name| name.to_str())
+            .unwrap_or(&quot;layerstack&quot;),
+        std::process::id(),
+        <span class="rs-type">NEXT_TMP_WRITE</span>.fetch_add(1, <span class="rs-type">Ordering</span>::<span class="rs-type">Relaxed</span>)
+    ));
+    <span class="rs-comment">// tmp+rename+fsync(parent): the directory entry is only durable once the</span>
+    <span class="rs-comment">// parent dir is fsynced after the rename, so a crash cannot leave the</span>
+    <span class="rs-comment">// manifest/digest pointer-swap half-applied (CAS linearization).</span>
+    <span class="rs-kw">let</span> result = (|| -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>&gt; {
+        <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-fs-rs.html#item-fn-write-bytes-fsynced-106">write_bytes_fsynced</a>(&amp;tmp, bytes)?;
+        std::fs::rename(&amp;tmp, path)?;
+        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(parent) = path.parent() {
+            <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-fs-rs.html#item-fn-fsync-dir-117">fsync_dir</a>(parent)?;
+        }
+        <span class="rs-type">Ok</span>(())
+    })();
+    <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Err</span>(err) = result {
+        <span class="rs-kw">let</span> _ = std::fs::remove_file(&amp;tmp);
+        <span class="rs-kw">return</span> <span class="rs-type">Err</span>(err);
+    }
+    <span class="rs-type">Ok</span>(())
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-layerstack/src/stack/fs.rs:75</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn fsync_dir pub(crate) pub(crate) fn fsync_dir (path : &amp; Path) -&gt; Result &lt; () , LayerStackError &gt; crates/eos-layerstack/src/stack/fs.rs  ">
+</article><article id="item-fn-fsync-dir-117" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn fsync_dir pub(crate) pub(crate) fn fsync_dir (path : &amp; Path) -&gt; Result &lt; () , LayerStackError &gt; crates/eos-layerstack/src/stack/fs.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>fsync_dir</h3>
     <span class="visibility">pub(crate)</span>
   </div>
-  <code class="signature">pub(crate) fn fsync_dir (path : &amp; Path) -&gt; Result &lt; () , LayerStackError &gt;</code>
+  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-layerstack--src-stack-fs-rs.html#item-fn-fsync-dir-117">fsync_dir</a> (path : &amp; Path) -&gt; Result &lt; () , <a class="symbol-link" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a> &gt;</code>
+  <p class="docstring">fsync a directory so a prior create/rename into it is persisted.</p>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-comment">/// fsync a directory so a prior create/rename into it is persisted.</span>
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-fs-rs.html#item-fn-fsync-dir-117">fsync_dir</a>(path: &amp;<span class="rs-type">Path</span>) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>&gt; {
+    std::fs::<span class="rs-type">File</span>::<a class="symbol-link rs-fn" href="eos-layerstack--src-stack-rs.html#method-open-202">open</a>(path)?.sync_all()?;
+    <span class="rs-type">Ok</span>(())
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-layerstack/src/stack/fs.rs:117</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn fsync_tree_files pub(super) pub(super) fn fsync_tree_files (root : &amp; Path) -&gt; Result &lt; () , LayerStackError &gt; crates/eos-layerstack/src/stack/fs.rs  ">
+</article><article id="item-fn-fsync-tree-files-123" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn fsync_tree_files pub(super) pub(super) fn fsync_tree_files (root : &amp; Path) -&gt; Result &lt; () , LayerStackError &gt; crates/eos-layerstack/src/stack/fs.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>fsync_tree_files</h3>
     <span class="visibility">pub(super)</span>
   </div>
-  <code class="signature">pub(super) fn fsync_tree_files (root : &amp; Path) -&gt; Result &lt; () , LayerStackError &gt;</code>
+  <code class="signature">pub(super) fn <a class="symbol-link" href="eos-layerstack--src-stack-fs-rs.html#item-fn-fsync-tree-files-123">fsync_tree_files</a> (root : &amp; Path) -&gt; Result &lt; () , <a class="symbol-link" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a> &gt;</code>
+  <p class="docstring">fsync every non-symlink regular file under `root` (the staged layer tree),<br>matching `os.walk(followlinks=False)` + `is_file()` filtering. Special<br>files (char-device whiteouts) and symlinks are skipped — fsync is N/A.</p>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-comment">/// fsync every non-symlink regular file under `root` (the staged layer tree),</span>
+<span class="rs-comment">/// matching `os.walk(followlinks=False)` + `is_file()` filtering. Special</span>
+<span class="rs-comment">/// files (char-device whiteouts) and symlinks are skipped — fsync is N/A.</span>
+<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-fs-rs.html#item-fn-fsync-tree-files-123">fsync_tree_files</a>(root: &amp;<span class="rs-type">Path</span>) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>&gt; {
+    <span class="rs-kw">for</span> entry <span class="rs-kw">in</span> std::fs::read_dir(root)? {
+        <span class="rs-kw">let</span> entry = entry?;
+        <span class="rs-kw">let</span> path = entry.<a class="symbol-link rs-fn" href="eos-layerstack--src-workspace-base-rs.html#method-path-46">path</a>();
+        <span class="rs-kw">let</span> file_type = std::fs::symlink_metadata(&amp;path)?.file_type();
+        <span class="rs-kw">if</span> file_type.is_dir() {
+            <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-fs-rs.html#item-fn-fsync-tree-files-123">fsync_tree_files</a>(&amp;path)?;
+        } <span class="rs-kw">else</span> <span class="rs-kw">if</span> file_type.is_file() {
+            std::fs::<span class="rs-type">File</span>::<a class="symbol-link rs-fn" href="eos-layerstack--src-stack-rs.html#method-open-202">open</a>(&amp;path)?.sync_all()?;
+        }
+    }
+    <span class="rs-type">Ok</span>(())
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-layerstack/src/stack/fs.rs:123</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn move_path private fn move_path (source : &amp; Path , destination : &amp; Path) -&gt; Result &lt; () , LayerStackError &gt; crates/eos-layerstack/src/stack/fs.rs  ">
+</article><article id="item-fn-move-path-25" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn move_path private fn move_path (source : &amp; Path , destination : &amp; Path) -&gt; Result &lt; () , LayerStackError &gt; crates/eos-layerstack/src/stack/fs.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>move_path</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn move_path (source : &amp; Path , destination : &amp; Path) -&gt; Result &lt; () , LayerStackError &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-layerstack--src-stack-fs-rs.html#item-fn-move-path-25">move_path</a> (source : &amp; Path , destination : &amp; Path) -&gt; Result &lt; () , <a class="symbol-link" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a> &gt;</code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-fs-rs.html#item-fn-move-path-25">move_path</a>(source: &amp;<span class="rs-type">Path</span>, destination: &amp;<span class="rs-type">Path</span>) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>&gt; {
+    <span class="rs-kw">match</span> std::fs::rename(source, destination) {
+        <span class="rs-type">Ok</span>(()) =&gt; <span class="rs-type">Ok</span>(()),
+        <span class="rs-type">Err</span>(err) <span class="rs-kw">if</span> err.raw_os_error() == <span class="rs-type">Some</span>(18) =&gt; {
+            <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-fs-rs.html#item-fn-copy-path-36">copy_path</a>(source, destination)?;
+            <a class="symbol-link rs-fn" href="eos-layerstack--src-fsutil-rs.html#item-fn-remove-path-8">remove_path</a>(source)
+        }
+        <span class="rs-type">Err</span>(err) =&gt; <span class="rs-type">Err</span>(err.into()),
+    }
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-layerstack/src/stack/fs.rs:25</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn copy_path private fn copy_path (source : &amp; Path , destination : &amp; Path) -&gt; Result &lt; () , LayerStackError &gt; crates/eos-layerstack/src/stack/fs.rs  ">
+</article><article id="item-fn-copy-path-36" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn copy_path private fn copy_path (source : &amp; Path , destination : &amp; Path) -&gt; Result &lt; () , LayerStackError &gt; crates/eos-layerstack/src/stack/fs.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>copy_path</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn copy_path (source : &amp; Path , destination : &amp; Path) -&gt; Result &lt; () , LayerStackError &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-layerstack--src-stack-fs-rs.html#item-fn-copy-path-36">copy_path</a> (source : &amp; Path , destination : &amp; Path) -&gt; Result &lt; () , <a class="symbol-link" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a> &gt;</code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-fs-rs.html#item-fn-copy-path-36">copy_path</a>(source: &amp;<span class="rs-type">Path</span>, destination: &amp;<span class="rs-type">Path</span>) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>&gt; {
+    <span class="rs-kw">let</span> meta = std::fs::symlink_metadata(source)?;
+    <span class="rs-kw">if</span> meta.file_type().is_symlink() {
+        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(parent) = destination.parent() {
+            std::fs::create_dir_all(parent)?;
+        }
+        <span class="rs-kw">let</span> target = std::fs::read_link(source)?;
+        <a class="symbol-link rs-fn" href="eos-layerstack--src-fsutil-rs.html#item-fn-remove-path-8">remove_path</a>(destination)?;
+        std::os::unix::fs::symlink(target, destination)?;
+    } <span class="rs-kw">else</span> <span class="rs-kw">if</span> meta.is_dir() {
+        std::fs::create_dir_all(destination)?;
+        <span class="rs-kw">for</span> child <span class="rs-kw">in</span> std::fs::read_dir(source)? {
+            <span class="rs-kw">let</span> child = child?;
+            <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-fs-rs.html#item-fn-copy-path-36">copy_path</a>(&amp;child.<a class="symbol-link rs-fn" href="eos-layerstack--src-workspace-base-rs.html#method-path-46">path</a>(), &amp;destination.join(child.file_name()))?;
+        }
+    } <span class="rs-kw">else</span> <span class="rs-kw">if</span> meta.is_file() {
+        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(parent) = destination.parent() {
+            std::fs::create_dir_all(parent)?;
+        }
+        <a class="symbol-link rs-fn" href="eos-layerstack--src-fsutil-rs.html#item-fn-remove-path-8">remove_path</a>(destination)?;
+        std::fs::copy(source, destination)?;
+    }
+    <span class="rs-type">Ok</span>(())
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-layerstack/src/stack/fs.rs:36</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn write_bytes_fsynced private fn write_bytes_fsynced (path : &amp; Path , bytes : &amp; [u8]) -&gt; Result &lt; () , LayerStackError &gt; crates/eos-layerstack/src/stack/fs.rs  ">
+</article><article id="item-fn-write-bytes-fsynced-106" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn write_bytes_fsynced private fn write_bytes_fsynced (path : &amp; Path , bytes : &amp; [u8]) -&gt; Result &lt; () , LayerStackError &gt; crates/eos-layerstack/src/stack/fs.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>write_bytes_fsynced</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn write_bytes_fsynced (path : &amp; Path , bytes : &amp; [u8]) -&gt; Result &lt; () , LayerStackError &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-layerstack--src-stack-fs-rs.html#item-fn-write-bytes-fsynced-106">write_bytes_fsynced</a> (path : &amp; Path , bytes : &amp; [u8]) -&gt; Result &lt; () , <a class="symbol-link" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a> &gt;</code>
+  <p class="docstring">Write `bytes` to `path` (create/truncate) and fsync the file before<br>returning; the caller fsyncs the parent dir after any rename.</p>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-comment">/// Write `bytes` to `path` (create/truncate) and fsync the file before</span>
+<span class="rs-comment">/// returning; the caller fsyncs the parent dir after any rename.</span>
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-fs-rs.html#item-fn-write-bytes-fsynced-106">write_bytes_fsynced</a>(path: &amp;<span class="rs-type">Path</span>, bytes: &amp;[u8]) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>&gt; {
+    <span class="rs-kw">use</span> std::io::<span class="rs-type">Write</span> <span class="rs-kw">as</span> _;
+
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> file = std::fs::<span class="rs-type">File</span>::create(path)?;
+    file.write_all(bytes)?;
+    file.sync_all()?;
+    <span class="rs-type">Ok</span>(())
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-layerstack/src/stack/fs.rs:106</p>
 </article></div>
 </section></div>
 </main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/eos-layerstack/src/stack/fs.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-kw">use</span> std::path::<span class="rs-type">Path</span>;
+<span class="rs-kw">use</span> std::sync::atomic::<span class="rs-type">Ordering</span>;
+
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::error::<a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>;
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::fsutil::remove_path;
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::storage_lock::<span class="rs-type">STORAGE_WRITER_LOCK_FILE</span>;
+
+<span class="rs-kw">use</span> <span class="rs-kw">super</span>::<span class="rs-type">NEXT_TMP_WRITE</span>;
+
+<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-fs-rs.html#item-fn-replace-workspace-contents-10">replace_workspace_contents</a>(
+    destination: &amp;<span class="rs-type">Path</span>,
+    source: &amp;<span class="rs-type">Path</span>,
+) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>&gt; {
+    std::fs::create_dir_all(destination)?;
+    <span class="rs-kw">for</span> child <span class="rs-kw">in</span> std::fs::read_dir(destination)? {
+        <a class="symbol-link rs-fn" href="eos-layerstack--src-fsutil-rs.html#item-fn-remove-path-8">remove_path</a>(&amp;child?.<a class="symbol-link rs-fn" href="eos-layerstack--src-workspace-base-rs.html#method-path-46">path</a>())?;
+    }
+    <span class="rs-kw">for</span> child <span class="rs-kw">in</span> std::fs::read_dir(source)? {
+        <span class="rs-kw">let</span> child = child?;
+        <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-fs-rs.html#item-fn-move-path-25">move_path</a>(&amp;child.<a class="symbol-link rs-fn" href="eos-layerstack--src-workspace-base-rs.html#method-path-46">path</a>(), &amp;destination.join(child.file_name()))?;
+    }
+    <span class="rs-type">Ok</span>(())
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-fs-rs.html#item-fn-move-path-25">move_path</a>(source: &amp;<span class="rs-type">Path</span>, destination: &amp;<span class="rs-type">Path</span>) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>&gt; {
+    <span class="rs-kw">match</span> std::fs::rename(source, destination) {
+        <span class="rs-type">Ok</span>(()) =&gt; <span class="rs-type">Ok</span>(()),
+        <span class="rs-type">Err</span>(err) <span class="rs-kw">if</span> err.raw_os_error() == <span class="rs-type">Some</span>(18) =&gt; {
+            <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-fs-rs.html#item-fn-copy-path-36">copy_path</a>(source, destination)?;
+            <a class="symbol-link rs-fn" href="eos-layerstack--src-fsutil-rs.html#item-fn-remove-path-8">remove_path</a>(source)
+        }
+        <span class="rs-type">Err</span>(err) =&gt; <span class="rs-type">Err</span>(err.into()),
+    }
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-fs-rs.html#item-fn-copy-path-36">copy_path</a>(source: &amp;<span class="rs-type">Path</span>, destination: &amp;<span class="rs-type">Path</span>) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>&gt; {
+    <span class="rs-kw">let</span> meta = std::fs::symlink_metadata(source)?;
+    <span class="rs-kw">if</span> meta.file_type().is_symlink() {
+        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(parent) = destination.parent() {
+            std::fs::create_dir_all(parent)?;
+        }
+        <span class="rs-kw">let</span> target = std::fs::read_link(source)?;
+        <a class="symbol-link rs-fn" href="eos-layerstack--src-fsutil-rs.html#item-fn-remove-path-8">remove_path</a>(destination)?;
+        std::os::unix::fs::symlink(target, destination)?;
+    } <span class="rs-kw">else</span> <span class="rs-kw">if</span> meta.is_dir() {
+        std::fs::create_dir_all(destination)?;
+        <span class="rs-kw">for</span> child <span class="rs-kw">in</span> std::fs::read_dir(source)? {
+            <span class="rs-kw">let</span> child = child?;
+            <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-fs-rs.html#item-fn-copy-path-36">copy_path</a>(&amp;child.<a class="symbol-link rs-fn" href="eos-layerstack--src-workspace-base-rs.html#method-path-46">path</a>(), &amp;destination.join(child.file_name()))?;
+        }
+    } <span class="rs-kw">else</span> <span class="rs-kw">if</span> meta.is_file() {
+        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(parent) = destination.parent() {
+            std::fs::create_dir_all(parent)?;
+        }
+        <a class="symbol-link rs-fn" href="eos-layerstack--src-fsutil-rs.html#item-fn-remove-path-8">remove_path</a>(destination)?;
+        std::fs::copy(source, destination)?;
+    }
+    <span class="rs-type">Ok</span>(())
+}
+
+<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-fs-rs.html#item-fn-clear-storage-root-preserving-lock-61">clear_storage_root_preserving_lock</a>(
+    storage_root: &amp;<span class="rs-type">Path</span>,
+) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>&gt; {
+    std::fs::create_dir_all(storage_root)?;
+    <span class="rs-kw">for</span> child <span class="rs-kw">in</span> std::fs::read_dir(storage_root)? {
+        <span class="rs-kw">let</span> child = child?;
+        <span class="rs-kw">if</span> child.file_name() == <span class="rs-type">STORAGE_WRITER_LOCK_FILE</span> {
+            <span class="rs-kw">continue</span>;
+        }
+        <a class="symbol-link rs-fn" href="eos-layerstack--src-fsutil-rs.html#item-fn-remove-path-8">remove_path</a>(&amp;child.<a class="symbol-link rs-fn" href="eos-layerstack--src-workspace-base-rs.html#method-path-46">path</a>())?;
+    }
+    <span class="rs-type">Ok</span>(())
+}
+
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-fs-rs.html#item-fn-write-atomic-75">write_atomic</a>(path: <span class="rs-kw">impl</span> <span class="rs-type">AsRef</span>&lt;<span class="rs-type">Path</span>&gt;, bytes: &amp;[u8]) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>&gt; {
+    <span class="rs-kw">let</span> path = path.as_ref();
+    <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(parent) = path.parent() {
+        std::fs::create_dir_all(parent)?;
+    }
+    <span class="rs-kw">let</span> tmp = path.with_file_name(format!(
+        &quot;.{}.{}.{}.tmp&quot;,
+        path.file_name()
+            .and_then(|name| name.to_str())
+            .unwrap_or(&quot;layerstack&quot;),
+        std::process::id(),
+        <span class="rs-type">NEXT_TMP_WRITE</span>.fetch_add(1, <span class="rs-type">Ordering</span>::<span class="rs-type">Relaxed</span>)
+    ));
+    <span class="rs-comment">// tmp+rename+fsync(parent): the directory entry is only durable once the</span>
+    <span class="rs-comment">// parent dir is fsynced after the rename, so a crash cannot leave the</span>
+    <span class="rs-comment">// manifest/digest pointer-swap half-applied (CAS linearization).</span>
+    <span class="rs-kw">let</span> result = (|| -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>&gt; {
+        <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-fs-rs.html#item-fn-write-bytes-fsynced-106">write_bytes_fsynced</a>(&amp;tmp, bytes)?;
+        std::fs::rename(&amp;tmp, path)?;
+        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(parent) = path.parent() {
+            <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-fs-rs.html#item-fn-fsync-dir-117">fsync_dir</a>(parent)?;
+        }
+        <span class="rs-type">Ok</span>(())
+    })();
+    <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Err</span>(err) = result {
+        <span class="rs-kw">let</span> _ = std::fs::remove_file(&amp;tmp);
+        <span class="rs-kw">return</span> <span class="rs-type">Err</span>(err);
+    }
+    <span class="rs-type">Ok</span>(())
+}
+
+<span class="rs-comment">/// Write `bytes` to `path` (create/truncate) and fsync the file before</span>
+<span class="rs-comment">/// returning; the caller fsyncs the parent dir after any rename.</span>
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-fs-rs.html#item-fn-write-bytes-fsynced-106">write_bytes_fsynced</a>(path: &amp;<span class="rs-type">Path</span>, bytes: &amp;[u8]) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>&gt; {
+    <span class="rs-kw">use</span> std::io::<span class="rs-type">Write</span> <span class="rs-kw">as</span> _;
+
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> file = std::fs::<span class="rs-type">File</span>::create(path)?;
+    file.write_all(bytes)?;
+    file.sync_all()?;
+    <span class="rs-type">Ok</span>(())
+}
+
+<span class="rs-comment">/// fsync a directory so a prior create/rename into it is persisted.</span>
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-fs-rs.html#item-fn-fsync-dir-117">fsync_dir</a>(path: &amp;<span class="rs-type">Path</span>) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>&gt; {
+    std::fs::<span class="rs-type">File</span>::<a class="symbol-link rs-fn" href="eos-layerstack--src-stack-rs.html#method-open-202">open</a>(path)?.sync_all()?;
+    <span class="rs-type">Ok</span>(())
+}
+
+<span class="rs-comment">/// fsync every non-symlink regular file under `root` (the staged layer tree),</span>
+<span class="rs-comment">/// matching `os.walk(followlinks=False)` + `is_file()` filtering. Special</span>
+<span class="rs-comment">/// files (char-device whiteouts) and symlinks are skipped — fsync is N/A.</span>
+<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-fs-rs.html#item-fn-fsync-tree-files-123">fsync_tree_files</a>(root: &amp;<span class="rs-type">Path</span>) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>&gt; {
+    <span class="rs-kw">for</span> entry <span class="rs-kw">in</span> std::fs::read_dir(root)? {
+        <span class="rs-kw">let</span> entry = entry?;
+        <span class="rs-kw">let</span> path = entry.<a class="symbol-link rs-fn" href="eos-layerstack--src-workspace-base-rs.html#method-path-46">path</a>();
+        <span class="rs-kw">let</span> file_type = std::fs::symlink_metadata(&amp;path)?.file_type();
+        <span class="rs-kw">if</span> file_type.is_dir() {
+            <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-fs-rs.html#item-fn-fsync-tree-files-123">fsync_tree_files</a>(&amp;path)?;
+        } <span class="rs-kw">else</span> <span class="rs-kw">if</span> file_type.is_file() {
+            std::fs::<span class="rs-type">File</span>::<a class="symbol-link rs-fn" href="eos-layerstack--src-stack-rs.html#method-open-202">open</a>(&amp;path)?.sync_all()?;
+        }
+    }
+    <span class="rs-type">Ok</span>(())
+}
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
   <script src="../assets/inventory.js"></script>
 </body>
 </html>

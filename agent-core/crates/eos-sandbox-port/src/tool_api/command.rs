@@ -148,3 +148,26 @@ pub async fn collect_command_completions(
     };
     Ok(completions)
 }
+
+/// Cancel every workspace run owned by one caller in one RPC
+/// (`caller_id == agent_run_id`): the daemon discards the caller's command
+/// session(s) and exits its isolated workspace if open. This is agent-core's
+/// per-run command-session teardown — one call replaces per-session cancels.
+/// Returns the daemon's raw response object (`cancelled_command_sessions`,
+/// `isolated_exited`); the caller may ignore it on success.
+pub async fn cancel_workspace_runs_by_caller_id(
+    transport: &dyn SandboxTransport,
+    sandbox_id: &SandboxId,
+    caller_id: &str,
+) -> Result<JsonObject, SandboxPortError> {
+    let mut payload = JsonObject::new();
+    payload.insert("caller_id".to_owned(), Value::String(caller_id.to_owned()));
+    transport
+        .call(
+            sandbox_id,
+            DaemonOp::CancelWorkspaceRunsByCaller,
+            payload,
+            exec_dispatch_timeout(None),
+        )
+        .await
+}

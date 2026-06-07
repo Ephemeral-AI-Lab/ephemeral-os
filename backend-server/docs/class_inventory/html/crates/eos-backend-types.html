@@ -1,0 +1,262 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>eos-backend-types · src/audit.rs</title>
+  <link rel="stylesheet" href="../assets/inventory.css">
+</head>
+<body>
+  <header>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>eos-backend-types File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS/backend-server &amp;&amp; cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
+  </header>
+  <a class="back-link" href="../index.html">backend-server</a>
+<section class="summary">
+  <div><b>7</b><span>modules</span></div>
+  <div><b>26</b><span>items</span></div>
+  <div><b>86</b><span>fields</span></div>
+  <div><b>6</b><span>methods</span></div>
+</section>
+<section class="toolbar">
+  <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
+  <select id="kind-filter">
+    <option value="">All items</option>
+    <option value="type-model">Type model</option>
+    <option value="struct">Structs</option>
+    <option value="enum">Enums</option>
+    <option value="trait">Traits</option>
+    <option value="impl">Impls</option>
+    <option value="fn">Functions</option>
+    <option value="type">Aliases</option>
+  </select>
+</section>
+<main class="crate-layout">
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><a class="file-link active" href="eos-backend-types.html"><span>audit.rs</span><small>4/0</small></a></li><li><a class="file-link" href="eos-backend-types--src-events-rs.html"><span>events.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-backend-types--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-backend-types--src-pagination-rs.html"><span>pagination.rs</span><small>2/0</small></a></li><li><a class="file-link" href="eos-backend-types--src-requests-rs.html"><span>requests.rs</span><small>9/0</small></a></li><li><a class="file-link" href="eos-backend-types--src-sandboxes-rs.html"><span>sandboxes.rs</span><small>2/0</small></a></li><li><a class="file-link" href="eos-backend-types--src-stats-rs.html"><span>stats.rs</span><small>4/0</small></a></li></ul></li></ul></nav>
+  <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="audit crates/eos-backend-types/src/audit.rs ObsSource impl ObsSource ObsEvent SandboxCallCorrelation AuditCursor">
+  <div class="module-head">
+    <div>
+      <h2>src/audit.rs</h2>
+      <p class="path">module <code>audit</code></p>
+    </div>
+    <div class="module-stats">
+      <span>file owns</span>
+      <span>4 types</span>
+      <span>1 impls</span>
+      <span>0 fns</span>
+      <span>2 methods</span>
+    </div>
+  </div>
+  <div class="items"><div class="group-label">File-Owned Types</div><article id="item-struct-ObsEvent-45" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct ObsEvent pub pub struct ObsEvent crates/eos-backend-types/src/audit.rs id Option &lt; i64 &gt; request_id Option &lt; RequestId &gt; task_id Option &lt; TaskId &gt; agent_run_id Option &lt; AgentRunId &gt; tool_use_id Option &lt; ToolUseId &gt; sandbox_invocation_id Option &lt; InvocationId &gt; sandbox_id Option &lt; SandboxId &gt; source ObsSource kind String payload serde_json :: Value created_at UtcDateTime ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>ObsEvent</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub struct <a class="symbol-link" href="eos-backend-types.html#item-struct-ObsEvent-45">ObsEvent</a></code>
+  <p class="docstring">One persisted observability event (`obs_event`).<br>Daemon audit rows with no matching correlation bridge persist with null<br>model-facing ids (`request_id` / `task_id` / `agent_run_id` / `tool_use_id`).</p>
+  <div class="tags"><span>derive: Clone</span><span>derive: Debug</span><span>derive: Deserialize</span><span>derive: PartialEq</span><span>derive: Serialize</span><span>serde</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>id</td><td><code>Option &lt; i64 &gt;</code></td></tr><tr><td>pub</td><td>request_id</td><td><code>Option &lt; RequestId &gt;</code></td></tr><tr><td>pub</td><td>task_id</td><td><code>Option &lt; TaskId &gt;</code></td></tr><tr><td>pub</td><td>agent_run_id</td><td><code>Option &lt; AgentRunId &gt;</code></td></tr><tr><td>pub</td><td>tool_use_id</td><td><code>Option &lt; ToolUseId &gt;</code></td></tr><tr><td>pub</td><td>sandbox_invocation_id</td><td><code>Option &lt; InvocationId &gt;</code></td></tr><tr><td>pub</td><td>sandbox_id</td><td><code>Option &lt; SandboxId &gt;</code></td></tr><tr><td>pub</td><td>source</td><td><code><a class="symbol-link" href="eos-backend-types.html#item-enum-ObsSource-14">ObsSource</a></code></td></tr><tr><td>pub</td><td>kind</td><td><code>String</code></td></tr><tr><td>pub</td><td>payload</td><td><code>serde_json :: Value</code></td></tr><tr><td>pub</td><td>created_at</td><td><code>UtcDateTime</code></td></tr></tbody></table>
+
+  <p class="source">crates/eos-backend-types/src/audit.rs:45</p>
+</article><article id="item-struct-SandboxCallCorrelation-75" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct SandboxCallCorrelation pub pub struct SandboxCallCorrelation crates/eos-backend-types/src/audit.rs request_id RequestId task_id TaskId agent_run_id AgentRunId tool_use_id ToolUseId sandbox_invocation_id InvocationId caller_id CallerId sandbox_id SandboxId created_at UtcDateTime ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>SandboxCallCorrelation</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub struct <a class="symbol-link" href="eos-backend-types.html#item-struct-SandboxCallCorrelation-75">SandboxCallCorrelation</a></code>
+  <p class="docstring">The persisted bridge joining a model/tool call to its daemon/sandbox<br>invocation (`sandbox_call_correlation`).<br>`tool_use_id` is the model identifier; `sandbox_invocation_id` is the daemon<br>identifier; the join key is `(sandbox_id, caller_id, sandbox_invocation_id)`.</p>
+  <div class="tags"><span>derive: Clone</span><span>derive: Debug</span><span>derive: Deserialize</span><span>derive: PartialEq</span><span>derive: Serialize</span><span>serde</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>request_id</td><td><code>RequestId</code></td></tr><tr><td>pub</td><td>task_id</td><td><code>TaskId</code></td></tr><tr><td>pub</td><td>agent_run_id</td><td><code>AgentRunId</code></td></tr><tr><td>pub</td><td>tool_use_id</td><td><code>ToolUseId</code></td></tr><tr><td>pub</td><td>sandbox_invocation_id</td><td><code>InvocationId</code></td></tr><tr><td>pub</td><td>caller_id</td><td><code>CallerId</code></td></tr><tr><td>pub</td><td>sandbox_id</td><td><code>SandboxId</code></td></tr><tr><td>pub</td><td>created_at</td><td><code>UtcDateTime</code></td></tr></tbody></table>
+
+  <p class="source">crates/eos-backend-types/src/audit.rs:75</p>
+</article><article id="item-struct-AuditCursor-100" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct AuditCursor pub pub struct AuditCursor crates/eos-backend-types/src/audit.rs sandbox_id SandboxId last_seq i64 boot_epoch_id i64 lost_before_seq Option &lt; i64 &gt; dropped_count u64 updated_at UtcDateTime ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>AuditCursor</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub struct <a class="symbol-link" href="eos-backend-types.html#item-struct-AuditCursor-100">AuditCursor</a></code>
+  <p class="docstring">Per-sandbox audit pull cursor (`audit_cursor`).<br>`boot_epoch_id` detects daemon restarts so a sequence regression alone is not<br>trusted (AC8).</p>
+  <div class="tags"><span>derive: Clone</span><span>derive: Debug</span><span>derive: Deserialize</span><span>derive: PartialEq</span><span>derive: Serialize</span><span>serde</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>sandbox_id</td><td><code>SandboxId</code></td></tr><tr><td>pub</td><td>last_seq</td><td><code>i64</code></td></tr><tr><td>pub</td><td>boot_epoch_id</td><td><code>i64</code></td></tr><tr><td>pub</td><td>lost_before_seq</td><td><code>Option &lt; i64 &gt;</code></td></tr><tr><td>pub</td><td>dropped_count</td><td><code>u64</code></td></tr><tr><td>pub</td><td>updated_at</td><td><code>UtcDateTime</code></td></tr></tbody></table>
+
+  <p class="source">crates/eos-backend-types/src/audit.rs:100</p>
+</article><article id="item-enum-ObsSource-14" class="type-card" data-kind="enum" data-kind-list="enum field impl method type-model" data-filter-text="enum ObsSource pub pub enum ObsSource crates/eos-backend-types/src/audit.rs  ">
+  <div class="item-head">
+    <span class="kind">enum</span>
+    <h3>ObsSource</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub enum <a class="symbol-link" href="eos-backend-types.html#item-enum-ObsSource-14">ObsSource</a></code>
+  <p class="docstring">Origin of an observability event.</p>
+  <div class="tags"><span>derive: Clone</span><span>derive: Copy</span><span>derive: Debug</span><span>derive: Deserialize</span><span>derive: Eq</span><span>derive: PartialEq</span><span>derive: Serialize</span><span>serde</span><span>serde: rename_all</span></div>
+  <h4>Variants</h4><table><tbody><tr><td>Engine</td><td><code></code></td></tr><tr><td>Daemon</td><td><code></code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-from-db-34"><td>constructor</td><td>from_db</td><td><code>pub fn <a class="symbol-link" href="eos-backend-types.html#method-from-db-34">from_db</a> (value : &amp; str) -&gt; Option &lt; Self &gt;</code><p class="docstring">Parse the TEXT-column form, returning `None` for an unknown value.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Parse the TEXT-column form, returning `None` for an unknown value.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-backend-types.html#method-from-db-34">from_db</a>(value: &amp;str) -&gt; <span class="rs-type">Option</span>&lt;<span class="rs-self">Self</span>&gt; {
+        <span class="rs-kw">match</span> value {
+            &quot;engine&quot; =&gt; <span class="rs-type">Some</span>(<span class="rs-self">Self</span>::<span class="rs-type">Engine</span>),
+            &quot;daemon&quot; =&gt; <span class="rs-type">Some</span>(<span class="rs-self">Self</span>::<span class="rs-type">Daemon</span>),
+            _ =&gt; <span class="rs-type">None</span>,
+        }
+    }
+</code></pre>
+</details></td></tr><tr id="method-as-str-25"><td>method</td><td>as_str</td><td><code>pub fn <a class="symbol-link" href="eos-backend-types.html#method-as-str-25">as_str</a> (self) -&gt; &amp; &#x27;static str</code><p class="docstring">The stable TEXT-column form (matches the `snake_case` serde form).</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// The stable TEXT-column form (matches the `snake_case` serde form).</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-backend-types.html#method-as-str-25">as_str</a>(<span class="rs-self">self</span>) -&gt; &amp;&#x27;<span class="rs-kw">static</span> str {
+        <span class="rs-kw">match</span> <span class="rs-self">self</span> {
+            <span class="rs-self">Self</span>::<span class="rs-type">Engine</span> =&gt; &quot;engine&quot;,
+            <span class="rs-self">Self</span>::<span class="rs-type">Daemon</span> =&gt; &quot;daemon&quot;,
+        }
+    }
+</code></pre>
+</details></td></tr></tbody></table>
+
+  <p class="source">crates/eos-backend-types/src/audit.rs:14</p>
+</article></div>
+</section></div>
+</main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/eos-backend-types/src/audit.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-comment">//! Observability and daemon-audit correlation DTOs.</span>
+<span class="rs-comment">//!</span>
+<span class="rs-comment">//! These rows are persistence-internal (they are never serialized as public API</span>
+<span class="rs-comment">//! bodies), so they derive serde only, not `JsonSchema` — and they carry the</span>
+<span class="rs-comment">//! daemon-supplied [`CallerId`], which has no `JsonSchema` impl. Model-facing</span>
+<span class="rs-comment">//! ([`ToolUseId`]) and daemon-facing ([`InvocationId`]) identities are stored as</span>
+<span class="rs-comment">//! distinct fields and are never reused as one another (AC7).</span>
+
+<span class="rs-kw">use</span> serde::{<span class="rs-type">Deserialize</span>, <span class="rs-type">Serialize</span>};
+
+<span class="rs-kw">use</span> eos_protocol::<span class="rs-type">CallerId</span>;
+<span class="rs-kw">use</span> eos_types::{<span class="rs-type">AgentRunId</span>, <span class="rs-type">InvocationId</span>, <span class="rs-type">RequestId</span>, <span class="rs-type">SandboxId</span>, <span class="rs-type">TaskId</span>, <span class="rs-type">ToolUseId</span>, <span class="rs-type">UtcDateTime</span>};
+
+<span class="rs-comment">/// Origin of an observability event.</span>
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">Copy</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Eq</span>, <span class="rs-type">Serialize</span>, <span class="rs-type">Deserialize</span>)]
+#[serde(rename_all = &quot;snake_case&quot;)]
+<span class="rs-kw">pub</span> <span class="rs-kw">enum</span> <a class="symbol-link rs-type" href="eos-backend-types.html#item-enum-ObsSource-14">ObsSource</a> {
+    <span class="rs-comment">/// Emitted by the agent-core engine / tool path (model-facing).</span>
+    <span class="rs-type">Engine</span>,
+    <span class="rs-comment">/// Pulled from the sandbox daemon audit stream (daemon-facing).</span>
+    <span class="rs-type">Daemon</span>,
+}
+
+<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-backend-types.html#item-enum-ObsSource-14">ObsSource</a> {
+    <span class="rs-comment">/// The stable TEXT-column form (matches the `snake_case` serde form).</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-backend-types.html#method-as-str-25">as_str</a>(<span class="rs-self">self</span>) -&gt; &amp;&#x27;<span class="rs-kw">static</span> str {
+        <span class="rs-kw">match</span> <span class="rs-self">self</span> {
+            <span class="rs-self">Self</span>::<span class="rs-type">Engine</span> =&gt; &quot;engine&quot;,
+            <span class="rs-self">Self</span>::<span class="rs-type">Daemon</span> =&gt; &quot;daemon&quot;,
+        }
+    }
+
+    <span class="rs-comment">/// Parse the TEXT-column form, returning `None` for an unknown value.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-backend-types.html#method-from-db-34">from_db</a>(value: &amp;str) -&gt; <span class="rs-type">Option</span>&lt;<span class="rs-self">Self</span>&gt; {
+        <span class="rs-kw">match</span> value {
+            &quot;engine&quot; =&gt; <span class="rs-type">Some</span>(<span class="rs-self">Self</span>::<span class="rs-type">Engine</span>),
+            &quot;daemon&quot; =&gt; <span class="rs-type">Some</span>(<span class="rs-self">Self</span>::<span class="rs-type">Daemon</span>),
+            _ =&gt; <span class="rs-type">None</span>,
+        }
+    }
+}
+
+<span class="rs-comment">/// One persisted observability event (`obs_event`).</span>
+<span class="rs-comment">///</span>
+<span class="rs-comment">/// Daemon audit rows with no matching correlation bridge persist with null</span>
+<span class="rs-comment">/// model-facing ids (`request_id` / `task_id` / `agent_run_id` / `tool_use_id`).</span>
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Serialize</span>, <span class="rs-type">Deserialize</span>)]
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-backend-types.html#item-struct-ObsEvent-45">ObsEvent</a> {
+    <span class="rs-comment">/// Autoincrement row id; `None` before insert, `Some` once persisted.</span>
+    <span class="rs-kw">pub</span> id: <span class="rs-type">Option</span>&lt;i64&gt;,
+    <span class="rs-comment">/// Owning request id, when known.</span>
+    <span class="rs-kw">pub</span> request_id: <span class="rs-type">Option</span>&lt;<span class="rs-type">RequestId</span>&gt;,
+    <span class="rs-comment">/// Owning task id, when known.</span>
+    <span class="rs-kw">pub</span> task_id: <span class="rs-type">Option</span>&lt;<span class="rs-type">TaskId</span>&gt;,
+    <span class="rs-comment">/// Owning agent-run id, when known.</span>
+    <span class="rs-kw">pub</span> agent_run_id: <span class="rs-type">Option</span>&lt;<span class="rs-type">AgentRunId</span>&gt;,
+    <span class="rs-comment">/// Model/tool-call id, when known. Never set from `sandbox_invocation_id`.</span>
+    <span class="rs-kw">pub</span> tool_use_id: <span class="rs-type">Option</span>&lt;<span class="rs-type">ToolUseId</span>&gt;,
+    <span class="rs-comment">/// Daemon/sandbox-call id, when known.</span>
+    <span class="rs-kw">pub</span> sandbox_invocation_id: <span class="rs-type">Option</span>&lt;<span class="rs-type">InvocationId</span>&gt;,
+    <span class="rs-comment">/// Sandbox the event relates to, when known.</span>
+    <span class="rs-kw">pub</span> sandbox_id: <span class="rs-type">Option</span>&lt;<span class="rs-type">SandboxId</span>&gt;,
+    <span class="rs-comment">/// Event origin.</span>
+    <span class="rs-kw">pub</span> source: <a class="symbol-link rs-type" href="eos-backend-types.html#item-enum-ObsSource-14">ObsSource</a>,
+    <span class="rs-comment">/// Event classification (free TEXT, e.g. an `unmatched` marker).</span>
+    <span class="rs-kw">pub</span> kind: <span class="rs-type">String</span>,
+    <span class="rs-comment">/// Event-specific payload.</span>
+    <span class="rs-kw">pub</span> payload: serde_json::<span class="rs-type">Value</span>,
+    <span class="rs-comment">/// When the event was recorded.</span>
+    <span class="rs-kw">pub</span> created_at: <span class="rs-type">UtcDateTime</span>,
+}
+
+<span class="rs-comment">/// The persisted bridge joining a model/tool call to its daemon/sandbox</span>
+<span class="rs-comment">/// invocation (`sandbox_call_correlation`).</span>
+<span class="rs-comment">///</span>
+<span class="rs-comment">/// `tool_use_id` is the model identifier; `sandbox_invocation_id` is the daemon</span>
+<span class="rs-comment">/// identifier; the join key is `(sandbox_id, caller_id, sandbox_invocation_id)`.</span>
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Serialize</span>, <span class="rs-type">Deserialize</span>)]
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-backend-types.html#item-struct-SandboxCallCorrelation-75">SandboxCallCorrelation</a> {
+    <span class="rs-comment">/// Owning request id.</span>
+    <span class="rs-kw">pub</span> request_id: <span class="rs-type">RequestId</span>,
+    <span class="rs-comment">/// Owning task id.</span>
+    <span class="rs-kw">pub</span> task_id: <span class="rs-type">TaskId</span>,
+    <span class="rs-comment">/// Owning agent-run id.</span>
+    <span class="rs-kw">pub</span> agent_run_id: <span class="rs-type">AgentRunId</span>,
+    <span class="rs-comment">/// Model/tool-call id.</span>
+    <span class="rs-kw">pub</span> tool_use_id: <span class="rs-type">ToolUseId</span>,
+    <span class="rs-comment">/// Daemon/sandbox-call id.</span>
+    <span class="rs-kw">pub</span> sandbox_invocation_id: <span class="rs-type">InvocationId</span>,
+    <span class="rs-comment">/// Daemon-supplied caller identity.</span>
+    <span class="rs-kw">pub</span> caller_id: <span class="rs-type">CallerId</span>,
+    <span class="rs-comment">/// Sandbox the call ran in.</span>
+    <span class="rs-kw">pub</span> sandbox_id: <span class="rs-type">SandboxId</span>,
+    <span class="rs-comment">/// When the bridge row was recorded (before the daemon request is sent).</span>
+    <span class="rs-kw">pub</span> created_at: <span class="rs-type">UtcDateTime</span>,
+}
+
+<span class="rs-comment">/// Per-sandbox audit pull cursor (`audit_cursor`).</span>
+<span class="rs-comment">///</span>
+<span class="rs-comment">/// `boot_epoch_id` detects daemon restarts so a sequence regression alone is not</span>
+<span class="rs-comment">/// trusted (AC8).</span>
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Serialize</span>, <span class="rs-type">Deserialize</span>)]
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-backend-types.html#item-struct-AuditCursor-100">AuditCursor</a> {
+    <span class="rs-comment">/// Sandbox the cursor tracks (primary key).</span>
+    <span class="rs-kw">pub</span> sandbox_id: <span class="rs-type">SandboxId</span>,
+    <span class="rs-comment">/// Highest daemon audit sequence consumed for the current epoch.</span>
+    <span class="rs-kw">pub</span> last_seq: i64,
+    <span class="rs-comment">/// Daemon boot epoch the cursor is anchored to.</span>
+    <span class="rs-kw">pub</span> boot_epoch_id: i64,
+    <span class="rs-comment">/// Sequence below which events were lost (set on epoch change), if any.</span>
+    <span class="rs-kw">pub</span> lost_before_seq: <span class="rs-type">Option</span>&lt;i64&gt;,
+    <span class="rs-comment">/// Count of audit events the daemon dropped for this sandbox in the current boot</span>
+    <span class="rs-comment">/// epoch (the daemon ring counter restarts on reboot, so this is not cumulative</span>
+    <span class="rs-comment">/// across epochs).</span>
+    <span class="rs-kw">pub</span> dropped_count: u64,
+    <span class="rs-comment">/// When the cursor was last advanced.</span>
+    <span class="rs-kw">pub</span> updated_at: <span class="rs-type">UtcDateTime</span>,
+}
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
+  <script src="../assets/inventory.js"></script>
+</body>
+</html>

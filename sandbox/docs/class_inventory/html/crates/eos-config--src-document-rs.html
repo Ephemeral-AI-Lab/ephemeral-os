@@ -8,8 +8,16 @@
 </head>
 <body>
   <header>
-    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
-    <h1>eos-config File Inventory</h1>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>eos-config File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS/sandbox &amp;&amp; cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
   </header>
   <a class="back-link" href="../index.html">sandbox</a>
 <section class="summary">
@@ -47,19 +55,212 @@
       <span>8 methods</span>
     </div>
   </div>
-  <div class="items"><div class="group-label">File-Owned Types</div><article class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct ConfigDocument pub pub struct ConfigDocument crates/eos-config/src/document.rs value Value ">
+  <div class="items"><div class="group-label">File-Owned Types</div><article id="item-struct-ConfigDocument-11" class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct ConfigDocument pub pub struct ConfigDocument crates/eos-config/src/document.rs value Value ">
   <div class="item-head">
     <span class="kind">struct</span>
     <h3>ConfigDocument</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub struct ConfigDocument</code>
-  <div class="tags"><span>config</span></div>
-  <h4>Fields</h4><table><tbody><tr><td>private</td><td>value</td><td><code>Value</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr><td>constructor</td><td>from_yaml_str</td><td><code>pub(crate) fn from_yaml_str (text : &amp; str) -&gt; Result &lt; Self , ConfigError &gt;</code></td></tr><tr><td>method</td><td>merge</td><td><code>pub(crate) fn merge (&amp; mut self , override_doc : Self) -&gt; Result &lt; () , ConfigError &gt;</code></td></tr><tr><td>method</td><td>to_yaml_string</td><td><code>pub fn to_yaml_string (&amp; self) -&gt; Result &lt; String , ConfigError &gt;</code></td></tr><tr><td>method</td><td>into_value</td><td><code>pub(crate) fn into_value (self) -&gt; Value</code></td></tr><tr><td>method</td><td>section</td><td><code>pub fn section &lt; T &gt; (&amp; self , name : &amp; str) -&gt; Result &lt; T , ConfigError &gt; where T : DeserializeOwned ,</code></td></tr><tr><td>method</td><td>root_mapping</td><td><code>fn root_mapping (&amp; self) -&gt; Result &lt; &amp; Mapping , ConfigError &gt;</code></td></tr><tr><td>associated-fn</td><td>read</td><td><code>pub(crate) fn read (path : &amp; Path) -&gt; Result &lt; Self , ConfigError &gt;</code></td></tr><tr><td>associated-fn</td><td>parse</td><td><code>pub(crate) fn parse (path : &amp; Path , text : &amp; str) -&gt; Result &lt; Self , ConfigError &gt;</code></td></tr></tbody></table>
+  <code class="signature">pub struct <a class="symbol-link" href="eos-config--src-document-rs.html#item-struct-ConfigDocument-11">ConfigDocument</a></code>
+  <p class="docstring">Parsed sandbox configuration document.</p>
+  <div class="tags"><span>config</span><span>derive: Clone</span><span>derive: Debug</span><span>derive: PartialEq</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>value</td><td><code>Value</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-from-yaml-str-34"><td>constructor</td><td>from_yaml_str</td><td><code>pub(crate) fn <a class="symbol-link" href="eos-config--src-document-rs.html#method-from-yaml-str-34">from_yaml_str</a> (text : &amp; str) -&gt; Result &lt; Self , <a class="symbol-link" href="eos-config--src-error-rs.html#item-enum-ConfigError-7">ConfigError</a> &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[cfg(test)]
+    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-config--src-document-rs.html#method-from-yaml-str-34">from_yaml_str</a>(text: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-self">Self</span>, <a class="symbol-link rs-type" href="eos-config--src-error-rs.html#item-enum-ConfigError-7">ConfigError</a>&gt; {
+        <span class="rs-self">Self</span>::<a class="symbol-link rs-fn" href="eos-config--src-document-rs.html#method-parse-26">parse</a>(<span class="rs-type">Path</span>::<a class="symbol-link rs-fn" href="eos-config--src-configs-validate-rs.html#method-new-19">new</a>(&quot;&lt;test&gt;&quot;), text)
+    }
+</code></pre>
+</details></td></tr><tr id="method-merge-39"><td>method</td><td>merge</td><td><code>pub(crate) fn <a class="symbol-link" href="eos-config--src-document-rs.html#method-merge-39">merge</a> (&amp; mut self , override_doc : Self) -&gt; Result &lt; () , <a class="symbol-link" href="eos-config--src-error-rs.html#item-enum-ConfigError-7">ConfigError</a> &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-config--src-document-rs.html#method-merge-39">merge</a>(&amp;<span class="rs-kw">mut</span> <span class="rs-self">self</span>, override_doc: <span class="rs-self">Self</span>) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-config--src-error-rs.html#item-enum-ConfigError-7">ConfigError</a>&gt; {
+        merge::<a class="symbol-link rs-fn" href="eos-config--src-merge-rs.html#item-fn-ensure-mapping-root-36">ensure_mapping_root</a>(&amp;<span class="rs-self">self</span>.value)?;
+        merge::<a class="symbol-link rs-fn" href="eos-config--src-merge-rs.html#item-fn-merge-values-13">merge_values</a>(&amp;<span class="rs-kw">mut</span> <span class="rs-self">self</span>.value, override_doc.value)?;
+        <span class="rs-type">Ok</span>(())
+    }
+</code></pre>
+</details></td></tr><tr id="method-to-yaml-string-45"><td>method</td><td>to_yaml_string</td><td><code>pub fn <a class="symbol-link" href="eos-config--src-document-rs.html#method-to-yaml-string-45">to_yaml_string</a> (&amp; self) -&gt; Result &lt; String , <a class="symbol-link" href="eos-config--src-error-rs.html#item-enum-ConfigError-7">ConfigError</a> &gt;</code><p class="docstring">Serialize the current document to YAML.<br>This is primarily used by test harnesses that load one approved<br>`*.test.yml` override and need to hand the merged document to a daemon<br>that still loads its production filename.<br># Errors<br>Returns an error if the in-memory YAML value cannot be serialized.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Serialize the current document to YAML.</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// This is primarily used by test harnesses that load one approved</span>
+    <span class="rs-comment">/// `*.test.yml` override and need to hand the merged document to a daemon</span>
+    <span class="rs-comment">/// that still loads its production filename.</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// # Errors</span>
+    <span class="rs-comment">/// Returns an error if the in-memory YAML value cannot be serialized.</span>
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-config--src-document-rs.html#method-to-yaml-string-45">to_yaml_string</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">String</span>, <a class="symbol-link rs-type" href="eos-config--src-error-rs.html#item-enum-ConfigError-7">ConfigError</a>&gt; {
+        serde_yaml::to_string(&amp;<span class="rs-self">self</span>.value).map_err(|source| <a class="symbol-link rs-type" href="eos-config--src-error-rs.html#item-enum-ConfigError-7">ConfigError</a>::<span class="rs-type">Serialize</span> { source })
+    }
+</code></pre>
+</details></td></tr><tr id="method-into-value-57"><td>method</td><td>into_value</td><td><code>pub(crate) fn <a class="symbol-link" href="eos-config--src-document-rs.html#method-into-value-57">into_value</a> (self) -&gt; Value</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[cfg(test)]
+    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-config--src-document-rs.html#method-into-value-57">into_value</a>(<span class="rs-self">self</span>) -&gt; <span class="rs-type">Value</span> {
+        <span class="rs-self">self</span>.value
+    }
+</code></pre>
+</details></td></tr><tr id="method-section-62"><td>method</td><td>section</td><td><code>pub fn <a class="symbol-link" href="eos-config--src-document-rs.html#method-section-62">section</a> &lt; T &gt; (&amp; self , name : &amp; str) -&gt; Result &lt; T , <a class="symbol-link" href="eos-config--src-error-rs.html#item-enum-ConfigError-7">ConfigError</a> &gt; where T : DeserializeOwned ,</code><p class="docstring">Deserialize a top-level section into its owner crate's typed schema.<br># Errors<br>Returns an error if the section is missing or if typed deserialization<br>fails.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Deserialize a top-level section into its owner crate's typed schema.</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// # Errors</span>
+    <span class="rs-comment">/// Returns an error if the section is missing or if typed deserialization</span>
+    <span class="rs-comment">/// fails.</span>
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> section&lt;<span class="rs-type">T</span>&gt;(&amp;<span class="rs-self">self</span>, name: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">T</span>, <a class="symbol-link rs-type" href="eos-config--src-error-rs.html#item-enum-ConfigError-7">ConfigError</a>&gt;
+    <span class="rs-kw">where</span>
+        <span class="rs-type">T</span>: <span class="rs-type">DeserializeOwned</span>,
+    {
+        <span class="rs-kw">let</span> section = <span class="rs-self">self</span>
+            .<a class="symbol-link rs-fn" href="eos-config--src-document-rs.html#method-root-mapping-86">root_mapping</a>()?
+            .get(<span class="rs-type">Value</span>::<span class="rs-type">String</span>(name.to_owned()))
+            .ok_or_else(|| <a class="symbol-link rs-type" href="eos-config--src-error-rs.html#item-enum-ConfigError-7">ConfigError</a>::<span class="rs-type">MissingSection</span> {
+                section: name.to_owned(),
+            })?;
+        <span class="rs-kw">let</span> deserializer = section.clone().into_deserializer();
+        serde_path_to_error::deserialize(deserializer).map_err(|source| {
+            <a class="symbol-link rs-type" href="eos-config--src-error-rs.html#item-enum-ConfigError-7">ConfigError</a>::<span class="rs-type">DeserializeSection</span> {
+                section: name.to_owned(),
+                source,
+            }
+        })
+    }
+</code></pre>
+</details></td></tr><tr id="method-root-mapping-86"><td>method</td><td>root_mapping</td><td><code>fn <a class="symbol-link" href="eos-config--src-document-rs.html#method-root-mapping-86">root_mapping</a> (&amp; self) -&gt; Result &lt; &amp; Mapping , <a class="symbol-link" href="eos-config--src-error-rs.html#item-enum-ConfigError-7">ConfigError</a> &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-config--src-document-rs.html#method-root-mapping-86">root_mapping</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Result</span>&lt;&amp;<span class="rs-type">Mapping</span>, <a class="symbol-link rs-type" href="eos-config--src-error-rs.html#item-enum-ConfigError-7">ConfigError</a>&gt; {
+        <span class="rs-kw">match</span> &amp;<span class="rs-self">self</span>.value {
+            <span class="rs-type">Value</span>::<span class="rs-type">Mapping</span>(mapping) =&gt; <span class="rs-type">Ok</span>(mapping),
+            _ =&gt; <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-config--src-error-rs.html#item-enum-ConfigError-7">ConfigError</a>::<span class="rs-type">InvalidDocumentRoot</span>),
+        }
+    }
+</code></pre>
+</details></td></tr><tr id="method-read-18"><td>associated-fn</td><td>read</td><td><code>pub(crate) fn <a class="symbol-link" href="eos-config--src-document-rs.html#method-read-18">read</a> (path : &amp; Path) -&gt; Result &lt; Self , <a class="symbol-link" href="eos-config--src-error-rs.html#item-enum-ConfigError-7">ConfigError</a> &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-config--src-document-rs.html#method-read-18">read</a>(path: &amp;<span class="rs-type">Path</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-self">Self</span>, <a class="symbol-link rs-type" href="eos-config--src-error-rs.html#item-enum-ConfigError-7">ConfigError</a>&gt; {
+        <span class="rs-kw">let</span> text = fs::read_to_string(path).map_err(|source| <a class="symbol-link rs-type" href="eos-config--src-error-rs.html#item-enum-ConfigError-7">ConfigError</a>::<span class="rs-type">Read</span> {
+            path: path.to_path_buf(),
+            source,
+        })?;
+        <span class="rs-self">Self</span>::<a class="symbol-link rs-fn" href="eos-config--src-document-rs.html#method-parse-26">parse</a>(path, &amp;text)
+    }
+</code></pre>
+</details></td></tr><tr id="method-parse-26"><td>associated-fn</td><td>parse</td><td><code>pub(crate) fn <a class="symbol-link" href="eos-config--src-document-rs.html#method-parse-26">parse</a> (path : &amp; Path , text : &amp; str) -&gt; Result &lt; Self , <a class="symbol-link" href="eos-config--src-error-rs.html#item-enum-ConfigError-7">ConfigError</a> &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-config--src-document-rs.html#method-parse-26">parse</a>(path: &amp;<span class="rs-type">Path</span>, text: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-self">Self</span>, <a class="symbol-link rs-type" href="eos-config--src-error-rs.html#item-enum-ConfigError-7">ConfigError</a>&gt; {
+        <span class="rs-kw">let</span> value = serde_yaml::from_str(text).map_err(|source| <a class="symbol-link rs-type" href="eos-config--src-error-rs.html#item-enum-ConfigError-7">ConfigError</a>::<span class="rs-type">Parse</span> {
+            path: path.to_path_buf(),
+            source,
+        })?;
+        <span class="rs-type">Ok</span>(<span class="rs-self">Self</span> { value })
+    }
+</code></pre>
+</details></td></tr></tbody></table>
+
   <p class="source">crates/eos-config/src/document.rs:11</p>
 </article></div>
 </section></div>
 </main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/eos-config/src/document.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-kw">use</span> serde::de::<span class="rs-type">DeserializeOwned</span>;
+<span class="rs-kw">use</span> serde::de::<span class="rs-type">IntoDeserializer</span>;
+<span class="rs-kw">use</span> serde_yaml::{<span class="rs-type">Mapping</span>, <span class="rs-type">Value</span>};
+
+<span class="rs-kw">use</span> std::fs;
+<span class="rs-kw">use</span> std::path::<span class="rs-type">Path</span>;
+
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::error::<a class="symbol-link rs-type" href="eos-config--src-error-rs.html#item-enum-ConfigError-7">ConfigError</a>;
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::merge;
+
+<span class="rs-comment">/// Parsed sandbox configuration document.</span>
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">PartialEq</span>)]
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-config--src-document-rs.html#item-struct-ConfigDocument-11">ConfigDocument</a> {
+    value: <span class="rs-type">Value</span>,
+}
+
+<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-config--src-document-rs.html#item-struct-ConfigDocument-11">ConfigDocument</a> {
+    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-config--src-document-rs.html#method-read-18">read</a>(path: &amp;<span class="rs-type">Path</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-self">Self</span>, <a class="symbol-link rs-type" href="eos-config--src-error-rs.html#item-enum-ConfigError-7">ConfigError</a>&gt; {
+        <span class="rs-kw">let</span> text = fs::read_to_string(path).map_err(|source| <a class="symbol-link rs-type" href="eos-config--src-error-rs.html#item-enum-ConfigError-7">ConfigError</a>::<span class="rs-type">Read</span> {
+            path: path.to_path_buf(),
+            source,
+        })?;
+        <span class="rs-self">Self</span>::<a class="symbol-link rs-fn" href="eos-config--src-document-rs.html#method-parse-26">parse</a>(path, &amp;text)
+    }
+
+    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-config--src-document-rs.html#method-parse-26">parse</a>(path: &amp;<span class="rs-type">Path</span>, text: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-self">Self</span>, <a class="symbol-link rs-type" href="eos-config--src-error-rs.html#item-enum-ConfigError-7">ConfigError</a>&gt; {
+        <span class="rs-kw">let</span> value = serde_yaml::from_str(text).map_err(|source| <a class="symbol-link rs-type" href="eos-config--src-error-rs.html#item-enum-ConfigError-7">ConfigError</a>::<span class="rs-type">Parse</span> {
+            path: path.to_path_buf(),
+            source,
+        })?;
+        <span class="rs-type">Ok</span>(<span class="rs-self">Self</span> { value })
+    }
+
+    #[cfg(test)]
+    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-config--src-document-rs.html#method-from-yaml-str-34">from_yaml_str</a>(text: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-self">Self</span>, <a class="symbol-link rs-type" href="eos-config--src-error-rs.html#item-enum-ConfigError-7">ConfigError</a>&gt; {
+        <span class="rs-self">Self</span>::<a class="symbol-link rs-fn" href="eos-config--src-document-rs.html#method-parse-26">parse</a>(<span class="rs-type">Path</span>::<a class="symbol-link rs-fn" href="eos-config--src-configs-validate-rs.html#method-new-19">new</a>(&quot;&lt;test&gt;&quot;), text)
+    }
+
+    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-config--src-document-rs.html#method-merge-39">merge</a>(&amp;<span class="rs-kw">mut</span> <span class="rs-self">self</span>, override_doc: <span class="rs-self">Self</span>) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-config--src-error-rs.html#item-enum-ConfigError-7">ConfigError</a>&gt; {
+        merge::<a class="symbol-link rs-fn" href="eos-config--src-merge-rs.html#item-fn-ensure-mapping-root-36">ensure_mapping_root</a>(&amp;<span class="rs-self">self</span>.value)?;
+        merge::<a class="symbol-link rs-fn" href="eos-config--src-merge-rs.html#item-fn-merge-values-13">merge_values</a>(&amp;<span class="rs-kw">mut</span> <span class="rs-self">self</span>.value, override_doc.value)?;
+        <span class="rs-type">Ok</span>(())
+    }
+
+    <span class="rs-comment">/// Serialize the current document to YAML.</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// This is primarily used by test harnesses that load one approved</span>
+    <span class="rs-comment">/// `*.test.yml` override and need to hand the merged document to a daemon</span>
+    <span class="rs-comment">/// that still loads its production filename.</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// # Errors</span>
+    <span class="rs-comment">/// Returns an error if the in-memory YAML value cannot be serialized.</span>
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-config--src-document-rs.html#method-to-yaml-string-45">to_yaml_string</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">String</span>, <a class="symbol-link rs-type" href="eos-config--src-error-rs.html#item-enum-ConfigError-7">ConfigError</a>&gt; {
+        serde_yaml::to_string(&amp;<span class="rs-self">self</span>.value).map_err(|source| <a class="symbol-link rs-type" href="eos-config--src-error-rs.html#item-enum-ConfigError-7">ConfigError</a>::<span class="rs-type">Serialize</span> { source })
+    }
+
+    #[cfg(test)]
+    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-config--src-document-rs.html#method-into-value-57">into_value</a>(<span class="rs-self">self</span>) -&gt; <span class="rs-type">Value</span> {
+        <span class="rs-self">self</span>.value
+    }
+
+    <span class="rs-comment">/// Deserialize a top-level section into its owner crate's typed schema.</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// # Errors</span>
+    <span class="rs-comment">/// Returns an error if the section is missing or if typed deserialization</span>
+    <span class="rs-comment">/// fails.</span>
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> section&lt;<span class="rs-type">T</span>&gt;(&amp;<span class="rs-self">self</span>, name: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">T</span>, <a class="symbol-link rs-type" href="eos-config--src-error-rs.html#item-enum-ConfigError-7">ConfigError</a>&gt;
+    <span class="rs-kw">where</span>
+        <span class="rs-type">T</span>: <span class="rs-type">DeserializeOwned</span>,
+    {
+        <span class="rs-kw">let</span> section = <span class="rs-self">self</span>
+            .<a class="symbol-link rs-fn" href="eos-config--src-document-rs.html#method-root-mapping-86">root_mapping</a>()?
+            .get(<span class="rs-type">Value</span>::<span class="rs-type">String</span>(name.to_owned()))
+            .ok_or_else(|| <a class="symbol-link rs-type" href="eos-config--src-error-rs.html#item-enum-ConfigError-7">ConfigError</a>::<span class="rs-type">MissingSection</span> {
+                section: name.to_owned(),
+            })?;
+        <span class="rs-kw">let</span> deserializer = section.clone().into_deserializer();
+        serde_path_to_error::deserialize(deserializer).map_err(|source| {
+            <a class="symbol-link rs-type" href="eos-config--src-error-rs.html#item-enum-ConfigError-7">ConfigError</a>::<span class="rs-type">DeserializeSection</span> {
+                section: name.to_owned(),
+                source,
+            }
+        })
+    }
+
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-config--src-document-rs.html#method-root-mapping-86">root_mapping</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Result</span>&lt;&amp;<span class="rs-type">Mapping</span>, <a class="symbol-link rs-type" href="eos-config--src-error-rs.html#item-enum-ConfigError-7">ConfigError</a>&gt; {
+        <span class="rs-kw">match</span> &amp;<span class="rs-self">self</span>.value {
+            <span class="rs-type">Value</span>::<span class="rs-type">Mapping</span>(mapping) =&gt; <span class="rs-type">Ok</span>(mapping),
+            _ =&gt; <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-config--src-error-rs.html#item-enum-ConfigError-7">ConfigError</a>::<span class="rs-type">InvalidDocumentRoot</span>),
+        }
+    }
+}
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
   <script src="../assets/inventory.js"></script>
 </body>
 </html>

@@ -66,9 +66,11 @@ impl AgentRunControlFactory {
         // The handle carries a clone of this factory so its `spawn` can mint each
         // subagent its own ephemeral control (spec §8.1/§11.3). This is value
         // capability only — the factory holds no `AgentRunControl`, so there is
-        // no reference cycle.
-        let background = self.background.create(self.clone());
-        let heartbeat = self.background.spawn_heartbeat(&background, &notifications);
+        // no reference cycle. The handle's command lane spawns this run's
+        // command-completion heartbeat against `notifications` internally.
+        let background =
+            self.background
+                .create(agent_run_id.clone(), notifications.clone(), self.clone());
         Arc::new(AgentRunControl::assemble(AgentRunControlParts {
             agent_run_id,
             persistence,
@@ -76,7 +78,6 @@ impl AgentRunControlFactory {
             foreground,
             notifications,
             background,
-            heartbeat,
         }))
     }
 }

@@ -8,8 +8,16 @@
 </head>
 <body>
   <header>
-    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
-    <h1>eos-config File Inventory</h1>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>eos-config File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS/agent-core &amp;&amp; cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
   </header>
   <a class="back-link" href="../index.html">agent-core</a>
 <section class="summary">
@@ -47,29 +55,135 @@
       <span>3 methods</span>
     </div>
   </div>
-  <div class="items"><div class="group-label">File-Owned Types</div><article class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct AttemptConfig pub pub struct AttemptConfig crates/eos-config/src/configs/attempt.rs max_concurrent_task_runs usize ">
+  <div class="items"><div class="group-label">File-Owned Types</div><article id="item-struct-AttemptConfig-12" class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct AttemptConfig pub pub struct AttemptConfig crates/eos-config/src/configs/attempt.rs max_concurrent_task_runs usize ">
   <div class="item-head">
     <span class="kind">struct</span>
     <h3>AttemptConfig</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub struct AttemptConfig</code>
-  <div class="tags"><span>config</span><span>serde</span></div>
-  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>max_concurrent_task_runs</td><td><code>usize</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr><td>method</td><td>validate</td><td><code>pub fn validate (&amp; self) -&gt; Result &lt; () , ConfigError &gt;</code></td></tr><tr><td>method</td><td>validate_with_field</td><td><code>pub(crate) fn validate_with_field (&amp; self , field : &amp; str) -&gt; Result &lt; () , ConfigError &gt;</code></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl Default for AttemptConfig</code></summary><table><tbody><tr><td>constructor</td><td>default</td><td><code>fn default () -&gt; Self</code></td></tr></tbody></table></details></div>
+  <code class="signature">pub struct <a class="symbol-link" href="eos-config.html#item-struct-AttemptConfig-12">AttemptConfig</a></code>
+  <p class="docstring">Per-Attempt run-stage tunables.</p>
+  <div class="tags"><span>config</span><span>derive: Clone</span><span>derive: Debug</span><span>derive: Deserialize</span><span>derive: Eq</span><span>derive: PartialEq</span><span>derive: Serialize</span><span>non_exhaustive</span><span>serde</span><span>serde: deny_unknown_fields</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>max_concurrent_task_runs</td><td><code>usize</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-validate-31"><td>method</td><td>validate</td><td><code>pub fn <a class="symbol-link" href="eos-config.html#method-validate-31">validate</a> (&amp; self) -&gt; Result &lt; () , <a class="symbol-link" href="eos-config--src-error-rs.html#item-enum-ConfigError-3">ConfigError</a> &gt;</code><p class="docstring">Enforce numeric-range constraints (call after deserializing a section).<br># Errors<br>Returns [`ConfigError::OutOfRange`] when `max_concurrent_task_runs &lt; 1`.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Enforce numeric-range constraints (call after deserializing a section).</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// # Errors</span>
+    <span class="rs-comment">/// Returns [`ConfigError::OutOfRange`] when `max_concurrent_task_runs &lt; 1`.</span>
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-config.html#method-validate-31">validate</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-config--src-error-rs.html#item-enum-ConfigError-3">ConfigError</a>&gt; {
+        <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-config.html#method-validate-with-field-39">validate_with_field</a>(&quot;attempt.max_concurrent_task_runs&quot;)
+    }
+</code></pre>
+</details></td></tr><tr id="method-validate-with-field-39"><td>method</td><td>validate_with_field</td><td><code>pub(crate) fn <a class="symbol-link" href="eos-config.html#method-validate-with-field-39">validate_with_field</a> (&amp; self , field : &amp; str) -&gt; Result &lt; () , <a class="symbol-link" href="eos-config--src-error-rs.html#item-enum-ConfigError-3">ConfigError</a> &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-config.html#method-validate-with-field-39">validate_with_field</a>(&amp;<span class="rs-self">self</span>, field: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-config--src-error-rs.html#item-enum-ConfigError-3">ConfigError</a>&gt; {
+        <span class="rs-kw">if</span> <span class="rs-self">self</span>.max_concurrent_task_runs &lt; 1 {
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-config--src-error-rs.html#item-enum-ConfigError-3">ConfigError</a>::<span class="rs-type">OutOfRange</span> {
+                field: field.to_owned(),
+                detail: &quot;must be &gt;= 1&quot;.to_owned(),
+            });
+        }
+        <span class="rs-type">Ok</span>(())
+    }
+</code></pre>
+</details></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl Default for <a class="symbol-link" href="eos-config.html#item-struct-AttemptConfig-12">AttemptConfig</a></code></summary><table><tbody><tr id="method-default-23"><td>constructor</td><td>default</td><td><code>fn <a class="symbol-link" href="eos-config.html#method-default-23">default</a> () -&gt; Self</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-config.html#method-default-23">default</a>() -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">Self</span> {
+            max_concurrent_task_runs: 8,
+        }
+    }
+</code></pre>
+</details></td></tr></tbody></table></details></div>
+
   <p class="source">crates/eos-config/src/configs/attempt.rs:12</p>
-</article><div class="group-label">Standalone Functions</div><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn defaults_are_set private fn defaults_are_set () crates/eos-config/src/configs/attempt.rs  ">
+</article><div class="group-label">Standalone Functions</div><article id="item-fn-defaults-are-set-54" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn defaults_are_set private fn defaults_are_set () crates/eos-config/src/configs/attempt.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>defaults_are_set</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn defaults_are_set ()</code>
-  <div class="tags"></div>
+  <code class="signature">fn <a class="symbol-link" href="eos-config.html#item-fn-defaults-are-set-54">defaults_are_set</a> ()</code>
+  <div class="tags"><span>test</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-config.html#item-fn-defaults-are-set-54">defaults_are_set</a>() {
+        assert_eq!(<a class="symbol-link rs-type" href="eos-config.html#item-struct-AttemptConfig-12">AttemptConfig</a>::<a class="symbol-link rs-fn" href="eos-config.html#method-default-23">default</a>().max_concurrent_task_runs, 8);
+    }
+</code></pre>
+</details>
 
   <p class="source">crates/eos-config/src/configs/attempt.rs:54</p>
 </article></div>
 </section></div>
 </main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/eos-config/src/configs/attempt.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-comment">//! Per-Attempt run-stage tunables: the cap on concurrently-launched agent runs</span>
+<span class="rs-comment">//! in an Attempt's RUN stage.</span>
+<span class="rs-comment">//!</span>
+<span class="rs-comment">//! `eos-workflow` has no `eos-config` edge, so the value does not flow directly:</span>
+<span class="rs-comment">//! `eos-runtime` reads `workflow.attempt.max_concurrent_task_runs` and injects it</span>
+<span class="rs-comment">//! into the per-attempt deps as a plain `usize`.</span>
+
+<span class="rs-kw">use</span> serde::{<span class="rs-type">Deserialize</span>, <span class="rs-type">Serialize</span>};
+
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::error::<a class="symbol-link rs-type" href="eos-config--src-error-rs.html#item-enum-ConfigError-3">ConfigError</a>;
+
+<span class="rs-comment">/// Per-Attempt run-stage tunables.</span>
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Eq</span>, <span class="rs-type">Serialize</span>, <span class="rs-type">Deserialize</span>)]
+#[serde(deny_unknown_fields)]
+#[non_exhaustive]
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-config.html#item-struct-AttemptConfig-12">AttemptConfig</a> {
+    <span class="rs-comment">/// Per-Attempt cap on concurrently-launched generator/reducer agent runs.</span>
+    <span class="rs-comment">/// Range-checked `&gt;= 1` by [`AttemptConfig::validate`].</span>
+    <span class="rs-kw">pub</span> max_concurrent_task_runs: usize,
+}
+
+<span class="rs-kw">impl</span> <span class="rs-type">Default</span> <span class="rs-kw">for</span> <a class="symbol-link rs-type" href="eos-config.html#item-struct-AttemptConfig-12">AttemptConfig</a> {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-config.html#method-default-23">default</a>() -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">Self</span> {
+            max_concurrent_task_runs: 8,
+        }
+    }
+}
+
+<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-config.html#item-struct-AttemptConfig-12">AttemptConfig</a> {
+    <span class="rs-comment">/// Enforce numeric-range constraints (call after deserializing a section).</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// # Errors</span>
+    <span class="rs-comment">/// Returns [`ConfigError::OutOfRange`] when `max_concurrent_task_runs &lt; 1`.</span>
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-config.html#method-validate-31">validate</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-config--src-error-rs.html#item-enum-ConfigError-3">ConfigError</a>&gt; {
+        <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-config.html#method-validate-with-field-39">validate_with_field</a>(&quot;attempt.max_concurrent_task_runs&quot;)
+    }
+
+    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-config.html#method-validate-with-field-39">validate_with_field</a>(&amp;<span class="rs-self">self</span>, field: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-config--src-error-rs.html#item-enum-ConfigError-3">ConfigError</a>&gt; {
+        <span class="rs-kw">if</span> <span class="rs-self">self</span>.max_concurrent_task_runs &lt; 1 {
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-config--src-error-rs.html#item-enum-ConfigError-3">ConfigError</a>::<span class="rs-type">OutOfRange</span> {
+                field: field.to_owned(),
+                detail: &quot;must be &gt;= 1&quot;.to_owned(),
+            });
+        }
+        <span class="rs-type">Ok</span>(())
+    }
+}
+
+#[cfg(test)]
+<span class="rs-kw">mod</span> tests {
+    <span class="rs-kw">use</span> <span class="rs-kw">super</span>::*;
+
+    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-config.html#item-fn-defaults-are-set-54">defaults_are_set</a>() {
+        assert_eq!(<a class="symbol-link rs-type" href="eos-config.html#item-struct-AttemptConfig-12">AttemptConfig</a>::<a class="symbol-link rs-fn" href="eos-config.html#method-default-23">default</a>().max_concurrent_task_runs, 8);
+    }
+}
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
   <script src="../assets/inventory.js"></script>
 </body>
 </html>

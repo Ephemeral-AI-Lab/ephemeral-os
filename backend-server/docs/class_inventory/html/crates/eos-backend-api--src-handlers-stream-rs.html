@@ -1,0 +1,179 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>eos-backend-api · src/handlers/stream.rs</title>
+  <link rel="stylesheet" href="../assets/inventory.css">
+</head>
+<body>
+  <header>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>eos-backend-api File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS/backend-server &amp;&amp; cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
+  </header>
+  <a class="back-link" href="../index.html">backend-server</a>
+<section class="summary">
+  <div><b>13</b><span>modules</span></div>
+  <div><b>66</b><span>items</span></div>
+  <div><b>35</b><span>fields</span></div>
+  <div><b>22</b><span>methods</span></div>
+</section>
+<section class="toolbar">
+  <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
+  <select id="kind-filter">
+    <option value="">All items</option>
+    <option value="type-model">Type model</option>
+    <option value="struct">Structs</option>
+    <option value="enum">Enums</option>
+    <option value="trait">Traits</option>
+    <option value="impl">Impls</option>
+    <option value="fn">Functions</option>
+    <option value="type">Aliases</option>
+  </select>
+</section>
+<main class="crate-layout">
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><a class="file-link" href="eos-backend-api.html"><span>error.rs</span><small>3/0</small></a></li><li><span class="folder">handlers</span><ul class="file-tree"><li><a class="file-link" href="eos-backend-api--src-handlers-agent-runs-rs.html"><span>agent_runs.rs</span><small>4/5</small></a></li><li><a class="file-link" href="eos-backend-api--src-handlers-mod-rs.html"><span>mod.rs</span><small>2/1</small></a></li><li><a class="file-link" href="eos-backend-api--src-handlers-sandboxes-rs.html"><span>sandboxes.rs</span><small>0/3</small></a></li><li><a class="file-link" href="eos-backend-api--src-handlers-stats-rs.html"><span>stats.rs</span><small>0/4</small></a></li><li><a class="file-link active" href="eos-backend-api--src-handlers-stream-rs.html"><span>stream.rs</span><small>1/2</small></a></li><li><a class="file-link" href="eos-backend-api--src-handlers-tasks-rs.html"><span>tasks.rs</span><small>2/4</small></a></li><li><a class="file-link" href="eos-backend-api--src-handlers-user-requests-rs.html"><span>user_requests.rs</span><small>1/7</small></a></li></ul></li><li><a class="file-link" href="eos-backend-api--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-backend-api--src-openapi-rs.html"><span>openapi.rs</span><small>0/6</small></a></li><li><a class="file-link" href="eos-backend-api--src-router-rs.html"><span>router.rs</span><small>4/1</small></a></li><li><span class="folder">stream</span><ul class="file-tree"><li><a class="file-link" href="eos-backend-api--src-stream-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-backend-api--src-stream-sse-rs.html"><span>sse.rs</span><small>0/2</small></a></li></ul></li></ul></li></ul></nav>
+  <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="handlers::stream crates/eos-backend-api/src/handlers/stream.rs StreamQuery stream last_event_id">
+  <div class="module-head">
+    <div>
+      <h2>src/handlers/stream.rs</h2>
+      <p class="path">module <code>handlers::stream</code></p>
+    </div>
+    <div class="module-stats">
+      <span>file owns</span>
+      <span>1 types</span>
+      <span>0 impls</span>
+      <span>2 fns</span>
+      <span>0 methods</span>
+    </div>
+  </div>
+  <div class="items"><div class="group-label">File-Owned Types</div><article id="item-struct-StreamQuery-20" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct StreamQuery pub pub struct StreamQuery crates/eos-backend-api/src/handlers/stream.rs last_seq Option &lt; i64 &gt; ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>StreamQuery</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub struct <a class="symbol-link" href="eos-backend-api--src-handlers-agent-runs-rs.html#item-struct-StreamQuery-35">StreamQuery</a></code>
+  <p class="docstring">`?last_seq=` query: replay resumes after this sequence (default `0` = start).</p>
+  <div class="tags"><span>derive: Debug</span><span>derive: Deserialize</span><span>serde</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>last_seq</td><td><code>Option &lt; i64 &gt;</code></td></tr></tbody></table>
+
+  <p class="source">crates/eos-backend-api/src/handlers/stream.rs:20</p>
+</article><div class="group-label">Standalone Functions</div><article id="item-fn-stream-26" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn stream pub pub async fn stream (State (state) : State &lt; AppState &gt; , Path (request_id) : Path &lt; String &gt; , Query (query) : Query &lt; StreamQuery &gt; , headers : HeaderMap ,) -&gt; Result &lt; Response , ApiError &gt; crates/eos-backend-api/src/handlers/stream.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>stream</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub async fn <a class="symbol-link" href="eos-backend-api--src-handlers-agent-runs-rs.html#item-fn-stream-77">stream</a> (State (state) : State &lt; <a class="symbol-link" href="eos-backend-api--src-router-rs.html#item-struct-AppState-110">AppState</a> &gt; , Path (request_id) : Path &lt; String &gt; , Query (query) : Query &lt; <a class="symbol-link" href="eos-backend-api--src-handlers-agent-runs-rs.html#item-struct-StreamQuery-35">StreamQuery</a> &gt; , headers : HeaderMap ,) -&gt; Result &lt; Response , <a class="symbol-link" href="eos-backend-api.html#item-enum-ApiError-20">ApiError</a> &gt;</code>
+  <p class="docstring">Return an SSE stream. The `Last-Event-ID` reconnect header, when present,<br>overrides `?last_seq=`.</p>
+  <div class="tags"><span>async</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-comment">/// Return an SSE stream. The `Last-Event-ID` reconnect header, when present,</span>
+<span class="rs-comment">/// overrides `?last_seq=`.</span>
+<span class="rs-kw">pub</span> <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-backend-api--src-handlers-agent-runs-rs.html#item-fn-stream-77">stream</a>(
+    <span class="rs-type">State</span>(state): <span class="rs-type">State</span>&lt;<a class="symbol-link rs-type" href="eos-backend-api--src-router-rs.html#item-struct-AppState-110">AppState</a>&gt;,
+    <span class="rs-type">Path</span>(request_id): <span class="rs-type">Path</span>&lt;<span class="rs-type">String</span>&gt;,
+    <span class="rs-type">Query</span>(query): <span class="rs-type">Query</span>&lt;<a class="symbol-link rs-type" href="eos-backend-api--src-handlers-agent-runs-rs.html#item-struct-StreamQuery-35">StreamQuery</a>&gt;,
+    headers: <span class="rs-type">HeaderMap</span>,
+) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Response</span>, <a class="symbol-link rs-type" href="eos-backend-api.html#item-enum-ApiError-20">ApiError</a>&gt; {
+    <span class="rs-kw">let</span> request_id: <span class="rs-type">RequestId</span> = <a class="symbol-link rs-fn" href="eos-backend-api--src-handlers-mod-rs.html#item-fn-parse-id-38">parse_id</a>(&amp;request_id, &quot;request&quot;)?;
+    <span class="rs-kw">if</span> state.run_meta.get(&amp;request_id).<span class="rs-kw">await</span>?.is_none() {
+        <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-backend-api.html#item-enum-ApiError-20">ApiError</a>::<span class="rs-type">NotFound</span>(&quot;user request&quot;));
+    }
+    <span class="rs-kw">let</span> last_seq = <a class="symbol-link rs-fn" href="eos-backend-api--src-handlers-agent-runs-rs.html#item-fn-last-event-id-164">last_event_id</a>(&amp;headers).or(query.last_seq).unwrap_or(0);
+
+    stream::sse::<a class="symbol-link rs-fn" href="eos-backend-api--src-stream-sse-rs.html#item-fn-response-15">response</a>(state, request_id, last_seq).<span class="rs-kw">await</span>
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-backend-api/src/handlers/stream.rs:26</p>
+</article><article id="item-fn-last-event-id-43" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn last_event_id private fn last_event_id (headers : &amp; HeaderMap) -&gt; Option &lt; i64 &gt; crates/eos-backend-api/src/handlers/stream.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>last_event_id</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="eos-backend-api--src-handlers-agent-runs-rs.html#item-fn-last-event-id-164">last_event_id</a> (headers : &amp; HeaderMap) -&gt; Option &lt; i64 &gt;</code>
+  <p class="docstring">Parse the SSE `Last-Event-ID` reconnect header into a sequence number.</p>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-comment">/// Parse the SSE `Last-Event-ID` reconnect header into a sequence number.</span>
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-backend-api--src-handlers-agent-runs-rs.html#item-fn-last-event-id-164">last_event_id</a>(headers: &amp;<span class="rs-type">HeaderMap</span>) -&gt; <span class="rs-type">Option</span>&lt;i64&gt; {
+    headers.get(&quot;last-event-id&quot;)?.to_str().ok()?.parse().ok()
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-backend-api/src/handlers/stream.rs:43</p>
+</article></div>
+</section></div>
+</main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/eos-backend-api/src/handlers/stream.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-comment">//! `GET /api/user-requests/{request_id}/stream` — the live milestone stream.</span>
+<span class="rs-comment">//!</span>
+<span class="rs-comment">//! The route serves Server-Sent Events only. It replays persisted `event_log`</span>
+<span class="rs-comment">//! rows with `seq &gt; last_seq` and then tails the live broadcast through one</span>
+<span class="rs-comment">//! [`EventBus::subscribe`] handoff with no gap (the replay/live join correctness</span>
+<span class="rs-comment">//! lives in `eos-backend-runtime`).</span>
+
+<span class="rs-kw">use</span> axum::extract::{<span class="rs-type">Path</span>, <span class="rs-type">Query</span>, <span class="rs-type">State</span>};
+<span class="rs-kw">use</span> axum::http::<span class="rs-type">HeaderMap</span>;
+<span class="rs-kw">use</span> axum::response::<span class="rs-type">Response</span>;
+<span class="rs-kw">use</span> serde::<span class="rs-type">Deserialize</span>;
+
+<span class="rs-kw">use</span> eos_types::<span class="rs-type">RequestId</span>;
+
+<span class="rs-kw">use</span> <span class="rs-kw">super</span>::parse_id;
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::error::<a class="symbol-link rs-type" href="eos-backend-api.html#item-enum-ApiError-20">ApiError</a>;
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::router::<a class="symbol-link rs-type" href="eos-backend-api--src-router-rs.html#item-struct-AppState-110">AppState</a>;
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::stream;
+
+<span class="rs-comment">/// `?last_seq=` query: replay resumes after this sequence (default `0` = start).</span>
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Deserialize</span>)]
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-backend-api--src-handlers-agent-runs-rs.html#item-struct-StreamQuery-35">StreamQuery</a> {
+    last_seq: <span class="rs-type">Option</span>&lt;i64&gt;,
+}
+
+<span class="rs-comment">/// Return an SSE stream. The `Last-Event-ID` reconnect header, when present,</span>
+<span class="rs-comment">/// overrides `?last_seq=`.</span>
+<span class="rs-kw">pub</span> <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-backend-api--src-handlers-agent-runs-rs.html#item-fn-stream-77">stream</a>(
+    <span class="rs-type">State</span>(state): <span class="rs-type">State</span>&lt;<a class="symbol-link rs-type" href="eos-backend-api--src-router-rs.html#item-struct-AppState-110">AppState</a>&gt;,
+    <span class="rs-type">Path</span>(request_id): <span class="rs-type">Path</span>&lt;<span class="rs-type">String</span>&gt;,
+    <span class="rs-type">Query</span>(query): <span class="rs-type">Query</span>&lt;<a class="symbol-link rs-type" href="eos-backend-api--src-handlers-agent-runs-rs.html#item-struct-StreamQuery-35">StreamQuery</a>&gt;,
+    headers: <span class="rs-type">HeaderMap</span>,
+) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Response</span>, <a class="symbol-link rs-type" href="eos-backend-api.html#item-enum-ApiError-20">ApiError</a>&gt; {
+    <span class="rs-kw">let</span> request_id: <span class="rs-type">RequestId</span> = <a class="symbol-link rs-fn" href="eos-backend-api--src-handlers-mod-rs.html#item-fn-parse-id-38">parse_id</a>(&amp;request_id, &quot;request&quot;)?;
+    <span class="rs-kw">if</span> state.run_meta.get(&amp;request_id).<span class="rs-kw">await</span>?.is_none() {
+        <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-backend-api.html#item-enum-ApiError-20">ApiError</a>::<span class="rs-type">NotFound</span>(&quot;user request&quot;));
+    }
+    <span class="rs-kw">let</span> last_seq = <a class="symbol-link rs-fn" href="eos-backend-api--src-handlers-agent-runs-rs.html#item-fn-last-event-id-164">last_event_id</a>(&amp;headers).or(query.last_seq).unwrap_or(0);
+
+    stream::sse::<a class="symbol-link rs-fn" href="eos-backend-api--src-stream-sse-rs.html#item-fn-response-15">response</a>(state, request_id, last_seq).<span class="rs-kw">await</span>
+}
+
+<span class="rs-comment">/// Parse the SSE `Last-Event-ID` reconnect header into a sequence number.</span>
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-backend-api--src-handlers-agent-runs-rs.html#item-fn-last-event-id-164">last_event_id</a>(headers: &amp;<span class="rs-type">HeaderMap</span>) -&gt; <span class="rs-type">Option</span>&lt;i64&gt; {
+    headers.get(&quot;last-event-id&quot;)?.to_str().ok()?.parse().ok()
+}
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
+  <script src="../assets/inventory.js"></script>
+</body>
+</html>

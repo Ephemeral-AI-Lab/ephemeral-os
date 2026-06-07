@@ -8,8 +8,16 @@
 </head>
 <body>
   <header>
-    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
-    <h1>eos-tools File Inventory</h1>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>eos-tools File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS/agent-core &amp;&amp; cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
   </header>
   <a class="back-link" href="../index.html">agent-core</a>
 <section class="summary">
@@ -47,259 +55,1328 @@
       <span>7 methods</span>
     </div>
   </div>
-  <div class="items"><div class="group-label">File-Owned Types</div><article class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct ToolConfig pub pub struct ToolConfig crates/eos-tools/src/registry/config.rs description String intent ToolIntent terminal bool hooks Vec &lt; Hook &gt; ">
+  <div class="items"><div class="group-label">File-Owned Types</div><article id="item-struct-ToolConfig-30" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct ToolConfig pub pub struct ToolConfig crates/eos-tools/src/registry/config.rs description String intent ToolIntent terminal bool hooks Vec &lt; Hook &gt; ">
   <div class="item-head">
     <span class="kind">struct</span>
     <h3>ToolConfig</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub struct ToolConfig</code>
-  <div class="tags"><span>config</span></div>
-  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>description</td><td><code>String</code></td></tr><tr><td>pub</td><td>intent</td><td><code>ToolIntent</code></td></tr><tr><td>pub</td><td>terminal</td><td><code>bool</code></td></tr><tr><td>pub</td><td>hooks</td><td><code>Vec &lt; Hook &gt;</code></td></tr></tbody></table>
+  <code class="signature">pub struct <a class="symbol-link" href="eos-tools--src-registry-config-rs.html#item-struct-ToolConfig-30">ToolConfig</a></code>
+  <p class="docstring">One tool's loaded configuration: the model-facing description plus the policy<br>the registry stamps onto its `RegisteredTool`.</p>
+  <div class="tags"><span>config</span><span>derive: Clone</span><span>derive: Debug</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>description</td><td><code>String</code></td></tr><tr><td>pub</td><td>intent</td><td><code><a class="symbol-link" href="eos-tools--src-core-intent-rs.html#item-enum-ToolIntent-14">ToolIntent</a></code></td></tr><tr><td>pub</td><td>terminal</td><td><code>bool</code></td></tr><tr><td>pub</td><td>hooks</td><td><code>Vec &lt; <a class="symbol-link" href="eos-tools--src-hooks-mod-rs.html#item-enum-Hook-31">Hook</a> &gt;</code></td></tr></tbody></table>
+
   <p class="source">crates/eos-tools/src/registry/config.rs:30</p>
-</article><article class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct ToolConfigSet pub pub struct ToolConfigSet crates/eos-tools/src/registry/config.rs configs HashMap &lt; ToolName , ToolConfig &gt; ">
+</article><article id="item-struct-ToolConfigSet-45" class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct ToolConfigSet pub pub struct ToolConfigSet crates/eos-tools/src/registry/config.rs configs HashMap &lt; ToolName , ToolConfig &gt; ">
   <div class="item-head">
     <span class="kind">struct</span>
     <h3>ToolConfigSet</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub struct ToolConfigSet</code>
-  <div class="tags"><span>config</span></div>
-  <h4>Fields</h4><table><tbody><tr><td>private</td><td>configs</td><td><code>HashMap &lt; ToolName , ToolConfig &gt;</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr><td>method</td><td>get</td><td><code>pub fn get (&amp; self , name : ToolName) -&gt; &amp; ToolConfig</code></td></tr><tr><td>method</td><td>with_workflow_max_depth</td><td><code>pub fn with_workflow_max_depth (mut self , max_depth : u32) -&gt; Self</code></td></tr><tr><td>associated-fn</td><td>load_from_dir</td><td><code>pub fn load_from_dir (root : &amp; Path) -&gt; Result &lt; Self , ToolConfigError &gt;</code></td></tr></tbody></table>
+  <code class="signature">pub struct <a class="symbol-link" href="eos-tools--src-registry-config-rs.html#item-struct-ToolConfigSet-45">ToolConfigSet</a></code>
+  <p class="docstring">The [`ToolName`]-keyed set of tool configs, built once at composition from a<br>`.eos-agents/tools` root and shared immutably.</p>
+  <div class="tags"><span>config</span><span>derive: Clone</span><span>derive: Debug</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>configs</td><td><code>HashMap &lt; <a class="symbol-link" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a> , <a class="symbol-link" href="eos-tools--src-registry-config-rs.html#item-struct-ToolConfig-30">ToolConfig</a> &gt;</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-get-89"><td>method</td><td>get</td><td><code>pub fn <a class="symbol-link" href="eos-tools--src-registry-config-rs.html#method-get-89">get</a> (&amp; self , name : <a class="symbol-link" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>) -&gt; &amp; <a class="symbol-link" href="eos-tools--src-registry-config-rs.html#item-struct-ToolConfig-30">ToolConfig</a></code><p class="docstring">The config for `name`. Infallible: `load_from_dir` validated totality over<br>[`ToolName::ALL`], so every name is present.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// The config for `name`. Infallible: `load_from_dir` validated totality over</span>
+    <span class="rs-comment">/// [`ToolName::ALL`], so every name is present.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#method-get-89">get</a>(&amp;<span class="rs-self">self</span>, name: <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>) -&gt; &amp;<a class="symbol-link rs-type" href="eos-tools--src-registry-config-rs.html#item-struct-ToolConfig-30">ToolConfig</a> {
+        <span class="rs-self">self</span>.configs
+            .<a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#method-get-89">get</a>(&amp;name)
+            .expect(&quot;<a class="symbol-link rs-type" href="eos-tools--src-registry-config-rs.html#item-struct-ToolConfigSet-45">ToolConfigSet</a> validated at load: every <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a> is present&quot;)
+    }
+</code></pre>
+</details></td></tr><tr id="method-with-workflow-max-depth-98"><td>method</td><td>with_workflow_max_depth</td><td><code>pub fn <a class="symbol-link" href="eos-tools--src-registry-config-rs.html#method-with-workflow-max-depth-98">with_workflow_max_depth</a> (mut self , max_depth : u32) -&gt; Self</code><p class="docstring">Return a config set whose planner-deferral depth hooks use the workflow<br>runtime depth bound.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Return a config set whose planner-deferral depth hooks use the workflow</span>
+    <span class="rs-comment">/// runtime depth bound.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#method-with-workflow-max-depth-98">with_workflow_max_depth</a>(<span class="rs-kw">mut</span> <span class="rs-self">self</span>, max_depth: u32) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-kw">for</span> config <span class="rs-kw">in</span> <span class="rs-self">self</span>.configs.values_mut() {
+            <span class="rs-kw">for</span> hook <span class="rs-kw">in</span> &amp;<span class="rs-kw">mut</span> config.hooks {
+                <span class="rs-kw">if</span> <span class="rs-kw">let</span> <a class="symbol-link rs-type" href="eos-tools--src-hooks-mod-rs.html#item-enum-Hook-31">Hook</a>::<span class="rs-type">DisallowNestedPlannerDeferral</span> {
+                    max_depth: depth, ..
+                } = hook
+                {
+                    *depth = max_depth;
+                }
+            }
+        }
+        <span class="rs-self">self</span>
+    }
+</code></pre>
+</details></td></tr><tr id="method-load-from-dir-53"><td>associated-fn</td><td>load_from_dir</td><td><code>pub fn <a class="symbol-link" href="eos-tools--src-registry-config-rs.html#method-load-from-dir-53">load_from_dir</a> (root : &amp; Path) -&gt; Result &lt; Self , <a class="symbol-link" href="eos-tools--src-registry-config-rs.html#item-enum-ToolConfigError-116">ToolConfigError</a> &gt;</code><p class="docstring">Load and validate every `&lt;wire&gt;.md` under `root`.<br># Errors<br>[`ToolConfigError`] for a non-directory root, an I/O failure, a file whose<br>stem is not a known tool, a missing tool, or any malformed frontmatter<br>(bad/absent intent, unknown hook token, terminal-flag mismatch, empty<br>description).</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Load and validate every `&lt;wire&gt;.md` under `root`.</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// # Errors</span>
+    <span class="rs-comment">/// [`ToolConfigError`] for a non-directory root, an I/O failure, a file whose</span>
+    <span class="rs-comment">/// stem is not a known tool, a missing tool, or any malformed frontmatter</span>
+    <span class="rs-comment">/// (bad/absent intent, unknown hook token, terminal-flag mismatch, empty</span>
+    <span class="rs-comment">/// description).</span>
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#method-load-from-dir-53">load_from_dir</a>(root: &amp;<span class="rs-type">Path</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-self">Self</span>, <a class="symbol-link rs-type" href="eos-tools--src-registry-config-rs.html#item-enum-ToolConfigError-116">ToolConfigError</a>&gt; {
+        <span class="rs-kw">if</span> !root.is_dir() {
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-tools--src-registry-config-rs.html#item-enum-ToolConfigError-116">ToolConfigError</a>::<span class="rs-type">RootNotDir</span>(root.to_owned()));
+        }
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> configs = <span class="rs-type">HashMap</span>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>();
+        <span class="rs-kw">for</span> path <span class="rs-kw">in</span> <a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#item-fn-read-dir-sorted-286">read_dir_sorted</a>(root)? {
+            <span class="rs-kw">if</span> !path.is_file() || <a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#item-fn-extension-282">extension</a>(&amp;path) != <span class="rs-type">Some</span>(&quot;md&quot;) {
+                <span class="rs-kw">continue</span>;
+            }
+            <span class="rs-kw">let</span> stem = path
+                .file_stem()
+                .and_then(|s| s.to_str())
+                .unwrap_or_default();
+            <span class="rs-kw">let</span> name = <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-fn" href="eos-tools--src-core-intent-rs.html#method-from-wire-52">from_wire</a>(stem)
+                .ok_or_else(|| <a class="symbol-link rs-type" href="eos-tools--src-registry-config-rs.html#item-enum-ToolConfigError-116">ToolConfigError</a>::<span class="rs-type">UnknownToolFile</span>(path.clone()))?;
+            <span class="rs-kw">let</span> content = fs::read_to_string(&amp;path).map_err(|cause| <a class="symbol-link rs-type" href="eos-tools--src-registry-config-rs.html#item-enum-ToolConfigError-116">ToolConfigError</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-read-file-rs.html#item-struct-ReadFile-36">ReadFile</a> {
+                path: path.clone(),
+                cause,
+            })?;
+            configs.insert(name, <a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#item-fn-parse-tool-config-178">parse_tool_config</a>(name, &amp;content)?);
+        }
+        <span class="rs-kw">for</span> name <span class="rs-kw">in</span> <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<span class="rs-type">ALL</span> {
+            <span class="rs-kw">if</span> !configs.contains_key(&amp;name) {
+                <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-tools--src-registry-config-rs.html#item-enum-ToolConfigError-116">ToolConfigError</a>::<span class="rs-type">MissingTool</span>(name));
+            }
+        }
+        <span class="rs-type">Ok</span>(<span class="rs-self">Self</span> { configs })
+    }
+</code></pre>
+</details></td></tr></tbody></table>
+
   <p class="source">crates/eos-tools/src/registry/config.rs:45</p>
-</article><article class="type-card" data-kind="enum" data-kind-list="enum field type-model" data-filter-text="enum ToolConfigError pub pub enum ToolConfigError crates/eos-tools/src/registry/config.rs  ">
+</article><article id="item-enum-ToolConfigError-116" class="type-card" data-kind="enum" data-kind-list="enum field type-model" data-filter-text="enum ToolConfigError pub pub enum ToolConfigError crates/eos-tools/src/registry/config.rs  ">
   <div class="item-head">
     <span class="kind">enum</span>
     <h3>ToolConfigError</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub enum ToolConfigError</code>
-  <div class="tags"><span>config</span><span>error</span></div>
-  <h4>Variants</h4><table><tbody><tr><td>RootNotDir</td><td><code>0: PathBuf</code></td></tr><tr><td>ReadDir</td><td><code>path: PathBuf, cause: std :: io :: Error</code></td></tr><tr><td>ReadFile</td><td><code>path: PathBuf, cause: std :: io :: Error</code></td></tr><tr><td>UnknownToolFile</td><td><code>0: PathBuf</code></td></tr><tr><td>MissingTool</td><td><code>0: ToolName</code></td></tr><tr><td>MissingIntent</td><td><code>0: ToolName</code></td></tr><tr><td>UnknownIntent</td><td><code>tool: ToolName, value: String</code></td></tr><tr><td>UnknownHook</td><td><code>tool: ToolName, token: String</code></td></tr><tr><td>TerminalMismatch</td><td><code>tool: ToolName, declared: bool, expected: bool</code></td></tr><tr><td>EmptyDescription</td><td><code>0: ToolName</code></td></tr></tbody></table>
+  <code class="signature">pub enum <a class="symbol-link" href="eos-tools--src-registry-config-rs.html#item-enum-ToolConfigError-116">ToolConfigError</a></code>
+  <p class="docstring">A failure loading or validating the tool config tree.</p>
+  <div class="tags"><span>config</span><span>derive: Debug</span><span>derive: Error</span><span>error</span></div>
+  <h4>Variants</h4><table><tbody><tr><td>RootNotDir</td><td><code>0: PathBuf</code></td></tr><tr><td>ReadDir</td><td><code>path: PathBuf, cause: std :: io :: Error</code></td></tr><tr><td>ReadFile</td><td><code>path: PathBuf, cause: std :: io :: Error</code></td></tr><tr><td>UnknownToolFile</td><td><code>0: PathBuf</code></td></tr><tr><td>MissingTool</td><td><code>0: <a class="symbol-link" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a></code></td></tr><tr><td>MissingIntent</td><td><code>0: <a class="symbol-link" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a></code></td></tr><tr><td>UnknownIntent</td><td><code>tool: <a class="symbol-link" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>, value: String</code></td></tr><tr><td>UnknownHook</td><td><code>tool: <a class="symbol-link" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>, token: String</code></td></tr><tr><td>TerminalMismatch</td><td><code>tool: <a class="symbol-link" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>, declared: bool, expected: bool</code></td></tr><tr><td>EmptyDescription</td><td><code>0: <a class="symbol-link" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a></code></td></tr></tbody></table>
+
   <p class="source">crates/eos-tools/src/registry/config.rs:116</p>
-</article><article class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct Scratch private struct Scratch crates/eos-tools/src/registry/config.rs 0 PathBuf ">
+</article><article id="item-struct-Scratch-310" class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct Scratch private struct Scratch crates/eos-tools/src/registry/config.rs 0 PathBuf ">
   <div class="item-head">
     <span class="kind">struct</span>
     <h3>Scratch</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">struct Scratch</code>
+  <code class="signature">struct <a class="symbol-link" href="eos-tools--src-registry-config-rs.html#item-struct-Scratch-310">Scratch</a></code>
+  <p class="docstring">A throwaway temp dir, removed on drop.</p>
   <div class="tags"></div>
-  <h4>Fields</h4><table><tbody><tr><td>private</td><td>0</td><td><code>PathBuf</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr><td>constructor</td><td>new</td><td><code>fn new (tag : &amp; str) -&gt; Self</code></td></tr><tr><td>method</td><td>write</td><td><code>fn write (&amp; self , name : &amp; str , content : &amp; str)</code></td></tr><tr><td>method</td><td>path</td><td><code>fn path (&amp; self) -&gt; &amp; Path</code></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl Drop for Scratch</code></summary><table><tbody><tr><td>method</td><td>drop</td><td><code>fn drop (&amp; mut self)</code></td></tr></tbody></table></details></div>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>0</td><td><code>PathBuf</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-314"><td>constructor</td><td>new</td><td><code>fn <a class="symbol-link" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a> (tag : &amp; str) -&gt; Self</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>        <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(tag: &amp;str) -&gt; <span class="rs-self">Self</span> {
+            <span class="rs-kw">let</span> dir = std::env::temp_dir().join(format!(
+                &quot;eos-tools-cfg-{tag}-{:?}&quot;,
+                std::thread::current().id()
+            ));
+            <span class="rs-kw">let</span> _ = fs::remove_dir_all(&amp;dir);
+            fs::create_dir_all(&amp;dir).unwrap();
+            <span class="rs-self">Self</span>(dir)
+        }
+</code></pre>
+</details></td></tr><tr id="method-write-323"><td>method</td><td>write</td><td><code>fn <a class="symbol-link" href="eos-tools--src-registry-config-rs.html#method-write-323">write</a> (&amp; self , name : &amp; str , content : &amp; str)</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>        <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#method-write-323">write</a>(&amp;<span class="rs-self">self</span>, name: &amp;str, content: &amp;str) {
+            fs::<a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#method-write-323">write</a>(<span class="rs-self">self</span>.0.join(name), content).unwrap();
+        }
+</code></pre>
+</details></td></tr><tr id="method-path-326"><td>method</td><td>path</td><td><code>fn <a class="symbol-link" href="eos-tools--src-registry-config-rs.html#method-path-326">path</a> (&amp; self) -&gt; &amp; Path</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>        <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#method-path-326">path</a>(&amp;<span class="rs-self">self</span>) -&gt; &amp;<span class="rs-type">Path</span> {
+            &amp;<span class="rs-self">self</span>.0
+        }
+</code></pre>
+</details></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl Drop for <a class="symbol-link" href="eos-tools--src-registry-config-rs.html#item-struct-Scratch-310">Scratch</a></code></summary><table><tbody><tr id="method-drop-332"><td>method</td><td>drop</td><td><code>fn <a class="symbol-link" href="eos-tools--src-registry-config-rs.html#method-drop-332">drop</a> (&amp; mut self)</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>        <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#method-drop-332">drop</a>(&amp;<span class="rs-kw">mut</span> <span class="rs-self">self</span>) {
+            <span class="rs-kw">let</span> _ = fs::remove_dir_all(&amp;<span class="rs-self">self</span>.0);
+        }
+</code></pre>
+</details></td></tr></tbody></table></details></div>
+
   <p class="source">crates/eos-tools/src/registry/config.rs:310</p>
-</article><div class="group-label">Standalone Functions</div><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn parse_tool_config private fn parse_tool_config (name : ToolName , content : &amp; str) -&gt; Result &lt; ToolConfig , ToolConfigError &gt; crates/eos-tools/src/registry/config.rs  ">
+</article><div class="group-label">Standalone Functions</div><article id="item-fn-parse-tool-config-178" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn parse_tool_config private fn parse_tool_config (name : ToolName , content : &amp; str) -&gt; Result &lt; ToolConfig , ToolConfigError &gt; crates/eos-tools/src/registry/config.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>parse_tool_config</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn parse_tool_config (name : ToolName , content : &amp; str) -&gt; Result &lt; ToolConfig , ToolConfigError &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-tools--src-registry-config-rs.html#item-fn-parse-tool-config-178">parse_tool_config</a> (name : <a class="symbol-link" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a> , content : &amp; str) -&gt; Result &lt; <a class="symbol-link" href="eos-tools--src-registry-config-rs.html#item-struct-ToolConfig-30">ToolConfig</a> , <a class="symbol-link" href="eos-tools--src-registry-config-rs.html#item-enum-ToolConfigError-116">ToolConfigError</a> &gt;</code>
+  <p class="docstring">Parse one tool's markdown into a validated [`ToolConfig`].</p>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-comment">/// Parse one tool's markdown into a validated [`ToolConfig`].</span>
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#item-fn-parse-tool-config-178">parse_tool_config</a>(name: <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>, content: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-tools--src-registry-config-rs.html#item-struct-ToolConfig-30">ToolConfig</a>, <a class="symbol-link rs-type" href="eos-tools--src-registry-config-rs.html#item-enum-ToolConfigError-116">ToolConfigError</a>&gt; {
+    <span class="rs-kw">let</span> (frontmatter, description) = parse_markdown_frontmatter(content);
+    <span class="rs-kw">if</span> description.<a class="symbol-link rs-fn" href="eos-tools--src-registry-tool-registry-rs.html#method-is-empty-96">is_empty</a>() {
+        <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-tools--src-registry-config-rs.html#item-enum-ToolConfigError-116">ToolConfigError</a>::<span class="rs-type">EmptyDescription</span>(name));
+    }
+
+    <span class="rs-kw">let</span> intent_str = frontmatter
+        .<a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#method-get-89">get</a>(&quot;intent&quot;)
+        .and_then(<span class="rs-type">Value</span>::as_str)
+        .ok_or(<a class="symbol-link rs-type" href="eos-tools--src-registry-config-rs.html#item-enum-ToolConfigError-116">ToolConfigError</a>::<span class="rs-type">MissingIntent</span>(name))?;
+    <span class="rs-kw">let</span> intent =
+        <a class="symbol-link rs-type" href="eos-tools--src-core-intent-rs.html#item-enum-ToolIntent-14">ToolIntent</a>::<a class="symbol-link rs-fn" href="eos-tools--src-core-intent-rs.html#method-from-wire-52">from_wire</a>(intent_str).ok_or_else(|| <a class="symbol-link rs-type" href="eos-tools--src-registry-config-rs.html#item-enum-ToolConfigError-116">ToolConfigError</a>::<span class="rs-type">UnknownIntent</span> {
+            tool: name,
+            value: intent_str.to_owned(),
+        })?;
+
+    <span class="rs-kw">let</span> declared_terminal = frontmatter
+        .<a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#method-get-89">get</a>(&quot;terminal&quot;)
+        .and_then(<span class="rs-type">Value</span>::as_bool)
+        .unwrap_or(<span class="rs-kw">false</span>);
+    <span class="rs-kw">let</span> expected_terminal = <a class="symbol-link rs-type" href="eos-tools--src-tools-terminal-rs.html#item-enum-TerminalTool-13">TerminalTool</a>::<a class="symbol-link rs-fn" href="eos-tools--src-tools-terminal-rs.html#method-from-tool-name-56">from_tool_name</a>(name).is_some();
+    <span class="rs-kw">if</span> declared_terminal != expected_terminal {
+        <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-tools--src-registry-config-rs.html#item-enum-ToolConfigError-116">ToolConfigError</a>::<span class="rs-type">TerminalMismatch</span> {
+            tool: name,
+            declared: declared_terminal,
+            expected: expected_terminal,
+        });
+    }
+
+    <span class="rs-kw">let</span> hooks = <a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#item-fn-parse-hooks-217">parse_hooks</a>(name, &amp;frontmatter)?;
+    <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-tools--src-registry-config-rs.html#item-struct-ToolConfig-30">ToolConfig</a> {
+        description,
+        intent,
+        terminal: expected_terminal,
+        hooks,
+    })
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-tools/src/registry/config.rs:178</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn parse_hooks private fn parse_hooks (name : ToolName , frontmatter : &amp; Mapping) -&gt; Result &lt; Vec &lt; Hook &gt; , ToolConfigError &gt; crates/eos-tools/src/registry/config.rs  ">
+</article><article id="item-fn-parse-hooks-217" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn parse_hooks private fn parse_hooks (name : ToolName , frontmatter : &amp; Mapping) -&gt; Result &lt; Vec &lt; Hook &gt; , ToolConfigError &gt; crates/eos-tools/src/registry/config.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>parse_hooks</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn parse_hooks (name : ToolName , frontmatter : &amp; Mapping) -&gt; Result &lt; Vec &lt; Hook &gt; , ToolConfigError &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-tools--src-registry-config-rs.html#item-fn-parse-hooks-217">parse_hooks</a> (name : <a class="symbol-link" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a> , frontmatter : &amp; Mapping) -&gt; Result &lt; Vec &lt; <a class="symbol-link" href="eos-tools--src-hooks-mod-rs.html#item-enum-Hook-31">Hook</a> &gt; , <a class="symbol-link" href="eos-tools--src-registry-config-rs.html#item-enum-ToolConfigError-116">ToolConfigError</a> &gt;</code>
+  <p class="docstring">Parse the `hooks` list (absent ⇒ empty) into ordered [`Hook`]s.</p>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-comment">/// Parse the `hooks` list (absent ⇒ empty) into ordered [`Hook`]s.</span>
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#item-fn-parse-hooks-217">parse_hooks</a>(name: <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>, frontmatter: &amp;<span class="rs-type">Mapping</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;<a class="symbol-link rs-type" href="eos-tools--src-hooks-mod-rs.html#item-enum-Hook-31">Hook</a>&gt;, <a class="symbol-link rs-type" href="eos-tools--src-registry-config-rs.html#item-enum-ToolConfigError-116">ToolConfigError</a>&gt; {
+    <span class="rs-kw">let</span> <span class="rs-type">Some</span>(value) = frontmatter.<a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#method-get-89">get</a>(&quot;hooks&quot;) <span class="rs-kw">else</span> {
+        <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>());
+    };
+    <span class="rs-kw">let</span> <span class="rs-type">Some</span>(items) = value.as_sequence() <span class="rs-kw">else</span> {
+        <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-tools--src-registry-config-rs.html#item-enum-ToolConfigError-116">ToolConfigError</a>::<span class="rs-type">UnknownHook</span> {
+            tool: name,
+            token: format!(&quot;{value:?}&quot;),
+        });
+    };
+    items
+        .iter()
+        .map(|item| <a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#item-fn-parse-hook-item-234">parse_hook_item</a>(name, item))
+        .collect()
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-tools/src/registry/config.rs:217</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn parse_hook_item private fn parse_hook_item (name : ToolName , item : &amp; Value) -&gt; Result &lt; Hook , ToolConfigError &gt; crates/eos-tools/src/registry/config.rs  ">
+</article><article id="item-fn-parse-hook-item-234" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn parse_hook_item private fn parse_hook_item (name : ToolName , item : &amp; Value) -&gt; Result &lt; Hook , ToolConfigError &gt; crates/eos-tools/src/registry/config.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>parse_hook_item</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn parse_hook_item (name : ToolName , item : &amp; Value) -&gt; Result &lt; Hook , ToolConfigError &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-tools--src-registry-config-rs.html#item-fn-parse-hook-item-234">parse_hook_item</a> (name : <a class="symbol-link" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a> , item : &amp; Value) -&gt; Result &lt; <a class="symbol-link" href="eos-tools--src-hooks-mod-rs.html#item-enum-Hook-31">Hook</a> , <a class="symbol-link" href="eos-tools--src-registry-config-rs.html#item-enum-ToolConfigError-116">ToolConfigError</a> &gt;</code>
+  <p class="docstring">Parse one `hooks` entry: a bare `token` string, or a single-key<br>`{token: {params}}` mapping (currently only `max_depth` for<br>`disallow_nested_planner_deferral`).</p>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-comment">/// Parse one `hooks` entry: a bare `token` string, or a single-key</span>
+<span class="rs-comment">/// `{token: {params}}` mapping (currently only `max_depth` for</span>
+<span class="rs-comment">/// `disallow_nested_planner_deferral`).</span>
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#item-fn-parse-hook-item-234">parse_hook_item</a>(name: <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>, item: &amp;<span class="rs-type">Value</span>) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-tools--src-hooks-mod-rs.html#item-enum-Hook-31">Hook</a>, <a class="symbol-link rs-type" href="eos-tools--src-registry-config-rs.html#item-enum-ToolConfigError-116">ToolConfigError</a>&gt; {
+    <span class="rs-kw">let</span> unknown = || <a class="symbol-link rs-type" href="eos-tools--src-registry-config-rs.html#item-enum-ToolConfigError-116">ToolConfigError</a>::<span class="rs-type">UnknownHook</span> {
+        tool: name,
+        token: format!(&quot;{item:?}&quot;),
+    };
+    <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(token) = item.<a class="symbol-link rs-fn" href="eos-tools--src-core-intent-rs.html#method-as-str-42">as_str</a>() {
+        <span class="rs-kw">return</span> <a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#item-fn-hook-from-token-262">hook_from_token</a>(name, token, <span class="rs-type">None</span>).ok_or_else(unknown);
+    }
+    <span class="rs-kw">let</span> one_entry = item
+        .as_mapping()
+        .filter(|map| map.<a class="symbol-link rs-fn" href="eos-tools--src-registry-tool-registry-rs.html#method-len-90">len</a>() == 1)
+        .and_then(|map| map.iter().next());
+    <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>((key, params)) = one_entry {
+        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(token) = key.<a class="symbol-link rs-fn" href="eos-tools--src-core-intent-rs.html#method-as-str-42">as_str</a>() {
+            <span class="rs-kw">return</span> <a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#item-fn-hook-from-token-262">hook_from_token</a>(name, token, <span class="rs-type">Some</span>(params)).ok_or_else(unknown);
+        }
+    }
+    <span class="rs-type">Err</span>(unknown())
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-tools/src/registry/config.rs:234</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn hook_from_token private fn hook_from_token (tool : ToolName , token : &amp; str , params : Option &lt; &amp; Value &gt;) -&gt; Option &lt; Hook &gt; crates/eos-tools/src/registry/config.rs  ">
+</article><article id="item-fn-hook-from-token-262" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn hook_from_token private fn hook_from_token (tool : ToolName , token : &amp; str , params : Option &lt; &amp; Value &gt;) -&gt; Option &lt; Hook &gt; crates/eos-tools/src/registry/config.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>hook_from_token</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn hook_from_token (tool : ToolName , token : &amp; str , params : Option &lt; &amp; Value &gt;) -&gt; Option &lt; Hook &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-tools--src-registry-config-rs.html#item-fn-hook-from-token-262">hook_from_token</a> (tool : <a class="symbol-link" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a> , token : &amp; str , params : Option &lt; &amp; Value &gt;) -&gt; Option &lt; <a class="symbol-link" href="eos-tools--src-hooks-mod-rs.html#item-enum-Hook-31">Hook</a> &gt;</code>
+  <p class="docstring">Map a config token (see [`Hook::config_token`]) to its [`Hook`], filling the<br>`{ tool }` field from the owning tool and any per-hook `params`.</p>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-comment">/// Map a config token (see [`Hook::config_token`]) to its [`Hook`], filling the</span>
+<span class="rs-comment">/// `{ tool }` field from the owning tool and any per-hook `params`.</span>
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#item-fn-hook-from-token-262">hook_from_token</a>(tool: <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>, token: &amp;str, params: <span class="rs-type">Option</span>&lt;&amp;<span class="rs-type">Value</span>&gt;) -&gt; <span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-tools--src-hooks-mod-rs.html#item-enum-Hook-31">Hook</a>&gt; {
+    <span class="rs-type">Some</span>(<span class="rs-kw">match</span> token {
+        &quot;no_background_sessions&quot; =&gt; <a class="symbol-link rs-type" href="eos-tools--src-hooks-mod-rs.html#item-enum-Hook-31">Hook</a>::<span class="rs-type">RequireNoBackgroundSessions</span> { tool },
+        &quot;advisor_approval&quot; =&gt; <a class="symbol-link rs-type" href="eos-tools--src-hooks-mod-rs.html#item-enum-Hook-31">Hook</a>::<span class="rs-type">AdvisorApproval</span> { tool },
+        &quot;disallow_nested_planner_deferral&quot; =&gt; <a class="symbol-link rs-type" href="eos-tools--src-hooks-mod-rs.html#item-enum-Hook-31">Hook</a>::<span class="rs-type">DisallowNestedPlannerDeferral</span> {
+            tool,
+            max_depth: params
+                .and_then(|p| p.<a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#method-get-89">get</a>(&quot;max_depth&quot;))
+                .and_then(<span class="rs-type">Value</span>::as_u64)
+                .map_or(<span class="rs-type">DEFAULT_MAX_WORKFLOW_DEPTH</span>, |d| d <span class="rs-kw">as</span> u32),
+        },
+        &quot;destructive_git_shell&quot; =&gt; <a class="symbol-link rs-type" href="eos-tools--src-hooks-mod-rs.html#item-enum-Hook-31">Hook</a>::<span class="rs-type">DestructiveGitShell</span> { tool },
+        &quot;destructive_shell&quot; =&gt; <a class="symbol-link rs-type" href="eos-tools--src-hooks-mod-rs.html#item-enum-Hook-31">Hook</a>::<span class="rs-type">DestructiveShell</span> { tool },
+        &quot;block_in_isolated_mode&quot; =&gt; <a class="symbol-link rs-type" href="eos-tools--src-hooks-mod-rs.html#item-enum-Hook-31">Hook</a>::<span class="rs-type">BlockInIsolatedMode</span> { tool },
+        _ =&gt; <span class="rs-kw">return</span> <span class="rs-type">None</span>,
+    })
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-tools/src/registry/config.rs:262</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn extension private fn extension (path : &amp; Path) -&gt; Option &lt; &amp; str &gt; crates/eos-tools/src/registry/config.rs  ">
+</article><article id="item-fn-extension-282" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn extension private fn extension (path : &amp; Path) -&gt; Option &lt; &amp; str &gt; crates/eos-tools/src/registry/config.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>extension</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn extension (path : &amp; Path) -&gt; Option &lt; &amp; str &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-tools--src-registry-config-rs.html#item-fn-extension-282">extension</a> (path : &amp; Path) -&gt; Option &lt; &amp; str &gt;</code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#item-fn-extension-282">extension</a>(path: &amp;<span class="rs-type">Path</span>) -&gt; <span class="rs-type">Option</span>&lt;&amp;str&gt; {
+    path.<a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#item-fn-extension-282">extension</a>().and_then(|e| e.to_str())
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-tools/src/registry/config.rs:282</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn read_dir_sorted private fn read_dir_sorted (dir : &amp; Path) -&gt; Result &lt; Vec &lt; PathBuf &gt; , ToolConfigError &gt; crates/eos-tools/src/registry/config.rs  ">
+</article><article id="item-fn-read-dir-sorted-286" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn read_dir_sorted private fn read_dir_sorted (dir : &amp; Path) -&gt; Result &lt; Vec &lt; PathBuf &gt; , ToolConfigError &gt; crates/eos-tools/src/registry/config.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>read_dir_sorted</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn read_dir_sorted (dir : &amp; Path) -&gt; Result &lt; Vec &lt; PathBuf &gt; , ToolConfigError &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-tools--src-registry-config-rs.html#item-fn-read-dir-sorted-286">read_dir_sorted</a> (dir : &amp; Path) -&gt; Result &lt; Vec &lt; PathBuf &gt; , <a class="symbol-link" href="eos-tools--src-registry-config-rs.html#item-enum-ToolConfigError-116">ToolConfigError</a> &gt;</code>
+  <p class="docstring">List a directory's entries as paths, sorted (deterministic load order, parity<br>with `eos-skills`).</p>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-comment">/// List a directory's entries as paths, sorted (deterministic load order, parity</span>
+<span class="rs-comment">/// with `eos-skills`).</span>
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#item-fn-read-dir-sorted-286">read_dir_sorted</a>(dir: &amp;<span class="rs-type">Path</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;<span class="rs-type">PathBuf</span>&gt;, <a class="symbol-link rs-type" href="eos-tools--src-registry-config-rs.html#item-enum-ToolConfigError-116">ToolConfigError</a>&gt; {
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> paths = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>();
+    <span class="rs-kw">let</span> entries = fs::read_dir(dir).map_err(|cause| <a class="symbol-link rs-type" href="eos-tools--src-registry-config-rs.html#item-enum-ToolConfigError-116">ToolConfigError</a>::<span class="rs-type">ReadDir</span> {
+        path: dir.to_owned(),
+        cause,
+    })?;
+    <span class="rs-kw">for</span> entry <span class="rs-kw">in</span> entries {
+        <span class="rs-kw">let</span> entry = entry.map_err(|cause| <a class="symbol-link rs-type" href="eos-tools--src-registry-config-rs.html#item-enum-ToolConfigError-116">ToolConfigError</a>::<span class="rs-type">ReadDir</span> {
+            path: dir.to_owned(),
+            cause,
+        })?;
+        paths.push(entry.<a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#method-path-326">path</a>());
+    }
+    paths.sort();
+    <span class="rs-type">Ok</span>(paths)
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-tools/src/registry/config.rs:286</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn valid_file private fn valid_file (name : ToolName) -&gt; String crates/eos-tools/src/registry/config.rs  ">
+</article><article id="item-fn-valid-file-337" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn valid_file private fn valid_file (name : ToolName) -&gt; String crates/eos-tools/src/registry/config.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>valid_file</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn valid_file (name : ToolName) -&gt; String</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-tools--src-registry-config-rs.html#item-fn-valid-file-337">valid_file</a> (name : <a class="symbol-link" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>) -&gt; String</code>
+  <p class="docstring">Write a minimal valid file body for `name` (terminal flag matches the<br>catalog, intent valid, non-empty body, no hooks).</p>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Write a minimal valid file body for `name` (terminal flag matches the</span>
+    <span class="rs-comment">/// catalog, intent valid, non-empty body, no hooks).</span>
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#item-fn-valid-file-337">valid_file</a>(name: <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>) -&gt; <span class="rs-type">String</span> {
+        <span class="rs-kw">let</span> terminal = <a class="symbol-link rs-type" href="eos-tools--src-tools-terminal-rs.html#item-enum-TerminalTool-13">TerminalTool</a>::<a class="symbol-link rs-fn" href="eos-tools--src-tools-terminal-rs.html#method-from-tool-name-56">from_tool_name</a>(name).is_some();
+        format!(
+            &quot;---\nintent: read_only\nterminal: {terminal}\nhooks: []\n---\n{name} description\n&quot;
+        )
+    }
+</code></pre>
+</details>
 
   <p class="source">crates/eos-tools/src/registry/config.rs:337</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn parses_a_well_formed_file private fn parses_a_well_formed_file () crates/eos-tools/src/registry/config.rs  ">
+</article><article id="item-fn-parses-a-well-formed-file-346" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn parses_a_well_formed_file private fn parses_a_well_formed_file () crates/eos-tools/src/registry/config.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>parses_a_well_formed_file</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn parses_a_well_formed_file ()</code>
-  <div class="tags"></div>
+  <code class="signature">fn <a class="symbol-link" href="eos-tools--src-registry-config-rs.html#item-fn-parses-a-well-formed-file-346">parses_a_well_formed_file</a> ()</code>
+  <div class="tags"><span>test</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#item-fn-parses-a-well-formed-file-346">parses_a_well_formed_file</a>() {
+        <span class="rs-kw">let</span> cfg = <a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#item-fn-parse-tool-config-178">parse_tool_config</a>(
+            <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-exec-command-rs.html#item-struct-ExecCommand-30">ExecCommand</a>,
+            &quot;---\nintent: write_allowed\nterminal: <span class="rs-kw">false</span>\nhooks: [destructive_git_shell, destructive_shell]\n---\nRun a command.\n&quot;,
+        )
+        .unwrap();
+        assert_eq!(cfg.intent, <a class="symbol-link rs-type" href="eos-tools--src-core-intent-rs.html#item-enum-ToolIntent-14">ToolIntent</a>::<span class="rs-type">WriteAllowed</span>);
+        assert!(!cfg.terminal);
+        assert_eq!(cfg.description, &quot;<span class="rs-type">Run</span> a command.&quot;);
+        assert_eq!(
+            cfg.hooks,
+            vec![
+                <a class="symbol-link rs-type" href="eos-tools--src-hooks-mod-rs.html#item-enum-Hook-31">Hook</a>::<span class="rs-type">DestructiveGitShell</span> {
+                    tool: <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-exec-command-rs.html#item-struct-ExecCommand-30">ExecCommand</a>
+                },
+                <a class="symbol-link rs-type" href="eos-tools--src-hooks-mod-rs.html#item-enum-Hook-31">Hook</a>::<span class="rs-type">DestructiveShell</span> {
+                    tool: <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-exec-command-rs.html#item-struct-ExecCommand-30">ExecCommand</a>
+                },
+            ]
+        );
+    }
+</code></pre>
+</details>
 
   <p class="source">crates/eos-tools/src/registry/config.rs:346</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn absent_hooks_is_empty private fn absent_hooks_is_empty () crates/eos-tools/src/registry/config.rs  ">
+</article><article id="item-fn-absent-hooks-is-empty-369" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn absent_hooks_is_empty private fn absent_hooks_is_empty () crates/eos-tools/src/registry/config.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>absent_hooks_is_empty</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn absent_hooks_is_empty ()</code>
-  <div class="tags"></div>
+  <code class="signature">fn <a class="symbol-link" href="eos-tools--src-registry-config-rs.html#item-fn-absent-hooks-is-empty-369">absent_hooks_is_empty</a> ()</code>
+  <div class="tags"><span>test</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#item-fn-absent-hooks-is-empty-369">absent_hooks_is_empty</a>() {
+        <span class="rs-kw">let</span> cfg = <a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#item-fn-parse-tool-config-178">parse_tool_config</a>(
+            <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-read-file-rs.html#item-struct-ReadFile-36">ReadFile</a>,
+            &quot;---\nintent: read_only\nterminal: <span class="rs-kw">false</span>\n---\nRead a file.\n&quot;,
+        )
+        .unwrap();
+        assert!(cfg.hooks.<a class="symbol-link rs-fn" href="eos-tools--src-registry-tool-registry-rs.html#method-is-empty-96">is_empty</a>());
+    }
+</code></pre>
+</details>
 
   <p class="source">crates/eos-tools/src/registry/config.rs:369</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn rejects_unknown_intent private fn rejects_unknown_intent () crates/eos-tools/src/registry/config.rs  ">
+</article><article id="item-fn-rejects-unknown-intent-379" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn rejects_unknown_intent private fn rejects_unknown_intent () crates/eos-tools/src/registry/config.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>rejects_unknown_intent</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn rejects_unknown_intent ()</code>
-  <div class="tags"></div>
+  <code class="signature">fn <a class="symbol-link" href="eos-tools--src-registry-config-rs.html#item-fn-rejects-unknown-intent-379">rejects_unknown_intent</a> ()</code>
+  <div class="tags"><span>test</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#item-fn-rejects-unknown-intent-379">rejects_unknown_intent</a>() {
+        <span class="rs-kw">let</span> err = <a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#item-fn-parse-tool-config-178">parse_tool_config</a>(
+            <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-read-file-rs.html#item-struct-ReadFile-36">ReadFile</a>,
+            &quot;---\nintent: bogus\nterminal: <span class="rs-kw">false</span>\n---\nbody\n&quot;,
+        )
+        .unwrap_err();
+        assert!(
+            matches!(err, <a class="symbol-link rs-type" href="eos-tools--src-registry-config-rs.html#item-enum-ToolConfigError-116">ToolConfigError</a>::<span class="rs-type">UnknownIntent</span> { .. }),
+            &quot;{err:?}&quot;
+        );
+    }
+</code></pre>
+</details>
 
   <p class="source">crates/eos-tools/src/registry/config.rs:379</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn rejects_missing_intent private fn rejects_missing_intent () crates/eos-tools/src/registry/config.rs  ">
+</article><article id="item-fn-rejects-missing-intent-392" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn rejects_missing_intent private fn rejects_missing_intent () crates/eos-tools/src/registry/config.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>rejects_missing_intent</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn rejects_missing_intent ()</code>
-  <div class="tags"></div>
+  <code class="signature">fn <a class="symbol-link" href="eos-tools--src-registry-config-rs.html#item-fn-rejects-missing-intent-392">rejects_missing_intent</a> ()</code>
+  <div class="tags"><span>test</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#item-fn-rejects-missing-intent-392">rejects_missing_intent</a>() {
+        <span class="rs-kw">let</span> err =
+            <a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#item-fn-parse-tool-config-178">parse_tool_config</a>(<a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-read-file-rs.html#item-struct-ReadFile-36">ReadFile</a>, &quot;---\nterminal: <span class="rs-kw">false</span>\n---\nbody\n&quot;).unwrap_err();
+        assert!(matches!(err, <a class="symbol-link rs-type" href="eos-tools--src-registry-config-rs.html#item-enum-ToolConfigError-116">ToolConfigError</a>::<span class="rs-type">MissingIntent</span>(_)), &quot;{err:?}&quot;);
+    }
+</code></pre>
+</details>
 
   <p class="source">crates/eos-tools/src/registry/config.rs:392</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn rejects_unknown_hook_token private fn rejects_unknown_hook_token () crates/eos-tools/src/registry/config.rs  ">
+</article><article id="item-fn-rejects-unknown-hook-token-399" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn rejects_unknown_hook_token private fn rejects_unknown_hook_token () crates/eos-tools/src/registry/config.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>rejects_unknown_hook_token</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn rejects_unknown_hook_token ()</code>
-  <div class="tags"></div>
+  <code class="signature">fn <a class="symbol-link" href="eos-tools--src-registry-config-rs.html#item-fn-rejects-unknown-hook-token-399">rejects_unknown_hook_token</a> ()</code>
+  <div class="tags"><span>test</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#item-fn-rejects-unknown-hook-token-399">rejects_unknown_hook_token</a>() {
+        <span class="rs-kw">let</span> err = <a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#item-fn-parse-tool-config-178">parse_tool_config</a>(
+            <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-read-file-rs.html#item-struct-ReadFile-36">ReadFile</a>,
+            &quot;---\nintent: read_only\nterminal: <span class="rs-kw">false</span>\nhooks: [made_up]\n---\nbody\n&quot;,
+        )
+        .unwrap_err();
+        assert!(
+            matches!(err, <a class="symbol-link rs-type" href="eos-tools--src-registry-config-rs.html#item-enum-ToolConfigError-116">ToolConfigError</a>::<span class="rs-type">UnknownHook</span> { .. }),
+            &quot;{err:?}&quot;
+        );
+    }
+</code></pre>
+</details>
 
   <p class="source">crates/eos-tools/src/registry/config.rs:399</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn rejects_terminal_mismatch private fn rejects_terminal_mismatch () crates/eos-tools/src/registry/config.rs  ">
+</article><article id="item-fn-rejects-terminal-mismatch-412" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn rejects_terminal_mismatch private fn rejects_terminal_mismatch () crates/eos-tools/src/registry/config.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>rejects_terminal_mismatch</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn rejects_terminal_mismatch ()</code>
-  <div class="tags"></div>
+  <code class="signature">fn <a class="symbol-link" href="eos-tools--src-registry-config-rs.html#item-fn-rejects-terminal-mismatch-412">rejects_terminal_mismatch</a> ()</code>
+  <div class="tags"><span>test</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#item-fn-rejects-terminal-mismatch-412">rejects_terminal_mismatch</a>() {
+        <span class="rs-comment">// read_file is not in the TerminalTool catalog, so terminal:true is wrong.</span>
+        <span class="rs-kw">let</span> err = <a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#item-fn-parse-tool-config-178">parse_tool_config</a>(
+            <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-read-file-rs.html#item-struct-ReadFile-36">ReadFile</a>,
+            &quot;---\nintent: read_only\nterminal: <span class="rs-kw">true</span>\n---\nbody\n&quot;,
+        )
+        .unwrap_err();
+        assert!(
+            matches!(err, <a class="symbol-link rs-type" href="eos-tools--src-registry-config-rs.html#item-enum-ToolConfigError-116">ToolConfigError</a>::<span class="rs-type">TerminalMismatch</span> { .. }),
+            &quot;{err:?}&quot;
+        );
+    }
+</code></pre>
+</details>
 
   <p class="source">crates/eos-tools/src/registry/config.rs:412</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn rejects_empty_description private fn rejects_empty_description () crates/eos-tools/src/registry/config.rs  ">
+</article><article id="item-fn-rejects-empty-description-426" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn rejects_empty_description private fn rejects_empty_description () crates/eos-tools/src/registry/config.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>rejects_empty_description</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn rejects_empty_description ()</code>
-  <div class="tags"></div>
+  <code class="signature">fn <a class="symbol-link" href="eos-tools--src-registry-config-rs.html#item-fn-rejects-empty-description-426">rejects_empty_description</a> ()</code>
+  <div class="tags"><span>test</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#item-fn-rejects-empty-description-426">rejects_empty_description</a>() {
+        <span class="rs-kw">let</span> err = <a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#item-fn-parse-tool-config-178">parse_tool_config</a>(
+            <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-read-file-rs.html#item-struct-ReadFile-36">ReadFile</a>,
+            &quot;---\nintent: read_only\nterminal: <span class="rs-kw">false</span>\n---\n   \n&quot;,
+        )
+        .unwrap_err();
+        assert!(
+            matches!(err, <a class="symbol-link rs-type" href="eos-tools--src-registry-config-rs.html#item-enum-ToolConfigError-116">ToolConfigError</a>::<span class="rs-type">EmptyDescription</span>(_)),
+            &quot;{err:?}&quot;
+        );
+    }
+</code></pre>
+</details>
 
   <p class="source">crates/eos-tools/src/registry/config.rs:426</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn load_rejects_non_directory_root private fn load_rejects_non_directory_root () crates/eos-tools/src/registry/config.rs  ">
+</article><article id="item-fn-load-rejects-non-directory-root-439" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn load_rejects_non_directory_root private fn load_rejects_non_directory_root () crates/eos-tools/src/registry/config.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>load_rejects_non_directory_root</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn load_rejects_non_directory_root ()</code>
-  <div class="tags"></div>
+  <code class="signature">fn <a class="symbol-link" href="eos-tools--src-registry-config-rs.html#item-fn-load-rejects-non-directory-root-439">load_rejects_non_directory_root</a> ()</code>
+  <div class="tags"><span>test</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#item-fn-load-rejects-non-directory-root-439">load_rejects_non_directory_root</a>() {
+        <span class="rs-kw">let</span> err = <a class="symbol-link rs-type" href="eos-tools--src-registry-config-rs.html#item-struct-ToolConfigSet-45">ToolConfigSet</a>::<a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#method-load-from-dir-53">load_from_dir</a>(<span class="rs-type">Path</span>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(&quot;/no/such/tools/root&quot;)).unwrap_err();
+        assert!(matches!(err, <a class="symbol-link rs-type" href="eos-tools--src-registry-config-rs.html#item-enum-ToolConfigError-116">ToolConfigError</a>::<span class="rs-type">RootNotDir</span>(_)), &quot;{err:?}&quot;);
+    }
+</code></pre>
+</details>
 
   <p class="source">crates/eos-tools/src/registry/config.rs:439</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn load_rejects_unknown_tool_file private fn load_rejects_unknown_tool_file () crates/eos-tools/src/registry/config.rs  ">
+</article><article id="item-fn-load-rejects-unknown-tool-file-445" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn load_rejects_unknown_tool_file private fn load_rejects_unknown_tool_file () crates/eos-tools/src/registry/config.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>load_rejects_unknown_tool_file</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn load_rejects_unknown_tool_file ()</code>
-  <div class="tags"></div>
+  <code class="signature">fn <a class="symbol-link" href="eos-tools--src-registry-config-rs.html#item-fn-load-rejects-unknown-tool-file-445">load_rejects_unknown_tool_file</a> ()</code>
+  <div class="tags"><span>test</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#item-fn-load-rejects-unknown-tool-file-445">load_rejects_unknown_tool_file</a>() {
+        <span class="rs-kw">let</span> scratch = <a class="symbol-link rs-type" href="eos-tools--src-registry-config-rs.html#item-struct-Scratch-310">Scratch</a>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(&quot;unknown-file&quot;);
+        <span class="rs-kw">for</span> name <span class="rs-kw">in</span> <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<span class="rs-type">ALL</span> {
+            scratch.<a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#method-write-323">write</a>(&amp;format!(&quot;{name}.md&quot;), &amp;<a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#item-fn-valid-file-337">valid_file</a>(name));
+        }
+        scratch.<a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#method-write-323">write</a>(&quot;not_a_tool.md&quot;, &amp;<a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#item-fn-valid-file-337">valid_file</a>(<a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-read-file-rs.html#item-struct-ReadFile-36">ReadFile</a>));
+        <span class="rs-kw">let</span> err = <a class="symbol-link rs-type" href="eos-tools--src-registry-config-rs.html#item-struct-ToolConfigSet-45">ToolConfigSet</a>::<a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#method-load-from-dir-53">load_from_dir</a>(scratch.<a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#method-path-326">path</a>()).unwrap_err();
+        assert!(
+            matches!(err, <a class="symbol-link rs-type" href="eos-tools--src-registry-config-rs.html#item-enum-ToolConfigError-116">ToolConfigError</a>::<span class="rs-type">UnknownToolFile</span>(_)),
+            &quot;{err:?}&quot;
+        );
+    }
+</code></pre>
+</details>
 
   <p class="source">crates/eos-tools/src/registry/config.rs:445</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn load_rejects_missing_tool private fn load_rejects_missing_tool () crates/eos-tools/src/registry/config.rs  ">
+</article><article id="item-fn-load-rejects-missing-tool-459" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn load_rejects_missing_tool private fn load_rejects_missing_tool () crates/eos-tools/src/registry/config.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>load_rejects_missing_tool</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn load_rejects_missing_tool ()</code>
-  <div class="tags"></div>
+  <code class="signature">fn <a class="symbol-link" href="eos-tools--src-registry-config-rs.html#item-fn-load-rejects-missing-tool-459">load_rejects_missing_tool</a> ()</code>
+  <div class="tags"><span>test</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#item-fn-load-rejects-missing-tool-459">load_rejects_missing_tool</a>() {
+        <span class="rs-kw">let</span> scratch = <a class="symbol-link rs-type" href="eos-tools--src-registry-config-rs.html#item-struct-Scratch-310">Scratch</a>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(&quot;missing-tool&quot;);
+        <span class="rs-kw">for</span> name <span class="rs-kw">in</span> <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<span class="rs-type">ALL</span> {
+            <span class="rs-kw">if</span> name == <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-read-file-rs.html#item-struct-ReadFile-36">ReadFile</a> {
+                <span class="rs-kw">continue</span>; <span class="rs-comment">// drop one</span>
+            }
+            scratch.<a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#method-write-323">write</a>(&amp;format!(&quot;{name}.md&quot;), &amp;<a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#item-fn-valid-file-337">valid_file</a>(name));
+        }
+        <span class="rs-kw">let</span> err = <a class="symbol-link rs-type" href="eos-tools--src-registry-config-rs.html#item-struct-ToolConfigSet-45">ToolConfigSet</a>::<a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#method-load-from-dir-53">load_from_dir</a>(scratch.<a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#method-path-326">path</a>()).unwrap_err();
+        assert!(
+            matches!(err, <a class="symbol-link rs-type" href="eos-tools--src-registry-config-rs.html#item-enum-ToolConfigError-116">ToolConfigError</a>::<span class="rs-type">MissingTool</span>(<a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-read-file-rs.html#item-struct-ReadFile-36">ReadFile</a>)),
+            &quot;{err:?}&quot;
+        );
+    }
+</code></pre>
+</details>
 
   <p class="source">crates/eos-tools/src/registry/config.rs:459</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn load_full_valid_set_is_total private fn load_full_valid_set_is_total () crates/eos-tools/src/registry/config.rs  ">
+</article><article id="item-fn-load-full-valid-set-is-total-475" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn load_full_valid_set_is_total private fn load_full_valid_set_is_total () crates/eos-tools/src/registry/config.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>load_full_valid_set_is_total</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn load_full_valid_set_is_total ()</code>
-  <div class="tags"></div>
+  <code class="signature">fn <a class="symbol-link" href="eos-tools--src-registry-config-rs.html#item-fn-load-full-valid-set-is-total-475">load_full_valid_set_is_total</a> ()</code>
+  <div class="tags"><span>test</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#item-fn-load-full-valid-set-is-total-475">load_full_valid_set_is_total</a>() {
+        <span class="rs-kw">let</span> scratch = <a class="symbol-link rs-type" href="eos-tools--src-registry-config-rs.html#item-struct-Scratch-310">Scratch</a>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(&quot;full-valid&quot;);
+        <span class="rs-kw">for</span> name <span class="rs-kw">in</span> <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<span class="rs-type">ALL</span> {
+            scratch.<a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#method-write-323">write</a>(&amp;format!(&quot;{name}.md&quot;), &amp;<a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#item-fn-valid-file-337">valid_file</a>(name));
+        }
+        <span class="rs-kw">let</span> set = <a class="symbol-link rs-type" href="eos-tools--src-registry-config-rs.html#item-struct-ToolConfigSet-45">ToolConfigSet</a>::<a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#method-load-from-dir-53">load_from_dir</a>(scratch.<a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#method-path-326">path</a>()).unwrap();
+        <span class="rs-kw">for</span> name <span class="rs-kw">in</span> <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<span class="rs-type">ALL</span> {
+            assert_eq!(set.<a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#method-get-89">get</a>(name).description, format!(&quot;{name} description&quot;));
+        }
+    }
+</code></pre>
+</details>
 
   <p class="source">crates/eos-tools/src/registry/config.rs:475</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn hook_tokens_round_trip private fn hook_tokens_round_trip () crates/eos-tools/src/registry/config.rs  ">
+</article><article id="item-fn-hook-tokens-round-trip-487" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn hook_tokens_round_trip private fn hook_tokens_round_trip () crates/eos-tools/src/registry/config.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>hook_tokens_round_trip</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn hook_tokens_round_trip ()</code>
-  <div class="tags"></div>
+  <code class="signature">fn <a class="symbol-link" href="eos-tools--src-registry-config-rs.html#item-fn-hook-tokens-round-trip-487">hook_tokens_round_trip</a> ()</code>
+  <p class="docstring">Every [`Hook`] variant's `config_token` round-trips through<br>`hook_from_token` (keeps the forward/inverse maps in sync).</p>
+  <div class="tags"><span>test</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Every [`Hook`] variant's `config_token` round-trips through</span>
+    <span class="rs-comment">/// `hook_from_token` (keeps the forward/inverse maps in sync).</span>
+    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#item-fn-hook-tokens-round-trip-487">hook_tokens_round_trip</a>() {
+        <span class="rs-kw">let</span> tool = <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-exec-command-rs.html#item-struct-ExecCommand-30">ExecCommand</a>;
+        <span class="rs-kw">for</span> hook <span class="rs-kw">in</span> [
+            <a class="symbol-link rs-type" href="eos-tools--src-hooks-mod-rs.html#item-enum-Hook-31">Hook</a>::<span class="rs-type">RequireNoBackgroundSessions</span> { tool },
+            <a class="symbol-link rs-type" href="eos-tools--src-hooks-mod-rs.html#item-enum-Hook-31">Hook</a>::<span class="rs-type">AdvisorApproval</span> { tool },
+            <a class="symbol-link rs-type" href="eos-tools--src-hooks-mod-rs.html#item-enum-Hook-31">Hook</a>::<span class="rs-type">DisallowNestedPlannerDeferral</span> { tool, max_depth: 1 },
+            <a class="symbol-link rs-type" href="eos-tools--src-hooks-mod-rs.html#item-enum-Hook-31">Hook</a>::<span class="rs-type">DestructiveGitShell</span> { tool },
+            <a class="symbol-link rs-type" href="eos-tools--src-hooks-mod-rs.html#item-enum-Hook-31">Hook</a>::<span class="rs-type">DestructiveShell</span> { tool },
+            <a class="symbol-link rs-type" href="eos-tools--src-hooks-mod-rs.html#item-enum-Hook-31">Hook</a>::<span class="rs-type">BlockInIsolatedMode</span> { tool },
+        ] {
+            assert_eq!(<a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#item-fn-hook-from-token-262">hook_from_token</a>(tool, hook.<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-config-token-144">config_token</a>(), <span class="rs-type">None</span>), <span class="rs-type">Some</span>(hook));
+        }
+    }
+</code></pre>
+</details>
 
   <p class="source">crates/eos-tools/src/registry/config.rs:487</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn disallow_nested_max_depth_parses_from_entry private fn disallow_nested_max_depth_parses_from_entry () crates/eos-tools/src/registry/config.rs  ">
+</article><article id="item-fn-disallow-nested-max-depth-parses-from-entry-504" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn disallow_nested_max_depth_parses_from_entry private fn disallow_nested_max_depth_parses_from_entry () crates/eos-tools/src/registry/config.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>disallow_nested_max_depth_parses_from_entry</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn disallow_nested_max_depth_parses_from_entry ()</code>
-  <div class="tags"></div>
+  <code class="signature">fn <a class="symbol-link" href="eos-tools--src-registry-config-rs.html#item-fn-disallow-nested-max-depth-parses-from-entry-504">disallow_nested_max_depth_parses_from_entry</a> ()</code>
+  <p class="docstring">The parameterized `{disallow_nested_planner_deferral: {max_depth: N}}`<br>hooks entry parses the configured depth; the bare token defaults.</p>
+  <div class="tags"><span>test</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// The parameterized `{disallow_nested_planner_deferral: {max_depth: N}}`</span>
+    <span class="rs-comment">/// hooks entry parses the configured depth; the bare token defaults.</span>
+    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#item-fn-disallow-nested-max-depth-parses-from-entry-504">disallow_nested_max_depth_parses_from_entry</a>() {
+        <span class="rs-kw">let</span> name = <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-submission-planner-submit-planner-outcome-rs.html#item-struct-SubmitPlannerOutcome-50">SubmitPlannerOutcome</a>;
+        <span class="rs-kw">let</span> configured: <span class="rs-type">Value</span> =
+            serde_yaml::<a class="symbol-link rs-fn" href="eos-tools--src-core-name-rs.html#method-from-str-232">from_str</a>(&quot;{disallow_nested_planner_deferral: {max_depth: 3}}&quot;).unwrap();
+        assert_eq!(
+            <a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#item-fn-parse-hook-item-234">parse_hook_item</a>(name, &amp;configured).unwrap(),
+            <a class="symbol-link rs-type" href="eos-tools--src-hooks-mod-rs.html#item-enum-Hook-31">Hook</a>::<span class="rs-type">DisallowNestedPlannerDeferral</span> {
+                tool: name,
+                max_depth: 3,
+            }
+        );
+
+        <span class="rs-kw">let</span> bare: <span class="rs-type">Value</span> = serde_yaml::<a class="symbol-link rs-fn" href="eos-tools--src-core-name-rs.html#method-from-str-232">from_str</a>(&quot;disallow_nested_planner_deferral&quot;).unwrap();
+        assert_eq!(
+            <a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#item-fn-parse-hook-item-234">parse_hook_item</a>(name, &amp;bare).unwrap(),
+            <a class="symbol-link rs-type" href="eos-tools--src-hooks-mod-rs.html#item-enum-Hook-31">Hook</a>::<span class="rs-type">DisallowNestedPlannerDeferral</span> {
+                tool: name,
+                max_depth: <span class="rs-type">DEFAULT_MAX_WORKFLOW_DEPTH</span>,
+            }
+        );
+    }
+</code></pre>
+</details>
 
   <p class="source">crates/eos-tools/src/registry/config.rs:504</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn workflow_max_depth_overrides_deferral_hooks private fn workflow_max_depth_overrides_deferral_hooks () crates/eos-tools/src/registry/config.rs  ">
+</article><article id="item-fn-workflow-max-depth-overrides-deferral-hooks-529" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn workflow_max_depth_overrides_deferral_hooks private fn workflow_max_depth_overrides_deferral_hooks () crates/eos-tools/src/registry/config.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>workflow_max_depth_overrides_deferral_hooks</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn workflow_max_depth_overrides_deferral_hooks ()</code>
-  <div class="tags"></div>
+  <code class="signature">fn <a class="symbol-link" href="eos-tools--src-registry-config-rs.html#item-fn-workflow-max-depth-overrides-deferral-hooks-529">workflow_max_depth_overrides_deferral_hooks</a> ()</code>
+  <div class="tags"><span>test</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#item-fn-workflow-max-depth-overrides-deferral-hooks-529">workflow_max_depth_overrides_deferral_hooks</a>() {
+        <span class="rs-kw">let</span> cfg = <a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#item-fn-parse-tool-config-178">parse_tool_config</a>(
+            <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-submission-planner-submit-planner-outcome-rs.html#item-struct-SubmitPlannerOutcome-50">SubmitPlannerOutcome</a>,
+            &quot;---\nintent: read_only\nterminal: <span class="rs-kw">true</span>\nhooks: [{disallow_nested_planner_deferral: {max_depth: 1}}]\n---\nSubmit plan.\n&quot;,
+        )
+        .unwrap();
+        <span class="rs-kw">let</span> set = <a class="symbol-link rs-type" href="eos-tools--src-registry-config-rs.html#item-struct-ToolConfigSet-45">ToolConfigSet</a> {
+            configs: <span class="rs-type">HashMap</span>::<a class="symbol-link rs-fn" href="eos-tools--src-core-intent-rs.html#method-from-63">from</a>([(<a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-submission-planner-submit-planner-outcome-rs.html#item-struct-SubmitPlannerOutcome-50">SubmitPlannerOutcome</a>, cfg)]),
+        }
+        .<a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#method-with-workflow-max-depth-98">with_workflow_max_depth</a>(2);
+
+        assert_eq!(
+            set.<a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#method-get-89">get</a>(<a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-submission-planner-submit-planner-outcome-rs.html#item-struct-SubmitPlannerOutcome-50">SubmitPlannerOutcome</a>).hooks,
+            vec![<a class="symbol-link rs-type" href="eos-tools--src-hooks-mod-rs.html#item-enum-Hook-31">Hook</a>::<span class="rs-type">DisallowNestedPlannerDeferral</span> {
+                tool: <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-submission-planner-submit-planner-outcome-rs.html#item-struct-SubmitPlannerOutcome-50">SubmitPlannerOutcome</a>,
+                max_depth: 2,
+            }]
+        );
+    }
+</code></pre>
+</details>
 
   <p class="source">crates/eos-tools/src/registry/config.rs:529</p>
 </article></div>
 </section></div>
 </main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/eos-tools/src/registry/config.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-comment">//! Externalized tool configuration loaded from `.eos-agents/tools/&lt;wire&gt;.md`.</span>
+<span class="rs-comment">//!</span>
+<span class="rs-comment">//! Each model-facing tool's **prose** (the body) and **policy** (the `intent` /</span>
+<span class="rs-comment">//! `terminal` / `hooks` frontmatter) live in one markdown file per tool, loaded</span>
+<span class="rs-comment">//! and validated here — mirroring how `eos-skills` and the agent profiles already</span>
+<span class="rs-comment">//! load from `.eos-agents/`. The Rust crate stays the owner of the *behavior*:</span>
+<span class="rs-comment">//! the executor, the `schemars`-derived schema, the sealed [`Hook`] match logic,</span>
+<span class="rs-comment">//! and the [`TerminalTool`] descriptor catalog. Only the configuration moves to</span>
+<span class="rs-comment">//! markdown; this module is the loader + validator.</span>
+<span class="rs-comment">//!</span>
+<span class="rs-comment">//! Validation is total and fail-fast (it replaces the compile-time guarantee the</span>
+<span class="rs-comment">//! old `include_str!` / `meta.rs` tables gave): every [`ToolName`] must have</span>
+<span class="rs-comment">//! exactly one well-formed file, every file must map to a known tool, the</span>
+<span class="rs-comment">//! `intent` and each `hooks` token must resolve to the sealed enums, and the</span>
+<span class="rs-comment">//! declared `terminal` flag must agree with the [`TerminalTool`] catalog.</span>
+
+<span class="rs-kw">use</span> std::collections::<span class="rs-type">HashMap</span>;
+<span class="rs-kw">use</span> std::fs;
+<span class="rs-kw">use</span> std::path::{<span class="rs-type">Path</span>, <span class="rs-type">PathBuf</span>};
+
+<span class="rs-kw">use</span> eos_config::parse_markdown_frontmatter;
+<span class="rs-kw">use</span> serde_yaml::{<span class="rs-type">Mapping</span>, <span class="rs-type">Value</span>};
+<span class="rs-kw">use</span> thiserror::<span class="rs-type">Error</span>;
+
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::core::intent::<a class="symbol-link rs-type" href="eos-tools--src-core-intent-rs.html#item-enum-ToolIntent-14">ToolIntent</a>;
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::core::name::<a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>;
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::hooks::<a class="symbol-link rs-type" href="eos-tools--src-hooks-mod-rs.html#item-enum-Hook-31">Hook</a>;
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::tools::terminal::<a class="symbol-link rs-type" href="eos-tools--src-tools-terminal-rs.html#item-enum-TerminalTool-13">TerminalTool</a>;
+
+<span class="rs-comment">/// One tool's loaded configuration: the model-facing description plus the policy</span>
+<span class="rs-comment">/// the registry stamps onto its `RegisteredTool`.</span>
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>)]
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-tools--src-registry-config-rs.html#item-struct-ToolConfig-30">ToolConfig</a> {
+    <span class="rs-comment">/// The model-facing description (the markdown body, end-trimmed).</span>
+    <span class="rs-kw">pub</span> description: <span class="rs-type">String</span>,
+    <span class="rs-comment">/// Batch-dispatch / sandbox-routing classification.</span>
+    <span class="rs-kw">pub</span> intent: <a class="symbol-link rs-type" href="eos-tools--src-core-intent-rs.html#item-enum-ToolIntent-14">ToolIntent</a>,
+    <span class="rs-comment">/// Whether a successful call ends the agent run (validated against the</span>
+    <span class="rs-comment">/// [`TerminalTool`] catalog at load).</span>
+    <span class="rs-kw">pub</span> terminal: bool,
+    <span class="rs-comment">/// The ordered pre-hook chain (order is load-bearing).</span>
+    <span class="rs-kw">pub</span> hooks: <span class="rs-type">Vec</span>&lt;<a class="symbol-link rs-type" href="eos-tools--src-hooks-mod-rs.html#item-enum-Hook-31">Hook</a>&gt;,
+}
+
+<span class="rs-comment">/// The [`ToolName`]-keyed set of tool configs, built once at composition from a</span>
+<span class="rs-comment">/// `.eos-agents/tools` root and shared immutably.</span>
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>)]
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-tools--src-registry-config-rs.html#item-struct-ToolConfigSet-45">ToolConfigSet</a> {
+    configs: <span class="rs-type">HashMap</span>&lt;<a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>, <a class="symbol-link rs-type" href="eos-tools--src-registry-config-rs.html#item-struct-ToolConfig-30">ToolConfig</a>&gt;,
+}
+
+<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-tools--src-registry-config-rs.html#item-struct-ToolConfigSet-45">ToolConfigSet</a> {
+    <span class="rs-comment">/// Load and validate every `&lt;wire&gt;.md` under `root`.</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// # Errors</span>
+    <span class="rs-comment">/// [`ToolConfigError`] for a non-directory root, an I/O failure, a file whose</span>
+    <span class="rs-comment">/// stem is not a known tool, a missing tool, or any malformed frontmatter</span>
+    <span class="rs-comment">/// (bad/absent intent, unknown hook token, terminal-flag mismatch, empty</span>
+    <span class="rs-comment">/// description).</span>
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#method-load-from-dir-53">load_from_dir</a>(root: &amp;<span class="rs-type">Path</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-self">Self</span>, <a class="symbol-link rs-type" href="eos-tools--src-registry-config-rs.html#item-enum-ToolConfigError-116">ToolConfigError</a>&gt; {
+        <span class="rs-kw">if</span> !root.is_dir() {
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-tools--src-registry-config-rs.html#item-enum-ToolConfigError-116">ToolConfigError</a>::<span class="rs-type">RootNotDir</span>(root.to_owned()));
+        }
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> configs = <span class="rs-type">HashMap</span>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>();
+        <span class="rs-kw">for</span> path <span class="rs-kw">in</span> <a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#item-fn-read-dir-sorted-286">read_dir_sorted</a>(root)? {
+            <span class="rs-kw">if</span> !path.is_file() || <a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#item-fn-extension-282">extension</a>(&amp;path) != <span class="rs-type">Some</span>(&quot;md&quot;) {
+                <span class="rs-kw">continue</span>;
+            }
+            <span class="rs-kw">let</span> stem = path
+                .file_stem()
+                .and_then(|s| s.to_str())
+                .unwrap_or_default();
+            <span class="rs-kw">let</span> name = <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-fn" href="eos-tools--src-core-intent-rs.html#method-from-wire-52">from_wire</a>(stem)
+                .ok_or_else(|| <a class="symbol-link rs-type" href="eos-tools--src-registry-config-rs.html#item-enum-ToolConfigError-116">ToolConfigError</a>::<span class="rs-type">UnknownToolFile</span>(path.clone()))?;
+            <span class="rs-kw">let</span> content = fs::read_to_string(&amp;path).map_err(|cause| <a class="symbol-link rs-type" href="eos-tools--src-registry-config-rs.html#item-enum-ToolConfigError-116">ToolConfigError</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-read-file-rs.html#item-struct-ReadFile-36">ReadFile</a> {
+                path: path.clone(),
+                cause,
+            })?;
+            configs.insert(name, <a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#item-fn-parse-tool-config-178">parse_tool_config</a>(name, &amp;content)?);
+        }
+        <span class="rs-kw">for</span> name <span class="rs-kw">in</span> <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<span class="rs-type">ALL</span> {
+            <span class="rs-kw">if</span> !configs.contains_key(&amp;name) {
+                <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-tools--src-registry-config-rs.html#item-enum-ToolConfigError-116">ToolConfigError</a>::<span class="rs-type">MissingTool</span>(name));
+            }
+        }
+        <span class="rs-type">Ok</span>(<span class="rs-self">Self</span> { configs })
+    }
+
+    <span class="rs-comment">/// The config for `name`. Infallible: `load_from_dir` validated totality over</span>
+    <span class="rs-comment">/// [`ToolName::ALL`], so every name is present.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#method-get-89">get</a>(&amp;<span class="rs-self">self</span>, name: <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>) -&gt; &amp;<a class="symbol-link rs-type" href="eos-tools--src-registry-config-rs.html#item-struct-ToolConfig-30">ToolConfig</a> {
+        <span class="rs-self">self</span>.configs
+            .<a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#method-get-89">get</a>(&amp;name)
+            .expect(&quot;<a class="symbol-link rs-type" href="eos-tools--src-registry-config-rs.html#item-struct-ToolConfigSet-45">ToolConfigSet</a> validated at load: every <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a> is present&quot;)
+    }
+
+    <span class="rs-comment">/// Return a config set whose planner-deferral depth hooks use the workflow</span>
+    <span class="rs-comment">/// runtime depth bound.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#method-with-workflow-max-depth-98">with_workflow_max_depth</a>(<span class="rs-kw">mut</span> <span class="rs-self">self</span>, max_depth: u32) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-kw">for</span> config <span class="rs-kw">in</span> <span class="rs-self">self</span>.configs.values_mut() {
+            <span class="rs-kw">for</span> hook <span class="rs-kw">in</span> &amp;<span class="rs-kw">mut</span> config.hooks {
+                <span class="rs-kw">if</span> <span class="rs-kw">let</span> <a class="symbol-link rs-type" href="eos-tools--src-hooks-mod-rs.html#item-enum-Hook-31">Hook</a>::<span class="rs-type">DisallowNestedPlannerDeferral</span> {
+                    max_depth: depth, ..
+                } = hook
+                {
+                    *depth = max_depth;
+                }
+            }
+        }
+        <span class="rs-self">self</span>
+    }
+}
+
+<span class="rs-comment">/// A failure loading or validating the tool config tree.</span>
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Error</span>)]
+<span class="rs-kw">pub</span> <span class="rs-kw">enum</span> <a class="symbol-link rs-type" href="eos-tools--src-registry-config-rs.html#item-enum-ToolConfigError-116">ToolConfigError</a> {
+    <span class="rs-comment">/// The configured root is not a directory.</span>
+    #[<a class="symbol-link rs-fn" href="eos-tools--src-core-result-rs.html#method-error-42">error</a>(&quot;tool config root is not a directory: {0}&quot;)]
+    <span class="rs-type">RootNotDir</span>(<span class="rs-type">PathBuf</span>),
+    <span class="rs-comment">/// A directory could not be read.</span>
+    #[<a class="symbol-link rs-fn" href="eos-tools--src-core-result-rs.html#method-error-42">error</a>(&quot;reading tool config dir {path}: {cause}&quot;)]
+    <span class="rs-type">ReadDir</span> {
+        <span class="rs-comment">/// The directory.</span>
+        path: <span class="rs-type">PathBuf</span>,
+        <span class="rs-comment">/// The underlying I/O error.</span>
+        cause: std::io::<span class="rs-type">Error</span>,
+    },
+    <span class="rs-comment">/// A file could not be read.</span>
+    #[<a class="symbol-link rs-fn" href="eos-tools--src-core-result-rs.html#method-error-42">error</a>(&quot;reading tool config file {path}: {cause}&quot;)]
+    <a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-read-file-rs.html#item-struct-ReadFile-36">ReadFile</a> {
+        <span class="rs-comment">/// The file.</span>
+        path: <span class="rs-type">PathBuf</span>,
+        <span class="rs-comment">/// The underlying I/O error.</span>
+        cause: std::io::<span class="rs-type">Error</span>,
+    },
+    <span class="rs-comment">/// A `*.md` file's stem is not a known tool name.</span>
+    #[<a class="symbol-link rs-fn" href="eos-tools--src-core-result-rs.html#method-error-42">error</a>(&quot;tool config file {0} does not name a known tool&quot;)]
+    <span class="rs-type">UnknownToolFile</span>(<span class="rs-type">PathBuf</span>),
+    <span class="rs-comment">/// A known tool has no config file.</span>
+    #[<a class="symbol-link rs-fn" href="eos-tools--src-core-result-rs.html#method-error-42">error</a>(&quot;no tool config file <span class="rs-kw">for</span> {0}&quot;)]
+    <span class="rs-type">MissingTool</span>(<a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>),
+    <span class="rs-comment">/// A tool file omits the `intent` frontmatter key.</span>
+    #[<a class="symbol-link rs-fn" href="eos-tools--src-core-result-rs.html#method-error-42">error</a>(&quot;tool {0} config is missing the `intent` field&quot;)]
+    <span class="rs-type">MissingIntent</span>(<a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>),
+    <span class="rs-comment">/// A tool file declares an `intent` that is not a known [`ToolIntent`].</span>
+    #[<a class="symbol-link rs-fn" href="eos-tools--src-core-result-rs.html#method-error-42">error</a>(&quot;tool {tool} config has unknown intent {value:?}&quot;)]
+    <span class="rs-type">UnknownIntent</span> {
+        <span class="rs-comment">/// The tool.</span>
+        tool: <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>,
+        <span class="rs-comment">/// The bad intent string.</span>
+        value: <span class="rs-type">String</span>,
+    },
+    <span class="rs-comment">/// A tool file lists a hook token that is not a known [`Hook`].</span>
+    #[<a class="symbol-link rs-fn" href="eos-tools--src-core-result-rs.html#method-error-42">error</a>(&quot;tool {tool} config has unknown hook token {token:?}&quot;)]
+    <span class="rs-type">UnknownHook</span> {
+        <span class="rs-comment">/// The tool.</span>
+        tool: <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>,
+        <span class="rs-comment">/// The bad hook token.</span>
+        token: <span class="rs-type">String</span>,
+    },
+    <span class="rs-comment">/// A tool file's `terminal` flag disagrees with the [`TerminalTool`] catalog.</span>
+    #[<a class="symbol-link rs-fn" href="eos-tools--src-core-result-rs.html#method-error-42">error</a>(&quot;tool {tool} config declares terminal={declared} but the catalog says {expected}&quot;)]
+    <span class="rs-type">TerminalMismatch</span> {
+        <span class="rs-comment">/// The tool.</span>
+        tool: <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>,
+        <span class="rs-comment">/// The flag the file declared.</span>
+        declared: bool,
+        <span class="rs-comment">/// The flag the catalog requires.</span>
+        expected: bool,
+    },
+    <span class="rs-comment">/// A tool file has an empty description body.</span>
+    #[<a class="symbol-link rs-fn" href="eos-tools--src-core-result-rs.html#method-error-42">error</a>(&quot;tool {0} config has an empty description&quot;)]
+    <span class="rs-type">EmptyDescription</span>(<a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>),
+}
+
+<span class="rs-comment">/// Parse one tool's markdown into a validated [`ToolConfig`].</span>
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#item-fn-parse-tool-config-178">parse_tool_config</a>(name: <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>, content: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-tools--src-registry-config-rs.html#item-struct-ToolConfig-30">ToolConfig</a>, <a class="symbol-link rs-type" href="eos-tools--src-registry-config-rs.html#item-enum-ToolConfigError-116">ToolConfigError</a>&gt; {
+    <span class="rs-kw">let</span> (frontmatter, description) = parse_markdown_frontmatter(content);
+    <span class="rs-kw">if</span> description.<a class="symbol-link rs-fn" href="eos-tools--src-registry-tool-registry-rs.html#method-is-empty-96">is_empty</a>() {
+        <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-tools--src-registry-config-rs.html#item-enum-ToolConfigError-116">ToolConfigError</a>::<span class="rs-type">EmptyDescription</span>(name));
+    }
+
+    <span class="rs-kw">let</span> intent_str = frontmatter
+        .<a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#method-get-89">get</a>(&quot;intent&quot;)
+        .and_then(<span class="rs-type">Value</span>::as_str)
+        .ok_or(<a class="symbol-link rs-type" href="eos-tools--src-registry-config-rs.html#item-enum-ToolConfigError-116">ToolConfigError</a>::<span class="rs-type">MissingIntent</span>(name))?;
+    <span class="rs-kw">let</span> intent =
+        <a class="symbol-link rs-type" href="eos-tools--src-core-intent-rs.html#item-enum-ToolIntent-14">ToolIntent</a>::<a class="symbol-link rs-fn" href="eos-tools--src-core-intent-rs.html#method-from-wire-52">from_wire</a>(intent_str).ok_or_else(|| <a class="symbol-link rs-type" href="eos-tools--src-registry-config-rs.html#item-enum-ToolConfigError-116">ToolConfigError</a>::<span class="rs-type">UnknownIntent</span> {
+            tool: name,
+            value: intent_str.to_owned(),
+        })?;
+
+    <span class="rs-kw">let</span> declared_terminal = frontmatter
+        .<a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#method-get-89">get</a>(&quot;terminal&quot;)
+        .and_then(<span class="rs-type">Value</span>::as_bool)
+        .unwrap_or(<span class="rs-kw">false</span>);
+    <span class="rs-kw">let</span> expected_terminal = <a class="symbol-link rs-type" href="eos-tools--src-tools-terminal-rs.html#item-enum-TerminalTool-13">TerminalTool</a>::<a class="symbol-link rs-fn" href="eos-tools--src-tools-terminal-rs.html#method-from-tool-name-56">from_tool_name</a>(name).is_some();
+    <span class="rs-kw">if</span> declared_terminal != expected_terminal {
+        <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-tools--src-registry-config-rs.html#item-enum-ToolConfigError-116">ToolConfigError</a>::<span class="rs-type">TerminalMismatch</span> {
+            tool: name,
+            declared: declared_terminal,
+            expected: expected_terminal,
+        });
+    }
+
+    <span class="rs-kw">let</span> hooks = <a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#item-fn-parse-hooks-217">parse_hooks</a>(name, &amp;frontmatter)?;
+    <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-tools--src-registry-config-rs.html#item-struct-ToolConfig-30">ToolConfig</a> {
+        description,
+        intent,
+        terminal: expected_terminal,
+        hooks,
+    })
+}
+
+<span class="rs-comment">/// Parse the `hooks` list (absent ⇒ empty) into ordered [`Hook`]s.</span>
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#item-fn-parse-hooks-217">parse_hooks</a>(name: <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>, frontmatter: &amp;<span class="rs-type">Mapping</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;<a class="symbol-link rs-type" href="eos-tools--src-hooks-mod-rs.html#item-enum-Hook-31">Hook</a>&gt;, <a class="symbol-link rs-type" href="eos-tools--src-registry-config-rs.html#item-enum-ToolConfigError-116">ToolConfigError</a>&gt; {
+    <span class="rs-kw">let</span> <span class="rs-type">Some</span>(value) = frontmatter.<a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#method-get-89">get</a>(&quot;hooks&quot;) <span class="rs-kw">else</span> {
+        <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>());
+    };
+    <span class="rs-kw">let</span> <span class="rs-type">Some</span>(items) = value.as_sequence() <span class="rs-kw">else</span> {
+        <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-tools--src-registry-config-rs.html#item-enum-ToolConfigError-116">ToolConfigError</a>::<span class="rs-type">UnknownHook</span> {
+            tool: name,
+            token: format!(&quot;{value:?}&quot;),
+        });
+    };
+    items
+        .iter()
+        .map(|item| <a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#item-fn-parse-hook-item-234">parse_hook_item</a>(name, item))
+        .collect()
+}
+
+<span class="rs-comment">/// Parse one `hooks` entry: a bare `token` string, or a single-key</span>
+<span class="rs-comment">/// `{token: {params}}` mapping (currently only `max_depth` for</span>
+<span class="rs-comment">/// `disallow_nested_planner_deferral`).</span>
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#item-fn-parse-hook-item-234">parse_hook_item</a>(name: <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>, item: &amp;<span class="rs-type">Value</span>) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-tools--src-hooks-mod-rs.html#item-enum-Hook-31">Hook</a>, <a class="symbol-link rs-type" href="eos-tools--src-registry-config-rs.html#item-enum-ToolConfigError-116">ToolConfigError</a>&gt; {
+    <span class="rs-kw">let</span> unknown = || <a class="symbol-link rs-type" href="eos-tools--src-registry-config-rs.html#item-enum-ToolConfigError-116">ToolConfigError</a>::<span class="rs-type">UnknownHook</span> {
+        tool: name,
+        token: format!(&quot;{item:?}&quot;),
+    };
+    <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(token) = item.<a class="symbol-link rs-fn" href="eos-tools--src-core-intent-rs.html#method-as-str-42">as_str</a>() {
+        <span class="rs-kw">return</span> <a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#item-fn-hook-from-token-262">hook_from_token</a>(name, token, <span class="rs-type">None</span>).ok_or_else(unknown);
+    }
+    <span class="rs-kw">let</span> one_entry = item
+        .as_mapping()
+        .filter(|map| map.<a class="symbol-link rs-fn" href="eos-tools--src-registry-tool-registry-rs.html#method-len-90">len</a>() == 1)
+        .and_then(|map| map.iter().next());
+    <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>((key, params)) = one_entry {
+        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(token) = key.<a class="symbol-link rs-fn" href="eos-tools--src-core-intent-rs.html#method-as-str-42">as_str</a>() {
+            <span class="rs-kw">return</span> <a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#item-fn-hook-from-token-262">hook_from_token</a>(name, token, <span class="rs-type">Some</span>(params)).ok_or_else(unknown);
+        }
+    }
+    <span class="rs-type">Err</span>(unknown())
+}
+
+<span class="rs-comment">/// Default deepest workflow depth still allowed to defer when a</span>
+<span class="rs-comment">/// `disallow_nested_planner_deferral` entry omits `max_depth` (depth &gt; 1 ⇒</span>
+<span class="rs-comment">/// nested ⇒ denied — the historical emergent cap).</span>
+<span class="rs-kw">const</span> <span class="rs-type">DEFAULT_MAX_WORKFLOW_DEPTH</span>: u32 = 1;
+
+<span class="rs-comment">/// Map a config token (see [`Hook::config_token`]) to its [`Hook`], filling the</span>
+<span class="rs-comment">/// `{ tool }` field from the owning tool and any per-hook `params`.</span>
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#item-fn-hook-from-token-262">hook_from_token</a>(tool: <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>, token: &amp;str, params: <span class="rs-type">Option</span>&lt;&amp;<span class="rs-type">Value</span>&gt;) -&gt; <span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-tools--src-hooks-mod-rs.html#item-enum-Hook-31">Hook</a>&gt; {
+    <span class="rs-type">Some</span>(<span class="rs-kw">match</span> token {
+        &quot;no_background_sessions&quot; =&gt; <a class="symbol-link rs-type" href="eos-tools--src-hooks-mod-rs.html#item-enum-Hook-31">Hook</a>::<span class="rs-type">RequireNoBackgroundSessions</span> { tool },
+        &quot;advisor_approval&quot; =&gt; <a class="symbol-link rs-type" href="eos-tools--src-hooks-mod-rs.html#item-enum-Hook-31">Hook</a>::<span class="rs-type">AdvisorApproval</span> { tool },
+        &quot;disallow_nested_planner_deferral&quot; =&gt; <a class="symbol-link rs-type" href="eos-tools--src-hooks-mod-rs.html#item-enum-Hook-31">Hook</a>::<span class="rs-type">DisallowNestedPlannerDeferral</span> {
+            tool,
+            max_depth: params
+                .and_then(|p| p.<a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#method-get-89">get</a>(&quot;max_depth&quot;))
+                .and_then(<span class="rs-type">Value</span>::as_u64)
+                .map_or(<span class="rs-type">DEFAULT_MAX_WORKFLOW_DEPTH</span>, |d| d <span class="rs-kw">as</span> u32),
+        },
+        &quot;destructive_git_shell&quot; =&gt; <a class="symbol-link rs-type" href="eos-tools--src-hooks-mod-rs.html#item-enum-Hook-31">Hook</a>::<span class="rs-type">DestructiveGitShell</span> { tool },
+        &quot;destructive_shell&quot; =&gt; <a class="symbol-link rs-type" href="eos-tools--src-hooks-mod-rs.html#item-enum-Hook-31">Hook</a>::<span class="rs-type">DestructiveShell</span> { tool },
+        &quot;block_in_isolated_mode&quot; =&gt; <a class="symbol-link rs-type" href="eos-tools--src-hooks-mod-rs.html#item-enum-Hook-31">Hook</a>::<span class="rs-type">BlockInIsolatedMode</span> { tool },
+        _ =&gt; <span class="rs-kw">return</span> <span class="rs-type">None</span>,
+    })
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#item-fn-extension-282">extension</a>(path: &amp;<span class="rs-type">Path</span>) -&gt; <span class="rs-type">Option</span>&lt;&amp;str&gt; {
+    path.<a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#item-fn-extension-282">extension</a>().and_then(|e| e.to_str())
+}
+
+<span class="rs-comment">/// List a directory's entries as paths, sorted (deterministic load order, parity</span>
+<span class="rs-comment">/// with `eos-skills`).</span>
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#item-fn-read-dir-sorted-286">read_dir_sorted</a>(dir: &amp;<span class="rs-type">Path</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;<span class="rs-type">PathBuf</span>&gt;, <a class="symbol-link rs-type" href="eos-tools--src-registry-config-rs.html#item-enum-ToolConfigError-116">ToolConfigError</a>&gt; {
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> paths = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>();
+    <span class="rs-kw">let</span> entries = fs::read_dir(dir).map_err(|cause| <a class="symbol-link rs-type" href="eos-tools--src-registry-config-rs.html#item-enum-ToolConfigError-116">ToolConfigError</a>::<span class="rs-type">ReadDir</span> {
+        path: dir.to_owned(),
+        cause,
+    })?;
+    <span class="rs-kw">for</span> entry <span class="rs-kw">in</span> entries {
+        <span class="rs-kw">let</span> entry = entry.map_err(|cause| <a class="symbol-link rs-type" href="eos-tools--src-registry-config-rs.html#item-enum-ToolConfigError-116">ToolConfigError</a>::<span class="rs-type">ReadDir</span> {
+            path: dir.to_owned(),
+            cause,
+        })?;
+        paths.push(entry.<a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#method-path-326">path</a>());
+    }
+    paths.sort();
+    <span class="rs-type">Ok</span>(paths)
+}
+
+#[cfg(test)]
+<span class="rs-kw">mod</span> tests {
+    #![allow(clippy::unwrap_used)] <span class="rs-comment">// unwrap permitted in tests (err-no-unwrap-prod)</span>
+    <span class="rs-kw">use</span> <span class="rs-kw">super</span>::*;
+
+    <span class="rs-comment">/// A throwaway temp dir, removed on drop.</span>
+    <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-tools--src-registry-config-rs.html#item-struct-Scratch-310">Scratch</a>(<span class="rs-type">PathBuf</span>);
+
+    <span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-tools--src-registry-config-rs.html#item-struct-Scratch-310">Scratch</a> {
+        <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(tag: &amp;str) -&gt; <span class="rs-self">Self</span> {
+            <span class="rs-kw">let</span> dir = std::env::temp_dir().join(format!(
+                &quot;eos-tools-cfg-{tag}-{:?}&quot;,
+                std::thread::current().id()
+            ));
+            <span class="rs-kw">let</span> _ = fs::remove_dir_all(&amp;dir);
+            fs::create_dir_all(&amp;dir).unwrap();
+            <span class="rs-self">Self</span>(dir)
+        }
+        <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#method-write-323">write</a>(&amp;<span class="rs-self">self</span>, name: &amp;str, content: &amp;str) {
+            fs::<a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#method-write-323">write</a>(<span class="rs-self">self</span>.0.join(name), content).unwrap();
+        }
+        <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#method-path-326">path</a>(&amp;<span class="rs-self">self</span>) -&gt; &amp;<span class="rs-type">Path</span> {
+            &amp;<span class="rs-self">self</span>.0
+        }
+    }
+
+    <span class="rs-kw">impl</span> <span class="rs-type">Drop</span> <span class="rs-kw">for</span> <a class="symbol-link rs-type" href="eos-tools--src-registry-config-rs.html#item-struct-Scratch-310">Scratch</a> {
+        <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#method-drop-332">drop</a>(&amp;<span class="rs-kw">mut</span> <span class="rs-self">self</span>) {
+            <span class="rs-kw">let</span> _ = fs::remove_dir_all(&amp;<span class="rs-self">self</span>.0);
+        }
+    }
+
+    <span class="rs-comment">/// Write a minimal valid file body for `name` (terminal flag matches the</span>
+    <span class="rs-comment">/// catalog, intent valid, non-empty body, no hooks).</span>
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#item-fn-valid-file-337">valid_file</a>(name: <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>) -&gt; <span class="rs-type">String</span> {
+        <span class="rs-kw">let</span> terminal = <a class="symbol-link rs-type" href="eos-tools--src-tools-terminal-rs.html#item-enum-TerminalTool-13">TerminalTool</a>::<a class="symbol-link rs-fn" href="eos-tools--src-tools-terminal-rs.html#method-from-tool-name-56">from_tool_name</a>(name).is_some();
+        format!(
+            &quot;---\nintent: read_only\nterminal: {terminal}\nhooks: []\n---\n{name} description\n&quot;
+        )
+    }
+
+    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#item-fn-parses-a-well-formed-file-346">parses_a_well_formed_file</a>() {
+        <span class="rs-kw">let</span> cfg = <a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#item-fn-parse-tool-config-178">parse_tool_config</a>(
+            <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-exec-command-rs.html#item-struct-ExecCommand-30">ExecCommand</a>,
+            &quot;---\nintent: write_allowed\nterminal: <span class="rs-kw">false</span>\nhooks: [destructive_git_shell, destructive_shell]\n---\nRun a command.\n&quot;,
+        )
+        .unwrap();
+        assert_eq!(cfg.intent, <a class="symbol-link rs-type" href="eos-tools--src-core-intent-rs.html#item-enum-ToolIntent-14">ToolIntent</a>::<span class="rs-type">WriteAllowed</span>);
+        assert!(!cfg.terminal);
+        assert_eq!(cfg.description, &quot;<span class="rs-type">Run</span> a command.&quot;);
+        assert_eq!(
+            cfg.hooks,
+            vec![
+                <a class="symbol-link rs-type" href="eos-tools--src-hooks-mod-rs.html#item-enum-Hook-31">Hook</a>::<span class="rs-type">DestructiveGitShell</span> {
+                    tool: <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-exec-command-rs.html#item-struct-ExecCommand-30">ExecCommand</a>
+                },
+                <a class="symbol-link rs-type" href="eos-tools--src-hooks-mod-rs.html#item-enum-Hook-31">Hook</a>::<span class="rs-type">DestructiveShell</span> {
+                    tool: <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-exec-command-rs.html#item-struct-ExecCommand-30">ExecCommand</a>
+                },
+            ]
+        );
+    }
+
+    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#item-fn-absent-hooks-is-empty-369">absent_hooks_is_empty</a>() {
+        <span class="rs-kw">let</span> cfg = <a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#item-fn-parse-tool-config-178">parse_tool_config</a>(
+            <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-read-file-rs.html#item-struct-ReadFile-36">ReadFile</a>,
+            &quot;---\nintent: read_only\nterminal: <span class="rs-kw">false</span>\n---\nRead a file.\n&quot;,
+        )
+        .unwrap();
+        assert!(cfg.hooks.<a class="symbol-link rs-fn" href="eos-tools--src-registry-tool-registry-rs.html#method-is-empty-96">is_empty</a>());
+    }
+
+    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#item-fn-rejects-unknown-intent-379">rejects_unknown_intent</a>() {
+        <span class="rs-kw">let</span> err = <a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#item-fn-parse-tool-config-178">parse_tool_config</a>(
+            <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-read-file-rs.html#item-struct-ReadFile-36">ReadFile</a>,
+            &quot;---\nintent: bogus\nterminal: <span class="rs-kw">false</span>\n---\nbody\n&quot;,
+        )
+        .unwrap_err();
+        assert!(
+            matches!(err, <a class="symbol-link rs-type" href="eos-tools--src-registry-config-rs.html#item-enum-ToolConfigError-116">ToolConfigError</a>::<span class="rs-type">UnknownIntent</span> { .. }),
+            &quot;{err:?}&quot;
+        );
+    }
+
+    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#item-fn-rejects-missing-intent-392">rejects_missing_intent</a>() {
+        <span class="rs-kw">let</span> err =
+            <a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#item-fn-parse-tool-config-178">parse_tool_config</a>(<a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-read-file-rs.html#item-struct-ReadFile-36">ReadFile</a>, &quot;---\nterminal: <span class="rs-kw">false</span>\n---\nbody\n&quot;).unwrap_err();
+        assert!(matches!(err, <a class="symbol-link rs-type" href="eos-tools--src-registry-config-rs.html#item-enum-ToolConfigError-116">ToolConfigError</a>::<span class="rs-type">MissingIntent</span>(_)), &quot;{err:?}&quot;);
+    }
+
+    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#item-fn-rejects-unknown-hook-token-399">rejects_unknown_hook_token</a>() {
+        <span class="rs-kw">let</span> err = <a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#item-fn-parse-tool-config-178">parse_tool_config</a>(
+            <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-read-file-rs.html#item-struct-ReadFile-36">ReadFile</a>,
+            &quot;---\nintent: read_only\nterminal: <span class="rs-kw">false</span>\nhooks: [made_up]\n---\nbody\n&quot;,
+        )
+        .unwrap_err();
+        assert!(
+            matches!(err, <a class="symbol-link rs-type" href="eos-tools--src-registry-config-rs.html#item-enum-ToolConfigError-116">ToolConfigError</a>::<span class="rs-type">UnknownHook</span> { .. }),
+            &quot;{err:?}&quot;
+        );
+    }
+
+    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#item-fn-rejects-terminal-mismatch-412">rejects_terminal_mismatch</a>() {
+        <span class="rs-comment">// read_file is not in the TerminalTool catalog, so terminal:true is wrong.</span>
+        <span class="rs-kw">let</span> err = <a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#item-fn-parse-tool-config-178">parse_tool_config</a>(
+            <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-read-file-rs.html#item-struct-ReadFile-36">ReadFile</a>,
+            &quot;---\nintent: read_only\nterminal: <span class="rs-kw">true</span>\n---\nbody\n&quot;,
+        )
+        .unwrap_err();
+        assert!(
+            matches!(err, <a class="symbol-link rs-type" href="eos-tools--src-registry-config-rs.html#item-enum-ToolConfigError-116">ToolConfigError</a>::<span class="rs-type">TerminalMismatch</span> { .. }),
+            &quot;{err:?}&quot;
+        );
+    }
+
+    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#item-fn-rejects-empty-description-426">rejects_empty_description</a>() {
+        <span class="rs-kw">let</span> err = <a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#item-fn-parse-tool-config-178">parse_tool_config</a>(
+            <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-read-file-rs.html#item-struct-ReadFile-36">ReadFile</a>,
+            &quot;---\nintent: read_only\nterminal: <span class="rs-kw">false</span>\n---\n   \n&quot;,
+        )
+        .unwrap_err();
+        assert!(
+            matches!(err, <a class="symbol-link rs-type" href="eos-tools--src-registry-config-rs.html#item-enum-ToolConfigError-116">ToolConfigError</a>::<span class="rs-type">EmptyDescription</span>(_)),
+            &quot;{err:?}&quot;
+        );
+    }
+
+    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#item-fn-load-rejects-non-directory-root-439">load_rejects_non_directory_root</a>() {
+        <span class="rs-kw">let</span> err = <a class="symbol-link rs-type" href="eos-tools--src-registry-config-rs.html#item-struct-ToolConfigSet-45">ToolConfigSet</a>::<a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#method-load-from-dir-53">load_from_dir</a>(<span class="rs-type">Path</span>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(&quot;/no/such/tools/root&quot;)).unwrap_err();
+        assert!(matches!(err, <a class="symbol-link rs-type" href="eos-tools--src-registry-config-rs.html#item-enum-ToolConfigError-116">ToolConfigError</a>::<span class="rs-type">RootNotDir</span>(_)), &quot;{err:?}&quot;);
+    }
+
+    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#item-fn-load-rejects-unknown-tool-file-445">load_rejects_unknown_tool_file</a>() {
+        <span class="rs-kw">let</span> scratch = <a class="symbol-link rs-type" href="eos-tools--src-registry-config-rs.html#item-struct-Scratch-310">Scratch</a>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(&quot;unknown-file&quot;);
+        <span class="rs-kw">for</span> name <span class="rs-kw">in</span> <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<span class="rs-type">ALL</span> {
+            scratch.<a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#method-write-323">write</a>(&amp;format!(&quot;{name}.md&quot;), &amp;<a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#item-fn-valid-file-337">valid_file</a>(name));
+        }
+        scratch.<a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#method-write-323">write</a>(&quot;not_a_tool.md&quot;, &amp;<a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#item-fn-valid-file-337">valid_file</a>(<a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-read-file-rs.html#item-struct-ReadFile-36">ReadFile</a>));
+        <span class="rs-kw">let</span> err = <a class="symbol-link rs-type" href="eos-tools--src-registry-config-rs.html#item-struct-ToolConfigSet-45">ToolConfigSet</a>::<a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#method-load-from-dir-53">load_from_dir</a>(scratch.<a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#method-path-326">path</a>()).unwrap_err();
+        assert!(
+            matches!(err, <a class="symbol-link rs-type" href="eos-tools--src-registry-config-rs.html#item-enum-ToolConfigError-116">ToolConfigError</a>::<span class="rs-type">UnknownToolFile</span>(_)),
+            &quot;{err:?}&quot;
+        );
+    }
+
+    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#item-fn-load-rejects-missing-tool-459">load_rejects_missing_tool</a>() {
+        <span class="rs-kw">let</span> scratch = <a class="symbol-link rs-type" href="eos-tools--src-registry-config-rs.html#item-struct-Scratch-310">Scratch</a>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(&quot;missing-tool&quot;);
+        <span class="rs-kw">for</span> name <span class="rs-kw">in</span> <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<span class="rs-type">ALL</span> {
+            <span class="rs-kw">if</span> name == <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-read-file-rs.html#item-struct-ReadFile-36">ReadFile</a> {
+                <span class="rs-kw">continue</span>; <span class="rs-comment">// drop one</span>
+            }
+            scratch.<a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#method-write-323">write</a>(&amp;format!(&quot;{name}.md&quot;), &amp;<a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#item-fn-valid-file-337">valid_file</a>(name));
+        }
+        <span class="rs-kw">let</span> err = <a class="symbol-link rs-type" href="eos-tools--src-registry-config-rs.html#item-struct-ToolConfigSet-45">ToolConfigSet</a>::<a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#method-load-from-dir-53">load_from_dir</a>(scratch.<a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#method-path-326">path</a>()).unwrap_err();
+        assert!(
+            matches!(err, <a class="symbol-link rs-type" href="eos-tools--src-registry-config-rs.html#item-enum-ToolConfigError-116">ToolConfigError</a>::<span class="rs-type">MissingTool</span>(<a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-read-file-rs.html#item-struct-ReadFile-36">ReadFile</a>)),
+            &quot;{err:?}&quot;
+        );
+    }
+
+    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#item-fn-load-full-valid-set-is-total-475">load_full_valid_set_is_total</a>() {
+        <span class="rs-kw">let</span> scratch = <a class="symbol-link rs-type" href="eos-tools--src-registry-config-rs.html#item-struct-Scratch-310">Scratch</a>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(&quot;full-valid&quot;);
+        <span class="rs-kw">for</span> name <span class="rs-kw">in</span> <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<span class="rs-type">ALL</span> {
+            scratch.<a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#method-write-323">write</a>(&amp;format!(&quot;{name}.md&quot;), &amp;<a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#item-fn-valid-file-337">valid_file</a>(name));
+        }
+        <span class="rs-kw">let</span> set = <a class="symbol-link rs-type" href="eos-tools--src-registry-config-rs.html#item-struct-ToolConfigSet-45">ToolConfigSet</a>::<a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#method-load-from-dir-53">load_from_dir</a>(scratch.<a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#method-path-326">path</a>()).unwrap();
+        <span class="rs-kw">for</span> name <span class="rs-kw">in</span> <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<span class="rs-type">ALL</span> {
+            assert_eq!(set.<a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#method-get-89">get</a>(name).description, format!(&quot;{name} description&quot;));
+        }
+    }
+
+    <span class="rs-comment">/// Every [`Hook`] variant's `config_token` round-trips through</span>
+    <span class="rs-comment">/// `hook_from_token` (keeps the forward/inverse maps in sync).</span>
+    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#item-fn-hook-tokens-round-trip-487">hook_tokens_round_trip</a>() {
+        <span class="rs-kw">let</span> tool = <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-exec-command-rs.html#item-struct-ExecCommand-30">ExecCommand</a>;
+        <span class="rs-kw">for</span> hook <span class="rs-kw">in</span> [
+            <a class="symbol-link rs-type" href="eos-tools--src-hooks-mod-rs.html#item-enum-Hook-31">Hook</a>::<span class="rs-type">RequireNoBackgroundSessions</span> { tool },
+            <a class="symbol-link rs-type" href="eos-tools--src-hooks-mod-rs.html#item-enum-Hook-31">Hook</a>::<span class="rs-type">AdvisorApproval</span> { tool },
+            <a class="symbol-link rs-type" href="eos-tools--src-hooks-mod-rs.html#item-enum-Hook-31">Hook</a>::<span class="rs-type">DisallowNestedPlannerDeferral</span> { tool, max_depth: 1 },
+            <a class="symbol-link rs-type" href="eos-tools--src-hooks-mod-rs.html#item-enum-Hook-31">Hook</a>::<span class="rs-type">DestructiveGitShell</span> { tool },
+            <a class="symbol-link rs-type" href="eos-tools--src-hooks-mod-rs.html#item-enum-Hook-31">Hook</a>::<span class="rs-type">DestructiveShell</span> { tool },
+            <a class="symbol-link rs-type" href="eos-tools--src-hooks-mod-rs.html#item-enum-Hook-31">Hook</a>::<span class="rs-type">BlockInIsolatedMode</span> { tool },
+        ] {
+            assert_eq!(<a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#item-fn-hook-from-token-262">hook_from_token</a>(tool, hook.<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-config-token-144">config_token</a>(), <span class="rs-type">None</span>), <span class="rs-type">Some</span>(hook));
+        }
+    }
+
+    <span class="rs-comment">/// The parameterized `{disallow_nested_planner_deferral: {max_depth: N}}`</span>
+    <span class="rs-comment">/// hooks entry parses the configured depth; the bare token defaults.</span>
+    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#item-fn-disallow-nested-max-depth-parses-from-entry-504">disallow_nested_max_depth_parses_from_entry</a>() {
+        <span class="rs-kw">let</span> name = <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-submission-planner-submit-planner-outcome-rs.html#item-struct-SubmitPlannerOutcome-50">SubmitPlannerOutcome</a>;
+        <span class="rs-kw">let</span> configured: <span class="rs-type">Value</span> =
+            serde_yaml::<a class="symbol-link rs-fn" href="eos-tools--src-core-name-rs.html#method-from-str-232">from_str</a>(&quot;{disallow_nested_planner_deferral: {max_depth: 3}}&quot;).unwrap();
+        assert_eq!(
+            <a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#item-fn-parse-hook-item-234">parse_hook_item</a>(name, &amp;configured).unwrap(),
+            <a class="symbol-link rs-type" href="eos-tools--src-hooks-mod-rs.html#item-enum-Hook-31">Hook</a>::<span class="rs-type">DisallowNestedPlannerDeferral</span> {
+                tool: name,
+                max_depth: 3,
+            }
+        );
+
+        <span class="rs-kw">let</span> bare: <span class="rs-type">Value</span> = serde_yaml::<a class="symbol-link rs-fn" href="eos-tools--src-core-name-rs.html#method-from-str-232">from_str</a>(&quot;disallow_nested_planner_deferral&quot;).unwrap();
+        assert_eq!(
+            <a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#item-fn-parse-hook-item-234">parse_hook_item</a>(name, &amp;bare).unwrap(),
+            <a class="symbol-link rs-type" href="eos-tools--src-hooks-mod-rs.html#item-enum-Hook-31">Hook</a>::<span class="rs-type">DisallowNestedPlannerDeferral</span> {
+                tool: name,
+                max_depth: <span class="rs-type">DEFAULT_MAX_WORKFLOW_DEPTH</span>,
+            }
+        );
+    }
+
+    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#item-fn-workflow-max-depth-overrides-deferral-hooks-529">workflow_max_depth_overrides_deferral_hooks</a>() {
+        <span class="rs-kw">let</span> cfg = <a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#item-fn-parse-tool-config-178">parse_tool_config</a>(
+            <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-submission-planner-submit-planner-outcome-rs.html#item-struct-SubmitPlannerOutcome-50">SubmitPlannerOutcome</a>,
+            &quot;---\nintent: read_only\nterminal: <span class="rs-kw">true</span>\nhooks: [{disallow_nested_planner_deferral: {max_depth: 1}}]\n---\nSubmit plan.\n&quot;,
+        )
+        .unwrap();
+        <span class="rs-kw">let</span> set = <a class="symbol-link rs-type" href="eos-tools--src-registry-config-rs.html#item-struct-ToolConfigSet-45">ToolConfigSet</a> {
+            configs: <span class="rs-type">HashMap</span>::<a class="symbol-link rs-fn" href="eos-tools--src-core-intent-rs.html#method-from-63">from</a>([(<a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-submission-planner-submit-planner-outcome-rs.html#item-struct-SubmitPlannerOutcome-50">SubmitPlannerOutcome</a>, cfg)]),
+        }
+        .<a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#method-with-workflow-max-depth-98">with_workflow_max_depth</a>(2);
+
+        assert_eq!(
+            set.<a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#method-get-89">get</a>(<a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-submission-planner-submit-planner-outcome-rs.html#item-struct-SubmitPlannerOutcome-50">SubmitPlannerOutcome</a>).hooks,
+            vec![<a class="symbol-link rs-type" href="eos-tools--src-hooks-mod-rs.html#item-enum-Hook-31">Hook</a>::<span class="rs-type">DisallowNestedPlannerDeferral</span> {
+                tool: <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-submission-planner-submit-planner-outcome-rs.html#item-struct-SubmitPlannerOutcome-50">SubmitPlannerOutcome</a>,
+                max_depth: 2,
+            }]
+        );
+    }
+}
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
   <script src="../assets/inventory.js"></script>
 </body>
 </html>

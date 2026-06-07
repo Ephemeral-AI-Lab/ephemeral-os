@@ -8,8 +8,16 @@
 </head>
 <body>
   <header>
-    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
-    <h1>eos-tools File Inventory</h1>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>eos-tools File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS/agent-core &amp;&amp; cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
   </header>
   <a class="back-link" href="../index.html">agent-core</a>
 <section class="summary">
@@ -47,59 +55,179 @@
       <span>2 methods</span>
     </div>
   </div>
-  <div class="items"><div class="group-label">File-Owned Types</div><article class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct OutcomeInput pub(crate :: tools :: submission) pub(crate :: tools :: submission) struct OutcomeInput crates/eos-tools/src/tools/submission/lib.rs status SubmissionStatus outcome String ">
+  <div class="items"><div class="group-label">File-Owned Types</div><article id="item-struct-OutcomeInput-34" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct OutcomeInput pub(crate :: tools :: submission) pub(crate :: tools :: submission) struct OutcomeInput crates/eos-tools/src/tools/submission/lib.rs status SubmissionStatus outcome String ">
   <div class="item-head">
     <span class="kind">struct</span>
     <h3>OutcomeInput</h3>
     <span class="visibility">pub(crate :: tools :: submission)</span>
   </div>
-  <code class="signature">pub(crate :: tools :: submission) struct OutcomeInput</code>
-  <div class="tags"><span>serde</span></div>
-  <h4>Fields</h4><table><tbody><tr><td>pub(crate :: tools :: submission)</td><td>status</td><td><code>SubmissionStatus</code></td></tr><tr><td>pub(crate :: tools :: submission)</td><td>outcome</td><td><code>String</code></td></tr></tbody></table>
+  <code class="signature">pub(crate :: tools :: submission) struct <a class="symbol-link" href="eos-tools--src-tools-submission-lib-rs.html#item-struct-OutcomeInput-34">OutcomeInput</a></code>
+  <div class="tags"><span>derive: Debug</span><span>derive: Deserialize</span><span>derive: JsonSchema</span><span>derive: Serialize</span><span>serde</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub(crate :: tools :: submission)</td><td>status</td><td><code><a class="symbol-link" href="eos-tools--src-tools-submission-lib-rs.html#item-enum-SubmissionStatus-10">SubmissionStatus</a></code></td></tr><tr><td>pub(crate :: tools :: submission)</td><td>outcome</td><td><code>String</code></td></tr></tbody></table>
+
   <p class="source">crates/eos-tools/src/tools/submission/lib.rs:34</p>
-</article><article class="type-card" data-kind="enum" data-kind-list="enum field impl method type-model" data-filter-text="enum SubmissionStatus pub(crate :: tools :: submission) pub(crate :: tools :: submission) enum SubmissionStatus crates/eos-tools/src/tools/submission/lib.rs  ">
+</article><article id="item-enum-SubmissionStatus-10" class="type-card" data-kind="enum" data-kind-list="enum field impl method type-model" data-filter-text="enum SubmissionStatus pub(crate :: tools :: submission) pub(crate :: tools :: submission) enum SubmissionStatus crates/eos-tools/src/tools/submission/lib.rs  ">
   <div class="item-head">
     <span class="kind">enum</span>
     <h3>SubmissionStatus</h3>
     <span class="visibility">pub(crate :: tools :: submission)</span>
   </div>
-  <code class="signature">pub(crate :: tools :: submission) enum SubmissionStatus</code>
-  <div class="tags"><span>serde</span></div>
-  <h4>Variants</h4><table><tbody><tr><td>Success</td><td><code></code></td></tr><tr><td>Failed</td><td><code></code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr><td>method</td><td>as_str</td><td><code>pub(crate :: tools :: submission) fn as_str (self) -&gt; &amp; 'static str</code></td></tr><tr><td>method</td><td>outcome_status</td><td><code>pub(crate :: tools :: submission) fn outcome_status (self) -&gt; TaskOutcomeStatus</code></td></tr></tbody></table>
+  <code class="signature">pub(crate :: tools :: submission) enum <a class="symbol-link" href="eos-tools--src-tools-submission-lib-rs.html#item-enum-SubmissionStatus-10">SubmissionStatus</a></code>
+  <p class="docstring">`Literal["success", "failed"]`.</p>
+  <div class="tags"><span>derive: Clone</span><span>derive: Copy</span><span>derive: Debug</span><span>derive: Deserialize</span><span>derive: Eq</span><span>derive: JsonSchema</span><span>derive: PartialEq</span><span>derive: Serialize</span><span>serde</span><span>serde: rename_all</span></div>
+  <h4>Variants</h4><table><tbody><tr><td>Success</td><td><code></code></td></tr><tr><td>Failed</td><td><code></code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-as-str-19"><td>method</td><td>as_str</td><td><code>pub(crate :: tools :: submission) fn <a class="symbol-link" href="eos-tools--src-core-intent-rs.html#method-as-str-42">as_str</a> (self) -&gt; &amp; &#x27;static str</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">pub</span>(<span class="rs-kw">in</span> <span class="rs-kw">crate</span>::tools::submission) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-core-intent-rs.html#method-as-str-42">as_str</a>(<span class="rs-self">self</span>) -&gt; &amp;&#x27;<span class="rs-kw">static</span> str {
+        <span class="rs-kw">match</span> <span class="rs-self">self</span> {
+            <a class="symbol-link rs-type" href="eos-tools--src-tools-submission-lib-rs.html#item-enum-SubmissionStatus-10">SubmissionStatus</a>::<span class="rs-type">Success</span> =&gt; &quot;success&quot;,
+            <a class="symbol-link rs-type" href="eos-tools--src-tools-submission-lib-rs.html#item-enum-SubmissionStatus-10">SubmissionStatus</a>::<span class="rs-type">Failed</span> =&gt; &quot;failed&quot;,
+        }
+    }
+</code></pre>
+</details></td></tr><tr id="method-outcome-status-26"><td>method</td><td>outcome_status</td><td><code>pub(crate :: tools :: submission) fn <a class="symbol-link" href="eos-tools--src-tools-submission-lib-rs.html#method-outcome-status-26">outcome_status</a> (self) -&gt; TaskOutcomeStatus</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">pub</span>(<span class="rs-kw">in</span> <span class="rs-kw">crate</span>::tools::submission) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-tools-submission-lib-rs.html#method-outcome-status-26">outcome_status</a>(<span class="rs-self">self</span>) -&gt; <span class="rs-type">TaskOutcomeStatus</span> {
+        <span class="rs-kw">match</span> <span class="rs-self">self</span> {
+            <a class="symbol-link rs-type" href="eos-tools--src-tools-submission-lib-rs.html#item-enum-SubmissionStatus-10">SubmissionStatus</a>::<span class="rs-type">Success</span> =&gt; <span class="rs-type">TaskOutcomeStatus</span>::<span class="rs-type">Success</span>,
+            <a class="symbol-link rs-type" href="eos-tools--src-tools-submission-lib-rs.html#item-enum-SubmissionStatus-10">SubmissionStatus</a>::<span class="rs-type">Failed</span> =&gt; <span class="rs-type">TaskOutcomeStatus</span>::<span class="rs-type">Failed</span>,
+        }
+    }
+</code></pre>
+</details></td></tr></tbody></table>
+
   <p class="source">crates/eos-tools/src/tools/submission/lib.rs:10</p>
-</article><div class="group-label">Standalone Functions</div><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn is_blank pub(crate :: tools :: submission) pub(crate :: tools :: submission) fn is_blank (s : &amp; str) -&gt; bool crates/eos-tools/src/tools/submission/lib.rs  ">
+</article><div class="group-label">Standalone Functions</div><article id="item-fn-is-blank-40" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn is_blank pub(crate :: tools :: submission) pub(crate :: tools :: submission) fn is_blank (s : &amp; str) -&gt; bool crates/eos-tools/src/tools/submission/lib.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>is_blank</h3>
     <span class="visibility">pub(crate :: tools :: submission)</span>
   </div>
-  <code class="signature">pub(crate :: tools :: submission) fn is_blank (s : &amp; str) -&gt; bool</code>
+  <code class="signature">pub(crate :: tools :: submission) fn <a class="symbol-link" href="eos-tools--src-tools-submission-lib-rs.html#item-fn-is-blank-40">is_blank</a> (s : &amp; str) -&gt; bool</code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">in</span> <span class="rs-kw">crate</span>::tools::submission) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-tools-submission-lib-rs.html#item-fn-is-blank-40">is_blank</a>(s: &amp;str) -&gt; bool {
+    s.trim().<a class="symbol-link rs-fn" href="eos-tools--src-registry-tool-registry-rs.html#method-is-empty-96">is_empty</a>()
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-tools/src/tools/submission/lib.rs:40</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn meta_obj pub(crate :: tools :: submission) pub(crate :: tools :: submission) fn meta_obj (pairs : &amp; [(&amp; str , Value)]) -&gt; JsonObject crates/eos-tools/src/tools/submission/lib.rs  ">
+</article><article id="item-fn-meta-obj-44" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn meta_obj pub(crate :: tools :: submission) pub(crate :: tools :: submission) fn meta_obj (pairs : &amp; [(&amp; str , Value)]) -&gt; JsonObject crates/eos-tools/src/tools/submission/lib.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>meta_obj</h3>
     <span class="visibility">pub(crate :: tools :: submission)</span>
   </div>
-  <code class="signature">pub(crate :: tools :: submission) fn meta_obj (pairs : &amp; [(&amp; str , Value)]) -&gt; JsonObject</code>
+  <code class="signature">pub(crate :: tools :: submission) fn <a class="symbol-link" href="eos-tools--src-tools-submission-lib-rs.html#item-fn-meta-obj-44">meta_obj</a> (pairs : &amp; [(&amp; str , Value)]) -&gt; JsonObject</code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">in</span> <span class="rs-kw">crate</span>::tools::submission) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-tools-submission-lib-rs.html#item-fn-meta-obj-44">meta_obj</a>(pairs: &amp;[(&amp;str, <span class="rs-type">Value</span>)]) -&gt; <span class="rs-type">JsonObject</span> {
+    pairs
+        .iter()
+        .map(|(k, v)| ((*k).to_owned(), v.clone()))
+        .collect()
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-tools/src/tools/submission/lib.rs:44</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn submission_ack_result pub(crate :: tools :: submission) pub(crate :: tools :: submission) fn submission_ack_result (ack : SubmissionAck , success : &amp; str , metadata : &amp; JsonObject ,) -&gt; ToolResult crates/eos-tools/src/tools/submission/lib.rs  ">
+</article><article id="item-fn-submission-ack-result-51" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn submission_ack_result pub(crate :: tools :: submission) pub(crate :: tools :: submission) fn submission_ack_result (ack : SubmissionAck , success : &amp; str , metadata : &amp; JsonObject ,) -&gt; ToolResult crates/eos-tools/src/tools/submission/lib.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>submission_ack_result</h3>
     <span class="visibility">pub(crate :: tools :: submission)</span>
   </div>
-  <code class="signature">pub(crate :: tools :: submission) fn submission_ack_result (ack : SubmissionAck , success : &amp; str , metadata : &amp; JsonObject ,) -&gt; ToolResult</code>
+  <code class="signature">pub(crate :: tools :: submission) fn <a class="symbol-link" href="eos-tools--src-tools-submission-lib-rs.html#item-fn-submission-ack-result-51">submission_ack_result</a> (ack : <a class="symbol-link" href="eos-tools--src-ports-mod-rs.html#item-enum-SubmissionAck-159">SubmissionAck</a> , success : &amp; str , metadata : &amp; JsonObject ,) -&gt; <a class="symbol-link" href="eos-tools--src-core-result-rs.html#item-struct-ToolResult-12">ToolResult</a></code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">in</span> <span class="rs-kw">crate</span>::tools::submission) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-tools-submission-lib-rs.html#item-fn-submission-ack-result-51">submission_ack_result</a>(
+    ack: <a class="symbol-link rs-type" href="eos-tools--src-ports-mod-rs.html#item-enum-SubmissionAck-159">SubmissionAck</a>,
+    success: &amp;str,
+    metadata: &amp;<span class="rs-type">JsonObject</span>,
+) -&gt; <a class="symbol-link rs-type" href="eos-tools--src-core-result-rs.html#item-struct-ToolResult-12">ToolResult</a> {
+    <span class="rs-kw">match</span> ack {
+        <a class="symbol-link rs-type" href="eos-tools--src-ports-mod-rs.html#item-enum-SubmissionAck-159">SubmissionAck</a>::<span class="rs-type">Accepted</span> =&gt; <a class="symbol-link rs-type" href="eos-tools--src-core-result-rs.html#item-struct-ToolResult-12">ToolResult</a>::<a class="symbol-link rs-fn" href="eos-tools--src-core-result-rs.html#method-ok-31">ok</a>(success).<a class="symbol-link rs-fn" href="eos-tools--src-core-result-rs.html#method-with-metadata-53">with_metadata</a>(metadata.clone()),
+        <a class="symbol-link rs-type" href="eos-tools--src-ports-mod-rs.html#item-enum-SubmissionAck-159">SubmissionAck</a>::<span class="rs-type">Rejected</span>(message) =&gt; <a class="symbol-link rs-type" href="eos-tools--src-core-result-rs.html#item-struct-ToolResult-12">ToolResult</a>::<a class="symbol-link rs-fn" href="eos-tools--src-core-result-rs.html#method-error-42">error</a>(message),
+    }
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-tools/src/tools/submission/lib.rs:51</p>
 </article></div>
 </section></div>
 </main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/eos-tools/src/tools/submission/lib.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-kw">use</span> eos_state::<span class="rs-type">TaskOutcomeStatus</span>;
+<span class="rs-kw">use</span> eos_types::<span class="rs-type">JsonObject</span>;
+<span class="rs-kw">use</span> schemars::<span class="rs-type">JsonSchema</span>;
+<span class="rs-kw">use</span> serde::{<span class="rs-type">Deserialize</span>, <span class="rs-type">Serialize</span>};
+<span class="rs-kw">use</span> serde_json::<span class="rs-type">Value</span>;
+
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::core::result::<a class="symbol-link rs-type" href="eos-tools--src-core-result-rs.html#item-struct-ToolResult-12">ToolResult</a>;
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::ports::<a class="symbol-link rs-type" href="eos-tools--src-ports-mod-rs.html#item-enum-SubmissionAck-159">SubmissionAck</a>;
+
+<span class="rs-comment">/// `Literal["success", "failed"]`.</span>
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">Copy</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Eq</span>, <span class="rs-type">Deserialize</span>, <span class="rs-type">Serialize</span>, <span class="rs-type">JsonSchema</span>)]
+#[serde(rename_all = &quot;snake_case&quot;)]
+<span class="rs-kw">pub</span>(<span class="rs-kw">in</span> <span class="rs-kw">crate</span>::tools::submission) <span class="rs-kw">enum</span> <a class="symbol-link rs-type" href="eos-tools--src-tools-submission-lib-rs.html#item-enum-SubmissionStatus-10">SubmissionStatus</a> {
+    <span class="rs-type">Success</span>,
+    <span class="rs-type">Failed</span>,
+}
+
+<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-tools--src-tools-submission-lib-rs.html#item-enum-SubmissionStatus-10">SubmissionStatus</a> {
+    <span class="rs-kw">pub</span>(<span class="rs-kw">in</span> <span class="rs-kw">crate</span>::tools::submission) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-core-intent-rs.html#method-as-str-42">as_str</a>(<span class="rs-self">self</span>) -&gt; &amp;&#x27;<span class="rs-kw">static</span> str {
+        <span class="rs-kw">match</span> <span class="rs-self">self</span> {
+            <a class="symbol-link rs-type" href="eos-tools--src-tools-submission-lib-rs.html#item-enum-SubmissionStatus-10">SubmissionStatus</a>::<span class="rs-type">Success</span> =&gt; &quot;success&quot;,
+            <a class="symbol-link rs-type" href="eos-tools--src-tools-submission-lib-rs.html#item-enum-SubmissionStatus-10">SubmissionStatus</a>::<span class="rs-type">Failed</span> =&gt; &quot;failed&quot;,
+        }
+    }
+
+    <span class="rs-kw">pub</span>(<span class="rs-kw">in</span> <span class="rs-kw">crate</span>::tools::submission) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-tools-submission-lib-rs.html#method-outcome-status-26">outcome_status</a>(<span class="rs-self">self</span>) -&gt; <span class="rs-type">TaskOutcomeStatus</span> {
+        <span class="rs-kw">match</span> <span class="rs-self">self</span> {
+            <a class="symbol-link rs-type" href="eos-tools--src-tools-submission-lib-rs.html#item-enum-SubmissionStatus-10">SubmissionStatus</a>::<span class="rs-type">Success</span> =&gt; <span class="rs-type">TaskOutcomeStatus</span>::<span class="rs-type">Success</span>,
+            <a class="symbol-link rs-type" href="eos-tools--src-tools-submission-lib-rs.html#item-enum-SubmissionStatus-10">SubmissionStatus</a>::<span class="rs-type">Failed</span> =&gt; <span class="rs-type">TaskOutcomeStatus</span>::<span class="rs-type">Failed</span>,
+        }
+    }
+}
+
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Deserialize</span>, <span class="rs-type">Serialize</span>, <span class="rs-type">JsonSchema</span>)]
+<span class="rs-kw">pub</span>(<span class="rs-kw">in</span> <span class="rs-kw">crate</span>::tools::submission) <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-tools--src-tools-submission-lib-rs.html#item-struct-OutcomeInput-34">OutcomeInput</a> {
+    <span class="rs-kw">pub</span>(<span class="rs-kw">in</span> <span class="rs-kw">crate</span>::tools::submission) status: <a class="symbol-link rs-type" href="eos-tools--src-tools-submission-lib-rs.html#item-enum-SubmissionStatus-10">SubmissionStatus</a>,
+    <span class="rs-kw">pub</span>(<span class="rs-kw">in</span> <span class="rs-kw">crate</span>::tools::submission) outcome: <span class="rs-type">String</span>,
+}
+
+<span class="rs-kw">pub</span>(<span class="rs-kw">in</span> <span class="rs-kw">crate</span>::tools::submission) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-tools-submission-lib-rs.html#item-fn-is-blank-40">is_blank</a>(s: &amp;str) -&gt; bool {
+    s.trim().<a class="symbol-link rs-fn" href="eos-tools--src-registry-tool-registry-rs.html#method-is-empty-96">is_empty</a>()
+}
+
+<span class="rs-kw">pub</span>(<span class="rs-kw">in</span> <span class="rs-kw">crate</span>::tools::submission) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-tools-submission-lib-rs.html#item-fn-meta-obj-44">meta_obj</a>(pairs: &amp;[(&amp;str, <span class="rs-type">Value</span>)]) -&gt; <span class="rs-type">JsonObject</span> {
+    pairs
+        .iter()
+        .map(|(k, v)| ((*k).to_owned(), v.clone()))
+        .collect()
+}
+
+<span class="rs-kw">pub</span>(<span class="rs-kw">in</span> <span class="rs-kw">crate</span>::tools::submission) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-tools-submission-lib-rs.html#item-fn-submission-ack-result-51">submission_ack_result</a>(
+    ack: <a class="symbol-link rs-type" href="eos-tools--src-ports-mod-rs.html#item-enum-SubmissionAck-159">SubmissionAck</a>,
+    success: &amp;str,
+    metadata: &amp;<span class="rs-type">JsonObject</span>,
+) -&gt; <a class="symbol-link rs-type" href="eos-tools--src-core-result-rs.html#item-struct-ToolResult-12">ToolResult</a> {
+    <span class="rs-kw">match</span> ack {
+        <a class="symbol-link rs-type" href="eos-tools--src-ports-mod-rs.html#item-enum-SubmissionAck-159">SubmissionAck</a>::<span class="rs-type">Accepted</span> =&gt; <a class="symbol-link rs-type" href="eos-tools--src-core-result-rs.html#item-struct-ToolResult-12">ToolResult</a>::<a class="symbol-link rs-fn" href="eos-tools--src-core-result-rs.html#method-ok-31">ok</a>(success).<a class="symbol-link rs-fn" href="eos-tools--src-core-result-rs.html#method-with-metadata-53">with_metadata</a>(metadata.clone()),
+        <a class="symbol-link rs-type" href="eos-tools--src-ports-mod-rs.html#item-enum-SubmissionAck-159">SubmissionAck</a>::<span class="rs-type">Rejected</span>(message) =&gt; <a class="symbol-link rs-type" href="eos-tools--src-core-result-rs.html#item-struct-ToolResult-12">ToolResult</a>::<a class="symbol-link rs-fn" href="eos-tools--src-core-result-rs.html#method-error-42">error</a>(message),
+    }
+}
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
   <script src="../assets/inventory.js"></script>
 </body>
 </html>

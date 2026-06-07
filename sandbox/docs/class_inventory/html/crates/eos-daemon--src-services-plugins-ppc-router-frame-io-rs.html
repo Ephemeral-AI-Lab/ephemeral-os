@@ -8,8 +8,16 @@
 </head>
 <body>
   <header>
-    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
-    <h1>eos-daemon File Inventory</h1>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>eos-daemon File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS/sandbox &amp;&amp; cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
   </header>
   <a class="back-link" href="../index.html">sandbox</a>
 <section class="summary">
@@ -47,39 +55,211 @@
       <span>4 methods</span>
     </div>
   </div>
-  <div class="items"><div class="group-label">File-Owned Types</div><article class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct FrameWriter pub(super) pub(super) struct FrameWriter crates/eos-daemon/src/services/plugins/ppc_router/frame_io.rs stream Arc &lt; Mutex &lt; UnixStream &gt; &gt; ">
+  <div class="items"><div class="group-label">File-Owned Types</div><article id="item-struct-FrameWriter-14" class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct FrameWriter pub(super) pub(super) struct FrameWriter crates/eos-daemon/src/services/plugins/ppc_router/frame_io.rs stream Arc &lt; Mutex &lt; UnixStream &gt; &gt; ">
   <div class="item-head">
     <span class="kind">struct</span>
     <h3>FrameWriter</h3>
     <span class="visibility">pub(super)</span>
   </div>
-  <code class="signature">pub(super) struct FrameWriter</code>
-  <div class="tags"></div>
-  <h4>Fields</h4><table><tbody><tr><td>private</td><td>stream</td><td><code>Arc &lt; Mutex &lt; UnixStream &gt; &gt;</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr><td>constructor</td><td>new</td><td><code>pub(super) fn new (stream : UnixStream) -&gt; Self</code></td></tr><tr><td>method</td><td>write_with_timeout</td><td><code>pub(super) fn write_with_timeout (&amp; self , frame : &amp; PpcEnvelope , timeout : Duration ,) -&gt; Result &lt; () , DaemonError &gt;</code></td></tr><tr><td>method</td><td>write</td><td><code>pub(super) fn write (&amp; self , frame : &amp; PpcEnvelope) -&gt; Result &lt; () , DaemonError &gt;</code></td></tr><tr><td>method</td><td>write_inner</td><td><code>fn write_inner (&amp; self , frame : &amp; PpcEnvelope , timeout : Option &lt; Duration &gt; ,) -&gt; Result &lt; () , DaemonError &gt;</code></td></tr></tbody></table>
+  <code class="signature">pub(super) struct <a class="symbol-link" href="eos-daemon--src-services-plugins-ppc-router-frame-io-rs.html#item-struct-FrameWriter-14">FrameWriter</a></code>
+  <div class="tags"><span>derive: Clone</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>stream</td><td><code>Arc &lt; Mutex &lt; UnixStream &gt; &gt;</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-20"><td>constructor</td><td>new</td><td><code>pub(super) fn <a class="symbol-link" href="eos-daemon.html#method-new-89">new</a> (stream : UnixStream) -&gt; Self</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon.html#method-new-89">new</a>(stream: <span class="rs-type">UnixStream</span>) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">Self</span> {
+            stream: <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-daemon.html#method-new-89">new</a>(<span class="rs-type">Mutex</span>::<a class="symbol-link rs-fn" href="eos-daemon.html#method-new-89">new</a>(stream)),
+        }
+    }
+</code></pre>
+</details></td></tr><tr id="method-write-with-timeout-26"><td>method</td><td>write_with_timeout</td><td><code>pub(super) fn <a class="symbol-link" href="eos-daemon--src-services-plugins-ppc-router-frame-io-rs.html#method-write-with-timeout-26">write_with_timeout</a> (&amp; self , frame : &amp; PpcEnvelope , timeout : Duration ,) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a> &lt; () , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-ppc-router-frame-io-rs.html#method-write-with-timeout-26">write_with_timeout</a>(
+        &amp;<span class="rs-self">self</span>,
+        frame: &amp;<span class="rs-type">PpcEnvelope</span>,
+        timeout: <span class="rs-type">Duration</span>,
+    ) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a>&lt;(), <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+        <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-ppc-router-frame-io-rs.html#method-write-inner-38">write_inner</a>(frame, <span class="rs-type">Some</span>(timeout))
+    }
+</code></pre>
+</details></td></tr><tr id="method-write-34"><td>method</td><td>write</td><td><code>pub(super) fn <a class="symbol-link" href="eos-daemon--src-services-plugins-ppc-router-frame-io-rs.html#method-write-34">write</a> (&amp; self , frame : &amp; PpcEnvelope) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a> &lt; () , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-ppc-router-frame-io-rs.html#method-write-34">write</a>(&amp;<span class="rs-self">self</span>, frame: &amp;<span class="rs-type">PpcEnvelope</span>) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a>&lt;(), <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+        <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-ppc-router-frame-io-rs.html#method-write-inner-38">write_inner</a>(frame, <span class="rs-type">None</span>)
+    }
+</code></pre>
+</details></td></tr><tr id="method-write-inner-38"><td>method</td><td>write_inner</td><td><code>fn <a class="symbol-link" href="eos-daemon--src-services-plugins-ppc-router-frame-io-rs.html#method-write-inner-38">write_inner</a> (&amp; self , frame : &amp; PpcEnvelope , timeout : Option &lt; Duration &gt; ,) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a> &lt; () , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-ppc-router-frame-io-rs.html#method-write-inner-38">write_inner</a>(
+        &amp;<span class="rs-self">self</span>,
+        frame: &amp;<span class="rs-type">PpcEnvelope</span>,
+        timeout: <span class="rs-type">Option</span>&lt;<span class="rs-type">Duration</span>&gt;,
+    ) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a>&lt;(), <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> writer = <span class="rs-self">self</span>
+            .stream
+            .<a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-ppc-router-pending-rs.html#method-lock-142">lock</a>()
+            .map_err(|_| <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>::<span class="rs-type">StateLockPoisoned</span>(&quot;plugin ppc writer&quot;))?;
+        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(timeout) = timeout {
+            writer.set_write_timeout(<span class="rs-type">Some</span>(timeout))?;
+        }
+        writer.write_all(&amp;frame.encode()?)?;
+        writer.flush()?;
+        <span class="rs-type">Ok</span>(())
+    }
+</code></pre>
+</details></td></tr></tbody></table>
+
   <p class="source">crates/eos-daemon/src/services/plugins/ppc_router/frame_io.rs:14</p>
-</article><div class="group-label">Standalone Functions</div><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn read_envelope pub(super) pub(super) fn read_envelope (stream : &amp; mut UnixStream) -&gt; Result &lt; PpcEnvelope , DaemonError &gt; crates/eos-daemon/src/services/plugins/ppc_router/frame_io.rs  ">
+</article><div class="group-label">Standalone Functions</div><article id="item-fn-read-envelope-56" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn read_envelope pub(super) pub(super) fn read_envelope (stream : &amp; mut UnixStream) -&gt; Result &lt; PpcEnvelope , DaemonError &gt; crates/eos-daemon/src/services/plugins/ppc_router/frame_io.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>read_envelope</h3>
     <span class="visibility">pub(super)</span>
   </div>
-  <code class="signature">pub(super) fn read_envelope (stream : &amp; mut UnixStream) -&gt; Result &lt; PpcEnvelope , DaemonError &gt;</code>
+  <code class="signature">pub(super) fn <a class="symbol-link" href="eos-daemon--src-services-plugins-ppc-router-frame-io-rs.html#item-fn-read-envelope-56">read_envelope</a> (stream : &amp; mut UnixStream) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a> &lt; PpcEnvelope , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-ppc-router-frame-io-rs.html#item-fn-read-envelope-56">read_envelope</a>(stream: &amp;<span class="rs-kw">mut</span> <span class="rs-type">UnixStream</span>) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a>&lt;<span class="rs-type">PpcEnvelope</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+    <span class="rs-kw">let</span> bytes = <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-ppc-router-frame-io-rs.html#item-fn-read-frame-61">read_frame</a>(stream)?;
+    <span class="rs-type">PpcEnvelope</span>::decode(&amp;bytes).map_err(<a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>::from)
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-daemon/src/services/plugins/ppc_router/frame_io.rs:56</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn read_frame pub(crate :: services :: plugins) pub(crate :: services :: plugins) fn read_frame (stream : &amp; mut UnixStream ,) -&gt; Result &lt; Vec &lt; u8 &gt; , DaemonError &gt; crates/eos-daemon/src/services/plugins/ppc_router/frame_io.rs  ">
+</article><article id="item-fn-read-frame-61" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn read_frame pub(crate :: services :: plugins) pub(crate :: services :: plugins) fn read_frame (stream : &amp; mut UnixStream ,) -&gt; Result &lt; Vec &lt; u8 &gt; , DaemonError &gt; crates/eos-daemon/src/services/plugins/ppc_router/frame_io.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>read_frame</h3>
     <span class="visibility">pub(crate :: services :: plugins)</span>
   </div>
-  <code class="signature">pub(crate :: services :: plugins) fn read_frame (stream : &amp; mut UnixStream ,) -&gt; Result &lt; Vec &lt; u8 &gt; , DaemonError &gt;</code>
+  <code class="signature">pub(crate :: services :: plugins) fn <a class="symbol-link" href="eos-daemon--src-services-plugins-ppc-router-frame-io-rs.html#item-fn-read-frame-61">read_frame</a> (stream : &amp; mut UnixStream ,) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a> &lt; Vec &lt; u8 &gt; , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">in</span> <span class="rs-kw">crate</span>::services::plugins) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-ppc-router-frame-io-rs.html#item-fn-read-frame-61">read_frame</a>(
+    stream: &amp;<span class="rs-kw">mut</span> <span class="rs-type">UnixStream</span>,
+) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a>&lt;<span class="rs-type">Vec</span>&lt;u8&gt;, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> bytes = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-daemon.html#method-new-89">new</a>();
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> one = [0_u8; 1];
+    loop {
+        <span class="rs-kw">let</span> read = stream.read(&amp;<span class="rs-kw">mut</span> one)?;
+        <span class="rs-kw">if</span> read == 0 {
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(
+                <span class="rs-type">PluginError</span>::<span class="rs-type">Ppc</span>(&quot;plugin <span class="rs-type">PPC</span> stream closed before reply&quot;.to_owned()).into(),
+            );
+        }
+        bytes.push(one[0]);
+        <span class="rs-kw">if</span> one[0] == b&#x27;\n&#x27; {
+            <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(bytes);
+        }
+        <span class="rs-kw">if</span> bytes.len() &gt;= <span class="rs-type">MAX_PPC_FRAME_BYTES</span> {
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<span class="rs-type">PluginError</span>::<span class="rs-type">Ppc</span>(format!(
+                &quot;plugin <span class="rs-type">PPC</span> reply exceeds {<span class="rs-type">MAX_PPC_FRAME_BYTES</span>} byte limit&quot;
+            ))
+            .into());
+        }
+    }
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-daemon/src/services/plugins/ppc_router/frame_io.rs:61</p>
 </article></div>
 </section></div>
 </main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/eos-daemon/src/services/plugins/ppc_router/frame_io.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-comment">//! PPC frame I/O over the connected service socket.</span>
+
+<span class="rs-kw">use</span> std::io::{<span class="rs-type">Read</span>, <span class="rs-type">Write</span>};
+<span class="rs-kw">use</span> std::os::unix::net::<span class="rs-type">UnixStream</span>;
+<span class="rs-kw">use</span> std::sync::{<span class="rs-type">Arc</span>, <span class="rs-type">Mutex</span>};
+<span class="rs-kw">use</span> std::time::<span class="rs-type">Duration</span>;
+
+<span class="rs-kw">use</span> eos_plugin::{<span class="rs-type">PluginError</span>, <span class="rs-type">PpcEnvelope</span>};
+
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::error::<a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>;
+
+<span class="rs-kw">const</span> <span class="rs-type">MAX_PPC_FRAME_BYTES</span>: usize = eos_protocol::<span class="rs-type">MAX_REQUEST_BYTES</span>;
+
+#[derive(<span class="rs-type">Clone</span>)]
+<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-daemon--src-services-plugins-ppc-router-frame-io-rs.html#item-struct-FrameWriter-14">FrameWriter</a> {
+    stream: <span class="rs-type">Arc</span>&lt;<span class="rs-type">Mutex</span>&lt;<span class="rs-type">UnixStream</span>&gt;&gt;,
+}
+
+<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-daemon--src-services-plugins-ppc-router-frame-io-rs.html#item-struct-FrameWriter-14">FrameWriter</a> {
+    <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon.html#method-new-89">new</a>(stream: <span class="rs-type">UnixStream</span>) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">Self</span> {
+            stream: <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-daemon.html#method-new-89">new</a>(<span class="rs-type">Mutex</span>::<a class="symbol-link rs-fn" href="eos-daemon.html#method-new-89">new</a>(stream)),
+        }
+    }
+
+    <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-ppc-router-frame-io-rs.html#method-write-with-timeout-26">write_with_timeout</a>(
+        &amp;<span class="rs-self">self</span>,
+        frame: &amp;<span class="rs-type">PpcEnvelope</span>,
+        timeout: <span class="rs-type">Duration</span>,
+    ) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a>&lt;(), <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+        <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-ppc-router-frame-io-rs.html#method-write-inner-38">write_inner</a>(frame, <span class="rs-type">Some</span>(timeout))
+    }
+
+    <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-ppc-router-frame-io-rs.html#method-write-34">write</a>(&amp;<span class="rs-self">self</span>, frame: &amp;<span class="rs-type">PpcEnvelope</span>) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a>&lt;(), <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+        <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-ppc-router-frame-io-rs.html#method-write-inner-38">write_inner</a>(frame, <span class="rs-type">None</span>)
+    }
+
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-ppc-router-frame-io-rs.html#method-write-inner-38">write_inner</a>(
+        &amp;<span class="rs-self">self</span>,
+        frame: &amp;<span class="rs-type">PpcEnvelope</span>,
+        timeout: <span class="rs-type">Option</span>&lt;<span class="rs-type">Duration</span>&gt;,
+    ) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a>&lt;(), <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> writer = <span class="rs-self">self</span>
+            .stream
+            .<a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-ppc-router-pending-rs.html#method-lock-142">lock</a>()
+            .map_err(|_| <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>::<span class="rs-type">StateLockPoisoned</span>(&quot;plugin ppc writer&quot;))?;
+        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(timeout) = timeout {
+            writer.set_write_timeout(<span class="rs-type">Some</span>(timeout))?;
+        }
+        writer.write_all(&amp;frame.encode()?)?;
+        writer.flush()?;
+        <span class="rs-type">Ok</span>(())
+    }
+}
+
+<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-ppc-router-frame-io-rs.html#item-fn-read-envelope-56">read_envelope</a>(stream: &amp;<span class="rs-kw">mut</span> <span class="rs-type">UnixStream</span>) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a>&lt;<span class="rs-type">PpcEnvelope</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+    <span class="rs-kw">let</span> bytes = <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-ppc-router-frame-io-rs.html#item-fn-read-frame-61">read_frame</a>(stream)?;
+    <span class="rs-type">PpcEnvelope</span>::decode(&amp;bytes).map_err(<a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>::from)
+}
+
+<span class="rs-kw">pub</span>(<span class="rs-kw">in</span> <span class="rs-kw">crate</span>::services::plugins) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-ppc-router-frame-io-rs.html#item-fn-read-frame-61">read_frame</a>(
+    stream: &amp;<span class="rs-kw">mut</span> <span class="rs-type">UnixStream</span>,
+) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a>&lt;<span class="rs-type">Vec</span>&lt;u8&gt;, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> bytes = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-daemon.html#method-new-89">new</a>();
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> one = [0_u8; 1];
+    loop {
+        <span class="rs-kw">let</span> read = stream.read(&amp;<span class="rs-kw">mut</span> one)?;
+        <span class="rs-kw">if</span> read == 0 {
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(
+                <span class="rs-type">PluginError</span>::<span class="rs-type">Ppc</span>(&quot;plugin <span class="rs-type">PPC</span> stream closed before reply&quot;.to_owned()).into(),
+            );
+        }
+        bytes.push(one[0]);
+        <span class="rs-kw">if</span> one[0] == b&#x27;\n&#x27; {
+            <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(bytes);
+        }
+        <span class="rs-kw">if</span> bytes.len() &gt;= <span class="rs-type">MAX_PPC_FRAME_BYTES</span> {
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<span class="rs-type">PluginError</span>::<span class="rs-type">Ppc</span>(format!(
+                &quot;plugin <span class="rs-type">PPC</span> reply exceeds {<span class="rs-type">MAX_PPC_FRAME_BYTES</span>} byte limit&quot;
+            ))
+            .into());
+        }
+    }
+}
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
   <script src="../assets/inventory.js"></script>
 </body>
 </html>

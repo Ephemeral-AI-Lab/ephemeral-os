@@ -8,8 +8,16 @@
 </head>
 <body>
   <header>
-    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
-    <h1>eos-isolated-workspace File Inventory</h1>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>eos-isolated-workspace File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS/sandbox &amp;&amp; cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
   </header>
   <a class="back-link" href="../index.html">sandbox</a>
 <section class="summary">
@@ -47,19 +55,852 @@
       <span>7 methods</span>
     </div>
   </div>
-  <div class="items"><div class="group-label">Other Implementations</div><article class="item-card" data-kind="impl" data-kind-list="impl method" data-filter-text="impl impl IsolatedSession &lt; S , R , A &gt; private impl IsolatedSession &lt; S , R , A &gt; crates/eos-isolated-workspace/src/session/lifecycle.rs  wire_handle pub(super) fn wire_handle (&amp; mut self , handle : &amp; mut WorkspaceHandle ,) -&gt; Result &lt; HashMap &lt; String , f64 &gt; , IsolatedError &gt; rollback_partial pub(super) fn rollback_partial (&amp; mut self , handle : &amp; WorkspaceHandle) teardown_handle pub(super) fn teardown_handle (&amp; mut self , handle : &amp; WorkspaceHandle , grace_s : f64 ,) -&gt; (Value , HashMap &lt; String , f64 &gt;) enter pub fn enter (&amp; mut self , caller_id : &amp; CallerId) -&gt; Result &lt; WorkspaceHandle , IsolatedError &gt; validated_workspace_root fn validated_workspace_root (&amp; self) -&gt; Result &lt; String , IsolatedError &gt; exit pub fn exit (&amp; mut self , caller_id : &amp; CallerId , grace_s : Option &lt; f64 &gt; ,) -&gt; Result &lt; Value , IsolatedError &gt; ttl_sweep pub fn ttl_sweep (&amp; mut self , active_callers : &amp; HashSet &lt; String &gt;) -&gt; usize">
+  <div class="items"><div class="group-label">Other Implementations</div><article id="item-impl-impl-IsolatedSession---S---R---A---17" class="item-card" data-kind="impl" data-kind-list="impl method" data-filter-text="impl impl IsolatedSession &lt; S , R , A &gt; private impl IsolatedSession &lt; S , R , A &gt; crates/eos-isolated-workspace/src/session/lifecycle.rs  wire_handle pub(super) fn wire_handle (&amp; mut self , handle : &amp; mut WorkspaceHandle ,) -&gt; Result &lt; HashMap &lt; String , f64 &gt; , IsolatedError &gt; rollback_partial pub(super) fn rollback_partial (&amp; mut self , handle : &amp; WorkspaceHandle) teardown_handle pub(super) fn teardown_handle (&amp; mut self , handle : &amp; WorkspaceHandle , grace_s : f64 ,) -&gt; (Value , HashMap &lt; String , f64 &gt;) enter pub fn enter (&amp; mut self , caller_id : &amp; CallerId) -&gt; Result &lt; WorkspaceHandle , IsolatedError &gt; validated_workspace_root fn validated_workspace_root (&amp; self) -&gt; Result &lt; String , IsolatedError &gt; exit pub fn exit (&amp; mut self , caller_id : &amp; CallerId , grace_s : Option &lt; f64 &gt; ,) -&gt; Result &lt; Value , IsolatedError &gt; ttl_sweep pub fn ttl_sweep (&amp; mut self , active_callers : &amp; HashSet &lt; String &gt;) -&gt; usize">
   <div class="item-head">
     <span class="kind">impl</span>
     <h3>impl IsolatedSession &lt; S , R , A &gt;</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">impl IsolatedSession &lt; S , R , A &gt;</code>
+  <code class="signature">impl <a class="symbol-link" href="eos-isolated-workspace--src-session-rs.html#item-struct-IsolatedSession-40">IsolatedSession</a> &lt; S , R , A &gt;</code>
   <div class="tags"><span>impl</span></div>
-  <h4>Methods</h4><table><tbody><tr><td>method</td><td>wire_handle</td><td><code>pub(super) fn wire_handle (&amp; mut self , handle : &amp; mut WorkspaceHandle ,) -&gt; Result &lt; HashMap &lt; String , f64 &gt; , IsolatedError &gt;</code></td></tr><tr><td>method</td><td>rollback_partial</td><td><code>pub(super) fn rollback_partial (&amp; mut self , handle : &amp; WorkspaceHandle)</code></td></tr><tr><td>method</td><td>teardown_handle</td><td><code>pub(super) fn teardown_handle (&amp; mut self , handle : &amp; WorkspaceHandle , grace_s : f64 ,) -&gt; (Value , HashMap &lt; String , f64 &gt;)</code></td></tr><tr><td>method</td><td>enter</td><td><code>pub fn enter (&amp; mut self , caller_id : &amp; CallerId) -&gt; Result &lt; WorkspaceHandle , IsolatedError &gt;</code></td></tr><tr><td>method</td><td>validated_workspace_root</td><td><code>fn validated_workspace_root (&amp; self) -&gt; Result &lt; String , IsolatedError &gt;</code></td></tr><tr><td>method</td><td>exit</td><td><code>pub fn exit (&amp; mut self , caller_id : &amp; CallerId , grace_s : Option &lt; f64 &gt; ,) -&gt; Result &lt; Value , IsolatedError &gt;</code></td></tr><tr><td>method</td><td>ttl_sweep</td><td><code>pub fn ttl_sweep (&amp; mut self , active_callers : &amp; HashSet &lt; String &gt;) -&gt; usize</code></td></tr></tbody></table>
+  <h4>Methods</h4><table><tbody><tr id="method-wire-handle-23"><td>method</td><td>wire_handle</td><td><code>pub(super) fn <a class="symbol-link" href="eos-isolated-workspace--src-session-lifecycle-rs.html#method-wire-handle-23">wire_handle</a> (&amp; mut self , handle : &amp; mut <a class="symbol-link" href="eos-isolated-workspace--src-session-types-rs.html#item-struct-WorkspaceHandle-14">WorkspaceHandle</a> ,) -&gt; Result &lt; HashMap &lt; String , f64 &gt; , <a class="symbol-link" href="eos-isolated-workspace--src-error-rs.html#item-enum-IsolatedError-8">IsolatedError</a> &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-isolated-workspace--src-session-lifecycle-rs.html#method-wire-handle-23">wire_handle</a>(
+        &amp;<span class="rs-kw">mut</span> <span class="rs-self">self</span>,
+        handle: &amp;<span class="rs-kw">mut</span> <a class="symbol-link rs-type" href="eos-isolated-workspace--src-session-types-rs.html#item-struct-WorkspaceHandle-14">WorkspaceHandle</a>,
+    ) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">HashMap</span>&lt;<span class="rs-type">String</span>, f64&gt;, <a class="symbol-link rs-type" href="eos-isolated-workspace--src-error-rs.html#item-enum-IsolatedError-8">IsolatedError</a>&gt; {
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> phases_ms = <span class="rs-type">HashMap</span>::<a class="symbol-link rs-fn" href="eos-isolated-workspace.html#method-new-37">new</a>();
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> phase_start = <span class="rs-type">Instant</span>::now();
+        handle.holder_pid = <span class="rs-self">self</span>
+            .runtime
+            .<a class="symbol-link rs-fn" href="eos-isolated-workspace--src-session-ports-rs.html#method-spawn-ns-holder-51">spawn_ns_holder</a>(handle, <span class="rs-self">self</span>.caps.setup_timeout_s)?;
+        phases_ms.insert(
+            &quot;spawn_ns_holder&quot;.to_owned(),
+            phase_start.elapsed().as_secs_f64() * 1000.0,
+        );
+        phase_start = <span class="rs-type">Instant</span>::now();
+        handle.ns_fds = <span class="rs-self">self</span>.runtime.<a class="symbol-link rs-fn" href="eos-isolated-workspace--src-session-ports-rs.html#method-open-ns-fds-64">open_ns_fds</a>(handle.holder_pid)?;
+        phases_ms.insert(
+            &quot;open_ns_fds&quot;.to_owned(),
+            phase_start.elapsed().as_secs_f64() * 1000.0,
+        );
+        phase_start = <span class="rs-type">Instant</span>::now();
+        <span class="rs-self">self</span>.network.<a class="symbol-link rs-fn" href="eos-isolated-workspace--src-network-rs.html#method-initialize-174">initialize</a>()?;
+        <a class="symbol-link rs-fn" href="eos-isolated-workspace--src-session-support-rs.html#item-fn-maybe-inject-phase-9">maybe_inject_phase</a>(&quot;install_veth&quot;)?;
+        handle.veth = <span class="rs-type">Some</span>(
+            <span class="rs-self">self</span>.network
+                .<a class="symbol-link rs-fn" href="eos-isolated-workspace--src-network-rs.html#method-install-veth-204">install_veth</a>(&amp;handle.workspace_handle_id.0, handle.holder_pid)?,
+        );
+        phases_ms.insert(
+            &quot;install_veth&quot;.to_owned(),
+            phase_start.elapsed().as_secs_f64() * 1000.0,
+        );
+        phase_start = <span class="rs-type">Instant</span>::now();
+        <a class="symbol-link rs-fn" href="eos-isolated-workspace--src-session-support-rs.html#item-fn-maybe-inject-phase-9">maybe_inject_phase</a>(&quot;mount_overlay&quot;)?;
+        <span class="rs-self">self</span>.runtime.<a class="symbol-link rs-fn" href="eos-isolated-workspace--src-session-ports-rs.html#method-mount-overlay-71">mount_overlay</a>(handle, &amp;handle.layer_paths)?;
+        phases_ms.insert(
+            &quot;mount_overlay&quot;.to_owned(),
+            phase_start.elapsed().as_secs_f64() * 1000.0,
+        );
+        phase_start = <span class="rs-type">Instant</span>::now();
+        <a class="symbol-link rs-fn" href="eos-isolated-workspace--src-session-support-rs.html#item-fn-maybe-inject-phase-9">maybe_inject_phase</a>(&quot;configure_dns&quot;)?;
+        <span class="rs-kw">let</span> _dns_fallback_applied = <span class="rs-self">self</span>
+            .runtime
+            .<a class="symbol-link rs-fn" href="eos-isolated-workspace--src-session-ports-rs.html#method-configure-dns-82">configure_dns</a>(handle, &amp;<span class="rs-self">self</span>.caps.fallback_dns)?;
+        phases_ms.insert(
+            &quot;configure_dns&quot;.to_owned(),
+            phase_start.elapsed().as_secs_f64() * 1000.0,
+        );
+        <span class="rs-comment">// signal_net_ready runs UNTIMED between the configure_dns and</span>
+        <span class="rs-comment">// create_cgroup phase measures (it is deliberately called outside any</span>
+        <span class="rs-comment">// phase-timer block) so the configure_dns phase budget is not inflated</span>
+        <span class="rs-comment">// by the net-ready wait.</span>
+        <span class="rs-self">self</span>.runtime
+            .<a class="symbol-link rs-fn" href="eos-isolated-workspace--src-session-ports-rs.html#method-signal-net-ready-94">signal_net_ready</a>(handle, <span class="rs-self">self</span>.caps.setup_timeout_s)?;
+        phase_start = <span class="rs-type">Instant</span>::now();
+        <span class="rs-kw">let</span> cgroup_path = <span class="rs-self">self</span>.runtime.<a class="symbol-link rs-fn" href="eos-isolated-workspace--src-session-ports-rs.html#method-create-cgroup-106">create_cgroup</a>(handle)?;
+        phases_ms.insert(
+            &quot;create_cgroup&quot;.to_owned(),
+            phase_start.elapsed().as_secs_f64() * 1000.0,
+        );
+        <span class="rs-kw">if</span> !cgroup_path.as_os_str().is_empty() {
+            handle.cgroup_path = <span class="rs-type">Some</span>(cgroup_path);
+        }
+        <span class="rs-type">Ok</span>(phases_ms)
+    }
+</code></pre>
+</details></td></tr><tr id="method-rollback-partial-87"><td>method</td><td>rollback_partial</td><td><code>pub(super) fn <a class="symbol-link" href="eos-isolated-workspace--src-session-lifecycle-rs.html#method-rollback-partial-87">rollback_partial</a> (&amp; mut self , handle : &amp; <a class="symbol-link" href="eos-isolated-workspace--src-session-types-rs.html#item-struct-WorkspaceHandle-14">WorkspaceHandle</a>)</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-isolated-workspace--src-session-lifecycle-rs.html#method-rollback-partial-87">rollback_partial</a>(&amp;<span class="rs-kw">mut</span> <span class="rs-self">self</span>, handle: &amp;<a class="symbol-link rs-type" href="eos-isolated-workspace--src-session-types-rs.html#item-struct-WorkspaceHandle-14">WorkspaceHandle</a>) {
+        <a class="symbol-link rs-fn" href="eos-isolated-workspace--src-session-support-rs.html#item-fn-close-handle-fds-53">close_handle_fds</a>(handle);
+        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(veth) = handle.veth.as_ref() {
+            <span class="rs-self">self</span>.network.<a class="symbol-link rs-fn" href="eos-isolated-workspace--src-network-rs.html#method-teardown-veth-247">teardown_veth</a>(veth);
+        }
+        <span class="rs-kw">if</span> handle.holder_pid &gt; 0 {
+            <span class="rs-kw">let</span> _ = <span class="rs-self">self</span>.runtime.<a class="symbol-link rs-fn" href="eos-isolated-workspace--src-session-ports-rs.html#method-kill-holder-113">kill_holder</a>(handle.holder_pid, 1.0);
+        }
+        <span class="rs-kw">let</span> _ = std::fs::remove_dir_all(&amp;handle.scratch_dir);
+    }
+</code></pre>
+</details></td></tr><tr id="method-teardown-handle-98"><td>method</td><td>teardown_handle</td><td><code>pub(super) fn <a class="symbol-link" href="eos-isolated-workspace--src-session-lifecycle-rs.html#method-teardown-handle-98">teardown_handle</a> (&amp; mut self , handle : &amp; <a class="symbol-link" href="eos-isolated-workspace--src-session-types-rs.html#item-struct-WorkspaceHandle-14">WorkspaceHandle</a> , grace_s : f64 ,) -&gt; (Value , HashMap &lt; String , f64 &gt;)</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-isolated-workspace--src-session-lifecycle-rs.html#method-teardown-handle-98">teardown_handle</a>(
+        &amp;<span class="rs-kw">mut</span> <span class="rs-self">self</span>,
+        handle: &amp;<a class="symbol-link rs-type" href="eos-isolated-workspace--src-session-types-rs.html#item-struct-WorkspaceHandle-14">WorkspaceHandle</a>,
+        grace_s: f64,
+    ) -&gt; (<span class="rs-type">Value</span>, <span class="rs-type">HashMap</span>&lt;<span class="rs-type">String</span>, f64&gt;) {
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> phases_ms = <span class="rs-type">HashMap</span>::<a class="symbol-link rs-fn" href="eos-isolated-workspace.html#method-new-37">new</a>();
+        <span class="rs-kw">let</span> phase_start = <span class="rs-type">Instant</span>::now();
+        <span class="rs-kw">let</span> holder_kill_error = <span class="rs-kw">if</span> handle.holder_pid &gt; 0 {
+            <span class="rs-self">self</span>.runtime
+                .<a class="symbol-link rs-fn" href="eos-isolated-workspace--src-session-ports-rs.html#method-kill-holder-113">kill_holder</a>(handle.holder_pid, grace_s)
+                .err()
+                .map(|err| err.to_string())
+        } <span class="rs-kw">else</span> {
+            <span class="rs-type">None</span>
+        };
+        phases_ms.insert(
+            &quot;kill_holder&quot;.to_owned(),
+            phase_start.elapsed().as_secs_f64() * 1000.0,
+        );
+        <span class="rs-kw">let</span> phase_start = <span class="rs-type">Instant</span>::now();
+        <a class="symbol-link rs-fn" href="eos-isolated-workspace--src-session-support-rs.html#item-fn-close-handle-fds-53">close_handle_fds</a>(handle);
+        <span class="rs-kw">let</span> _close_fds_ms = phase_start.elapsed().as_secs_f64() * 1000.0;
+        <span class="rs-kw">let</span> phase_start = <span class="rs-type">Instant</span>::now();
+        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(veth) = handle.veth.as_ref() {
+            <span class="rs-self">self</span>.network.<a class="symbol-link rs-fn" href="eos-isolated-workspace--src-network-rs.html#method-teardown-veth-247">teardown_veth</a>(veth);
+        }
+        phases_ms.insert(
+            &quot;teardown_veth&quot;.to_owned(),
+            phase_start.elapsed().as_secs_f64() * 1000.0,
+        );
+        <span class="rs-kw">let</span> phase_start = <span class="rs-type">Instant</span>::now();
+        <span class="rs-kw">let</span> lease_released = <span class="rs-self">self</span>.layer_stack.<a class="symbol-link rs-fn" href="eos-isolated-workspace--src-session-ports-rs.html#method-release-lease-23">release_lease</a>(&amp;handle.lease_id).ok();
+        phases_ms.insert(
+            &quot;release_snapshot&quot;.to_owned(),
+            phase_start.elapsed().as_secs_f64() * 1000.0,
+        );
+        <span class="rs-kw">let</span> phase_start = <span class="rs-type">Instant</span>::now();
+        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(cgroup_path) = handle.cgroup_path.as_ref() {
+            <span class="rs-kw">let</span> _ = std::fs::remove_dir(cgroup_path);
+        }
+        phases_ms.insert(
+            &quot;cgroup_rmdir&quot;.to_owned(),
+            phase_start.elapsed().as_secs_f64() * 1000.0,
+        );
+        <span class="rs-kw">let</span> phase_start = <span class="rs-type">Instant</span>::now();
+        <span class="rs-kw">let</span> _ = std::fs::remove_dir_all(&amp;handle.scratch_dir);
+        phases_ms.insert(
+            &quot;rmtree_scratch&quot;.to_owned(),
+            phase_start.elapsed().as_secs_f64() * 1000.0,
+        );
+        <span class="rs-kw">let</span> cgroup_exists_after = handle.cgroup_path.as_ref().map(|path| path.exists());
+        <span class="rs-kw">let</span> inspection = json!({
+            &quot;handle_registered_after&quot;: <span class="rs-self">self</span>.handles.contains_key(&amp;handle.workspace_handle_id),
+            &quot;agent_registered_after&quot;: <span class="rs-self">self</span>.by_caller.contains_key(&amp;handle.caller_id),
+            &quot;open_handle_count_after&quot;: <span class="rs-self">self</span>.handles.len(),
+            &quot;open_agent_count_after&quot;: <span class="rs-self">self</span>.by_caller.len(),
+            &quot;lease_released&quot;: lease_released,
+            &quot;active_leases_after&quot;: <span class="rs-self">self</span>.layer_stack.<a class="symbol-link rs-fn" href="eos-isolated-workspace--src-session-ports-rs.html#method-active-lease-count-31">active_lease_count</a>().ok().flatten(),
+            &quot;holder_pid&quot;: handle.holder_pid,
+            &quot;holder_kill_error&quot;: holder_kill_error,
+            &quot;ns_fd_count&quot;: handle.ns_fds.len(),
+            &quot;readiness_fd_was_open&quot;: handle.readiness_fd &gt;= 0,
+            &quot;control_fd_was_open&quot;: handle.control_fd &gt;= 0,
+            &quot;veth_host_name&quot;: handle.veth.as_ref().map(|veth| veth.host_name.as_str()),
+            &quot;veth_ns_name&quot;: handle.veth.as_ref().map(|veth| veth.ns_name.as_str()),
+            &quot;cgroup_path&quot;: handle
+                .cgroup_path
+                .as_ref()
+                .map(|path| path.to_string_lossy().into_owned()),
+            &quot;cgroup_exists_after&quot;: cgroup_exists_after,
+            &quot;scratch_dir&quot;: handle.scratch_dir.to_string_lossy(),
+            &quot;scratch_exists_after&quot;: handle.scratch_dir.exists(),
+            &quot;upperdir_exists_after&quot;: handle.upperdir.exists(),
+            &quot;workdir_exists_after&quot;: handle.workdir.exists(),
+            &quot;mountinfo_reference_count_after&quot;: <a class="symbol-link rs-fn" href="eos-isolated-workspace--src-session-support-rs.html#item-fn-mountinfo-reference-count-99">mountinfo_reference_count</a>(&amp;[
+                &amp;handle.scratch_dir,
+                &amp;handle.upperdir,
+                &amp;handle.workdir,
+            ]),
+        });
+        (inspection, phases_ms)
+    }
+</code></pre>
+</details></td></tr><tr id="method-enter-181"><td>method</td><td>enter</td><td><code>pub fn <a class="symbol-link" href="eos-isolated-workspace--src-session-lifecycle-rs.html#method-enter-181">enter</a> (&amp; mut self , caller_id : &amp; CallerId) -&gt; Result &lt; <a class="symbol-link" href="eos-isolated-workspace--src-session-types-rs.html#item-struct-WorkspaceHandle-14">WorkspaceHandle</a> , <a class="symbol-link" href="eos-isolated-workspace--src-error-rs.html#item-enum-IsolatedError-8">IsolatedError</a> &gt;</code><p class="docstring">Enter (or reject) the isolated workspace for `caller_id`.<br>Acquires the snapshot/lease, allocates scratch, wires the namespace, and<br>registers the handle. Rolls back partial state (and releases the lease)<br>on any wiring failure.<br># Errors<br>Returns [`IsolatedError`] when the feature is disabled, `caller_id` is<br>invalid, capacity is exhausted, snapshot acquisition fails, or namespace<br>wiring fails.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Enter (or reject) the isolated workspace for `caller_id`.</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// Acquires the snapshot/lease, allocates scratch, wires the namespace, and</span>
+    <span class="rs-comment">/// registers the handle. Rolls back partial state (and releases the lease)</span>
+    <span class="rs-comment">/// on any wiring failure.</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// # Errors</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// Returns [`IsolatedError`] when the feature is disabled, `caller_id` is</span>
+    <span class="rs-comment">/// invalid, capacity is exhausted, snapshot acquisition fails, or namespace</span>
+    <span class="rs-comment">/// wiring fails.</span>
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-isolated-workspace--src-session-lifecycle-rs.html#method-enter-181">enter</a>(&amp;<span class="rs-kw">mut</span> <span class="rs-self">self</span>, caller_id: &amp;<span class="rs-type">CallerId</span>) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-isolated-workspace--src-session-types-rs.html#item-struct-WorkspaceHandle-14">WorkspaceHandle</a>, <a class="symbol-link rs-type" href="eos-isolated-workspace--src-error-rs.html#item-enum-IsolatedError-8">IsolatedError</a>&gt; {
+        <span class="rs-kw">if</span> !<span class="rs-self">self</span>.caps.enabled {
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-isolated-workspace--src-error-rs.html#item-enum-IsolatedError-8">IsolatedError</a>::<span class="rs-type">FeatureDisabled</span>);
+        }
+        <span class="rs-kw">if</span> caller_id.0.trim().is_empty() {
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-isolated-workspace--src-error-rs.html#item-enum-IsolatedError-8">IsolatedError</a>::<span class="rs-type">InvalidArgument</span>(
+                &quot;caller_id is required&quot;.to_owned(),
+            ));
+        }
+        <span class="rs-kw">let</span> workspace_root = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-isolated-workspace--src-session-lifecycle-rs.html#method-validated-workspace-root-298">validated_workspace_root</a>()?;
+        <span class="rs-kw">if</span> <span class="rs-self">self</span>.by_caller.contains_key(caller_id) {
+            <span class="rs-kw">let</span> existing = <span class="rs-self">self</span>
+                .by_caller
+                .get(caller_id)
+                .and_then(|workspace_handle_id| <span class="rs-self">self</span>.handles.get(workspace_handle_id))
+                .ok_or_else(|| <a class="symbol-link rs-type" href="eos-isolated-workspace--src-error-rs.html#item-enum-IsolatedError-8">IsolatedError</a>::<span class="rs-type">SetupFailed</span> {
+                    step: &quot;agent handle index is inconsistent&quot;.to_owned(),
+                })?;
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-isolated-workspace--src-error-rs.html#item-enum-IsolatedError-8">IsolatedError</a>::<span class="rs-type">AlreadyOpen</span> {
+                created_at: existing.created_at,
+                last_activity: existing.last_activity,
+            });
+        }
+        <span class="rs-kw">let</span> total_cap = usize::try_from(<span class="rs-self">self</span>.caps.total_cap).unwrap_or(usize::<span class="rs-type">MAX</span>);
+        <span class="rs-kw">if</span> <span class="rs-self">self</span>.handles.len() &gt;= total_cap {
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-isolated-workspace--src-error-rs.html#item-enum-IsolatedError-8">IsolatedError</a>::<span class="rs-type">QuotaExceeded</span> {
+                total_cap: <span class="rs-self">self</span>.caps.total_cap,
+            });
+        }
+        <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-isolated-workspace--src-session-capacity-rs.html#method-check-host-capacity-15">check_host_capacity</a>()?;
+
+        <span class="rs-kw">let</span> workspace_handle_id = <span class="rs-type">WorkspaceHandleId</span>(<a class="symbol-link rs-fn" href="eos-isolated-workspace--src-session-support-rs.html#item-fn-next-handle-id-66">next_handle_id</a>());
+        <span class="rs-kw">let</span> snapshot = <span class="rs-self">self</span>
+            .layer_stack
+            .<a class="symbol-link rs-fn" href="eos-isolated-workspace--src-session-ports-rs.html#method-acquire-snapshot-15">acquire_snapshot</a>(&amp;format!(&quot;isolated-{}&quot;, workspace_handle_id.0))?;
+        <span class="rs-kw">let</span> scratch_dir = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-isolated-workspace--src-session-persistence-rs.html#method-session-scratch-root-16">session_scratch_root</a>().join(&amp;workspace_handle_id.0);
+        <span class="rs-kw">let</span> upperdir = scratch_dir.join(&quot;upper&quot;);
+        <span class="rs-kw">let</span> workdir = scratch_dir.join(&quot;work&quot;);
+        std::fs::create_dir_all(&amp;upperdir).map_err(|err| <a class="symbol-link rs-type" href="eos-isolated-workspace--src-error-rs.html#item-enum-IsolatedError-8">IsolatedError</a>::<span class="rs-type">SetupFailed</span> {
+            step: format!(&quot;upperdir: {err}&quot;),
+        })?;
+        std::fs::create_dir_all(&amp;workdir).map_err(|err| <a class="symbol-link rs-type" href="eos-isolated-workspace--src-error-rs.html#item-enum-IsolatedError-8">IsolatedError</a>::<span class="rs-type">SetupFailed</span> {
+            step: format!(&quot;workdir: {err}&quot;),
+        })?;
+
+        <span class="rs-kw">let</span> now = <a class="symbol-link rs-fn" href="eos-isolated-workspace--src-session-support-rs.html#item-fn-monotonic-seconds-75">monotonic_seconds</a>();
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> handle = <a class="symbol-link rs-type" href="eos-isolated-workspace--src-session-types-rs.html#item-struct-WorkspaceHandle-14">WorkspaceHandle</a> {
+            workspace_handle_id: workspace_handle_id.clone(),
+            caller_id: caller_id.clone(),
+            lease_id: snapshot.lease_id.clone(),
+            manifest_version: snapshot.manifest_version,
+            manifest_root_hash: snapshot.manifest_root_hash.clone(),
+            workspace_root,
+            scratch_dir,
+            upperdir,
+            workdir,
+            layer_paths: snapshot.layer_paths.clone(),
+            ns_fds: <span class="rs-type">HashMap</span>::<a class="symbol-link rs-fn" href="eos-isolated-workspace.html#method-new-37">new</a>(),
+            holder_pid: 0,
+            readiness_fd: -1,
+            control_fd: -1,
+            veth: <span class="rs-type">None</span>,
+            cgroup_path: <span class="rs-type">None</span>,
+            created_at: now,
+            last_activity: now,
+        };
+
+        <span class="rs-kw">let</span> enter_timer = <span class="rs-type">Instant</span>::now();
+        <span class="rs-kw">let</span> phases_ms = <span class="rs-kw">match</span> <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-isolated-workspace--src-session-lifecycle-rs.html#method-wire-handle-23">wire_handle</a>(&amp;<span class="rs-kw">mut</span> handle) {
+            <span class="rs-type">Ok</span>(phases_ms) =&gt; phases_ms,
+            <span class="rs-type">Err</span>(err) =&gt; {
+                <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-isolated-workspace--src-session-lifecycle-rs.html#method-rollback-partial-87">rollback_partial</a>(&amp;handle);
+                <span class="rs-kw">let</span> _ = <span class="rs-self">self</span>.layer_stack.<a class="symbol-link rs-fn" href="eos-isolated-workspace--src-session-ports-rs.html#method-release-lease-23">release_lease</a>(&amp;snapshot.lease_id);
+                <span class="rs-kw">return</span> <span class="rs-type">Err</span>(err);
+            }
+        };
+        <span class="rs-kw">let</span> total_ms = enter_timer.elapsed().as_secs_f64() * 1000.0;
+
+        <span class="rs-self">self</span>.by_caller
+            .insert(caller_id.clone(), workspace_handle_id.clone());
+        <span class="rs-self">self</span>.handles
+            .insert(workspace_handle_id.clone(), handle.clone());
+        <span class="rs-kw">let</span> _ = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-isolated-workspace--src-session-persistence-rs.html#method-persist-handles-24">persist_handles</a>();
+        <span class="rs-kw">let</span> _ = <span class="rs-self">self</span>.audit.<a class="symbol-link rs-fn" href="eos-isolated-workspace.html#method-emit-21">emit</a>(
+            &quot;sandbox_isolated_workspace_enter&quot;,
+            json!({
+                &quot;workspace_handle_id&quot;: workspace_handle_id.0,
+                &quot;caller_id&quot;: caller_id.0,
+                &quot;manifest_version&quot;: handle.manifest_version,
+                &quot;manifest_root_hash&quot;: handle.manifest_root_hash,
+                &quot;lease_id&quot;: handle.lease_id,
+                &quot;lowerdir_layer_count&quot;: handle.layer_paths.len(),
+                &quot;workspace_root&quot;: handle.workspace_root,
+                &quot;upperdir&quot;: handle.upperdir.to_string_lossy(),
+                &quot;workdir&quot;: handle.workdir.to_string_lossy(),
+                &quot;veth_host_name&quot;: handle.veth.as_ref().map(|veth| veth.host_name.as_str()),
+                &quot;veth_ns_name&quot;: handle.veth.as_ref().map(|veth| veth.ns_name.as_str()),
+                &quot;ns_ip&quot;: handle.veth.as_ref().map(|veth| veth.ns_ip.to_string()),
+                &quot;tree-copy&quot;: <span class="rs-kw">false</span>,
+                &quot;total_ms&quot;: total_ms,
+                &quot;phases_ms&quot;: phases_ms,
+            }),
+        );
+        <span class="rs-type">Ok</span>(handle)
+    }
+</code></pre>
+</details></td></tr><tr id="method-validated-workspace-root-298"><td>method</td><td>validated_workspace_root</td><td><code>fn <a class="symbol-link" href="eos-isolated-workspace--src-session-lifecycle-rs.html#method-validated-workspace-root-298">validated_workspace_root</a> (&amp; self) -&gt; Result &lt; String , <a class="symbol-link" href="eos-isolated-workspace--src-error-rs.html#item-enum-IsolatedError-8">IsolatedError</a> &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-isolated-workspace--src-session-lifecycle-rs.html#method-validated-workspace-root-298">validated_workspace_root</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">String</span>, <a class="symbol-link rs-type" href="eos-isolated-workspace--src-error-rs.html#item-enum-IsolatedError-8">IsolatedError</a>&gt; {
+        <span class="rs-kw">let</span> workspace_root = <span class="rs-self">self</span>.caps.eos_workspace_root.trim();
+        <span class="rs-kw">if</span> workspace_root.is_empty() {
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-isolated-workspace--src-error-rs.html#item-enum-IsolatedError-8">IsolatedError</a>::<span class="rs-type">InvalidArgument</span>(
+                &quot;eos_workspace_root is required&quot;.to_owned(),
+            ));
+        }
+        <span class="rs-kw">if</span> !std::path::<span class="rs-type">Path</span>::<a class="symbol-link rs-fn" href="eos-isolated-workspace.html#method-new-37">new</a>(workspace_root).is_absolute() {
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-isolated-workspace--src-error-rs.html#item-enum-IsolatedError-8">IsolatedError</a>::<span class="rs-type">InvalidArgument</span>(format!(
+                &quot;eos_workspace_root must be absolute: {workspace_root}&quot;
+            )));
+        }
+        <span class="rs-type">Ok</span>(workspace_root.to_owned())
+    }
+</code></pre>
+</details></td></tr><tr id="method-exit-313"><td>method</td><td>exit</td><td><code>pub fn <a class="symbol-link" href="eos-isolated-workspace--src-session-lifecycle-rs.html#method-exit-313">exit</a> (&amp; mut self , caller_id : &amp; CallerId , grace_s : Option &lt; f64 &gt; ,) -&gt; Result &lt; Value , <a class="symbol-link" href="eos-isolated-workspace--src-error-rs.html#item-enum-IsolatedError-8">IsolatedError</a> &gt;</code><p class="docstring">Exit the isolated workspace for `caller_id`.<br>Tears down namespace/network/cgroup, releases the lease, and DISCARDS<br>the upperdir (no publish).<br># Errors<br>Returns [`IsolatedError`] when `caller_id` is invalid or no isolated<br>workspace is open for the agent.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Exit the isolated workspace for `caller_id`.</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// Tears down namespace/network/cgroup, releases the lease, and DISCARDS</span>
+    <span class="rs-comment">/// the upperdir (no publish).</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// # Errors</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// Returns [`IsolatedError`] when `caller_id` is invalid or no isolated</span>
+    <span class="rs-comment">/// workspace is open for the agent.</span>
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-isolated-workspace--src-session-lifecycle-rs.html#method-exit-313">exit</a>(
+        &amp;<span class="rs-kw">mut</span> <span class="rs-self">self</span>,
+        caller_id: &amp;<span class="rs-type">CallerId</span>,
+        grace_s: <span class="rs-type">Option</span>&lt;f64&gt;,
+    ) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-isolated-workspace--src-error-rs.html#item-enum-IsolatedError-8">IsolatedError</a>&gt; {
+        <span class="rs-kw">if</span> caller_id.0.trim().is_empty() {
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-isolated-workspace--src-error-rs.html#item-enum-IsolatedError-8">IsolatedError</a>::<span class="rs-type">InvalidArgument</span>(
+                &quot;caller_id is required&quot;.to_owned(),
+            ));
+        }
+        <span class="rs-kw">let</span> <span class="rs-type">Some</span>(workspace_handle_id) = <span class="rs-self">self</span>.by_caller.remove(caller_id) <span class="rs-kw">else</span> {
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-isolated-workspace--src-error-rs.html#item-enum-IsolatedError-8">IsolatedError</a>::<span class="rs-type">NotOpen</span>);
+        };
+        <span class="rs-kw">let</span> <span class="rs-type">Some</span>(handle) = <span class="rs-self">self</span>.handles.remove(&amp;workspace_handle_id) <span class="rs-kw">else</span> {
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-isolated-workspace--src-error-rs.html#item-enum-IsolatedError-8">IsolatedError</a>::<span class="rs-type">NotOpen</span>);
+        };
+        <span class="rs-kw">let</span> timer = <span class="rs-type">Instant</span>::now();
+        <span class="rs-kw">let</span> upperdir_bytes = <a class="symbol-link rs-fn" href="eos-isolated-workspace--src-session-support-rs.html#item-fn-directory-file-bytes-80">directory_file_bytes</a>(&amp;handle.upperdir);
+        <span class="rs-kw">let</span> (inspection, phases_ms) =
+            <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-isolated-workspace--src-session-lifecycle-rs.html#method-teardown-handle-98">teardown_handle</a>(&amp;handle, grace_s.unwrap_or(<span class="rs-self">self</span>.caps.exit_grace_s));
+        <span class="rs-kw">let</span> _ = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-isolated-workspace--src-session-persistence-rs.html#method-persist-handles-24">persist_handles</a>();
+        <span class="rs-kw">let</span> lifetime_s = (<a class="symbol-link rs-fn" href="eos-isolated-workspace--src-session-support-rs.html#item-fn-monotonic-seconds-75">monotonic_seconds</a>() - handle.created_at).max(0.0);
+        <span class="rs-kw">let</span> total_ms = timer.elapsed().as_secs_f64() * 1000.0;
+        <span class="rs-kw">let</span> _ = <span class="rs-self">self</span>.audit.<a class="symbol-link rs-fn" href="eos-isolated-workspace.html#method-emit-21">emit</a>(
+            &quot;sandbox_isolated_workspace_exit&quot;,
+            json!({
+                &quot;workspace_handle_id&quot;: handle.workspace_handle_id.0,
+                &quot;caller_id&quot;: caller_id.0,
+                &quot;reason&quot;: &quot;explicit&quot;,
+                &quot;lifetime_s&quot;: lifetime_s,
+                &quot;upperdir_bytes_discarded&quot;: upperdir_bytes,
+                &quot;total_ms&quot;: total_ms,
+                &quot;phases_ms&quot;: phases_ms.clone(),
+                &quot;scratch_removed&quot;: !handle.scratch_dir.exists(),
+                &quot;inspection&quot;: inspection,
+            }),
+        );
+        <span class="rs-type">Ok</span>(json!({
+            &quot;success&quot;: <span class="rs-kw">true</span>,
+            &quot;evicted_upperdir_bytes&quot;: upperdir_bytes,
+            &quot;lifetime_s&quot;: lifetime_s,
+            &quot;total_ms&quot;: total_ms,
+            &quot;phases_ms&quot;: phases_ms,
+            &quot;inspection&quot;: inspection,
+        }))
+    }
+</code></pre>
+</details></td></tr><tr id="method-ttl-sweep-369"><td>method</td><td>ttl_sweep</td><td><code>pub fn <a class="symbol-link" href="eos-isolated-workspace--src-session-lifecycle-rs.html#method-ttl-sweep-369">ttl_sweep</a> (&amp; mut self , active_callers : &amp; HashSet &lt; String &gt;) -&gt; usize</code><p class="docstring">Evict idle handles whose last activity exceeds the configured TTL.<br>Callers listed in `active_callers` are skipped because the daemon still<br>owns at least one live command session for them.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Evict idle handles whose last activity exceeds the configured TTL.</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// Callers listed in `active_callers` are skipped because the daemon still</span>
+    <span class="rs-comment">/// owns at least one live command session for them.</span>
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-isolated-workspace--src-session-lifecycle-rs.html#method-ttl-sweep-369">ttl_sweep</a>(&amp;<span class="rs-kw">mut</span> <span class="rs-self">self</span>, active_callers: &amp;<span class="rs-type">HashSet</span>&lt;<span class="rs-type">String</span>&gt;) -&gt; usize {
+        <span class="rs-kw">if</span> <span class="rs-self">self</span>.caps.ttl_s &lt;= 0.0 {
+            <span class="rs-kw">return</span> 0;
+        }
+        <span class="rs-kw">let</span> now = <a class="symbol-link rs-fn" href="eos-isolated-workspace--src-session-support-rs.html#item-fn-monotonic-seconds-75">monotonic_seconds</a>();
+        <span class="rs-kw">let</span> stale = <span class="rs-self">self</span>
+            .handles
+            .values()
+            .filter(|handle| now - handle.last_activity &gt; <span class="rs-self">self</span>.caps.ttl_s)
+            .filter(|handle| !active_callers.contains(&amp;handle.caller_id.0))
+            .cloned()
+            .collect::&lt;<span class="rs-type">Vec</span>&lt;_&gt;&gt;();
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> evicted = 0;
+        <span class="rs-kw">for</span> handle <span class="rs-kw">in</span> stale {
+            <span class="rs-kw">let</span> <span class="rs-type">Ok</span>(stats) = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-isolated-workspace--src-session-lifecycle-rs.html#method-exit-313">exit</a>(&amp;handle.caller_id, <span class="rs-type">None</span>) <span class="rs-kw">else</span> {
+                <span class="rs-kw">continue</span>;
+            };
+            <span class="rs-kw">let</span> upperdir_bytes = stats
+                .get(&quot;evicted_upperdir_bytes&quot;)
+                .and_then(<span class="rs-type">Value</span>::as_u64)
+                .unwrap_or(0);
+            <span class="rs-kw">let</span> lifetime_s = stats
+                .get(&quot;lifetime_s&quot;)
+                .and_then(<span class="rs-type">Value</span>::as_f64)
+                .unwrap_or(0.0);
+            <span class="rs-kw">let</span> total_ms = stats.get(&quot;total_ms&quot;).and_then(<span class="rs-type">Value</span>::as_f64).unwrap_or(0.0);
+            <span class="rs-kw">let</span> phases_ms = stats.get(&quot;phases_ms&quot;).cloned().unwrap_or_else(|| json!({}));
+            <span class="rs-kw">let</span> _ = <span class="rs-self">self</span>.audit.<a class="symbol-link rs-fn" href="eos-isolated-workspace.html#method-emit-21">emit</a>(
+                &quot;sandbox_isolated_workspace_evicted&quot;,
+                json!({
+                    &quot;workspace_handle_id&quot;: handle.workspace_handle_id.0,
+                    &quot;caller_id&quot;: handle.caller_id.0,
+                    &quot;reason&quot;: &quot;ttl&quot;,
+                    &quot;lifetime_s&quot;: lifetime_s,
+                    &quot;upperdir_bytes_discarded&quot;: upperdir_bytes,
+                    &quot;total_ms&quot;: total_ms,
+                    &quot;phases_ms&quot;: phases_ms,
+                }),
+            );
+            evicted += 1;
+        }
+        evicted
+    }
+</code></pre>
+</details></td></tr></tbody></table>
+
   <p class="source">crates/eos-isolated-workspace/src/session/lifecycle.rs:17</p>
 </article></div>
 </section></div>
 </main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/eos-isolated-workspace/src/session/lifecycle.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-kw">use</span> std::collections::{<span class="rs-type">HashMap</span>, <span class="rs-type">HashSet</span>};
+<span class="rs-kw">use</span> std::time::<span class="rs-type">Instant</span>;
+
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::audit::<a class="symbol-link rs-type" href="eos-isolated-workspace.html#item-trait-AuditSink-16">AuditSink</a>;
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::error::<a class="symbol-link rs-type" href="eos-isolated-workspace--src-error-rs.html#item-enum-IsolatedError-8">IsolatedError</a>;
+<span class="rs-kw">use</span> serde_json::{json, <span class="rs-type">Value</span>};
+
+<span class="rs-kw">use</span> <span class="rs-kw">super</span>::support::{
+    close_handle_fds, directory_file_bytes, maybe_inject_phase, monotonic_seconds,
+    mountinfo_reference_count, next_handle_id,
+};
+<span class="rs-kw">use</span> <span class="rs-kw">super</span>::{
+    <span class="rs-type">CallerId</span>, <a class="symbol-link rs-type" href="eos-isolated-workspace--src-session-rs.html#item-struct-IsolatedSession-40">IsolatedSession</a>, <a class="symbol-link rs-type" href="eos-isolated-workspace--src-session-ports-rs.html#item-trait-LayerStackSnapshotPort-8">LayerStackSnapshotPort</a>, <a class="symbol-link rs-type" href="eos-isolated-workspace--src-session-ports-rs.html#item-trait-NamespaceRuntimePort-44">NamespaceRuntimePort</a>, <a class="symbol-link rs-type" href="eos-isolated-workspace--src-session-types-rs.html#item-struct-WorkspaceHandle-14">WorkspaceHandle</a>,
+    <span class="rs-type">WorkspaceHandleId</span>,
+};
+
+<span class="rs-kw">impl</span>&lt;<span class="rs-type">S</span>, <span class="rs-type">R</span>, <span class="rs-type">A</span>&gt; <a class="symbol-link rs-type" href="eos-isolated-workspace--src-session-rs.html#item-struct-IsolatedSession-40">IsolatedSession</a>&lt;<span class="rs-type">S</span>, <span class="rs-type">R</span>, <span class="rs-type">A</span>&gt;
+<span class="rs-kw">where</span>
+    <span class="rs-type">S</span>: <a class="symbol-link rs-type" href="eos-isolated-workspace--src-session-ports-rs.html#item-trait-LayerStackSnapshotPort-8">LayerStackSnapshotPort</a>,
+    <span class="rs-type">R</span>: <a class="symbol-link rs-type" href="eos-isolated-workspace--src-session-ports-rs.html#item-trait-NamespaceRuntimePort-44">NamespaceRuntimePort</a>,
+    <span class="rs-type">A</span>: <a class="symbol-link rs-type" href="eos-isolated-workspace.html#item-trait-AuditSink-16">AuditSink</a>,
+{
+    <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-isolated-workspace--src-session-lifecycle-rs.html#method-wire-handle-23">wire_handle</a>(
+        &amp;<span class="rs-kw">mut</span> <span class="rs-self">self</span>,
+        handle: &amp;<span class="rs-kw">mut</span> <a class="symbol-link rs-type" href="eos-isolated-workspace--src-session-types-rs.html#item-struct-WorkspaceHandle-14">WorkspaceHandle</a>,
+    ) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">HashMap</span>&lt;<span class="rs-type">String</span>, f64&gt;, <a class="symbol-link rs-type" href="eos-isolated-workspace--src-error-rs.html#item-enum-IsolatedError-8">IsolatedError</a>&gt; {
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> phases_ms = <span class="rs-type">HashMap</span>::<a class="symbol-link rs-fn" href="eos-isolated-workspace.html#method-new-37">new</a>();
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> phase_start = <span class="rs-type">Instant</span>::now();
+        handle.holder_pid = <span class="rs-self">self</span>
+            .runtime
+            .<a class="symbol-link rs-fn" href="eos-isolated-workspace--src-session-ports-rs.html#method-spawn-ns-holder-51">spawn_ns_holder</a>(handle, <span class="rs-self">self</span>.caps.setup_timeout_s)?;
+        phases_ms.insert(
+            &quot;spawn_ns_holder&quot;.to_owned(),
+            phase_start.elapsed().as_secs_f64() * 1000.0,
+        );
+        phase_start = <span class="rs-type">Instant</span>::now();
+        handle.ns_fds = <span class="rs-self">self</span>.runtime.<a class="symbol-link rs-fn" href="eos-isolated-workspace--src-session-ports-rs.html#method-open-ns-fds-64">open_ns_fds</a>(handle.holder_pid)?;
+        phases_ms.insert(
+            &quot;open_ns_fds&quot;.to_owned(),
+            phase_start.elapsed().as_secs_f64() * 1000.0,
+        );
+        phase_start = <span class="rs-type">Instant</span>::now();
+        <span class="rs-self">self</span>.network.<a class="symbol-link rs-fn" href="eos-isolated-workspace--src-network-rs.html#method-initialize-174">initialize</a>()?;
+        <a class="symbol-link rs-fn" href="eos-isolated-workspace--src-session-support-rs.html#item-fn-maybe-inject-phase-9">maybe_inject_phase</a>(&quot;install_veth&quot;)?;
+        handle.veth = <span class="rs-type">Some</span>(
+            <span class="rs-self">self</span>.network
+                .<a class="symbol-link rs-fn" href="eos-isolated-workspace--src-network-rs.html#method-install-veth-204">install_veth</a>(&amp;handle.workspace_handle_id.0, handle.holder_pid)?,
+        );
+        phases_ms.insert(
+            &quot;install_veth&quot;.to_owned(),
+            phase_start.elapsed().as_secs_f64() * 1000.0,
+        );
+        phase_start = <span class="rs-type">Instant</span>::now();
+        <a class="symbol-link rs-fn" href="eos-isolated-workspace--src-session-support-rs.html#item-fn-maybe-inject-phase-9">maybe_inject_phase</a>(&quot;mount_overlay&quot;)?;
+        <span class="rs-self">self</span>.runtime.<a class="symbol-link rs-fn" href="eos-isolated-workspace--src-session-ports-rs.html#method-mount-overlay-71">mount_overlay</a>(handle, &amp;handle.layer_paths)?;
+        phases_ms.insert(
+            &quot;mount_overlay&quot;.to_owned(),
+            phase_start.elapsed().as_secs_f64() * 1000.0,
+        );
+        phase_start = <span class="rs-type">Instant</span>::now();
+        <a class="symbol-link rs-fn" href="eos-isolated-workspace--src-session-support-rs.html#item-fn-maybe-inject-phase-9">maybe_inject_phase</a>(&quot;configure_dns&quot;)?;
+        <span class="rs-kw">let</span> _dns_fallback_applied = <span class="rs-self">self</span>
+            .runtime
+            .<a class="symbol-link rs-fn" href="eos-isolated-workspace--src-session-ports-rs.html#method-configure-dns-82">configure_dns</a>(handle, &amp;<span class="rs-self">self</span>.caps.fallback_dns)?;
+        phases_ms.insert(
+            &quot;configure_dns&quot;.to_owned(),
+            phase_start.elapsed().as_secs_f64() * 1000.0,
+        );
+        <span class="rs-comment">// signal_net_ready runs UNTIMED between the configure_dns and</span>
+        <span class="rs-comment">// create_cgroup phase measures (it is deliberately called outside any</span>
+        <span class="rs-comment">// phase-timer block) so the configure_dns phase budget is not inflated</span>
+        <span class="rs-comment">// by the net-ready wait.</span>
+        <span class="rs-self">self</span>.runtime
+            .<a class="symbol-link rs-fn" href="eos-isolated-workspace--src-session-ports-rs.html#method-signal-net-ready-94">signal_net_ready</a>(handle, <span class="rs-self">self</span>.caps.setup_timeout_s)?;
+        phase_start = <span class="rs-type">Instant</span>::now();
+        <span class="rs-kw">let</span> cgroup_path = <span class="rs-self">self</span>.runtime.<a class="symbol-link rs-fn" href="eos-isolated-workspace--src-session-ports-rs.html#method-create-cgroup-106">create_cgroup</a>(handle)?;
+        phases_ms.insert(
+            &quot;create_cgroup&quot;.to_owned(),
+            phase_start.elapsed().as_secs_f64() * 1000.0,
+        );
+        <span class="rs-kw">if</span> !cgroup_path.as_os_str().is_empty() {
+            handle.cgroup_path = <span class="rs-type">Some</span>(cgroup_path);
+        }
+        <span class="rs-type">Ok</span>(phases_ms)
+    }
+
+    <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-isolated-workspace--src-session-lifecycle-rs.html#method-rollback-partial-87">rollback_partial</a>(&amp;<span class="rs-kw">mut</span> <span class="rs-self">self</span>, handle: &amp;<a class="symbol-link rs-type" href="eos-isolated-workspace--src-session-types-rs.html#item-struct-WorkspaceHandle-14">WorkspaceHandle</a>) {
+        <a class="symbol-link rs-fn" href="eos-isolated-workspace--src-session-support-rs.html#item-fn-close-handle-fds-53">close_handle_fds</a>(handle);
+        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(veth) = handle.veth.as_ref() {
+            <span class="rs-self">self</span>.network.<a class="symbol-link rs-fn" href="eos-isolated-workspace--src-network-rs.html#method-teardown-veth-247">teardown_veth</a>(veth);
+        }
+        <span class="rs-kw">if</span> handle.holder_pid &gt; 0 {
+            <span class="rs-kw">let</span> _ = <span class="rs-self">self</span>.runtime.<a class="symbol-link rs-fn" href="eos-isolated-workspace--src-session-ports-rs.html#method-kill-holder-113">kill_holder</a>(handle.holder_pid, 1.0);
+        }
+        <span class="rs-kw">let</span> _ = std::fs::remove_dir_all(&amp;handle.scratch_dir);
+    }
+
+    <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-isolated-workspace--src-session-lifecycle-rs.html#method-teardown-handle-98">teardown_handle</a>(
+        &amp;<span class="rs-kw">mut</span> <span class="rs-self">self</span>,
+        handle: &amp;<a class="symbol-link rs-type" href="eos-isolated-workspace--src-session-types-rs.html#item-struct-WorkspaceHandle-14">WorkspaceHandle</a>,
+        grace_s: f64,
+    ) -&gt; (<span class="rs-type">Value</span>, <span class="rs-type">HashMap</span>&lt;<span class="rs-type">String</span>, f64&gt;) {
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> phases_ms = <span class="rs-type">HashMap</span>::<a class="symbol-link rs-fn" href="eos-isolated-workspace.html#method-new-37">new</a>();
+        <span class="rs-kw">let</span> phase_start = <span class="rs-type">Instant</span>::now();
+        <span class="rs-kw">let</span> holder_kill_error = <span class="rs-kw">if</span> handle.holder_pid &gt; 0 {
+            <span class="rs-self">self</span>.runtime
+                .<a class="symbol-link rs-fn" href="eos-isolated-workspace--src-session-ports-rs.html#method-kill-holder-113">kill_holder</a>(handle.holder_pid, grace_s)
+                .err()
+                .map(|err| err.to_string())
+        } <span class="rs-kw">else</span> {
+            <span class="rs-type">None</span>
+        };
+        phases_ms.insert(
+            &quot;kill_holder&quot;.to_owned(),
+            phase_start.elapsed().as_secs_f64() * 1000.0,
+        );
+        <span class="rs-kw">let</span> phase_start = <span class="rs-type">Instant</span>::now();
+        <a class="symbol-link rs-fn" href="eos-isolated-workspace--src-session-support-rs.html#item-fn-close-handle-fds-53">close_handle_fds</a>(handle);
+        <span class="rs-kw">let</span> _close_fds_ms = phase_start.elapsed().as_secs_f64() * 1000.0;
+        <span class="rs-kw">let</span> phase_start = <span class="rs-type">Instant</span>::now();
+        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(veth) = handle.veth.as_ref() {
+            <span class="rs-self">self</span>.network.<a class="symbol-link rs-fn" href="eos-isolated-workspace--src-network-rs.html#method-teardown-veth-247">teardown_veth</a>(veth);
+        }
+        phases_ms.insert(
+            &quot;teardown_veth&quot;.to_owned(),
+            phase_start.elapsed().as_secs_f64() * 1000.0,
+        );
+        <span class="rs-kw">let</span> phase_start = <span class="rs-type">Instant</span>::now();
+        <span class="rs-kw">let</span> lease_released = <span class="rs-self">self</span>.layer_stack.<a class="symbol-link rs-fn" href="eos-isolated-workspace--src-session-ports-rs.html#method-release-lease-23">release_lease</a>(&amp;handle.lease_id).ok();
+        phases_ms.insert(
+            &quot;release_snapshot&quot;.to_owned(),
+            phase_start.elapsed().as_secs_f64() * 1000.0,
+        );
+        <span class="rs-kw">let</span> phase_start = <span class="rs-type">Instant</span>::now();
+        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(cgroup_path) = handle.cgroup_path.as_ref() {
+            <span class="rs-kw">let</span> _ = std::fs::remove_dir(cgroup_path);
+        }
+        phases_ms.insert(
+            &quot;cgroup_rmdir&quot;.to_owned(),
+            phase_start.elapsed().as_secs_f64() * 1000.0,
+        );
+        <span class="rs-kw">let</span> phase_start = <span class="rs-type">Instant</span>::now();
+        <span class="rs-kw">let</span> _ = std::fs::remove_dir_all(&amp;handle.scratch_dir);
+        phases_ms.insert(
+            &quot;rmtree_scratch&quot;.to_owned(),
+            phase_start.elapsed().as_secs_f64() * 1000.0,
+        );
+        <span class="rs-kw">let</span> cgroup_exists_after = handle.cgroup_path.as_ref().map(|path| path.exists());
+        <span class="rs-kw">let</span> inspection = json!({
+            &quot;handle_registered_after&quot;: <span class="rs-self">self</span>.handles.contains_key(&amp;handle.workspace_handle_id),
+            &quot;agent_registered_after&quot;: <span class="rs-self">self</span>.by_caller.contains_key(&amp;handle.caller_id),
+            &quot;open_handle_count_after&quot;: <span class="rs-self">self</span>.handles.len(),
+            &quot;open_agent_count_after&quot;: <span class="rs-self">self</span>.by_caller.len(),
+            &quot;lease_released&quot;: lease_released,
+            &quot;active_leases_after&quot;: <span class="rs-self">self</span>.layer_stack.<a class="symbol-link rs-fn" href="eos-isolated-workspace--src-session-ports-rs.html#method-active-lease-count-31">active_lease_count</a>().ok().flatten(),
+            &quot;holder_pid&quot;: handle.holder_pid,
+            &quot;holder_kill_error&quot;: holder_kill_error,
+            &quot;ns_fd_count&quot;: handle.ns_fds.len(),
+            &quot;readiness_fd_was_open&quot;: handle.readiness_fd &gt;= 0,
+            &quot;control_fd_was_open&quot;: handle.control_fd &gt;= 0,
+            &quot;veth_host_name&quot;: handle.veth.as_ref().map(|veth| veth.host_name.as_str()),
+            &quot;veth_ns_name&quot;: handle.veth.as_ref().map(|veth| veth.ns_name.as_str()),
+            &quot;cgroup_path&quot;: handle
+                .cgroup_path
+                .as_ref()
+                .map(|path| path.to_string_lossy().into_owned()),
+            &quot;cgroup_exists_after&quot;: cgroup_exists_after,
+            &quot;scratch_dir&quot;: handle.scratch_dir.to_string_lossy(),
+            &quot;scratch_exists_after&quot;: handle.scratch_dir.exists(),
+            &quot;upperdir_exists_after&quot;: handle.upperdir.exists(),
+            &quot;workdir_exists_after&quot;: handle.workdir.exists(),
+            &quot;mountinfo_reference_count_after&quot;: <a class="symbol-link rs-fn" href="eos-isolated-workspace--src-session-support-rs.html#item-fn-mountinfo-reference-count-99">mountinfo_reference_count</a>(&amp;[
+                &amp;handle.scratch_dir,
+                &amp;handle.upperdir,
+                &amp;handle.workdir,
+            ]),
+        });
+        (inspection, phases_ms)
+    }
+
+    <span class="rs-comment">/// Enter (or reject) the isolated workspace for `caller_id`.</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// Acquires the snapshot/lease, allocates scratch, wires the namespace, and</span>
+    <span class="rs-comment">/// registers the handle. Rolls back partial state (and releases the lease)</span>
+    <span class="rs-comment">/// on any wiring failure.</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// # Errors</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// Returns [`IsolatedError`] when the feature is disabled, `caller_id` is</span>
+    <span class="rs-comment">/// invalid, capacity is exhausted, snapshot acquisition fails, or namespace</span>
+    <span class="rs-comment">/// wiring fails.</span>
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-isolated-workspace--src-session-lifecycle-rs.html#method-enter-181">enter</a>(&amp;<span class="rs-kw">mut</span> <span class="rs-self">self</span>, caller_id: &amp;<span class="rs-type">CallerId</span>) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-isolated-workspace--src-session-types-rs.html#item-struct-WorkspaceHandle-14">WorkspaceHandle</a>, <a class="symbol-link rs-type" href="eos-isolated-workspace--src-error-rs.html#item-enum-IsolatedError-8">IsolatedError</a>&gt; {
+        <span class="rs-kw">if</span> !<span class="rs-self">self</span>.caps.enabled {
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-isolated-workspace--src-error-rs.html#item-enum-IsolatedError-8">IsolatedError</a>::<span class="rs-type">FeatureDisabled</span>);
+        }
+        <span class="rs-kw">if</span> caller_id.0.trim().is_empty() {
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-isolated-workspace--src-error-rs.html#item-enum-IsolatedError-8">IsolatedError</a>::<span class="rs-type">InvalidArgument</span>(
+                &quot;caller_id is required&quot;.to_owned(),
+            ));
+        }
+        <span class="rs-kw">let</span> workspace_root = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-isolated-workspace--src-session-lifecycle-rs.html#method-validated-workspace-root-298">validated_workspace_root</a>()?;
+        <span class="rs-kw">if</span> <span class="rs-self">self</span>.by_caller.contains_key(caller_id) {
+            <span class="rs-kw">let</span> existing = <span class="rs-self">self</span>
+                .by_caller
+                .get(caller_id)
+                .and_then(|workspace_handle_id| <span class="rs-self">self</span>.handles.get(workspace_handle_id))
+                .ok_or_else(|| <a class="symbol-link rs-type" href="eos-isolated-workspace--src-error-rs.html#item-enum-IsolatedError-8">IsolatedError</a>::<span class="rs-type">SetupFailed</span> {
+                    step: &quot;agent handle index is inconsistent&quot;.to_owned(),
+                })?;
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-isolated-workspace--src-error-rs.html#item-enum-IsolatedError-8">IsolatedError</a>::<span class="rs-type">AlreadyOpen</span> {
+                created_at: existing.created_at,
+                last_activity: existing.last_activity,
+            });
+        }
+        <span class="rs-kw">let</span> total_cap = usize::try_from(<span class="rs-self">self</span>.caps.total_cap).unwrap_or(usize::<span class="rs-type">MAX</span>);
+        <span class="rs-kw">if</span> <span class="rs-self">self</span>.handles.len() &gt;= total_cap {
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-isolated-workspace--src-error-rs.html#item-enum-IsolatedError-8">IsolatedError</a>::<span class="rs-type">QuotaExceeded</span> {
+                total_cap: <span class="rs-self">self</span>.caps.total_cap,
+            });
+        }
+        <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-isolated-workspace--src-session-capacity-rs.html#method-check-host-capacity-15">check_host_capacity</a>()?;
+
+        <span class="rs-kw">let</span> workspace_handle_id = <span class="rs-type">WorkspaceHandleId</span>(<a class="symbol-link rs-fn" href="eos-isolated-workspace--src-session-support-rs.html#item-fn-next-handle-id-66">next_handle_id</a>());
+        <span class="rs-kw">let</span> snapshot = <span class="rs-self">self</span>
+            .layer_stack
+            .<a class="symbol-link rs-fn" href="eos-isolated-workspace--src-session-ports-rs.html#method-acquire-snapshot-15">acquire_snapshot</a>(&amp;format!(&quot;isolated-{}&quot;, workspace_handle_id.0))?;
+        <span class="rs-kw">let</span> scratch_dir = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-isolated-workspace--src-session-persistence-rs.html#method-session-scratch-root-16">session_scratch_root</a>().join(&amp;workspace_handle_id.0);
+        <span class="rs-kw">let</span> upperdir = scratch_dir.join(&quot;upper&quot;);
+        <span class="rs-kw">let</span> workdir = scratch_dir.join(&quot;work&quot;);
+        std::fs::create_dir_all(&amp;upperdir).map_err(|err| <a class="symbol-link rs-type" href="eos-isolated-workspace--src-error-rs.html#item-enum-IsolatedError-8">IsolatedError</a>::<span class="rs-type">SetupFailed</span> {
+            step: format!(&quot;upperdir: {err}&quot;),
+        })?;
+        std::fs::create_dir_all(&amp;workdir).map_err(|err| <a class="symbol-link rs-type" href="eos-isolated-workspace--src-error-rs.html#item-enum-IsolatedError-8">IsolatedError</a>::<span class="rs-type">SetupFailed</span> {
+            step: format!(&quot;workdir: {err}&quot;),
+        })?;
+
+        <span class="rs-kw">let</span> now = <a class="symbol-link rs-fn" href="eos-isolated-workspace--src-session-support-rs.html#item-fn-monotonic-seconds-75">monotonic_seconds</a>();
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> handle = <a class="symbol-link rs-type" href="eos-isolated-workspace--src-session-types-rs.html#item-struct-WorkspaceHandle-14">WorkspaceHandle</a> {
+            workspace_handle_id: workspace_handle_id.clone(),
+            caller_id: caller_id.clone(),
+            lease_id: snapshot.lease_id.clone(),
+            manifest_version: snapshot.manifest_version,
+            manifest_root_hash: snapshot.manifest_root_hash.clone(),
+            workspace_root,
+            scratch_dir,
+            upperdir,
+            workdir,
+            layer_paths: snapshot.layer_paths.clone(),
+            ns_fds: <span class="rs-type">HashMap</span>::<a class="symbol-link rs-fn" href="eos-isolated-workspace.html#method-new-37">new</a>(),
+            holder_pid: 0,
+            readiness_fd: -1,
+            control_fd: -1,
+            veth: <span class="rs-type">None</span>,
+            cgroup_path: <span class="rs-type">None</span>,
+            created_at: now,
+            last_activity: now,
+        };
+
+        <span class="rs-kw">let</span> enter_timer = <span class="rs-type">Instant</span>::now();
+        <span class="rs-kw">let</span> phases_ms = <span class="rs-kw">match</span> <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-isolated-workspace--src-session-lifecycle-rs.html#method-wire-handle-23">wire_handle</a>(&amp;<span class="rs-kw">mut</span> handle) {
+            <span class="rs-type">Ok</span>(phases_ms) =&gt; phases_ms,
+            <span class="rs-type">Err</span>(err) =&gt; {
+                <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-isolated-workspace--src-session-lifecycle-rs.html#method-rollback-partial-87">rollback_partial</a>(&amp;handle);
+                <span class="rs-kw">let</span> _ = <span class="rs-self">self</span>.layer_stack.<a class="symbol-link rs-fn" href="eos-isolated-workspace--src-session-ports-rs.html#method-release-lease-23">release_lease</a>(&amp;snapshot.lease_id);
+                <span class="rs-kw">return</span> <span class="rs-type">Err</span>(err);
+            }
+        };
+        <span class="rs-kw">let</span> total_ms = enter_timer.elapsed().as_secs_f64() * 1000.0;
+
+        <span class="rs-self">self</span>.by_caller
+            .insert(caller_id.clone(), workspace_handle_id.clone());
+        <span class="rs-self">self</span>.handles
+            .insert(workspace_handle_id.clone(), handle.clone());
+        <span class="rs-kw">let</span> _ = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-isolated-workspace--src-session-persistence-rs.html#method-persist-handles-24">persist_handles</a>();
+        <span class="rs-kw">let</span> _ = <span class="rs-self">self</span>.audit.<a class="symbol-link rs-fn" href="eos-isolated-workspace.html#method-emit-21">emit</a>(
+            &quot;sandbox_isolated_workspace_enter&quot;,
+            json!({
+                &quot;workspace_handle_id&quot;: workspace_handle_id.0,
+                &quot;caller_id&quot;: caller_id.0,
+                &quot;manifest_version&quot;: handle.manifest_version,
+                &quot;manifest_root_hash&quot;: handle.manifest_root_hash,
+                &quot;lease_id&quot;: handle.lease_id,
+                &quot;lowerdir_layer_count&quot;: handle.layer_paths.len(),
+                &quot;workspace_root&quot;: handle.workspace_root,
+                &quot;upperdir&quot;: handle.upperdir.to_string_lossy(),
+                &quot;workdir&quot;: handle.workdir.to_string_lossy(),
+                &quot;veth_host_name&quot;: handle.veth.as_ref().map(|veth| veth.host_name.as_str()),
+                &quot;veth_ns_name&quot;: handle.veth.as_ref().map(|veth| veth.ns_name.as_str()),
+                &quot;ns_ip&quot;: handle.veth.as_ref().map(|veth| veth.ns_ip.to_string()),
+                &quot;tree-copy&quot;: <span class="rs-kw">false</span>,
+                &quot;total_ms&quot;: total_ms,
+                &quot;phases_ms&quot;: phases_ms,
+            }),
+        );
+        <span class="rs-type">Ok</span>(handle)
+    }
+
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-isolated-workspace--src-session-lifecycle-rs.html#method-validated-workspace-root-298">validated_workspace_root</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">String</span>, <a class="symbol-link rs-type" href="eos-isolated-workspace--src-error-rs.html#item-enum-IsolatedError-8">IsolatedError</a>&gt; {
+        <span class="rs-kw">let</span> workspace_root = <span class="rs-self">self</span>.caps.eos_workspace_root.trim();
+        <span class="rs-kw">if</span> workspace_root.is_empty() {
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-isolated-workspace--src-error-rs.html#item-enum-IsolatedError-8">IsolatedError</a>::<span class="rs-type">InvalidArgument</span>(
+                &quot;eos_workspace_root is required&quot;.to_owned(),
+            ));
+        }
+        <span class="rs-kw">if</span> !std::path::<span class="rs-type">Path</span>::<a class="symbol-link rs-fn" href="eos-isolated-workspace.html#method-new-37">new</a>(workspace_root).is_absolute() {
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-isolated-workspace--src-error-rs.html#item-enum-IsolatedError-8">IsolatedError</a>::<span class="rs-type">InvalidArgument</span>(format!(
+                &quot;eos_workspace_root must be absolute: {workspace_root}&quot;
+            )));
+        }
+        <span class="rs-type">Ok</span>(workspace_root.to_owned())
+    }
+
+    <span class="rs-comment">/// Exit the isolated workspace for `caller_id`.</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// Tears down namespace/network/cgroup, releases the lease, and DISCARDS</span>
+    <span class="rs-comment">/// the upperdir (no publish).</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// # Errors</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// Returns [`IsolatedError`] when `caller_id` is invalid or no isolated</span>
+    <span class="rs-comment">/// workspace is open for the agent.</span>
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-isolated-workspace--src-session-lifecycle-rs.html#method-exit-313">exit</a>(
+        &amp;<span class="rs-kw">mut</span> <span class="rs-self">self</span>,
+        caller_id: &amp;<span class="rs-type">CallerId</span>,
+        grace_s: <span class="rs-type">Option</span>&lt;f64&gt;,
+    ) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-isolated-workspace--src-error-rs.html#item-enum-IsolatedError-8">IsolatedError</a>&gt; {
+        <span class="rs-kw">if</span> caller_id.0.trim().is_empty() {
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-isolated-workspace--src-error-rs.html#item-enum-IsolatedError-8">IsolatedError</a>::<span class="rs-type">InvalidArgument</span>(
+                &quot;caller_id is required&quot;.to_owned(),
+            ));
+        }
+        <span class="rs-kw">let</span> <span class="rs-type">Some</span>(workspace_handle_id) = <span class="rs-self">self</span>.by_caller.remove(caller_id) <span class="rs-kw">else</span> {
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-isolated-workspace--src-error-rs.html#item-enum-IsolatedError-8">IsolatedError</a>::<span class="rs-type">NotOpen</span>);
+        };
+        <span class="rs-kw">let</span> <span class="rs-type">Some</span>(handle) = <span class="rs-self">self</span>.handles.remove(&amp;workspace_handle_id) <span class="rs-kw">else</span> {
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-isolated-workspace--src-error-rs.html#item-enum-IsolatedError-8">IsolatedError</a>::<span class="rs-type">NotOpen</span>);
+        };
+        <span class="rs-kw">let</span> timer = <span class="rs-type">Instant</span>::now();
+        <span class="rs-kw">let</span> upperdir_bytes = <a class="symbol-link rs-fn" href="eos-isolated-workspace--src-session-support-rs.html#item-fn-directory-file-bytes-80">directory_file_bytes</a>(&amp;handle.upperdir);
+        <span class="rs-kw">let</span> (inspection, phases_ms) =
+            <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-isolated-workspace--src-session-lifecycle-rs.html#method-teardown-handle-98">teardown_handle</a>(&amp;handle, grace_s.unwrap_or(<span class="rs-self">self</span>.caps.exit_grace_s));
+        <span class="rs-kw">let</span> _ = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-isolated-workspace--src-session-persistence-rs.html#method-persist-handles-24">persist_handles</a>();
+        <span class="rs-kw">let</span> lifetime_s = (<a class="symbol-link rs-fn" href="eos-isolated-workspace--src-session-support-rs.html#item-fn-monotonic-seconds-75">monotonic_seconds</a>() - handle.created_at).max(0.0);
+        <span class="rs-kw">let</span> total_ms = timer.elapsed().as_secs_f64() * 1000.0;
+        <span class="rs-kw">let</span> _ = <span class="rs-self">self</span>.audit.<a class="symbol-link rs-fn" href="eos-isolated-workspace.html#method-emit-21">emit</a>(
+            &quot;sandbox_isolated_workspace_exit&quot;,
+            json!({
+                &quot;workspace_handle_id&quot;: handle.workspace_handle_id.0,
+                &quot;caller_id&quot;: caller_id.0,
+                &quot;reason&quot;: &quot;explicit&quot;,
+                &quot;lifetime_s&quot;: lifetime_s,
+                &quot;upperdir_bytes_discarded&quot;: upperdir_bytes,
+                &quot;total_ms&quot;: total_ms,
+                &quot;phases_ms&quot;: phases_ms.clone(),
+                &quot;scratch_removed&quot;: !handle.scratch_dir.exists(),
+                &quot;inspection&quot;: inspection,
+            }),
+        );
+        <span class="rs-type">Ok</span>(json!({
+            &quot;success&quot;: <span class="rs-kw">true</span>,
+            &quot;evicted_upperdir_bytes&quot;: upperdir_bytes,
+            &quot;lifetime_s&quot;: lifetime_s,
+            &quot;total_ms&quot;: total_ms,
+            &quot;phases_ms&quot;: phases_ms,
+            &quot;inspection&quot;: inspection,
+        }))
+    }
+
+    <span class="rs-comment">/// Evict idle handles whose last activity exceeds the configured TTL.</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// Callers listed in `active_callers` are skipped because the daemon still</span>
+    <span class="rs-comment">/// owns at least one live command session for them.</span>
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-isolated-workspace--src-session-lifecycle-rs.html#method-ttl-sweep-369">ttl_sweep</a>(&amp;<span class="rs-kw">mut</span> <span class="rs-self">self</span>, active_callers: &amp;<span class="rs-type">HashSet</span>&lt;<span class="rs-type">String</span>&gt;) -&gt; usize {
+        <span class="rs-kw">if</span> <span class="rs-self">self</span>.caps.ttl_s &lt;= 0.0 {
+            <span class="rs-kw">return</span> 0;
+        }
+        <span class="rs-kw">let</span> now = <a class="symbol-link rs-fn" href="eos-isolated-workspace--src-session-support-rs.html#item-fn-monotonic-seconds-75">monotonic_seconds</a>();
+        <span class="rs-kw">let</span> stale = <span class="rs-self">self</span>
+            .handles
+            .values()
+            .filter(|handle| now - handle.last_activity &gt; <span class="rs-self">self</span>.caps.ttl_s)
+            .filter(|handle| !active_callers.contains(&amp;handle.caller_id.0))
+            .cloned()
+            .collect::&lt;<span class="rs-type">Vec</span>&lt;_&gt;&gt;();
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> evicted = 0;
+        <span class="rs-kw">for</span> handle <span class="rs-kw">in</span> stale {
+            <span class="rs-kw">let</span> <span class="rs-type">Ok</span>(stats) = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-isolated-workspace--src-session-lifecycle-rs.html#method-exit-313">exit</a>(&amp;handle.caller_id, <span class="rs-type">None</span>) <span class="rs-kw">else</span> {
+                <span class="rs-kw">continue</span>;
+            };
+            <span class="rs-kw">let</span> upperdir_bytes = stats
+                .get(&quot;evicted_upperdir_bytes&quot;)
+                .and_then(<span class="rs-type">Value</span>::as_u64)
+                .unwrap_or(0);
+            <span class="rs-kw">let</span> lifetime_s = stats
+                .get(&quot;lifetime_s&quot;)
+                .and_then(<span class="rs-type">Value</span>::as_f64)
+                .unwrap_or(0.0);
+            <span class="rs-kw">let</span> total_ms = stats.get(&quot;total_ms&quot;).and_then(<span class="rs-type">Value</span>::as_f64).unwrap_or(0.0);
+            <span class="rs-kw">let</span> phases_ms = stats.get(&quot;phases_ms&quot;).cloned().unwrap_or_else(|| json!({}));
+            <span class="rs-kw">let</span> _ = <span class="rs-self">self</span>.audit.<a class="symbol-link rs-fn" href="eos-isolated-workspace.html#method-emit-21">emit</a>(
+                &quot;sandbox_isolated_workspace_evicted&quot;,
+                json!({
+                    &quot;workspace_handle_id&quot;: handle.workspace_handle_id.0,
+                    &quot;caller_id&quot;: handle.caller_id.0,
+                    &quot;reason&quot;: &quot;ttl&quot;,
+                    &quot;lifetime_s&quot;: lifetime_s,
+                    &quot;upperdir_bytes_discarded&quot;: upperdir_bytes,
+                    &quot;total_ms&quot;: total_ms,
+                    &quot;phases_ms&quot;: phases_ms,
+                }),
+            );
+            evicted += 1;
+        }
+        evicted
+    }
+}
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
   <script src="../assets/inventory.js"></script>
 </body>
 </html>

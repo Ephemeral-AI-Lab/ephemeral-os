@@ -8,8 +8,16 @@
 </head>
 <body>
   <header>
-    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
-    <h1>eos-daemon File Inventory</h1>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>eos-daemon File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS/sandbox &amp;&amp; cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
   </header>
   <a class="back-link" href="../index.html">sandbox</a>
 <section class="summary">
@@ -47,69 +55,328 @@
       <span>0 methods</span>
     </div>
   </div>
-  <div class="items"><div class="group-label">Standalone Functions</div><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn layer_metrics pub(crate) pub(crate) fn layer_metrics (args : &amp; Value) -&gt; Result &lt; Value , DaemonError &gt; crates/eos-daemon/src/services/checkpoint/base.rs  ">
+  <div class="items"><div class="group-label">Standalone Functions</div><article id="item-fn-layer-metrics-17" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn layer_metrics pub(crate) pub(crate) fn layer_metrics (args : &amp; Value) -&gt; Result &lt; Value , DaemonError &gt; crates/eos-daemon/src/services/checkpoint/base.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>layer_metrics</h3>
     <span class="visibility">pub(crate)</span>
   </div>
-  <code class="signature">pub(crate) fn layer_metrics (args : &amp; Value) -&gt; Result &lt; Value , DaemonError &gt;</code>
+  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-daemon--src-services-checkpoint-base-rs.html#item-fn-layer-metrics-17">layer_metrics</a> (args : &amp; Value) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a> &lt; Value , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-checkpoint-base-rs.html#item-fn-layer-metrics-17">layer_metrics</a>(args: &amp;<span class="rs-type">Value</span>) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+    <span class="rs-kw">let</span> root = <span class="rs-type">PathBuf</span>::from(<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-request-args-rs.html#item-fn-require-string-8">require_string</a>(args, &quot;layer_stack_root&quot;)?);
+    <span class="rs-kw">let</span> stack = <span class="rs-type">LayerStack</span>::open(root.clone())?;
+    <span class="rs-kw">let</span> manifest = stack.read_active_manifest()?;
+    <span class="rs-kw">let</span> binding = read_workspace_binding(&amp;root)?;
+    <span class="rs-type">Ok</span>(json!({
+        &quot;success&quot;: <span class="rs-kw">true</span>,
+        &quot;manifest_version&quot;: manifest.version,
+        &quot;manifest_depth&quot;: manifest.depth(),
+        &quot;active_leases&quot;: stack.<a class="symbol-link rs-fn" href="eos-daemon--src-services-isolated-workspace-runtime-rs.html#method-active-lease-count-87">active_lease_count</a>(),
+        &quot;leased_layers&quot;: stack.leased_layers().len(),
+        &quot;layer_dirs&quot;: <a class="symbol-link rs-fn" href="eos-daemon--src-services-checkpoint-base-rs.html#item-fn-count-dirs-93">count_dirs</a>(&amp;root.join(&quot;layers&quot;))?,
+        &quot;referenced_layers&quot;: manifest.layers.len(),
+        &quot;orphan_layer_count&quot;: 0,
+        &quot;missing_layer_count&quot;: 0,
+        &quot;orphan_layer_ids&quot;: [],
+        &quot;missing_layer_ids&quot;: [],
+        &quot;staging_dirs&quot;: <a class="symbol-link rs-fn" href="eos-daemon--src-services-checkpoint-base-rs.html#item-fn-count-dirs-93">count_dirs</a>(&amp;root.join(&quot;staging&quot;))?,
+        &quot;storage_bytes&quot;: <a class="symbol-link rs-fn" href="eos-daemon--src-services-checkpoint-base-rs.html#item-fn-storage-bytes-106">storage_bytes</a>(&amp;root)?,
+        &quot;workspace_bound&quot;: binding.is_some(),
+        &quot;workspace_root&quot;: binding.as_ref().map_or(&quot;&quot;, |binding| binding.workspace_root.as_str()),
+        &quot;base_root_hash&quot;: binding.as_ref().map_or(&quot;&quot;, |binding| binding.base_root_hash.as_str()),
+        &quot;occ_runtime_service_cache&quot;: <a class="symbol-link rs-fn" href="eos-daemon--src-services-occ-service-cache-rs.html#item-fn-occ-service-cache-snapshot-223">occ_service_cache_snapshot</a>(),
+    }))
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-daemon/src/services/checkpoint/base.rs:17</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn build_workspace_base pub(crate) pub(crate) fn build_workspace_base (args : &amp; Value) -&gt; Result &lt; Value , DaemonError &gt; crates/eos-daemon/src/services/checkpoint/base.rs  ">
+</article><article id="item-fn-build-workspace-base-43" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn build_workspace_base pub(crate) pub(crate) fn build_workspace_base (args : &amp; Value) -&gt; Result &lt; Value , DaemonError &gt; crates/eos-daemon/src/services/checkpoint/base.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>build_workspace_base</h3>
     <span class="visibility">pub(crate)</span>
   </div>
-  <code class="signature">pub(crate) fn build_workspace_base (args : &amp; Value) -&gt; Result &lt; Value , DaemonError &gt;</code>
+  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-daemon--src-services-checkpoint-base-rs.html#item-fn-build-workspace-base-43">build_workspace_base</a> (args : &amp; Value) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a> &lt; Value , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-checkpoint-base-rs.html#item-fn-build-workspace-base-43">build_workspace_base</a>(args: &amp;<span class="rs-type">Value</span>) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+    <span class="rs-kw">let</span> total_start = <span class="rs-type">Instant</span>::now();
+    <span class="rs-kw">let</span> root = <span class="rs-type">PathBuf</span>::from(<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-request-args-rs.html#item-fn-require-string-8">require_string</a>(args, &quot;layer_stack_root&quot;)?);
+    <span class="rs-kw">let</span> workspace_root = <span class="rs-type">PathBuf</span>::from(<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-request-args-rs.html#item-fn-require-string-8">require_string</a>(args, &quot;workspace_root&quot;)?);
+    <span class="rs-kw">let</span> reset = args.<a class="symbol-link rs-fn" href="eos-daemon--src-services-occ-service-cache-rs.html#method-get-87">get</a>(&quot;reset&quot;).and_then(<span class="rs-type">Value</span>::as_bool).unwrap_or(<span class="rs-kw">false</span>);
+    <span class="rs-kw">if</span> reset {
+        <span class="rs-kw">crate</span>::services::plugins::<a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-mod-rs.html#item-fn-stop-services-for-layer-stack-root-342">stop_services_for_layer_stack_root</a>(&amp;root.to_string_lossy())?;
+    }
+    <span class="rs-kw">let</span> built = build_layer_stack_workspace_base(&amp;root, &amp;workspace_root, reset)?;
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> timings = <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-request-args-rs.html#item-fn-timings-to-value-map-37">timings_to_value_map</a>(&amp;built.timings);
+    timings.insert(
+        &quot;api.workspace_base.total_s&quot;.to_owned(),
+        json!(total_start.elapsed().as_secs_f64()),
+    );
+    <span class="rs-kw">let</span> binding = <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-request-args-rs.html#item-fn-binding-to-value-33">binding_to_value</a>(&amp;built.binding)?;
+    <span class="rs-type">Ok</span>(json!({
+        &quot;success&quot;: <span class="rs-kw">true</span>,
+        &quot;created&quot;: <span class="rs-kw">true</span>,
+        &quot;binding&quot;: binding,
+        &quot;timings&quot;: <span class="rs-type">Value</span>::<span class="rs-type">Object</span>(timings),
+    }))
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-daemon/src/services/checkpoint/base.rs:43</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn ensure_workspace_base pub(crate) pub(crate) fn ensure_workspace_base (args : &amp; Value) -&gt; Result &lt; Value , DaemonError &gt; crates/eos-daemon/src/services/checkpoint/base.rs  ">
+</article><article id="item-fn-ensure-workspace-base-66" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn ensure_workspace_base pub(crate) pub(crate) fn ensure_workspace_base (args : &amp; Value) -&gt; Result &lt; Value , DaemonError &gt; crates/eos-daemon/src/services/checkpoint/base.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>ensure_workspace_base</h3>
     <span class="visibility">pub(crate)</span>
   </div>
-  <code class="signature">pub(crate) fn ensure_workspace_base (args : &amp; Value) -&gt; Result &lt; Value , DaemonError &gt;</code>
+  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-daemon--src-services-checkpoint-base-rs.html#item-fn-ensure-workspace-base-66">ensure_workspace_base</a> (args : &amp; Value) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a> &lt; Value , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-checkpoint-base-rs.html#item-fn-ensure-workspace-base-66">ensure_workspace_base</a>(args: &amp;<span class="rs-type">Value</span>) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+    <span class="rs-kw">let</span> total_start = <span class="rs-type">Instant</span>::now();
+    <span class="rs-kw">let</span> root = <span class="rs-type">PathBuf</span>::from(<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-request-args-rs.html#item-fn-require-string-8">require_string</a>(args, &quot;layer_stack_root&quot;)?);
+    <span class="rs-kw">let</span> workspace_root = <span class="rs-type">PathBuf</span>::from(<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-request-args-rs.html#item-fn-require-string-8">require_string</a>(args, &quot;workspace_root&quot;)?);
+    <span class="rs-kw">let</span> (binding, created) = ensure_layer_stack_workspace_base(&amp;root, &amp;workspace_root)?;
+    <span class="rs-kw">let</span> binding = <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-request-args-rs.html#item-fn-binding-to-value-33">binding_to_value</a>(&amp;binding)?;
+    <span class="rs-kw">let</span> timings = json!({
+        &quot;api.workspace_base.total_s&quot;: total_start.elapsed().as_secs_f64(),
+    });
+    <span class="rs-type">Ok</span>(json!({
+        &quot;success&quot;: <span class="rs-kw">true</span>,
+        &quot;created&quot;: created,
+        &quot;binding&quot;: binding,
+        &quot;timings&quot;: timings,
+    }))
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-daemon/src/services/checkpoint/base.rs:66</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn workspace_binding pub(crate) pub(crate) fn workspace_binding (args : &amp; Value) -&gt; Result &lt; Value , DaemonError &gt; crates/eos-daemon/src/services/checkpoint/base.rs  ">
+</article><article id="item-fn-workspace-binding-83" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn workspace_binding pub(crate) pub(crate) fn workspace_binding (args : &amp; Value) -&gt; Result &lt; Value , DaemonError &gt; crates/eos-daemon/src/services/checkpoint/base.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>workspace_binding</h3>
     <span class="visibility">pub(crate)</span>
   </div>
-  <code class="signature">pub(crate) fn workspace_binding (args : &amp; Value) -&gt; Result &lt; Value , DaemonError &gt;</code>
+  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-daemon--src-services-checkpoint-base-rs.html#item-fn-workspace-binding-83">workspace_binding</a> (args : &amp; Value) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a> &lt; Value , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-checkpoint-base-rs.html#item-fn-workspace-binding-83">workspace_binding</a>(args: &amp;<span class="rs-type">Value</span>) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+    <span class="rs-kw">let</span> root = <span class="rs-type">PathBuf</span>::from(<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-request-args-rs.html#item-fn-require-string-8">require_string</a>(args, &quot;layer_stack_root&quot;)?);
+    <span class="rs-kw">let</span> binding = require_workspace_binding(&amp;root)?;
+    <span class="rs-kw">let</span> binding = <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-request-args-rs.html#item-fn-binding-to-value-33">binding_to_value</a>(&amp;binding)?;
+    <span class="rs-type">Ok</span>(json!({
+        &quot;success&quot;: <span class="rs-kw">true</span>,
+        &quot;binding&quot;: binding,
+    }))
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-daemon/src/services/checkpoint/base.rs:83</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn count_dirs private fn count_dirs (path : &amp; Path) -&gt; Result &lt; usize , DaemonError &gt; crates/eos-daemon/src/services/checkpoint/base.rs  ">
+</article><article id="item-fn-count-dirs-93" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn count_dirs private fn count_dirs (path : &amp; Path) -&gt; Result &lt; usize , DaemonError &gt; crates/eos-daemon/src/services/checkpoint/base.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>count_dirs</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn count_dirs (path : &amp; Path) -&gt; Result &lt; usize , DaemonError &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-daemon--src-services-checkpoint-base-rs.html#item-fn-count-dirs-93">count_dirs</a> (path : &amp; Path) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a> &lt; usize , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-checkpoint-base-rs.html#item-fn-count-dirs-93">count_dirs</a>(path: &amp;<span class="rs-type">Path</span>) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a>&lt;usize, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+    <span class="rs-kw">if</span> !path.exists() {
+        <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(0);
+    }
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> count = 0;
+    <span class="rs-kw">for</span> entry <span class="rs-kw">in</span> std::fs::read_dir(path)? {
+        <span class="rs-kw">if</span> entry?.file_type()?.is_dir() {
+            count += 1;
+        }
+    }
+    <span class="rs-type">Ok</span>(count)
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-daemon/src/services/checkpoint/base.rs:93</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn storage_bytes private fn storage_bytes (path : &amp; Path) -&gt; Result &lt; u64 , DaemonError &gt; crates/eos-daemon/src/services/checkpoint/base.rs  ">
+</article><article id="item-fn-storage-bytes-106" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn storage_bytes private fn storage_bytes (path : &amp; Path) -&gt; Result &lt; u64 , DaemonError &gt; crates/eos-daemon/src/services/checkpoint/base.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>storage_bytes</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn storage_bytes (path : &amp; Path) -&gt; Result &lt; u64 , DaemonError &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-daemon--src-services-checkpoint-base-rs.html#item-fn-storage-bytes-106">storage_bytes</a> (path : &amp; Path) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a> &lt; u64 , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-checkpoint-base-rs.html#item-fn-storage-bytes-106">storage_bytes</a>(path: &amp;<span class="rs-type">Path</span>) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a>&lt;u64, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+    <span class="rs-kw">if</span> !path.exists() {
+        <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(0);
+    }
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> total = 0;
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> stack = vec![path.to_path_buf()];
+    <span class="rs-kw">while</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(dir) = stack.pop() {
+        <span class="rs-kw">for</span> entry <span class="rs-kw">in</span> std::fs::read_dir(dir)? {
+            <span class="rs-kw">let</span> entry = entry?;
+            <span class="rs-kw">let</span> meta = entry.metadata()?;
+            <span class="rs-kw">if</span> meta.is_dir() {
+                stack.push(entry.<a class="symbol-link rs-fn" href="eos-daemon--src-services-checkpoint-commit-rs.html#method-path-190">path</a>());
+            } <span class="rs-kw">else</span> <span class="rs-kw">if</span> meta.is_file() {
+                total += meta.len();
+            }
+        }
+    }
+    <span class="rs-type">Ok</span>(total)
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-daemon/src/services/checkpoint/base.rs:106</p>
 </article></div>
 </section></div>
 </main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/eos-daemon/src/services/checkpoint/base.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-comment">//! Workspace checkpoint base, binding, and LayerStack metric services.</span>
+
+<span class="rs-kw">use</span> std::path::{<span class="rs-type">Path</span>, <span class="rs-type">PathBuf</span>};
+<span class="rs-kw">use</span> std::time::<span class="rs-type">Instant</span>;
+
+<span class="rs-kw">use</span> eos_layerstack::{
+    build_workspace_base <span class="rs-kw">as</span> build_layer_stack_workspace_base,
+    ensure_workspace_base <span class="rs-kw">as</span> ensure_layer_stack_workspace_base, read_workspace_binding,
+    require_workspace_binding, <span class="rs-type">LayerStack</span>,
+};
+<span class="rs-kw">use</span> serde_json::{json, <span class="rs-type">Value</span>};
+
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::error::<a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>;
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::request_args::{binding_to_value, require_string, timings_to_value_map};
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::services::occ::occ_service_cache_snapshot;
+
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-checkpoint-base-rs.html#item-fn-layer-metrics-17">layer_metrics</a>(args: &amp;<span class="rs-type">Value</span>) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+    <span class="rs-kw">let</span> root = <span class="rs-type">PathBuf</span>::from(<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-request-args-rs.html#item-fn-require-string-8">require_string</a>(args, &quot;layer_stack_root&quot;)?);
+    <span class="rs-kw">let</span> stack = <span class="rs-type">LayerStack</span>::open(root.clone())?;
+    <span class="rs-kw">let</span> manifest = stack.read_active_manifest()?;
+    <span class="rs-kw">let</span> binding = read_workspace_binding(&amp;root)?;
+    <span class="rs-type">Ok</span>(json!({
+        &quot;success&quot;: <span class="rs-kw">true</span>,
+        &quot;manifest_version&quot;: manifest.version,
+        &quot;manifest_depth&quot;: manifest.depth(),
+        &quot;active_leases&quot;: stack.<a class="symbol-link rs-fn" href="eos-daemon--src-services-isolated-workspace-runtime-rs.html#method-active-lease-count-87">active_lease_count</a>(),
+        &quot;leased_layers&quot;: stack.leased_layers().len(),
+        &quot;layer_dirs&quot;: <a class="symbol-link rs-fn" href="eos-daemon--src-services-checkpoint-base-rs.html#item-fn-count-dirs-93">count_dirs</a>(&amp;root.join(&quot;layers&quot;))?,
+        &quot;referenced_layers&quot;: manifest.layers.len(),
+        &quot;orphan_layer_count&quot;: 0,
+        &quot;missing_layer_count&quot;: 0,
+        &quot;orphan_layer_ids&quot;: [],
+        &quot;missing_layer_ids&quot;: [],
+        &quot;staging_dirs&quot;: <a class="symbol-link rs-fn" href="eos-daemon--src-services-checkpoint-base-rs.html#item-fn-count-dirs-93">count_dirs</a>(&amp;root.join(&quot;staging&quot;))?,
+        &quot;storage_bytes&quot;: <a class="symbol-link rs-fn" href="eos-daemon--src-services-checkpoint-base-rs.html#item-fn-storage-bytes-106">storage_bytes</a>(&amp;root)?,
+        &quot;workspace_bound&quot;: binding.is_some(),
+        &quot;workspace_root&quot;: binding.as_ref().map_or(&quot;&quot;, |binding| binding.workspace_root.as_str()),
+        &quot;base_root_hash&quot;: binding.as_ref().map_or(&quot;&quot;, |binding| binding.base_root_hash.as_str()),
+        &quot;occ_runtime_service_cache&quot;: <a class="symbol-link rs-fn" href="eos-daemon--src-services-occ-service-cache-rs.html#item-fn-occ-service-cache-snapshot-223">occ_service_cache_snapshot</a>(),
+    }))
+}
+
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-checkpoint-base-rs.html#item-fn-build-workspace-base-43">build_workspace_base</a>(args: &amp;<span class="rs-type">Value</span>) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+    <span class="rs-kw">let</span> total_start = <span class="rs-type">Instant</span>::now();
+    <span class="rs-kw">let</span> root = <span class="rs-type">PathBuf</span>::from(<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-request-args-rs.html#item-fn-require-string-8">require_string</a>(args, &quot;layer_stack_root&quot;)?);
+    <span class="rs-kw">let</span> workspace_root = <span class="rs-type">PathBuf</span>::from(<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-request-args-rs.html#item-fn-require-string-8">require_string</a>(args, &quot;workspace_root&quot;)?);
+    <span class="rs-kw">let</span> reset = args.<a class="symbol-link rs-fn" href="eos-daemon--src-services-occ-service-cache-rs.html#method-get-87">get</a>(&quot;reset&quot;).and_then(<span class="rs-type">Value</span>::as_bool).unwrap_or(<span class="rs-kw">false</span>);
+    <span class="rs-kw">if</span> reset {
+        <span class="rs-kw">crate</span>::services::plugins::<a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-mod-rs.html#item-fn-stop-services-for-layer-stack-root-342">stop_services_for_layer_stack_root</a>(&amp;root.to_string_lossy())?;
+    }
+    <span class="rs-kw">let</span> built = build_layer_stack_workspace_base(&amp;root, &amp;workspace_root, reset)?;
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> timings = <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-request-args-rs.html#item-fn-timings-to-value-map-37">timings_to_value_map</a>(&amp;built.timings);
+    timings.insert(
+        &quot;api.workspace_base.total_s&quot;.to_owned(),
+        json!(total_start.elapsed().as_secs_f64()),
+    );
+    <span class="rs-kw">let</span> binding = <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-request-args-rs.html#item-fn-binding-to-value-33">binding_to_value</a>(&amp;built.binding)?;
+    <span class="rs-type">Ok</span>(json!({
+        &quot;success&quot;: <span class="rs-kw">true</span>,
+        &quot;created&quot;: <span class="rs-kw">true</span>,
+        &quot;binding&quot;: binding,
+        &quot;timings&quot;: <span class="rs-type">Value</span>::<span class="rs-type">Object</span>(timings),
+    }))
+}
+
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-checkpoint-base-rs.html#item-fn-ensure-workspace-base-66">ensure_workspace_base</a>(args: &amp;<span class="rs-type">Value</span>) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+    <span class="rs-kw">let</span> total_start = <span class="rs-type">Instant</span>::now();
+    <span class="rs-kw">let</span> root = <span class="rs-type">PathBuf</span>::from(<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-request-args-rs.html#item-fn-require-string-8">require_string</a>(args, &quot;layer_stack_root&quot;)?);
+    <span class="rs-kw">let</span> workspace_root = <span class="rs-type">PathBuf</span>::from(<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-request-args-rs.html#item-fn-require-string-8">require_string</a>(args, &quot;workspace_root&quot;)?);
+    <span class="rs-kw">let</span> (binding, created) = ensure_layer_stack_workspace_base(&amp;root, &amp;workspace_root)?;
+    <span class="rs-kw">let</span> binding = <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-request-args-rs.html#item-fn-binding-to-value-33">binding_to_value</a>(&amp;binding)?;
+    <span class="rs-kw">let</span> timings = json!({
+        &quot;api.workspace_base.total_s&quot;: total_start.elapsed().as_secs_f64(),
+    });
+    <span class="rs-type">Ok</span>(json!({
+        &quot;success&quot;: <span class="rs-kw">true</span>,
+        &quot;created&quot;: created,
+        &quot;binding&quot;: binding,
+        &quot;timings&quot;: timings,
+    }))
+}
+
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-checkpoint-base-rs.html#item-fn-workspace-binding-83">workspace_binding</a>(args: &amp;<span class="rs-type">Value</span>) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+    <span class="rs-kw">let</span> root = <span class="rs-type">PathBuf</span>::from(<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-request-args-rs.html#item-fn-require-string-8">require_string</a>(args, &quot;layer_stack_root&quot;)?);
+    <span class="rs-kw">let</span> binding = require_workspace_binding(&amp;root)?;
+    <span class="rs-kw">let</span> binding = <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-request-args-rs.html#item-fn-binding-to-value-33">binding_to_value</a>(&amp;binding)?;
+    <span class="rs-type">Ok</span>(json!({
+        &quot;success&quot;: <span class="rs-kw">true</span>,
+        &quot;binding&quot;: binding,
+    }))
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-checkpoint-base-rs.html#item-fn-count-dirs-93">count_dirs</a>(path: &amp;<span class="rs-type">Path</span>) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a>&lt;usize, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+    <span class="rs-kw">if</span> !path.exists() {
+        <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(0);
+    }
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> count = 0;
+    <span class="rs-kw">for</span> entry <span class="rs-kw">in</span> std::fs::read_dir(path)? {
+        <span class="rs-kw">if</span> entry?.file_type()?.is_dir() {
+            count += 1;
+        }
+    }
+    <span class="rs-type">Ok</span>(count)
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-checkpoint-base-rs.html#item-fn-storage-bytes-106">storage_bytes</a>(path: &amp;<span class="rs-type">Path</span>) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a>&lt;u64, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+    <span class="rs-kw">if</span> !path.exists() {
+        <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(0);
+    }
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> total = 0;
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> stack = vec![path.to_path_buf()];
+    <span class="rs-kw">while</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(dir) = stack.pop() {
+        <span class="rs-kw">for</span> entry <span class="rs-kw">in</span> std::fs::read_dir(dir)? {
+            <span class="rs-kw">let</span> entry = entry?;
+            <span class="rs-kw">let</span> meta = entry.metadata()?;
+            <span class="rs-kw">if</span> meta.is_dir() {
+                stack.push(entry.<a class="symbol-link rs-fn" href="eos-daemon--src-services-checkpoint-commit-rs.html#method-path-190">path</a>());
+            } <span class="rs-kw">else</span> <span class="rs-kw">if</span> meta.is_file() {
+                total += meta.len();
+            }
+        }
+    }
+    <span class="rs-type">Ok</span>(total)
+}
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
   <script src="../assets/inventory.js"></script>
 </body>
 </html>

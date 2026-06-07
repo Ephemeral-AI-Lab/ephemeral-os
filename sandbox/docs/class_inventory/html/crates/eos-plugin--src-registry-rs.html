@@ -8,8 +8,16 @@
 </head>
 <body>
   <header>
-    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
-    <h1>eos-plugin File Inventory</h1>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>eos-plugin File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS/sandbox &amp;&amp; cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
   </header>
   <a class="back-link" href="../index.html">sandbox</a>
 <section class="summary">
@@ -47,49 +55,140 @@
       <span>0 methods</span>
     </div>
   </div>
-  <div class="items"><div class="group-label">Standalone Functions</div><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn public_op_name pub pub fn public_op_name (plugin_name : &amp; str , op_name : &amp; str) -&gt; String crates/eos-plugin/src/registry.rs  ">
+  <div class="items"><div class="group-label">Standalone Functions</div><article id="item-fn-public-op-name-6" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn public_op_name pub pub fn public_op_name (plugin_name : &amp; str , op_name : &amp; str) -&gt; String crates/eos-plugin/src/registry.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>public_op_name</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub fn public_op_name (plugin_name : &amp; str , op_name : &amp; str) -&gt; String</code>
-  <div class="tags"></div>
+  <code class="signature">pub fn <a class="symbol-link" href="eos-plugin--src-registry-rs.html#item-fn-public-op-name-6">public_op_name</a> (plugin_name : &amp; str , op_name : &amp; str) -&gt; String</code>
+  <p class="docstring">Build the public op name the daemon dispatcher registers: `plugin.&lt;plugin&gt;.&lt;op&gt;`.</p>
+  <div class="tags"><span>must_use</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-comment">/// Build the public op name the daemon dispatcher registers: `plugin.&lt;plugin&gt;.&lt;op&gt;`.</span>
+#[must_use]
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-registry-rs.html#item-fn-public-op-name-6">public_op_name</a>(plugin_name: &amp;str, op_name: &amp;str) -&gt; <span class="rs-type">String</span> {
+    format!(&quot;plugin.{plugin_name}.{op_name}&quot;)
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-plugin/src/registry.rs:6</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn is_valid_plugin_name pub(crate) pub(crate) fn is_valid_plugin_name (name : &amp; str) -&gt; bool crates/eos-plugin/src/registry.rs  ">
+</article><article id="item-fn-is-valid-plugin-name-12" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn is_valid_plugin_name pub(crate) pub(crate) fn is_valid_plugin_name (name : &amp; str) -&gt; bool crates/eos-plugin/src/registry.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>is_valid_plugin_name</h3>
     <span class="visibility">pub(crate)</span>
   </div>
-  <code class="signature">pub(crate) fn is_valid_plugin_name (name : &amp; str) -&gt; bool</code>
+  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-plugin--src-registry-rs.html#item-fn-is-valid-plugin-name-12">is_valid_plugin_name</a> (name : &amp; str) -&gt; bool</code>
+  <p class="docstring">Whether `name` matches the Rust `_PLUGIN_NAME_RE` (`^[A-Za-z_][A-Za-z0-9_]*$`).</p>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-comment">/// Whether `name` matches the Rust `_PLUGIN_NAME_RE` (`^[A-Za-z_][A-Za-z0-9_]*$`).</span>
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-registry-rs.html#item-fn-is-valid-plugin-name-12">is_valid_plugin_name</a>(name: &amp;str) -&gt; bool {
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> chars = name.chars();
+    <span class="rs-kw">match</span> chars.next() {
+        <span class="rs-type">Some</span>(c) <span class="rs-kw">if</span> c == &#x27;_&#x27; || c.is_ascii_alphabetic() =&gt; {}
+        _ =&gt; <span class="rs-kw">return</span> <span class="rs-kw">false</span>,
+    }
+    chars.all(|c| c == &#x27;_&#x27; || c.is_ascii_alphanumeric())
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-plugin/src/registry.rs:12</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn public_op_name_format private fn public_op_name_format () crates/eos-plugin/src/registry.rs  ">
+</article><article id="item-fn-public-op-name-format-26" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn public_op_name_format private fn public_op_name_format () crates/eos-plugin/src/registry.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>public_op_name_format</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn public_op_name_format ()</code>
-  <div class="tags"></div>
+  <code class="signature">fn <a class="symbol-link" href="eos-plugin--src-registry-rs.html#item-fn-public-op-name-format-26">public_op_name_format</a> ()</code>
+  <div class="tags"><span>test</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-registry-rs.html#item-fn-public-op-name-format-26">public_op_name_format</a>() {
+        assert_eq!(<a class="symbol-link rs-fn" href="eos-plugin--src-registry-rs.html#item-fn-public-op-name-6">public_op_name</a>(&quot;generic&quot;, &quot;hover&quot;), &quot;plugin.generic.hover&quot;);
+    }
+</code></pre>
+</details>
 
   <p class="source">crates/eos-plugin/src/registry.rs:26</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn plugin_name_validation private fn plugin_name_validation () crates/eos-plugin/src/registry.rs  ">
+</article><article id="item-fn-plugin-name-validation-31" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn plugin_name_validation private fn plugin_name_validation () crates/eos-plugin/src/registry.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>plugin_name_validation</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn plugin_name_validation ()</code>
-  <div class="tags"></div>
+  <code class="signature">fn <a class="symbol-link" href="eos-plugin--src-registry-rs.html#item-fn-plugin-name-validation-31">plugin_name_validation</a> ()</code>
+  <div class="tags"><span>test</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-registry-rs.html#item-fn-plugin-name-validation-31">plugin_name_validation</a>() {
+        assert!(<a class="symbol-link rs-fn" href="eos-plugin--src-registry-rs.html#item-fn-is-valid-plugin-name-12">is_valid_plugin_name</a>(&quot;generic&quot;));
+        assert!(<a class="symbol-link rs-fn" href="eos-plugin--src-registry-rs.html#item-fn-is-valid-plugin-name-12">is_valid_plugin_name</a>(&quot;_x9&quot;));
+        assert!(!<a class="symbol-link rs-fn" href="eos-plugin--src-registry-rs.html#item-fn-is-valid-plugin-name-12">is_valid_plugin_name</a>(&quot;9plugin&quot;));
+        assert!(!<a class="symbol-link rs-fn" href="eos-plugin--src-registry-rs.html#item-fn-is-valid-plugin-name-12">is_valid_plugin_name</a>(&quot;&quot;));
+        assert!(!<a class="symbol-link rs-fn" href="eos-plugin--src-registry-rs.html#item-fn-is-valid-plugin-name-12">is_valid_plugin_name</a>(&quot;ls-p&quot;));
+    }
+</code></pre>
+</details>
 
   <p class="source">crates/eos-plugin/src/registry.rs:31</p>
 </article></div>
 </section></div>
 </main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/eos-plugin/src/registry.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-comment">//! Plugin op-name helpers.</span>
+<span class="rs-comment">//!</span>
+<span class="rs-comment">//! Builds the public op name `plugin.&lt;plugin&gt;.&lt;op&gt;` the daemon dispatcher</span>
+<span class="rs-comment">//! registers, and validates plugin identifiers.</span>
+
+<span class="rs-comment">/// Build the public op name the daemon dispatcher registers: `plugin.&lt;plugin&gt;.&lt;op&gt;`.</span>
+#[must_use]
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-registry-rs.html#item-fn-public-op-name-6">public_op_name</a>(plugin_name: &amp;str, op_name: &amp;str) -&gt; <span class="rs-type">String</span> {
+    format!(&quot;plugin.{plugin_name}.{op_name}&quot;)
+}
+
+<span class="rs-comment">/// Whether `name` matches the Rust `_PLUGIN_NAME_RE` (`^[A-Za-z_][A-Za-z0-9_]*$`).</span>
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-registry-rs.html#item-fn-is-valid-plugin-name-12">is_valid_plugin_name</a>(name: &amp;str) -&gt; bool {
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> chars = name.chars();
+    <span class="rs-kw">match</span> chars.next() {
+        <span class="rs-type">Some</span>(c) <span class="rs-kw">if</span> c == &#x27;_&#x27; || c.is_ascii_alphabetic() =&gt; {}
+        _ =&gt; <span class="rs-kw">return</span> <span class="rs-kw">false</span>,
+    }
+    chars.all(|c| c == &#x27;_&#x27; || c.is_ascii_alphanumeric())
+}
+
+#[cfg(test)]
+<span class="rs-kw">mod</span> tests {
+    <span class="rs-kw">use</span> <span class="rs-kw">super</span>::*;
+
+    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-registry-rs.html#item-fn-public-op-name-format-26">public_op_name_format</a>() {
+        assert_eq!(<a class="symbol-link rs-fn" href="eos-plugin--src-registry-rs.html#item-fn-public-op-name-6">public_op_name</a>(&quot;generic&quot;, &quot;hover&quot;), &quot;plugin.generic.hover&quot;);
+    }
+
+    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-registry-rs.html#item-fn-plugin-name-validation-31">plugin_name_validation</a>() {
+        assert!(<a class="symbol-link rs-fn" href="eos-plugin--src-registry-rs.html#item-fn-is-valid-plugin-name-12">is_valid_plugin_name</a>(&quot;generic&quot;));
+        assert!(<a class="symbol-link rs-fn" href="eos-plugin--src-registry-rs.html#item-fn-is-valid-plugin-name-12">is_valid_plugin_name</a>(&quot;_x9&quot;));
+        assert!(!<a class="symbol-link rs-fn" href="eos-plugin--src-registry-rs.html#item-fn-is-valid-plugin-name-12">is_valid_plugin_name</a>(&quot;9plugin&quot;));
+        assert!(!<a class="symbol-link rs-fn" href="eos-plugin--src-registry-rs.html#item-fn-is-valid-plugin-name-12">is_valid_plugin_name</a>(&quot;&quot;));
+        assert!(!<a class="symbol-link rs-fn" href="eos-plugin--src-registry-rs.html#item-fn-is-valid-plugin-name-12">is_valid_plugin_name</a>(&quot;ls-p&quot;));
+    }
+}
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
   <script src="../assets/inventory.js"></script>
 </body>
 </html>

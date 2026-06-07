@@ -8,8 +8,16 @@
 </head>
 <body>
   <header>
-    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
-    <h1>eos-state File Inventory</h1>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>eos-state File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS/agent-core &amp;&amp; cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
   </header>
   <a class="back-link" href="../index.html">agent-core</a>
 <section class="summary">
@@ -47,69 +55,654 @@
       <span>22 methods</span>
     </div>
   </div>
-  <div class="items"><div class="group-label">File-Owned Types</div><article class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct Attempt pub pub struct Attempt crates/eos-state/src/attempt.rs id AttemptId iteration_id IterationId workflow_id WorkflowId attempt_sequence_no i64 state AttemptState created_at UtcDateTime updated_at UtcDateTime ">
+  <div class="items"><div class="group-label">File-Owned Types</div><article id="item-struct-Attempt-222" class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct Attempt pub pub struct Attempt crates/eos-state/src/attempt.rs id AttemptId iteration_id IterationId workflow_id WorkflowId attempt_sequence_no i64 state AttemptState created_at UtcDateTime updated_at UtcDateTime ">
   <div class="item-head">
     <span class="kind">struct</span>
     <h3>Attempt</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub struct Attempt</code>
-  <div class="tags"><span>serde</span></div>
-  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>id</td><td><code>AttemptId</code></td></tr><tr><td>pub</td><td>iteration_id</td><td><code>IterationId</code></td></tr><tr><td>pub</td><td>workflow_id</td><td><code>WorkflowId</code></td></tr><tr><td>pub</td><td>attempt_sequence_no</td><td><code>i64</code></td></tr><tr><td>pub</td><td>state</td><td><code>AttemptState</code></td></tr><tr><td>pub</td><td>created_at</td><td><code>UtcDateTime</code></td></tr><tr><td>pub</td><td>updated_at</td><td><code>UtcDateTime</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr><td>method</td><td>stage</td><td><code>pub const fn stage (&amp; self) -&gt; AttemptStage</code></td></tr><tr><td>method</td><td>status</td><td><code>pub const fn status (&amp; self) -&gt; AttemptStatus</code></td></tr><tr><td>method</td><td>is_closed</td><td><code>pub const fn is_closed (&amp; self) -&gt; bool</code></td></tr><tr><td>method</td><td>planner_task_id</td><td><code>pub const fn planner_task_id (&amp; self) -&gt; Option &lt; &amp; TaskId &gt;</code></td></tr><tr><td>method</td><td>materialized_plan</td><td><code>pub const fn materialized_plan (&amp; self) -&gt; Option &lt; &amp; MaterializedPlan &gt;</code></td></tr><tr><td>method</td><td>generator_task_ids</td><td><code>pub fn generator_task_ids (&amp; self) -&gt; &amp; [TaskId]</code></td></tr><tr><td>method</td><td>reducer_task_ids</td><td><code>pub fn reducer_task_ids (&amp; self) -&gt; &amp; [TaskId]</code></td></tr><tr><td>method</td><td>deferred_goal_for_next_iteration</td><td><code>pub const fn deferred_goal_for_next_iteration (&amp; self) -&gt; Option &lt; &amp; DeferredGoal &gt;</code></td></tr><tr><td>method</td><td>closure</td><td><code>pub const fn closure (&amp; self) -&gt; Option &lt; &amp; AttemptClosure &gt;</code></td></tr><tr><td>method</td><td>fail_reason</td><td><code>pub const fn fail_reason (&amp; self) -&gt; Option &lt; AttemptFailReason &gt;</code></td></tr><tr><td>method</td><td>closed_at</td><td><code>pub const fn closed_at (&amp; self) -&gt; Option &lt; UtcDateTime &gt;</code></td></tr><tr><td>method</td><td>outcomes</td><td><code>pub fn outcomes (&amp; self) -&gt; &amp; [ExecutionTaskOutcome]</code></td></tr></tbody></table>
+  <code class="signature">pub struct <a class="symbol-link" href="eos-state--src-attempt-rs.html#item-struct-Attempt-222">Attempt</a></code>
+  <p class="docstring">Immutable view of a persisted Attempt (Rust `state.py:Attempt`).</p>
+  <div class="tags"><span>derive: Clone</span><span>derive: Debug</span><span>derive: Deserialize</span><span>derive: JsonSchema</span><span>derive: PartialEq</span><span>derive: Serialize</span><span>serde</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>id</td><td><code>AttemptId</code></td></tr><tr><td>pub</td><td>iteration_id</td><td><code>IterationId</code></td></tr><tr><td>pub</td><td>workflow_id</td><td><code>WorkflowId</code></td></tr><tr><td>pub</td><td>attempt_sequence_no</td><td><code>i64</code></td></tr><tr><td>pub</td><td>state</td><td><code><a class="symbol-link" href="eos-state--src-attempt-rs.html#item-enum-AttemptState-137">AttemptState</a></code></td></tr><tr><td>pub</td><td>created_at</td><td><code>UtcDateTime</code></td></tr><tr><td>pub</td><td>updated_at</td><td><code>UtcDateTime</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-stage-242"><td>method</td><td>stage</td><td><code>pub const fn <a class="symbol-link" href="eos-state--src-attempt-rs.html#method-stage-163">stage</a> (&amp; self) -&gt; <a class="symbol-link" href="eos-state--src-attempt-rs.html#item-enum-AttemptStage-15">AttemptStage</a></code><p class="docstring">Persisted stage view.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Persisted stage view.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-attempt-rs.html#method-stage-163">stage</a>(&amp;<span class="rs-self">self</span>) -&gt; <a class="symbol-link rs-type" href="eos-state--src-attempt-rs.html#item-enum-AttemptStage-15">AttemptStage</a> {
+        <span class="rs-self">self</span>.state.<a class="symbol-link rs-fn" href="eos-state--src-attempt-rs.html#method-stage-163">stage</a>()
+    }
+</code></pre>
+</details></td></tr><tr id="method-status-248"><td>method</td><td>status</td><td><code>pub const fn <a class="symbol-link" href="eos-state--src-attempt-rs.html#method-status-97">status</a> (&amp; self) -&gt; <a class="symbol-link" href="eos-state--src-attempt-rs.html#item-enum-AttemptStatus-27">AttemptStatus</a></code><p class="docstring">Persisted status view.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Persisted status view.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-attempt-rs.html#method-status-97">status</a>(&amp;<span class="rs-self">self</span>) -&gt; <a class="symbol-link rs-type" href="eos-state--src-attempt-rs.html#item-enum-AttemptStatus-27">AttemptStatus</a> {
+        <span class="rs-self">self</span>.state.<a class="symbol-link rs-fn" href="eos-state--src-attempt-rs.html#method-status-97">status</a>()
+    }
+</code></pre>
+</details></td></tr><tr id="method-is-closed-254"><td>method</td><td>is_closed</td><td><code>pub const fn <a class="symbol-link" href="eos-state--src-attempt-rs.html#method-is-closed-254">is_closed</a> (&amp; self) -&gt; bool</code><p class="docstring">Whether the attempt has reached the closed stage.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Whether the attempt has reached the closed stage.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-attempt-rs.html#method-is-closed-254">is_closed</a>(&amp;<span class="rs-self">self</span>) -&gt; bool {
+        matches!(<span class="rs-self">self</span>.state, <a class="symbol-link rs-type" href="eos-state--src-attempt-rs.html#item-enum-AttemptState-137">AttemptState</a>::<span class="rs-type">Closed</span> { .. })
+    }
+</code></pre>
+</details></td></tr><tr id="method-planner-task-id-260"><td>method</td><td>planner_task_id</td><td><code>pub const fn <a class="symbol-link" href="eos-state--src-attempt-rs.html#method-planner-task-id-182">planner_task_id</a> (&amp; self) -&gt; Option &lt; &amp; TaskId &gt;</code><p class="docstring">Planner task id, if one is known.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Planner task id, if one is known.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-attempt-rs.html#method-planner-task-id-182">planner_task_id</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Option</span>&lt;&amp;<span class="rs-type">TaskId</span>&gt; {
+        <span class="rs-self">self</span>.state.<a class="symbol-link rs-fn" href="eos-state--src-attempt-rs.html#method-planner-task-id-182">planner_task_id</a>()
+    }
+</code></pre>
+</details></td></tr><tr id="method-materialized-plan-266"><td>method</td><td>materialized_plan</td><td><code>pub const fn <a class="symbol-link" href="eos-state--src-attempt-rs.html#method-materialized-plan-199">materialized_plan</a> (&amp; self) -&gt; Option &lt; &amp; <a class="symbol-link" href="eos-state--src-plan-rs.html#item-struct-MaterializedPlan-236">MaterializedPlan</a> &gt;</code><p class="docstring">Project the resolved plan, if one has been recorded.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Project the resolved plan, if one has been recorded.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-attempt-rs.html#method-materialized-plan-199">materialized_plan</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Option</span>&lt;&amp;<a class="symbol-link rs-type" href="eos-state--src-plan-rs.html#item-struct-MaterializedPlan-236">MaterializedPlan</a>&gt; {
+        <span class="rs-self">self</span>.state.<a class="symbol-link rs-fn" href="eos-state--src-attempt-rs.html#method-materialized-plan-199">materialized_plan</a>()
+    }
+</code></pre>
+</details></td></tr><tr id="method-generator-task-ids-272"><td>method</td><td>generator_task_ids</td><td><code>pub fn <a class="symbol-link" href="eos-state--src-attempt-rs.html#method-generator-task-ids-272">generator_task_ids</a> (&amp; self) -&gt; &amp; [TaskId]</code><p class="docstring">Generator task ids in the materialized plan.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Generator task ids in the materialized plan.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-attempt-rs.html#method-generator-task-ids-272">generator_task_ids</a>(&amp;<span class="rs-self">self</span>) -&gt; &amp;[<span class="rs-type">TaskId</span>] {
+        <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-state--src-attempt-rs.html#method-materialized-plan-199">materialized_plan</a>()
+            .map_or(&amp;[], |plan| plan.generator_task_ids.as_slice())
+    }
+</code></pre>
+</details></td></tr><tr id="method-reducer-task-ids-279"><td>method</td><td>reducer_task_ids</td><td><code>pub fn <a class="symbol-link" href="eos-state--src-attempt-rs.html#method-reducer-task-ids-279">reducer_task_ids</a> (&amp; self) -&gt; &amp; [TaskId]</code><p class="docstring">Reducer task ids in the materialized plan.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Reducer task ids in the materialized plan.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-attempt-rs.html#method-reducer-task-ids-279">reducer_task_ids</a>(&amp;<span class="rs-self">self</span>) -&gt; &amp;[<span class="rs-type">TaskId</span>] {
+        <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-state--src-attempt-rs.html#method-materialized-plan-199">materialized_plan</a>()
+            .map_or(&amp;[], |plan| plan.reducer_task_ids.as_slice())
+    }
+</code></pre>
+</details></td></tr><tr id="method-deferred-goal-for-next-iteration-286"><td>method</td><td>deferred_goal_for_next_iteration</td><td><code>pub const fn <a class="symbol-link" href="eos-state--src-attempt-rs.html#method-deferred-goal-for-next-iteration-286">deferred_goal_for_next_iteration</a> (&amp; self) -&gt; Option &lt; &amp; <a class="symbol-link" href="eos-state--src-plan-rs.html#item-struct-DeferredGoal-65">DeferredGoal</a> &gt;</code><p class="docstring">Deferred goal carried by the materialized plan.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Deferred goal carried by the materialized plan.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-attempt-rs.html#method-deferred-goal-for-next-iteration-286">deferred_goal_for_next_iteration</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Option</span>&lt;&amp;<a class="symbol-link rs-type" href="eos-state--src-plan-rs.html#item-struct-DeferredGoal-65">DeferredGoal</a>&gt; {
+        <span class="rs-kw">match</span> <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-state--src-attempt-rs.html#method-materialized-plan-199">materialized_plan</a>() {
+            <span class="rs-type">Some</span>(plan) =&gt; plan.<a class="symbol-link rs-fn" href="eos-state--src-plan-rs.html#method-deferred-goal-158">deferred_goal</a>(),
+            <span class="rs-type">None</span> =&gt; <span class="rs-type">None</span>,
+        }
+    }
+</code></pre>
+</details></td></tr><tr id="method-closure-295"><td>method</td><td>closure</td><td><code>pub const fn <a class="symbol-link" href="eos-state--src-attempt-rs.html#method-closure-212">closure</a> (&amp; self) -&gt; Option &lt; &amp; <a class="symbol-link" href="eos-state--src-attempt-rs.html#item-enum-AttemptClosure-65">AttemptClosure</a> &gt;</code><p class="docstring">Terminal closure, if closed.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Terminal closure, if closed.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-attempt-rs.html#method-closure-212">closure</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Option</span>&lt;&amp;<a class="symbol-link rs-type" href="eos-state--src-attempt-rs.html#item-enum-AttemptClosure-65">AttemptClosure</a>&gt; {
+        <span class="rs-self">self</span>.state.<a class="symbol-link rs-fn" href="eos-state--src-attempt-rs.html#method-closure-212">closure</a>()
+    }
+</code></pre>
+</details></td></tr><tr id="method-fail-reason-301"><td>method</td><td>fail_reason</td><td><code>pub const fn <a class="symbol-link" href="eos-state--src-attempt-rs.html#method-fail-reason-107">fail_reason</a> (&amp; self) -&gt; Option &lt; <a class="symbol-link" href="eos-state--src-attempt-rs.html#item-enum-AttemptFailReason-54">AttemptFailReason</a> &gt;</code><p class="docstring">Failure reason, if failed.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Failure reason, if failed.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-attempt-rs.html#method-fail-reason-107">fail_reason</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-state--src-attempt-rs.html#item-enum-AttemptFailReason-54">AttemptFailReason</a>&gt; {
+        <span class="rs-kw">match</span> <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-state--src-attempt-rs.html#method-closure-212">closure</a>() {
+            <span class="rs-type">Some</span>(closure) =&gt; closure.<a class="symbol-link rs-fn" href="eos-state--src-attempt-rs.html#method-fail-reason-107">fail_reason</a>(),
+            <span class="rs-type">None</span> =&gt; <span class="rs-type">None</span>,
+        }
+    }
+</code></pre>
+</details></td></tr><tr id="method-closed-at-310"><td>method</td><td>closed_at</td><td><code>pub const fn <a class="symbol-link" href="eos-state--src-attempt-rs.html#method-closed-at-126">closed_at</a> (&amp; self) -&gt; Option &lt; UtcDateTime &gt;</code><p class="docstring">Close timestamp, if closed.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Close timestamp, if closed.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-attempt-rs.html#method-closed-at-126">closed_at</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Option</span>&lt;<span class="rs-type">UtcDateTime</span>&gt; {
+        <span class="rs-kw">match</span> <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-state--src-attempt-rs.html#method-closure-212">closure</a>() {
+            <span class="rs-type">Some</span>(closure) =&gt; <span class="rs-type">Some</span>(closure.<a class="symbol-link rs-fn" href="eos-state--src-attempt-rs.html#method-closed-at-126">closed_at</a>()),
+            <span class="rs-type">None</span> =&gt; <span class="rs-type">None</span>,
+        }
+    }
+</code></pre>
+</details></td></tr><tr id="method-outcomes-319"><td>method</td><td>outcomes</td><td><code>pub fn <a class="symbol-link" href="eos-state--src-attempt-rs.html#method-outcomes-116">outcomes</a> (&amp; self) -&gt; &amp; [<a class="symbol-link" href="eos-state--src-outcomes-rs.html#item-struct-ExecutionTaskOutcome-67">ExecutionTaskOutcome</a>]</code><p class="docstring">Recorded execution outcomes (pre-normalized at the `eos-db` boundary).</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Recorded execution outcomes (pre-normalized at the `eos-db` boundary).</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-attempt-rs.html#method-outcomes-116">outcomes</a>(&amp;<span class="rs-self">self</span>) -&gt; &amp;[<a class="symbol-link rs-type" href="eos-state--src-outcomes-rs.html#item-struct-ExecutionTaskOutcome-67">ExecutionTaskOutcome</a>] {
+        <span class="rs-kw">match</span> <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-state--src-attempt-rs.html#method-closure-212">closure</a>() {
+            <span class="rs-type">Some</span>(closure) =&gt; closure.<a class="symbol-link rs-fn" href="eos-state--src-attempt-rs.html#method-outcomes-116">outcomes</a>(),
+            <span class="rs-type">None</span> =&gt; &amp;[],
+        }
+    }
+</code></pre>
+</details></td></tr></tbody></table>
+
   <p class="source">crates/eos-state/src/attempt.rs:222</p>
-</article><article class="type-card" data-kind="enum" data-kind-list="enum field type-model" data-filter-text="enum AttemptStage pub pub enum AttemptStage crates/eos-state/src/attempt.rs  ">
+</article><article id="item-enum-AttemptStage-15" class="type-card" data-kind="enum" data-kind-list="enum field type-model" data-filter-text="enum AttemptStage pub pub enum AttemptStage crates/eos-state/src/attempt.rs  ">
   <div class="item-head">
     <span class="kind">enum</span>
     <h3>AttemptStage</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub enum AttemptStage</code>
-  <div class="tags"><span>serde</span></div>
+  <code class="signature">pub enum <a class="symbol-link" href="eos-state--src-attempt-rs.html#item-enum-AttemptStage-15">AttemptStage</a></code>
+  <p class="docstring">Stage of an [`Attempt`] (Rust `AttemptStage`).</p>
+  <div class="tags"><span>derive: Clone</span><span>derive: Copy</span><span>derive: Debug</span><span>derive: Deserialize</span><span>derive: Eq</span><span>derive: Hash</span><span>derive: JsonSchema</span><span>derive: PartialEq</span><span>derive: Serialize</span><span>serde</span><span>serde: rename_all</span></div>
   <h4>Variants</h4><table><tbody><tr><td>Plan</td><td><code></code></td></tr><tr><td>Run</td><td><code></code></td></tr><tr><td>Closed</td><td><code></code></td></tr></tbody></table>
+
   <p class="source">crates/eos-state/src/attempt.rs:15</p>
-</article><article class="type-card" data-kind="enum" data-kind-list="enum field impl method type-model" data-filter-text="enum AttemptStatus pub pub enum AttemptStatus crates/eos-state/src/attempt.rs  ">
+</article><article id="item-enum-AttemptStatus-27" class="type-card" data-kind="enum" data-kind-list="enum field impl method type-model" data-filter-text="enum AttemptStatus pub pub enum AttemptStatus crates/eos-state/src/attempt.rs  ">
   <div class="item-head">
     <span class="kind">enum</span>
     <h3>AttemptStatus</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub enum AttemptStatus</code>
-  <div class="tags"><span>serde</span></div>
-  <h4>Variants</h4><table><tbody><tr><td>Running</td><td><code></code></td></tr><tr><td>Passed</td><td><code></code></td></tr><tr><td>Failed</td><td><code></code></td></tr><tr><td>Cancelled</td><td><code></code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr><td>method</td><td>as_str</td><td><code>pub const fn as_str (self) -&gt; &amp; 'static str</code></td></tr></tbody></table>
+  <code class="signature">pub enum <a class="symbol-link" href="eos-state--src-attempt-rs.html#item-enum-AttemptStatus-27">AttemptStatus</a></code>
+  <p class="docstring">Outcome status of an [`Attempt`] (Rust `AttemptStatus`).</p>
+  <div class="tags"><span>derive: Clone</span><span>derive: Copy</span><span>derive: Debug</span><span>derive: Deserialize</span><span>derive: Eq</span><span>derive: Hash</span><span>derive: JsonSchema</span><span>derive: PartialEq</span><span>derive: Serialize</span><span>serde</span><span>serde: rename_all</span></div>
+  <h4>Variants</h4><table><tbody><tr><td>Running</td><td><code></code></td></tr><tr><td>Passed</td><td><code></code></td></tr><tr><td>Failed</td><td><code></code></td></tr><tr><td>Cancelled</td><td><code></code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-as-str-42"><td>method</td><td>as_str</td><td><code>pub const fn <a class="symbol-link" href="eos-state--src-attempt-rs.html#method-as-str-42">as_str</a> (self) -&gt; &amp; &#x27;static str</code><p class="docstring">The canonical `snake_case` token (matches the `serde` wire form).</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// The canonical `snake_case` token (matches the `serde` wire form).</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-attempt-rs.html#method-as-str-42">as_str</a>(<span class="rs-self">self</span>) -&gt; &amp;&#x27;<span class="rs-kw">static</span> str {
+        <span class="rs-kw">match</span> <span class="rs-self">self</span> {
+            <span class="rs-self">Self</span>::<span class="rs-type">Running</span> =&gt; &quot;running&quot;,
+            <span class="rs-self">Self</span>::<span class="rs-type">Passed</span> =&gt; &quot;passed&quot;,
+            <span class="rs-self">Self</span>::<span class="rs-type">Failed</span> =&gt; &quot;failed&quot;,
+            <span class="rs-self">Self</span>::<span class="rs-type">Cancelled</span> =&gt; &quot;cancelled&quot;,
+        }
+    }
+</code></pre>
+</details></td></tr></tbody></table>
+
   <p class="source">crates/eos-state/src/attempt.rs:27</p>
-</article><article class="type-card" data-kind="enum" data-kind-list="enum field type-model" data-filter-text="enum AttemptFailReason pub pub enum AttemptFailReason crates/eos-state/src/attempt.rs  ">
+</article><article id="item-enum-AttemptFailReason-54" class="type-card" data-kind="enum" data-kind-list="enum field type-model" data-filter-text="enum AttemptFailReason pub pub enum AttemptFailReason crates/eos-state/src/attempt.rs  ">
   <div class="item-head">
     <span class="kind">enum</span>
     <h3>AttemptFailReason</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub enum AttemptFailReason</code>
-  <div class="tags"><span>serde</span></div>
+  <code class="signature">pub enum <a class="symbol-link" href="eos-state--src-attempt-rs.html#item-enum-AttemptFailReason-54">AttemptFailReason</a></code>
+  <p class="docstring">Why an attempt failed (Rust `AttemptFailReason`). Distinct from<br>`PlannerFailReason` (spec §6.10).</p>
+  <div class="tags"><span>derive: Clone</span><span>derive: Copy</span><span>derive: Debug</span><span>derive: Deserialize</span><span>derive: Eq</span><span>derive: Hash</span><span>derive: JsonSchema</span><span>derive: PartialEq</span><span>derive: Serialize</span><span>serde</span><span>serde: rename_all</span></div>
   <h4>Variants</h4><table><tbody><tr><td>TaskFailed</td><td><code></code></td></tr><tr><td>StartupFailed</td><td><code></code></td></tr></tbody></table>
+
   <p class="source">crates/eos-state/src/attempt.rs:54</p>
-</article><article class="type-card" data-kind="enum" data-kind-list="enum field impl method type-model" data-filter-text="enum AttemptClosure pub pub enum AttemptClosure crates/eos-state/src/attempt.rs  ">
+</article><article id="item-enum-AttemptClosure-65" class="type-card" data-kind="enum" data-kind-list="enum field impl method type-model" data-filter-text="enum AttemptClosure pub pub enum AttemptClosure crates/eos-state/src/attempt.rs  ">
   <div class="item-head">
     <span class="kind">enum</span>
     <h3>AttemptClosure</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub enum AttemptClosure</code>
-  <div class="tags"><span>serde</span></div>
-  <h4>Variants</h4><table><tbody><tr><td>Passed</td><td><code>outcomes: Vec &lt; ExecutionTaskOutcome &gt;, closed_at: UtcDateTime</code></td></tr><tr><td>Failed</td><td><code>reason: AttemptFailReason, outcomes: Vec &lt; ExecutionTaskOutcome &gt;, closed_at: UtcDateTime</code></td></tr><tr><td>Cancelled</td><td><code>reason: String, outcomes: Vec &lt; ExecutionTaskOutcome &gt;, closed_at: UtcDateTime</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr><td>method</td><td>status</td><td><code>pub const fn status (&amp; self) -&gt; AttemptStatus</code></td></tr><tr><td>method</td><td>fail_reason</td><td><code>pub const fn fail_reason (&amp; self) -&gt; Option &lt; AttemptFailReason &gt;</code></td></tr><tr><td>method</td><td>outcomes</td><td><code>pub fn outcomes (&amp; self) -&gt; &amp; [ExecutionTaskOutcome]</code></td></tr><tr><td>method</td><td>closed_at</td><td><code>pub const fn closed_at (&amp; self) -&gt; UtcDateTime</code></td></tr></tbody></table>
+  <code class="signature">pub enum <a class="symbol-link" href="eos-state--src-attempt-rs.html#item-enum-AttemptClosure-65">AttemptClosure</a></code>
+  <p class="docstring">Terminal closure of an [`Attempt`].</p>
+  <div class="tags"><span>derive: Clone</span><span>derive: Debug</span><span>derive: Deserialize</span><span>derive: JsonSchema</span><span>derive: PartialEq</span><span>derive: Serialize</span><span>serde</span><span>serde: rename_all</span></div>
+  <h4>Variants</h4><table><tbody><tr><td>Passed</td><td><code>outcomes: Vec &lt; <a class="symbol-link" href="eos-state--src-outcomes-rs.html#item-struct-ExecutionTaskOutcome-67">ExecutionTaskOutcome</a> &gt;, closed_at: UtcDateTime</code></td></tr><tr><td>Failed</td><td><code>reason: <a class="symbol-link" href="eos-state--src-attempt-rs.html#item-enum-AttemptFailReason-54">AttemptFailReason</a>, outcomes: Vec &lt; <a class="symbol-link" href="eos-state--src-outcomes-rs.html#item-struct-ExecutionTaskOutcome-67">ExecutionTaskOutcome</a> &gt;, closed_at: UtcDateTime</code></td></tr><tr><td>Cancelled</td><td><code>reason: String, outcomes: Vec &lt; <a class="symbol-link" href="eos-state--src-outcomes-rs.html#item-struct-ExecutionTaskOutcome-67">ExecutionTaskOutcome</a> &gt;, closed_at: UtcDateTime</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-status-97"><td>method</td><td>status</td><td><code>pub const fn <a class="symbol-link" href="eos-state--src-attempt-rs.html#method-status-97">status</a> (&amp; self) -&gt; <a class="symbol-link" href="eos-state--src-attempt-rs.html#item-enum-AttemptStatus-27">AttemptStatus</a></code><p class="docstring">Closure status.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Closure status.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-attempt-rs.html#method-status-97">status</a>(&amp;<span class="rs-self">self</span>) -&gt; <a class="symbol-link rs-type" href="eos-state--src-attempt-rs.html#item-enum-AttemptStatus-27">AttemptStatus</a> {
+        <span class="rs-kw">match</span> <span class="rs-self">self</span> {
+            <span class="rs-self">Self</span>::<span class="rs-type">Passed</span> { .. } =&gt; <a class="symbol-link rs-type" href="eos-state--src-attempt-rs.html#item-enum-AttemptStatus-27">AttemptStatus</a>::<span class="rs-type">Passed</span>,
+            <span class="rs-self">Self</span>::<span class="rs-type">Failed</span> { .. } =&gt; <a class="symbol-link rs-type" href="eos-state--src-attempt-rs.html#item-enum-AttemptStatus-27">AttemptStatus</a>::<span class="rs-type">Failed</span>,
+            <span class="rs-self">Self</span>::<span class="rs-type">Cancelled</span> { .. } =&gt; <a class="symbol-link rs-type" href="eos-state--src-attempt-rs.html#item-enum-AttemptStatus-27">AttemptStatus</a>::<span class="rs-type">Cancelled</span>,
+        }
+    }
+</code></pre>
+</details></td></tr><tr id="method-fail-reason-107"><td>method</td><td>fail_reason</td><td><code>pub const fn <a class="symbol-link" href="eos-state--src-attempt-rs.html#method-fail-reason-107">fail_reason</a> (&amp; self) -&gt; Option &lt; <a class="symbol-link" href="eos-state--src-attempt-rs.html#item-enum-AttemptFailReason-54">AttemptFailReason</a> &gt;</code><p class="docstring">Failure reason, if failed.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Failure reason, if failed.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-attempt-rs.html#method-fail-reason-107">fail_reason</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-state--src-attempt-rs.html#item-enum-AttemptFailReason-54">AttemptFailReason</a>&gt; {
+        <span class="rs-kw">match</span> <span class="rs-self">self</span> {
+            <span class="rs-self">Self</span>::<span class="rs-type">Passed</span> { .. } | <span class="rs-self">Self</span>::<span class="rs-type">Cancelled</span> { .. } =&gt; <span class="rs-type">None</span>,
+            <span class="rs-self">Self</span>::<span class="rs-type">Failed</span> { reason, .. } =&gt; <span class="rs-type">Some</span>(*reason),
+        }
+    }
+</code></pre>
+</details></td></tr><tr id="method-outcomes-116"><td>method</td><td>outcomes</td><td><code>pub fn <a class="symbol-link" href="eos-state--src-attempt-rs.html#method-outcomes-116">outcomes</a> (&amp; self) -&gt; &amp; [<a class="symbol-link" href="eos-state--src-outcomes-rs.html#item-struct-ExecutionTaskOutcome-67">ExecutionTaskOutcome</a>]</code><p class="docstring">Recorded execution outcomes.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Recorded execution outcomes.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-attempt-rs.html#method-outcomes-116">outcomes</a>(&amp;<span class="rs-self">self</span>) -&gt; &amp;[<a class="symbol-link rs-type" href="eos-state--src-outcomes-rs.html#item-struct-ExecutionTaskOutcome-67">ExecutionTaskOutcome</a>] {
+        <span class="rs-kw">match</span> <span class="rs-self">self</span> {
+            <span class="rs-self">Self</span>::<span class="rs-type">Passed</span> { outcomes, .. }
+            | <span class="rs-self">Self</span>::<span class="rs-type">Failed</span> { outcomes, .. }
+            | <span class="rs-self">Self</span>::<span class="rs-type">Cancelled</span> { outcomes, .. } =&gt; outcomes,
+        }
+    }
+</code></pre>
+</details></td></tr><tr id="method-closed-at-126"><td>method</td><td>closed_at</td><td><code>pub const fn <a class="symbol-link" href="eos-state--src-attempt-rs.html#method-closed-at-126">closed_at</a> (&amp; self) -&gt; UtcDateTime</code><p class="docstring">Close timestamp.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Close timestamp.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-attempt-rs.html#method-closed-at-126">closed_at</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">UtcDateTime</span> {
+        <span class="rs-kw">match</span> <span class="rs-self">self</span> {
+            <span class="rs-self">Self</span>::<span class="rs-type">Passed</span> { closed_at, .. }
+            | <span class="rs-self">Self</span>::<span class="rs-type">Failed</span> { closed_at, .. }
+            | <span class="rs-self">Self</span>::<span class="rs-type">Cancelled</span> { closed_at, .. } =&gt; *closed_at,
+        }
+    }
+</code></pre>
+</details></td></tr></tbody></table>
+
   <p class="source">crates/eos-state/src/attempt.rs:65</p>
-</article><article class="type-card" data-kind="enum" data-kind-list="enum field impl method type-model" data-filter-text="enum AttemptState pub pub enum AttemptState crates/eos-state/src/attempt.rs  ">
+</article><article id="item-enum-AttemptState-137" class="type-card" data-kind="enum" data-kind-list="enum field impl method type-model" data-filter-text="enum AttemptState pub pub enum AttemptState crates/eos-state/src/attempt.rs  ">
   <div class="item-head">
     <span class="kind">enum</span>
     <h3>AttemptState</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub enum AttemptState</code>
-  <div class="tags"><span>serde</span></div>
-  <h4>Variants</h4><table><tbody><tr><td>Planning</td><td><code>planner_task_id: Option &lt; TaskId &gt;</code></td></tr><tr><td>Running</td><td><code>plan: MaterializedPlan</code></td></tr><tr><td>Closed</td><td><code>closure: AttemptClosure, planner_task_id: Option &lt; TaskId &gt;, plan: Option &lt; MaterializedPlan &gt;</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr><td>method</td><td>stage</td><td><code>pub const fn stage (&amp; self) -&gt; AttemptStage</code></td></tr><tr><td>method</td><td>status</td><td><code>pub const fn status (&amp; self) -&gt; AttemptStatus</code></td></tr><tr><td>method</td><td>planner_task_id</td><td><code>pub const fn planner_task_id (&amp; self) -&gt; Option &lt; &amp; TaskId &gt;</code></td></tr><tr><td>method</td><td>materialized_plan</td><td><code>pub const fn materialized_plan (&amp; self) -&gt; Option &lt; &amp; MaterializedPlan &gt;</code></td></tr><tr><td>method</td><td>closure</td><td><code>pub const fn closure (&amp; self) -&gt; Option &lt; &amp; AttemptClosure &gt;</code></td></tr></tbody></table>
+  <code class="signature">pub enum <a class="symbol-link" href="eos-state--src-attempt-rs.html#item-enum-AttemptState-137">AttemptState</a></code>
+  <p class="docstring">Lifecycle state of an [`Attempt`].</p>
+  <div class="tags"><span>derive: Clone</span><span>derive: Debug</span><span>derive: Deserialize</span><span>derive: JsonSchema</span><span>derive: PartialEq</span><span>derive: Serialize</span><span>serde</span><span>serde: rename_all</span></div>
+  <h4>Variants</h4><table><tbody><tr><td>Planning</td><td><code>planner_task_id: Option &lt; TaskId &gt;</code></td></tr><tr><td>Running</td><td><code>plan: <a class="symbol-link" href="eos-state--src-plan-rs.html#item-struct-MaterializedPlan-236">MaterializedPlan</a></code></td></tr><tr><td>Closed</td><td><code>closure: <a class="symbol-link" href="eos-state--src-attempt-rs.html#item-enum-AttemptClosure-65">AttemptClosure</a>, planner_task_id: Option &lt; TaskId &gt;, plan: Option &lt; <a class="symbol-link" href="eos-state--src-plan-rs.html#item-struct-MaterializedPlan-236">MaterializedPlan</a> &gt;</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-stage-163"><td>method</td><td>stage</td><td><code>pub const fn <a class="symbol-link" href="eos-state--src-attempt-rs.html#method-stage-163">stage</a> (&amp; self) -&gt; <a class="symbol-link" href="eos-state--src-attempt-rs.html#item-enum-AttemptStage-15">AttemptStage</a></code><p class="docstring">Persisted stage view derived from the state.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Persisted stage view derived from the state.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-attempt-rs.html#method-stage-163">stage</a>(&amp;<span class="rs-self">self</span>) -&gt; <a class="symbol-link rs-type" href="eos-state--src-attempt-rs.html#item-enum-AttemptStage-15">AttemptStage</a> {
+        <span class="rs-kw">match</span> <span class="rs-self">self</span> {
+            <span class="rs-self">Self</span>::<span class="rs-type">Planning</span> { .. } =&gt; <a class="symbol-link rs-type" href="eos-state--src-attempt-rs.html#item-enum-AttemptStage-15">AttemptStage</a>::<span class="rs-type">Plan</span>,
+            <span class="rs-self">Self</span>::<span class="rs-type">Running</span> { .. } =&gt; <a class="symbol-link rs-type" href="eos-state--src-attempt-rs.html#item-enum-AttemptStage-15">AttemptStage</a>::<span class="rs-type">Run</span>,
+            <span class="rs-self">Self</span>::<span class="rs-type">Closed</span> { .. } =&gt; <a class="symbol-link rs-type" href="eos-state--src-attempt-rs.html#item-enum-AttemptStage-15">AttemptStage</a>::<span class="rs-type">Closed</span>,
+        }
+    }
+</code></pre>
+</details></td></tr><tr id="method-status-173"><td>method</td><td>status</td><td><code>pub const fn <a class="symbol-link" href="eos-state--src-attempt-rs.html#method-status-97">status</a> (&amp; self) -&gt; <a class="symbol-link" href="eos-state--src-attempt-rs.html#item-enum-AttemptStatus-27">AttemptStatus</a></code><p class="docstring">Persisted status view derived from the state.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Persisted status view derived from the state.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-attempt-rs.html#method-status-97">status</a>(&amp;<span class="rs-self">self</span>) -&gt; <a class="symbol-link rs-type" href="eos-state--src-attempt-rs.html#item-enum-AttemptStatus-27">AttemptStatus</a> {
+        <span class="rs-kw">match</span> <span class="rs-self">self</span> {
+            <span class="rs-self">Self</span>::<span class="rs-type">Planning</span> { .. } | <span class="rs-self">Self</span>::<span class="rs-type">Running</span> { .. } =&gt; <a class="symbol-link rs-type" href="eos-state--src-attempt-rs.html#item-enum-AttemptStatus-27">AttemptStatus</a>::<span class="rs-type">Running</span>,
+            <span class="rs-self">Self</span>::<span class="rs-type">Closed</span> { closure, .. } =&gt; closure.<a class="symbol-link rs-fn" href="eos-state--src-attempt-rs.html#method-status-97">status</a>(),
+        }
+    }
+</code></pre>
+</details></td></tr><tr id="method-planner-task-id-182"><td>method</td><td>planner_task_id</td><td><code>pub const fn <a class="symbol-link" href="eos-state--src-attempt-rs.html#method-planner-task-id-182">planner_task_id</a> (&amp; self) -&gt; Option &lt; &amp; TaskId &gt;</code><p class="docstring">Planner task id, if one is known in this state.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Planner task id, if one is known in this state.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-attempt-rs.html#method-planner-task-id-182">planner_task_id</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Option</span>&lt;&amp;<span class="rs-type">TaskId</span>&gt; {
+        <span class="rs-kw">match</span> <span class="rs-self">self</span> {
+            <span class="rs-self">Self</span>::<span class="rs-type">Planning</span> { planner_task_id } =&gt; planner_task_id.as_ref(),
+            <span class="rs-self">Self</span>::<span class="rs-type">Running</span> { plan } =&gt; <span class="rs-type">Some</span>(&amp;plan.planner_task_id),
+            <span class="rs-self">Self</span>::<span class="rs-type">Closed</span> {
+                planner_task_id,
+                plan,
+                ..
+            } =&gt; <span class="rs-kw">match</span> plan {
+                <span class="rs-type">Some</span>(plan) =&gt; <span class="rs-type">Some</span>(&amp;plan.planner_task_id),
+                <span class="rs-type">None</span> =&gt; planner_task_id.as_ref(),
+            },
+        }
+    }
+</code></pre>
+</details></td></tr><tr id="method-materialized-plan-199"><td>method</td><td>materialized_plan</td><td><code>pub const fn <a class="symbol-link" href="eos-state--src-attempt-rs.html#method-materialized-plan-199">materialized_plan</a> (&amp; self) -&gt; Option &lt; &amp; <a class="symbol-link" href="eos-state--src-plan-rs.html#item-struct-MaterializedPlan-236">MaterializedPlan</a> &gt;</code><p class="docstring">Materialized plan, if this state owns one.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Materialized plan, if this state owns one.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-attempt-rs.html#method-materialized-plan-199">materialized_plan</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Option</span>&lt;&amp;<a class="symbol-link rs-type" href="eos-state--src-plan-rs.html#item-struct-MaterializedPlan-236">MaterializedPlan</a>&gt; {
+        <span class="rs-kw">match</span> <span class="rs-self">self</span> {
+            <span class="rs-self">Self</span>::<span class="rs-type">Planning</span> { .. } =&gt; <span class="rs-type">None</span>,
+            <span class="rs-self">Self</span>::<span class="rs-type">Running</span> { plan } =&gt; <span class="rs-type">Some</span>(plan),
+            <span class="rs-self">Self</span>::<span class="rs-type">Closed</span> { plan, .. } =&gt; <span class="rs-kw">match</span> plan {
+                <span class="rs-type">Some</span>(plan) =&gt; <span class="rs-type">Some</span>(plan),
+                <span class="rs-type">None</span> =&gt; <span class="rs-type">None</span>,
+            },
+        }
+    }
+</code></pre>
+</details></td></tr><tr id="method-closure-212"><td>method</td><td>closure</td><td><code>pub const fn <a class="symbol-link" href="eos-state--src-attempt-rs.html#method-closure-212">closure</a> (&amp; self) -&gt; Option &lt; &amp; <a class="symbol-link" href="eos-state--src-attempt-rs.html#item-enum-AttemptClosure-65">AttemptClosure</a> &gt;</code><p class="docstring">Terminal closure, if closed.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Terminal closure, if closed.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-attempt-rs.html#method-closure-212">closure</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Option</span>&lt;&amp;<a class="symbol-link rs-type" href="eos-state--src-attempt-rs.html#item-enum-AttemptClosure-65">AttemptClosure</a>&gt; {
+        <span class="rs-kw">match</span> <span class="rs-self">self</span> {
+            <span class="rs-self">Self</span>::<span class="rs-type">Closed</span> { closure, .. } =&gt; <span class="rs-type">Some</span>(closure),
+            <span class="rs-self">Self</span>::<span class="rs-type">Planning</span> { .. } | <span class="rs-self">Self</span>::<span class="rs-type">Running</span> { .. } =&gt; <span class="rs-type">None</span>,
+        }
+    }
+</code></pre>
+</details></td></tr></tbody></table>
+
   <p class="source">crates/eos-state/src/attempt.rs:137</p>
 </article></div>
 </section></div>
 </main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/eos-state/src/attempt.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-comment">//! `Attempt` DTO (horizontal-retry axis) and its enums.</span>
+<span class="rs-comment">//!</span>
+<span class="rs-comment">//! Ports the Attempt half of `workflow/_core/state.py`. An attempt is one</span>
+<span class="rs-comment">//! planner-authored plan (a DAG of generator + reducer tasks); the reducer set</span>
+<span class="rs-comment">//! is the exit gate.</span>
+
+<span class="rs-kw">use</span> schemars::<span class="rs-type">JsonSchema</span>;
+<span class="rs-kw">use</span> serde::{<span class="rs-type">Deserialize</span>, <span class="rs-type">Serialize</span>};
+
+<span class="rs-kw">use</span> eos_types::{<span class="rs-type">AttemptId</span>, <span class="rs-type">IterationId</span>, <span class="rs-type">TaskId</span>, <span class="rs-type">UtcDateTime</span>, <span class="rs-type">WorkflowId</span>};
+
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::outcomes::<a class="symbol-link rs-type" href="eos-state--src-outcomes-rs.html#item-struct-ExecutionTaskOutcome-67">ExecutionTaskOutcome</a>;
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::plan::{<a class="symbol-link rs-type" href="eos-state--src-plan-rs.html#item-struct-DeferredGoal-65">DeferredGoal</a>, <a class="symbol-link rs-type" href="eos-state--src-plan-rs.html#item-struct-MaterializedPlan-236">MaterializedPlan</a>};
+
+<span class="rs-comment">/// Stage of an [`Attempt`] (Rust `AttemptStage`).</span>
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">Copy</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Eq</span>, <span class="rs-type">Hash</span>, <span class="rs-type">Serialize</span>, <span class="rs-type">Deserialize</span>, <span class="rs-type">JsonSchema</span>)]
+#[serde(rename_all = &quot;snake_case&quot;)]
+<span class="rs-kw">pub</span> <span class="rs-kw">enum</span> <a class="symbol-link rs-type" href="eos-state--src-attempt-rs.html#item-enum-AttemptStage-15">AttemptStage</a> {
+    <span class="rs-comment">/// Planning the generator/reducer DAG.</span>
+    <span class="rs-type">Plan</span>,
+    <span class="rs-comment">/// Running the planned task set to quiescence.</span>
+    <span class="rs-type">Run</span>,
+    <span class="rs-comment">/// Closed (terminal).</span>
+    <span class="rs-type">Closed</span>,
+}
+
+<span class="rs-comment">/// Outcome status of an [`Attempt`] (Rust `AttemptStatus`).</span>
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">Copy</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Eq</span>, <span class="rs-type">Hash</span>, <span class="rs-type">Serialize</span>, <span class="rs-type">Deserialize</span>, <span class="rs-type">JsonSchema</span>)]
+#[serde(rename_all = &quot;snake_case&quot;)]
+<span class="rs-kw">pub</span> <span class="rs-kw">enum</span> <a class="symbol-link rs-type" href="eos-state--src-attempt-rs.html#item-enum-AttemptStatus-27">AttemptStatus</a> {
+    <span class="rs-comment">/// In progress.</span>
+    <span class="rs-type">Running</span>,
+    <span class="rs-comment">/// Passed (reducer gate satisfied).</span>
+    <span class="rs-type">Passed</span>,
+    <span class="rs-comment">/// Failed.</span>
+    <span class="rs-type">Failed</span>,
+    <span class="rs-comment">/// Cancelled before reaching a natural terminal.</span>
+    <span class="rs-type">Cancelled</span>,
+}
+
+<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-state--src-attempt-rs.html#item-enum-AttemptStatus-27">AttemptStatus</a> {
+    <span class="rs-comment">/// The canonical `snake_case` token (matches the `serde` wire form).</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-attempt-rs.html#method-as-str-42">as_str</a>(<span class="rs-self">self</span>) -&gt; &amp;&#x27;<span class="rs-kw">static</span> str {
+        <span class="rs-kw">match</span> <span class="rs-self">self</span> {
+            <span class="rs-self">Self</span>::<span class="rs-type">Running</span> =&gt; &quot;running&quot;,
+            <span class="rs-self">Self</span>::<span class="rs-type">Passed</span> =&gt; &quot;passed&quot;,
+            <span class="rs-self">Self</span>::<span class="rs-type">Failed</span> =&gt; &quot;failed&quot;,
+            <span class="rs-self">Self</span>::<span class="rs-type">Cancelled</span> =&gt; &quot;cancelled&quot;,
+        }
+    }
+}
+
+<span class="rs-comment">/// Why an attempt failed (Rust `AttemptFailReason`). Distinct from</span>
+<span class="rs-comment">/// `PlannerFailReason` (spec §6.10).</span>
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">Copy</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Eq</span>, <span class="rs-type">Hash</span>, <span class="rs-type">Serialize</span>, <span class="rs-type">Deserialize</span>, <span class="rs-type">JsonSchema</span>)]
+#[serde(rename_all = &quot;snake_case&quot;)]
+<span class="rs-kw">pub</span> <span class="rs-kw">enum</span> <a class="symbol-link rs-type" href="eos-state--src-attempt-rs.html#item-enum-AttemptFailReason-54">AttemptFailReason</a> {
+    <span class="rs-comment">/// A task in the plan failed.</span>
+    <span class="rs-type">TaskFailed</span>,
+    <span class="rs-comment">/// The attempt failed to start up.</span>
+    <span class="rs-type">StartupFailed</span>,
+}
+
+<span class="rs-comment">/// Terminal closure of an [`Attempt`].</span>
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Serialize</span>, <span class="rs-type">Deserialize</span>, <span class="rs-type">JsonSchema</span>)]
+#[serde(rename_all = &quot;snake_case&quot;)]
+<span class="rs-kw">pub</span> <span class="rs-kw">enum</span> <a class="symbol-link rs-type" href="eos-state--src-attempt-rs.html#item-enum-AttemptClosure-65">AttemptClosure</a> {
+    <span class="rs-comment">/// Reducer gate passed.</span>
+    <span class="rs-type">Passed</span> {
+        <span class="rs-comment">/// Recorded execution outcomes.</span>
+        outcomes: <span class="rs-type">Vec</span>&lt;<a class="symbol-link rs-type" href="eos-state--src-outcomes-rs.html#item-struct-ExecutionTaskOutcome-67">ExecutionTaskOutcome</a>&gt;,
+        <span class="rs-comment">/// Close timestamp.</span>
+        closed_at: <span class="rs-type">UtcDateTime</span>,
+    },
+    <span class="rs-comment">/// Attempt failed.</span>
+    <span class="rs-type">Failed</span> {
+        <span class="rs-comment">/// Required failure reason.</span>
+        reason: <a class="symbol-link rs-type" href="eos-state--src-attempt-rs.html#item-enum-AttemptFailReason-54">AttemptFailReason</a>,
+        <span class="rs-comment">/// Recorded execution outcomes.</span>
+        outcomes: <span class="rs-type">Vec</span>&lt;<a class="symbol-link rs-type" href="eos-state--src-outcomes-rs.html#item-struct-ExecutionTaskOutcome-67">ExecutionTaskOutcome</a>&gt;,
+        <span class="rs-comment">/// Close timestamp.</span>
+        closed_at: <span class="rs-type">UtcDateTime</span>,
+    },
+    <span class="rs-comment">/// Attempt was cancelled.</span>
+    <span class="rs-type">Cancelled</span> {
+        <span class="rs-comment">/// Cancellation reason.</span>
+        reason: <span class="rs-type">String</span>,
+        <span class="rs-comment">/// Recorded execution outcomes.</span>
+        outcomes: <span class="rs-type">Vec</span>&lt;<a class="symbol-link rs-type" href="eos-state--src-outcomes-rs.html#item-struct-ExecutionTaskOutcome-67">ExecutionTaskOutcome</a>&gt;,
+        <span class="rs-comment">/// Close timestamp.</span>
+        closed_at: <span class="rs-type">UtcDateTime</span>,
+    },
+}
+
+<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-state--src-attempt-rs.html#item-enum-AttemptClosure-65">AttemptClosure</a> {
+    <span class="rs-comment">/// Closure status.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-attempt-rs.html#method-status-97">status</a>(&amp;<span class="rs-self">self</span>) -&gt; <a class="symbol-link rs-type" href="eos-state--src-attempt-rs.html#item-enum-AttemptStatus-27">AttemptStatus</a> {
+        <span class="rs-kw">match</span> <span class="rs-self">self</span> {
+            <span class="rs-self">Self</span>::<span class="rs-type">Passed</span> { .. } =&gt; <a class="symbol-link rs-type" href="eos-state--src-attempt-rs.html#item-enum-AttemptStatus-27">AttemptStatus</a>::<span class="rs-type">Passed</span>,
+            <span class="rs-self">Self</span>::<span class="rs-type">Failed</span> { .. } =&gt; <a class="symbol-link rs-type" href="eos-state--src-attempt-rs.html#item-enum-AttemptStatus-27">AttemptStatus</a>::<span class="rs-type">Failed</span>,
+            <span class="rs-self">Self</span>::<span class="rs-type">Cancelled</span> { .. } =&gt; <a class="symbol-link rs-type" href="eos-state--src-attempt-rs.html#item-enum-AttemptStatus-27">AttemptStatus</a>::<span class="rs-type">Cancelled</span>,
+        }
+    }
+
+    <span class="rs-comment">/// Failure reason, if failed.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-attempt-rs.html#method-fail-reason-107">fail_reason</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-state--src-attempt-rs.html#item-enum-AttemptFailReason-54">AttemptFailReason</a>&gt; {
+        <span class="rs-kw">match</span> <span class="rs-self">self</span> {
+            <span class="rs-self">Self</span>::<span class="rs-type">Passed</span> { .. } | <span class="rs-self">Self</span>::<span class="rs-type">Cancelled</span> { .. } =&gt; <span class="rs-type">None</span>,
+            <span class="rs-self">Self</span>::<span class="rs-type">Failed</span> { reason, .. } =&gt; <span class="rs-type">Some</span>(*reason),
+        }
+    }
+
+    <span class="rs-comment">/// Recorded execution outcomes.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-attempt-rs.html#method-outcomes-116">outcomes</a>(&amp;<span class="rs-self">self</span>) -&gt; &amp;[<a class="symbol-link rs-type" href="eos-state--src-outcomes-rs.html#item-struct-ExecutionTaskOutcome-67">ExecutionTaskOutcome</a>] {
+        <span class="rs-kw">match</span> <span class="rs-self">self</span> {
+            <span class="rs-self">Self</span>::<span class="rs-type">Passed</span> { outcomes, .. }
+            | <span class="rs-self">Self</span>::<span class="rs-type">Failed</span> { outcomes, .. }
+            | <span class="rs-self">Self</span>::<span class="rs-type">Cancelled</span> { outcomes, .. } =&gt; outcomes,
+        }
+    }
+
+    <span class="rs-comment">/// Close timestamp.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-attempt-rs.html#method-closed-at-126">closed_at</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">UtcDateTime</span> {
+        <span class="rs-kw">match</span> <span class="rs-self">self</span> {
+            <span class="rs-self">Self</span>::<span class="rs-type">Passed</span> { closed_at, .. }
+            | <span class="rs-self">Self</span>::<span class="rs-type">Failed</span> { closed_at, .. }
+            | <span class="rs-self">Self</span>::<span class="rs-type">Cancelled</span> { closed_at, .. } =&gt; *closed_at,
+        }
+    }
+}
+
+<span class="rs-comment">/// Lifecycle state of an [`Attempt`].</span>
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Serialize</span>, <span class="rs-type">Deserialize</span>, <span class="rs-type">JsonSchema</span>)]
+#[serde(rename_all = &quot;snake_case&quot;)]
+<span class="rs-kw">pub</span> <span class="rs-kw">enum</span> <a class="symbol-link rs-type" href="eos-state--src-attempt-rs.html#item-enum-AttemptState-137">AttemptState</a> {
+    <span class="rs-comment">/// Planner task has not materialized a DAG yet.</span>
+    <span class="rs-type">Planning</span> {
+        <span class="rs-comment">/// Planner task assigned to this attempt, if PLAN has started.</span>
+        planner_task_id: <span class="rs-type">Option</span>&lt;<span class="rs-type">TaskId</span>&gt;,
+    },
+    <span class="rs-comment">/// Planner task has materialized the generator/reducer DAG.</span>
+    <span class="rs-type">Running</span> {
+        <span class="rs-comment">/// Materialized persisted plan.</span>
+        plan: <a class="symbol-link rs-type" href="eos-state--src-plan-rs.html#item-struct-MaterializedPlan-236">MaterializedPlan</a>,
+    },
+    <span class="rs-comment">/// Attempt is terminal.</span>
+    <span class="rs-type">Closed</span> {
+        <span class="rs-comment">/// Terminal closure.</span>
+        closure: <a class="symbol-link rs-type" href="eos-state--src-attempt-rs.html#item-enum-AttemptClosure-65">AttemptClosure</a>,
+        <span class="rs-comment">/// Planner task assigned before close when no materialized plan exists.</span>
+        planner_task_id: <span class="rs-type">Option</span>&lt;<span class="rs-type">TaskId</span>&gt;,
+        <span class="rs-comment">/// Materialized plan, when this attempt reached RUN before closing.</span>
+        plan: <span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-state--src-plan-rs.html#item-struct-MaterializedPlan-236">MaterializedPlan</a>&gt;,
+    },
+}
+
+<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-state--src-attempt-rs.html#item-enum-AttemptState-137">AttemptState</a> {
+    <span class="rs-comment">/// Persisted stage view derived from the state.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-attempt-rs.html#method-stage-163">stage</a>(&amp;<span class="rs-self">self</span>) -&gt; <a class="symbol-link rs-type" href="eos-state--src-attempt-rs.html#item-enum-AttemptStage-15">AttemptStage</a> {
+        <span class="rs-kw">match</span> <span class="rs-self">self</span> {
+            <span class="rs-self">Self</span>::<span class="rs-type">Planning</span> { .. } =&gt; <a class="symbol-link rs-type" href="eos-state--src-attempt-rs.html#item-enum-AttemptStage-15">AttemptStage</a>::<span class="rs-type">Plan</span>,
+            <span class="rs-self">Self</span>::<span class="rs-type">Running</span> { .. } =&gt; <a class="symbol-link rs-type" href="eos-state--src-attempt-rs.html#item-enum-AttemptStage-15">AttemptStage</a>::<span class="rs-type">Run</span>,
+            <span class="rs-self">Self</span>::<span class="rs-type">Closed</span> { .. } =&gt; <a class="symbol-link rs-type" href="eos-state--src-attempt-rs.html#item-enum-AttemptStage-15">AttemptStage</a>::<span class="rs-type">Closed</span>,
+        }
+    }
+
+    <span class="rs-comment">/// Persisted status view derived from the state.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-attempt-rs.html#method-status-97">status</a>(&amp;<span class="rs-self">self</span>) -&gt; <a class="symbol-link rs-type" href="eos-state--src-attempt-rs.html#item-enum-AttemptStatus-27">AttemptStatus</a> {
+        <span class="rs-kw">match</span> <span class="rs-self">self</span> {
+            <span class="rs-self">Self</span>::<span class="rs-type">Planning</span> { .. } | <span class="rs-self">Self</span>::<span class="rs-type">Running</span> { .. } =&gt; <a class="symbol-link rs-type" href="eos-state--src-attempt-rs.html#item-enum-AttemptStatus-27">AttemptStatus</a>::<span class="rs-type">Running</span>,
+            <span class="rs-self">Self</span>::<span class="rs-type">Closed</span> { closure, .. } =&gt; closure.<a class="symbol-link rs-fn" href="eos-state--src-attempt-rs.html#method-status-97">status</a>(),
+        }
+    }
+
+    <span class="rs-comment">/// Planner task id, if one is known in this state.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-attempt-rs.html#method-planner-task-id-182">planner_task_id</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Option</span>&lt;&amp;<span class="rs-type">TaskId</span>&gt; {
+        <span class="rs-kw">match</span> <span class="rs-self">self</span> {
+            <span class="rs-self">Self</span>::<span class="rs-type">Planning</span> { planner_task_id } =&gt; planner_task_id.as_ref(),
+            <span class="rs-self">Self</span>::<span class="rs-type">Running</span> { plan } =&gt; <span class="rs-type">Some</span>(&amp;plan.planner_task_id),
+            <span class="rs-self">Self</span>::<span class="rs-type">Closed</span> {
+                planner_task_id,
+                plan,
+                ..
+            } =&gt; <span class="rs-kw">match</span> plan {
+                <span class="rs-type">Some</span>(plan) =&gt; <span class="rs-type">Some</span>(&amp;plan.planner_task_id),
+                <span class="rs-type">None</span> =&gt; planner_task_id.as_ref(),
+            },
+        }
+    }
+
+    <span class="rs-comment">/// Materialized plan, if this state owns one.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-attempt-rs.html#method-materialized-plan-199">materialized_plan</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Option</span>&lt;&amp;<a class="symbol-link rs-type" href="eos-state--src-plan-rs.html#item-struct-MaterializedPlan-236">MaterializedPlan</a>&gt; {
+        <span class="rs-kw">match</span> <span class="rs-self">self</span> {
+            <span class="rs-self">Self</span>::<span class="rs-type">Planning</span> { .. } =&gt; <span class="rs-type">None</span>,
+            <span class="rs-self">Self</span>::<span class="rs-type">Running</span> { plan } =&gt; <span class="rs-type">Some</span>(plan),
+            <span class="rs-self">Self</span>::<span class="rs-type">Closed</span> { plan, .. } =&gt; <span class="rs-kw">match</span> plan {
+                <span class="rs-type">Some</span>(plan) =&gt; <span class="rs-type">Some</span>(plan),
+                <span class="rs-type">None</span> =&gt; <span class="rs-type">None</span>,
+            },
+        }
+    }
+
+    <span class="rs-comment">/// Terminal closure, if closed.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-attempt-rs.html#method-closure-212">closure</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Option</span>&lt;&amp;<a class="symbol-link rs-type" href="eos-state--src-attempt-rs.html#item-enum-AttemptClosure-65">AttemptClosure</a>&gt; {
+        <span class="rs-kw">match</span> <span class="rs-self">self</span> {
+            <span class="rs-self">Self</span>::<span class="rs-type">Closed</span> { closure, .. } =&gt; <span class="rs-type">Some</span>(closure),
+            <span class="rs-self">Self</span>::<span class="rs-type">Planning</span> { .. } | <span class="rs-self">Self</span>::<span class="rs-type">Running</span> { .. } =&gt; <span class="rs-type">None</span>,
+        }
+    }
+}
+
+<span class="rs-comment">/// Immutable view of a persisted Attempt (Rust `state.py:Attempt`).</span>
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Serialize</span>, <span class="rs-type">Deserialize</span>, <span class="rs-type">JsonSchema</span>)]
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-state--src-attempt-rs.html#item-struct-Attempt-222">Attempt</a> {
+    <span class="rs-comment">/// Attempt identifier.</span>
+    <span class="rs-kw">pub</span> id: <span class="rs-type">AttemptId</span>,
+    <span class="rs-comment">/// Owning iteration.</span>
+    <span class="rs-kw">pub</span> iteration_id: <span class="rs-type">IterationId</span>,
+    <span class="rs-comment">/// Owning workflow.</span>
+    <span class="rs-kw">pub</span> workflow_id: <span class="rs-type">WorkflowId</span>,
+    <span class="rs-comment">/// Monotonic per-iteration sequence number (unique).</span>
+    <span class="rs-kw">pub</span> attempt_sequence_no: i64,
+    <span class="rs-comment">/// Lifecycle state.</span>
+    <span class="rs-kw">pub</span> state: <a class="symbol-link rs-type" href="eos-state--src-attempt-rs.html#item-enum-AttemptState-137">AttemptState</a>,
+    <span class="rs-comment">/// Creation timestamp.</span>
+    <span class="rs-kw">pub</span> created_at: <span class="rs-type">UtcDateTime</span>,
+    <span class="rs-comment">/// Last-update timestamp.</span>
+    <span class="rs-kw">pub</span> updated_at: <span class="rs-type">UtcDateTime</span>,
+}
+
+<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-state--src-attempt-rs.html#item-struct-Attempt-222">Attempt</a> {
+    <span class="rs-comment">/// Persisted stage view.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-attempt-rs.html#method-stage-163">stage</a>(&amp;<span class="rs-self">self</span>) -&gt; <a class="symbol-link rs-type" href="eos-state--src-attempt-rs.html#item-enum-AttemptStage-15">AttemptStage</a> {
+        <span class="rs-self">self</span>.state.<a class="symbol-link rs-fn" href="eos-state--src-attempt-rs.html#method-stage-163">stage</a>()
+    }
+
+    <span class="rs-comment">/// Persisted status view.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-attempt-rs.html#method-status-97">status</a>(&amp;<span class="rs-self">self</span>) -&gt; <a class="symbol-link rs-type" href="eos-state--src-attempt-rs.html#item-enum-AttemptStatus-27">AttemptStatus</a> {
+        <span class="rs-self">self</span>.state.<a class="symbol-link rs-fn" href="eos-state--src-attempt-rs.html#method-status-97">status</a>()
+    }
+
+    <span class="rs-comment">/// Whether the attempt has reached the closed stage.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-attempt-rs.html#method-is-closed-254">is_closed</a>(&amp;<span class="rs-self">self</span>) -&gt; bool {
+        matches!(<span class="rs-self">self</span>.state, <a class="symbol-link rs-type" href="eos-state--src-attempt-rs.html#item-enum-AttemptState-137">AttemptState</a>::<span class="rs-type">Closed</span> { .. })
+    }
+
+    <span class="rs-comment">/// Planner task id, if one is known.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-attempt-rs.html#method-planner-task-id-182">planner_task_id</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Option</span>&lt;&amp;<span class="rs-type">TaskId</span>&gt; {
+        <span class="rs-self">self</span>.state.<a class="symbol-link rs-fn" href="eos-state--src-attempt-rs.html#method-planner-task-id-182">planner_task_id</a>()
+    }
+
+    <span class="rs-comment">/// Project the resolved plan, if one has been recorded.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-attempt-rs.html#method-materialized-plan-199">materialized_plan</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Option</span>&lt;&amp;<a class="symbol-link rs-type" href="eos-state--src-plan-rs.html#item-struct-MaterializedPlan-236">MaterializedPlan</a>&gt; {
+        <span class="rs-self">self</span>.state.<a class="symbol-link rs-fn" href="eos-state--src-attempt-rs.html#method-materialized-plan-199">materialized_plan</a>()
+    }
+
+    <span class="rs-comment">/// Generator task ids in the materialized plan.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-attempt-rs.html#method-generator-task-ids-272">generator_task_ids</a>(&amp;<span class="rs-self">self</span>) -&gt; &amp;[<span class="rs-type">TaskId</span>] {
+        <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-state--src-attempt-rs.html#method-materialized-plan-199">materialized_plan</a>()
+            .map_or(&amp;[], |plan| plan.generator_task_ids.as_slice())
+    }
+
+    <span class="rs-comment">/// Reducer task ids in the materialized plan.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-attempt-rs.html#method-reducer-task-ids-279">reducer_task_ids</a>(&amp;<span class="rs-self">self</span>) -&gt; &amp;[<span class="rs-type">TaskId</span>] {
+        <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-state--src-attempt-rs.html#method-materialized-plan-199">materialized_plan</a>()
+            .map_or(&amp;[], |plan| plan.reducer_task_ids.as_slice())
+    }
+
+    <span class="rs-comment">/// Deferred goal carried by the materialized plan.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-attempt-rs.html#method-deferred-goal-for-next-iteration-286">deferred_goal_for_next_iteration</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Option</span>&lt;&amp;<a class="symbol-link rs-type" href="eos-state--src-plan-rs.html#item-struct-DeferredGoal-65">DeferredGoal</a>&gt; {
+        <span class="rs-kw">match</span> <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-state--src-attempt-rs.html#method-materialized-plan-199">materialized_plan</a>() {
+            <span class="rs-type">Some</span>(plan) =&gt; plan.<a class="symbol-link rs-fn" href="eos-state--src-plan-rs.html#method-deferred-goal-158">deferred_goal</a>(),
+            <span class="rs-type">None</span> =&gt; <span class="rs-type">None</span>,
+        }
+    }
+
+    <span class="rs-comment">/// Terminal closure, if closed.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-attempt-rs.html#method-closure-212">closure</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Option</span>&lt;&amp;<a class="symbol-link rs-type" href="eos-state--src-attempt-rs.html#item-enum-AttemptClosure-65">AttemptClosure</a>&gt; {
+        <span class="rs-self">self</span>.state.<a class="symbol-link rs-fn" href="eos-state--src-attempt-rs.html#method-closure-212">closure</a>()
+    }
+
+    <span class="rs-comment">/// Failure reason, if failed.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-attempt-rs.html#method-fail-reason-107">fail_reason</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-state--src-attempt-rs.html#item-enum-AttemptFailReason-54">AttemptFailReason</a>&gt; {
+        <span class="rs-kw">match</span> <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-state--src-attempt-rs.html#method-closure-212">closure</a>() {
+            <span class="rs-type">Some</span>(closure) =&gt; closure.<a class="symbol-link rs-fn" href="eos-state--src-attempt-rs.html#method-fail-reason-107">fail_reason</a>(),
+            <span class="rs-type">None</span> =&gt; <span class="rs-type">None</span>,
+        }
+    }
+
+    <span class="rs-comment">/// Close timestamp, if closed.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-attempt-rs.html#method-closed-at-126">closed_at</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Option</span>&lt;<span class="rs-type">UtcDateTime</span>&gt; {
+        <span class="rs-kw">match</span> <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-state--src-attempt-rs.html#method-closure-212">closure</a>() {
+            <span class="rs-type">Some</span>(closure) =&gt; <span class="rs-type">Some</span>(closure.<a class="symbol-link rs-fn" href="eos-state--src-attempt-rs.html#method-closed-at-126">closed_at</a>()),
+            <span class="rs-type">None</span> =&gt; <span class="rs-type">None</span>,
+        }
+    }
+
+    <span class="rs-comment">/// Recorded execution outcomes (pre-normalized at the `eos-db` boundary).</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-attempt-rs.html#method-outcomes-116">outcomes</a>(&amp;<span class="rs-self">self</span>) -&gt; &amp;[<a class="symbol-link rs-type" href="eos-state--src-outcomes-rs.html#item-struct-ExecutionTaskOutcome-67">ExecutionTaskOutcome</a>] {
+        <span class="rs-kw">match</span> <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-state--src-attempt-rs.html#method-closure-212">closure</a>() {
+            <span class="rs-type">Some</span>(closure) =&gt; closure.<a class="symbol-link rs-fn" href="eos-state--src-attempt-rs.html#method-outcomes-116">outcomes</a>(),
+            <span class="rs-type">None</span> =&gt; &amp;[],
+        }
+    }
+}
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
   <script src="../assets/inventory.js"></script>
 </body>
 </html>

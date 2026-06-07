@@ -8,8 +8,16 @@
 </head>
 <body>
   <header>
-    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
-    <h1>eos-llm-client File Inventory</h1>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>eos-llm-client File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS/agent-core &amp;&amp; cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
   </header>
   <a class="back-link" href="../index.html">agent-core</a>
 <section class="summary">
@@ -50,6 +58,25 @@
   <div class="items"></div>
 </section></div>
 </main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/eos-llm-client/src/clients/mod.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-comment">//! Concrete provider clients.</span>
+
+<span class="rs-kw">mod</span> anthropic_api_client;
+<span class="rs-kw">mod</span> claude_coding_plan;
+<span class="rs-kw">mod</span> codex_coding_plan;
+<span class="rs-kw">mod</span> openai_api_client;
+
+<span class="rs-kw">pub</span> <span class="rs-kw">use</span> anthropic_api_client::<a class="symbol-link rs-type" href="eos-llm-client--src-clients-anthropic-api-client-rs.html#item-struct-AnthropicApiClient-41">AnthropicApiClient</a>;
+<span class="rs-kw">pub</span> <span class="rs-kw">use</span> claude_coding_plan::<a class="symbol-link rs-type" href="eos-llm-client--src-clients-claude-coding-plan-rs.html#item-struct-ClaudeCodingPlanClient-23">ClaudeCodingPlanClient</a>;
+<span class="rs-kw">pub</span> <span class="rs-kw">use</span> codex_coding_plan::<a class="symbol-link rs-type" href="eos-llm-client--src-clients-codex-coding-plan-rs.html#item-struct-CodexCodingPlanClient-19">CodexCodingPlanClient</a>;
+<span class="rs-kw">pub</span> <span class="rs-kw">use</span> openai_api_client::<a class="symbol-link rs-type" href="eos-llm-client--src-clients-openai-api-client-rs.html#item-struct-OpenAiApiClient-37">OpenAiApiClient</a>;
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
   <script src="../assets/inventory.js"></script>
 </body>
 </html>

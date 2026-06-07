@@ -8,8 +8,16 @@
 </head>
 <body>
   <header>
-    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
-    <h1>eos-types File Inventory</h1>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>eos-types File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS/agent-core &amp;&amp; cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
   </header>
   <a class="back-link" href="../index.html">agent-core</a>
 <section class="summary">
@@ -47,59 +55,472 @@
       <span>0 methods</span>
     </div>
   </div>
-  <div class="items"><div class="group-label">Standalone Functions</div><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn id_serde_transparent_single_key private fn id_serde_transparent_single_key () crates/eos-types/src/ids.rs  ">
+  <div class="items"><div class="group-label">Standalone Functions</div><article id="item-fn-id-serde-transparent-single-key-234" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn id_serde_transparent_single_key private fn id_serde_transparent_single_key () crates/eos-types/src/ids.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>id_serde_transparent_single_key</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn id_serde_transparent_single_key ()</code>
-  <div class="tags"></div>
+  <code class="signature">fn <a class="symbol-link" href="eos-types--src-ids-rs.html#item-fn-id-serde-transparent-single-key-234">id_serde_transparent_single_key</a> ()</code>
+  <div class="tags"><span>test</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-types--src-ids-rs.html#item-fn-id-serde-transparent-single-key-234">id_serde_transparent_single_key</a>() {
+        <span class="rs-kw">let</span> id: <span class="rs-type">TaskId</span> = &quot;t1&quot;.parse().unwrap();
+        assert_eq!(serde_json::to_value(&amp;id).unwrap(), serde_json::json!(&quot;t1&quot;));
+        <span class="rs-kw">let</span> back: <span class="rs-type">TaskId</span> = serde_json::from_value(serde_json::json!(&quot;t1&quot;)).unwrap();
+        assert_eq!(back, id);
+
+        #[derive(serde::<span class="rs-type">Serialize</span>)]
+        <span class="rs-kw">struct</span> <span class="rs-type">Row</span> {
+            id: <span class="rs-type">TaskId</span>,
+        }
+        <span class="rs-kw">let</span> row = serde_json::to_value(<span class="rs-type">Row</span> {
+            id: &quot;t1&quot;.parse().unwrap(),
+        })
+        .unwrap();
+        assert_eq!(row, serde_json::json!({ &quot;id&quot;: &quot;t1&quot; }));
+        <span class="rs-comment">// The id appears under exactly one key (no `id` + `task_id` duplication).</span>
+        assert_eq!(row.as_object().unwrap().len(), 1);
+    }
+</code></pre>
+</details>
 
   <p class="source">crates/eos-types/src/ids.rs:234</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn try_from_and_parse_agree private fn try_from_and_parse_agree () crates/eos-types/src/ids.rs  ">
+</article><article id="item-fn-try-from-and-parse-agree-254" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn try_from_and_parse_agree private fn try_from_and_parse_agree () crates/eos-types/src/ids.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>try_from_and_parse_agree</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn try_from_and_parse_agree ()</code>
-  <div class="tags"></div>
+  <code class="signature">fn <a class="symbol-link" href="eos-types--src-ids-rs.html#item-fn-try-from-and-parse-agree-254">try_from_and_parse_agree</a> ()</code>
+  <div class="tags"><span>test</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-types--src-ids-rs.html#item-fn-try-from-and-parse-agree-254">try_from_and_parse_agree</a>() {
+        <span class="rs-kw">let</span> a: <span class="rs-type">TaskId</span> = &quot;x&quot;.parse().unwrap();
+        <span class="rs-kw">let</span> b = <span class="rs-type">TaskId</span>::try_from(&quot;x&quot;).unwrap();
+        <span class="rs-kw">let</span> c = <span class="rs-type">TaskId</span>::try_from(<span class="rs-type">String</span>::from(&quot;x&quot;)).unwrap();
+        assert_eq!(a, b);
+        assert_eq!(b, c);
+        assert_eq!(a.as_str(), &quot;x&quot;);
+        assert_eq!(a.<a class="symbol-link rs-fn" href="eos-types--src-time-rs.html#method-into-inner-68">into_inner</a>(), <span class="rs-type">String</span>::from(&quot;x&quot;));
+    }
+</code></pre>
+</details>
 
   <p class="source">crates/eos-types/src/ids.rs:254</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn try_from_error_type_is_core_error private fn try_from_error_type_is_core_error () crates/eos-types/src/ids.rs  ">
+</article><article id="item-fn-try-from-error-type-is-core-error-265" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn try_from_error_type_is_core_error private fn try_from_error_type_is_core_error () crates/eos-types/src/ids.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>try_from_error_type_is_core_error</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn try_from_error_type_is_core_error ()</code>
-  <div class="tags"></div>
+  <code class="signature">fn <a class="symbol-link" href="eos-types--src-ids-rs.html#item-fn-try-from-error-type-is-core-error-265">try_from_error_type_is_core_error</a> ()</code>
+  <div class="tags"><span>test</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-types--src-ids-rs.html#item-fn-try-from-error-type-is-core-error-265">try_from_error_type_is_core_error</a>() {
+        <span class="rs-comment">// The named contract is `TryFrom&lt;_, Error = CoreError&gt;` — assert the</span>
+        <span class="rs-comment">// associated error type, not the std blanket `Infallible`.</span>
+        <span class="rs-kw">fn</span> assert_core_error&lt;<span class="rs-type">T</span>&gt;()
+        <span class="rs-kw">where</span>
+            <span class="rs-type">T</span>: <span class="rs-type">TryFrom</span>&lt;&amp;&#x27;<span class="rs-kw">static</span> str, <span class="rs-type">Error</span> = <span class="rs-kw">crate</span>::error::<a class="symbol-link rs-type" href="eos-types.html#item-enum-CoreError-9">CoreError</a>&gt;,
+        {
+        }
+        assert_core_error::&lt;<span class="rs-type">TaskId</span>&gt;();
+    }
+</code></pre>
+</details>
 
   <p class="source">crates/eos-types/src/ids.rs:265</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn new_v4_is_a_dashed_uuid private fn new_v4_is_a_dashed_uuid () crates/eos-types/src/ids.rs  ">
+</article><article id="item-fn-new-v4-is-a-dashed-uuid-277" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn new_v4_is_a_dashed_uuid private fn new_v4_is_a_dashed_uuid () crates/eos-types/src/ids.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>new_v4_is_a_dashed_uuid</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn new_v4_is_a_dashed_uuid ()</code>
-  <div class="tags"></div>
+  <code class="signature">fn <a class="symbol-link" href="eos-types--src-ids-rs.html#item-fn-new-v4-is-a-dashed-uuid-277">new_v4_is_a_dashed_uuid</a> ()</code>
+  <div class="tags"><span>test</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-types--src-ids-rs.html#item-fn-new-v4-is-a-dashed-uuid-277">new_v4_is_a_dashed_uuid</a>() {
+        <span class="rs-kw">let</span> id = <span class="rs-type">RequestId</span>::new_v4();
+        <span class="rs-comment">// 8-4-4-4-12 dashed form, parses back as a uuid.</span>
+        assert!(uuid::<span class="rs-type">Uuid</span>::parse_str(id.as_str()).is_ok());
+        assert_eq!(id.as_str().len(), 36);
+    }
+</code></pre>
+</details>
 
   <p class="source">crates/eos-types/src/ids.rs:277</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn json_schema_ids_are_strings private fn json_schema_ids_are_strings () crates/eos-types/src/ids.rs  ">
+</article><article id="item-fn-json-schema-ids-are-strings-286" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn json_schema_ids_are_strings private fn json_schema_ids_are_strings () crates/eos-types/src/ids.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>json_schema_ids_are_strings</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn json_schema_ids_are_strings ()</code>
-  <div class="tags"></div>
+  <code class="signature">fn <a class="symbol-link" href="eos-types--src-ids-rs.html#item-fn-json-schema-ids-are-strings-286">json_schema_ids_are_strings</a> ()</code>
+  <div class="tags"><span>test</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-types--src-ids-rs.html#item-fn-json-schema-ids-are-strings-286">json_schema_ids_are_strings</a>() {
+        macro_rules! assert_string_schema {
+            ($ty:ty) =&gt; {{
+                <span class="rs-kw">let</span> schema = serde_json::to_value(schemars::schema_for!($ty)).unwrap();
+                assert_eq!(
+                    schema[&quot;<span class="rs-kw">type</span>&quot;],
+                    serde_json::json!(&quot;string&quot;),
+                    &quot;{}&quot;,
+                    stringify!($ty)
+                );
+            }};
+        }
+        assert_string_schema!(<span class="rs-type">RequestId</span>);
+        assert_string_schema!(<span class="rs-type">TaskId</span>);
+        assert_string_schema!(<span class="rs-type">WorkflowId</span>);
+        assert_string_schema!(<span class="rs-type">IterationId</span>);
+        assert_string_schema!(<span class="rs-type">AttemptId</span>);
+        assert_string_schema!(<span class="rs-type">AgentRunId</span>);
+        assert_string_schema!(<span class="rs-type">SandboxId</span>);
+        assert_string_schema!(<span class="rs-type">ToolUseId</span>);
+        assert_string_schema!(<span class="rs-type">InvocationId</span>);
+        assert_string_schema!(<span class="rs-type">WorkflowSessionId</span>);
+        assert_string_schema!(<span class="rs-type">CommandSessionId</span>);
+        assert_string_schema!(<span class="rs-type">SubagentSessionId</span>);
+    }
+</code></pre>
+</details>
 
   <p class="source">crates/eos-types/src/ids.rs:286</p>
 </article></div>
 </section></div>
 </main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/eos-types/src/ids.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-comment">//! The twelve cross-cutting typed string identifiers.</span>
+<span class="rs-comment">//!</span>
+<span class="rs-comment">//! Each is a `#[repr(transparent)]` newtype over `Arc&lt;str&gt;` (the Rust IDs are</span>
+<span class="rs-comment">//! `UUIDv4` strings and prefixed strings such as `root-&lt;hex16&gt;`, so the inner</span>
+<span class="rs-comment">//! type is a string slice, never an integer — hence not `Copy`). `Arc&lt;str&gt;`</span>
+<span class="rs-comment">//! makes the pervasive id clones across the control plane O(1) atomic refcount</span>
+<span class="rs-comment">//! bumps rather than heap allocations, while keeping the value immutable after</span>
+<span class="rs-comment">//! mint. All are generated by the `pub(crate)` [`define_id!`] codegen helper</span>
+<span class="rs-comment">//! (DRY); it is an internal helper, not a public extension point, and is not</span>
+<span class="rs-comment">//! re-exported.</span>
+
+<span class="rs-comment">/// Generate a transparent string-newtype identifier with the standard surface:</span>
+<span class="rs-comment">/// `Display`/`FromStr`, `TryFrom&lt;String&gt;`/`TryFrom&lt;&amp;str&gt;` (parse-don't-validate,</span>
+<span class="rs-comment">/// `Error = CoreError`), transparent serde, `JsonSchema`, `as_str`,</span>
+<span class="rs-comment">/// `into_inner`, and (with the `mint` keyword) `new_v4`.</span>
+<span class="rs-comment">///</span>
+<span class="rs-comment">/// `Display` writes the bare inner string (no `kind:` prefix) so</span>
+<span class="rs-comment">/// `id.to_string().parse() == Ok(id)` is lossless and DB/JSON columns stay</span>
+<span class="rs-comment">/// byte-identical to the Rust strings. The non-empty invariant is enforced on</span>
+<span class="rs-comment">/// every fallible construction path (`FromStr`/`TryFrom`) via</span>
+<span class="rs-comment">/// [`CoreError::EmptyId`](crate::CoreError::EmptyId).</span>
+macro_rules! define_id {
+    ($(#[$meta:meta])* $name:ident, mint) =&gt; {
+        define_id!(@core $(#[$meta])* $name);
+        <span class="rs-kw">impl</span> $name {
+            <span class="rs-comment">/// Mint a fresh dashed `UUIDv4`-backed identifier. The runtime's</span>
+            <span class="rs-comment">/// prefixed mints (`root-{request_id}`, `uuid4().hex[:16]`,</span>
+            <span class="rs-comment">/// `subagent_&lt;counter&gt;`) are produced by the owning crate, not by</span>
+            <span class="rs-comment">/// this generic helper.</span>
+            #[must_use]
+            <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> new_v4() -&gt; <span class="rs-self">Self</span> {
+                <span class="rs-self">Self</span>(::uuid::<span class="rs-type">Uuid</span>::new_v4().to_string().into())
+            }
+        }
+    };
+    ($(#[$meta:meta])* $name:ident, no_mint) =&gt; {
+        define_id!(@core $(#[$meta])* $name);
+    };
+    (@core $(#[$meta:meta])* $name:ident) =&gt; {
+        $(#[$meta])*
+        #[repr(transparent)]
+        #[derive(
+            <span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Eq</span>, <span class="rs-type">Hash</span>, <span class="rs-type">PartialOrd</span>, <span class="rs-type">Ord</span>,
+            ::serde::<span class="rs-type">Serialize</span>, ::serde::<span class="rs-type">Deserialize</span>, ::schemars::<span class="rs-type">JsonSchema</span>,
+        )]
+        #[serde(transparent)]
+        <span class="rs-kw">pub</span> <span class="rs-kw">struct</span> $name(::std::sync::<span class="rs-type">Arc</span>&lt;str&gt;);
+
+        <span class="rs-kw">impl</span> $name {
+            <span class="rs-comment">/// Borrow the identifier as a string slice.</span>
+            #[must_use]
+            <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> as_str(&amp;<span class="rs-self">self</span>) -&gt; &amp;str {
+                &amp;<span class="rs-self">self</span>.0
+            }
+
+            <span class="rs-comment">/// Consume the identifier, returning an owned `String` copy of the</span>
+            <span class="rs-comment">/// inner slice.</span>
+            #[must_use]
+            <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-types--src-time-rs.html#method-into-inner-68">into_inner</a>(<span class="rs-self">self</span>) -&gt; <span class="rs-type">String</span> {
+                <span class="rs-self">self</span>.0.as_ref().to_owned()
+            }
+        }
+
+        <span class="rs-kw">impl</span> ::core::fmt::<span class="rs-type">Display</span> <span class="rs-kw">for</span> $name {
+            <span class="rs-kw">fn</span> fmt(&amp;<span class="rs-self">self</span>, f: &amp;<span class="rs-kw">mut</span> ::core::fmt::<span class="rs-type">Formatter</span>&lt;&#x27;_&gt;) -&gt; ::core::fmt::<span class="rs-type">Result</span> {
+                f.write_str(&amp;<span class="rs-self">self</span>.0)
+            }
+        }
+
+        <span class="rs-kw">impl</span> ::core::str::<span class="rs-type">FromStr</span> <span class="rs-kw">for</span> $name {
+            <span class="rs-kw">type</span> <span class="rs-type">Err</span> = $<span class="rs-kw">crate</span>::error::<a class="symbol-link rs-type" href="eos-types.html#item-enum-CoreError-9">CoreError</a>;
+            <span class="rs-kw">fn</span> from_str(s: &amp;str) -&gt; ::core::result::<span class="rs-type">Result</span>&lt;<span class="rs-self">Self</span>, <span class="rs-self">Self</span>::<span class="rs-type">Err</span>&gt; {
+                <span class="rs-kw">if</span> s.is_empty() {
+                    <span class="rs-kw">return</span> ::core::result::<span class="rs-type">Result</span>::<span class="rs-type">Err</span>(
+                        $<span class="rs-kw">crate</span>::error::<a class="symbol-link rs-type" href="eos-types.html#item-enum-CoreError-9">CoreError</a>::<span class="rs-type">EmptyId</span> { kind: stringify!($name) },
+                    );
+                }
+                ::core::result::<span class="rs-type">Result</span>::<span class="rs-type">Ok</span>(<span class="rs-self">Self</span>(::std::sync::<span class="rs-type">Arc</span>::from(s)))
+            }
+        }
+
+        <span class="rs-kw">impl</span> ::core::convert::<span class="rs-type">TryFrom</span>&lt;<span class="rs-type">String</span>&gt; <span class="rs-kw">for</span> $name {
+            <span class="rs-kw">type</span> <span class="rs-type">Error</span> = $<span class="rs-kw">crate</span>::error::<a class="symbol-link rs-type" href="eos-types.html#item-enum-CoreError-9">CoreError</a>;
+            <span class="rs-kw">fn</span> try_from(s: <span class="rs-type">String</span>) -&gt; ::core::result::<span class="rs-type">Result</span>&lt;<span class="rs-self">Self</span>, <span class="rs-self">Self</span>::<span class="rs-type">Error</span>&gt; {
+                s.parse()
+            }
+        }
+
+        <span class="rs-kw">impl</span> ::core::convert::<span class="rs-type">TryFrom</span>&lt;&amp;str&gt; <span class="rs-kw">for</span> $name {
+            <span class="rs-kw">type</span> <span class="rs-type">Error</span> = $<span class="rs-kw">crate</span>::error::<a class="symbol-link rs-type" href="eos-types.html#item-enum-CoreError-9">CoreError</a>;
+            <span class="rs-kw">fn</span> try_from(s: &amp;str) -&gt; ::core::result::<span class="rs-type">Result</span>&lt;<span class="rs-self">Self</span>, <span class="rs-self">Self</span>::<span class="rs-type">Error</span>&gt; {
+                s.parse()
+            }
+        }
+    };
+}
+
+define_id!(
+    <span class="rs-comment">/// Identifier for a request row. Minted as `str(uuid.uuid4())` in</span>
+    <span class="rs-comment">/// `runtime/entry.py`; `new_v4` reproduces that dashed `UUIDv4` shape exactly.</span>
+    <span class="rs-type">RequestId</span>,
+    mint
+);
+define_id!(
+    <span class="rs-comment">/// Identifier for a persisted Task row. Opaque string; the root mint is</span>
+    <span class="rs-comment">/// `root-{request_id}` (derived by the owning `eos-runtime` crate from the</span>
+    <span class="rs-comment">/// injected request id, not `new_v4`).</span>
+    <span class="rs-type">TaskId</span>,
+    mint
+);
+define_id!(
+    <span class="rs-comment">/// Identifier for a delegated Workflow row.</span>
+    <span class="rs-type">WorkflowId</span>,
+    mint
+);
+define_id!(
+    <span class="rs-comment">/// Identifier for an Iteration row.</span>
+    <span class="rs-type">IterationId</span>,
+    mint
+);
+define_id!(
+    <span class="rs-comment">/// Identifier for an Attempt row.</span>
+    <span class="rs-type">AttemptId</span>,
+    mint
+);
+define_id!(
+    <span class="rs-comment">/// Identifier for an agent run (engine agent factory).</span>
+    <span class="rs-type">AgentRunId</span>,
+    mint
+);
+define_id!(
+    <span class="rs-comment">/// Identifier for a provisioned sandbox.</span>
+    <span class="rs-type">SandboxId</span>,
+    mint
+);
+define_id!(
+    <span class="rs-comment">/// Identifier for a single tool use. Model-assigned by the provider stream,</span>
+    <span class="rs-comment">/// so it has no local `new_v4` mint — minting one would be a bug.</span>
+    <span class="rs-type">ToolUseId</span>,
+    no_mint
+);
+define_id!(
+    <span class="rs-comment">/// Identifier for a sandbox tool-call invocation (tool dispatch).</span>
+    <span class="rs-type">InvocationId</span>,
+    mint
+);
+define_id!(
+    <span class="rs-comment">/// Identifier for an engine background workflow-handle session — the</span>
+    <span class="rs-comment">/// agent-facing `wf_&lt;counter&gt;` handle for one delegated workflow (distinct</span>
+    <span class="rs-comment">/// from `WorkflowId`, which it tracks). Named for consistency with</span>
+    <span class="rs-comment">/// `CommandSessionId`/`SubagentSessionId`; the model-facing tool param keeps</span>
+    <span class="rs-comment">/// the name `workflow_task_id` for tool-contract parity.</span>
+    <span class="rs-type">WorkflowSessionId</span>,
+    mint
+);
+define_id!(
+    <span class="rs-comment">/// Identifier for a sandbox command-session tool handle.</span>
+    <span class="rs-type">CommandSessionId</span>,
+    mint
+);
+define_id!(
+    <span class="rs-comment">/// Identifier for an engine subagent supervisor session. The runtime mint is</span>
+    <span class="rs-comment">/// `subagent_&lt;counter&gt;`; `new_v4` is the generic helper, not that shape.</span>
+    <span class="rs-type">SubagentSessionId</span>,
+    mint
+);
+
+#[cfg(test)]
+<span class="rs-kw">mod</span> tests {
+    #![allow(clippy::unwrap_used)] <span class="rs-comment">// unwrap is permitted in tests (err-no-unwrap-prod)</span>
+    <span class="rs-kw">use</span> <span class="rs-kw">super</span>::*;
+    <span class="rs-kw">use</span> std::str::<span class="rs-type">FromStr</span>;
+
+    <span class="rs-comment">// AC-types-01: Display/FromStr roundtrip for every id, over arbitrary</span>
+    <span class="rs-comment">// non-empty strings (proptest) plus the `UUIDv4` and `root-…` shapes; empty</span>
+    <span class="rs-comment">// input is rejected on every fallible path (CoreError::EmptyId).</span>
+    macro_rules! roundtrip_suite {
+        ($modname:ident, $ty:ty) =&gt; {
+            <span class="rs-kw">mod</span> $modname {
+                <span class="rs-kw">use</span> <span class="rs-kw">super</span>::*;
+
+                proptest::proptest! {
+                    #[test]
+                    <span class="rs-kw">fn</span> id_display_fromstr_roundtrip(s <span class="rs-kw">in</span> &quot;\\<span class="rs-type">PC</span>+&quot;) {
+                        <span class="rs-kw">let</span> id = &lt;$ty&gt;::from_str(&amp;s).expect(&quot;non-empty parses&quot;);
+                        proptest::prop_assert_eq!(id.to_string(), s);
+                    }
+                }
+
+                #[test]
+                <span class="rs-kw">fn</span> explicit_shapes_roundtrip() {
+                    <span class="rs-kw">for</span> s <span class="rs-kw">in</span> [
+                        &quot;3f2504e0-4f89-41d3-9a0c-0305e82c3301&quot;,
+                        &quot;root-abc123def4567890&quot;,
+                    ] {
+                        <span class="rs-kw">let</span> id = &lt;$ty&gt;::from_str(s).expect(&quot;non-empty parses&quot;);
+                        assert_eq!(id.to_string(), s);
+                    }
+                }
+
+                #[test]
+                <span class="rs-kw">fn</span> empty_is_rejected_on_every_fallible_path() {
+                    assert!(matches!(
+                        &lt;$ty&gt;::from_str(&quot;&quot;),
+                        <span class="rs-type">Err</span>(<span class="rs-kw">crate</span>::error::<a class="symbol-link rs-type" href="eos-types.html#item-enum-CoreError-9">CoreError</a>::<span class="rs-type">EmptyId</span> { .. })
+                    ));
+                    assert!(matches!(
+                        &lt;$ty&gt;::try_from(&quot;&quot;),
+                        <span class="rs-type">Err</span>(<span class="rs-kw">crate</span>::error::<a class="symbol-link rs-type" href="eos-types.html#item-enum-CoreError-9">CoreError</a>::<span class="rs-type">EmptyId</span> { .. })
+                    ));
+                    assert!(matches!(
+                        &lt;$ty&gt;::try_from(<span class="rs-type">String</span>::<a class="symbol-link rs-fn" href="eos-types--src-time-rs.html#method-new-124">new</a>()),
+                        <span class="rs-type">Err</span>(<span class="rs-kw">crate</span>::error::<a class="symbol-link rs-type" href="eos-types.html#item-enum-CoreError-9">CoreError</a>::<span class="rs-type">EmptyId</span> { .. })
+                    ));
+                }
+            }
+        };
+    }
+
+    roundtrip_suite!(request_id, <span class="rs-type">RequestId</span>);
+    roundtrip_suite!(task_id, <span class="rs-type">TaskId</span>);
+    roundtrip_suite!(workflow_id, <span class="rs-type">WorkflowId</span>);
+    roundtrip_suite!(iteration_id, <span class="rs-type">IterationId</span>);
+    roundtrip_suite!(attempt_id, <span class="rs-type">AttemptId</span>);
+    roundtrip_suite!(agent_run_id, <span class="rs-type">AgentRunId</span>);
+    roundtrip_suite!(sandbox_id, <span class="rs-type">SandboxId</span>);
+    roundtrip_suite!(tool_use_id, <span class="rs-type">ToolUseId</span>);
+    roundtrip_suite!(invocation_id, <span class="rs-type">InvocationId</span>);
+    roundtrip_suite!(workflow_session_id, <span class="rs-type">WorkflowSessionId</span>);
+    roundtrip_suite!(command_session_id, <span class="rs-type">CommandSessionId</span>);
+    roundtrip_suite!(subagent_session_id, <span class="rs-type">SubagentSessionId</span>);
+
+    <span class="rs-comment">// AC-types-02: transparent serde, no key duplication (GC-types-01).</span>
+    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-types--src-ids-rs.html#item-fn-id-serde-transparent-single-key-234">id_serde_transparent_single_key</a>() {
+        <span class="rs-kw">let</span> id: <span class="rs-type">TaskId</span> = &quot;t1&quot;.parse().unwrap();
+        assert_eq!(serde_json::to_value(&amp;id).unwrap(), serde_json::json!(&quot;t1&quot;));
+        <span class="rs-kw">let</span> back: <span class="rs-type">TaskId</span> = serde_json::from_value(serde_json::json!(&quot;t1&quot;)).unwrap();
+        assert_eq!(back, id);
+
+        #[derive(serde::<span class="rs-type">Serialize</span>)]
+        <span class="rs-kw">struct</span> <span class="rs-type">Row</span> {
+            id: <span class="rs-type">TaskId</span>,
+        }
+        <span class="rs-kw">let</span> row = serde_json::to_value(<span class="rs-type">Row</span> {
+            id: &quot;t1&quot;.parse().unwrap(),
+        })
+        .unwrap();
+        assert_eq!(row, serde_json::json!({ &quot;id&quot;: &quot;t1&quot; }));
+        <span class="rs-comment">// The id appears under exactly one key (no `id` + `task_id` duplication).</span>
+        assert_eq!(row.as_object().unwrap().len(), 1);
+    }
+
+    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-types--src-ids-rs.html#item-fn-try-from-and-parse-agree-254">try_from_and_parse_agree</a>() {
+        <span class="rs-kw">let</span> a: <span class="rs-type">TaskId</span> = &quot;x&quot;.parse().unwrap();
+        <span class="rs-kw">let</span> b = <span class="rs-type">TaskId</span>::try_from(&quot;x&quot;).unwrap();
+        <span class="rs-kw">let</span> c = <span class="rs-type">TaskId</span>::try_from(<span class="rs-type">String</span>::from(&quot;x&quot;)).unwrap();
+        assert_eq!(a, b);
+        assert_eq!(b, c);
+        assert_eq!(a.as_str(), &quot;x&quot;);
+        assert_eq!(a.<a class="symbol-link rs-fn" href="eos-types--src-time-rs.html#method-into-inner-68">into_inner</a>(), <span class="rs-type">String</span>::from(&quot;x&quot;));
+    }
+
+    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-types--src-ids-rs.html#item-fn-try-from-error-type-is-core-error-265">try_from_error_type_is_core_error</a>() {
+        <span class="rs-comment">// The named contract is `TryFrom&lt;_, Error = CoreError&gt;` — assert the</span>
+        <span class="rs-comment">// associated error type, not the std blanket `Infallible`.</span>
+        <span class="rs-kw">fn</span> assert_core_error&lt;<span class="rs-type">T</span>&gt;()
+        <span class="rs-kw">where</span>
+            <span class="rs-type">T</span>: <span class="rs-type">TryFrom</span>&lt;&amp;&#x27;<span class="rs-kw">static</span> str, <span class="rs-type">Error</span> = <span class="rs-kw">crate</span>::error::<a class="symbol-link rs-type" href="eos-types.html#item-enum-CoreError-9">CoreError</a>&gt;,
+        {
+        }
+        assert_core_error::&lt;<span class="rs-type">TaskId</span>&gt;();
+    }
+
+    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-types--src-ids-rs.html#item-fn-new-v4-is-a-dashed-uuid-277">new_v4_is_a_dashed_uuid</a>() {
+        <span class="rs-kw">let</span> id = <span class="rs-type">RequestId</span>::new_v4();
+        <span class="rs-comment">// 8-4-4-4-12 dashed form, parses back as a uuid.</span>
+        assert!(uuid::<span class="rs-type">Uuid</span>::parse_str(id.as_str()).is_ok());
+        assert_eq!(id.as_str().len(), 36);
+    }
+
+    <span class="rs-comment">// AC-types-06 (ids portion): every id schemas as a JSON `string`.</span>
+    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-types--src-ids-rs.html#item-fn-json-schema-ids-are-strings-286">json_schema_ids_are_strings</a>() {
+        macro_rules! assert_string_schema {
+            ($ty:ty) =&gt; {{
+                <span class="rs-kw">let</span> schema = serde_json::to_value(schemars::schema_for!($ty)).unwrap();
+                assert_eq!(
+                    schema[&quot;<span class="rs-kw">type</span>&quot;],
+                    serde_json::json!(&quot;string&quot;),
+                    &quot;{}&quot;,
+                    stringify!($ty)
+                );
+            }};
+        }
+        assert_string_schema!(<span class="rs-type">RequestId</span>);
+        assert_string_schema!(<span class="rs-type">TaskId</span>);
+        assert_string_schema!(<span class="rs-type">WorkflowId</span>);
+        assert_string_schema!(<span class="rs-type">IterationId</span>);
+        assert_string_schema!(<span class="rs-type">AttemptId</span>);
+        assert_string_schema!(<span class="rs-type">AgentRunId</span>);
+        assert_string_schema!(<span class="rs-type">SandboxId</span>);
+        assert_string_schema!(<span class="rs-type">ToolUseId</span>);
+        assert_string_schema!(<span class="rs-type">InvocationId</span>);
+        assert_string_schema!(<span class="rs-type">WorkflowSessionId</span>);
+        assert_string_schema!(<span class="rs-type">CommandSessionId</span>);
+        assert_string_schema!(<span class="rs-type">SubagentSessionId</span>);
+    }
+}
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
   <script src="../assets/inventory.js"></script>
 </body>
 </html>

@@ -8,8 +8,16 @@
 </head>
 <body>
   <header>
-    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
-    <h1>eos-daemon File Inventory</h1>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>eos-daemon File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS/sandbox &amp;&amp; cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
   </header>
   <a class="back-link" href="../index.html">sandbox</a>
 <section class="summary">
@@ -47,69 +55,189 @@
       <span>0 methods</span>
     </div>
   </div>
-  <div class="items"><div class="group-label">Standalone Functions</div><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn op_layer_metrics pub(crate) pub(crate) fn op_layer_metrics (args : &amp; Value , _context : DispatchContext &lt; '_ &gt; ,) -&gt; Result &lt; Value , DaemonError &gt; crates/eos-daemon/src/ops/checkpoint.rs  ">
+  <div class="items"><div class="group-label">Standalone Functions</div><article id="item-fn-op-layer-metrics-9" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn op_layer_metrics pub(crate) pub(crate) fn op_layer_metrics (args : &amp; Value , _context : DispatchContext &lt; '_ &gt; ,) -&gt; Result &lt; Value , DaemonError &gt; crates/eos-daemon/src/ops/checkpoint.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>op_layer_metrics</h3>
     <span class="visibility">pub(crate)</span>
   </div>
-  <code class="signature">pub(crate) fn op_layer_metrics (args : &amp; Value , _context : DispatchContext &lt; '_ &gt; ,) -&gt; Result &lt; Value , DaemonError &gt;</code>
+  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-daemon--src-ops-checkpoint-rs.html#item-fn-op-layer-metrics-9">op_layer_metrics</a> (args : &amp; Value , _context : <a class="symbol-link" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-DispatchContext-56">DispatchContext</a> &lt; &#x27;_ &gt; ,) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a> &lt; Value , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
+  <p class="docstring">`api.layer_metrics` — summarize layer-stack storage + lease state for a root.</p>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-comment">/// `api.layer_metrics` — summarize layer-stack storage + lease state for a root.</span>
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-ops-checkpoint-rs.html#item-fn-op-layer-metrics-9">op_layer_metrics</a>(
+    args: &amp;<span class="rs-type">Value</span>,
+    _context: <a class="symbol-link rs-type" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-DispatchContext-56">DispatchContext</a>&lt;&#x27;_&gt;,
+) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+    checkpoint::<a class="symbol-link rs-fn" href="eos-daemon--src-services-checkpoint-base-rs.html#item-fn-layer-metrics-17">layer_metrics</a>(args)
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-daemon/src/ops/checkpoint.rs:9</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn op_build_workspace_base pub(crate) pub(crate) fn op_build_workspace_base (args : &amp; Value , _context : DispatchContext &lt; '_ &gt; ,) -&gt; Result &lt; Value , DaemonError &gt; crates/eos-daemon/src/ops/checkpoint.rs  ">
+</article><article id="item-fn-op-build-workspace-base-17" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn op_build_workspace_base pub(crate) pub(crate) fn op_build_workspace_base (args : &amp; Value , _context : DispatchContext &lt; '_ &gt; ,) -&gt; Result &lt; Value , DaemonError &gt; crates/eos-daemon/src/ops/checkpoint.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>op_build_workspace_base</h3>
     <span class="visibility">pub(crate)</span>
   </div>
-  <code class="signature">pub(crate) fn op_build_workspace_base (args : &amp; Value , _context : DispatchContext &lt; '_ &gt; ,) -&gt; Result &lt; Value , DaemonError &gt;</code>
+  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-daemon--src-ops-checkpoint-rs.html#item-fn-op-build-workspace-base-17">op_build_workspace_base</a> (args : &amp; Value , _context : <a class="symbol-link" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-DispatchContext-56">DispatchContext</a> &lt; &#x27;_ &gt; ,) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a> &lt; Value , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-ops-checkpoint-rs.html#item-fn-op-build-workspace-base-17">op_build_workspace_base</a>(
+    args: &amp;<span class="rs-type">Value</span>,
+    _context: <a class="symbol-link rs-type" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-DispatchContext-56">DispatchContext</a>&lt;&#x27;_&gt;,
+) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+    checkpoint::<a class="symbol-link rs-fn" href="eos-daemon--src-services-checkpoint-base-rs.html#item-fn-build-workspace-base-43">build_workspace_base</a>(args)
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-daemon/src/ops/checkpoint.rs:17</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn op_ensure_workspace_base pub(crate) pub(crate) fn op_ensure_workspace_base (args : &amp; Value , _context : DispatchContext &lt; '_ &gt; ,) -&gt; Result &lt; Value , DaemonError &gt; crates/eos-daemon/src/ops/checkpoint.rs  ">
+</article><article id="item-fn-op-ensure-workspace-base-24" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn op_ensure_workspace_base pub(crate) pub(crate) fn op_ensure_workspace_base (args : &amp; Value , _context : DispatchContext &lt; '_ &gt; ,) -&gt; Result &lt; Value , DaemonError &gt; crates/eos-daemon/src/ops/checkpoint.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>op_ensure_workspace_base</h3>
     <span class="visibility">pub(crate)</span>
   </div>
-  <code class="signature">pub(crate) fn op_ensure_workspace_base (args : &amp; Value , _context : DispatchContext &lt; '_ &gt; ,) -&gt; Result &lt; Value , DaemonError &gt;</code>
+  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-daemon--src-ops-checkpoint-rs.html#item-fn-op-ensure-workspace-base-24">op_ensure_workspace_base</a> (args : &amp; Value , _context : <a class="symbol-link" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-DispatchContext-56">DispatchContext</a> &lt; &#x27;_ &gt; ,) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a> &lt; Value , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-ops-checkpoint-rs.html#item-fn-op-ensure-workspace-base-24">op_ensure_workspace_base</a>(
+    args: &amp;<span class="rs-type">Value</span>,
+    _context: <a class="symbol-link rs-type" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-DispatchContext-56">DispatchContext</a>&lt;&#x27;_&gt;,
+) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+    checkpoint::<a class="symbol-link rs-fn" href="eos-daemon--src-services-checkpoint-base-rs.html#item-fn-ensure-workspace-base-66">ensure_workspace_base</a>(args)
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-daemon/src/ops/checkpoint.rs:24</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn op_workspace_binding pub(crate) pub(crate) fn op_workspace_binding (args : &amp; Value , _context : DispatchContext &lt; '_ &gt; ,) -&gt; Result &lt; Value , DaemonError &gt; crates/eos-daemon/src/ops/checkpoint.rs  ">
+</article><article id="item-fn-op-workspace-binding-31" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn op_workspace_binding pub(crate) pub(crate) fn op_workspace_binding (args : &amp; Value , _context : DispatchContext &lt; '_ &gt; ,) -&gt; Result &lt; Value , DaemonError &gt; crates/eos-daemon/src/ops/checkpoint.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>op_workspace_binding</h3>
     <span class="visibility">pub(crate)</span>
   </div>
-  <code class="signature">pub(crate) fn op_workspace_binding (args : &amp; Value , _context : DispatchContext &lt; '_ &gt; ,) -&gt; Result &lt; Value , DaemonError &gt;</code>
+  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-daemon--src-ops-checkpoint-rs.html#item-fn-op-workspace-binding-31">op_workspace_binding</a> (args : &amp; Value , _context : <a class="symbol-link" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-DispatchContext-56">DispatchContext</a> &lt; &#x27;_ &gt; ,) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a> &lt; Value , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-ops-checkpoint-rs.html#item-fn-op-workspace-binding-31">op_workspace_binding</a>(
+    args: &amp;<span class="rs-type">Value</span>,
+    _context: <a class="symbol-link rs-type" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-DispatchContext-56">DispatchContext</a>&lt;&#x27;_&gt;,
+) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+    checkpoint::<a class="symbol-link rs-fn" href="eos-daemon--src-services-checkpoint-base-rs.html#item-fn-workspace-binding-83">workspace_binding</a>(args)
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-daemon/src/ops/checkpoint.rs:31</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn op_commit_to_workspace pub(crate) pub(crate) fn op_commit_to_workspace (args : &amp; Value , _context : DispatchContext &lt; '_ &gt; ,) -&gt; Result &lt; Value , DaemonError &gt; crates/eos-daemon/src/ops/checkpoint.rs  ">
+</article><article id="item-fn-op-commit-to-workspace-38" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn op_commit_to_workspace pub(crate) pub(crate) fn op_commit_to_workspace (args : &amp; Value , _context : DispatchContext &lt; '_ &gt; ,) -&gt; Result &lt; Value , DaemonError &gt; crates/eos-daemon/src/ops/checkpoint.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>op_commit_to_workspace</h3>
     <span class="visibility">pub(crate)</span>
   </div>
-  <code class="signature">pub(crate) fn op_commit_to_workspace (args : &amp; Value , _context : DispatchContext &lt; '_ &gt; ,) -&gt; Result &lt; Value , DaemonError &gt;</code>
+  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-daemon--src-ops-checkpoint-rs.html#item-fn-op-commit-to-workspace-38">op_commit_to_workspace</a> (args : &amp; Value , _context : <a class="symbol-link" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-DispatchContext-56">DispatchContext</a> &lt; &#x27;_ &gt; ,) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a> &lt; Value , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-ops-checkpoint-rs.html#item-fn-op-commit-to-workspace-38">op_commit_to_workspace</a>(
+    args: &amp;<span class="rs-type">Value</span>,
+    _context: <a class="symbol-link rs-type" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-DispatchContext-56">DispatchContext</a>&lt;&#x27;_&gt;,
+) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+    checkpoint::<a class="symbol-link rs-fn" href="eos-daemon--src-services-checkpoint-commit-rs.html#item-fn-commit-to-workspace-19">commit_to_workspace</a>(args)
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-daemon/src/ops/checkpoint.rs:38</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn op_commit_to_git pub(crate) pub(crate) fn op_commit_to_git (args : &amp; Value , _context : DispatchContext &lt; '_ &gt; ,) -&gt; Result &lt; Value , DaemonError &gt; crates/eos-daemon/src/ops/checkpoint.rs  ">
+</article><article id="item-fn-op-commit-to-git-45" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn op_commit_to_git pub(crate) pub(crate) fn op_commit_to_git (args : &amp; Value , _context : DispatchContext &lt; '_ &gt; ,) -&gt; Result &lt; Value , DaemonError &gt; crates/eos-daemon/src/ops/checkpoint.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>op_commit_to_git</h3>
     <span class="visibility">pub(crate)</span>
   </div>
-  <code class="signature">pub(crate) fn op_commit_to_git (args : &amp; Value , _context : DispatchContext &lt; '_ &gt; ,) -&gt; Result &lt; Value , DaemonError &gt;</code>
+  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-daemon--src-ops-checkpoint-rs.html#item-fn-op-commit-to-git-45">op_commit_to_git</a> (args : &amp; Value , _context : <a class="symbol-link" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-DispatchContext-56">DispatchContext</a> &lt; &#x27;_ &gt; ,) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a> &lt; Value , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-ops-checkpoint-rs.html#item-fn-op-commit-to-git-45">op_commit_to_git</a>(
+    args: &amp;<span class="rs-type">Value</span>,
+    _context: <a class="symbol-link rs-type" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-DispatchContext-56">DispatchContext</a>&lt;&#x27;_&gt;,
+) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+    checkpoint::<a class="symbol-link rs-fn" href="eos-daemon--src-services-checkpoint-commit-rs.html#item-fn-commit-to-git-37">commit_to_git</a>(args)
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-daemon/src/ops/checkpoint.rs:45</p>
 </article></div>
 </section></div>
 </main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/eos-daemon/src/ops/checkpoint.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-comment">//! Checkpoint operation handlers.</span>
+
+<span class="rs-kw">use</span> serde_json::<span class="rs-type">Value</span>;
+
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::dispatcher::<a class="symbol-link rs-type" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-DispatchContext-56">DispatchContext</a>;
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::error::<a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>;
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::services::checkpoint;
+
+<span class="rs-comment">/// `api.layer_metrics` — summarize layer-stack storage + lease state for a root.</span>
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-ops-checkpoint-rs.html#item-fn-op-layer-metrics-9">op_layer_metrics</a>(
+    args: &amp;<span class="rs-type">Value</span>,
+    _context: <a class="symbol-link rs-type" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-DispatchContext-56">DispatchContext</a>&lt;&#x27;_&gt;,
+) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+    checkpoint::<a class="symbol-link rs-fn" href="eos-daemon--src-services-checkpoint-base-rs.html#item-fn-layer-metrics-17">layer_metrics</a>(args)
+}
+
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-ops-checkpoint-rs.html#item-fn-op-build-workspace-base-17">op_build_workspace_base</a>(
+    args: &amp;<span class="rs-type">Value</span>,
+    _context: <a class="symbol-link rs-type" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-DispatchContext-56">DispatchContext</a>&lt;&#x27;_&gt;,
+) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+    checkpoint::<a class="symbol-link rs-fn" href="eos-daemon--src-services-checkpoint-base-rs.html#item-fn-build-workspace-base-43">build_workspace_base</a>(args)
+}
+
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-ops-checkpoint-rs.html#item-fn-op-ensure-workspace-base-24">op_ensure_workspace_base</a>(
+    args: &amp;<span class="rs-type">Value</span>,
+    _context: <a class="symbol-link rs-type" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-DispatchContext-56">DispatchContext</a>&lt;&#x27;_&gt;,
+) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+    checkpoint::<a class="symbol-link rs-fn" href="eos-daemon--src-services-checkpoint-base-rs.html#item-fn-ensure-workspace-base-66">ensure_workspace_base</a>(args)
+}
+
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-ops-checkpoint-rs.html#item-fn-op-workspace-binding-31">op_workspace_binding</a>(
+    args: &amp;<span class="rs-type">Value</span>,
+    _context: <a class="symbol-link rs-type" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-DispatchContext-56">DispatchContext</a>&lt;&#x27;_&gt;,
+) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+    checkpoint::<a class="symbol-link rs-fn" href="eos-daemon--src-services-checkpoint-base-rs.html#item-fn-workspace-binding-83">workspace_binding</a>(args)
+}
+
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-ops-checkpoint-rs.html#item-fn-op-commit-to-workspace-38">op_commit_to_workspace</a>(
+    args: &amp;<span class="rs-type">Value</span>,
+    _context: <a class="symbol-link rs-type" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-DispatchContext-56">DispatchContext</a>&lt;&#x27;_&gt;,
+) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+    checkpoint::<a class="symbol-link rs-fn" href="eos-daemon--src-services-checkpoint-commit-rs.html#item-fn-commit-to-workspace-19">commit_to_workspace</a>(args)
+}
+
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-ops-checkpoint-rs.html#item-fn-op-commit-to-git-45">op_commit_to_git</a>(
+    args: &amp;<span class="rs-type">Value</span>,
+    _context: <a class="symbol-link rs-type" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-DispatchContext-56">DispatchContext</a>&lt;&#x27;_&gt;,
+) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+    checkpoint::<a class="symbol-link rs-fn" href="eos-daemon--src-services-checkpoint-commit-rs.html#item-fn-commit-to-git-37">commit_to_git</a>(args)
+}
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
   <script src="../assets/inventory.js"></script>
 </body>
 </html>

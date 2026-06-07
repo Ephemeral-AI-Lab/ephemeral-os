@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>eos-backend-config · src/sandbox.rs</title>
+  <link rel="stylesheet" href="../assets/inventory.css">
+</head>
+<body>
+  <header>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>eos-backend-config File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS/backend-server &amp;&amp; cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
+  </header>
+  <a class="back-link" href="../index.html">backend-server</a>
+<section class="summary">
+  <div><b>5</b><span>modules</span></div>
+  <div><b>16</b><span>items</span></div>
+  <div><b>23</b><span>fields</span></div>
+  <div><b>4</b><span>methods</span></div>
+</section>
+<section class="toolbar">
+  <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
+  <select id="kind-filter">
+    <option value="">All items</option>
+    <option value="type-model">Type model</option>
+    <option value="struct">Structs</option>
+    <option value="enum">Enums</option>
+    <option value="trait">Traits</option>
+    <option value="impl">Impls</option>
+    <option value="fn">Functions</option>
+    <option value="type">Aliases</option>
+  </select>
+</section>
+<main class="crate-layout">
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><a class="file-link" href="eos-backend-config.html"><span>lib.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-backend-config--src-loader-rs.html"><span>loader.rs</span><small>1/7</small></a></li><li><a class="file-link" href="eos-backend-config--src-obs-rs.html"><span>obs.rs</span><small>1/0</small></a></li><li><a class="file-link active" href="eos-backend-config--src-sandbox-rs.html"><span>sandbox.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-backend-config--src-server-rs.html"><span>server.rs</span><small>2/0</small></a></li></ul></li></ul></nav>
+  <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="sandbox crates/eos-backend-config/src/sandbox.rs SandboxConfig impl SandboxConfig">
+  <div class="module-head">
+    <div>
+      <h2>src/sandbox.rs</h2>
+      <p class="path">module <code>sandbox</code></p>
+    </div>
+    <div class="module-stats">
+      <span>file owns</span>
+      <span>1 types</span>
+      <span>1 impls</span>
+      <span>0 fns</span>
+      <span>1 methods</span>
+    </div>
+  </div>
+  <div class="items"><div class="group-label">File-Owned Types</div><article id="item-struct-SandboxConfig-7" class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct SandboxConfig pub pub struct SandboxConfig crates/eos-backend-config/src/sandbox.rs default_snapshot Option &lt; String &gt; max_owned_sandboxes usize destroy_on_finish bool startup_timeout_ms u64 ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>SandboxConfig</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub struct <a class="symbol-link" href="eos-backend-config--src-sandbox-rs.html#item-struct-SandboxConfig-7">SandboxConfig</a></code>
+  <p class="docstring">Fresh-sandbox defaults and cleanup policy. These belong to backend-server,<br>not agent-core, and are passed to the `SandboxManager` / provisioner.</p>
+  <div class="tags"><span>config</span><span>derive: Clone</span><span>derive: Debug</span><span>derive: Deserialize</span><span>derive: Eq</span><span>derive: PartialEq</span><span>derive: Serialize</span><span>non_exhaustive</span><span>serde</span><span>serde: deny_unknown_fields</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>default_snapshot</td><td><code>Option &lt; String &gt;</code></td></tr><tr><td>pub</td><td>max_owned_sandboxes</td><td><code>usize</code></td></tr><tr><td>pub</td><td>destroy_on_finish</td><td><code>bool</code></td></tr><tr><td>pub</td><td>startup_timeout_ms</td><td><code>u64</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-validate-24"><td>method</td><td>validate</td><td><code>pub fn <a class="symbol-link" href="eos-backend-config--src-obs-rs.html#method-validate-23">validate</a> (&amp; self) -&gt; Result &lt; () , <a class="symbol-link" href="eos-backend-config--src-loader-rs.html#item-enum-ConfigError-14">ConfigError</a> &gt;</code><p class="docstring">Enforce numeric-range constraints.<br># Errors<br>[`ConfigError::OutOfRange`] when `max_owned_sandboxes` or<br>`startup_timeout_ms` is zero.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Enforce numeric-range constraints.</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// # Errors</span>
+    <span class="rs-comment">/// [`ConfigError::OutOfRange`] when `max_owned_sandboxes` or</span>
+    <span class="rs-comment">/// `startup_timeout_ms` is zero.</span>
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-backend-config--src-obs-rs.html#method-validate-23">validate</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-backend-config--src-loader-rs.html#item-enum-ConfigError-14">ConfigError</a>&gt; {
+        <span class="rs-kw">if</span> <span class="rs-self">self</span>.max_owned_sandboxes == 0 {
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-backend-config--src-loader-rs.html#item-enum-ConfigError-14">ConfigError</a>::<span class="rs-type">OutOfRange</span> {
+                field: &quot;sandbox.max_owned_sandboxes&quot;,
+                detail: &quot;must be &gt;= 1&quot;,
+            });
+        }
+        <span class="rs-kw">if</span> <span class="rs-self">self</span>.startup_timeout_ms == 0 {
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-backend-config--src-loader-rs.html#item-enum-ConfigError-14">ConfigError</a>::<span class="rs-type">OutOfRange</span> {
+                field: &quot;sandbox.startup_timeout_ms&quot;,
+                detail: &quot;must be &gt;= 1&quot;,
+            });
+        }
+        <span class="rs-type">Ok</span>(())
+    }
+</code></pre>
+</details></td></tr></tbody></table>
+
+  <p class="source">crates/eos-backend-config/src/sandbox.rs:7</p>
+</article></div>
+</section></div>
+</main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/eos-backend-config/src/sandbox.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-comment">//! Backend-owned sandbox lifecycle and provisioning defaults.</span>
+
+<span class="rs-kw">use</span> serde::{<span class="rs-type">Deserialize</span>, <span class="rs-type">Serialize</span>};
+
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::loader::<a class="symbol-link rs-type" href="eos-backend-config--src-loader-rs.html#item-enum-ConfigError-14">ConfigError</a>;
+
+<span class="rs-comment">/// Fresh-sandbox defaults and cleanup policy. These belong to backend-server,</span>
+<span class="rs-comment">/// not agent-core, and are passed to the `SandboxManager` / provisioner.</span>
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Eq</span>, <span class="rs-type">Serialize</span>, <span class="rs-type">Deserialize</span>)]
+#[serde(deny_unknown_fields)]
+#[non_exhaustive]
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-backend-config--src-sandbox-rs.html#item-struct-SandboxConfig-7">SandboxConfig</a> {
+    <span class="rs-comment">/// Default snapshot to provision from when a request supplies none.</span>
+    <span class="rs-kw">pub</span> default_snapshot: <span class="rs-type">Option</span>&lt;<span class="rs-type">String</span>&gt;,
+    <span class="rs-comment">/// Upper bound on concurrently backend-owned sandboxes.</span>
+    <span class="rs-kw">pub</span> max_owned_sandboxes: usize,
+    <span class="rs-comment">/// Destroy a sandbox once its last reference is released.</span>
+    <span class="rs-kw">pub</span> destroy_on_finish: bool,
+    <span class="rs-comment">/// Sandbox startup timeout in milliseconds.</span>
+    <span class="rs-kw">pub</span> startup_timeout_ms: u64,
+}
+
+<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-backend-config--src-sandbox-rs.html#item-struct-SandboxConfig-7">SandboxConfig</a> {
+    <span class="rs-comment">/// Enforce numeric-range constraints.</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// # Errors</span>
+    <span class="rs-comment">/// [`ConfigError::OutOfRange`] when `max_owned_sandboxes` or</span>
+    <span class="rs-comment">/// `startup_timeout_ms` is zero.</span>
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-backend-config--src-obs-rs.html#method-validate-23">validate</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-backend-config--src-loader-rs.html#item-enum-ConfigError-14">ConfigError</a>&gt; {
+        <span class="rs-kw">if</span> <span class="rs-self">self</span>.max_owned_sandboxes == 0 {
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-backend-config--src-loader-rs.html#item-enum-ConfigError-14">ConfigError</a>::<span class="rs-type">OutOfRange</span> {
+                field: &quot;sandbox.max_owned_sandboxes&quot;,
+                detail: &quot;must be &gt;= 1&quot;,
+            });
+        }
+        <span class="rs-kw">if</span> <span class="rs-self">self</span>.startup_timeout_ms == 0 {
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-backend-config--src-loader-rs.html#item-enum-ConfigError-14">ConfigError</a>::<span class="rs-type">OutOfRange</span> {
+                field: &quot;sandbox.startup_timeout_ms&quot;,
+                detail: &quot;must be &gt;= 1&quot;,
+            });
+        }
+        <span class="rs-type">Ok</span>(())
+    }
+}
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
+  <script src="../assets/inventory.js"></script>
+</body>
+</html>

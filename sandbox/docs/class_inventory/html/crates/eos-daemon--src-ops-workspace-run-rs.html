@@ -8,8 +8,16 @@
 </head>
 <body>
   <header>
-    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
-    <h1>eos-daemon File Inventory</h1>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>eos-daemon File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS/sandbox &amp;&amp; cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
   </header>
   <a class="back-link" href="../index.html">sandbox</a>
 <section class="summary">
@@ -47,29 +55,77 @@
       <span>0 methods</span>
     </div>
   </div>
-  <div class="items"><div class="group-label">Standalone Functions</div><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn op_cancel_workspace_runs_by_caller_id pub(crate) pub(crate) fn op_cancel_workspace_runs_by_caller_id (args : &amp; Value , context : DispatchContext &lt; '_ &gt; ,) -&gt; Result &lt; Value , DaemonError &gt; crates/eos-daemon/src/ops/workspace_run.rs  ">
+  <div class="items"><div class="group-label">Standalone Functions</div><article id="item-fn-op-cancel-workspace-runs-by-caller-id-8" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn op_cancel_workspace_runs_by_caller_id pub(crate) pub(crate) fn op_cancel_workspace_runs_by_caller_id (args : &amp; Value , context : DispatchContext &lt; '_ &gt; ,) -&gt; Result &lt; Value , DaemonError &gt; crates/eos-daemon/src/ops/workspace_run.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>op_cancel_workspace_runs_by_caller_id</h3>
     <span class="visibility">pub(crate)</span>
   </div>
-  <code class="signature">pub(crate) fn op_cancel_workspace_runs_by_caller_id (args : &amp; Value , context : DispatchContext &lt; '_ &gt; ,) -&gt; Result &lt; Value , DaemonError &gt;</code>
+  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-daemon--src-ops-workspace-run-rs.html#item-fn-op-cancel-workspace-runs-by-caller-id-8">op_cancel_workspace_runs_by_caller_id</a> (args : &amp; Value , context : <a class="symbol-link" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-DispatchContext-56">DispatchContext</a> &lt; &#x27;_ &gt; ,) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a> &lt; Value , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-ops-workspace-run-rs.html#item-fn-op-cancel-workspace-runs-by-caller-id-8">op_cancel_workspace_runs_by_caller_id</a>(
+    args: &amp;<span class="rs-type">Value</span>,
+    context: <a class="symbol-link rs-type" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-DispatchContext-56">DispatchContext</a>&lt;&#x27;_&gt;,
+) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+    <span class="rs-kw">crate</span>::services::workspace_run::<a class="symbol-link rs-fn" href="eos-daemon--src-ops-workspace-run-rs.html#item-fn-op-cancel-workspace-runs-by-caller-id-8">op_cancel_workspace_runs_by_caller_id</a>(args, context)
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-daemon/src/ops/workspace_run.rs:8</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn op_cancel_workspace_runs pub(crate) pub(crate) fn op_cancel_workspace_runs (args : &amp; Value , context : DispatchContext &lt; '_ &gt; ,) -&gt; Result &lt; Value , DaemonError &gt; crates/eos-daemon/src/ops/workspace_run.rs  ">
+</article><article id="item-fn-op-cancel-workspace-runs-15" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn op_cancel_workspace_runs pub(crate) pub(crate) fn op_cancel_workspace_runs (args : &amp; Value , context : DispatchContext &lt; '_ &gt; ,) -&gt; Result &lt; Value , DaemonError &gt; crates/eos-daemon/src/ops/workspace_run.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>op_cancel_workspace_runs</h3>
     <span class="visibility">pub(crate)</span>
   </div>
-  <code class="signature">pub(crate) fn op_cancel_workspace_runs (args : &amp; Value , context : DispatchContext &lt; '_ &gt; ,) -&gt; Result &lt; Value , DaemonError &gt;</code>
+  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-daemon--src-ops-workspace-run-rs.html#item-fn-op-cancel-workspace-runs-15">op_cancel_workspace_runs</a> (args : &amp; Value , context : <a class="symbol-link" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-DispatchContext-56">DispatchContext</a> &lt; &#x27;_ &gt; ,) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a> &lt; Value , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-ops-workspace-run-rs.html#item-fn-op-cancel-workspace-runs-15">op_cancel_workspace_runs</a>(
+    args: &amp;<span class="rs-type">Value</span>,
+    context: <a class="symbol-link rs-type" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-DispatchContext-56">DispatchContext</a>&lt;&#x27;_&gt;,
+) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+    <span class="rs-kw">crate</span>::services::workspace_run::<a class="symbol-link rs-fn" href="eos-daemon--src-ops-workspace-run-rs.html#item-fn-op-cancel-workspace-runs-15">op_cancel_workspace_runs</a>(args, context)
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-daemon/src/ops/workspace_run.rs:15</p>
 </article></div>
 </section></div>
 </main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/eos-daemon/src/ops/workspace_run.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-comment">//! Workspace-run cancel daemon operation handlers.</span>
+
+<span class="rs-kw">use</span> serde_json::<span class="rs-type">Value</span>;
+
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::dispatcher::<a class="symbol-link rs-type" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-DispatchContext-56">DispatchContext</a>;
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::error::<a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>;
+
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-ops-workspace-run-rs.html#item-fn-op-cancel-workspace-runs-by-caller-id-8">op_cancel_workspace_runs_by_caller_id</a>(
+    args: &amp;<span class="rs-type">Value</span>,
+    context: <a class="symbol-link rs-type" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-DispatchContext-56">DispatchContext</a>&lt;&#x27;_&gt;,
+) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+    <span class="rs-kw">crate</span>::services::workspace_run::<a class="symbol-link rs-fn" href="eos-daemon--src-ops-workspace-run-rs.html#item-fn-op-cancel-workspace-runs-by-caller-id-8">op_cancel_workspace_runs_by_caller_id</a>(args, context)
+}
+
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-ops-workspace-run-rs.html#item-fn-op-cancel-workspace-runs-15">op_cancel_workspace_runs</a>(
+    args: &amp;<span class="rs-type">Value</span>,
+    context: <a class="symbol-link rs-type" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-DispatchContext-56">DispatchContext</a>&lt;&#x27;_&gt;,
+) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+    <span class="rs-kw">crate</span>::services::workspace_run::<a class="symbol-link rs-fn" href="eos-daemon--src-ops-workspace-run-rs.html#item-fn-op-cancel-workspace-runs-15">op_cancel_workspace_runs</a>(args, context)
+}
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
   <script src="../assets/inventory.js"></script>
 </body>
 </html>

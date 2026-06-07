@@ -8,8 +8,16 @@
 </head>
 <body>
   <header>
-    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
-    <h1>eos-daemon File Inventory</h1>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>eos-daemon File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS/sandbox &amp;&amp; cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
   </header>
   <a class="back-link" href="../index.html">sandbox</a>
 <section class="summary">
@@ -47,19 +55,47 @@
       <span>0 methods</span>
     </div>
   </div>
-  <div class="items"><div class="group-label">Standalone Functions</div><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn workspace_api_error pub(super) pub(super) fn workspace_api_error (error : impl std :: fmt :: Display) -&gt; WorkspaceApiError crates/eos-daemon/src/services/command_session/ports/mod.rs  ">
+  <div class="items"><div class="group-label">Standalone Functions</div><article id="item-fn-workspace-api-error-6" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn workspace_api_error pub(super) pub(super) fn workspace_api_error (error : impl std :: fmt :: Display) -&gt; WorkspaceApiError crates/eos-daemon/src/services/command_session/ports/mod.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>workspace_api_error</h3>
     <span class="visibility">pub(super)</span>
   </div>
-  <code class="signature">pub(super) fn workspace_api_error (error : impl std :: fmt :: Display) -&gt; WorkspaceApiError</code>
+  <code class="signature">pub(super) fn <a class="symbol-link" href="eos-daemon--src-services-command-session-ports-mod-rs.html#item-fn-workspace-api-error-6">workspace_api_error</a> (error : impl std :: fmt :: Display) -&gt; WorkspaceApiError</code>
+  <p class="docstring">Wrap any error as the daemon's command-workspace `WorkspaceApiError`, shared<br>by both the ephemeral and isolated command ports.</p>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-comment">/// Wrap any error as the daemon's command-workspace `WorkspaceApiError`, shared</span>
+<span class="rs-comment">/// by both the ephemeral and isolated command ports.</span>
+<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-command-session-ports-mod-rs.html#item-fn-workspace-api-error-6">workspace_api_error</a>(error: <span class="rs-kw">impl</span> std::fmt::<span class="rs-type">Display</span>) -&gt; <span class="rs-type">WorkspaceApiError</span> {
+    <span class="rs-type">WorkspaceApiError</span>::<a class="symbol-link rs-fn" href="eos-daemon.html#method-new-89">new</a>(&quot;daemon_command_workspace_error&quot;, error.to_string())
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-daemon/src/services/command_session/ports/mod.rs:6</p>
 </article></div>
 </section></div>
 </main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/eos-daemon/src/services/command_session/ports/mod.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">mod</span> ephemeral;
+<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">mod</span> isolated;
+
+<span class="rs-kw">use</span> eos_workspace_api::<span class="rs-type">WorkspaceApiError</span>;
+
+<span class="rs-comment">/// Wrap any error as the daemon's command-workspace `WorkspaceApiError`, shared</span>
+<span class="rs-comment">/// by both the ephemeral and isolated command ports.</span>
+<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-command-session-ports-mod-rs.html#item-fn-workspace-api-error-6">workspace_api_error</a>(error: <span class="rs-kw">impl</span> std::fmt::<span class="rs-type">Display</span>) -&gt; <span class="rs-type">WorkspaceApiError</span> {
+    <span class="rs-type">WorkspaceApiError</span>::<a class="symbol-link rs-fn" href="eos-daemon.html#method-new-89">new</a>(&quot;daemon_command_workspace_error&quot;, error.to_string())
+}
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
   <script src="../assets/inventory.js"></script>
 </body>
 </html>

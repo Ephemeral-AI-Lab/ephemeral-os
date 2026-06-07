@@ -8,8 +8,16 @@
 </head>
 <body>
   <header>
-    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
-    <h1>eos-tools File Inventory</h1>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>eos-tools File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS/agent-core &amp;&amp; cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
   </header>
   <a class="back-link" href="../index.html">agent-core</a>
 <section class="summary">
@@ -47,99 +55,351 @@
       <span>0 methods</span>
     </div>
   </div>
-  <div class="items"><div class="group-label">Standalone Functions</div><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn register pub(crate) pub(crate) fn register (registry : &amp; mut crate :: registry :: ToolRegistry , config : &amp; crate :: registry :: config :: ToolConfigSet , sandbox_service : super :: SandboxToolService ,) crates/eos-tools/src/tools/isolated_workspace/mod.rs  ">
+  <div class="items"><div class="group-label">Standalone Functions</div><article id="item-fn-register-17" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn register pub(crate) pub(crate) fn register (registry : &amp; mut crate :: registry :: ToolRegistry , config : &amp; crate :: registry :: config :: ToolConfigSet , sandbox_service : super :: SandboxToolService ,) crates/eos-tools/src/tools/isolated_workspace/mod.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>register</h3>
     <span class="visibility">pub(crate)</span>
   </div>
-  <code class="signature">pub(crate) fn register (registry : &amp; mut crate :: registry :: ToolRegistry , config : &amp; crate :: registry :: config :: ToolConfigSet , sandbox_service : super :: SandboxToolService ,)</code>
+  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-tools--src-ports-mod-rs.html#method-register-322">register</a> (registry : &amp; mut crate :: registry :: <a class="symbol-link" href="eos-tools--src-registry-tool-registry-rs.html#item-struct-ToolRegistry-18">ToolRegistry</a> , config : &amp; crate :: registry :: config :: <a class="symbol-link" href="eos-tools--src-registry-config-rs.html#item-struct-ToolConfigSet-45">ToolConfigSet</a> , sandbox_service : super :: <a class="symbol-link" href="eos-tools--src-tools-services-rs.html#item-struct-SandboxToolService-65">SandboxToolService</a> ,)</code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-ports-mod-rs.html#method-register-322">register</a>(
+    registry: &amp;<span class="rs-kw">mut</span> <span class="rs-kw">crate</span>::registry::<a class="symbol-link rs-type" href="eos-tools--src-registry-tool-registry-rs.html#item-struct-ToolRegistry-18">ToolRegistry</a>,
+    config: &amp;<span class="rs-kw">crate</span>::registry::config::<a class="symbol-link rs-type" href="eos-tools--src-registry-config-rs.html#item-struct-ToolConfigSet-45">ToolConfigSet</a>,
+    sandbox_service: <span class="rs-kw">super</span>::<a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-SandboxToolService-65">SandboxToolService</a>,
+) {
+    enter_isolated_workspace::<a class="symbol-link rs-fn" href="eos-tools--src-ports-mod-rs.html#method-register-322">register</a>(registry, config, sandbox_service.clone());
+    exit_isolated_workspace::<a class="symbol-link rs-fn" href="eos-tools--src-ports-mod-rs.html#method-register-322">register</a>(registry, config, sandbox_service);
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-tools/src/tools/isolated_workspace/mod.rs:17</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn effective_layer_stack_root private fn effective_layer_stack_root (layer_stack_root : &amp; str) -&gt; String crates/eos-tools/src/tools/isolated_workspace/mod.rs  ">
+</article><article id="item-fn-effective-layer-stack-root-26" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn effective_layer_stack_root private fn effective_layer_stack_root (layer_stack_root : &amp; str) -&gt; String crates/eos-tools/src/tools/isolated_workspace/mod.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>effective_layer_stack_root</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn effective_layer_stack_root (layer_stack_root : &amp; str) -&gt; String</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-tools--src-tools-isolated-workspace-mod-rs.html#item-fn-effective-layer-stack-root-26">effective_layer_stack_root</a> (layer_stack_root : &amp; str) -&gt; String</code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-tools-isolated-workspace-mod-rs.html#item-fn-effective-layer-stack-root-26">effective_layer_stack_root</a>(layer_stack_root: &amp;str) -&gt; <span class="rs-type">String</span> {
+    <span class="rs-kw">if</span> layer_stack_root.<a class="symbol-link rs-fn" href="eos-tools--src-registry-tool-registry-rs.html#method-is-empty-96">is_empty</a>() {
+        <span class="rs-type">DEFAULT_LAYER_STACK_ROOT</span>.to_owned()
+    } <span class="rs-kw">else</span> {
+        layer_stack_root.to_owned()
+    }
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-tools/src/tools/isolated_workspace/mod.rs:26</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn render_enter_result private fn render_enter_result (result : &amp; EnterIsolatedWorkspaceResult) -&gt; Result &lt; ToolResult , ToolError &gt; crates/eos-tools/src/tools/isolated_workspace/mod.rs  ">
+</article><article id="item-fn-render-enter-result-34" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn render_enter_result private fn render_enter_result (result : &amp; EnterIsolatedWorkspaceResult) -&gt; Result &lt; ToolResult , ToolError &gt; crates/eos-tools/src/tools/isolated_workspace/mod.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>render_enter_result</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn render_enter_result (result : &amp; EnterIsolatedWorkspaceResult) -&gt; Result &lt; ToolResult , ToolError &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-tools--src-tools-isolated-workspace-mod-rs.html#item-fn-render-enter-result-34">render_enter_result</a> (result : &amp; EnterIsolatedWorkspaceResult) -&gt; Result &lt; <a class="symbol-link" href="eos-tools--src-core-result-rs.html#item-struct-ToolResult-12">ToolResult</a> , <a class="symbol-link" href="eos-tools.html#item-enum-ToolError-16">ToolError</a> &gt;</code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-tools-isolated-workspace-mod-rs.html#item-fn-render-enter-result-34">render_enter_result</a>(result: &amp;<span class="rs-type">EnterIsolatedWorkspaceResult</span>) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-tools--src-core-result-rs.html#item-struct-ToolResult-12">ToolResult</a>, <a class="symbol-link rs-type" href="eos-tools.html#item-enum-ToolError-16">ToolError</a>&gt; {
+    <a class="symbol-link rs-fn" href="eos-tools--src-tools-isolated-workspace-mod-rs.html#item-fn-render-lifecycle-84">render_lifecycle</a>(
+        result.base.success,
+        &amp;json!({
+            &quot;success&quot;: result.base.success,
+            &quot;manifest_version&quot;: result.manifest_version,
+            &quot;manifest_root_hash&quot;: result.manifest_root_hash,
+            &quot;error&quot;: <a class="symbol-link rs-fn" href="eos-tools--src-tools-isolated-workspace-mod-rs.html#item-fn-lifecycle-error-value-95">lifecycle_error_value</a>(result.base.error.as_ref()),
+        }),
+    )
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-tools/src/tools/isolated_workspace/mod.rs:34</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn render_exit_result private fn render_exit_result (result : &amp; ExitIsolatedWorkspaceResult) -&gt; Result &lt; ToolResult , ToolError &gt; crates/eos-tools/src/tools/isolated_workspace/mod.rs  ">
+</article><article id="item-fn-render-exit-result-46" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn render_exit_result private fn render_exit_result (result : &amp; ExitIsolatedWorkspaceResult) -&gt; Result &lt; ToolResult , ToolError &gt; crates/eos-tools/src/tools/isolated_workspace/mod.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>render_exit_result</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn render_exit_result (result : &amp; ExitIsolatedWorkspaceResult) -&gt; Result &lt; ToolResult , ToolError &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-tools--src-tools-isolated-workspace-mod-rs.html#item-fn-render-exit-result-46">render_exit_result</a> (result : &amp; ExitIsolatedWorkspaceResult) -&gt; Result &lt; <a class="symbol-link" href="eos-tools--src-core-result-rs.html#item-struct-ToolResult-12">ToolResult</a> , <a class="symbol-link" href="eos-tools.html#item-enum-ToolError-16">ToolError</a> &gt;</code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-tools-isolated-workspace-mod-rs.html#item-fn-render-exit-result-46">render_exit_result</a>(result: &amp;<span class="rs-type">ExitIsolatedWorkspaceResult</span>) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-tools--src-core-result-rs.html#item-struct-ToolResult-12">ToolResult</a>, <a class="symbol-link rs-type" href="eos-tools.html#item-enum-ToolError-16">ToolError</a>&gt; {
+    <a class="symbol-link rs-fn" href="eos-tools--src-tools-isolated-workspace-mod-rs.html#item-fn-render-lifecycle-84">render_lifecycle</a>(
+        result.base.success,
+        &amp;json!({
+            &quot;success&quot;: result.base.success,
+            &quot;evicted_upperdir_bytes&quot;: result.evicted_upperdir_bytes,
+            &quot;lifetime_s&quot;: result.lifetime_s,
+            &quot;phases_ms&quot;: result.phases_ms,
+            &quot;error&quot;: <a class="symbol-link rs-fn" href="eos-tools--src-tools-isolated-workspace-mod-rs.html#item-fn-lifecycle-error-value-95">lifecycle_error_value</a>(result.base.error.as_ref()),
+        }),
+    )
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-tools/src/tools/isolated_workspace/mod.rs:46</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn render_enter_api_failure private fn render_enter_api_failure (error : &amp; SandboxPortError) -&gt; Result &lt; ToolResult , ToolError &gt; crates/eos-tools/src/tools/isolated_workspace/mod.rs  ">
+</article><article id="item-fn-render-enter-api-failure-59" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn render_enter_api_failure private fn render_enter_api_failure (error : &amp; SandboxPortError) -&gt; Result &lt; ToolResult , ToolError &gt; crates/eos-tools/src/tools/isolated_workspace/mod.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>render_enter_api_failure</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn render_enter_api_failure (error : &amp; SandboxPortError) -&gt; Result &lt; ToolResult , ToolError &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-tools--src-tools-isolated-workspace-mod-rs.html#item-fn-render-enter-api-failure-59">render_enter_api_failure</a> (error : &amp; SandboxPortError) -&gt; Result &lt; <a class="symbol-link" href="eos-tools--src-core-result-rs.html#item-struct-ToolResult-12">ToolResult</a> , <a class="symbol-link" href="eos-tools.html#item-enum-ToolError-16">ToolError</a> &gt;</code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-tools-isolated-workspace-mod-rs.html#item-fn-render-enter-api-failure-59">render_enter_api_failure</a>(error: &amp;<span class="rs-type">SandboxPortError</span>) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-tools--src-core-result-rs.html#item-struct-ToolResult-12">ToolResult</a>, <a class="symbol-link rs-type" href="eos-tools.html#item-enum-ToolError-16">ToolError</a>&gt; {
+    <a class="symbol-link rs-fn" href="eos-tools--src-tools-isolated-workspace-mod-rs.html#item-fn-render-lifecycle-84">render_lifecycle</a>(
+        <span class="rs-kw">false</span>,
+        &amp;json!({
+            &quot;success&quot;: <span class="rs-kw">false</span>,
+            &quot;manifest_version&quot;: &quot;&quot;,
+            &quot;manifest_root_hash&quot;: &quot;&quot;,
+            &quot;error&quot;: <a class="symbol-link rs-fn" href="eos-tools--src-tools-isolated-workspace-mod-rs.html#item-fn-lifecycle-error-value-95">lifecycle_error_value</a>(<span class="rs-type">Some</span>(&amp;<a class="symbol-link rs-fn" href="eos-tools--src-tools-isolated-workspace-mod-rs.html#item-fn-lifecycle-error-from-api-106">lifecycle_error_from_api</a>(error))),
+        }),
+    )
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-tools/src/tools/isolated_workspace/mod.rs:59</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn render_exit_api_failure private fn render_exit_api_failure (error : &amp; SandboxPortError) -&gt; Result &lt; ToolResult , ToolError &gt; crates/eos-tools/src/tools/isolated_workspace/mod.rs  ">
+</article><article id="item-fn-render-exit-api-failure-71" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn render_exit_api_failure private fn render_exit_api_failure (error : &amp; SandboxPortError) -&gt; Result &lt; ToolResult , ToolError &gt; crates/eos-tools/src/tools/isolated_workspace/mod.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>render_exit_api_failure</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn render_exit_api_failure (error : &amp; SandboxPortError) -&gt; Result &lt; ToolResult , ToolError &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-tools--src-tools-isolated-workspace-mod-rs.html#item-fn-render-exit-api-failure-71">render_exit_api_failure</a> (error : &amp; SandboxPortError) -&gt; Result &lt; <a class="symbol-link" href="eos-tools--src-core-result-rs.html#item-struct-ToolResult-12">ToolResult</a> , <a class="symbol-link" href="eos-tools.html#item-enum-ToolError-16">ToolError</a> &gt;</code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-tools-isolated-workspace-mod-rs.html#item-fn-render-exit-api-failure-71">render_exit_api_failure</a>(error: &amp;<span class="rs-type">SandboxPortError</span>) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-tools--src-core-result-rs.html#item-struct-ToolResult-12">ToolResult</a>, <a class="symbol-link rs-type" href="eos-tools.html#item-enum-ToolError-16">ToolError</a>&gt; {
+    <a class="symbol-link rs-fn" href="eos-tools--src-tools-isolated-workspace-mod-rs.html#item-fn-render-lifecycle-84">render_lifecycle</a>(
+        <span class="rs-kw">false</span>,
+        &amp;json!({
+            &quot;success&quot;: <span class="rs-kw">false</span>,
+            &quot;evicted_upperdir_bytes&quot;: 0,
+            &quot;lifetime_s&quot;: 0.0,
+            &quot;phases_ms&quot;: {},
+            &quot;error&quot;: <a class="symbol-link rs-fn" href="eos-tools--src-tools-isolated-workspace-mod-rs.html#item-fn-lifecycle-error-value-95">lifecycle_error_value</a>(<span class="rs-type">Some</span>(&amp;<a class="symbol-link rs-fn" href="eos-tools--src-tools-isolated-workspace-mod-rs.html#item-fn-lifecycle-error-from-api-106">lifecycle_error_from_api</a>(error))),
+        }),
+    )
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-tools/src/tools/isolated_workspace/mod.rs:71</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn render_lifecycle private fn render_lifecycle (success : bool , payload : &amp; Value) -&gt; Result &lt; ToolResult , ToolError &gt; crates/eos-tools/src/tools/isolated_workspace/mod.rs  ">
+</article><article id="item-fn-render-lifecycle-84" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn render_lifecycle private fn render_lifecycle (success : bool , payload : &amp; Value) -&gt; Result &lt; ToolResult , ToolError &gt; crates/eos-tools/src/tools/isolated_workspace/mod.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>render_lifecycle</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn render_lifecycle (success : bool , payload : &amp; Value) -&gt; Result &lt; ToolResult , ToolError &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-tools--src-tools-isolated-workspace-mod-rs.html#item-fn-render-lifecycle-84">render_lifecycle</a> (success : bool , payload : &amp; Value) -&gt; Result &lt; <a class="symbol-link" href="eos-tools--src-core-result-rs.html#item-struct-ToolResult-12">ToolResult</a> , <a class="symbol-link" href="eos-tools.html#item-enum-ToolError-16">ToolError</a> &gt;</code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-tools-isolated-workspace-mod-rs.html#item-fn-render-lifecycle-84">render_lifecycle</a>(success: bool, payload: &amp;<span class="rs-type">Value</span>) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-tools--src-core-result-rs.html#item-struct-ToolResult-12">ToolResult</a>, <a class="symbol-link rs-type" href="eos-tools.html#item-enum-ToolError-16">ToolError</a>&gt; {
+    <span class="rs-kw">let</span> output = serde_json::to_string_pretty(payload).map_err(|err| {
+        <a class="symbol-link rs-type" href="eos-tools.html#item-enum-ToolError-16">ToolError</a>::<span class="rs-type">Internal</span>(format!(&quot;failed to serialize lifecycle result: {err}&quot;))
+    })?;
+    <span class="rs-type">Ok</span>(<span class="rs-kw">if</span> success {
+        <a class="symbol-link rs-type" href="eos-tools--src-core-result-rs.html#item-struct-ToolResult-12">ToolResult</a>::<a class="symbol-link rs-fn" href="eos-tools--src-core-result-rs.html#method-ok-31">ok</a>(output)
+    } <span class="rs-kw">else</span> {
+        <a class="symbol-link rs-type" href="eos-tools--src-core-result-rs.html#item-struct-ToolResult-12">ToolResult</a>::<a class="symbol-link rs-fn" href="eos-tools--src-core-result-rs.html#method-error-42">error</a>(output)
+    })
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-tools/src/tools/isolated_workspace/mod.rs:84</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn lifecycle_error_value private fn lifecycle_error_value (error : Option &lt; &amp; LifecycleError &gt;) -&gt; Value crates/eos-tools/src/tools/isolated_workspace/mod.rs  ">
+</article><article id="item-fn-lifecycle-error-value-95" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn lifecycle_error_value private fn lifecycle_error_value (error : Option &lt; &amp; LifecycleError &gt;) -&gt; Value crates/eos-tools/src/tools/isolated_workspace/mod.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>lifecycle_error_value</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn lifecycle_error_value (error : Option &lt; &amp; LifecycleError &gt;) -&gt; Value</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-tools--src-tools-isolated-workspace-mod-rs.html#item-fn-lifecycle-error-value-95">lifecycle_error_value</a> (error : Option &lt; &amp; LifecycleError &gt;) -&gt; Value</code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-tools-isolated-workspace-mod-rs.html#item-fn-lifecycle-error-value-95">lifecycle_error_value</a>(error: <span class="rs-type">Option</span>&lt;&amp;<span class="rs-type">LifecycleError</span>&gt;) -&gt; <span class="rs-type">Value</span> {
+    <span class="rs-kw">match</span> error {
+        <span class="rs-type">Some</span>(error) =&gt; json!({
+            &quot;kind&quot;: error.kind,
+            &quot;message&quot;: error.message,
+            &quot;details&quot;: error.details,
+        }),
+        <span class="rs-type">None</span> =&gt; <span class="rs-type">Value</span>::<span class="rs-type">Null</span>,
+    }
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-tools/src/tools/isolated_workspace/mod.rs:95</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn lifecycle_error_from_api private fn lifecycle_error_from_api (error : &amp; SandboxPortError) -&gt; LifecycleError crates/eos-tools/src/tools/isolated_workspace/mod.rs  ">
+</article><article id="item-fn-lifecycle-error-from-api-106" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn lifecycle_error_from_api private fn lifecycle_error_from_api (error : &amp; SandboxPortError) -&gt; LifecycleError crates/eos-tools/src/tools/isolated_workspace/mod.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>lifecycle_error_from_api</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn lifecycle_error_from_api (error : &amp; SandboxPortError) -&gt; LifecycleError</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-tools--src-tools-isolated-workspace-mod-rs.html#item-fn-lifecycle-error-from-api-106">lifecycle_error_from_api</a> (error : &amp; SandboxPortError) -&gt; LifecycleError</code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-tools-isolated-workspace-mod-rs.html#item-fn-lifecycle-error-from-api-106">lifecycle_error_from_api</a>(error: &amp;<span class="rs-type">SandboxPortError</span>) -&gt; <span class="rs-type">LifecycleError</span> {
+    <span class="rs-kw">let</span> fallback = <span class="rs-kw">match</span> error {
+        <span class="rs-type">SandboxPortError</span>::<span class="rs-type">Decode</span> { .. } =&gt; &quot;decode_error&quot;,
+        _ =&gt; &quot;internal_error&quot;,
+    };
+    <span class="rs-type">LifecycleError</span> {
+        kind: error.code().unwrap_or(fallback).to_owned(),
+        message: error.message().to_owned(),
+        details: <span class="rs-type">BTreeMap</span>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(),
+    }
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-tools/src/tools/isolated_workspace/mod.rs:106</p>
 </article></div>
 </section></div>
 </main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/eos-tools/src/tools/isolated_workspace/mod.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-comment">//! Isolated-workspace lifecycle tools.</span>
+
+<span class="rs-kw">use</span> std::collections::<span class="rs-type">BTreeMap</span>;
+
+<span class="rs-kw">use</span> eos_sandbox_port::{
+    <span class="rs-type">EnterIsolatedWorkspaceResult</span>, <span class="rs-type">ExitIsolatedWorkspaceResult</span>, <span class="rs-type">LifecycleError</span>, <span class="rs-type">SandboxPortError</span>,
+};
+<span class="rs-kw">use</span> serde_json::{json, <span class="rs-type">Value</span>};
+
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::{<a class="symbol-link rs-type" href="eos-tools.html#item-enum-ToolError-16">ToolError</a>, <a class="symbol-link rs-type" href="eos-tools--src-core-result-rs.html#item-struct-ToolResult-12">ToolResult</a>};
+
+<span class="rs-kw">mod</span> enter_isolated_workspace;
+<span class="rs-kw">mod</span> exit_isolated_workspace;
+
+<span class="rs-kw">const</span> <span class="rs-type">DEFAULT_LAYER_STACK_ROOT</span>: &amp;str = &quot;/eos/state/layer-stack&quot;;
+
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-ports-mod-rs.html#method-register-322">register</a>(
+    registry: &amp;<span class="rs-kw">mut</span> <span class="rs-kw">crate</span>::registry::<a class="symbol-link rs-type" href="eos-tools--src-registry-tool-registry-rs.html#item-struct-ToolRegistry-18">ToolRegistry</a>,
+    config: &amp;<span class="rs-kw">crate</span>::registry::config::<a class="symbol-link rs-type" href="eos-tools--src-registry-config-rs.html#item-struct-ToolConfigSet-45">ToolConfigSet</a>,
+    sandbox_service: <span class="rs-kw">super</span>::<a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-SandboxToolService-65">SandboxToolService</a>,
+) {
+    enter_isolated_workspace::<a class="symbol-link rs-fn" href="eos-tools--src-ports-mod-rs.html#method-register-322">register</a>(registry, config, sandbox_service.clone());
+    exit_isolated_workspace::<a class="symbol-link rs-fn" href="eos-tools--src-ports-mod-rs.html#method-register-322">register</a>(registry, config, sandbox_service);
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-tools-isolated-workspace-mod-rs.html#item-fn-effective-layer-stack-root-26">effective_layer_stack_root</a>(layer_stack_root: &amp;str) -&gt; <span class="rs-type">String</span> {
+    <span class="rs-kw">if</span> layer_stack_root.<a class="symbol-link rs-fn" href="eos-tools--src-registry-tool-registry-rs.html#method-is-empty-96">is_empty</a>() {
+        <span class="rs-type">DEFAULT_LAYER_STACK_ROOT</span>.to_owned()
+    } <span class="rs-kw">else</span> {
+        layer_stack_root.to_owned()
+    }
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-tools-isolated-workspace-mod-rs.html#item-fn-render-enter-result-34">render_enter_result</a>(result: &amp;<span class="rs-type">EnterIsolatedWorkspaceResult</span>) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-tools--src-core-result-rs.html#item-struct-ToolResult-12">ToolResult</a>, <a class="symbol-link rs-type" href="eos-tools.html#item-enum-ToolError-16">ToolError</a>&gt; {
+    <a class="symbol-link rs-fn" href="eos-tools--src-tools-isolated-workspace-mod-rs.html#item-fn-render-lifecycle-84">render_lifecycle</a>(
+        result.base.success,
+        &amp;json!({
+            &quot;success&quot;: result.base.success,
+            &quot;manifest_version&quot;: result.manifest_version,
+            &quot;manifest_root_hash&quot;: result.manifest_root_hash,
+            &quot;error&quot;: <a class="symbol-link rs-fn" href="eos-tools--src-tools-isolated-workspace-mod-rs.html#item-fn-lifecycle-error-value-95">lifecycle_error_value</a>(result.base.error.as_ref()),
+        }),
+    )
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-tools-isolated-workspace-mod-rs.html#item-fn-render-exit-result-46">render_exit_result</a>(result: &amp;<span class="rs-type">ExitIsolatedWorkspaceResult</span>) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-tools--src-core-result-rs.html#item-struct-ToolResult-12">ToolResult</a>, <a class="symbol-link rs-type" href="eos-tools.html#item-enum-ToolError-16">ToolError</a>&gt; {
+    <a class="symbol-link rs-fn" href="eos-tools--src-tools-isolated-workspace-mod-rs.html#item-fn-render-lifecycle-84">render_lifecycle</a>(
+        result.base.success,
+        &amp;json!({
+            &quot;success&quot;: result.base.success,
+            &quot;evicted_upperdir_bytes&quot;: result.evicted_upperdir_bytes,
+            &quot;lifetime_s&quot;: result.lifetime_s,
+            &quot;phases_ms&quot;: result.phases_ms,
+            &quot;error&quot;: <a class="symbol-link rs-fn" href="eos-tools--src-tools-isolated-workspace-mod-rs.html#item-fn-lifecycle-error-value-95">lifecycle_error_value</a>(result.base.error.as_ref()),
+        }),
+    )
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-tools-isolated-workspace-mod-rs.html#item-fn-render-enter-api-failure-59">render_enter_api_failure</a>(error: &amp;<span class="rs-type">SandboxPortError</span>) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-tools--src-core-result-rs.html#item-struct-ToolResult-12">ToolResult</a>, <a class="symbol-link rs-type" href="eos-tools.html#item-enum-ToolError-16">ToolError</a>&gt; {
+    <a class="symbol-link rs-fn" href="eos-tools--src-tools-isolated-workspace-mod-rs.html#item-fn-render-lifecycle-84">render_lifecycle</a>(
+        <span class="rs-kw">false</span>,
+        &amp;json!({
+            &quot;success&quot;: <span class="rs-kw">false</span>,
+            &quot;manifest_version&quot;: &quot;&quot;,
+            &quot;manifest_root_hash&quot;: &quot;&quot;,
+            &quot;error&quot;: <a class="symbol-link rs-fn" href="eos-tools--src-tools-isolated-workspace-mod-rs.html#item-fn-lifecycle-error-value-95">lifecycle_error_value</a>(<span class="rs-type">Some</span>(&amp;<a class="symbol-link rs-fn" href="eos-tools--src-tools-isolated-workspace-mod-rs.html#item-fn-lifecycle-error-from-api-106">lifecycle_error_from_api</a>(error))),
+        }),
+    )
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-tools-isolated-workspace-mod-rs.html#item-fn-render-exit-api-failure-71">render_exit_api_failure</a>(error: &amp;<span class="rs-type">SandboxPortError</span>) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-tools--src-core-result-rs.html#item-struct-ToolResult-12">ToolResult</a>, <a class="symbol-link rs-type" href="eos-tools.html#item-enum-ToolError-16">ToolError</a>&gt; {
+    <a class="symbol-link rs-fn" href="eos-tools--src-tools-isolated-workspace-mod-rs.html#item-fn-render-lifecycle-84">render_lifecycle</a>(
+        <span class="rs-kw">false</span>,
+        &amp;json!({
+            &quot;success&quot;: <span class="rs-kw">false</span>,
+            &quot;evicted_upperdir_bytes&quot;: 0,
+            &quot;lifetime_s&quot;: 0.0,
+            &quot;phases_ms&quot;: {},
+            &quot;error&quot;: <a class="symbol-link rs-fn" href="eos-tools--src-tools-isolated-workspace-mod-rs.html#item-fn-lifecycle-error-value-95">lifecycle_error_value</a>(<span class="rs-type">Some</span>(&amp;<a class="symbol-link rs-fn" href="eos-tools--src-tools-isolated-workspace-mod-rs.html#item-fn-lifecycle-error-from-api-106">lifecycle_error_from_api</a>(error))),
+        }),
+    )
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-tools-isolated-workspace-mod-rs.html#item-fn-render-lifecycle-84">render_lifecycle</a>(success: bool, payload: &amp;<span class="rs-type">Value</span>) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-tools--src-core-result-rs.html#item-struct-ToolResult-12">ToolResult</a>, <a class="symbol-link rs-type" href="eos-tools.html#item-enum-ToolError-16">ToolError</a>&gt; {
+    <span class="rs-kw">let</span> output = serde_json::to_string_pretty(payload).map_err(|err| {
+        <a class="symbol-link rs-type" href="eos-tools.html#item-enum-ToolError-16">ToolError</a>::<span class="rs-type">Internal</span>(format!(&quot;failed to serialize lifecycle result: {err}&quot;))
+    })?;
+    <span class="rs-type">Ok</span>(<span class="rs-kw">if</span> success {
+        <a class="symbol-link rs-type" href="eos-tools--src-core-result-rs.html#item-struct-ToolResult-12">ToolResult</a>::<a class="symbol-link rs-fn" href="eos-tools--src-core-result-rs.html#method-ok-31">ok</a>(output)
+    } <span class="rs-kw">else</span> {
+        <a class="symbol-link rs-type" href="eos-tools--src-core-result-rs.html#item-struct-ToolResult-12">ToolResult</a>::<a class="symbol-link rs-fn" href="eos-tools--src-core-result-rs.html#method-error-42">error</a>(output)
+    })
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-tools-isolated-workspace-mod-rs.html#item-fn-lifecycle-error-value-95">lifecycle_error_value</a>(error: <span class="rs-type">Option</span>&lt;&amp;<span class="rs-type">LifecycleError</span>&gt;) -&gt; <span class="rs-type">Value</span> {
+    <span class="rs-kw">match</span> error {
+        <span class="rs-type">Some</span>(error) =&gt; json!({
+            &quot;kind&quot;: error.kind,
+            &quot;message&quot;: error.message,
+            &quot;details&quot;: error.details,
+        }),
+        <span class="rs-type">None</span> =&gt; <span class="rs-type">Value</span>::<span class="rs-type">Null</span>,
+    }
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-tools-isolated-workspace-mod-rs.html#item-fn-lifecycle-error-from-api-106">lifecycle_error_from_api</a>(error: &amp;<span class="rs-type">SandboxPortError</span>) -&gt; <span class="rs-type">LifecycleError</span> {
+    <span class="rs-kw">let</span> fallback = <span class="rs-kw">match</span> error {
+        <span class="rs-type">SandboxPortError</span>::<span class="rs-type">Decode</span> { .. } =&gt; &quot;decode_error&quot;,
+        _ =&gt; &quot;internal_error&quot;,
+    };
+    <span class="rs-type">LifecycleError</span> {
+        kind: error.code().unwrap_or(fallback).to_owned(),
+        message: error.message().to_owned(),
+        details: <span class="rs-type">BTreeMap</span>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(),
+    }
+}
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
   <script src="../assets/inventory.js"></script>
 </body>
 </html>

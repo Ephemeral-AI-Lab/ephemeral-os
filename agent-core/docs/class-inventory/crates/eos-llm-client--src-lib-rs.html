@@ -8,8 +8,16 @@
 </head>
 <body>
   <header>
-    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
-    <h1>eos-llm-client File Inventory</h1>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>eos-llm-client File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS/agent-core &amp;&amp; cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
   </header>
   <a class="back-link" href="../index.html">agent-core</a>
 <section class="summary">
@@ -50,6 +58,50 @@
   <div class="items"></div>
 </section></div>
 </main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/eos-llm-client/src/lib.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-comment">//! `eos-llm-client` — the provider-neutral LLM vocabulary and the direct</span>
+<span class="rs-comment">//! HTTP/SSE clients that turn an [`LlmRequest`] into a stream of normalized</span>
+<span class="rs-comment">//! [`LlmStreamEvent`]s.</span>
+<span class="rs-comment">//!</span>
+<span class="rs-comment">//! This crate is the single boundary where a wire protocol (Anthropic Messages,</span>
+<span class="rs-comment">//! `OpenAI` Responses) is encoded from neutral types and decoded back into neutral</span>
+<span class="rs-comment">//! types. It owns [`Message`]/[`ContentBlock`], [`UsageSnapshot`], [`LlmRequest`],</span>
+<span class="rs-comment">//! [`LlmStreamEvent`], [`ProviderError`], [`ToolSpec`], and the [`LlmClient`]</span>
+<span class="rs-comment">//! seam (anchor §5). It depends on no provider SDK — direct `reqwest` + a</span>
+<span class="rs-comment">//! hand-rolled SSE splitter only — and owns no engine-domain events, tool</span>
+<span class="rs-comment">//! registry, or lifecycle policy.</span>
+#![forbid(unsafe_code)]
+#![warn(missing_docs)]
+
+<span class="rs-kw">mod</span> auth;
+<span class="rs-kw">mod</span> client;
+<span class="rs-kw">mod</span> clients;
+<span class="rs-kw">mod</span> error;
+<span class="rs-kw">mod</span> events;
+<span class="rs-kw">mod</span> message;
+<span class="rs-kw">mod</span> retry;
+<span class="rs-kw">mod</span> sse;
+<span class="rs-kw">mod</span> types;
+
+<span class="rs-kw">pub</span> <span class="rs-kw">use</span> auth::<a class="symbol-link rs-type" href="eos-llm-client.html#item-enum-Auth-38">Auth</a>;
+<span class="rs-kw">pub</span> <span class="rs-kw">use</span> client::{<a class="symbol-link rs-type" href="eos-llm-client--src-client-rs.html#item-struct-ConfiguredLlmClient-85">ConfiguredLlmClient</a>, <a class="symbol-link rs-type" href="eos-llm-client--src-client-rs.html#item-trait-LlmClient-28">LlmClient</a>, <a class="symbol-link rs-type" href="eos-llm-client--src-client-rs.html#item-struct-LlmRequestDefaults-45">LlmRequestDefaults</a>, <a class="symbol-link rs-type" href="eos-llm-client--src-client-rs.html#item-type-LlmStream-22">LlmStream</a>};
+<span class="rs-kw">pub</span> <span class="rs-kw">use</span> clients::{
+    <a class="symbol-link rs-type" href="eos-llm-client--src-clients-anthropic-api-client-rs.html#item-struct-AnthropicApiClient-41">AnthropicApiClient</a>, <a class="symbol-link rs-type" href="eos-llm-client--src-clients-claude-coding-plan-rs.html#item-struct-ClaudeCodingPlanClient-23">ClaudeCodingPlanClient</a>, <a class="symbol-link rs-type" href="eos-llm-client--src-clients-codex-coding-plan-rs.html#item-struct-CodexCodingPlanClient-19">CodexCodingPlanClient</a>, <a class="symbol-link rs-type" href="eos-llm-client--src-clients-openai-api-client-rs.html#item-struct-OpenAiApiClient-37">OpenAiApiClient</a>,
+};
+<span class="rs-kw">pub</span> <span class="rs-kw">use</span> error::{<a class="symbol-link rs-type" href="eos-llm-client--src-error-rs.html#item-struct-ProviderError-29">ProviderError</a>, <a class="symbol-link rs-type" href="eos-llm-client--src-error-rs.html#item-enum-ProviderErrorKind-6">ProviderErrorKind</a>};
+<span class="rs-kw">pub</span> <span class="rs-kw">use</span> events::{<a class="symbol-link rs-type" href="eos-llm-client--src-events-rs.html#item-enum-LlmStreamEvent-15">LlmStreamEvent</a>, <a class="symbol-link rs-type" href="eos-llm-client--src-events-rs.html#item-enum-StopReason-53">StopReason</a>};
+<span class="rs-kw">pub</span> <span class="rs-kw">use</span> message::{<a class="symbol-link rs-type" href="eos-llm-client--src-message-rs.html#item-enum-ContentBlock-34">ContentBlock</a>, <a class="symbol-link rs-type" href="eos-llm-client--src-message-rs.html#item-struct-Message-88">Message</a>, <a class="symbol-link rs-type" href="eos-llm-client--src-message-rs.html#item-enum-MessageRole-10">MessageRole</a>};
+<span class="rs-kw">pub</span> <span class="rs-kw">use</span> types::{
+    <a class="symbol-link rs-type" href="eos-llm-client--src-types-rs.html#item-struct-LlmRequest-113">LlmRequest</a>, <a class="symbol-link rs-type" href="eos-llm-client--src-types-rs.html#item-struct-LlmRequestBuilder-154">LlmRequestBuilder</a>, <a class="symbol-link rs-type" href="eos-llm-client--src-types-rs.html#item-enum-ReasoningEffort-85">ReasoningEffort</a>, <a class="symbol-link rs-type" href="eos-llm-client--src-types-rs.html#item-enum-ToolChoice-68">ToolChoice</a>, <a class="symbol-link rs-type" href="eos-llm-client--src-types-rs.html#item-struct-ToolSpec-30">ToolSpec</a>, <a class="symbol-link rs-type" href="eos-llm-client--src-types-rs.html#item-struct-UsageSnapshot-12">UsageSnapshot</a>,
+    <span class="rs-type">DEFAULT_MAX_TOKENS</span>,
+};
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
   <script src="../assets/inventory.js"></script>
 </body>
 </html>

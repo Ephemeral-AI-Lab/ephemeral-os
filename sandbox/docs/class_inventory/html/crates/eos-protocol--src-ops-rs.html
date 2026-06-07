@@ -8,8 +8,16 @@
 </head>
 <body>
   <header>
-    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
-    <h1>eos-protocol File Inventory</h1>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>eos-protocol File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS/sandbox &amp;&amp; cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
   </header>
   <a class="back-link" href="../index.html">sandbox</a>
 <section class="summary">
@@ -50,6 +58,120 @@
   <div class="items"></div>
 </section></div>
 </main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/eos-protocol/src/ops.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-comment">//! Daemon operation names owned by the protocol crate.</span>
+<span class="rs-comment">//!</span>
+<span class="rs-comment">//! The live `eosd` dispatcher registers these exact strings, and protocol</span>
+<span class="rs-comment">//! clients should import them from here instead of duplicating string literals.</span>
+
+<span class="rs-comment">/// Runtime readiness probe.</span>
+<span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-type">API_RUNTIME_READY</span>: &amp;str = &quot;api.runtime.ready&quot;;
+<span class="rs-comment">/// Invocation heartbeat.</span>
+<span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-type">API_V1_HEARTBEAT</span>: &amp;str = &quot;api.v1.heartbeat&quot;;
+<span class="rs-comment">/// Cancel an in-flight invocation.</span>
+<span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-type">API_V1_CANCEL</span>: &amp;str = &quot;api.v1.cancel&quot;;
+<span class="rs-comment">/// Count in-flight invocations.</span>
+<span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-type">API_V1_INFLIGHT_COUNT</span>: &amp;str = &quot;api.v1.inflight_count&quot;;
+<span class="rs-comment">/// LayerStack/storage metrics.</span>
+<span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-type">API_LAYER_METRICS</span>: &amp;str = &quot;api.layer_metrics&quot;;
+<span class="rs-comment">/// Ensure a workspace base binding exists.</span>
+<span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-type">API_ENSURE_WORKSPACE_BASE</span>: &amp;str = &quot;api.ensure_workspace_base&quot;;
+<span class="rs-comment">/// Build or rebuild a workspace base binding.</span>
+<span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-type">API_BUILD_WORKSPACE_BASE</span>: &amp;str = &quot;api.build_workspace_base&quot;;
+<span class="rs-comment">/// Materialize LayerStack state into the bound workspace.</span>
+<span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-type">API_COMMIT_TO_WORKSPACE</span>: &amp;str = &quot;api.commit_to_workspace&quot;;
+<span class="rs-comment">/// Commit a LayerStack snapshot into the bound workspace's durable Git repo.</span>
+<span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-type">API_COMMIT_TO_GIT</span>: &amp;str = &quot;api.commit_to_git&quot;;
+<span class="rs-comment">/// Inspect the workspace binding for a layer stack root.</span>
+<span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-type">API_WORKSPACE_BINDING</span>: &amp;str = &quot;api.workspace_binding&quot;;
+<span class="rs-comment">/// Pull audit events after a cursor.</span>
+<span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-type">API_AUDIT_PULL</span>: &amp;str = &quot;api.audit.pull&quot;;
+<span class="rs-comment">/// Snapshot audit ring metadata.</span>
+<span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-type">API_AUDIT_SNAPSHOT</span>: &amp;str = &quot;api.audit.snapshot&quot;;
+<span class="rs-comment">/// Reset the audit floor when daemon-side test gate allows it.</span>
+<span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-type">API_AUDIT_RESET_FLOOR</span>: &amp;str = &quot;api.audit.reset_floor&quot;;
+<span class="rs-comment">/// Direct LayerStack read.</span>
+<span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-type">API_V1_READ_FILE</span>: &amp;str = &quot;api.v1.read_file&quot;;
+<span class="rs-comment">/// Direct OCC-gated write.</span>
+<span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-type">API_V1_WRITE_FILE</span>: &amp;str = &quot;api.v1.write_file&quot;;
+<span class="rs-comment">/// Direct OCC-gated edit.</span>
+<span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-type">API_V1_EDIT_FILE</span>: &amp;str = &quot;api.v1.edit_file&quot;;
+<span class="rs-comment">/// Ensure a plugin service is available.</span>
+<span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-type">API_PLUGIN_ENSURE</span>: &amp;str = &quot;api.plugin.ensure&quot;;
+<span class="rs-comment">/// Inspect plugin service status.</span>
+<span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-type">API_PLUGIN_STATUS</span>: &amp;str = &quot;api.plugin.status&quot;;
+<span class="rs-comment">/// Enter isolated workspace mode.</span>
+<span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-type">API_ISOLATED_WORKSPACE_ENTER</span>: &amp;str = &quot;api.isolated_workspace.enter&quot;;
+<span class="rs-comment">/// Exit isolated workspace mode.</span>
+<span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-type">API_ISOLATED_WORKSPACE_EXIT</span>: &amp;str = &quot;api.isolated_workspace.exit&quot;;
+<span class="rs-comment">/// Inspect isolated workspace status.</span>
+<span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-type">API_ISOLATED_WORKSPACE_STATUS</span>: &amp;str = &quot;api.isolated_workspace.status&quot;;
+<span class="rs-comment">/// List open isolated workspaces.</span>
+<span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-type">API_ISOLATED_WORKSPACE_LIST_OPEN</span>: &amp;str = &quot;api.isolated_workspace.list_open&quot;;
+<span class="rs-comment">/// Test-only isolated workspace reset hook.</span>
+<span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-type">API_ISOLATED_WORKSPACE_TEST_RESET</span>: &amp;str = &quot;api.isolated_workspace.test_reset&quot;;
+<span class="rs-comment">/// Start or poll a command session.</span>
+<span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-type">API_V1_EXEC_COMMAND</span>: &amp;str = &quot;api.v1.exec_command&quot;;
+<span class="rs-comment">/// Write stdin to a command session.</span>
+<span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-type">API_V1_WRITE_STDIN</span>: &amp;str = &quot;api.v1.write_stdin&quot;;
+<span class="rs-comment">/// Read command-session progress without writing stdin.</span>
+<span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-type">API_V1_COMMAND_READ_PROGRESS</span>: &amp;str = &quot;api.v1.command.read_progress&quot;;
+<span class="rs-comment">/// Cancel a command session.</span>
+<span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-type">API_V1_COMMAND_CANCEL</span>: &amp;str = &quot;api.v1.command.cancel&quot;;
+<span class="rs-comment">/// Collect completed command-session notifications.</span>
+<span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-type">API_V1_COMMAND_COLLECT_COMPLETED</span>: &amp;str = &quot;api.v1.command.collect_completed&quot;;
+<span class="rs-comment">/// Count live command sessions.</span>
+<span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-type">API_V1_COMMAND_SESSION_COUNT</span>: &amp;str = &quot;api.v1.command_session_count&quot;;
+<span class="rs-comment">/// Cancel every workspace run owned by one caller (`caller_id == agent_run_id`):</span>
+<span class="rs-comment">/// discards the caller's command session(s) and exits its isolated workspace if</span>
+<span class="rs-comment">/// open. The agent-core per-run cancellation RPC.</span>
+<span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-type">API_V1_CANCEL_WORKSPACE_RUNS_BY_CALLER</span>: &amp;str =
+    &quot;api.v1.cancel_workspace_runs_by_caller_id&quot;;
+<span class="rs-comment">/// Cancel every workspace run in the sandbox (whole-sandbox sweep backstop):</span>
+<span class="rs-comment">/// discards all command sessions, exits all isolated callers, reaps orphans.</span>
+<span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-type">API_V1_CANCEL_WORKSPACE_RUNS</span>: &amp;str = &quot;api.v1.cancel_workspace_runs&quot;;
+
+<span class="rs-comment">/// Built-in daemon ops expected to be available over the wire.</span>
+<span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-type">BUILTIN_DAEMON_OPS</span>: &amp;[&amp;str] = &amp;[
+    <span class="rs-type">API_RUNTIME_READY</span>,
+    <span class="rs-type">API_V1_HEARTBEAT</span>,
+    <span class="rs-type">API_V1_CANCEL</span>,
+    <span class="rs-type">API_V1_INFLIGHT_COUNT</span>,
+    <span class="rs-type">API_LAYER_METRICS</span>,
+    <span class="rs-type">API_ENSURE_WORKSPACE_BASE</span>,
+    <span class="rs-type">API_BUILD_WORKSPACE_BASE</span>,
+    <span class="rs-type">API_COMMIT_TO_WORKSPACE</span>,
+    <span class="rs-type">API_COMMIT_TO_GIT</span>,
+    <span class="rs-type">API_WORKSPACE_BINDING</span>,
+    <span class="rs-type">API_AUDIT_PULL</span>,
+    <span class="rs-type">API_AUDIT_SNAPSHOT</span>,
+    <span class="rs-type">API_AUDIT_RESET_FLOOR</span>,
+    <span class="rs-type">API_V1_READ_FILE</span>,
+    <span class="rs-type">API_V1_WRITE_FILE</span>,
+    <span class="rs-type">API_V1_EDIT_FILE</span>,
+    <span class="rs-type">API_PLUGIN_ENSURE</span>,
+    <span class="rs-type">API_PLUGIN_STATUS</span>,
+    <span class="rs-type">API_ISOLATED_WORKSPACE_ENTER</span>,
+    <span class="rs-type">API_ISOLATED_WORKSPACE_EXIT</span>,
+    <span class="rs-type">API_ISOLATED_WORKSPACE_STATUS</span>,
+    <span class="rs-type">API_ISOLATED_WORKSPACE_LIST_OPEN</span>,
+    <span class="rs-type">API_ISOLATED_WORKSPACE_TEST_RESET</span>,
+    <span class="rs-type">API_V1_EXEC_COMMAND</span>,
+    <span class="rs-type">API_V1_WRITE_STDIN</span>,
+    <span class="rs-type">API_V1_COMMAND_READ_PROGRESS</span>,
+    <span class="rs-type">API_V1_COMMAND_CANCEL</span>,
+    <span class="rs-type">API_V1_COMMAND_COLLECT_COMPLETED</span>,
+    <span class="rs-type">API_V1_COMMAND_SESSION_COUNT</span>,
+    <span class="rs-type">API_V1_CANCEL_WORKSPACE_RUNS_BY_CALLER</span>,
+    <span class="rs-type">API_V1_CANCEL_WORKSPACE_RUNS</span>,
+];
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
   <script src="../assets/inventory.js"></script>
 </body>
 </html>

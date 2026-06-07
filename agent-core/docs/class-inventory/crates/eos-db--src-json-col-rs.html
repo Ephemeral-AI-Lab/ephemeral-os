@@ -8,8 +8,16 @@
 </head>
 <body>
   <header>
-    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
-    <h1>eos-db File Inventory</h1>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>eos-db File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS/agent-core &amp;&amp; cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
   </header>
   <a class="back-link" href="../index.html">agent-core</a>
 <section class="summary">
@@ -47,79 +55,287 @@
       <span>0 methods</span>
     </div>
   </div>
-  <div class="items"><div class="group-label">Standalone Functions</div><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn encode pub(crate) pub(crate) fn encode &lt; T : Serialize + ? Sized &gt; (value : &amp; T) -&gt; Result &lt; String , DbError &gt; crates/eos-db/src/json_col.rs  ">
+  <div class="items"><div class="group-label">Standalone Functions</div><article id="item-fn-encode-12" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn encode pub(crate) pub(crate) fn encode &lt; T : Serialize + ? Sized &gt; (value : &amp; T) -&gt; Result &lt; String , DbError &gt; crates/eos-db/src/json_col.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>encode</h3>
     <span class="visibility">pub(crate)</span>
   </div>
-  <code class="signature">pub(crate) fn encode &lt; T : Serialize + ? Sized &gt; (value : &amp; T) -&gt; Result &lt; String , DbError &gt;</code>
+  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-db--src-json-col-rs.html#item-fn-encode-12">encode</a> &lt; T : Serialize + ? Sized &gt; (value : &amp; T) -&gt; Result &lt; String , <a class="symbol-link" href="eos-db--src-error-rs.html#item-enum-DbError-5">DbError</a> &gt;</code>
+  <p class="docstring">Serialize a value to its JSON TEXT column form.<br># Errors<br>Returns [`DbError::JsonEncode`] if serialization fails.</p>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-comment">/// Serialize a value to its JSON TEXT column form.</span>
+<span class="rs-comment">///</span>
+<span class="rs-comment">/// # Errors</span>
+<span class="rs-comment">/// Returns [`DbError::JsonEncode`] if serialization fails.</span>
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> encode&lt;<span class="rs-type">T</span>: <span class="rs-type">Serialize</span> + ?<span class="rs-type">Sized</span>&gt;(value: &amp;<span class="rs-type">T</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">String</span>, <a class="symbol-link rs-type" href="eos-db--src-error-rs.html#item-enum-DbError-5">DbError</a>&gt; {
+    serde_json::to_string(value).map_err(<a class="symbol-link rs-type" href="eos-db--src-error-rs.html#item-enum-DbError-5">DbError</a>::<span class="rs-type">JsonEncode</span>)
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-db/src/json_col.rs:12</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn decode_default pub(crate) pub(crate) fn decode_default &lt; T : DeserializeOwned + Default &gt; (text : Option &lt; &amp; str &gt; ,) -&gt; Result &lt; T , DbError &gt; crates/eos-db/src/json_col.rs  ">
+</article><article id="item-fn-decode-default-20" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn decode_default pub(crate) pub(crate) fn decode_default &lt; T : DeserializeOwned + Default &gt; (text : Option &lt; &amp; str &gt; ,) -&gt; Result &lt; T , DbError &gt; crates/eos-db/src/json_col.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>decode_default</h3>
     <span class="visibility">pub(crate)</span>
   </div>
-  <code class="signature">pub(crate) fn decode_default &lt; T : DeserializeOwned + Default &gt; (text : Option &lt; &amp; str &gt; ,) -&gt; Result &lt; T , DbError &gt;</code>
+  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-db--src-json-col-rs.html#item-fn-decode-default-20">decode_default</a> &lt; T : DeserializeOwned + Default &gt; (text : Option &lt; &amp; str &gt; ,) -&gt; Result &lt; T , <a class="symbol-link" href="eos-db--src-error-rs.html#item-enum-DbError-5">DbError</a> &gt;</code>
+  <p class="docstring">Default-to-empty decode for the `x or []` columns (needs, task/attempt<br>outcomes, iteration/attempt id lists, generator/reducer task ids). A<br>NULL/empty cell decodes to `T::default()`.<br># Errors<br>Returns [`DbError::JsonDecode`] if a non-empty cell is malformed JSON.</p>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-comment">/// Default-to-empty decode for the `x or []` columns (needs, task/attempt</span>
+<span class="rs-comment">/// outcomes, iteration/attempt id lists, generator/reducer task ids). A</span>
+<span class="rs-comment">/// NULL/empty cell decodes to `T::default()`.</span>
+<span class="rs-comment">///</span>
+<span class="rs-comment">/// # Errors</span>
+<span class="rs-comment">/// Returns [`DbError::JsonDecode`] if a non-empty cell is malformed JSON.</span>
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> decode_default&lt;<span class="rs-type">T</span>: <span class="rs-type">DeserializeOwned</span> + <span class="rs-type">Default</span>&gt;(
+    text: <span class="rs-type">Option</span>&lt;&amp;str&gt;,
+) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">T</span>, <a class="symbol-link rs-type" href="eos-db--src-error-rs.html#item-enum-DbError-5">DbError</a>&gt; {
+    <span class="rs-kw">match</span> text {
+        <span class="rs-type">None</span> | <span class="rs-type">Some</span>(&quot;&quot;) =&gt; <span class="rs-type">Ok</span>(<span class="rs-type">T</span>::default()),
+        <span class="rs-type">Some</span>(s) =&gt; serde_json::from_str(s).map_err(<a class="symbol-link rs-type" href="eos-db--src-error-rs.html#item-enum-DbError-5">DbError</a>::<span class="rs-type">JsonDecode</span>),
+    }
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-db/src/json_col.rs:20</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn decode_opt pub(crate) pub(crate) fn decode_opt &lt; T : DeserializeOwned &gt; (text : Option &lt; &amp; str &gt;) -&gt; Result &lt; Option &lt; T &gt; , DbError &gt; crates/eos-db/src/json_col.rs  ">
+</article><article id="item-fn-decode-opt-35" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn decode_opt pub(crate) pub(crate) fn decode_opt &lt; T : DeserializeOwned &gt; (text : Option &lt; &amp; str &gt;) -&gt; Result &lt; Option &lt; T &gt; , DbError &gt; crates/eos-db/src/json_col.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>decode_opt</h3>
     <span class="visibility">pub(crate)</span>
   </div>
-  <code class="signature">pub(crate) fn decode_opt &lt; T : DeserializeOwned &gt; (text : Option &lt; &amp; str &gt;) -&gt; Result &lt; Option &lt; T &gt; , DbError &gt;</code>
+  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-db--src-json-col-rs.html#item-fn-decode-opt-35">decode_opt</a> &lt; T : DeserializeOwned &gt; (text : Option &lt; &amp; str &gt;) -&gt; Result &lt; Option &lt; T &gt; , <a class="symbol-link" href="eos-db--src-error-rs.html#item-enum-DbError-5">DbError</a> &gt;</code>
+  <p class="docstring">Null-preserving decode for the nullable `agent_run` columns<br>(`initial_messages`, `message_history`, `terminal_tool_result`): NULL/empty<br>stays `None` — `agent_run_store` does not coerce to `[]`.<br># Errors<br>Returns [`DbError::JsonDecode`] if a non-empty cell is malformed JSON.</p>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-comment">/// Null-preserving decode for the nullable `agent_run` columns</span>
+<span class="rs-comment">/// (`initial_messages`, `message_history`, `terminal_tool_result`): NULL/empty</span>
+<span class="rs-comment">/// stays `None` — `agent_run_store` does not coerce to `[]`.</span>
+<span class="rs-comment">///</span>
+<span class="rs-comment">/// # Errors</span>
+<span class="rs-comment">/// Returns [`DbError::JsonDecode`] if a non-empty cell is malformed JSON.</span>
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> decode_opt&lt;<span class="rs-type">T</span>: <span class="rs-type">DeserializeOwned</span>&gt;(text: <span class="rs-type">Option</span>&lt;&amp;str&gt;) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Option</span>&lt;<span class="rs-type">T</span>&gt;, <a class="symbol-link rs-type" href="eos-db--src-error-rs.html#item-enum-DbError-5">DbError</a>&gt; {
+    <span class="rs-kw">match</span> text {
+        <span class="rs-type">None</span> | <span class="rs-type">Some</span>(&quot;&quot;) =&gt; <span class="rs-type">Ok</span>(<span class="rs-type">None</span>),
+        <span class="rs-type">Some</span>(s) =&gt; serde_json::from_str(s)
+            .map(<span class="rs-type">Some</span>)
+            .map_err(<a class="symbol-link rs-type" href="eos-db--src-error-rs.html#item-enum-DbError-5">DbError</a>::<span class="rs-type">JsonDecode</span>),
+    }
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-db/src/json_col.rs:35</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn decode_default_coerces_null_and_empty private fn decode_default_coerces_null_and_empty () crates/eos-db/src/json_col.rs  ">
+</article><article id="item-fn-decode-default-coerces-null-and-empty-55" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn decode_default_coerces_null_and_empty private fn decode_default_coerces_null_and_empty () crates/eos-db/src/json_col.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>decode_default_coerces_null_and_empty</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn decode_default_coerces_null_and_empty ()</code>
-  <div class="tags"></div>
+  <code class="signature">fn <a class="symbol-link" href="eos-db--src-json-col-rs.html#item-fn-decode-default-coerces-null-and-empty-55">decode_default_coerces_null_and_empty</a> ()</code>
+  <div class="tags"><span>test</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-db--src-json-col-rs.html#item-fn-decode-default-coerces-null-and-empty-55">decode_default_coerces_null_and_empty</a>() {
+        assert_eq!(
+            decode_default::&lt;<span class="rs-type">Vec</span>&lt;<span class="rs-type">String</span>&gt;&gt;(<span class="rs-type">None</span>).expect(&quot;none&quot;),
+            <span class="rs-type">Vec</span>::&lt;<span class="rs-type">String</span>&gt;::<a class="symbol-link rs-fn" href="eos-db--src-model-registry-rs.html#method-new-64">new</a>()
+        );
+        assert_eq!(
+            decode_default::&lt;<span class="rs-type">Vec</span>&lt;<span class="rs-type">String</span>&gt;&gt;(<span class="rs-type">Some</span>(&quot;&quot;)).expect(&quot;empty&quot;),
+            <span class="rs-type">Vec</span>::&lt;<span class="rs-type">String</span>&gt;::<a class="symbol-link rs-fn" href="eos-db--src-model-registry-rs.html#method-new-64">new</a>()
+        );
+        assert_eq!(
+            decode_default::&lt;<span class="rs-type">Vec</span>&lt;<span class="rs-type">String</span>&gt;&gt;(<span class="rs-type">Some</span>(&quot;[\&quot;a\&quot;,\&quot;b\&quot;]&quot;)).expect(&quot;json&quot;),
+            vec![&quot;a&quot;.to_owned(), &quot;b&quot;.to_owned()]
+        );
+    }
+</code></pre>
+</details>
 
   <p class="source">crates/eos-db/src/json_col.rs:55</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn decode_opt_preserves_none private fn decode_opt_preserves_none () crates/eos-db/src/json_col.rs  ">
+</article><article id="item-fn-decode-opt-preserves-none-71" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn decode_opt_preserves_none private fn decode_opt_preserves_none () crates/eos-db/src/json_col.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>decode_opt_preserves_none</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn decode_opt_preserves_none ()</code>
-  <div class="tags"></div>
+  <code class="signature">fn <a class="symbol-link" href="eos-db--src-json-col-rs.html#item-fn-decode-opt-preserves-none-71">decode_opt_preserves_none</a> ()</code>
+  <div class="tags"><span>test</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-db--src-json-col-rs.html#item-fn-decode-opt-preserves-none-71">decode_opt_preserves_none</a>() {
+        assert!(decode_opt::&lt;<span class="rs-type">JsonObject</span>&gt;(<span class="rs-type">None</span>).expect(&quot;none&quot;).is_none());
+        assert!(decode_opt::&lt;<span class="rs-type">JsonObject</span>&gt;(<span class="rs-type">Some</span>(&quot;&quot;)).expect(&quot;empty&quot;).is_none());
+        <span class="rs-kw">let</span> obj = decode_opt::&lt;<span class="rs-type">JsonObject</span>&gt;(<span class="rs-type">Some</span>(&quot;{\&quot;k\&quot;:1}&quot;))
+            .expect(&quot;json&quot;)
+            .expect(&quot;some&quot;);
+        assert_eq!(obj.<a class="symbol-link rs-fn" href="eos-db--src-model-registry-rs.html#method-get-208">get</a>(&quot;k&quot;).and_then(serde_json::<span class="rs-type">Value</span>::as_i64), <span class="rs-type">Some</span>(1));
+    }
+</code></pre>
+</details>
 
   <p class="source">crates/eos-db/src/json_col.rs:71</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn encode_roundtrips private fn encode_roundtrips () crates/eos-db/src/json_col.rs  ">
+</article><article id="item-fn-encode-roundtrips-81" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn encode_roundtrips private fn encode_roundtrips () crates/eos-db/src/json_col.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>encode_roundtrips</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn encode_roundtrips ()</code>
-  <div class="tags"></div>
+  <code class="signature">fn <a class="symbol-link" href="eos-db--src-json-col-rs.html#item-fn-encode-roundtrips-81">encode_roundtrips</a> ()</code>
+  <div class="tags"><span>test</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-db--src-json-col-rs.html#item-fn-encode-roundtrips-81">encode_roundtrips</a>() {
+        <span class="rs-kw">let</span> v = vec![&quot;x&quot;.to_owned()];
+        <span class="rs-kw">let</span> s = <a class="symbol-link rs-fn" href="eos-db--src-json-col-rs.html#item-fn-encode-12">encode</a>(&amp;v).expect(&quot;encode&quot;);
+        assert_eq!(s, &quot;[\&quot;x\&quot;]&quot;);
+        assert_eq!(decode_default::&lt;<span class="rs-type">Vec</span>&lt;<span class="rs-type">String</span>&gt;&gt;(<span class="rs-type">Some</span>(&amp;s)).expect(&quot;decode&quot;), v);
+    }
+</code></pre>
+</details>
 
   <p class="source">crates/eos-db/src/json_col.rs:81</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn decode_default_rejects_malformed private fn decode_default_rejects_malformed () crates/eos-db/src/json_col.rs  ">
+</article><article id="item-fn-decode-default-rejects-malformed-89" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn decode_default_rejects_malformed private fn decode_default_rejects_malformed () crates/eos-db/src/json_col.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>decode_default_rejects_malformed</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn decode_default_rejects_malformed ()</code>
-  <div class="tags"></div>
+  <code class="signature">fn <a class="symbol-link" href="eos-db--src-json-col-rs.html#item-fn-decode-default-rejects-malformed-89">decode_default_rejects_malformed</a> ()</code>
+  <div class="tags"><span>test</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-db--src-json-col-rs.html#item-fn-decode-default-rejects-malformed-89">decode_default_rejects_malformed</a>() {
+        assert!(matches!(
+            decode_default::&lt;<span class="rs-type">Vec</span>&lt;<span class="rs-type">String</span>&gt;&gt;(<span class="rs-type">Some</span>(&quot;not json&quot;)),
+            <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-db--src-error-rs.html#item-enum-DbError-5">DbError</a>::<span class="rs-type">JsonDecode</span>(_))
+        ));
+    }
+</code></pre>
+</details>
 
   <p class="source">crates/eos-db/src/json_col.rs:89</p>
 </article></div>
 </section></div>
 </main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/eos-db/src/json_col.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-comment">//! JSON-column codec: serialize/deserialize TEXT-of-validated-JSON columns.</span>
+<span class="rs-comment">//!</span>
+<span class="rs-comment">//! There are two decode paths because the Rust stores disagree on NULL</span>
+<span class="rs-comment">//! handling (impl-eos-db.md §6/§8): [`decode_default`] mirrors `task_store`'s</span>
+<span class="rs-comment">//! `record.x or []` coercion (NULL/empty → `T::default()`); [`decode_opt`]</span>
+<span class="rs-comment">//! mirrors `agent_run_store`'s nullable columns that must preserve `None`.</span>
+
+<span class="rs-kw">use</span> serde::{de::<span class="rs-type">DeserializeOwned</span>, <span class="rs-type">Serialize</span>};
+
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::error::<a class="symbol-link rs-type" href="eos-db--src-error-rs.html#item-enum-DbError-5">DbError</a>;
+
+<span class="rs-comment">/// Serialize a value to its JSON TEXT column form.</span>
+<span class="rs-comment">///</span>
+<span class="rs-comment">/// # Errors</span>
+<span class="rs-comment">/// Returns [`DbError::JsonEncode`] if serialization fails.</span>
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> encode&lt;<span class="rs-type">T</span>: <span class="rs-type">Serialize</span> + ?<span class="rs-type">Sized</span>&gt;(value: &amp;<span class="rs-type">T</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">String</span>, <a class="symbol-link rs-type" href="eos-db--src-error-rs.html#item-enum-DbError-5">DbError</a>&gt; {
+    serde_json::to_string(value).map_err(<a class="symbol-link rs-type" href="eos-db--src-error-rs.html#item-enum-DbError-5">DbError</a>::<span class="rs-type">JsonEncode</span>)
+}
+
+<span class="rs-comment">/// Default-to-empty decode for the `x or []` columns (needs, task/attempt</span>
+<span class="rs-comment">/// outcomes, iteration/attempt id lists, generator/reducer task ids). A</span>
+<span class="rs-comment">/// NULL/empty cell decodes to `T::default()`.</span>
+<span class="rs-comment">///</span>
+<span class="rs-comment">/// # Errors</span>
+<span class="rs-comment">/// Returns [`DbError::JsonDecode`] if a non-empty cell is malformed JSON.</span>
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> decode_default&lt;<span class="rs-type">T</span>: <span class="rs-type">DeserializeOwned</span> + <span class="rs-type">Default</span>&gt;(
+    text: <span class="rs-type">Option</span>&lt;&amp;str&gt;,
+) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">T</span>, <a class="symbol-link rs-type" href="eos-db--src-error-rs.html#item-enum-DbError-5">DbError</a>&gt; {
+    <span class="rs-kw">match</span> text {
+        <span class="rs-type">None</span> | <span class="rs-type">Some</span>(&quot;&quot;) =&gt; <span class="rs-type">Ok</span>(<span class="rs-type">T</span>::default()),
+        <span class="rs-type">Some</span>(s) =&gt; serde_json::from_str(s).map_err(<a class="symbol-link rs-type" href="eos-db--src-error-rs.html#item-enum-DbError-5">DbError</a>::<span class="rs-type">JsonDecode</span>),
+    }
+}
+
+<span class="rs-comment">/// Null-preserving decode for the nullable `agent_run` columns</span>
+<span class="rs-comment">/// (`initial_messages`, `message_history`, `terminal_tool_result`): NULL/empty</span>
+<span class="rs-comment">/// stays `None` — `agent_run_store` does not coerce to `[]`.</span>
+<span class="rs-comment">///</span>
+<span class="rs-comment">/// # Errors</span>
+<span class="rs-comment">/// Returns [`DbError::JsonDecode`] if a non-empty cell is malformed JSON.</span>
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> decode_opt&lt;<span class="rs-type">T</span>: <span class="rs-type">DeserializeOwned</span>&gt;(text: <span class="rs-type">Option</span>&lt;&amp;str&gt;) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Option</span>&lt;<span class="rs-type">T</span>&gt;, <a class="symbol-link rs-type" href="eos-db--src-error-rs.html#item-enum-DbError-5">DbError</a>&gt; {
+    <span class="rs-kw">match</span> text {
+        <span class="rs-type">None</span> | <span class="rs-type">Some</span>(&quot;&quot;) =&gt; <span class="rs-type">Ok</span>(<span class="rs-type">None</span>),
+        <span class="rs-type">Some</span>(s) =&gt; serde_json::from_str(s)
+            .map(<span class="rs-type">Some</span>)
+            .map_err(<a class="symbol-link rs-type" href="eos-db--src-error-rs.html#item-enum-DbError-5">DbError</a>::<span class="rs-type">JsonDecode</span>),
+    }
+}
+
+#[cfg(test)]
+<span class="rs-kw">mod</span> tests {
+    <span class="rs-kw">use</span> <span class="rs-kw">super</span>::*;
+    <span class="rs-kw">use</span> eos_state::<span class="rs-type">JsonObject</span>;
+
+    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-db--src-json-col-rs.html#item-fn-decode-default-coerces-null-and-empty-55">decode_default_coerces_null_and_empty</a>() {
+        assert_eq!(
+            decode_default::&lt;<span class="rs-type">Vec</span>&lt;<span class="rs-type">String</span>&gt;&gt;(<span class="rs-type">None</span>).expect(&quot;none&quot;),
+            <span class="rs-type">Vec</span>::&lt;<span class="rs-type">String</span>&gt;::<a class="symbol-link rs-fn" href="eos-db--src-model-registry-rs.html#method-new-64">new</a>()
+        );
+        assert_eq!(
+            decode_default::&lt;<span class="rs-type">Vec</span>&lt;<span class="rs-type">String</span>&gt;&gt;(<span class="rs-type">Some</span>(&quot;&quot;)).expect(&quot;empty&quot;),
+            <span class="rs-type">Vec</span>::&lt;<span class="rs-type">String</span>&gt;::<a class="symbol-link rs-fn" href="eos-db--src-model-registry-rs.html#method-new-64">new</a>()
+        );
+        assert_eq!(
+            decode_default::&lt;<span class="rs-type">Vec</span>&lt;<span class="rs-type">String</span>&gt;&gt;(<span class="rs-type">Some</span>(&quot;[\&quot;a\&quot;,\&quot;b\&quot;]&quot;)).expect(&quot;json&quot;),
+            vec![&quot;a&quot;.to_owned(), &quot;b&quot;.to_owned()]
+        );
+    }
+
+    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-db--src-json-col-rs.html#item-fn-decode-opt-preserves-none-71">decode_opt_preserves_none</a>() {
+        assert!(decode_opt::&lt;<span class="rs-type">JsonObject</span>&gt;(<span class="rs-type">None</span>).expect(&quot;none&quot;).is_none());
+        assert!(decode_opt::&lt;<span class="rs-type">JsonObject</span>&gt;(<span class="rs-type">Some</span>(&quot;&quot;)).expect(&quot;empty&quot;).is_none());
+        <span class="rs-kw">let</span> obj = decode_opt::&lt;<span class="rs-type">JsonObject</span>&gt;(<span class="rs-type">Some</span>(&quot;{\&quot;k\&quot;:1}&quot;))
+            .expect(&quot;json&quot;)
+            .expect(&quot;some&quot;);
+        assert_eq!(obj.<a class="symbol-link rs-fn" href="eos-db--src-model-registry-rs.html#method-get-208">get</a>(&quot;k&quot;).and_then(serde_json::<span class="rs-type">Value</span>::as_i64), <span class="rs-type">Some</span>(1));
+    }
+
+    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-db--src-json-col-rs.html#item-fn-encode-roundtrips-81">encode_roundtrips</a>() {
+        <span class="rs-kw">let</span> v = vec![&quot;x&quot;.to_owned()];
+        <span class="rs-kw">let</span> s = <a class="symbol-link rs-fn" href="eos-db--src-json-col-rs.html#item-fn-encode-12">encode</a>(&amp;v).expect(&quot;encode&quot;);
+        assert_eq!(s, &quot;[\&quot;x\&quot;]&quot;);
+        assert_eq!(decode_default::&lt;<span class="rs-type">Vec</span>&lt;<span class="rs-type">String</span>&gt;&gt;(<span class="rs-type">Some</span>(&amp;s)).expect(&quot;decode&quot;), v);
+    }
+
+    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-db--src-json-col-rs.html#item-fn-decode-default-rejects-malformed-89">decode_default_rejects_malformed</a>() {
+        assert!(matches!(
+            decode_default::&lt;<span class="rs-type">Vec</span>&lt;<span class="rs-type">String</span>&gt;&gt;(<span class="rs-type">Some</span>(&quot;not json&quot;)),
+            <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-db--src-error-rs.html#item-enum-DbError-5">DbError</a>::<span class="rs-type">JsonDecode</span>(_))
+        ));
+    }
+}
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
   <script src="../assets/inventory.js"></script>
 </body>
 </html>

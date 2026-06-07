@@ -42,6 +42,11 @@ pub enum DaemonOp {
     /// `api.v1.command_session_count`
     #[serde(rename = "api.v1.command_session_count")]
     CommandSessionCount,
+    /// `api.v1.cancel_workspace_runs_by_caller_id` — agent-core's one-RPC,
+    /// per-caller (`caller_id == agent_run_id`) workspace-run teardown: discards
+    /// the caller's command session(s) and exits its isolated workspace if open.
+    #[serde(rename = "api.v1.cancel_workspace_runs_by_caller_id")]
+    CancelWorkspaceRunsByCaller,
     /// `api.v1.cancel`
     #[serde(rename = "api.v1.cancel")]
     InvocationCancel,
@@ -90,6 +95,7 @@ impl DaemonOp {
             Self::CommandCancel => "api.v1.command.cancel",
             Self::CommandCollectCompleted => "api.v1.command.collect_completed",
             Self::CommandSessionCount => "api.v1.command_session_count",
+            Self::CancelWorkspaceRunsByCaller => "api.v1.cancel_workspace_runs_by_caller_id",
             Self::InvocationCancel => "api.v1.cancel",
             Self::InvocationHeartbeat => "api.v1.heartbeat",
             Self::InflightCount => "api.v1.inflight_count",
@@ -130,6 +136,10 @@ mod tests {
             (
                 DaemonOp::CommandSessionCount,
                 "api.v1.command_session_count",
+            ),
+            (
+                DaemonOp::CancelWorkspaceRunsByCaller,
+                "api.v1.cancel_workspace_runs_by_caller_id",
             ),
             (DaemonOp::InvocationCancel, "api.v1.cancel"),
             (DaemonOp::InvocationHeartbeat, "api.v1.heartbeat"),

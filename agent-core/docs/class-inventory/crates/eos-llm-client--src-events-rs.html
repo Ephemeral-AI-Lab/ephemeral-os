@@ -8,8 +8,16 @@
 </head>
 <body>
   <header>
-    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
-    <h1>eos-llm-client File Inventory</h1>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>eos-llm-client File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS/agent-core &amp;&amp; cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
   </header>
   <a class="back-link" href="../index.html">agent-core</a>
 <section class="summary">
@@ -47,39 +55,182 @@
       <span>1 methods</span>
     </div>
   </div>
-  <div class="items"><div class="group-label">File-Owned Types</div><article class="type-card" data-kind="enum" data-kind-list="enum field type-model" data-filter-text="enum LlmStreamEvent pub pub enum LlmStreamEvent crates/eos-llm-client/src/events.rs  ">
+  <div class="items"><div class="group-label">File-Owned Types</div><article id="item-enum-LlmStreamEvent-15" class="type-card" data-kind="enum" data-kind-list="enum field type-model" data-filter-text="enum LlmStreamEvent pub pub enum LlmStreamEvent crates/eos-llm-client/src/events.rs  ">
   <div class="item-head">
     <span class="kind">enum</span>
     <h3>LlmStreamEvent</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub enum LlmStreamEvent</code>
-  <div class="tags"><span>serde</span></div>
-  <h4>Variants</h4><table><tbody><tr><td>AssistantTextDelta</td><td><code>text: String</code></td></tr><tr><td>ReasoningDelta</td><td><code>text: String</code></td></tr><tr><td>ToolUseDelta</td><td><code>tool_use_id: ToolUseId, name: String, input: JsonObject</code></td></tr><tr><td>AssistantMessageComplete</td><td><code>message: Message, usage: UsageSnapshot, stop_reason: Option &lt; StopReason &gt;</code></td></tr></tbody></table>
+  <code class="signature">pub enum <a class="symbol-link" href="eos-llm-client--src-events-rs.html#item-enum-LlmStreamEvent-15">LlmStreamEvent</a></code>
+  <p class="docstring">A single normalized event from a streaming model invocation.<br>The three `*Delta` variants are "visible output" for the retry gate (§8);<br>[`LlmStreamEvent::AssistantMessageComplete`] is the success terminus.</p>
+  <div class="tags"><span>derive: Clone</span><span>derive: Debug</span><span>derive: Deserialize</span><span>derive: Eq</span><span>derive: PartialEq</span><span>derive: Serialize</span><span>non_exhaustive</span><span>serde</span></div>
+  <h4>Variants</h4><table><tbody><tr><td>AssistantTextDelta</td><td><code>text: String</code></td></tr><tr><td>ReasoningDelta</td><td><code>text: String</code></td></tr><tr><td>ToolUseDelta</td><td><code>tool_use_id: ToolUseId, name: String, input: JsonObject</code></td></tr><tr><td>AssistantMessageComplete</td><td><code>message: <a class="symbol-link" href="eos-llm-client--src-message-rs.html#item-struct-Message-88">Message</a>, usage: <a class="symbol-link" href="eos-llm-client--src-types-rs.html#item-struct-UsageSnapshot-12">UsageSnapshot</a>, stop_reason: Option &lt; <a class="symbol-link" href="eos-llm-client--src-events-rs.html#item-enum-StopReason-53">StopReason</a> &gt;</code></td></tr></tbody></table>
+
   <p class="source">crates/eos-llm-client/src/events.rs:15</p>
-</article><article class="type-card" data-kind="enum" data-kind-list="enum field impl method type-model" data-filter-text="enum StopReason pub pub enum StopReason crates/eos-llm-client/src/events.rs  ">
+</article><article id="item-enum-StopReason-53" class="type-card" data-kind="enum" data-kind-list="enum field impl method type-model" data-filter-text="enum StopReason pub pub enum StopReason crates/eos-llm-client/src/events.rs  ">
   <div class="item-head">
     <span class="kind">enum</span>
     <h3>StopReason</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub enum StopReason</code>
-  <div class="tags"><span>serde</span></div>
-  <h4>Variants</h4><table><tbody><tr><td>EndTurn</td><td><code></code></td></tr><tr><td>MaxTokens</td><td><code></code></td></tr><tr><td>ToolUse</td><td><code></code></td></tr><tr><td>StopSequence</td><td><code></code></td></tr><tr><td>Other</td><td><code>0: String</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr><td>associated-fn</td><td>parse</td><td><code>pub(crate) fn parse (raw : &amp; str) -&gt; Self</code></td></tr></tbody></table>
+  <code class="signature">pub enum <a class="symbol-link" href="eos-llm-client--src-events-rs.html#item-enum-StopReason-53">StopReason</a></code>
+  <p class="docstring">A parsed provider stop reason (`api-parse-dont-validate`).</p>
+  <div class="tags"><span>derive: Clone</span><span>derive: Debug</span><span>derive: Deserialize</span><span>derive: Eq</span><span>derive: PartialEq</span><span>derive: Serialize</span><span>serde</span><span>serde: rename_all</span></div>
+  <h4>Variants</h4><table><tbody><tr><td>EndTurn</td><td><code></code></td></tr><tr><td>MaxTokens</td><td><code></code></td></tr><tr><td>ToolUse</td><td><code></code></td></tr><tr><td>StopSequence</td><td><code></code></td></tr><tr><td>Other</td><td><code>0: String</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-parse-70"><td>associated-fn</td><td>parse</td><td><code>pub(crate) fn <a class="symbol-link" href="eos-llm-client--src-events-rs.html#method-parse-70">parse</a> (raw : &amp; str) -&gt; Self</code><p class="docstring">Parse a provider `stop_reason` string. Crate-internal: the decoders<br>construct `StopReason` from the wire here; consumers receive the parsed<br>`Option&lt;StopReason&gt;` on the event, never a raw provider string.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Parse a provider `stop_reason` string. Crate-internal: the decoders</span>
+    <span class="rs-comment">/// construct `StopReason` from the wire here; consumers receive the parsed</span>
+    <span class="rs-comment">/// `Option&lt;StopReason&gt;` on the event, never a raw provider string.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-llm-client--src-events-rs.html#method-parse-70">parse</a>(raw: &amp;str) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-kw">match</span> raw {
+            &quot;end_turn&quot; =&gt; <span class="rs-self">Self</span>::<span class="rs-type">EndTurn</span>,
+            &quot;max_tokens&quot; =&gt; <span class="rs-self">Self</span>::<span class="rs-type">MaxTokens</span>,
+            &quot;tool_use&quot; =&gt; <span class="rs-self">Self</span>::<span class="rs-type">ToolUse</span>,
+            &quot;stop_sequence&quot; =&gt; <span class="rs-self">Self</span>::<span class="rs-type">StopSequence</span>,
+            other =&gt; <span class="rs-self">Self</span>::<span class="rs-type">Other</span>(other.to_owned()),
+        }
+    }
+</code></pre>
+</details></td></tr></tbody></table>
+
   <p class="source">crates/eos-llm-client/src/events.rs:53</p>
-</article><div class="group-label">Standalone Functions</div><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn parses_known_and_unknown_stop_reasons private fn parses_known_and_unknown_stop_reasons () crates/eos-llm-client/src/events.rs  ">
+</article><div class="group-label">Standalone Functions</div><article id="item-fn-parses-known-and-unknown-stop-reasons-89" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn parses_known_and_unknown_stop_reasons private fn parses_known_and_unknown_stop_reasons () crates/eos-llm-client/src/events.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>parses_known_and_unknown_stop_reasons</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn parses_known_and_unknown_stop_reasons ()</code>
-  <div class="tags"></div>
+  <code class="signature">fn <a class="symbol-link" href="eos-llm-client--src-events-rs.html#item-fn-parses-known-and-unknown-stop-reasons-89">parses_known_and_unknown_stop_reasons</a> ()</code>
+  <div class="tags"><span>test</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-llm-client--src-events-rs.html#item-fn-parses-known-and-unknown-stop-reasons-89">parses_known_and_unknown_stop_reasons</a>() {
+        assert_eq!(<a class="symbol-link rs-type" href="eos-llm-client--src-events-rs.html#item-enum-StopReason-53">StopReason</a>::<a class="symbol-link rs-fn" href="eos-llm-client--src-events-rs.html#method-parse-70">parse</a>(&quot;end_turn&quot;), <a class="symbol-link rs-type" href="eos-llm-client--src-events-rs.html#item-enum-StopReason-53">StopReason</a>::<span class="rs-type">EndTurn</span>);
+        assert_eq!(<a class="symbol-link rs-type" href="eos-llm-client--src-events-rs.html#item-enum-StopReason-53">StopReason</a>::<a class="symbol-link rs-fn" href="eos-llm-client--src-events-rs.html#method-parse-70">parse</a>(&quot;max_tokens&quot;), <a class="symbol-link rs-type" href="eos-llm-client--src-events-rs.html#item-enum-StopReason-53">StopReason</a>::<span class="rs-type">MaxTokens</span>);
+        assert_eq!(<a class="symbol-link rs-type" href="eos-llm-client--src-events-rs.html#item-enum-StopReason-53">StopReason</a>::<a class="symbol-link rs-fn" href="eos-llm-client--src-events-rs.html#method-parse-70">parse</a>(&quot;tool_use&quot;), <a class="symbol-link rs-type" href="eos-llm-client--src-events-rs.html#item-enum-StopReason-53">StopReason</a>::<span class="rs-type">ToolUse</span>);
+        assert_eq!(<a class="symbol-link rs-type" href="eos-llm-client--src-events-rs.html#item-enum-StopReason-53">StopReason</a>::<a class="symbol-link rs-fn" href="eos-llm-client--src-events-rs.html#method-parse-70">parse</a>(&quot;stop_sequence&quot;), <a class="symbol-link rs-type" href="eos-llm-client--src-events-rs.html#item-enum-StopReason-53">StopReason</a>::<span class="rs-type">StopSequence</span>);
+        assert_eq!(
+            <a class="symbol-link rs-type" href="eos-llm-client--src-events-rs.html#item-enum-StopReason-53">StopReason</a>::<a class="symbol-link rs-fn" href="eos-llm-client--src-events-rs.html#method-parse-70">parse</a>(&quot;refusal&quot;),
+            <a class="symbol-link rs-type" href="eos-llm-client--src-events-rs.html#item-enum-StopReason-53">StopReason</a>::<span class="rs-type">Other</span>(&quot;refusal&quot;.to_owned())
+        );
+    }
+</code></pre>
+</details>
 
   <p class="source">crates/eos-llm-client/src/events.rs:89</p>
 </article></div>
 </section></div>
 </main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/eos-llm-client/src/events.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-comment">//! The normalized model-stream events.</span>
+<span class="rs-comment">//!</span>
+<span class="rs-comment">//! Source: `message/events.py`. Only the **four model-stream variants** move</span>
+<span class="rs-comment">//! here. Tool execution and notification events are engine-domain `EventSource`</span>
+<span class="rs-comment">//! events owned by `eos-engine`, not provider stream events — they are</span>
+<span class="rs-comment">//! intentionally absent. The `agent_name`/`agent_run_id` identity fields are</span>
+<span class="rs-comment">//! dropped (the engine stamps those on its own envelope).</span>
+
+<span class="rs-kw">use</span> eos_types::{<span class="rs-type">JsonObject</span>, <span class="rs-type">ToolUseId</span>};
+<span class="rs-kw">use</span> serde::{<span class="rs-type">Deserialize</span>, <span class="rs-type">Serialize</span>};
+
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::message::<a class="symbol-link rs-type" href="eos-llm-client--src-message-rs.html#item-struct-Message-88">Message</a>;
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::types::<a class="symbol-link rs-type" href="eos-llm-client--src-types-rs.html#item-struct-UsageSnapshot-12">UsageSnapshot</a>;
+
+<span class="rs-comment">/// A single normalized event from a streaming model invocation.</span>
+<span class="rs-comment">///</span>
+<span class="rs-comment">/// The three `*Delta` variants are "visible output" for the retry gate (§8);</span>
+<span class="rs-comment">/// [`LlmStreamEvent::AssistantMessageComplete`] is the success terminus.</span>
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Eq</span>, <span class="rs-type">Serialize</span>, <span class="rs-type">Deserialize</span>)]
+#[non_exhaustive]
+<span class="rs-kw">pub</span> <span class="rs-kw">enum</span> <a class="symbol-link rs-type" href="eos-llm-client--src-events-rs.html#item-enum-LlmStreamEvent-15">LlmStreamEvent</a> {
+    <span class="rs-comment">/// Incremental assistant text (`AssistantTextDeltaEvent`).</span>
+    <span class="rs-type">AssistantTextDelta</span> {
+        <span class="rs-comment">/// The text fragment.</span>
+        text: <span class="rs-type">String</span>,
+    },
+    <span class="rs-comment">/// Incremental model reasoning (Rust `ThinkingDeltaEvent`).</span>
+    <span class="rs-type">ReasoningDelta</span> {
+        <span class="rs-comment">/// The reasoning fragment.</span>
+        text: <span class="rs-type">String</span>,
+    },
+    <span class="rs-comment">/// A fully-assembled tool call, emitted mid-stream at the block's close</span>
+    <span class="rs-comment">/// (`ToolUseDeltaEvent`) so the engine can begin executing it early.</span>
+    <span class="rs-type">ToolUseDelta</span> {
+        <span class="rs-comment">/// The provider tool-use id.</span>
+        tool_use_id: <span class="rs-type">ToolUseId</span>,
+        <span class="rs-comment">/// The tool name.</span>
+        name: <span class="rs-type">String</span>,
+        <span class="rs-comment">/// The parsed tool arguments (`{}` if the provider sent malformed JSON).</span>
+        input: <span class="rs-type">JsonObject</span>,
+    },
+    <span class="rs-comment">/// The completed assistant message (`AssistantMessageCompleteEvent`).</span>
+    <span class="rs-type">AssistantMessageComplete</span> {
+        <span class="rs-comment">/// The reassembled assistant message.</span>
+        message: <a class="symbol-link rs-type" href="eos-llm-client--src-message-rs.html#item-struct-Message-88">Message</a>,
+        <span class="rs-comment">/// Final token usage.</span>
+        usage: <a class="symbol-link rs-type" href="eos-llm-client--src-types-rs.html#item-struct-UsageSnapshot-12">UsageSnapshot</a>,
+        <span class="rs-comment">/// The provider stop reason, when reported.</span>
+        stop_reason: <span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-llm-client--src-events-rs.html#item-enum-StopReason-53">StopReason</a>&gt;,
+    },
+}
+
+<span class="rs-comment">/// A parsed provider stop reason (`api-parse-dont-validate`).</span>
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Eq</span>, <span class="rs-type">Serialize</span>, <span class="rs-type">Deserialize</span>)]
+#[serde(rename_all = &quot;snake_case&quot;)]
+<span class="rs-kw">pub</span> <span class="rs-kw">enum</span> <a class="symbol-link rs-type" href="eos-llm-client--src-events-rs.html#item-enum-StopReason-53">StopReason</a> {
+    <span class="rs-comment">/// The model ended its turn.</span>
+    <span class="rs-type">EndTurn</span>,
+    <span class="rs-comment">/// The completion-token cap was hit.</span>
+    <span class="rs-type">MaxTokens</span>,
+    <span class="rs-comment">/// The model stopped to call a tool.</span>
+    <span class="rs-type">ToolUse</span>,
+    <span class="rs-comment">/// A stop sequence was emitted.</span>
+    <span class="rs-type">StopSequence</span>,
+    <span class="rs-comment">/// Any other provider-specific reason, preserved verbatim.</span>
+    <span class="rs-type">Other</span>(<span class="rs-type">String</span>),
+}
+
+<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-llm-client--src-events-rs.html#item-enum-StopReason-53">StopReason</a> {
+    <span class="rs-comment">/// Parse a provider `stop_reason` string. Crate-internal: the decoders</span>
+    <span class="rs-comment">/// construct `StopReason` from the wire here; consumers receive the parsed</span>
+    <span class="rs-comment">/// `Option&lt;StopReason&gt;` on the event, never a raw provider string.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-llm-client--src-events-rs.html#method-parse-70">parse</a>(raw: &amp;str) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-kw">match</span> raw {
+            &quot;end_turn&quot; =&gt; <span class="rs-self">Self</span>::<span class="rs-type">EndTurn</span>,
+            &quot;max_tokens&quot; =&gt; <span class="rs-self">Self</span>::<span class="rs-type">MaxTokens</span>,
+            &quot;tool_use&quot; =&gt; <span class="rs-self">Self</span>::<span class="rs-type">ToolUse</span>,
+            &quot;stop_sequence&quot; =&gt; <span class="rs-self">Self</span>::<span class="rs-type">StopSequence</span>,
+            other =&gt; <span class="rs-self">Self</span>::<span class="rs-type">Other</span>(other.to_owned()),
+        }
+    }
+}
+
+#[cfg(test)]
+<span class="rs-kw">mod</span> tests {
+    <span class="rs-kw">use</span> <span class="rs-kw">super</span>::*;
+
+    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-llm-client--src-events-rs.html#item-fn-parses-known-and-unknown-stop-reasons-89">parses_known_and_unknown_stop_reasons</a>() {
+        assert_eq!(<a class="symbol-link rs-type" href="eos-llm-client--src-events-rs.html#item-enum-StopReason-53">StopReason</a>::<a class="symbol-link rs-fn" href="eos-llm-client--src-events-rs.html#method-parse-70">parse</a>(&quot;end_turn&quot;), <a class="symbol-link rs-type" href="eos-llm-client--src-events-rs.html#item-enum-StopReason-53">StopReason</a>::<span class="rs-type">EndTurn</span>);
+        assert_eq!(<a class="symbol-link rs-type" href="eos-llm-client--src-events-rs.html#item-enum-StopReason-53">StopReason</a>::<a class="symbol-link rs-fn" href="eos-llm-client--src-events-rs.html#method-parse-70">parse</a>(&quot;max_tokens&quot;), <a class="symbol-link rs-type" href="eos-llm-client--src-events-rs.html#item-enum-StopReason-53">StopReason</a>::<span class="rs-type">MaxTokens</span>);
+        assert_eq!(<a class="symbol-link rs-type" href="eos-llm-client--src-events-rs.html#item-enum-StopReason-53">StopReason</a>::<a class="symbol-link rs-fn" href="eos-llm-client--src-events-rs.html#method-parse-70">parse</a>(&quot;tool_use&quot;), <a class="symbol-link rs-type" href="eos-llm-client--src-events-rs.html#item-enum-StopReason-53">StopReason</a>::<span class="rs-type">ToolUse</span>);
+        assert_eq!(<a class="symbol-link rs-type" href="eos-llm-client--src-events-rs.html#item-enum-StopReason-53">StopReason</a>::<a class="symbol-link rs-fn" href="eos-llm-client--src-events-rs.html#method-parse-70">parse</a>(&quot;stop_sequence&quot;), <a class="symbol-link rs-type" href="eos-llm-client--src-events-rs.html#item-enum-StopReason-53">StopReason</a>::<span class="rs-type">StopSequence</span>);
+        assert_eq!(
+            <a class="symbol-link rs-type" href="eos-llm-client--src-events-rs.html#item-enum-StopReason-53">StopReason</a>::<a class="symbol-link rs-fn" href="eos-llm-client--src-events-rs.html#method-parse-70">parse</a>(&quot;refusal&quot;),
+            <a class="symbol-link rs-type" href="eos-llm-client--src-events-rs.html#item-enum-StopReason-53">StopReason</a>::<span class="rs-type">Other</span>(&quot;refusal&quot;.to_owned())
+        );
+    }
+}
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
   <script src="../assets/inventory.js"></script>
 </body>
 </html>

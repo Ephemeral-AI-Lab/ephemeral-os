@@ -8,8 +8,16 @@
 </head>
 <body>
   <header>
-    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
-    <h1>eos-daemon File Inventory</h1>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>eos-daemon File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS/sandbox &amp;&amp; cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
   </header>
   <a class="back-link" href="../index.html">sandbox</a>
 <section class="summary">
@@ -47,239 +55,1738 @@
       <span>18 methods</span>
     </div>
   </div>
-  <div class="items"><div class="group-label">File-Owned Types</div><article class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct PluginServiceOverlay pub(super) pub(super) struct PluginServiceOverlay crates/eos-daemon/src/services/plugins/process.rs run_dir PathBuf layer_paths Vec &lt; PathBuf &gt; upperdir PathBuf workdir PathBuf ">
+  <div class="items"><div class="group-label">File-Owned Types</div><article id="item-struct-PluginServiceOverlay-42" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct PluginServiceOverlay pub(super) pub(super) struct PluginServiceOverlay crates/eos-daemon/src/services/plugins/process.rs run_dir PathBuf layer_paths Vec &lt; PathBuf &gt; upperdir PathBuf workdir PathBuf ">
   <div class="item-head">
     <span class="kind">struct</span>
     <h3>PluginServiceOverlay</h3>
     <span class="visibility">pub(super)</span>
   </div>
-  <code class="signature">pub(super) struct PluginServiceOverlay</code>
-  <div class="tags"></div>
+  <code class="signature">pub(super) struct <a class="symbol-link" href="eos-daemon--src-services-plugins-process-rs.html#item-struct-PluginServiceOverlay-42">PluginServiceOverlay</a></code>
+  <div class="tags"><span>derive: Clone</span><span>derive: Debug</span></div>
   <h4>Fields</h4><table><tbody><tr><td>pub(super)</td><td>run_dir</td><td><code>PathBuf</code></td></tr><tr><td>pub(super)</td><td>layer_paths</td><td><code>Vec &lt; PathBuf &gt;</code></td></tr><tr><td>pub(super)</td><td>upperdir</td><td><code>PathBuf</code></td></tr><tr><td>pub(super)</td><td>workdir</td><td><code>PathBuf</code></td></tr></tbody></table>
+
   <p class="source">crates/eos-daemon/src/services/plugins/process.rs:42</p>
-</article><article class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct PluginProcessSpec pub(super) pub(super) struct PluginProcessSpec crates/eos-daemon/src/services/plugins/process.rs key PluginServiceKey command Vec &lt; String &gt; package_root PathBuf dependency_root PathBuf working_dir PathBuf ppc_protocol_version u32 socket_path PathBuf ">
+</article><article id="item-struct-PluginProcessSpec-50" class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct PluginProcessSpec pub(super) pub(super) struct PluginProcessSpec crates/eos-daemon/src/services/plugins/process.rs key PluginServiceKey command Vec &lt; String &gt; package_root PathBuf dependency_root PathBuf working_dir PathBuf ppc_protocol_version u32 socket_path PathBuf ">
   <div class="item-head">
     <span class="kind">struct</span>
     <h3>PluginProcessSpec</h3>
     <span class="visibility">pub(super)</span>
   </div>
-  <code class="signature">pub(super) struct PluginProcessSpec</code>
-  <div class="tags"></div>
-  <h4>Fields</h4><table><tbody><tr><td>private</td><td>key</td><td><code>PluginServiceKey</code></td></tr><tr><td>private</td><td>command</td><td><code>Vec &lt; String &gt;</code></td></tr><tr><td>private</td><td>package_root</td><td><code>PathBuf</code></td></tr><tr><td>private</td><td>dependency_root</td><td><code>PathBuf</code></td></tr><tr><td>private</td><td>working_dir</td><td><code>PathBuf</code></td></tr><tr><td>private</td><td>ppc_protocol_version</td><td><code>u32</code></td></tr><tr><td>private</td><td>socket_path</td><td><code>PathBuf</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr><td>constructor</td><td>new</td><td><code>pub(crate) fn new (key : PluginServiceKey , command : Vec &lt; String &gt; , ppc_protocol_version : u32 ,) -&gt; Result &lt; Self , PluginError &gt;</code></td></tr><tr><td>method</td><td>environment</td><td><code>pub(crate) fn environment (&amp; self) -&gt; BTreeMap &lt; &amp; 'static str , String &gt;</code></td></tr><tr><td>method</td><td>service_instance_id</td><td><code>pub(crate) fn service_instance_id (&amp; self) -&gt; String</code></td></tr><tr><td>method</td><td>key</td><td><code>pub(crate) const fn key (&amp; self) -&gt; &amp; PluginServiceKey</code></td></tr><tr><td>method</td><td>spawn</td><td><code>pub(crate) fn spawn (&amp; self) -&gt; Result &lt; PluginServiceProcess , DaemonError &gt;</code></td></tr><tr><td>method</td><td>spawn_command</td><td><code>fn spawn_command (&amp; self , argv : &amp; [String] , env : BTreeMap &lt; &amp; 'static str , String &gt; ,) -&gt; Result &lt; PluginServiceProcess , DaemonError &gt;</code></td></tr><tr><td>method</td><td>spawn_connected_with_overlay</td><td><code>pub(crate) fn spawn_connected_with_overlay (&amp; self , overlay : Option &lt; &amp; PluginServiceOverlay &gt; , timeout : Duration ,) -&gt; Result &lt; (PluginServiceProcess , PpcClient) , DaemonError &gt;</code></td></tr><tr><td>method</td><td>spawn_for_overlay</td><td><code>fn spawn_for_overlay (&amp; self , overlay : Option &lt; &amp; PluginServiceOverlay &gt; ,) -&gt; Result &lt; PluginServiceProcess , DaemonError &gt;</code></td></tr><tr><td>method</td><td>spawn_overlay_runner</td><td><code>fn spawn_overlay_runner (&amp; self , overlay : &amp; PluginServiceOverlay ,) -&gt; Result &lt; PluginServiceProcess , DaemonError &gt;</code></td></tr><tr><td>method</td><td>spawn_overlay_runner</td><td><code>fn spawn_overlay_runner (&amp; self , overlay : &amp; PluginServiceOverlay ,) -&gt; Result &lt; PluginServiceProcess , DaemonError &gt;</code></td></tr><tr><td>method</td><td>overlay_run_request</td><td><code>fn overlay_run_request (&amp; self , overlay : &amp; PluginServiceOverlay) -&gt; RunRequest</code></td></tr><tr><td>method</td><td>to_json</td><td><code>pub(crate) fn to_json (&amp; self) -&gt; Value</code></td></tr><tr><td>associated-fn</td><td>new_with_socket_root</td><td><code>pub(crate) fn new_with_socket_root (key : PluginServiceKey , command : Vec &lt; String &gt; , ppc_protocol_version : u32 , socket_root : impl AsRef &lt; Path &gt; ,) -&gt; Result &lt; Self , PluginError &gt;</code></td></tr><tr><td>associated-fn</td><td>new_with_package_paths</td><td><code>pub(crate) fn new_with_package_paths (key : PluginServiceKey , command : Vec &lt; String &gt; , package_root : PathBuf , dependency_root : PathBuf , working_dir : PathBuf , ppc_protocol_version : u32 , socket_root : impl AsRef &lt; Path &gt; ,) -&gt; Result &lt; Self , PluginError &gt;</code></td></tr></tbody></table>
+  <code class="signature">pub(super) struct <a class="symbol-link" href="eos-daemon--src-services-plugins-process-rs.html#item-struct-PluginProcessSpec-50">PluginProcessSpec</a></code>
+  <div class="tags"><span>derive: Clone</span><span>derive: Debug</span><span>derive: Eq</span><span>derive: PartialEq</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>key</td><td><code>PluginServiceKey</code></td></tr><tr><td>private</td><td>command</td><td><code>Vec &lt; String &gt;</code></td></tr><tr><td>private</td><td>package_root</td><td><code>PathBuf</code></td></tr><tr><td>private</td><td>dependency_root</td><td><code>PathBuf</code></td></tr><tr><td>private</td><td>working_dir</td><td><code>PathBuf</code></td></tr><tr><td>private</td><td>ppc_protocol_version</td><td><code>u32</code></td></tr><tr><td>private</td><td>socket_path</td><td><code>PathBuf</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-62"><td>constructor</td><td>new</td><td><code>pub(crate) fn <a class="symbol-link" href="eos-daemon.html#method-new-89">new</a> (key : PluginServiceKey , command : Vec &lt; String &gt; , ppc_protocol_version : u32 ,) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a> &lt; Self , PluginError &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[cfg(test)]
+    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon.html#method-new-89">new</a>(
+        key: <span class="rs-type">PluginServiceKey</span>,
+        command: <span class="rs-type">Vec</span>&lt;<span class="rs-type">String</span>&gt;,
+        ppc_protocol_version: u32,
+    ) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a>&lt;<span class="rs-self">Self</span>, <span class="rs-type">PluginError</span>&gt; {
+        <span class="rs-kw">let</span> package_root = <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-process-rs.html#item-fn-default-package-root-325">default_package_root</a>(&amp;key);
+        <span class="rs-kw">let</span> dependency_root = <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-process-rs.html#item-fn-default-dependency-root-332">default_dependency_root</a>(&amp;key);
+        <span class="rs-kw">let</span> socket_root = <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-mod-rs.html#item-fn-plugin-runtime-config-71">plugin_runtime_config</a>().ppc_root;
+        <span class="rs-self">Self</span>::<a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-process-rs.html#method-new-with-package-paths-102">new_with_package_paths</a>(
+            key,
+            command,
+            package_root.clone(),
+            dependency_root,
+            <span class="rs-type">PathBuf</span>::from(&quot;.&quot;),
+            ppc_protocol_version,
+            socket_root,
+        )
+    }
+</code></pre>
+</details></td></tr><tr id="method-environment-134"><td>method</td><td>environment</td><td><code>pub(crate) fn <a class="symbol-link" href="eos-daemon--src-services-plugins-process-rs.html#method-environment-134">environment</a> (&amp; self) -&gt; BTreeMap &lt; &amp; &#x27;static str , String &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-process-rs.html#method-environment-134">environment</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">BTreeMap</span>&lt;&amp;&#x27;<span class="rs-kw">static</span> str, <span class="rs-type">String</span>&gt; {
+        <span class="rs-type">BTreeMap</span>::from([
+            (
+                <span class="rs-type">ENV_PLUGIN_PPC_SOCKET</span>,
+                <span class="rs-self">self</span>.socket_path.to_string_lossy().into_owned(),
+            ),
+            (
+                <span class="rs-type">ENV_PLUGIN_LAYER_STACK_ROOT</span>,
+                <span class="rs-self">self</span>.key.layer_stack_root.clone(),
+            ),
+            (<span class="rs-type">ENV_PLUGIN_WORKSPACE_ROOT</span>, <span class="rs-self">self</span>.key.workspace_root.clone()),
+            (
+                <span class="rs-type">ENV_PLUGIN_PACKAGE_ROOT</span>,
+                <span class="rs-self">self</span>.package_root.to_string_lossy().into_owned(),
+            ),
+            (
+                <span class="rs-type">ENV_PLUGIN_DEPENDENCY_ROOT</span>,
+                <span class="rs-self">self</span>.dependency_root.to_string_lossy().into_owned(),
+            ),
+            (<span class="rs-type">ENV_PLUGIN_ID</span>, <span class="rs-self">self</span>.key.plugin_id.clone()),
+            (<span class="rs-type">ENV_PLUGIN_DIGEST</span>, <span class="rs-self">self</span>.key.plugin_digest.clone()),
+            (<span class="rs-type">ENV_PLUGIN_SERVICE_ID</span>, <span class="rs-self">self</span>.key.service_id.clone()),
+            (
+                <span class="rs-type">ENV_PLUGIN_SERVICE_PROFILE_DIGEST</span>,
+                <span class="rs-self">self</span>.key.service_profile_digest.clone(),
+            ),
+            (
+                <span class="rs-type">ENV_PLUGIN_PPC_PROTOCOL_VERSION</span>,
+                <span class="rs-self">self</span>.ppc_protocol_version.to_string(),
+            ),
+            (<span class="rs-type">ENV_PLUGIN_WORKSPACE_MOUNTED</span>, &quot;0&quot;.to_owned()),
+        ])
+    }
+</code></pre>
+</details></td></tr><tr id="method-service-instance-id-168"><td>method</td><td>service_instance_id</td><td><code>pub(crate) fn <a class="symbol-link" href="eos-daemon--src-services-plugins-process-rs.html#method-service-instance-id-168">service_instance_id</a> (&amp; self) -&gt; String</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-process-rs.html#method-service-instance-id-168">service_instance_id</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">String</span> {
+        <span class="rs-self">self</span>.key.<a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-process-rs.html#method-service-instance-id-168">service_instance_id</a>()
+    }
+</code></pre>
+</details></td></tr><tr id="method-key-172"><td>method</td><td>key</td><td><code>pub(crate) const fn <a class="symbol-link" href="eos-daemon--src-services-plugins-process-rs.html#method-key-172">key</a> (&amp; self) -&gt; &amp; PluginServiceKey</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-process-rs.html#method-key-172">key</a>(&amp;<span class="rs-self">self</span>) -&gt; &amp;<span class="rs-type">PluginServiceKey</span> {
+        &amp;<span class="rs-self">self</span>.key
+    }
+</code></pre>
+</details></td></tr><tr id="method-spawn-176"><td>method</td><td>spawn</td><td><code>pub(crate) fn <a class="symbol-link" href="eos-daemon--src-services-plugins-process-rs.html#method-spawn-176">spawn</a> (&amp; self) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a> &lt; <a class="symbol-link" href="eos-daemon--src-services-plugins-process-rs.html#item-struct-PluginServiceProcess-339">PluginServiceProcess</a> , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-process-rs.html#method-spawn-176">spawn</a>(&amp;<span class="rs-self">self</span>) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a>&lt;<a class="symbol-link rs-type" href="eos-daemon--src-services-plugins-process-rs.html#item-struct-PluginServiceProcess-339">PluginServiceProcess</a>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+        <span class="rs-kw">let</span> env = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-process-rs.html#method-environment-134">environment</a>();
+        <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-process-rs.html#method-spawn-command-181">spawn_command</a>(&amp;<span class="rs-self">self</span>.command, env)
+    }
+</code></pre>
+</details></td></tr><tr id="method-spawn-command-181"><td>method</td><td>spawn_command</td><td><code>fn <a class="symbol-link" href="eos-daemon--src-services-plugins-process-rs.html#method-spawn-command-181">spawn_command</a> (&amp; self , argv : &amp; [String] , env : BTreeMap &lt; &amp; &#x27;static str , String &gt; ,) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a> &lt; <a class="symbol-link" href="eos-daemon--src-services-plugins-process-rs.html#item-struct-PluginServiceProcess-339">PluginServiceProcess</a> , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-process-rs.html#method-spawn-command-181">spawn_command</a>(
+        &amp;<span class="rs-self">self</span>,
+        argv: &amp;[<span class="rs-type">String</span>],
+        env: <span class="rs-type">BTreeMap</span>&lt;&amp;&#x27;<span class="rs-kw">static</span> str, <span class="rs-type">String</span>&gt;,
+    ) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a>&lt;<a class="symbol-link rs-type" href="eos-daemon--src-services-plugins-process-rs.html#item-struct-PluginServiceProcess-339">PluginServiceProcess</a>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> command = <span class="rs-type">Command</span>::<a class="symbol-link rs-fn" href="eos-daemon.html#method-new-89">new</a>(&amp;argv[0]);
+        command.args(&amp;argv[1..]);
+        <span class="rs-kw">if</span> <span class="rs-self">self</span>.working_dir.is_dir() {
+            command.current_dir(&amp;<span class="rs-self">self</span>.working_dir);
+        }
+        command
+            .envs(env)
+            .stdin(<span class="rs-type">Stdio</span>::null())
+            .stdout(<span class="rs-type">Stdio</span>::null())
+            .stderr(<span class="rs-type">Stdio</span>::null());
+        #[cfg(unix)]
+        {
+            <span class="rs-kw">use</span> std::os::unix::process::<span class="rs-type">CommandExt</span>;
+            command.process_group(0);
+        }
+        <span class="rs-kw">let</span> child = command.<a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-process-rs.html#method-spawn-176">spawn</a>()?;
+        <span class="rs-kw">let</span> process_group_id = i32::try_from(child.id()).ok();
+        <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-daemon--src-services-plugins-process-rs.html#item-struct-PluginServiceProcess-339">PluginServiceProcess</a> {
+            spec: <span class="rs-self">self</span>.clone(),
+            child,
+            process_group_id,
+            torn_down: <span class="rs-kw">false</span>,
+        })
+    }
+</code></pre>
+</details></td></tr><tr id="method-spawn-connected-with-overlay-211"><td>method</td><td>spawn_connected_with_overlay</td><td><code>pub(crate) fn <a class="symbol-link" href="eos-daemon--src-services-plugins-process-rs.html#method-spawn-connected-with-overlay-211">spawn_connected_with_overlay</a> (&amp; self , overlay : Option &lt; &amp; <a class="symbol-link" href="eos-daemon--src-services-plugins-process-rs.html#item-struct-PluginServiceOverlay-42">PluginServiceOverlay</a> &gt; , timeout : Duration ,) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a> &lt; (<a class="symbol-link" href="eos-daemon--src-services-plugins-process-rs.html#item-struct-PluginServiceProcess-339">PluginServiceProcess</a> , <a class="symbol-link" href="eos-daemon--src-services-plugins-ppc-router-rs.html#item-struct-PpcClient-34">PpcClient</a>) , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-process-rs.html#method-spawn-connected-with-overlay-211">spawn_connected_with_overlay</a>(
+        &amp;<span class="rs-self">self</span>,
+        overlay: <span class="rs-type">Option</span>&lt;&amp;<a class="symbol-link rs-type" href="eos-daemon--src-services-plugins-process-rs.html#item-struct-PluginServiceOverlay-42">PluginServiceOverlay</a>&gt;,
+        timeout: <span class="rs-type">Duration</span>,
+    ) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a>&lt;(<a class="symbol-link rs-type" href="eos-daemon--src-services-plugins-process-rs.html#item-struct-PluginServiceProcess-339">PluginServiceProcess</a>, <a class="symbol-link rs-type" href="eos-daemon--src-services-plugins-ppc-router-rs.html#item-struct-PpcClient-34">PpcClient</a>), <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+        <span class="rs-kw">let</span> listener = <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-process-rs.html#item-fn-bind-ppc-listener-532">bind_ppc_listener</a>(&amp;<span class="rs-self">self</span>.socket_path)?;
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> process = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-process-rs.html#method-spawn-for-overlay-227">spawn_for_overlay</a>(overlay)?;
+        <span class="rs-kw">match</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-process-rs.html#item-fn-accept-ppc-client-546">accept_ppc_client</a>(&amp;listener, &amp;<span class="rs-kw">mut</span> process, timeout) {
+            <span class="rs-type">Ok</span>(client) =&gt; <span class="rs-type">Ok</span>((process, client)),
+            <span class="rs-type">Err</span>(err) =&gt; {
+                process.<a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-process-rs.html#method-teardown-366">teardown</a>();
+                <span class="rs-type">Err</span>(err)
+            }
+        }
+    }
+</code></pre>
+</details></td></tr><tr id="method-spawn-for-overlay-227"><td>method</td><td>spawn_for_overlay</td><td><code>fn <a class="symbol-link" href="eos-daemon--src-services-plugins-process-rs.html#method-spawn-for-overlay-227">spawn_for_overlay</a> (&amp; self , overlay : Option &lt; &amp; <a class="symbol-link" href="eos-daemon--src-services-plugins-process-rs.html#item-struct-PluginServiceOverlay-42">PluginServiceOverlay</a> &gt; ,) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a> &lt; <a class="symbol-link" href="eos-daemon--src-services-plugins-process-rs.html#item-struct-PluginServiceProcess-339">PluginServiceProcess</a> , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-process-rs.html#method-spawn-for-overlay-227">spawn_for_overlay</a>(
+        &amp;<span class="rs-self">self</span>,
+        overlay: <span class="rs-type">Option</span>&lt;&amp;<a class="symbol-link rs-type" href="eos-daemon--src-services-plugins-process-rs.html#item-struct-PluginServiceOverlay-42">PluginServiceOverlay</a>&gt;,
+    ) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a>&lt;<a class="symbol-link rs-type" href="eos-daemon--src-services-plugins-process-rs.html#item-struct-PluginServiceProcess-339">PluginServiceProcess</a>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(overlay) = overlay {
+            <span class="rs-kw">return</span> <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-process-rs.html#method-spawn-overlay-runner-237">spawn_overlay_runner</a>(overlay);
+        }
+        <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-process-rs.html#method-spawn-176">spawn</a>()
+    }
+</code></pre>
+</details></td></tr><tr id="method-spawn-overlay-runner-237"><td>method</td><td>spawn_overlay_runner</td><td><code>fn <a class="symbol-link" href="eos-daemon--src-services-plugins-process-rs.html#method-spawn-overlay-runner-237">spawn_overlay_runner</a> (&amp; self , overlay : &amp; <a class="symbol-link" href="eos-daemon--src-services-plugins-process-rs.html#item-struct-PluginServiceOverlay-42">PluginServiceOverlay</a> ,) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a> &lt; <a class="symbol-link" href="eos-daemon--src-services-plugins-process-rs.html#item-struct-PluginServiceProcess-339">PluginServiceProcess</a> , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[cfg(all(target_os = &quot;linux&quot;, not(test)))]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-process-rs.html#method-spawn-overlay-runner-237">spawn_overlay_runner</a>(
+        &amp;<span class="rs-self">self</span>,
+        overlay: &amp;<a class="symbol-link rs-type" href="eos-daemon--src-services-plugins-process-rs.html#item-struct-PluginServiceOverlay-42">PluginServiceOverlay</a>,
+    ) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a>&lt;<a class="symbol-link rs-type" href="eos-daemon--src-services-plugins-process-rs.html#item-struct-PluginServiceProcess-339">PluginServiceProcess</a>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+        <span class="rs-kw">let</span> request = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-process-rs.html#method-overlay-run-request-281">overlay_run_request</a>(overlay);
+        <span class="rs-kw">let</span> payload = serde_json::to_vec(&amp;request)
+            .map_err(|err| <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>::<span class="rs-type">InvalidEnvelope</span>(err.to_string()))?;
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> command = <span class="rs-type">Command</span>::<a class="symbol-link rs-fn" href="eos-daemon.html#method-new-89">new</a>(std::env::current_exe()?);
+        command
+            .arg(&quot;ns-runner&quot;)
+            .stdin(<span class="rs-type">Stdio</span>::piped())
+            .stdout(<span class="rs-type">Stdio</span>::null())
+            .stderr(<span class="rs-type">Stdio</span>::null());
+        #[cfg(unix)]
+        {
+            <span class="rs-kw">use</span> std::os::unix::process::<span class="rs-type">CommandExt</span>;
+            command.process_group(0);
+        }
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> child = command.<a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-process-rs.html#method-spawn-176">spawn</a>()?;
+        child
+            .stdin
+            .as_mut()
+            .ok_or_else(|| <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>::<span class="rs-type">InvalidEnvelope</span>(&quot;ns-runner stdin unavailable&quot;.to_owned()))?
+            .write_all(&amp;payload)?;
+        <a class="symbol-link rs-fn" href="eos-daemon--src-services-checkpoint-commit-rs.html#method-drop-200">drop</a>(child.stdin.<a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-ppc-router-pending-rs.html#method-take-150">take</a>());
+        <span class="rs-kw">let</span> process_group_id = i32::try_from(child.id()).ok();
+        <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-daemon--src-services-plugins-process-rs.html#item-struct-PluginServiceProcess-339">PluginServiceProcess</a> {
+            spec: <span class="rs-self">self</span>.clone(),
+            child,
+            process_group_id,
+            torn_down: <span class="rs-kw">false</span>,
+        })
+    }
+</code></pre>
+</details></td></tr><tr id="method-spawn-overlay-runner-272"><td>method</td><td>spawn_overlay_runner</td><td><code>fn <a class="symbol-link" href="eos-daemon--src-services-plugins-process-rs.html#method-spawn-overlay-runner-237">spawn_overlay_runner</a> (&amp; self , overlay : &amp; <a class="symbol-link" href="eos-daemon--src-services-plugins-process-rs.html#item-struct-PluginServiceOverlay-42">PluginServiceOverlay</a> ,) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a> &lt; <a class="symbol-link" href="eos-daemon--src-services-plugins-process-rs.html#item-struct-PluginServiceProcess-339">PluginServiceProcess</a> , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[cfg(any(not(target_os = &quot;linux&quot;), test))]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-process-rs.html#method-spawn-overlay-runner-237">spawn_overlay_runner</a>(
+        &amp;<span class="rs-self">self</span>,
+        overlay: &amp;<a class="symbol-link rs-type" href="eos-daemon--src-services-plugins-process-rs.html#item-struct-PluginServiceOverlay-42">PluginServiceOverlay</a>,
+    ) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a>&lt;<a class="symbol-link rs-type" href="eos-daemon--src-services-plugins-process-rs.html#item-struct-PluginServiceProcess-339">PluginServiceProcess</a>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+        <span class="rs-kw">let</span> _ = (&amp;overlay.layer_paths, &amp;overlay.upperdir, &amp;overlay.workdir);
+        <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-process-rs.html#method-spawn-176">spawn</a>()
+    }
+</code></pre>
+</details></td></tr><tr id="method-overlay-run-request-281"><td>method</td><td>overlay_run_request</td><td><code>fn <a class="symbol-link" href="eos-daemon--src-services-plugins-process-rs.html#method-overlay-run-request-281">overlay_run_request</a> (&amp; self , overlay : &amp; <a class="symbol-link" href="eos-daemon--src-services-plugins-process-rs.html#item-struct-PluginServiceOverlay-42">PluginServiceOverlay</a>) -&gt; RunRequest</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[cfg(all(target_os = &quot;linux&quot;, not(test)))]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-process-rs.html#method-overlay-run-request-281">overlay_run_request</a>(&amp;<span class="rs-self">self</span>, overlay: &amp;<a class="symbol-link rs-type" href="eos-daemon--src-services-plugins-process-rs.html#item-struct-PluginServiceOverlay-42">PluginServiceOverlay</a>) -&gt; <span class="rs-type">RunRequest</span> {
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> env = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-process-rs.html#method-environment-134">environment</a>();
+        env.insert(<span class="rs-type">ENV_PLUGIN_WORKSPACE_MOUNTED</span>, &quot;1&quot;.to_owned());
+        <span class="rs-type">RunRequest</span> {
+            mode: <span class="rs-type">RunMode</span>::<span class="rs-type">FreshNs</span>,
+            tool_call: <span class="rs-type">ToolCall</span> {
+                invocation_id: format!(&quot;plugin-service:{}&quot;, <span class="rs-self">self</span>.key.<a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-process-rs.html#method-service-instance-id-168">service_instance_id</a>()),
+                caller_id: &quot;plugin-service&quot;.to_owned(),
+                verb: &quot;plugin_service&quot;.into(),
+                intent: <span class="rs-type">Intent</span>::<span class="rs-type">ReadOnly</span>,
+                args: json!({
+                    &quot;command&quot;: <span class="rs-self">self</span>.command.clone(),
+                    &quot;cwd&quot;: &quot;.&quot;,
+                    &quot;env&quot;: env,
+                }),
+                background: <span class="rs-kw">false</span>,
+            },
+            workspace_root: <span class="rs-type">WorkspaceRoot</span>(<span class="rs-type">PathBuf</span>::from(&amp;<span class="rs-self">self</span>.key.workspace_root)),
+            layer_paths: overlay.layer_paths.clone(),
+            upperdir: <span class="rs-type">Some</span>(overlay.upperdir.clone()),
+            workdir: <span class="rs-type">Some</span>(overlay.workdir.clone()),
+            ns_fds: <span class="rs-type">None</span>,
+            cgroup_path: <span class="rs-type">None</span>,
+            timeout_seconds: <span class="rs-type">None</span>,
+        }
+    }
+</code></pre>
+</details></td></tr><tr id="method-to-json-309"><td>method</td><td>to_json</td><td><code>pub(crate) fn <a class="symbol-link" href="eos-daemon--src-services-plugins-process-rs.html#method-to-json-309">to_json</a> (&amp; self) -&gt; Value</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-process-rs.html#method-to-json-309">to_json</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Value</span> {
+        json!({
+            &quot;service_id&quot;: <span class="rs-self">self</span>.key.service_id,
+            &quot;service_instance_id&quot;: <span class="rs-self">self</span>.key.<a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-process-rs.html#method-service-instance-id-168">service_instance_id</a>(),
+            &quot;command&quot;: <span class="rs-self">self</span>.command,
+            &quot;package_root&quot;: <span class="rs-self">self</span>.package_root,
+            &quot;dependency_root&quot;: <span class="rs-self">self</span>.dependency_root,
+            &quot;working_dir&quot;: <span class="rs-self">self</span>.working_dir,
+            &quot;socket_path&quot;: <span class="rs-self">self</span>.socket_path,
+            &quot;env&quot;: <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-process-rs.html#method-environment-134">environment</a>(),
+            &quot;ppc_protocol_version&quot;: <span class="rs-self">self</span>.ppc_protocol_version,
+            &quot;process_started&quot;: <span class="rs-kw">false</span>,
+        })
+    }
+</code></pre>
+</details></td></tr><tr id="method-new-with-socket-root-82"><td>associated-fn</td><td>new_with_socket_root</td><td><code>pub(crate) fn <a class="symbol-link" href="eos-daemon--src-services-plugins-process-rs.html#method-new-with-socket-root-82">new_with_socket_root</a> (key : PluginServiceKey , command : Vec &lt; String &gt; , ppc_protocol_version : u32 , socket_root : impl AsRef &lt; Path &gt; ,) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a> &lt; Self , PluginError &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[cfg(test)]
+    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-process-rs.html#method-new-with-socket-root-82">new_with_socket_root</a>(
+        key: <span class="rs-type">PluginServiceKey</span>,
+        command: <span class="rs-type">Vec</span>&lt;<span class="rs-type">String</span>&gt;,
+        ppc_protocol_version: u32,
+        socket_root: <span class="rs-kw">impl</span> <span class="rs-type">AsRef</span>&lt;<span class="rs-type">Path</span>&gt;,
+    ) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a>&lt;<span class="rs-self">Self</span>, <span class="rs-type">PluginError</span>&gt; {
+        <span class="rs-kw">let</span> package_root = <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-process-rs.html#item-fn-default-package-root-325">default_package_root</a>(&amp;key);
+        <span class="rs-kw">let</span> dependency_root = <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-process-rs.html#item-fn-default-dependency-root-332">default_dependency_root</a>(&amp;key);
+        <span class="rs-self">Self</span>::<a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-process-rs.html#method-new-with-package-paths-102">new_with_package_paths</a>(
+            key,
+            command,
+            package_root.clone(),
+            dependency_root,
+            <span class="rs-type">PathBuf</span>::from(&quot;.&quot;),
+            ppc_protocol_version,
+            socket_root,
+        )
+    }
+</code></pre>
+</details></td></tr><tr id="method-new-with-package-paths-102"><td>associated-fn</td><td>new_with_package_paths</td><td><code>pub(crate) fn <a class="symbol-link" href="eos-daemon--src-services-plugins-process-rs.html#method-new-with-package-paths-102">new_with_package_paths</a> (key : PluginServiceKey , command : Vec &lt; String &gt; , package_root : PathBuf , dependency_root : PathBuf , working_dir : PathBuf , ppc_protocol_version : u32 , socket_root : impl AsRef &lt; Path &gt; ,) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a> &lt; Self , PluginError &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-process-rs.html#method-new-with-package-paths-102">new_with_package_paths</a>(
+        key: <span class="rs-type">PluginServiceKey</span>,
+        command: <span class="rs-type">Vec</span>&lt;<span class="rs-type">String</span>&gt;,
+        package_root: <span class="rs-type">PathBuf</span>,
+        dependency_root: <span class="rs-type">PathBuf</span>,
+        working_dir: <span class="rs-type">PathBuf</span>,
+        ppc_protocol_version: u32,
+        socket_root: <span class="rs-kw">impl</span> <span class="rs-type">AsRef</span>&lt;<span class="rs-type">Path</span>&gt;,
+    ) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a>&lt;<span class="rs-self">Self</span>, <span class="rs-type">PluginError</span>&gt; {
+        <span class="rs-kw">if</span> command.is_empty() || command[0].trim().is_empty() {
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<span class="rs-type">PluginError</span>::<span class="rs-type">Manifest</span>(format!(
+                &quot;service {} requires a launch command&quot;,
+                key.service_id
+            )));
+        }
+        <span class="rs-kw">if</span> ppc_protocol_version == 0 {
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<span class="rs-type">PluginError</span>::<span class="rs-type">Manifest</span>(
+                &quot;ppc_protocol_version must be positive&quot;.to_owned(),
+            ));
+        }
+        <span class="rs-kw">let</span> socket_path = <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-process-rs.html#item-fn-socket-path-for-key-513">socket_path_for_key</a>(&amp;key, socket_root.as_ref());
+        <span class="rs-type">Ok</span>(<span class="rs-self">Self</span> {
+            key,
+            command,
+            package_root,
+            dependency_root,
+            working_dir,
+            ppc_protocol_version,
+            socket_path,
+        })
+    }
+</code></pre>
+</details></td></tr></tbody></table>
+
   <p class="source">crates/eos-daemon/src/services/plugins/process.rs:50</p>
-</article><article class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct PluginServiceProcess pub(super) pub(super) struct PluginServiceProcess crates/eos-daemon/src/services/plugins/process.rs spec PluginProcessSpec child Child process_group_id Option &lt; i32 &gt; torn_down bool ">
+</article><article id="item-struct-PluginServiceProcess-339" class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct PluginServiceProcess pub(super) pub(super) struct PluginServiceProcess crates/eos-daemon/src/services/plugins/process.rs spec PluginProcessSpec child Child process_group_id Option &lt; i32 &gt; torn_down bool ">
   <div class="item-head">
     <span class="kind">struct</span>
     <h3>PluginServiceProcess</h3>
     <span class="visibility">pub(super)</span>
   </div>
-  <code class="signature">pub(super) struct PluginServiceProcess</code>
-  <div class="tags"></div>
-  <h4>Fields</h4><table><tbody><tr><td>private</td><td>spec</td><td><code>PluginProcessSpec</code></td></tr><tr><td>private</td><td>child</td><td><code>Child</code></td></tr><tr><td>private</td><td>process_group_id</td><td><code>Option &lt; i32 &gt;</code></td></tr><tr><td>private</td><td>torn_down</td><td><code>bool</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr><td>method</td><td>pid</td><td><code>pub(crate) fn pid (&amp; self) -&gt; u32</code></td></tr><tr><td>method</td><td>status_json</td><td><code>pub(crate) fn status_json (&amp; mut self) -&gt; Value</code></td></tr><tr><td>method</td><td>teardown</td><td><code>pub(crate) fn teardown (&amp; mut self)</code></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl Drop for PluginServiceProcess</code></summary><table><tbody><tr><td>method</td><td>drop</td><td><code>fn drop (&amp; mut self)</code></td></tr></tbody></table></details></div>
+  <code class="signature">pub(super) struct <a class="symbol-link" href="eos-daemon--src-services-plugins-process-rs.html#item-struct-PluginServiceProcess-339">PluginServiceProcess</a></code>
+  <div class="tags"><span>derive: Debug</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>spec</td><td><code><a class="symbol-link" href="eos-daemon--src-services-plugins-process-rs.html#item-struct-PluginProcessSpec-50">PluginProcessSpec</a></code></td></tr><tr><td>private</td><td>child</td><td><code>Child</code></td></tr><tr><td>private</td><td>process_group_id</td><td><code>Option &lt; i32 &gt;</code></td></tr><tr><td>private</td><td>torn_down</td><td><code>bool</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-pid-348"><td>method</td><td>pid</td><td><code>pub(crate) fn <a class="symbol-link" href="eos-daemon--src-services-plugins-process-rs.html#method-pid-348">pid</a> (&amp; self) -&gt; u32</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-process-rs.html#method-pid-348">pid</a>(&amp;<span class="rs-self">self</span>) -&gt; u32 {
+        <span class="rs-self">self</span>.child.id()
+    }
+</code></pre>
+</details></td></tr><tr id="method-status-json-352"><td>method</td><td>status_json</td><td><code>pub(crate) fn <a class="symbol-link" href="eos-daemon--src-services-plugins-process-rs.html#method-status-json-352">status_json</a> (&amp; mut self) -&gt; Value</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-process-rs.html#method-status-json-352">status_json</a>(&amp;<span class="rs-kw">mut</span> <span class="rs-self">self</span>) -&gt; <span class="rs-type">Value</span> {
+        <span class="rs-kw">let</span> exit_status = <span class="rs-self">self</span>.child.try_wait().ok().flatten();
+        <span class="rs-kw">let</span> running = exit_status.is_none();
+        json!({
+            &quot;service_id&quot;: <span class="rs-self">self</span>.spec.key.service_id,
+            &quot;service_instance_id&quot;: <span class="rs-self">self</span>.spec.<a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-process-rs.html#method-service-instance-id-168">service_instance_id</a>(),
+            &quot;pid&quot;: <span class="rs-self">self</span>.child.id(),
+            &quot;process_group_id&quot;: <span class="rs-self">self</span>.process_group_id,
+            &quot;running&quot;: running,
+            &quot;exit_status&quot;: exit_status.and_then(|status| status.code()),
+            &quot;socket_path&quot;: <span class="rs-self">self</span>.spec.socket_path,
+        })
+    }
+</code></pre>
+</details></td></tr><tr id="method-teardown-366"><td>method</td><td>teardown</td><td><code>pub(crate) fn <a class="symbol-link" href="eos-daemon--src-services-plugins-process-rs.html#method-teardown-366">teardown</a> (&amp; mut self)</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-process-rs.html#method-teardown-366">teardown</a>(&amp;<span class="rs-kw">mut</span> <span class="rs-self">self</span>) {
+        <span class="rs-kw">if</span> <span class="rs-self">self</span>.torn_down {
+            <span class="rs-kw">return</span>;
+        }
+        <span class="rs-self">self</span>.torn_down = <span class="rs-kw">true</span>;
+        <span class="rs-kw">if</span> <span class="rs-self">self</span>.child.try_wait().ok().flatten().is_some() {
+            <span class="rs-kw">return</span>;
+        }
+        <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#item-fn-terminate-process-group-234">terminate_process_group</a>(<span class="rs-self">self</span>.process_group_id);
+        <span class="rs-kw">let</span> _ = <span class="rs-self">self</span>.child.kill();
+        <span class="rs-kw">let</span> _ = <span class="rs-self">self</span>.child.wait();
+    }
+</code></pre>
+</details></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl Drop for <a class="symbol-link" href="eos-daemon--src-services-plugins-process-rs.html#item-struct-PluginServiceProcess-339">PluginServiceProcess</a></code></summary><table><tbody><tr id="method-drop-491"><td>method</td><td>drop</td><td><code>fn <a class="symbol-link" href="eos-daemon--src-services-checkpoint-commit-rs.html#method-drop-200">drop</a> (&amp; mut self)</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-checkpoint-commit-rs.html#method-drop-200">drop</a>(&amp;<span class="rs-kw">mut</span> <span class="rs-self">self</span>) {
+        <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-process-rs.html#method-teardown-366">teardown</a>();
+    }
+</code></pre>
+</details></td></tr></tbody></table></details></div>
+
   <p class="source">crates/eos-daemon/src/services/plugins/process.rs:339</p>
-</article><div class="group-label">Aliases</div><article class="item-card" data-kind="type" data-kind-list="type" data-filter-text="type TestResult private type TestResult = std :: result :: Result &lt; () , Box &lt; dyn std :: error :: Error + Send + Sync &gt; &gt; crates/eos-daemon/src/services/plugins/process.rs  ">
+</article><div class="group-label">Aliases</div><article id="item-type-TestResult-585" class="item-card" data-kind="type" data-kind-list="type" data-filter-text="type TestResult private type TestResult = std :: result :: Result &lt; () , Box &lt; dyn std :: error :: Error + Send + Sync &gt; &gt; crates/eos-daemon/src/services/plugins/process.rs  ">
   <div class="item-head">
     <span class="kind">type</span>
     <h3>TestResult</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">type TestResult = std :: result :: Result &lt; () , Box &lt; dyn std :: error :: Error + Send + Sync &gt; &gt;</code>
+  <code class="signature">type <a class="symbol-link" href="eos-daemon--src-runtime-invocation-registry-rs.html#item-type-TestResult-262">TestResult</a> = std :: result :: <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a> &lt; () , Box &lt; dyn std :: error :: Error + Send + Sync &gt; &gt;</code>
   <div class="tags"></div>
 
   <p class="source">crates/eos-daemon/src/services/plugins/process.rs:585</p>
-</article><div class="group-label">Standalone Functions</div><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn remount_workspace_overlay pub(super) pub(super) fn remount_workspace_overlay (target_pid : u32 , workspace_root : &amp; str , overlay : &amp; PluginServiceOverlay , timeout : Duration ,) -&gt; Result &lt; () , DaemonError &gt; crates/eos-daemon/src/services/plugins/process.rs  ">
+</article><div class="group-label">Standalone Functions</div><article id="item-fn-remount-workspace-overlay-380" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn remount_workspace_overlay pub(super) pub(super) fn remount_workspace_overlay (target_pid : u32 , workspace_root : &amp; str , overlay : &amp; PluginServiceOverlay , timeout : Duration ,) -&gt; Result &lt; () , DaemonError &gt; crates/eos-daemon/src/services/plugins/process.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>remount_workspace_overlay</h3>
     <span class="visibility">pub(super)</span>
   </div>
-  <code class="signature">pub(super) fn remount_workspace_overlay (target_pid : u32 , workspace_root : &amp; str , overlay : &amp; PluginServiceOverlay , timeout : Duration ,) -&gt; Result &lt; () , DaemonError &gt;</code>
-  <div class="tags"></div>
+  <code class="signature">pub(super) fn <a class="symbol-link" href="eos-daemon--src-services-plugins-process-rs.html#item-fn-remount-workspace-overlay-380">remount_workspace_overlay</a> (target_pid : u32 , workspace_root : &amp; str , overlay : &amp; <a class="symbol-link" href="eos-daemon--src-services-plugins-process-rs.html#item-struct-PluginServiceOverlay-42">PluginServiceOverlay</a> , timeout : Duration ,) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a> &lt; () , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
+  <div class="tags"><span>cfg: all</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>#[cfg(all(target_os = &quot;linux&quot;, not(test)))]
+<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-process-rs.html#item-fn-remount-workspace-overlay-380">remount_workspace_overlay</a>(
+    target_pid: u32,
+    workspace_root: &amp;str,
+    overlay: &amp;<a class="symbol-link rs-type" href="eos-daemon--src-services-plugins-process-rs.html#item-struct-PluginServiceOverlay-42">PluginServiceOverlay</a>,
+    timeout: <span class="rs-type">Duration</span>,
+) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a>&lt;(), <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+    <span class="rs-kw">let</span> request = <span class="rs-type">RunRequest</span> {
+        mode: <span class="rs-type">RunMode</span>::<span class="rs-type">FreshNs</span>,
+        tool_call: <span class="rs-type">ToolCall</span> {
+            invocation_id: format!(&quot;plugin-service-remount:{target_pid}&quot;),
+            caller_id: &quot;plugin-service&quot;.to_owned(),
+            verb: &quot;remount_overlay&quot;.into(),
+            intent: <span class="rs-type">Intent</span>::<span class="rs-type">ReadOnly</span>,
+            args: json!({}),
+            background: <span class="rs-kw">false</span>,
+        },
+        workspace_root: <span class="rs-type">WorkspaceRoot</span>(<span class="rs-type">PathBuf</span>::from(workspace_root)),
+        layer_paths: overlay.layer_paths.clone(),
+        upperdir: <span class="rs-type">Some</span>(overlay.upperdir.clone()),
+        workdir: <span class="rs-type">Some</span>(overlay.workdir.clone()),
+        ns_fds: <span class="rs-type">None</span>,
+        cgroup_path: <span class="rs-type">None</span>,
+        timeout_seconds: <span class="rs-type">None</span>,
+    };
+    <span class="rs-kw">let</span> payload = serde_json::to_vec(&amp;request)
+        .map_err(|err| <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>::<span class="rs-type">InvalidEnvelope</span>(err.to_string()))?;
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> command = <span class="rs-type">Command</span>::<a class="symbol-link rs-fn" href="eos-daemon.html#method-new-89">new</a>(&quot;nsenter&quot;);
+    command
+        .arg(&quot;-t&quot;)
+        .arg(target_pid.to_string())
+        .arg(&quot;-<span class="rs-type">U</span>&quot;)
+        .arg(&quot;-m&quot;)
+        .arg(&quot;--preserve-credentials&quot;)
+        .arg(&quot;--&quot;)
+        .arg(std::env::current_exe()?)
+        .arg(&quot;ns-runner&quot;)
+        .arg(&quot;--remount-overlay&quot;)
+        .stdin(<span class="rs-type">Stdio</span>::piped())
+        .stdout(<span class="rs-type">Stdio</span>::null())
+        .stderr(<span class="rs-type">Stdio</span>::piped());
+    #[cfg(unix)]
+    {
+        <span class="rs-kw">use</span> std::os::unix::process::<span class="rs-type">CommandExt</span>;
+        command.process_group(0);
+    }
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> child = command.<a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-process-rs.html#method-spawn-176">spawn</a>().map_err(|err| {
+        <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>::<span class="rs-type">OverlayPipeline</span>(format!(
+            &quot;failed to spawn nsenter <span class="rs-kw">for</span> plugin service remount: {err}&quot;
+        ))
+    })?;
+    child
+        .stdin
+        .as_mut()
+        .ok_or_else(|| <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>::<span class="rs-type">OverlayPipeline</span>(&quot;nsenter stdin unavailable&quot;.to_owned()))?
+        .write_all(&amp;payload)?;
+    <a class="symbol-link rs-fn" href="eos-daemon--src-services-checkpoint-commit-rs.html#method-drop-200">drop</a>(child.stdin.<a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-ppc-router-pending-rs.html#method-take-150">take</a>());
+    <span class="rs-kw">let</span> output = <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-process-rs.html#item-fn-wait-for-helper-464">wait_for_helper</a>(child, timeout, &quot;plugin service remount&quot;)?;
+    <span class="rs-kw">if</span> output.status.success() {
+        <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(());
+    }
+    <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>::<span class="rs-type">OverlayPipeline</span>(format!(
+        &quot;plugin service remount failed with status {}: {}&quot;,
+        output.status,
+        <span class="rs-type">String</span>::from_utf8_lossy(&amp;output.stderr).trim()
+    )))
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-daemon/src/services/plugins/process.rs:380</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn remount_workspace_overlay pub(super) pub(super) const fn remount_workspace_overlay (_target_pid : u32 , _workspace_root : &amp; str , _overlay : &amp; PluginServiceOverlay , _timeout : Duration ,) -&gt; Result &lt; () , DaemonError &gt; crates/eos-daemon/src/services/plugins/process.rs  ">
+</article><article id="item-fn-remount-workspace-overlay-448" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn remount_workspace_overlay pub(super) pub(super) const fn remount_workspace_overlay (_target_pid : u32 , _workspace_root : &amp; str , _overlay : &amp; PluginServiceOverlay , _timeout : Duration ,) -&gt; Result &lt; () , DaemonError &gt; crates/eos-daemon/src/services/plugins/process.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>remount_workspace_overlay</h3>
     <span class="visibility">pub(super)</span>
   </div>
-  <code class="signature">pub(super) const fn remount_workspace_overlay (_target_pid : u32 , _workspace_root : &amp; str , _overlay : &amp; PluginServiceOverlay , _timeout : Duration ,) -&gt; Result &lt; () , DaemonError &gt;</code>
-  <div class="tags"></div>
+  <code class="signature">pub(super) const fn <a class="symbol-link" href="eos-daemon--src-services-plugins-process-rs.html#item-fn-remount-workspace-overlay-380">remount_workspace_overlay</a> (_target_pid : u32 , _workspace_root : &amp; str , _overlay : &amp; <a class="symbol-link" href="eos-daemon--src-services-plugins-process-rs.html#item-struct-PluginServiceOverlay-42">PluginServiceOverlay</a> , _timeout : Duration ,) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a> &lt; () , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
+  <div class="tags"><span>cfg: any</span><span>expect: clippy::unnecessary_wraps</span><span>expect: reason</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>#[cfg(any(not(target_os = &quot;linux&quot;), test))]
+<span class="rs-comment">// Keep the same fallible signature as the Linux remount path so refresh callers</span>
+<span class="rs-comment">// stay cfg-free; off-Linux/test builds only validate overlay metadata plumbing.</span>
+#[expect(
+    clippy::unnecessary_wraps,
+    reason = &quot;non-<span class="rs-type">Linux</span>/test parity keeps the <span class="rs-type">Linux</span> fallible helper signature&quot;
+)]
+<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-process-rs.html#item-fn-remount-workspace-overlay-380">remount_workspace_overlay</a>(
+    _target_pid: u32,
+    _workspace_root: &amp;str,
+    _overlay: &amp;<a class="symbol-link rs-type" href="eos-daemon--src-services-plugins-process-rs.html#item-struct-PluginServiceOverlay-42">PluginServiceOverlay</a>,
+    _timeout: <span class="rs-type">Duration</span>,
+) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a>&lt;(), <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+    <span class="rs-type">Ok</span>(())
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-daemon/src/services/plugins/process.rs:448</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn default_package_root private fn default_package_root (key : &amp; PluginServiceKey) -&gt; PathBuf crates/eos-daemon/src/services/plugins/process.rs  ">
+</article><article id="item-fn-default-package-root-325" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn default_package_root private fn default_package_root (key : &amp; PluginServiceKey) -&gt; PathBuf crates/eos-daemon/src/services/plugins/process.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>default_package_root</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn default_package_root (key : &amp; PluginServiceKey) -&gt; PathBuf</code>
-  <div class="tags"></div>
+  <code class="signature">fn <a class="symbol-link" href="eos-daemon--src-services-plugins-process-rs.html#item-fn-default-package-root-325">default_package_root</a> (key : &amp; PluginServiceKey) -&gt; PathBuf</code>
+  <div class="tags"><span>cfg: test</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>#[cfg(test)]
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-process-rs.html#item-fn-default-package-root-325">default_package_root</a>(key: &amp;<span class="rs-type">PluginServiceKey</span>) -&gt; <span class="rs-type">PathBuf</span> {
+    <span class="rs-type">PathBuf</span>::from(&quot;/eos/runtime/plugins/catalog&quot;)
+        .join(&amp;key.plugin_id)
+        .join(&amp;key.plugin_digest)
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-daemon/src/services/plugins/process.rs:325</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn default_dependency_root private fn default_dependency_root (key : &amp; PluginServiceKey) -&gt; PathBuf crates/eos-daemon/src/services/plugins/process.rs  ">
+</article><article id="item-fn-default-dependency-root-332" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn default_dependency_root private fn default_dependency_root (key : &amp; PluginServiceKey) -&gt; PathBuf crates/eos-daemon/src/services/plugins/process.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>default_dependency_root</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn default_dependency_root (key : &amp; PluginServiceKey) -&gt; PathBuf</code>
-  <div class="tags"></div>
+  <code class="signature">fn <a class="symbol-link" href="eos-daemon--src-services-plugins-process-rs.html#item-fn-default-dependency-root-332">default_dependency_root</a> (key : &amp; PluginServiceKey) -&gt; PathBuf</code>
+  <div class="tags"><span>cfg: test</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>#[cfg(test)]
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-process-rs.html#item-fn-default-dependency-root-332">default_dependency_root</a>(key: &amp;<span class="rs-type">PluginServiceKey</span>) -&gt; <span class="rs-type">PathBuf</span> {
+    <span class="rs-type">PathBuf</span>::from(&quot;/eos/runtime/packages&quot;)
+        .join(&amp;key.plugin_id)
+        .join(&amp;key.plugin_digest)
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-daemon/src/services/plugins/process.rs:332</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn wait_for_helper private fn wait_for_helper (mut child : Child , timeout : Duration , label : &amp; str ,) -&gt; Result &lt; std :: process :: Output , DaemonError &gt; crates/eos-daemon/src/services/plugins/process.rs  ">
+</article><article id="item-fn-wait-for-helper-464" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn wait_for_helper private fn wait_for_helper (mut child : Child , timeout : Duration , label : &amp; str ,) -&gt; Result &lt; std :: process :: Output , DaemonError &gt; crates/eos-daemon/src/services/plugins/process.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>wait_for_helper</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn wait_for_helper (mut child : Child , timeout : Duration , label : &amp; str ,) -&gt; Result &lt; std :: process :: Output , DaemonError &gt;</code>
-  <div class="tags"></div>
+  <code class="signature">fn <a class="symbol-link" href="eos-daemon--src-services-plugins-process-rs.html#item-fn-wait-for-helper-464">wait_for_helper</a> (mut child : Child , timeout : Duration , label : &amp; str ,) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a> &lt; std :: process :: Output , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
+  <div class="tags"><span>cfg: all</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>#[cfg(all(target_os = &quot;linux&quot;, not(test)))]
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-process-rs.html#item-fn-wait-for-helper-464">wait_for_helper</a>(
+    <span class="rs-kw">mut</span> child: <span class="rs-type">Child</span>,
+    timeout: <span class="rs-type">Duration</span>,
+    label: &amp;str,
+) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a>&lt;std::process::<span class="rs-type">Output</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+    <span class="rs-kw">let</span> process_group_id = i32::try_from(child.id()).ok();
+    <span class="rs-kw">let</span> deadline = <span class="rs-type">Instant</span>::now() + timeout;
+    loop {
+        <span class="rs-kw">if</span> child.try_wait()?.is_some() {
+            <span class="rs-kw">return</span> child.wait_with_output().map_err(<a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>::from);
+        }
+        <span class="rs-kw">if</span> <span class="rs-type">Instant</span>::now() &gt;= deadline {
+            <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#item-fn-terminate-process-group-234">terminate_process_group</a>(process_group_id);
+            <span class="rs-kw">let</span> _ = child.kill();
+            <span class="rs-kw">let</span> output = child.wait_with_output()?;
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>::<span class="rs-type">OverlayPipeline</span>(format!(
+                &quot;{label} timed out after {:.3}s: {}&quot;,
+                timeout.as_secs_f64(),
+                <span class="rs-type">String</span>::from_utf8_lossy(&amp;output.stderr).trim()
+            )));
+        }
+        std::thread::sleep(<span class="rs-type">Duration</span>::from_millis(10));
+    }
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-daemon/src/services/plugins/process.rs:464</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn terminate_process_group private fn terminate_process_group (process_group_id : Option &lt; i32 &gt;) crates/eos-daemon/src/services/plugins/process.rs  ">
+</article><article id="item-fn-terminate-process-group-496" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn terminate_process_group private fn terminate_process_group (process_group_id : Option &lt; i32 &gt;) crates/eos-daemon/src/services/plugins/process.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>terminate_process_group</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn terminate_process_group (process_group_id : Option &lt; i32 &gt;)</code>
-  <div class="tags"></div>
+  <code class="signature">fn <a class="symbol-link" href="eos-daemon--src-runtime-invocation-registry-rs.html#item-fn-terminate-process-group-234">terminate_process_group</a> (process_group_id : Option &lt; i32 &gt;)</code>
+  <div class="tags"><span>cfg: target_os</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>#[cfg(target_os = &quot;linux&quot;)]
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#item-fn-terminate-process-group-234">terminate_process_group</a>(process_group_id: <span class="rs-type">Option</span>&lt;i32&gt;) {
+    <span class="rs-kw">use</span> nix::sys::signal::{killpg, <span class="rs-type">Signal</span>};
+    <span class="rs-kw">use</span> nix::unistd::<span class="rs-type">Pid</span>;
+
+    <span class="rs-kw">let</span> <span class="rs-type">Some</span>(process_group_id) = process_group_id <span class="rs-kw">else</span> {
+        <span class="rs-kw">return</span>;
+    };
+    <span class="rs-kw">if</span> killpg(<span class="rs-type">Pid</span>::from_raw(process_group_id), <span class="rs-type">Signal</span>::<span class="rs-type">SIGTERM</span>).is_ok() {
+        std::thread::sleep(std::time::<span class="rs-type">Duration</span>::from_millis(50));
+        <span class="rs-kw">let</span> _ = killpg(<span class="rs-type">Pid</span>::from_raw(process_group_id), <span class="rs-type">Signal</span>::<span class="rs-type">SIGKILL</span>);
+    }
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-daemon/src/services/plugins/process.rs:496</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn terminate_process_group private const fn terminate_process_group (_process_group_id : Option &lt; i32 &gt;) crates/eos-daemon/src/services/plugins/process.rs  ">
+</article><article id="item-fn-terminate-process-group-510" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn terminate_process_group private const fn terminate_process_group (_process_group_id : Option &lt; i32 &gt;) crates/eos-daemon/src/services/plugins/process.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>terminate_process_group</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">const fn terminate_process_group (_process_group_id : Option &lt; i32 &gt;)</code>
-  <div class="tags"></div>
+  <code class="signature">const fn <a class="symbol-link" href="eos-daemon--src-runtime-invocation-registry-rs.html#item-fn-terminate-process-group-234">terminate_process_group</a> (_process_group_id : Option &lt; i32 &gt;)</code>
+  <div class="tags"><span>cfg: not</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>#[cfg(not(target_os = &quot;linux&quot;))]
+<span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#item-fn-terminate-process-group-234">terminate_process_group</a>(_process_group_id: <span class="rs-type">Option</span>&lt;i32&gt;) {}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-daemon/src/services/plugins/process.rs:510</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn socket_path_for_key private fn socket_path_for_key (key : &amp; PluginServiceKey , socket_root : &amp; Path) -&gt; PathBuf crates/eos-daemon/src/services/plugins/process.rs  ">
+</article><article id="item-fn-socket-path-for-key-513" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn socket_path_for_key private fn socket_path_for_key (key : &amp; PluginServiceKey , socket_root : &amp; Path) -&gt; PathBuf crates/eos-daemon/src/services/plugins/process.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>socket_path_for_key</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn socket_path_for_key (key : &amp; PluginServiceKey , socket_root : &amp; Path) -&gt; PathBuf</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-daemon--src-services-plugins-process-rs.html#item-fn-socket-path-for-key-513">socket_path_for_key</a> (key : &amp; PluginServiceKey , socket_root : &amp; Path) -&gt; PathBuf</code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-process-rs.html#item-fn-socket-path-for-key-513">socket_path_for_key</a>(key: &amp;<span class="rs-type">PluginServiceKey</span>, socket_root: &amp;<span class="rs-type">Path</span>) -&gt; <span class="rs-type">PathBuf</span> {
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> hasher = <span class="rs-type">Sha256</span>::<a class="symbol-link rs-fn" href="eos-daemon.html#method-new-89">new</a>();
+    hasher.update(key.<a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-process-rs.html#method-service-instance-id-168">service_instance_id</a>().as_bytes());
+    hasher.update(b&quot;\0&quot;);
+    hasher.update(key.plugin_digest.as_bytes());
+    <span class="rs-kw">let</span> digest = hasher.finalize();
+    socket_root.join(format!(&quot;{}.sock&quot;, <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-process-rs.html#item-fn-lower-hex-522">lower_hex</a>(&amp;digest[..16])))
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-daemon/src/services/plugins/process.rs:513</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn lower_hex private fn lower_hex (bytes : &amp; [u8]) -&gt; String crates/eos-daemon/src/services/plugins/process.rs  ">
+</article><article id="item-fn-lower-hex-522" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn lower_hex private fn lower_hex (bytes : &amp; [u8]) -&gt; String crates/eos-daemon/src/services/plugins/process.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>lower_hex</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn lower_hex (bytes : &amp; [u8]) -&gt; String</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-daemon--src-services-plugins-process-rs.html#item-fn-lower-hex-522">lower_hex</a> (bytes : &amp; [u8]) -&gt; String</code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-process-rs.html#item-fn-lower-hex-522">lower_hex</a>(bytes: &amp;[u8]) -&gt; <span class="rs-type">String</span> {
+    <span class="rs-kw">const</span> <span class="rs-type">HEX</span>: &amp;[u8; 16] = b&quot;0123456789abcdef&quot;;
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> out = <span class="rs-type">String</span>::with_capacity(bytes.len() * 2);
+    <span class="rs-kw">for</span> byte <span class="rs-kw">in</span> bytes {
+        out.push(char::from(<span class="rs-type">HEX</span>[usize::from(byte &gt;&gt; 4)]));
+        out.push(char::from(<span class="rs-type">HEX</span>[usize::from(byte &amp; 0x0f)]));
+    }
+    out
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-daemon/src/services/plugins/process.rs:522</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn bind_ppc_listener private fn bind_ppc_listener (socket_path : &amp; Path) -&gt; Result &lt; UnixListener , DaemonError &gt; crates/eos-daemon/src/services/plugins/process.rs  ">
+</article><article id="item-fn-bind-ppc-listener-532" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn bind_ppc_listener private fn bind_ppc_listener (socket_path : &amp; Path) -&gt; Result &lt; UnixListener , DaemonError &gt; crates/eos-daemon/src/services/plugins/process.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>bind_ppc_listener</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn bind_ppc_listener (socket_path : &amp; Path) -&gt; Result &lt; UnixListener , DaemonError &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-daemon--src-services-plugins-process-rs.html#item-fn-bind-ppc-listener-532">bind_ppc_listener</a> (socket_path : &amp; Path) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a> &lt; UnixListener , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-process-rs.html#item-fn-bind-ppc-listener-532">bind_ppc_listener</a>(socket_path: &amp;<span class="rs-type">Path</span>) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a>&lt;<span class="rs-type">UnixListener</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+    <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(parent) = socket_path.parent() {
+        std::fs::create_dir_all(parent)?;
+    }
+    <span class="rs-kw">match</span> std::fs::remove_file(socket_path) {
+        <span class="rs-type">Ok</span>(()) =&gt; {}
+        <span class="rs-type">Err</span>(err) <span class="rs-kw">if</span> err.kind() == <span class="rs-type">ErrorKind</span>::<span class="rs-type">NotFound</span> =&gt; {}
+        <span class="rs-type">Err</span>(err) =&gt; <span class="rs-kw">return</span> <span class="rs-type">Err</span>(err.into()),
+    }
+    <span class="rs-kw">let</span> listener = <span class="rs-type">UnixListener</span>::bind(socket_path)?;
+    listener.<a class="symbol-link rs-fn" href="eos-daemon--src-services-isolated-workspace-runtime-rs.html#item-fn-set-nonblocking-384">set_nonblocking</a>(<span class="rs-kw">true</span>)?;
+    <span class="rs-type">Ok</span>(listener)
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-daemon/src/services/plugins/process.rs:532</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn accept_ppc_client private fn accept_ppc_client (listener : &amp; UnixListener , process : &amp; mut PluginServiceProcess , timeout : Duration ,) -&gt; Result &lt; PpcClient , DaemonError &gt; crates/eos-daemon/src/services/plugins/process.rs  ">
+</article><article id="item-fn-accept-ppc-client-546" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn accept_ppc_client private fn accept_ppc_client (listener : &amp; UnixListener , process : &amp; mut PluginServiceProcess , timeout : Duration ,) -&gt; Result &lt; PpcClient , DaemonError &gt; crates/eos-daemon/src/services/plugins/process.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>accept_ppc_client</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn accept_ppc_client (listener : &amp; UnixListener , process : &amp; mut PluginServiceProcess , timeout : Duration ,) -&gt; Result &lt; PpcClient , DaemonError &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-daemon--src-services-plugins-process-rs.html#item-fn-accept-ppc-client-546">accept_ppc_client</a> (listener : &amp; UnixListener , process : &amp; mut <a class="symbol-link" href="eos-daemon--src-services-plugins-process-rs.html#item-struct-PluginServiceProcess-339">PluginServiceProcess</a> , timeout : Duration ,) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a> &lt; <a class="symbol-link" href="eos-daemon--src-services-plugins-ppc-router-rs.html#item-struct-PpcClient-34">PpcClient</a> , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-process-rs.html#item-fn-accept-ppc-client-546">accept_ppc_client</a>(
+    listener: &amp;<span class="rs-type">UnixListener</span>,
+    process: &amp;<span class="rs-kw">mut</span> <a class="symbol-link rs-type" href="eos-daemon--src-services-plugins-process-rs.html#item-struct-PluginServiceProcess-339">PluginServiceProcess</a>,
+    timeout: <span class="rs-type">Duration</span>,
+) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a>&lt;<a class="symbol-link rs-type" href="eos-daemon--src-services-plugins-ppc-router-rs.html#item-struct-PpcClient-34">PpcClient</a>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+    <span class="rs-kw">let</span> deadline = <span class="rs-type">Instant</span>::now() + timeout;
+    loop {
+        <span class="rs-kw">match</span> listener.accept() {
+            <span class="rs-type">Ok</span>((stream, _addr)) =&gt; {
+                stream.<a class="symbol-link rs-fn" href="eos-daemon--src-services-isolated-workspace-runtime-rs.html#item-fn-set-nonblocking-384">set_nonblocking</a>(<span class="rs-kw">false</span>)?;
+                <span class="rs-kw">return</span> <a class="symbol-link rs-type" href="eos-daemon--src-services-plugins-ppc-router-rs.html#item-struct-PpcClient-34">PpcClient</a>::<a class="symbol-link rs-fn" href="eos-daemon.html#method-new-89">new</a>(stream);
+            }
+            <span class="rs-type">Err</span>(err) <span class="rs-kw">if</span> err.kind() == <span class="rs-type">ErrorKind</span>::<span class="rs-type">WouldBlock</span> =&gt; {}
+            <span class="rs-type">Err</span>(err) =&gt; <span class="rs-kw">return</span> <span class="rs-type">Err</span>(err.into()),
+        }
+        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(status) = process.child.try_wait()? {
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<span class="rs-type">PluginError</span>::<span class="rs-type">Ensure</span>(format!(
+                &quot;plugin service {} exited before <span class="rs-type">PPC</span> connect: {status}&quot;,
+                process.spec.key.service_id
+            ))
+            .into());
+        }
+        <span class="rs-kw">if</span> <span class="rs-type">Instant</span>::now() &gt;= deadline {
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<span class="rs-type">PluginError</span>::<span class="rs-type">Ensure</span>(format!(
+                &quot;timed out waiting <span class="rs-kw">for</span> plugin service {} to connect <span class="rs-type">PPC</span> socket {}&quot;,
+                process.spec.key.service_id,
+                process.spec.socket_path.display()
+            ))
+            .into());
+        }
+        std::thread::sleep(<span class="rs-type">Duration</span>::from_millis(10));
+    }
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-daemon/src/services/plugins/process.rs:546</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn key private fn key (profile : &amp; str) -&gt; std :: result :: Result &lt; PluginServiceKey , PluginError &gt; crates/eos-daemon/src/services/plugins/process.rs  ">
+</article><article id="item-fn-key-587" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn key private fn key (profile : &amp; str) -&gt; std :: result :: Result &lt; PluginServiceKey , PluginError &gt; crates/eos-daemon/src/services/plugins/process.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>key</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn key (profile : &amp; str) -&gt; std :: result :: Result &lt; PluginServiceKey , PluginError &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-daemon--src-services-plugins-process-rs.html#method-key-172">key</a> (profile : &amp; str) -&gt; std :: result :: <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a> &lt; PluginServiceKey , PluginError &gt;</code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-process-rs.html#method-key-172">key</a>(profile: &amp;str) -&gt; std::result::<a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a>&lt;<span class="rs-type">PluginServiceKey</span>, <span class="rs-type">PluginError</span>&gt; {
+        <span class="rs-type">PluginServiceKey</span>::<a class="symbol-link rs-fn" href="eos-daemon.html#method-new-89">new</a>(<span class="rs-type">PluginServiceKeyParts</span> {
+            layer_stack_root: &quot;/eos/plugin/layer-stack&quot;.to_owned(),
+            workspace_root: &quot;/eos/plugin/workspace&quot;.to_owned(),
+            plugin_id: &quot;demo&quot;.to_owned(),
+            plugin_digest: &quot;digest-a&quot;.to_owned(),
+            service_id: &quot;indexer&quot;.to_owned(),
+            service_profile_digest: profile.to_owned(),
+            service_mode: <span class="rs-type">ServiceMode</span>::<span class="rs-type">WorkspaceSnapshotRefresh</span>,
+            refresh_strategy: <span class="rs-type">RefreshStrategy</span>::<span class="rs-type">RemountWorkspaceAndNotify</span>,
+        })
+    }
+</code></pre>
+</details>
 
   <p class="source">crates/eos-daemon/src/services/plugins/process.rs:587</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn process_spec_uses_stable_eos_plugin_socket_and_env private fn process_spec_uses_stable_eos_plugin_socket_and_env () -&gt; TestResult crates/eos-daemon/src/services/plugins/process.rs  ">
+</article><article id="item-fn-process-spec-uses-stable-eos-plugin-socket-and-env-600" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn process_spec_uses_stable_eos_plugin_socket_and_env private fn process_spec_uses_stable_eos_plugin_socket_and_env () -&gt; TestResult crates/eos-daemon/src/services/plugins/process.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>process_spec_uses_stable_eos_plugin_socket_and_env</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn process_spec_uses_stable_eos_plugin_socket_and_env () -&gt; TestResult</code>
-  <div class="tags"></div>
+  <code class="signature">fn <a class="symbol-link" href="eos-daemon--src-services-plugins-process-rs.html#item-fn-process-spec-uses-stable-eos-plugin-socket-and-env-600">process_spec_uses_stable_eos_plugin_socket_and_env</a> () -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-invocation-registry-rs.html#item-type-TestResult-262">TestResult</a></code>
+  <div class="tags"><span>test</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-process-rs.html#item-fn-process-spec-uses-stable-eos-plugin-socket-and-env-600">process_spec_uses_stable_eos_plugin_socket_and_env</a>() -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-invocation-registry-rs.html#item-type-TestResult-262">TestResult</a> {
+        <span class="rs-kw">let</span> spec = <a class="symbol-link rs-type" href="eos-daemon--src-services-plugins-process-rs.html#item-struct-PluginProcessSpec-50">PluginProcessSpec</a>::<a class="symbol-link rs-fn" href="eos-daemon.html#method-new-89">new</a>(
+            <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-process-rs.html#method-key-172">key</a>(&quot;profile-a&quot;)?,
+            vec![&quot;demo-indexer&quot;.to_owned(), &quot;--stdio&quot;.to_owned()],
+            1,
+        )?;
+        <span class="rs-kw">let</span> env = spec.<a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-process-rs.html#method-environment-134">environment</a>();
+
+        assert!(env[<span class="rs-type">ENV_PLUGIN_PPC_SOCKET</span>].starts_with(&quot;/eos/plugin/ppc/&quot;));
+        assert!(std::path::<span class="rs-type">Path</span>::<a class="symbol-link rs-fn" href="eos-daemon.html#method-new-89">new</a>(&amp;env[<span class="rs-type">ENV_PLUGIN_PPC_SOCKET</span>])
+            .extension()
+            .is_some_and(|ext| ext.eq_ignore_ascii_case(&quot;sock&quot;)));
+        assert_eq!(env[<span class="rs-type">ENV_PLUGIN_LAYER_STACK_ROOT</span>], &quot;/eos/plugin/layer-stack&quot;);
+        assert_eq!(env[<span class="rs-type">ENV_PLUGIN_WORKSPACE_ROOT</span>], &quot;/eos/plugin/workspace&quot;);
+        assert_eq!(
+            env[<span class="rs-type">ENV_PLUGIN_PACKAGE_ROOT</span>],
+            &quot;/eos/runtime/plugins/catalog/demo/digest-a&quot;
+        );
+        assert_eq!(
+            env[<span class="rs-type">ENV_PLUGIN_DEPENDENCY_ROOT</span>],
+            &quot;/eos/runtime/packages/demo/digest-a&quot;
+        );
+        assert_eq!(env[<span class="rs-type">ENV_PLUGIN_ID</span>], &quot;demo&quot;);
+        assert_eq!(env[<span class="rs-type">ENV_PLUGIN_SERVICE_ID</span>], &quot;indexer&quot;);
+        assert_eq!(env[<span class="rs-type">ENV_PLUGIN_PPC_PROTOCOL_VERSION</span>], &quot;1&quot;);
+        <span class="rs-type">Ok</span>(())
+    }
+</code></pre>
+</details>
 
   <p class="source">crates/eos-daemon/src/services/plugins/process.rs:600</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn process_spec_key_changes_socket_path private fn process_spec_key_changes_socket_path () -&gt; TestResult crates/eos-daemon/src/services/plugins/process.rs  ">
+</article><article id="item-fn-process-spec-key-changes-socket-path-629" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn process_spec_key_changes_socket_path private fn process_spec_key_changes_socket_path () -&gt; TestResult crates/eos-daemon/src/services/plugins/process.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>process_spec_key_changes_socket_path</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn process_spec_key_changes_socket_path () -&gt; TestResult</code>
-  <div class="tags"></div>
+  <code class="signature">fn <a class="symbol-link" href="eos-daemon--src-services-plugins-process-rs.html#item-fn-process-spec-key-changes-socket-path-629">process_spec_key_changes_socket_path</a> () -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-invocation-registry-rs.html#item-type-TestResult-262">TestResult</a></code>
+  <div class="tags"><span>test</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-process-rs.html#item-fn-process-spec-key-changes-socket-path-629">process_spec_key_changes_socket_path</a>() -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-invocation-registry-rs.html#item-type-TestResult-262">TestResult</a> {
+        <span class="rs-kw">let</span> first = <a class="symbol-link rs-type" href="eos-daemon--src-services-plugins-process-rs.html#item-struct-PluginProcessSpec-50">PluginProcessSpec</a>::<a class="symbol-link rs-fn" href="eos-daemon.html#method-new-89">new</a>(<a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-process-rs.html#method-key-172">key</a>(&quot;profile-a&quot;)?, vec![&quot;svc&quot;.to_owned()], 1)?;
+        <span class="rs-kw">let</span> second = <a class="symbol-link rs-type" href="eos-daemon--src-services-plugins-process-rs.html#item-struct-PluginProcessSpec-50">PluginProcessSpec</a>::<a class="symbol-link rs-fn" href="eos-daemon.html#method-new-89">new</a>(<a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-process-rs.html#method-key-172">key</a>(&quot;profile-b&quot;)?, vec![&quot;svc&quot;.to_owned()], 1)?;
+
+        assert_ne!(
+            first.<a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-process-rs.html#method-environment-134">environment</a>()[<span class="rs-type">ENV_PLUGIN_PPC_SOCKET</span>],
+            second.<a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-process-rs.html#method-environment-134">environment</a>()[<span class="rs-type">ENV_PLUGIN_PPC_SOCKET</span>]
+        );
+        <span class="rs-type">Ok</span>(())
+    }
+</code></pre>
+</details>
 
   <p class="source">crates/eos-daemon/src/services/plugins/process.rs:629</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn process_spec_rejects_empty_command private fn process_spec_rejects_empty_command () -&gt; TestResult crates/eos-daemon/src/services/plugins/process.rs  ">
+</article><article id="item-fn-process-spec-rejects-empty-command-641" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn process_spec_rejects_empty_command private fn process_spec_rejects_empty_command () -&gt; TestResult crates/eos-daemon/src/services/plugins/process.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>process_spec_rejects_empty_command</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn process_spec_rejects_empty_command () -&gt; TestResult</code>
-  <div class="tags"></div>
+  <code class="signature">fn <a class="symbol-link" href="eos-daemon--src-services-plugins-process-rs.html#item-fn-process-spec-rejects-empty-command-641">process_spec_rejects_empty_command</a> () -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-invocation-registry-rs.html#item-type-TestResult-262">TestResult</a></code>
+  <div class="tags"><span>test</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-process-rs.html#item-fn-process-spec-rejects-empty-command-641">process_spec_rejects_empty_command</a>() -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-invocation-registry-rs.html#item-type-TestResult-262">TestResult</a> {
+        <span class="rs-kw">let</span> service_key = <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-process-rs.html#method-key-172">key</a>(&quot;profile-a&quot;)?;
+        assert!(matches!(
+            <a class="symbol-link rs-type" href="eos-daemon--src-services-plugins-process-rs.html#item-struct-PluginProcessSpec-50">PluginProcessSpec</a>::<a class="symbol-link rs-fn" href="eos-daemon.html#method-new-89">new</a>(service_key, <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-daemon.html#method-new-89">new</a>(), 1),
+            <span class="rs-type">Err</span>(<span class="rs-type">PluginError</span>::<span class="rs-type">Manifest</span>(message)) <span class="rs-kw">if</span> message.<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#method-contains-133">contains</a>(&quot;launch command&quot;)
+        ));
+        <span class="rs-type">Ok</span>(())
+    }
+</code></pre>
+</details>
 
   <p class="source">crates/eos-daemon/src/services/plugins/process.rs:641</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn spawned_process_reports_running_then_tears_down private fn spawned_process_reports_running_then_tears_down () -&gt; TestResult crates/eos-daemon/src/services/plugins/process.rs  ">
+</article><article id="item-fn-spawned-process-reports-running-then-tears-down-651" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn spawned_process_reports_running_then_tears_down private fn spawned_process_reports_running_then_tears_down () -&gt; TestResult crates/eos-daemon/src/services/plugins/process.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>spawned_process_reports_running_then_tears_down</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn spawned_process_reports_running_then_tears_down () -&gt; TestResult</code>
-  <div class="tags"></div>
+  <code class="signature">fn <a class="symbol-link" href="eos-daemon--src-services-plugins-process-rs.html#item-fn-spawned-process-reports-running-then-tears-down-651">spawned_process_reports_running_then_tears_down</a> () -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-invocation-registry-rs.html#item-type-TestResult-262">TestResult</a></code>
+  <div class="tags"><span>test</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-process-rs.html#item-fn-spawned-process-reports-running-then-tears-down-651">spawned_process_reports_running_then_tears_down</a>() -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-invocation-registry-rs.html#item-type-TestResult-262">TestResult</a> {
+        <span class="rs-kw">let</span> spec = <a class="symbol-link rs-type" href="eos-daemon--src-services-plugins-process-rs.html#item-struct-PluginProcessSpec-50">PluginProcessSpec</a>::<a class="symbol-link rs-fn" href="eos-daemon.html#method-new-89">new</a>(
+            <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-process-rs.html#method-key-172">key</a>(&quot;profile-a&quot;)?,
+            vec![
+                &quot;/bin/sh&quot;.to_owned(),
+                &quot;-c&quot;.to_owned(),
+                &quot;test \&quot;$<span class="rs-type">EOS_PLUGIN_SERVICE_ID</span>\&quot; = indexer &amp;&amp; sleep 30&quot;.to_owned(),
+            ],
+            1,
+        )?;
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> process = spec.<a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-process-rs.html#method-spawn-176">spawn</a>()?;
+
+        <span class="rs-kw">let</span> status = process.<a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-process-rs.html#method-status-json-352">status_json</a>();
+        assert_eq!(status[&quot;service_id&quot;], &quot;indexer&quot;);
+        assert_eq!(status[&quot;running&quot;], <span class="rs-kw">true</span>);
+        <span class="rs-kw">let</span> pid = status[&quot;pid&quot;]
+            .as_u64()
+            .ok_or_else(|| std::io::<span class="rs-type">Error</span>::<a class="symbol-link rs-fn" href="eos-daemon.html#method-new-89">new</a>(<span class="rs-type">ErrorKind</span>::<span class="rs-type">InvalidData</span>, &quot;missing process pid&quot;))?;
+        assert!(pid &gt; 0);
+
+        process.<a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-process-rs.html#method-teardown-366">teardown</a>();
+        <span class="rs-kw">let</span> status = process.<a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-process-rs.html#method-status-json-352">status_json</a>();
+        assert_eq!(status[&quot;running&quot;], <span class="rs-kw">false</span>);
+        <span class="rs-type">Ok</span>(())
+    }
+</code></pre>
+</details>
 
   <p class="source">crates/eos-daemon/src/services/plugins/process.rs:651</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn spawn_connected_accepts_ppc_socket private fn spawn_connected_accepts_ppc_socket () -&gt; TestResult crates/eos-daemon/src/services/plugins/process.rs  ">
+</article><article id="item-fn-spawn-connected-accepts-ppc-socket-678" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn spawn_connected_accepts_ppc_socket private fn spawn_connected_accepts_ppc_socket () -&gt; TestResult crates/eos-daemon/src/services/plugins/process.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>spawn_connected_accepts_ppc_socket</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn spawn_connected_accepts_ppc_socket () -&gt; TestResult</code>
-  <div class="tags"></div>
+  <code class="signature">fn <a class="symbol-link" href="eos-daemon--src-services-plugins-process-rs.html#item-fn-spawn-connected-accepts-ppc-socket-678">spawn_connected_accepts_ppc_socket</a> () -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-invocation-registry-rs.html#item-type-TestResult-262">TestResult</a></code>
+  <div class="tags"><span>test</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-process-rs.html#item-fn-spawn-connected-accepts-ppc-socket-678">spawn_connected_accepts_ppc_socket</a>() -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-invocation-registry-rs.html#item-type-TestResult-262">TestResult</a> {
+        <span class="rs-kw">let</span> root = <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-process-rs.html#item-fn-test-socket-root-712">test_socket_root</a>(&quot;spawn-connected&quot;);
+        <span class="rs-kw">let</span> spec = <a class="symbol-link rs-type" href="eos-daemon--src-services-plugins-process-rs.html#item-struct-PluginProcessSpec-50">PluginProcessSpec</a>::<a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-process-rs.html#method-new-with-socket-root-82">new_with_socket_root</a>(
+            <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-process-rs.html#method-key-172">key</a>(&quot;profile-a&quot;)?,
+            vec![&quot;/bin/sh&quot;.to_owned(), &quot;-c&quot;.to_owned(), &quot;sleep 30&quot;.to_owned()],
+            1,
+            &amp;root,
+        )?;
+        <span class="rs-kw">let</span> socket_root = root.clone();
+        <span class="rs-kw">let</span> connector = std::thread::<a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-process-rs.html#method-spawn-176">spawn</a>(<span class="rs-kw">move</span> || {
+            <span class="rs-kw">let</span> socket = <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-process-rs.html#item-fn-wait-for-socket-718">wait_for_socket</a>(&amp;socket_root)?;
+            std::os::unix::net::<span class="rs-type">UnixStream</span>::connect(socket).map(|_| ())
+        });
+
+        <span class="rs-kw">let</span> (<span class="rs-kw">mut</span> process, _client) =
+            <span class="rs-kw">match</span> spec.<a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-process-rs.html#method-spawn-connected-with-overlay-211">spawn_connected_with_overlay</a>(<span class="rs-type">None</span>, <span class="rs-type">Duration</span>::from_secs(5)) {
+                <span class="rs-type">Ok</span>(pair) =&gt; pair,
+                <span class="rs-type">Err</span>(err) =&gt; {
+                    <span class="rs-kw">let</span> _ = connector.join();
+                    <span class="rs-kw">return</span> <span class="rs-type">Err</span>(err.into());
+                }
+            };
+        <span class="rs-kw">match</span> connector.join() {
+            <span class="rs-type">Ok</span>(result) =&gt; result?,
+            <span class="rs-type">Err</span>(_) =&gt; {
+                <span class="rs-kw">return</span> <span class="rs-type">Err</span>(std::io::<span class="rs-type">Error</span>::other(&quot;connector thread panicked&quot;).into());
+            }
+        }
+        process.<a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-process-rs.html#method-teardown-366">teardown</a>();
+        <span class="rs-kw">let</span> _ = std::fs::remove_dir_all(root);
+        <span class="rs-type">Ok</span>(())
+    }
+</code></pre>
+</details>
 
   <p class="source">crates/eos-daemon/src/services/plugins/process.rs:678</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn test_socket_root private fn test_socket_root (name : &amp; str) -&gt; PathBuf crates/eos-daemon/src/services/plugins/process.rs  ">
+</article><article id="item-fn-test-socket-root-712" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn test_socket_root private fn test_socket_root (name : &amp; str) -&gt; PathBuf crates/eos-daemon/src/services/plugins/process.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>test_socket_root</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn test_socket_root (name : &amp; str) -&gt; PathBuf</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-daemon--src-services-plugins-process-rs.html#item-fn-test-socket-root-712">test_socket_root</a> (name : &amp; str) -&gt; PathBuf</code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-process-rs.html#item-fn-test-socket-root-712">test_socket_root</a>(name: &amp;str) -&gt; <span class="rs-type">PathBuf</span> {
+        <span class="rs-kw">let</span> root = <span class="rs-type">PathBuf</span>::from(&quot;target&quot;).join(format!(&quot;ppc-{name}-{}&quot;, std::process::id()));
+        <span class="rs-kw">let</span> _ = std::fs::remove_dir_all(&amp;root);
+        root
+    }
+</code></pre>
+</details>
 
   <p class="source">crates/eos-daemon/src/services/plugins/process.rs:712</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn wait_for_socket private fn wait_for_socket (root : &amp; Path) -&gt; std :: io :: Result &lt; PathBuf &gt; crates/eos-daemon/src/services/plugins/process.rs  ">
+</article><article id="item-fn-wait-for-socket-718" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn wait_for_socket private fn wait_for_socket (root : &amp; Path) -&gt; std :: io :: Result &lt; PathBuf &gt; crates/eos-daemon/src/services/plugins/process.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>wait_for_socket</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn wait_for_socket (root : &amp; Path) -&gt; std :: io :: Result &lt; PathBuf &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-daemon--src-services-plugins-process-rs.html#item-fn-wait-for-socket-718">wait_for_socket</a> (root : &amp; Path) -&gt; std :: io :: <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a> &lt; PathBuf &gt;</code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-process-rs.html#item-fn-wait-for-socket-718">wait_for_socket</a>(root: &amp;<span class="rs-type">Path</span>) -&gt; std::io::<a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a>&lt;<span class="rs-type">PathBuf</span>&gt; {
+        <span class="rs-kw">let</span> deadline = <span class="rs-type">Instant</span>::now() + <span class="rs-type">Duration</span>::from_secs(5);
+        loop {
+            <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Ok</span>(entries) = std::fs::read_dir(root) {
+                <span class="rs-kw">for</span> entry <span class="rs-kw">in</span> entries.flatten() {
+                    <span class="rs-kw">let</span> path = entry.<a class="symbol-link rs-fn" href="eos-daemon--src-services-checkpoint-commit-rs.html#method-path-190">path</a>();
+                    <span class="rs-kw">if</span> path.extension().and_then(|ext| ext.to_str()) == <span class="rs-type">Some</span>(&quot;sock&quot;) {
+                        <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(path);
+                    }
+                }
+            }
+            <span class="rs-kw">if</span> <span class="rs-type">Instant</span>::now() &gt;= deadline {
+                <span class="rs-kw">return</span> <span class="rs-type">Err</span>(std::io::<span class="rs-type">Error</span>::<a class="symbol-link rs-fn" href="eos-daemon.html#method-new-89">new</a>(
+                    <span class="rs-type">ErrorKind</span>::<span class="rs-type">TimedOut</span>,
+                    format!(&quot;timed out waiting <span class="rs-kw">for</span> socket under {}&quot;, root.display()),
+                ));
+            }
+            std::thread::sleep(<span class="rs-type">Duration</span>::from_millis(10));
+        }
+    }
+</code></pre>
+</details>
 
   <p class="source">crates/eos-daemon/src/services/plugins/process.rs:718</p>
 </article></div>
 </section></div>
 </main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/eos-daemon/src/services/plugins/process.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-comment">//! Plugin service process specifications.</span>
+<span class="rs-comment">//!</span>
+<span class="rs-comment">//! The daemon is the impure owner for service process lifecycle. This module</span>
+<span class="rs-comment">//! keeps the launch contract explicit and keyed by `PluginServiceKey`: every</span>
+<span class="rs-comment">//! service process gets a stable `/eos/plugin/ppc/*.sock` endpoint plus the</span>
+<span class="rs-comment">//! environment a small generic harness needs to connect back to the daemon.</span>
+
+<span class="rs-kw">use</span> std::collections::<span class="rs-type">BTreeMap</span>;
+<span class="rs-kw">use</span> std::io::<span class="rs-type">ErrorKind</span>;
+#[cfg(all(target_os = &quot;linux&quot;, not(test)))]
+<span class="rs-kw">use</span> std::io::<span class="rs-type">Write</span>;
+<span class="rs-kw">use</span> std::os::unix::net::<span class="rs-type">UnixListener</span>;
+<span class="rs-kw">use</span> std::path::{<span class="rs-type">Path</span>, <span class="rs-type">PathBuf</span>};
+<span class="rs-kw">use</span> std::process::{<span class="rs-type">Child</span>, <span class="rs-type">Command</span>, <span class="rs-type">Stdio</span>};
+<span class="rs-kw">use</span> std::time::{<span class="rs-type">Duration</span>, <span class="rs-type">Instant</span>};
+
+<span class="rs-kw">use</span> eos_plugin::{<span class="rs-type">PluginError</span>, <span class="rs-type">PluginServiceKey</span>};
+#[cfg(all(target_os = &quot;linux&quot;, not(test)))]
+<span class="rs-kw">use</span> eos_protocol::<span class="rs-type">Intent</span>;
+#[cfg(all(target_os = &quot;linux&quot;, not(test)))]
+<span class="rs-kw">use</span> eos_runner::{<span class="rs-type">RunMode</span>, <span class="rs-type">RunRequest</span>, <span class="rs-type">ToolCall</span>, <span class="rs-type">WorkspaceRoot</span>};
+<span class="rs-kw">use</span> serde_json::{json, <span class="rs-type">Value</span>};
+<span class="rs-kw">use</span> sha2::{<span class="rs-type">Digest</span>, <span class="rs-type">Sha256</span>};
+
+#[cfg(test)]
+<span class="rs-kw">use</span> <span class="rs-kw">super</span>::plugin_runtime_config;
+<span class="rs-kw">use</span> <span class="rs-kw">super</span>::ppc_router::<a class="symbol-link rs-type" href="eos-daemon--src-services-plugins-ppc-router-rs.html#item-struct-PpcClient-34">PpcClient</a>;
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::error::<a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>;
+
+<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">const</span> <span class="rs-type">ENV_PLUGIN_PPC_SOCKET</span>: &amp;str = &quot;<span class="rs-type">EOS_PLUGIN_PPC_SOCKET</span>&quot;;
+<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">const</span> <span class="rs-type">ENV_PLUGIN_LAYER_STACK_ROOT</span>: &amp;str = &quot;<span class="rs-type">EOS_PLUGIN_LAYER_STACK_ROOT</span>&quot;;
+<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">const</span> <span class="rs-type">ENV_PLUGIN_WORKSPACE_ROOT</span>: &amp;str = &quot;<span class="rs-type">EOS_PLUGIN_WORKSPACE_ROOT</span>&quot;;
+<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">const</span> <span class="rs-type">ENV_PLUGIN_PACKAGE_ROOT</span>: &amp;str = &quot;<span class="rs-type">EOS_PLUGIN_PACKAGE_ROOT</span>&quot;;
+<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">const</span> <span class="rs-type">ENV_PLUGIN_DEPENDENCY_ROOT</span>: &amp;str = &quot;<span class="rs-type">EOS_PLUGIN_DEPENDENCY_ROOT</span>&quot;;
+<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">const</span> <span class="rs-type">ENV_PLUGIN_ID</span>: &amp;str = &quot;<span class="rs-type">EOS_PLUGIN_ID</span>&quot;;
+<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">const</span> <span class="rs-type">ENV_PLUGIN_DIGEST</span>: &amp;str = &quot;<span class="rs-type">EOS_PLUGIN_DIGEST</span>&quot;;
+<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">const</span> <span class="rs-type">ENV_PLUGIN_SERVICE_ID</span>: &amp;str = &quot;<span class="rs-type">EOS_PLUGIN_SERVICE_ID</span>&quot;;
+<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">const</span> <span class="rs-type">ENV_PLUGIN_SERVICE_PROFILE_DIGEST</span>: &amp;str = &quot;<span class="rs-type">EOS_PLUGIN_SERVICE_PROFILE_DIGEST</span>&quot;;
+<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">const</span> <span class="rs-type">ENV_PLUGIN_PPC_PROTOCOL_VERSION</span>: &amp;str = &quot;<span class="rs-type">EOS_PLUGIN_PPC_PROTOCOL_VERSION</span>&quot;;
+<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">const</span> <span class="rs-type">ENV_PLUGIN_WORKSPACE_MOUNTED</span>: &amp;str = &quot;<span class="rs-type">EOS_PLUGIN_WORKSPACE_MOUNTED</span>&quot;;
+
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>)]
+<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-daemon--src-services-plugins-process-rs.html#item-struct-PluginServiceOverlay-42">PluginServiceOverlay</a> {
+    <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) run_dir: <span class="rs-type">PathBuf</span>,
+    <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) layer_paths: <span class="rs-type">Vec</span>&lt;<span class="rs-type">PathBuf</span>&gt;,
+    <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) upperdir: <span class="rs-type">PathBuf</span>,
+    <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) workdir: <span class="rs-type">PathBuf</span>,
+}
+
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Eq</span>)]
+<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-daemon--src-services-plugins-process-rs.html#item-struct-PluginProcessSpec-50">PluginProcessSpec</a> {
+    key: <span class="rs-type">PluginServiceKey</span>,
+    command: <span class="rs-type">Vec</span>&lt;<span class="rs-type">String</span>&gt;,
+    package_root: <span class="rs-type">PathBuf</span>,
+    dependency_root: <span class="rs-type">PathBuf</span>,
+    working_dir: <span class="rs-type">PathBuf</span>,
+    ppc_protocol_version: u32,
+    socket_path: <span class="rs-type">PathBuf</span>,
+}
+
+<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-daemon--src-services-plugins-process-rs.html#item-struct-PluginProcessSpec-50">PluginProcessSpec</a> {
+    #[cfg(test)]
+    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon.html#method-new-89">new</a>(
+        key: <span class="rs-type">PluginServiceKey</span>,
+        command: <span class="rs-type">Vec</span>&lt;<span class="rs-type">String</span>&gt;,
+        ppc_protocol_version: u32,
+    ) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a>&lt;<span class="rs-self">Self</span>, <span class="rs-type">PluginError</span>&gt; {
+        <span class="rs-kw">let</span> package_root = <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-process-rs.html#item-fn-default-package-root-325">default_package_root</a>(&amp;key);
+        <span class="rs-kw">let</span> dependency_root = <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-process-rs.html#item-fn-default-dependency-root-332">default_dependency_root</a>(&amp;key);
+        <span class="rs-kw">let</span> socket_root = <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-mod-rs.html#item-fn-plugin-runtime-config-71">plugin_runtime_config</a>().ppc_root;
+        <span class="rs-self">Self</span>::<a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-process-rs.html#method-new-with-package-paths-102">new_with_package_paths</a>(
+            key,
+            command,
+            package_root.clone(),
+            dependency_root,
+            <span class="rs-type">PathBuf</span>::from(&quot;.&quot;),
+            ppc_protocol_version,
+            socket_root,
+        )
+    }
+
+    #[cfg(test)]
+    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-process-rs.html#method-new-with-socket-root-82">new_with_socket_root</a>(
+        key: <span class="rs-type">PluginServiceKey</span>,
+        command: <span class="rs-type">Vec</span>&lt;<span class="rs-type">String</span>&gt;,
+        ppc_protocol_version: u32,
+        socket_root: <span class="rs-kw">impl</span> <span class="rs-type">AsRef</span>&lt;<span class="rs-type">Path</span>&gt;,
+    ) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a>&lt;<span class="rs-self">Self</span>, <span class="rs-type">PluginError</span>&gt; {
+        <span class="rs-kw">let</span> package_root = <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-process-rs.html#item-fn-default-package-root-325">default_package_root</a>(&amp;key);
+        <span class="rs-kw">let</span> dependency_root = <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-process-rs.html#item-fn-default-dependency-root-332">default_dependency_root</a>(&amp;key);
+        <span class="rs-self">Self</span>::<a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-process-rs.html#method-new-with-package-paths-102">new_with_package_paths</a>(
+            key,
+            command,
+            package_root.clone(),
+            dependency_root,
+            <span class="rs-type">PathBuf</span>::from(&quot;.&quot;),
+            ppc_protocol_version,
+            socket_root,
+        )
+    }
+
+    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-process-rs.html#method-new-with-package-paths-102">new_with_package_paths</a>(
+        key: <span class="rs-type">PluginServiceKey</span>,
+        command: <span class="rs-type">Vec</span>&lt;<span class="rs-type">String</span>&gt;,
+        package_root: <span class="rs-type">PathBuf</span>,
+        dependency_root: <span class="rs-type">PathBuf</span>,
+        working_dir: <span class="rs-type">PathBuf</span>,
+        ppc_protocol_version: u32,
+        socket_root: <span class="rs-kw">impl</span> <span class="rs-type">AsRef</span>&lt;<span class="rs-type">Path</span>&gt;,
+    ) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a>&lt;<span class="rs-self">Self</span>, <span class="rs-type">PluginError</span>&gt; {
+        <span class="rs-kw">if</span> command.is_empty() || command[0].trim().is_empty() {
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<span class="rs-type">PluginError</span>::<span class="rs-type">Manifest</span>(format!(
+                &quot;service {} requires a launch command&quot;,
+                key.service_id
+            )));
+        }
+        <span class="rs-kw">if</span> ppc_protocol_version == 0 {
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<span class="rs-type">PluginError</span>::<span class="rs-type">Manifest</span>(
+                &quot;ppc_protocol_version must be positive&quot;.to_owned(),
+            ));
+        }
+        <span class="rs-kw">let</span> socket_path = <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-process-rs.html#item-fn-socket-path-for-key-513">socket_path_for_key</a>(&amp;key, socket_root.as_ref());
+        <span class="rs-type">Ok</span>(<span class="rs-self">Self</span> {
+            key,
+            command,
+            package_root,
+            dependency_root,
+            working_dir,
+            ppc_protocol_version,
+            socket_path,
+        })
+    }
+
+    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-process-rs.html#method-environment-134">environment</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">BTreeMap</span>&lt;&amp;&#x27;<span class="rs-kw">static</span> str, <span class="rs-type">String</span>&gt; {
+        <span class="rs-type">BTreeMap</span>::from([
+            (
+                <span class="rs-type">ENV_PLUGIN_PPC_SOCKET</span>,
+                <span class="rs-self">self</span>.socket_path.to_string_lossy().into_owned(),
+            ),
+            (
+                <span class="rs-type">ENV_PLUGIN_LAYER_STACK_ROOT</span>,
+                <span class="rs-self">self</span>.key.layer_stack_root.clone(),
+            ),
+            (<span class="rs-type">ENV_PLUGIN_WORKSPACE_ROOT</span>, <span class="rs-self">self</span>.key.workspace_root.clone()),
+            (
+                <span class="rs-type">ENV_PLUGIN_PACKAGE_ROOT</span>,
+                <span class="rs-self">self</span>.package_root.to_string_lossy().into_owned(),
+            ),
+            (
+                <span class="rs-type">ENV_PLUGIN_DEPENDENCY_ROOT</span>,
+                <span class="rs-self">self</span>.dependency_root.to_string_lossy().into_owned(),
+            ),
+            (<span class="rs-type">ENV_PLUGIN_ID</span>, <span class="rs-self">self</span>.key.plugin_id.clone()),
+            (<span class="rs-type">ENV_PLUGIN_DIGEST</span>, <span class="rs-self">self</span>.key.plugin_digest.clone()),
+            (<span class="rs-type">ENV_PLUGIN_SERVICE_ID</span>, <span class="rs-self">self</span>.key.service_id.clone()),
+            (
+                <span class="rs-type">ENV_PLUGIN_SERVICE_PROFILE_DIGEST</span>,
+                <span class="rs-self">self</span>.key.service_profile_digest.clone(),
+            ),
+            (
+                <span class="rs-type">ENV_PLUGIN_PPC_PROTOCOL_VERSION</span>,
+                <span class="rs-self">self</span>.ppc_protocol_version.to_string(),
+            ),
+            (<span class="rs-type">ENV_PLUGIN_WORKSPACE_MOUNTED</span>, &quot;0&quot;.to_owned()),
+        ])
+    }
+
+    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-process-rs.html#method-service-instance-id-168">service_instance_id</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">String</span> {
+        <span class="rs-self">self</span>.key.<a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-process-rs.html#method-service-instance-id-168">service_instance_id</a>()
+    }
+
+    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-process-rs.html#method-key-172">key</a>(&amp;<span class="rs-self">self</span>) -&gt; &amp;<span class="rs-type">PluginServiceKey</span> {
+        &amp;<span class="rs-self">self</span>.key
+    }
+
+    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-process-rs.html#method-spawn-176">spawn</a>(&amp;<span class="rs-self">self</span>) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a>&lt;<a class="symbol-link rs-type" href="eos-daemon--src-services-plugins-process-rs.html#item-struct-PluginServiceProcess-339">PluginServiceProcess</a>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+        <span class="rs-kw">let</span> env = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-process-rs.html#method-environment-134">environment</a>();
+        <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-process-rs.html#method-spawn-command-181">spawn_command</a>(&amp;<span class="rs-self">self</span>.command, env)
+    }
+
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-process-rs.html#method-spawn-command-181">spawn_command</a>(
+        &amp;<span class="rs-self">self</span>,
+        argv: &amp;[<span class="rs-type">String</span>],
+        env: <span class="rs-type">BTreeMap</span>&lt;&amp;&#x27;<span class="rs-kw">static</span> str, <span class="rs-type">String</span>&gt;,
+    ) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a>&lt;<a class="symbol-link rs-type" href="eos-daemon--src-services-plugins-process-rs.html#item-struct-PluginServiceProcess-339">PluginServiceProcess</a>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> command = <span class="rs-type">Command</span>::<a class="symbol-link rs-fn" href="eos-daemon.html#method-new-89">new</a>(&amp;argv[0]);
+        command.args(&amp;argv[1..]);
+        <span class="rs-kw">if</span> <span class="rs-self">self</span>.working_dir.is_dir() {
+            command.current_dir(&amp;<span class="rs-self">self</span>.working_dir);
+        }
+        command
+            .envs(env)
+            .stdin(<span class="rs-type">Stdio</span>::null())
+            .stdout(<span class="rs-type">Stdio</span>::null())
+            .stderr(<span class="rs-type">Stdio</span>::null());
+        #[cfg(unix)]
+        {
+            <span class="rs-kw">use</span> std::os::unix::process::<span class="rs-type">CommandExt</span>;
+            command.process_group(0);
+        }
+        <span class="rs-kw">let</span> child = command.<a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-process-rs.html#method-spawn-176">spawn</a>()?;
+        <span class="rs-kw">let</span> process_group_id = i32::try_from(child.id()).ok();
+        <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-daemon--src-services-plugins-process-rs.html#item-struct-PluginServiceProcess-339">PluginServiceProcess</a> {
+            spec: <span class="rs-self">self</span>.clone(),
+            child,
+            process_group_id,
+            torn_down: <span class="rs-kw">false</span>,
+        })
+    }
+
+    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-process-rs.html#method-spawn-connected-with-overlay-211">spawn_connected_with_overlay</a>(
+        &amp;<span class="rs-self">self</span>,
+        overlay: <span class="rs-type">Option</span>&lt;&amp;<a class="symbol-link rs-type" href="eos-daemon--src-services-plugins-process-rs.html#item-struct-PluginServiceOverlay-42">PluginServiceOverlay</a>&gt;,
+        timeout: <span class="rs-type">Duration</span>,
+    ) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a>&lt;(<a class="symbol-link rs-type" href="eos-daemon--src-services-plugins-process-rs.html#item-struct-PluginServiceProcess-339">PluginServiceProcess</a>, <a class="symbol-link rs-type" href="eos-daemon--src-services-plugins-ppc-router-rs.html#item-struct-PpcClient-34">PpcClient</a>), <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+        <span class="rs-kw">let</span> listener = <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-process-rs.html#item-fn-bind-ppc-listener-532">bind_ppc_listener</a>(&amp;<span class="rs-self">self</span>.socket_path)?;
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> process = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-process-rs.html#method-spawn-for-overlay-227">spawn_for_overlay</a>(overlay)?;
+        <span class="rs-kw">match</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-process-rs.html#item-fn-accept-ppc-client-546">accept_ppc_client</a>(&amp;listener, &amp;<span class="rs-kw">mut</span> process, timeout) {
+            <span class="rs-type">Ok</span>(client) =&gt; <span class="rs-type">Ok</span>((process, client)),
+            <span class="rs-type">Err</span>(err) =&gt; {
+                process.<a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-process-rs.html#method-teardown-366">teardown</a>();
+                <span class="rs-type">Err</span>(err)
+            }
+        }
+    }
+
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-process-rs.html#method-spawn-for-overlay-227">spawn_for_overlay</a>(
+        &amp;<span class="rs-self">self</span>,
+        overlay: <span class="rs-type">Option</span>&lt;&amp;<a class="symbol-link rs-type" href="eos-daemon--src-services-plugins-process-rs.html#item-struct-PluginServiceOverlay-42">PluginServiceOverlay</a>&gt;,
+    ) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a>&lt;<a class="symbol-link rs-type" href="eos-daemon--src-services-plugins-process-rs.html#item-struct-PluginServiceProcess-339">PluginServiceProcess</a>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(overlay) = overlay {
+            <span class="rs-kw">return</span> <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-process-rs.html#method-spawn-overlay-runner-237">spawn_overlay_runner</a>(overlay);
+        }
+        <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-process-rs.html#method-spawn-176">spawn</a>()
+    }
+
+    #[cfg(all(target_os = &quot;linux&quot;, not(test)))]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-process-rs.html#method-spawn-overlay-runner-237">spawn_overlay_runner</a>(
+        &amp;<span class="rs-self">self</span>,
+        overlay: &amp;<a class="symbol-link rs-type" href="eos-daemon--src-services-plugins-process-rs.html#item-struct-PluginServiceOverlay-42">PluginServiceOverlay</a>,
+    ) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a>&lt;<a class="symbol-link rs-type" href="eos-daemon--src-services-plugins-process-rs.html#item-struct-PluginServiceProcess-339">PluginServiceProcess</a>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+        <span class="rs-kw">let</span> request = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-process-rs.html#method-overlay-run-request-281">overlay_run_request</a>(overlay);
+        <span class="rs-kw">let</span> payload = serde_json::to_vec(&amp;request)
+            .map_err(|err| <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>::<span class="rs-type">InvalidEnvelope</span>(err.to_string()))?;
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> command = <span class="rs-type">Command</span>::<a class="symbol-link rs-fn" href="eos-daemon.html#method-new-89">new</a>(std::env::current_exe()?);
+        command
+            .arg(&quot;ns-runner&quot;)
+            .stdin(<span class="rs-type">Stdio</span>::piped())
+            .stdout(<span class="rs-type">Stdio</span>::null())
+            .stderr(<span class="rs-type">Stdio</span>::null());
+        #[cfg(unix)]
+        {
+            <span class="rs-kw">use</span> std::os::unix::process::<span class="rs-type">CommandExt</span>;
+            command.process_group(0);
+        }
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> child = command.<a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-process-rs.html#method-spawn-176">spawn</a>()?;
+        child
+            .stdin
+            .as_mut()
+            .ok_or_else(|| <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>::<span class="rs-type">InvalidEnvelope</span>(&quot;ns-runner stdin unavailable&quot;.to_owned()))?
+            .write_all(&amp;payload)?;
+        <a class="symbol-link rs-fn" href="eos-daemon--src-services-checkpoint-commit-rs.html#method-drop-200">drop</a>(child.stdin.<a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-ppc-router-pending-rs.html#method-take-150">take</a>());
+        <span class="rs-kw">let</span> process_group_id = i32::try_from(child.id()).ok();
+        <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-daemon--src-services-plugins-process-rs.html#item-struct-PluginServiceProcess-339">PluginServiceProcess</a> {
+            spec: <span class="rs-self">self</span>.clone(),
+            child,
+            process_group_id,
+            torn_down: <span class="rs-kw">false</span>,
+        })
+    }
+
+    #[cfg(any(not(target_os = &quot;linux&quot;), test))]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-process-rs.html#method-spawn-overlay-runner-237">spawn_overlay_runner</a>(
+        &amp;<span class="rs-self">self</span>,
+        overlay: &amp;<a class="symbol-link rs-type" href="eos-daemon--src-services-plugins-process-rs.html#item-struct-PluginServiceOverlay-42">PluginServiceOverlay</a>,
+    ) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a>&lt;<a class="symbol-link rs-type" href="eos-daemon--src-services-plugins-process-rs.html#item-struct-PluginServiceProcess-339">PluginServiceProcess</a>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+        <span class="rs-kw">let</span> _ = (&amp;overlay.layer_paths, &amp;overlay.upperdir, &amp;overlay.workdir);
+        <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-process-rs.html#method-spawn-176">spawn</a>()
+    }
+
+    #[cfg(all(target_os = &quot;linux&quot;, not(test)))]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-process-rs.html#method-overlay-run-request-281">overlay_run_request</a>(&amp;<span class="rs-self">self</span>, overlay: &amp;<a class="symbol-link rs-type" href="eos-daemon--src-services-plugins-process-rs.html#item-struct-PluginServiceOverlay-42">PluginServiceOverlay</a>) -&gt; <span class="rs-type">RunRequest</span> {
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> env = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-process-rs.html#method-environment-134">environment</a>();
+        env.insert(<span class="rs-type">ENV_PLUGIN_WORKSPACE_MOUNTED</span>, &quot;1&quot;.to_owned());
+        <span class="rs-type">RunRequest</span> {
+            mode: <span class="rs-type">RunMode</span>::<span class="rs-type">FreshNs</span>,
+            tool_call: <span class="rs-type">ToolCall</span> {
+                invocation_id: format!(&quot;plugin-service:{}&quot;, <span class="rs-self">self</span>.key.<a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-process-rs.html#method-service-instance-id-168">service_instance_id</a>()),
+                caller_id: &quot;plugin-service&quot;.to_owned(),
+                verb: &quot;plugin_service&quot;.into(),
+                intent: <span class="rs-type">Intent</span>::<span class="rs-type">ReadOnly</span>,
+                args: json!({
+                    &quot;command&quot;: <span class="rs-self">self</span>.command.clone(),
+                    &quot;cwd&quot;: &quot;.&quot;,
+                    &quot;env&quot;: env,
+                }),
+                background: <span class="rs-kw">false</span>,
+            },
+            workspace_root: <span class="rs-type">WorkspaceRoot</span>(<span class="rs-type">PathBuf</span>::from(&amp;<span class="rs-self">self</span>.key.workspace_root)),
+            layer_paths: overlay.layer_paths.clone(),
+            upperdir: <span class="rs-type">Some</span>(overlay.upperdir.clone()),
+            workdir: <span class="rs-type">Some</span>(overlay.workdir.clone()),
+            ns_fds: <span class="rs-type">None</span>,
+            cgroup_path: <span class="rs-type">None</span>,
+            timeout_seconds: <span class="rs-type">None</span>,
+        }
+    }
+
+    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-process-rs.html#method-to-json-309">to_json</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Value</span> {
+        json!({
+            &quot;service_id&quot;: <span class="rs-self">self</span>.key.service_id,
+            &quot;service_instance_id&quot;: <span class="rs-self">self</span>.key.<a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-process-rs.html#method-service-instance-id-168">service_instance_id</a>(),
+            &quot;command&quot;: <span class="rs-self">self</span>.command,
+            &quot;package_root&quot;: <span class="rs-self">self</span>.package_root,
+            &quot;dependency_root&quot;: <span class="rs-self">self</span>.dependency_root,
+            &quot;working_dir&quot;: <span class="rs-self">self</span>.working_dir,
+            &quot;socket_path&quot;: <span class="rs-self">self</span>.socket_path,
+            &quot;env&quot;: <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-process-rs.html#method-environment-134">environment</a>(),
+            &quot;ppc_protocol_version&quot;: <span class="rs-self">self</span>.ppc_protocol_version,
+            &quot;process_started&quot;: <span class="rs-kw">false</span>,
+        })
+    }
+}
+
+#[cfg(test)]
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-process-rs.html#item-fn-default-package-root-325">default_package_root</a>(key: &amp;<span class="rs-type">PluginServiceKey</span>) -&gt; <span class="rs-type">PathBuf</span> {
+    <span class="rs-type">PathBuf</span>::from(&quot;/eos/runtime/plugins/catalog&quot;)
+        .join(&amp;key.plugin_id)
+        .join(&amp;key.plugin_digest)
+}
+
+#[cfg(test)]
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-process-rs.html#item-fn-default-dependency-root-332">default_dependency_root</a>(key: &amp;<span class="rs-type">PluginServiceKey</span>) -&gt; <span class="rs-type">PathBuf</span> {
+    <span class="rs-type">PathBuf</span>::from(&quot;/eos/runtime/packages&quot;)
+        .join(&amp;key.plugin_id)
+        .join(&amp;key.plugin_digest)
+}
+
+#[derive(<span class="rs-type">Debug</span>)]
+<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-daemon--src-services-plugins-process-rs.html#item-struct-PluginServiceProcess-339">PluginServiceProcess</a> {
+    spec: <a class="symbol-link rs-type" href="eos-daemon--src-services-plugins-process-rs.html#item-struct-PluginProcessSpec-50">PluginProcessSpec</a>,
+    child: <span class="rs-type">Child</span>,
+    process_group_id: <span class="rs-type">Option</span>&lt;i32&gt;,
+    torn_down: bool,
+}
+
+<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-daemon--src-services-plugins-process-rs.html#item-struct-PluginServiceProcess-339">PluginServiceProcess</a> {
+    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-process-rs.html#method-pid-348">pid</a>(&amp;<span class="rs-self">self</span>) -&gt; u32 {
+        <span class="rs-self">self</span>.child.id()
+    }
+
+    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-process-rs.html#method-status-json-352">status_json</a>(&amp;<span class="rs-kw">mut</span> <span class="rs-self">self</span>) -&gt; <span class="rs-type">Value</span> {
+        <span class="rs-kw">let</span> exit_status = <span class="rs-self">self</span>.child.try_wait().ok().flatten();
+        <span class="rs-kw">let</span> running = exit_status.is_none();
+        json!({
+            &quot;service_id&quot;: <span class="rs-self">self</span>.spec.key.service_id,
+            &quot;service_instance_id&quot;: <span class="rs-self">self</span>.spec.<a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-process-rs.html#method-service-instance-id-168">service_instance_id</a>(),
+            &quot;pid&quot;: <span class="rs-self">self</span>.child.id(),
+            &quot;process_group_id&quot;: <span class="rs-self">self</span>.process_group_id,
+            &quot;running&quot;: running,
+            &quot;exit_status&quot;: exit_status.and_then(|status| status.code()),
+            &quot;socket_path&quot;: <span class="rs-self">self</span>.spec.socket_path,
+        })
+    }
+
+    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-process-rs.html#method-teardown-366">teardown</a>(&amp;<span class="rs-kw">mut</span> <span class="rs-self">self</span>) {
+        <span class="rs-kw">if</span> <span class="rs-self">self</span>.torn_down {
+            <span class="rs-kw">return</span>;
+        }
+        <span class="rs-self">self</span>.torn_down = <span class="rs-kw">true</span>;
+        <span class="rs-kw">if</span> <span class="rs-self">self</span>.child.try_wait().ok().flatten().is_some() {
+            <span class="rs-kw">return</span>;
+        }
+        <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#item-fn-terminate-process-group-234">terminate_process_group</a>(<span class="rs-self">self</span>.process_group_id);
+        <span class="rs-kw">let</span> _ = <span class="rs-self">self</span>.child.kill();
+        <span class="rs-kw">let</span> _ = <span class="rs-self">self</span>.child.wait();
+    }
+}
+
+#[cfg(all(target_os = &quot;linux&quot;, not(test)))]
+<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-process-rs.html#item-fn-remount-workspace-overlay-380">remount_workspace_overlay</a>(
+    target_pid: u32,
+    workspace_root: &amp;str,
+    overlay: &amp;<a class="symbol-link rs-type" href="eos-daemon--src-services-plugins-process-rs.html#item-struct-PluginServiceOverlay-42">PluginServiceOverlay</a>,
+    timeout: <span class="rs-type">Duration</span>,
+) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a>&lt;(), <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+    <span class="rs-kw">let</span> request = <span class="rs-type">RunRequest</span> {
+        mode: <span class="rs-type">RunMode</span>::<span class="rs-type">FreshNs</span>,
+        tool_call: <span class="rs-type">ToolCall</span> {
+            invocation_id: format!(&quot;plugin-service-remount:{target_pid}&quot;),
+            caller_id: &quot;plugin-service&quot;.to_owned(),
+            verb: &quot;remount_overlay&quot;.into(),
+            intent: <span class="rs-type">Intent</span>::<span class="rs-type">ReadOnly</span>,
+            args: json!({}),
+            background: <span class="rs-kw">false</span>,
+        },
+        workspace_root: <span class="rs-type">WorkspaceRoot</span>(<span class="rs-type">PathBuf</span>::from(workspace_root)),
+        layer_paths: overlay.layer_paths.clone(),
+        upperdir: <span class="rs-type">Some</span>(overlay.upperdir.clone()),
+        workdir: <span class="rs-type">Some</span>(overlay.workdir.clone()),
+        ns_fds: <span class="rs-type">None</span>,
+        cgroup_path: <span class="rs-type">None</span>,
+        timeout_seconds: <span class="rs-type">None</span>,
+    };
+    <span class="rs-kw">let</span> payload = serde_json::to_vec(&amp;request)
+        .map_err(|err| <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>::<span class="rs-type">InvalidEnvelope</span>(err.to_string()))?;
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> command = <span class="rs-type">Command</span>::<a class="symbol-link rs-fn" href="eos-daemon.html#method-new-89">new</a>(&quot;nsenter&quot;);
+    command
+        .arg(&quot;-t&quot;)
+        .arg(target_pid.to_string())
+        .arg(&quot;-<span class="rs-type">U</span>&quot;)
+        .arg(&quot;-m&quot;)
+        .arg(&quot;--preserve-credentials&quot;)
+        .arg(&quot;--&quot;)
+        .arg(std::env::current_exe()?)
+        .arg(&quot;ns-runner&quot;)
+        .arg(&quot;--remount-overlay&quot;)
+        .stdin(<span class="rs-type">Stdio</span>::piped())
+        .stdout(<span class="rs-type">Stdio</span>::null())
+        .stderr(<span class="rs-type">Stdio</span>::piped());
+    #[cfg(unix)]
+    {
+        <span class="rs-kw">use</span> std::os::unix::process::<span class="rs-type">CommandExt</span>;
+        command.process_group(0);
+    }
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> child = command.<a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-process-rs.html#method-spawn-176">spawn</a>().map_err(|err| {
+        <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>::<span class="rs-type">OverlayPipeline</span>(format!(
+            &quot;failed to spawn nsenter <span class="rs-kw">for</span> plugin service remount: {err}&quot;
+        ))
+    })?;
+    child
+        .stdin
+        .as_mut()
+        .ok_or_else(|| <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>::<span class="rs-type">OverlayPipeline</span>(&quot;nsenter stdin unavailable&quot;.to_owned()))?
+        .write_all(&amp;payload)?;
+    <a class="symbol-link rs-fn" href="eos-daemon--src-services-checkpoint-commit-rs.html#method-drop-200">drop</a>(child.stdin.<a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-ppc-router-pending-rs.html#method-take-150">take</a>());
+    <span class="rs-kw">let</span> output = <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-process-rs.html#item-fn-wait-for-helper-464">wait_for_helper</a>(child, timeout, &quot;plugin service remount&quot;)?;
+    <span class="rs-kw">if</span> output.status.success() {
+        <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(());
+    }
+    <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>::<span class="rs-type">OverlayPipeline</span>(format!(
+        &quot;plugin service remount failed with status {}: {}&quot;,
+        output.status,
+        <span class="rs-type">String</span>::from_utf8_lossy(&amp;output.stderr).trim()
+    )))
+}
+
+#[cfg(any(not(target_os = &quot;linux&quot;), test))]
+<span class="rs-comment">// Keep the same fallible signature as the Linux remount path so refresh callers</span>
+<span class="rs-comment">// stay cfg-free; off-Linux/test builds only validate overlay metadata plumbing.</span>
+#[expect(
+    clippy::unnecessary_wraps,
+    reason = &quot;non-<span class="rs-type">Linux</span>/test parity keeps the <span class="rs-type">Linux</span> fallible helper signature&quot;
+)]
+<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-process-rs.html#item-fn-remount-workspace-overlay-380">remount_workspace_overlay</a>(
+    _target_pid: u32,
+    _workspace_root: &amp;str,
+    _overlay: &amp;<a class="symbol-link rs-type" href="eos-daemon--src-services-plugins-process-rs.html#item-struct-PluginServiceOverlay-42">PluginServiceOverlay</a>,
+    _timeout: <span class="rs-type">Duration</span>,
+) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a>&lt;(), <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+    <span class="rs-type">Ok</span>(())
+}
+
+#[cfg(all(target_os = &quot;linux&quot;, not(test)))]
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-process-rs.html#item-fn-wait-for-helper-464">wait_for_helper</a>(
+    <span class="rs-kw">mut</span> child: <span class="rs-type">Child</span>,
+    timeout: <span class="rs-type">Duration</span>,
+    label: &amp;str,
+) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a>&lt;std::process::<span class="rs-type">Output</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+    <span class="rs-kw">let</span> process_group_id = i32::try_from(child.id()).ok();
+    <span class="rs-kw">let</span> deadline = <span class="rs-type">Instant</span>::now() + timeout;
+    loop {
+        <span class="rs-kw">if</span> child.try_wait()?.is_some() {
+            <span class="rs-kw">return</span> child.wait_with_output().map_err(<a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>::from);
+        }
+        <span class="rs-kw">if</span> <span class="rs-type">Instant</span>::now() &gt;= deadline {
+            <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#item-fn-terminate-process-group-234">terminate_process_group</a>(process_group_id);
+            <span class="rs-kw">let</span> _ = child.kill();
+            <span class="rs-kw">let</span> output = child.wait_with_output()?;
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>::<span class="rs-type">OverlayPipeline</span>(format!(
+                &quot;{label} timed out after {:.3}s: {}&quot;,
+                timeout.as_secs_f64(),
+                <span class="rs-type">String</span>::from_utf8_lossy(&amp;output.stderr).trim()
+            )));
+        }
+        std::thread::sleep(<span class="rs-type">Duration</span>::from_millis(10));
+    }
+}
+
+<span class="rs-kw">impl</span> <span class="rs-type">Drop</span> <span class="rs-kw">for</span> <a class="symbol-link rs-type" href="eos-daemon--src-services-plugins-process-rs.html#item-struct-PluginServiceProcess-339">PluginServiceProcess</a> {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-checkpoint-commit-rs.html#method-drop-200">drop</a>(&amp;<span class="rs-kw">mut</span> <span class="rs-self">self</span>) {
+        <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-process-rs.html#method-teardown-366">teardown</a>();
+    }
+}
+
+#[cfg(target_os = &quot;linux&quot;)]
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#item-fn-terminate-process-group-234">terminate_process_group</a>(process_group_id: <span class="rs-type">Option</span>&lt;i32&gt;) {
+    <span class="rs-kw">use</span> nix::sys::signal::{killpg, <span class="rs-type">Signal</span>};
+    <span class="rs-kw">use</span> nix::unistd::<span class="rs-type">Pid</span>;
+
+    <span class="rs-kw">let</span> <span class="rs-type">Some</span>(process_group_id) = process_group_id <span class="rs-kw">else</span> {
+        <span class="rs-kw">return</span>;
+    };
+    <span class="rs-kw">if</span> killpg(<span class="rs-type">Pid</span>::from_raw(process_group_id), <span class="rs-type">Signal</span>::<span class="rs-type">SIGTERM</span>).is_ok() {
+        std::thread::sleep(std::time::<span class="rs-type">Duration</span>::from_millis(50));
+        <span class="rs-kw">let</span> _ = killpg(<span class="rs-type">Pid</span>::from_raw(process_group_id), <span class="rs-type">Signal</span>::<span class="rs-type">SIGKILL</span>);
+    }
+}
+
+#[cfg(not(target_os = &quot;linux&quot;))]
+<span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#item-fn-terminate-process-group-234">terminate_process_group</a>(_process_group_id: <span class="rs-type">Option</span>&lt;i32&gt;) {}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-process-rs.html#item-fn-socket-path-for-key-513">socket_path_for_key</a>(key: &amp;<span class="rs-type">PluginServiceKey</span>, socket_root: &amp;<span class="rs-type">Path</span>) -&gt; <span class="rs-type">PathBuf</span> {
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> hasher = <span class="rs-type">Sha256</span>::<a class="symbol-link rs-fn" href="eos-daemon.html#method-new-89">new</a>();
+    hasher.update(key.<a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-process-rs.html#method-service-instance-id-168">service_instance_id</a>().as_bytes());
+    hasher.update(b&quot;\0&quot;);
+    hasher.update(key.plugin_digest.as_bytes());
+    <span class="rs-kw">let</span> digest = hasher.finalize();
+    socket_root.join(format!(&quot;{}.sock&quot;, <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-process-rs.html#item-fn-lower-hex-522">lower_hex</a>(&amp;digest[..16])))
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-process-rs.html#item-fn-lower-hex-522">lower_hex</a>(bytes: &amp;[u8]) -&gt; <span class="rs-type">String</span> {
+    <span class="rs-kw">const</span> <span class="rs-type">HEX</span>: &amp;[u8; 16] = b&quot;0123456789abcdef&quot;;
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> out = <span class="rs-type">String</span>::with_capacity(bytes.len() * 2);
+    <span class="rs-kw">for</span> byte <span class="rs-kw">in</span> bytes {
+        out.push(char::from(<span class="rs-type">HEX</span>[usize::from(byte &gt;&gt; 4)]));
+        out.push(char::from(<span class="rs-type">HEX</span>[usize::from(byte &amp; 0x0f)]));
+    }
+    out
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-process-rs.html#item-fn-bind-ppc-listener-532">bind_ppc_listener</a>(socket_path: &amp;<span class="rs-type">Path</span>) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a>&lt;<span class="rs-type">UnixListener</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+    <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(parent) = socket_path.parent() {
+        std::fs::create_dir_all(parent)?;
+    }
+    <span class="rs-kw">match</span> std::fs::remove_file(socket_path) {
+        <span class="rs-type">Ok</span>(()) =&gt; {}
+        <span class="rs-type">Err</span>(err) <span class="rs-kw">if</span> err.kind() == <span class="rs-type">ErrorKind</span>::<span class="rs-type">NotFound</span> =&gt; {}
+        <span class="rs-type">Err</span>(err) =&gt; <span class="rs-kw">return</span> <span class="rs-type">Err</span>(err.into()),
+    }
+    <span class="rs-kw">let</span> listener = <span class="rs-type">UnixListener</span>::bind(socket_path)?;
+    listener.<a class="symbol-link rs-fn" href="eos-daemon--src-services-isolated-workspace-runtime-rs.html#item-fn-set-nonblocking-384">set_nonblocking</a>(<span class="rs-kw">true</span>)?;
+    <span class="rs-type">Ok</span>(listener)
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-process-rs.html#item-fn-accept-ppc-client-546">accept_ppc_client</a>(
+    listener: &amp;<span class="rs-type">UnixListener</span>,
+    process: &amp;<span class="rs-kw">mut</span> <a class="symbol-link rs-type" href="eos-daemon--src-services-plugins-process-rs.html#item-struct-PluginServiceProcess-339">PluginServiceProcess</a>,
+    timeout: <span class="rs-type">Duration</span>,
+) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a>&lt;<a class="symbol-link rs-type" href="eos-daemon--src-services-plugins-ppc-router-rs.html#item-struct-PpcClient-34">PpcClient</a>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+    <span class="rs-kw">let</span> deadline = <span class="rs-type">Instant</span>::now() + timeout;
+    loop {
+        <span class="rs-kw">match</span> listener.accept() {
+            <span class="rs-type">Ok</span>((stream, _addr)) =&gt; {
+                stream.<a class="symbol-link rs-fn" href="eos-daemon--src-services-isolated-workspace-runtime-rs.html#item-fn-set-nonblocking-384">set_nonblocking</a>(<span class="rs-kw">false</span>)?;
+                <span class="rs-kw">return</span> <a class="symbol-link rs-type" href="eos-daemon--src-services-plugins-ppc-router-rs.html#item-struct-PpcClient-34">PpcClient</a>::<a class="symbol-link rs-fn" href="eos-daemon.html#method-new-89">new</a>(stream);
+            }
+            <span class="rs-type">Err</span>(err) <span class="rs-kw">if</span> err.kind() == <span class="rs-type">ErrorKind</span>::<span class="rs-type">WouldBlock</span> =&gt; {}
+            <span class="rs-type">Err</span>(err) =&gt; <span class="rs-kw">return</span> <span class="rs-type">Err</span>(err.into()),
+        }
+        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(status) = process.child.try_wait()? {
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<span class="rs-type">PluginError</span>::<span class="rs-type">Ensure</span>(format!(
+                &quot;plugin service {} exited before <span class="rs-type">PPC</span> connect: {status}&quot;,
+                process.spec.key.service_id
+            ))
+            .into());
+        }
+        <span class="rs-kw">if</span> <span class="rs-type">Instant</span>::now() &gt;= deadline {
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<span class="rs-type">PluginError</span>::<span class="rs-type">Ensure</span>(format!(
+                &quot;timed out waiting <span class="rs-kw">for</span> plugin service {} to connect <span class="rs-type">PPC</span> socket {}&quot;,
+                process.spec.key.service_id,
+                process.spec.socket_path.display()
+            ))
+            .into());
+        }
+        std::thread::sleep(<span class="rs-type">Duration</span>::from_millis(10));
+    }
+}
+
+#[cfg(test)]
+<span class="rs-kw">mod</span> tests {
+    <span class="rs-kw">use</span> <span class="rs-kw">super</span>::*;
+    <span class="rs-kw">use</span> eos_plugin::{<span class="rs-type">PluginServiceKeyParts</span>, <span class="rs-type">RefreshStrategy</span>, <span class="rs-type">ServiceMode</span>};
+
+    <span class="rs-kw">type</span> <a class="symbol-link rs-type" href="eos-daemon--src-runtime-invocation-registry-rs.html#item-type-TestResult-262">TestResult</a> = std::result::<a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a>&lt;(), <span class="rs-type">Box</span>&lt;<span class="rs-kw">dyn</span> std::error::<span class="rs-type">Error</span> + <span class="rs-type">Send</span> + <span class="rs-type">Sync</span>&gt;&gt;;
+
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-process-rs.html#method-key-172">key</a>(profile: &amp;str) -&gt; std::result::<a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a>&lt;<span class="rs-type">PluginServiceKey</span>, <span class="rs-type">PluginError</span>&gt; {
+        <span class="rs-type">PluginServiceKey</span>::<a class="symbol-link rs-fn" href="eos-daemon.html#method-new-89">new</a>(<span class="rs-type">PluginServiceKeyParts</span> {
+            layer_stack_root: &quot;/eos/plugin/layer-stack&quot;.to_owned(),
+            workspace_root: &quot;/eos/plugin/workspace&quot;.to_owned(),
+            plugin_id: &quot;demo&quot;.to_owned(),
+            plugin_digest: &quot;digest-a&quot;.to_owned(),
+            service_id: &quot;indexer&quot;.to_owned(),
+            service_profile_digest: profile.to_owned(),
+            service_mode: <span class="rs-type">ServiceMode</span>::<span class="rs-type">WorkspaceSnapshotRefresh</span>,
+            refresh_strategy: <span class="rs-type">RefreshStrategy</span>::<span class="rs-type">RemountWorkspaceAndNotify</span>,
+        })
+    }
+
+    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-process-rs.html#item-fn-process-spec-uses-stable-eos-plugin-socket-and-env-600">process_spec_uses_stable_eos_plugin_socket_and_env</a>() -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-invocation-registry-rs.html#item-type-TestResult-262">TestResult</a> {
+        <span class="rs-kw">let</span> spec = <a class="symbol-link rs-type" href="eos-daemon--src-services-plugins-process-rs.html#item-struct-PluginProcessSpec-50">PluginProcessSpec</a>::<a class="symbol-link rs-fn" href="eos-daemon.html#method-new-89">new</a>(
+            <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-process-rs.html#method-key-172">key</a>(&quot;profile-a&quot;)?,
+            vec![&quot;demo-indexer&quot;.to_owned(), &quot;--stdio&quot;.to_owned()],
+            1,
+        )?;
+        <span class="rs-kw">let</span> env = spec.<a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-process-rs.html#method-environment-134">environment</a>();
+
+        assert!(env[<span class="rs-type">ENV_PLUGIN_PPC_SOCKET</span>].starts_with(&quot;/eos/plugin/ppc/&quot;));
+        assert!(std::path::<span class="rs-type">Path</span>::<a class="symbol-link rs-fn" href="eos-daemon.html#method-new-89">new</a>(&amp;env[<span class="rs-type">ENV_PLUGIN_PPC_SOCKET</span>])
+            .extension()
+            .is_some_and(|ext| ext.eq_ignore_ascii_case(&quot;sock&quot;)));
+        assert_eq!(env[<span class="rs-type">ENV_PLUGIN_LAYER_STACK_ROOT</span>], &quot;/eos/plugin/layer-stack&quot;);
+        assert_eq!(env[<span class="rs-type">ENV_PLUGIN_WORKSPACE_ROOT</span>], &quot;/eos/plugin/workspace&quot;);
+        assert_eq!(
+            env[<span class="rs-type">ENV_PLUGIN_PACKAGE_ROOT</span>],
+            &quot;/eos/runtime/plugins/catalog/demo/digest-a&quot;
+        );
+        assert_eq!(
+            env[<span class="rs-type">ENV_PLUGIN_DEPENDENCY_ROOT</span>],
+            &quot;/eos/runtime/packages/demo/digest-a&quot;
+        );
+        assert_eq!(env[<span class="rs-type">ENV_PLUGIN_ID</span>], &quot;demo&quot;);
+        assert_eq!(env[<span class="rs-type">ENV_PLUGIN_SERVICE_ID</span>], &quot;indexer&quot;);
+        assert_eq!(env[<span class="rs-type">ENV_PLUGIN_PPC_PROTOCOL_VERSION</span>], &quot;1&quot;);
+        <span class="rs-type">Ok</span>(())
+    }
+
+    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-process-rs.html#item-fn-process-spec-key-changes-socket-path-629">process_spec_key_changes_socket_path</a>() -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-invocation-registry-rs.html#item-type-TestResult-262">TestResult</a> {
+        <span class="rs-kw">let</span> first = <a class="symbol-link rs-type" href="eos-daemon--src-services-plugins-process-rs.html#item-struct-PluginProcessSpec-50">PluginProcessSpec</a>::<a class="symbol-link rs-fn" href="eos-daemon.html#method-new-89">new</a>(<a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-process-rs.html#method-key-172">key</a>(&quot;profile-a&quot;)?, vec![&quot;svc&quot;.to_owned()], 1)?;
+        <span class="rs-kw">let</span> second = <a class="symbol-link rs-type" href="eos-daemon--src-services-plugins-process-rs.html#item-struct-PluginProcessSpec-50">PluginProcessSpec</a>::<a class="symbol-link rs-fn" href="eos-daemon.html#method-new-89">new</a>(<a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-process-rs.html#method-key-172">key</a>(&quot;profile-b&quot;)?, vec![&quot;svc&quot;.to_owned()], 1)?;
+
+        assert_ne!(
+            first.<a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-process-rs.html#method-environment-134">environment</a>()[<span class="rs-type">ENV_PLUGIN_PPC_SOCKET</span>],
+            second.<a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-process-rs.html#method-environment-134">environment</a>()[<span class="rs-type">ENV_PLUGIN_PPC_SOCKET</span>]
+        );
+        <span class="rs-type">Ok</span>(())
+    }
+
+    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-process-rs.html#item-fn-process-spec-rejects-empty-command-641">process_spec_rejects_empty_command</a>() -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-invocation-registry-rs.html#item-type-TestResult-262">TestResult</a> {
+        <span class="rs-kw">let</span> service_key = <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-process-rs.html#method-key-172">key</a>(&quot;profile-a&quot;)?;
+        assert!(matches!(
+            <a class="symbol-link rs-type" href="eos-daemon--src-services-plugins-process-rs.html#item-struct-PluginProcessSpec-50">PluginProcessSpec</a>::<a class="symbol-link rs-fn" href="eos-daemon.html#method-new-89">new</a>(service_key, <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-daemon.html#method-new-89">new</a>(), 1),
+            <span class="rs-type">Err</span>(<span class="rs-type">PluginError</span>::<span class="rs-type">Manifest</span>(message)) <span class="rs-kw">if</span> message.<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#method-contains-133">contains</a>(&quot;launch command&quot;)
+        ));
+        <span class="rs-type">Ok</span>(())
+    }
+
+    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-process-rs.html#item-fn-spawned-process-reports-running-then-tears-down-651">spawned_process_reports_running_then_tears_down</a>() -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-invocation-registry-rs.html#item-type-TestResult-262">TestResult</a> {
+        <span class="rs-kw">let</span> spec = <a class="symbol-link rs-type" href="eos-daemon--src-services-plugins-process-rs.html#item-struct-PluginProcessSpec-50">PluginProcessSpec</a>::<a class="symbol-link rs-fn" href="eos-daemon.html#method-new-89">new</a>(
+            <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-process-rs.html#method-key-172">key</a>(&quot;profile-a&quot;)?,
+            vec![
+                &quot;/bin/sh&quot;.to_owned(),
+                &quot;-c&quot;.to_owned(),
+                &quot;test \&quot;$<span class="rs-type">EOS_PLUGIN_SERVICE_ID</span>\&quot; = indexer &amp;&amp; sleep 30&quot;.to_owned(),
+            ],
+            1,
+        )?;
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> process = spec.<a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-process-rs.html#method-spawn-176">spawn</a>()?;
+
+        <span class="rs-kw">let</span> status = process.<a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-process-rs.html#method-status-json-352">status_json</a>();
+        assert_eq!(status[&quot;service_id&quot;], &quot;indexer&quot;);
+        assert_eq!(status[&quot;running&quot;], <span class="rs-kw">true</span>);
+        <span class="rs-kw">let</span> pid = status[&quot;pid&quot;]
+            .as_u64()
+            .ok_or_else(|| std::io::<span class="rs-type">Error</span>::<a class="symbol-link rs-fn" href="eos-daemon.html#method-new-89">new</a>(<span class="rs-type">ErrorKind</span>::<span class="rs-type">InvalidData</span>, &quot;missing process pid&quot;))?;
+        assert!(pid &gt; 0);
+
+        process.<a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-process-rs.html#method-teardown-366">teardown</a>();
+        <span class="rs-kw">let</span> status = process.<a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-process-rs.html#method-status-json-352">status_json</a>();
+        assert_eq!(status[&quot;running&quot;], <span class="rs-kw">false</span>);
+        <span class="rs-type">Ok</span>(())
+    }
+
+    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-process-rs.html#item-fn-spawn-connected-accepts-ppc-socket-678">spawn_connected_accepts_ppc_socket</a>() -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-invocation-registry-rs.html#item-type-TestResult-262">TestResult</a> {
+        <span class="rs-kw">let</span> root = <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-process-rs.html#item-fn-test-socket-root-712">test_socket_root</a>(&quot;spawn-connected&quot;);
+        <span class="rs-kw">let</span> spec = <a class="symbol-link rs-type" href="eos-daemon--src-services-plugins-process-rs.html#item-struct-PluginProcessSpec-50">PluginProcessSpec</a>::<a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-process-rs.html#method-new-with-socket-root-82">new_with_socket_root</a>(
+            <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-process-rs.html#method-key-172">key</a>(&quot;profile-a&quot;)?,
+            vec![&quot;/bin/sh&quot;.to_owned(), &quot;-c&quot;.to_owned(), &quot;sleep 30&quot;.to_owned()],
+            1,
+            &amp;root,
+        )?;
+        <span class="rs-kw">let</span> socket_root = root.clone();
+        <span class="rs-kw">let</span> connector = std::thread::<a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-process-rs.html#method-spawn-176">spawn</a>(<span class="rs-kw">move</span> || {
+            <span class="rs-kw">let</span> socket = <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-process-rs.html#item-fn-wait-for-socket-718">wait_for_socket</a>(&amp;socket_root)?;
+            std::os::unix::net::<span class="rs-type">UnixStream</span>::connect(socket).map(|_| ())
+        });
+
+        <span class="rs-kw">let</span> (<span class="rs-kw">mut</span> process, _client) =
+            <span class="rs-kw">match</span> spec.<a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-process-rs.html#method-spawn-connected-with-overlay-211">spawn_connected_with_overlay</a>(<span class="rs-type">None</span>, <span class="rs-type">Duration</span>::from_secs(5)) {
+                <span class="rs-type">Ok</span>(pair) =&gt; pair,
+                <span class="rs-type">Err</span>(err) =&gt; {
+                    <span class="rs-kw">let</span> _ = connector.join();
+                    <span class="rs-kw">return</span> <span class="rs-type">Err</span>(err.into());
+                }
+            };
+        <span class="rs-kw">match</span> connector.join() {
+            <span class="rs-type">Ok</span>(result) =&gt; result?,
+            <span class="rs-type">Err</span>(_) =&gt; {
+                <span class="rs-kw">return</span> <span class="rs-type">Err</span>(std::io::<span class="rs-type">Error</span>::other(&quot;connector thread panicked&quot;).into());
+            }
+        }
+        process.<a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-process-rs.html#method-teardown-366">teardown</a>();
+        <span class="rs-kw">let</span> _ = std::fs::remove_dir_all(root);
+        <span class="rs-type">Ok</span>(())
+    }
+
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-process-rs.html#item-fn-test-socket-root-712">test_socket_root</a>(name: &amp;str) -&gt; <span class="rs-type">PathBuf</span> {
+        <span class="rs-kw">let</span> root = <span class="rs-type">PathBuf</span>::from(&quot;target&quot;).join(format!(&quot;ppc-{name}-{}&quot;, std::process::id()));
+        <span class="rs-kw">let</span> _ = std::fs::remove_dir_all(&amp;root);
+        root
+    }
+
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-process-rs.html#item-fn-wait-for-socket-718">wait_for_socket</a>(root: &amp;<span class="rs-type">Path</span>) -&gt; std::io::<a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a>&lt;<span class="rs-type">PathBuf</span>&gt; {
+        <span class="rs-kw">let</span> deadline = <span class="rs-type">Instant</span>::now() + <span class="rs-type">Duration</span>::from_secs(5);
+        loop {
+            <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Ok</span>(entries) = std::fs::read_dir(root) {
+                <span class="rs-kw">for</span> entry <span class="rs-kw">in</span> entries.flatten() {
+                    <span class="rs-kw">let</span> path = entry.<a class="symbol-link rs-fn" href="eos-daemon--src-services-checkpoint-commit-rs.html#method-path-190">path</a>();
+                    <span class="rs-kw">if</span> path.extension().and_then(|ext| ext.to_str()) == <span class="rs-type">Some</span>(&quot;sock&quot;) {
+                        <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(path);
+                    }
+                }
+            }
+            <span class="rs-kw">if</span> <span class="rs-type">Instant</span>::now() &gt;= deadline {
+                <span class="rs-kw">return</span> <span class="rs-type">Err</span>(std::io::<span class="rs-type">Error</span>::<a class="symbol-link rs-fn" href="eos-daemon.html#method-new-89">new</a>(
+                    <span class="rs-type">ErrorKind</span>::<span class="rs-type">TimedOut</span>,
+                    format!(&quot;timed out waiting <span class="rs-kw">for</span> socket under {}&quot;, root.display()),
+                ));
+            }
+            std::thread::sleep(<span class="rs-type">Duration</span>::from_millis(10));
+        }
+    }
+}
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
   <script src="../assets/inventory.js"></script>
 </body>
 </html>

@@ -8,15 +8,23 @@
 </head>
 <body>
   <header>
-    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
-    <h1>eos-engine File Inventory</h1>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>eos-engine File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS/agent-core &amp;&amp; cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
   </header>
   <a class="back-link" href="../index.html">agent-core</a>
 <section class="summary">
-  <div><b>43</b><span>modules</span></div>
-  <div><b>319</b><span>items</span></div>
-  <div><b>259</b><span>fields</span></div>
-  <div><b>179</b><span>methods</span></div>
+  <div><b>47</b><span>modules</span></div>
+  <div><b>314</b><span>items</span></div>
+  <div><b>272</b><span>fields</span></div>
+  <div><b>187</b><span>methods</span></div>
 </section>
 <section class="toolbar">
   <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
@@ -32,8 +40,8 @@
   </select>
 </section>
 <main class="crate-layout">
-  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><span class="folder">agent</span><ul class="file-tree"><li><a class="file-link" href="eos-engine.html"><span>factory.rs</span><small>3/9</small></a></li><li><a class="file-link" href="eos-engine--src-agent-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li></ul></li><li><span class="folder">background</span><ul class="file-tree"><li><a class="file-link" href="eos-engine--src-background-command-session-rs.html"><span>command_session.rs</span><small>1/10</small></a></li><li><a class="file-link" href="eos-engine--src-background-factory-rs.html"><span>factory.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-engine--src-background-handle-rs.html"><span>handle.rs</span><small>5/4</small></a></li><li><a class="file-link" href="eos-engine--src-background-heartbeat-rs.html"><span>heartbeat.rs</span><small>1/5</small></a></li><li><a class="file-link" href="eos-engine--src-background-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-engine--src-background-parent-exit-rs.html"><span>parent_exit.rs</span><small>2/3</small></a></li><li><a class="file-link" href="eos-engine--src-background-subagent-rs.html"><span>subagent.rs</span><small>2/24</small></a></li><li><a class="file-link" href="eos-engine--src-background-supervisor-rs.html"><span>supervisor.rs</span><small>5/7</small></a></li></ul></li><li><a class="file-link" href="eos-engine--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><span class="folder">notifications</span><ul class="file-tree"><li><a class="file-link" href="eos-engine--src-notifications-mod-rs.html"><span>mod.rs</span><small>2/3</small></a></li><li><span class="folder">rules</span><ul class="file-tree"><li><a class="file-link" href="eos-engine--src-notifications-rules-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-engine--src-notifications-rules-terminal-reminder-rs.html"><span>terminal_reminder.rs</span><small>1/1</small></a></li><li><a class="file-link" href="eos-engine--src-notifications-rules-tool-budget-rs.html"><span>tool_budget.rs</span><small>1/0</small></a></li></ul></li></ul></li><li><span class="folder">prompt</span><ul class="file-tree"><li><a class="file-link" href="eos-engine--src-prompt-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-engine--src-prompt-runtime-prompt-rs.html"><span>runtime_prompt.rs</span><small>0/1</small></a></li></ul></li><li><span class="folder">query</span><ul class="file-tree"><li><a class="file-link" href="eos-engine--src-query-context-rs.html"><span>context.rs</span><small>3/0</small></a></li><li><a class="file-link" href="eos-engine--src-query-loop--rs.html"><span>loop_.rs</span><small>0/12</small></a></li><li><a class="file-link" href="eos-engine--src-query-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-engine--src-query-provider-messages-rs.html"><span>provider_messages.rs</span><small>0/18</small></a></li><li><a class="file-link" href="eos-engine--src-query-provider-source-rs.html"><span>provider_source.rs</span><small>2/4</small></a></li><li><a class="file-link" href="eos-engine--src-query-request-rs.html"><span>request.rs</span><small>1/3</small></a></li></ul></li><li><span class="folder">runtime</span><ul class="file-tree"><li><a class="file-link" href="eos-engine--src-runtime-advisor-rs.html"><span>advisor.rs</span><small>0/24</small></a></li><li><a class="file-link" href="eos-engine--src-runtime-agent-loop-rs.html"><span>agent_loop.rs</span><small>0/1</small></a></li><li><a class="file-link" href="eos-engine--src-runtime-cancel-rs.html"><span>cancel.rs</span><small>1/1</small></a></li><li><a class="file-link active" href="eos-engine--src-runtime-control-rs.html"><span>control.rs</span><small>7/0</small></a></li><li><a class="file-link" href="eos-engine--src-runtime-factory-rs.html"><span>factory.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-engine--src-runtime-foreground-rs.html"><span>foreground.rs</span><small>4/0</small></a></li><li><a class="file-link" href="eos-engine--src-runtime-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-engine--src-runtime-persistence-rs.html"><span>persistence.rs</span><small>0/2</small></a></li><li><a class="file-link" href="eos-engine--src-runtime-registry-rs.html"><span>registry.rs</span><small>3/0</small></a></li><li><a class="file-link" href="eos-engine--src-runtime-setup-rs.html"><span>setup.rs</span><small>2/2</small></a></li><li><a class="file-link" href="eos-engine--src-runtime-types-rs.html"><span>types.rs</span><small>3/0</small></a></li></ul></li><li><span class="folder">support</span><ul class="file-tree"><li><a class="file-link" href="eos-engine--src-support-error-rs.html"><span>error.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-engine--src-support-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li></ul></li><li><span class="folder">telemetry</span><ul class="file-tree"><li><a class="file-link" href="eos-engine--src-telemetry-agent-run-audit-rs.html"><span>agent_run_audit.rs</span><small>3/8</small></a></li><li><a class="file-link" href="eos-engine--src-telemetry-events-rs.html"><span>events.rs</span><small>2/2</small></a></li><li><a class="file-link" href="eos-engine--src-telemetry-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-engine--src-telemetry-prompt-report-rs.html"><span>prompt_report.rs</span><small>6/2</small></a></li><li><a class="file-link" href="eos-engine--src-telemetry-resource-sample-rs.html"><span>resource_sample.rs</span><small>1/15</small></a></li></ul></li><li><span class="folder">tool_call</span><ul class="file-tree"><li><a class="file-link" href="eos-engine--src-tool-call-dispatch-rs.html"><span>dispatch.rs</span><small>3/15</small></a></li><li><a class="file-link" href="eos-engine--src-tool-call-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li></ul></li></ul></li></ul></nav>
-  <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="runtime::control crates/eos-engine/src/runtime/control.rs AgentRunCancellation AgentRunCancellationState impl Default for AgentRunCancellation impl AgentRunCancellation AgentRunPersistence AgentRunFinalization impl std :: fmt :: Debug for AgentRunFinalization impl AgentRunFinalization HeartbeatGuard impl Drop for HeartbeatGuard AgentRunControl impl std :: fmt :: Debug for AgentRunControl impl AgentRunControl AgentRunControlParts">
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><span class="folder">agent</span><ul class="file-tree"><li><a class="file-link" href="eos-engine.html"><span>factory.rs</span><small>3/9</small></a></li><li><a class="file-link" href="eos-engine--src-agent-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li></ul></li><li><span class="folder">background</span><ul class="file-tree"><li><a class="file-link" href="eos-engine--src-background-command-session-rs.html"><span>command_session.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-engine--src-background-factory-rs.html"><span>factory.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-engine--src-background-handle-rs.html"><span>handle.rs</span><small>6/5</small></a></li><li><span class="folder">lanes</span><ul class="file-tree"><li><a class="file-link" href="eos-engine--src-background-lanes-command-session-rs.html"><span>command_session.rs</span><small>4/3</small></a></li><li><a class="file-link" href="eos-engine--src-background-lanes-mod-rs.html"><span>mod.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-engine--src-background-lanes-subagent-rs.html"><span>subagent.rs</span><small>3/0</small></a></li><li><a class="file-link" href="eos-engine--src-background-lanes-workflow-rs.html"><span>workflow.rs</span><small>3/0</small></a></li></ul></li><li><a class="file-link" href="eos-engine--src-background-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-engine--src-background-notifications-rs.html"><span>notifications.rs</span><small>2/2</small></a></li><li><a class="file-link" href="eos-engine--src-background-parent-exit-rs.html"><span>parent_exit.rs</span><small>2/3</small></a></li><li><a class="file-link" href="eos-engine--src-background-subagent-rs.html"><span>subagent.rs</span><small>2/23</small></a></li><li><a class="file-link" href="eos-engine--src-background-supervisor-rs.html"><span>supervisor.rs</span><small>1/0</small></a></li></ul></li><li><a class="file-link" href="eos-engine--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><span class="folder">notifications</span><ul class="file-tree"><li><a class="file-link" href="eos-engine--src-notifications-mod-rs.html"><span>mod.rs</span><small>2/3</small></a></li><li><span class="folder">rules</span><ul class="file-tree"><li><a class="file-link" href="eos-engine--src-notifications-rules-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-engine--src-notifications-rules-terminal-reminder-rs.html"><span>terminal_reminder.rs</span><small>1/1</small></a></li><li><a class="file-link" href="eos-engine--src-notifications-rules-tool-budget-rs.html"><span>tool_budget.rs</span><small>1/0</small></a></li></ul></li></ul></li><li><span class="folder">prompt</span><ul class="file-tree"><li><a class="file-link" href="eos-engine--src-prompt-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-engine--src-prompt-runtime-prompt-rs.html"><span>runtime_prompt.rs</span><small>0/1</small></a></li></ul></li><li><span class="folder">query</span><ul class="file-tree"><li><a class="file-link" href="eos-engine--src-query-context-rs.html"><span>context.rs</span><small>3/0</small></a></li><li><a class="file-link" href="eos-engine--src-query-loop--rs.html"><span>loop_.rs</span><small>0/12</small></a></li><li><a class="file-link" href="eos-engine--src-query-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-engine--src-query-provider-messages-rs.html"><span>provider_messages.rs</span><small>0/18</small></a></li><li><a class="file-link" href="eos-engine--src-query-provider-source-rs.html"><span>provider_source.rs</span><small>2/4</small></a></li><li><a class="file-link" href="eos-engine--src-query-request-rs.html"><span>request.rs</span><small>1/3</small></a></li></ul></li><li><span class="folder">runtime</span><ul class="file-tree"><li><a class="file-link" href="eos-engine--src-runtime-advisor-rs.html"><span>advisor.rs</span><small>0/24</small></a></li><li><a class="file-link" href="eos-engine--src-runtime-agent-loop-rs.html"><span>agent_loop.rs</span><small>0/1</small></a></li><li><a class="file-link" href="eos-engine--src-runtime-cancel-rs.html"><span>cancel.rs</span><small>1/1</small></a></li><li><a class="file-link active" href="eos-engine--src-runtime-control-rs.html"><span>control.rs</span><small>6/0</small></a></li><li><a class="file-link" href="eos-engine--src-runtime-factory-rs.html"><span>factory.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-engine--src-runtime-foreground-rs.html"><span>foreground.rs</span><small>4/0</small></a></li><li><a class="file-link" href="eos-engine--src-runtime-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-engine--src-runtime-persistence-rs.html"><span>persistence.rs</span><small>0/2</small></a></li><li><a class="file-link" href="eos-engine--src-runtime-registry-rs.html"><span>registry.rs</span><small>3/0</small></a></li><li><a class="file-link" href="eos-engine--src-runtime-setup-rs.html"><span>setup.rs</span><small>2/2</small></a></li><li><a class="file-link" href="eos-engine--src-runtime-types-rs.html"><span>types.rs</span><small>3/0</small></a></li></ul></li><li><span class="folder">support</span><ul class="file-tree"><li><a class="file-link" href="eos-engine--src-support-error-rs.html"><span>error.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-engine--src-support-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li></ul></li><li><span class="folder">telemetry</span><ul class="file-tree"><li><a class="file-link" href="eos-engine--src-telemetry-agent-run-audit-rs.html"><span>agent_run_audit.rs</span><small>3/8</small></a></li><li><a class="file-link" href="eos-engine--src-telemetry-events-rs.html"><span>events.rs</span><small>2/2</small></a></li><li><a class="file-link" href="eos-engine--src-telemetry-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-engine--src-telemetry-prompt-report-rs.html"><span>prompt_report.rs</span><small>6/2</small></a></li><li><a class="file-link" href="eos-engine--src-telemetry-resource-sample-rs.html"><span>resource_sample.rs</span><small>1/15</small></a></li></ul></li><li><span class="folder">tool_call</span><ul class="file-tree"><li><a class="file-link" href="eos-engine--src-tool-call-dispatch-rs.html"><span>dispatch.rs</span><small>3/15</small></a></li><li><a class="file-link" href="eos-engine--src-tool-call-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li></ul></li></ul></li></ul></nav>
+  <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="runtime::control crates/eos-engine/src/runtime/control.rs AgentRunCancellation AgentRunCancellationState impl Default for AgentRunCancellation impl AgentRunCancellation AgentRunPersistence AgentRunFinalization impl std :: fmt :: Debug for AgentRunFinalization impl AgentRunFinalization AgentRunControl impl std :: fmt :: Debug for AgentRunControl impl AgentRunControl AgentRunControlParts">
   <div class="module-head">
     <div>
       <h2>src/runtime/control.rs</h2>
@@ -41,85 +49,578 @@
     </div>
     <div class="module-stats">
       <span>file owns</span>
-      <span>7 types</span>
-      <span>7 impls</span>
+      <span>6 types</span>
+      <span>6 impls</span>
       <span>0 fns</span>
-      <span>20 methods</span>
+      <span>19 methods</span>
     </div>
   </div>
-  <div class="items"><div class="group-label">File-Owned Types</div><article class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct AgentRunCancellation pub pub struct AgentRunCancellation crates/eos-engine/src/runtime/control.rs state Arc &lt; AgentRunCancellationState &gt; ">
+  <div class="items"><div class="group-label">File-Owned Types</div><article id="item-struct-AgentRunCancellation-20" class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct AgentRunCancellation pub pub struct AgentRunCancellation crates/eos-engine/src/runtime/control.rs state Arc &lt; AgentRunCancellationState &gt; ">
   <div class="item-head">
     <span class="kind">struct</span>
     <h3>AgentRunCancellation</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub struct AgentRunCancellation</code>
-  <div class="tags"></div>
-  <h4>Fields</h4><table><tbody><tr><td>private</td><td>state</td><td><code>Arc &lt; AgentRunCancellationState &gt;</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr><td>constructor</td><td>new</td><td><code>pub fn new () -&gt; Self</code></td></tr><tr><td>method</td><td>request_cancel</td><td><code>pub fn request_cancel (&amp; self , reason : impl Into &lt; String &gt;)</code></td></tr><tr><td>method</td><td>is_cancel_requested</td><td><code>pub fn is_cancel_requested (&amp; self) -&gt; bool</code></td></tr><tr><td>method</td><td>reason</td><td><code>pub fn reason (&amp; self) -&gt; Option &lt; String &gt;</code></td></tr><tr><td>method</td><td>wait_for_cancel</td><td><code>pub async fn wait_for_cancel (&amp; self)</code></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl Default for AgentRunCancellation</code></summary><table><tbody><tr><td>constructor</td><td>default</td><td><code>fn default () -&gt; Self</code></td></tr></tbody></table></details></div>
-  <p class="source">crates/eos-engine/src/runtime/control.rs:21</p>
-</article><article class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct AgentRunFinalization pub pub struct AgentRunFinalization crates/eos-engine/src/runtime/control.rs agent_run_id AgentRunId persistence AgentRunPersistence agent_run_store Arc &lt; dyn AgentRunStore &gt; ">
+  <code class="signature">pub struct <a class="symbol-link" href="eos-engine--src-runtime-control-rs.html#item-struct-AgentRunCancellation-20">AgentRunCancellation</a></code>
+  <p class="docstring">The cooperative half of cancellation (spec §6.1).<br>The query loop polls it at turn boundaries; once a cancel is requested it<br>prevents future work from starting. It does **not** clean up already-spawned<br>effects — that is owned by the foreground/background teardown paths. Provider<br>streams are not treated as cancel-safe and are never interrupted mid-response.</p>
+  <div class="tags"><span>derive: Clone</span><span>derive: Debug</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>state</td><td><code>Arc &lt; <a class="symbol-link" href="eos-engine--src-runtime-control-rs.html#item-struct-AgentRunCancellationState-31">AgentRunCancellationState</a> &gt;</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-45"><td>constructor</td><td>new</td><td><code>pub fn <a class="symbol-link" href="eos-engine--src-background-factory-rs.html#method-new-39">new</a> () -&gt; Self</code><p class="docstring">A fresh, not-yet-cancelled token.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// A fresh, not-yet-cancelled token.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-background-factory-rs.html#method-new-39">new</a>() -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">Self</span> {
+            state: <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-engine--src-background-factory-rs.html#method-new-39">new</a>(<a class="symbol-link rs-type" href="eos-engine--src-runtime-control-rs.html#item-struct-AgentRunCancellationState-31">AgentRunCancellationState</a> {
+                cancelled: std::sync::atomic::<span class="rs-type">AtomicBool</span>::<a class="symbol-link rs-fn" href="eos-engine--src-background-factory-rs.html#method-new-39">new</a>(<span class="rs-kw">false</span>),
+                reason: <span class="rs-type">Mutex</span>::<a class="symbol-link rs-fn" href="eos-engine--src-background-factory-rs.html#method-new-39">new</a>(<span class="rs-type">None</span>),
+                notify: <span class="rs-type">Notify</span>::<a class="symbol-link rs-fn" href="eos-engine--src-background-factory-rs.html#method-new-39">new</a>(),
+            }),
+        }
+    }
+</code></pre>
+</details></td></tr><tr id="method-request-cancel-57"><td>method</td><td>request_cancel</td><td><code>pub fn <a class="symbol-link" href="eos-engine--src-runtime-control-rs.html#method-request-cancel-57">request_cancel</a> (&amp; self , reason : impl Into &lt; String &gt;)</code><p class="docstring">Request cancellation, recording the first reason. Idempotent.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Request cancellation, recording the first reason. Idempotent.</span>
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-runtime-control-rs.html#method-request-cancel-57">request_cancel</a>(&amp;<span class="rs-self">self</span>, reason: <span class="rs-kw">impl</span> <span class="rs-type">Into</span>&lt;<span class="rs-type">String</span>&gt;) {
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> guard = <span class="rs-self">self</span>.state.reason.lock().expect(&quot;cancellation reason lock&quot;);
+        <span class="rs-kw">if</span> guard.is_none() {
+            *guard = <span class="rs-type">Some</span>(reason.into());
+        }
+        <a class="symbol-link rs-fn" href="eos-engine--src-background-lanes-command-session-rs.html#method-drop-276">drop</a>(guard);
+        <span class="rs-self">self</span>.state
+            .cancelled
+            .store(<span class="rs-kw">true</span>, std::sync::atomic::<span class="rs-type">Ordering</span>::<span class="rs-type">SeqCst</span>);
+        <span class="rs-self">self</span>.state.notify.notify_waiters();
+    }
+</code></pre>
+</details></td></tr><tr id="method-is-cancel-requested-70"><td>method</td><td>is_cancel_requested</td><td><code>pub fn <a class="symbol-link" href="eos-engine--src-runtime-control-rs.html#method-is-cancel-requested-70">is_cancel_requested</a> (&amp; self) -&gt; bool</code><p class="docstring">Whether cancellation has been requested.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Whether cancellation has been requested.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-runtime-control-rs.html#method-is-cancel-requested-70">is_cancel_requested</a>(&amp;<span class="rs-self">self</span>) -&gt; bool {
+        <span class="rs-self">self</span>.state
+            .cancelled
+            .load(std::sync::atomic::<span class="rs-type">Ordering</span>::<span class="rs-type">SeqCst</span>)
+    }
+</code></pre>
+</details></td></tr><tr id="method-reason-78"><td>method</td><td>reason</td><td><code>pub fn <a class="symbol-link" href="eos-engine--src-runtime-control-rs.html#method-reason-78">reason</a> (&amp; self) -&gt; Option &lt; String &gt;</code><p class="docstring">The recorded cancellation reason, if any.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// The recorded cancellation reason, if any.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-runtime-control-rs.html#method-reason-78">reason</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Option</span>&lt;<span class="rs-type">String</span>&gt; {
+        <span class="rs-self">self</span>.state
+            .reason
+            .lock()
+            .expect(&quot;cancellation reason lock&quot;)
+            .clone()
+    }
+</code></pre>
+</details></td></tr><tr id="method-wait-for-cancel-88"><td>method</td><td>wait_for_cancel</td><td><code>pub async fn <a class="symbol-link" href="eos-engine--src-runtime-control-rs.html#method-wait-for-cancel-88">wait_for_cancel</a> (&amp; self)</code><p class="docstring">Resolve once cancellation has been requested.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Resolve once cancellation has been requested.</span>
+    <span class="rs-kw">pub</span> <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-runtime-control-rs.html#method-wait-for-cancel-88">wait_for_cancel</a>(&amp;<span class="rs-self">self</span>) {
+        <span class="rs-kw">if</span> <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-engine--src-runtime-control-rs.html#method-is-cancel-requested-70">is_cancel_requested</a>() {
+            <span class="rs-kw">return</span>;
+        }
+        <span class="rs-self">self</span>.state.notify.notified().<span class="rs-kw">await</span>;
+    }
+</code></pre>
+</details></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl Default for <a class="symbol-link" href="eos-engine--src-runtime-control-rs.html#item-struct-AgentRunCancellation-20">AgentRunCancellation</a></code></summary><table><tbody><tr id="method-default-39"><td>constructor</td><td>default</td><td><code>fn <a class="symbol-link" href="eos-engine--src-runtime-control-rs.html#method-default-39">default</a> () -&gt; Self</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-runtime-control-rs.html#method-default-39">default</a>() -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">Self</span>::<a class="symbol-link rs-fn" href="eos-engine--src-background-factory-rs.html#method-new-39">new</a>()
+    }
+</code></pre>
+</details></td></tr></tbody></table></details></div>
+
+  <p class="source">crates/eos-engine/src/runtime/control.rs:20</p>
+</article><article id="item-struct-AgentRunFinalization-110" class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct AgentRunFinalization pub pub struct AgentRunFinalization crates/eos-engine/src/runtime/control.rs agent_run_id AgentRunId persistence AgentRunPersistence agent_run_store Arc &lt; dyn AgentRunStore &gt; ">
   <div class="item-head">
     <span class="kind">struct</span>
     <h3>AgentRunFinalization</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub struct AgentRunFinalization</code>
+  <code class="signature">pub struct <a class="symbol-link" href="eos-engine--src-runtime-control-rs.html#item-struct-AgentRunFinalization-110">AgentRunFinalization</a></code>
+  <p class="docstring">Finalization data and the cancelled-finish path for one agent run (spec §6.3).<br>Finalization owns only the **durable `agent_run` row** completion. The<br>message-record handle is deliberately *not* held here: it stays in the<br>`QueryContext` and is always finished by `run_agent` itself (cancel-aware<br>status), since the loop is awaited rather than aborted on cancellation. This<br>keeps record ownership in one place and avoids cloning the record handle into<br>the control (a documented, observably-equivalent divergence from §12.3's<br>literal "`finish_cancelled` finishes the message-record": finished once, and<br>cancel-aware either way).</p>
   <div class="tags"></div>
-  <h4>Fields</h4><table><tbody><tr><td>private</td><td>agent_run_id</td><td><code>AgentRunId</code></td></tr><tr><td>private</td><td>persistence</td><td><code>AgentRunPersistence</code></td></tr><tr><td>private</td><td>agent_run_store</td><td><code>Arc &lt; dyn AgentRunStore &gt;</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr><td>constructor</td><td>new</td><td><code>fn new (agent_run_id : AgentRunId , persistence : AgentRunPersistence , agent_run_store : Arc &lt; dyn AgentRunStore &gt; ,) -&gt; Self</code></td></tr><tr><td>method</td><td>task_id</td><td><code>pub fn task_id (&amp; self) -&gt; Option &lt; &amp; TaskId &gt;</code></td></tr><tr><td>method</td><td>finish_cancelled</td><td><code>pub async fn finish_cancelled (&amp; self , reason : &amp; str) -&gt; Result &lt; () , EngineError &gt;</code></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl std :: fmt :: Debug for AgentRunFinalization</code></summary><table><tbody><tr><td>method</td><td>fmt</td><td><code>fn fmt (&amp; self , f : &amp; mut std :: fmt :: Formatter &lt; '_ &gt;) -&gt; std :: fmt :: Result</code></td></tr></tbody></table></details></div>
-  <p class="source">crates/eos-engine/src/runtime/control.rs:111</p>
-</article><article class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct AgentRunControl pub pub struct AgentRunControl crates/eos-engine/src/runtime/control.rs agent_run_id AgentRunId cancellation AgentRunCancellation foreground Arc &lt; ForegroundExecutor &gt; notifications NotificationService background BackgroundSupervisorHandle finalization AgentRunFinalization _heartbeat HeartbeatGuard ">
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>agent_run_id</td><td><code>AgentRunId</code></td></tr><tr><td>private</td><td>persistence</td><td><code><a class="symbol-link" href="eos-engine--src-runtime-control-rs.html#item-enum-AgentRunPersistence-97">AgentRunPersistence</a></code></td></tr><tr><td>private</td><td>agent_run_store</td><td><code>Arc &lt; dyn AgentRunStore &gt;</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-136"><td>constructor</td><td>new</td><td><code>fn <a class="symbol-link" href="eos-engine--src-background-factory-rs.html#method-new-39">new</a> (agent_run_id : AgentRunId , persistence : <a class="symbol-link" href="eos-engine--src-runtime-control-rs.html#item-enum-AgentRunPersistence-97">AgentRunPersistence</a> , agent_run_store : Arc &lt; dyn AgentRunStore &gt; ,) -&gt; Self</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-background-factory-rs.html#method-new-39">new</a>(
+        agent_run_id: <span class="rs-type">AgentRunId</span>,
+        persistence: <a class="symbol-link rs-type" href="eos-engine--src-runtime-control-rs.html#item-enum-AgentRunPersistence-97">AgentRunPersistence</a>,
+        agent_run_store: <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <span class="rs-type">AgentRunStore</span>&gt;,
+    ) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">Self</span> {
+            agent_run_id,
+            persistence,
+            agent_run_store,
+        }
+    }
+</code></pre>
+</details></td></tr><tr id="method-task-id-148"><td>method</td><td>task_id</td><td><code>pub fn <a class="symbol-link" href="eos-engine--src-runtime-control-rs.html#method-task-id-148">task_id</a> (&amp; self) -&gt; Option &lt; &amp; TaskId &gt;</code><p class="docstring">The owning task id, for persisted runs.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// The owning task id, for persisted runs.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-runtime-control-rs.html#method-task-id-148">task_id</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Option</span>&lt;&amp;<span class="rs-type">TaskId</span>&gt; {
+        <span class="rs-kw">match</span> &amp;<span class="rs-self">self</span>.persistence {
+            <a class="symbol-link rs-type" href="eos-engine--src-runtime-control-rs.html#item-enum-AgentRunPersistence-97">AgentRunPersistence</a>::<span class="rs-type">Persisted</span> { task_id } =&gt; <span class="rs-type">Some</span>(task_id),
+            <a class="symbol-link rs-type" href="eos-engine--src-runtime-control-rs.html#item-enum-AgentRunPersistence-97">AgentRunPersistence</a>::<span class="rs-type">Ephemeral</span> =&gt; <span class="rs-type">None</span>,
+        }
+    }
+</code></pre>
+</details></td></tr><tr id="method-finish-cancelled-157"><td>method</td><td>finish_cancelled</td><td><code>pub async fn <a class="symbol-link" href="eos-engine--src-runtime-control-rs.html#method-finish-cancelled-157">finish_cancelled</a> (&amp; self , reason : &amp; str) -&gt; Result &lt; () , <a class="symbol-link" href="eos-engine--src-support-error-rs.html#item-enum-EngineError-7">EngineError</a> &gt;</code><p class="docstring">Finish the run's durable `agent_run` row as cancelled. Ephemeral runs own<br>no row, so this is a no-op for them. The message-record handle is finished<br>by `run_agent`, not here.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Finish the run's durable `agent_run` row as cancelled. Ephemeral runs own</span>
+    <span class="rs-comment">/// no row, so this is a no-op for them. The message-record handle is finished</span>
+    <span class="rs-comment">/// by `run_agent`, not here.</span>
+    <span class="rs-kw">pub</span> <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-runtime-control-rs.html#method-finish-cancelled-157">finish_cancelled</a>(&amp;<span class="rs-self">self</span>, reason: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-engine--src-support-error-rs.html#item-enum-EngineError-7">EngineError</a>&gt; {
+        <span class="rs-kw">if</span> matches!(<span class="rs-self">self</span>.persistence, <a class="symbol-link rs-type" href="eos-engine--src-runtime-control-rs.html#item-enum-AgentRunPersistence-97">AgentRunPersistence</a>::<span class="rs-type">Persisted</span> { .. }) {
+            <span class="rs-kw">let</span> <span class="rs-kw">mut</span> terminal = <span class="rs-type">JsonObject</span>::<a class="symbol-link rs-fn" href="eos-engine--src-background-factory-rs.html#method-new-39">new</a>();
+            terminal.<a class="symbol-link rs-fn" href="eos-engine--src-background-lanes-subagent-rs.html#method-insert-74">insert</a>(&quot;fail_reason&quot;.to_owned(), &quot;cancelled&quot;.into());
+            terminal.<a class="symbol-link rs-fn" href="eos-engine--src-background-lanes-subagent-rs.html#method-insert-74">insert</a>(&quot;reason&quot;.to_owned(), reason.into());
+            <span class="rs-self">self</span>.agent_run_store
+                .<a class="symbol-link rs-fn" href="eos-engine--src-background-handle-rs.html#method-finish-run-282">finish_run</a>(&amp;<span class="rs-self">self</span>.agent_run_id, <span class="rs-type">None</span>, <span class="rs-type">Some</span>(&amp;terminal), 0, <span class="rs-type">Some</span>(reason))
+                .<span class="rs-kw">await</span>?;
+        }
+        <span class="rs-type">Ok</span>(())
+    }
+</code></pre>
+</details></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl std :: fmt :: Debug for <a class="symbol-link" href="eos-engine--src-runtime-control-rs.html#item-struct-AgentRunFinalization-110">AgentRunFinalization</a></code></summary><table><tbody><tr id="method-fmt-127"><td>method</td><td>fmt</td><td><code>fn <a class="symbol-link" href="eos-engine.html#method-fmt-58">fmt</a> (&amp; self , f : &amp; mut std :: fmt :: Formatter &lt; &#x27;_ &gt;) -&gt; std :: fmt :: Result</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine.html#method-fmt-58">fmt</a>(&amp;<span class="rs-self">self</span>, f: &amp;<span class="rs-kw">mut</span> std::fmt::<span class="rs-type">Formatter</span>&lt;&#x27;_&gt;) -&gt; std::fmt::<span class="rs-type">Result</span> {
+        f.debug_struct(&quot;<a class="symbol-link rs-type" href="eos-engine--src-runtime-control-rs.html#item-struct-AgentRunFinalization-110">AgentRunFinalization</a>&quot;)
+            .field(&quot;agent_run_id&quot;, &amp;<span class="rs-self">self</span>.agent_run_id)
+            .field(&quot;persistence&quot;, &amp;<span class="rs-self">self</span>.persistence)
+            .finish_non_exhaustive()
+    }
+</code></pre>
+</details></td></tr></tbody></table></details></div>
+
+  <p class="source">crates/eos-engine/src/runtime/control.rs:110</p>
+</article><article id="item-struct-AgentRunControl-173" class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct AgentRunControl pub pub struct AgentRunControl crates/eos-engine/src/runtime/control.rs agent_run_id AgentRunId cancellation AgentRunCancellation foreground Arc &lt; ForegroundExecutor &gt; notifications NotificationService background BackgroundSupervisorHandle finalization AgentRunFinalization ">
   <div class="item-head">
     <span class="kind">struct</span>
     <h3>AgentRunControl</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub struct AgentRunControl</code>
+  <code class="signature">pub struct <a class="symbol-link" href="eos-engine--src-runtime-control-rs.html#item-struct-AgentRunControl-173">AgentRunControl</a></code>
+  <p class="docstring">The live object for one agent run (spec §6.3).<br>The run's command-completion heartbeat is owned by the<br>`CommandSessionLane` inside `background`, so dropping this control (the last<br>handle clone) drops the lane and aborts the heartbeat (RAII) — no separate<br>guard is held here.</p>
   <div class="tags"></div>
-  <h4>Fields</h4><table><tbody><tr><td>private</td><td>agent_run_id</td><td><code>AgentRunId</code></td></tr><tr><td>private</td><td>cancellation</td><td><code>AgentRunCancellation</code></td></tr><tr><td>private</td><td>foreground</td><td><code>Arc &lt; ForegroundExecutor &gt;</code></td></tr><tr><td>private</td><td>notifications</td><td><code>NotificationService</code></td></tr><tr><td>private</td><td>background</td><td><code>BackgroundSupervisorHandle</code></td></tr><tr><td>private</td><td>finalization</td><td><code>AgentRunFinalization</code></td></tr><tr><td>private</td><td>_heartbeat</td><td><code>HeartbeatGuard</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr><td>method</td><td>agent_run_id</td><td><code>pub fn agent_run_id (&amp; self) -&gt; &amp; AgentRunId</code></td></tr><tr><td>method</td><td>task_id</td><td><code>pub fn task_id (&amp; self) -&gt; Option &lt; &amp; TaskId &gt;</code></td></tr><tr><td>method</td><td>cancellation</td><td><code>pub fn cancellation (&amp; self) -&gt; AgentRunCancellation</code></td></tr><tr><td>method</td><td>background</td><td><code>pub fn background (&amp; self) -&gt; BackgroundSupervisorHandle</code></td></tr><tr><td>method</td><td>notifications</td><td><code>pub fn notifications (&amp; self) -&gt; NotificationService</code></td></tr><tr><td>method</td><td>foreground</td><td><code>pub fn foreground (&amp; self) -&gt; Arc &lt; ForegroundExecutor &gt;</code></td></tr><tr><td>method</td><td>finalization</td><td><code>pub fn finalization (&amp; self) -&gt; &amp; AgentRunFinalization</code></td></tr><tr><td>associated-fn</td><td>assemble</td><td><code>pub(super) fn assemble (parts : AgentRunControlParts) -&gt; Self</code></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl std :: fmt :: Debug for AgentRunControl</code></summary><table><tbody><tr><td>method</td><td>fmt</td><td><code>fn fmt (&amp; self , f : &amp; mut std :: fmt :: Formatter &lt; '_ &gt;) -&gt; std :: fmt :: Result</code></td></tr></tbody></table></details></div>
-  <p class="source">crates/eos-engine/src/runtime/control.rs:188</p>
-</article><article class="type-card" data-kind="enum" data-kind-list="enum field type-model" data-filter-text="enum AgentRunPersistence pub pub enum AgentRunPersistence crates/eos-engine/src/runtime/control.rs  ">
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>agent_run_id</td><td><code>AgentRunId</code></td></tr><tr><td>private</td><td>cancellation</td><td><code><a class="symbol-link" href="eos-engine--src-runtime-control-rs.html#item-struct-AgentRunCancellation-20">AgentRunCancellation</a></code></td></tr><tr><td>private</td><td>foreground</td><td><code>Arc &lt; <a class="symbol-link" href="eos-engine--src-runtime-foreground-rs.html#item-struct-ForegroundExecutor-49">ForegroundExecutor</a> &gt;</code></td></tr><tr><td>private</td><td>notifications</td><td><code><a class="symbol-link" href="eos-engine--src-notifications-mod-rs.html#item-struct-NotificationService-107">NotificationService</a></code></td></tr><tr><td>private</td><td>background</td><td><code><a class="symbol-link" href="eos-engine--src-background-handle-rs.html#item-struct-BackgroundSupervisorHandle-49">BackgroundSupervisorHandle</a></code></td></tr><tr><td>private</td><td>finalization</td><td><code><a class="symbol-link" href="eos-engine--src-runtime-control-rs.html#item-struct-AgentRunFinalization-110">AgentRunFinalization</a></code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-agent-run-id-222"><td>method</td><td>agent_run_id</td><td><code>pub fn <a class="symbol-link" href="eos-engine--src-runtime-control-rs.html#method-agent-run-id-222">agent_run_id</a> (&amp; self) -&gt; &amp; AgentRunId</code><p class="docstring">The agent-run id this control owns.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// The agent-run id this control owns.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-runtime-control-rs.html#method-agent-run-id-222">agent_run_id</a>(&amp;<span class="rs-self">self</span>) -&gt; &amp;<span class="rs-type">AgentRunId</span> {
+        &amp;<span class="rs-self">self</span>.agent_run_id
+    }
+</code></pre>
+</details></td></tr><tr id="method-task-id-228"><td>method</td><td>task_id</td><td><code>pub fn <a class="symbol-link" href="eos-engine--src-runtime-control-rs.html#method-task-id-148">task_id</a> (&amp; self) -&gt; Option &lt; &amp; TaskId &gt;</code><p class="docstring">The owning task id, for persisted runs.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// The owning task id, for persisted runs.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-runtime-control-rs.html#method-task-id-148">task_id</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Option</span>&lt;&amp;<span class="rs-type">TaskId</span>&gt; {
+        <span class="rs-self">self</span>.finalization.<a class="symbol-link rs-fn" href="eos-engine--src-runtime-control-rs.html#method-task-id-148">task_id</a>()
+    }
+</code></pre>
+</details></td></tr><tr id="method-cancellation-234"><td>method</td><td>cancellation</td><td><code>pub fn <a class="symbol-link" href="eos-engine--src-runtime-control-rs.html#method-cancellation-234">cancellation</a> (&amp; self) -&gt; <a class="symbol-link" href="eos-engine--src-runtime-control-rs.html#item-struct-AgentRunCancellation-20">AgentRunCancellation</a></code><p class="docstring">A clone of the run's cancellation token (shared with the query loop).</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// A clone of the run's cancellation token (shared with the query loop).</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-runtime-control-rs.html#method-cancellation-234">cancellation</a>(&amp;<span class="rs-self">self</span>) -&gt; <a class="symbol-link rs-type" href="eos-engine--src-runtime-control-rs.html#item-struct-AgentRunCancellation-20">AgentRunCancellation</a> {
+        <span class="rs-self">self</span>.cancellation.clone()
+    }
+</code></pre>
+</details></td></tr><tr id="method-background-240"><td>method</td><td>background</td><td><code>pub fn <a class="symbol-link" href="eos-engine--src-runtime-control-rs.html#method-background-240">background</a> (&amp; self) -&gt; <a class="symbol-link" href="eos-engine--src-background-handle-rs.html#item-struct-BackgroundSupervisorHandle-49">BackgroundSupervisorHandle</a></code><p class="docstring">A clone of the run's background supervisor handle.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// A clone of the run's background supervisor handle.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-runtime-control-rs.html#method-background-240">background</a>(&amp;<span class="rs-self">self</span>) -&gt; <a class="symbol-link rs-type" href="eos-engine--src-background-handle-rs.html#item-struct-BackgroundSupervisorHandle-49">BackgroundSupervisorHandle</a> {
+        <span class="rs-self">self</span>.background.clone()
+    }
+</code></pre>
+</details></td></tr><tr id="method-notifications-246"><td>method</td><td>notifications</td><td><code>pub fn <a class="symbol-link" href="eos-engine--src-background-handle-rs.html#method-notifications-122">notifications</a> (&amp; self) -&gt; <a class="symbol-link" href="eos-engine--src-notifications-mod-rs.html#item-struct-NotificationService-107">NotificationService</a></code><p class="docstring">A clone of the run-local notification service (the exact queue the loop<br>drains and the lanes enqueue into — the §7 instance-identity invariant).</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// A clone of the run-local notification service (the exact queue the loop</span>
+    <span class="rs-comment">/// drains and the lanes enqueue into — the §7 instance-identity invariant).</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-background-handle-rs.html#method-notifications-122">notifications</a>(&amp;<span class="rs-self">self</span>) -&gt; <a class="symbol-link rs-type" href="eos-engine--src-notifications-mod-rs.html#item-struct-NotificationService-107">NotificationService</a> {
+        <span class="rs-self">self</span>.notifications.clone()
+    }
+</code></pre>
+</details></td></tr><tr id="method-foreground-253"><td>method</td><td>foreground</td><td><code>pub fn <a class="symbol-link" href="eos-engine--src-runtime-control-rs.html#method-foreground-253">foreground</a> (&amp; self) -&gt; Arc &lt; <a class="symbol-link" href="eos-engine--src-runtime-foreground-rs.html#item-struct-ForegroundExecutor-49">ForegroundExecutor</a> &gt;</code><p class="docstring">The run's foreground executor (shared into the query loop / tools).</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// The run's foreground executor (shared into the query loop / tools).</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-runtime-control-rs.html#method-foreground-253">foreground</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Arc</span>&lt;<a class="symbol-link rs-type" href="eos-engine--src-runtime-foreground-rs.html#item-struct-ForegroundExecutor-49">ForegroundExecutor</a>&gt; {
+        <span class="rs-self">self</span>.foreground.clone()
+    }
+</code></pre>
+</details></td></tr><tr id="method-finalization-259"><td>method</td><td>finalization</td><td><code>pub fn <a class="symbol-link" href="eos-engine--src-runtime-control-rs.html#method-finalization-259">finalization</a> (&amp; self) -&gt; &amp; <a class="symbol-link" href="eos-engine--src-runtime-control-rs.html#item-struct-AgentRunFinalization-110">AgentRunFinalization</a></code><p class="docstring">The run's finalization handles (used by the cancellation path).</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// The run's finalization handles (used by the cancellation path).</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-runtime-control-rs.html#method-finalization-259">finalization</a>(&amp;<span class="rs-self">self</span>) -&gt; &amp;<a class="symbol-link rs-type" href="eos-engine--src-runtime-control-rs.html#item-struct-AgentRunFinalization-110">AgentRunFinalization</a> {
+        &amp;<span class="rs-self">self</span>.finalization
+    }
+</code></pre>
+</details></td></tr><tr id="method-assemble-197"><td>associated-fn</td><td>assemble</td><td><code>pub(super) fn <a class="symbol-link" href="eos-engine--src-runtime-control-rs.html#method-assemble-197">assemble</a> (parts : <a class="symbol-link" href="eos-engine--src-runtime-control-rs.html#item-struct-AgentRunControlParts-266">AgentRunControlParts</a>) -&gt; Self</code><p class="docstring">Assemble a control from its already-built parts. Called only by<br>`AgentRunControlFactory`.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Assemble a control from its already-built parts. Called only by</span>
+    <span class="rs-comment">/// `AgentRunControlFactory`.</span>
+    <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-runtime-control-rs.html#method-assemble-197">assemble</a>(parts: <a class="symbol-link rs-type" href="eos-engine--src-runtime-control-rs.html#item-struct-AgentRunControlParts-266">AgentRunControlParts</a>) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-kw">let</span> <a class="symbol-link rs-type" href="eos-engine--src-runtime-control-rs.html#item-struct-AgentRunControlParts-266">AgentRunControlParts</a> {
+            agent_run_id,
+            persistence,
+            agent_run_store,
+            foreground,
+            notifications,
+            background,
+        } = parts;
+        <span class="rs-self">Self</span> {
+            cancellation: <a class="symbol-link rs-type" href="eos-engine--src-runtime-control-rs.html#item-struct-AgentRunCancellation-20">AgentRunCancellation</a>::<a class="symbol-link rs-fn" href="eos-engine--src-background-factory-rs.html#method-new-39">new</a>(),
+            foreground,
+            notifications,
+            background,
+            finalization: <a class="symbol-link rs-type" href="eos-engine--src-runtime-control-rs.html#item-struct-AgentRunFinalization-110">AgentRunFinalization</a>::<a class="symbol-link rs-fn" href="eos-engine--src-background-factory-rs.html#method-new-39">new</a>(
+                agent_run_id.clone(),
+                persistence,
+                agent_run_store,
+            ),
+            agent_run_id,
+        }
+    }
+</code></pre>
+</details></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl std :: fmt :: Debug for <a class="symbol-link" href="eos-engine--src-runtime-control-rs.html#item-struct-AgentRunControl-173">AgentRunControl</a></code></summary><table><tbody><tr id="method-fmt-189"><td>method</td><td>fmt</td><td><code>fn <a class="symbol-link" href="eos-engine.html#method-fmt-58">fmt</a> (&amp; self , f : &amp; mut std :: fmt :: Formatter &lt; &#x27;_ &gt;) -&gt; std :: fmt :: Result</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine.html#method-fmt-58">fmt</a>(&amp;<span class="rs-self">self</span>, f: &amp;<span class="rs-kw">mut</span> std::fmt::<span class="rs-type">Formatter</span>&lt;&#x27;_&gt;) -&gt; std::fmt::<span class="rs-type">Result</span> {
+        f.debug_struct(&quot;<a class="symbol-link rs-type" href="eos-engine--src-runtime-control-rs.html#item-struct-AgentRunControl-173">AgentRunControl</a>&quot;)
+            .field(&quot;agent_run_id&quot;, &amp;<span class="rs-self">self</span>.agent_run_id)
+            .finish_non_exhaustive()
+    }
+</code></pre>
+</details></td></tr></tbody></table></details></div>
+
+  <p class="source">crates/eos-engine/src/runtime/control.rs:173</p>
+</article><article id="item-enum-AgentRunPersistence-97" class="type-card" data-kind="enum" data-kind-list="enum field type-model" data-filter-text="enum AgentRunPersistence pub pub enum AgentRunPersistence crates/eos-engine/src/runtime/control.rs  ">
   <div class="item-head">
     <span class="kind">enum</span>
     <h3>AgentRunPersistence</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub enum AgentRunPersistence</code>
-  <div class="tags"></div>
+  <code class="signature">pub enum <a class="symbol-link" href="eos-engine--src-runtime-control-rs.html#item-enum-AgentRunPersistence-97">AgentRunPersistence</a></code>
+  <p class="docstring">Whether an agent run persists a durable `agent_run` row.</p>
+  <div class="tags"><span>derive: Clone</span><span>derive: Debug</span></div>
   <h4>Variants</h4><table><tbody><tr><td>Persisted</td><td><code>task_id: TaskId</code></td></tr><tr><td>Ephemeral</td><td><code></code></td></tr></tbody></table>
-  <p class="source">crates/eos-engine/src/runtime/control.rs:98</p>
-</article><article class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct AgentRunControlParts pub(super) pub(super) struct AgentRunControlParts crates/eos-engine/src/runtime/control.rs agent_run_id AgentRunId persistence AgentRunPersistence agent_run_store Arc &lt; dyn AgentRunStore &gt; foreground Arc &lt; ForegroundExecutor &gt; notifications NotificationService background BackgroundSupervisorHandle heartbeat JoinHandle &lt; () &gt; ">
+
+  <p class="source">crates/eos-engine/src/runtime/control.rs:97</p>
+</article><article id="item-struct-AgentRunControlParts-266" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct AgentRunControlParts pub(super) pub(super) struct AgentRunControlParts crates/eos-engine/src/runtime/control.rs agent_run_id AgentRunId persistence AgentRunPersistence agent_run_store Arc &lt; dyn AgentRunStore &gt; foreground Arc &lt; ForegroundExecutor &gt; notifications NotificationService background BackgroundSupervisorHandle ">
   <div class="item-head">
     <span class="kind">struct</span>
     <h3>AgentRunControlParts</h3>
     <span class="visibility">pub(super)</span>
   </div>
-  <code class="signature">pub(super) struct AgentRunControlParts</code>
+  <code class="signature">pub(super) struct <a class="symbol-link" href="eos-engine--src-runtime-control-rs.html#item-struct-AgentRunControlParts-266">AgentRunControlParts</a></code>
+  <p class="docstring">The already-built parts an [`AgentRunControl`] is assembled from.</p>
   <div class="tags"></div>
-  <h4>Fields</h4><table><tbody><tr><td>pub(super)</td><td>agent_run_id</td><td><code>AgentRunId</code></td></tr><tr><td>pub(super)</td><td>persistence</td><td><code>AgentRunPersistence</code></td></tr><tr><td>pub(super)</td><td>agent_run_store</td><td><code>Arc &lt; dyn AgentRunStore &gt;</code></td></tr><tr><td>pub(super)</td><td>foreground</td><td><code>Arc &lt; ForegroundExecutor &gt;</code></td></tr><tr><td>pub(super)</td><td>notifications</td><td><code>NotificationService</code></td></tr><tr><td>pub(super)</td><td>background</td><td><code>BackgroundSupervisorHandle</code></td></tr><tr><td>pub(super)</td><td>heartbeat</td><td><code>JoinHandle &lt; () &gt;</code></td></tr></tbody></table>
-  <p class="source">crates/eos-engine/src/runtime/control.rs:279</p>
-</article><article class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct AgentRunCancellationState private struct AgentRunCancellationState crates/eos-engine/src/runtime/control.rs cancelled std :: sync :: atomic :: AtomicBool reason Mutex &lt; Option &lt; String &gt; &gt; notify Notify ">
+  <h4>Fields</h4><table><tbody><tr><td>pub(super)</td><td>agent_run_id</td><td><code>AgentRunId</code></td></tr><tr><td>pub(super)</td><td>persistence</td><td><code><a class="symbol-link" href="eos-engine--src-runtime-control-rs.html#item-enum-AgentRunPersistence-97">AgentRunPersistence</a></code></td></tr><tr><td>pub(super)</td><td>agent_run_store</td><td><code>Arc &lt; dyn AgentRunStore &gt;</code></td></tr><tr><td>pub(super)</td><td>foreground</td><td><code>Arc &lt; <a class="symbol-link" href="eos-engine--src-runtime-foreground-rs.html#item-struct-ForegroundExecutor-49">ForegroundExecutor</a> &gt;</code></td></tr><tr><td>pub(super)</td><td>notifications</td><td><code><a class="symbol-link" href="eos-engine--src-notifications-mod-rs.html#item-struct-NotificationService-107">NotificationService</a></code></td></tr><tr><td>pub(super)</td><td>background</td><td><code><a class="symbol-link" href="eos-engine--src-background-handle-rs.html#item-struct-BackgroundSupervisorHandle-49">BackgroundSupervisorHandle</a></code></td></tr></tbody></table>
+
+  <p class="source">crates/eos-engine/src/runtime/control.rs:266</p>
+</article><article id="item-struct-AgentRunCancellationState-31" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct AgentRunCancellationState private struct AgentRunCancellationState crates/eos-engine/src/runtime/control.rs cancelled std :: sync :: atomic :: AtomicBool reason Mutex &lt; Option &lt; String &gt; &gt; notify Notify ">
   <div class="item-head">
     <span class="kind">struct</span>
     <h3>AgentRunCancellationState</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">struct AgentRunCancellationState</code>
-  <div class="tags"></div>
+  <code class="signature">struct <a class="symbol-link" href="eos-engine--src-runtime-control-rs.html#item-struct-AgentRunCancellationState-31">AgentRunCancellationState</a></code>
+  <div class="tags"><span>derive: Debug</span></div>
   <h4>Fields</h4><table><tbody><tr><td>private</td><td>cancelled</td><td><code>std :: sync :: atomic :: AtomicBool</code></td></tr><tr><td>private</td><td>reason</td><td><code>Mutex &lt; Option &lt; String &gt; &gt;</code></td></tr><tr><td>private</td><td>notify</td><td><code>Notify</code></td></tr></tbody></table>
-  <p class="source">crates/eos-engine/src/runtime/control.rs:32</p>
-</article><article class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct HeartbeatGuard private struct HeartbeatGuard crates/eos-engine/src/runtime/control.rs join JoinHandle &lt; () &gt; ">
-  <div class="item-head">
-    <span class="kind">struct</span>
-    <h3>HeartbeatGuard</h3>
-    <span class="visibility">private</span>
-  </div>
-  <code class="signature">struct HeartbeatGuard</code>
-  <div class="tags"></div>
-  <h4>Fields</h4><table><tbody><tr><td>private</td><td>join</td><td><code>JoinHandle &lt; () &gt;</code></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl Drop for HeartbeatGuard</code></summary><table><tbody><tr><td>method</td><td>drop</td><td><code>fn drop (&amp; mut self)</code></td></tr></tbody></table></details></div>
-  <p class="source">crates/eos-engine/src/runtime/control.rs:174</p>
+
+  <p class="source">crates/eos-engine/src/runtime/control.rs:31</p>
 </article></div>
 </section></div>
 </main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/eos-engine/src/runtime/control.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-comment">//! [`AgentRunControl`] — the live object for one agent run (spec §6.1, §6.3).</span>
+<span class="rs-comment">//!</span>
+<span class="rs-comment">//! Each root, workflow-agent, and subagent run owns exactly one</span>
+<span class="rs-comment">//! `AgentRunControl`. It is the object-oriented owner of the run-local</span>
+<span class="rs-comment">//! cancellation state, foreground executor, notification service, background</span>
+<span class="rs-comment">//! supervisor, and finalization handles. It replaces `BackgroundRunFinalizer`'s</span>
+<span class="rs-comment">//! `Drop`-based cleanup as the cleanup owner; teardown is awaited.</span>
+
+<span class="rs-kw">use</span> std::sync::{<span class="rs-type">Arc</span>, <span class="rs-type">Mutex</span>};
+
+<span class="rs-kw">use</span> eos_state::<span class="rs-type">AgentRunStore</span>;
+<span class="rs-kw">use</span> eos_types::{<span class="rs-type">AgentRunId</span>, <span class="rs-type">JsonObject</span>, <span class="rs-type">TaskId</span>};
+<span class="rs-kw">use</span> tokio::sync::<span class="rs-type">Notify</span>;
+
+<span class="rs-kw">use</span> <span class="rs-kw">super</span>::foreground::<a class="symbol-link rs-type" href="eos-engine--src-runtime-foreground-rs.html#item-struct-ForegroundExecutor-49">ForegroundExecutor</a>;
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::background::<a class="symbol-link rs-type" href="eos-engine--src-background-handle-rs.html#item-struct-BackgroundSupervisorHandle-49">BackgroundSupervisorHandle</a>;
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::notifications::<a class="symbol-link rs-type" href="eos-engine--src-notifications-mod-rs.html#item-struct-NotificationService-107">NotificationService</a>;
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::<a class="symbol-link rs-type" href="eos-engine--src-support-error-rs.html#item-enum-EngineError-7">EngineError</a>;
+
+<span class="rs-comment">/// The cooperative half of cancellation (spec §6.1).</span>
+<span class="rs-comment">///</span>
+<span class="rs-comment">/// The query loop polls it at turn boundaries; once a cancel is requested it</span>
+<span class="rs-comment">/// prevents future work from starting. It does **not** clean up already-spawned</span>
+<span class="rs-comment">/// effects — that is owned by the foreground/background teardown paths. Provider</span>
+<span class="rs-comment">/// streams are not treated as cancel-safe and are never interrupted mid-response.</span>
+#[derive(<span class="rs-type">Clone</span>, <span class="rs-type">Debug</span>)]
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-engine--src-runtime-control-rs.html#item-struct-AgentRunCancellation-20">AgentRunCancellation</a> {
+    state: <span class="rs-type">Arc</span>&lt;<a class="symbol-link rs-type" href="eos-engine--src-runtime-control-rs.html#item-struct-AgentRunCancellationState-31">AgentRunCancellationState</a>&gt;,
+}
+
+#[derive(<span class="rs-type">Debug</span>)]
+<span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-engine--src-runtime-control-rs.html#item-struct-AgentRunCancellationState-31">AgentRunCancellationState</a> {
+    cancelled: std::sync::atomic::<span class="rs-type">AtomicBool</span>,
+    reason: <span class="rs-type">Mutex</span>&lt;<span class="rs-type">Option</span>&lt;<span class="rs-type">String</span>&gt;&gt;,
+    notify: <span class="rs-type">Notify</span>,
+}
+
+<span class="rs-kw">impl</span> <span class="rs-type">Default</span> <span class="rs-kw">for</span> <a class="symbol-link rs-type" href="eos-engine--src-runtime-control-rs.html#item-struct-AgentRunCancellation-20">AgentRunCancellation</a> {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-runtime-control-rs.html#method-default-39">default</a>() -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">Self</span>::<a class="symbol-link rs-fn" href="eos-engine--src-background-factory-rs.html#method-new-39">new</a>()
+    }
+}
+
+<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-engine--src-runtime-control-rs.html#item-struct-AgentRunCancellation-20">AgentRunCancellation</a> {
+    <span class="rs-comment">/// A fresh, not-yet-cancelled token.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-background-factory-rs.html#method-new-39">new</a>() -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">Self</span> {
+            state: <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-engine--src-background-factory-rs.html#method-new-39">new</a>(<a class="symbol-link rs-type" href="eos-engine--src-runtime-control-rs.html#item-struct-AgentRunCancellationState-31">AgentRunCancellationState</a> {
+                cancelled: std::sync::atomic::<span class="rs-type">AtomicBool</span>::<a class="symbol-link rs-fn" href="eos-engine--src-background-factory-rs.html#method-new-39">new</a>(<span class="rs-kw">false</span>),
+                reason: <span class="rs-type">Mutex</span>::<a class="symbol-link rs-fn" href="eos-engine--src-background-factory-rs.html#method-new-39">new</a>(<span class="rs-type">None</span>),
+                notify: <span class="rs-type">Notify</span>::<a class="symbol-link rs-fn" href="eos-engine--src-background-factory-rs.html#method-new-39">new</a>(),
+            }),
+        }
+    }
+
+    <span class="rs-comment">/// Request cancellation, recording the first reason. Idempotent.</span>
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-runtime-control-rs.html#method-request-cancel-57">request_cancel</a>(&amp;<span class="rs-self">self</span>, reason: <span class="rs-kw">impl</span> <span class="rs-type">Into</span>&lt;<span class="rs-type">String</span>&gt;) {
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> guard = <span class="rs-self">self</span>.state.reason.lock().expect(&quot;cancellation reason lock&quot;);
+        <span class="rs-kw">if</span> guard.is_none() {
+            *guard = <span class="rs-type">Some</span>(reason.into());
+        }
+        <a class="symbol-link rs-fn" href="eos-engine--src-background-lanes-command-session-rs.html#method-drop-276">drop</a>(guard);
+        <span class="rs-self">self</span>.state
+            .cancelled
+            .store(<span class="rs-kw">true</span>, std::sync::atomic::<span class="rs-type">Ordering</span>::<span class="rs-type">SeqCst</span>);
+        <span class="rs-self">self</span>.state.notify.notify_waiters();
+    }
+
+    <span class="rs-comment">/// Whether cancellation has been requested.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-runtime-control-rs.html#method-is-cancel-requested-70">is_cancel_requested</a>(&amp;<span class="rs-self">self</span>) -&gt; bool {
+        <span class="rs-self">self</span>.state
+            .cancelled
+            .load(std::sync::atomic::<span class="rs-type">Ordering</span>::<span class="rs-type">SeqCst</span>)
+    }
+
+    <span class="rs-comment">/// The recorded cancellation reason, if any.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-runtime-control-rs.html#method-reason-78">reason</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Option</span>&lt;<span class="rs-type">String</span>&gt; {
+        <span class="rs-self">self</span>.state
+            .reason
+            .lock()
+            .expect(&quot;cancellation reason lock&quot;)
+            .clone()
+    }
+
+    <span class="rs-comment">/// Resolve once cancellation has been requested.</span>
+    <span class="rs-kw">pub</span> <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-runtime-control-rs.html#method-wait-for-cancel-88">wait_for_cancel</a>(&amp;<span class="rs-self">self</span>) {
+        <span class="rs-kw">if</span> <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-engine--src-runtime-control-rs.html#method-is-cancel-requested-70">is_cancel_requested</a>() {
+            <span class="rs-kw">return</span>;
+        }
+        <span class="rs-self">self</span>.state.notify.notified().<span class="rs-kw">await</span>;
+    }
+}
+
+<span class="rs-comment">/// Whether an agent run persists a durable `agent_run` row.</span>
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>)]
+<span class="rs-kw">pub</span> <span class="rs-kw">enum</span> <a class="symbol-link rs-type" href="eos-engine--src-runtime-control-rs.html#item-enum-AgentRunPersistence-97">AgentRunPersistence</a> {
+    <span class="rs-comment">/// Task-backed root / workflow-agent run: owns a durable `AgentRunStore`</span>
+    <span class="rs-comment">/// completion obligation.</span>
+    <span class="rs-type">Persisted</span> {
+        <span class="rs-comment">/// The owning task.</span>
+        task_id: <span class="rs-type">TaskId</span>,
+    },
+    <span class="rs-comment">/// Live-only subagent / helper run: no `AgentRunStore` row to create/finish.</span>
+    <span class="rs-type">Ephemeral</span>,
+}
+
+<span class="rs-comment">/// Finalization data and the cancelled-finish path for one agent run (spec §6.3).</span>
+<span class="rs-comment">///</span>
+<span class="rs-comment">/// Finalization owns only the **durable `agent_run` row** completion. The</span>
+<span class="rs-comment">/// message-record handle is deliberately *not* held here: it stays in the</span>
+<span class="rs-comment">/// `QueryContext` and is always finished by `run_agent` itself (cancel-aware</span>
+<span class="rs-comment">/// status), since the loop is awaited rather than aborted on cancellation. This</span>
+<span class="rs-comment">/// keeps record ownership in one place and avoids cloning the record handle into</span>
+<span class="rs-comment">/// the control (a documented, observably-equivalent divergence from §12.3's</span>
+<span class="rs-comment">/// literal "`finish_cancelled` finishes the message-record": finished once, and</span>
+<span class="rs-comment">/// cancel-aware either way).</span>
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-engine--src-runtime-control-rs.html#item-struct-AgentRunFinalization-110">AgentRunFinalization</a> {
+    agent_run_id: <span class="rs-type">AgentRunId</span>,
+    persistence: <a class="symbol-link rs-type" href="eos-engine--src-runtime-control-rs.html#item-enum-AgentRunPersistence-97">AgentRunPersistence</a>,
+    agent_run_store: <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <span class="rs-type">AgentRunStore</span>&gt;,
+}
+
+<span class="rs-kw">impl</span> std::fmt::<span class="rs-type">Debug</span> <span class="rs-kw">for</span> <a class="symbol-link rs-type" href="eos-engine--src-runtime-control-rs.html#item-struct-AgentRunFinalization-110">AgentRunFinalization</a> {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine.html#method-fmt-58">fmt</a>(&amp;<span class="rs-self">self</span>, f: &amp;<span class="rs-kw">mut</span> std::fmt::<span class="rs-type">Formatter</span>&lt;&#x27;_&gt;) -&gt; std::fmt::<span class="rs-type">Result</span> {
+        f.debug_struct(&quot;<a class="symbol-link rs-type" href="eos-engine--src-runtime-control-rs.html#item-struct-AgentRunFinalization-110">AgentRunFinalization</a>&quot;)
+            .field(&quot;agent_run_id&quot;, &amp;<span class="rs-self">self</span>.agent_run_id)
+            .field(&quot;persistence&quot;, &amp;<span class="rs-self">self</span>.persistence)
+            .finish_non_exhaustive()
+    }
+}
+
+<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-engine--src-runtime-control-rs.html#item-struct-AgentRunFinalization-110">AgentRunFinalization</a> {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-background-factory-rs.html#method-new-39">new</a>(
+        agent_run_id: <span class="rs-type">AgentRunId</span>,
+        persistence: <a class="symbol-link rs-type" href="eos-engine--src-runtime-control-rs.html#item-enum-AgentRunPersistence-97">AgentRunPersistence</a>,
+        agent_run_store: <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <span class="rs-type">AgentRunStore</span>&gt;,
+    ) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">Self</span> {
+            agent_run_id,
+            persistence,
+            agent_run_store,
+        }
+    }
+
+    <span class="rs-comment">/// The owning task id, for persisted runs.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-runtime-control-rs.html#method-task-id-148">task_id</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Option</span>&lt;&amp;<span class="rs-type">TaskId</span>&gt; {
+        <span class="rs-kw">match</span> &amp;<span class="rs-self">self</span>.persistence {
+            <a class="symbol-link rs-type" href="eos-engine--src-runtime-control-rs.html#item-enum-AgentRunPersistence-97">AgentRunPersistence</a>::<span class="rs-type">Persisted</span> { task_id } =&gt; <span class="rs-type">Some</span>(task_id),
+            <a class="symbol-link rs-type" href="eos-engine--src-runtime-control-rs.html#item-enum-AgentRunPersistence-97">AgentRunPersistence</a>::<span class="rs-type">Ephemeral</span> =&gt; <span class="rs-type">None</span>,
+        }
+    }
+
+    <span class="rs-comment">/// Finish the run's durable `agent_run` row as cancelled. Ephemeral runs own</span>
+    <span class="rs-comment">/// no row, so this is a no-op for them. The message-record handle is finished</span>
+    <span class="rs-comment">/// by `run_agent`, not here.</span>
+    <span class="rs-kw">pub</span> <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-runtime-control-rs.html#method-finish-cancelled-157">finish_cancelled</a>(&amp;<span class="rs-self">self</span>, reason: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-engine--src-support-error-rs.html#item-enum-EngineError-7">EngineError</a>&gt; {
+        <span class="rs-kw">if</span> matches!(<span class="rs-self">self</span>.persistence, <a class="symbol-link rs-type" href="eos-engine--src-runtime-control-rs.html#item-enum-AgentRunPersistence-97">AgentRunPersistence</a>::<span class="rs-type">Persisted</span> { .. }) {
+            <span class="rs-kw">let</span> <span class="rs-kw">mut</span> terminal = <span class="rs-type">JsonObject</span>::<a class="symbol-link rs-fn" href="eos-engine--src-background-factory-rs.html#method-new-39">new</a>();
+            terminal.<a class="symbol-link rs-fn" href="eos-engine--src-background-lanes-subagent-rs.html#method-insert-74">insert</a>(&quot;fail_reason&quot;.to_owned(), &quot;cancelled&quot;.into());
+            terminal.<a class="symbol-link rs-fn" href="eos-engine--src-background-lanes-subagent-rs.html#method-insert-74">insert</a>(&quot;reason&quot;.to_owned(), reason.into());
+            <span class="rs-self">self</span>.agent_run_store
+                .<a class="symbol-link rs-fn" href="eos-engine--src-background-handle-rs.html#method-finish-run-282">finish_run</a>(&amp;<span class="rs-self">self</span>.agent_run_id, <span class="rs-type">None</span>, <span class="rs-type">Some</span>(&amp;terminal), 0, <span class="rs-type">Some</span>(reason))
+                .<span class="rs-kw">await</span>?;
+        }
+        <span class="rs-type">Ok</span>(())
+    }
+}
+
+<span class="rs-comment">/// The live object for one agent run (spec §6.3).</span>
+<span class="rs-comment">///</span>
+<span class="rs-comment">/// The run's command-completion heartbeat is owned by the</span>
+<span class="rs-comment">/// `CommandSessionLane` inside `background`, so dropping this control (the last</span>
+<span class="rs-comment">/// handle clone) drops the lane and aborts the heartbeat (RAII) — no separate</span>
+<span class="rs-comment">/// guard is held here.</span>
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-engine--src-runtime-control-rs.html#item-struct-AgentRunControl-173">AgentRunControl</a> {
+    agent_run_id: <span class="rs-type">AgentRunId</span>,
+    cancellation: <a class="symbol-link rs-type" href="eos-engine--src-runtime-control-rs.html#item-struct-AgentRunCancellation-20">AgentRunCancellation</a>,
+    foreground: <span class="rs-type">Arc</span>&lt;<a class="symbol-link rs-type" href="eos-engine--src-runtime-foreground-rs.html#item-struct-ForegroundExecutor-49">ForegroundExecutor</a>&gt;,
+    notifications: <a class="symbol-link rs-type" href="eos-engine--src-notifications-mod-rs.html#item-struct-NotificationService-107">NotificationService</a>,
+    background: <a class="symbol-link rs-type" href="eos-engine--src-background-handle-rs.html#item-struct-BackgroundSupervisorHandle-49">BackgroundSupervisorHandle</a>,
+    finalization: <a class="symbol-link rs-type" href="eos-engine--src-runtime-control-rs.html#item-struct-AgentRunFinalization-110">AgentRunFinalization</a>,
+}
+
+<span class="rs-kw">impl</span> std::fmt::<span class="rs-type">Debug</span> <span class="rs-kw">for</span> <a class="symbol-link rs-type" href="eos-engine--src-runtime-control-rs.html#item-struct-AgentRunControl-173">AgentRunControl</a> {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine.html#method-fmt-58">fmt</a>(&amp;<span class="rs-self">self</span>, f: &amp;<span class="rs-kw">mut</span> std::fmt::<span class="rs-type">Formatter</span>&lt;&#x27;_&gt;) -&gt; std::fmt::<span class="rs-type">Result</span> {
+        f.debug_struct(&quot;<a class="symbol-link rs-type" href="eos-engine--src-runtime-control-rs.html#item-struct-AgentRunControl-173">AgentRunControl</a>&quot;)
+            .field(&quot;agent_run_id&quot;, &amp;<span class="rs-self">self</span>.agent_run_id)
+            .finish_non_exhaustive()
+    }
+}
+
+<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-engine--src-runtime-control-rs.html#item-struct-AgentRunControl-173">AgentRunControl</a> {
+    <span class="rs-comment">/// Assemble a control from its already-built parts. Called only by</span>
+    <span class="rs-comment">/// `AgentRunControlFactory`.</span>
+    <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-runtime-control-rs.html#method-assemble-197">assemble</a>(parts: <a class="symbol-link rs-type" href="eos-engine--src-runtime-control-rs.html#item-struct-AgentRunControlParts-266">AgentRunControlParts</a>) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-kw">let</span> <a class="symbol-link rs-type" href="eos-engine--src-runtime-control-rs.html#item-struct-AgentRunControlParts-266">AgentRunControlParts</a> {
+            agent_run_id,
+            persistence,
+            agent_run_store,
+            foreground,
+            notifications,
+            background,
+        } = parts;
+        <span class="rs-self">Self</span> {
+            cancellation: <a class="symbol-link rs-type" href="eos-engine--src-runtime-control-rs.html#item-struct-AgentRunCancellation-20">AgentRunCancellation</a>::<a class="symbol-link rs-fn" href="eos-engine--src-background-factory-rs.html#method-new-39">new</a>(),
+            foreground,
+            notifications,
+            background,
+            finalization: <a class="symbol-link rs-type" href="eos-engine--src-runtime-control-rs.html#item-struct-AgentRunFinalization-110">AgentRunFinalization</a>::<a class="symbol-link rs-fn" href="eos-engine--src-background-factory-rs.html#method-new-39">new</a>(
+                agent_run_id.clone(),
+                persistence,
+                agent_run_store,
+            ),
+            agent_run_id,
+        }
+    }
+
+    <span class="rs-comment">/// The agent-run id this control owns.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-runtime-control-rs.html#method-agent-run-id-222">agent_run_id</a>(&amp;<span class="rs-self">self</span>) -&gt; &amp;<span class="rs-type">AgentRunId</span> {
+        &amp;<span class="rs-self">self</span>.agent_run_id
+    }
+
+    <span class="rs-comment">/// The owning task id, for persisted runs.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-runtime-control-rs.html#method-task-id-148">task_id</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Option</span>&lt;&amp;<span class="rs-type">TaskId</span>&gt; {
+        <span class="rs-self">self</span>.finalization.<a class="symbol-link rs-fn" href="eos-engine--src-runtime-control-rs.html#method-task-id-148">task_id</a>()
+    }
+
+    <span class="rs-comment">/// A clone of the run's cancellation token (shared with the query loop).</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-runtime-control-rs.html#method-cancellation-234">cancellation</a>(&amp;<span class="rs-self">self</span>) -&gt; <a class="symbol-link rs-type" href="eos-engine--src-runtime-control-rs.html#item-struct-AgentRunCancellation-20">AgentRunCancellation</a> {
+        <span class="rs-self">self</span>.cancellation.clone()
+    }
+
+    <span class="rs-comment">/// A clone of the run's background supervisor handle.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-runtime-control-rs.html#method-background-240">background</a>(&amp;<span class="rs-self">self</span>) -&gt; <a class="symbol-link rs-type" href="eos-engine--src-background-handle-rs.html#item-struct-BackgroundSupervisorHandle-49">BackgroundSupervisorHandle</a> {
+        <span class="rs-self">self</span>.background.clone()
+    }
+
+    <span class="rs-comment">/// A clone of the run-local notification service (the exact queue the loop</span>
+    <span class="rs-comment">/// drains and the lanes enqueue into — the §7 instance-identity invariant).</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-background-handle-rs.html#method-notifications-122">notifications</a>(&amp;<span class="rs-self">self</span>) -&gt; <a class="symbol-link rs-type" href="eos-engine--src-notifications-mod-rs.html#item-struct-NotificationService-107">NotificationService</a> {
+        <span class="rs-self">self</span>.notifications.clone()
+    }
+
+    <span class="rs-comment">/// The run's foreground executor (shared into the query loop / tools).</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-runtime-control-rs.html#method-foreground-253">foreground</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Arc</span>&lt;<a class="symbol-link rs-type" href="eos-engine--src-runtime-foreground-rs.html#item-struct-ForegroundExecutor-49">ForegroundExecutor</a>&gt; {
+        <span class="rs-self">self</span>.foreground.clone()
+    }
+
+    <span class="rs-comment">/// The run's finalization handles (used by the cancellation path).</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-runtime-control-rs.html#method-finalization-259">finalization</a>(&amp;<span class="rs-self">self</span>) -&gt; &amp;<a class="symbol-link rs-type" href="eos-engine--src-runtime-control-rs.html#item-struct-AgentRunFinalization-110">AgentRunFinalization</a> {
+        &amp;<span class="rs-self">self</span>.finalization
+    }
+}
+
+<span class="rs-comment">/// The already-built parts an [`AgentRunControl`] is assembled from.</span>
+<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-engine--src-runtime-control-rs.html#item-struct-AgentRunControlParts-266">AgentRunControlParts</a> {
+    <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) agent_run_id: <span class="rs-type">AgentRunId</span>,
+    <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) persistence: <a class="symbol-link rs-type" href="eos-engine--src-runtime-control-rs.html#item-enum-AgentRunPersistence-97">AgentRunPersistence</a>,
+    <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) agent_run_store: <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <span class="rs-type">AgentRunStore</span>&gt;,
+    <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) foreground: <span class="rs-type">Arc</span>&lt;<a class="symbol-link rs-type" href="eos-engine--src-runtime-foreground-rs.html#item-struct-ForegroundExecutor-49">ForegroundExecutor</a>&gt;,
+    <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) notifications: <a class="symbol-link rs-type" href="eos-engine--src-notifications-mod-rs.html#item-struct-NotificationService-107">NotificationService</a>,
+    <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) background: <a class="symbol-link rs-type" href="eos-engine--src-background-handle-rs.html#item-struct-BackgroundSupervisorHandle-49">BackgroundSupervisorHandle</a>,
+}
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
   <script src="../assets/inventory.js"></script>
 </body>
 </html>

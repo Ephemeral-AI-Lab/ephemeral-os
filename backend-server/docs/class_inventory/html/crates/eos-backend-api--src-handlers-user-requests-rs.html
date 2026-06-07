@@ -1,0 +1,511 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>eos-backend-api · src/handlers/user_requests.rs</title>
+  <link rel="stylesheet" href="../assets/inventory.css">
+</head>
+<body>
+  <header>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>eos-backend-api File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS/backend-server &amp;&amp; cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
+  </header>
+  <a class="back-link" href="../index.html">backend-server</a>
+<section class="summary">
+  <div><b>13</b><span>modules</span></div>
+  <div><b>66</b><span>items</span></div>
+  <div><b>35</b><span>fields</span></div>
+  <div><b>22</b><span>methods</span></div>
+</section>
+<section class="toolbar">
+  <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
+  <select id="kind-filter">
+    <option value="">All items</option>
+    <option value="type-model">Type model</option>
+    <option value="struct">Structs</option>
+    <option value="enum">Enums</option>
+    <option value="trait">Traits</option>
+    <option value="impl">Impls</option>
+    <option value="fn">Functions</option>
+    <option value="type">Aliases</option>
+  </select>
+</section>
+<main class="crate-layout">
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><a class="file-link" href="eos-backend-api.html"><span>error.rs</span><small>3/0</small></a></li><li><span class="folder">handlers</span><ul class="file-tree"><li><a class="file-link" href="eos-backend-api--src-handlers-agent-runs-rs.html"><span>agent_runs.rs</span><small>4/5</small></a></li><li><a class="file-link" href="eos-backend-api--src-handlers-mod-rs.html"><span>mod.rs</span><small>2/1</small></a></li><li><a class="file-link" href="eos-backend-api--src-handlers-sandboxes-rs.html"><span>sandboxes.rs</span><small>0/3</small></a></li><li><a class="file-link" href="eos-backend-api--src-handlers-stats-rs.html"><span>stats.rs</span><small>0/4</small></a></li><li><a class="file-link" href="eos-backend-api--src-handlers-stream-rs.html"><span>stream.rs</span><small>1/2</small></a></li><li><a class="file-link" href="eos-backend-api--src-handlers-tasks-rs.html"><span>tasks.rs</span><small>2/4</small></a></li><li><a class="file-link active" href="eos-backend-api--src-handlers-user-requests-rs.html"><span>user_requests.rs</span><small>1/7</small></a></li></ul></li><li><a class="file-link" href="eos-backend-api--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-backend-api--src-openapi-rs.html"><span>openapi.rs</span><small>0/6</small></a></li><li><a class="file-link" href="eos-backend-api--src-router-rs.html"><span>router.rs</span><small>4/1</small></a></li><li><span class="folder">stream</span><ul class="file-tree"><li><a class="file-link" href="eos-backend-api--src-stream-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-backend-api--src-stream-sse-rs.html"><span>sse.rs</span><small>0/2</small></a></li></ul></li></ul></li></ul></nav>
+  <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="handlers::user_requests crates/eos-backend-api/src/handlers/user_requests.rs create list detail reconcile cancel EventsQuery events run_record">
+  <div class="module-head">
+    <div>
+      <h2>src/handlers/user_requests.rs</h2>
+      <p class="path">module <code>handlers::user_requests</code></p>
+    </div>
+    <div class="module-stats">
+      <span>file owns</span>
+      <span>1 types</span>
+      <span>0 impls</span>
+      <span>7 fns</span>
+      <span>0 methods</span>
+    </div>
+  </div>
+  <div class="items"><div class="group-label">File-Owned Types</div><article id="item-struct-EventsQuery-144" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct EventsQuery pub pub struct EventsQuery crates/eos-backend-api/src/handlers/user_requests.rs after_seq Option &lt; i64 &gt; ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>EventsQuery</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub struct <a class="symbol-link" href="eos-backend-api--src-handlers-agent-runs-rs.html#item-struct-EventsQuery-29">EventsQuery</a></code>
+  <p class="docstring">`?after_seq=` query for the events replay route.</p>
+  <div class="tags"><span>derive: Debug</span><span>derive: Deserialize</span><span>serde</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>after_seq</td><td><code>Option &lt; i64 &gt;</code></td></tr></tbody></table>
+
+  <p class="source">crates/eos-backend-api/src/handlers/user_requests.rs:144</p>
+</article><div class="group-label">Standalone Functions</div><article id="item-fn-create-24" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn create pub pub async fn create (State (state) : State &lt; AppState &gt; , ValidatedJson (request) : ValidatedJson &lt; CreateUserRequest &gt; ,) -&gt; Result &lt; impl IntoResponse , ApiError &gt; crates/eos-backend-api/src/handlers/user_requests.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>create</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub async fn <a class="symbol-link" href="eos-backend-api--src-handlers-user-requests-rs.html#item-fn-create-24">create</a> (State (state) : State &lt; <a class="symbol-link" href="eos-backend-api--src-router-rs.html#item-struct-AppState-110">AppState</a> &gt; , <a class="symbol-link" href="eos-backend-api--src-handlers-mod-rs.html#item-struct-ValidatedJson-44">ValidatedJson</a> (request) : <a class="symbol-link" href="eos-backend-api--src-handlers-mod-rs.html#item-struct-ValidatedJson-44">ValidatedJson</a> &lt; CreateUserRequest &gt; ,) -&gt; Result &lt; impl IntoResponse , <a class="symbol-link" href="eos-backend-api.html#item-enum-ApiError-20">ApiError</a> &gt;</code>
+  <p class="docstring">`POST /api/user-requests` — accept a prompt and launch an agent-core run.<br>Returns `202 { request_id }`. v1 accepts only `sandbox_args.sandbox_id`;<br>unsupported override fields are rejected by `deny_unknown_fields` at<br>deserialize time.</p>
+  <div class="tags"><span>async</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-comment">/// `POST /api/user-requests` — accept a prompt and launch an agent-core run.</span>
+<span class="rs-comment">/// Returns `202 { request_id }`. v1 accepts only `sandbox_args.sandbox_id`;</span>
+<span class="rs-comment">/// unsupported override fields are rejected by `deny_unknown_fields` at</span>
+<span class="rs-comment">/// deserialize time.</span>
+<span class="rs-kw">pub</span> <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-backend-api--src-handlers-user-requests-rs.html#item-fn-create-24">create</a>(
+    <span class="rs-type">State</span>(state): <span class="rs-type">State</span>&lt;<a class="symbol-link rs-type" href="eos-backend-api--src-router-rs.html#item-struct-AppState-110">AppState</a>&gt;,
+    <a class="symbol-link rs-type" href="eos-backend-api--src-handlers-mod-rs.html#item-struct-ValidatedJson-44">ValidatedJson</a>(request): <a class="symbol-link rs-type" href="eos-backend-api--src-handlers-mod-rs.html#item-struct-ValidatedJson-44">ValidatedJson</a>&lt;<span class="rs-type">CreateUserRequest</span>&gt;,
+) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-kw">impl</span> <span class="rs-type">IntoResponse</span>, <a class="symbol-link rs-type" href="eos-backend-api.html#item-enum-ApiError-20">ApiError</a>&gt; {
+    <span class="rs-kw">let</span> request_id = state.runs.<a class="symbol-link rs-fn" href="eos-backend-api--src-router-rs.html#method-launch-37">launch</a>(request).<span class="rs-kw">await</span>.map_err(|err| {
+        tracing::error!(error = %err, &quot;run launch failed&quot;);
+        <a class="symbol-link rs-type" href="eos-backend-api.html#item-enum-ApiError-20">ApiError</a>::<span class="rs-type">Internal</span>
+    })?;
+    <span class="rs-type">Ok</span>((
+        <span class="rs-type">StatusCode</span>::<span class="rs-type">ACCEPTED</span>,
+        <span class="rs-type">Json</span>(<span class="rs-type">CreateUserRequestResponse</span> { request_id }),
+    ))
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-backend-api/src/handlers/user_requests.rs:24</p>
+</article><article id="item-fn-list-42" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn list pub pub async fn list (State (state) : State &lt; AppState &gt; , Query (pagination) : Query &lt; Pagination &gt; ,) -&gt; Result &lt; Json &lt; PageResult &lt; RunRecord &gt; &gt; , ApiError &gt; crates/eos-backend-api/src/handlers/user_requests.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>list</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub async fn <a class="symbol-link" href="eos-backend-api--src-handlers-sandboxes-rs.html#item-fn-list-16">list</a> (State (state) : State &lt; <a class="symbol-link" href="eos-backend-api--src-router-rs.html#item-struct-AppState-110">AppState</a> &gt; , Query (pagination) : Query &lt; <a class="symbol-link" href="eos-backend-api--src-handlers-mod-rs.html#item-struct-Pagination-21">Pagination</a> &gt; ,) -&gt; Result &lt; Json &lt; PageResult &lt; RunRecord &gt; &gt; , <a class="symbol-link" href="eos-backend-api.html#item-enum-ApiError-20">ApiError</a> &gt;</code>
+  <p class="docstring">`GET /api/user-requests` — list backend run records, newest first. Each row's<br>status comes from `run_meta` alone (the reaper finalizes it on completion), so<br>listing avoids a per-row agent-core join; the detail route does that join.</p>
+  <div class="tags"><span>async</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-comment">/// `GET /api/user-requests` — list backend run records, newest first. Each row's</span>
+<span class="rs-comment">/// status comes from `run_meta` alone (the reaper finalizes it on completion), so</span>
+<span class="rs-comment">/// listing avoids a per-row agent-core join; the detail route does that join.</span>
+<span class="rs-kw">pub</span> <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-backend-api--src-handlers-sandboxes-rs.html#item-fn-list-16">list</a>(
+    <span class="rs-type">State</span>(state): <span class="rs-type">State</span>&lt;<a class="symbol-link rs-type" href="eos-backend-api--src-router-rs.html#item-struct-AppState-110">AppState</a>&gt;,
+    <span class="rs-type">Query</span>(pagination): <span class="rs-type">Query</span>&lt;<a class="symbol-link rs-type" href="eos-backend-api--src-handlers-mod-rs.html#item-struct-Pagination-21">Pagination</a>&gt;,
+) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Json</span>&lt;<span class="rs-type">PageResult</span>&lt;<span class="rs-type">RunRecord</span>&gt;&gt;, <a class="symbol-link rs-type" href="eos-backend-api.html#item-enum-ApiError-20">ApiError</a>&gt; {
+    <span class="rs-kw">let</span> page = state.run_meta.<a class="symbol-link rs-fn" href="eos-backend-api--src-handlers-sandboxes-rs.html#item-fn-list-16">list</a>(pagination.<a class="symbol-link rs-fn" href="eos-backend-api--src-handlers-mod-rs.html#method-page-29">page</a>()).<span class="rs-kw">await</span>?;
+    <span class="rs-kw">let</span> items = page.items.into_iter().map(run_record).collect();
+    <span class="rs-type">Ok</span>(<span class="rs-type">Json</span>(<span class="rs-type">PageResult</span> {
+        items,
+        total: page.total,
+        limit: page.limit,
+        offset: page.offset,
+    }))
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-backend-api/src/handlers/user_requests.rs:42</p>
+</article><article id="item-fn-detail-59" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn detail pub pub async fn detail (State (state) : State &lt; AppState &gt; , Path (request_id) : Path &lt; String &gt; ,) -&gt; Result &lt; Json &lt; UserRequestDetail &gt; , ApiError &gt; crates/eos-backend-api/src/handlers/user_requests.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>detail</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub async fn <a class="symbol-link" href="eos-backend-api--src-handlers-sandboxes-rs.html#item-fn-detail-21">detail</a> (State (state) : State &lt; <a class="symbol-link" href="eos-backend-api--src-router-rs.html#item-struct-AppState-110">AppState</a> &gt; , Path (request_id) : Path &lt; String &gt; ,) -&gt; Result &lt; Json &lt; UserRequestDetail &gt; , <a class="symbol-link" href="eos-backend-api.html#item-enum-ApiError-20">ApiError</a> &gt;</code>
+  <p class="docstring">`GET /api/user-requests/{request_id}` — backend lifecycle joined with the<br>agent-core request outcome through `RuntimeServices::state_reader()`. When the<br>backend row is still non-terminal but agent-core has finished, the resolved<br>terminal status is persisted with a CAS guard so the next read is stable<br>(and a concurrent cancellation is never clobbered).</p>
+  <div class="tags"><span>async</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-comment">/// `GET /api/user-requests/{request_id}` — backend lifecycle joined with the</span>
+<span class="rs-comment">/// agent-core request outcome through `RuntimeServices::state_reader()`. When the</span>
+<span class="rs-comment">/// backend row is still non-terminal but agent-core has finished, the resolved</span>
+<span class="rs-comment">/// terminal status is persisted with a CAS guard so the next read is stable</span>
+<span class="rs-comment">/// (and a concurrent cancellation is never clobbered).</span>
+<span class="rs-kw">pub</span> <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-backend-api--src-handlers-sandboxes-rs.html#item-fn-detail-21">detail</a>(
+    <span class="rs-type">State</span>(state): <span class="rs-type">State</span>&lt;<a class="symbol-link rs-type" href="eos-backend-api--src-router-rs.html#item-struct-AppState-110">AppState</a>&gt;,
+    <span class="rs-type">Path</span>(request_id): <span class="rs-type">Path</span>&lt;<span class="rs-type">String</span>&gt;,
+) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Json</span>&lt;<span class="rs-type">UserRequestDetail</span>&gt;, <a class="symbol-link rs-type" href="eos-backend-api.html#item-enum-ApiError-20">ApiError</a>&gt; {
+    <span class="rs-kw">let</span> request_id: <span class="rs-type">RequestId</span> = <a class="symbol-link rs-fn" href="eos-backend-api--src-handlers-mod-rs.html#item-fn-parse-id-38">parse_id</a>(&amp;request_id, &quot;request&quot;)?;
+    <span class="rs-kw">let</span> meta = state
+        .run_meta
+        .get(&amp;request_id)
+        .<span class="rs-kw">await</span>?
+        .ok_or(<a class="symbol-link rs-type" href="eos-backend-api.html#item-enum-ApiError-20">ApiError</a>::<span class="rs-type">NotFound</span>(&quot;user request&quot;))?;
+    <span class="rs-kw">let</span> agent_status = state
+        .reads
+        .requests
+        .get(&amp;request_id)
+        .<span class="rs-kw">await</span>?
+        .map(|request| request.status);
+
+    <span class="rs-kw">let</span> meta = <a class="symbol-link rs-fn" href="eos-backend-api--src-handlers-user-requests-rs.html#item-fn-reconcile-94">reconcile</a>(&amp;state, &amp;request_id, meta, agent_status).<span class="rs-kw">await</span>?;
+    <span class="rs-kw">let</span> status = resolve_api_status(meta.status, agent_status);
+    <span class="rs-type">Ok</span>(<span class="rs-type">Json</span>(<span class="rs-type">UserRequestDetail</span> {
+        request_id: meta.request_id,
+        status,
+        label: meta.label,
+        client_meta: meta.client_meta,
+        created_at: meta.created_at,
+        finished_at: meta.finished_at,
+        cancel_reason: meta.cancel_reason,
+    }))
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-backend-api/src/handlers/user_requests.rs:59</p>
+</article><article id="item-fn-cancel-127" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn cancel pub pub async fn cancel (State (state) : State &lt; AppState &gt; , Path (request_id) : Path &lt; String &gt; ,) -&gt; Result &lt; impl IntoResponse , ApiError &gt; crates/eos-backend-api/src/handlers/user_requests.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>cancel</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub async fn <a class="symbol-link" href="eos-backend-api--src-handlers-user-requests-rs.html#item-fn-cancel-127">cancel</a> (State (state) : State &lt; <a class="symbol-link" href="eos-backend-api--src-router-rs.html#item-struct-AppState-110">AppState</a> &gt; , Path (request_id) : Path &lt; String &gt; ,) -&gt; Result &lt; impl IntoResponse , <a class="symbol-link" href="eos-backend-api.html#item-enum-ApiError-20">ApiError</a> &gt;</code>
+  <p class="docstring">`DELETE /api/user-requests/{request_id}` — request backend-local cancellation.<br>`202` when an in-flight run was signalled; `409` when the run already<br>finalized; `404` when no such run exists.</p>
+  <div class="tags"><span>async</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-comment">/// `DELETE /api/user-requests/{request_id}` — request backend-local cancellation.</span>
+<span class="rs-comment">/// `202` when an in-flight run was signalled; `409` when the run already</span>
+<span class="rs-comment">/// finalized; `404` when no such run exists.</span>
+<span class="rs-kw">pub</span> <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-backend-api--src-handlers-user-requests-rs.html#item-fn-cancel-127">cancel</a>(
+    <span class="rs-type">State</span>(state): <span class="rs-type">State</span>&lt;<a class="symbol-link rs-type" href="eos-backend-api--src-router-rs.html#item-struct-AppState-110">AppState</a>&gt;,
+    <span class="rs-type">Path</span>(request_id): <span class="rs-type">Path</span>&lt;<span class="rs-type">String</span>&gt;,
+) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-kw">impl</span> <span class="rs-type">IntoResponse</span>, <a class="symbol-link rs-type" href="eos-backend-api.html#item-enum-ApiError-20">ApiError</a>&gt; {
+    <span class="rs-kw">let</span> request_id: <span class="rs-type">RequestId</span> = <a class="symbol-link rs-fn" href="eos-backend-api--src-handlers-mod-rs.html#item-fn-parse-id-38">parse_id</a>(&amp;request_id, &quot;request&quot;)?;
+    <span class="rs-kw">if</span> state.run_meta.get(&amp;request_id).<span class="rs-kw">await</span>?.is_none() {
+        <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-backend-api.html#item-enum-ApiError-20">ApiError</a>::<span class="rs-type">NotFound</span>(&quot;user request&quot;));
+    }
+    <span class="rs-kw">match</span> state.runs.<a class="symbol-link rs-fn" href="eos-backend-api--src-handlers-user-requests-rs.html#item-fn-cancel-127">cancel</a>(&amp;request_id, <span class="rs-type">DEFAULT_CANCEL_REASON</span>) {
+        <span class="rs-type">CancelOutcome</span>::<span class="rs-type">Requested</span> =&gt; <span class="rs-type">Ok</span>(<span class="rs-type">StatusCode</span>::<span class="rs-type">ACCEPTED</span>),
+        <span class="rs-type">CancelOutcome</span>::<span class="rs-type">NotFound</span> =&gt; <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-backend-api.html#item-enum-ApiError-20">ApiError</a>::<span class="rs-type">Conflict</span>(&quot;run already finished&quot;.to_owned())),
+    }
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-backend-api/src/handlers/user_requests.rs:127</p>
+</article><article id="item-fn-events-150" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn events pub pub async fn events (State (state) : State &lt; AppState &gt; , Path (request_id) : Path &lt; String &gt; , Query (query) : Query &lt; EventsQuery &gt; ,) -&gt; Result &lt; Json &lt; Vec &lt; EventRecord &gt; &gt; , ApiError &gt; crates/eos-backend-api/src/handlers/user_requests.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>events</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub async fn <a class="symbol-link" href="eos-backend-api--src-handlers-agent-runs-rs.html#item-fn-events-62">events</a> (State (state) : State &lt; <a class="symbol-link" href="eos-backend-api--src-router-rs.html#item-struct-AppState-110">AppState</a> &gt; , Path (request_id) : Path &lt; String &gt; , Query (query) : Query &lt; <a class="symbol-link" href="eos-backend-api--src-handlers-agent-runs-rs.html#item-struct-EventsQuery-29">EventsQuery</a> &gt; ,) -&gt; Result &lt; Json &lt; Vec &lt; EventRecord &gt; &gt; , <a class="symbol-link" href="eos-backend-api.html#item-enum-ApiError-20">ApiError</a> &gt;</code>
+  <p class="docstring">`GET /api/user-requests/{request_id}/events` — replay persisted milestone<br>events from `event_log` (those with `seq &gt; after_seq`), including any<br>`event_stream_gap` markers so dropped milestones stay visible.</p>
+  <div class="tags"><span>async</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-comment">/// `GET /api/user-requests/{request_id}/events` — replay persisted milestone</span>
+<span class="rs-comment">/// events from `event_log` (those with `seq &gt; after_seq`), including any</span>
+<span class="rs-comment">/// `event_stream_gap` markers so dropped milestones stay visible.</span>
+<span class="rs-kw">pub</span> <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-backend-api--src-handlers-agent-runs-rs.html#item-fn-events-62">events</a>(
+    <span class="rs-type">State</span>(state): <span class="rs-type">State</span>&lt;<a class="symbol-link rs-type" href="eos-backend-api--src-router-rs.html#item-struct-AppState-110">AppState</a>&gt;,
+    <span class="rs-type">Path</span>(request_id): <span class="rs-type">Path</span>&lt;<span class="rs-type">String</span>&gt;,
+    <span class="rs-type">Query</span>(query): <span class="rs-type">Query</span>&lt;<a class="symbol-link rs-type" href="eos-backend-api--src-handlers-agent-runs-rs.html#item-struct-EventsQuery-29">EventsQuery</a>&gt;,
+) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Json</span>&lt;<span class="rs-type">Vec</span>&lt;<span class="rs-type">EventRecord</span>&gt;&gt;, <a class="symbol-link rs-type" href="eos-backend-api.html#item-enum-ApiError-20">ApiError</a>&gt; {
+    <span class="rs-kw">let</span> request_id: <span class="rs-type">RequestId</span> = <a class="symbol-link rs-fn" href="eos-backend-api--src-handlers-mod-rs.html#item-fn-parse-id-38">parse_id</a>(&amp;request_id, &quot;request&quot;)?;
+    <span class="rs-kw">if</span> state.run_meta.get(&amp;request_id).<span class="rs-kw">await</span>?.is_none() {
+        <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-backend-api.html#item-enum-ApiError-20">ApiError</a>::<span class="rs-type">NotFound</span>(&quot;user request&quot;));
+    }
+    <span class="rs-kw">let</span> events = state
+        .event_log
+        .list_since(&amp;request_id, query.after_seq.unwrap_or(0))
+        .<span class="rs-kw">await</span>?;
+    <span class="rs-type">Ok</span>(<span class="rs-type">Json</span>(events))
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-backend-api/src/handlers/user_requests.rs:150</p>
+</article><article id="item-fn-reconcile-94" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn reconcile private async fn reconcile (state : &amp; AppState , request_id : &amp; RequestId , meta : RunMeta , agent_status : Option &lt; RequestStatus &gt; ,) -&gt; Result &lt; RunMeta , ApiError &gt; crates/eos-backend-api/src/handlers/user_requests.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>reconcile</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">async fn <a class="symbol-link" href="eos-backend-api--src-handlers-user-requests-rs.html#item-fn-reconcile-94">reconcile</a> (state : &amp; <a class="symbol-link" href="eos-backend-api--src-router-rs.html#item-struct-AppState-110">AppState</a> , request_id : &amp; RequestId , meta : RunMeta , agent_status : Option &lt; RequestStatus &gt; ,) -&gt; Result &lt; RunMeta , <a class="symbol-link" href="eos-backend-api.html#item-enum-ApiError-20">ApiError</a> &gt;</code>
+  <p class="docstring">Persist agent-core's terminal outcome onto a still-non-terminal backend row,<br>CAS-guarded. If the CAS matches nothing (a concurrent `DELETE` wrote<br>`cancelled` between the read and the update), re-read the authoritative row so<br>the response never reports `done`/`failed` over a just-written `cancelled`.</p>
+  <div class="tags"><span>async</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-comment">/// Persist agent-core's terminal outcome onto a still-non-terminal backend row,</span>
+<span class="rs-comment">/// CAS-guarded. If the CAS matches nothing (a concurrent `DELETE` wrote</span>
+<span class="rs-comment">/// `cancelled` between the read and the update), re-read the authoritative row so</span>
+<span class="rs-comment">/// the response never reports `done`/`failed` over a just-written `cancelled`.</span>
+<span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-backend-api--src-handlers-user-requests-rs.html#item-fn-reconcile-94">reconcile</a>(
+    state: &amp;<a class="symbol-link rs-type" href="eos-backend-api--src-router-rs.html#item-struct-AppState-110">AppState</a>,
+    request_id: &amp;<span class="rs-type">RequestId</span>,
+    meta: <span class="rs-type">RunMeta</span>,
+    agent_status: <span class="rs-type">Option</span>&lt;<span class="rs-type">RequestStatus</span>&gt;,
+) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">RunMeta</span>, <a class="symbol-link rs-type" href="eos-backend-api.html#item-enum-ApiError-20">ApiError</a>&gt; {
+    <span class="rs-kw">let</span> terminal = <span class="rs-kw">match</span> (meta.status, agent_status) {
+        (<span class="rs-type">BackendRunStatus</span>::<span class="rs-type">Accepted</span> | <span class="rs-type">BackendRunStatus</span>::<span class="rs-type">Running</span>, <span class="rs-type">Some</span>(<span class="rs-type">RequestStatus</span>::<span class="rs-type">Done</span>)) =&gt; {
+            <span class="rs-type">BackendRunStatus</span>::<span class="rs-type">Done</span>
+        }
+        (<span class="rs-type">BackendRunStatus</span>::<span class="rs-type">Accepted</span> | <span class="rs-type">BackendRunStatus</span>::<span class="rs-type">Running</span>, <span class="rs-type">Some</span>(<span class="rs-type">RequestStatus</span>::<span class="rs-type">Failed</span>)) =&gt; {
+            <span class="rs-type">BackendRunStatus</span>::<span class="rs-type">Failed</span>
+        }
+        _ =&gt; <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(meta),
+    };
+    <span class="rs-kw">match</span> state
+        .run_meta
+        .reconcile_terminal(request_id, terminal, <span class="rs-type">UtcDateTime</span>::now())
+        .<span class="rs-kw">await</span>?
+    {
+        <span class="rs-type">Some</span>(updated) =&gt; <span class="rs-type">Ok</span>(updated),
+        <span class="rs-type">None</span> =&gt; state
+            .run_meta
+            .get(request_id)
+            .<span class="rs-kw">await</span>?
+            .ok_or(<a class="symbol-link rs-type" href="eos-backend-api.html#item-enum-ApiError-20">ApiError</a>::<span class="rs-type">NotFound</span>(&quot;user request&quot;)),
+    }
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-backend-api/src/handlers/user_requests.rs:94</p>
+</article><article id="item-fn-run-record-169" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn run_record private fn run_record (meta : RunMeta) -&gt; RunRecord crates/eos-backend-api/src/handlers/user_requests.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>run_record</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="eos-backend-api--src-handlers-user-requests-rs.html#item-fn-run-record-169">run_record</a> (meta : RunMeta) -&gt; RunRecord</code>
+  <p class="docstring">Map a backend run row to its list record. Status resolves from `run_meta`<br>alone (no agent-core row passed), which for a finalized run is authoritative.</p>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-comment">/// Map a backend run row to its list record. Status resolves from `run_meta`</span>
+<span class="rs-comment">/// alone (no agent-core row passed), which for a finalized run is authoritative.</span>
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-backend-api--src-handlers-user-requests-rs.html#item-fn-run-record-169">run_record</a>(meta: <span class="rs-type">RunMeta</span>) -&gt; <span class="rs-type">RunRecord</span> {
+    <span class="rs-type">RunRecord</span> {
+        request_id: meta.request_id,
+        status: resolve_api_status(meta.status, <span class="rs-type">None</span>),
+        label: meta.label,
+        created_at: meta.created_at,
+        finished_at: meta.finished_at,
+    }
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-backend-api/src/handlers/user_requests.rs:169</p>
+</article></div>
+</section></div>
+</main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/eos-backend-api/src/handlers/user_requests.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-comment">//! `/api/user-requests` routes: create, list, detail, cancel, events.</span>
+
+<span class="rs-kw">use</span> axum::extract::{<span class="rs-type">Path</span>, <span class="rs-type">Query</span>, <span class="rs-type">State</span>};
+<span class="rs-kw">use</span> axum::http::<span class="rs-type">StatusCode</span>;
+<span class="rs-kw">use</span> axum::response::<span class="rs-type">IntoResponse</span>;
+<span class="rs-kw">use</span> axum::<span class="rs-type">Json</span>;
+<span class="rs-kw">use</span> serde::<span class="rs-type">Deserialize</span>;
+
+<span class="rs-kw">use</span> eos_backend_runtime::{resolve_api_status, <span class="rs-type">CancelOutcome</span>};
+<span class="rs-kw">use</span> eos_backend_types::{
+    <span class="rs-type">BackendRunStatus</span>, <span class="rs-type">CreateUserRequest</span>, <span class="rs-type">CreateUserRequestResponse</span>, <span class="rs-type">EventRecord</span>, <span class="rs-type">PageResult</span>,
+    <span class="rs-type">RunMeta</span>, <span class="rs-type">RunRecord</span>, <span class="rs-type">UserRequestDetail</span>,
+};
+<span class="rs-kw">use</span> eos_state::<span class="rs-type">RequestStatus</span>;
+<span class="rs-kw">use</span> eos_types::{<span class="rs-type">RequestId</span>, <span class="rs-type">UtcDateTime</span>};
+
+<span class="rs-kw">use</span> <span class="rs-kw">super</span>::{parse_id, <a class="symbol-link rs-type" href="eos-backend-api--src-handlers-mod-rs.html#item-struct-Pagination-21">Pagination</a>, <a class="symbol-link rs-type" href="eos-backend-api--src-handlers-mod-rs.html#item-struct-ValidatedJson-44">ValidatedJson</a>};
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::error::<a class="symbol-link rs-type" href="eos-backend-api.html#item-enum-ApiError-20">ApiError</a>;
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::router::<a class="symbol-link rs-type" href="eos-backend-api--src-router-rs.html#item-struct-AppState-110">AppState</a>;
+
+<span class="rs-comment">/// Default cancellation reason recorded when a client cancels with no reason.</span>
+<span class="rs-kw">const</span> <span class="rs-type">DEFAULT_CANCEL_REASON</span>: &amp;str = &quot;cancelled via api request&quot;;
+
+<span class="rs-comment">/// `POST /api/user-requests` — accept a prompt and launch an agent-core run.</span>
+<span class="rs-comment">/// Returns `202 { request_id }`. v1 accepts only `sandbox_args.sandbox_id`;</span>
+<span class="rs-comment">/// unsupported override fields are rejected by `deny_unknown_fields` at</span>
+<span class="rs-comment">/// deserialize time.</span>
+<span class="rs-kw">pub</span> <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-backend-api--src-handlers-user-requests-rs.html#item-fn-create-24">create</a>(
+    <span class="rs-type">State</span>(state): <span class="rs-type">State</span>&lt;<a class="symbol-link rs-type" href="eos-backend-api--src-router-rs.html#item-struct-AppState-110">AppState</a>&gt;,
+    <a class="symbol-link rs-type" href="eos-backend-api--src-handlers-mod-rs.html#item-struct-ValidatedJson-44">ValidatedJson</a>(request): <a class="symbol-link rs-type" href="eos-backend-api--src-handlers-mod-rs.html#item-struct-ValidatedJson-44">ValidatedJson</a>&lt;<span class="rs-type">CreateUserRequest</span>&gt;,
+) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-kw">impl</span> <span class="rs-type">IntoResponse</span>, <a class="symbol-link rs-type" href="eos-backend-api.html#item-enum-ApiError-20">ApiError</a>&gt; {
+    <span class="rs-kw">let</span> request_id = state.runs.<a class="symbol-link rs-fn" href="eos-backend-api--src-router-rs.html#method-launch-37">launch</a>(request).<span class="rs-kw">await</span>.map_err(|err| {
+        tracing::error!(error = %err, &quot;run launch failed&quot;);
+        <a class="symbol-link rs-type" href="eos-backend-api.html#item-enum-ApiError-20">ApiError</a>::<span class="rs-type">Internal</span>
+    })?;
+    <span class="rs-type">Ok</span>((
+        <span class="rs-type">StatusCode</span>::<span class="rs-type">ACCEPTED</span>,
+        <span class="rs-type">Json</span>(<span class="rs-type">CreateUserRequestResponse</span> { request_id }),
+    ))
+}
+
+<span class="rs-comment">/// `GET /api/user-requests` — list backend run records, newest first. Each row's</span>
+<span class="rs-comment">/// status comes from `run_meta` alone (the reaper finalizes it on completion), so</span>
+<span class="rs-comment">/// listing avoids a per-row agent-core join; the detail route does that join.</span>
+<span class="rs-kw">pub</span> <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-backend-api--src-handlers-sandboxes-rs.html#item-fn-list-16">list</a>(
+    <span class="rs-type">State</span>(state): <span class="rs-type">State</span>&lt;<a class="symbol-link rs-type" href="eos-backend-api--src-router-rs.html#item-struct-AppState-110">AppState</a>&gt;,
+    <span class="rs-type">Query</span>(pagination): <span class="rs-type">Query</span>&lt;<a class="symbol-link rs-type" href="eos-backend-api--src-handlers-mod-rs.html#item-struct-Pagination-21">Pagination</a>&gt;,
+) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Json</span>&lt;<span class="rs-type">PageResult</span>&lt;<span class="rs-type">RunRecord</span>&gt;&gt;, <a class="symbol-link rs-type" href="eos-backend-api.html#item-enum-ApiError-20">ApiError</a>&gt; {
+    <span class="rs-kw">let</span> page = state.run_meta.<a class="symbol-link rs-fn" href="eos-backend-api--src-handlers-sandboxes-rs.html#item-fn-list-16">list</a>(pagination.<a class="symbol-link rs-fn" href="eos-backend-api--src-handlers-mod-rs.html#method-page-29">page</a>()).<span class="rs-kw">await</span>?;
+    <span class="rs-kw">let</span> items = page.items.into_iter().map(run_record).collect();
+    <span class="rs-type">Ok</span>(<span class="rs-type">Json</span>(<span class="rs-type">PageResult</span> {
+        items,
+        total: page.total,
+        limit: page.limit,
+        offset: page.offset,
+    }))
+}
+
+<span class="rs-comment">/// `GET /api/user-requests/{request_id}` — backend lifecycle joined with the</span>
+<span class="rs-comment">/// agent-core request outcome through `RuntimeServices::state_reader()`. When the</span>
+<span class="rs-comment">/// backend row is still non-terminal but agent-core has finished, the resolved</span>
+<span class="rs-comment">/// terminal status is persisted with a CAS guard so the next read is stable</span>
+<span class="rs-comment">/// (and a concurrent cancellation is never clobbered).</span>
+<span class="rs-kw">pub</span> <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-backend-api--src-handlers-sandboxes-rs.html#item-fn-detail-21">detail</a>(
+    <span class="rs-type">State</span>(state): <span class="rs-type">State</span>&lt;<a class="symbol-link rs-type" href="eos-backend-api--src-router-rs.html#item-struct-AppState-110">AppState</a>&gt;,
+    <span class="rs-type">Path</span>(request_id): <span class="rs-type">Path</span>&lt;<span class="rs-type">String</span>&gt;,
+) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Json</span>&lt;<span class="rs-type">UserRequestDetail</span>&gt;, <a class="symbol-link rs-type" href="eos-backend-api.html#item-enum-ApiError-20">ApiError</a>&gt; {
+    <span class="rs-kw">let</span> request_id: <span class="rs-type">RequestId</span> = <a class="symbol-link rs-fn" href="eos-backend-api--src-handlers-mod-rs.html#item-fn-parse-id-38">parse_id</a>(&amp;request_id, &quot;request&quot;)?;
+    <span class="rs-kw">let</span> meta = state
+        .run_meta
+        .get(&amp;request_id)
+        .<span class="rs-kw">await</span>?
+        .ok_or(<a class="symbol-link rs-type" href="eos-backend-api.html#item-enum-ApiError-20">ApiError</a>::<span class="rs-type">NotFound</span>(&quot;user request&quot;))?;
+    <span class="rs-kw">let</span> agent_status = state
+        .reads
+        .requests
+        .get(&amp;request_id)
+        .<span class="rs-kw">await</span>?
+        .map(|request| request.status);
+
+    <span class="rs-kw">let</span> meta = <a class="symbol-link rs-fn" href="eos-backend-api--src-handlers-user-requests-rs.html#item-fn-reconcile-94">reconcile</a>(&amp;state, &amp;request_id, meta, agent_status).<span class="rs-kw">await</span>?;
+    <span class="rs-kw">let</span> status = resolve_api_status(meta.status, agent_status);
+    <span class="rs-type">Ok</span>(<span class="rs-type">Json</span>(<span class="rs-type">UserRequestDetail</span> {
+        request_id: meta.request_id,
+        status,
+        label: meta.label,
+        client_meta: meta.client_meta,
+        created_at: meta.created_at,
+        finished_at: meta.finished_at,
+        cancel_reason: meta.cancel_reason,
+    }))
+}
+
+<span class="rs-comment">/// Persist agent-core's terminal outcome onto a still-non-terminal backend row,</span>
+<span class="rs-comment">/// CAS-guarded. If the CAS matches nothing (a concurrent `DELETE` wrote</span>
+<span class="rs-comment">/// `cancelled` between the read and the update), re-read the authoritative row so</span>
+<span class="rs-comment">/// the response never reports `done`/`failed` over a just-written `cancelled`.</span>
+<span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-backend-api--src-handlers-user-requests-rs.html#item-fn-reconcile-94">reconcile</a>(
+    state: &amp;<a class="symbol-link rs-type" href="eos-backend-api--src-router-rs.html#item-struct-AppState-110">AppState</a>,
+    request_id: &amp;<span class="rs-type">RequestId</span>,
+    meta: <span class="rs-type">RunMeta</span>,
+    agent_status: <span class="rs-type">Option</span>&lt;<span class="rs-type">RequestStatus</span>&gt;,
+) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">RunMeta</span>, <a class="symbol-link rs-type" href="eos-backend-api.html#item-enum-ApiError-20">ApiError</a>&gt; {
+    <span class="rs-kw">let</span> terminal = <span class="rs-kw">match</span> (meta.status, agent_status) {
+        (<span class="rs-type">BackendRunStatus</span>::<span class="rs-type">Accepted</span> | <span class="rs-type">BackendRunStatus</span>::<span class="rs-type">Running</span>, <span class="rs-type">Some</span>(<span class="rs-type">RequestStatus</span>::<span class="rs-type">Done</span>)) =&gt; {
+            <span class="rs-type">BackendRunStatus</span>::<span class="rs-type">Done</span>
+        }
+        (<span class="rs-type">BackendRunStatus</span>::<span class="rs-type">Accepted</span> | <span class="rs-type">BackendRunStatus</span>::<span class="rs-type">Running</span>, <span class="rs-type">Some</span>(<span class="rs-type">RequestStatus</span>::<span class="rs-type">Failed</span>)) =&gt; {
+            <span class="rs-type">BackendRunStatus</span>::<span class="rs-type">Failed</span>
+        }
+        _ =&gt; <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(meta),
+    };
+    <span class="rs-kw">match</span> state
+        .run_meta
+        .reconcile_terminal(request_id, terminal, <span class="rs-type">UtcDateTime</span>::now())
+        .<span class="rs-kw">await</span>?
+    {
+        <span class="rs-type">Some</span>(updated) =&gt; <span class="rs-type">Ok</span>(updated),
+        <span class="rs-type">None</span> =&gt; state
+            .run_meta
+            .get(request_id)
+            .<span class="rs-kw">await</span>?
+            .ok_or(<a class="symbol-link rs-type" href="eos-backend-api.html#item-enum-ApiError-20">ApiError</a>::<span class="rs-type">NotFound</span>(&quot;user request&quot;)),
+    }
+}
+
+<span class="rs-comment">/// `DELETE /api/user-requests/{request_id}` — request backend-local cancellation.</span>
+<span class="rs-comment">/// `202` when an in-flight run was signalled; `409` when the run already</span>
+<span class="rs-comment">/// finalized; `404` when no such run exists.</span>
+<span class="rs-kw">pub</span> <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-backend-api--src-handlers-user-requests-rs.html#item-fn-cancel-127">cancel</a>(
+    <span class="rs-type">State</span>(state): <span class="rs-type">State</span>&lt;<a class="symbol-link rs-type" href="eos-backend-api--src-router-rs.html#item-struct-AppState-110">AppState</a>&gt;,
+    <span class="rs-type">Path</span>(request_id): <span class="rs-type">Path</span>&lt;<span class="rs-type">String</span>&gt;,
+) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-kw">impl</span> <span class="rs-type">IntoResponse</span>, <a class="symbol-link rs-type" href="eos-backend-api.html#item-enum-ApiError-20">ApiError</a>&gt; {
+    <span class="rs-kw">let</span> request_id: <span class="rs-type">RequestId</span> = <a class="symbol-link rs-fn" href="eos-backend-api--src-handlers-mod-rs.html#item-fn-parse-id-38">parse_id</a>(&amp;request_id, &quot;request&quot;)?;
+    <span class="rs-kw">if</span> state.run_meta.get(&amp;request_id).<span class="rs-kw">await</span>?.is_none() {
+        <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-backend-api.html#item-enum-ApiError-20">ApiError</a>::<span class="rs-type">NotFound</span>(&quot;user request&quot;));
+    }
+    <span class="rs-kw">match</span> state.runs.<a class="symbol-link rs-fn" href="eos-backend-api--src-handlers-user-requests-rs.html#item-fn-cancel-127">cancel</a>(&amp;request_id, <span class="rs-type">DEFAULT_CANCEL_REASON</span>) {
+        <span class="rs-type">CancelOutcome</span>::<span class="rs-type">Requested</span> =&gt; <span class="rs-type">Ok</span>(<span class="rs-type">StatusCode</span>::<span class="rs-type">ACCEPTED</span>),
+        <span class="rs-type">CancelOutcome</span>::<span class="rs-type">NotFound</span> =&gt; <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-backend-api.html#item-enum-ApiError-20">ApiError</a>::<span class="rs-type">Conflict</span>(&quot;run already finished&quot;.to_owned())),
+    }
+}
+
+<span class="rs-comment">/// `?after_seq=` query for the events replay route.</span>
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Deserialize</span>)]
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-backend-api--src-handlers-agent-runs-rs.html#item-struct-EventsQuery-29">EventsQuery</a> {
+    after_seq: <span class="rs-type">Option</span>&lt;i64&gt;,
+}
+
+<span class="rs-comment">/// `GET /api/user-requests/{request_id}/events` — replay persisted milestone</span>
+<span class="rs-comment">/// events from `event_log` (those with `seq &gt; after_seq`), including any</span>
+<span class="rs-comment">/// `event_stream_gap` markers so dropped milestones stay visible.</span>
+<span class="rs-kw">pub</span> <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-backend-api--src-handlers-agent-runs-rs.html#item-fn-events-62">events</a>(
+    <span class="rs-type">State</span>(state): <span class="rs-type">State</span>&lt;<a class="symbol-link rs-type" href="eos-backend-api--src-router-rs.html#item-struct-AppState-110">AppState</a>&gt;,
+    <span class="rs-type">Path</span>(request_id): <span class="rs-type">Path</span>&lt;<span class="rs-type">String</span>&gt;,
+    <span class="rs-type">Query</span>(query): <span class="rs-type">Query</span>&lt;<a class="symbol-link rs-type" href="eos-backend-api--src-handlers-agent-runs-rs.html#item-struct-EventsQuery-29">EventsQuery</a>&gt;,
+) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Json</span>&lt;<span class="rs-type">Vec</span>&lt;<span class="rs-type">EventRecord</span>&gt;&gt;, <a class="symbol-link rs-type" href="eos-backend-api.html#item-enum-ApiError-20">ApiError</a>&gt; {
+    <span class="rs-kw">let</span> request_id: <span class="rs-type">RequestId</span> = <a class="symbol-link rs-fn" href="eos-backend-api--src-handlers-mod-rs.html#item-fn-parse-id-38">parse_id</a>(&amp;request_id, &quot;request&quot;)?;
+    <span class="rs-kw">if</span> state.run_meta.get(&amp;request_id).<span class="rs-kw">await</span>?.is_none() {
+        <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-backend-api.html#item-enum-ApiError-20">ApiError</a>::<span class="rs-type">NotFound</span>(&quot;user request&quot;));
+    }
+    <span class="rs-kw">let</span> events = state
+        .event_log
+        .list_since(&amp;request_id, query.after_seq.unwrap_or(0))
+        .<span class="rs-kw">await</span>?;
+    <span class="rs-type">Ok</span>(<span class="rs-type">Json</span>(events))
+}
+
+<span class="rs-comment">/// Map a backend run row to its list record. Status resolves from `run_meta`</span>
+<span class="rs-comment">/// alone (no agent-core row passed), which for a finalized run is authoritative.</span>
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-backend-api--src-handlers-user-requests-rs.html#item-fn-run-record-169">run_record</a>(meta: <span class="rs-type">RunMeta</span>) -&gt; <span class="rs-type">RunRecord</span> {
+    <span class="rs-type">RunRecord</span> {
+        request_id: meta.request_id,
+        status: resolve_api_status(meta.status, <span class="rs-type">None</span>),
+        label: meta.label,
+        created_at: meta.created_at,
+        finished_at: meta.finished_at,
+    }
+}
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
+  <script src="../assets/inventory.js"></script>
+</body>
+</html>

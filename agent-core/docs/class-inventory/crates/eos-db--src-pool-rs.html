@@ -8,8 +8,16 @@
 </head>
 <body>
   <header>
-    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
-    <h1>eos-db File Inventory</h1>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>eos-db File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS/agent-core &amp;&amp; cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
   </header>
   <a class="back-link" href="../index.html">agent-core</a>
 <section class="summary">
@@ -47,39 +55,217 @@
       <span>0 methods</span>
     </div>
   </div>
-  <div class="items"><div class="group-label">Standalone Functions</div><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn ensure_sqlite_url pub(crate) pub(crate) fn ensure_sqlite_url (url : &amp; str) -&gt; Result &lt; () , DbError &gt; crates/eos-db/src/pool.rs  ">
+  <div class="items"><div class="group-label">Standalone Functions</div><article id="item-fn-ensure-sqlite-url-14" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn ensure_sqlite_url pub(crate) pub(crate) fn ensure_sqlite_url (url : &amp; str) -&gt; Result &lt; () , DbError &gt; crates/eos-db/src/pool.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>ensure_sqlite_url</h3>
     <span class="visibility">pub(crate)</span>
   </div>
-  <code class="signature">pub(crate) fn ensure_sqlite_url (url : &amp; str) -&gt; Result &lt; () , DbError &gt;</code>
+  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-db--src-pool-rs.html#item-fn-ensure-sqlite-url-14">ensure_sqlite_url</a> (url : &amp; str) -&gt; Result &lt; () , <a class="symbol-link" href="eos-db--src-error-rs.html#item-enum-DbError-5">DbError</a> &gt;</code>
+  <p class="docstring">Defence-in-depth guard: reject a network database url (GC-eos-db-04). The<br>primary fail-fast lives in `eos-config::DatabaseUrl::parse`; a `DatabaseConfig`<br>therefore cannot normally carry a non-`SQLite` url, but this re-check keeps the<br>invariant at the pool boundary too.</p>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-comment">/// Defence-in-depth guard: reject a network database url (GC-eos-db-04). The</span>
+<span class="rs-comment">/// primary fail-fast lives in `eos-config::DatabaseUrl::parse`; a `DatabaseConfig`</span>
+<span class="rs-comment">/// therefore cannot normally carry a non-`SQLite` url, but this re-check keeps the</span>
+<span class="rs-comment">/// invariant at the pool boundary too.</span>
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-db--src-pool-rs.html#item-fn-ensure-sqlite-url-14">ensure_sqlite_url</a>(url: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-db--src-error-rs.html#item-enum-DbError-5">DbError</a>&gt; {
+    <span class="rs-kw">let</span> lower = url.to_ascii_lowercase();
+    <span class="rs-kw">if</span> lower.starts_with(&quot;postgres:<span class="rs-comment">//")</span>
+        || lower.starts_with(&quot;postgresql:<span class="rs-comment">//")</span>
+        || lower.starts_with(&quot;mysql:<span class="rs-comment">//")</span>
+    {
+        <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-db--src-error-rs.html#item-enum-DbError-5">DbError</a>::<span class="rs-type">PostgresRejected</span>);
+    }
+    <span class="rs-type">Ok</span>(())
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-db/src/pool.rs:14</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn open_pool pub(crate) pub(crate) async fn open_pool (config : &amp; DatabaseConfig) -&gt; Result &lt; SqlitePool , DbError &gt; crates/eos-db/src/pool.rs  ">
+</article><article id="item-fn-open-pool-29" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn open_pool pub(crate) pub(crate) async fn open_pool (config : &amp; DatabaseConfig) -&gt; Result &lt; SqlitePool , DbError &gt; crates/eos-db/src/pool.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>open_pool</h3>
     <span class="visibility">pub(crate)</span>
   </div>
-  <code class="signature">pub(crate) async fn open_pool (config : &amp; DatabaseConfig) -&gt; Result &lt; SqlitePool , DbError &gt;</code>
+  <code class="signature">pub(crate) async fn <a class="symbol-link" href="eos-db--src-pool-rs.html#item-fn-open-pool-29">open_pool</a> (config : &amp; DatabaseConfig) -&gt; Result &lt; SqlitePool , <a class="symbol-link" href="eos-db--src-error-rs.html#item-enum-DbError-5">DbError</a> &gt;</code>
+  <p class="docstring">Open the `SQLite` pool: reject Postgres, set WAL / foreign-keys / busy-timeout<br>PRAGMAs on every connection, create the parent directory for a file-backed<br>db, and run `migrations/`.</p>
   <div class="tags"><span>async</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-comment">/// Open the `SQLite` pool: reject Postgres, set WAL / foreign-keys / busy-timeout</span>
+<span class="rs-comment">/// PRAGMAs on every connection, create the parent directory for a file-backed</span>
+<span class="rs-comment">/// db, and run `migrations/`.</span>
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-db--src-pool-rs.html#item-fn-open-pool-29">open_pool</a>(config: &amp;<span class="rs-type">DatabaseConfig</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">SqlitePool</span>, <a class="symbol-link rs-type" href="eos-db--src-error-rs.html#item-enum-DbError-5">DbError</a>&gt; {
+    <span class="rs-kw">let</span> url = config.url.as_str();
+    <a class="symbol-link rs-fn" href="eos-db--src-pool-rs.html#item-fn-ensure-sqlite-url-14">ensure_sqlite_url</a>(url)?;
+
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> options = <span class="rs-kw">if</span> url.starts_with(&quot;sqlite:&quot;) {
+        <span class="rs-type">SqliteConnectOptions</span>::from_str(url)?
+    } <span class="rs-kw">else</span> {
+        <span class="rs-type">SqliteConnectOptions</span>::<a class="symbol-link rs-fn" href="eos-db--src-model-registry-rs.html#method-new-64">new</a>().filename(url)
+    };
+    options = options
+        .create_if_missing(<span class="rs-kw">true</span>)
+        .foreign_keys(config.foreign_keys)
+        .busy_timeout(<span class="rs-type">Duration</span>::from_millis(config.busy_timeout_ms));
+    <span class="rs-kw">if</span> config.wal {
+        options = options.journal_mode(<span class="rs-type">SqliteJournalMode</span>::<span class="rs-type">Wal</span>);
+    }
+
+    <span class="rs-comment">// Mirror the Rust `mkdir(parents=True, exist_ok=True)` for non-:memory: dbs.</span>
+    <span class="rs-kw">let</span> filename = options.get_filename().to_path_buf();
+    <span class="rs-kw">if</span> filename != std::path::<span class="rs-type">Path</span>::<a class="symbol-link rs-fn" href="eos-db--src-model-registry-rs.html#method-new-64">new</a>(&quot;:memory:&quot;) {
+        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(parent) = filename.parent() {
+            <span class="rs-kw">if</span> !parent.as_os_str().is_empty() {
+                std::fs::create_dir_all(parent)?;
+            }
+        }
+    }
+
+    <span class="rs-kw">let</span> pool = <span class="rs-type">SqlitePoolOptions</span>::<a class="symbol-link rs-fn" href="eos-db--src-model-registry-rs.html#method-new-64">new</a>()
+        .max_connections(config.pool_size)
+        .connect_with(options)
+        .<span class="rs-kw">await</span>?;
+    sqlx::migrate!().run(&amp;pool).<span class="rs-kw">await</span>?;
+    <span class="rs-type">Ok</span>(pool)
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-db/src/pool.rs:29</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn postgres_url_rejected private fn postgres_url_rejected () crates/eos-db/src/pool.rs  ">
+</article><article id="item-fn-postgres-url-rejected-73" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn postgres_url_rejected private fn postgres_url_rejected () crates/eos-db/src/pool.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>postgres_url_rejected</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn postgres_url_rejected ()</code>
-  <div class="tags"></div>
+  <code class="signature">fn <a class="symbol-link" href="eos-db--src-pool-rs.html#item-fn-postgres-url-rejected-73">postgres_url_rejected</a> ()</code>
+  <div class="tags"><span>test</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-db--src-pool-rs.html#item-fn-postgres-url-rejected-73">postgres_url_rejected</a>() {
+        assert!(matches!(
+            <a class="symbol-link rs-fn" href="eos-db--src-pool-rs.html#item-fn-ensure-sqlite-url-14">ensure_sqlite_url</a>(&quot;postgresql:<span class="rs-comment">//user:pw@db.example.com/app"),</span>
+            <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-db--src-error-rs.html#item-enum-DbError-5">DbError</a>::<span class="rs-type">PostgresRejected</span>)
+        ));
+        assert!(matches!(
+            <a class="symbol-link rs-fn" href="eos-db--src-pool-rs.html#item-fn-ensure-sqlite-url-14">ensure_sqlite_url</a>(&quot;postgres:<span class="rs-comment">//db/app"),</span>
+            <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-db--src-error-rs.html#item-enum-DbError-5">DbError</a>::<span class="rs-type">PostgresRejected</span>)
+        ));
+        assert!(matches!(
+            <a class="symbol-link rs-fn" href="eos-db--src-pool-rs.html#item-fn-ensure-sqlite-url-14">ensure_sqlite_url</a>(&quot;mysql:<span class="rs-comment">//host/app"),</span>
+            <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-db--src-error-rs.html#item-enum-DbError-5">DbError</a>::<span class="rs-type">PostgresRejected</span>)
+        ));
+        assert!(<a class="symbol-link rs-fn" href="eos-db--src-pool-rs.html#item-fn-ensure-sqlite-url-14">ensure_sqlite_url</a>(&quot;sqlite:<span class="rs-comment">///./x.db").is_ok());</span>
+    }
+</code></pre>
+</details>
 
   <p class="source">crates/eos-db/src/pool.rs:73</p>
 </article></div>
 </section></div>
 </main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/eos-db/src/pool.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-comment">//! `SqlitePool` builder: reject non-`SQLite` urls, apply PRAGMA discipline, create</span>
+<span class="rs-comment">//! the parent directory, and run the embedded migrations.</span>
+
+<span class="rs-kw">use</span> std::str::<span class="rs-type">FromStr</span>;
+<span class="rs-kw">use</span> std::time::<span class="rs-type">Duration</span>;
+
+<span class="rs-kw">use</span> sqlx::sqlite::{<span class="rs-type">SqliteConnectOptions</span>, <span class="rs-type">SqliteJournalMode</span>, <span class="rs-type">SqlitePoolOptions</span>};
+<span class="rs-kw">use</span> sqlx::<span class="rs-type">SqlitePool</span>;
+
+<span class="rs-kw">use</span> eos_config::<span class="rs-type">DatabaseConfig</span>;
+
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::error::<a class="symbol-link rs-type" href="eos-db--src-error-rs.html#item-enum-DbError-5">DbError</a>;
+
+<span class="rs-comment">/// Defence-in-depth guard: reject a network database url (GC-eos-db-04). The</span>
+<span class="rs-comment">/// primary fail-fast lives in `eos-config::DatabaseUrl::parse`; a `DatabaseConfig`</span>
+<span class="rs-comment">/// therefore cannot normally carry a non-`SQLite` url, but this re-check keeps the</span>
+<span class="rs-comment">/// invariant at the pool boundary too.</span>
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-db--src-pool-rs.html#item-fn-ensure-sqlite-url-14">ensure_sqlite_url</a>(url: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-db--src-error-rs.html#item-enum-DbError-5">DbError</a>&gt; {
+    <span class="rs-kw">let</span> lower = url.to_ascii_lowercase();
+    <span class="rs-kw">if</span> lower.starts_with(&quot;postgres:<span class="rs-comment">//")</span>
+        || lower.starts_with(&quot;postgresql:<span class="rs-comment">//")</span>
+        || lower.starts_with(&quot;mysql:<span class="rs-comment">//")</span>
+    {
+        <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-db--src-error-rs.html#item-enum-DbError-5">DbError</a>::<span class="rs-type">PostgresRejected</span>);
+    }
+    <span class="rs-type">Ok</span>(())
+}
+
+<span class="rs-comment">/// Open the `SQLite` pool: reject Postgres, set WAL / foreign-keys / busy-timeout</span>
+<span class="rs-comment">/// PRAGMAs on every connection, create the parent directory for a file-backed</span>
+<span class="rs-comment">/// db, and run `migrations/`.</span>
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-db--src-pool-rs.html#item-fn-open-pool-29">open_pool</a>(config: &amp;<span class="rs-type">DatabaseConfig</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">SqlitePool</span>, <a class="symbol-link rs-type" href="eos-db--src-error-rs.html#item-enum-DbError-5">DbError</a>&gt; {
+    <span class="rs-kw">let</span> url = config.url.as_str();
+    <a class="symbol-link rs-fn" href="eos-db--src-pool-rs.html#item-fn-ensure-sqlite-url-14">ensure_sqlite_url</a>(url)?;
+
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> options = <span class="rs-kw">if</span> url.starts_with(&quot;sqlite:&quot;) {
+        <span class="rs-type">SqliteConnectOptions</span>::from_str(url)?
+    } <span class="rs-kw">else</span> {
+        <span class="rs-type">SqliteConnectOptions</span>::<a class="symbol-link rs-fn" href="eos-db--src-model-registry-rs.html#method-new-64">new</a>().filename(url)
+    };
+    options = options
+        .create_if_missing(<span class="rs-kw">true</span>)
+        .foreign_keys(config.foreign_keys)
+        .busy_timeout(<span class="rs-type">Duration</span>::from_millis(config.busy_timeout_ms));
+    <span class="rs-kw">if</span> config.wal {
+        options = options.journal_mode(<span class="rs-type">SqliteJournalMode</span>::<span class="rs-type">Wal</span>);
+    }
+
+    <span class="rs-comment">// Mirror the Rust `mkdir(parents=True, exist_ok=True)` for non-:memory: dbs.</span>
+    <span class="rs-kw">let</span> filename = options.get_filename().to_path_buf();
+    <span class="rs-kw">if</span> filename != std::path::<span class="rs-type">Path</span>::<a class="symbol-link rs-fn" href="eos-db--src-model-registry-rs.html#method-new-64">new</a>(&quot;:memory:&quot;) {
+        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(parent) = filename.parent() {
+            <span class="rs-kw">if</span> !parent.as_os_str().is_empty() {
+                std::fs::create_dir_all(parent)?;
+            }
+        }
+    }
+
+    <span class="rs-kw">let</span> pool = <span class="rs-type">SqlitePoolOptions</span>::<a class="symbol-link rs-fn" href="eos-db--src-model-registry-rs.html#method-new-64">new</a>()
+        .max_connections(config.pool_size)
+        .connect_with(options)
+        .<span class="rs-kw">await</span>?;
+    sqlx::migrate!().run(&amp;pool).<span class="rs-kw">await</span>?;
+    <span class="rs-type">Ok</span>(pool)
+}
+
+#[cfg(test)]
+<span class="rs-kw">mod</span> tests {
+    <span class="rs-kw">use</span> <span class="rs-kw">super</span>::*;
+
+    <span class="rs-comment">// AC-eos-db-06: a non-`SQLite` url is rejected before any connection. The</span>
+    <span class="rs-comment">// config layer also rejects it, so this guards the pool boundary directly.</span>
+    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-db--src-pool-rs.html#item-fn-postgres-url-rejected-73">postgres_url_rejected</a>() {
+        assert!(matches!(
+            <a class="symbol-link rs-fn" href="eos-db--src-pool-rs.html#item-fn-ensure-sqlite-url-14">ensure_sqlite_url</a>(&quot;postgresql:<span class="rs-comment">//user:pw@db.example.com/app"),</span>
+            <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-db--src-error-rs.html#item-enum-DbError-5">DbError</a>::<span class="rs-type">PostgresRejected</span>)
+        ));
+        assert!(matches!(
+            <a class="symbol-link rs-fn" href="eos-db--src-pool-rs.html#item-fn-ensure-sqlite-url-14">ensure_sqlite_url</a>(&quot;postgres:<span class="rs-comment">//db/app"),</span>
+            <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-db--src-error-rs.html#item-enum-DbError-5">DbError</a>::<span class="rs-type">PostgresRejected</span>)
+        ));
+        assert!(matches!(
+            <a class="symbol-link rs-fn" href="eos-db--src-pool-rs.html#item-fn-ensure-sqlite-url-14">ensure_sqlite_url</a>(&quot;mysql:<span class="rs-comment">//host/app"),</span>
+            <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-db--src-error-rs.html#item-enum-DbError-5">DbError</a>::<span class="rs-type">PostgresRejected</span>)
+        ));
+        assert!(<a class="symbol-link rs-fn" href="eos-db--src-pool-rs.html#item-fn-ensure-sqlite-url-14">ensure_sqlite_url</a>(&quot;sqlite:<span class="rs-comment">///./x.db").is_ok());</span>
+    }
+}
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
   <script src="../assets/inventory.js"></script>
 </body>
 </html>

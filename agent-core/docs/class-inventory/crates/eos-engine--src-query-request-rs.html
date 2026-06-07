@@ -8,15 +8,23 @@
 </head>
 <body>
   <header>
-    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
-    <h1>eos-engine File Inventory</h1>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>eos-engine File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS/agent-core &amp;&amp; cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
   </header>
   <a class="back-link" href="../index.html">agent-core</a>
 <section class="summary">
-  <div><b>43</b><span>modules</span></div>
-  <div><b>319</b><span>items</span></div>
-  <div><b>259</b><span>fields</span></div>
-  <div><b>179</b><span>methods</span></div>
+  <div><b>47</b><span>modules</span></div>
+  <div><b>314</b><span>items</span></div>
+  <div><b>272</b><span>fields</span></div>
+  <div><b>187</b><span>methods</span></div>
 </section>
 <section class="toolbar">
   <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
@@ -32,7 +40,7 @@
   </select>
 </section>
 <main class="crate-layout">
-  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><span class="folder">agent</span><ul class="file-tree"><li><a class="file-link" href="eos-engine.html"><span>factory.rs</span><small>3/9</small></a></li><li><a class="file-link" href="eos-engine--src-agent-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li></ul></li><li><span class="folder">background</span><ul class="file-tree"><li><a class="file-link" href="eos-engine--src-background-command-session-rs.html"><span>command_session.rs</span><small>1/10</small></a></li><li><a class="file-link" href="eos-engine--src-background-factory-rs.html"><span>factory.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-engine--src-background-handle-rs.html"><span>handle.rs</span><small>5/4</small></a></li><li><a class="file-link" href="eos-engine--src-background-heartbeat-rs.html"><span>heartbeat.rs</span><small>1/5</small></a></li><li><a class="file-link" href="eos-engine--src-background-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-engine--src-background-parent-exit-rs.html"><span>parent_exit.rs</span><small>2/3</small></a></li><li><a class="file-link" href="eos-engine--src-background-subagent-rs.html"><span>subagent.rs</span><small>2/24</small></a></li><li><a class="file-link" href="eos-engine--src-background-supervisor-rs.html"><span>supervisor.rs</span><small>5/7</small></a></li></ul></li><li><a class="file-link" href="eos-engine--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><span class="folder">notifications</span><ul class="file-tree"><li><a class="file-link" href="eos-engine--src-notifications-mod-rs.html"><span>mod.rs</span><small>2/3</small></a></li><li><span class="folder">rules</span><ul class="file-tree"><li><a class="file-link" href="eos-engine--src-notifications-rules-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-engine--src-notifications-rules-terminal-reminder-rs.html"><span>terminal_reminder.rs</span><small>1/1</small></a></li><li><a class="file-link" href="eos-engine--src-notifications-rules-tool-budget-rs.html"><span>tool_budget.rs</span><small>1/0</small></a></li></ul></li></ul></li><li><span class="folder">prompt</span><ul class="file-tree"><li><a class="file-link" href="eos-engine--src-prompt-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-engine--src-prompt-runtime-prompt-rs.html"><span>runtime_prompt.rs</span><small>0/1</small></a></li></ul></li><li><span class="folder">query</span><ul class="file-tree"><li><a class="file-link" href="eos-engine--src-query-context-rs.html"><span>context.rs</span><small>3/0</small></a></li><li><a class="file-link" href="eos-engine--src-query-loop--rs.html"><span>loop_.rs</span><small>0/12</small></a></li><li><a class="file-link" href="eos-engine--src-query-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-engine--src-query-provider-messages-rs.html"><span>provider_messages.rs</span><small>0/18</small></a></li><li><a class="file-link" href="eos-engine--src-query-provider-source-rs.html"><span>provider_source.rs</span><small>2/4</small></a></li><li><a class="file-link active" href="eos-engine--src-query-request-rs.html"><span>request.rs</span><small>1/3</small></a></li></ul></li><li><span class="folder">runtime</span><ul class="file-tree"><li><a class="file-link" href="eos-engine--src-runtime-advisor-rs.html"><span>advisor.rs</span><small>0/24</small></a></li><li><a class="file-link" href="eos-engine--src-runtime-agent-loop-rs.html"><span>agent_loop.rs</span><small>0/1</small></a></li><li><a class="file-link" href="eos-engine--src-runtime-cancel-rs.html"><span>cancel.rs</span><small>1/1</small></a></li><li><a class="file-link" href="eos-engine--src-runtime-control-rs.html"><span>control.rs</span><small>7/0</small></a></li><li><a class="file-link" href="eos-engine--src-runtime-factory-rs.html"><span>factory.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-engine--src-runtime-foreground-rs.html"><span>foreground.rs</span><small>4/0</small></a></li><li><a class="file-link" href="eos-engine--src-runtime-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-engine--src-runtime-persistence-rs.html"><span>persistence.rs</span><small>0/2</small></a></li><li><a class="file-link" href="eos-engine--src-runtime-registry-rs.html"><span>registry.rs</span><small>3/0</small></a></li><li><a class="file-link" href="eos-engine--src-runtime-setup-rs.html"><span>setup.rs</span><small>2/2</small></a></li><li><a class="file-link" href="eos-engine--src-runtime-types-rs.html"><span>types.rs</span><small>3/0</small></a></li></ul></li><li><span class="folder">support</span><ul class="file-tree"><li><a class="file-link" href="eos-engine--src-support-error-rs.html"><span>error.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-engine--src-support-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li></ul></li><li><span class="folder">telemetry</span><ul class="file-tree"><li><a class="file-link" href="eos-engine--src-telemetry-agent-run-audit-rs.html"><span>agent_run_audit.rs</span><small>3/8</small></a></li><li><a class="file-link" href="eos-engine--src-telemetry-events-rs.html"><span>events.rs</span><small>2/2</small></a></li><li><a class="file-link" href="eos-engine--src-telemetry-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-engine--src-telemetry-prompt-report-rs.html"><span>prompt_report.rs</span><small>6/2</small></a></li><li><a class="file-link" href="eos-engine--src-telemetry-resource-sample-rs.html"><span>resource_sample.rs</span><small>1/15</small></a></li></ul></li><li><span class="folder">tool_call</span><ul class="file-tree"><li><a class="file-link" href="eos-engine--src-tool-call-dispatch-rs.html"><span>dispatch.rs</span><small>3/15</small></a></li><li><a class="file-link" href="eos-engine--src-tool-call-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li></ul></li></ul></li></ul></nav>
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><span class="folder">agent</span><ul class="file-tree"><li><a class="file-link" href="eos-engine.html"><span>factory.rs</span><small>3/9</small></a></li><li><a class="file-link" href="eos-engine--src-agent-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li></ul></li><li><span class="folder">background</span><ul class="file-tree"><li><a class="file-link" href="eos-engine--src-background-command-session-rs.html"><span>command_session.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-engine--src-background-factory-rs.html"><span>factory.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-engine--src-background-handle-rs.html"><span>handle.rs</span><small>6/5</small></a></li><li><span class="folder">lanes</span><ul class="file-tree"><li><a class="file-link" href="eos-engine--src-background-lanes-command-session-rs.html"><span>command_session.rs</span><small>4/3</small></a></li><li><a class="file-link" href="eos-engine--src-background-lanes-mod-rs.html"><span>mod.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-engine--src-background-lanes-subagent-rs.html"><span>subagent.rs</span><small>3/0</small></a></li><li><a class="file-link" href="eos-engine--src-background-lanes-workflow-rs.html"><span>workflow.rs</span><small>3/0</small></a></li></ul></li><li><a class="file-link" href="eos-engine--src-background-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-engine--src-background-notifications-rs.html"><span>notifications.rs</span><small>2/2</small></a></li><li><a class="file-link" href="eos-engine--src-background-parent-exit-rs.html"><span>parent_exit.rs</span><small>2/3</small></a></li><li><a class="file-link" href="eos-engine--src-background-subagent-rs.html"><span>subagent.rs</span><small>2/23</small></a></li><li><a class="file-link" href="eos-engine--src-background-supervisor-rs.html"><span>supervisor.rs</span><small>1/0</small></a></li></ul></li><li><a class="file-link" href="eos-engine--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><span class="folder">notifications</span><ul class="file-tree"><li><a class="file-link" href="eos-engine--src-notifications-mod-rs.html"><span>mod.rs</span><small>2/3</small></a></li><li><span class="folder">rules</span><ul class="file-tree"><li><a class="file-link" href="eos-engine--src-notifications-rules-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-engine--src-notifications-rules-terminal-reminder-rs.html"><span>terminal_reminder.rs</span><small>1/1</small></a></li><li><a class="file-link" href="eos-engine--src-notifications-rules-tool-budget-rs.html"><span>tool_budget.rs</span><small>1/0</small></a></li></ul></li></ul></li><li><span class="folder">prompt</span><ul class="file-tree"><li><a class="file-link" href="eos-engine--src-prompt-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-engine--src-prompt-runtime-prompt-rs.html"><span>runtime_prompt.rs</span><small>0/1</small></a></li></ul></li><li><span class="folder">query</span><ul class="file-tree"><li><a class="file-link" href="eos-engine--src-query-context-rs.html"><span>context.rs</span><small>3/0</small></a></li><li><a class="file-link" href="eos-engine--src-query-loop--rs.html"><span>loop_.rs</span><small>0/12</small></a></li><li><a class="file-link" href="eos-engine--src-query-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-engine--src-query-provider-messages-rs.html"><span>provider_messages.rs</span><small>0/18</small></a></li><li><a class="file-link" href="eos-engine--src-query-provider-source-rs.html"><span>provider_source.rs</span><small>2/4</small></a></li><li><a class="file-link active" href="eos-engine--src-query-request-rs.html"><span>request.rs</span><small>1/3</small></a></li></ul></li><li><span class="folder">runtime</span><ul class="file-tree"><li><a class="file-link" href="eos-engine--src-runtime-advisor-rs.html"><span>advisor.rs</span><small>0/24</small></a></li><li><a class="file-link" href="eos-engine--src-runtime-agent-loop-rs.html"><span>agent_loop.rs</span><small>0/1</small></a></li><li><a class="file-link" href="eos-engine--src-runtime-cancel-rs.html"><span>cancel.rs</span><small>1/1</small></a></li><li><a class="file-link" href="eos-engine--src-runtime-control-rs.html"><span>control.rs</span><small>6/0</small></a></li><li><a class="file-link" href="eos-engine--src-runtime-factory-rs.html"><span>factory.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-engine--src-runtime-foreground-rs.html"><span>foreground.rs</span><small>4/0</small></a></li><li><a class="file-link" href="eos-engine--src-runtime-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-engine--src-runtime-persistence-rs.html"><span>persistence.rs</span><small>0/2</small></a></li><li><a class="file-link" href="eos-engine--src-runtime-registry-rs.html"><span>registry.rs</span><small>3/0</small></a></li><li><a class="file-link" href="eos-engine--src-runtime-setup-rs.html"><span>setup.rs</span><small>2/2</small></a></li><li><a class="file-link" href="eos-engine--src-runtime-types-rs.html"><span>types.rs</span><small>3/0</small></a></li></ul></li><li><span class="folder">support</span><ul class="file-tree"><li><a class="file-link" href="eos-engine--src-support-error-rs.html"><span>error.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-engine--src-support-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li></ul></li><li><span class="folder">telemetry</span><ul class="file-tree"><li><a class="file-link" href="eos-engine--src-telemetry-agent-run-audit-rs.html"><span>agent_run_audit.rs</span><small>3/8</small></a></li><li><a class="file-link" href="eos-engine--src-telemetry-events-rs.html"><span>events.rs</span><small>2/2</small></a></li><li><a class="file-link" href="eos-engine--src-telemetry-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-engine--src-telemetry-prompt-report-rs.html"><span>prompt_report.rs</span><small>6/2</small></a></li><li><a class="file-link" href="eos-engine--src-telemetry-resource-sample-rs.html"><span>resource_sample.rs</span><small>1/15</small></a></li></ul></li><li><span class="folder">tool_call</span><ul class="file-tree"><li><a class="file-link" href="eos-engine--src-tool-call-dispatch-rs.html"><span>dispatch.rs</span><small>3/15</small></a></li><li><a class="file-link" href="eos-engine--src-tool-call-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li></ul></li></ul></li></ul></nav>
   <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="query::request crates/eos-engine/src/query/request.rs QueryRunRequest build_query_run_request context build_request_uses_provider_safe_history">
   <div class="module-head">
     <div>
@@ -47,49 +55,248 @@
       <span>0 methods</span>
     </div>
   </div>
-  <div class="items"><div class="group-label">File-Owned Types</div><article class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct QueryRunRequest pub pub struct QueryRunRequest crates/eos-engine/src/query/request.rs request LlmRequest prompt_report_seq u64 ">
+  <div class="items"><div class="group-label">File-Owned Types</div><article id="item-struct-QueryRunRequest-7" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct QueryRunRequest pub pub struct QueryRunRequest crates/eos-engine/src/query/request.rs request LlmRequest prompt_report_seq u64 ">
   <div class="item-head">
     <span class="kind">struct</span>
     <h3>QueryRunRequest</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub struct QueryRunRequest</code>
-  <div class="tags"><span>dto</span></div>
+  <code class="signature">pub struct <a class="symbol-link" href="eos-engine--src-query-request-rs.html#item-struct-QueryRunRequest-7">QueryRunRequest</a></code>
+  <p class="docstring">Built provider request plus the prompt-report sequence for the turn.</p>
+  <div class="tags"><span>derive: Clone</span><span>derive: Debug</span><span>derive: Eq</span><span>derive: PartialEq</span><span>dto</span></div>
   <h4>Fields</h4><table><tbody><tr><td>pub</td><td>request</td><td><code>LlmRequest</code></td></tr><tr><td>pub</td><td>prompt_report_seq</td><td><code>u64</code></td></tr></tbody></table>
+
   <p class="source">crates/eos-engine/src/query/request.rs:7</p>
-</article><div class="group-label">Standalone Functions</div><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn build_query_run_request pub pub async fn build_query_run_request (ctx : &amp; mut QueryContext , messages : &amp; [Message] ,) -&gt; QueryRunRequest crates/eos-engine/src/query/request.rs  ">
+</article><div class="group-label">Standalone Functions</div><article id="item-fn-build-query-run-request-16" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn build_query_run_request pub pub async fn build_query_run_request (ctx : &amp; mut QueryContext , messages : &amp; [Message] ,) -&gt; QueryRunRequest crates/eos-engine/src/query/request.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>build_query_run_request</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub async fn build_query_run_request (ctx : &amp; mut QueryContext , messages : &amp; [Message] ,) -&gt; QueryRunRequest</code>
+  <code class="signature">pub async fn <a class="symbol-link" href="eos-engine--src-query-request-rs.html#item-fn-build-query-run-request-16">build_query_run_request</a> (ctx : &amp; mut <a class="symbol-link" href="eos-engine--src-query-context-rs.html#item-struct-QueryContext-46">QueryContext</a> , messages : &amp; [Message] ,) -&gt; <a class="symbol-link" href="eos-engine--src-query-request-rs.html#item-struct-QueryRunRequest-7">QueryRunRequest</a></code>
+  <p class="docstring">Build the provider request for one loop turn.</p>
   <div class="tags"><span>async</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-comment">/// Build the provider request for one loop turn.</span>
+<span class="rs-kw">pub</span> <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-query-request-rs.html#item-fn-build-query-run-request-16">build_query_run_request</a>(
+    ctx: &amp;<span class="rs-kw">mut</span> <a class="symbol-link rs-type" href="eos-engine--src-query-context-rs.html#item-struct-QueryContext-46">QueryContext</a>,
+    messages: &amp;[<span class="rs-type">Message</span>],
+) -&gt; <a class="symbol-link rs-type" href="eos-engine--src-query-request-rs.html#item-struct-QueryRunRequest-7">QueryRunRequest</a> {
+    <span class="rs-kw">let</span> seq = <span class="rs-kw">match</span> &amp;ctx.prompt_report {
+        <span class="rs-type">Some</span>(recorder) =&gt; recorder.<a class="symbol-link rs-fn" href="eos-engine--src-telemetry-prompt-report-rs.html#method-next-seq-89">next_seq</a>().<span class="rs-kw">await</span>,
+        <span class="rs-type">None</span> =&gt; 0,
+    };
+    <span class="rs-kw">let</span> provider_messages = <a class="symbol-link rs-fn" href="eos-engine--src-query-provider-messages-rs.html#item-fn-build-provider-messages-8">build_provider_messages</a>(messages);
+    <span class="rs-kw">let</span> request = <span class="rs-type">LlmRequest</span>::builder(ctx.model.clone())
+        .messages(provider_messages)
+        .system_prompt(ctx.system_prompt.clone())
+        .max_tokens(ctx.max_tokens)
+        .tools(ctx.tool_registry.specs())
+        .<a class="symbol-link rs-fn" href="eos-engine--src-runtime-factory-rs.html#method-build-61">build</a>();
+    <a class="symbol-link rs-type" href="eos-engine--src-query-request-rs.html#item-struct-QueryRunRequest-7">QueryRunRequest</a> {
+        request,
+        prompt_report_seq: seq,
+    }
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-engine/src/query/request.rs:16</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn context private fn context () -&gt; QueryContext crates/eos-engine/src/query/request.rs  ">
+</article><article id="item-fn-context-54" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn context private fn context () -&gt; QueryContext crates/eos-engine/src/query/request.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>context</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn context () -&gt; QueryContext</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-engine--src-query-request-rs.html#item-fn-context-54">context</a> () -&gt; <a class="symbol-link" href="eos-engine--src-query-context-rs.html#item-struct-QueryContext-46">QueryContext</a></code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-query-request-rs.html#item-fn-context-54">context</a>() -&gt; <a class="symbol-link rs-type" href="eos-engine--src-query-context-rs.html#item-struct-QueryContext-46">QueryContext</a> {
+        <a class="symbol-link rs-type" href="eos-engine--src-query-context-rs.html#item-struct-QueryContext-46">QueryContext</a> {
+            tool_registry: <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-engine--src-background-factory-rs.html#method-new-39">new</a>(<span class="rs-type">ToolRegistry</span>::<a class="symbol-link rs-fn" href="eos-engine--src-background-factory-rs.html#method-new-39">new</a>()),
+            cwd: <span class="rs-type">PathBuf</span>::<a class="symbol-link rs-fn" href="eos-engine--src-background-factory-rs.html#method-new-39">new</a>(),
+            model: &quot;model&quot;.to_owned(),
+            system_prompt: &quot;system&quot;.to_owned(),
+            max_tokens: 32,
+            tool_call_limit: 8,
+            agent_name: &quot;root&quot;.to_owned(),
+            agent_run_id: <span class="rs-type">AgentRunId</span>::new_v4(),
+            task_id: <span class="rs-type">None</span>,
+            tool_calls_used: 0,
+            text_only_no_terminal_turns: 0,
+            tool_metadata: metadata(),
+            terminal_tools: <span class="rs-type">BTreeSet</span>::<a class="symbol-link rs-fn" href="eos-engine--src-background-factory-rs.html#method-new-39">new</a>(),
+            exit_reason: <span class="rs-type">None</span>,
+            terminal_result: <span class="rs-type">None</span>,
+            event_source: <span class="rs-type">None</span>,
+            prompt_report: <span class="rs-type">None</span>,
+            message_record: <span class="rs-type">None</span>,
+            notification_rules: <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-engine--src-background-factory-rs.html#method-new-39">new</a>(),
+            notification_fired: <span class="rs-type">BTreeSet</span>::<a class="symbol-link rs-fn" href="eos-engine--src-background-factory-rs.html#method-new-39">new</a>(),
+            notifier: <a class="symbol-link rs-type" href="eos-engine--src-notifications-mod-rs.html#item-struct-NotificationService-107">NotificationService</a>::<a class="symbol-link rs-fn" href="eos-engine--src-background-factory-rs.html#method-new-39">new</a>(),
+            cancellation: <span class="rs-kw">crate</span>::<a class="symbol-link rs-type" href="eos-engine--src-runtime-control-rs.html#item-struct-AgentRunCancellation-20">AgentRunCancellation</a>::<a class="symbol-link rs-fn" href="eos-engine--src-background-factory-rs.html#method-new-39">new</a>(),
+            foreground: <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-engine--src-background-factory-rs.html#method-new-39">new</a>(<span class="rs-kw">crate</span>::<a class="symbol-link rs-type" href="eos-engine--src-runtime-foreground-rs.html#item-struct-ForegroundExecutorFactory-23">ForegroundExecutorFactory</a>.<a class="symbol-link rs-fn" href="eos-engine--src-background-factory-rs.html#method-create-53">create</a>(<span class="rs-type">AgentRunId</span>::new_v4())),
+            audit: <span class="rs-type">None</span>,
+            run_handles: <span class="rs-type">None</span>,
+        }
+    }
+</code></pre>
+</details>
 
   <p class="source">crates/eos-engine/src/query/request.rs:54</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn build_request_uses_provider_safe_history private async fn build_request_uses_provider_safe_history () crates/eos-engine/src/query/request.rs  ">
+</article><article id="item-fn-build-request-uses-provider-safe-history-84" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn build_request_uses_provider_safe_history private async fn build_request_uses_provider_safe_history () crates/eos-engine/src/query/request.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>build_request_uses_provider_safe_history</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">async fn build_request_uses_provider_safe_history ()</code>
-  <div class="tags"><span>async</span></div>
+  <code class="signature">async fn <a class="symbol-link" href="eos-engine--src-query-request-rs.html#item-fn-build-request-uses-provider-safe-history-84">build_request_uses_provider_safe_history</a> ()</code>
+  <div class="tags"><span>async</span><span>tokio::test</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[tokio::test]
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-query-request-rs.html#item-fn-build-request-uses-provider-safe-history-84">build_request_uses_provider_safe_history</a>() {
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> ctx = <a class="symbol-link rs-fn" href="eos-engine--src-query-request-rs.html#item-fn-context-54">context</a>();
+        <span class="rs-kw">let</span> messages = vec![<span class="rs-type">Message</span> {
+            role: <span class="rs-type">MessageRole</span>::<span class="rs-type">Assistant</span>,
+            content: vec![<span class="rs-type">ContentBlock</span>::<span class="rs-type">ToolUse</span> {
+                tool_use_id: &quot;toolu_a&quot;.parse().expect(&quot;tool <span class="rs-kw">use</span> id&quot;),
+                name: &quot;read_file&quot;.to_owned(),
+                input: <span class="rs-type">JsonObject</span>::<a class="symbol-link rs-fn" href="eos-engine--src-background-factory-rs.html#method-new-39">new</a>(),
+            }],
+        }];
+
+        <span class="rs-kw">let</span> request = <a class="symbol-link rs-fn" href="eos-engine--src-query-request-rs.html#item-fn-build-query-run-request-16">build_query_run_request</a>(&amp;<span class="rs-kw">mut</span> ctx, &amp;messages).<span class="rs-kw">await</span>;
+
+        assert!(request.request.messages.is_empty());
+        assert_eq!(
+            messages[0].content.len(),
+            1,
+            &quot;durable transcript input is not mutated&quot;
+        );
+    }
+</code></pre>
+</details>
 
   <p class="source">crates/eos-engine/src/query/request.rs:84</p>
 </article></div>
 </section></div>
 </main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/eos-engine/src/query/request.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-comment">//! Query request construction.</span>
+
+<span class="rs-kw">use</span> eos_llm_client::{<span class="rs-type">LlmRequest</span>, <span class="rs-type">Message</span>};
+
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::query::{provider_messages::build_provider_messages, <a class="symbol-link rs-type" href="eos-engine--src-query-context-rs.html#item-struct-QueryContext-46">QueryContext</a>};
+
+<span class="rs-comment">/// Built provider request plus the prompt-report sequence for the turn.</span>
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Eq</span>)]
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-engine--src-query-request-rs.html#item-struct-QueryRunRequest-7">QueryRunRequest</a> {
+    <span class="rs-comment">/// Provider-neutral request.</span>
+    <span class="rs-kw">pub</span> request: <span class="rs-type">LlmRequest</span>,
+    <span class="rs-comment">/// Prompt-report sequence id.</span>
+    <span class="rs-kw">pub</span> prompt_report_seq: u64,
+}
+
+<span class="rs-comment">/// Build the provider request for one loop turn.</span>
+<span class="rs-kw">pub</span> <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-query-request-rs.html#item-fn-build-query-run-request-16">build_query_run_request</a>(
+    ctx: &amp;<span class="rs-kw">mut</span> <a class="symbol-link rs-type" href="eos-engine--src-query-context-rs.html#item-struct-QueryContext-46">QueryContext</a>,
+    messages: &amp;[<span class="rs-type">Message</span>],
+) -&gt; <a class="symbol-link rs-type" href="eos-engine--src-query-request-rs.html#item-struct-QueryRunRequest-7">QueryRunRequest</a> {
+    <span class="rs-kw">let</span> seq = <span class="rs-kw">match</span> &amp;ctx.prompt_report {
+        <span class="rs-type">Some</span>(recorder) =&gt; recorder.<a class="symbol-link rs-fn" href="eos-engine--src-telemetry-prompt-report-rs.html#method-next-seq-89">next_seq</a>().<span class="rs-kw">await</span>,
+        <span class="rs-type">None</span> =&gt; 0,
+    };
+    <span class="rs-kw">let</span> provider_messages = <a class="symbol-link rs-fn" href="eos-engine--src-query-provider-messages-rs.html#item-fn-build-provider-messages-8">build_provider_messages</a>(messages);
+    <span class="rs-kw">let</span> request = <span class="rs-type">LlmRequest</span>::builder(ctx.model.clone())
+        .messages(provider_messages)
+        .system_prompt(ctx.system_prompt.clone())
+        .max_tokens(ctx.max_tokens)
+        .tools(ctx.tool_registry.specs())
+        .<a class="symbol-link rs-fn" href="eos-engine--src-runtime-factory-rs.html#method-build-61">build</a>();
+    <a class="symbol-link rs-type" href="eos-engine--src-query-request-rs.html#item-struct-QueryRunRequest-7">QueryRunRequest</a> {
+        request,
+        prompt_report_seq: seq,
+    }
+}
+
+#[cfg(test)]
+<span class="rs-kw">mod</span> tests {
+    #![allow(clippy::expect_used)]
+
+    <span class="rs-kw">use</span> std::collections::<span class="rs-type">BTreeSet</span>;
+    <span class="rs-kw">use</span> std::path::<span class="rs-type">PathBuf</span>;
+    <span class="rs-kw">use</span> std::sync::<span class="rs-type">Arc</span>;
+
+    <span class="rs-kw">use</span> eos_llm_client::{<span class="rs-type">ContentBlock</span>, <span class="rs-type">MessageRole</span>};
+    <span class="rs-kw">use</span> eos_tools::<span class="rs-type">ToolRegistry</span>;
+    <span class="rs-kw">use</span> eos_types::{<span class="rs-type">AgentRunId</span>, <span class="rs-type">JsonObject</span>};
+
+    <span class="rs-kw">use</span> <span class="rs-kw">super</span>::*;
+    <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::notifications::<a class="symbol-link rs-type" href="eos-engine--src-notifications-mod-rs.html#item-struct-NotificationService-107">NotificationService</a>;
+    <span class="rs-kw">use</span> eos_testkit::metadata;
+
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-query-request-rs.html#item-fn-context-54">context</a>() -&gt; <a class="symbol-link rs-type" href="eos-engine--src-query-context-rs.html#item-struct-QueryContext-46">QueryContext</a> {
+        <a class="symbol-link rs-type" href="eos-engine--src-query-context-rs.html#item-struct-QueryContext-46">QueryContext</a> {
+            tool_registry: <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-engine--src-background-factory-rs.html#method-new-39">new</a>(<span class="rs-type">ToolRegistry</span>::<a class="symbol-link rs-fn" href="eos-engine--src-background-factory-rs.html#method-new-39">new</a>()),
+            cwd: <span class="rs-type">PathBuf</span>::<a class="symbol-link rs-fn" href="eos-engine--src-background-factory-rs.html#method-new-39">new</a>(),
+            model: &quot;model&quot;.to_owned(),
+            system_prompt: &quot;system&quot;.to_owned(),
+            max_tokens: 32,
+            tool_call_limit: 8,
+            agent_name: &quot;root&quot;.to_owned(),
+            agent_run_id: <span class="rs-type">AgentRunId</span>::new_v4(),
+            task_id: <span class="rs-type">None</span>,
+            tool_calls_used: 0,
+            text_only_no_terminal_turns: 0,
+            tool_metadata: metadata(),
+            terminal_tools: <span class="rs-type">BTreeSet</span>::<a class="symbol-link rs-fn" href="eos-engine--src-background-factory-rs.html#method-new-39">new</a>(),
+            exit_reason: <span class="rs-type">None</span>,
+            terminal_result: <span class="rs-type">None</span>,
+            event_source: <span class="rs-type">None</span>,
+            prompt_report: <span class="rs-type">None</span>,
+            message_record: <span class="rs-type">None</span>,
+            notification_rules: <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-engine--src-background-factory-rs.html#method-new-39">new</a>(),
+            notification_fired: <span class="rs-type">BTreeSet</span>::<a class="symbol-link rs-fn" href="eos-engine--src-background-factory-rs.html#method-new-39">new</a>(),
+            notifier: <a class="symbol-link rs-type" href="eos-engine--src-notifications-mod-rs.html#item-struct-NotificationService-107">NotificationService</a>::<a class="symbol-link rs-fn" href="eos-engine--src-background-factory-rs.html#method-new-39">new</a>(),
+            cancellation: <span class="rs-kw">crate</span>::<a class="symbol-link rs-type" href="eos-engine--src-runtime-control-rs.html#item-struct-AgentRunCancellation-20">AgentRunCancellation</a>::<a class="symbol-link rs-fn" href="eos-engine--src-background-factory-rs.html#method-new-39">new</a>(),
+            foreground: <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-engine--src-background-factory-rs.html#method-new-39">new</a>(<span class="rs-kw">crate</span>::<a class="symbol-link rs-type" href="eos-engine--src-runtime-foreground-rs.html#item-struct-ForegroundExecutorFactory-23">ForegroundExecutorFactory</a>.<a class="symbol-link rs-fn" href="eos-engine--src-background-factory-rs.html#method-create-53">create</a>(<span class="rs-type">AgentRunId</span>::new_v4())),
+            audit: <span class="rs-type">None</span>,
+            run_handles: <span class="rs-type">None</span>,
+        }
+    }
+
+    #[tokio::test]
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-query-request-rs.html#item-fn-build-request-uses-provider-safe-history-84">build_request_uses_provider_safe_history</a>() {
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> ctx = <a class="symbol-link rs-fn" href="eos-engine--src-query-request-rs.html#item-fn-context-54">context</a>();
+        <span class="rs-kw">let</span> messages = vec![<span class="rs-type">Message</span> {
+            role: <span class="rs-type">MessageRole</span>::<span class="rs-type">Assistant</span>,
+            content: vec![<span class="rs-type">ContentBlock</span>::<span class="rs-type">ToolUse</span> {
+                tool_use_id: &quot;toolu_a&quot;.parse().expect(&quot;tool <span class="rs-kw">use</span> id&quot;),
+                name: &quot;read_file&quot;.to_owned(),
+                input: <span class="rs-type">JsonObject</span>::<a class="symbol-link rs-fn" href="eos-engine--src-background-factory-rs.html#method-new-39">new</a>(),
+            }],
+        }];
+
+        <span class="rs-kw">let</span> request = <a class="symbol-link rs-fn" href="eos-engine--src-query-request-rs.html#item-fn-build-query-run-request-16">build_query_run_request</a>(&amp;<span class="rs-kw">mut</span> ctx, &amp;messages).<span class="rs-kw">await</span>;
+
+        assert!(request.request.messages.is_empty());
+        assert_eq!(
+            messages[0].content.len(),
+            1,
+            &quot;durable transcript input is not mutated&quot;
+        );
+    }
+}
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
   <script src="../assets/inventory.js"></script>
 </body>
 </html>

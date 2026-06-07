@@ -8,8 +8,16 @@
 </head>
 <body>
   <header>
-    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
-    <h1>eos-layerstack File Inventory</h1>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>eos-layerstack File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS/sandbox &amp;&amp; cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
   </header>
   <a class="back-link" href="../index.html">sandbox</a>
 <section class="summary">
@@ -47,69 +55,401 @@
       <span>0 methods</span>
     </div>
   </div>
-  <div class="items"><div class="group-label">File-Owned Types</div><article class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct ProjectEntry private struct ProjectEntry crates/eos-layerstack/src/stack/projection.rs path PathBuf rel PathBuf kind ProjectEntryKind ">
+  <div class="items"><div class="group-label">File-Owned Types</div><article id="item-struct-ProjectEntry-84" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct ProjectEntry private struct ProjectEntry crates/eos-layerstack/src/stack/projection.rs path PathBuf rel PathBuf kind ProjectEntryKind ">
   <div class="item-head">
     <span class="kind">struct</span>
     <h3>ProjectEntry</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">struct ProjectEntry</code>
-  <div class="tags"></div>
-  <h4>Fields</h4><table><tbody><tr><td>private</td><td>path</td><td><code>PathBuf</code></td></tr><tr><td>private</td><td>rel</td><td><code>PathBuf</code></td></tr><tr><td>private</td><td>kind</td><td><code>ProjectEntryKind</code></td></tr></tbody></table>
+  <code class="signature">struct <a class="symbol-link" href="eos-layerstack--src-stack-projection-rs.html#item-struct-ProjectEntry-84">ProjectEntry</a></code>
+  <div class="tags"><span>derive: Debug</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>path</td><td><code>PathBuf</code></td></tr><tr><td>private</td><td>rel</td><td><code>PathBuf</code></td></tr><tr><td>private</td><td>kind</td><td><code><a class="symbol-link" href="eos-layerstack--src-stack-projection-rs.html#item-enum-ProjectEntryKind-91">ProjectEntryKind</a></code></td></tr></tbody></table>
+
   <p class="source">crates/eos-layerstack/src/stack/projection.rs:84</p>
-</article><article class="type-card" data-kind="enum" data-kind-list="enum field type-model" data-filter-text="enum ProjectEntryKind private enum ProjectEntryKind crates/eos-layerstack/src/stack/projection.rs  ">
+</article><article id="item-enum-ProjectEntryKind-91" class="type-card" data-kind="enum" data-kind-list="enum field type-model" data-filter-text="enum ProjectEntryKind private enum ProjectEntryKind crates/eos-layerstack/src/stack/projection.rs  ">
   <div class="item-head">
     <span class="kind">enum</span>
     <h3>ProjectEntryKind</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">enum ProjectEntryKind</code>
-  <div class="tags"></div>
+  <code class="signature">enum <a class="symbol-link" href="eos-layerstack--src-stack-projection-rs.html#item-enum-ProjectEntryKind-91">ProjectEntryKind</a></code>
+  <div class="tags"><span>derive: Debug</span></div>
   <h4>Variants</h4><table><tbody><tr><td>Opaque</td><td><code></code></td></tr><tr><td>LogicalWhiteout</td><td><code></code></td></tr><tr><td>KernelWhiteout</td><td><code></code></td></tr><tr><td>Directory</td><td><code></code></td></tr><tr><td>File</td><td><code></code></td></tr><tr><td>Symlink</td><td><code></code></td></tr></tbody></table>
+
   <p class="source">crates/eos-layerstack/src/stack/projection.rs:91</p>
-</article><div class="group-label">Standalone Functions</div><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn apply_layer pub(super) pub(super) fn apply_layer (layer_dir : &amp; Path , destination : &amp; Path) -&gt; Result &lt; () , LayerStackError &gt; crates/eos-layerstack/src/stack/projection.rs  ">
+</article><div class="group-label">Standalone Functions</div><article id="item-fn-apply-layer-9" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn apply_layer pub(super) pub(super) fn apply_layer (layer_dir : &amp; Path , destination : &amp; Path) -&gt; Result &lt; () , LayerStackError &gt; crates/eos-layerstack/src/stack/projection.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>apply_layer</h3>
     <span class="visibility">pub(super)</span>
   </div>
-  <code class="signature">pub(super) fn apply_layer (layer_dir : &amp; Path , destination : &amp; Path) -&gt; Result &lt; () , LayerStackError &gt;</code>
+  <code class="signature">pub(super) fn <a class="symbol-link" href="eos-layerstack--src-stack-projection-rs.html#item-fn-apply-layer-9">apply_layer</a> (layer_dir : &amp; Path , destination : &amp; Path) -&gt; Result &lt; () , <a class="symbol-link" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a> &gt;</code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-projection-rs.html#item-fn-apply-layer-9">apply_layer</a>(layer_dir: &amp;<span class="rs-type">Path</span>, destination: &amp;<span class="rs-type">Path</span>) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>&gt; {
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> entries = <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-projection-rs.html#item-fn-collect-project-entries-101">collect_project_entries</a>(layer_dir)?;
+    entries.sort_by(|left, right| left.rel.cmp(&amp;right.rel));
+    <span class="rs-kw">for</span> entry <span class="rs-kw">in</span> entries
+        .iter()
+        .filter(|entry| matches!(entry.kind, <a class="symbol-link rs-type" href="eos-layerstack--src-stack-projection-rs.html#item-enum-ProjectEntryKind-91">ProjectEntryKind</a>::<span class="rs-type">Opaque</span>))
+    {
+        <span class="rs-kw">let</span> dir = entry
+            .rel
+            .parent()
+            .filter(|parent| !parent.as_os_str().is_empty())
+            .map_or_else(
+                || destination.to_path_buf(),
+                |parent| destination.join(parent),
+            );
+        <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-projection-rs.html#item-fn-clear-directory-144">clear_directory</a>(&amp;dir)?;
+    }
+    <span class="rs-kw">for</span> entry <span class="rs-kw">in</span> entries.iter().filter(|entry| {
+        matches!(
+            entry.kind,
+            <a class="symbol-link rs-type" href="eos-layerstack--src-stack-projection-rs.html#item-enum-ProjectEntryKind-91">ProjectEntryKind</a>::<span class="rs-type">LogicalWhiteout</span> | <a class="symbol-link rs-type" href="eos-layerstack--src-stack-projection-rs.html#item-enum-ProjectEntryKind-91">ProjectEntryKind</a>::<span class="rs-type">KernelWhiteout</span>
+        )
+    }) {
+        <span class="rs-kw">let</span> target = <span class="rs-kw">match</span> entry.kind {
+            <a class="symbol-link rs-type" href="eos-layerstack--src-stack-projection-rs.html#item-enum-ProjectEntryKind-91">ProjectEntryKind</a>::<span class="rs-type">LogicalWhiteout</span> =&gt; {
+                <span class="rs-kw">let</span> <span class="rs-type">Some</span>(name) = entry.rel.file_name().and_then(|name| name.to_str()) <span class="rs-kw">else</span> {
+                    <span class="rs-kw">continue</span>;
+                };
+                <span class="rs-kw">let</span> target_name = name.trim_start_matches(<span class="rs-type">LOGICAL_WHITEOUT_PREFIX</span>);
+                entry
+                    .rel
+                    .parent()
+                    .filter(|parent| !parent.as_os_str().is_empty())
+                    .map_or_else(
+                        || destination.join(target_name),
+                        |parent| destination.join(parent).join(target_name),
+                    )
+            }
+            <a class="symbol-link rs-type" href="eos-layerstack--src-stack-projection-rs.html#item-enum-ProjectEntryKind-91">ProjectEntryKind</a>::<span class="rs-type">KernelWhiteout</span> =&gt; destination.join(&amp;entry.rel),
+            _ =&gt; <span class="rs-kw">continue</span>,
+        };
+        <a class="symbol-link rs-fn" href="eos-layerstack--src-fsutil-rs.html#item-fn-remove-path-8">remove_path</a>(&amp;target)?;
+    }
+    <span class="rs-kw">for</span> entry <span class="rs-kw">in</span> entries.into_iter().filter(|entry| {
+        matches!(
+            entry.kind,
+            <a class="symbol-link rs-type" href="eos-layerstack--src-stack-projection-rs.html#item-enum-ProjectEntryKind-91">ProjectEntryKind</a>::<span class="rs-type">Directory</span> | <a class="symbol-link rs-type" href="eos-layerstack--src-stack-projection-rs.html#item-enum-ProjectEntryKind-91">ProjectEntryKind</a>::<span class="rs-type">File</span> | <a class="symbol-link rs-type" href="eos-layerstack--src-stack-projection-rs.html#item-enum-ProjectEntryKind-91">ProjectEntryKind</a>::<span class="rs-type">Symlink</span>
+        )
+    }) {
+        <span class="rs-kw">let</span> target = destination.join(&amp;entry.rel);
+        <span class="rs-kw">match</span> entry.kind {
+            <a class="symbol-link rs-type" href="eos-layerstack--src-stack-projection-rs.html#item-enum-ProjectEntryKind-91">ProjectEntryKind</a>::<span class="rs-type">Directory</span> =&gt; <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-projection-rs.html#item-fn-ensure-directory-158">ensure_directory</a>(&amp;target)?,
+            <a class="symbol-link rs-type" href="eos-layerstack--src-stack-projection-rs.html#item-enum-ProjectEntryKind-91">ProjectEntryKind</a>::<span class="rs-type">File</span> =&gt; {
+                <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(parent) = target.parent() {
+                    std::fs::create_dir_all(parent)?;
+                }
+                <a class="symbol-link rs-fn" href="eos-layerstack--src-fsutil-rs.html#item-fn-remove-path-8">remove_path</a>(&amp;target)?;
+                std::fs::copy(entry.path, target)?;
+            }
+            <a class="symbol-link rs-type" href="eos-layerstack--src-stack-projection-rs.html#item-enum-ProjectEntryKind-91">ProjectEntryKind</a>::<span class="rs-type">Symlink</span> =&gt; {
+                <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(parent) = target.parent() {
+                    std::fs::create_dir_all(parent)?;
+                }
+                <a class="symbol-link rs-fn" href="eos-layerstack--src-fsutil-rs.html#item-fn-remove-path-8">remove_path</a>(&amp;target)?;
+                <span class="rs-kw">let</span> link_target = std::fs::read_link(entry.path)?;
+                std::os::unix::fs::symlink(link_target, target)?;
+            }
+            <a class="symbol-link rs-type" href="eos-layerstack--src-stack-projection-rs.html#item-enum-ProjectEntryKind-91">ProjectEntryKind</a>::<span class="rs-type">Opaque</span>
+            | <a class="symbol-link rs-type" href="eos-layerstack--src-stack-projection-rs.html#item-enum-ProjectEntryKind-91">ProjectEntryKind</a>::<span class="rs-type">LogicalWhiteout</span>
+            | <a class="symbol-link rs-type" href="eos-layerstack--src-stack-projection-rs.html#item-enum-ProjectEntryKind-91">ProjectEntryKind</a>::<span class="rs-type">KernelWhiteout</span> =&gt; {}
+        }
+    }
+    <span class="rs-type">Ok</span>(())
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-layerstack/src/stack/projection.rs:9</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn collect_project_entries private fn collect_project_entries (layer_dir : &amp; Path) -&gt; Result &lt; Vec &lt; ProjectEntry &gt; , LayerStackError &gt; crates/eos-layerstack/src/stack/projection.rs  ">
+</article><article id="item-fn-collect-project-entries-101" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn collect_project_entries private fn collect_project_entries (layer_dir : &amp; Path) -&gt; Result &lt; Vec &lt; ProjectEntry &gt; , LayerStackError &gt; crates/eos-layerstack/src/stack/projection.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>collect_project_entries</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn collect_project_entries (layer_dir : &amp; Path) -&gt; Result &lt; Vec &lt; ProjectEntry &gt; , LayerStackError &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-layerstack--src-stack-projection-rs.html#item-fn-collect-project-entries-101">collect_project_entries</a> (layer_dir : &amp; Path) -&gt; Result &lt; Vec &lt; <a class="symbol-link" href="eos-layerstack--src-stack-projection-rs.html#item-struct-ProjectEntry-84">ProjectEntry</a> &gt; , <a class="symbol-link" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a> &gt;</code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-projection-rs.html#item-fn-collect-project-entries-101">collect_project_entries</a>(layer_dir: &amp;<span class="rs-type">Path</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;<a class="symbol-link rs-type" href="eos-layerstack--src-stack-projection-rs.html#item-struct-ProjectEntry-84">ProjectEntry</a>&gt;, <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>&gt; {
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> entries = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-new-79">new</a>();
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> stack = vec![layer_dir.to_path_buf()];
+    <span class="rs-kw">while</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(dir) = stack.pop() {
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> children = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-new-79">new</a>();
+        <span class="rs-kw">for</span> entry <span class="rs-kw">in</span> std::fs::read_dir(&amp;dir)? {
+            children.push(entry?);
+        }
+        children.sort_by_key(std::fs::<span class="rs-type">DirEntry</span>::path);
+        <span class="rs-kw">for</span> entry <span class="rs-kw">in</span> children {
+            <span class="rs-kw">let</span> path = entry.<a class="symbol-link rs-fn" href="eos-layerstack--src-workspace-base-rs.html#method-path-46">path</a>();
+            <span class="rs-kw">let</span> rel = path
+                .strip_prefix(layer_dir)
+                .map_err(|err| <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>::<span class="rs-type">Storage</span>(err.to_string()))?
+                .to_path_buf();
+            <span class="rs-kw">let</span> file_type = entry.file_type()?;
+            <span class="rs-kw">let</span> name = path
+                .file_name()
+                .and_then(|name| name.to_str())
+                .unwrap_or_default();
+            <span class="rs-kw">let</span> meta = std::fs::symlink_metadata(&amp;path)?;
+            <span class="rs-kw">let</span> kind = <span class="rs-kw">if</span> name == <span class="rs-type">OPAQUE_MARKER</span> {
+                <a class="symbol-link rs-type" href="eos-layerstack--src-stack-projection-rs.html#item-enum-ProjectEntryKind-91">ProjectEntryKind</a>::<span class="rs-type">Opaque</span>
+            } <span class="rs-kw">else</span> <span class="rs-kw">if</span> name.starts_with(<span class="rs-type">LOGICAL_WHITEOUT_PREFIX</span>) {
+                <a class="symbol-link rs-type" href="eos-layerstack--src-stack-projection-rs.html#item-enum-ProjectEntryKind-91">ProjectEntryKind</a>::<span class="rs-type">LogicalWhiteout</span>
+            } <span class="rs-kw">else</span> <span class="rs-kw">if</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-whiteout-rs.html#item-fn-is-kernel-whiteout-meta-89">is_kernel_whiteout_meta</a>(&amp;path, &amp;meta) {
+                <a class="symbol-link rs-type" href="eos-layerstack--src-stack-projection-rs.html#item-enum-ProjectEntryKind-91">ProjectEntryKind</a>::<span class="rs-type">KernelWhiteout</span>
+            } <span class="rs-kw">else</span> <span class="rs-kw">if</span> file_type.is_symlink() {
+                <a class="symbol-link rs-type" href="eos-layerstack--src-stack-projection-rs.html#item-enum-ProjectEntryKind-91">ProjectEntryKind</a>::<span class="rs-type">Symlink</span>
+            } <span class="rs-kw">else</span> <span class="rs-kw">if</span> file_type.is_dir() {
+                stack.push(path.clone());
+                <a class="symbol-link rs-type" href="eos-layerstack--src-stack-projection-rs.html#item-enum-ProjectEntryKind-91">ProjectEntryKind</a>::<span class="rs-type">Directory</span>
+            } <span class="rs-kw">else</span> <span class="rs-kw">if</span> file_type.is_file() {
+                <a class="symbol-link rs-type" href="eos-layerstack--src-stack-projection-rs.html#item-enum-ProjectEntryKind-91">ProjectEntryKind</a>::<span class="rs-type">File</span>
+            } <span class="rs-kw">else</span> {
+                <span class="rs-kw">continue</span>;
+            };
+            entries.push(<a class="symbol-link rs-type" href="eos-layerstack--src-stack-projection-rs.html#item-struct-ProjectEntry-84">ProjectEntry</a> { path, rel, kind });
+        }
+    }
+    <span class="rs-type">Ok</span>(entries)
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-layerstack/src/stack/projection.rs:101</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn clear_directory private fn clear_directory (path : &amp; Path) -&gt; Result &lt; () , LayerStackError &gt; crates/eos-layerstack/src/stack/projection.rs  ">
+</article><article id="item-fn-clear-directory-144" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn clear_directory private fn clear_directory (path : &amp; Path) -&gt; Result &lt; () , LayerStackError &gt; crates/eos-layerstack/src/stack/projection.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>clear_directory</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn clear_directory (path : &amp; Path) -&gt; Result &lt; () , LayerStackError &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-layerstack--src-stack-projection-rs.html#item-fn-clear-directory-144">clear_directory</a> (path : &amp; Path) -&gt; Result &lt; () , <a class="symbol-link" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a> &gt;</code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-projection-rs.html#item-fn-clear-directory-144">clear_directory</a>(path: &amp;<span class="rs-type">Path</span>) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>&gt; {
+    <span class="rs-kw">match</span> std::fs::symlink_metadata(path) {
+        <span class="rs-type">Ok</span>(meta) <span class="rs-kw">if</span> meta.file_type().is_symlink() || !meta.is_dir() =&gt; <a class="symbol-link rs-fn" href="eos-layerstack--src-fsutil-rs.html#item-fn-remove-path-8">remove_path</a>(path)?,
+        <span class="rs-type">Ok</span>(_) =&gt; {}
+        <span class="rs-type">Err</span>(err) <span class="rs-kw">if</span> err.<a class="symbol-link rs-fn" href="eos-layerstack--src-workspace-base-rs.html#method-kind-52">kind</a>() == <span class="rs-type">ErrorKind</span>::<span class="rs-type">NotFound</span> =&gt; {}
+        <span class="rs-type">Err</span>(err) =&gt; <span class="rs-kw">return</span> <span class="rs-type">Err</span>(err.into()),
+    }
+    std::fs::create_dir_all(path)?;
+    <span class="rs-kw">for</span> entry <span class="rs-kw">in</span> std::fs::read_dir(path)? {
+        <a class="symbol-link rs-fn" href="eos-layerstack--src-fsutil-rs.html#item-fn-remove-path-8">remove_path</a>(&amp;entry?.<a class="symbol-link rs-fn" href="eos-layerstack--src-workspace-base-rs.html#method-path-46">path</a>())?;
+    }
+    <span class="rs-type">Ok</span>(())
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-layerstack/src/stack/projection.rs:144</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn ensure_directory private fn ensure_directory (path : &amp; Path) -&gt; Result &lt; () , LayerStackError &gt; crates/eos-layerstack/src/stack/projection.rs  ">
+</article><article id="item-fn-ensure-directory-158" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn ensure_directory private fn ensure_directory (path : &amp; Path) -&gt; Result &lt; () , LayerStackError &gt; crates/eos-layerstack/src/stack/projection.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>ensure_directory</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn ensure_directory (path : &amp; Path) -&gt; Result &lt; () , LayerStackError &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-layerstack--src-stack-projection-rs.html#item-fn-ensure-directory-158">ensure_directory</a> (path : &amp; Path) -&gt; Result &lt; () , <a class="symbol-link" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a> &gt;</code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-projection-rs.html#item-fn-ensure-directory-158">ensure_directory</a>(path: &amp;<span class="rs-type">Path</span>) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>&gt; {
+    <span class="rs-kw">match</span> std::fs::symlink_metadata(path) {
+        <span class="rs-type">Ok</span>(meta) <span class="rs-kw">if</span> meta.file_type().is_symlink() || !meta.is_dir() =&gt; <a class="symbol-link rs-fn" href="eos-layerstack--src-fsutil-rs.html#item-fn-remove-path-8">remove_path</a>(path)?,
+        <span class="rs-type">Ok</span>(_) =&gt; {}
+        <span class="rs-type">Err</span>(err) <span class="rs-kw">if</span> err.<a class="symbol-link rs-fn" href="eos-layerstack--src-workspace-base-rs.html#method-kind-52">kind</a>() == <span class="rs-type">ErrorKind</span>::<span class="rs-type">NotFound</span> =&gt; {}
+        <span class="rs-type">Err</span>(err) =&gt; <span class="rs-kw">return</span> <span class="rs-type">Err</span>(err.into()),
+    }
+    std::fs::create_dir_all(path)?;
+    <span class="rs-type">Ok</span>(())
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-layerstack/src/stack/projection.rs:158</p>
 </article></div>
 </section></div>
 </main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/eos-layerstack/src/stack/projection.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-kw">use</span> std::io::<span class="rs-type">ErrorKind</span>;
+<span class="rs-kw">use</span> std::path::{<span class="rs-type">Path</span>, <span class="rs-type">PathBuf</span>};
+
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::error::<a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>;
+
+<span class="rs-kw">use</span> <span class="rs-kw">super</span>::whiteout::{is_kernel_whiteout_meta, <span class="rs-type">LOGICAL_WHITEOUT_PREFIX</span>, <span class="rs-type">OPAQUE_MARKER</span>};
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::fsutil::remove_path;
+
+<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-projection-rs.html#item-fn-apply-layer-9">apply_layer</a>(layer_dir: &amp;<span class="rs-type">Path</span>, destination: &amp;<span class="rs-type">Path</span>) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>&gt; {
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> entries = <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-projection-rs.html#item-fn-collect-project-entries-101">collect_project_entries</a>(layer_dir)?;
+    entries.sort_by(|left, right| left.rel.cmp(&amp;right.rel));
+    <span class="rs-kw">for</span> entry <span class="rs-kw">in</span> entries
+        .iter()
+        .filter(|entry| matches!(entry.kind, <a class="symbol-link rs-type" href="eos-layerstack--src-stack-projection-rs.html#item-enum-ProjectEntryKind-91">ProjectEntryKind</a>::<span class="rs-type">Opaque</span>))
+    {
+        <span class="rs-kw">let</span> dir = entry
+            .rel
+            .parent()
+            .filter(|parent| !parent.as_os_str().is_empty())
+            .map_or_else(
+                || destination.to_path_buf(),
+                |parent| destination.join(parent),
+            );
+        <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-projection-rs.html#item-fn-clear-directory-144">clear_directory</a>(&amp;dir)?;
+    }
+    <span class="rs-kw">for</span> entry <span class="rs-kw">in</span> entries.iter().filter(|entry| {
+        matches!(
+            entry.kind,
+            <a class="symbol-link rs-type" href="eos-layerstack--src-stack-projection-rs.html#item-enum-ProjectEntryKind-91">ProjectEntryKind</a>::<span class="rs-type">LogicalWhiteout</span> | <a class="symbol-link rs-type" href="eos-layerstack--src-stack-projection-rs.html#item-enum-ProjectEntryKind-91">ProjectEntryKind</a>::<span class="rs-type">KernelWhiteout</span>
+        )
+    }) {
+        <span class="rs-kw">let</span> target = <span class="rs-kw">match</span> entry.kind {
+            <a class="symbol-link rs-type" href="eos-layerstack--src-stack-projection-rs.html#item-enum-ProjectEntryKind-91">ProjectEntryKind</a>::<span class="rs-type">LogicalWhiteout</span> =&gt; {
+                <span class="rs-kw">let</span> <span class="rs-type">Some</span>(name) = entry.rel.file_name().and_then(|name| name.to_str()) <span class="rs-kw">else</span> {
+                    <span class="rs-kw">continue</span>;
+                };
+                <span class="rs-kw">let</span> target_name = name.trim_start_matches(<span class="rs-type">LOGICAL_WHITEOUT_PREFIX</span>);
+                entry
+                    .rel
+                    .parent()
+                    .filter(|parent| !parent.as_os_str().is_empty())
+                    .map_or_else(
+                        || destination.join(target_name),
+                        |parent| destination.join(parent).join(target_name),
+                    )
+            }
+            <a class="symbol-link rs-type" href="eos-layerstack--src-stack-projection-rs.html#item-enum-ProjectEntryKind-91">ProjectEntryKind</a>::<span class="rs-type">KernelWhiteout</span> =&gt; destination.join(&amp;entry.rel),
+            _ =&gt; <span class="rs-kw">continue</span>,
+        };
+        <a class="symbol-link rs-fn" href="eos-layerstack--src-fsutil-rs.html#item-fn-remove-path-8">remove_path</a>(&amp;target)?;
+    }
+    <span class="rs-kw">for</span> entry <span class="rs-kw">in</span> entries.into_iter().filter(|entry| {
+        matches!(
+            entry.kind,
+            <a class="symbol-link rs-type" href="eos-layerstack--src-stack-projection-rs.html#item-enum-ProjectEntryKind-91">ProjectEntryKind</a>::<span class="rs-type">Directory</span> | <a class="symbol-link rs-type" href="eos-layerstack--src-stack-projection-rs.html#item-enum-ProjectEntryKind-91">ProjectEntryKind</a>::<span class="rs-type">File</span> | <a class="symbol-link rs-type" href="eos-layerstack--src-stack-projection-rs.html#item-enum-ProjectEntryKind-91">ProjectEntryKind</a>::<span class="rs-type">Symlink</span>
+        )
+    }) {
+        <span class="rs-kw">let</span> target = destination.join(&amp;entry.rel);
+        <span class="rs-kw">match</span> entry.kind {
+            <a class="symbol-link rs-type" href="eos-layerstack--src-stack-projection-rs.html#item-enum-ProjectEntryKind-91">ProjectEntryKind</a>::<span class="rs-type">Directory</span> =&gt; <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-projection-rs.html#item-fn-ensure-directory-158">ensure_directory</a>(&amp;target)?,
+            <a class="symbol-link rs-type" href="eos-layerstack--src-stack-projection-rs.html#item-enum-ProjectEntryKind-91">ProjectEntryKind</a>::<span class="rs-type">File</span> =&gt; {
+                <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(parent) = target.parent() {
+                    std::fs::create_dir_all(parent)?;
+                }
+                <a class="symbol-link rs-fn" href="eos-layerstack--src-fsutil-rs.html#item-fn-remove-path-8">remove_path</a>(&amp;target)?;
+                std::fs::copy(entry.path, target)?;
+            }
+            <a class="symbol-link rs-type" href="eos-layerstack--src-stack-projection-rs.html#item-enum-ProjectEntryKind-91">ProjectEntryKind</a>::<span class="rs-type">Symlink</span> =&gt; {
+                <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(parent) = target.parent() {
+                    std::fs::create_dir_all(parent)?;
+                }
+                <a class="symbol-link rs-fn" href="eos-layerstack--src-fsutil-rs.html#item-fn-remove-path-8">remove_path</a>(&amp;target)?;
+                <span class="rs-kw">let</span> link_target = std::fs::read_link(entry.path)?;
+                std::os::unix::fs::symlink(link_target, target)?;
+            }
+            <a class="symbol-link rs-type" href="eos-layerstack--src-stack-projection-rs.html#item-enum-ProjectEntryKind-91">ProjectEntryKind</a>::<span class="rs-type">Opaque</span>
+            | <a class="symbol-link rs-type" href="eos-layerstack--src-stack-projection-rs.html#item-enum-ProjectEntryKind-91">ProjectEntryKind</a>::<span class="rs-type">LogicalWhiteout</span>
+            | <a class="symbol-link rs-type" href="eos-layerstack--src-stack-projection-rs.html#item-enum-ProjectEntryKind-91">ProjectEntryKind</a>::<span class="rs-type">KernelWhiteout</span> =&gt; {}
+        }
+    }
+    <span class="rs-type">Ok</span>(())
+}
+
+#[derive(<span class="rs-type">Debug</span>)]
+<span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-layerstack--src-stack-projection-rs.html#item-struct-ProjectEntry-84">ProjectEntry</a> {
+    path: <span class="rs-type">PathBuf</span>,
+    rel: <span class="rs-type">PathBuf</span>,
+    kind: <a class="symbol-link rs-type" href="eos-layerstack--src-stack-projection-rs.html#item-enum-ProjectEntryKind-91">ProjectEntryKind</a>,
+}
+
+#[derive(<span class="rs-type">Debug</span>)]
+<span class="rs-kw">enum</span> <a class="symbol-link rs-type" href="eos-layerstack--src-stack-projection-rs.html#item-enum-ProjectEntryKind-91">ProjectEntryKind</a> {
+    <span class="rs-type">Opaque</span>,
+    <span class="rs-type">LogicalWhiteout</span>,
+    <span class="rs-type">KernelWhiteout</span>,
+    <span class="rs-type">Directory</span>,
+    <span class="rs-type">File</span>,
+    <span class="rs-type">Symlink</span>,
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-projection-rs.html#item-fn-collect-project-entries-101">collect_project_entries</a>(layer_dir: &amp;<span class="rs-type">Path</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;<a class="symbol-link rs-type" href="eos-layerstack--src-stack-projection-rs.html#item-struct-ProjectEntry-84">ProjectEntry</a>&gt;, <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>&gt; {
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> entries = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-new-79">new</a>();
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> stack = vec![layer_dir.to_path_buf()];
+    <span class="rs-kw">while</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(dir) = stack.pop() {
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> children = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-new-79">new</a>();
+        <span class="rs-kw">for</span> entry <span class="rs-kw">in</span> std::fs::read_dir(&amp;dir)? {
+            children.push(entry?);
+        }
+        children.sort_by_key(std::fs::<span class="rs-type">DirEntry</span>::path);
+        <span class="rs-kw">for</span> entry <span class="rs-kw">in</span> children {
+            <span class="rs-kw">let</span> path = entry.<a class="symbol-link rs-fn" href="eos-layerstack--src-workspace-base-rs.html#method-path-46">path</a>();
+            <span class="rs-kw">let</span> rel = path
+                .strip_prefix(layer_dir)
+                .map_err(|err| <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>::<span class="rs-type">Storage</span>(err.to_string()))?
+                .to_path_buf();
+            <span class="rs-kw">let</span> file_type = entry.file_type()?;
+            <span class="rs-kw">let</span> name = path
+                .file_name()
+                .and_then(|name| name.to_str())
+                .unwrap_or_default();
+            <span class="rs-kw">let</span> meta = std::fs::symlink_metadata(&amp;path)?;
+            <span class="rs-kw">let</span> kind = <span class="rs-kw">if</span> name == <span class="rs-type">OPAQUE_MARKER</span> {
+                <a class="symbol-link rs-type" href="eos-layerstack--src-stack-projection-rs.html#item-enum-ProjectEntryKind-91">ProjectEntryKind</a>::<span class="rs-type">Opaque</span>
+            } <span class="rs-kw">else</span> <span class="rs-kw">if</span> name.starts_with(<span class="rs-type">LOGICAL_WHITEOUT_PREFIX</span>) {
+                <a class="symbol-link rs-type" href="eos-layerstack--src-stack-projection-rs.html#item-enum-ProjectEntryKind-91">ProjectEntryKind</a>::<span class="rs-type">LogicalWhiteout</span>
+            } <span class="rs-kw">else</span> <span class="rs-kw">if</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-whiteout-rs.html#item-fn-is-kernel-whiteout-meta-89">is_kernel_whiteout_meta</a>(&amp;path, &amp;meta) {
+                <a class="symbol-link rs-type" href="eos-layerstack--src-stack-projection-rs.html#item-enum-ProjectEntryKind-91">ProjectEntryKind</a>::<span class="rs-type">KernelWhiteout</span>
+            } <span class="rs-kw">else</span> <span class="rs-kw">if</span> file_type.is_symlink() {
+                <a class="symbol-link rs-type" href="eos-layerstack--src-stack-projection-rs.html#item-enum-ProjectEntryKind-91">ProjectEntryKind</a>::<span class="rs-type">Symlink</span>
+            } <span class="rs-kw">else</span> <span class="rs-kw">if</span> file_type.is_dir() {
+                stack.push(path.clone());
+                <a class="symbol-link rs-type" href="eos-layerstack--src-stack-projection-rs.html#item-enum-ProjectEntryKind-91">ProjectEntryKind</a>::<span class="rs-type">Directory</span>
+            } <span class="rs-kw">else</span> <span class="rs-kw">if</span> file_type.is_file() {
+                <a class="symbol-link rs-type" href="eos-layerstack--src-stack-projection-rs.html#item-enum-ProjectEntryKind-91">ProjectEntryKind</a>::<span class="rs-type">File</span>
+            } <span class="rs-kw">else</span> {
+                <span class="rs-kw">continue</span>;
+            };
+            entries.push(<a class="symbol-link rs-type" href="eos-layerstack--src-stack-projection-rs.html#item-struct-ProjectEntry-84">ProjectEntry</a> { path, rel, kind });
+        }
+    }
+    <span class="rs-type">Ok</span>(entries)
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-projection-rs.html#item-fn-clear-directory-144">clear_directory</a>(path: &amp;<span class="rs-type">Path</span>) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>&gt; {
+    <span class="rs-kw">match</span> std::fs::symlink_metadata(path) {
+        <span class="rs-type">Ok</span>(meta) <span class="rs-kw">if</span> meta.file_type().is_symlink() || !meta.is_dir() =&gt; <a class="symbol-link rs-fn" href="eos-layerstack--src-fsutil-rs.html#item-fn-remove-path-8">remove_path</a>(path)?,
+        <span class="rs-type">Ok</span>(_) =&gt; {}
+        <span class="rs-type">Err</span>(err) <span class="rs-kw">if</span> err.<a class="symbol-link rs-fn" href="eos-layerstack--src-workspace-base-rs.html#method-kind-52">kind</a>() == <span class="rs-type">ErrorKind</span>::<span class="rs-type">NotFound</span> =&gt; {}
+        <span class="rs-type">Err</span>(err) =&gt; <span class="rs-kw">return</span> <span class="rs-type">Err</span>(err.into()),
+    }
+    std::fs::create_dir_all(path)?;
+    <span class="rs-kw">for</span> entry <span class="rs-kw">in</span> std::fs::read_dir(path)? {
+        <a class="symbol-link rs-fn" href="eos-layerstack--src-fsutil-rs.html#item-fn-remove-path-8">remove_path</a>(&amp;entry?.<a class="symbol-link rs-fn" href="eos-layerstack--src-workspace-base-rs.html#method-path-46">path</a>())?;
+    }
+    <span class="rs-type">Ok</span>(())
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-projection-rs.html#item-fn-ensure-directory-158">ensure_directory</a>(path: &amp;<span class="rs-type">Path</span>) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>&gt; {
+    <span class="rs-kw">match</span> std::fs::symlink_metadata(path) {
+        <span class="rs-type">Ok</span>(meta) <span class="rs-kw">if</span> meta.file_type().is_symlink() || !meta.is_dir() =&gt; <a class="symbol-link rs-fn" href="eos-layerstack--src-fsutil-rs.html#item-fn-remove-path-8">remove_path</a>(path)?,
+        <span class="rs-type">Ok</span>(_) =&gt; {}
+        <span class="rs-type">Err</span>(err) <span class="rs-kw">if</span> err.<a class="symbol-link rs-fn" href="eos-layerstack--src-workspace-base-rs.html#method-kind-52">kind</a>() == <span class="rs-type">ErrorKind</span>::<span class="rs-type">NotFound</span> =&gt; {}
+        <span class="rs-type">Err</span>(err) =&gt; <span class="rs-kw">return</span> <span class="rs-type">Err</span>(err.into()),
+    }
+    std::fs::create_dir_all(path)?;
+    <span class="rs-type">Ok</span>(())
+}
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
   <script src="../assets/inventory.js"></script>
 </body>
 </html>

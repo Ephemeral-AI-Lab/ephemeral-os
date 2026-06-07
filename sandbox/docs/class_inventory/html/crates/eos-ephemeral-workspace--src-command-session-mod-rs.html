@@ -8,8 +8,16 @@
 </head>
 <body>
   <header>
-    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
-    <h1>eos-ephemeral-workspace File Inventory</h1>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>eos-ephemeral-workspace File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS/sandbox &amp;&amp; cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
   </header>
   <a class="back-link" href="../index.html">sandbox</a>
 <section class="summary">
@@ -50,6 +58,22 @@
   <div class="items"></div>
 </section></div>
 </main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/eos-ephemeral-workspace/src/command_session/mod.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-comment">//! Command workspace policy boundary for ephemeral command sessions.</span>
+
+<span class="rs-kw">mod</span> finalize;
+<span class="rs-kw">mod</span> policy;
+<span class="rs-kw">mod</span> prepare;
+<span class="rs-kw">pub</span> <span class="rs-kw">mod</span> types;
+
+<span class="rs-kw">pub</span> <span class="rs-kw">use</span> policy::<a class="symbol-link rs-type" href="eos-ephemeral-workspace--src-command-session-policy-rs.html#item-struct-EphemeralCommandPolicy-15">EphemeralCommandPolicy</a>;
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
   <script src="../assets/inventory.js"></script>
 </body>
 </html>

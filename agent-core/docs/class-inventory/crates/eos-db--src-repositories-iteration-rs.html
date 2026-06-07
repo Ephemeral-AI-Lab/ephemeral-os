@@ -8,8 +8,16 @@
 </head>
 <body>
   <header>
-    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
-    <h1>eos-db File Inventory</h1>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>eos-db File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS/agent-core &amp;&amp; cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
   </header>
   <a class="back-link" href="../index.html">agent-core</a>
 <section class="summary">
@@ -47,19 +55,393 @@
       <span>8 methods</span>
     </div>
   </div>
-  <div class="items"><div class="group-label">File-Owned Types</div><article class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct SqlIterationStore pub pub struct SqlIterationStore crates/eos-db/src/repositories/iteration.rs pool SqlitePool ">
+  <div class="items"><div class="group-label">File-Owned Types</div><article id="item-struct-SqlIterationStore-15" class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct SqlIterationStore pub pub struct SqlIterationStore crates/eos-db/src/repositories/iteration.rs pool SqlitePool ">
   <div class="item-head">
     <span class="kind">struct</span>
     <h3>SqlIterationStore</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub struct SqlIterationStore</code>
-  <div class="tags"></div>
-  <h4>Fields</h4><table><tbody><tr><td>private</td><td>pool</td><td><code>SqlitePool</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr><td>constructor</td><td>new</td><td><code>pub(crate) fn new (pool : SqlitePool) -&gt; Self</code></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl Sealed for SqlIterationStore</code></summary><table><tbody></tbody></table></details><details><summary><code>impl IterationStore for SqlIterationStore</code></summary><table><tbody><tr><td>method</td><td>insert</td><td><code>async fn insert (&amp; self , workflow_id : &amp; WorkflowId , sequence_no : i64 , creation_reason : IterationCreationReason , iteration_goal : &amp; str , attempt_budget : AttemptBudget ,) -&gt; Result &lt; Iteration , CoreError &gt;</code></td></tr><tr><td>method</td><td>get</td><td><code>async fn get (&amp; self , id : &amp; IterationId) -&gt; Result &lt; Option &lt; Iteration &gt; , CoreError &gt;</code></td></tr><tr><td>method</td><td>append_attempt_id</td><td><code>async fn append_attempt_id (&amp; self , id : &amp; IterationId , attempt_id : &amp; AttemptId ,) -&gt; Result &lt; Iteration , CoreError &gt;</code></td></tr><tr><td>method</td><td>set_status</td><td><code>async fn set_status (&amp; self , id : &amp; IterationId , status : IterationStatus , closed_at : Option &lt; UtcDateTime &gt; , outcomes : Option &lt; &amp; str &gt; ,) -&gt; Result &lt; Iteration , CoreError &gt;</code></td></tr><tr><td>method</td><td>set_deferred_goal_for_next_iteration</td><td><code>async fn set_deferred_goal_for_next_iteration (&amp; self , id : &amp; IterationId , deferred_goal_for_next_iteration : Option &lt; &amp; DeferredGoal &gt; ,) -&gt; Result &lt; Iteration , CoreError &gt;</code></td></tr><tr><td>method</td><td>close_succeeded</td><td><code>async fn close_succeeded (&amp; self , id : &amp; IterationId , outcomes : &amp; str , closed_at : Option &lt; UtcDateTime &gt; ,) -&gt; Result &lt; Iteration , CoreError &gt;</code></td></tr><tr><td>method</td><td>list_for_workflow</td><td><code>async fn list_for_workflow (&amp; self , workflow_id : &amp; WorkflowId ,) -&gt; Result &lt; Vec &lt; Iteration &gt; , CoreError &gt;</code></td></tr></tbody></table></details></div>
+  <code class="signature">pub struct <a class="symbol-link" href="eos-db--src-repositories-iteration-rs.html#item-struct-SqlIterationStore-15">SqlIterationStore</a></code>
+  <p class="docstring">`SQLite` repository for iterations. Returns frozen `Iteration` DTOs.</p>
+  <div class="tags"><span>derive: Debug</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>pool</td><td><code>SqlitePool</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-22"><td>constructor</td><td>new</td><td><code>pub(crate) fn <a class="symbol-link" href="eos-db--src-model-registry-rs.html#method-new-64">new</a> (pool : SqlitePool) -&gt; Self</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-db--src-model-registry-rs.html#method-new-64">new</a>(pool: <span class="rs-type">SqlitePool</span>) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">Self</span> { pool }
+    }
+</code></pre>
+</details></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl Sealed for <a class="symbol-link" href="eos-db--src-repositories-iteration-rs.html#item-struct-SqlIterationStore-15">SqlIterationStore</a></code></summary><table><tbody></tbody></table></details><details><summary><code>impl IterationStore for <a class="symbol-link" href="eos-db--src-repositories-iteration-rs.html#item-struct-SqlIterationStore-15">SqlIterationStore</a></code></summary><table><tbody><tr id="method-insert-31"><td>method</td><td>insert</td><td><code>async fn <a class="symbol-link" href="eos-db--src-repositories-attempt-rs.html#method-insert-39">insert</a> (&amp; self , workflow_id : &amp; WorkflowId , sequence_no : i64 , creation_reason : IterationCreationReason , iteration_goal : &amp; str , attempt_budget : AttemptBudget ,) -&gt; Result &lt; Iteration , CoreError &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-db--src-repositories-attempt-rs.html#method-insert-39">insert</a>(
+        &amp;<span class="rs-self">self</span>,
+        workflow_id: &amp;<span class="rs-type">WorkflowId</span>,
+        sequence_no: i64,
+        creation_reason: <span class="rs-type">IterationCreationReason</span>,
+        iteration_goal: &amp;str,
+        attempt_budget: <span class="rs-type">AttemptBudget</span>,
+    ) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Iteration</span>, <span class="rs-type">CoreError</span>&gt; {
+        <span class="rs-kw">let</span> now = <span class="rs-type">OffsetDateTime</span>::now_utc();
+        <span class="rs-kw">let</span> row = sqlx::query_as::&lt;<span class="rs-type">Sqlite</span>, <a class="symbol-link rs-type" href="eos-db--src-rows-rs.html#item-struct-IterationRow-69">IterationRow</a>&gt;(
+            &quot;<span class="rs-type">INSERT</span> <span class="rs-type">INTO</span> iterations \
+             (id, workflow_id, sequence_no, creation_reason, goal, attempt_budget, status, \
+              attempt_ids, deferred_goal, created_at, updated_at, closed_at, outcomes) \
+             <span class="rs-type">VALUES</span> (?, ?, ?, ?, ?, ?, &#x27;open&#x27;, &#x27;[]&#x27;, <span class="rs-type">NULL</span>, ?, ?, <span class="rs-type">NULL</span>, <span class="rs-type">NULL</span>) <span class="rs-type">RETURNING</span> *&quot;,
+        )
+        .bind(<span class="rs-type">IterationId</span>::new_v4().as_str())
+        .bind(workflow_id.as_str())
+        .bind(sequence_no)
+        .bind(<a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-enum-to-db-148">enum_to_db</a>(&amp;creation_reason))
+        .bind(iteration_goal)
+        .bind(attempt_budget.as_i64())
+        .bind(now)
+        .bind(now)
+        .fetch_one(&amp;<span class="rs-self">self</span>.pool)
+        .<span class="rs-kw">await</span>
+        .map_err(<a class="symbol-link rs-type" href="eos-db--src-error-rs.html#item-enum-DbError-5">DbError</a>::from)?;
+        <span class="rs-type">Ok</span>(<a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-row-to-iteration-300">row_to_iteration</a>(row)?)
+    }
+</code></pre>
+</details></td></tr><tr id="method-get-60"><td>method</td><td>get</td><td><code>async fn <a class="symbol-link" href="eos-db--src-model-registry-rs.html#method-get-208">get</a> (&amp; self , id : &amp; IterationId) -&gt; Result &lt; Option &lt; Iteration &gt; , CoreError &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-db--src-model-registry-rs.html#method-get-208">get</a>(&amp;<span class="rs-self">self</span>, id: &amp;<span class="rs-type">IterationId</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Option</span>&lt;<span class="rs-type">Iteration</span>&gt;, <span class="rs-type">CoreError</span>&gt; {
+        <span class="rs-kw">let</span> row = sqlx::query_as::&lt;<span class="rs-type">Sqlite</span>, <a class="symbol-link rs-type" href="eos-db--src-rows-rs.html#item-struct-IterationRow-69">IterationRow</a>&gt;(&quot;<span class="rs-type">SELECT</span> * <span class="rs-type">FROM</span> iterations <span class="rs-type">WHERE</span> id = ?&quot;)
+            .bind(id.as_str())
+            .fetch_optional(&amp;<span class="rs-self">self</span>.pool)
+            .<span class="rs-kw">await</span>
+            .map_err(<a class="symbol-link rs-type" href="eos-db--src-error-rs.html#item-enum-DbError-5">DbError</a>::from)?;
+        <span class="rs-type">Ok</span>(row.map(row_to_iteration).transpose()?)
+    }
+</code></pre>
+</details></td></tr><tr id="method-append-attempt-id-69"><td>method</td><td>append_attempt_id</td><td><code>async fn <a class="symbol-link" href="eos-db--src-repositories-iteration-rs.html#method-append-attempt-id-69">append_attempt_id</a> (&amp; self , id : &amp; IterationId , attempt_id : &amp; AttemptId ,) -&gt; Result &lt; Iteration , CoreError &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-db--src-repositories-iteration-rs.html#method-append-attempt-id-69">append_attempt_id</a>(
+        &amp;<span class="rs-self">self</span>,
+        id: &amp;<span class="rs-type">IterationId</span>,
+        attempt_id: &amp;<span class="rs-type">AttemptId</span>,
+    ) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Iteration</span>, <span class="rs-type">CoreError</span>&gt; {
+        <span class="rs-kw">let</span> now = <span class="rs-type">OffsetDateTime</span>::now_utc();
+        <span class="rs-kw">let</span> row = sqlx::query_as::&lt;<span class="rs-type">Sqlite</span>, <a class="symbol-link rs-type" href="eos-db--src-rows-rs.html#item-struct-IterationRow-69">IterationRow</a>&gt;(
+            &quot;<span class="rs-type">UPDATE</span> iterations \
+             <span class="rs-type">SET</span> attempt_ids = json_insert(<span class="rs-type">COALESCE</span>(attempt_ids, &#x27;[]&#x27;), &#x27;$[#]&#x27;, ?), \
+                 updated_at = ? <span class="rs-type">WHERE</span> id = ? <span class="rs-type">RETURNING</span> *&quot;,
+        )
+        .bind(attempt_id.as_str())
+        .bind(now)
+        .bind(id.as_str())
+        .fetch_optional(&amp;<span class="rs-self">self</span>.pool)
+        .<span class="rs-kw">await</span>
+        .map_err(<a class="symbol-link rs-type" href="eos-db--src-error-rs.html#item-enum-DbError-5">DbError</a>::from)?;
+        <span class="rs-kw">let</span> row = row.ok_or_else(|| <a class="symbol-link rs-type" href="eos-db--src-error-rs.html#item-enum-DbError-5">DbError</a>::<span class="rs-type">NotFound</span> {
+            table: &quot;iterations&quot;,
+            id: id.to_string(),
+        })?;
+        <span class="rs-type">Ok</span>(<a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-row-to-iteration-300">row_to_iteration</a>(row)?)
+    }
+</code></pre>
+</details></td></tr><tr id="method-set-status-93"><td>method</td><td>set_status</td><td><code>async fn <a class="symbol-link" href="eos-db--src-repositories-iteration-rs.html#method-set-status-93">set_status</a> (&amp; self , id : &amp; IterationId , status : IterationStatus , closed_at : Option &lt; UtcDateTime &gt; , outcomes : Option &lt; &amp; str &gt; ,) -&gt; Result &lt; Iteration , CoreError &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-db--src-repositories-iteration-rs.html#method-set-status-93">set_status</a>(
+        &amp;<span class="rs-self">self</span>,
+        id: &amp;<span class="rs-type">IterationId</span>,
+        status: <span class="rs-type">IterationStatus</span>,
+        closed_at: <span class="rs-type">Option</span>&lt;<span class="rs-type">UtcDateTime</span>&gt;,
+        outcomes: <span class="rs-type">Option</span>&lt;&amp;str&gt;,
+    ) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Iteration</span>, <span class="rs-type">CoreError</span>&gt; {
+        <span class="rs-kw">let</span> now = <span class="rs-type">OffsetDateTime</span>::now_utc();
+        <span class="rs-kw">let</span> row = sqlx::query_as::&lt;<span class="rs-type">Sqlite</span>, <a class="symbol-link rs-type" href="eos-db--src-rows-rs.html#item-struct-IterationRow-69">IterationRow</a>&gt;(
+            &quot;<span class="rs-type">UPDATE</span> iterations <span class="rs-type">SET</span> status = ?, \
+               closed_at = <span class="rs-type">COALESCE</span>(?, closed_at), \
+               outcomes = <span class="rs-type">COALESCE</span>(?, outcomes), \
+               updated_at = ? <span class="rs-type">WHERE</span> id = ? <span class="rs-type">RETURNING</span> *&quot;,
+        )
+        .bind(<a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-enum-to-db-148">enum_to_db</a>(&amp;status))
+        .bind(closed_at.map(<span class="rs-type">UtcDateTime</span>::into_inner))
+        .bind(outcomes)
+        .bind(now)
+        .bind(id.as_str())
+        .fetch_optional(&amp;<span class="rs-self">self</span>.pool)
+        .<span class="rs-kw">await</span>
+        .map_err(<a class="symbol-link rs-type" href="eos-db--src-error-rs.html#item-enum-DbError-5">DbError</a>::from)?;
+        <span class="rs-kw">let</span> row = row.ok_or_else(|| <a class="symbol-link rs-type" href="eos-db--src-error-rs.html#item-enum-DbError-5">DbError</a>::<span class="rs-type">NotFound</span> {
+            table: &quot;iterations&quot;,
+            id: id.to_string(),
+        })?;
+        <span class="rs-type">Ok</span>(<a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-row-to-iteration-300">row_to_iteration</a>(row)?)
+    }
+</code></pre>
+</details></td></tr><tr id="method-set-deferred-goal-for-next-iteration-122"><td>method</td><td>set_deferred_goal_for_next_iteration</td><td><code>async fn <a class="symbol-link" href="eos-db--src-repositories-iteration-rs.html#method-set-deferred-goal-for-next-iteration-122">set_deferred_goal_for_next_iteration</a> (&amp; self , id : &amp; IterationId , deferred_goal_for_next_iteration : Option &lt; &amp; DeferredGoal &gt; ,) -&gt; Result &lt; Iteration , CoreError &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-db--src-repositories-iteration-rs.html#method-set-deferred-goal-for-next-iteration-122">set_deferred_goal_for_next_iteration</a>(
+        &amp;<span class="rs-self">self</span>,
+        id: &amp;<span class="rs-type">IterationId</span>,
+        deferred_goal_for_next_iteration: <span class="rs-type">Option</span>&lt;&amp;<span class="rs-type">DeferredGoal</span>&gt;,
+    ) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Iteration</span>, <span class="rs-type">CoreError</span>&gt; {
+        <span class="rs-kw">let</span> now = <span class="rs-type">OffsetDateTime</span>::now_utc();
+        <span class="rs-kw">let</span> row = sqlx::query_as::&lt;<span class="rs-type">Sqlite</span>, <a class="symbol-link rs-type" href="eos-db--src-rows-rs.html#item-struct-IterationRow-69">IterationRow</a>&gt;(
+            &quot;<span class="rs-type">UPDATE</span> iterations <span class="rs-type">SET</span> deferred_goal = ?, updated_at = ? <span class="rs-type">WHERE</span> id = ? <span class="rs-type">RETURNING</span> *&quot;,
+        )
+        .bind(deferred_goal_for_next_iteration.map(<span class="rs-type">DeferredGoal</span>::as_str))
+        .bind(now)
+        .bind(id.as_str())
+        .fetch_optional(&amp;<span class="rs-self">self</span>.pool)
+        .<span class="rs-kw">await</span>
+        .map_err(<a class="symbol-link rs-type" href="eos-db--src-error-rs.html#item-enum-DbError-5">DbError</a>::from)?;
+        <span class="rs-kw">let</span> row = row.ok_or_else(|| <a class="symbol-link rs-type" href="eos-db--src-error-rs.html#item-enum-DbError-5">DbError</a>::<span class="rs-type">NotFound</span> {
+            table: &quot;iterations&quot;,
+            id: id.to_string(),
+        })?;
+        <span class="rs-type">Ok</span>(<a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-row-to-iteration-300">row_to_iteration</a>(row)?)
+    }
+</code></pre>
+</details></td></tr><tr id="method-close-succeeded-144"><td>method</td><td>close_succeeded</td><td><code>async fn <a class="symbol-link" href="eos-db--src-repositories-iteration-rs.html#method-close-succeeded-144">close_succeeded</a> (&amp; self , id : &amp; IterationId , outcomes : &amp; str , closed_at : Option &lt; UtcDateTime &gt; ,) -&gt; Result &lt; Iteration , CoreError &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-db--src-repositories-iteration-rs.html#method-close-succeeded-144">close_succeeded</a>(
+        &amp;<span class="rs-self">self</span>,
+        id: &amp;<span class="rs-type">IterationId</span>,
+        outcomes: &amp;str,
+        closed_at: <span class="rs-type">Option</span>&lt;<span class="rs-type">UtcDateTime</span>&gt;,
+    ) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Iteration</span>, <span class="rs-type">CoreError</span>&gt; {
+        <span class="rs-comment">// Single UPDATE =&gt; status + outcomes are written atomically (a crash</span>
+        <span class="rs-comment">// leaves the row untouched), preserving the close_succeeded invariant.</span>
+        <span class="rs-kw">let</span> now = <span class="rs-type">OffsetDateTime</span>::now_utc();
+        <span class="rs-kw">let</span> row = sqlx::query_as::&lt;<span class="rs-type">Sqlite</span>, <a class="symbol-link rs-type" href="eos-db--src-rows-rs.html#item-struct-IterationRow-69">IterationRow</a>&gt;(
+            &quot;<span class="rs-type">UPDATE</span> iterations <span class="rs-type">SET</span> status = &#x27;succeeded&#x27;, outcomes = ?, \
+               closed_at = <span class="rs-type">COALESCE</span>(?, closed_at), updated_at = ? <span class="rs-type">WHERE</span> id = ? <span class="rs-type">RETURNING</span> *&quot;,
+        )
+        .bind(outcomes)
+        .bind(closed_at.map(<span class="rs-type">UtcDateTime</span>::into_inner))
+        .bind(now)
+        .bind(id.as_str())
+        .fetch_optional(&amp;<span class="rs-self">self</span>.pool)
+        .<span class="rs-kw">await</span>
+        .map_err(<a class="symbol-link rs-type" href="eos-db--src-error-rs.html#item-enum-DbError-5">DbError</a>::from)?;
+        <span class="rs-kw">let</span> row = row.ok_or_else(|| <a class="symbol-link rs-type" href="eos-db--src-error-rs.html#item-enum-DbError-5">DbError</a>::<span class="rs-type">NotFound</span> {
+            table: &quot;iterations&quot;,
+            id: id.to_string(),
+        })?;
+        <span class="rs-type">Ok</span>(<a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-row-to-iteration-300">row_to_iteration</a>(row)?)
+    }
+</code></pre>
+</details></td></tr><tr id="method-list-for-workflow-171"><td>method</td><td>list_for_workflow</td><td><code>async fn <a class="symbol-link" href="eos-db--src-repositories-iteration-rs.html#method-list-for-workflow-171">list_for_workflow</a> (&amp; self , workflow_id : &amp; WorkflowId ,) -&gt; Result &lt; Vec &lt; Iteration &gt; , CoreError &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-db--src-repositories-iteration-rs.html#method-list-for-workflow-171">list_for_workflow</a>(
+        &amp;<span class="rs-self">self</span>,
+        workflow_id: &amp;<span class="rs-type">WorkflowId</span>,
+    ) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;<span class="rs-type">Iteration</span>&gt;, <span class="rs-type">CoreError</span>&gt; {
+        <span class="rs-kw">let</span> rows = sqlx::query_as::&lt;<span class="rs-type">Sqlite</span>, <a class="symbol-link rs-type" href="eos-db--src-rows-rs.html#item-struct-IterationRow-69">IterationRow</a>&gt;(
+            &quot;<span class="rs-type">SELECT</span> * <span class="rs-type">FROM</span> iterations <span class="rs-type">WHERE</span> workflow_id = ? <span class="rs-type">ORDER</span> <span class="rs-type">BY</span> sequence_no <span class="rs-type">ASC</span>&quot;,
+        )
+        .bind(workflow_id.as_str())
+        .fetch_all(&amp;<span class="rs-self">self</span>.pool)
+        .<span class="rs-kw">await</span>
+        .map_err(<a class="symbol-link rs-type" href="eos-db--src-error-rs.html#item-enum-DbError-5">DbError</a>::from)?;
+        <span class="rs-type">Ok</span>(rows
+            .into_iter()
+            .map(row_to_iteration)
+            .collect::&lt;<span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;_&gt;, _&gt;&gt;()?)
+    }
+</code></pre>
+</details></td></tr></tbody></table></details></div>
+
   <p class="source">crates/eos-db/src/repositories/iteration.rs:15</p>
 </article></div>
 </section></div>
 </main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/eos-db/src/repositories/iteration.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-comment">//! `SqlIterationStore` — the iteration repository (Rust `iteration_store.py`).</span>
+
+<span class="rs-kw">use</span> async_trait::async_trait;
+<span class="rs-kw">use</span> sqlx::{<span class="rs-type">Sqlite</span>, <span class="rs-type">SqlitePool</span>};
+<span class="rs-kw">use</span> time::<span class="rs-type">OffsetDateTime</span>;
+
+<span class="rs-kw">use</span> eos_state::{
+    <span class="rs-type">AttemptBudget</span>, <span class="rs-type">AttemptId</span>, <span class="rs-type">CoreError</span>, <span class="rs-type">DeferredGoal</span>, <span class="rs-type">Iteration</span>, <span class="rs-type">IterationCreationReason</span>,
+    <span class="rs-type">IterationId</span>, <span class="rs-type">IterationStatus</span>, <span class="rs-type">IterationStore</span>, <span class="rs-type">Sealed</span>, <span class="rs-type">UtcDateTime</span>, <span class="rs-type">WorkflowId</span>,
+};
+
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::error::<a class="symbol-link rs-type" href="eos-db--src-error-rs.html#item-enum-DbError-5">DbError</a>;
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::rows::{enum_to_db, row_to_iteration, <a class="symbol-link rs-type" href="eos-db--src-rows-rs.html#item-struct-IterationRow-69">IterationRow</a>};
+
+<span class="rs-comment">/// `SQLite` repository for iterations. Returns frozen `Iteration` DTOs.</span>
+#[derive(<span class="rs-type">Debug</span>)]
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-db--src-repositories-iteration-rs.html#item-struct-SqlIterationStore-15">SqlIterationStore</a> {
+    pool: <span class="rs-type">SqlitePool</span>,
+}
+
+<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-db--src-repositories-iteration-rs.html#item-struct-SqlIterationStore-15">SqlIterationStore</a> {
+    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-db--src-model-registry-rs.html#method-new-64">new</a>(pool: <span class="rs-type">SqlitePool</span>) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">Self</span> { pool }
+    }
+}
+
+<span class="rs-kw">impl</span> <span class="rs-type">Sealed</span> <span class="rs-kw">for</span> <a class="symbol-link rs-type" href="eos-db--src-repositories-iteration-rs.html#item-struct-SqlIterationStore-15">SqlIterationStore</a> {}
+
+#[async_trait]
+<span class="rs-kw">impl</span> <span class="rs-type">IterationStore</span> <span class="rs-kw">for</span> <a class="symbol-link rs-type" href="eos-db--src-repositories-iteration-rs.html#item-struct-SqlIterationStore-15">SqlIterationStore</a> {
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-db--src-repositories-attempt-rs.html#method-insert-39">insert</a>(
+        &amp;<span class="rs-self">self</span>,
+        workflow_id: &amp;<span class="rs-type">WorkflowId</span>,
+        sequence_no: i64,
+        creation_reason: <span class="rs-type">IterationCreationReason</span>,
+        iteration_goal: &amp;str,
+        attempt_budget: <span class="rs-type">AttemptBudget</span>,
+    ) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Iteration</span>, <span class="rs-type">CoreError</span>&gt; {
+        <span class="rs-kw">let</span> now = <span class="rs-type">OffsetDateTime</span>::now_utc();
+        <span class="rs-kw">let</span> row = sqlx::query_as::&lt;<span class="rs-type">Sqlite</span>, <a class="symbol-link rs-type" href="eos-db--src-rows-rs.html#item-struct-IterationRow-69">IterationRow</a>&gt;(
+            &quot;<span class="rs-type">INSERT</span> <span class="rs-type">INTO</span> iterations \
+             (id, workflow_id, sequence_no, creation_reason, goal, attempt_budget, status, \
+              attempt_ids, deferred_goal, created_at, updated_at, closed_at, outcomes) \
+             <span class="rs-type">VALUES</span> (?, ?, ?, ?, ?, ?, &#x27;open&#x27;, &#x27;[]&#x27;, <span class="rs-type">NULL</span>, ?, ?, <span class="rs-type">NULL</span>, <span class="rs-type">NULL</span>) <span class="rs-type">RETURNING</span> *&quot;,
+        )
+        .bind(<span class="rs-type">IterationId</span>::new_v4().as_str())
+        .bind(workflow_id.as_str())
+        .bind(sequence_no)
+        .bind(<a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-enum-to-db-148">enum_to_db</a>(&amp;creation_reason))
+        .bind(iteration_goal)
+        .bind(attempt_budget.as_i64())
+        .bind(now)
+        .bind(now)
+        .fetch_one(&amp;<span class="rs-self">self</span>.pool)
+        .<span class="rs-kw">await</span>
+        .map_err(<a class="symbol-link rs-type" href="eos-db--src-error-rs.html#item-enum-DbError-5">DbError</a>::from)?;
+        <span class="rs-type">Ok</span>(<a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-row-to-iteration-300">row_to_iteration</a>(row)?)
+    }
+
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-db--src-model-registry-rs.html#method-get-208">get</a>(&amp;<span class="rs-self">self</span>, id: &amp;<span class="rs-type">IterationId</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Option</span>&lt;<span class="rs-type">Iteration</span>&gt;, <span class="rs-type">CoreError</span>&gt; {
+        <span class="rs-kw">let</span> row = sqlx::query_as::&lt;<span class="rs-type">Sqlite</span>, <a class="symbol-link rs-type" href="eos-db--src-rows-rs.html#item-struct-IterationRow-69">IterationRow</a>&gt;(&quot;<span class="rs-type">SELECT</span> * <span class="rs-type">FROM</span> iterations <span class="rs-type">WHERE</span> id = ?&quot;)
+            .bind(id.as_str())
+            .fetch_optional(&amp;<span class="rs-self">self</span>.pool)
+            .<span class="rs-kw">await</span>
+            .map_err(<a class="symbol-link rs-type" href="eos-db--src-error-rs.html#item-enum-DbError-5">DbError</a>::from)?;
+        <span class="rs-type">Ok</span>(row.map(row_to_iteration).transpose()?)
+    }
+
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-db--src-repositories-iteration-rs.html#method-append-attempt-id-69">append_attempt_id</a>(
+        &amp;<span class="rs-self">self</span>,
+        id: &amp;<span class="rs-type">IterationId</span>,
+        attempt_id: &amp;<span class="rs-type">AttemptId</span>,
+    ) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Iteration</span>, <span class="rs-type">CoreError</span>&gt; {
+        <span class="rs-kw">let</span> now = <span class="rs-type">OffsetDateTime</span>::now_utc();
+        <span class="rs-kw">let</span> row = sqlx::query_as::&lt;<span class="rs-type">Sqlite</span>, <a class="symbol-link rs-type" href="eos-db--src-rows-rs.html#item-struct-IterationRow-69">IterationRow</a>&gt;(
+            &quot;<span class="rs-type">UPDATE</span> iterations \
+             <span class="rs-type">SET</span> attempt_ids = json_insert(<span class="rs-type">COALESCE</span>(attempt_ids, &#x27;[]&#x27;), &#x27;$[#]&#x27;, ?), \
+                 updated_at = ? <span class="rs-type">WHERE</span> id = ? <span class="rs-type">RETURNING</span> *&quot;,
+        )
+        .bind(attempt_id.as_str())
+        .bind(now)
+        .bind(id.as_str())
+        .fetch_optional(&amp;<span class="rs-self">self</span>.pool)
+        .<span class="rs-kw">await</span>
+        .map_err(<a class="symbol-link rs-type" href="eos-db--src-error-rs.html#item-enum-DbError-5">DbError</a>::from)?;
+        <span class="rs-kw">let</span> row = row.ok_or_else(|| <a class="symbol-link rs-type" href="eos-db--src-error-rs.html#item-enum-DbError-5">DbError</a>::<span class="rs-type">NotFound</span> {
+            table: &quot;iterations&quot;,
+            id: id.to_string(),
+        })?;
+        <span class="rs-type">Ok</span>(<a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-row-to-iteration-300">row_to_iteration</a>(row)?)
+    }
+
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-db--src-repositories-iteration-rs.html#method-set-status-93">set_status</a>(
+        &amp;<span class="rs-self">self</span>,
+        id: &amp;<span class="rs-type">IterationId</span>,
+        status: <span class="rs-type">IterationStatus</span>,
+        closed_at: <span class="rs-type">Option</span>&lt;<span class="rs-type">UtcDateTime</span>&gt;,
+        outcomes: <span class="rs-type">Option</span>&lt;&amp;str&gt;,
+    ) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Iteration</span>, <span class="rs-type">CoreError</span>&gt; {
+        <span class="rs-kw">let</span> now = <span class="rs-type">OffsetDateTime</span>::now_utc();
+        <span class="rs-kw">let</span> row = sqlx::query_as::&lt;<span class="rs-type">Sqlite</span>, <a class="symbol-link rs-type" href="eos-db--src-rows-rs.html#item-struct-IterationRow-69">IterationRow</a>&gt;(
+            &quot;<span class="rs-type">UPDATE</span> iterations <span class="rs-type">SET</span> status = ?, \
+               closed_at = <span class="rs-type">COALESCE</span>(?, closed_at), \
+               outcomes = <span class="rs-type">COALESCE</span>(?, outcomes), \
+               updated_at = ? <span class="rs-type">WHERE</span> id = ? <span class="rs-type">RETURNING</span> *&quot;,
+        )
+        .bind(<a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-enum-to-db-148">enum_to_db</a>(&amp;status))
+        .bind(closed_at.map(<span class="rs-type">UtcDateTime</span>::into_inner))
+        .bind(outcomes)
+        .bind(now)
+        .bind(id.as_str())
+        .fetch_optional(&amp;<span class="rs-self">self</span>.pool)
+        .<span class="rs-kw">await</span>
+        .map_err(<a class="symbol-link rs-type" href="eos-db--src-error-rs.html#item-enum-DbError-5">DbError</a>::from)?;
+        <span class="rs-kw">let</span> row = row.ok_or_else(|| <a class="symbol-link rs-type" href="eos-db--src-error-rs.html#item-enum-DbError-5">DbError</a>::<span class="rs-type">NotFound</span> {
+            table: &quot;iterations&quot;,
+            id: id.to_string(),
+        })?;
+        <span class="rs-type">Ok</span>(<a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-row-to-iteration-300">row_to_iteration</a>(row)?)
+    }
+
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-db--src-repositories-iteration-rs.html#method-set-deferred-goal-for-next-iteration-122">set_deferred_goal_for_next_iteration</a>(
+        &amp;<span class="rs-self">self</span>,
+        id: &amp;<span class="rs-type">IterationId</span>,
+        deferred_goal_for_next_iteration: <span class="rs-type">Option</span>&lt;&amp;<span class="rs-type">DeferredGoal</span>&gt;,
+    ) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Iteration</span>, <span class="rs-type">CoreError</span>&gt; {
+        <span class="rs-kw">let</span> now = <span class="rs-type">OffsetDateTime</span>::now_utc();
+        <span class="rs-kw">let</span> row = sqlx::query_as::&lt;<span class="rs-type">Sqlite</span>, <a class="symbol-link rs-type" href="eos-db--src-rows-rs.html#item-struct-IterationRow-69">IterationRow</a>&gt;(
+            &quot;<span class="rs-type">UPDATE</span> iterations <span class="rs-type">SET</span> deferred_goal = ?, updated_at = ? <span class="rs-type">WHERE</span> id = ? <span class="rs-type">RETURNING</span> *&quot;,
+        )
+        .bind(deferred_goal_for_next_iteration.map(<span class="rs-type">DeferredGoal</span>::as_str))
+        .bind(now)
+        .bind(id.as_str())
+        .fetch_optional(&amp;<span class="rs-self">self</span>.pool)
+        .<span class="rs-kw">await</span>
+        .map_err(<a class="symbol-link rs-type" href="eos-db--src-error-rs.html#item-enum-DbError-5">DbError</a>::from)?;
+        <span class="rs-kw">let</span> row = row.ok_or_else(|| <a class="symbol-link rs-type" href="eos-db--src-error-rs.html#item-enum-DbError-5">DbError</a>::<span class="rs-type">NotFound</span> {
+            table: &quot;iterations&quot;,
+            id: id.to_string(),
+        })?;
+        <span class="rs-type">Ok</span>(<a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-row-to-iteration-300">row_to_iteration</a>(row)?)
+    }
+
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-db--src-repositories-iteration-rs.html#method-close-succeeded-144">close_succeeded</a>(
+        &amp;<span class="rs-self">self</span>,
+        id: &amp;<span class="rs-type">IterationId</span>,
+        outcomes: &amp;str,
+        closed_at: <span class="rs-type">Option</span>&lt;<span class="rs-type">UtcDateTime</span>&gt;,
+    ) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Iteration</span>, <span class="rs-type">CoreError</span>&gt; {
+        <span class="rs-comment">// Single UPDATE =&gt; status + outcomes are written atomically (a crash</span>
+        <span class="rs-comment">// leaves the row untouched), preserving the close_succeeded invariant.</span>
+        <span class="rs-kw">let</span> now = <span class="rs-type">OffsetDateTime</span>::now_utc();
+        <span class="rs-kw">let</span> row = sqlx::query_as::&lt;<span class="rs-type">Sqlite</span>, <a class="symbol-link rs-type" href="eos-db--src-rows-rs.html#item-struct-IterationRow-69">IterationRow</a>&gt;(
+            &quot;<span class="rs-type">UPDATE</span> iterations <span class="rs-type">SET</span> status = &#x27;succeeded&#x27;, outcomes = ?, \
+               closed_at = <span class="rs-type">COALESCE</span>(?, closed_at), updated_at = ? <span class="rs-type">WHERE</span> id = ? <span class="rs-type">RETURNING</span> *&quot;,
+        )
+        .bind(outcomes)
+        .bind(closed_at.map(<span class="rs-type">UtcDateTime</span>::into_inner))
+        .bind(now)
+        .bind(id.as_str())
+        .fetch_optional(&amp;<span class="rs-self">self</span>.pool)
+        .<span class="rs-kw">await</span>
+        .map_err(<a class="symbol-link rs-type" href="eos-db--src-error-rs.html#item-enum-DbError-5">DbError</a>::from)?;
+        <span class="rs-kw">let</span> row = row.ok_or_else(|| <a class="symbol-link rs-type" href="eos-db--src-error-rs.html#item-enum-DbError-5">DbError</a>::<span class="rs-type">NotFound</span> {
+            table: &quot;iterations&quot;,
+            id: id.to_string(),
+        })?;
+        <span class="rs-type">Ok</span>(<a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-row-to-iteration-300">row_to_iteration</a>(row)?)
+    }
+
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-db--src-repositories-iteration-rs.html#method-list-for-workflow-171">list_for_workflow</a>(
+        &amp;<span class="rs-self">self</span>,
+        workflow_id: &amp;<span class="rs-type">WorkflowId</span>,
+    ) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;<span class="rs-type">Iteration</span>&gt;, <span class="rs-type">CoreError</span>&gt; {
+        <span class="rs-kw">let</span> rows = sqlx::query_as::&lt;<span class="rs-type">Sqlite</span>, <a class="symbol-link rs-type" href="eos-db--src-rows-rs.html#item-struct-IterationRow-69">IterationRow</a>&gt;(
+            &quot;<span class="rs-type">SELECT</span> * <span class="rs-type">FROM</span> iterations <span class="rs-type">WHERE</span> workflow_id = ? <span class="rs-type">ORDER</span> <span class="rs-type">BY</span> sequence_no <span class="rs-type">ASC</span>&quot;,
+        )
+        .bind(workflow_id.as_str())
+        .fetch_all(&amp;<span class="rs-self">self</span>.pool)
+        .<span class="rs-kw">await</span>
+        .map_err(<a class="symbol-link rs-type" href="eos-db--src-error-rs.html#item-enum-DbError-5">DbError</a>::from)?;
+        <span class="rs-type">Ok</span>(rows
+            .into_iter()
+            .map(row_to_iteration)
+            .collect::&lt;<span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;_&gt;, _&gt;&gt;()?)
+    }
+}
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
   <script src="../assets/inventory.js"></script>
 </body>
 </html>

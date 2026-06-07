@@ -8,8 +8,16 @@
 </head>
 <body>
   <header>
-    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
-    <h1>eos-tools File Inventory</h1>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>eos-tools File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS/agent-core &amp;&amp; cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
   </header>
   <a class="back-link" href="../index.html">agent-core</a>
 <section class="summary">
@@ -47,39 +55,99 @@
       <span>0 methods</span>
     </div>
   </div>
-  <div class="items"><div class="group-label">File-Owned Types</div><article class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct ReadFileOutput pub(crate :: tools :: sandbox) pub(crate :: tools :: sandbox) struct ReadFileOutput crates/eos-tools/src/tools/sandbox/lib/outputs.rs cwd String file_path String total_lines u32 start_line u32 end_line u32 content String ">
+  <div class="items"><div class="group-label">File-Owned Types</div><article id="item-struct-ReadFileOutput-8" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct ReadFileOutput pub(crate :: tools :: sandbox) pub(crate :: tools :: sandbox) struct ReadFileOutput crates/eos-tools/src/tools/sandbox/lib/outputs.rs cwd String file_path String total_lines u32 start_line u32 end_line u32 content String ">
   <div class="item-head">
     <span class="kind">struct</span>
     <h3>ReadFileOutput</h3>
     <span class="visibility">pub(crate :: tools :: sandbox)</span>
   </div>
-  <code class="signature">pub(crate :: tools :: sandbox) struct ReadFileOutput</code>
-  <div class="tags"><span>serde</span></div>
+  <code class="signature">pub(crate :: tools :: sandbox) struct <a class="symbol-link" href="eos-tools--src-tools-sandbox-lib-outputs-rs.html#item-struct-ReadFileOutput-8">ReadFileOutput</a></code>
+  <div class="tags"><span>derive: Debug</span><span>derive: Deserialize</span><span>derive: JsonSchema</span><span>derive: Serialize</span><span>serde</span></div>
   <h4>Fields</h4><table><tbody><tr><td>pub(crate :: tools :: sandbox)</td><td>cwd</td><td><code>String</code></td></tr><tr><td>pub(crate :: tools :: sandbox)</td><td>file_path</td><td><code>String</code></td></tr><tr><td>pub(crate :: tools :: sandbox)</td><td>total_lines</td><td><code>u32</code></td></tr><tr><td>pub(crate :: tools :: sandbox)</td><td>start_line</td><td><code>u32</code></td></tr><tr><td>pub(crate :: tools :: sandbox)</td><td>end_line</td><td><code>u32</code></td></tr><tr><td>pub(crate :: tools :: sandbox)</td><td>content</td><td><code>String</code></td></tr></tbody></table>
+
   <p class="source">crates/eos-tools/src/tools/sandbox/lib/outputs.rs:8</p>
-</article><article class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct MutationOutput pub(crate :: tools :: sandbox) pub(crate :: tools :: sandbox) struct MutationOutput crates/eos-tools/src/tools/sandbox/lib/outputs.rs cwd String file_path String status String changed_paths Vec &lt; String &gt; changed_path_kinds BTreeMap &lt; String , String &gt; mutation_source String conflict_reason Option &lt; String &gt; error JsonObject extra BTreeMap &lt; String , Value &gt; ">
+</article><article id="item-struct-MutationOutput-18" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct MutationOutput pub(crate :: tools :: sandbox) pub(crate :: tools :: sandbox) struct MutationOutput crates/eos-tools/src/tools/sandbox/lib/outputs.rs cwd String file_path String status String changed_paths Vec &lt; String &gt; changed_path_kinds BTreeMap &lt; String , String &gt; mutation_source String conflict_reason Option &lt; String &gt; error JsonObject extra BTreeMap &lt; String , Value &gt; ">
   <div class="item-head">
     <span class="kind">struct</span>
     <h3>MutationOutput</h3>
     <span class="visibility">pub(crate :: tools :: sandbox)</span>
   </div>
-  <code class="signature">pub(crate :: tools :: sandbox) struct MutationOutput</code>
-  <div class="tags"><span>serde</span></div>
+  <code class="signature">pub(crate :: tools :: sandbox) struct <a class="symbol-link" href="eos-tools--src-tools-sandbox-lib-outputs-rs.html#item-struct-MutationOutput-18">MutationOutput</a></code>
+  <div class="tags"><span>derive: Debug</span><span>derive: Deserialize</span><span>derive: JsonSchema</span><span>derive: Serialize</span><span>serde</span></div>
   <h4>Fields</h4><table><tbody><tr><td>pub(crate :: tools :: sandbox)</td><td>cwd</td><td><code>String</code></td></tr><tr><td>pub(crate :: tools :: sandbox)</td><td>file_path</td><td><code>String</code></td></tr><tr><td>pub(crate :: tools :: sandbox)</td><td>status</td><td><code>String</code></td></tr><tr><td>pub(crate :: tools :: sandbox)</td><td>changed_paths</td><td><code>Vec &lt; String &gt;</code></td></tr><tr><td>pub(crate :: tools :: sandbox)</td><td>changed_path_kinds</td><td><code>BTreeMap &lt; String , String &gt;</code></td></tr><tr><td>pub(crate :: tools :: sandbox)</td><td>mutation_source</td><td><code>String</code></td></tr><tr><td>pub(crate :: tools :: sandbox)</td><td>conflict_reason</td><td><code>Option &lt; String &gt;</code></td></tr><tr><td>pub(crate :: tools :: sandbox)</td><td>error</td><td><code>JsonObject</code></td></tr><tr><td>pub(crate :: tools :: sandbox)</td><td>extra</td><td><code>BTreeMap &lt; String , Value &gt;</code></td></tr></tbody></table>
+
   <p class="source">crates/eos-tools/src/tools/sandbox/lib/outputs.rs:18</p>
-</article><article class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct CommandToolOutput pub(crate :: tools :: sandbox) pub(crate :: tools :: sandbox) struct CommandToolOutput crates/eos-tools/src/tools/sandbox/lib/outputs.rs status String exit_code Option &lt; i32 &gt; output BTreeMap &lt; String , String &gt; command_session_id Option &lt; CommandSessionId &gt; stdout String stderr String changed_paths Vec &lt; String &gt; changed_path_kinds BTreeMap &lt; String , String &gt; mutation_source String conflict_reason Option &lt; String &gt; error Option &lt; JsonObject &gt; ">
+</article><article id="item-struct-CommandToolOutput-33" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct CommandToolOutput pub(crate :: tools :: sandbox) pub(crate :: tools :: sandbox) struct CommandToolOutput crates/eos-tools/src/tools/sandbox/lib/outputs.rs status String exit_code Option &lt; i32 &gt; output BTreeMap &lt; String , String &gt; command_session_id Option &lt; CommandSessionId &gt; stdout String stderr String changed_paths Vec &lt; String &gt; changed_path_kinds BTreeMap &lt; String , String &gt; mutation_source String conflict_reason Option &lt; String &gt; error Option &lt; JsonObject &gt; ">
   <div class="item-head">
     <span class="kind">struct</span>
     <h3>CommandToolOutput</h3>
     <span class="visibility">pub(crate :: tools :: sandbox)</span>
   </div>
-  <code class="signature">pub(crate :: tools :: sandbox) struct CommandToolOutput</code>
-  <div class="tags"><span>serde</span></div>
+  <code class="signature">pub(crate :: tools :: sandbox) struct <a class="symbol-link" href="eos-tools--src-tools-sandbox-lib-outputs-rs.html#item-struct-CommandToolOutput-33">CommandToolOutput</a></code>
+  <p class="docstring">Shared output shape for command-session tools.</p>
+  <div class="tags"><span>derive: Debug</span><span>derive: Deserialize</span><span>derive: JsonSchema</span><span>derive: Serialize</span><span>serde</span></div>
   <h4>Fields</h4><table><tbody><tr><td>pub(crate :: tools :: sandbox)</td><td>status</td><td><code>String</code></td></tr><tr><td>pub(crate :: tools :: sandbox)</td><td>exit_code</td><td><code>Option &lt; i32 &gt;</code></td></tr><tr><td>pub(crate :: tools :: sandbox)</td><td>output</td><td><code>BTreeMap &lt; String , String &gt;</code></td></tr><tr><td>pub(crate :: tools :: sandbox)</td><td>command_session_id</td><td><code>Option &lt; CommandSessionId &gt;</code></td></tr><tr><td>pub(crate :: tools :: sandbox)</td><td>stdout</td><td><code>String</code></td></tr><tr><td>pub(crate :: tools :: sandbox)</td><td>stderr</td><td><code>String</code></td></tr><tr><td>pub(crate :: tools :: sandbox)</td><td>changed_paths</td><td><code>Vec &lt; String &gt;</code></td></tr><tr><td>pub(crate :: tools :: sandbox)</td><td>changed_path_kinds</td><td><code>BTreeMap &lt; String , String &gt;</code></td></tr><tr><td>pub(crate :: tools :: sandbox)</td><td>mutation_source</td><td><code>String</code></td></tr><tr><td>pub(crate :: tools :: sandbox)</td><td>conflict_reason</td><td><code>Option &lt; String &gt;</code></td></tr><tr><td>pub(crate :: tools :: sandbox)</td><td>error</td><td><code>Option &lt; JsonObject &gt;</code></td></tr></tbody></table>
+
   <p class="source">crates/eos-tools/src/tools/sandbox/lib/outputs.rs:33</p>
 </article></div>
 </section></div>
 </main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/eos-tools/src/tools/sandbox/lib/outputs.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-kw">use</span> std::collections::<span class="rs-type">BTreeMap</span>;
+
+<span class="rs-kw">use</span> eos_types::{<span class="rs-type">CommandSessionId</span>, <span class="rs-type">JsonObject</span>};
+<span class="rs-kw">use</span> schemars::<span class="rs-type">JsonSchema</span>;
+<span class="rs-kw">use</span> serde::{<span class="rs-type">Deserialize</span>, <span class="rs-type">Serialize</span>};
+<span class="rs-kw">use</span> serde_json::<span class="rs-type">Value</span>;
+
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Serialize</span>, <span class="rs-type">Deserialize</span>, <span class="rs-type">JsonSchema</span>)]
+<span class="rs-kw">pub</span>(<span class="rs-kw">in</span> <span class="rs-kw">crate</span>::tools::sandbox) <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-lib-outputs-rs.html#item-struct-ReadFileOutput-8">ReadFileOutput</a> {
+    <span class="rs-kw">pub</span>(<span class="rs-kw">in</span> <span class="rs-kw">crate</span>::tools::sandbox) cwd: <span class="rs-type">String</span>,
+    <span class="rs-kw">pub</span>(<span class="rs-kw">in</span> <span class="rs-kw">crate</span>::tools::sandbox) file_path: <span class="rs-type">String</span>,
+    <span class="rs-kw">pub</span>(<span class="rs-kw">in</span> <span class="rs-kw">crate</span>::tools::sandbox) total_lines: u32,
+    <span class="rs-kw">pub</span>(<span class="rs-kw">in</span> <span class="rs-kw">crate</span>::tools::sandbox) start_line: u32,
+    <span class="rs-kw">pub</span>(<span class="rs-kw">in</span> <span class="rs-kw">crate</span>::tools::sandbox) end_line: u32,
+    <span class="rs-kw">pub</span>(<span class="rs-kw">in</span> <span class="rs-kw">crate</span>::tools::sandbox) content: <span class="rs-type">String</span>,
+}
+
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Serialize</span>, <span class="rs-type">Deserialize</span>, <span class="rs-type">JsonSchema</span>)]
+<span class="rs-kw">pub</span>(<span class="rs-kw">in</span> <span class="rs-kw">crate</span>::tools::sandbox) <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-lib-outputs-rs.html#item-struct-MutationOutput-18">MutationOutput</a> {
+    <span class="rs-kw">pub</span>(<span class="rs-kw">in</span> <span class="rs-kw">crate</span>::tools::sandbox) cwd: <span class="rs-type">String</span>,
+    <span class="rs-kw">pub</span>(<span class="rs-kw">in</span> <span class="rs-kw">crate</span>::tools::sandbox) file_path: <span class="rs-type">String</span>,
+    <span class="rs-kw">pub</span>(<span class="rs-kw">in</span> <span class="rs-kw">crate</span>::tools::sandbox) status: <span class="rs-type">String</span>,
+    <span class="rs-kw">pub</span>(<span class="rs-kw">in</span> <span class="rs-kw">crate</span>::tools::sandbox) changed_paths: <span class="rs-type">Vec</span>&lt;<span class="rs-type">String</span>&gt;,
+    <span class="rs-kw">pub</span>(<span class="rs-kw">in</span> <span class="rs-kw">crate</span>::tools::sandbox) changed_path_kinds: <span class="rs-type">BTreeMap</span>&lt;<span class="rs-type">String</span>, <span class="rs-type">String</span>&gt;,
+    <span class="rs-kw">pub</span>(<span class="rs-kw">in</span> <span class="rs-kw">crate</span>::tools::sandbox) mutation_source: <span class="rs-type">String</span>,
+    <span class="rs-kw">pub</span>(<span class="rs-kw">in</span> <span class="rs-kw">crate</span>::tools::sandbox) conflict_reason: <span class="rs-type">Option</span>&lt;<span class="rs-type">String</span>&gt;,
+    <span class="rs-kw">pub</span>(<span class="rs-kw">in</span> <span class="rs-kw">crate</span>::tools::sandbox) error: <span class="rs-type">JsonObject</span>,
+    <span class="rs-comment">/// `bytes_written` for `write_file`, `applied_edits` for the edit tools.</span>
+    #[serde(flatten)]
+    <span class="rs-kw">pub</span>(<span class="rs-kw">in</span> <span class="rs-kw">crate</span>::tools::sandbox) extra: <span class="rs-type">BTreeMap</span>&lt;<span class="rs-type">String</span>, <span class="rs-type">Value</span>&gt;,
+}
+
+<span class="rs-comment">/// Shared output shape for command-session tools.</span>
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Serialize</span>, <span class="rs-type">Deserialize</span>, <span class="rs-type">JsonSchema</span>)]
+<span class="rs-kw">pub</span>(<span class="rs-kw">in</span> <span class="rs-kw">crate</span>::tools::sandbox) <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-lib-outputs-rs.html#item-struct-CommandToolOutput-33">CommandToolOutput</a> {
+    <span class="rs-kw">pub</span>(<span class="rs-kw">in</span> <span class="rs-kw">crate</span>::tools::sandbox) status: <span class="rs-type">String</span>,
+    <span class="rs-kw">pub</span>(<span class="rs-kw">in</span> <span class="rs-kw">crate</span>::tools::sandbox) exit_code: <span class="rs-type">Option</span>&lt;i32&gt;,
+    <span class="rs-kw">pub</span>(<span class="rs-kw">in</span> <span class="rs-kw">crate</span>::tools::sandbox) output: <span class="rs-type">BTreeMap</span>&lt;<span class="rs-type">String</span>, <span class="rs-type">String</span>&gt;,
+    #[serde(skip_serializing_if = &quot;<span class="rs-type">Option</span>::is_none&quot;)]
+    <span class="rs-kw">pub</span>(<span class="rs-kw">in</span> <span class="rs-kw">crate</span>::tools::sandbox) command_session_id: <span class="rs-type">Option</span>&lt;<span class="rs-type">CommandSessionId</span>&gt;,
+    <span class="rs-kw">pub</span>(<span class="rs-kw">in</span> <span class="rs-kw">crate</span>::tools::sandbox) stdout: <span class="rs-type">String</span>,
+    <span class="rs-kw">pub</span>(<span class="rs-kw">in</span> <span class="rs-kw">crate</span>::tools::sandbox) stderr: <span class="rs-type">String</span>,
+    <span class="rs-kw">pub</span>(<span class="rs-kw">in</span> <span class="rs-kw">crate</span>::tools::sandbox) changed_paths: <span class="rs-type">Vec</span>&lt;<span class="rs-type">String</span>&gt;,
+    <span class="rs-kw">pub</span>(<span class="rs-kw">in</span> <span class="rs-kw">crate</span>::tools::sandbox) changed_path_kinds: <span class="rs-type">BTreeMap</span>&lt;<span class="rs-type">String</span>, <span class="rs-type">String</span>&gt;,
+    <span class="rs-kw">pub</span>(<span class="rs-kw">in</span> <span class="rs-kw">crate</span>::tools::sandbox) mutation_source: <span class="rs-type">String</span>,
+    <span class="rs-kw">pub</span>(<span class="rs-kw">in</span> <span class="rs-kw">crate</span>::tools::sandbox) conflict_reason: <span class="rs-type">Option</span>&lt;<span class="rs-type">String</span>&gt;,
+    <span class="rs-kw">pub</span>(<span class="rs-kw">in</span> <span class="rs-kw">crate</span>::tools::sandbox) error: <span class="rs-type">Option</span>&lt;<span class="rs-type">JsonObject</span>&gt;,
+}
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
   <script src="../assets/inventory.js"></script>
 </body>
 </html>

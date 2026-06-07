@@ -1,0 +1,753 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>eos-sandbox-host · src/provider.rs</title>
+  <link rel="stylesheet" href="../assets/inventory.css">
+</head>
+<body>
+  <header>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>eos-sandbox-host File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS/backend-server &amp;&amp; cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
+  </header>
+  <a class="back-link" href="../index.html">backend-server</a>
+<section class="summary">
+  <div><b>14</b><span>modules</span></div>
+  <div><b>122</b><span>items</span></div>
+  <div><b>72</b><span>fields</span></div>
+  <div><b>76</b><span>methods</span></div>
+</section>
+<section class="toolbar">
+  <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
+  <select id="kind-filter">
+    <option value="">All items</option>
+    <option value="type-model">Type model</option>
+    <option value="struct">Structs</option>
+    <option value="enum">Enums</option>
+    <option value="trait">Traits</option>
+    <option value="impl">Impls</option>
+    <option value="fn">Functions</option>
+    <option value="type">Aliases</option>
+  </select>
+</section>
+<main class="crate-layout">
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><a class="file-link" href="eos-sandbox-host.html"><span>bootstrap_artifact.rs</span><small>0/9</small></a></li><li><span class="folder">daemon_client</span><ul class="file-tree"><li><a class="file-link" href="eos-sandbox-host--src-daemon-client-codec-rs.html"><span>codec.rs</span><small>0/18</small></a></li><li><a class="file-link" href="eos-sandbox-host--src-daemon-client-shell-rs.html"><span>shell.rs</span><small>0/6</small></a></li><li><a class="file-link" href="eos-sandbox-host--src-daemon-client-tcp-rs.html"><span>tcp.rs</span><small>1/5</small></a></li></ul></li><li><a class="file-link" href="eos-sandbox-host--src-daemon-client-rs.html"><span>daemon_client.rs</span><small>1/2</small></a></li><li><a class="file-link" href="eos-sandbox-host--src-docker-rs.html"><span>docker.rs</span><small>1/13</small></a></li><li><a class="file-link" href="eos-sandbox-host--src-error-rs.html"><span>error.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-sandbox-host--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-sandbox-host--src-lifecycle-rs.html"><span>lifecycle.rs</span><small>2/5</small></a></li><li><a class="file-link" href="eos-sandbox-host--src-plugin-package-rs.html"><span>plugin_package.rs</span><small>0/8</small></a></li><li><a class="file-link active" href="eos-sandbox-host--src-provider-rs.html"><span>provider.rs</span><small>12/2</small></a></li><li><a class="file-link" href="eos-sandbox-host--src-provisioning-rs.html"><span>provisioning.rs</span><small>1/2</small></a></li><li><a class="file-link" href="eos-sandbox-host--src-registry-rs.html"><span>registry.rs</span><small>1/1</small></a></li><li><a class="file-link" href="eos-sandbox-host--src-sandbox-upload-rs.html"><span>sandbox_upload.rs</span><small>3/8</small></a></li></ul></li></ul></nav>
+  <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="provider crates/eos-sandbox-host/src/provider.rs Labels ProviderKind impl ProviderKind CreateSandboxSpec default_language impl Default for CreateSandboxSpec SandboxInfo DaemonTcpEndpoint RawExecResult default_true impl Default for RawExecResult ExecOpts ProviderHealth SnapshotInfo ContextPreparer impl ContextPreparer DockerContextPreparer impl DockerContextPreparer Sealed ProviderAdapter">
+  <div class="module-head">
+    <div>
+      <h2>src/provider.rs</h2>
+      <p class="path">module <code>provider</code></p>
+    </div>
+    <div class="module-stats">
+      <span>file owns</span>
+      <span>12 types</span>
+      <span>5 impls</span>
+      <span>2 fns</span>
+      <span>20 methods</span>
+    </div>
+  </div>
+  <div class="items"><div class="group-label">File-Owned Types</div><article id="item-struct-CreateSandboxSpec-44" class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct CreateSandboxSpec pub pub struct CreateSandboxSpec crates/eos-sandbox-host/src/provider.rs name String snapshot Option &lt; String &gt; image Option &lt; String &gt; language String env_vars BTreeMap &lt; String , String &gt; labels Labels platform Option &lt; String &gt; ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>CreateSandboxSpec</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub struct <a class="symbol-link" href="eos-sandbox-host--src-provider-rs.html#item-struct-CreateSandboxSpec-44">CreateSandboxSpec</a></code>
+  <p class="docstring">Arguments to [`ProviderAdapter::create`]; `language` defaults to `"python"`.</p>
+  <div class="tags"><span>derive: Clone</span><span>derive: Debug</span><span>derive: Deserialize</span><span>derive: Eq</span><span>derive: JsonSchema</span><span>derive: PartialEq</span><span>derive: Serialize</span><span>serde</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>name</td><td><code>String</code></td></tr><tr><td>pub</td><td>snapshot</td><td><code>Option &lt; String &gt;</code></td></tr><tr><td>pub</td><td>image</td><td><code>Option &lt; String &gt;</code></td></tr><tr><td>pub</td><td>language</td><td><code>String</code></td></tr><tr><td>pub</td><td>env_vars</td><td><code>BTreeMap &lt; String , String &gt;</code></td></tr><tr><td>pub</td><td>labels</td><td><code><a class="symbol-link" href="eos-sandbox-host--src-provider-rs.html#item-type-Labels-19">Labels</a></code></td></tr><tr><td>pub</td><td>platform</td><td><code>Option &lt; String &gt;</code></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl Default for <a class="symbol-link" href="eos-sandbox-host--src-provider-rs.html#item-struct-CreateSandboxSpec-44">CreateSandboxSpec</a></code></summary><table><tbody><tr id="method-default-74"><td>constructor</td><td>default</td><td><code>fn <a class="symbol-link" href="eos-sandbox-host--src-provider-rs.html#method-default-74">default</a> () -&gt; Self</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-host--src-provider-rs.html#method-default-74">default</a>() -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">Self</span> {
+            name: <span class="rs-type">String</span>::<a class="symbol-link rs-fn" href="eos-sandbox-host--src-daemon-client-rs.html#method-new-119">new</a>(),
+            snapshot: <span class="rs-type">None</span>,
+            image: <span class="rs-type">None</span>,
+            language: <a class="symbol-link rs-fn" href="eos-sandbox-host--src-provider-rs.html#item-fn-default-language-69">default_language</a>(),
+            env_vars: <span class="rs-type">BTreeMap</span>::<a class="symbol-link rs-fn" href="eos-sandbox-host--src-daemon-client-rs.html#method-new-119">new</a>(),
+            labels: <a class="symbol-link rs-type" href="eos-sandbox-host--src-provider-rs.html#item-type-Labels-19">Labels</a>::<a class="symbol-link rs-fn" href="eos-sandbox-host--src-daemon-client-rs.html#method-new-119">new</a>(),
+            platform: <span class="rs-type">None</span>,
+        }
+    }
+</code></pre>
+</details></td></tr></tbody></table></details></div>
+
+  <p class="source">crates/eos-sandbox-host/src/provider.rs:44</p>
+</article><article id="item-struct-SandboxInfo-87" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct SandboxInfo pub pub struct SandboxInfo crates/eos-sandbox-host/src/provider.rs id SandboxId name String image Option &lt; String &gt; snapshot Option &lt; String &gt; state String labels Labels project_dir Option &lt; String &gt; managed_by_app bool ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>SandboxInfo</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub struct <a class="symbol-link" href="eos-sandbox-host--src-provider-rs.html#item-struct-SandboxInfo-87">SandboxInfo</a></code>
+  <p class="docstring">Canonical serialized sandbox/container shape returned by the provider.<br>Canonical-normalization drops the Docker `_serialize_container` `docker_init`<br>(`HostConfig.Init`) field because no consumer in this crate needs it.</p>
+  <div class="tags"><span>derive: Clone</span><span>derive: Debug</span><span>derive: Deserialize</span><span>derive: Eq</span><span>derive: JsonSchema</span><span>derive: PartialEq</span><span>derive: Serialize</span><span>serde</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>id</td><td><code>SandboxId</code></td></tr><tr><td>pub</td><td>name</td><td><code>String</code></td></tr><tr><td>pub</td><td>image</td><td><code>Option &lt; String &gt;</code></td></tr><tr><td>pub</td><td>snapshot</td><td><code>Option &lt; String &gt;</code></td></tr><tr><td>pub</td><td>state</td><td><code>String</code></td></tr><tr><td>pub</td><td>labels</td><td><code><a class="symbol-link" href="eos-sandbox-host--src-provider-rs.html#item-type-Labels-19">Labels</a></code></td></tr><tr><td>pub</td><td>project_dir</td><td><code>Option &lt; String &gt;</code></td></tr><tr><td>pub</td><td>managed_by_app</td><td><code>bool</code></td></tr></tbody></table>
+
+  <p class="source">crates/eos-sandbox-host/src/provider.rs:87</p>
+</article><article id="item-struct-DaemonTcpEndpoint-115" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct DaemonTcpEndpoint pub pub struct DaemonTcpEndpoint crates/eos-sandbox-host/src/provider.rs host String port u16 internal_port Option &lt; u16 &gt; auth_token String ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>DaemonTcpEndpoint</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub struct <a class="symbol-link" href="eos-sandbox-host--src-provider-rs.html#item-struct-DaemonTcpEndpoint-115">DaemonTcpEndpoint</a></code>
+  <p class="docstring">Docker host-side TCP path to the resident daemon (from<br>`get_daemon_tcp_endpoint`).</p>
+  <div class="tags"><span>derive: Clone</span><span>derive: Debug</span><span>derive: Deserialize</span><span>derive: Eq</span><span>derive: JsonSchema</span><span>derive: PartialEq</span><span>derive: Serialize</span><span>serde</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>host</td><td><code>String</code></td></tr><tr><td>pub</td><td>port</td><td><code>u16</code></td></tr><tr><td>pub</td><td>internal_port</td><td><code>Option &lt; u16 &gt;</code></td></tr><tr><td>pub</td><td>auth_token</td><td><code>String</code></td></tr></tbody></table>
+
+  <p class="source">crates/eos-sandbox-host/src/provider.rs:115</p>
+</article><article id="item-struct-RawExecResult-130" class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct RawExecResult pub pub struct RawExecResult crates/eos-sandbox-host/src/provider.rs exit_code i32 stdout String stderr String success bool ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>RawExecResult</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub struct <a class="symbol-link" href="eos-sandbox-host--src-provider-rs.html#item-struct-RawExecResult-130">RawExecResult</a></code>
+  <p class="docstring">The `ProviderAdapter::exec` return — owned here (spec §5; sandbox-api drops<br>it as "a host concern").</p>
+  <div class="tags"><span>derive: Clone</span><span>derive: Debug</span><span>derive: Deserialize</span><span>derive: Eq</span><span>derive: JsonSchema</span><span>derive: PartialEq</span><span>derive: Serialize</span><span>serde</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>exit_code</td><td><code>i32</code></td></tr><tr><td>pub</td><td>stdout</td><td><code>String</code></td></tr><tr><td>pub</td><td>stderr</td><td><code>String</code></td></tr><tr><td>pub</td><td>success</td><td><code>bool</code></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl Default for <a class="symbol-link" href="eos-sandbox-host--src-provider-rs.html#item-struct-RawExecResult-130">RawExecResult</a></code></summary><table><tbody><tr id="method-default-151"><td>constructor</td><td>default</td><td><code>fn <a class="symbol-link" href="eos-sandbox-host--src-provider-rs.html#method-default-74">default</a> () -&gt; Self</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-host--src-provider-rs.html#method-default-74">default</a>() -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">Self</span> {
+            exit_code: 0,
+            stdout: <span class="rs-type">String</span>::<a class="symbol-link rs-fn" href="eos-sandbox-host--src-daemon-client-rs.html#method-new-119">new</a>(),
+            stderr: <span class="rs-type">String</span>::<a class="symbol-link rs-fn" href="eos-sandbox-host--src-daemon-client-rs.html#method-new-119">new</a>(),
+            success: <span class="rs-kw">true</span>,
+        }
+    }
+</code></pre>
+</details></td></tr></tbody></table></details></div>
+
+  <p class="source">crates/eos-sandbox-host/src/provider.rs:130</p>
+</article><article id="item-struct-ExecOpts-161" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct ExecOpts pub pub struct ExecOpts crates/eos-sandbox-host/src/provider.rs cwd Option &lt; String &gt; timeout Option &lt; Duration &gt; ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>ExecOpts</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub struct <a class="symbol-link" href="eos-sandbox-host--src-provider-rs.html#item-struct-ExecOpts-161">ExecOpts</a></code>
+  <p class="docstring">Options for a provider `exec`. Not a wire DTO (carries a `Duration`).</p>
+  <div class="tags"><span>derive: Clone</span><span>derive: Debug</span><span>derive: Default</span><span>derive: Eq</span><span>derive: PartialEq</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>cwd</td><td><code>Option &lt; String &gt;</code></td></tr><tr><td>pub</td><td>timeout</td><td><code>Option &lt; Duration &gt;</code></td></tr></tbody></table>
+
+  <p class="source">crates/eos-sandbox-host/src/provider.rs:161</p>
+</article><article id="item-struct-ProviderHealth-170" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct ProviderHealth pub pub struct ProviderHealth crates/eos-sandbox-host/src/provider.rs provider String healthy bool server_version Option &lt; String &gt; containers_running Option &lt; u64 &gt; kernel_version Option &lt; String &gt; operating_system Option &lt; String &gt; error Option &lt; String &gt; ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>ProviderHealth</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub struct <a class="symbol-link" href="eos-sandbox-host--src-provider-rs.html#item-struct-ProviderHealth-170">ProviderHealth</a></code>
+  <p class="docstring">Provider health snapshot (Docker health info).</p>
+  <div class="tags"><span>derive: Clone</span><span>derive: Debug</span><span>derive: Deserialize</span><span>derive: Eq</span><span>derive: JsonSchema</span><span>derive: PartialEq</span><span>derive: Serialize</span><span>serde</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>provider</td><td><code>String</code></td></tr><tr><td>pub</td><td>healthy</td><td><code>bool</code></td></tr><tr><td>pub</td><td>server_version</td><td><code>Option &lt; String &gt;</code></td></tr><tr><td>pub</td><td>containers_running</td><td><code>Option &lt; u64 &gt;</code></td></tr><tr><td>pub</td><td>kernel_version</td><td><code>Option &lt; String &gt;</code></td></tr><tr><td>pub</td><td>operating_system</td><td><code>Option &lt; String &gt;</code></td></tr><tr><td>pub</td><td>error</td><td><code>Option &lt; String &gt;</code></td></tr></tbody></table>
+
+  <p class="source">crates/eos-sandbox-host/src/provider.rs:170</p>
+</article><article id="item-struct-SnapshotInfo-195" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct SnapshotInfo pub pub struct SnapshotInfo crates/eos-sandbox-host/src/provider.rs name Option &lt; String &gt; image Option &lt; String &gt; id String tags Vec &lt; String &gt; ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>SnapshotInfo</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub struct <a class="symbol-link" href="eos-sandbox-host--src-provider-rs.html#item-struct-SnapshotInfo-195">SnapshotInfo</a></code>
+  <p class="docstring">A provider snapshot/image listing entry (mirrors Docker `_serialize_image`:<br>`name == image == first repo tag`).</p>
+  <div class="tags"><span>derive: Clone</span><span>derive: Debug</span><span>derive: Default</span><span>derive: Deserialize</span><span>derive: Eq</span><span>derive: JsonSchema</span><span>derive: PartialEq</span><span>derive: Serialize</span><span>serde</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>name</td><td><code>Option &lt; String &gt;</code></td></tr><tr><td>pub</td><td>image</td><td><code>Option &lt; String &gt;</code></td></tr><tr><td>pub</td><td>id</td><td><code>String</code></td></tr><tr><td>pub</td><td>tags</td><td><code>Vec &lt; String &gt;</code></td></tr></tbody></table>
+
+  <p class="source">crates/eos-sandbox-host/src/provider.rs:195</p>
+</article><article id="item-struct-DockerContextPreparer-231" class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct DockerContextPreparer pub pub struct DockerContextPreparer crates/eos-sandbox-host/src/provider.rs sandbox_id SandboxId ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>DockerContextPreparer</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub struct <a class="symbol-link" href="eos-sandbox-host--src-provider-rs.html#item-struct-DockerContextPreparer-231">DockerContextPreparer</a></code>
+  <p class="docstring">Docker context-preparer payload (GC-07 typed fixed point). Carries the<br>sandbox id and injects provider-neutral metadata into a tool context map.<br>Deviation from spec §6 (`pub(crate)`): made `pub` with a private field +<br>`#[non_exhaustive]` so it can sit in the public [`ContextPreparer::Docker`]<br>variant without tripping `private_interfaces`; it remains un-constructable<br>outside this crate. The deep container/workspace discovery a context<br>preparer performs lives outside the host (such orchestration is built on top<br>of the provider, not inside it), so the Rust fixed point injects only<br>`sandbox_id` + `sandbox_provider`.</p>
+  <div class="tags"><span>derive: Clone</span><span>derive: Debug</span><span>non_exhaustive</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>sandbox_id</td><td><code>SandboxId</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-248"><td>constructor</td><td>new</td><td><code>pub(crate) fn <a class="symbol-link" href="eos-sandbox-host--src-daemon-client-rs.html#method-new-119">new</a> (sandbox_id : SandboxId) -&gt; Self</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-host--src-daemon-client-rs.html#method-new-119">new</a>(sandbox_id: <span class="rs-type">SandboxId</span>) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">Self</span> { sandbox_id }
+    }
+</code></pre>
+</details></td></tr><tr id="method-inject-252"><td>method</td><td>inject</td><td><code>fn <a class="symbol-link" href="eos-sandbox-host--src-provider-rs.html#method-inject-252">inject</a> (&amp; self , ctx : &amp; mut JsonObject)</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-host--src-provider-rs.html#method-inject-252">inject</a>(&amp;<span class="rs-self">self</span>, ctx: &amp;<span class="rs-kw">mut</span> <span class="rs-type">JsonObject</span>) {
+        ctx.insert(
+            &quot;sandbox_id&quot;.to_owned(),
+            <span class="rs-self">self</span>.sandbox_id.<a class="symbol-link rs-fn" href="eos-sandbox-host--src-provider-rs.html#method-as-str-35">as_str</a>().to_owned().into(),
+        );
+        ctx.insert(
+            &quot;sandbox_provider&quot;.to_owned(),
+            <a class="symbol-link rs-type" href="eos-sandbox-host--src-provider-rs.html#item-enum-ProviderKind-22">ProviderKind</a>::<span class="rs-type">Docker</span>.<a class="symbol-link rs-fn" href="eos-sandbox-host--src-provider-rs.html#method-as-str-35">as_str</a>().to_owned().into(),
+        );
+    }
+</code></pre>
+</details></td></tr></tbody></table>
+
+  <p class="source">crates/eos-sandbox-host/src/provider.rs:231</p>
+</article><article id="item-enum-ProviderKind-22" class="type-card" data-kind="enum" data-kind-list="enum field impl method type-model" data-filter-text="enum ProviderKind pub pub enum ProviderKind crates/eos-sandbox-host/src/provider.rs  ">
+  <div class="item-head">
+    <span class="kind">enum</span>
+    <h3>ProviderKind</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub enum <a class="symbol-link" href="eos-sandbox-host--src-provider-rs.html#item-enum-ProviderKind-22">ProviderKind</a></code>
+  <p class="docstring">The sandbox backend selector (spec-conventions §4: `sandbox_provider`, never<br>bare `provider`). `#[non_exhaustive]` so dispatch sites carry a catch-all<br>arm, but the Rust migration ships only `Docker`.</p>
+  <div class="tags"><span>derive: Clone</span><span>derive: Copy</span><span>derive: Debug</span><span>derive: Default</span><span>derive: Deserialize</span><span>derive: Eq</span><span>derive: Hash</span><span>derive: JsonSchema</span><span>derive: PartialEq</span><span>derive: Serialize</span><span>non_exhaustive</span><span>serde</span><span>serde: rename_all</span></div>
+  <h4>Variants</h4><table><tbody><tr><td>Docker</td><td><code></code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-as-str-35"><td>method</td><td>as_str</td><td><code>pub const fn <a class="symbol-link" href="eos-sandbox-host--src-provider-rs.html#method-as-str-35">as_str</a> (self) -&gt; &amp; &#x27;static str</code><p class="docstring">The wire/string form of this kind (`"docker"`).</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// The wire/string form of this kind (`"docker"`).</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-host--src-provider-rs.html#method-as-str-35">as_str</a>(<span class="rs-self">self</span>) -&gt; &amp;&#x27;<span class="rs-kw">static</span> str {
+        <span class="rs-kw">match</span> <span class="rs-self">self</span> {
+            <span class="rs-self">Self</span>::<span class="rs-type">Docker</span> =&gt; &quot;docker&quot;,
+        }
+    }
+</code></pre>
+</details></td></tr></tbody></table>
+
+  <p class="source">crates/eos-sandbox-host/src/provider.rs:22</p>
+</article><article id="item-enum-ContextPreparer-212" class="type-card" data-kind="enum" data-kind-list="enum field impl method type-model" data-filter-text="enum ContextPreparer pub pub enum ContextPreparer crates/eos-sandbox-host/src/provider.rs  ">
+  <div class="item-head">
+    <span class="kind">enum</span>
+    <h3>ContextPreparer</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub enum <a class="symbol-link" href="eos-sandbox-host--src-provider-rs.html#item-enum-ContextPreparer-212">ContextPreparer</a></code>
+  <p class="docstring">The typed context-preparer fixed point (GC-07): a closed enum, **not** a new<br>trait seam. Replaces a duck-typed `context_preparer(...) -&gt; Any` indirection.</p>
+  <div class="tags"><span>derive: Clone</span><span>derive: Debug</span><span>non_exhaustive</span></div>
+  <h4>Variants</h4><table><tbody><tr><td>Docker</td><td><code>0: <a class="symbol-link" href="eos-sandbox-host--src-provider-rs.html#item-struct-DockerContextPreparer-231">DockerContextPreparer</a></code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-prepare-context-222"><td>method</td><td>prepare_context</td><td><code>pub fn <a class="symbol-link" href="eos-sandbox-host--src-provider-rs.html#method-prepare-context-222">prepare_context</a> (&amp; self , ctx : &amp; mut JsonObject) -&gt; Result &lt; () , <a class="symbol-link" href="eos-sandbox-host--src-error-rs.html#item-enum-SandboxHostError-5">SandboxHostError</a> &gt;</code><p class="docstring">Inject provider-aware runtime metadata into `ctx` (sync path).</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Inject provider-aware runtime metadata into `ctx` (sync path).</span>
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-host--src-provider-rs.html#method-prepare-context-222">prepare_context</a>(&amp;<span class="rs-self">self</span>, ctx: &amp;<span class="rs-kw">mut</span> <span class="rs-type">JsonObject</span>) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-sandbox-host--src-error-rs.html#item-enum-SandboxHostError-5">SandboxHostError</a>&gt; {
+        <span class="rs-kw">match</span> <span class="rs-self">self</span> {
+            <span class="rs-self">Self</span>::<span class="rs-type">Docker</span>(p) =&gt; p.<a class="symbol-link rs-fn" href="eos-sandbox-host--src-provider-rs.html#method-inject-252">inject</a>(ctx),
+        }
+        <span class="rs-type">Ok</span>(())
+    }
+</code></pre>
+</details></td></tr></tbody></table>
+
+  <p class="source">crates/eos-sandbox-host/src/provider.rs:212</p>
+</article><article id="item-trait-Sealed-265" class="type-card" data-kind="trait" data-kind-list="trait type-model" data-filter-text="trait Sealed pub pub trait Sealed crates/eos-sandbox-host/src/provider.rs  ">
+  <div class="item-head">
+    <span class="kind">trait</span>
+    <h3>Sealed</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub trait <a class="symbol-link" href="eos-sandbox-host--src-provider-rs.html#item-trait-Sealed-265">Sealed</a></code>
+  <p class="docstring">Seals [`super::ProviderAdapter`] (`api-sealed-trait`): only in-crate types<br>implement it. External crates cannot name this trait, so they cannot<br>implement the supertrait (see `tests/compile_fail`).</p>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-sandbox-host/src/provider.rs:265</p>
+</article><article id="item-trait-ProviderAdapter-271" class="type-card" data-kind="trait" data-kind-list="method trait type-model" data-filter-text="trait ProviderAdapter pub pub trait ProviderAdapter crates/eos-sandbox-host/src/provider.rs  kind fn kind (&amp; self) -&gt; ProviderKind health async fn health (&amp; self) -&gt; Result &lt; ProviderHealth , SandboxHostError &gt; list_snapshots async fn list_snapshots (&amp; self) -&gt; Result &lt; Vec &lt; SnapshotInfo &gt; , SandboxHostError &gt; create async fn create (&amp; self , spec : &amp; CreateSandboxSpec) -&gt; Result &lt; SandboxInfo , SandboxHostError &gt; get async fn get (&amp; self , id : &amp; SandboxId) -&gt; Result &lt; SandboxInfo , SandboxHostError &gt; list async fn list (&amp; self) -&gt; Result &lt; Vec &lt; SandboxInfo &gt; , SandboxHostError &gt; start async fn start (&amp; self , id : &amp; SandboxId) -&gt; Result &lt; SandboxInfo , SandboxHostError &gt; stop async fn stop (&amp; self , id : &amp; SandboxId) -&gt; Result &lt; SandboxInfo , SandboxHostError &gt; delete async fn delete (&amp; self , id : &amp; SandboxId) -&gt; Result &lt; () , SandboxHostError &gt; set_labels async fn set_labels (&amp; self , id : &amp; SandboxId , labels : &amp; Labels ,) -&gt; Result &lt; SandboxInfo , SandboxHostError &gt; daemon_tcp_endpoint async fn daemon_tcp_endpoint (&amp; self , id : &amp; SandboxId ,) -&gt; Result &lt; Option &lt; DaemonTcpEndpoint &gt; , SandboxHostError &gt; exec async fn exec (&amp; self , id : &amp; SandboxId , command : &amp; str , opts : &amp; ExecOpts ,) -&gt; Result &lt; RawExecResult , SandboxHostError &gt; put_archive async fn put_archive (&amp; self , id : &amp; SandboxId , tar_stream : &amp; [u8] , dest_dir : &amp; str ,) -&gt; Result &lt; () , SandboxHostError &gt; context_preparer fn context_preparer (&amp; self , id : &amp; SandboxId) -&gt; ContextPreparer">
+  <div class="item-head">
+    <span class="kind">trait</span>
+    <h3>ProviderAdapter</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub trait <a class="symbol-link" href="eos-sandbox-host--src-provider-rs.html#item-trait-ProviderAdapter-271">ProviderAdapter</a></code>
+  <p class="docstring">Container CRUD + exec primitives implemented by each sandbox provider (the<br>OCP/LSP seam). Sealed; `#[async_trait]` because it is stored as<br>`Arc&lt;dyn ProviderAdapter&gt;` in the registry (anchor §6 object-safety note).<br>Method names drop the<br>`get_` prefix per Rust API guidelines C-GETTER: `health` ← `get_health`,<br>`daemon_tcp_endpoint` ← `get_daemon_tcp_endpoint`,<br>`kind()` ← the `name: str` class attribute.</p>
+  <div class="tags"><span>async_trait</span></div>
+  <h4>Methods</h4><table><tbody><tr id="method-start-295"><td>required</td><td>start</td><td><code>async fn <a class="symbol-link" href="eos-sandbox-host--src-docker-rs.html#method-start-262">start</a> (&amp; self , id : &amp; SandboxId) -&gt; Result &lt; <a class="symbol-link" href="eos-sandbox-host--src-provider-rs.html#item-struct-SandboxInfo-87">SandboxInfo</a> , <a class="symbol-link" href="eos-sandbox-host--src-error-rs.html#item-enum-SandboxHostError-5">SandboxHostError</a> &gt;</code><p class="docstring">Start a stopped container.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Start a stopped container.</span>
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-host--src-docker-rs.html#method-start-262">start</a>(&amp;<span class="rs-self">self</span>, id: &amp;<span class="rs-type">SandboxId</span>) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-sandbox-host--src-provider-rs.html#item-struct-SandboxInfo-87">SandboxInfo</a>, <a class="symbol-link rs-type" href="eos-sandbox-host--src-error-rs.html#item-enum-SandboxHostError-5">SandboxHostError</a>&gt;;
+</code></pre>
+</details></td></tr><tr id="method-kind-281"><td>required</td><td>kind</td><td><code>fn <a class="symbol-link" href="eos-sandbox-host--src-docker-rs.html#method-kind-96">kind</a> (&amp; self) -&gt; <a class="symbol-link" href="eos-sandbox-host--src-provider-rs.html#item-enum-ProviderKind-22">ProviderKind</a></code><p class="docstring">The backend kind this adapter speaks for.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// The backend kind this adapter speaks for.</span>
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-host--src-docker-rs.html#method-kind-96">kind</a>(&amp;<span class="rs-self">self</span>) -&gt; <a class="symbol-link rs-type" href="eos-sandbox-host--src-provider-rs.html#item-enum-ProviderKind-22">ProviderKind</a>;
+</code></pre>
+</details></td></tr><tr id="method-health-284"><td>required</td><td>health</td><td><code>async fn <a class="symbol-link" href="eos-sandbox-host--src-docker-rs.html#method-health-100">health</a> (&amp; self) -&gt; Result &lt; <a class="symbol-link" href="eos-sandbox-host--src-provider-rs.html#item-struct-ProviderHealth-170">ProviderHealth</a> , <a class="symbol-link" href="eos-sandbox-host--src-error-rs.html#item-enum-SandboxHostError-5">SandboxHostError</a> &gt;</code><p class="docstring">Backend health/reachability snapshot.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Backend health/reachability snapshot.</span>
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-host--src-docker-rs.html#method-health-100">health</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-sandbox-host--src-provider-rs.html#item-struct-ProviderHealth-170">ProviderHealth</a>, <a class="symbol-link rs-type" href="eos-sandbox-host--src-error-rs.html#item-enum-SandboxHostError-5">SandboxHostError</a>&gt;;
+</code></pre>
+</details></td></tr><tr id="method-list-snapshots-286"><td>required</td><td>list_snapshots</td><td><code>async fn <a class="symbol-link" href="eos-sandbox-host--src-docker-rs.html#method-list-snapshots-124">list_snapshots</a> (&amp; self) -&gt; Result &lt; Vec &lt; <a class="symbol-link" href="eos-sandbox-host--src-provider-rs.html#item-struct-SnapshotInfo-195">SnapshotInfo</a> &gt; , <a class="symbol-link" href="eos-sandbox-host--src-error-rs.html#item-enum-SandboxHostError-5">SandboxHostError</a> &gt;</code><p class="docstring">List available snapshots/images.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// List available snapshots/images.</span>
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-host--src-docker-rs.html#method-list-snapshots-124">list_snapshots</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;<a class="symbol-link rs-type" href="eos-sandbox-host--src-provider-rs.html#item-struct-SnapshotInfo-195">SnapshotInfo</a>&gt;, <a class="symbol-link rs-type" href="eos-sandbox-host--src-error-rs.html#item-enum-SandboxHostError-5">SandboxHostError</a>&gt;;
+</code></pre>
+</details></td></tr><tr id="method-create-289"><td>required</td><td>create</td><td><code>async fn <a class="symbol-link" href="eos-sandbox-host--src-docker-rs.html#method-create-139">create</a> (&amp; self , spec : &amp; <a class="symbol-link" href="eos-sandbox-host--src-provider-rs.html#item-struct-CreateSandboxSpec-44">CreateSandboxSpec</a>) -&gt; Result &lt; <a class="symbol-link" href="eos-sandbox-host--src-provider-rs.html#item-struct-SandboxInfo-87">SandboxInfo</a> , <a class="symbol-link" href="eos-sandbox-host--src-error-rs.html#item-enum-SandboxHostError-5">SandboxHostError</a> &gt;</code><p class="docstring">Create a container from `spec`.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Create a container from `spec`.</span>
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-host--src-docker-rs.html#method-create-139">create</a>(&amp;<span class="rs-self">self</span>, spec: &amp;<a class="symbol-link rs-type" href="eos-sandbox-host--src-provider-rs.html#item-struct-CreateSandboxSpec-44">CreateSandboxSpec</a>) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-sandbox-host--src-provider-rs.html#item-struct-SandboxInfo-87">SandboxInfo</a>, <a class="symbol-link rs-type" href="eos-sandbox-host--src-error-rs.html#item-enum-SandboxHostError-5">SandboxHostError</a>&gt;;
+</code></pre>
+</details></td></tr><tr id="method-get-291"><td>required</td><td>get</td><td><code>async fn <a class="symbol-link" href="eos-sandbox-host--src-docker-rs.html#method-get-238">get</a> (&amp; self , id : &amp; SandboxId) -&gt; Result &lt; <a class="symbol-link" href="eos-sandbox-host--src-provider-rs.html#item-struct-SandboxInfo-87">SandboxInfo</a> , <a class="symbol-link" href="eos-sandbox-host--src-error-rs.html#item-enum-SandboxHostError-5">SandboxHostError</a> &gt;</code><p class="docstring">Fetch one container by id.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Fetch one container by id.</span>
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-host--src-docker-rs.html#method-get-238">get</a>(&amp;<span class="rs-self">self</span>, id: &amp;<span class="rs-type">SandboxId</span>) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-sandbox-host--src-provider-rs.html#item-struct-SandboxInfo-87">SandboxInfo</a>, <a class="symbol-link rs-type" href="eos-sandbox-host--src-error-rs.html#item-enum-SandboxHostError-5">SandboxHostError</a>&gt;;
+</code></pre>
+</details></td></tr><tr id="method-list-293"><td>required</td><td>list</td><td><code>async fn <a class="symbol-link" href="eos-sandbox-host--src-docker-rs.html#method-list-242">list</a> (&amp; self) -&gt; Result &lt; Vec &lt; <a class="symbol-link" href="eos-sandbox-host--src-provider-rs.html#item-struct-SandboxInfo-87">SandboxInfo</a> &gt; , <a class="symbol-link" href="eos-sandbox-host--src-error-rs.html#item-enum-SandboxHostError-5">SandboxHostError</a> &gt;</code><p class="docstring">List managed containers.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// List managed containers.</span>
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-host--src-docker-rs.html#method-list-242">list</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;<a class="symbol-link rs-type" href="eos-sandbox-host--src-provider-rs.html#item-struct-SandboxInfo-87">SandboxInfo</a>&gt;, <a class="symbol-link rs-type" href="eos-sandbox-host--src-error-rs.html#item-enum-SandboxHostError-5">SandboxHostError</a>&gt;;
+</code></pre>
+</details></td></tr><tr id="method-stop-297"><td>required</td><td>stop</td><td><code>async fn <a class="symbol-link" href="eos-sandbox-host--src-docker-rs.html#method-stop-270">stop</a> (&amp; self , id : &amp; SandboxId) -&gt; Result &lt; <a class="symbol-link" href="eos-sandbox-host--src-provider-rs.html#item-struct-SandboxInfo-87">SandboxInfo</a> , <a class="symbol-link" href="eos-sandbox-host--src-error-rs.html#item-enum-SandboxHostError-5">SandboxHostError</a> &gt;</code><p class="docstring">Stop a running container.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Stop a running container.</span>
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-host--src-docker-rs.html#method-stop-270">stop</a>(&amp;<span class="rs-self">self</span>, id: &amp;<span class="rs-type">SandboxId</span>) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-sandbox-host--src-provider-rs.html#item-struct-SandboxInfo-87">SandboxInfo</a>, <a class="symbol-link rs-type" href="eos-sandbox-host--src-error-rs.html#item-enum-SandboxHostError-5">SandboxHostError</a>&gt;;
+</code></pre>
+</details></td></tr><tr id="method-delete-299"><td>required</td><td>delete</td><td><code>async fn <a class="symbol-link" href="eos-sandbox-host--src-docker-rs.html#method-delete-278">delete</a> (&amp; self , id : &amp; SandboxId) -&gt; Result &lt; () , <a class="symbol-link" href="eos-sandbox-host--src-error-rs.html#item-enum-SandboxHostError-5">SandboxHostError</a> &gt;</code><p class="docstring">Delete a container.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Delete a container.</span>
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-host--src-docker-rs.html#method-delete-278">delete</a>(&amp;<span class="rs-self">self</span>, id: &amp;<span class="rs-type">SandboxId</span>) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-sandbox-host--src-error-rs.html#item-enum-SandboxHostError-5">SandboxHostError</a>&gt;;
+</code></pre>
+</details></td></tr><tr id="method-set-labels-301"><td>required</td><td>set_labels</td><td><code>async fn <a class="symbol-link" href="eos-sandbox-host--src-docker-rs.html#method-set-labels-294">set_labels</a> (&amp; self , id : &amp; SandboxId , labels : &amp; <a class="symbol-link" href="eos-sandbox-host--src-provider-rs.html#item-type-Labels-19">Labels</a> ,) -&gt; Result &lt; <a class="symbol-link" href="eos-sandbox-host--src-provider-rs.html#item-struct-SandboxInfo-87">SandboxInfo</a> , <a class="symbol-link" href="eos-sandbox-host--src-error-rs.html#item-enum-SandboxHostError-5">SandboxHostError</a> &gt;</code><p class="docstring">Replace a container's labels.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Replace a container's labels.</span>
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-host--src-docker-rs.html#method-set-labels-294">set_labels</a>(
+        &amp;<span class="rs-self">self</span>,
+        id: &amp;<span class="rs-type">SandboxId</span>,
+        labels: &amp;<a class="symbol-link rs-type" href="eos-sandbox-host--src-provider-rs.html#item-type-Labels-19">Labels</a>,
+    ) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-sandbox-host--src-provider-rs.html#item-struct-SandboxInfo-87">SandboxInfo</a>, <a class="symbol-link rs-type" href="eos-sandbox-host--src-error-rs.html#item-enum-SandboxHostError-5">SandboxHostError</a>&gt;;
+</code></pre>
+</details></td></tr><tr id="method-exec-318"><td>required</td><td>exec</td><td><code>async fn <a class="symbol-link" href="eos-sandbox-host--src-docker-rs.html#method-exec-334">exec</a> (&amp; self , id : &amp; SandboxId , command : &amp; str , opts : &amp; <a class="symbol-link" href="eos-sandbox-host--src-provider-rs.html#item-struct-ExecOpts-161">ExecOpts</a> ,) -&gt; Result &lt; <a class="symbol-link" href="eos-sandbox-host--src-provider-rs.html#item-struct-RawExecResult-130">RawExecResult</a> , <a class="symbol-link" href="eos-sandbox-host--src-error-rs.html#item-enum-SandboxHostError-5">SandboxHostError</a> &gt;</code><p class="docstring">Execute `command` inside the container.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Execute `command` inside the container.</span>
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-host--src-docker-rs.html#method-exec-334">exec</a>(
+        &amp;<span class="rs-self">self</span>,
+        id: &amp;<span class="rs-type">SandboxId</span>,
+        command: &amp;str,
+        opts: &amp;<a class="symbol-link rs-type" href="eos-sandbox-host--src-provider-rs.html#item-struct-ExecOpts-161">ExecOpts</a>,
+    ) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-sandbox-host--src-provider-rs.html#item-struct-RawExecResult-130">RawExecResult</a>, <a class="symbol-link rs-type" href="eos-sandbox-host--src-error-rs.html#item-enum-SandboxHostError-5">SandboxHostError</a>&gt;;
+</code></pre>
+</details></td></tr><tr id="method-put-archive-325"><td>required</td><td>put_archive</td><td><code>async fn <a class="symbol-link" href="eos-sandbox-host--src-docker-rs.html#method-put-archive-353">put_archive</a> (&amp; self , id : &amp; SandboxId , tar_stream : &amp; [u8] , dest_dir : &amp; str ,) -&gt; Result &lt; () , <a class="symbol-link" href="eos-sandbox-host--src-error-rs.html#item-enum-SandboxHostError-5">SandboxHostError</a> &gt;</code><p class="docstring">Stream a tar archive into `dest_dir` (the provider unpacks server-side).</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Stream a tar archive into `dest_dir` (the provider unpacks server-side).</span>
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-host--src-docker-rs.html#method-put-archive-353">put_archive</a>(
+        &amp;<span class="rs-self">self</span>,
+        id: &amp;<span class="rs-type">SandboxId</span>,
+        tar_stream: &amp;[u8],
+        dest_dir: &amp;str,
+    ) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-sandbox-host--src-error-rs.html#item-enum-SandboxHostError-5">SandboxHostError</a>&gt;;
+</code></pre>
+</details></td></tr><tr id="method-context-preparer-333"><td>required</td><td>context_preparer</td><td><code>fn <a class="symbol-link" href="eos-sandbox-host--src-docker-rs.html#method-context-preparer-378">context_preparer</a> (&amp; self , id : &amp; SandboxId) -&gt; <a class="symbol-link" href="eos-sandbox-host--src-provider-rs.html#item-enum-ContextPreparer-212">ContextPreparer</a></code><p class="docstring">The typed context preparer for `id` (GC-07 fixed point).</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// The typed context preparer for `id` (GC-07 fixed point).</span>
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-host--src-docker-rs.html#method-context-preparer-378">context_preparer</a>(&amp;<span class="rs-self">self</span>, id: &amp;<span class="rs-type">SandboxId</span>) -&gt; <a class="symbol-link rs-type" href="eos-sandbox-host--src-provider-rs.html#item-enum-ContextPreparer-212">ContextPreparer</a>;
+</code></pre>
+</details></td></tr><tr id="method-daemon-tcp-endpoint-308"><td>provided</td><td>daemon_tcp_endpoint</td><td><code>async fn <a class="symbol-link" href="eos-sandbox-host--src-docker-rs.html#method-daemon-tcp-endpoint-323">daemon_tcp_endpoint</a> (&amp; self , id : &amp; SandboxId ,) -&gt; Result &lt; Option &lt; <a class="symbol-link" href="eos-sandbox-host--src-provider-rs.html#item-struct-DaemonTcpEndpoint-115">DaemonTcpEndpoint</a> &gt; , <a class="symbol-link" href="eos-sandbox-host--src-error-rs.html#item-enum-SandboxHostError-5">SandboxHostError</a> &gt;</code><p class="docstring">Docker-only host→daemon TCP endpoint; default `None` for providers with<br>no TCP daemon path.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Docker-only host→daemon TCP endpoint; default `None` for providers with</span>
+    <span class="rs-comment">/// no TCP daemon path.</span>
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-host--src-docker-rs.html#method-daemon-tcp-endpoint-323">daemon_tcp_endpoint</a>(
+        &amp;<span class="rs-self">self</span>,
+        id: &amp;<span class="rs-type">SandboxId</span>,
+    ) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-sandbox-host--src-provider-rs.html#item-struct-DaemonTcpEndpoint-115">DaemonTcpEndpoint</a>&gt;, <a class="symbol-link rs-type" href="eos-sandbox-host--src-error-rs.html#item-enum-SandboxHostError-5">SandboxHostError</a>&gt; {
+        <span class="rs-kw">let</span> _ = id;
+        <span class="rs-type">Ok</span>(<span class="rs-type">None</span>)
+    }
+</code></pre>
+</details></td></tr></tbody></table>
+
+  <p class="source">crates/eos-sandbox-host/src/provider.rs:271</p>
+</article><div class="group-label">Aliases</div><article id="item-type-Labels-19" class="item-card" data-kind="type" data-kind-list="type" data-filter-text="type Labels pub pub type Labels = BTreeMap &lt; String , String &gt; crates/eos-sandbox-host/src/provider.rs  ">
+  <div class="item-head">
+    <span class="kind">type</span>
+    <h3>Labels</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub type <a class="symbol-link" href="eos-sandbox-host--src-provider-rs.html#item-type-Labels-19">Labels</a> = BTreeMap &lt; String , String &gt;</code>
+  <p class="docstring">Container/sandbox label map (`BTreeMap` for deterministic order).</p>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-sandbox-host/src/provider.rs:19</p>
+</article><div class="group-label">Standalone Functions</div><article id="item-fn-default-language-69" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn default_language private fn default_language () -&gt; String crates/eos-sandbox-host/src/provider.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>default_language</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="eos-sandbox-host--src-provider-rs.html#item-fn-default-language-69">default_language</a> () -&gt; String</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-host--src-provider-rs.html#item-fn-default-language-69">default_language</a>() -&gt; <span class="rs-type">String</span> {
+    &quot;python&quot;.to_owned()
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-sandbox-host/src/provider.rs:69</p>
+</article><article id="item-fn-default-true-146" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn default_true private fn default_true () -&gt; bool crates/eos-sandbox-host/src/provider.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>default_true</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="eos-sandbox-host--src-provider-rs.html#item-fn-default-true-146">default_true</a> () -&gt; bool</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-host--src-provider-rs.html#item-fn-default-true-146">default_true</a>() -&gt; bool {
+    <span class="rs-kw">true</span>
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-sandbox-host/src/provider.rs:146</p>
+</article></div>
+</section></div>
+</main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/eos-sandbox-host/src/provider.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-comment">//! The provider seam (`ProviderAdapter`), its value types, and the typed</span>
+<span class="rs-comment">//! [`ContextPreparer`] fixed point (GC-07).</span>
+<span class="rs-comment">//!</span>
+<span class="rs-comment">//! `ProviderAdapter` is the OCP/LSP seam: the production Docker adapter and a</span>
+<span class="rs-comment">//! `#[cfg(test)]` mock are substitutable behind `Arc&lt;dyn ProviderAdapter&gt;`. The</span>
+<span class="rs-comment">//! trait is **sealed** (`api-sealed-trait`) so only in-crate types implement it;</span>
+<span class="rs-comment">//! a future production provider needs an explicit plan (spec §1).</span>
+
+<span class="rs-kw">use</span> std::collections::<span class="rs-type">BTreeMap</span>;
+<span class="rs-kw">use</span> std::time::<span class="rs-type">Duration</span>;
+
+<span class="rs-kw">use</span> async_trait::async_trait;
+<span class="rs-kw">use</span> eos_types::{<span class="rs-type">JsonObject</span>, <span class="rs-type">SandboxId</span>};
+<span class="rs-kw">use</span> schemars::<span class="rs-type">JsonSchema</span>;
+<span class="rs-kw">use</span> serde::{<span class="rs-type">Deserialize</span>, <span class="rs-type">Serialize</span>};
+
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::error::<a class="symbol-link rs-type" href="eos-sandbox-host--src-error-rs.html#item-enum-SandboxHostError-5">SandboxHostError</a>;
+
+<span class="rs-comment">/// Container/sandbox label map (`BTreeMap` for deterministic order).</span>
+<span class="rs-kw">pub</span> <span class="rs-kw">type</span> <a class="symbol-link rs-type" href="eos-sandbox-host--src-provider-rs.html#item-type-Labels-19">Labels</a> = <span class="rs-type">BTreeMap</span>&lt;<span class="rs-type">String</span>, <span class="rs-type">String</span>&gt;;
+
+<span class="rs-comment">/// The sandbox backend selector (spec-conventions §4: `sandbox_provider`, never</span>
+<span class="rs-comment">/// bare `provider`). `#[non_exhaustive]` so dispatch sites carry a catch-all</span>
+<span class="rs-comment">/// arm, but the Rust migration ships only `Docker`.</span>
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">Copy</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Eq</span>, <span class="rs-type">Hash</span>, <span class="rs-type">Default</span>, <span class="rs-type">Serialize</span>, <span class="rs-type">Deserialize</span>, <span class="rs-type">JsonSchema</span>)]
+#[serde(rename_all = &quot;snake_case&quot;)]
+#[non_exhaustive]
+<span class="rs-kw">pub</span> <span class="rs-kw">enum</span> <a class="symbol-link rs-type" href="eos-sandbox-host--src-provider-rs.html#item-enum-ProviderKind-22">ProviderKind</a> {
+    <span class="rs-comment">/// The Docker sandbox backend — the only supported Rust provider.</span>
+    #[default]
+    <span class="rs-type">Docker</span>,
+}
+
+<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-sandbox-host--src-provider-rs.html#item-enum-ProviderKind-22">ProviderKind</a> {
+    <span class="rs-comment">/// The wire/string form of this kind (`"docker"`).</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-host--src-provider-rs.html#method-as-str-35">as_str</a>(<span class="rs-self">self</span>) -&gt; &amp;&#x27;<span class="rs-kw">static</span> str {
+        <span class="rs-kw">match</span> <span class="rs-self">self</span> {
+            <span class="rs-self">Self</span>::<span class="rs-type">Docker</span> =&gt; &quot;docker&quot;,
+        }
+    }
+}
+
+<span class="rs-comment">/// Arguments to [`ProviderAdapter::create`]; `language` defaults to `"python"`.</span>
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Eq</span>, <span class="rs-type">Serialize</span>, <span class="rs-type">Deserialize</span>, <span class="rs-type">JsonSchema</span>)]
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-sandbox-host--src-provider-rs.html#item-struct-CreateSandboxSpec-44">CreateSandboxSpec</a> {
+    <span class="rs-comment">/// Human/display name for the container.</span>
+    <span class="rs-kw">pub</span> name: <span class="rs-type">String</span>,
+    <span class="rs-comment">/// Optional snapshot/image tag to create from.</span>
+    #[serde(skip_serializing_if = &quot;<span class="rs-type">Option</span>::is_none&quot;, default)]
+    <span class="rs-kw">pub</span> snapshot: <span class="rs-type">Option</span>&lt;<span class="rs-type">String</span>&gt;,
+    <span class="rs-comment">/// Optional explicit image override.</span>
+    #[serde(skip_serializing_if = &quot;<span class="rs-type">Option</span>::is_none&quot;, default)]
+    <span class="rs-kw">pub</span> image: <span class="rs-type">Option</span>&lt;<span class="rs-type">String</span>&gt;,
+    <span class="rs-comment">/// Runtime language profile (defaults to `"python"`).</span>
+    #[serde(default = &quot;default_language&quot;)]
+    <span class="rs-kw">pub</span> language: <span class="rs-type">String</span>,
+    <span class="rs-comment">/// Environment variables injected into the container.</span>
+    #[serde(default)]
+    <span class="rs-kw">pub</span> env_vars: <span class="rs-type">BTreeMap</span>&lt;<span class="rs-type">String</span>, <span class="rs-type">String</span>&gt;,
+    <span class="rs-comment">/// Labels applied at create time.</span>
+    #[serde(default)]
+    <span class="rs-kw">pub</span> labels: <a class="symbol-link rs-type" href="eos-sandbox-host--src-provider-rs.html#item-type-Labels-19">Labels</a>,
+    <span class="rs-comment">/// Optional Docker platform string (Docker only).</span>
+    #[serde(skip_serializing_if = &quot;<span class="rs-type">Option</span>::is_none&quot;, default)]
+    <span class="rs-kw">pub</span> platform: <span class="rs-type">Option</span>&lt;<span class="rs-type">String</span>&gt;,
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-host--src-provider-rs.html#item-fn-default-language-69">default_language</a>() -&gt; <span class="rs-type">String</span> {
+    &quot;python&quot;.to_owned()
+}
+
+<span class="rs-kw">impl</span> <span class="rs-type">Default</span> <span class="rs-kw">for</span> <a class="symbol-link rs-type" href="eos-sandbox-host--src-provider-rs.html#item-struct-CreateSandboxSpec-44">CreateSandboxSpec</a> {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-host--src-provider-rs.html#method-default-74">default</a>() -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">Self</span> {
+            name: <span class="rs-type">String</span>::<a class="symbol-link rs-fn" href="eos-sandbox-host--src-daemon-client-rs.html#method-new-119">new</a>(),
+            snapshot: <span class="rs-type">None</span>,
+            image: <span class="rs-type">None</span>,
+            language: <a class="symbol-link rs-fn" href="eos-sandbox-host--src-provider-rs.html#item-fn-default-language-69">default_language</a>(),
+            env_vars: <span class="rs-type">BTreeMap</span>::<a class="symbol-link rs-fn" href="eos-sandbox-host--src-daemon-client-rs.html#method-new-119">new</a>(),
+            labels: <a class="symbol-link rs-type" href="eos-sandbox-host--src-provider-rs.html#item-type-Labels-19">Labels</a>::<a class="symbol-link rs-fn" href="eos-sandbox-host--src-daemon-client-rs.html#method-new-119">new</a>(),
+            platform: <span class="rs-type">None</span>,
+        }
+    }
+}
+
+<span class="rs-comment">/// Canonical serialized sandbox/container shape returned by the provider.</span>
+<span class="rs-comment">///</span>
+<span class="rs-comment">/// Canonical-normalization drops the Docker `_serialize_container` `docker_init`</span>
+<span class="rs-comment">/// (`HostConfig.Init`) field because no consumer in this crate needs it.</span>
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Eq</span>, <span class="rs-type">Serialize</span>, <span class="rs-type">Deserialize</span>, <span class="rs-type">JsonSchema</span>)]
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-sandbox-host--src-provider-rs.html#item-struct-SandboxInfo-87">SandboxInfo</a> {
+    <span class="rs-comment">/// Provider/container id.</span>
+    <span class="rs-kw">pub</span> id: <span class="rs-type">SandboxId</span>,
+    <span class="rs-comment">/// Container name with any leading `/` stripped (Docker).</span>
+    <span class="rs-kw">pub</span> name: <span class="rs-type">String</span>,
+    <span class="rs-comment">/// Container image (`Config.Image`).</span>
+    #[serde(skip_serializing_if = &quot;<span class="rs-type">Option</span>::is_none&quot;, default)]
+    <span class="rs-kw">pub</span> image: <span class="rs-type">Option</span>&lt;<span class="rs-type">String</span>&gt;,
+    <span class="rs-comment">/// Snapshot tag from `labels["snapshot"]`.</span>
+    #[serde(skip_serializing_if = &quot;<span class="rs-type">Option</span>::is_none&quot;, default)]
+    <span class="rs-kw">pub</span> snapshot: <span class="rs-type">Option</span>&lt;<span class="rs-type">String</span>&gt;,
+    <span class="rs-comment">/// Normalized lowercase container state (`status` / `state`).</span>
+    <span class="rs-kw">pub</span> state: <span class="rs-type">String</span>,
+    <span class="rs-comment">/// Container/sandbox labels.</span>
+    #[serde(default)]
+    <span class="rs-kw">pub</span> labels: <a class="symbol-link rs-type" href="eos-sandbox-host--src-provider-rs.html#item-type-Labels-19">Labels</a>,
+    <span class="rs-comment">/// Project/working directory (`labels["project_dir"]` or `WorkingDir`).</span>
+    #[serde(skip_serializing_if = &quot;<span class="rs-type">Option</span>::is_none&quot;, default)]
+    <span class="rs-kw">pub</span> project_dir: <span class="rs-type">Option</span>&lt;<span class="rs-type">String</span>&gt;,
+    <span class="rs-comment">/// Whether this sandbox is app-managed (`labels["managed_by"] == "eos"`).</span>
+    <span class="rs-kw">pub</span> managed_by_app: bool,
+}
+
+<span class="rs-comment">/// Docker host-side TCP path to the resident daemon (from</span>
+<span class="rs-comment">/// `get_daemon_tcp_endpoint`).</span>
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Eq</span>, <span class="rs-type">Serialize</span>, <span class="rs-type">Deserialize</span>, <span class="rs-type">JsonSchema</span>)]
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-sandbox-host--src-provider-rs.html#item-struct-DaemonTcpEndpoint-115">DaemonTcpEndpoint</a> {
+    <span class="rs-comment">/// Mapped host (`127.0.0.1`).</span>
+    <span class="rs-kw">pub</span> host: <span class="rs-type">String</span>,
+    <span class="rs-comment">/// Host-mapped port (`HostPort`).</span>
+    <span class="rs-kw">pub</span> port: u16,
+    <span class="rs-comment">/// Container-internal daemon port (`37657`).</span>
+    #[serde(skip_serializing_if = &quot;<span class="rs-type">Option</span>::is_none&quot;, default)]
+    <span class="rs-kw">pub</span> internal_port: <span class="rs-type">Option</span>&lt;u16&gt;,
+    <span class="rs-comment">/// Daemon auth token (`EOS_DAEMON_AUTH_TOKEN` env).</span>
+    <span class="rs-kw">pub</span> auth_token: <span class="rs-type">String</span>,
+}
+
+<span class="rs-comment">/// The `ProviderAdapter::exec` return — owned here (spec §5; sandbox-api drops</span>
+<span class="rs-comment">/// it as "a host concern").</span>
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Eq</span>, <span class="rs-type">Serialize</span>, <span class="rs-type">Deserialize</span>, <span class="rs-type">JsonSchema</span>)]
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-sandbox-host--src-provider-rs.html#item-struct-RawExecResult-130">RawExecResult</a> {
+    <span class="rs-comment">/// Process exit code.</span>
+    <span class="rs-kw">pub</span> exit_code: i32,
+    <span class="rs-comment">/// Captured stdout.</span>
+    <span class="rs-kw">pub</span> stdout: <span class="rs-type">String</span>,
+    <span class="rs-comment">/// Captured stderr (decode default `""`).</span>
+    #[serde(default)]
+    <span class="rs-kw">pub</span> stderr: <span class="rs-type">String</span>,
+    <span class="rs-comment">/// Whether the exec succeeded (`SandboxResultBase.success`, default `true`).</span>
+    #[serde(default = &quot;default_true&quot;)]
+    <span class="rs-kw">pub</span> success: bool,
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-host--src-provider-rs.html#item-fn-default-true-146">default_true</a>() -&gt; bool {
+    <span class="rs-kw">true</span>
+}
+
+<span class="rs-kw">impl</span> <span class="rs-type">Default</span> <span class="rs-kw">for</span> <a class="symbol-link rs-type" href="eos-sandbox-host--src-provider-rs.html#item-struct-RawExecResult-130">RawExecResult</a> {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-host--src-provider-rs.html#method-default-74">default</a>() -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">Self</span> {
+            exit_code: 0,
+            stdout: <span class="rs-type">String</span>::<a class="symbol-link rs-fn" href="eos-sandbox-host--src-daemon-client-rs.html#method-new-119">new</a>(),
+            stderr: <span class="rs-type">String</span>::<a class="symbol-link rs-fn" href="eos-sandbox-host--src-daemon-client-rs.html#method-new-119">new</a>(),
+            success: <span class="rs-kw">true</span>,
+        }
+    }
+}
+
+<span class="rs-comment">/// Options for a provider `exec`. Not a wire DTO (carries a `Duration`).</span>
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">Default</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Eq</span>)]
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-sandbox-host--src-provider-rs.html#item-struct-ExecOpts-161">ExecOpts</a> {
+    <span class="rs-comment">/// Working directory for the command.</span>
+    <span class="rs-kw">pub</span> cwd: <span class="rs-type">Option</span>&lt;<span class="rs-type">String</span>&gt;,
+    <span class="rs-comment">/// Optional wall-clock timeout for the command.</span>
+    <span class="rs-kw">pub</span> timeout: <span class="rs-type">Option</span>&lt;<span class="rs-type">Duration</span>&gt;,
+}
+
+<span class="rs-comment">/// Provider health snapshot (Docker health info).</span>
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Eq</span>, <span class="rs-type">Serialize</span>, <span class="rs-type">Deserialize</span>, <span class="rs-type">JsonSchema</span>)]
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-sandbox-host--src-provider-rs.html#item-struct-ProviderHealth-170">ProviderHealth</a> {
+    <span class="rs-comment">/// The provider name (`"docker"`).</span>
+    <span class="rs-kw">pub</span> provider: <span class="rs-type">String</span>,
+    <span class="rs-comment">/// Whether the provider backend is reachable/healthy.</span>
+    <span class="rs-kw">pub</span> healthy: bool,
+    <span class="rs-comment">/// Docker server version, if reported.</span>
+    #[serde(skip_serializing_if = &quot;<span class="rs-type">Option</span>::is_none&quot;, default)]
+    <span class="rs-kw">pub</span> server_version: <span class="rs-type">Option</span>&lt;<span class="rs-type">String</span>&gt;,
+    <span class="rs-comment">/// Number of running containers, if reported.</span>
+    #[serde(skip_serializing_if = &quot;<span class="rs-type">Option</span>::is_none&quot;, default)]
+    <span class="rs-kw">pub</span> containers_running: <span class="rs-type">Option</span>&lt;u64&gt;,
+    <span class="rs-comment">/// Host kernel version, if reported.</span>
+    #[serde(skip_serializing_if = &quot;<span class="rs-type">Option</span>::is_none&quot;, default)]
+    <span class="rs-kw">pub</span> kernel_version: <span class="rs-type">Option</span>&lt;<span class="rs-type">String</span>&gt;,
+    <span class="rs-comment">/// Host operating system, if reported.</span>
+    #[serde(skip_serializing_if = &quot;<span class="rs-type">Option</span>::is_none&quot;, default)]
+    <span class="rs-kw">pub</span> operating_system: <span class="rs-type">Option</span>&lt;<span class="rs-type">String</span>&gt;,
+    <span class="rs-comment">/// Failure detail when `healthy` is false (Docker `get_health` fail-open</span>
+    <span class="rs-comment">/// path returns `{provider, healthy: false, error}`).</span>
+    #[serde(skip_serializing_if = &quot;<span class="rs-type">Option</span>::is_none&quot;, default)]
+    <span class="rs-kw">pub</span> error: <span class="rs-type">Option</span>&lt;<span class="rs-type">String</span>&gt;,
+}
+
+<span class="rs-comment">/// A provider snapshot/image listing entry (mirrors Docker `_serialize_image`:</span>
+<span class="rs-comment">/// `name == image == first repo tag`).</span>
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Eq</span>, <span class="rs-type">Default</span>, <span class="rs-type">Serialize</span>, <span class="rs-type">Deserialize</span>, <span class="rs-type">JsonSchema</span>)]
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-sandbox-host--src-provider-rs.html#item-struct-SnapshotInfo-195">SnapshotInfo</a> {
+    <span class="rs-comment">/// Primary tag (first repo tag), or `None` if untagged.</span>
+    #[serde(skip_serializing_if = &quot;<span class="rs-type">Option</span>::is_none&quot;, default)]
+    <span class="rs-kw">pub</span> name: <span class="rs-type">Option</span>&lt;<span class="rs-type">String</span>&gt;,
+    <span class="rs-comment">/// Alias of `name` (Docker `_serialize_image` emits both).</span>
+    #[serde(skip_serializing_if = &quot;<span class="rs-type">Option</span>::is_none&quot;, default)]
+    <span class="rs-kw">pub</span> image: <span class="rs-type">Option</span>&lt;<span class="rs-type">String</span>&gt;,
+    <span class="rs-comment">/// Image/snapshot id.</span>
+    <span class="rs-kw">pub</span> id: <span class="rs-type">String</span>,
+    <span class="rs-comment">/// All repository tags attached to the image/snapshot.</span>
+    #[serde(default)]
+    <span class="rs-kw">pub</span> tags: <span class="rs-type">Vec</span>&lt;<span class="rs-type">String</span>&gt;,
+}
+
+<span class="rs-comment">/// The typed context-preparer fixed point (GC-07): a closed enum, **not** a new</span>
+<span class="rs-comment">/// trait seam. Replaces a duck-typed `context_preparer(...) -&gt; Any` indirection.</span>
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>)]
+#[non_exhaustive]
+<span class="rs-kw">pub</span> <span class="rs-kw">enum</span> <a class="symbol-link rs-type" href="eos-sandbox-host--src-provider-rs.html#item-enum-ContextPreparer-212">ContextPreparer</a> {
+    <span class="rs-comment">/// The Docker provider's context preparer.</span>
+    <span class="rs-type">Docker</span>(<a class="symbol-link rs-type" href="eos-sandbox-host--src-provider-rs.html#item-struct-DockerContextPreparer-231">DockerContextPreparer</a>),
+}
+
+<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-sandbox-host--src-provider-rs.html#item-enum-ContextPreparer-212">ContextPreparer</a> {
+    <span class="rs-comment">/// Inject provider-aware runtime metadata into `ctx` (sync path).</span>
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-host--src-provider-rs.html#method-prepare-context-222">prepare_context</a>(&amp;<span class="rs-self">self</span>, ctx: &amp;<span class="rs-kw">mut</span> <span class="rs-type">JsonObject</span>) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-sandbox-host--src-error-rs.html#item-enum-SandboxHostError-5">SandboxHostError</a>&gt; {
+        <span class="rs-kw">match</span> <span class="rs-self">self</span> {
+            <span class="rs-self">Self</span>::<span class="rs-type">Docker</span>(p) =&gt; p.<a class="symbol-link rs-fn" href="eos-sandbox-host--src-provider-rs.html#method-inject-252">inject</a>(ctx),
+        }
+        <span class="rs-type">Ok</span>(())
+    }
+}
+
+<span class="rs-comment">/// Docker context-preparer payload (GC-07 typed fixed point). Carries the</span>
+<span class="rs-comment">/// sandbox id and injects provider-neutral metadata into a tool context map.</span>
+<span class="rs-comment">///</span>
+<span class="rs-comment">/// Deviation from spec §6 (`pub(crate)`): made `pub` with a private field +</span>
+<span class="rs-comment">/// `#[non_exhaustive]` so it can sit in the public [`ContextPreparer::Docker`]</span>
+<span class="rs-comment">/// variant without tripping `private_interfaces`; it remains un-constructable</span>
+<span class="rs-comment">/// outside this crate. The deep container/workspace discovery a context</span>
+<span class="rs-comment">/// preparer performs lives outside the host (such orchestration is built on top</span>
+<span class="rs-comment">/// of the provider, not inside it), so the Rust fixed point injects only</span>
+<span class="rs-comment">/// `sandbox_id` + `sandbox_provider`.</span>
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>)]
+#[non_exhaustive]
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-sandbox-host--src-provider-rs.html#item-struct-DockerContextPreparer-231">DockerContextPreparer</a> {
+    sandbox_id: <span class="rs-type">SandboxId</span>,
+}
+
+<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-sandbox-host--src-provider-rs.html#item-struct-DockerContextPreparer-231">DockerContextPreparer</a> {
+    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-host--src-daemon-client-rs.html#method-new-119">new</a>(sandbox_id: <span class="rs-type">SandboxId</span>) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">Self</span> { sandbox_id }
+    }
+
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-host--src-provider-rs.html#method-inject-252">inject</a>(&amp;<span class="rs-self">self</span>, ctx: &amp;<span class="rs-kw">mut</span> <span class="rs-type">JsonObject</span>) {
+        ctx.insert(
+            &quot;sandbox_id&quot;.to_owned(),
+            <span class="rs-self">self</span>.sandbox_id.<a class="symbol-link rs-fn" href="eos-sandbox-host--src-provider-rs.html#method-as-str-35">as_str</a>().to_owned().into(),
+        );
+        ctx.insert(
+            &quot;sandbox_provider&quot;.to_owned(),
+            <a class="symbol-link rs-type" href="eos-sandbox-host--src-provider-rs.html#item-enum-ProviderKind-22">ProviderKind</a>::<span class="rs-type">Docker</span>.<a class="symbol-link rs-fn" href="eos-sandbox-host--src-provider-rs.html#method-as-str-35">as_str</a>().to_owned().into(),
+        );
+    }
+}
+
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">mod</span> sealed {
+    <span class="rs-comment">/// Seals [`super::ProviderAdapter`] (`api-sealed-trait`): only in-crate types</span>
+    <span class="rs-comment">/// implement it. External crates cannot name this trait, so they cannot</span>
+    <span class="rs-comment">/// implement the supertrait (see `tests/compile_fail`).</span>
+    <span class="rs-kw">pub</span> <span class="rs-kw">trait</span> <a class="symbol-link rs-type" href="eos-sandbox-host--src-provider-rs.html#item-trait-Sealed-265">Sealed</a> {}
+}
+
+<span class="rs-comment">/// Container CRUD + exec primitives implemented by each sandbox provider (the</span>
+<span class="rs-comment">/// OCP/LSP seam). Sealed; `#[async_trait]` because it is stored as</span>
+<span class="rs-comment">/// `Arc&lt;dyn ProviderAdapter&gt;` in the registry (anchor §6 object-safety note).</span>
+<span class="rs-comment">///</span>
+<span class="rs-comment">/// Method names drop the</span>
+<span class="rs-comment">/// `get_` prefix per Rust API guidelines C-GETTER: `health` ← `get_health`,</span>
+<span class="rs-comment">/// `daemon_tcp_endpoint` ← `get_daemon_tcp_endpoint`,</span>
+<span class="rs-comment">/// `kind()` ← the `name: str` class attribute.</span>
+#[async_trait]
+<span class="rs-kw">pub</span> <span class="rs-kw">trait</span> <a class="symbol-link rs-type" href="eos-sandbox-host--src-provider-rs.html#item-trait-ProviderAdapter-271">ProviderAdapter</a>: sealed::<a class="symbol-link rs-type" href="eos-sandbox-host--src-provider-rs.html#item-trait-Sealed-265">Sealed</a> + <span class="rs-type">Send</span> + <span class="rs-type">Sync</span> + std::fmt::<span class="rs-type">Debug</span> {
+    <span class="rs-comment">/// The backend kind this adapter speaks for.</span>
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-host--src-docker-rs.html#method-kind-96">kind</a>(&amp;<span class="rs-self">self</span>) -&gt; <a class="symbol-link rs-type" href="eos-sandbox-host--src-provider-rs.html#item-enum-ProviderKind-22">ProviderKind</a>;
+
+    <span class="rs-comment">/// Backend health/reachability snapshot.</span>
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-host--src-docker-rs.html#method-health-100">health</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-sandbox-host--src-provider-rs.html#item-struct-ProviderHealth-170">ProviderHealth</a>, <a class="symbol-link rs-type" href="eos-sandbox-host--src-error-rs.html#item-enum-SandboxHostError-5">SandboxHostError</a>&gt;;
+    <span class="rs-comment">/// List available snapshots/images.</span>
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-host--src-docker-rs.html#method-list-snapshots-124">list_snapshots</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;<a class="symbol-link rs-type" href="eos-sandbox-host--src-provider-rs.html#item-struct-SnapshotInfo-195">SnapshotInfo</a>&gt;, <a class="symbol-link rs-type" href="eos-sandbox-host--src-error-rs.html#item-enum-SandboxHostError-5">SandboxHostError</a>&gt;;
+
+    <span class="rs-comment">/// Create a container from `spec`.</span>
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-host--src-docker-rs.html#method-create-139">create</a>(&amp;<span class="rs-self">self</span>, spec: &amp;<a class="symbol-link rs-type" href="eos-sandbox-host--src-provider-rs.html#item-struct-CreateSandboxSpec-44">CreateSandboxSpec</a>) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-sandbox-host--src-provider-rs.html#item-struct-SandboxInfo-87">SandboxInfo</a>, <a class="symbol-link rs-type" href="eos-sandbox-host--src-error-rs.html#item-enum-SandboxHostError-5">SandboxHostError</a>&gt;;
+    <span class="rs-comment">/// Fetch one container by id.</span>
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-host--src-docker-rs.html#method-get-238">get</a>(&amp;<span class="rs-self">self</span>, id: &amp;<span class="rs-type">SandboxId</span>) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-sandbox-host--src-provider-rs.html#item-struct-SandboxInfo-87">SandboxInfo</a>, <a class="symbol-link rs-type" href="eos-sandbox-host--src-error-rs.html#item-enum-SandboxHostError-5">SandboxHostError</a>&gt;;
+    <span class="rs-comment">/// List managed containers.</span>
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-host--src-docker-rs.html#method-list-242">list</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;<a class="symbol-link rs-type" href="eos-sandbox-host--src-provider-rs.html#item-struct-SandboxInfo-87">SandboxInfo</a>&gt;, <a class="symbol-link rs-type" href="eos-sandbox-host--src-error-rs.html#item-enum-SandboxHostError-5">SandboxHostError</a>&gt;;
+    <span class="rs-comment">/// Start a stopped container.</span>
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-host--src-docker-rs.html#method-start-262">start</a>(&amp;<span class="rs-self">self</span>, id: &amp;<span class="rs-type">SandboxId</span>) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-sandbox-host--src-provider-rs.html#item-struct-SandboxInfo-87">SandboxInfo</a>, <a class="symbol-link rs-type" href="eos-sandbox-host--src-error-rs.html#item-enum-SandboxHostError-5">SandboxHostError</a>&gt;;
+    <span class="rs-comment">/// Stop a running container.</span>
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-host--src-docker-rs.html#method-stop-270">stop</a>(&amp;<span class="rs-self">self</span>, id: &amp;<span class="rs-type">SandboxId</span>) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-sandbox-host--src-provider-rs.html#item-struct-SandboxInfo-87">SandboxInfo</a>, <a class="symbol-link rs-type" href="eos-sandbox-host--src-error-rs.html#item-enum-SandboxHostError-5">SandboxHostError</a>&gt;;
+    <span class="rs-comment">/// Delete a container.</span>
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-host--src-docker-rs.html#method-delete-278">delete</a>(&amp;<span class="rs-self">self</span>, id: &amp;<span class="rs-type">SandboxId</span>) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-sandbox-host--src-error-rs.html#item-enum-SandboxHostError-5">SandboxHostError</a>&gt;;
+    <span class="rs-comment">/// Replace a container's labels.</span>
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-host--src-docker-rs.html#method-set-labels-294">set_labels</a>(
+        &amp;<span class="rs-self">self</span>,
+        id: &amp;<span class="rs-type">SandboxId</span>,
+        labels: &amp;<a class="symbol-link rs-type" href="eos-sandbox-host--src-provider-rs.html#item-type-Labels-19">Labels</a>,
+    ) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-sandbox-host--src-provider-rs.html#item-struct-SandboxInfo-87">SandboxInfo</a>, <a class="symbol-link rs-type" href="eos-sandbox-host--src-error-rs.html#item-enum-SandboxHostError-5">SandboxHostError</a>&gt;;
+
+    <span class="rs-comment">/// Docker-only host→daemon TCP endpoint; default `None` for providers with</span>
+    <span class="rs-comment">/// no TCP daemon path.</span>
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-host--src-docker-rs.html#method-daemon-tcp-endpoint-323">daemon_tcp_endpoint</a>(
+        &amp;<span class="rs-self">self</span>,
+        id: &amp;<span class="rs-type">SandboxId</span>,
+    ) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-sandbox-host--src-provider-rs.html#item-struct-DaemonTcpEndpoint-115">DaemonTcpEndpoint</a>&gt;, <a class="symbol-link rs-type" href="eos-sandbox-host--src-error-rs.html#item-enum-SandboxHostError-5">SandboxHostError</a>&gt; {
+        <span class="rs-kw">let</span> _ = id;
+        <span class="rs-type">Ok</span>(<span class="rs-type">None</span>)
+    }
+
+    <span class="rs-comment">/// Execute `command` inside the container.</span>
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-host--src-docker-rs.html#method-exec-334">exec</a>(
+        &amp;<span class="rs-self">self</span>,
+        id: &amp;<span class="rs-type">SandboxId</span>,
+        command: &amp;str,
+        opts: &amp;<a class="symbol-link rs-type" href="eos-sandbox-host--src-provider-rs.html#item-struct-ExecOpts-161">ExecOpts</a>,
+    ) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-sandbox-host--src-provider-rs.html#item-struct-RawExecResult-130">RawExecResult</a>, <a class="symbol-link rs-type" href="eos-sandbox-host--src-error-rs.html#item-enum-SandboxHostError-5">SandboxHostError</a>&gt;;
+    <span class="rs-comment">/// Stream a tar archive into `dest_dir` (the provider unpacks server-side).</span>
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-host--src-docker-rs.html#method-put-archive-353">put_archive</a>(
+        &amp;<span class="rs-self">self</span>,
+        id: &amp;<span class="rs-type">SandboxId</span>,
+        tar_stream: &amp;[u8],
+        dest_dir: &amp;str,
+    ) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-sandbox-host--src-error-rs.html#item-enum-SandboxHostError-5">SandboxHostError</a>&gt;;
+
+    <span class="rs-comment">/// The typed context preparer for `id` (GC-07 fixed point).</span>
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-host--src-docker-rs.html#method-context-preparer-378">context_preparer</a>(&amp;<span class="rs-self">self</span>, id: &amp;<span class="rs-type">SandboxId</span>) -&gt; <a class="symbol-link rs-type" href="eos-sandbox-host--src-provider-rs.html#item-enum-ContextPreparer-212">ContextPreparer</a>;
+}
+
+#[cfg(test)]
+#[path = &quot;../tests/provider/<span class="rs-kw">mod</span>.rs&quot;]
+<span class="rs-kw">mod</span> tests;
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
+  <script src="../assets/inventory.js"></script>
+</body>
+</html>

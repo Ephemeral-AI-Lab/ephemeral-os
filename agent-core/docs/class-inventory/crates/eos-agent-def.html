@@ -8,8 +8,16 @@
 </head>
 <body>
   <header>
-    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
-    <h1>eos-agent-def File Inventory</h1>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>eos-agent-def File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS/agent-core &amp;&amp; cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
   </header>
   <a class="back-link" href="../index.html">agent-core</a>
 <section class="summary">
@@ -47,19 +55,116 @@
       <span>0 methods</span>
     </div>
   </div>
-  <div class="items"><div class="group-label">File-Owned Types</div><article class="type-card" data-kind="enum" data-kind-list="enum field type-model" data-filter-text="enum AgentDefError pub pub enum AgentDefError crates/eos-agent-def/src/error.rs  ">
+  <div class="items"><div class="group-label">File-Owned Types</div><article id="item-enum-AgentDefError-8" class="type-card" data-kind="enum" data-kind-list="enum field type-model" data-filter-text="enum AgentDefError pub pub enum AgentDefError crates/eos-agent-def/src/error.rs  ">
   <div class="item-head">
     <span class="kind">enum</span>
     <h3>AgentDefError</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub enum AgentDefError</code>
-  <div class="tags"><span>error</span></div>
-  <h4>Variants</h4><table><tbody><tr><td>MissingRole</td><td><code>path: PathBuf</code></td></tr><tr><td>EmptyName</td><td><code></code></td></tr><tr><td>EmptyTerminals</td><td><code></code></td></tr><tr><td>NonPositiveToolCallLimit</td><td><code></code></td></tr><tr><td>Read</td><td><code>path: PathBuf, cause: std :: io :: Error</code></td></tr><tr><td>Frontmatter</td><td><code>path: PathBuf, cause: serde_yaml :: Error</code></td></tr><tr><td>SkillNotFound</td><td><code>path: PathBuf, declared: String, resolved: PathBuf</code></td></tr><tr><td>RecipeRoleMismatch</td><td><code>agent: String, recipe: String, role: AgentRole</code></td></tr><tr><td>SkillLint</td><td><code>violations: Vec &lt; String &gt;</code></td></tr></tbody></table>
+  <code class="signature">pub enum <a class="symbol-link" href="eos-agent-def.html#item-enum-AgentDefError-8">AgentDefError</a></code>
+  <p class="docstring">Failures raised when loading, parsing, or validating an agent profile.<br>`#[non_exhaustive]` because the set may grow (`api-non-exhaustive`); messages<br>are lowercase with no trailing punctuation (`err-lowercase-msg`) and chain the<br>underlying cause via `#[source]` (`err-source-chain`).</p>
+  <div class="tags"><span>derive: Debug</span><span>derive: thiserror::Error</span><span>error</span><span>non_exhaustive</span></div>
+  <h4>Variants</h4><table><tbody><tr><td>MissingRole</td><td><code>path: PathBuf</code></td></tr><tr><td>EmptyName</td><td><code></code></td></tr><tr><td>EmptyTerminals</td><td><code></code></td></tr><tr><td>NonPositiveToolCallLimit</td><td><code></code></td></tr><tr><td>Read</td><td><code>path: PathBuf, cause: std :: io :: Error</code></td></tr><tr><td>Frontmatter</td><td><code>path: PathBuf, cause: serde_yaml :: Error</code></td></tr><tr><td>SkillNotFound</td><td><code>path: PathBuf, declared: String, resolved: PathBuf</code></td></tr><tr><td>RecipeRoleMismatch</td><td><code>agent: String, recipe: String, role: <a class="symbol-link" href="eos-agent-def--src-model-rs.html#item-enum-AgentRole-36">AgentRole</a></code></td></tr><tr><td>SkillLint</td><td><code>violations: Vec &lt; String &gt;</code></td></tr></tbody></table>
+
   <p class="source">crates/eos-agent-def/src/error.rs:8</p>
 </article></div>
 </section></div>
 </main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/eos-agent-def/src/error.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-comment">//! The single typed error enum for this crate (spec-conventions §8,</span>
+<span class="rs-comment">//! `err-thiserror-lib`).</span>
+
+<span class="rs-kw">use</span> std::path::<span class="rs-type">PathBuf</span>;
+
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::model::<a class="symbol-link rs-type" href="eos-agent-def--src-model-rs.html#item-enum-AgentRole-36">AgentRole</a>;
+
+<span class="rs-comment">/// Failures raised when loading, parsing, or validating an agent profile.</span>
+<span class="rs-comment">///</span>
+<span class="rs-comment">/// `#[non_exhaustive]` because the set may grow (`api-non-exhaustive`); messages</span>
+<span class="rs-comment">/// are lowercase with no trailing punctuation (`err-lowercase-msg`) and chain the</span>
+<span class="rs-comment">/// underlying cause via `#[source]` (`err-source-chain`).</span>
+#[derive(<span class="rs-type">Debug</span>, thiserror::<span class="rs-type">Error</span>)]
+#[non_exhaustive]
+<span class="rs-kw">pub</span> <span class="rs-kw">enum</span> <a class="symbol-link rs-type" href="eos-agent-def.html#item-enum-AgentDefError-8">AgentDefError</a> {
+    <span class="rs-comment">/// A profile `.md` omitted the required `role:` frontmatter field.</span>
+    #[error(&quot;agent profile {} is missing required &#x27;role&#x27; frontmatter&quot;, path.display())]
+    <span class="rs-type">MissingRole</span> {
+        <span class="rs-comment">/// The profile file that omitted `role:`.</span>
+        path: <span class="rs-type">PathBuf</span>,
+    },
+
+    <span class="rs-comment">/// A resolved agent `name` was empty after trimming surrounding whitespace.</span>
+    #[error(&quot;agent name must be non-empty&quot;)]
+    <span class="rs-type">EmptyName</span>,
+
+    <span class="rs-comment">/// `terminals` was empty (or all-blank) — every agent must declare at least</span>
+    <span class="rs-comment">/// one terminal-capable tool.</span>
+    #[error(&quot;agent definition terminals must be non-empty&quot;)]
+    <span class="rs-type">EmptyTerminals</span>,
+
+    <span class="rs-comment">/// `tool_call_limit` was not strictly positive.</span>
+    #[error(&quot;tool_call_limit must be positive&quot;)]
+    <span class="rs-type">NonPositiveToolCallLimit</span>,
+
+    <span class="rs-comment">/// The profile file could not be read from disk.</span>
+    #[error(&quot;could not read agent profile {}&quot;, path.display())]
+    <span class="rs-type">Read</span> {
+        <span class="rs-comment">/// The file (or directory) that could not be read.</span>
+        path: <span class="rs-type">PathBuf</span>,
+        <span class="rs-comment">/// The underlying I/O failure.</span>
+        #[source]
+        cause: std::io::<span class="rs-type">Error</span>,
+    },
+
+    <span class="rs-comment">/// The YAML frontmatter failed to parse, or carried an unknown key.</span>
+    #[error(&quot;invalid frontmatter <span class="rs-kw">in</span> {}&quot;, path.display())]
+    <span class="rs-type">Frontmatter</span> {
+        <span class="rs-comment">/// The profile file whose frontmatter failed to parse.</span>
+        path: <span class="rs-type">PathBuf</span>,
+        <span class="rs-comment">/// The underlying YAML deserialization failure.</span>
+        #[source]
+        cause: serde_yaml::<span class="rs-type">Error</span>,
+    },
+
+    <span class="rs-comment">/// A declared `skill:` path did not resolve to an existing file.</span>
+    #[error(&quot;agent profile {} declares skill {declared}, but {} does not exist&quot;, path.display(), resolved.display())]
+    <span class="rs-type">SkillNotFound</span> {
+        <span class="rs-comment">/// The profile file that declared the skill.</span>
+        path: <span class="rs-type">PathBuf</span>,
+        <span class="rs-comment">/// The relative `skill:` value as authored.</span>
+        declared: <span class="rs-type">String</span>,
+        <span class="rs-comment">/// The resolved (absolute) path that did not exist.</span>
+        resolved: <span class="rs-type">PathBuf</span>,
+    },
+
+    <span class="rs-comment">/// A `context_recipe` was declared by a role that has no context builder</span>
+    <span class="rs-comment">/// (anything outside `{planner, generator, reducer}`).</span>
+    #[error(
+        &quot;agent {agent} declares context_recipe {recipe}, but role {role} has no context builder&quot;
+    )]
+    <span class="rs-type">RecipeRoleMismatch</span> {
+        <span class="rs-comment">/// The offending agent's name.</span>
+        agent: <span class="rs-type">String</span>,
+        <span class="rs-comment">/// The declared recipe id.</span>
+        recipe: <span class="rs-type">String</span>,
+        <span class="rs-comment">/// The agent's role, which has no context builder.</span>
+        role: <a class="symbol-link rs-type" href="eos-agent-def--src-model-rs.html#item-enum-AgentRole-36">AgentRole</a>,
+    },
+
+    <span class="rs-comment">/// One or more declared skill files violated the terminal-silence contract.</span>
+    #[error(&quot;skill-file lint failed&quot;)]
+    <span class="rs-type">SkillLint</span> {
+        <span class="rs-comment">/// One human-readable description per violation.</span>
+        violations: <span class="rs-type">Vec</span>&lt;<span class="rs-type">String</span>&gt;,
+    },
+}
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
   <script src="../assets/inventory.js"></script>
 </body>
 </html>

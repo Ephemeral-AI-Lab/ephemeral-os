@@ -8,8 +8,16 @@
 </head>
 <body>
   <header>
-    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
-    <h1>eos-audit File Inventory</h1>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>eos-audit File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS/agent-core &amp;&amp; cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
   </header>
   <a class="back-link" href="../index.html">agent-core</a>
 <section class="summary">
@@ -47,19 +55,53 @@
       <span>0 methods</span>
     </div>
   </div>
-  <div class="items"><div class="group-label">File-Owned Types</div><article class="type-card" data-kind="enum" data-kind-list="enum field type-model" data-filter-text="enum AuditError pub pub enum AuditError crates/eos-audit/src/error.rs  ">
+  <div class="items"><div class="group-label">File-Owned Types</div><article id="item-enum-AuditError-7" class="type-card" data-kind="enum" data-kind-list="enum field type-model" data-filter-text="enum AuditError pub pub enum AuditError crates/eos-audit/src/error.rs  ">
   <div class="item-head">
     <span class="kind">enum</span>
     <h3>AuditError</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub enum AuditError</code>
-  <div class="tags"><span>error</span></div>
+  <code class="signature">pub enum <a class="symbol-link" href="eos-audit.html#item-enum-AuditError-7">AuditError</a></code>
+  <p class="docstring">Errors reported by an [`AuditSink`](crate::AuditSink).<br>These are *recoverable* failures surfaced through `Result` without<br>interrupting the emitting domain path. Sinks must not panic.</p>
+  <div class="tags"><span>derive: Debug</span><span>derive: thiserror::Error</span><span>error</span><span>non_exhaustive</span></div>
   <h4>Variants</h4><table><tbody><tr><td>Jsonl</td><td><code>0: std :: io :: Error</code></td></tr><tr><td>Serialize</td><td><code>0: serde_json :: Error</code></td></tr><tr><td>Backpressure</td><td><code></code></td></tr></tbody></table>
+
   <p class="source">crates/eos-audit/src/error.rs:7</p>
 </article></div>
 </section></div>
 </main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/eos-audit/src/error.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-comment">//! The single `thiserror` error enum for the audit side channel.</span>
+<span class="rs-comment">//!</span>
+<span class="rs-comment">//! `AuditError` covers the three recoverable failures an audit sink can report:</span>
+<span class="rs-comment">//! a `JSONL` write IO error, an event serialization error, and the bounded-queue</span>
+<span class="rs-comment">//! backpressure signal raised by [`BufferedJsonlSink`](crate::BufferedJsonlSink).</span>
+
+<span class="rs-comment">/// Errors reported by an [`AuditSink`](crate::AuditSink).</span>
+<span class="rs-comment">///</span>
+<span class="rs-comment">/// These are *recoverable* failures surfaced through `Result` without</span>
+<span class="rs-comment">/// interrupting the emitting domain path. Sinks must not panic.</span>
+#[derive(<span class="rs-type">Debug</span>, thiserror::<span class="rs-type">Error</span>)]
+#[non_exhaustive]
+<span class="rs-kw">pub</span> <span class="rs-kw">enum</span> <a class="symbol-link rs-type" href="eos-audit.html#item-enum-AuditError-7">AuditError</a> {
+    <span class="rs-comment">/// Appending the event to a `JSONL` file failed.</span>
+    #[error(&quot;audit jsonl write failed&quot;)]
+    <span class="rs-type">Jsonl</span>(#[from] std::io::<span class="rs-type">Error</span>),
+    <span class="rs-comment">/// Encoding the event to canonical `JSON` failed.</span>
+    #[error(&quot;audit event serialization failed&quot;)]
+    <span class="rs-type">Serialize</span>(#[from] serde_json::<span class="rs-type">Error</span>),
+    <span class="rs-comment">/// The bounded sink queue is full; the event was dropped rather than block</span>
+    <span class="rs-comment">/// the caller's runtime thread.</span>
+    #[error(&quot;audit sink queue is full&quot;)]
+    <span class="rs-type">Backpressure</span>,
+}
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
   <script src="../assets/inventory.js"></script>
 </body>
 </html>

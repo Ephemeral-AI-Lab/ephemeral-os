@@ -79,7 +79,7 @@ impl ToolExecutor for DelegateWorkflow {
         }
 
         let started = control.start(task_id, agent_run_id, &parsed.goal).await?;
-        supervisor.register_workflow(agent_run_id, &started).await;
+        supervisor.register_workflow(&started).await;
         let payload = json!({
             "workflow_task_id": started.workflow_task_id.as_str(),
             "workflow_id": started.workflow_id.as_str(),

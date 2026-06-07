@@ -8,8 +8,16 @@
 </head>
 <body>
   <header>
-    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
-    <h1>eos-state File Inventory</h1>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>eos-state File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS/agent-core &amp;&amp; cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
   </header>
   <a class="back-link" href="../index.html">agent-core</a>
 <section class="summary">
@@ -47,29 +55,100 @@
       <span>1 methods</span>
     </div>
   </div>
-  <div class="items"><div class="group-label">File-Owned Types</div><article class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct Request pub pub struct Request crates/eos-state/src/request.rs id RequestId cwd String sandbox_id Option &lt; SandboxId &gt; request_prompt String root_task_id Option &lt; TaskId &gt; status RequestStatus created_at UtcDateTime updated_at UtcDateTime finished_at Option &lt; UtcDateTime &gt; ">
+  <div class="items"><div class="group-label">File-Owned Types</div><article id="item-struct-Request-30" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct Request pub pub struct Request crates/eos-state/src/request.rs id RequestId cwd String sandbox_id Option &lt; SandboxId &gt; request_prompt String root_task_id Option &lt; TaskId &gt; status RequestStatus created_at UtcDateTime updated_at UtcDateTime finished_at Option &lt; UtcDateTime &gt; ">
   <div class="item-head">
     <span class="kind">struct</span>
     <h3>Request</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub struct Request</code>
-  <div class="tags"><span>dto</span><span>serde</span></div>
-  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>id</td><td><code>RequestId</code></td></tr><tr><td>pub</td><td>cwd</td><td><code>String</code></td></tr><tr><td>pub</td><td>sandbox_id</td><td><code>Option &lt; SandboxId &gt;</code></td></tr><tr><td>pub</td><td>request_prompt</td><td><code>String</code></td></tr><tr><td>pub</td><td>root_task_id</td><td><code>Option &lt; TaskId &gt;</code></td></tr><tr><td>pub</td><td>status</td><td><code>RequestStatus</code></td></tr><tr><td>pub</td><td>created_at</td><td><code>UtcDateTime</code></td></tr><tr><td>pub</td><td>updated_at</td><td><code>UtcDateTime</code></td></tr><tr><td>pub</td><td>finished_at</td><td><code>Option &lt; UtcDateTime &gt;</code></td></tr></tbody></table>
+  <code class="signature">pub struct <a class="symbol-link" href="eos-state--src-request-rs.html#item-struct-Request-30">Request</a></code>
+  <p class="docstring">Immutable view of a persisted request row (Rust `RequestRecord`).</p>
+  <div class="tags"><span>derive: Clone</span><span>derive: Debug</span><span>derive: Deserialize</span><span>derive: JsonSchema</span><span>derive: PartialEq</span><span>derive: Serialize</span><span>dto</span><span>serde</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>id</td><td><code>RequestId</code></td></tr><tr><td>pub</td><td>cwd</td><td><code>String</code></td></tr><tr><td>pub</td><td>sandbox_id</td><td><code>Option &lt; SandboxId &gt;</code></td></tr><tr><td>pub</td><td>request_prompt</td><td><code>String</code></td></tr><tr><td>pub</td><td>root_task_id</td><td><code>Option &lt; TaskId &gt;</code></td></tr><tr><td>pub</td><td>status</td><td><code><a class="symbol-link" href="eos-state--src-request-rs.html#item-enum-RequestStatus-8">RequestStatus</a></code></td></tr><tr><td>pub</td><td>created_at</td><td><code>UtcDateTime</code></td></tr><tr><td>pub</td><td>updated_at</td><td><code>UtcDateTime</code></td></tr><tr><td>pub</td><td>finished_at</td><td><code>Option &lt; UtcDateTime &gt;</code></td></tr></tbody></table>
+
   <p class="source">crates/eos-state/src/request.rs:30</p>
-</article><article class="type-card" data-kind="enum" data-kind-list="enum field impl method type-model" data-filter-text="enum RequestStatus pub pub enum RequestStatus crates/eos-state/src/request.rs  ">
+</article><article id="item-enum-RequestStatus-8" class="type-card" data-kind="enum" data-kind-list="enum field impl method type-model" data-filter-text="enum RequestStatus pub pub enum RequestStatus crates/eos-state/src/request.rs  ">
   <div class="item-head">
     <span class="kind">enum</span>
     <h3>RequestStatus</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub enum RequestStatus</code>
-  <div class="tags"><span>dto</span><span>serde</span></div>
-  <h4>Variants</h4><table><tbody><tr><td>Running</td><td><code></code></td></tr><tr><td>Done</td><td><code></code></td></tr><tr><td>Failed</td><td><code></code></td></tr><tr><td>Cancelled</td><td><code></code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr><td>method</td><td>is_terminal</td><td><code>pub const fn is_terminal (self) -&gt; bool</code></td></tr></tbody></table>
+  <code class="signature">pub enum <a class="symbol-link" href="eos-state--src-request-rs.html#item-enum-RequestStatus-8">RequestStatus</a></code>
+  <p class="docstring">Lifecycle status of a top-level request.</p>
+  <div class="tags"><span>derive: Clone</span><span>derive: Copy</span><span>derive: Debug</span><span>derive: Deserialize</span><span>derive: Eq</span><span>derive: Hash</span><span>derive: JsonSchema</span><span>derive: PartialEq</span><span>derive: Serialize</span><span>dto</span><span>serde</span><span>serde: rename_all</span></div>
+  <h4>Variants</h4><table><tbody><tr><td>Running</td><td><code></code></td></tr><tr><td>Done</td><td><code></code></td></tr><tr><td>Failed</td><td><code></code></td></tr><tr><td>Cancelled</td><td><code></code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-is-terminal-23"><td>method</td><td>is_terminal</td><td><code>pub const fn <a class="symbol-link" href="eos-state--src-request-rs.html#method-is-terminal-23">is_terminal</a> (self) -&gt; bool</code><p class="docstring">Whether this request status is terminal.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Whether this request status is terminal.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-request-rs.html#method-is-terminal-23">is_terminal</a>(<span class="rs-self">self</span>) -&gt; bool {
+        matches!(<span class="rs-self">self</span>, <span class="rs-self">Self</span>::<span class="rs-type">Done</span> | <span class="rs-self">Self</span>::<span class="rs-type">Failed</span> | <span class="rs-self">Self</span>::<span class="rs-type">Cancelled</span>)
+    }
+</code></pre>
+</details></td></tr></tbody></table>
+
   <p class="source">crates/eos-state/src/request.rs:8</p>
 </article></div>
 </section></div>
 </main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/eos-state/src/request.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-comment">//! `Request` DTO — one top-level user request (Rust `db/models/request.py`).</span>
+
+<span class="rs-kw">use</span> schemars::<span class="rs-type">JsonSchema</span>;
+<span class="rs-kw">use</span> serde::{<span class="rs-type">Deserialize</span>, <span class="rs-type">Serialize</span>};
+
+<span class="rs-kw">use</span> eos_types::{<span class="rs-type">RequestId</span>, <span class="rs-type">SandboxId</span>, <span class="rs-type">TaskId</span>, <span class="rs-type">UtcDateTime</span>};
+
+<span class="rs-comment">/// Lifecycle status of a top-level request.</span>
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">Copy</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Eq</span>, <span class="rs-type">Hash</span>, <span class="rs-type">Serialize</span>, <span class="rs-type">Deserialize</span>, <span class="rs-type">JsonSchema</span>)]
+#[serde(rename_all = &quot;snake_case&quot;)]
+<span class="rs-kw">pub</span> <span class="rs-kw">enum</span> <a class="symbol-link rs-type" href="eos-state--src-request-rs.html#item-enum-RequestStatus-8">RequestStatus</a> {
+    <span class="rs-comment">/// Root task is still running.</span>
+    <span class="rs-type">Running</span>,
+    <span class="rs-comment">/// Root task completed successfully.</span>
+    <span class="rs-type">Done</span>,
+    <span class="rs-comment">/// Root task failed or exhausted.</span>
+    <span class="rs-type">Failed</span>,
+    <span class="rs-comment">/// Root task was cancelled.</span>
+    <span class="rs-type">Cancelled</span>,
+}
+
+<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-state--src-request-rs.html#item-enum-RequestStatus-8">RequestStatus</a> {
+    <span class="rs-comment">/// Whether this request status is terminal.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-request-rs.html#method-is-terminal-23">is_terminal</a>(<span class="rs-self">self</span>) -&gt; bool {
+        matches!(<span class="rs-self">self</span>, <span class="rs-self">Self</span>::<span class="rs-type">Done</span> | <span class="rs-self">Self</span>::<span class="rs-type">Failed</span> | <span class="rs-self">Self</span>::<span class="rs-type">Cancelled</span>)
+    }
+}
+
+<span class="rs-comment">/// Immutable view of a persisted request row (Rust `RequestRecord`).</span>
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Serialize</span>, <span class="rs-type">Deserialize</span>, <span class="rs-type">JsonSchema</span>)]
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-state--src-request-rs.html#item-struct-Request-30">Request</a> {
+    <span class="rs-comment">/// Request identifier.</span>
+    <span class="rs-kw">pub</span> id: <span class="rs-type">RequestId</span>,
+    <span class="rs-comment">/// Working directory the request runs against.</span>
+    <span class="rs-kw">pub</span> cwd: <span class="rs-type">String</span>,
+    <span class="rs-comment">/// Provisioned sandbox, if any.</span>
+    <span class="rs-kw">pub</span> sandbox_id: <span class="rs-type">Option</span>&lt;<span class="rs-type">SandboxId</span>&gt;,
+    <span class="rs-comment">/// The original request prompt.</span>
+    <span class="rs-kw">pub</span> request_prompt: <span class="rs-type">String</span>,
+    <span class="rs-comment">/// The root `Task(role=root, workflow_id=None)`, once minted.</span>
+    <span class="rs-kw">pub</span> root_task_id: <span class="rs-type">Option</span>&lt;<span class="rs-type">TaskId</span>&gt;,
+    <span class="rs-comment">/// Request lifecycle status; set via `RequestStore::finish_request`.</span>
+    <span class="rs-kw">pub</span> status: <a class="symbol-link rs-type" href="eos-state--src-request-rs.html#item-enum-RequestStatus-8">RequestStatus</a>,
+    <span class="rs-comment">/// Creation timestamp.</span>
+    <span class="rs-kw">pub</span> created_at: <span class="rs-type">UtcDateTime</span>,
+    <span class="rs-comment">/// Last-update timestamp.</span>
+    <span class="rs-kw">pub</span> updated_at: <span class="rs-type">UtcDateTime</span>,
+    <span class="rs-comment">/// Finish timestamp, set server-side at `finish_request`.</span>
+    <span class="rs-kw">pub</span> finished_at: <span class="rs-type">Option</span>&lt;<span class="rs-type">UtcDateTime</span>&gt;,
+}
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
   <script src="../assets/inventory.js"></script>
 </body>
 </html>

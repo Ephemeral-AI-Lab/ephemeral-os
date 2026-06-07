@@ -1,0 +1,520 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>eos-backend-api · src/openapi.rs</title>
+  <link rel="stylesheet" href="../assets/inventory.css">
+</head>
+<body>
+  <header>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>eos-backend-api File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS/backend-server &amp;&amp; cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
+  </header>
+  <a class="back-link" href="../index.html">backend-server</a>
+<section class="summary">
+  <div><b>13</b><span>modules</span></div>
+  <div><b>66</b><span>items</span></div>
+  <div><b>35</b><span>fields</span></div>
+  <div><b>22</b><span>methods</span></div>
+</section>
+<section class="toolbar">
+  <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
+  <select id="kind-filter">
+    <option value="">All items</option>
+    <option value="type-model">Type model</option>
+    <option value="struct">Structs</option>
+    <option value="enum">Enums</option>
+    <option value="trait">Traits</option>
+    <option value="impl">Impls</option>
+    <option value="fn">Functions</option>
+    <option value="type">Aliases</option>
+  </select>
+</section>
+<main class="crate-layout">
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><a class="file-link" href="eos-backend-api.html"><span>error.rs</span><small>3/0</small></a></li><li><span class="folder">handlers</span><ul class="file-tree"><li><a class="file-link" href="eos-backend-api--src-handlers-agent-runs-rs.html"><span>agent_runs.rs</span><small>4/5</small></a></li><li><a class="file-link" href="eos-backend-api--src-handlers-mod-rs.html"><span>mod.rs</span><small>2/1</small></a></li><li><a class="file-link" href="eos-backend-api--src-handlers-sandboxes-rs.html"><span>sandboxes.rs</span><small>0/3</small></a></li><li><a class="file-link" href="eos-backend-api--src-handlers-stats-rs.html"><span>stats.rs</span><small>0/4</small></a></li><li><a class="file-link" href="eos-backend-api--src-handlers-stream-rs.html"><span>stream.rs</span><small>1/2</small></a></li><li><a class="file-link" href="eos-backend-api--src-handlers-tasks-rs.html"><span>tasks.rs</span><small>2/4</small></a></li><li><a class="file-link" href="eos-backend-api--src-handlers-user-requests-rs.html"><span>user_requests.rs</span><small>1/7</small></a></li></ul></li><li><a class="file-link" href="eos-backend-api--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><a class="file-link active" href="eos-backend-api--src-openapi-rs.html"><span>openapi.rs</span><small>0/6</small></a></li><li><a class="file-link" href="eos-backend-api--src-router-rs.html"><span>router.rs</span><small>4/1</small></a></li><li><span class="folder">stream</span><ul class="file-tree"><li><a class="file-link" href="eos-backend-api--src-stream-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-backend-api--src-stream-sse-rs.html"><span>sse.rs</span><small>0/2</small></a></li></ul></li></ul></li></ul></nav>
+  <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="openapi crates/eos-backend-api/src/openapi.rs openapi_doc document reg schema_ref json_body paths">
+  <div class="module-head">
+    <div>
+      <h2>src/openapi.rs</h2>
+      <p class="path">module <code>openapi</code></p>
+    </div>
+    <div class="module-stats">
+      <span>file owns</span>
+      <span>0 types</span>
+      <span>0 impls</span>
+      <span>6 fns</span>
+      <span>0 methods</span>
+    </div>
+  </div>
+  <div class="items"><div class="group-label">Standalone Functions</div><article id="item-fn-openapi-doc-19" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn openapi_doc pub(crate) pub(crate) async fn openapi_doc () -&gt; Json &lt; Value &gt; crates/eos-backend-api/src/openapi.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>openapi_doc</h3>
+    <span class="visibility">pub(crate)</span>
+  </div>
+  <code class="signature">pub(crate) async fn <a class="symbol-link" href="eos-backend-api--src-openapi-rs.html#item-fn-openapi-doc-19">openapi_doc</a> () -&gt; Json &lt; Value &gt;</code>
+  <p class="docstring">`GET /openapi.json` — the assembled `OpenAPI` 3.0 document.</p>
+  <div class="tags"><span>async</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-comment">/// `GET /openapi.json` — the assembled `OpenAPI` 3.0 document.</span>
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-backend-api--src-openapi-rs.html#item-fn-openapi-doc-19">openapi_doc</a>() -&gt; <span class="rs-type">Json</span>&lt;<span class="rs-type">Value</span>&gt; {
+    <span class="rs-type">Json</span>(<a class="symbol-link rs-fn" href="eos-backend-api--src-openapi-rs.html#item-fn-document-24">document</a>())
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-backend-api/src/openapi.rs:19</p>
+</article><article id="item-fn-document-24" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn document private fn document () -&gt; Value crates/eos-backend-api/src/openapi.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>document</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="eos-backend-api--src-openapi-rs.html#item-fn-document-24">document</a> () -&gt; Value</code>
+  <p class="docstring">Build the document: component schemas from the DTO derives, plus the static<br>path table mirroring [`build_router`](crate::build_router).</p>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-comment">/// Build the document: component schemas from the DTO derives, plus the static</span>
+<span class="rs-comment">/// path table mirroring [`build_router`](crate::build_router).</span>
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-backend-api--src-openapi-rs.html#item-fn-document-24">document</a>() -&gt; <span class="rs-type">Value</span> {
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> generator = <span class="rs-type">SchemaGenerator</span>::<a class="symbol-link rs-fn" href="eos-backend-api--src-handlers-agent-runs-rs.html#method-new-137">new</a>(<span class="rs-type">SchemaSettings</span>::openapi3());
+    reg::&lt;<span class="rs-type">CreateUserRequest</span>&gt;(&amp;<span class="rs-kw">mut</span> generator);
+    reg::&lt;<span class="rs-type">CreateUserRequestResponse</span>&gt;(&amp;<span class="rs-kw">mut</span> generator);
+    reg::&lt;<span class="rs-type">RunRecord</span>&gt;(&amp;<span class="rs-kw">mut</span> generator);
+    reg::&lt;<span class="rs-type">UserRequestDetail</span>&gt;(&amp;<span class="rs-kw">mut</span> generator);
+    reg::&lt;<span class="rs-type">ApiRunStatus</span>&gt;(&amp;<span class="rs-kw">mut</span> generator);
+    reg::&lt;<span class="rs-type">EventRecord</span>&gt;(&amp;<span class="rs-kw">mut</span> generator);
+    reg::&lt;<span class="rs-type">SandboxView</span>&gt;(&amp;<span class="rs-kw">mut</span> generator);
+    reg::&lt;<span class="rs-type">PerformanceStats</span>&gt;(&amp;<span class="rs-kw">mut</span> generator);
+    reg::&lt;<span class="rs-type">CorrectnessStats</span>&gt;(&amp;<span class="rs-kw">mut</span> generator);
+    reg::&lt;<span class="rs-type">AgentRunStat</span>&gt;(&amp;<span class="rs-kw">mut</span> generator);
+    reg::&lt;<span class="rs-type">Task</span>&gt;(&amp;<span class="rs-kw">mut</span> generator);
+    reg::&lt;<span class="rs-type">AgentRun</span>&gt;(&amp;<span class="rs-kw">mut</span> generator);
+
+    <span class="rs-kw">let</span> schemas = serde_json::to_value(generator.definitions()).unwrap_or_else(|_| json!({}));
+
+    json!({
+        &quot;openapi&quot;: &quot;3.0.3&quot;,
+        &quot;info&quot;: {
+            &quot;title&quot;: &quot;<span class="rs-type">EphemeralOS</span> backend <span class="rs-type">API</span>&quot;,
+            &quot;version&quot;: env!(&quot;<span class="rs-type">CARGO_PKG_VERSION</span>&quot;),
+        },
+        &quot;paths&quot;: <a class="symbol-link rs-fn" href="eos-backend-api--src-openapi-rs.html#item-fn-paths-69">paths</a>(),
+        &quot;components&quot;: { &quot;schemas&quot;: schemas },
+    })
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-backend-api/src/openapi.rs:24</p>
+</article><article id="item-fn-reg-54" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn reg private fn reg &lt; T : JsonSchema &gt; (generator : &amp; mut SchemaGenerator) crates/eos-backend-api/src/openapi.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>reg</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="eos-backend-api--src-openapi-rs.html#item-fn-reg-54">reg</a> &lt; T : JsonSchema &gt; (generator : &amp; mut SchemaGenerator)</code>
+  <p class="docstring">Register a DTO (and its transitive references) into the component schemas.</p>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-comment">/// Register a DTO (and its transitive references) into the component schemas.</span>
+<span class="rs-kw">fn</span> reg&lt;<span class="rs-type">T</span>: <span class="rs-type">JsonSchema</span>&gt;(generator: &amp;<span class="rs-kw">mut</span> <span class="rs-type">SchemaGenerator</span>) {
+    <span class="rs-kw">let</span> _ = generator.subschema_for::&lt;<span class="rs-type">T</span>&gt;();
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-backend-api/src/openapi.rs:54</p>
+</article><article id="item-fn-schema-ref-59" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn schema_ref private fn schema_ref (name : &amp; str) -&gt; Value crates/eos-backend-api/src/openapi.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>schema_ref</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="eos-backend-api--src-openapi-rs.html#item-fn-schema-ref-59">schema_ref</a> (name : &amp; str) -&gt; Value</code>
+  <p class="docstring">`$ref` to a component schema by type name.</p>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-comment">/// `$ref` to a component schema by type name.</span>
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-backend-api--src-openapi-rs.html#item-fn-schema-ref-59">schema_ref</a>(name: &amp;str) -&gt; <span class="rs-type">Value</span> {
+    json!({ &quot;$<span class="rs-kw">ref</span>&quot;: format!(&quot;#/components/schemas/{name}&quot;) })
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-backend-api/src/openapi.rs:59</p>
+</article><article id="item-fn-json-body-64" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn json_body private fn json_body (schema_name : &amp; str) -&gt; Value crates/eos-backend-api/src/openapi.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>json_body</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="eos-backend-api--src-openapi-rs.html#item-fn-json-body-64">json_body</a> (schema_name : &amp; str) -&gt; Value</code>
+  <p class="docstring">A JSON response body of the given component schema.</p>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-comment">/// A JSON response body of the given component schema.</span>
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-backend-api--src-openapi-rs.html#item-fn-json-body-64">json_body</a>(schema_name: &amp;str) -&gt; <span class="rs-type">Value</span> {
+    json!({ &quot;content&quot;: { &quot;application/json&quot;: { &quot;schema&quot;: <a class="symbol-link rs-fn" href="eos-backend-api--src-openapi-rs.html#item-fn-schema-ref-59">schema_ref</a>(schema_name) } } })
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-backend-api/src/openapi.rs:64</p>
+</article><article id="item-fn-paths-69" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn paths private fn paths () -&gt; Value crates/eos-backend-api/src/openapi.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>paths</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="eos-backend-api--src-openapi-rs.html#item-fn-paths-69">paths</a> () -&gt; Value</code>
+  <p class="docstring">The static path table. Resource names are plural and id paths use<br>`/collection/{id}` form (no `/collection={id}`).</p>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-comment">/// The static path table. Resource names are plural and id paths use</span>
+<span class="rs-comment">/// `/collection/{id}` form (no `/collection={id}`).</span>
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-backend-api--src-openapi-rs.html#item-fn-paths-69">paths</a>() -&gt; <span class="rs-type">Value</span> {
+    json!({
+        &quot;/api/user-requests&quot;: {
+            &quot;post&quot;: {
+                &quot;summary&quot;: &quot;<span class="rs-type">Accept</span> a prompt and launch an agent-core run&quot;,
+                &quot;requestBody&quot;: <a class="symbol-link rs-fn" href="eos-backend-api--src-openapi-rs.html#item-fn-json-body-64">json_body</a>(&quot;<span class="rs-type">CreateUserRequest</span>&quot;),
+                &quot;responses&quot;: { &quot;202&quot;: <a class="symbol-link rs-fn" href="eos-backend-api--src-openapi-rs.html#item-fn-json-body-64">json_body</a>(&quot;<span class="rs-type">CreateUserRequestResponse</span>&quot;) },
+            },
+            &quot;get&quot;: {
+                &quot;summary&quot;: &quot;<span class="rs-type">List</span> backend run records&quot;,
+                &quot;responses&quot;: { &quot;200&quot;: { &quot;description&quot;: &quot;page of run records&quot; } },
+            },
+        },
+        &quot;/api/user-requests/{request_id}&quot;: {
+            &quot;get&quot;: {
+                &quot;summary&quot;: &quot;<span class="rs-type">Backend</span> lifecycle joined with the agent-core outcome&quot;,
+                &quot;responses&quot;: { &quot;200&quot;: <a class="symbol-link rs-fn" href="eos-backend-api--src-openapi-rs.html#item-fn-json-body-64">json_body</a>(&quot;<span class="rs-type">UserRequestDetail</span>&quot;) },
+            },
+            &quot;delete&quot;: {
+                &quot;summary&quot;: &quot;<span class="rs-type">Request</span> backend-local cancellation&quot;,
+                &quot;responses&quot;: {
+                    &quot;202&quot;: { &quot;description&quot;: &quot;cancellation requested&quot; },
+                    &quot;404&quot;: { &quot;description&quot;: &quot;no such user request&quot; },
+                    &quot;409&quot;: { &quot;description&quot;: &quot;run already finished&quot; },
+                },
+            },
+        },
+        &quot;/api/user-requests/{request_id}/events&quot;: {
+            &quot;get&quot;: {
+                &quot;summary&quot;: &quot;<span class="rs-type">Replay</span> persisted milestone events&quot;,
+                &quot;responses&quot;: { &quot;200&quot;: { &quot;description&quot;: &quot;milestone event records&quot; } },
+            },
+        },
+        &quot;/api/user-requests/{request_id}/stream&quot;: {
+            &quot;get&quot;: {
+                &quot;summary&quot;: &quot;<span class="rs-type">SSE</span>-only milestone stream with replay from last_seq&quot;,
+                &quot;responses&quot;: { &quot;200&quot;: { &quot;description&quot;: &quot;server-sent event stream&quot; } },
+            },
+        },
+        &quot;/api/user-requests/{request_id}/tasks&quot;: {
+            &quot;get&quot;: {
+                &quot;summary&quot;: &quot;<span class="rs-type">The</span> request task tree from agent-core state&quot;,
+                &quot;responses&quot;: { &quot;200&quot;: { &quot;description&quot;: &quot;tasks&quot; } },
+            },
+        },
+        &quot;/api/tasks/{task_id}&quot;: {
+            &quot;get&quot;: {
+                &quot;summary&quot;: &quot;<span class="rs-type">Task</span> detail and related agent run&quot;,
+                &quot;responses&quot;: { &quot;200&quot;: { &quot;description&quot;: &quot;task detail&quot; } },
+            },
+        },
+        &quot;/api/tasks/{task_id}/transcript&quot;: {
+            &quot;get&quot;: {
+                &quot;summary&quot;: &quot;<span class="rs-type">Model</span>/tool transcript <span class="rs-kw">for</span> a task&quot;,
+                &quot;responses&quot;: { &quot;200&quot;: { &quot;description&quot;: &quot;transcript&quot; } },
+            },
+        },
+        &quot;/api/agent-runs/{agent_run_id}/messages&quot;: {
+            &quot;get&quot;: {
+                &quot;summary&quot;: &quot;<span class="rs-type">Raw</span> node-local messages.jsonl bytes <span class="rs-kw">for</span> an agent run&quot;,
+                &quot;responses&quot;: { &quot;200&quot;: { &quot;description&quot;: &quot;application/x-ndjson messages&quot; } },
+            },
+        },
+        &quot;/api/agent-runs/{agent_run_id}/events&quot;: {
+            &quot;get&quot;: {
+                &quot;summary&quot;: &quot;<span class="rs-type">Replay</span> node-local events.jsonl rows <span class="rs-kw">for</span> an agent run&quot;,
+                &quot;responses&quot;: { &quot;200&quot;: { &quot;description&quot;: &quot;agent-run node events&quot; } },
+            },
+        },
+        &quot;/api/agent-runs/{agent_run_id}/stream&quot;: {
+            &quot;get&quot;: {
+                &quot;summary&quot;: &quot;<span class="rs-type">SSE</span>-only node-local event stream with replay from last_seq&quot;,
+                &quot;responses&quot;: { &quot;200&quot;: { &quot;description&quot;: &quot;server-sent event stream&quot; } },
+            },
+        },
+        &quot;/api/stats/performance&quot;: {
+            &quot;get&quot;: {
+                &quot;summary&quot;: &quot;<span class="rs-type">Timing</span> and resource summaries&quot;,
+                &quot;responses&quot;: { &quot;200&quot;: <a class="symbol-link rs-fn" href="eos-backend-api--src-openapi-rs.html#item-fn-json-body-64">json_body</a>(&quot;<span class="rs-type">PerformanceStats</span>&quot;) },
+            },
+        },
+        &quot;/api/stats/correctness&quot;: {
+            &quot;get&quot;: {
+                &quot;summary&quot;: &quot;<span class="rs-type">Correctness</span> summaries from persisted outcomes and obs events&quot;,
+                &quot;responses&quot;: { &quot;200&quot;: <a class="symbol-link rs-fn" href="eos-backend-api--src-openapi-rs.html#item-fn-json-body-64">json_body</a>(&quot;<span class="rs-type">CorrectnessStats</span>&quot;) },
+            },
+        },
+        &quot;/api/stats/agent-runs&quot;: {
+            &quot;get&quot;: {
+                &quot;summary&quot;: &quot;<span class="rs-type">Per</span>-agent-run stats&quot;,
+                &quot;responses&quot;: { &quot;200&quot;: { &quot;description&quot;: &quot;agent-run stats&quot; } },
+            },
+        },
+        &quot;/api/stats/events&quot;: {
+            &quot;get&quot;: {
+                &quot;summary&quot;: &quot;<span class="rs-type">Normalized</span> observability events&quot;,
+                &quot;responses&quot;: { &quot;200&quot;: { &quot;description&quot;: &quot;observability events&quot; } },
+            },
+        },
+        &quot;/api/sandboxes&quot;: {
+            &quot;get&quot;: {
+                &quot;summary&quot;: &quot;<span class="rs-type">List</span> backend-owned sandboxes and lifecycle state&quot;,
+                &quot;responses&quot;: { &quot;200&quot;: { &quot;description&quot;: &quot;sanitized sandbox views&quot; } },
+            },
+        },
+        &quot;/api/sandboxes/{sandbox_id}&quot;: {
+            &quot;get&quot;: {
+                &quot;summary&quot;: &quot;<span class="rs-type">A</span> sanitized sandbox view&quot;,
+                &quot;responses&quot;: { &quot;200&quot;: <a class="symbol-link rs-fn" href="eos-backend-api--src-openapi-rs.html#item-fn-json-body-64">json_body</a>(&quot;<span class="rs-type">SandboxView</span>&quot;) },
+            },
+            &quot;delete&quot;: {
+                &quot;summary&quot;: &quot;<span class="rs-type">Destroy</span> a backend-owned sandbox when unreferenced&quot;,
+                &quot;responses&quot;: {
+                    &quot;204&quot;: { &quot;description&quot;: &quot;destroyed&quot; },
+                    &quot;404&quot;: { &quot;description&quot;: &quot;unknown sandbox&quot; },
+                    &quot;409&quot;: { &quot;description&quot;: &quot;sandbox is referenced (active or retained)&quot; },
+                },
+            },
+        },
+    })
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-backend-api/src/openapi.rs:69</p>
+</article></div>
+</section></div>
+</main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/eos-backend-api/src/openapi.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-comment">//! The `OpenAPI` document, assembled from the backend DTOs' JSON schemas plus</span>
+<span class="rs-comment">//! the route table, and served at `GET /openapi.json`.</span>
+<span class="rs-comment">//!</span>
+<span class="rs-comment">//! Component schemas are generated from the `JsonSchema` derives on the public</span>
+<span class="rs-comment">//! DTOs (one `schemars` openapi3 generator), so the contract tests pin the</span>
+<span class="rs-comment">//! request/response shapes against the same types the handlers (de)serialize.</span>
+
+<span class="rs-kw">use</span> axum::<span class="rs-type">Json</span>;
+<span class="rs-kw">use</span> schemars::gen::{<span class="rs-type">SchemaGenerator</span>, <span class="rs-type">SchemaSettings</span>};
+<span class="rs-kw">use</span> schemars::<span class="rs-type">JsonSchema</span>;
+<span class="rs-kw">use</span> serde_json::{json, <span class="rs-type">Value</span>};
+
+<span class="rs-kw">use</span> eos_backend_types::{
+    <span class="rs-type">AgentRunStat</span>, <span class="rs-type">ApiRunStatus</span>, <span class="rs-type">CorrectnessStats</span>, <span class="rs-type">CreateUserRequest</span>, <span class="rs-type">CreateUserRequestResponse</span>,
+    <span class="rs-type">EventRecord</span>, <span class="rs-type">PerformanceStats</span>, <span class="rs-type">RunRecord</span>, <span class="rs-type">SandboxView</span>, <span class="rs-type">UserRequestDetail</span>,
+};
+<span class="rs-kw">use</span> eos_state::{<span class="rs-type">AgentRun</span>, <span class="rs-type">Task</span>};
+
+<span class="rs-comment">/// `GET /openapi.json` — the assembled `OpenAPI` 3.0 document.</span>
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-backend-api--src-openapi-rs.html#item-fn-openapi-doc-19">openapi_doc</a>() -&gt; <span class="rs-type">Json</span>&lt;<span class="rs-type">Value</span>&gt; {
+    <span class="rs-type">Json</span>(<a class="symbol-link rs-fn" href="eos-backend-api--src-openapi-rs.html#item-fn-document-24">document</a>())
+}
+
+<span class="rs-comment">/// Build the document: component schemas from the DTO derives, plus the static</span>
+<span class="rs-comment">/// path table mirroring [`build_router`](crate::build_router).</span>
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-backend-api--src-openapi-rs.html#item-fn-document-24">document</a>() -&gt; <span class="rs-type">Value</span> {
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> generator = <span class="rs-type">SchemaGenerator</span>::<a class="symbol-link rs-fn" href="eos-backend-api--src-handlers-agent-runs-rs.html#method-new-137">new</a>(<span class="rs-type">SchemaSettings</span>::openapi3());
+    reg::&lt;<span class="rs-type">CreateUserRequest</span>&gt;(&amp;<span class="rs-kw">mut</span> generator);
+    reg::&lt;<span class="rs-type">CreateUserRequestResponse</span>&gt;(&amp;<span class="rs-kw">mut</span> generator);
+    reg::&lt;<span class="rs-type">RunRecord</span>&gt;(&amp;<span class="rs-kw">mut</span> generator);
+    reg::&lt;<span class="rs-type">UserRequestDetail</span>&gt;(&amp;<span class="rs-kw">mut</span> generator);
+    reg::&lt;<span class="rs-type">ApiRunStatus</span>&gt;(&amp;<span class="rs-kw">mut</span> generator);
+    reg::&lt;<span class="rs-type">EventRecord</span>&gt;(&amp;<span class="rs-kw">mut</span> generator);
+    reg::&lt;<span class="rs-type">SandboxView</span>&gt;(&amp;<span class="rs-kw">mut</span> generator);
+    reg::&lt;<span class="rs-type">PerformanceStats</span>&gt;(&amp;<span class="rs-kw">mut</span> generator);
+    reg::&lt;<span class="rs-type">CorrectnessStats</span>&gt;(&amp;<span class="rs-kw">mut</span> generator);
+    reg::&lt;<span class="rs-type">AgentRunStat</span>&gt;(&amp;<span class="rs-kw">mut</span> generator);
+    reg::&lt;<span class="rs-type">Task</span>&gt;(&amp;<span class="rs-kw">mut</span> generator);
+    reg::&lt;<span class="rs-type">AgentRun</span>&gt;(&amp;<span class="rs-kw">mut</span> generator);
+
+    <span class="rs-kw">let</span> schemas = serde_json::to_value(generator.definitions()).unwrap_or_else(|_| json!({}));
+
+    json!({
+        &quot;openapi&quot;: &quot;3.0.3&quot;,
+        &quot;info&quot;: {
+            &quot;title&quot;: &quot;<span class="rs-type">EphemeralOS</span> backend <span class="rs-type">API</span>&quot;,
+            &quot;version&quot;: env!(&quot;<span class="rs-type">CARGO_PKG_VERSION</span>&quot;),
+        },
+        &quot;paths&quot;: <a class="symbol-link rs-fn" href="eos-backend-api--src-openapi-rs.html#item-fn-paths-69">paths</a>(),
+        &quot;components&quot;: { &quot;schemas&quot;: schemas },
+    })
+}
+
+<span class="rs-comment">/// Register a DTO (and its transitive references) into the component schemas.</span>
+<span class="rs-kw">fn</span> reg&lt;<span class="rs-type">T</span>: <span class="rs-type">JsonSchema</span>&gt;(generator: &amp;<span class="rs-kw">mut</span> <span class="rs-type">SchemaGenerator</span>) {
+    <span class="rs-kw">let</span> _ = generator.subschema_for::&lt;<span class="rs-type">T</span>&gt;();
+}
+
+<span class="rs-comment">/// `$ref` to a component schema by type name.</span>
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-backend-api--src-openapi-rs.html#item-fn-schema-ref-59">schema_ref</a>(name: &amp;str) -&gt; <span class="rs-type">Value</span> {
+    json!({ &quot;$<span class="rs-kw">ref</span>&quot;: format!(&quot;#/components/schemas/{name}&quot;) })
+}
+
+<span class="rs-comment">/// A JSON response body of the given component schema.</span>
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-backend-api--src-openapi-rs.html#item-fn-json-body-64">json_body</a>(schema_name: &amp;str) -&gt; <span class="rs-type">Value</span> {
+    json!({ &quot;content&quot;: { &quot;application/json&quot;: { &quot;schema&quot;: <a class="symbol-link rs-fn" href="eos-backend-api--src-openapi-rs.html#item-fn-schema-ref-59">schema_ref</a>(schema_name) } } })
+}
+
+<span class="rs-comment">/// The static path table. Resource names are plural and id paths use</span>
+<span class="rs-comment">/// `/collection/{id}` form (no `/collection={id}`).</span>
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-backend-api--src-openapi-rs.html#item-fn-paths-69">paths</a>() -&gt; <span class="rs-type">Value</span> {
+    json!({
+        &quot;/api/user-requests&quot;: {
+            &quot;post&quot;: {
+                &quot;summary&quot;: &quot;<span class="rs-type">Accept</span> a prompt and launch an agent-core run&quot;,
+                &quot;requestBody&quot;: <a class="symbol-link rs-fn" href="eos-backend-api--src-openapi-rs.html#item-fn-json-body-64">json_body</a>(&quot;<span class="rs-type">CreateUserRequest</span>&quot;),
+                &quot;responses&quot;: { &quot;202&quot;: <a class="symbol-link rs-fn" href="eos-backend-api--src-openapi-rs.html#item-fn-json-body-64">json_body</a>(&quot;<span class="rs-type">CreateUserRequestResponse</span>&quot;) },
+            },
+            &quot;get&quot;: {
+                &quot;summary&quot;: &quot;<span class="rs-type">List</span> backend run records&quot;,
+                &quot;responses&quot;: { &quot;200&quot;: { &quot;description&quot;: &quot;page of run records&quot; } },
+            },
+        },
+        &quot;/api/user-requests/{request_id}&quot;: {
+            &quot;get&quot;: {
+                &quot;summary&quot;: &quot;<span class="rs-type">Backend</span> lifecycle joined with the agent-core outcome&quot;,
+                &quot;responses&quot;: { &quot;200&quot;: <a class="symbol-link rs-fn" href="eos-backend-api--src-openapi-rs.html#item-fn-json-body-64">json_body</a>(&quot;<span class="rs-type">UserRequestDetail</span>&quot;) },
+            },
+            &quot;delete&quot;: {
+                &quot;summary&quot;: &quot;<span class="rs-type">Request</span> backend-local cancellation&quot;,
+                &quot;responses&quot;: {
+                    &quot;202&quot;: { &quot;description&quot;: &quot;cancellation requested&quot; },
+                    &quot;404&quot;: { &quot;description&quot;: &quot;no such user request&quot; },
+                    &quot;409&quot;: { &quot;description&quot;: &quot;run already finished&quot; },
+                },
+            },
+        },
+        &quot;/api/user-requests/{request_id}/events&quot;: {
+            &quot;get&quot;: {
+                &quot;summary&quot;: &quot;<span class="rs-type">Replay</span> persisted milestone events&quot;,
+                &quot;responses&quot;: { &quot;200&quot;: { &quot;description&quot;: &quot;milestone event records&quot; } },
+            },
+        },
+        &quot;/api/user-requests/{request_id}/stream&quot;: {
+            &quot;get&quot;: {
+                &quot;summary&quot;: &quot;<span class="rs-type">SSE</span>-only milestone stream with replay from last_seq&quot;,
+                &quot;responses&quot;: { &quot;200&quot;: { &quot;description&quot;: &quot;server-sent event stream&quot; } },
+            },
+        },
+        &quot;/api/user-requests/{request_id}/tasks&quot;: {
+            &quot;get&quot;: {
+                &quot;summary&quot;: &quot;<span class="rs-type">The</span> request task tree from agent-core state&quot;,
+                &quot;responses&quot;: { &quot;200&quot;: { &quot;description&quot;: &quot;tasks&quot; } },
+            },
+        },
+        &quot;/api/tasks/{task_id}&quot;: {
+            &quot;get&quot;: {
+                &quot;summary&quot;: &quot;<span class="rs-type">Task</span> detail and related agent run&quot;,
+                &quot;responses&quot;: { &quot;200&quot;: { &quot;description&quot;: &quot;task detail&quot; } },
+            },
+        },
+        &quot;/api/tasks/{task_id}/transcript&quot;: {
+            &quot;get&quot;: {
+                &quot;summary&quot;: &quot;<span class="rs-type">Model</span>/tool transcript <span class="rs-kw">for</span> a task&quot;,
+                &quot;responses&quot;: { &quot;200&quot;: { &quot;description&quot;: &quot;transcript&quot; } },
+            },
+        },
+        &quot;/api/agent-runs/{agent_run_id}/messages&quot;: {
+            &quot;get&quot;: {
+                &quot;summary&quot;: &quot;<span class="rs-type">Raw</span> node-local messages.jsonl bytes <span class="rs-kw">for</span> an agent run&quot;,
+                &quot;responses&quot;: { &quot;200&quot;: { &quot;description&quot;: &quot;application/x-ndjson messages&quot; } },
+            },
+        },
+        &quot;/api/agent-runs/{agent_run_id}/events&quot;: {
+            &quot;get&quot;: {
+                &quot;summary&quot;: &quot;<span class="rs-type">Replay</span> node-local events.jsonl rows <span class="rs-kw">for</span> an agent run&quot;,
+                &quot;responses&quot;: { &quot;200&quot;: { &quot;description&quot;: &quot;agent-run node events&quot; } },
+            },
+        },
+        &quot;/api/agent-runs/{agent_run_id}/stream&quot;: {
+            &quot;get&quot;: {
+                &quot;summary&quot;: &quot;<span class="rs-type">SSE</span>-only node-local event stream with replay from last_seq&quot;,
+                &quot;responses&quot;: { &quot;200&quot;: { &quot;description&quot;: &quot;server-sent event stream&quot; } },
+            },
+        },
+        &quot;/api/stats/performance&quot;: {
+            &quot;get&quot;: {
+                &quot;summary&quot;: &quot;<span class="rs-type">Timing</span> and resource summaries&quot;,
+                &quot;responses&quot;: { &quot;200&quot;: <a class="symbol-link rs-fn" href="eos-backend-api--src-openapi-rs.html#item-fn-json-body-64">json_body</a>(&quot;<span class="rs-type">PerformanceStats</span>&quot;) },
+            },
+        },
+        &quot;/api/stats/correctness&quot;: {
+            &quot;get&quot;: {
+                &quot;summary&quot;: &quot;<span class="rs-type">Correctness</span> summaries from persisted outcomes and obs events&quot;,
+                &quot;responses&quot;: { &quot;200&quot;: <a class="symbol-link rs-fn" href="eos-backend-api--src-openapi-rs.html#item-fn-json-body-64">json_body</a>(&quot;<span class="rs-type">CorrectnessStats</span>&quot;) },
+            },
+        },
+        &quot;/api/stats/agent-runs&quot;: {
+            &quot;get&quot;: {
+                &quot;summary&quot;: &quot;<span class="rs-type">Per</span>-agent-run stats&quot;,
+                &quot;responses&quot;: { &quot;200&quot;: { &quot;description&quot;: &quot;agent-run stats&quot; } },
+            },
+        },
+        &quot;/api/stats/events&quot;: {
+            &quot;get&quot;: {
+                &quot;summary&quot;: &quot;<span class="rs-type">Normalized</span> observability events&quot;,
+                &quot;responses&quot;: { &quot;200&quot;: { &quot;description&quot;: &quot;observability events&quot; } },
+            },
+        },
+        &quot;/api/sandboxes&quot;: {
+            &quot;get&quot;: {
+                &quot;summary&quot;: &quot;<span class="rs-type">List</span> backend-owned sandboxes and lifecycle state&quot;,
+                &quot;responses&quot;: { &quot;200&quot;: { &quot;description&quot;: &quot;sanitized sandbox views&quot; } },
+            },
+        },
+        &quot;/api/sandboxes/{sandbox_id}&quot;: {
+            &quot;get&quot;: {
+                &quot;summary&quot;: &quot;<span class="rs-type">A</span> sanitized sandbox view&quot;,
+                &quot;responses&quot;: { &quot;200&quot;: <a class="symbol-link rs-fn" href="eos-backend-api--src-openapi-rs.html#item-fn-json-body-64">json_body</a>(&quot;<span class="rs-type">SandboxView</span>&quot;) },
+            },
+            &quot;delete&quot;: {
+                &quot;summary&quot;: &quot;<span class="rs-type">Destroy</span> a backend-owned sandbox when unreferenced&quot;,
+                &quot;responses&quot;: {
+                    &quot;204&quot;: { &quot;description&quot;: &quot;destroyed&quot; },
+                    &quot;404&quot;: { &quot;description&quot;: &quot;unknown sandbox&quot; },
+                    &quot;409&quot;: { &quot;description&quot;: &quot;sandbox is referenced (active or retained)&quot; },
+                },
+            },
+        },
+    })
+}
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
+  <script src="../assets/inventory.js"></script>
+</body>
+</html>

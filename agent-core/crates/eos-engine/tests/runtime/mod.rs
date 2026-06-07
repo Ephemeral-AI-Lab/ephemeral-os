@@ -21,7 +21,7 @@ use eos_testkit::{
     FakeTransport,
 };
 use eos_tools::{
-    BackgroundInflightReport, BackgroundSupervisorPort, CancelPort, ExecutionMetadata,
+    RunningBackgroundTasks, BackgroundSupervisorPort, CancelPort, ExecutionMetadata,
     NotificationSink, OutputShape, RegisteredTool, SandboxToolService, SkillToolService,
     SpawnedSubagent, StartedSubagent, StartedWorkflowHandle, SystemNotification, ToolConfigSet,
     ToolError, ToolExecutor, ToolIntent, ToolName, ToolRegistry, ToolResult, WorkflowControlPort,
@@ -183,7 +183,6 @@ fn terminal_extender(result: ToolResult) -> ToolRegistryExtender {
 
 #[derive(Debug, Clone)]
 struct CancelRecord {
-    agent_run_id: Option<AgentRunId>,
     reason: String,
 }
 
@@ -200,12 +199,12 @@ impl RecordingBackgroundSupervisor {
 
 impl eos_tools::ports::Sealed for RecordingBackgroundSupervisor {}
 
-fn empty_report() -> BackgroundInflightReport {
-    BackgroundInflightReport {
+fn empty_report() -> RunningBackgroundTasks {
+    RunningBackgroundTasks {
         total: 0,
-        subagent: 0,
-        workflow: 0,
-        command_session: 0,
+        subagents: 0,
+        workflows: 0,
+        command_sessions: 0,
     }
 }
 
@@ -238,26 +237,15 @@ impl BackgroundSupervisorPort for RecordingBackgroundSupervisor {
         Ok(ToolResult::ok("cancelled"))
     }
 
-    async fn inflight_report(
-        &self,
-        _agent_run_id: Option<&AgentRunId>,
-    ) -> BackgroundInflightReport {
+    async fn running_background_tasks(&self) -> RunningBackgroundTasks {
         empty_report()
     }
 
-    async fn cancel_subagents_for_agent_run(
-        &self,
-        _agent_run_id: &AgentRunId,
-    ) -> BackgroundInflightReport {
+    async fn cancel_subagents(&self) -> RunningBackgroundTasks {
         empty_report()
     }
 
-    async fn register_workflow(
-        &self,
-        _agent_run_id: &AgentRunId,
-        _workflow: &StartedWorkflowHandle,
-    ) {
-    }
+    async fn register_workflow(&self, _workflow: &StartedWorkflowHandle) {}
 
     async fn cancel_workflow_record(
         &self,
@@ -267,14 +255,12 @@ impl BackgroundSupervisorPort for RecordingBackgroundSupervisor {
         false
     }
 
-    async fn cancel_for_parent_exit(
+    async fn teardown(
         &self,
-        agent_run_id: Option<&AgentRunId>,
         _workflow_control: Option<Arc<dyn WorkflowControlPort>>,
         reason: &str,
-    ) -> BackgroundInflightReport {
+    ) -> RunningBackgroundTasks {
         self.cancels.lock().unwrap().push(CancelRecord {
-            agent_run_id: agent_run_id.cloned(),
             reason: reason.to_owned(),
         });
         empty_report()
@@ -547,7 +533,6 @@ async fn run_agent_finalizes_background_handles_after_query_error() {
     assert!(result.error.is_some());
     let cancels = background.cancels();
     assert_eq!(cancels.len(), 1);
-    assert_eq!(cancels[0].agent_run_id.as_ref(), Some(&agent_run_id));
     assert!(cancels[0].reason.contains("engine run failed"));
     assert!(cancels[0]
         .reason
@@ -586,7 +571,6 @@ async fn run_agent_finalizes_background_handles_after_tool_stop() {
     assert!(result.error.is_none(), "{result:?}");
     let cancels = background.cancels();
     assert_eq!(cancels.len(), 1);
-    assert_eq!(cancels[0].agent_run_id.as_ref(), Some(&agent_run_id));
     assert_eq!(cancels[0].reason, "parent agent submitted its terminal");
 }
 
@@ -622,7 +606,6 @@ async fn run_agent_finalizes_background_handles_after_terminal_not_submitted() {
     assert!(result.terminal_result.is_none());
     let cancels = background.cancels();
     assert_eq!(cancels.len(), 1);
-    assert_eq!(cancels[0].agent_run_id.as_ref(), Some(&agent_run_id));
     assert_eq!(
         cancels[0].reason,
         "parent agent exited without submitting a terminal tool"

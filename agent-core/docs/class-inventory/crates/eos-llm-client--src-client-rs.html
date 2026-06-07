@@ -8,8 +8,16 @@
 </head>
 <body>
   <header>
-    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
-    <h1>eos-llm-client File Inventory</h1>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>eos-llm-client File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS/agent-core &amp;&amp; cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
   </header>
   <a class="back-link" href="../index.html">agent-core</a>
 <section class="summary">
@@ -47,149 +55,738 @@
       <span>10 methods</span>
     </div>
   </div>
-  <div class="items"><div class="group-label">File-Owned Types</div><article class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct LlmRequestDefaults pub pub struct LlmRequestDefaults crates/eos-llm-client/src/client.rs model String reasoning_effort Option &lt; ReasoningEffort &gt; ">
+  <div class="items"><div class="group-label">File-Owned Types</div><article id="item-struct-LlmRequestDefaults-45" class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct LlmRequestDefaults pub pub struct LlmRequestDefaults crates/eos-llm-client/src/client.rs model String reasoning_effort Option &lt; ReasoningEffort &gt; ">
   <div class="item-head">
     <span class="kind">struct</span>
     <h3>LlmRequestDefaults</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub struct LlmRequestDefaults</code>
-  <div class="tags"><span>dto</span></div>
-  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>model</td><td><code>String</code></td></tr><tr><td>pub</td><td>reasoning_effort</td><td><code>Option &lt; ReasoningEffort &gt;</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr><td>constructor</td><td>new</td><td><code>pub fn new (model : impl Into &lt; String &gt;) -&gt; Self</code></td></tr><tr><td>constructor</td><td>from_model_kwargs</td><td><code>pub fn from_model_kwargs (model : impl Into &lt; String &gt; , kwargs : &amp; eos_types :: JsonObject) -&gt; Self</code></td></tr><tr><td>method</td><td>apply</td><td><code>fn apply (&amp; self , mut request : LlmRequest) -&gt; LlmRequest</code></td></tr></tbody></table>
+  <code class="signature">pub struct <a class="symbol-link" href="eos-llm-client--src-client-rs.html#item-struct-LlmRequestDefaults-45">LlmRequestDefaults</a></code>
+  <p class="docstring">Default request values attached to a configured provider client.</p>
+  <div class="tags"><span>derive: Clone</span><span>derive: Debug</span><span>derive: Eq</span><span>derive: PartialEq</span><span>dto</span><span>non_exhaustive</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>model</td><td><code>String</code></td></tr><tr><td>pub</td><td>reasoning_effort</td><td><code>Option &lt; <a class="symbol-link" href="eos-llm-client--src-types-rs.html#item-enum-ReasoningEffort-85">ReasoningEffort</a> &gt;</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-56"><td>constructor</td><td>new</td><td><code>pub fn <a class="symbol-link" href="eos-llm-client--src-client-rs.html#method-new-56">new</a> (model : impl Into &lt; String &gt;) -&gt; Self</code><p class="docstring">Construct defaults for a model id.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Construct defaults for a model id.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-llm-client--src-client-rs.html#method-new-56">new</a>(model: <span class="rs-kw">impl</span> <span class="rs-type">Into</span>&lt;<span class="rs-type">String</span>&gt;) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">Self</span> {
+            model: model.into(),
+            reasoning_effort: <span class="rs-type">None</span>,
+        }
+    }
+</code></pre>
+</details></td></tr><tr id="method-from-model-kwargs-65"><td>constructor</td><td>from_model_kwargs</td><td><code>pub fn <a class="symbol-link" href="eos-llm-client--src-client-rs.html#method-from-model-kwargs-65">from_model_kwargs</a> (model : impl Into &lt; String &gt; , kwargs : &amp; eos_types :: JsonObject) -&gt; Self</code><p class="docstring">Construct defaults from a provider-local model registration `kwargs` map.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Construct defaults from a provider-local model registration `kwargs` map.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-llm-client--src-client-rs.html#method-from-model-kwargs-65">from_model_kwargs</a>(model: <span class="rs-kw">impl</span> <span class="rs-type">Into</span>&lt;<span class="rs-type">String</span>&gt;, kwargs: &amp;eos_types::<span class="rs-type">JsonObject</span>) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">Self</span> {
+            model: model.into(),
+            reasoning_effort: <a class="symbol-link rs-fn" href="eos-llm-client--src-client-rs.html#item-fn-reasoning-effort-from-kwargs-123">reasoning_effort_from_kwargs</a>(kwargs),
+        }
+    }
+</code></pre>
+</details></td></tr><tr id="method-apply-74"><td>method</td><td>apply</td><td><code>fn <a class="symbol-link" href="eos-llm-client.html#method-apply-105">apply</a> (&amp; self , mut request : <a class="symbol-link" href="eos-llm-client--src-types-rs.html#item-struct-LlmRequest-113">LlmRequest</a>) -&gt; <a class="symbol-link" href="eos-llm-client--src-types-rs.html#item-struct-LlmRequest-113">LlmRequest</a></code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-llm-client.html#method-apply-105">apply</a>(&amp;<span class="rs-self">self</span>, <span class="rs-kw">mut</span> request: <a class="symbol-link rs-type" href="eos-llm-client--src-types-rs.html#item-struct-LlmRequest-113">LlmRequest</a>) -&gt; <a class="symbol-link rs-type" href="eos-llm-client--src-types-rs.html#item-struct-LlmRequest-113">LlmRequest</a> {
+        <span class="rs-kw">if</span> request.model.trim().is_empty() {
+            request.model.clone_from(&amp;<span class="rs-self">self</span>.model);
+        }
+        <span class="rs-kw">if</span> request.reasoning_effort.is_none() {
+            request.reasoning_effort = <span class="rs-self">self</span>.reasoning_effort;
+        }
+        request
+    }
+</code></pre>
+</details></td></tr></tbody></table>
+
   <p class="source">crates/eos-llm-client/src/client.rs:45</p>
-</article><article class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct ConfiguredLlmClient pub pub struct ConfiguredLlmClient crates/eos-llm-client/src/client.rs inner Arc &lt; dyn LlmClient &gt; defaults LlmRequestDefaults ">
+</article><article id="item-struct-ConfiguredLlmClient-85" class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct ConfiguredLlmClient pub pub struct ConfiguredLlmClient crates/eos-llm-client/src/client.rs inner Arc &lt; dyn LlmClient &gt; defaults LlmRequestDefaults ">
   <div class="item-head">
     <span class="kind">struct</span>
     <h3>ConfiguredLlmClient</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub struct ConfiguredLlmClient</code>
-  <div class="tags"><span>config</span><span>port/service</span></div>
-  <h4>Fields</h4><table><tbody><tr><td>private</td><td>inner</td><td><code>Arc &lt; dyn LlmClient &gt;</code></td></tr><tr><td>private</td><td>defaults</td><td><code>LlmRequestDefaults</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr><td>constructor</td><td>new</td><td><code>pub fn new (inner : Arc &lt; dyn LlmClient &gt; , defaults : LlmRequestDefaults) -&gt; Self</code></td></tr><tr><td>method</td><td>defaults</td><td><code>pub fn defaults (&amp; self) -&gt; &amp; LlmRequestDefaults</code></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl std :: fmt :: Debug for ConfiguredLlmClient</code></summary><table><tbody><tr><td>method</td><td>fmt</td><td><code>fn fmt (&amp; self , f : &amp; mut std :: fmt :: Formatter &lt; '_ &gt;) -&gt; std :: fmt :: Result</code></td></tr></tbody></table></details><details><summary><code>impl LlmClient for ConfiguredLlmClient</code></summary><table><tbody><tr><td>method</td><td>stream_message</td><td><code>async fn stream_message (&amp; self , request : LlmRequest) -&gt; Result &lt; LlmStream , ProviderError &gt;</code></td></tr></tbody></table></details></div>
+  <code class="signature">pub struct <a class="symbol-link" href="eos-llm-client--src-client-rs.html#item-struct-ConfiguredLlmClient-85">ConfiguredLlmClient</a></code>
+  <p class="docstring">Provider client wrapper that applies config-derived request defaults.</p>
+  <div class="tags"><span>config</span><span>derive: Clone</span><span>port/service</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>inner</td><td><code>Arc &lt; dyn <a class="symbol-link" href="eos-llm-client--src-client-rs.html#item-trait-LlmClient-28">LlmClient</a> &gt;</code></td></tr><tr><td>private</td><td>defaults</td><td><code><a class="symbol-link" href="eos-llm-client--src-client-rs.html#item-struct-LlmRequestDefaults-45">LlmRequestDefaults</a></code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-101"><td>constructor</td><td>new</td><td><code>pub fn <a class="symbol-link" href="eos-llm-client--src-client-rs.html#method-new-56">new</a> (inner : Arc &lt; dyn <a class="symbol-link" href="eos-llm-client--src-client-rs.html#item-trait-LlmClient-28">LlmClient</a> &gt; , defaults : <a class="symbol-link" href="eos-llm-client--src-client-rs.html#item-struct-LlmRequestDefaults-45">LlmRequestDefaults</a>) -&gt; Self</code><p class="docstring">Wrap a concrete provider client with request defaults.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Wrap a concrete provider client with request defaults.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-llm-client--src-client-rs.html#method-new-56">new</a>(inner: <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <a class="symbol-link rs-type" href="eos-llm-client--src-client-rs.html#item-trait-LlmClient-28">LlmClient</a>&gt;, defaults: <a class="symbol-link rs-type" href="eos-llm-client--src-client-rs.html#item-struct-LlmRequestDefaults-45">LlmRequestDefaults</a>) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">Self</span> { inner, defaults }
+    }
+</code></pre>
+</details></td></tr><tr id="method-defaults-107"><td>method</td><td>defaults</td><td><code>pub fn <a class="symbol-link" href="eos-llm-client--src-client-rs.html#method-defaults-107">defaults</a> (&amp; self) -&gt; &amp; <a class="symbol-link" href="eos-llm-client--src-client-rs.html#item-struct-LlmRequestDefaults-45">LlmRequestDefaults</a></code><p class="docstring">Borrow configured request defaults.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Borrow configured request defaults.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-llm-client--src-client-rs.html#method-defaults-107">defaults</a>(&amp;<span class="rs-self">self</span>) -&gt; &amp;<a class="symbol-link rs-type" href="eos-llm-client--src-client-rs.html#item-struct-LlmRequestDefaults-45">LlmRequestDefaults</a> {
+        &amp;<span class="rs-self">self</span>.defaults
+    }
+</code></pre>
+</details></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl std :: fmt :: Debug for <a class="symbol-link" href="eos-llm-client--src-client-rs.html#item-struct-ConfiguredLlmClient-85">ConfiguredLlmClient</a></code></summary><table><tbody><tr id="method-fmt-93"><td>method</td><td>fmt</td><td><code>fn <a class="symbol-link" href="eos-llm-client--src-client-rs.html#method-fmt-93">fmt</a> (&amp; self , f : &amp; mut std :: fmt :: Formatter &lt; &#x27;_ &gt;) -&gt; std :: fmt :: Result</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-llm-client--src-client-rs.html#method-fmt-93">fmt</a>(&amp;<span class="rs-self">self</span>, f: &amp;<span class="rs-kw">mut</span> std::fmt::<span class="rs-type">Formatter</span>&lt;&#x27;_&gt;) -&gt; std::fmt::<span class="rs-type">Result</span> {
+        f.debug_struct(&quot;<a class="symbol-link rs-type" href="eos-llm-client--src-client-rs.html#item-struct-ConfiguredLlmClient-85">ConfiguredLlmClient</a>&quot;)
+            .field(&quot;defaults&quot;, &amp;<span class="rs-self">self</span>.defaults)
+            .finish_non_exhaustive()
+    }
+</code></pre>
+</details></td></tr></tbody></table></details><details><summary><code>impl <a class="symbol-link" href="eos-llm-client--src-client-rs.html#item-trait-LlmClient-28">LlmClient</a> for <a class="symbol-link" href="eos-llm-client--src-client-rs.html#item-struct-ConfiguredLlmClient-85">ConfiguredLlmClient</a></code></summary><table><tbody><tr id="method-stream-message-116"><td>method</td><td>stream_message</td><td><code>async fn <a class="symbol-link" href="eos-llm-client--src-client-rs.html#method-stream-message-36">stream_message</a> (&amp; self , request : <a class="symbol-link" href="eos-llm-client--src-types-rs.html#item-struct-LlmRequest-113">LlmRequest</a>) -&gt; Result &lt; <a class="symbol-link" href="eos-llm-client--src-client-rs.html#item-type-LlmStream-22">LlmStream</a> , <a class="symbol-link" href="eos-llm-client--src-error-rs.html#item-struct-ProviderError-29">ProviderError</a> &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-llm-client--src-client-rs.html#method-stream-message-36">stream_message</a>(&amp;<span class="rs-self">self</span>, request: <a class="symbol-link rs-type" href="eos-llm-client--src-types-rs.html#item-struct-LlmRequest-113">LlmRequest</a>) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-llm-client--src-client-rs.html#item-type-LlmStream-22">LlmStream</a>, <a class="symbol-link rs-type" href="eos-llm-client--src-error-rs.html#item-struct-ProviderError-29">ProviderError</a>&gt; {
+        <span class="rs-self">self</span>.inner
+            .<a class="symbol-link rs-fn" href="eos-llm-client--src-client-rs.html#method-stream-message-36">stream_message</a>(<span class="rs-self">self</span>.defaults.<a class="symbol-link rs-fn" href="eos-llm-client.html#method-apply-105">apply</a>(request))
+            .<span class="rs-kw">await</span>
+    }
+</code></pre>
+</details></td></tr></tbody></table></details></div>
+
   <p class="source">crates/eos-llm-client/src/client.rs:85</p>
-</article><article class="type-card" data-kind="trait" data-kind-list="method trait type-model" data-filter-text="trait LlmClient pub pub trait LlmClient crates/eos-llm-client/src/client.rs  stream_message async fn stream_message (&amp; self , request : LlmRequest) -&gt; Result &lt; LlmStream , ProviderError &gt;">
+</article><article id="item-trait-LlmClient-28" class="type-card" data-kind="trait" data-kind-list="method trait type-model" data-filter-text="trait LlmClient pub pub trait LlmClient crates/eos-llm-client/src/client.rs  stream_message async fn stream_message (&amp; self , request : LlmRequest) -&gt; Result &lt; LlmStream , ProviderError &gt;">
   <div class="item-head">
     <span class="kind">trait</span>
     <h3>LlmClient</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub trait LlmClient</code>
-  <div class="tags"><span>port/service</span></div>
-  <h4>Methods</h4><table><tbody><tr><td>required</td><td>stream_message</td><td><code>async fn stream_message (&amp; self , request : LlmRequest) -&gt; Result &lt; LlmStream , ProviderError &gt;</code></td></tr></tbody></table>
+  <code class="signature">pub trait <a class="symbol-link" href="eos-llm-client--src-client-rs.html#item-trait-LlmClient-28">LlmClient</a></code>
+  <p class="docstring">The provider-neutral streaming client seam.<br>Implementors: `AnthropicApiClient`, `OpenAiApiClient`,<br>`CodexCodingPlanClient`, `ClaudeCodingPlanClient`, and test mocks. Every<br>event is a neutral [`LlmStreamEvent`], so the implementors are substitutable<br>(LSP).</p>
+  <div class="tags"><span>async_trait::async_trait</span><span>port/service</span></div>
+  <h4>Methods</h4><table><tbody><tr id="method-stream-message-36"><td>required</td><td>stream_message</td><td><code>async fn <a class="symbol-link" href="eos-llm-client--src-client-rs.html#method-stream-message-36">stream_message</a> (&amp; self , request : <a class="symbol-link" href="eos-llm-client--src-types-rs.html#item-struct-LlmRequest-113">LlmRequest</a>) -&gt; Result &lt; <a class="symbol-link" href="eos-llm-client--src-client-rs.html#item-type-LlmStream-22">LlmStream</a> , <a class="symbol-link" href="eos-llm-client--src-error-rs.html#item-struct-ProviderError-29">ProviderError</a> &gt;</code><p class="docstring">Open a streaming model invocation.<br>The outer `Err` is reserved for **synchronous request-construction<br>failures only** (URL/header/body build). All connect, auth, rate-limit,<br>transport, and decode errors — including a non-retryable failure on the<br>very first attempt — surface as `Err` items of the returned stream.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Open a streaming model invocation.</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// The outer `Err` is reserved for **synchronous request-construction</span>
+    <span class="rs-comment">/// failures only** (URL/header/body build). All connect, auth, rate-limit,</span>
+    <span class="rs-comment">/// transport, and decode errors — including a non-retryable failure on the</span>
+    <span class="rs-comment">/// very first attempt — surface as `Err` items of the returned stream.</span>
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-llm-client--src-client-rs.html#method-stream-message-36">stream_message</a>(&amp;<span class="rs-self">self</span>, request: <a class="symbol-link rs-type" href="eos-llm-client--src-types-rs.html#item-struct-LlmRequest-113">LlmRequest</a>) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-llm-client--src-client-rs.html#item-type-LlmStream-22">LlmStream</a>, <a class="symbol-link rs-type" href="eos-llm-client--src-error-rs.html#item-struct-ProviderError-29">ProviderError</a>&gt;;
+</code></pre>
+</details></td></tr></tbody></table>
+
   <p class="source">crates/eos-llm-client/src/client.rs:28</p>
-</article><article class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct MockLlmClient private struct MockLlmClient crates/eos-llm-client/src/client.rs events Vec &lt; LlmStreamEvent &gt; ">
+</article><article id="item-struct-MockLlmClient-240" class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct MockLlmClient private struct MockLlmClient crates/eos-llm-client/src/client.rs events Vec &lt; LlmStreamEvent &gt; ">
   <div class="item-head">
     <span class="kind">struct</span>
     <h3>MockLlmClient</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">struct MockLlmClient</code>
-  <div class="tags"><span>port/service</span></div>
-  <h4>Fields</h4><table><tbody><tr><td>private</td><td>events</td><td><code>Vec &lt; LlmStreamEvent &gt;</code></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl LlmClient for MockLlmClient</code></summary><table><tbody><tr><td>method</td><td>stream_message</td><td><code>async fn stream_message (&amp; self , _request : LlmRequest) -&gt; Result &lt; LlmStream , ProviderError &gt;</code></td></tr></tbody></table></details></div>
+  <code class="signature">struct <a class="symbol-link" href="eos-llm-client--src-client-rs.html#item-struct-MockLlmClient-240">MockLlmClient</a></code>
+  <p class="docstring">A scripted client that replays a fixed event sequence — proves the trait<br>is object-safe behind `Arc&lt;dyn LlmClient&gt;` and substitutable.</p>
+  <div class="tags"><span>derive: Debug</span><span>port/service</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>events</td><td><code>Vec &lt; <a class="symbol-link" href="eos-llm-client--src-events-rs.html#item-enum-LlmStreamEvent-15">LlmStreamEvent</a> &gt;</code></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl <a class="symbol-link" href="eos-llm-client--src-client-rs.html#item-trait-LlmClient-28">LlmClient</a> for <a class="symbol-link" href="eos-llm-client--src-client-rs.html#item-struct-MockLlmClient-240">MockLlmClient</a></code></summary><table><tbody><tr id="method-stream-message-285"><td>method</td><td>stream_message</td><td><code>async fn <a class="symbol-link" href="eos-llm-client--src-client-rs.html#method-stream-message-36">stream_message</a> (&amp; self , _request : <a class="symbol-link" href="eos-llm-client--src-types-rs.html#item-struct-LlmRequest-113">LlmRequest</a>) -&gt; Result &lt; <a class="symbol-link" href="eos-llm-client--src-client-rs.html#item-type-LlmStream-22">LlmStream</a> , <a class="symbol-link" href="eos-llm-client--src-error-rs.html#item-struct-ProviderError-29">ProviderError</a> &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>        <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-llm-client--src-client-rs.html#method-stream-message-36">stream_message</a>(&amp;<span class="rs-self">self</span>, _request: <a class="symbol-link rs-type" href="eos-llm-client--src-types-rs.html#item-struct-LlmRequest-113">LlmRequest</a>) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-llm-client--src-client-rs.html#item-type-LlmStream-22">LlmStream</a>, <a class="symbol-link rs-type" href="eos-llm-client--src-error-rs.html#item-struct-ProviderError-29">ProviderError</a>&gt; {
+            <span class="rs-kw">let</span> events = <span class="rs-self">self</span>.events.clone();
+            <span class="rs-type">Ok</span>(<span class="rs-type">Box</span>::pin(futures::stream::iter(events.into_iter().map(<span class="rs-type">Ok</span>))))
+        }
+</code></pre>
+</details></td></tr></tbody></table></details></div>
+
   <p class="source">crates/eos-llm-client/src/client.rs:240</p>
-</article><article class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct CaptureClient private struct CaptureClient crates/eos-llm-client/src/client.rs request std :: sync :: Mutex &lt; Option &lt; LlmRequest &gt; &gt; ">
+</article><article id="item-struct-CaptureClient-247" class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct CaptureClient private struct CaptureClient crates/eos-llm-client/src/client.rs request std :: sync :: Mutex &lt; Option &lt; LlmRequest &gt; &gt; ">
   <div class="item-head">
     <span class="kind">struct</span>
     <h3>CaptureClient</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">struct CaptureClient</code>
-  <div class="tags"><span>port/service</span></div>
-  <h4>Fields</h4><table><tbody><tr><td>private</td><td>request</td><td><code>std :: sync :: Mutex &lt; Option &lt; LlmRequest &gt; &gt;</code></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl LlmClient for CaptureClient</code></summary><table><tbody><tr><td>method</td><td>stream_message</td><td><code>async fn stream_message (&amp; self , request : LlmRequest) -&gt; Result &lt; LlmStream , ProviderError &gt;</code></td></tr></tbody></table></details></div>
+  <code class="signature">struct <a class="symbol-link" href="eos-llm-client--src-client-rs.html#item-struct-CaptureClient-247">CaptureClient</a></code>
+  <div class="tags"><span>derive: Debug</span><span>port/service</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>request</td><td><code>std :: sync :: Mutex &lt; Option &lt; <a class="symbol-link" href="eos-llm-client--src-types-rs.html#item-struct-LlmRequest-113">LlmRequest</a> &gt; &gt;</code></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl <a class="symbol-link" href="eos-llm-client--src-client-rs.html#item-trait-LlmClient-28">LlmClient</a> for <a class="symbol-link" href="eos-llm-client--src-client-rs.html#item-struct-CaptureClient-247">CaptureClient</a></code></summary><table><tbody><tr id="method-stream-message-254"><td>method</td><td>stream_message</td><td><code>async fn <a class="symbol-link" href="eos-llm-client--src-client-rs.html#method-stream-message-36">stream_message</a> (&amp; self , request : <a class="symbol-link" href="eos-llm-client--src-types-rs.html#item-struct-LlmRequest-113">LlmRequest</a>) -&gt; Result &lt; <a class="symbol-link" href="eos-llm-client--src-client-rs.html#item-type-LlmStream-22">LlmStream</a> , <a class="symbol-link" href="eos-llm-client--src-error-rs.html#item-struct-ProviderError-29">ProviderError</a> &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>        <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-llm-client--src-client-rs.html#method-stream-message-36">stream_message</a>(&amp;<span class="rs-self">self</span>, request: <a class="symbol-link rs-type" href="eos-llm-client--src-types-rs.html#item-struct-LlmRequest-113">LlmRequest</a>) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-llm-client--src-client-rs.html#item-type-LlmStream-22">LlmStream</a>, <a class="symbol-link rs-type" href="eos-llm-client--src-error-rs.html#item-struct-ProviderError-29">ProviderError</a>&gt; {
+            *<span class="rs-self">self</span>.request.lock().unwrap() = <span class="rs-type">Some</span>(request);
+            <span class="rs-type">Ok</span>(<span class="rs-type">Box</span>::pin(futures::stream::empty()))
+        }
+</code></pre>
+</details></td></tr></tbody></table></details></div>
+
   <p class="source">crates/eos-llm-client/src/client.rs:247</p>
-</article><div class="group-label">Aliases</div><article class="item-card" data-kind="type" data-kind-list="type" data-filter-text="type LlmStream pub pub type LlmStream = Pin &lt; Box &lt; dyn Stream &lt; Item = Result &lt; LlmStreamEvent , ProviderError &gt; &gt; + Send &gt; &gt; crates/eos-llm-client/src/client.rs  ">
+</article><div class="group-label">Aliases</div><article id="item-type-LlmStream-22" class="item-card" data-kind="type" data-kind-list="type" data-filter-text="type LlmStream pub pub type LlmStream = Pin &lt; Box &lt; dyn Stream &lt; Item = Result &lt; LlmStreamEvent , ProviderError &gt; &gt; + Send &gt; &gt; crates/eos-llm-client/src/client.rs  ">
   <div class="item-head">
     <span class="kind">type</span>
     <h3>LlmStream</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub type LlmStream = Pin &lt; Box &lt; dyn Stream &lt; Item = Result &lt; LlmStreamEvent , ProviderError &gt; &gt; + Send &gt; &gt;</code>
+  <code class="signature">pub type <a class="symbol-link" href="eos-llm-client--src-client-rs.html#item-type-LlmStream-22">LlmStream</a> = Pin &lt; Box &lt; dyn Stream &lt; Item = Result &lt; <a class="symbol-link" href="eos-llm-client--src-events-rs.html#item-enum-LlmStreamEvent-15">LlmStreamEvent</a> , <a class="symbol-link" href="eos-llm-client--src-error-rs.html#item-struct-ProviderError-29">ProviderError</a> &gt; &gt; + Send &gt; &gt;</code>
+  <p class="docstring">A streamed model invocation: a single linear stream of normalized events or<br>errors. The retry gate (`retry.rs`) runs lazily inside this stream, so a<br>non-retryable failure on the first attempt surfaces as an `Err` **item**,<br>not as the caller's outer `Err`.</p>
   <div class="tags"></div>
 
   <p class="source">crates/eos-llm-client/src/client.rs:22</p>
-</article><div class="group-label">Standalone Functions</div><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn build_endpoint pub(crate) pub(crate) fn build_endpoint (base_url : &amp; str , path : &amp; str) -&gt; Result &lt; reqwest :: Url , ProviderError &gt; crates/eos-llm-client/src/client.rs  ">
+</article><div class="group-label">Standalone Functions</div><article id="item-fn-build-endpoint-147" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn build_endpoint pub(crate) pub(crate) fn build_endpoint (base_url : &amp; str , path : &amp; str) -&gt; Result &lt; reqwest :: Url , ProviderError &gt; crates/eos-llm-client/src/client.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>build_endpoint</h3>
     <span class="visibility">pub(crate)</span>
   </div>
-  <code class="signature">pub(crate) fn build_endpoint (base_url : &amp; str , path : &amp; str) -&gt; Result &lt; reqwest :: Url , ProviderError &gt;</code>
+  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-llm-client--src-client-rs.html#item-fn-build-endpoint-147">build_endpoint</a> (base_url : &amp; str , path : &amp; str) -&gt; Result &lt; reqwest :: Url , <a class="symbol-link" href="eos-llm-client--src-error-rs.html#item-struct-ProviderError-29">ProviderError</a> &gt;</code>
+  <p class="docstring">Build a concrete endpoint `Url` from a base url and a path suffix, parsing<br>(not merely string-concatenating) so a malformed base fails fast as the outer<br>`Err` of `stream_message` (`api-parse-dont-validate`).</p>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-comment">/// Build a concrete endpoint `Url` from a base url and a path suffix, parsing</span>
+<span class="rs-comment">/// (not merely string-concatenating) so a malformed base fails fast as the outer</span>
+<span class="rs-comment">/// `Err` of `stream_message` (`api-parse-dont-validate`).</span>
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-llm-client--src-client-rs.html#item-fn-build-endpoint-147">build_endpoint</a>(base_url: &amp;str, path: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;reqwest::<span class="rs-type">Url</span>, <a class="symbol-link rs-type" href="eos-llm-client--src-error-rs.html#item-struct-ProviderError-29">ProviderError</a>&gt; {
+    <span class="rs-kw">let</span> trimmed = base_url.trim_end_matches(&#x27;/&#x27;);
+    reqwest::<span class="rs-type">Url</span>::<a class="symbol-link rs-fn" href="eos-llm-client--src-events-rs.html#method-parse-70">parse</a>(&amp;format!(&quot;{trimmed}{path}&quot;))
+        .map_err(|e| <a class="symbol-link rs-type" href="eos-llm-client--src-error-rs.html#item-struct-ProviderError-29">ProviderError</a>::<a class="symbol-link rs-fn" href="eos-llm-client--src-error-rs.html#method-request-96">request</a>(format!(&quot;invalid base url: {e}&quot;)))
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-llm-client/src/client.rs:147</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn extract_request_id pub(crate) pub(crate) fn extract_request_id (headers : &amp; reqwest :: header :: HeaderMap) -&gt; Option &lt; String &gt; crates/eos-llm-client/src/client.rs  ">
+</article><article id="item-fn-extract-request-id-156" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn extract_request_id pub(crate) pub(crate) fn extract_request_id (headers : &amp; reqwest :: header :: HeaderMap) -&gt; Option &lt; String &gt; crates/eos-llm-client/src/client.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>extract_request_id</h3>
     <span class="visibility">pub(crate)</span>
   </div>
-  <code class="signature">pub(crate) fn extract_request_id (headers : &amp; reqwest :: header :: HeaderMap) -&gt; Option &lt; String &gt;</code>
+  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-llm-client--src-client-rs.html#item-fn-extract-request-id-156">extract_request_id</a> (headers : &amp; reqwest :: header :: HeaderMap) -&gt; Option &lt; String &gt;</code>
+  <p class="docstring">Capture the provider request-id (`request-id` or `x-request-id`) from the<br>response headers **before** the body is consumed, so it survives the<br>streaming error path (invariant §8.8).</p>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-comment">/// Capture the provider request-id (`request-id` or `x-request-id`) from the</span>
+<span class="rs-comment">/// response headers **before** the body is consumed, so it survives the</span>
+<span class="rs-comment">/// streaming error path (invariant §8.8).</span>
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-llm-client--src-client-rs.html#item-fn-extract-request-id-156">extract_request_id</a>(headers: &amp;reqwest::header::<span class="rs-type">HeaderMap</span>) -&gt; <span class="rs-type">Option</span>&lt;<span class="rs-type">String</span>&gt; {
+    headers
+        .get(&quot;request-id&quot;)
+        .or_else(|| headers.get(&quot;x-request-id&quot;))
+        .and_then(|v| v.to_str().ok())
+        .map(str::to_owned)
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-llm-client/src/client.rs:156</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn error_detail pub(crate) pub(crate) fn error_detail (body : &amp; str) -&gt; String crates/eos-llm-client/src/client.rs  ">
+</article><article id="item-fn-error-detail-167" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn error_detail pub(crate) pub(crate) fn error_detail (body : &amp; str) -&gt; String crates/eos-llm-client/src/client.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>error_detail</h3>
     <span class="visibility">pub(crate)</span>
   </div>
-  <code class="signature">pub(crate) fn error_detail (body : &amp; str) -&gt; String</code>
+  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-llm-client--src-client-rs.html#item-fn-error-detail-167">error_detail</a> (body : &amp; str) -&gt; String</code>
+  <p class="docstring">Truncate a provider error body for inclusion in a [`ProviderError`] message<br>(bounded so a large HTML error page does not bloat the error).</p>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-comment">/// Truncate a provider error body for inclusion in a [`ProviderError`] message</span>
+<span class="rs-comment">/// (bounded so a large HTML error page does not bloat the error).</span>
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-llm-client--src-client-rs.html#item-fn-error-detail-167">error_detail</a>(body: &amp;str) -&gt; <span class="rs-type">String</span> {
+    <span class="rs-kw">let</span> trimmed = body.trim();
+    <span class="rs-kw">if</span> trimmed.is_empty() {
+        <span class="rs-kw">return</span> &quot;no response body&quot;.to_owned();
+    }
+    trimmed.chars().take(500).collect()
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-llm-client/src/client.rs:167</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn open_stream pub(crate) pub(crate) async fn open_stream &lt; D , R &gt; (http : reqwest :: Client , url : reqwest :: Url , headers : HeaderMap , body : Bytes , decode : D ,) -&gt; Result &lt; LlmStream , ProviderError &gt; where D : FnOnce (BoxStream &lt; 'static , Result &lt; String , ProviderError &gt; &gt; , Option &lt; String &gt;) -&gt; R , R : Stream &lt; Item = Result &lt; LlmStreamEvent , ProviderError &gt; &gt; + Send + 'static , crates/eos-llm-client/src/client.rs  ">
+</article><article id="item-fn-open-stream-177" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn open_stream pub(crate) pub(crate) async fn open_stream &lt; D , R &gt; (http : reqwest :: Client , url : reqwest :: Url , headers : HeaderMap , body : Bytes , decode : D ,) -&gt; Result &lt; LlmStream , ProviderError &gt; where D : FnOnce (BoxStream &lt; 'static , Result &lt; String , ProviderError &gt; &gt; , Option &lt; String &gt;) -&gt; R , R : Stream &lt; Item = Result &lt; LlmStreamEvent , ProviderError &gt; &gt; + Send + 'static , crates/eos-llm-client/src/client.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>open_stream</h3>
     <span class="visibility">pub(crate)</span>
   </div>
-  <code class="signature">pub(crate) async fn open_stream &lt; D , R &gt; (http : reqwest :: Client , url : reqwest :: Url , headers : HeaderMap , body : Bytes , decode : D ,) -&gt; Result &lt; LlmStream , ProviderError &gt; where D : FnOnce (BoxStream &lt; 'static , Result &lt; String , ProviderError &gt; &gt; , Option &lt; String &gt;) -&gt; R , R : Stream &lt; Item = Result &lt; LlmStreamEvent , ProviderError &gt; &gt; + Send + 'static ,</code>
+  <code class="signature">pub(crate) async fn <a class="symbol-link" href="eos-llm-client--src-client-rs.html#item-fn-open-stream-177">open_stream</a> &lt; D , R &gt; (http : reqwest :: Client , url : reqwest :: Url , headers : HeaderMap , body : Bytes , decode : D ,) -&gt; Result &lt; <a class="symbol-link" href="eos-llm-client--src-client-rs.html#item-type-LlmStream-22">LlmStream</a> , <a class="symbol-link" href="eos-llm-client--src-error-rs.html#item-struct-ProviderError-29">ProviderError</a> &gt; where D : FnOnce (BoxStream &lt; &#x27;static , Result &lt; String , <a class="symbol-link" href="eos-llm-client--src-error-rs.html#item-struct-ProviderError-29">ProviderError</a> &gt; &gt; , Option &lt; String &gt;) -&gt; R , R : Stream &lt; Item = Result &lt; <a class="symbol-link" href="eos-llm-client--src-events-rs.html#item-enum-LlmStreamEvent-15">LlmStreamEvent</a> , <a class="symbol-link" href="eos-llm-client--src-error-rs.html#item-struct-ProviderError-29">ProviderError</a> &gt; &gt; + Send + &#x27;static ,</code>
+  <p class="docstring">Open one streaming attempt — the shared transport/SSE plumbing for both<br>providers. POST the request, capture the request-id **before** the body is<br>consumed (§8.8), map a non-2xx status, stamp the request-id onto mid-stream<br>transport errors, then decode the SSE frames via the provider-specific<br>`decode` closure. This is plumbing, not projection: the per-provider encode<br>and SSE→event mapping stay under `clients/`.</p>
   <div class="tags"><span>async</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-comment">/// Open one streaming attempt — the shared transport/SSE plumbing for both</span>
+<span class="rs-comment">/// providers. POST the request, capture the request-id **before** the body is</span>
+<span class="rs-comment">/// consumed (§8.8), map a non-2xx status, stamp the request-id onto mid-stream</span>
+<span class="rs-comment">/// transport errors, then decode the SSE frames via the provider-specific</span>
+<span class="rs-comment">/// `decode` closure. This is plumbing, not projection: the per-provider encode</span>
+<span class="rs-comment">/// and SSE→event mapping stay under `clients/`.</span>
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">async</span> <span class="rs-kw">fn</span> open_stream&lt;<span class="rs-type">D</span>, <span class="rs-type">R</span>&gt;(
+    http: reqwest::<span class="rs-type">Client</span>,
+    url: reqwest::<span class="rs-type">Url</span>,
+    headers: <span class="rs-type">HeaderMap</span>,
+    body: <span class="rs-type">Bytes</span>,
+    decode: <span class="rs-type">D</span>,
+) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-llm-client--src-client-rs.html#item-type-LlmStream-22">LlmStream</a>, <a class="symbol-link rs-type" href="eos-llm-client--src-error-rs.html#item-struct-ProviderError-29">ProviderError</a>&gt;
+<span class="rs-kw">where</span>
+    <span class="rs-type">D</span>: <span class="rs-type">FnOnce</span>(<span class="rs-type">BoxStream</span>&lt;&#x27;<span class="rs-kw">static</span>, <span class="rs-type">Result</span>&lt;<span class="rs-type">String</span>, <a class="symbol-link rs-type" href="eos-llm-client--src-error-rs.html#item-struct-ProviderError-29">ProviderError</a>&gt;&gt;, <span class="rs-type">Option</span>&lt;<span class="rs-type">String</span>&gt;) -&gt; <span class="rs-type">R</span>,
+    <span class="rs-type">R</span>: <span class="rs-type">Stream</span>&lt;<span class="rs-type">Item</span> = <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-llm-client--src-events-rs.html#item-enum-LlmStreamEvent-15">LlmStreamEvent</a>, <a class="symbol-link rs-type" href="eos-llm-client--src-error-rs.html#item-struct-ProviderError-29">ProviderError</a>&gt;&gt; + <span class="rs-type">Send</span> + &#x27;<span class="rs-kw">static</span>,
+{
+    <span class="rs-kw">let</span> response = http
+        .post(url)
+        .headers(headers)
+        .body(body)
+        .send()
+        .<span class="rs-kw">await</span>
+        .map_err(|e| <a class="symbol-link rs-type" href="eos-llm-client--src-error-rs.html#item-struct-ProviderError-29">ProviderError</a>::<a class="symbol-link rs-fn" href="eos-llm-client--src-error-rs.html#method-transport-74">transport</a>(format!(&quot;request send failed: {e}&quot;)))?;
+
+    <span class="rs-kw">let</span> request_id = <a class="symbol-link rs-fn" href="eos-llm-client--src-client-rs.html#item-fn-extract-request-id-156">extract_request_id</a>(response.headers());
+    <span class="rs-kw">let</span> status = response.status();
+    <span class="rs-kw">if</span> !status.is_success() {
+        <span class="rs-kw">let</span> detail = response.<a class="symbol-link rs-fn" href="eos-llm-client--src-retry-rs.html#item-fn-text-184">text</a>().<span class="rs-kw">await</span>.unwrap_or_default();
+        <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-llm-client--src-error-rs.html#item-struct-ProviderError-29">ProviderError</a>::<a class="symbol-link rs-fn" href="eos-llm-client--src-error-rs.html#method-from-status-49">from_status</a>(
+            status.as_u16(),
+            request_id,
+            <a class="symbol-link rs-fn" href="eos-llm-client--src-client-rs.html#item-fn-error-detail-167">error_detail</a>(&amp;detail),
+        ));
+    }
+
+    <span class="rs-comment">// Stamp the captured request-id onto mid-stream transport errors too, so it</span>
+    <span class="rs-comment">// survives the streaming error path (§8.8), not just decode errors.</span>
+    <span class="rs-kw">let</span> rid = request_id.clone();
+    <span class="rs-kw">let</span> byte_stream = response.bytes_stream().map(<span class="rs-kw">move</span> |chunk| {
+        chunk.map_err(|e| {
+            <span class="rs-kw">let</span> <span class="rs-kw">mut</span> err = <a class="symbol-link rs-type" href="eos-llm-client--src-error-rs.html#item-struct-ProviderError-29">ProviderError</a>::<a class="symbol-link rs-fn" href="eos-llm-client--src-error-rs.html#method-transport-74">transport</a>(format!(&quot;stream read failed: {e}&quot;));
+            err.request_id = rid.clone();
+            err
+        })
+    });
+    <span class="rs-type">Ok</span>(<span class="rs-type">Box</span>::pin(<a class="symbol-link rs-fn" href="eos-llm-client--src-error-rs.html#method-decode-85">decode</a>(
+        <a class="symbol-link rs-fn" href="eos-llm-client--src-sse-rs.html#item-fn-frame-stream-139">frame_stream</a>(byte_stream).boxed(),
+        request_id,
+    )))
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-llm-client/src/client.rs:177</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn reasoning_effort_from_kwargs private fn reasoning_effort_from_kwargs (kwargs : &amp; eos_types :: JsonObject) -&gt; Option &lt; ReasoningEffort &gt; crates/eos-llm-client/src/client.rs  ">
+</article><article id="item-fn-reasoning-effort-from-kwargs-123" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn reasoning_effort_from_kwargs private fn reasoning_effort_from_kwargs (kwargs : &amp; eos_types :: JsonObject) -&gt; Option &lt; ReasoningEffort &gt; crates/eos-llm-client/src/client.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>reasoning_effort_from_kwargs</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn reasoning_effort_from_kwargs (kwargs : &amp; eos_types :: JsonObject) -&gt; Option &lt; ReasoningEffort &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-llm-client--src-client-rs.html#item-fn-reasoning-effort-from-kwargs-123">reasoning_effort_from_kwargs</a> (kwargs : &amp; eos_types :: JsonObject) -&gt; Option &lt; <a class="symbol-link" href="eos-llm-client--src-types-rs.html#item-enum-ReasoningEffort-85">ReasoningEffort</a> &gt;</code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-llm-client--src-client-rs.html#item-fn-reasoning-effort-from-kwargs-123">reasoning_effort_from_kwargs</a>(kwargs: &amp;eos_types::<span class="rs-type">JsonObject</span>) -&gt; <span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-llm-client--src-types-rs.html#item-enum-ReasoningEffort-85">ReasoningEffort</a>&gt; {
+    <span class="rs-kw">let</span> raw = kwargs
+        .get(&quot;reasoning_effort&quot;)
+        .or_else(|| kwargs.get(&quot;effort&quot;))
+        .and_then(<span class="rs-type">Value</span>::as_str)
+        .or_else(|| {
+            kwargs
+                .get(&quot;reasoning&quot;)
+                .and_then(|reasoning| reasoning.get(&quot;effort&quot;))
+                .and_then(<span class="rs-type">Value</span>::as_str)
+        })?;
+    <a class="symbol-link rs-fn" href="eos-llm-client--src-client-rs.html#item-fn-parse-reasoning-effort-137">parse_reasoning_effort</a>(raw)
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-llm-client/src/client.rs:123</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn parse_reasoning_effort private fn parse_reasoning_effort (raw : &amp; str) -&gt; Option &lt; ReasoningEffort &gt; crates/eos-llm-client/src/client.rs  ">
+</article><article id="item-fn-parse-reasoning-effort-137" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn parse_reasoning_effort private fn parse_reasoning_effort (raw : &amp; str) -&gt; Option &lt; ReasoningEffort &gt; crates/eos-llm-client/src/client.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>parse_reasoning_effort</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn parse_reasoning_effort (raw : &amp; str) -&gt; Option &lt; ReasoningEffort &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-llm-client--src-client-rs.html#item-fn-parse-reasoning-effort-137">parse_reasoning_effort</a> (raw : &amp; str) -&gt; Option &lt; <a class="symbol-link" href="eos-llm-client--src-types-rs.html#item-enum-ReasoningEffort-85">ReasoningEffort</a> &gt;</code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-llm-client--src-client-rs.html#item-fn-parse-reasoning-effort-137">parse_reasoning_effort</a>(raw: &amp;str) -&gt; <span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-llm-client--src-types-rs.html#item-enum-ReasoningEffort-85">ReasoningEffort</a>&gt; {
+    <span class="rs-kw">match</span> raw.trim().to_ascii_lowercase().replace(&#x27;-&#x27;, &quot;_&quot;).as_str() {
+        &quot;minimal&quot; =&gt; <span class="rs-type">Some</span>(<a class="symbol-link rs-type" href="eos-llm-client--src-types-rs.html#item-enum-ReasoningEffort-85">ReasoningEffort</a>::<span class="rs-type">Minimal</span>),
+        &quot;low&quot; =&gt; <span class="rs-type">Some</span>(<a class="symbol-link rs-type" href="eos-llm-client--src-types-rs.html#item-enum-ReasoningEffort-85">ReasoningEffort</a>::<span class="rs-type">Low</span>),
+        &quot;medium&quot; =&gt; <span class="rs-type">Some</span>(<a class="symbol-link rs-type" href="eos-llm-client--src-types-rs.html#item-enum-ReasoningEffort-85">ReasoningEffort</a>::<span class="rs-type">Medium</span>),
+        &quot;high&quot; =&gt; <span class="rs-type">Some</span>(<a class="symbol-link rs-type" href="eos-llm-client--src-types-rs.html#item-enum-ReasoningEffort-85">ReasoningEffort</a>::<span class="rs-type">High</span>),
+        _ =&gt; <span class="rs-type">None</span>,
+    }
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-llm-client/src/client.rs:137</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn configured_client_applies_model_defaults private async fn configured_client_applies_model_defaults () crates/eos-llm-client/src/client.rs  ">
+</article><article id="item-fn-configured-client-applies-model-defaults-260" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn configured_client_applies_model_defaults private async fn configured_client_applies_model_defaults () crates/eos-llm-client/src/client.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>configured_client_applies_model_defaults</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">async fn configured_client_applies_model_defaults ()</code>
-  <div class="tags"><span>async</span></div>
+  <code class="signature">async fn <a class="symbol-link" href="eos-llm-client--src-client-rs.html#item-fn-configured-client-applies-model-defaults-260">configured_client_applies_model_defaults</a> ()</code>
+  <div class="tags"><span>async</span><span>tokio::test</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[tokio::test]
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-llm-client--src-client-rs.html#item-fn-configured-client-applies-model-defaults-260">configured_client_applies_model_defaults</a>() {
+        <span class="rs-kw">let</span> capture = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-llm-client--src-client-rs.html#method-new-56">new</a>(<a class="symbol-link rs-type" href="eos-llm-client--src-client-rs.html#item-struct-CaptureClient-247">CaptureClient</a> {
+            request: std::sync::<span class="rs-type">Mutex</span>::<a class="symbol-link rs-fn" href="eos-llm-client--src-client-rs.html#method-new-56">new</a>(<span class="rs-type">None</span>),
+        });
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> kwargs = eos_types::<span class="rs-type">JsonObject</span>::<a class="symbol-link rs-fn" href="eos-llm-client--src-client-rs.html#method-new-56">new</a>();
+        kwargs.insert(&quot;reasoning_effort&quot;.to_owned(), json!(&quot;medium&quot;));
+        <span class="rs-kw">let</span> client = <a class="symbol-link rs-type" href="eos-llm-client--src-client-rs.html#item-struct-ConfiguredLlmClient-85">ConfiguredLlmClient</a>::<a class="symbol-link rs-fn" href="eos-llm-client--src-client-rs.html#method-new-56">new</a>(
+            capture.clone(),
+            <a class="symbol-link rs-type" href="eos-llm-client--src-client-rs.html#item-struct-LlmRequestDefaults-45">LlmRequestDefaults</a>::<a class="symbol-link rs-fn" href="eos-llm-client--src-client-rs.html#method-from-model-kwargs-65">from_model_kwargs</a>(&quot;gpt-5.5&quot;, &amp;kwargs),
+        );
+
+        <span class="rs-kw">let</span> stream = client
+            .<a class="symbol-link rs-fn" href="eos-llm-client--src-client-rs.html#method-stream-message-36">stream_message</a>(<a class="symbol-link rs-type" href="eos-llm-client--src-types-rs.html#item-struct-LlmRequest-113">LlmRequest</a>::<a class="symbol-link rs-fn" href="eos-llm-client--src-types-rs.html#method-builder-140">builder</a>(&quot;&quot;).<a class="symbol-link rs-fn" href="eos-llm-client--src-types-rs.html#method-build-210">build</a>())
+            .<span class="rs-kw">await</span>
+            .unwrap();
+        drop(stream);
+
+        <span class="rs-kw">let</span> request = capture.request.lock().unwrap().clone().unwrap();
+        assert_eq!(request.model, &quot;gpt-5.5&quot;);
+        assert_eq!(request.reasoning_effort, <span class="rs-type">Some</span>(<a class="symbol-link rs-type" href="eos-llm-client--src-types-rs.html#item-enum-ReasoningEffort-85">ReasoningEffort</a>::<span class="rs-type">Medium</span>));
+    }
+</code></pre>
+</details>
 
   <p class="source">crates/eos-llm-client/src/client.rs:260</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn mock_client_is_object_safe_and_streams private async fn mock_client_is_object_safe_and_streams () crates/eos-llm-client/src/client.rs  ">
+</article><article id="item-fn-mock-client-is-object-safe-and-streams-291" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn mock_client_is_object_safe_and_streams private async fn mock_client_is_object_safe_and_streams () crates/eos-llm-client/src/client.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>mock_client_is_object_safe_and_streams</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">async fn mock_client_is_object_safe_and_streams ()</code>
-  <div class="tags"><span>async</span></div>
+  <code class="signature">async fn <a class="symbol-link" href="eos-llm-client--src-client-rs.html#item-fn-mock-client-is-object-safe-and-streams-291">mock_client_is_object_safe_and_streams</a> ()</code>
+  <div class="tags"><span>async</span><span>tokio::test</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[tokio::test]
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-llm-client--src-client-rs.html#item-fn-mock-client-is-object-safe-and-streams-291">mock_client_is_object_safe_and_streams</a>() {
+        <span class="rs-kw">let</span> client: <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <a class="symbol-link rs-type" href="eos-llm-client--src-client-rs.html#item-trait-LlmClient-28">LlmClient</a>&gt; = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-llm-client--src-client-rs.html#method-new-56">new</a>(<a class="symbol-link rs-type" href="eos-llm-client--src-client-rs.html#item-struct-MockLlmClient-240">MockLlmClient</a> {
+            events: vec![<a class="symbol-link rs-type" href="eos-llm-client--src-events-rs.html#item-enum-LlmStreamEvent-15">LlmStreamEvent</a>::<span class="rs-type">AssistantTextDelta</span> { text: &quot;hi&quot;.into() }],
+        });
+        <span class="rs-kw">let</span> stream = client
+            .<a class="symbol-link rs-fn" href="eos-llm-client--src-client-rs.html#method-stream-message-36">stream_message</a>(<a class="symbol-link rs-type" href="eos-llm-client--src-types-rs.html#item-struct-LlmRequest-113">LlmRequest</a>::<a class="symbol-link rs-fn" href="eos-llm-client--src-types-rs.html#method-builder-140">builder</a>(&quot;m&quot;).<a class="symbol-link rs-fn" href="eos-llm-client--src-types-rs.html#method-build-210">build</a>())
+            .<span class="rs-kw">await</span>
+            .unwrap();
+        <span class="rs-kw">let</span> collected: <span class="rs-type">Vec</span>&lt;_&gt; = stream.collect().<span class="rs-kw">await</span>;
+        assert_eq!(collected.len(), 1);
+        assert!(matches!(
+            collected[0],
+            <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-llm-client--src-events-rs.html#item-enum-LlmStreamEvent-15">LlmStreamEvent</a>::<span class="rs-type">AssistantTextDelta</span> { .. })
+        ));
+    }
+</code></pre>
+</details>
 
   <p class="source">crates/eos-llm-client/src/client.rs:291</p>
 </article></div>
 </section></div>
 </main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/eos-llm-client/src/client.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-comment">//! The [`LlmClient`] seam (DIP + LSP, anchor §6).</span>
+<span class="rs-comment">//!</span>
+<span class="rs-comment">//! Source: `providers/types.py::SupportsStreamingMessages`. Stored as</span>
+<span class="rs-comment">//! `Arc&lt;dyn LlmClient&gt;` at the `eos-runtime` composition root (heterogeneous:</span>
+<span class="rs-comment">//! Anthropic, `OpenAI`, mock), so it uses `#[async_trait]` — native</span>
+<span class="rs-comment">//! async-fn-in-trait is not yet `dyn`-safe — and returns a boxed [`LlmStream`].</span>
+
+<span class="rs-kw">use</span> std::pin::<span class="rs-type">Pin</span>;
+<span class="rs-kw">use</span> std::sync::<span class="rs-type">Arc</span>;
+
+<span class="rs-kw">use</span> bytes::<span class="rs-type">Bytes</span>;
+<span class="rs-kw">use</span> futures::stream::<span class="rs-type">BoxStream</span>;
+<span class="rs-kw">use</span> futures::{<span class="rs-type">Stream</span>, <span class="rs-type">StreamExt</span>};
+<span class="rs-kw">use</span> reqwest::header::<span class="rs-type">HeaderMap</span>;
+<span class="rs-kw">use</span> serde_json::<span class="rs-type">Value</span>;
+
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::error::<a class="symbol-link rs-type" href="eos-llm-client--src-error-rs.html#item-struct-ProviderError-29">ProviderError</a>;
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::events::<a class="symbol-link rs-type" href="eos-llm-client--src-events-rs.html#item-enum-LlmStreamEvent-15">LlmStreamEvent</a>;
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::sse::frame_stream;
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::types::{<a class="symbol-link rs-type" href="eos-llm-client--src-types-rs.html#item-struct-LlmRequest-113">LlmRequest</a>, <a class="symbol-link rs-type" href="eos-llm-client--src-types-rs.html#item-enum-ReasoningEffort-85">ReasoningEffort</a>};
+
+<span class="rs-comment">/// A streamed model invocation: a single linear stream of normalized events or</span>
+<span class="rs-comment">/// errors. The retry gate (`retry.rs`) runs lazily inside this stream, so a</span>
+<span class="rs-comment">/// non-retryable failure on the first attempt surfaces as an `Err` **item**,</span>
+<span class="rs-comment">/// not as the caller's outer `Err`.</span>
+<span class="rs-kw">pub</span> <span class="rs-kw">type</span> <a class="symbol-link rs-type" href="eos-llm-client--src-client-rs.html#item-type-LlmStream-22">LlmStream</a> = <span class="rs-type">Pin</span>&lt;<span class="rs-type">Box</span>&lt;<span class="rs-kw">dyn</span> <span class="rs-type">Stream</span>&lt;<span class="rs-type">Item</span> = <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-llm-client--src-events-rs.html#item-enum-LlmStreamEvent-15">LlmStreamEvent</a>, <a class="symbol-link rs-type" href="eos-llm-client--src-error-rs.html#item-struct-ProviderError-29">ProviderError</a>&gt;&gt; + <span class="rs-type">Send</span>&gt;&gt;;
+
+<span class="rs-comment">/// The provider-neutral streaming client seam.</span>
+<span class="rs-comment">///</span>
+<span class="rs-comment">/// Implementors: `AnthropicApiClient`, `OpenAiApiClient`,</span>
+<span class="rs-comment">/// `CodexCodingPlanClient`, `ClaudeCodingPlanClient`, and test mocks. Every</span>
+<span class="rs-comment">/// event is a neutral [`LlmStreamEvent`], so the implementors are substitutable</span>
+<span class="rs-comment">/// (LSP).</span>
+#[async_trait::async_trait]
+<span class="rs-kw">pub</span> <span class="rs-kw">trait</span> <a class="symbol-link rs-type" href="eos-llm-client--src-client-rs.html#item-trait-LlmClient-28">LlmClient</a>: <span class="rs-type">Send</span> + <span class="rs-type">Sync</span> {
+    <span class="rs-comment">/// Open a streaming model invocation.</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// The outer `Err` is reserved for **synchronous request-construction</span>
+    <span class="rs-comment">/// failures only** (URL/header/body build). All connect, auth, rate-limit,</span>
+    <span class="rs-comment">/// transport, and decode errors — including a non-retryable failure on the</span>
+    <span class="rs-comment">/// very first attempt — surface as `Err` items of the returned stream.</span>
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-llm-client--src-client-rs.html#method-stream-message-36">stream_message</a>(&amp;<span class="rs-self">self</span>, request: <a class="symbol-link rs-type" href="eos-llm-client--src-types-rs.html#item-struct-LlmRequest-113">LlmRequest</a>) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-llm-client--src-client-rs.html#item-type-LlmStream-22">LlmStream</a>, <a class="symbol-link rs-type" href="eos-llm-client--src-error-rs.html#item-struct-ProviderError-29">ProviderError</a>&gt;;
+}
+
+<span class="rs-comment">/// Default request values attached to a configured provider client.</span>
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Eq</span>)]
+#[non_exhaustive]
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-llm-client--src-client-rs.html#item-struct-LlmRequestDefaults-45">LlmRequestDefaults</a> {
+    <span class="rs-comment">/// Model id used when the request does not carry an explicit model.</span>
+    <span class="rs-kw">pub</span> model: <span class="rs-type">String</span>,
+    <span class="rs-comment">/// Reasoning effort used when the request does not carry an explicit effort.</span>
+    <span class="rs-kw">pub</span> reasoning_effort: <span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-llm-client--src-types-rs.html#item-enum-ReasoningEffort-85">ReasoningEffort</a>&gt;,
+}
+
+<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-llm-client--src-client-rs.html#item-struct-LlmRequestDefaults-45">LlmRequestDefaults</a> {
+    <span class="rs-comment">/// Construct defaults for a model id.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-llm-client--src-client-rs.html#method-new-56">new</a>(model: <span class="rs-kw">impl</span> <span class="rs-type">Into</span>&lt;<span class="rs-type">String</span>&gt;) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">Self</span> {
+            model: model.into(),
+            reasoning_effort: <span class="rs-type">None</span>,
+        }
+    }
+
+    <span class="rs-comment">/// Construct defaults from a provider-local model registration `kwargs` map.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-llm-client--src-client-rs.html#method-from-model-kwargs-65">from_model_kwargs</a>(model: <span class="rs-kw">impl</span> <span class="rs-type">Into</span>&lt;<span class="rs-type">String</span>&gt;, kwargs: &amp;eos_types::<span class="rs-type">JsonObject</span>) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">Self</span> {
+            model: model.into(),
+            reasoning_effort: <a class="symbol-link rs-fn" href="eos-llm-client--src-client-rs.html#item-fn-reasoning-effort-from-kwargs-123">reasoning_effort_from_kwargs</a>(kwargs),
+        }
+    }
+
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-llm-client.html#method-apply-105">apply</a>(&amp;<span class="rs-self">self</span>, <span class="rs-kw">mut</span> request: <a class="symbol-link rs-type" href="eos-llm-client--src-types-rs.html#item-struct-LlmRequest-113">LlmRequest</a>) -&gt; <a class="symbol-link rs-type" href="eos-llm-client--src-types-rs.html#item-struct-LlmRequest-113">LlmRequest</a> {
+        <span class="rs-kw">if</span> request.model.trim().is_empty() {
+            request.model.clone_from(&amp;<span class="rs-self">self</span>.model);
+        }
+        <span class="rs-kw">if</span> request.reasoning_effort.is_none() {
+            request.reasoning_effort = <span class="rs-self">self</span>.reasoning_effort;
+        }
+        request
+    }
+}
+
+<span class="rs-comment">/// Provider client wrapper that applies config-derived request defaults.</span>
+#[derive(<span class="rs-type">Clone</span>)]
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-llm-client--src-client-rs.html#item-struct-ConfiguredLlmClient-85">ConfiguredLlmClient</a> {
+    inner: <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <a class="symbol-link rs-type" href="eos-llm-client--src-client-rs.html#item-trait-LlmClient-28">LlmClient</a>&gt;,
+    defaults: <a class="symbol-link rs-type" href="eos-llm-client--src-client-rs.html#item-struct-LlmRequestDefaults-45">LlmRequestDefaults</a>,
+}
+
+<span class="rs-kw">impl</span> std::fmt::<span class="rs-type">Debug</span> <span class="rs-kw">for</span> <a class="symbol-link rs-type" href="eos-llm-client--src-client-rs.html#item-struct-ConfiguredLlmClient-85">ConfiguredLlmClient</a> {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-llm-client--src-client-rs.html#method-fmt-93">fmt</a>(&amp;<span class="rs-self">self</span>, f: &amp;<span class="rs-kw">mut</span> std::fmt::<span class="rs-type">Formatter</span>&lt;&#x27;_&gt;) -&gt; std::fmt::<span class="rs-type">Result</span> {
+        f.debug_struct(&quot;<a class="symbol-link rs-type" href="eos-llm-client--src-client-rs.html#item-struct-ConfiguredLlmClient-85">ConfiguredLlmClient</a>&quot;)
+            .field(&quot;defaults&quot;, &amp;<span class="rs-self">self</span>.defaults)
+            .finish_non_exhaustive()
+    }
+}
+
+<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-llm-client--src-client-rs.html#item-struct-ConfiguredLlmClient-85">ConfiguredLlmClient</a> {
+    <span class="rs-comment">/// Wrap a concrete provider client with request defaults.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-llm-client--src-client-rs.html#method-new-56">new</a>(inner: <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <a class="symbol-link rs-type" href="eos-llm-client--src-client-rs.html#item-trait-LlmClient-28">LlmClient</a>&gt;, defaults: <a class="symbol-link rs-type" href="eos-llm-client--src-client-rs.html#item-struct-LlmRequestDefaults-45">LlmRequestDefaults</a>) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">Self</span> { inner, defaults }
+    }
+
+    <span class="rs-comment">/// Borrow configured request defaults.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-llm-client--src-client-rs.html#method-defaults-107">defaults</a>(&amp;<span class="rs-self">self</span>) -&gt; &amp;<a class="symbol-link rs-type" href="eos-llm-client--src-client-rs.html#item-struct-LlmRequestDefaults-45">LlmRequestDefaults</a> {
+        &amp;<span class="rs-self">self</span>.defaults
+    }
+}
+
+#[async_trait::async_trait]
+<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-llm-client--src-client-rs.html#item-trait-LlmClient-28">LlmClient</a> <span class="rs-kw">for</span> <a class="symbol-link rs-type" href="eos-llm-client--src-client-rs.html#item-struct-ConfiguredLlmClient-85">ConfiguredLlmClient</a> {
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-llm-client--src-client-rs.html#method-stream-message-36">stream_message</a>(&amp;<span class="rs-self">self</span>, request: <a class="symbol-link rs-type" href="eos-llm-client--src-types-rs.html#item-struct-LlmRequest-113">LlmRequest</a>) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-llm-client--src-client-rs.html#item-type-LlmStream-22">LlmStream</a>, <a class="symbol-link rs-type" href="eos-llm-client--src-error-rs.html#item-struct-ProviderError-29">ProviderError</a>&gt; {
+        <span class="rs-self">self</span>.inner
+            .<a class="symbol-link rs-fn" href="eos-llm-client--src-client-rs.html#method-stream-message-36">stream_message</a>(<span class="rs-self">self</span>.defaults.<a class="symbol-link rs-fn" href="eos-llm-client.html#method-apply-105">apply</a>(request))
+            .<span class="rs-kw">await</span>
+    }
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-llm-client--src-client-rs.html#item-fn-reasoning-effort-from-kwargs-123">reasoning_effort_from_kwargs</a>(kwargs: &amp;eos_types::<span class="rs-type">JsonObject</span>) -&gt; <span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-llm-client--src-types-rs.html#item-enum-ReasoningEffort-85">ReasoningEffort</a>&gt; {
+    <span class="rs-kw">let</span> raw = kwargs
+        .get(&quot;reasoning_effort&quot;)
+        .or_else(|| kwargs.get(&quot;effort&quot;))
+        .and_then(<span class="rs-type">Value</span>::as_str)
+        .or_else(|| {
+            kwargs
+                .get(&quot;reasoning&quot;)
+                .and_then(|reasoning| reasoning.get(&quot;effort&quot;))
+                .and_then(<span class="rs-type">Value</span>::as_str)
+        })?;
+    <a class="symbol-link rs-fn" href="eos-llm-client--src-client-rs.html#item-fn-parse-reasoning-effort-137">parse_reasoning_effort</a>(raw)
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-llm-client--src-client-rs.html#item-fn-parse-reasoning-effort-137">parse_reasoning_effort</a>(raw: &amp;str) -&gt; <span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-llm-client--src-types-rs.html#item-enum-ReasoningEffort-85">ReasoningEffort</a>&gt; {
+    <span class="rs-kw">match</span> raw.trim().to_ascii_lowercase().replace(&#x27;-&#x27;, &quot;_&quot;).as_str() {
+        &quot;minimal&quot; =&gt; <span class="rs-type">Some</span>(<a class="symbol-link rs-type" href="eos-llm-client--src-types-rs.html#item-enum-ReasoningEffort-85">ReasoningEffort</a>::<span class="rs-type">Minimal</span>),
+        &quot;low&quot; =&gt; <span class="rs-type">Some</span>(<a class="symbol-link rs-type" href="eos-llm-client--src-types-rs.html#item-enum-ReasoningEffort-85">ReasoningEffort</a>::<span class="rs-type">Low</span>),
+        &quot;medium&quot; =&gt; <span class="rs-type">Some</span>(<a class="symbol-link rs-type" href="eos-llm-client--src-types-rs.html#item-enum-ReasoningEffort-85">ReasoningEffort</a>::<span class="rs-type">Medium</span>),
+        &quot;high&quot; =&gt; <span class="rs-type">Some</span>(<a class="symbol-link rs-type" href="eos-llm-client--src-types-rs.html#item-enum-ReasoningEffort-85">ReasoningEffort</a>::<span class="rs-type">High</span>),
+        _ =&gt; <span class="rs-type">None</span>,
+    }
+}
+
+<span class="rs-comment">/// Build a concrete endpoint `Url` from a base url and a path suffix, parsing</span>
+<span class="rs-comment">/// (not merely string-concatenating) so a malformed base fails fast as the outer</span>
+<span class="rs-comment">/// `Err` of `stream_message` (`api-parse-dont-validate`).</span>
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-llm-client--src-client-rs.html#item-fn-build-endpoint-147">build_endpoint</a>(base_url: &amp;str, path: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;reqwest::<span class="rs-type">Url</span>, <a class="symbol-link rs-type" href="eos-llm-client--src-error-rs.html#item-struct-ProviderError-29">ProviderError</a>&gt; {
+    <span class="rs-kw">let</span> trimmed = base_url.trim_end_matches(&#x27;/&#x27;);
+    reqwest::<span class="rs-type">Url</span>::<a class="symbol-link rs-fn" href="eos-llm-client--src-events-rs.html#method-parse-70">parse</a>(&amp;format!(&quot;{trimmed}{path}&quot;))
+        .map_err(|e| <a class="symbol-link rs-type" href="eos-llm-client--src-error-rs.html#item-struct-ProviderError-29">ProviderError</a>::<a class="symbol-link rs-fn" href="eos-llm-client--src-error-rs.html#method-request-96">request</a>(format!(&quot;invalid base url: {e}&quot;)))
+}
+
+<span class="rs-comment">/// Capture the provider request-id (`request-id` or `x-request-id`) from the</span>
+<span class="rs-comment">/// response headers **before** the body is consumed, so it survives the</span>
+<span class="rs-comment">/// streaming error path (invariant §8.8).</span>
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-llm-client--src-client-rs.html#item-fn-extract-request-id-156">extract_request_id</a>(headers: &amp;reqwest::header::<span class="rs-type">HeaderMap</span>) -&gt; <span class="rs-type">Option</span>&lt;<span class="rs-type">String</span>&gt; {
+    headers
+        .get(&quot;request-id&quot;)
+        .or_else(|| headers.get(&quot;x-request-id&quot;))
+        .and_then(|v| v.to_str().ok())
+        .map(str::to_owned)
+}
+
+<span class="rs-comment">/// Truncate a provider error body for inclusion in a [`ProviderError`] message</span>
+<span class="rs-comment">/// (bounded so a large HTML error page does not bloat the error).</span>
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-llm-client--src-client-rs.html#item-fn-error-detail-167">error_detail</a>(body: &amp;str) -&gt; <span class="rs-type">String</span> {
+    <span class="rs-kw">let</span> trimmed = body.trim();
+    <span class="rs-kw">if</span> trimmed.is_empty() {
+        <span class="rs-kw">return</span> &quot;no response body&quot;.to_owned();
+    }
+    trimmed.chars().take(500).collect()
+}
+
+<span class="rs-comment">/// Open one streaming attempt — the shared transport/SSE plumbing for both</span>
+<span class="rs-comment">/// providers. POST the request, capture the request-id **before** the body is</span>
+<span class="rs-comment">/// consumed (§8.8), map a non-2xx status, stamp the request-id onto mid-stream</span>
+<span class="rs-comment">/// transport errors, then decode the SSE frames via the provider-specific</span>
+<span class="rs-comment">/// `decode` closure. This is plumbing, not projection: the per-provider encode</span>
+<span class="rs-comment">/// and SSE→event mapping stay under `clients/`.</span>
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">async</span> <span class="rs-kw">fn</span> open_stream&lt;<span class="rs-type">D</span>, <span class="rs-type">R</span>&gt;(
+    http: reqwest::<span class="rs-type">Client</span>,
+    url: reqwest::<span class="rs-type">Url</span>,
+    headers: <span class="rs-type">HeaderMap</span>,
+    body: <span class="rs-type">Bytes</span>,
+    decode: <span class="rs-type">D</span>,
+) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-llm-client--src-client-rs.html#item-type-LlmStream-22">LlmStream</a>, <a class="symbol-link rs-type" href="eos-llm-client--src-error-rs.html#item-struct-ProviderError-29">ProviderError</a>&gt;
+<span class="rs-kw">where</span>
+    <span class="rs-type">D</span>: <span class="rs-type">FnOnce</span>(<span class="rs-type">BoxStream</span>&lt;&#x27;<span class="rs-kw">static</span>, <span class="rs-type">Result</span>&lt;<span class="rs-type">String</span>, <a class="symbol-link rs-type" href="eos-llm-client--src-error-rs.html#item-struct-ProviderError-29">ProviderError</a>&gt;&gt;, <span class="rs-type">Option</span>&lt;<span class="rs-type">String</span>&gt;) -&gt; <span class="rs-type">R</span>,
+    <span class="rs-type">R</span>: <span class="rs-type">Stream</span>&lt;<span class="rs-type">Item</span> = <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-llm-client--src-events-rs.html#item-enum-LlmStreamEvent-15">LlmStreamEvent</a>, <a class="symbol-link rs-type" href="eos-llm-client--src-error-rs.html#item-struct-ProviderError-29">ProviderError</a>&gt;&gt; + <span class="rs-type">Send</span> + &#x27;<span class="rs-kw">static</span>,
+{
+    <span class="rs-kw">let</span> response = http
+        .post(url)
+        .headers(headers)
+        .body(body)
+        .send()
+        .<span class="rs-kw">await</span>
+        .map_err(|e| <a class="symbol-link rs-type" href="eos-llm-client--src-error-rs.html#item-struct-ProviderError-29">ProviderError</a>::<a class="symbol-link rs-fn" href="eos-llm-client--src-error-rs.html#method-transport-74">transport</a>(format!(&quot;request send failed: {e}&quot;)))?;
+
+    <span class="rs-kw">let</span> request_id = <a class="symbol-link rs-fn" href="eos-llm-client--src-client-rs.html#item-fn-extract-request-id-156">extract_request_id</a>(response.headers());
+    <span class="rs-kw">let</span> status = response.status();
+    <span class="rs-kw">if</span> !status.is_success() {
+        <span class="rs-kw">let</span> detail = response.<a class="symbol-link rs-fn" href="eos-llm-client--src-retry-rs.html#item-fn-text-184">text</a>().<span class="rs-kw">await</span>.unwrap_or_default();
+        <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-llm-client--src-error-rs.html#item-struct-ProviderError-29">ProviderError</a>::<a class="symbol-link rs-fn" href="eos-llm-client--src-error-rs.html#method-from-status-49">from_status</a>(
+            status.as_u16(),
+            request_id,
+            <a class="symbol-link rs-fn" href="eos-llm-client--src-client-rs.html#item-fn-error-detail-167">error_detail</a>(&amp;detail),
+        ));
+    }
+
+    <span class="rs-comment">// Stamp the captured request-id onto mid-stream transport errors too, so it</span>
+    <span class="rs-comment">// survives the streaming error path (§8.8), not just decode errors.</span>
+    <span class="rs-kw">let</span> rid = request_id.clone();
+    <span class="rs-kw">let</span> byte_stream = response.bytes_stream().map(<span class="rs-kw">move</span> |chunk| {
+        chunk.map_err(|e| {
+            <span class="rs-kw">let</span> <span class="rs-kw">mut</span> err = <a class="symbol-link rs-type" href="eos-llm-client--src-error-rs.html#item-struct-ProviderError-29">ProviderError</a>::<a class="symbol-link rs-fn" href="eos-llm-client--src-error-rs.html#method-transport-74">transport</a>(format!(&quot;stream read failed: {e}&quot;));
+            err.request_id = rid.clone();
+            err
+        })
+    });
+    <span class="rs-type">Ok</span>(<span class="rs-type">Box</span>::pin(<a class="symbol-link rs-fn" href="eos-llm-client--src-error-rs.html#method-decode-85">decode</a>(
+        <a class="symbol-link rs-fn" href="eos-llm-client--src-sse-rs.html#item-fn-frame-stream-139">frame_stream</a>(byte_stream).boxed(),
+        request_id,
+    )))
+}
+
+#[cfg(test)]
+<span class="rs-kw">mod</span> tests {
+    #![allow(clippy::unwrap_used)]
+    <span class="rs-kw">use</span> std::sync::<span class="rs-type">Arc</span>;
+
+    <span class="rs-kw">use</span> futures::<span class="rs-type">StreamExt</span>;
+    <span class="rs-kw">use</span> serde_json::json;
+
+    <span class="rs-kw">use</span> <span class="rs-kw">super</span>::*;
+    <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::events::<a class="symbol-link rs-type" href="eos-llm-client--src-events-rs.html#item-enum-LlmStreamEvent-15">LlmStreamEvent</a>;
+
+    <span class="rs-comment">/// A scripted client that replays a fixed event sequence — proves the trait</span>
+    <span class="rs-comment">/// is object-safe behind `Arc&lt;dyn LlmClient&gt;` and substitutable.</span>
+    #[derive(<span class="rs-type">Debug</span>)]
+    <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-llm-client--src-client-rs.html#item-struct-MockLlmClient-240">MockLlmClient</a> {
+        events: <span class="rs-type">Vec</span>&lt;<a class="symbol-link rs-type" href="eos-llm-client--src-events-rs.html#item-enum-LlmStreamEvent-15">LlmStreamEvent</a>&gt;,
+    }
+
+    #[derive(<span class="rs-type">Debug</span>)]
+    <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-llm-client--src-client-rs.html#item-struct-CaptureClient-247">CaptureClient</a> {
+        request: std::sync::<span class="rs-type">Mutex</span>&lt;<span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-llm-client--src-types-rs.html#item-struct-LlmRequest-113">LlmRequest</a>&gt;&gt;,
+    }
+
+    #[async_trait::async_trait]
+    <span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-llm-client--src-client-rs.html#item-trait-LlmClient-28">LlmClient</a> <span class="rs-kw">for</span> <a class="symbol-link rs-type" href="eos-llm-client--src-client-rs.html#item-struct-CaptureClient-247">CaptureClient</a> {
+        <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-llm-client--src-client-rs.html#method-stream-message-36">stream_message</a>(&amp;<span class="rs-self">self</span>, request: <a class="symbol-link rs-type" href="eos-llm-client--src-types-rs.html#item-struct-LlmRequest-113">LlmRequest</a>) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-llm-client--src-client-rs.html#item-type-LlmStream-22">LlmStream</a>, <a class="symbol-link rs-type" href="eos-llm-client--src-error-rs.html#item-struct-ProviderError-29">ProviderError</a>&gt; {
+            *<span class="rs-self">self</span>.request.lock().unwrap() = <span class="rs-type">Some</span>(request);
+            <span class="rs-type">Ok</span>(<span class="rs-type">Box</span>::pin(futures::stream::empty()))
+        }
+    }
+
+    #[tokio::test]
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-llm-client--src-client-rs.html#item-fn-configured-client-applies-model-defaults-260">configured_client_applies_model_defaults</a>() {
+        <span class="rs-kw">let</span> capture = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-llm-client--src-client-rs.html#method-new-56">new</a>(<a class="symbol-link rs-type" href="eos-llm-client--src-client-rs.html#item-struct-CaptureClient-247">CaptureClient</a> {
+            request: std::sync::<span class="rs-type">Mutex</span>::<a class="symbol-link rs-fn" href="eos-llm-client--src-client-rs.html#method-new-56">new</a>(<span class="rs-type">None</span>),
+        });
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> kwargs = eos_types::<span class="rs-type">JsonObject</span>::<a class="symbol-link rs-fn" href="eos-llm-client--src-client-rs.html#method-new-56">new</a>();
+        kwargs.insert(&quot;reasoning_effort&quot;.to_owned(), json!(&quot;medium&quot;));
+        <span class="rs-kw">let</span> client = <a class="symbol-link rs-type" href="eos-llm-client--src-client-rs.html#item-struct-ConfiguredLlmClient-85">ConfiguredLlmClient</a>::<a class="symbol-link rs-fn" href="eos-llm-client--src-client-rs.html#method-new-56">new</a>(
+            capture.clone(),
+            <a class="symbol-link rs-type" href="eos-llm-client--src-client-rs.html#item-struct-LlmRequestDefaults-45">LlmRequestDefaults</a>::<a class="symbol-link rs-fn" href="eos-llm-client--src-client-rs.html#method-from-model-kwargs-65">from_model_kwargs</a>(&quot;gpt-5.5&quot;, &amp;kwargs),
+        );
+
+        <span class="rs-kw">let</span> stream = client
+            .<a class="symbol-link rs-fn" href="eos-llm-client--src-client-rs.html#method-stream-message-36">stream_message</a>(<a class="symbol-link rs-type" href="eos-llm-client--src-types-rs.html#item-struct-LlmRequest-113">LlmRequest</a>::<a class="symbol-link rs-fn" href="eos-llm-client--src-types-rs.html#method-builder-140">builder</a>(&quot;&quot;).<a class="symbol-link rs-fn" href="eos-llm-client--src-types-rs.html#method-build-210">build</a>())
+            .<span class="rs-kw">await</span>
+            .unwrap();
+        drop(stream);
+
+        <span class="rs-kw">let</span> request = capture.request.lock().unwrap().clone().unwrap();
+        assert_eq!(request.model, &quot;gpt-5.5&quot;);
+        assert_eq!(request.reasoning_effort, <span class="rs-type">Some</span>(<a class="symbol-link rs-type" href="eos-llm-client--src-types-rs.html#item-enum-ReasoningEffort-85">ReasoningEffort</a>::<span class="rs-type">Medium</span>));
+    }
+
+    #[async_trait::async_trait]
+    <span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-llm-client--src-client-rs.html#item-trait-LlmClient-28">LlmClient</a> <span class="rs-kw">for</span> <a class="symbol-link rs-type" href="eos-llm-client--src-client-rs.html#item-struct-MockLlmClient-240">MockLlmClient</a> {
+        <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-llm-client--src-client-rs.html#method-stream-message-36">stream_message</a>(&amp;<span class="rs-self">self</span>, _request: <a class="symbol-link rs-type" href="eos-llm-client--src-types-rs.html#item-struct-LlmRequest-113">LlmRequest</a>) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-llm-client--src-client-rs.html#item-type-LlmStream-22">LlmStream</a>, <a class="symbol-link rs-type" href="eos-llm-client--src-error-rs.html#item-struct-ProviderError-29">ProviderError</a>&gt; {
+            <span class="rs-kw">let</span> events = <span class="rs-self">self</span>.events.clone();
+            <span class="rs-type">Ok</span>(<span class="rs-type">Box</span>::pin(futures::stream::iter(events.into_iter().map(<span class="rs-type">Ok</span>))))
+        }
+    }
+
+    #[tokio::test]
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-llm-client--src-client-rs.html#item-fn-mock-client-is-object-safe-and-streams-291">mock_client_is_object_safe_and_streams</a>() {
+        <span class="rs-kw">let</span> client: <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <a class="symbol-link rs-type" href="eos-llm-client--src-client-rs.html#item-trait-LlmClient-28">LlmClient</a>&gt; = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-llm-client--src-client-rs.html#method-new-56">new</a>(<a class="symbol-link rs-type" href="eos-llm-client--src-client-rs.html#item-struct-MockLlmClient-240">MockLlmClient</a> {
+            events: vec![<a class="symbol-link rs-type" href="eos-llm-client--src-events-rs.html#item-enum-LlmStreamEvent-15">LlmStreamEvent</a>::<span class="rs-type">AssistantTextDelta</span> { text: &quot;hi&quot;.into() }],
+        });
+        <span class="rs-kw">let</span> stream = client
+            .<a class="symbol-link rs-fn" href="eos-llm-client--src-client-rs.html#method-stream-message-36">stream_message</a>(<a class="symbol-link rs-type" href="eos-llm-client--src-types-rs.html#item-struct-LlmRequest-113">LlmRequest</a>::<a class="symbol-link rs-fn" href="eos-llm-client--src-types-rs.html#method-builder-140">builder</a>(&quot;m&quot;).<a class="symbol-link rs-fn" href="eos-llm-client--src-types-rs.html#method-build-210">build</a>())
+            .<span class="rs-kw">await</span>
+            .unwrap();
+        <span class="rs-kw">let</span> collected: <span class="rs-type">Vec</span>&lt;_&gt; = stream.collect().<span class="rs-kw">await</span>;
+        assert_eq!(collected.len(), 1);
+        assert!(matches!(
+            collected[0],
+            <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-llm-client--src-events-rs.html#item-enum-LlmStreamEvent-15">LlmStreamEvent</a>::<span class="rs-type">AssistantTextDelta</span> { .. })
+        ));
+    }
+}
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
   <script src="../assets/inventory.js"></script>
 </body>
 </html>

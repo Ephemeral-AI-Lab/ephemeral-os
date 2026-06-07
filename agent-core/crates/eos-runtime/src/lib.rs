@@ -23,6 +23,7 @@
 #![warn(missing_docs)]
 
 mod agent_runner;
+mod cancel;
 mod entry;
 pub mod observability;
 mod plugin_tools;
@@ -34,6 +35,7 @@ mod tool_context;
 #[path = "../tests/unit/mod.rs"]
 mod tests;
 
+pub use cancel::{cancel_agent_core_user_request, CancelReport};
 pub use entry::{run_request, RequestOutcome};
 pub use request_input::RequestRunInput;
 pub use runtime_services::{

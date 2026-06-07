@@ -4,19 +4,17 @@
 //! Owned by the request-scoped `AgentRunControlFactory`. It is immutable and
 //! cheap to clone, and holds only the immutable construction dependencies (run
 //! handles, sandbox transport, completion poll interval) — never a per-agent
-//! ledger. Each `create` mints a fresh per-run supervisor; `spawn_heartbeat`
-//! starts that run's command-completion heartbeat against the run's own
-//! notification service.
+//! ledger. Each `create` mints a fresh per-run supervisor whose
+//! [`CommandSessionLane`](super::lanes::CommandSessionLane) spawns this run's
+//! command-completion heartbeat against the run's own notification service.
 
 use std::sync::Arc;
 use std::time::Duration;
 
 use eos_sandbox_port::SandboxTransport;
-use eos_tools::NotificationSink;
-use tokio::task::JoinHandle;
+use eos_types::AgentRunId;
 
 use super::handle::BackgroundSupervisorHandle;
-use super::heartbeat::spawn_command_completion_heartbeat;
 use crate::notifications::NotificationService;
 use crate::runtime::AgentRunControlFactory;
 use crate::EngineRunHandles;
@@ -52,12 +50,28 @@ impl BackgroundSupervisorFactory {
         }
     }
 
-    /// Mint a fresh per-agent-run background supervisor handle with an empty
-    /// ledger. `control_factory` is the request-scoped factory clone the handle
-    /// uses to give each subagent its own ephemeral control (spec §8.1/§11.3).
+    /// Mint a fresh per-agent-run background supervisor handle (empty ledger).
+    /// `owner_agent_run_id` is the run that owns the handle (`== caller_id` for
+    /// daemon calls); `notifications` is this run's queue (the handle wraps it so
+    /// background completions surface to the owning run, spec §8.4); and
+    /// `control_factory` lets `spawn` give each subagent its own ephemeral control
+    /// (spec §8.1/§11.3). Must be called within a Tokio runtime — the command lane
+    /// spawns this run's heartbeat.
     #[must_use]
-    pub fn create(&self, control_factory: AgentRunControlFactory) -> BackgroundSupervisorHandle {
-        BackgroundSupervisorHandle::new(self.handles.clone(), self.transport.clone(), control_factory)
+    pub fn create(
+        &self,
+        owner_agent_run_id: AgentRunId,
+        notifications: NotificationService,
+        control_factory: AgentRunControlFactory,
+    ) -> BackgroundSupervisorHandle {
+        BackgroundSupervisorHandle::new(
+            owner_agent_run_id,
+            self.handles.clone(),
+            self.transport.clone(),
+            self.completion_poll_interval,
+            notifications,
+            control_factory,
+        )
     }
 
     /// The durable agent-run store, used by a control's finalization to finish a
@@ -65,24 +79,5 @@ impl BackgroundSupervisorFactory {
     #[must_use]
     pub(crate) fn agent_run_store(&self) -> Arc<dyn eos_state::AgentRunStore> {
         self.handles.agent_run_store.clone()
-    }
-
-    /// Spawn this run's command-completion heartbeat. The returned join handle is
-    /// owned (and aborted on drop) by the run's `AgentRunControl`; the heartbeat
-    /// enqueues completions into the run's own `notifications` queue — the same
-    /// instance the query loop drains.
-    #[must_use]
-    pub(crate) fn spawn_heartbeat(
-        &self,
-        background: &BackgroundSupervisorHandle,
-        notifications: &NotificationService,
-    ) -> JoinHandle<()> {
-        let sink: Arc<dyn NotificationSink> = Arc::new(notifications.clone());
-        spawn_command_completion_heartbeat(
-            background.inner(),
-            sink,
-            self.transport.clone(),
-            self.completion_poll_interval,
-        )
     }
 }

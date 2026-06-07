@@ -8,8 +8,16 @@
 </head>
 <body>
   <header>
-    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
-    <h1>eos-daemon File Inventory</h1>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>eos-daemon File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS/sandbox &amp;&amp; cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
   </header>
   <a class="back-link" href="../index.html">sandbox</a>
 <section class="summary">
@@ -47,169 +55,818 @@
       <span>1 methods</span>
     </div>
   </div>
-  <div class="items"><div class="group-label">File-Owned Types</div><article class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct TreeResourceStats pub(crate) pub(crate) struct TreeResourceStats crates/eos-daemon/src/runtime/response_timings.rs exists f64 bytes f64 file_count f64 dir_count f64 entry_count f64 truncated f64 ">
+  <div class="items"><div class="group-label">File-Owned Types</div><article id="item-struct-TreeResourceStats-12" class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct TreeResourceStats pub(crate) pub(crate) struct TreeResourceStats crates/eos-daemon/src/runtime/response_timings.rs exists f64 bytes f64 file_count f64 dir_count f64 entry_count f64 truncated f64 ">
   <div class="item-head">
     <span class="kind">struct</span>
     <h3>TreeResourceStats</h3>
     <span class="visibility">pub(crate)</span>
   </div>
-  <code class="signature">pub(crate) struct TreeResourceStats</code>
-  <div class="tags"></div>
-  <h4>Fields</h4><table><tbody><tr><td>private</td><td>exists</td><td><code>f64</code></td></tr><tr><td>private</td><td>bytes</td><td><code>f64</code></td></tr><tr><td>private</td><td>file_count</td><td><code>f64</code></td></tr><tr><td>private</td><td>dir_count</td><td><code>f64</code></td></tr><tr><td>private</td><td>entry_count</td><td><code>f64</code></td></tr><tr><td>private</td><td>truncated</td><td><code>f64</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr><td>constructor</td><td>from_ephemeral</td><td><code>pub(crate) fn from_ephemeral (stats : &amp; eos_ephemeral_workspace :: TreeResourceStats) -&gt; Self</code></td></tr></tbody></table>
+  <code class="signature">pub(crate) struct <a class="symbol-link" href="eos-daemon--src-runtime-response-timings-rs.html#item-struct-TreeResourceStats-12">TreeResourceStats</a></code>
+  <div class="tags"><span>derive: Clone</span><span>derive: Copy</span><span>derive: Debug</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>exists</td><td><code>f64</code></td></tr><tr><td>private</td><td>bytes</td><td><code>f64</code></td></tr><tr><td>private</td><td>file_count</td><td><code>f64</code></td></tr><tr><td>private</td><td>dir_count</td><td><code>f64</code></td></tr><tr><td>private</td><td>entry_count</td><td><code>f64</code></td></tr><tr><td>private</td><td>truncated</td><td><code>f64</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-from-ephemeral-23"><td>constructor</td><td>from_ephemeral</td><td><code>pub(crate) fn <a class="symbol-link" href="eos-daemon--src-runtime-response-timings-rs.html#method-from-ephemeral-23">from_ephemeral</a> (stats : &amp; eos_ephemeral_workspace :: <a class="symbol-link" href="eos-daemon--src-runtime-response-timings-rs.html#item-struct-TreeResourceStats-12">TreeResourceStats</a>) -&gt; Self</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-response-timings-rs.html#method-from-ephemeral-23">from_ephemeral</a>(stats: &amp;eos_ephemeral_workspace::<a class="symbol-link rs-type" href="eos-daemon--src-runtime-response-timings-rs.html#item-struct-TreeResourceStats-12">TreeResourceStats</a>) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-kw">let</span> file_entries = stats.files.saturating_add(stats.symlinks);
+        <span class="rs-kw">let</span> entry_count = file_entries.saturating_add(stats.dirs);
+        <span class="rs-self">Self</span> {
+            exists: <span class="rs-kw">if</span> entry_count &gt; 0 { 1.0 } <span class="rs-kw">else</span> { 0.0 },
+            bytes: <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-response-timings-rs.html#item-fn-u64-to-f64-saturating-297">u64_to_f64_saturating</a>(stats.bytes),
+            file_count: <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-response-timings-rs.html#item-fn-u64-to-f64-saturating-297">u64_to_f64_saturating</a>(file_entries),
+            dir_count: <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-response-timings-rs.html#item-fn-u64-to-f64-saturating-297">u64_to_f64_saturating</a>(stats.dirs),
+            entry_count: <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-response-timings-rs.html#item-fn-u64-to-f64-saturating-297">u64_to_f64_saturating</a>(entry_count),
+            truncated: 0.0,
+        }
+    }
+</code></pre>
+</details></td></tr></tbody></table>
+
   <p class="source">crates/eos-daemon/src/runtime/response_timings.rs:12</p>
-</article><div class="group-label">Standalone Functions</div><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn attach_runner_shell_fields pub(crate) pub(crate) fn attach_runner_shell_fields (response : &amp; mut Value , runner : &amp; RunResult) crates/eos-daemon/src/runtime/response_timings.rs  ">
+</article><div class="group-label">Standalone Functions</div><article id="item-fn-attach-runner-shell-fields-37" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn attach_runner_shell_fields pub(crate) pub(crate) fn attach_runner_shell_fields (response : &amp; mut Value , runner : &amp; RunResult) crates/eos-daemon/src/runtime/response_timings.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>attach_runner_shell_fields</h3>
     <span class="visibility">pub(crate)</span>
   </div>
-  <code class="signature">pub(crate) fn attach_runner_shell_fields (response : &amp; mut Value , runner : &amp; RunResult)</code>
+  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-daemon--src-runtime-response-timings-rs.html#item-fn-attach-runner-shell-fields-37">attach_runner_shell_fields</a> (response : &amp; mut Value , runner : &amp; RunResult)</code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-response-timings-rs.html#item-fn-attach-runner-shell-fields-37">attach_runner_shell_fields</a>(response: &amp;<span class="rs-kw">mut</span> <span class="rs-type">Value</span>, runner: &amp;<span class="rs-type">RunResult</span>) {
+    response[&quot;exit_code&quot;] = runner
+        .tool_result
+        .<a class="symbol-link rs-fn" href="eos-daemon--src-services-occ-service-cache-rs.html#method-get-87">get</a>(&quot;exit_code&quot;)
+        .cloned()
+        .unwrap_or_else(|| json!(runner.exit_code));
+    response[&quot;stdout&quot;] = runner
+        .tool_result
+        .<a class="symbol-link rs-fn" href="eos-daemon--src-services-occ-service-cache-rs.html#method-get-87">get</a>(&quot;stdout&quot;)
+        .cloned()
+        .unwrap_or_else(|| json!(&quot;&quot;));
+    response[&quot;stderr&quot;] = runner
+        .tool_result
+        .<a class="symbol-link rs-fn" href="eos-daemon--src-services-occ-service-cache-rs.html#method-get-87">get</a>(&quot;stderr&quot;)
+        .cloned()
+        .unwrap_or_else(|| json!(&quot;&quot;));
+    response[&quot;warnings&quot;] = runner
+        .tool_result
+        .<a class="symbol-link rs-fn" href="eos-daemon--src-services-occ-service-cache-rs.html#method-get-87">get</a>(&quot;warnings&quot;)
+        .cloned()
+        .unwrap_or_else(|| json!([]));
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-daemon/src/runtime/response_timings.rs:37</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn merge_runner_timings pub(crate) pub(crate) fn merge_runner_timings (timings : &amp; mut serde_json :: Map &lt; String , Value &gt; , runner : &amp; RunResult ,) crates/eos-daemon/src/runtime/response_timings.rs  ">
+</article><article id="item-fn-merge-runner-timings-60" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn merge_runner_timings pub(crate) pub(crate) fn merge_runner_timings (timings : &amp; mut serde_json :: Map &lt; String , Value &gt; , runner : &amp; RunResult ,) crates/eos-daemon/src/runtime/response_timings.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>merge_runner_timings</h3>
     <span class="visibility">pub(crate)</span>
   </div>
-  <code class="signature">pub(crate) fn merge_runner_timings (timings : &amp; mut serde_json :: Map &lt; String , Value &gt; , runner : &amp; RunResult ,)</code>
+  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-daemon--src-runtime-response-timings-rs.html#item-fn-merge-runner-timings-60">merge_runner_timings</a> (timings : &amp; mut serde_json :: Map &lt; String , Value &gt; , runner : &amp; RunResult ,)</code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-response-timings-rs.html#item-fn-merge-runner-timings-60">merge_runner_timings</a>(
+    timings: &amp;<span class="rs-kw">mut</span> serde_json::<span class="rs-type">Map</span>&lt;<span class="rs-type">String</span>, <span class="rs-type">Value</span>&gt;,
+    runner: &amp;<span class="rs-type">RunResult</span>,
+) {
+    <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(runner_timings) = runner.tool_result.<a class="symbol-link rs-fn" href="eos-daemon--src-services-occ-service-cache-rs.html#method-get-87">get</a>(&quot;timings&quot;).and_then(<span class="rs-type">Value</span>::as_object) {
+        <span class="rs-kw">for</span> (key, value) <span class="rs-kw">in</span> runner_timings {
+            timings.entry(key.clone()).or_insert_with(|| value.clone());
+        }
+    }
+    <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(value) = timings.<a class="symbol-link rs-fn" href="eos-daemon--src-services-occ-service-cache-rs.html#method-get-87">get</a>(&quot;workspace.mount_s&quot;).cloned() {
+        timings
+            .entry(&quot;command_exec.mount_workspace_s&quot;.to_owned())
+            .or_insert(value);
+    }
+    <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(value) = timings.<a class="symbol-link rs-fn" href="eos-daemon--src-services-occ-service-cache-rs.html#method-get-87">get</a>(&quot;workspace.tool_s&quot;).cloned() {
+        timings
+            .entry(&quot;command_exec.run_command_s&quot;.to_owned())
+            .or_insert(value);
+    }
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-daemon/src/runtime/response_timings.rs:60</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn timing_map pub(crate) pub(crate) fn timing_map (timings : serde_json :: Map &lt; String , Value &gt;) -&gt; WorkspaceTimings crates/eos-daemon/src/runtime/response_timings.rs  ">
+</article><article id="item-fn-timing-map-81" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn timing_map pub(crate) pub(crate) fn timing_map (timings : serde_json :: Map &lt; String , Value &gt;) -&gt; WorkspaceTimings crates/eos-daemon/src/runtime/response_timings.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>timing_map</h3>
     <span class="visibility">pub(crate)</span>
   </div>
-  <code class="signature">pub(crate) fn timing_map (timings : serde_json :: Map &lt; String , Value &gt;) -&gt; WorkspaceTimings</code>
+  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-daemon--src-runtime-response-timings-rs.html#item-fn-timing-map-81">timing_map</a> (timings : serde_json :: Map &lt; String , Value &gt;) -&gt; WorkspaceTimings</code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-response-timings-rs.html#item-fn-timing-map-81">timing_map</a>(timings: serde_json::<span class="rs-type">Map</span>&lt;<span class="rs-type">String</span>, <span class="rs-type">Value</span>&gt;) -&gt; <span class="rs-type">WorkspaceTimings</span> {
+    timings.into_iter().collect()
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-daemon/src/runtime/response_timings.rs:81</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn guarded_changeset_response pub(crate) pub(crate) fn guarded_changeset_response (verb : &amp; str , result : &amp; ChangesetResult , mut timings : serde_json :: Map &lt; String , Value &gt; , total_start : Instant , applied_edits : Option &lt; i64 &gt; ,) -&gt; Value crates/eos-daemon/src/runtime/response_timings.rs  ">
+</article><article id="item-fn-guarded-changeset-response-85" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn guarded_changeset_response pub(crate) pub(crate) fn guarded_changeset_response (verb : &amp; str , result : &amp; ChangesetResult , mut timings : serde_json :: Map &lt; String , Value &gt; , total_start : Instant , applied_edits : Option &lt; i64 &gt; ,) -&gt; Value crates/eos-daemon/src/runtime/response_timings.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>guarded_changeset_response</h3>
     <span class="visibility">pub(crate)</span>
   </div>
-  <code class="signature">pub(crate) fn guarded_changeset_response (verb : &amp; str , result : &amp; ChangesetResult , mut timings : serde_json :: Map &lt; String , Value &gt; , total_start : Instant , applied_edits : Option &lt; i64 &gt; ,) -&gt; Value</code>
+  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-daemon--src-runtime-response-timings-rs.html#item-fn-guarded-changeset-response-85">guarded_changeset_response</a> (verb : &amp; str , result : &amp; ChangesetResult , mut timings : serde_json :: Map &lt; String , Value &gt; , total_start : Instant , applied_edits : Option &lt; i64 &gt; ,) -&gt; Value</code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-response-timings-rs.html#item-fn-guarded-changeset-response-85">guarded_changeset_response</a>(
+    verb: &amp;str,
+    result: &amp;<span class="rs-type">ChangesetResult</span>,
+    <span class="rs-kw">mut</span> timings: serde_json::<span class="rs-type">Map</span>&lt;<span class="rs-type">String</span>, <span class="rs-type">Value</span>&gt;,
+    total_start: <span class="rs-type">Instant</span>,
+    applied_edits: <span class="rs-type">Option</span>&lt;i64&gt;,
+) -&gt; <span class="rs-type">Value</span> {
+    <span class="rs-kw">for</span> (key, value) <span class="rs-kw">in</span> &amp;result.timings {
+        timings.insert(key.clone(), json!(value));
+    }
+    timings.insert(
+        format!(&quot;api.{verb}.total_s&quot;),
+        json!(total_start.elapsed().as_secs_f64()),
+    );
+    <span class="rs-kw">let</span> changed_paths = result.published_paths();
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> changed_path_kinds = serde_json::<span class="rs-type">Map</span>::<a class="symbol-link rs-fn" href="eos-daemon.html#method-new-89">new</a>();
+    <span class="rs-kw">for</span> path <span class="rs-kw">in</span> &amp;changed_paths {
+        changed_path_kinds.insert(path.to_owned(), json!(&quot;write&quot;));
+    }
+    <span class="rs-kw">let</span> conflict = result.first_conflict();
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> response = json!({
+        &quot;success&quot;: result.success(),
+        &quot;workspace&quot;: &quot;ephemeral&quot;,
+        &quot;changed_paths&quot;: changed_paths,
+        &quot;changed_path_kinds&quot;: <span class="rs-type">Value</span>::<span class="rs-type">Object</span>(changed_path_kinds),
+        &quot;mutation_source&quot;: <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-response-timings-rs.html#item-fn-mutation-source-275">mutation_source</a>(verb),
+        &quot;status&quot;: conflict
+            .as_ref()
+            .map_or(&quot;committed&quot;, |file| file.status.wire_str()),
+        &quot;conflict&quot;: conflict.as_ref().map(|file| json!({
+            &quot;reason&quot;: file.status.wire_str(),
+            &quot;conflict_file&quot;: file.path.as_str(),
+            &quot;message&quot;: file.conflict_message(file.status.wire_str()),
+        })),
+        &quot;conflict_reason&quot;: conflict.as_ref().map(|file| {
+            file.conflict_message(file.status.wire_str())
+        }),
+        &quot;error&quot;: null,
+        &quot;timings&quot;: <span class="rs-type">Value</span>::<span class="rs-type">Object</span>(timings),
+    });
+    <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(count) = applied_edits {
+        response[&quot;applied_edits&quot;] = json!(count);
+    }
+    response
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-daemon/src/runtime/response_timings.rs:85</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn resource_timings pub(crate) pub(crate) fn resource_timings (manifest : &amp; Manifest , changed_path_count : usize ,) -&gt; serde_json :: Map &lt; String , Value &gt; crates/eos-daemon/src/runtime/response_timings.rs  ">
+</article><article id="item-fn-resource-timings-131" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn resource_timings pub(crate) pub(crate) fn resource_timings (manifest : &amp; Manifest , changed_path_count : usize ,) -&gt; serde_json :: Map &lt; String , Value &gt; crates/eos-daemon/src/runtime/response_timings.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>resource_timings</h3>
     <span class="visibility">pub(crate)</span>
   </div>
-  <code class="signature">pub(crate) fn resource_timings (manifest : &amp; Manifest , changed_path_count : usize ,) -&gt; serde_json :: Map &lt; String , Value &gt;</code>
+  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-daemon--src-runtime-response-timings-rs.html#item-fn-resource-timings-131">resource_timings</a> (manifest : &amp; Manifest , changed_path_count : usize ,) -&gt; serde_json :: Map &lt; String , Value &gt;</code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-response-timings-rs.html#item-fn-resource-timings-131">resource_timings</a>(
+    manifest: &amp;<span class="rs-type">Manifest</span>,
+    changed_path_count: usize,
+) -&gt; serde_json::<span class="rs-type">Map</span>&lt;<span class="rs-type">String</span>, <span class="rs-type">Value</span>&gt; {
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> timings = serde_json::<span class="rs-type">Map</span>::<a class="symbol-link rs-fn" href="eos-daemon.html#method-new-89">new</a>();
+    timings.insert(
+        &quot;resource.command_exec.changed_path_count&quot;.to_owned(),
+        json!(<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-response-timings-rs.html#item-fn-usize-to-f64-saturating-289">usize_to_f64_saturating</a>(changed_path_count)),
+    );
+    timings.insert(
+        &quot;resource.layer_stack.manifest_depth&quot;.to_owned(),
+        json!(<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-response-timings-rs.html#item-fn-usize-to-f64-saturating-289">usize_to_f64_saturating</a>(manifest.depth())),
+    );
+    timings.insert(
+        &quot;resource.layer_stack.manifest_path_count&quot;.to_owned(),
+        json!(<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-response-timings-rs.html#item-fn-usize-to-f64-saturating-289">usize_to_f64_saturating</a>(manifest.depth())),
+    );
+    <span class="rs-kw">for</span> key <span class="rs-kw">in</span> [
+        &quot;resource.command_exec.run_dir_tree_exists&quot;,
+        &quot;resource.command_exec.run_dir_tree_bytes&quot;,
+        &quot;resource.command_exec.run_dir_tree_file_count&quot;,
+        &quot;resource.command_exec.run_dir_tree_dir_count&quot;,
+        &quot;resource.command_exec.run_dir_tree_entry_count&quot;,
+        &quot;resource.command_exec.run_dir_tree_truncated&quot;,
+        &quot;resource.command_exec.workspace_tree_exists&quot;,
+        &quot;resource.command_exec.workspace_tree_bytes&quot;,
+        &quot;resource.command_exec.workspace_tree_file_count&quot;,
+        &quot;resource.command_exec.workspace_tree_dir_count&quot;,
+        &quot;resource.command_exec.workspace_tree_entry_count&quot;,
+        &quot;resource.command_exec.workspace_tree_truncated&quot;,
+        &quot;resource.command_exec.upperdir_tree_exists&quot;,
+        &quot;resource.command_exec.upperdir_tree_bytes&quot;,
+        &quot;resource.command_exec.upperdir_tree_file_count&quot;,
+        &quot;resource.command_exec.upperdir_tree_dir_count&quot;,
+        &quot;resource.command_exec.upperdir_tree_entry_count&quot;,
+        &quot;resource.command_exec.upperdir_tree_truncated&quot;,
+    ] {
+        timings.insert(key.to_owned(), json!(0.0));
+    }
+    <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-response-timings-rs.html#item-fn-insert-cgroup-resource-timings-191">insert_cgroup_resource_timings</a>(&amp;<span class="rs-kw">mut</span> timings);
+    <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-response-timings-rs.html#item-fn-insert-process-resource-timings-251">insert_process_resource_timings</a>(&amp;<span class="rs-kw">mut</span> timings);
+    timings
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-daemon/src/runtime/response_timings.rs:131</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn insert_tree_resource_timings pub(crate) pub(crate) fn insert_tree_resource_timings (timings : &amp; mut serde_json :: Map &lt; String , Value &gt; , prefix : &amp; str , stats : &amp; TreeResourceStats ,) crates/eos-daemon/src/runtime/response_timings.rs  ">
+</article><article id="item-fn-insert-tree-resource-timings-175" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn insert_tree_resource_timings pub(crate) pub(crate) fn insert_tree_resource_timings (timings : &amp; mut serde_json :: Map &lt; String , Value &gt; , prefix : &amp; str , stats : &amp; TreeResourceStats ,) crates/eos-daemon/src/runtime/response_timings.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>insert_tree_resource_timings</h3>
     <span class="visibility">pub(crate)</span>
   </div>
-  <code class="signature">pub(crate) fn insert_tree_resource_timings (timings : &amp; mut serde_json :: Map &lt; String , Value &gt; , prefix : &amp; str , stats : &amp; TreeResourceStats ,)</code>
+  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-daemon--src-runtime-response-timings-rs.html#item-fn-insert-tree-resource-timings-175">insert_tree_resource_timings</a> (timings : &amp; mut serde_json :: Map &lt; String , Value &gt; , prefix : &amp; str , stats : &amp; <a class="symbol-link" href="eos-daemon--src-runtime-response-timings-rs.html#item-struct-TreeResourceStats-12">TreeResourceStats</a> ,)</code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-response-timings-rs.html#item-fn-insert-tree-resource-timings-175">insert_tree_resource_timings</a>(
+    timings: &amp;<span class="rs-kw">mut</span> serde_json::<span class="rs-type">Map</span>&lt;<span class="rs-type">String</span>, <span class="rs-type">Value</span>&gt;,
+    prefix: &amp;str,
+    stats: &amp;<a class="symbol-link rs-type" href="eos-daemon--src-runtime-response-timings-rs.html#item-struct-TreeResourceStats-12">TreeResourceStats</a>,
+) {
+    timings.insert(format!(&quot;{prefix}_tree_exists&quot;), json!(stats.exists));
+    timings.insert(format!(&quot;{prefix}_tree_bytes&quot;), json!(stats.bytes));
+    timings.insert(format!(&quot;{prefix}_tree_file_count&quot;), json!(stats.file_count));
+    timings.insert(format!(&quot;{prefix}_tree_dir_count&quot;), json!(stats.dir_count));
+    timings.insert(
+        format!(&quot;{prefix}_tree_entry_count&quot;),
+        json!(stats.entry_count),
+    );
+    timings.insert(format!(&quot;{prefix}_tree_truncated&quot;), json!(stats.truncated));
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-daemon/src/runtime/response_timings.rs:175</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn usize_to_i64_saturating pub(crate) pub(crate) fn usize_to_i64_saturating (value : usize) -&gt; i64 crates/eos-daemon/src/runtime/response_timings.rs  ">
+</article><article id="item-fn-usize-to-i64-saturating-285" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn usize_to_i64_saturating pub(crate) pub(crate) fn usize_to_i64_saturating (value : usize) -&gt; i64 crates/eos-daemon/src/runtime/response_timings.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>usize_to_i64_saturating</h3>
     <span class="visibility">pub(crate)</span>
   </div>
-  <code class="signature">pub(crate) fn usize_to_i64_saturating (value : usize) -&gt; i64</code>
+  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-daemon--src-runtime-response-timings-rs.html#item-fn-usize-to-i64-saturating-285">usize_to_i64_saturating</a> (value : usize) -&gt; i64</code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-response-timings-rs.html#item-fn-usize-to-i64-saturating-285">usize_to_i64_saturating</a>(value: usize) -&gt; i64 {
+    i64::try_from(value).unwrap_or(i64::<span class="rs-type">MAX</span>)
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-daemon/src/runtime/response_timings.rs:285</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn usize_to_f64_saturating pub(crate) pub(crate) fn usize_to_f64_saturating (value : usize) -&gt; f64 crates/eos-daemon/src/runtime/response_timings.rs  ">
+</article><article id="item-fn-usize-to-f64-saturating-289" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn usize_to_f64_saturating pub(crate) pub(crate) fn usize_to_f64_saturating (value : usize) -&gt; f64 crates/eos-daemon/src/runtime/response_timings.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>usize_to_f64_saturating</h3>
     <span class="visibility">pub(crate)</span>
   </div>
-  <code class="signature">pub(crate) fn usize_to_f64_saturating (value : usize) -&gt; f64</code>
+  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-daemon--src-runtime-response-timings-rs.html#item-fn-usize-to-f64-saturating-289">usize_to_f64_saturating</a> (value : usize) -&gt; f64</code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-response-timings-rs.html#item-fn-usize-to-f64-saturating-289">usize_to_f64_saturating</a>(value: usize) -&gt; f64 {
+    u32::try_from(value).map_or_else(|_| f64::from(u32::<span class="rs-type">MAX</span>), f64::from)
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-daemon/src/runtime/response_timings.rs:289</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn i64_to_f64_saturating pub(crate) pub(crate) fn i64_to_f64_saturating (value : i64) -&gt; f64 crates/eos-daemon/src/runtime/response_timings.rs  ">
+</article><article id="item-fn-i64-to-f64-saturating-293" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn i64_to_f64_saturating pub(crate) pub(crate) fn i64_to_f64_saturating (value : i64) -&gt; f64 crates/eos-daemon/src/runtime/response_timings.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>i64_to_f64_saturating</h3>
     <span class="visibility">pub(crate)</span>
   </div>
-  <code class="signature">pub(crate) fn i64_to_f64_saturating (value : i64) -&gt; f64</code>
+  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-daemon--src-runtime-response-timings-rs.html#item-fn-i64-to-f64-saturating-293">i64_to_f64_saturating</a> (value : i64) -&gt; f64</code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-response-timings-rs.html#item-fn-i64-to-f64-saturating-293">i64_to_f64_saturating</a>(value: i64) -&gt; f64 {
+    u64::try_from(value).map_or(0.0, u64_to_f64_saturating)
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-daemon/src/runtime/response_timings.rs:293</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn u64_to_f64_saturating pub(crate) pub(crate) fn u64_to_f64_saturating (value : u64) -&gt; f64 crates/eos-daemon/src/runtime/response_timings.rs  ">
+</article><article id="item-fn-u64-to-f64-saturating-297" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn u64_to_f64_saturating pub(crate) pub(crate) fn u64_to_f64_saturating (value : u64) -&gt; f64 crates/eos-daemon/src/runtime/response_timings.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>u64_to_f64_saturating</h3>
     <span class="visibility">pub(crate)</span>
   </div>
-  <code class="signature">pub(crate) fn u64_to_f64_saturating (value : u64) -&gt; f64</code>
+  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-daemon--src-runtime-response-timings-rs.html#item-fn-u64-to-f64-saturating-297">u64_to_f64_saturating</a> (value : u64) -&gt; f64</code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-response-timings-rs.html#item-fn-u64-to-f64-saturating-297">u64_to_f64_saturating</a>(value: u64) -&gt; f64 {
+    u32::try_from(value).map_or_else(|_| f64::from(u32::<span class="rs-type">MAX</span>), f64::from)
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-daemon/src/runtime/response_timings.rs:297</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn u64_to_usize_saturating pub(crate) pub(crate) fn u64_to_usize_saturating (value : u64) -&gt; usize crates/eos-daemon/src/runtime/response_timings.rs  ">
+</article><article id="item-fn-u64-to-usize-saturating-301" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn u64_to_usize_saturating pub(crate) pub(crate) fn u64_to_usize_saturating (value : u64) -&gt; usize crates/eos-daemon/src/runtime/response_timings.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>u64_to_usize_saturating</h3>
     <span class="visibility">pub(crate)</span>
   </div>
-  <code class="signature">pub(crate) fn u64_to_usize_saturating (value : u64) -&gt; usize</code>
+  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-daemon--src-runtime-response-timings-rs.html#item-fn-u64-to-usize-saturating-301">u64_to_usize_saturating</a> (value : u64) -&gt; usize</code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-response-timings-rs.html#item-fn-u64-to-usize-saturating-301">u64_to_usize_saturating</a>(value: u64) -&gt; usize {
+    usize::try_from(value).unwrap_or(usize::<span class="rs-type">MAX</span>)
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-daemon/src/runtime/response_timings.rs:301</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn f64_to_i64_rounded_saturating pub(crate) pub(crate) fn f64_to_i64_rounded_saturating (value : f64) -&gt; i64 crates/eos-daemon/src/runtime/response_timings.rs  ">
+</article><article id="item-fn-f64-to-i64-rounded-saturating-305" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn f64_to_i64_rounded_saturating pub(crate) pub(crate) fn f64_to_i64_rounded_saturating (value : f64) -&gt; i64 crates/eos-daemon/src/runtime/response_timings.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>f64_to_i64_rounded_saturating</h3>
     <span class="visibility">pub(crate)</span>
   </div>
-  <code class="signature">pub(crate) fn f64_to_i64_rounded_saturating (value : f64) -&gt; i64</code>
+  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-daemon--src-runtime-response-timings-rs.html#item-fn-f64-to-i64-rounded-saturating-305">f64_to_i64_rounded_saturating</a> (value : f64) -&gt; i64</code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-response-timings-rs.html#item-fn-f64-to-i64-rounded-saturating-305">f64_to_i64_rounded_saturating</a>(value: f64) -&gt; i64 {
+    value.round() <span class="rs-kw">as</span> i64
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-daemon/src/runtime/response_timings.rs:305</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn insert_cgroup_resource_timings private fn insert_cgroup_resource_timings (timings : &amp; mut serde_json :: Map &lt; String , Value &gt;) crates/eos-daemon/src/runtime/response_timings.rs  ">
+</article><article id="item-fn-insert-cgroup-resource-timings-191" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn insert_cgroup_resource_timings private fn insert_cgroup_resource_timings (timings : &amp; mut serde_json :: Map &lt; String , Value &gt;) crates/eos-daemon/src/runtime/response_timings.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>insert_cgroup_resource_timings</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn insert_cgroup_resource_timings (timings : &amp; mut serde_json :: Map &lt; String , Value &gt;)</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-daemon--src-runtime-response-timings-rs.html#item-fn-insert-cgroup-resource-timings-191">insert_cgroup_resource_timings</a> (timings : &amp; mut serde_json :: Map &lt; String , Value &gt;)</code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-response-timings-rs.html#item-fn-insert-cgroup-resource-timings-191">insert_cgroup_resource_timings</a>(timings: &amp;<span class="rs-kw">mut</span> serde_json::<span class="rs-type">Map</span>&lt;<span class="rs-type">String</span>, <span class="rs-type">Value</span>&gt;) {
+    <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Ok</span>(raw) = std::fs::read_to_string(&quot;/sys/fs/cgroup/cpu.stat&quot;) {
+        <span class="rs-kw">for</span> line <span class="rs-kw">in</span> raw.lines() {
+            <span class="rs-kw">let</span> <span class="rs-kw">mut</span> parts = line.split_whitespace();
+            <span class="rs-kw">let</span> <span class="rs-type">Some</span>(name) = parts.next() <span class="rs-kw">else</span> {
+                <span class="rs-kw">continue</span>;
+            };
+            <span class="rs-kw">let</span> <span class="rs-type">Some</span>(value) = parts.next().and_then(|raw| raw.parse::&lt;f64&gt;().ok()) <span class="rs-kw">else</span> {
+                <span class="rs-kw">continue</span>;
+            };
+            timings.insert(format!(&quot;resource.cgroup.cpu_{name}&quot;), json!(value));
+        }
+    }
+
+    <span class="rs-kw">for</span> (path, key) <span class="rs-kw">in</span> [
+        (
+            &quot;/sys/fs/cgroup/memory.current&quot;,
+            &quot;resource.cgroup.memory_current_bytes&quot;,
+        ),
+        (
+            &quot;/sys/fs/cgroup/memory.peak&quot;,
+            &quot;resource.cgroup.memory_peak_bytes&quot;,
+        ),
+    ] {
+        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Ok</span>(raw) = std::fs::read_to_string(path) {
+            <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Ok</span>(value) = raw.trim().parse::&lt;f64&gt;() {
+                timings.insert(key.to_owned(), json!(value));
+            }
+        }
+    }
+
+    <span class="rs-kw">let</span> <span class="rs-type">Ok</span>(raw) = std::fs::read_to_string(&quot;/sys/fs/cgroup/io.stat&quot;) <span class="rs-kw">else</span> {
+        <span class="rs-kw">return</span>;
+    };
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> totals = <span class="rs-type">BTreeMap</span>::&lt;&amp;str, f64&gt;::from([
+        (&quot;rbytes&quot;, 0.0),
+        (&quot;wbytes&quot;, 0.0),
+        (&quot;rios&quot;, 0.0),
+        (&quot;wios&quot;, 0.0),
+        (&quot;dbytes&quot;, 0.0),
+        (&quot;dios&quot;, 0.0),
+    ]);
+    <span class="rs-kw">for</span> line <span class="rs-kw">in</span> raw.lines() {
+        <span class="rs-kw">for</span> token <span class="rs-kw">in</span> line.split_whitespace().skip(1) {
+            <span class="rs-kw">let</span> <span class="rs-type">Some</span>((name, raw_value)) = token.split_once(&#x27;=&#x27;) <span class="rs-kw">else</span> {
+                <span class="rs-kw">continue</span>;
+            };
+            <span class="rs-kw">let</span> <span class="rs-type">Some</span>(total) = totals.get_mut(name) <span class="rs-kw">else</span> {
+                <span class="rs-kw">continue</span>;
+            };
+            <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Ok</span>(value) = raw_value.parse::&lt;f64&gt;() {
+                *total += value;
+            }
+        }
+    }
+    <span class="rs-kw">for</span> (name, value) <span class="rs-kw">in</span> totals {
+        timings.insert(format!(&quot;resource.cgroup.io_{name}&quot;), json!(value));
+    }
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-daemon/src/runtime/response_timings.rs:191</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn insert_process_resource_timings private fn insert_process_resource_timings (timings : &amp; mut serde_json :: Map &lt; String , Value &gt;) crates/eos-daemon/src/runtime/response_timings.rs  ">
+</article><article id="item-fn-insert-process-resource-timings-251" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn insert_process_resource_timings private fn insert_process_resource_timings (timings : &amp; mut serde_json :: Map &lt; String , Value &gt;) crates/eos-daemon/src/runtime/response_timings.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>insert_process_resource_timings</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn insert_process_resource_timings (timings : &amp; mut serde_json :: Map &lt; String , Value &gt;)</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-daemon--src-runtime-response-timings-rs.html#item-fn-insert-process-resource-timings-251">insert_process_resource_timings</a> (timings : &amp; mut serde_json :: Map &lt; String , Value &gt;)</code>
+  <p class="docstring">Emit daemon process memory from `/proc/self/status`: `VmRSS` (current<br>resident set) and `VmHWM` (peak resident set), reported in bytes. These are<br>gauges, not run deltas, and are absent on non-Linux dev hosts where the file<br>does not exist.</p>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-comment">/// Emit daemon process memory from `/proc/self/status`: `VmRSS` (current</span>
+<span class="rs-comment">/// resident set) and `VmHWM` (peak resident set), reported in bytes. These are</span>
+<span class="rs-comment">/// gauges, not run deltas, and are absent on non-Linux dev hosts where the file</span>
+<span class="rs-comment">/// does not exist.</span>
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-response-timings-rs.html#item-fn-insert-process-resource-timings-251">insert_process_resource_timings</a>(timings: &amp;<span class="rs-kw">mut</span> serde_json::<span class="rs-type">Map</span>&lt;<span class="rs-type">String</span>, <span class="rs-type">Value</span>&gt;) {
+    <span class="rs-kw">let</span> <span class="rs-type">Ok</span>(status) = std::fs::read_to_string(&quot;/proc/<span class="rs-self">self</span>/status&quot;) <span class="rs-kw">else</span> {
+        <span class="rs-kw">return</span>;
+    };
+    <span class="rs-kw">for</span> line <span class="rs-kw">in</span> status.lines() {
+        <span class="rs-kw">let</span> key = <span class="rs-kw">match</span> line.split(&#x27;:&#x27;).next() {
+            <span class="rs-type">Some</span>(&quot;<span class="rs-type">VmRSS</span>&quot;) =&gt; &quot;resource.process.rss_bytes&quot;,
+            <span class="rs-type">Some</span>(&quot;<span class="rs-type">VmHWM</span>&quot;) =&gt; &quot;resource.process.max_rss_bytes&quot;,
+            _ =&gt; <span class="rs-kw">continue</span>,
+        };
+        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(kib) = line
+            .split_whitespace()
+            .nth(1)
+            .and_then(|value| value.parse::&lt;f64&gt;().ok())
+        {
+            timings.insert(key.to_owned(), json!(kib * 1024.0));
+        }
+    }
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-daemon/src/runtime/response_timings.rs:251</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn mutation_source private fn mutation_source (verb : &amp; str) -&gt; &amp; 'static str crates/eos-daemon/src/runtime/response_timings.rs  ">
+</article><article id="item-fn-mutation-source-275" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn mutation_source private fn mutation_source (verb : &amp; str) -&gt; &amp; 'static str crates/eos-daemon/src/runtime/response_timings.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>mutation_source</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn mutation_source (verb : &amp; str) -&gt; &amp; 'static str</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-daemon--src-runtime-response-timings-rs.html#item-fn-mutation-source-275">mutation_source</a> (verb : &amp; str) -&gt; &amp; &#x27;static str</code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-response-timings-rs.html#item-fn-mutation-source-275">mutation_source</a>(verb: &amp;str) -&gt; &amp;&#x27;<span class="rs-kw">static</span> str {
+    <span class="rs-kw">match</span> verb {
+        &quot;write&quot; =&gt; &quot;api_write&quot;,
+        &quot;edit&quot; =&gt; &quot;api_edit&quot;,
+        &quot;exec_command&quot; =&gt; &quot;overlay_capture&quot;,
+        &quot;plugin_overlay&quot; =&gt; &quot;plugin_overlay&quot;,
+        _ =&gt; &quot;&quot;,
+    }
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-daemon/src/runtime/response_timings.rs:275</p>
 </article></div>
 </section></div>
 </main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/eos-daemon/src/runtime/response_timings.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-comment">//! Shared daemon response shaping and resource timing helpers.</span>
+
+<span class="rs-kw">use</span> std::collections::<span class="rs-type">BTreeMap</span>;
+<span class="rs-kw">use</span> std::time::<span class="rs-type">Instant</span>;
+
+<span class="rs-kw">use</span> eos_occ::<span class="rs-type">ChangesetResult</span>;
+<span class="rs-kw">use</span> eos_protocol::<span class="rs-type">Manifest</span>;
+<span class="rs-kw">use</span> eos_runner::<span class="rs-type">RunResult</span>;
+<span class="rs-kw">use</span> eos_workspace_api::<span class="rs-type">WorkspaceTimings</span>;
+<span class="rs-kw">use</span> serde_json::{json, <span class="rs-type">Value</span>};
+
+#[derive(<span class="rs-type">Clone</span>, <span class="rs-type">Copy</span>, <span class="rs-type">Debug</span>)]
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-daemon--src-runtime-response-timings-rs.html#item-struct-TreeResourceStats-12">TreeResourceStats</a> {
+    exists: f64,
+    bytes: f64,
+    file_count: f64,
+    dir_count: f64,
+    entry_count: f64,
+    truncated: f64,
+}
+
+<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-daemon--src-runtime-response-timings-rs.html#item-struct-TreeResourceStats-12">TreeResourceStats</a> {
+    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-response-timings-rs.html#method-from-ephemeral-23">from_ephemeral</a>(stats: &amp;eos_ephemeral_workspace::<a class="symbol-link rs-type" href="eos-daemon--src-runtime-response-timings-rs.html#item-struct-TreeResourceStats-12">TreeResourceStats</a>) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-kw">let</span> file_entries = stats.files.saturating_add(stats.symlinks);
+        <span class="rs-kw">let</span> entry_count = file_entries.saturating_add(stats.dirs);
+        <span class="rs-self">Self</span> {
+            exists: <span class="rs-kw">if</span> entry_count &gt; 0 { 1.0 } <span class="rs-kw">else</span> { 0.0 },
+            bytes: <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-response-timings-rs.html#item-fn-u64-to-f64-saturating-297">u64_to_f64_saturating</a>(stats.bytes),
+            file_count: <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-response-timings-rs.html#item-fn-u64-to-f64-saturating-297">u64_to_f64_saturating</a>(file_entries),
+            dir_count: <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-response-timings-rs.html#item-fn-u64-to-f64-saturating-297">u64_to_f64_saturating</a>(stats.dirs),
+            entry_count: <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-response-timings-rs.html#item-fn-u64-to-f64-saturating-297">u64_to_f64_saturating</a>(entry_count),
+            truncated: 0.0,
+        }
+    }
+}
+
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-response-timings-rs.html#item-fn-attach-runner-shell-fields-37">attach_runner_shell_fields</a>(response: &amp;<span class="rs-kw">mut</span> <span class="rs-type">Value</span>, runner: &amp;<span class="rs-type">RunResult</span>) {
+    response[&quot;exit_code&quot;] = runner
+        .tool_result
+        .<a class="symbol-link rs-fn" href="eos-daemon--src-services-occ-service-cache-rs.html#method-get-87">get</a>(&quot;exit_code&quot;)
+        .cloned()
+        .unwrap_or_else(|| json!(runner.exit_code));
+    response[&quot;stdout&quot;] = runner
+        .tool_result
+        .<a class="symbol-link rs-fn" href="eos-daemon--src-services-occ-service-cache-rs.html#method-get-87">get</a>(&quot;stdout&quot;)
+        .cloned()
+        .unwrap_or_else(|| json!(&quot;&quot;));
+    response[&quot;stderr&quot;] = runner
+        .tool_result
+        .<a class="symbol-link rs-fn" href="eos-daemon--src-services-occ-service-cache-rs.html#method-get-87">get</a>(&quot;stderr&quot;)
+        .cloned()
+        .unwrap_or_else(|| json!(&quot;&quot;));
+    response[&quot;warnings&quot;] = runner
+        .tool_result
+        .<a class="symbol-link rs-fn" href="eos-daemon--src-services-occ-service-cache-rs.html#method-get-87">get</a>(&quot;warnings&quot;)
+        .cloned()
+        .unwrap_or_else(|| json!([]));
+}
+
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-response-timings-rs.html#item-fn-merge-runner-timings-60">merge_runner_timings</a>(
+    timings: &amp;<span class="rs-kw">mut</span> serde_json::<span class="rs-type">Map</span>&lt;<span class="rs-type">String</span>, <span class="rs-type">Value</span>&gt;,
+    runner: &amp;<span class="rs-type">RunResult</span>,
+) {
+    <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(runner_timings) = runner.tool_result.<a class="symbol-link rs-fn" href="eos-daemon--src-services-occ-service-cache-rs.html#method-get-87">get</a>(&quot;timings&quot;).and_then(<span class="rs-type">Value</span>::as_object) {
+        <span class="rs-kw">for</span> (key, value) <span class="rs-kw">in</span> runner_timings {
+            timings.entry(key.clone()).or_insert_with(|| value.clone());
+        }
+    }
+    <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(value) = timings.<a class="symbol-link rs-fn" href="eos-daemon--src-services-occ-service-cache-rs.html#method-get-87">get</a>(&quot;workspace.mount_s&quot;).cloned() {
+        timings
+            .entry(&quot;command_exec.mount_workspace_s&quot;.to_owned())
+            .or_insert(value);
+    }
+    <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(value) = timings.<a class="symbol-link rs-fn" href="eos-daemon--src-services-occ-service-cache-rs.html#method-get-87">get</a>(&quot;workspace.tool_s&quot;).cloned() {
+        timings
+            .entry(&quot;command_exec.run_command_s&quot;.to_owned())
+            .or_insert(value);
+    }
+}
+
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-response-timings-rs.html#item-fn-timing-map-81">timing_map</a>(timings: serde_json::<span class="rs-type">Map</span>&lt;<span class="rs-type">String</span>, <span class="rs-type">Value</span>&gt;) -&gt; <span class="rs-type">WorkspaceTimings</span> {
+    timings.into_iter().collect()
+}
+
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-response-timings-rs.html#item-fn-guarded-changeset-response-85">guarded_changeset_response</a>(
+    verb: &amp;str,
+    result: &amp;<span class="rs-type">ChangesetResult</span>,
+    <span class="rs-kw">mut</span> timings: serde_json::<span class="rs-type">Map</span>&lt;<span class="rs-type">String</span>, <span class="rs-type">Value</span>&gt;,
+    total_start: <span class="rs-type">Instant</span>,
+    applied_edits: <span class="rs-type">Option</span>&lt;i64&gt;,
+) -&gt; <span class="rs-type">Value</span> {
+    <span class="rs-kw">for</span> (key, value) <span class="rs-kw">in</span> &amp;result.timings {
+        timings.insert(key.clone(), json!(value));
+    }
+    timings.insert(
+        format!(&quot;api.{verb}.total_s&quot;),
+        json!(total_start.elapsed().as_secs_f64()),
+    );
+    <span class="rs-kw">let</span> changed_paths = result.published_paths();
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> changed_path_kinds = serde_json::<span class="rs-type">Map</span>::<a class="symbol-link rs-fn" href="eos-daemon.html#method-new-89">new</a>();
+    <span class="rs-kw">for</span> path <span class="rs-kw">in</span> &amp;changed_paths {
+        changed_path_kinds.insert(path.to_owned(), json!(&quot;write&quot;));
+    }
+    <span class="rs-kw">let</span> conflict = result.first_conflict();
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> response = json!({
+        &quot;success&quot;: result.success(),
+        &quot;workspace&quot;: &quot;ephemeral&quot;,
+        &quot;changed_paths&quot;: changed_paths,
+        &quot;changed_path_kinds&quot;: <span class="rs-type">Value</span>::<span class="rs-type">Object</span>(changed_path_kinds),
+        &quot;mutation_source&quot;: <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-response-timings-rs.html#item-fn-mutation-source-275">mutation_source</a>(verb),
+        &quot;status&quot;: conflict
+            .as_ref()
+            .map_or(&quot;committed&quot;, |file| file.status.wire_str()),
+        &quot;conflict&quot;: conflict.as_ref().map(|file| json!({
+            &quot;reason&quot;: file.status.wire_str(),
+            &quot;conflict_file&quot;: file.path.as_str(),
+            &quot;message&quot;: file.conflict_message(file.status.wire_str()),
+        })),
+        &quot;conflict_reason&quot;: conflict.as_ref().map(|file| {
+            file.conflict_message(file.status.wire_str())
+        }),
+        &quot;error&quot;: null,
+        &quot;timings&quot;: <span class="rs-type">Value</span>::<span class="rs-type">Object</span>(timings),
+    });
+    <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(count) = applied_edits {
+        response[&quot;applied_edits&quot;] = json!(count);
+    }
+    response
+}
+
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-response-timings-rs.html#item-fn-resource-timings-131">resource_timings</a>(
+    manifest: &amp;<span class="rs-type">Manifest</span>,
+    changed_path_count: usize,
+) -&gt; serde_json::<span class="rs-type">Map</span>&lt;<span class="rs-type">String</span>, <span class="rs-type">Value</span>&gt; {
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> timings = serde_json::<span class="rs-type">Map</span>::<a class="symbol-link rs-fn" href="eos-daemon.html#method-new-89">new</a>();
+    timings.insert(
+        &quot;resource.command_exec.changed_path_count&quot;.to_owned(),
+        json!(<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-response-timings-rs.html#item-fn-usize-to-f64-saturating-289">usize_to_f64_saturating</a>(changed_path_count)),
+    );
+    timings.insert(
+        &quot;resource.layer_stack.manifest_depth&quot;.to_owned(),
+        json!(<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-response-timings-rs.html#item-fn-usize-to-f64-saturating-289">usize_to_f64_saturating</a>(manifest.depth())),
+    );
+    timings.insert(
+        &quot;resource.layer_stack.manifest_path_count&quot;.to_owned(),
+        json!(<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-response-timings-rs.html#item-fn-usize-to-f64-saturating-289">usize_to_f64_saturating</a>(manifest.depth())),
+    );
+    <span class="rs-kw">for</span> key <span class="rs-kw">in</span> [
+        &quot;resource.command_exec.run_dir_tree_exists&quot;,
+        &quot;resource.command_exec.run_dir_tree_bytes&quot;,
+        &quot;resource.command_exec.run_dir_tree_file_count&quot;,
+        &quot;resource.command_exec.run_dir_tree_dir_count&quot;,
+        &quot;resource.command_exec.run_dir_tree_entry_count&quot;,
+        &quot;resource.command_exec.run_dir_tree_truncated&quot;,
+        &quot;resource.command_exec.workspace_tree_exists&quot;,
+        &quot;resource.command_exec.workspace_tree_bytes&quot;,
+        &quot;resource.command_exec.workspace_tree_file_count&quot;,
+        &quot;resource.command_exec.workspace_tree_dir_count&quot;,
+        &quot;resource.command_exec.workspace_tree_entry_count&quot;,
+        &quot;resource.command_exec.workspace_tree_truncated&quot;,
+        &quot;resource.command_exec.upperdir_tree_exists&quot;,
+        &quot;resource.command_exec.upperdir_tree_bytes&quot;,
+        &quot;resource.command_exec.upperdir_tree_file_count&quot;,
+        &quot;resource.command_exec.upperdir_tree_dir_count&quot;,
+        &quot;resource.command_exec.upperdir_tree_entry_count&quot;,
+        &quot;resource.command_exec.upperdir_tree_truncated&quot;,
+    ] {
+        timings.insert(key.to_owned(), json!(0.0));
+    }
+    <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-response-timings-rs.html#item-fn-insert-cgroup-resource-timings-191">insert_cgroup_resource_timings</a>(&amp;<span class="rs-kw">mut</span> timings);
+    <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-response-timings-rs.html#item-fn-insert-process-resource-timings-251">insert_process_resource_timings</a>(&amp;<span class="rs-kw">mut</span> timings);
+    timings
+}
+
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-response-timings-rs.html#item-fn-insert-tree-resource-timings-175">insert_tree_resource_timings</a>(
+    timings: &amp;<span class="rs-kw">mut</span> serde_json::<span class="rs-type">Map</span>&lt;<span class="rs-type">String</span>, <span class="rs-type">Value</span>&gt;,
+    prefix: &amp;str,
+    stats: &amp;<a class="symbol-link rs-type" href="eos-daemon--src-runtime-response-timings-rs.html#item-struct-TreeResourceStats-12">TreeResourceStats</a>,
+) {
+    timings.insert(format!(&quot;{prefix}_tree_exists&quot;), json!(stats.exists));
+    timings.insert(format!(&quot;{prefix}_tree_bytes&quot;), json!(stats.bytes));
+    timings.insert(format!(&quot;{prefix}_tree_file_count&quot;), json!(stats.file_count));
+    timings.insert(format!(&quot;{prefix}_tree_dir_count&quot;), json!(stats.dir_count));
+    timings.insert(
+        format!(&quot;{prefix}_tree_entry_count&quot;),
+        json!(stats.entry_count),
+    );
+    timings.insert(format!(&quot;{prefix}_tree_truncated&quot;), json!(stats.truncated));
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-response-timings-rs.html#item-fn-insert-cgroup-resource-timings-191">insert_cgroup_resource_timings</a>(timings: &amp;<span class="rs-kw">mut</span> serde_json::<span class="rs-type">Map</span>&lt;<span class="rs-type">String</span>, <span class="rs-type">Value</span>&gt;) {
+    <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Ok</span>(raw) = std::fs::read_to_string(&quot;/sys/fs/cgroup/cpu.stat&quot;) {
+        <span class="rs-kw">for</span> line <span class="rs-kw">in</span> raw.lines() {
+            <span class="rs-kw">let</span> <span class="rs-kw">mut</span> parts = line.split_whitespace();
+            <span class="rs-kw">let</span> <span class="rs-type">Some</span>(name) = parts.next() <span class="rs-kw">else</span> {
+                <span class="rs-kw">continue</span>;
+            };
+            <span class="rs-kw">let</span> <span class="rs-type">Some</span>(value) = parts.next().and_then(|raw| raw.parse::&lt;f64&gt;().ok()) <span class="rs-kw">else</span> {
+                <span class="rs-kw">continue</span>;
+            };
+            timings.insert(format!(&quot;resource.cgroup.cpu_{name}&quot;), json!(value));
+        }
+    }
+
+    <span class="rs-kw">for</span> (path, key) <span class="rs-kw">in</span> [
+        (
+            &quot;/sys/fs/cgroup/memory.current&quot;,
+            &quot;resource.cgroup.memory_current_bytes&quot;,
+        ),
+        (
+            &quot;/sys/fs/cgroup/memory.peak&quot;,
+            &quot;resource.cgroup.memory_peak_bytes&quot;,
+        ),
+    ] {
+        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Ok</span>(raw) = std::fs::read_to_string(path) {
+            <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Ok</span>(value) = raw.trim().parse::&lt;f64&gt;() {
+                timings.insert(key.to_owned(), json!(value));
+            }
+        }
+    }
+
+    <span class="rs-kw">let</span> <span class="rs-type">Ok</span>(raw) = std::fs::read_to_string(&quot;/sys/fs/cgroup/io.stat&quot;) <span class="rs-kw">else</span> {
+        <span class="rs-kw">return</span>;
+    };
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> totals = <span class="rs-type">BTreeMap</span>::&lt;&amp;str, f64&gt;::from([
+        (&quot;rbytes&quot;, 0.0),
+        (&quot;wbytes&quot;, 0.0),
+        (&quot;rios&quot;, 0.0),
+        (&quot;wios&quot;, 0.0),
+        (&quot;dbytes&quot;, 0.0),
+        (&quot;dios&quot;, 0.0),
+    ]);
+    <span class="rs-kw">for</span> line <span class="rs-kw">in</span> raw.lines() {
+        <span class="rs-kw">for</span> token <span class="rs-kw">in</span> line.split_whitespace().skip(1) {
+            <span class="rs-kw">let</span> <span class="rs-type">Some</span>((name, raw_value)) = token.split_once(&#x27;=&#x27;) <span class="rs-kw">else</span> {
+                <span class="rs-kw">continue</span>;
+            };
+            <span class="rs-kw">let</span> <span class="rs-type">Some</span>(total) = totals.get_mut(name) <span class="rs-kw">else</span> {
+                <span class="rs-kw">continue</span>;
+            };
+            <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Ok</span>(value) = raw_value.parse::&lt;f64&gt;() {
+                *total += value;
+            }
+        }
+    }
+    <span class="rs-kw">for</span> (name, value) <span class="rs-kw">in</span> totals {
+        timings.insert(format!(&quot;resource.cgroup.io_{name}&quot;), json!(value));
+    }
+}
+
+<span class="rs-comment">/// Emit daemon process memory from `/proc/self/status`: `VmRSS` (current</span>
+<span class="rs-comment">/// resident set) and `VmHWM` (peak resident set), reported in bytes. These are</span>
+<span class="rs-comment">/// gauges, not run deltas, and are absent on non-Linux dev hosts where the file</span>
+<span class="rs-comment">/// does not exist.</span>
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-response-timings-rs.html#item-fn-insert-process-resource-timings-251">insert_process_resource_timings</a>(timings: &amp;<span class="rs-kw">mut</span> serde_json::<span class="rs-type">Map</span>&lt;<span class="rs-type">String</span>, <span class="rs-type">Value</span>&gt;) {
+    <span class="rs-kw">let</span> <span class="rs-type">Ok</span>(status) = std::fs::read_to_string(&quot;/proc/<span class="rs-self">self</span>/status&quot;) <span class="rs-kw">else</span> {
+        <span class="rs-kw">return</span>;
+    };
+    <span class="rs-kw">for</span> line <span class="rs-kw">in</span> status.lines() {
+        <span class="rs-kw">let</span> key = <span class="rs-kw">match</span> line.split(&#x27;:&#x27;).next() {
+            <span class="rs-type">Some</span>(&quot;<span class="rs-type">VmRSS</span>&quot;) =&gt; &quot;resource.process.rss_bytes&quot;,
+            <span class="rs-type">Some</span>(&quot;<span class="rs-type">VmHWM</span>&quot;) =&gt; &quot;resource.process.max_rss_bytes&quot;,
+            _ =&gt; <span class="rs-kw">continue</span>,
+        };
+        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(kib) = line
+            .split_whitespace()
+            .nth(1)
+            .and_then(|value| value.parse::&lt;f64&gt;().ok())
+        {
+            timings.insert(key.to_owned(), json!(kib * 1024.0));
+        }
+    }
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-response-timings-rs.html#item-fn-mutation-source-275">mutation_source</a>(verb: &amp;str) -&gt; &amp;&#x27;<span class="rs-kw">static</span> str {
+    <span class="rs-kw">match</span> verb {
+        &quot;write&quot; =&gt; &quot;api_write&quot;,
+        &quot;edit&quot; =&gt; &quot;api_edit&quot;,
+        &quot;exec_command&quot; =&gt; &quot;overlay_capture&quot;,
+        &quot;plugin_overlay&quot; =&gt; &quot;plugin_overlay&quot;,
+        _ =&gt; &quot;&quot;,
+    }
+}
+
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-response-timings-rs.html#item-fn-usize-to-i64-saturating-285">usize_to_i64_saturating</a>(value: usize) -&gt; i64 {
+    i64::try_from(value).unwrap_or(i64::<span class="rs-type">MAX</span>)
+}
+
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-response-timings-rs.html#item-fn-usize-to-f64-saturating-289">usize_to_f64_saturating</a>(value: usize) -&gt; f64 {
+    u32::try_from(value).map_or_else(|_| f64::from(u32::<span class="rs-type">MAX</span>), f64::from)
+}
+
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-response-timings-rs.html#item-fn-i64-to-f64-saturating-293">i64_to_f64_saturating</a>(value: i64) -&gt; f64 {
+    u64::try_from(value).map_or(0.0, u64_to_f64_saturating)
+}
+
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-response-timings-rs.html#item-fn-u64-to-f64-saturating-297">u64_to_f64_saturating</a>(value: u64) -&gt; f64 {
+    u32::try_from(value).map_or_else(|_| f64::from(u32::<span class="rs-type">MAX</span>), f64::from)
+}
+
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-response-timings-rs.html#item-fn-u64-to-usize-saturating-301">u64_to_usize_saturating</a>(value: u64) -&gt; usize {
+    usize::try_from(value).unwrap_or(usize::<span class="rs-type">MAX</span>)
+}
+
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-response-timings-rs.html#item-fn-f64-to-i64-rounded-saturating-305">f64_to_i64_rounded_saturating</a>(value: f64) -&gt; i64 {
+    value.round() <span class="rs-kw">as</span> i64
+}
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
   <script src="../assets/inventory.js"></script>
 </body>
 </html>

@@ -3,6 +3,7 @@
 mod agent_core_registry;
 mod audit;
 mod builder;
+mod cancel_registry;
 mod db_store;
 mod engine;
 mod message_records;
@@ -19,6 +20,7 @@ use crate::plugin_tools::register_plugin_tools;
 pub(crate) use agent_core_registry::AgentCoreRegistryService;
 pub(crate) use audit::AuditService;
 pub use builder::RuntimeServicesBuilder;
+pub(crate) use cancel_registry::RequestCancelRegistry;
 pub(crate) use db_store::DbStoreService;
 pub(crate) use engine::EngineService;
 pub(crate) use message_records::MessageRecordService;
@@ -42,6 +44,9 @@ pub struct RuntimeServices {
     pub(crate) sandbox: SandboxService,
     pub(crate) audit: AuditService,
     pub(crate) message_records: MessageRecordService,
+    /// Per-request cancellation ports, so `cancel_agent_core_user_request` can
+    /// reach a live request's recursive `CancelPort` from another task.
+    pub(crate) cancel_registry: RequestCancelRegistry,
 }
 
 impl RuntimeServices {

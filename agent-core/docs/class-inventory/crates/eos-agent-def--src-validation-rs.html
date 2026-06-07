@@ -8,8 +8,16 @@
 </head>
 <body>
   <header>
-    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
-    <h1>eos-agent-def File Inventory</h1>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>eos-agent-def File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS/agent-core &amp;&amp; cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
   </header>
   <a class="back-link" href="../index.html">agent-core</a>
 <section class="summary">
@@ -47,89 +55,452 @@
       <span>0 methods</span>
     </div>
   </div>
-  <div class="items"><div class="group-label">Standalone Functions</div><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn check_context_recipe_role pub pub fn check_context_recipe_role (definition : &amp; AgentDefinition) -&gt; Result &lt; () , AgentDefError &gt; crates/eos-agent-def/src/validation.rs  ">
+  <div class="items"><div class="group-label">Standalone Functions</div><article id="item-fn-check-context-recipe-role-21" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn check_context_recipe_role pub pub fn check_context_recipe_role (definition : &amp; AgentDefinition) -&gt; Result &lt; () , AgentDefError &gt; crates/eos-agent-def/src/validation.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>check_context_recipe_role</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub fn check_context_recipe_role (definition : &amp; AgentDefinition) -&gt; Result &lt; () , AgentDefError &gt;</code>
+  <code class="signature">pub fn <a class="symbol-link" href="eos-agent-def--src-validation-rs.html#item-fn-check-context-recipe-role-21">check_context_recipe_role</a> (definition : &amp; <a class="symbol-link" href="eos-agent-def--src-model-rs.html#item-struct-AgentDefinition-157">AgentDefinition</a>) -&gt; Result &lt; () , <a class="symbol-link" href="eos-agent-def.html#item-enum-AgentDefError-8">AgentDefError</a> &gt;</code>
+  <p class="docstring">Reject a `context_recipe` declared by a role outside<br>`{planner, generator, reducer}` (the pure precheck only).<br>The catalog-validity check (`validate_context_recipe`) is owned by<br>`eos-workflow` and runs at the composition root after the registry is built.<br># Errors<br>Returns [`AgentDefError::RecipeRoleMismatch`] when a recipe is declared by a<br>role that has no context builder.</p>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-comment">/// Reject a `context_recipe` declared by a role outside</span>
+<span class="rs-comment">/// `{planner, generator, reducer}` (the pure precheck only).</span>
+<span class="rs-comment">///</span>
+<span class="rs-comment">/// The catalog-validity check (`validate_context_recipe`) is owned by</span>
+<span class="rs-comment">/// `eos-workflow` and runs at the composition root after the registry is built.</span>
+<span class="rs-comment">///</span>
+<span class="rs-comment">/// # Errors</span>
+<span class="rs-comment">/// Returns [`AgentDefError::RecipeRoleMismatch`] when a recipe is declared by a</span>
+<span class="rs-comment">/// role that has no context builder.</span>
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-def--src-validation-rs.html#item-fn-check-context-recipe-role-21">check_context_recipe_role</a>(definition: &amp;<a class="symbol-link rs-type" href="eos-agent-def--src-model-rs.html#item-struct-AgentDefinition-157">AgentDefinition</a>) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-agent-def.html#item-enum-AgentDefError-8">AgentDefError</a>&gt; {
+    <span class="rs-kw">let</span> <span class="rs-type">Some</span>(recipe) = &amp;definition.context_recipe <span class="rs-kw">else</span> {
+        <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(());
+    };
+    <span class="rs-kw">if</span> <a class="symbol-link rs-fn" href="eos-agent-def--src-validation-rs.html#item-fn-role-has-context-builder-13">role_has_context_builder</a>(definition.role) {
+        <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(());
+    }
+    <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-agent-def.html#item-enum-AgentDefError-8">AgentDefError</a>::<span class="rs-type">RecipeRoleMismatch</span> {
+        agent: definition.name.<a class="symbol-link rs-fn" href="eos-agent-def--src-model-rs.html#method-as-str-60">as_str</a>().to_owned(),
+        recipe: recipe.clone(),
+        role: definition.role,
+    })
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-agent-def/src/validation.rs:21</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn scan_skill_file pub pub fn scan_skill_file (body : &amp; str , terminal_keys : &amp; [&amp; str]) -&gt; Vec &lt; String &gt; crates/eos-agent-def/src/validation.rs  ">
+</article><article id="item-fn-scan-skill-file-46" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn scan_skill_file pub pub fn scan_skill_file (body : &amp; str , terminal_keys : &amp; [&amp; str]) -&gt; Vec &lt; String &gt; crates/eos-agent-def/src/validation.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>scan_skill_file</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub fn scan_skill_file (body : &amp; str , terminal_keys : &amp; [&amp; str]) -&gt; Vec &lt; String &gt;</code>
-  <div class="tags"></div>
+  <code class="signature">pub fn <a class="symbol-link" href="eos-agent-def--src-validation-rs.html#item-fn-scan-skill-file-46">scan_skill_file</a> (body : &amp; str , terminal_keys : &amp; [&amp; str]) -&gt; Vec &lt; String &gt;</code>
+  <p class="docstring">Scan a skill body for terminal-tool mentions, returning one<br>human-readable violation per hit (empty means clean).<br>`terminal_keys` are injected as data (the `TERMINAL_DESCRIPTORS` keys are<br>owned by `eos-tools`, GC-eos-agent-def-05). The caller passes an already<br>frontmatter-stripped `body` so author metadata cannot false-positive.</p>
+  <div class="tags"><span>must_use</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Scan a skill body for terminal-tool mentions, returning one</span>
+    <span class="rs-comment">/// human-readable violation per hit (empty means clean).</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// `terminal_keys` are injected as data (the `TERMINAL_DESCRIPTORS` keys are</span>
+    <span class="rs-comment">/// owned by `eos-tools`, GC-eos-agent-def-05). The caller passes an already</span>
+    <span class="rs-comment">/// frontmatter-stripped `body` so author metadata cannot false-positive.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-def--src-validation-rs.html#item-fn-scan-skill-file-46">scan_skill_file</a>(body: &amp;str, terminal_keys: &amp;[&amp;str]) -&gt; <span class="rs-type">Vec</span>&lt;<span class="rs-type">String</span>&gt; {
+        <span class="rs-kw">let</span> submit_hits = <a class="symbol-link rs-fn" href="eos-agent-def--src-validation-rs.html#item-fn-find-submit-tokens-80">find_submit_tokens</a>(body);
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> violations: <span class="rs-type">Vec</span>&lt;<span class="rs-type">String</span>&gt; = submit_hits
+            .iter()
+            .map(|hit| {
+                format!(
+                    &quot;skill body mentions terminal-tool name {hit:?}; row 4 must be \
+                     terminal-silent (row 3 owns the catalog)&quot;
+                )
+            })
+            .collect();
+
+        <span class="rs-comment">// Catch terminal keys that escape the `submit_*` pattern.</span>
+        <span class="rs-kw">for</span> key <span class="rs-kw">in</span> terminal_keys {
+            <span class="rs-kw">if</span> submit_hits.iter().any(|hit| hit == key) {
+                <span class="rs-kw">continue</span>;
+            }
+            <span class="rs-kw">if</span> body.contains(*key) {
+                violations.push(format!(
+                    &quot;skill body mentions terminal descriptor key {key:?}; row 4 must be \
+                     terminal-silent (row 3 owns the catalog)&quot;
+                ));
+            }
+        }
+        violations
+    }
+</code></pre>
+</details>
 
   <p class="source">crates/eos-agent-def/src/validation.rs:46</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn role_has_context_builder private fn role_has_context_builder (role : AgentRole) -&gt; bool crates/eos-agent-def/src/validation.rs  ">
+</article><article id="item-fn-role-has-context-builder-13" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn role_has_context_builder private fn role_has_context_builder (role : AgentRole) -&gt; bool crates/eos-agent-def/src/validation.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>role_has_context_builder</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn role_has_context_builder (role : AgentRole) -&gt; bool</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-agent-def--src-validation-rs.html#item-fn-role-has-context-builder-13">role_has_context_builder</a> (role : <a class="symbol-link" href="eos-agent-def--src-model-rs.html#item-enum-AgentRole-36">AgentRole</a>) -&gt; bool</code>
+  <p class="docstring">Roles that own a context builder; a `context_recipe` is only valid on these.</p>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-comment">/// Roles that own a context builder; a `context_recipe` is only valid on these.</span>
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-def--src-validation-rs.html#item-fn-role-has-context-builder-13">role_has_context_builder</a>(role: <a class="symbol-link rs-type" href="eos-agent-def--src-model-rs.html#item-enum-AgentRole-36">AgentRole</a>) -&gt; bool {
+    matches!(
+        role,
+        <a class="symbol-link rs-type" href="eos-agent-def--src-model-rs.html#item-enum-AgentRole-36">AgentRole</a>::<span class="rs-type">Planner</span> | <a class="symbol-link rs-type" href="eos-agent-def--src-model-rs.html#item-enum-AgentRole-36">AgentRole</a>::<span class="rs-type">Generator</span> | <a class="symbol-link rs-type" href="eos-agent-def--src-model-rs.html#item-enum-AgentRole-36">AgentRole</a>::<span class="rs-type">Reducer</span>
+    )
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-agent-def/src/validation.rs:13</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn find_submit_tokens private fn find_submit_tokens (body : &amp; str) -&gt; Vec &lt; String &gt; crates/eos-agent-def/src/validation.rs  ">
+</article><article id="item-fn-find-submit-tokens-80" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn find_submit_tokens private fn find_submit_tokens (body : &amp; str) -&gt; Vec &lt; String &gt; crates/eos-agent-def/src/validation.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>find_submit_tokens</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn find_submit_tokens (body : &amp; str) -&gt; Vec &lt; String &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-agent-def--src-validation-rs.html#item-fn-find-submit-tokens-80">find_submit_tokens</a> (body : &amp; str) -&gt; Vec &lt; String &gt;</code>
+  <p class="docstring">Sorted, de-duplicated `submit_&lt;identifier&gt;` tokens (port of the<br>`submit_[A-Za-z0-9_]+` regex without a regex dependency).</p>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Sorted, de-duplicated `submit_&lt;identifier&gt;` tokens (port of the</span>
+    <span class="rs-comment">/// `submit_[A-Za-z0-9_]+` regex without a regex dependency).</span>
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-def--src-validation-rs.html#item-fn-find-submit-tokens-80">find_submit_tokens</a>(body: &amp;str) -&gt; <span class="rs-type">Vec</span>&lt;<span class="rs-type">String</span>&gt; {
+        <span class="rs-kw">const</span> <span class="rs-type">PREFIX</span>: &amp;str = &quot;submit_&quot;;
+        <span class="rs-kw">let</span> bytes = body.as_bytes();
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> tokens = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-agent-def--src-loader-rs.html#method-new-228">new</a>();
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> cursor = 0;
+        <span class="rs-kw">while</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(rel) = body[cursor..].find(<span class="rs-type">PREFIX</span>) {
+            <span class="rs-kw">let</span> start = cursor + rel;
+            <span class="rs-kw">let</span> extend_from = start + <span class="rs-type">PREFIX</span>.len();
+            <span class="rs-kw">let</span> <span class="rs-kw">mut</span> end = extend_from;
+            <span class="rs-kw">while</span> end &lt; bytes.len() &amp;&amp; (bytes[end].is_ascii_alphanumeric() || bytes[end] == b&#x27;_&#x27;) {
+                end += 1;
+            }
+            <span class="rs-comment">// The regex `+` requires at least one identifier char after the</span>
+            <span class="rs-comment">// underscore; a bare `submit_` followed by a non-word char is no match.</span>
+            <span class="rs-kw">if</span> end &gt; extend_from {
+                tokens.push(body[start..end].to_owned());
+            }
+            cursor = end.max(extend_from);
+        }
+        tokens.sort();
+        tokens.dedup();
+        tokens
+    }
+</code></pre>
+</details>
 
   <p class="source">crates/eos-agent-def/src/validation.rs:80</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn def_with private fn def_with (role : AgentRole , recipe : Option &lt; &amp; str &gt;) -&gt; AgentDefinition crates/eos-agent-def/src/validation.rs  ">
+</article><article id="item-fn-def-with-116" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn def_with private fn def_with (role : AgentRole , recipe : Option &lt; &amp; str &gt;) -&gt; AgentDefinition crates/eos-agent-def/src/validation.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>def_with</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn def_with (role : AgentRole , recipe : Option &lt; &amp; str &gt;) -&gt; AgentDefinition</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-agent-def--src-validation-rs.html#item-fn-def-with-116">def_with</a> (role : <a class="symbol-link" href="eos-agent-def--src-model-rs.html#item-enum-AgentRole-36">AgentRole</a> , recipe : Option &lt; &amp; str &gt;) -&gt; <a class="symbol-link" href="eos-agent-def--src-model-rs.html#item-struct-AgentDefinition-157">AgentDefinition</a></code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-def--src-validation-rs.html#item-fn-def-with-116">def_with</a>(role: <a class="symbol-link rs-type" href="eos-agent-def--src-model-rs.html#item-enum-AgentRole-36">AgentRole</a>, recipe: <span class="rs-type">Option</span>&lt;&amp;str&gt;) -&gt; <a class="symbol-link rs-type" href="eos-agent-def--src-model-rs.html#item-struct-AgentDefinition-157">AgentDefinition</a> {
+        <a class="symbol-link rs-type" href="eos-agent-def--src-model-rs.html#item-struct-AgentDefinition-157">AgentDefinition</a> {
+            name: <a class="symbol-link rs-type" href="eos-agent-def--src-model-rs.html#item-struct-AgentName-80">AgentName</a>::<a class="symbol-link rs-fn" href="eos-agent-def--src-loader-rs.html#method-new-228">new</a>(&quot;a&quot;).unwrap(),
+            description: &quot;d&quot;.to_owned(),
+            system_prompt: <span class="rs-type">None</span>,
+            model: <span class="rs-type">None</span>,
+            tool_call_limit: <span class="rs-type">NonZeroU32</span>::<a class="symbol-link rs-fn" href="eos-agent-def--src-loader-rs.html#method-new-228">new</a>(10).unwrap(),
+            role,
+            agent_type: <a class="symbol-link rs-type" href="eos-agent-def--src-model-rs.html#item-enum-AgentType-19">AgentType</a>::<span class="rs-type">Agent</span>,
+            allowed_tools: vec![],
+            terminals: vec![&quot;submit_x&quot;.to_owned()],
+            notification_triggers: vec![],
+            skill: <span class="rs-type">None</span>,
+            context_recipe: recipe.map(str::to_owned),
+        }
+    }
+</code></pre>
+</details>
 
   <p class="source">crates/eos-agent-def/src/validation.rs:116</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn recipe_role_precheck private fn recipe_role_precheck () crates/eos-agent-def/src/validation.rs  ">
+</article><article id="item-fn-recipe-role-precheck-134" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn recipe_role_precheck private fn recipe_role_precheck () crates/eos-agent-def/src/validation.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>recipe_role_precheck</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn recipe_role_precheck ()</code>
-  <div class="tags"></div>
+  <code class="signature">fn <a class="symbol-link" href="eos-agent-def--src-validation-rs.html#item-fn-recipe-role-precheck-134">recipe_role_precheck</a> ()</code>
+  <div class="tags"><span>test</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-def--src-validation-rs.html#item-fn-recipe-role-precheck-134">recipe_role_precheck</a>() {
+        <span class="rs-comment">// No recipe -&gt; ok regardless of role.</span>
+        assert!(<a class="symbol-link rs-fn" href="eos-agent-def--src-validation-rs.html#item-fn-check-context-recipe-role-21">check_context_recipe_role</a>(&amp;<a class="symbol-link rs-fn" href="eos-agent-def--src-validation-rs.html#item-fn-def-with-116">def_with</a>(<a class="symbol-link rs-type" href="eos-agent-def--src-model-rs.html#item-enum-AgentRole-36">AgentRole</a>::<span class="rs-type">Helper</span>, <span class="rs-type">None</span>)).is_ok());
+        <span class="rs-comment">// In-scope roles pass the precheck.</span>
+        <span class="rs-kw">for</span> role <span class="rs-kw">in</span> [<a class="symbol-link rs-type" href="eos-agent-def--src-model-rs.html#item-enum-AgentRole-36">AgentRole</a>::<span class="rs-type">Planner</span>, <a class="symbol-link rs-type" href="eos-agent-def--src-model-rs.html#item-enum-AgentRole-36">AgentRole</a>::<span class="rs-type">Generator</span>, <a class="symbol-link rs-type" href="eos-agent-def--src-model-rs.html#item-enum-AgentRole-36">AgentRole</a>::<span class="rs-type">Reducer</span>] {
+            assert!(<a class="symbol-link rs-fn" href="eos-agent-def--src-validation-rs.html#item-fn-check-context-recipe-role-21">check_context_recipe_role</a>(&amp;<a class="symbol-link rs-fn" href="eos-agent-def--src-validation-rs.html#item-fn-def-with-116">def_with</a>(role, <span class="rs-type">Some</span>(&quot;generator&quot;))).is_ok());
+        }
+        <span class="rs-comment">// Out-of-scope role with a recipe -&gt; RecipeRoleMismatch.</span>
+        <span class="rs-kw">for</span> role <span class="rs-kw">in</span> [<a class="symbol-link rs-type" href="eos-agent-def--src-model-rs.html#item-enum-AgentRole-36">AgentRole</a>::<span class="rs-type">Root</span>, <a class="symbol-link rs-type" href="eos-agent-def--src-model-rs.html#item-enum-AgentRole-36">AgentRole</a>::<span class="rs-type">Helper</span>, <a class="symbol-link rs-type" href="eos-agent-def--src-model-rs.html#item-enum-AgentRole-36">AgentRole</a>::<span class="rs-type">Subagent</span>] {
+            <span class="rs-kw">let</span> err = <a class="symbol-link rs-fn" href="eos-agent-def--src-validation-rs.html#item-fn-check-context-recipe-role-21">check_context_recipe_role</a>(&amp;<a class="symbol-link rs-fn" href="eos-agent-def--src-validation-rs.html#item-fn-def-with-116">def_with</a>(role, <span class="rs-type">Some</span>(&quot;generator&quot;))).unwrap_err();
+            assert!(
+                matches!(err, <a class="symbol-link rs-type" href="eos-agent-def.html#item-enum-AgentDefError-8">AgentDefError</a>::<span class="rs-type">RecipeRoleMismatch</span> { .. }),
+                &quot;{err:?}&quot;
+            );
+        }
+    }
+</code></pre>
+</details>
 
   <p class="source">crates/eos-agent-def/src/validation.rs:134</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn skill_lint_detects_terminals private fn skill_lint_detects_terminals () crates/eos-agent-def/src/validation.rs  ">
+</article><article id="item-fn-skill-lint-detects-terminals-154" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn skill_lint_detects_terminals private fn skill_lint_detects_terminals () crates/eos-agent-def/src/validation.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>skill_lint_detects_terminals</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn skill_lint_detects_terminals ()</code>
-  <div class="tags"></div>
+  <code class="signature">fn <a class="symbol-link" href="eos-agent-def--src-validation-rs.html#item-fn-skill-lint-detects-terminals-154">skill_lint_detects_terminals</a> ()</code>
+  <div class="tags"><span>test</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-def--src-validation-rs.html#item-fn-skill-lint-detects-terminals-154">skill_lint_detects_terminals</a>() {
+        <span class="rs-kw">let</span> keys = [&quot;submit_planner_outcome&quot;, &quot;finish_run&quot;];
+
+        <span class="rs-kw">let</span> submit = <a class="symbol-link rs-fn" href="eos-agent-def--src-validation-rs.html#item-fn-scan-skill-file-46">scan_skill_file</a>(&quot;call submit_planner_outcome when done&quot;, &amp;keys);
+        assert_eq!(submit.len(), 1, &quot;{submit:?}&quot;);
+        assert!(submit[0].contains(&quot;submit_planner_outcome&quot;));
+
+        <span class="rs-kw">let</span> key_only = <a class="symbol-link rs-fn" href="eos-agent-def--src-validation-rs.html#item-fn-scan-skill-file-46">scan_skill_file</a>(&quot;then perform the finish_run step&quot;, &amp;keys);
+        assert_eq!(key_only.len(), 1, &quot;{key_only:?}&quot;);
+        assert!(key_only[0].contains(&quot;finish_run&quot;));
+
+        <span class="rs-kw">let</span> clean = <a class="symbol-link rs-fn" href="eos-agent-def--src-validation-rs.html#item-fn-scan-skill-file-46">scan_skill_file</a>(&quot;reach the decision point and submit once&quot;, &amp;keys);
+        assert!(clean.is_empty(), &quot;{clean:?}&quot;);
+    }
+</code></pre>
+</details>
 
   <p class="source">crates/eos-agent-def/src/validation.rs:154</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn skill_lint_dedupes_and_ignores_bare_prefix private fn skill_lint_dedupes_and_ignores_bare_prefix () crates/eos-agent-def/src/validation.rs  ">
+</article><article id="item-fn-skill-lint-dedupes-and-ignores-bare-prefix-170" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn skill_lint_dedupes_and_ignores_bare_prefix private fn skill_lint_dedupes_and_ignores_bare_prefix () crates/eos-agent-def/src/validation.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>skill_lint_dedupes_and_ignores_bare_prefix</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn skill_lint_dedupes_and_ignores_bare_prefix ()</code>
-  <div class="tags"></div>
+  <code class="signature">fn <a class="symbol-link" href="eos-agent-def--src-validation-rs.html#item-fn-skill-lint-dedupes-and-ignores-bare-prefix-170">skill_lint_dedupes_and_ignores_bare_prefix</a> ()</code>
+  <div class="tags"><span>test</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-def--src-validation-rs.html#item-fn-skill-lint-dedupes-and-ignores-bare-prefix-170">skill_lint_dedupes_and_ignores_bare_prefix</a>() {
+        <span class="rs-comment">// Repeated token reported once; bare `submit_` (no trailing word char) ignored.</span>
+        <span class="rs-kw">let</span> hits = <a class="symbol-link rs-fn" href="eos-agent-def--src-validation-rs.html#item-fn-scan-skill-file-46">scan_skill_file</a>(&quot;submit_x then submit_x and a bare submit_ here&quot;, &amp;[]);
+        assert_eq!(hits.len(), 1, &quot;{hits:?}&quot;);
+        assert!(hits[0].contains(&quot;submit_x&quot;));
+    }
+</code></pre>
+</details>
 
   <p class="source">crates/eos-agent-def/src/validation.rs:170</p>
 </article></div>
 </section></div>
 </main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/eos-agent-def/src/validation.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-comment">//! The *pure* fragments of profile validation that need no other crate: the</span>
+<span class="rs-comment">//! `context_recipe` role-gating precheck (`resolved_validation.py:42`) and the</span>
+<span class="rs-comment">//! skill-file terminal-silence scanner (`skills/loader.py`).</span>
+<span class="rs-comment">//!</span>
+<span class="rs-comment">//! The cyclic edges in the Rust source are broken by relocation and injection</span>
+<span class="rs-comment">//! (GC-eos-agent-def-05): the recipe *catalog* check (`validate_context_recipe`)</span>
+<span class="rs-comment">//! lives in `eos-workflow`; the terminal keys are passed into the scanner as data</span>
+<span class="rs-comment">//! rather than imported from `eos-tools`.</span>
+
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::error::<a class="symbol-link rs-type" href="eos-agent-def.html#item-enum-AgentDefError-8">AgentDefError</a>;
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::model::{<a class="symbol-link rs-type" href="eos-agent-def--src-model-rs.html#item-struct-AgentDefinition-157">AgentDefinition</a>, <a class="symbol-link rs-type" href="eos-agent-def--src-model-rs.html#item-enum-AgentRole-36">AgentRole</a>};
+
+<span class="rs-comment">/// Roles that own a context builder; a `context_recipe` is only valid on these.</span>
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-def--src-validation-rs.html#item-fn-role-has-context-builder-13">role_has_context_builder</a>(role: <a class="symbol-link rs-type" href="eos-agent-def--src-model-rs.html#item-enum-AgentRole-36">AgentRole</a>) -&gt; bool {
+    matches!(
+        role,
+        <a class="symbol-link rs-type" href="eos-agent-def--src-model-rs.html#item-enum-AgentRole-36">AgentRole</a>::<span class="rs-type">Planner</span> | <a class="symbol-link rs-type" href="eos-agent-def--src-model-rs.html#item-enum-AgentRole-36">AgentRole</a>::<span class="rs-type">Generator</span> | <a class="symbol-link rs-type" href="eos-agent-def--src-model-rs.html#item-enum-AgentRole-36">AgentRole</a>::<span class="rs-type">Reducer</span>
+    )
+}
+
+<span class="rs-comment">/// Reject a `context_recipe` declared by a role outside</span>
+<span class="rs-comment">/// `{planner, generator, reducer}` (the pure precheck only).</span>
+<span class="rs-comment">///</span>
+<span class="rs-comment">/// The catalog-validity check (`validate_context_recipe`) is owned by</span>
+<span class="rs-comment">/// `eos-workflow` and runs at the composition root after the registry is built.</span>
+<span class="rs-comment">///</span>
+<span class="rs-comment">/// # Errors</span>
+<span class="rs-comment">/// Returns [`AgentDefError::RecipeRoleMismatch`] when a recipe is declared by a</span>
+<span class="rs-comment">/// role that has no context builder.</span>
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-def--src-validation-rs.html#item-fn-check-context-recipe-role-21">check_context_recipe_role</a>(definition: &amp;<a class="symbol-link rs-type" href="eos-agent-def--src-model-rs.html#item-struct-AgentDefinition-157">AgentDefinition</a>) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-agent-def.html#item-enum-AgentDefError-8">AgentDefError</a>&gt; {
+    <span class="rs-kw">let</span> <span class="rs-type">Some</span>(recipe) = &amp;definition.context_recipe <span class="rs-kw">else</span> {
+        <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(());
+    };
+    <span class="rs-kw">if</span> <a class="symbol-link rs-fn" href="eos-agent-def--src-validation-rs.html#item-fn-role-has-context-builder-13">role_has_context_builder</a>(definition.role) {
+        <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(());
+    }
+    <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-agent-def.html#item-enum-AgentDefError-8">AgentDefError</a>::<span class="rs-type">RecipeRoleMismatch</span> {
+        agent: definition.name.<a class="symbol-link rs-fn" href="eos-agent-def--src-model-rs.html#method-as-str-60">as_str</a>().to_owned(),
+        recipe: recipe.clone(),
+        role: definition.role,
+    })
+}
+
+<span class="rs-comment">/// Terminal-silence lint over a skill body (`agents/skills/loader.py`).</span>
+<span class="rs-kw">pub</span> <span class="rs-kw">mod</span> skill_lint {
+    <span class="rs-comment">/// Scan a skill body for terminal-tool mentions, returning one</span>
+    <span class="rs-comment">/// human-readable violation per hit (empty means clean).</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// `terminal_keys` are injected as data (the `TERMINAL_DESCRIPTORS` keys are</span>
+    <span class="rs-comment">/// owned by `eos-tools`, GC-eos-agent-def-05). The caller passes an already</span>
+    <span class="rs-comment">/// frontmatter-stripped `body` so author metadata cannot false-positive.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-def--src-validation-rs.html#item-fn-scan-skill-file-46">scan_skill_file</a>(body: &amp;str, terminal_keys: &amp;[&amp;str]) -&gt; <span class="rs-type">Vec</span>&lt;<span class="rs-type">String</span>&gt; {
+        <span class="rs-kw">let</span> submit_hits = <a class="symbol-link rs-fn" href="eos-agent-def--src-validation-rs.html#item-fn-find-submit-tokens-80">find_submit_tokens</a>(body);
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> violations: <span class="rs-type">Vec</span>&lt;<span class="rs-type">String</span>&gt; = submit_hits
+            .iter()
+            .map(|hit| {
+                format!(
+                    &quot;skill body mentions terminal-tool name {hit:?}; row 4 must be \
+                     terminal-silent (row 3 owns the catalog)&quot;
+                )
+            })
+            .collect();
+
+        <span class="rs-comment">// Catch terminal keys that escape the `submit_*` pattern.</span>
+        <span class="rs-kw">for</span> key <span class="rs-kw">in</span> terminal_keys {
+            <span class="rs-kw">if</span> submit_hits.iter().any(|hit| hit == key) {
+                <span class="rs-kw">continue</span>;
+            }
+            <span class="rs-kw">if</span> body.contains(*key) {
+                violations.push(format!(
+                    &quot;skill body mentions terminal descriptor key {key:?}; row 4 must be \
+                     terminal-silent (row 3 owns the catalog)&quot;
+                ));
+            }
+        }
+        violations
+    }
+
+    <span class="rs-comment">/// Sorted, de-duplicated `submit_&lt;identifier&gt;` tokens (port of the</span>
+    <span class="rs-comment">/// `submit_[A-Za-z0-9_]+` regex without a regex dependency).</span>
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-def--src-validation-rs.html#item-fn-find-submit-tokens-80">find_submit_tokens</a>(body: &amp;str) -&gt; <span class="rs-type">Vec</span>&lt;<span class="rs-type">String</span>&gt; {
+        <span class="rs-kw">const</span> <span class="rs-type">PREFIX</span>: &amp;str = &quot;submit_&quot;;
+        <span class="rs-kw">let</span> bytes = body.as_bytes();
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> tokens = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-agent-def--src-loader-rs.html#method-new-228">new</a>();
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> cursor = 0;
+        <span class="rs-kw">while</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(rel) = body[cursor..].find(<span class="rs-type">PREFIX</span>) {
+            <span class="rs-kw">let</span> start = cursor + rel;
+            <span class="rs-kw">let</span> extend_from = start + <span class="rs-type">PREFIX</span>.len();
+            <span class="rs-kw">let</span> <span class="rs-kw">mut</span> end = extend_from;
+            <span class="rs-kw">while</span> end &lt; bytes.len() &amp;&amp; (bytes[end].is_ascii_alphanumeric() || bytes[end] == b&#x27;_&#x27;) {
+                end += 1;
+            }
+            <span class="rs-comment">// The regex `+` requires at least one identifier char after the</span>
+            <span class="rs-comment">// underscore; a bare `submit_` followed by a non-word char is no match.</span>
+            <span class="rs-kw">if</span> end &gt; extend_from {
+                tokens.push(body[start..end].to_owned());
+            }
+            cursor = end.max(extend_from);
+        }
+        tokens.sort();
+        tokens.dedup();
+        tokens
+    }
+}
+
+#[cfg(test)]
+<span class="rs-kw">mod</span> tests {
+    #![allow(clippy::unwrap_used)] <span class="rs-comment">// unwrap is permitted in tests (err-no-unwrap-prod)</span>
+    <span class="rs-kw">use</span> std::num::<span class="rs-type">NonZeroU32</span>;
+
+    <span class="rs-kw">use</span> <span class="rs-kw">super</span>::skill_lint::scan_skill_file;
+    <span class="rs-kw">use</span> <span class="rs-kw">super</span>::*;
+    <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::model::{<a class="symbol-link rs-type" href="eos-agent-def--src-model-rs.html#item-struct-AgentName-80">AgentName</a>, <a class="symbol-link rs-type" href="eos-agent-def--src-model-rs.html#item-enum-AgentType-19">AgentType</a>};
+
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-def--src-validation-rs.html#item-fn-def-with-116">def_with</a>(role: <a class="symbol-link rs-type" href="eos-agent-def--src-model-rs.html#item-enum-AgentRole-36">AgentRole</a>, recipe: <span class="rs-type">Option</span>&lt;&amp;str&gt;) -&gt; <a class="symbol-link rs-type" href="eos-agent-def--src-model-rs.html#item-struct-AgentDefinition-157">AgentDefinition</a> {
+        <a class="symbol-link rs-type" href="eos-agent-def--src-model-rs.html#item-struct-AgentDefinition-157">AgentDefinition</a> {
+            name: <a class="symbol-link rs-type" href="eos-agent-def--src-model-rs.html#item-struct-AgentName-80">AgentName</a>::<a class="symbol-link rs-fn" href="eos-agent-def--src-loader-rs.html#method-new-228">new</a>(&quot;a&quot;).unwrap(),
+            description: &quot;d&quot;.to_owned(),
+            system_prompt: <span class="rs-type">None</span>,
+            model: <span class="rs-type">None</span>,
+            tool_call_limit: <span class="rs-type">NonZeroU32</span>::<a class="symbol-link rs-fn" href="eos-agent-def--src-loader-rs.html#method-new-228">new</a>(10).unwrap(),
+            role,
+            agent_type: <a class="symbol-link rs-type" href="eos-agent-def--src-model-rs.html#item-enum-AgentType-19">AgentType</a>::<span class="rs-type">Agent</span>,
+            allowed_tools: vec![],
+            terminals: vec![&quot;submit_x&quot;.to_owned()],
+            notification_triggers: vec![],
+            skill: <span class="rs-type">None</span>,
+            context_recipe: recipe.map(str::to_owned),
+        }
+    }
+
+    <span class="rs-comment">// AC-eos-agent-def-07: recipe on an out-of-scope role fails; in-scope passes.</span>
+    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-def--src-validation-rs.html#item-fn-recipe-role-precheck-134">recipe_role_precheck</a>() {
+        <span class="rs-comment">// No recipe -&gt; ok regardless of role.</span>
+        assert!(<a class="symbol-link rs-fn" href="eos-agent-def--src-validation-rs.html#item-fn-check-context-recipe-role-21">check_context_recipe_role</a>(&amp;<a class="symbol-link rs-fn" href="eos-agent-def--src-validation-rs.html#item-fn-def-with-116">def_with</a>(<a class="symbol-link rs-type" href="eos-agent-def--src-model-rs.html#item-enum-AgentRole-36">AgentRole</a>::<span class="rs-type">Helper</span>, <span class="rs-type">None</span>)).is_ok());
+        <span class="rs-comment">// In-scope roles pass the precheck.</span>
+        <span class="rs-kw">for</span> role <span class="rs-kw">in</span> [<a class="symbol-link rs-type" href="eos-agent-def--src-model-rs.html#item-enum-AgentRole-36">AgentRole</a>::<span class="rs-type">Planner</span>, <a class="symbol-link rs-type" href="eos-agent-def--src-model-rs.html#item-enum-AgentRole-36">AgentRole</a>::<span class="rs-type">Generator</span>, <a class="symbol-link rs-type" href="eos-agent-def--src-model-rs.html#item-enum-AgentRole-36">AgentRole</a>::<span class="rs-type">Reducer</span>] {
+            assert!(<a class="symbol-link rs-fn" href="eos-agent-def--src-validation-rs.html#item-fn-check-context-recipe-role-21">check_context_recipe_role</a>(&amp;<a class="symbol-link rs-fn" href="eos-agent-def--src-validation-rs.html#item-fn-def-with-116">def_with</a>(role, <span class="rs-type">Some</span>(&quot;generator&quot;))).is_ok());
+        }
+        <span class="rs-comment">// Out-of-scope role with a recipe -&gt; RecipeRoleMismatch.</span>
+        <span class="rs-kw">for</span> role <span class="rs-kw">in</span> [<a class="symbol-link rs-type" href="eos-agent-def--src-model-rs.html#item-enum-AgentRole-36">AgentRole</a>::<span class="rs-type">Root</span>, <a class="symbol-link rs-type" href="eos-agent-def--src-model-rs.html#item-enum-AgentRole-36">AgentRole</a>::<span class="rs-type">Helper</span>, <a class="symbol-link rs-type" href="eos-agent-def--src-model-rs.html#item-enum-AgentRole-36">AgentRole</a>::<span class="rs-type">Subagent</span>] {
+            <span class="rs-kw">let</span> err = <a class="symbol-link rs-fn" href="eos-agent-def--src-validation-rs.html#item-fn-check-context-recipe-role-21">check_context_recipe_role</a>(&amp;<a class="symbol-link rs-fn" href="eos-agent-def--src-validation-rs.html#item-fn-def-with-116">def_with</a>(role, <span class="rs-type">Some</span>(&quot;generator&quot;))).unwrap_err();
+            assert!(
+                matches!(err, <a class="symbol-link rs-type" href="eos-agent-def.html#item-enum-AgentDefError-8">AgentDefError</a>::<span class="rs-type">RecipeRoleMismatch</span> { .. }),
+                &quot;{err:?}&quot;
+            );
+        }
+    }
+
+    <span class="rs-comment">// AC-eos-agent-def-08: submit_* tokens and injected keys are flagged; a</span>
+    <span class="rs-comment">// terminal-silent body returns empty.</span>
+    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-def--src-validation-rs.html#item-fn-skill-lint-detects-terminals-154">skill_lint_detects_terminals</a>() {
+        <span class="rs-kw">let</span> keys = [&quot;submit_planner_outcome&quot;, &quot;finish_run&quot;];
+
+        <span class="rs-kw">let</span> submit = <a class="symbol-link rs-fn" href="eos-agent-def--src-validation-rs.html#item-fn-scan-skill-file-46">scan_skill_file</a>(&quot;call submit_planner_outcome when done&quot;, &amp;keys);
+        assert_eq!(submit.len(), 1, &quot;{submit:?}&quot;);
+        assert!(submit[0].contains(&quot;submit_planner_outcome&quot;));
+
+        <span class="rs-kw">let</span> key_only = <a class="symbol-link rs-fn" href="eos-agent-def--src-validation-rs.html#item-fn-scan-skill-file-46">scan_skill_file</a>(&quot;then perform the finish_run step&quot;, &amp;keys);
+        assert_eq!(key_only.len(), 1, &quot;{key_only:?}&quot;);
+        assert!(key_only[0].contains(&quot;finish_run&quot;));
+
+        <span class="rs-kw">let</span> clean = <a class="symbol-link rs-fn" href="eos-agent-def--src-validation-rs.html#item-fn-scan-skill-file-46">scan_skill_file</a>(&quot;reach the decision point and submit once&quot;, &amp;keys);
+        assert!(clean.is_empty(), &quot;{clean:?}&quot;);
+    }
+
+    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-agent-def--src-validation-rs.html#item-fn-skill-lint-dedupes-and-ignores-bare-prefix-170">skill_lint_dedupes_and_ignores_bare_prefix</a>() {
+        <span class="rs-comment">// Repeated token reported once; bare `submit_` (no trailing word char) ignored.</span>
+        <span class="rs-kw">let</span> hits = <a class="symbol-link rs-fn" href="eos-agent-def--src-validation-rs.html#item-fn-scan-skill-file-46">scan_skill_file</a>(&quot;submit_x then submit_x and a bare submit_ here&quot;, &amp;[]);
+        assert_eq!(hits.len(), 1, &quot;{hits:?}&quot;);
+        assert!(hits[0].contains(&quot;submit_x&quot;));
+    }
+}
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
   <script src="../assets/inventory.js"></script>
 </body>
 </html>

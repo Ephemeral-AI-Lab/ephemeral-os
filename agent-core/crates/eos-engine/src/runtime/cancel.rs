@@ -112,10 +112,7 @@ impl CancelPort for EngineCancelPort {
         // and background work (subagents, delegated workflows, command sessions).
         control.foreground().teardown(self, reason).await?;
         let workflow_control = self.workflow_control.get().cloned();
-        let background = control.background();
-        background
-            .cancel_for_parent_exit(Some(control.agent_run_id()), workflow_control, reason)
-            .await;
+        control.background().teardown(workflow_control, reason).await;
         // Finish the durable agent_run row (cancelled payload); ephemeral runs
         // own no row. The message-record is finished by `run_agent`.
         control

@@ -78,20 +78,18 @@ pub(crate) async fn run_require_no_background_sessions(
         // only inspects (reject). After cancellation `report.subagent == 0`, so
         // the deny below fires only on the reject path.
         let report = if cancels_inflight_subagents(tool) {
-            supervisor
-                .cancel_subagents_for_agent_run(agent_run_id)
-                .await
+            supervisor.cancel_subagents().await
         } else {
-            supervisor.inflight_report(Some(agent_run_id)).await
+            supervisor.running_background_tasks().await
         };
-        if report.subagent > 0 {
+        if report.subagents > 0 {
             return Ok(HookOutcome::Deny(
                 HookDenial::new(
-                    subagent_in_flight_message(report.subagent, tool),
+                    subagent_in_flight_message(report.subagents, tool),
                     "no_background_sessions",
                 )
                 .with_reason("ephemeral_jobs_in_flight")
-                .with_count(report.subagent),
+                .with_count(report.subagents),
             ));
         }
     }
@@ -195,18 +193,18 @@ mod tests {
     use eos_types::{AgentRunId, SubagentSessionId, TaskId, WorkflowId, WorkflowSessionId};
 
     use crate::ports::{
-        BackgroundInflightReport, BackgroundSupervisorPort, OutstandingWorkflow, Sealed,
+        RunningBackgroundTasks, BackgroundSupervisorPort, OutstandingWorkflow, Sealed,
         SpawnedSubagent, StartedWorkflowHandle, WorkflowControlPort,
     };
     use crate::ToolResult;
 
     struct ReportSupervisor {
-        report: BackgroundInflightReport,
+        report: RunningBackgroundTasks,
         cancel_called: AtomicBool,
     }
 
     impl ReportSupervisor {
-        const fn new(report: BackgroundInflightReport) -> Self {
+        const fn new(report: RunningBackgroundTasks) -> Self {
             Self {
                 report,
                 cancel_called: AtomicBool::new(false),
@@ -235,31 +233,30 @@ mod tests {
             unreachable!("not used by hook tests")
         }
 
-        async fn inflight_report(&self, _: Option<&AgentRunId>) -> BackgroundInflightReport {
+        async fn running_background_tasks(&self) -> RunningBackgroundTasks {
             self.report
         }
 
-        async fn cancel_subagents_for_agent_run(&self, _: &AgentRunId) -> BackgroundInflightReport {
+        async fn cancel_subagents(&self) -> RunningBackgroundTasks {
             self.cancel_called.store(true, Ordering::Relaxed);
-            BackgroundInflightReport {
-                subagent: 0,
-                total: self.report.workflow + self.report.command_session,
+            RunningBackgroundTasks {
+                subagents: 0,
+                total: self.report.workflows + self.report.command_sessions,
                 ..self.report
             }
         }
 
-        async fn register_workflow(&self, _: &AgentRunId, _: &StartedWorkflowHandle) {}
+        async fn register_workflow(&self, _: &StartedWorkflowHandle) {}
 
         async fn cancel_workflow_record(&self, _: &WorkflowSessionId, _: &str) -> bool {
             false
         }
 
-        async fn cancel_for_parent_exit(
+        async fn teardown(
             &self,
-            _: Option<&AgentRunId>,
             _: Option<Arc<dyn WorkflowControlPort>>,
             _: &str,
-        ) -> BackgroundInflightReport {
+        ) -> RunningBackgroundTasks {
             unreachable!("not used by hook tests")
         }
     }
@@ -308,15 +305,15 @@ mod tests {
     }
 
     const fn report(
-        subagent: usize,
-        workflow: usize,
-        command_session: usize,
-    ) -> BackgroundInflightReport {
-        BackgroundInflightReport {
-            total: subagent + workflow + command_session,
-            subagent,
-            workflow,
-            command_session,
+        subagents: usize,
+        workflows: usize,
+        command_sessions: usize,
+    ) -> RunningBackgroundTasks {
+        RunningBackgroundTasks {
+            total: subagents + workflows + command_sessions,
+            subagents,
+            workflows,
+            command_sessions,
         }
     }
 

@@ -8,15 +8,23 @@
 </head>
 <body>
   <header>
-    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
-    <h1>eos-command-session File Inventory</h1>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>eos-command-session File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS/sandbox &amp;&amp; cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
   </header>
   <a class="back-link" href="../index.html">sandbox</a>
 <section class="summary">
   <div><b>14</b><span>modules</span></div>
   <div><b>86</b><span>items</span></div>
-  <div><b>83</b><span>fields</span></div>
-  <div><b>109</b><span>methods</span></div>
+  <div><b>90</b><span>fields</span></div>
+  <div><b>104</b><span>methods</span></div>
 </section>
 <section class="toolbar">
   <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
@@ -32,8 +40,8 @@
   </select>
 </section>
 <main class="crate-layout">
-  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><a class="file-link" href="eos-command-session.html"><span>error.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-command-session--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-command-session--src-manager-rs.html"><span>manager.rs</span><small>3/6</small></a></li><li><a class="file-link" href="eos-command-session--src-output-rs.html"><span>output.rs</span><small>0/1</small></a></li><li><span class="folder">process</span><ul class="file-tree"><li><a class="file-link" href="eos-command-session--src-process-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-command-session--src-process-pty-rs.html"><span>pty.rs</span><small>0/1</small></a></li><li><a class="file-link" href="eos-command-session--src-process-runner-rs.html"><span>runner.rs</span><small>5/4</small></a></li><li><a class="file-link" href="eos-command-session--src-process-signal-rs.html"><span>signal.rs</span><small>0/1</small></a></li></ul></li><li><a class="file-link active" href="eos-command-session--src-registry-rs.html"><span>registry.rs</span><small>6/1</small></a></li><li><a class="file-link" href="eos-command-session--src-request-rs.html"><span>request.rs</span><small>5/0</small></a></li><li><a class="file-link" href="eos-command-session--src-response-rs.html"><span>response.rs</span><small>2/0</small></a></li><li><a class="file-link" href="eos-command-session--src-session-rs.html"><span>session.rs</span><small>5/7</small></a></li><li><a class="file-link" href="eos-command-session--src-transcript-rs.html"><span>transcript.rs</span><small>2/11</small></a></li><li><a class="file-link" href="eos-command-session--src-wait-rs.html"><span>wait.rs</span><small>3/2</small></a></li></ul></li></ul></nav>
-  <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="registry crates/eos-command-session/src/registry.rs CommandSessionCompletion WorkspaceRunKind EphemeralWorkspaceRun IsolatedWorkspaceRun CallerRun impl CallerRun CommandSessionRegistry impl CommandSessionRegistry lock">
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><a class="file-link" href="eos-command-session.html"><span>error.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-command-session--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-command-session--src-manager-rs.html"><span>manager.rs</span><small>3/6</small></a></li><li><a class="file-link" href="eos-command-session--src-output-rs.html"><span>output.rs</span><small>0/1</small></a></li><li><span class="folder">process</span><ul class="file-tree"><li><a class="file-link" href="eos-command-session--src-process-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-command-session--src-process-pty-rs.html"><span>pty.rs</span><small>0/1</small></a></li><li><a class="file-link" href="eos-command-session--src-process-runner-rs.html"><span>runner.rs</span><small>5/4</small></a></li><li><a class="file-link" href="eos-command-session--src-process-signal-rs.html"><span>signal.rs</span><small>0/1</small></a></li></ul></li><li><a class="file-link active" href="eos-command-session--src-registry-rs.html"><span>registry.rs</span><small>7/1</small></a></li><li><a class="file-link" href="eos-command-session--src-request-rs.html"><span>request.rs</span><small>5/0</small></a></li><li><a class="file-link" href="eos-command-session--src-response-rs.html"><span>response.rs</span><small>2/0</small></a></li><li><a class="file-link" href="eos-command-session--src-session-rs.html"><span>session.rs</span><small>4/7</small></a></li><li><a class="file-link" href="eos-command-session--src-transcript-rs.html"><span>transcript.rs</span><small>2/11</small></a></li><li><a class="file-link" href="eos-command-session--src-wait-rs.html"><span>wait.rs</span><small>3/2</small></a></li></ul></li></ul></nav>
+  <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="registry crates/eos-command-session/src/registry.rs CommandSessionCompletion PolicyArc RunSession impl RunSession WorkspaceRunKind EphemeralWorkspaceRun IsolatedWorkspaceRun CallerRun impl CallerRun CommandSessionRegistry impl CommandSessionRegistry lock">
   <div class="module-head">
     <div>
       <h2>src/registry.rs</h2>
@@ -41,85 +49,613 @@
     </div>
     <div class="module-stats">
       <span>file owns</span>
-      <span>6 types</span>
-      <span>2 impls</span>
+      <span>7 types</span>
+      <span>3 impls</span>
       <span>1 fns</span>
-      <span>16 methods</span>
+      <span>17 methods</span>
     </div>
   </div>
-  <div class="items"><div class="group-label">File-Owned Types</div><article class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct CommandSessionCompletion pub pub struct CommandSessionCompletion crates/eos-command-session/src/registry.rs command_session_id String caller_id String command String result CommandResponse notification_result CommandResponse ">
+  <div class="items"><div class="group-label">File-Owned Types</div><article id="item-struct-CommandSessionCompletion-11" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct CommandSessionCompletion pub pub struct CommandSessionCompletion crates/eos-command-session/src/registry.rs command_session_id String caller_id String command String result CommandResponse notification_result CommandResponse ">
   <div class="item-head">
     <span class="kind">struct</span>
     <h3>CommandSessionCompletion</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub struct CommandSessionCompletion</code>
-  <div class="tags"><span>serde</span></div>
-  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>command_session_id</td><td><code>String</code></td></tr><tr><td>pub</td><td>caller_id</td><td><code>String</code></td></tr><tr><td>pub</td><td>command</td><td><code>String</code></td></tr><tr><td>pub</td><td>result</td><td><code>CommandResponse</code></td></tr><tr><td>pub</td><td>notification_result</td><td><code>CommandResponse</code></td></tr></tbody></table>
-  <p class="source">crates/eos-command-session/src/registry.rs:10</p>
-</article><article class="type-card" data-kind="enum" data-kind-list="enum field type-model" data-filter-text="enum WorkspaceRunKind pub pub enum WorkspaceRunKind crates/eos-command-session/src/registry.rs  ">
+  <code class="signature">pub struct <a class="symbol-link" href="eos-command-session--src-registry-rs.html#item-struct-CommandSessionCompletion-11">CommandSessionCompletion</a></code>
+  <div class="tags"><span>derive: Clone</span><span>derive: Debug</span><span>derive: Deserialize</span><span>derive: PartialEq</span><span>derive: Serialize</span><span>serde</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>command_session_id</td><td><code>String</code></td></tr><tr><td>pub</td><td>caller_id</td><td><code>String</code></td></tr><tr><td>pub</td><td>command</td><td><code>String</code></td></tr><tr><td>pub</td><td>result</td><td><code><a class="symbol-link" href="eos-command-session--src-response-rs.html#item-struct-CommandResponse-8">CommandResponse</a></code></td></tr><tr><td>pub</td><td>notification_result</td><td><code><a class="symbol-link" href="eos-command-session--src-response-rs.html#item-struct-CommandResponse-8">CommandResponse</a></code></td></tr></tbody></table>
+
+  <p class="source">crates/eos-command-session/src/registry.rs:11</p>
+</article><article id="item-enum-WorkspaceRunKind-40" class="type-card" data-kind="enum" data-kind-list="enum field type-model" data-filter-text="enum WorkspaceRunKind pub pub enum WorkspaceRunKind crates/eos-command-session/src/registry.rs  ">
   <div class="item-head">
     <span class="kind">enum</span>
     <h3>WorkspaceRunKind</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub enum WorkspaceRunKind</code>
-  <div class="tags"></div>
+  <code class="signature">pub enum <a class="symbol-link" href="eos-command-session--src-registry-rs.html#item-enum-WorkspaceRunKind-40">WorkspaceRunKind</a></code>
+  <p class="docstring">Which workspace a starting command session belongs to. The daemon picks the<br>kind from the caller's current mode; the registry uses it to place the session<br>into a fresh ephemeral workspace run or the caller's isolated run.</p>
+  <div class="tags"><span>derive: Clone</span><span>derive: Copy</span><span>derive: Debug</span><span>derive: Eq</span><span>derive: PartialEq</span></div>
   <h4>Variants</h4><table><tbody><tr><td>Ephemeral</td><td><code></code></td></tr><tr><td>Isolated</td><td><code></code></td></tr></tbody></table>
-  <p class="source">crates/eos-command-session/src/registry.rs:19</p>
-</article><article class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct CommandSessionRegistry pub(crate) pub(crate) struct CommandSessionRegistry crates/eos-command-session/src/registry.rs runs Mutex &lt; HashMap &lt; String , CallerRun &gt; &gt; completed Mutex &lt; HashMap &lt; String , CommandSessionCompletion &gt; &gt; counter AtomicU64 ">
+
+  <p class="source">crates/eos-command-session/src/registry.rs:40</p>
+</article><article id="item-struct-RunSession-25" class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct RunSession pub(crate) pub(crate) struct RunSession crates/eos-command-session/src/registry.rs session CommandSession policy PolicyArc ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>RunSession</h3>
+    <span class="visibility">pub(crate)</span>
+  </div>
+  <code class="signature">pub(crate) struct <a class="symbol-link" href="eos-command-session--src-registry-rs.html#item-struct-RunSession-25">RunSession</a></code>
+  <p class="docstring">One command session paired with the workspace policy that owns its overlay<br>(ephemeral) or namespace (isolated) state. The session is the PTY substrate;<br>the policy decides publish (complete) vs discard (cancel).</p>
+  <div class="tags"></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub(crate)</td><td>session</td><td><code><a class="symbol-link" href="eos-command-session--src-session-rs.html#item-struct-CommandSession-39">CommandSession</a></code></td></tr><tr><td>pub(crate)</td><td>policy</td><td><code><a class="symbol-link" href="eos-command-session--src-registry-rs.html#item-type-PolicyArc-20">PolicyArc</a></code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-34"><td>constructor</td><td>new</td><td><code>pub(crate) fn <a class="symbol-link" href="eos-command-session--src-manager-rs.html#method-new-33">new</a> (session : <a class="symbol-link" href="eos-command-session--src-session-rs.html#item-struct-CommandSession-39">CommandSession</a> , policy : <a class="symbol-link" href="eos-command-session--src-registry-rs.html#item-type-PolicyArc-20">PolicyArc</a>) -&gt; Self</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[must_use]
+    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-session--src-manager-rs.html#method-new-33">new</a>(session: <a class="symbol-link rs-type" href="eos-command-session--src-session-rs.html#item-struct-CommandSession-39">CommandSession</a>, policy: <a class="symbol-link rs-type" href="eos-command-session--src-registry-rs.html#item-type-PolicyArc-20">PolicyArc</a>) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">Self</span> { session, policy }
+    }
+</code></pre>
+</details></td></tr></tbody></table>
+
+  <p class="source">crates/eos-command-session/src/registry.rs:25</p>
+</article><article id="item-struct-CommandSessionRegistry-111" class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct CommandSessionRegistry pub(crate) pub(crate) struct CommandSessionRegistry crates/eos-command-session/src/registry.rs runs Mutex &lt; HashMap &lt; String , CallerRun &gt; &gt; completed Mutex &lt; HashMap &lt; String , CommandSessionCompletion &gt; &gt; counter AtomicU64 ">
   <div class="item-head">
     <span class="kind">struct</span>
     <h3>CommandSessionRegistry</h3>
     <span class="visibility">pub(crate)</span>
   </div>
-  <code class="signature">pub(crate) struct CommandSessionRegistry</code>
-  <div class="tags"></div>
-  <h4>Fields</h4><table><tbody><tr><td>private</td><td>runs</td><td><code>Mutex &lt; HashMap &lt; String , CallerRun &gt; &gt;</code></td></tr><tr><td>private</td><td>completed</td><td><code>Mutex &lt; HashMap &lt; String , CommandSessionCompletion &gt; &gt;</code></td></tr><tr><td>private</td><td>counter</td><td><code>AtomicU64</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr><td>constructor</td><td>new</td><td><code>pub(crate) fn new () -&gt; Self</code></td></tr><tr><td>method</td><td>next_id</td><td><code>pub(crate) fn next_id (&amp; self) -&gt; String</code></td></tr><tr><td>method</td><td>insert</td><td><code>pub(crate) fn insert (&amp; self , session : Arc &lt; CommandSession &gt; , kind : WorkspaceRunKind)</code></td></tr><tr><td>method</td><td>get</td><td><code>pub(crate) fn get (&amp; self , id : &amp; str) -&gt; Option &lt; Arc &lt; CommandSession &gt; &gt;</code></td></tr><tr><td>method</td><td>remove</td><td><code>pub(crate) fn remove (&amp; self , id : &amp; str) -&gt; Option &lt; Arc &lt; CommandSession &gt; &gt;</code></td></tr><tr><td>method</td><td>count_by_caller</td><td><code>pub(crate) fn count_by_caller (&amp; self , caller_id : Option &lt; &amp; str &gt;) -&gt; usize</code></td></tr><tr><td>method</td><td>live</td><td><code>pub(crate) fn live (&amp; self) -&gt; Vec &lt; Arc &lt; CommandSession &gt; &gt;</code></td></tr><tr><td>method</td><td>caller_sessions</td><td><code>pub(crate) fn caller_sessions (&amp; self , caller_id : &amp; str) -&gt; Vec &lt; Arc &lt; CommandSession &gt; &gt;</code></td></tr><tr><td>method</td><td>push_completed</td><td><code>pub(crate) fn push_completed (&amp; self , completion : CommandSessionCompletion)</code></td></tr><tr><td>method</td><td>take_completed_result</td><td><code>pub(crate) fn take_completed_result (&amp; self , id : &amp; str) -&gt; Option &lt; CommandResponse &gt;</code></td></tr><tr><td>method</td><td>completed_result</td><td><code>pub(crate) fn completed_result (&amp; self , id : &amp; str) -&gt; Option &lt; CommandResponse &gt;</code></td></tr><tr><td>method</td><td>collect_completed</td><td><code>pub(crate) fn collect_completed (&amp; self , request : &amp; CollectCompleted) -&gt; CollectCompletedResponse</code></td></tr></tbody></table>
-  <p class="source">crates/eos-command-session/src/registry.rs:91</p>
-</article><article class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct EphemeralWorkspaceRun private struct EphemeralWorkspaceRun crates/eos-command-session/src/registry.rs session Arc &lt; CommandSession &gt; ">
+  <code class="signature">pub(crate) struct <a class="symbol-link" href="eos-command-session--src-registry-rs.html#item-struct-CommandSessionRegistry-111">CommandSessionRegistry</a></code>
+  <p class="docstring">Single caller-keyed command-session authority. Each caller maps to its<br>`CallerRun` (many ephemeral workspace runs or the one isolated run).<br>Session-targeted ops resolve by scanning runs for the session id (caller count<br>is small).</p>
+  <div class="tags"><span>derive: Default</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>runs</td><td><code>Mutex &lt; HashMap &lt; String , <a class="symbol-link" href="eos-command-session--src-registry-rs.html#item-enum-CallerRun-63">CallerRun</a> &gt; &gt;</code></td></tr><tr><td>private</td><td>completed</td><td><code>Mutex &lt; HashMap &lt; String , <a class="symbol-link" href="eos-command-session--src-registry-rs.html#item-struct-CommandSessionCompletion-11">CommandSessionCompletion</a> &gt; &gt;</code></td></tr><tr><td>private</td><td>counter</td><td><code>AtomicU64</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-123"><td>constructor</td><td>new</td><td><code>pub(crate) fn <a class="symbol-link" href="eos-command-session--src-manager-rs.html#method-new-33">new</a> () -&gt; Self</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[must_use]
+    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-session--src-manager-rs.html#method-new-33">new</a>() -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">Self</span> {
+            runs: <span class="rs-type">Mutex</span>::<a class="symbol-link rs-fn" href="eos-command-session--src-manager-rs.html#method-new-33">new</a>(<span class="rs-type">HashMap</span>::<a class="symbol-link rs-fn" href="eos-command-session--src-manager-rs.html#method-new-33">new</a>()),
+            completed: <span class="rs-type">Mutex</span>::<a class="symbol-link rs-fn" href="eos-command-session--src-manager-rs.html#method-new-33">new</a>(<span class="rs-type">HashMap</span>::<a class="symbol-link rs-fn" href="eos-command-session--src-manager-rs.html#method-new-33">new</a>()),
+            counter: <span class="rs-type">AtomicU64</span>::<a class="symbol-link rs-fn" href="eos-command-session--src-manager-rs.html#method-new-33">new</a>(1),
+        }
+    }
+</code></pre>
+</details></td></tr><tr id="method-next-id-132"><td>method</td><td>next_id</td><td><code>pub(crate) fn <a class="symbol-link" href="eos-command-session--src-registry-rs.html#method-next-id-132">next_id</a> (&amp; self) -&gt; String</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[must_use]
+    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-session--src-registry-rs.html#method-next-id-132">next_id</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">String</span> {
+        format!(&quot;cmd_{}&quot;, <span class="rs-self">self</span>.counter.fetch_add(1, <span class="rs-type">Ordering</span>::<span class="rs-type">Relaxed</span>))
+    }
+</code></pre>
+</details></td></tr><tr id="method-insert-137"><td>method</td><td>insert</td><td><code>pub(crate) fn <a class="symbol-link" href="eos-command-session--src-registry-rs.html#method-insert-137">insert</a> (&amp; self , run : Arc &lt; <a class="symbol-link" href="eos-command-session--src-registry-rs.html#item-struct-RunSession-25">RunSession</a> &gt; , kind : <a class="symbol-link" href="eos-command-session--src-registry-rs.html#item-enum-WorkspaceRunKind-40">WorkspaceRunKind</a>)</code><p class="docstring">Place a started run into its caller's runs: a fresh ephemeral workspace<br>run, or the caller's (created-on-first-session) isolated run.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Place a started run into its caller's runs: a fresh ephemeral workspace</span>
+    <span class="rs-comment">/// run, or the caller's (created-on-first-session) isolated run.</span>
+    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-session--src-registry-rs.html#method-insert-137">insert</a>(&amp;<span class="rs-self">self</span>, run: <span class="rs-type">Arc</span>&lt;<a class="symbol-link rs-type" href="eos-command-session--src-registry-rs.html#item-struct-RunSession-25">RunSession</a>&gt;, kind: <a class="symbol-link rs-type" href="eos-command-session--src-registry-rs.html#item-enum-WorkspaceRunKind-40">WorkspaceRunKind</a>) {
+        <span class="rs-kw">let</span> caller_id = run.session.<a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-caller-id-144">caller_id</a>().to_owned();
+        <span class="rs-kw">let</span> session_id = run.session.<a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-id-139">id</a>().to_owned();
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> runs = <a class="symbol-link rs-fn" href="eos-command-session--src-process-runner-rs.html#item-fn-lock-281">lock</a>(&amp;<span class="rs-self">self</span>.runs);
+        <span class="rs-kw">match</span> kind {
+            <a class="symbol-link rs-type" href="eos-command-session--src-registry-rs.html#item-enum-WorkspaceRunKind-40">WorkspaceRunKind</a>::<span class="rs-type">Ephemeral</span> =&gt; {
+                <span class="rs-kw">let</span> caller = runs
+                    .entry(caller_id)
+                    .or_insert_with(|| <a class="symbol-link rs-type" href="eos-command-session--src-registry-rs.html#item-enum-CallerRun-63">CallerRun</a>::<span class="rs-type">Ephemeral</span>(<span class="rs-type">HashMap</span>::<a class="symbol-link rs-fn" href="eos-command-session--src-manager-rs.html#method-new-33">new</a>()));
+                <span class="rs-kw">if</span> <span class="rs-kw">let</span> <a class="symbol-link rs-type" href="eos-command-session--src-registry-rs.html#item-enum-CallerRun-63">CallerRun</a>::<span class="rs-type">Ephemeral</span>(ephemeral) = caller {
+                    ephemeral.<a class="symbol-link rs-fn" href="eos-command-session--src-registry-rs.html#method-insert-137">insert</a>(session_id, <a class="symbol-link rs-type" href="eos-command-session--src-registry-rs.html#item-struct-EphemeralWorkspaceRun-49">EphemeralWorkspaceRun</a> { run });
+                }
+            }
+            <a class="symbol-link rs-type" href="eos-command-session--src-registry-rs.html#item-enum-WorkspaceRunKind-40">WorkspaceRunKind</a>::<span class="rs-type">Isolated</span> =&gt; {
+                <span class="rs-kw">let</span> caller = runs.entry(caller_id).or_insert_with(|| {
+                    <a class="symbol-link rs-type" href="eos-command-session--src-registry-rs.html#item-enum-CallerRun-63">CallerRun</a>::<span class="rs-type">Isolated</span>(<a class="symbol-link rs-type" href="eos-command-session--src-registry-rs.html#item-struct-IsolatedWorkspaceRun-56">IsolatedWorkspaceRun</a> {
+                        sessions: <span class="rs-type">HashMap</span>::<a class="symbol-link rs-fn" href="eos-command-session--src-manager-rs.html#method-new-33">new</a>(),
+                    })
+                });
+                <span class="rs-kw">if</span> <span class="rs-kw">let</span> <a class="symbol-link rs-type" href="eos-command-session--src-registry-rs.html#item-enum-CallerRun-63">CallerRun</a>::<span class="rs-type">Isolated</span>(isolated) = caller {
+                    isolated.sessions.<a class="symbol-link rs-fn" href="eos-command-session--src-registry-rs.html#method-insert-137">insert</a>(session_id, run);
+                }
+            }
+        }
+    }
+</code></pre>
+</details></td></tr><tr id="method-get-165"><td>method</td><td>get</td><td><code>pub(crate) fn <a class="symbol-link" href="eos-command-session--src-registry-rs.html#method-get-81">get</a> (&amp; self , id : &amp; str) -&gt; Option &lt; Arc &lt; <a class="symbol-link" href="eos-command-session--src-registry-rs.html#item-struct-RunSession-25">RunSession</a> &gt; &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[must_use]
+    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-session--src-registry-rs.html#method-get-81">get</a>(&amp;<span class="rs-self">self</span>, id: &amp;str) -&gt; <span class="rs-type">Option</span>&lt;<span class="rs-type">Arc</span>&lt;<a class="symbol-link rs-type" href="eos-command-session--src-registry-rs.html#item-struct-RunSession-25">RunSession</a>&gt;&gt; {
+        <a class="symbol-link rs-fn" href="eos-command-session--src-process-runner-rs.html#item-fn-lock-281">lock</a>(&amp;<span class="rs-self">self</span>.runs).values().find_map(|run| run.<a class="symbol-link rs-fn" href="eos-command-session--src-registry-rs.html#method-get-81">get</a>(id))
+    }
+</code></pre>
+</details></td></tr><tr id="method-remove-170"><td>method</td><td>remove</td><td><code>pub(crate) fn <a class="symbol-link" href="eos-command-session--src-registry-rs.html#method-remove-170">remove</a> (&amp; self , id : &amp; str) -&gt; Option &lt; Arc &lt; <a class="symbol-link" href="eos-command-session--src-registry-rs.html#item-struct-RunSession-25">RunSession</a> &gt; &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-session--src-registry-rs.html#method-remove-170">remove</a>(&amp;<span class="rs-self">self</span>, id: &amp;str) -&gt; <span class="rs-type">Option</span>&lt;<span class="rs-type">Arc</span>&lt;<a class="symbol-link rs-type" href="eos-command-session--src-registry-rs.html#item-struct-RunSession-25">RunSession</a>&gt;&gt; {
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> runs = <a class="symbol-link rs-fn" href="eos-command-session--src-process-runner-rs.html#item-fn-lock-281">lock</a>(&amp;<span class="rs-self">self</span>.runs);
+        <span class="rs-kw">let</span> caller = runs
+            .iter()
+            .find(|(_, run)| run.<a class="symbol-link rs-fn" href="eos-command-session--src-registry-rs.html#method-get-81">get</a>(id).is_some())
+            .map(|(caller, _)| caller.clone())?;
+        <span class="rs-kw">let</span> (run, now_empty) = runs
+            .get_mut(&amp;caller)
+            .map(|run| run.<a class="symbol-link rs-fn" href="eos-command-session--src-registry-rs.html#method-take-95">take</a>(id))
+            .unwrap_or((<span class="rs-type">None</span>, <span class="rs-kw">false</span>));
+        <span class="rs-kw">if</span> now_empty {
+            runs.<a class="symbol-link rs-fn" href="eos-command-session--src-registry-rs.html#method-remove-170">remove</a>(&amp;caller);
+        }
+        run
+    }
+</code></pre>
+</details></td></tr><tr id="method-count-by-caller-186"><td>method</td><td>count_by_caller</td><td><code>pub(crate) fn <a class="symbol-link" href="eos-command-session--src-manager-rs.html#method-count-by-caller-304">count_by_caller</a> (&amp; self , caller_id : Option &lt; &amp; str &gt;) -&gt; usize</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[must_use]
+    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-session--src-manager-rs.html#method-count-by-caller-304">count_by_caller</a>(&amp;<span class="rs-self">self</span>, caller_id: <span class="rs-type">Option</span>&lt;&amp;str&gt;) -&gt; usize {
+        <span class="rs-kw">let</span> runs = <a class="symbol-link rs-fn" href="eos-command-session--src-process-runner-rs.html#item-fn-lock-281">lock</a>(&amp;<span class="rs-self">self</span>.runs);
+        <span class="rs-kw">match</span> caller_id {
+            <span class="rs-type">Some</span>(caller) =&gt; runs.<a class="symbol-link rs-fn" href="eos-command-session--src-registry-rs.html#method-get-81">get</a>(caller).map_or(0, <a class="symbol-link rs-type" href="eos-command-session--src-registry-rs.html#item-enum-CallerRun-63">CallerRun</a>::count),
+            <span class="rs-type">None</span> =&gt; runs.values().map(<a class="symbol-link rs-type" href="eos-command-session--src-registry-rs.html#item-enum-CallerRun-63">CallerRun</a>::count).sum(),
+        }
+    }
+</code></pre>
+</details></td></tr><tr id="method-live-195"><td>method</td><td>live</td><td><code>pub(crate) fn <a class="symbol-link" href="eos-command-session--src-registry-rs.html#method-live-195">live</a> (&amp; self) -&gt; Vec &lt; Arc &lt; <a class="symbol-link" href="eos-command-session--src-registry-rs.html#item-struct-RunSession-25">RunSession</a> &gt; &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[must_use]
+    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-session--src-registry-rs.html#method-live-195">live</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Vec</span>&lt;<span class="rs-type">Arc</span>&lt;<a class="symbol-link rs-type" href="eos-command-session--src-registry-rs.html#item-struct-RunSession-25">RunSession</a>&gt;&gt; {
+        <a class="symbol-link rs-fn" href="eos-command-session--src-process-runner-rs.html#item-fn-lock-281">lock</a>(&amp;<span class="rs-self">self</span>.runs)
+            .values()
+            .flat_map(<a class="symbol-link rs-type" href="eos-command-session--src-registry-rs.html#item-enum-CallerRun-63">CallerRun</a>::sessions)
+            .collect()
+    }
+</code></pre>
+</details></td></tr><tr id="method-caller-sessions-203"><td>method</td><td>caller_sessions</td><td><code>pub(crate) fn <a class="symbol-link" href="eos-command-session--src-registry-rs.html#method-caller-sessions-203">caller_sessions</a> (&amp; self , caller_id : &amp; str) -&gt; Vec &lt; Arc &lt; <a class="symbol-link" href="eos-command-session--src-registry-rs.html#item-struct-RunSession-25">RunSession</a> &gt; &gt;</code><p class="docstring">All live runs owned by `caller_id` (drives per-caller cleanup).</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// All live runs owned by `caller_id` (drives per-caller cleanup).</span>
+    #[cfg(target_os = &quot;linux&quot;)]
+    #[must_use]
+    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-session--src-registry-rs.html#method-caller-sessions-203">caller_sessions</a>(&amp;<span class="rs-self">self</span>, caller_id: &amp;str) -&gt; <span class="rs-type">Vec</span>&lt;<span class="rs-type">Arc</span>&lt;<a class="symbol-link rs-type" href="eos-command-session--src-registry-rs.html#item-struct-RunSession-25">RunSession</a>&gt;&gt; {
+        <a class="symbol-link rs-fn" href="eos-command-session--src-process-runner-rs.html#item-fn-lock-281">lock</a>(&amp;<span class="rs-self">self</span>.runs)
+            .<a class="symbol-link rs-fn" href="eos-command-session--src-registry-rs.html#method-get-81">get</a>(caller_id)
+            .map(<a class="symbol-link rs-type" href="eos-command-session--src-registry-rs.html#item-enum-CallerRun-63">CallerRun</a>::sessions)
+            .unwrap_or_default()
+    }
+</code></pre>
+</details></td></tr><tr id="method-push-completed-213"><td>method</td><td>push_completed</td><td><code>pub(crate) fn <a class="symbol-link" href="eos-command-session--src-manager-rs.html#method-push-completed-314">push_completed</a> (&amp; self , completion : <a class="symbol-link" href="eos-command-session--src-registry-rs.html#item-struct-CommandSessionCompletion-11">CommandSessionCompletion</a>)</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-session--src-manager-rs.html#method-push-completed-314">push_completed</a>(&amp;<span class="rs-self">self</span>, completion: <a class="symbol-link rs-type" href="eos-command-session--src-registry-rs.html#item-struct-CommandSessionCompletion-11">CommandSessionCompletion</a>) {
+        <a class="symbol-link rs-fn" href="eos-command-session--src-process-runner-rs.html#item-fn-lock-281">lock</a>(&amp;<span class="rs-self">self</span>.completed).<a class="symbol-link rs-fn" href="eos-command-session--src-registry-rs.html#method-insert-137">insert</a>(completion.command_session_id.clone(), completion);
+    }
+</code></pre>
+</details></td></tr><tr id="method-take-completed-result-217"><td>method</td><td>take_completed_result</td><td><code>pub(crate) fn <a class="symbol-link" href="eos-command-session--src-registry-rs.html#method-take-completed-result-217">take_completed_result</a> (&amp; self , id : &amp; str) -&gt; Option &lt; <a class="symbol-link" href="eos-command-session--src-response-rs.html#item-struct-CommandResponse-8">CommandResponse</a> &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-session--src-registry-rs.html#method-take-completed-result-217">take_completed_result</a>(&amp;<span class="rs-self">self</span>, id: &amp;str) -&gt; <span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-command-session--src-response-rs.html#item-struct-CommandResponse-8">CommandResponse</a>&gt; {
+        <a class="symbol-link rs-fn" href="eos-command-session--src-process-runner-rs.html#item-fn-lock-281">lock</a>(&amp;<span class="rs-self">self</span>.completed).<a class="symbol-link rs-fn" href="eos-command-session--src-registry-rs.html#method-remove-170">remove</a>(id).map(|entry| entry.result)
+    }
+</code></pre>
+</details></td></tr><tr id="method-completed-result-221"><td>method</td><td>completed_result</td><td><code>pub(crate) fn <a class="symbol-link" href="eos-command-session--src-registry-rs.html#method-completed-result-221">completed_result</a> (&amp; self , id : &amp; str) -&gt; Option &lt; <a class="symbol-link" href="eos-command-session--src-response-rs.html#item-struct-CommandResponse-8">CommandResponse</a> &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[must_use]
+    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-session--src-registry-rs.html#method-completed-result-221">completed_result</a>(&amp;<span class="rs-self">self</span>, id: &amp;str) -&gt; <span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-command-session--src-response-rs.html#item-struct-CommandResponse-8">CommandResponse</a>&gt; {
+        <a class="symbol-link rs-fn" href="eos-command-session--src-process-runner-rs.html#item-fn-lock-281">lock</a>(&amp;<span class="rs-self">self</span>.completed)
+            .<a class="symbol-link rs-fn" href="eos-command-session--src-registry-rs.html#method-get-81">get</a>(id)
+            .map(|entry| entry.result.clone())
+    }
+</code></pre>
+</details></td></tr><tr id="method-collect-completed-228"><td>method</td><td>collect_completed</td><td><code>pub(crate) fn <a class="symbol-link" href="eos-command-session--src-manager-rs.html#method-collect-completed-309">collect_completed</a> (&amp; self , request : &amp; <a class="symbol-link" href="eos-command-session--src-request-rs.html#item-struct-CollectCompleted-43">CollectCompleted</a>) -&gt; <a class="symbol-link" href="eos-command-session--src-response-rs.html#item-struct-CollectCompletedResponse-157">CollectCompletedResponse</a></code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[must_use]
+    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-session--src-manager-rs.html#method-collect-completed-309">collect_completed</a>(&amp;<span class="rs-self">self</span>, request: &amp;<a class="symbol-link rs-type" href="eos-command-session--src-request-rs.html#item-struct-CollectCompleted-43">CollectCompleted</a>) -&gt; <a class="symbol-link rs-type" href="eos-command-session--src-response-rs.html#item-struct-CollectCompletedResponse-157">CollectCompletedResponse</a> {
+        <span class="rs-kw">let</span> wanted: <span class="rs-type">Option</span>&lt;<span class="rs-type">HashSet</span>&lt;<span class="rs-type">String</span>&gt;&gt; = request
+            .command_session_ids
+            .as_ref()
+            .map(|ids| ids.iter().cloned().collect());
+        <span class="rs-kw">let</span> caller_id = request.caller_id.as_deref();
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> completed = <a class="symbol-link rs-fn" href="eos-command-session--src-process-runner-rs.html#item-fn-lock-281">lock</a>(&amp;<span class="rs-self">self</span>.completed);
+        <span class="rs-kw">let</span> matched: <span class="rs-type">Vec</span>&lt;<span class="rs-type">String</span>&gt; = completed
+            .iter()
+            .filter(|(id, completion)| {
+                <span class="rs-kw">let</span> id_matches = wanted.as_ref().is_none_or(|ids| ids.contains(*id));
+                <span class="rs-kw">let</span> caller_matches =
+                    caller_id.is_none_or(|caller_id| completion.caller_id == caller_id);
+                id_matches &amp;&amp; caller_matches
+            })
+            .map(|(id, _)| id.clone())
+            .collect();
+        <span class="rs-kw">let</span> completions = matched
+            .iter()
+            .filter_map(|id| completed.<a class="symbol-link rs-fn" href="eos-command-session--src-registry-rs.html#method-remove-170">remove</a>(id))
+            .map(|<span class="rs-kw">mut</span> completion| {
+                completion.result = completion.notification_result.clone();
+                completion
+            })
+            .collect();
+        <a class="symbol-link rs-type" href="eos-command-session--src-response-rs.html#item-struct-CollectCompletedResponse-157">CollectCompletedResponse</a> {
+            success: <span class="rs-kw">true</span>,
+            completions,
+        }
+    }
+</code></pre>
+</details></td></tr></tbody></table>
+
+  <p class="source">crates/eos-command-session/src/registry.rs:111</p>
+</article><article id="item-struct-EphemeralWorkspaceRun-49" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct EphemeralWorkspaceRun private struct EphemeralWorkspaceRun crates/eos-command-session/src/registry.rs run Arc &lt; RunSession &gt; ">
   <div class="item-head">
     <span class="kind">struct</span>
     <h3>EphemeralWorkspaceRun</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">struct EphemeralWorkspaceRun</code>
+  <code class="signature">struct <a class="symbol-link" href="eos-command-session--src-registry-rs.html#item-struct-EphemeralWorkspaceRun-49">EphemeralWorkspaceRun</a></code>
+  <p class="docstring">One ephemeral workspace run: **exactly one** command session. Each ephemeral<br>`exec_command` gets its own workspace (its snapshot lease + run dirs live in<br>the run's policy), so the workspace and its session are 1:1 and co-terminal.</p>
   <div class="tags"></div>
-  <h4>Fields</h4><table><tbody><tr><td>private</td><td>session</td><td><code>Arc &lt; CommandSession &gt;</code></td></tr></tbody></table>
-  <p class="source">crates/eos-command-session/src/registry.rs:28</p>
-</article><article class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct IsolatedWorkspaceRun private struct IsolatedWorkspaceRun crates/eos-command-session/src/registry.rs sessions HashMap &lt; String , Arc &lt; CommandSession &gt; &gt; ">
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>run</td><td><code>Arc &lt; <a class="symbol-link" href="eos-command-session--src-registry-rs.html#item-struct-RunSession-25">RunSession</a> &gt;</code></td></tr></tbody></table>
+
+  <p class="source">crates/eos-command-session/src/registry.rs:49</p>
+</article><article id="item-struct-IsolatedWorkspaceRun-56" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct IsolatedWorkspaceRun private struct IsolatedWorkspaceRun crates/eos-command-session/src/registry.rs sessions HashMap &lt; String , Arc &lt; RunSession &gt; &gt; ">
   <div class="item-head">
     <span class="kind">struct</span>
     <h3>IsolatedWorkspaceRun</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">struct IsolatedWorkspaceRun</code>
+  <code class="signature">struct <a class="symbol-link" href="eos-command-session--src-registry-rs.html#item-struct-IsolatedWorkspaceRun-56">IsolatedWorkspaceRun</a></code>
+  <p class="docstring">The isolated workspace run: **many** command sessions sharing the caller's one<br>isolated workspace (namespace + snapshot are owned by the isolated-session<br>subsystem; this run just tracks the command sessions running inside it).</p>
   <div class="tags"></div>
-  <h4>Fields</h4><table><tbody><tr><td>private</td><td>sessions</td><td><code>HashMap &lt; String , Arc &lt; CommandSession &gt; &gt;</code></td></tr></tbody></table>
-  <p class="source">crates/eos-command-session/src/registry.rs:36</p>
-</article><article class="type-card" data-kind="enum" data-kind-list="enum field impl method type-model" data-filter-text="enum CallerRun private enum CallerRun crates/eos-command-session/src/registry.rs  ">
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>sessions</td><td><code>HashMap &lt; String , Arc &lt; <a class="symbol-link" href="eos-command-session--src-registry-rs.html#item-struct-RunSession-25">RunSession</a> &gt; &gt;</code></td></tr></tbody></table>
+
+  <p class="source">crates/eos-command-session/src/registry.rs:56</p>
+</article><article id="item-enum-CallerRun-63" class="type-card" data-kind="enum" data-kind-list="enum field impl method type-model" data-filter-text="enum CallerRun private enum CallerRun crates/eos-command-session/src/registry.rs  ">
   <div class="item-head">
     <span class="kind">enum</span>
     <h3>CallerRun</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">enum CallerRun</code>
+  <code class="signature">enum <a class="symbol-link" href="eos-command-session--src-registry-rs.html#item-enum-CallerRun-63">CallerRun</a></code>
+  <p class="docstring">A caller's workspace runs. The XOR — many ephemeral workspaces (each one<br>session) **or** the one isolated workspace (many sessions) — is enforced by<br>the isolated enter/exit gate and encoded structurally here: an ephemeral<br>caller maps to a set of single-session runs, an isolated caller to one<br>many-session run.</p>
   <div class="tags"></div>
-  <h4>Variants</h4><table><tbody><tr><td>Ephemeral</td><td><code>0: HashMap &lt; String , EphemeralWorkspaceRun &gt;</code></td></tr><tr><td>Isolated</td><td><code>0: IsolatedWorkspaceRun</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr><td>method</td><td>sessions</td><td><code>fn sessions (&amp; self) -&gt; Vec &lt; Arc &lt; CommandSession &gt; &gt;</code></td></tr><tr><td>method</td><td>get</td><td><code>fn get (&amp; self , session_id : &amp; str) -&gt; Option &lt; Arc &lt; CommandSession &gt; &gt;</code></td></tr><tr><td>method</td><td>count</td><td><code>fn count (&amp; self) -&gt; usize</code></td></tr><tr><td>method</td><td>take</td><td><code>fn take (&amp; mut self , session_id : &amp; str) -&gt; (Option &lt; Arc &lt; CommandSession &gt; &gt; , bool)</code></td></tr></tbody></table>
-  <p class="source">crates/eos-command-session/src/registry.rs:43</p>
-</article><div class="group-label">Standalone Functions</div><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn lock pub(crate) pub(crate) fn lock &lt; T &gt; (mutex : &amp; Mutex &lt; T &gt;) -&gt; MutexGuard &lt; '_ , T &gt; crates/eos-command-session/src/registry.rs  ">
+  <h4>Variants</h4><table><tbody><tr><td>Ephemeral</td><td><code>0: HashMap &lt; String , <a class="symbol-link" href="eos-command-session--src-registry-rs.html#item-struct-EphemeralWorkspaceRun-49">EphemeralWorkspaceRun</a> &gt;</code></td></tr><tr><td>Isolated</td><td><code>0: <a class="symbol-link" href="eos-command-session--src-registry-rs.html#item-struct-IsolatedWorkspaceRun-56">IsolatedWorkspaceRun</a></code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-sessions-74"><td>method</td><td>sessions</td><td><code>fn <a class="symbol-link" href="eos-command-session--src-registry-rs.html#method-sessions-74">sessions</a> (&amp; self) -&gt; Vec &lt; Arc &lt; <a class="symbol-link" href="eos-command-session--src-registry-rs.html#item-struct-RunSession-25">RunSession</a> &gt; &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-session--src-registry-rs.html#method-sessions-74">sessions</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Vec</span>&lt;<span class="rs-type">Arc</span>&lt;<a class="symbol-link rs-type" href="eos-command-session--src-registry-rs.html#item-struct-RunSession-25">RunSession</a>&gt;&gt; {
+        <span class="rs-kw">match</span> <span class="rs-self">self</span> {
+            <span class="rs-self">Self</span>::<span class="rs-type">Ephemeral</span>(runs) =&gt; runs.values().map(|run| <span class="rs-type">Arc</span>::clone(&amp;run.run)).collect(),
+            <span class="rs-self">Self</span>::<span class="rs-type">Isolated</span>(run) =&gt; run.sessions.values().cloned().collect(),
+        }
+    }
+</code></pre>
+</details></td></tr><tr id="method-get-81"><td>method</td><td>get</td><td><code>fn <a class="symbol-link" href="eos-command-session--src-registry-rs.html#method-get-81">get</a> (&amp; self , session_id : &amp; str) -&gt; Option &lt; Arc &lt; <a class="symbol-link" href="eos-command-session--src-registry-rs.html#item-struct-RunSession-25">RunSession</a> &gt; &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-session--src-registry-rs.html#method-get-81">get</a>(&amp;<span class="rs-self">self</span>, session_id: &amp;str) -&gt; <span class="rs-type">Option</span>&lt;<span class="rs-type">Arc</span>&lt;<a class="symbol-link rs-type" href="eos-command-session--src-registry-rs.html#item-struct-RunSession-25">RunSession</a>&gt;&gt; {
+        <span class="rs-kw">match</span> <span class="rs-self">self</span> {
+            <span class="rs-self">Self</span>::<span class="rs-type">Ephemeral</span>(runs) =&gt; runs.<a class="symbol-link rs-fn" href="eos-command-session--src-registry-rs.html#method-get-81">get</a>(session_id).map(|run| <span class="rs-type">Arc</span>::clone(&amp;run.run)),
+            <span class="rs-self">Self</span>::<span class="rs-type">Isolated</span>(run) =&gt; run.sessions.<a class="symbol-link rs-fn" href="eos-command-session--src-registry-rs.html#method-get-81">get</a>(session_id).cloned(),
+        }
+    }
+</code></pre>
+</details></td></tr><tr id="method-count-88"><td>method</td><td>count</td><td><code>fn <a class="symbol-link" href="eos-command-session--src-registry-rs.html#method-count-88">count</a> (&amp; self) -&gt; usize</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-session--src-registry-rs.html#method-count-88">count</a>(&amp;<span class="rs-self">self</span>) -&gt; usize {
+        <span class="rs-kw">match</span> <span class="rs-self">self</span> {
+            <span class="rs-self">Self</span>::<span class="rs-type">Ephemeral</span>(runs) =&gt; runs.len(),
+            <span class="rs-self">Self</span>::<span class="rs-type">Isolated</span>(run) =&gt; run.sessions.len(),
+        }
+    }
+</code></pre>
+</details></td></tr><tr id="method-take-95"><td>method</td><td>take</td><td><code>fn <a class="symbol-link" href="eos-command-session--src-registry-rs.html#method-take-95">take</a> (&amp; mut self , session_id : &amp; str) -&gt; (Option &lt; Arc &lt; <a class="symbol-link" href="eos-command-session--src-registry-rs.html#item-struct-RunSession-25">RunSession</a> &gt; &gt; , bool)</code><p class="docstring">Remove `session_id`, returning the removed run and whether this caller<br>run is now empty (so the registry can drop the caller entry).</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Remove `session_id`, returning the removed run and whether this caller</span>
+    <span class="rs-comment">/// run is now empty (so the registry can drop the caller entry).</span>
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-session--src-registry-rs.html#method-take-95">take</a>(&amp;<span class="rs-kw">mut</span> <span class="rs-self">self</span>, session_id: &amp;str) -&gt; (<span class="rs-type">Option</span>&lt;<span class="rs-type">Arc</span>&lt;<a class="symbol-link rs-type" href="eos-command-session--src-registry-rs.html#item-struct-RunSession-25">RunSession</a>&gt;&gt;, bool) {
+        <span class="rs-kw">match</span> <span class="rs-self">self</span> {
+            <span class="rs-self">Self</span>::<span class="rs-type">Ephemeral</span>(runs) =&gt; {
+                <span class="rs-kw">let</span> removed = runs.<a class="symbol-link rs-fn" href="eos-command-session--src-registry-rs.html#method-remove-170">remove</a>(session_id).map(|run| run.run);
+                (removed, runs.is_empty())
+            }
+            <span class="rs-self">Self</span>::<span class="rs-type">Isolated</span>(run) =&gt; {
+                <span class="rs-kw">let</span> removed = run.sessions.<a class="symbol-link rs-fn" href="eos-command-session--src-registry-rs.html#method-remove-170">remove</a>(session_id);
+                (removed, run.sessions.is_empty())
+            }
+        }
+    }
+</code></pre>
+</details></td></tr></tbody></table>
+
+  <p class="source">crates/eos-command-session/src/registry.rs:63</p>
+</article><div class="group-label">Aliases</div><article id="item-type-PolicyArc-20" class="item-card" data-kind="type" data-kind-list="type" data-filter-text="type PolicyArc pub(crate) pub(crate) type PolicyArc = Arc &lt; dyn CommandWorkspacePolicy + Send + Sync &gt; crates/eos-command-session/src/registry.rs  ">
+  <div class="item-head">
+    <span class="kind">type</span>
+    <h3>PolicyArc</h3>
+    <span class="visibility">pub(crate)</span>
+  </div>
+  <code class="signature">pub(crate) type <a class="symbol-link" href="eos-command-session--src-registry-rs.html#item-type-PolicyArc-20">PolicyArc</a> = Arc &lt; dyn CommandWorkspacePolicy + Send + Sync &gt;</code>
+  <p class="docstring">The workspace policy owned by a run — overlay/namespace state (lease + dirs)<br>plus the finalize/discard logic. The run, not the session, owns this so the<br>publish-vs-discard decision lives at the run level.</p>
+  <div class="tags"></div>
+
+  <p class="source">crates/eos-command-session/src/registry.rs:20</p>
+</article><div class="group-label">Standalone Functions</div><article id="item-fn-lock-261" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn lock pub(crate) pub(crate) fn lock &lt; T &gt; (mutex : &amp; Mutex &lt; T &gt;) -&gt; MutexGuard &lt; '_ , T &gt; crates/eos-command-session/src/registry.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>lock</h3>
     <span class="visibility">pub(crate)</span>
   </div>
-  <code class="signature">pub(crate) fn lock &lt; T &gt; (mutex : &amp; Mutex &lt; T &gt;) -&gt; MutexGuard &lt; '_ , T &gt;</code>
+  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-command-session--src-process-runner-rs.html#item-fn-lock-281">lock</a> &lt; T &gt; (mutex : &amp; Mutex &lt; T &gt;) -&gt; MutexGuard &lt; &#x27;_ , T &gt;</code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> lock&lt;<span class="rs-type">T</span>&gt;(mutex: &amp;<span class="rs-type">Mutex</span>&lt;<span class="rs-type">T</span>&gt;) -&gt; <span class="rs-type">MutexGuard</span>&lt;&#x27;_, <span class="rs-type">T</span>&gt; {
+    mutex
+        .<a class="symbol-link rs-fn" href="eos-command-session--src-process-runner-rs.html#item-fn-lock-281">lock</a>()
+        .unwrap_or_else(std::sync::<span class="rs-type">PoisonError</span>::into_inner)
+}
+</code></pre>
+</details>
 
-  <p class="source">crates/eos-command-session/src/registry.rs:241</p>
+  <p class="source">crates/eos-command-session/src/registry.rs:261</p>
 </article></div>
 </section></div>
 </main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/eos-command-session/src/registry.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-kw">use</span> std::collections::{<span class="rs-type">HashMap</span>, <span class="rs-type">HashSet</span>};
+<span class="rs-kw">use</span> std::sync::atomic::{<span class="rs-type">AtomicU64</span>, <span class="rs-type">Ordering</span>};
+<span class="rs-kw">use</span> std::sync::{<span class="rs-type">Arc</span>, <span class="rs-type">Mutex</span>, <span class="rs-type">MutexGuard</span>};
+
+<span class="rs-kw">use</span> eos_workspace_api::<span class="rs-type">CommandWorkspacePolicy</span>;
+<span class="rs-kw">use</span> serde::{<span class="rs-type">Deserialize</span>, <span class="rs-type">Serialize</span>};
+
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::session::<a class="symbol-link rs-type" href="eos-command-session--src-session-rs.html#item-struct-CommandSession-39">CommandSession</a>;
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::{<a class="symbol-link rs-type" href="eos-command-session--src-request-rs.html#item-struct-CollectCompleted-43">CollectCompleted</a>, <a class="symbol-link rs-type" href="eos-command-session--src-response-rs.html#item-struct-CollectCompletedResponse-157">CollectCompletedResponse</a>, <a class="symbol-link rs-type" href="eos-command-session--src-response-rs.html#item-struct-CommandResponse-8">CommandResponse</a>};
+
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Serialize</span>, <span class="rs-type">Deserialize</span>)]
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-command-session--src-registry-rs.html#item-struct-CommandSessionCompletion-11">CommandSessionCompletion</a> {
+    <span class="rs-kw">pub</span> command_session_id: <span class="rs-type">String</span>,
+    <span class="rs-kw">pub</span> caller_id: <span class="rs-type">String</span>,
+    <span class="rs-kw">pub</span> command: <span class="rs-type">String</span>,
+    <span class="rs-kw">pub</span> result: <a class="symbol-link rs-type" href="eos-command-session--src-response-rs.html#item-struct-CommandResponse-8">CommandResponse</a>,
+    <span class="rs-kw">pub</span> notification_result: <a class="symbol-link rs-type" href="eos-command-session--src-response-rs.html#item-struct-CommandResponse-8">CommandResponse</a>,
+}
+
+<span class="rs-comment">/// The workspace policy owned by a run — overlay/namespace state (lease + dirs)</span>
+<span class="rs-comment">/// plus the finalize/discard logic. The run, not the session, owns this so the</span>
+<span class="rs-comment">/// publish-vs-discard decision lives at the run level.</span>
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">type</span> <a class="symbol-link rs-type" href="eos-command-session--src-registry-rs.html#item-type-PolicyArc-20">PolicyArc</a> = <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <span class="rs-type">CommandWorkspacePolicy</span> + <span class="rs-type">Send</span> + <span class="rs-type">Sync</span>&gt;;
+
+<span class="rs-comment">/// One command session paired with the workspace policy that owns its overlay</span>
+<span class="rs-comment">/// (ephemeral) or namespace (isolated) state. The session is the PTY substrate;</span>
+<span class="rs-comment">/// the policy decides publish (complete) vs discard (cancel).</span>
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-command-session--src-registry-rs.html#item-struct-RunSession-25">RunSession</a> {
+    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) session: <a class="symbol-link rs-type" href="eos-command-session--src-session-rs.html#item-struct-CommandSession-39">CommandSession</a>,
+    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) policy: <a class="symbol-link rs-type" href="eos-command-session--src-registry-rs.html#item-type-PolicyArc-20">PolicyArc</a>,
+}
+
+<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-command-session--src-registry-rs.html#item-struct-RunSession-25">RunSession</a> {
+    #[must_use]
+    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-session--src-manager-rs.html#method-new-33">new</a>(session: <a class="symbol-link rs-type" href="eos-command-session--src-session-rs.html#item-struct-CommandSession-39">CommandSession</a>, policy: <a class="symbol-link rs-type" href="eos-command-session--src-registry-rs.html#item-type-PolicyArc-20">PolicyArc</a>) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">Self</span> { session, policy }
+    }
+}
+
+<span class="rs-comment">/// Which workspace a starting command session belongs to. The daemon picks the</span>
+<span class="rs-comment">/// kind from the caller's current mode; the registry uses it to place the session</span>
+<span class="rs-comment">/// into a fresh ephemeral workspace run or the caller's isolated run.</span>
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">Copy</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Eq</span>)]
+<span class="rs-kw">pub</span> <span class="rs-kw">enum</span> <a class="symbol-link rs-type" href="eos-command-session--src-registry-rs.html#item-enum-WorkspaceRunKind-40">WorkspaceRunKind</a> {
+    <span class="rs-type">Ephemeral</span>,
+    <span class="rs-type">Isolated</span>,
+}
+
+<span class="rs-comment">/// One ephemeral workspace run: **exactly one** command session. Each ephemeral</span>
+<span class="rs-comment">/// `exec_command` gets its own workspace (its snapshot lease + run dirs live in</span>
+<span class="rs-comment">/// the run's policy), so the workspace and its session are 1:1 and co-terminal.</span>
+<span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-command-session--src-registry-rs.html#item-struct-EphemeralWorkspaceRun-49">EphemeralWorkspaceRun</a> {
+    run: <span class="rs-type">Arc</span>&lt;<a class="symbol-link rs-type" href="eos-command-session--src-registry-rs.html#item-struct-RunSession-25">RunSession</a>&gt;,
+}
+
+<span class="rs-comment">/// The isolated workspace run: **many** command sessions sharing the caller's one</span>
+<span class="rs-comment">/// isolated workspace (namespace + snapshot are owned by the isolated-session</span>
+<span class="rs-comment">/// subsystem; this run just tracks the command sessions running inside it).</span>
+<span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-command-session--src-registry-rs.html#item-struct-IsolatedWorkspaceRun-56">IsolatedWorkspaceRun</a> {
+    sessions: <span class="rs-type">HashMap</span>&lt;<span class="rs-type">String</span>, <span class="rs-type">Arc</span>&lt;<a class="symbol-link rs-type" href="eos-command-session--src-registry-rs.html#item-struct-RunSession-25">RunSession</a>&gt;&gt;,
+}
+
+<span class="rs-comment">/// A caller's workspace runs. The XOR — many ephemeral workspaces (each one</span>
+<span class="rs-comment">/// session) **or** the one isolated workspace (many sessions) — is enforced by</span>
+<span class="rs-comment">/// the isolated enter/exit gate and encoded structurally here: an ephemeral</span>
+<span class="rs-comment">/// caller maps to a set of single-session runs, an isolated caller to one</span>
+<span class="rs-comment">/// many-session run.</span>
+<span class="rs-kw">enum</span> <a class="symbol-link rs-type" href="eos-command-session--src-registry-rs.html#item-enum-CallerRun-63">CallerRun</a> {
+    <span class="rs-type">Ephemeral</span>(<span class="rs-type">HashMap</span>&lt;<span class="rs-type">String</span>, <a class="symbol-link rs-type" href="eos-command-session--src-registry-rs.html#item-struct-EphemeralWorkspaceRun-49">EphemeralWorkspaceRun</a>&gt;),
+    <span class="rs-type">Isolated</span>(<a class="symbol-link rs-type" href="eos-command-session--src-registry-rs.html#item-struct-IsolatedWorkspaceRun-56">IsolatedWorkspaceRun</a>),
+}
+
+<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-command-session--src-registry-rs.html#item-enum-CallerRun-63">CallerRun</a> {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-session--src-registry-rs.html#method-sessions-74">sessions</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Vec</span>&lt;<span class="rs-type">Arc</span>&lt;<a class="symbol-link rs-type" href="eos-command-session--src-registry-rs.html#item-struct-RunSession-25">RunSession</a>&gt;&gt; {
+        <span class="rs-kw">match</span> <span class="rs-self">self</span> {
+            <span class="rs-self">Self</span>::<span class="rs-type">Ephemeral</span>(runs) =&gt; runs.values().map(|run| <span class="rs-type">Arc</span>::clone(&amp;run.run)).collect(),
+            <span class="rs-self">Self</span>::<span class="rs-type">Isolated</span>(run) =&gt; run.sessions.values().cloned().collect(),
+        }
+    }
+
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-session--src-registry-rs.html#method-get-81">get</a>(&amp;<span class="rs-self">self</span>, session_id: &amp;str) -&gt; <span class="rs-type">Option</span>&lt;<span class="rs-type">Arc</span>&lt;<a class="symbol-link rs-type" href="eos-command-session--src-registry-rs.html#item-struct-RunSession-25">RunSession</a>&gt;&gt; {
+        <span class="rs-kw">match</span> <span class="rs-self">self</span> {
+            <span class="rs-self">Self</span>::<span class="rs-type">Ephemeral</span>(runs) =&gt; runs.<a class="symbol-link rs-fn" href="eos-command-session--src-registry-rs.html#method-get-81">get</a>(session_id).map(|run| <span class="rs-type">Arc</span>::clone(&amp;run.run)),
+            <span class="rs-self">Self</span>::<span class="rs-type">Isolated</span>(run) =&gt; run.sessions.<a class="symbol-link rs-fn" href="eos-command-session--src-registry-rs.html#method-get-81">get</a>(session_id).cloned(),
+        }
+    }
+
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-session--src-registry-rs.html#method-count-88">count</a>(&amp;<span class="rs-self">self</span>) -&gt; usize {
+        <span class="rs-kw">match</span> <span class="rs-self">self</span> {
+            <span class="rs-self">Self</span>::<span class="rs-type">Ephemeral</span>(runs) =&gt; runs.len(),
+            <span class="rs-self">Self</span>::<span class="rs-type">Isolated</span>(run) =&gt; run.sessions.len(),
+        }
+    }
+
+    <span class="rs-comment">/// Remove `session_id`, returning the removed run and whether this caller</span>
+    <span class="rs-comment">/// run is now empty (so the registry can drop the caller entry).</span>
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-session--src-registry-rs.html#method-take-95">take</a>(&amp;<span class="rs-kw">mut</span> <span class="rs-self">self</span>, session_id: &amp;str) -&gt; (<span class="rs-type">Option</span>&lt;<span class="rs-type">Arc</span>&lt;<a class="symbol-link rs-type" href="eos-command-session--src-registry-rs.html#item-struct-RunSession-25">RunSession</a>&gt;&gt;, bool) {
+        <span class="rs-kw">match</span> <span class="rs-self">self</span> {
+            <span class="rs-self">Self</span>::<span class="rs-type">Ephemeral</span>(runs) =&gt; {
+                <span class="rs-kw">let</span> removed = runs.<a class="symbol-link rs-fn" href="eos-command-session--src-registry-rs.html#method-remove-170">remove</a>(session_id).map(|run| run.run);
+                (removed, runs.is_empty())
+            }
+            <span class="rs-self">Self</span>::<span class="rs-type">Isolated</span>(run) =&gt; {
+                <span class="rs-kw">let</span> removed = run.sessions.<a class="symbol-link rs-fn" href="eos-command-session--src-registry-rs.html#method-remove-170">remove</a>(session_id);
+                (removed, run.sessions.is_empty())
+            }
+        }
+    }
+}
+
+<span class="rs-comment">/// Single caller-keyed command-session authority. Each caller maps to its</span>
+<span class="rs-comment">/// `CallerRun` (many ephemeral workspace runs or the one isolated run).</span>
+<span class="rs-comment">/// Session-targeted ops resolve by scanning runs for the session id (caller count</span>
+<span class="rs-comment">/// is small).</span>
+#[derive(<span class="rs-type">Default</span>)]
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-command-session--src-registry-rs.html#item-struct-CommandSessionRegistry-111">CommandSessionRegistry</a> {
+    runs: <span class="rs-type">Mutex</span>&lt;<span class="rs-type">HashMap</span>&lt;<span class="rs-type">String</span>, <a class="symbol-link rs-type" href="eos-command-session--src-registry-rs.html#item-enum-CallerRun-63">CallerRun</a>&gt;&gt;,
+    completed: <span class="rs-type">Mutex</span>&lt;<span class="rs-type">HashMap</span>&lt;<span class="rs-type">String</span>, <a class="symbol-link rs-type" href="eos-command-session--src-registry-rs.html#item-struct-CommandSessionCompletion-11">CommandSessionCompletion</a>&gt;&gt;,
+    counter: <span class="rs-type">AtomicU64</span>,
+}
+
+<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-command-session--src-registry-rs.html#item-struct-CommandSessionRegistry-111">CommandSessionRegistry</a> {
+    #[must_use]
+    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-session--src-manager-rs.html#method-new-33">new</a>() -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">Self</span> {
+            runs: <span class="rs-type">Mutex</span>::<a class="symbol-link rs-fn" href="eos-command-session--src-manager-rs.html#method-new-33">new</a>(<span class="rs-type">HashMap</span>::<a class="symbol-link rs-fn" href="eos-command-session--src-manager-rs.html#method-new-33">new</a>()),
+            completed: <span class="rs-type">Mutex</span>::<a class="symbol-link rs-fn" href="eos-command-session--src-manager-rs.html#method-new-33">new</a>(<span class="rs-type">HashMap</span>::<a class="symbol-link rs-fn" href="eos-command-session--src-manager-rs.html#method-new-33">new</a>()),
+            counter: <span class="rs-type">AtomicU64</span>::<a class="symbol-link rs-fn" href="eos-command-session--src-manager-rs.html#method-new-33">new</a>(1),
+        }
+    }
+
+    #[must_use]
+    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-session--src-registry-rs.html#method-next-id-132">next_id</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">String</span> {
+        format!(&quot;cmd_{}&quot;, <span class="rs-self">self</span>.counter.fetch_add(1, <span class="rs-type">Ordering</span>::<span class="rs-type">Relaxed</span>))
+    }
+
+    <span class="rs-comment">/// Place a started run into its caller's runs: a fresh ephemeral workspace</span>
+    <span class="rs-comment">/// run, or the caller's (created-on-first-session) isolated run.</span>
+    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-session--src-registry-rs.html#method-insert-137">insert</a>(&amp;<span class="rs-self">self</span>, run: <span class="rs-type">Arc</span>&lt;<a class="symbol-link rs-type" href="eos-command-session--src-registry-rs.html#item-struct-RunSession-25">RunSession</a>&gt;, kind: <a class="symbol-link rs-type" href="eos-command-session--src-registry-rs.html#item-enum-WorkspaceRunKind-40">WorkspaceRunKind</a>) {
+        <span class="rs-kw">let</span> caller_id = run.session.<a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-caller-id-144">caller_id</a>().to_owned();
+        <span class="rs-kw">let</span> session_id = run.session.<a class="symbol-link rs-fn" href="eos-command-session--src-session-rs.html#method-id-139">id</a>().to_owned();
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> runs = <a class="symbol-link rs-fn" href="eos-command-session--src-process-runner-rs.html#item-fn-lock-281">lock</a>(&amp;<span class="rs-self">self</span>.runs);
+        <span class="rs-kw">match</span> kind {
+            <a class="symbol-link rs-type" href="eos-command-session--src-registry-rs.html#item-enum-WorkspaceRunKind-40">WorkspaceRunKind</a>::<span class="rs-type">Ephemeral</span> =&gt; {
+                <span class="rs-kw">let</span> caller = runs
+                    .entry(caller_id)
+                    .or_insert_with(|| <a class="symbol-link rs-type" href="eos-command-session--src-registry-rs.html#item-enum-CallerRun-63">CallerRun</a>::<span class="rs-type">Ephemeral</span>(<span class="rs-type">HashMap</span>::<a class="symbol-link rs-fn" href="eos-command-session--src-manager-rs.html#method-new-33">new</a>()));
+                <span class="rs-kw">if</span> <span class="rs-kw">let</span> <a class="symbol-link rs-type" href="eos-command-session--src-registry-rs.html#item-enum-CallerRun-63">CallerRun</a>::<span class="rs-type">Ephemeral</span>(ephemeral) = caller {
+                    ephemeral.<a class="symbol-link rs-fn" href="eos-command-session--src-registry-rs.html#method-insert-137">insert</a>(session_id, <a class="symbol-link rs-type" href="eos-command-session--src-registry-rs.html#item-struct-EphemeralWorkspaceRun-49">EphemeralWorkspaceRun</a> { run });
+                }
+            }
+            <a class="symbol-link rs-type" href="eos-command-session--src-registry-rs.html#item-enum-WorkspaceRunKind-40">WorkspaceRunKind</a>::<span class="rs-type">Isolated</span> =&gt; {
+                <span class="rs-kw">let</span> caller = runs.entry(caller_id).or_insert_with(|| {
+                    <a class="symbol-link rs-type" href="eos-command-session--src-registry-rs.html#item-enum-CallerRun-63">CallerRun</a>::<span class="rs-type">Isolated</span>(<a class="symbol-link rs-type" href="eos-command-session--src-registry-rs.html#item-struct-IsolatedWorkspaceRun-56">IsolatedWorkspaceRun</a> {
+                        sessions: <span class="rs-type">HashMap</span>::<a class="symbol-link rs-fn" href="eos-command-session--src-manager-rs.html#method-new-33">new</a>(),
+                    })
+                });
+                <span class="rs-kw">if</span> <span class="rs-kw">let</span> <a class="symbol-link rs-type" href="eos-command-session--src-registry-rs.html#item-enum-CallerRun-63">CallerRun</a>::<span class="rs-type">Isolated</span>(isolated) = caller {
+                    isolated.sessions.<a class="symbol-link rs-fn" href="eos-command-session--src-registry-rs.html#method-insert-137">insert</a>(session_id, run);
+                }
+            }
+        }
+    }
+
+    #[must_use]
+    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-session--src-registry-rs.html#method-get-81">get</a>(&amp;<span class="rs-self">self</span>, id: &amp;str) -&gt; <span class="rs-type">Option</span>&lt;<span class="rs-type">Arc</span>&lt;<a class="symbol-link rs-type" href="eos-command-session--src-registry-rs.html#item-struct-RunSession-25">RunSession</a>&gt;&gt; {
+        <a class="symbol-link rs-fn" href="eos-command-session--src-process-runner-rs.html#item-fn-lock-281">lock</a>(&amp;<span class="rs-self">self</span>.runs).values().find_map(|run| run.<a class="symbol-link rs-fn" href="eos-command-session--src-registry-rs.html#method-get-81">get</a>(id))
+    }
+
+    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-session--src-registry-rs.html#method-remove-170">remove</a>(&amp;<span class="rs-self">self</span>, id: &amp;str) -&gt; <span class="rs-type">Option</span>&lt;<span class="rs-type">Arc</span>&lt;<a class="symbol-link rs-type" href="eos-command-session--src-registry-rs.html#item-struct-RunSession-25">RunSession</a>&gt;&gt; {
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> runs = <a class="symbol-link rs-fn" href="eos-command-session--src-process-runner-rs.html#item-fn-lock-281">lock</a>(&amp;<span class="rs-self">self</span>.runs);
+        <span class="rs-kw">let</span> caller = runs
+            .iter()
+            .find(|(_, run)| run.<a class="symbol-link rs-fn" href="eos-command-session--src-registry-rs.html#method-get-81">get</a>(id).is_some())
+            .map(|(caller, _)| caller.clone())?;
+        <span class="rs-kw">let</span> (run, now_empty) = runs
+            .get_mut(&amp;caller)
+            .map(|run| run.<a class="symbol-link rs-fn" href="eos-command-session--src-registry-rs.html#method-take-95">take</a>(id))
+            .unwrap_or((<span class="rs-type">None</span>, <span class="rs-kw">false</span>));
+        <span class="rs-kw">if</span> now_empty {
+            runs.<a class="symbol-link rs-fn" href="eos-command-session--src-registry-rs.html#method-remove-170">remove</a>(&amp;caller);
+        }
+        run
+    }
+
+    #[must_use]
+    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-session--src-manager-rs.html#method-count-by-caller-304">count_by_caller</a>(&amp;<span class="rs-self">self</span>, caller_id: <span class="rs-type">Option</span>&lt;&amp;str&gt;) -&gt; usize {
+        <span class="rs-kw">let</span> runs = <a class="symbol-link rs-fn" href="eos-command-session--src-process-runner-rs.html#item-fn-lock-281">lock</a>(&amp;<span class="rs-self">self</span>.runs);
+        <span class="rs-kw">match</span> caller_id {
+            <span class="rs-type">Some</span>(caller) =&gt; runs.<a class="symbol-link rs-fn" href="eos-command-session--src-registry-rs.html#method-get-81">get</a>(caller).map_or(0, <a class="symbol-link rs-type" href="eos-command-session--src-registry-rs.html#item-enum-CallerRun-63">CallerRun</a>::count),
+            <span class="rs-type">None</span> =&gt; runs.values().map(<a class="symbol-link rs-type" href="eos-command-session--src-registry-rs.html#item-enum-CallerRun-63">CallerRun</a>::count).sum(),
+        }
+    }
+
+    #[must_use]
+    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-session--src-registry-rs.html#method-live-195">live</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Vec</span>&lt;<span class="rs-type">Arc</span>&lt;<a class="symbol-link rs-type" href="eos-command-session--src-registry-rs.html#item-struct-RunSession-25">RunSession</a>&gt;&gt; {
+        <a class="symbol-link rs-fn" href="eos-command-session--src-process-runner-rs.html#item-fn-lock-281">lock</a>(&amp;<span class="rs-self">self</span>.runs)
+            .values()
+            .flat_map(<a class="symbol-link rs-type" href="eos-command-session--src-registry-rs.html#item-enum-CallerRun-63">CallerRun</a>::sessions)
+            .collect()
+    }
+
+    <span class="rs-comment">/// All live runs owned by `caller_id` (drives per-caller cleanup).</span>
+    #[cfg(target_os = &quot;linux&quot;)]
+    #[must_use]
+    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-session--src-registry-rs.html#method-caller-sessions-203">caller_sessions</a>(&amp;<span class="rs-self">self</span>, caller_id: &amp;str) -&gt; <span class="rs-type">Vec</span>&lt;<span class="rs-type">Arc</span>&lt;<a class="symbol-link rs-type" href="eos-command-session--src-registry-rs.html#item-struct-RunSession-25">RunSession</a>&gt;&gt; {
+        <a class="symbol-link rs-fn" href="eos-command-session--src-process-runner-rs.html#item-fn-lock-281">lock</a>(&amp;<span class="rs-self">self</span>.runs)
+            .<a class="symbol-link rs-fn" href="eos-command-session--src-registry-rs.html#method-get-81">get</a>(caller_id)
+            .map(<a class="symbol-link rs-type" href="eos-command-session--src-registry-rs.html#item-enum-CallerRun-63">CallerRun</a>::sessions)
+            .unwrap_or_default()
+    }
+
+    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-session--src-manager-rs.html#method-push-completed-314">push_completed</a>(&amp;<span class="rs-self">self</span>, completion: <a class="symbol-link rs-type" href="eos-command-session--src-registry-rs.html#item-struct-CommandSessionCompletion-11">CommandSessionCompletion</a>) {
+        <a class="symbol-link rs-fn" href="eos-command-session--src-process-runner-rs.html#item-fn-lock-281">lock</a>(&amp;<span class="rs-self">self</span>.completed).<a class="symbol-link rs-fn" href="eos-command-session--src-registry-rs.html#method-insert-137">insert</a>(completion.command_session_id.clone(), completion);
+    }
+
+    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-session--src-registry-rs.html#method-take-completed-result-217">take_completed_result</a>(&amp;<span class="rs-self">self</span>, id: &amp;str) -&gt; <span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-command-session--src-response-rs.html#item-struct-CommandResponse-8">CommandResponse</a>&gt; {
+        <a class="symbol-link rs-fn" href="eos-command-session--src-process-runner-rs.html#item-fn-lock-281">lock</a>(&amp;<span class="rs-self">self</span>.completed).<a class="symbol-link rs-fn" href="eos-command-session--src-registry-rs.html#method-remove-170">remove</a>(id).map(|entry| entry.result)
+    }
+
+    #[must_use]
+    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-session--src-registry-rs.html#method-completed-result-221">completed_result</a>(&amp;<span class="rs-self">self</span>, id: &amp;str) -&gt; <span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-command-session--src-response-rs.html#item-struct-CommandResponse-8">CommandResponse</a>&gt; {
+        <a class="symbol-link rs-fn" href="eos-command-session--src-process-runner-rs.html#item-fn-lock-281">lock</a>(&amp;<span class="rs-self">self</span>.completed)
+            .<a class="symbol-link rs-fn" href="eos-command-session--src-registry-rs.html#method-get-81">get</a>(id)
+            .map(|entry| entry.result.clone())
+    }
+
+    #[must_use]
+    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-command-session--src-manager-rs.html#method-collect-completed-309">collect_completed</a>(&amp;<span class="rs-self">self</span>, request: &amp;<a class="symbol-link rs-type" href="eos-command-session--src-request-rs.html#item-struct-CollectCompleted-43">CollectCompleted</a>) -&gt; <a class="symbol-link rs-type" href="eos-command-session--src-response-rs.html#item-struct-CollectCompletedResponse-157">CollectCompletedResponse</a> {
+        <span class="rs-kw">let</span> wanted: <span class="rs-type">Option</span>&lt;<span class="rs-type">HashSet</span>&lt;<span class="rs-type">String</span>&gt;&gt; = request
+            .command_session_ids
+            .as_ref()
+            .map(|ids| ids.iter().cloned().collect());
+        <span class="rs-kw">let</span> caller_id = request.caller_id.as_deref();
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> completed = <a class="symbol-link rs-fn" href="eos-command-session--src-process-runner-rs.html#item-fn-lock-281">lock</a>(&amp;<span class="rs-self">self</span>.completed);
+        <span class="rs-kw">let</span> matched: <span class="rs-type">Vec</span>&lt;<span class="rs-type">String</span>&gt; = completed
+            .iter()
+            .filter(|(id, completion)| {
+                <span class="rs-kw">let</span> id_matches = wanted.as_ref().is_none_or(|ids| ids.contains(*id));
+                <span class="rs-kw">let</span> caller_matches =
+                    caller_id.is_none_or(|caller_id| completion.caller_id == caller_id);
+                id_matches &amp;&amp; caller_matches
+            })
+            .map(|(id, _)| id.clone())
+            .collect();
+        <span class="rs-kw">let</span> completions = matched
+            .iter()
+            .filter_map(|id| completed.<a class="symbol-link rs-fn" href="eos-command-session--src-registry-rs.html#method-remove-170">remove</a>(id))
+            .map(|<span class="rs-kw">mut</span> completion| {
+                completion.result = completion.notification_result.clone();
+                completion
+            })
+            .collect();
+        <a class="symbol-link rs-type" href="eos-command-session--src-response-rs.html#item-struct-CollectCompletedResponse-157">CollectCompletedResponse</a> {
+            success: <span class="rs-kw">true</span>,
+            completions,
+        }
+    }
+}
+
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> lock&lt;<span class="rs-type">T</span>&gt;(mutex: &amp;<span class="rs-type">Mutex</span>&lt;<span class="rs-type">T</span>&gt;) -&gt; <span class="rs-type">MutexGuard</span>&lt;&#x27;_, <span class="rs-type">T</span>&gt; {
+    mutex
+        .<a class="symbol-link rs-fn" href="eos-command-session--src-process-runner-rs.html#item-fn-lock-281">lock</a>()
+        .unwrap_or_else(std::sync::<span class="rs-type">PoisonError</span>::into_inner)
+}
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
   <script src="../assets/inventory.js"></script>
 </body>
 </html>

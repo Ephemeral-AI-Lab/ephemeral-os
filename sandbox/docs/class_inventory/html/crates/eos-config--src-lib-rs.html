@@ -8,8 +8,16 @@
 </head>
 <body>
   <header>
-    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
-    <h1>eos-config File Inventory</h1>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>eos-config File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS/sandbox &amp;&amp; cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
   </header>
   <a class="back-link" href="../index.html">sandbox</a>
 <section class="summary">
@@ -47,139 +55,713 @@
       <span>0 methods</span>
     </div>
   </div>
-  <div class="items"><div class="group-label">Standalone Functions</div><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn load_prd pub pub fn load_prd () -&gt; Result &lt; ConfigDocument , ConfigError &gt; crates/eos-config/src/lib.rs  ">
+  <div class="items"><div class="group-label">Standalone Functions</div><article id="item-fn-load-prd-18" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn load_prd pub pub fn load_prd () -&gt; Result &lt; ConfigDocument , ConfigError &gt; crates/eos-config/src/lib.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>load_prd</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub fn load_prd () -&gt; Result &lt; ConfigDocument , ConfigError &gt;</code>
+  <code class="signature">pub fn <a class="symbol-link" href="eos-config--src-lib-rs.html#item-fn-load-prd-18">load_prd</a> () -&gt; Result &lt; <a class="symbol-link" href="eos-config--src-document-rs.html#item-struct-ConfigDocument-11">ConfigDocument</a> , <a class="symbol-link" href="eos-config--src-error-rs.html#item-enum-ConfigError-7">ConfigError</a> &gt;</code>
+  <p class="docstring">Load the single production baseline at `sandbox/config/prd.yml`.<br># Errors<br>Returns an error when the baseline path cannot be resolved, read, or parsed.</p>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-comment">/// Load the single production baseline at `sandbox/config/prd.yml`.</span>
+<span class="rs-comment">///</span>
+<span class="rs-comment">/// # Errors</span>
+<span class="rs-comment">/// Returns an error when the baseline path cannot be resolved, read, or parsed.</span>
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-config--src-lib-rs.html#item-fn-load-prd-18">load_prd</a>() -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-config--src-document-rs.html#item-struct-ConfigDocument-11">ConfigDocument</a>, <a class="symbol-link rs-type" href="eos-config--src-error-rs.html#item-enum-ConfigError-7">ConfigError</a>&gt; {
+    <span class="rs-kw">let</span> path = <a class="symbol-link rs-type" href="eos-config--src-paths-rs.html#item-struct-ConfigPath-5">ConfigPath</a>::<a class="symbol-link rs-fn" href="eos-config--src-paths-rs.html#method-prd-12">prd</a>()?;
+    <a class="symbol-link rs-type" href="eos-config--src-document-rs.html#item-struct-ConfigDocument-11">ConfigDocument</a>::<a class="symbol-link rs-fn" href="eos-config--src-document-rs.html#method-read-18">read</a>(path.<a class="symbol-link rs-fn" href="eos-config--src-paths-rs.html#method-as-path-69">as_path</a>())
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-config/src/lib.rs:18</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn load_test_override pub pub fn load_test_override (path : impl AsRef &lt; Path &gt;) -&gt; Result &lt; ConfigDocument , ConfigError &gt; crates/eos-config/src/lib.rs  ">
+</article><article id="item-fn-load-test-override-27" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn load_test_override pub pub fn load_test_override (path : impl AsRef &lt; Path &gt;) -&gt; Result &lt; ConfigDocument , ConfigError &gt; crates/eos-config/src/lib.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>load_test_override</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub fn load_test_override (path : impl AsRef &lt; Path &gt;) -&gt; Result &lt; ConfigDocument , ConfigError &gt;</code>
+  <code class="signature">pub fn <a class="symbol-link" href="eos-config--src-configs-e2e-test-rs.html#method-load-test-override-269">load_test_override</a> (path : impl AsRef &lt; Path &gt;) -&gt; Result &lt; <a class="symbol-link" href="eos-config--src-document-rs.html#item-struct-ConfigDocument-11">ConfigDocument</a> , <a class="symbol-link" href="eos-config--src-error-rs.html#item-enum-ConfigError-7">ConfigError</a> &gt;</code>
+  <p class="docstring">Load `prd.yml`, merge one test-local `*.test.yml` override, and return the<br>merged document.<br>The path parameter is for test code only; this crate intentionally exposes no<br>CLI or environment variable config path selection.<br># Errors<br>Returns an error when the override path is not a valid sandbox-local<br>`*.test.yml`, when either file cannot be read or parsed, or when merging<br>fails.</p>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-comment">/// Load `prd.yml`, merge one test-local `*.test.yml` override, and return the</span>
+<span class="rs-comment">/// merged document.</span>
+<span class="rs-comment">///</span>
+<span class="rs-comment">/// The path parameter is for test code only; this crate intentionally exposes no</span>
+<span class="rs-comment">/// CLI or environment variable config path selection.</span>
+<span class="rs-comment">///</span>
+<span class="rs-comment">/// # Errors</span>
+<span class="rs-comment">/// Returns an error when the override path is not a valid sandbox-local</span>
+<span class="rs-comment">/// `*.test.yml`, when either file cannot be read or parsed, or when merging</span>
+<span class="rs-comment">/// fails.</span>
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-config--src-configs-e2e-test-rs.html#method-load-test-override-269">load_test_override</a>(path: <span class="rs-kw">impl</span> <span class="rs-type">AsRef</span>&lt;<span class="rs-type">Path</span>&gt;) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-config--src-document-rs.html#item-struct-ConfigDocument-11">ConfigDocument</a>, <a class="symbol-link rs-type" href="eos-config--src-error-rs.html#item-enum-ConfigError-7">ConfigError</a>&gt; {
+    <span class="rs-kw">let</span> prd = <a class="symbol-link rs-type" href="eos-config--src-paths-rs.html#item-struct-ConfigPath-5">ConfigPath</a>::<a class="symbol-link rs-fn" href="eos-config--src-paths-rs.html#method-prd-12">prd</a>()?;
+    <span class="rs-kw">let</span> override_path = <a class="symbol-link rs-type" href="eos-config--src-paths-rs.html#item-struct-ConfigPath-5">ConfigPath</a>::<a class="symbol-link rs-fn" href="eos-config--src-paths-rs.html#method-test-override-23">test_override</a>(path.as_ref())?;
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> baseline = <a class="symbol-link rs-type" href="eos-config--src-document-rs.html#item-struct-ConfigDocument-11">ConfigDocument</a>::<a class="symbol-link rs-fn" href="eos-config--src-document-rs.html#method-read-18">read</a>(prd.<a class="symbol-link rs-fn" href="eos-config--src-paths-rs.html#method-as-path-69">as_path</a>())?;
+    <span class="rs-kw">let</span> override_doc = <a class="symbol-link rs-type" href="eos-config--src-document-rs.html#item-struct-ConfigDocument-11">ConfigDocument</a>::<a class="symbol-link rs-fn" href="eos-config--src-document-rs.html#method-read-18">read</a>(override_path.<a class="symbol-link rs-fn" href="eos-config--src-paths-rs.html#method-as-path-69">as_path</a>())?;
+    baseline.<a class="symbol-link rs-fn" href="eos-config--src-document-rs.html#method-merge-39">merge</a>(override_doc)?;
+    <span class="rs-type">Ok</span>(baseline)
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-config/src/lib.rs:27</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn load_prd_reads_committed_baseline private fn load_prd_reads_committed_baseline () crates/eos-config/src/lib.rs  ">
+</article><article id="item-fn-load-prd-reads-committed-baseline-56" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn load_prd_reads_committed_baseline private fn load_prd_reads_committed_baseline () crates/eos-config/src/lib.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>load_prd_reads_committed_baseline</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn load_prd_reads_committed_baseline ()</code>
-  <div class="tags"></div>
+  <code class="signature">fn <a class="symbol-link" href="eos-config--src-lib-rs.html#item-fn-load-prd-reads-committed-baseline-56">load_prd_reads_committed_baseline</a> ()</code>
+  <div class="tags"><span>test</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-config--src-lib-rs.html#item-fn-load-prd-reads-committed-baseline-56">load_prd_reads_committed_baseline</a>() {
+        <span class="rs-kw">let</span> doc = <a class="symbol-link rs-fn" href="eos-config--src-lib-rs.html#item-fn-load-prd-18">load_prd</a>().expect(&quot;prd.yml loads&quot;);
+        <span class="rs-kw">let</span> section = doc
+            .section::&lt;serde_yaml::<span class="rs-type">Value</span>&gt;(&quot;eos_e2e_test&quot;)
+            .expect(&quot;eos_e2e_test section exists&quot;);
+
+        assert!(matches!(section, serde_yaml::<span class="rs-type">Value</span>::<span class="rs-type">Mapping</span>(_)));
+    }
+</code></pre>
+</details>
 
   <p class="source">crates/eos-config/src/lib.rs:56</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn merge_recurses_objects_replaces_scalars_and_replaces_arrays private fn merge_recurses_objects_replaces_scalars_and_replaces_arrays () crates/eos-config/src/lib.rs  ">
+</article><article id="item-fn-merge-recurses-objects-replaces-scalars-and-replaces-arrays-66" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn merge_recurses_objects_replaces_scalars_and_replaces_arrays private fn merge_recurses_objects_replaces_scalars_and_replaces_arrays () crates/eos-config/src/lib.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>merge_recurses_objects_replaces_scalars_and_replaces_arrays</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn merge_recurses_objects_replaces_scalars_and_replaces_arrays ()</code>
-  <div class="tags"></div>
+  <code class="signature">fn <a class="symbol-link" href="eos-config--src-lib-rs.html#item-fn-merge-recurses-objects-replaces-scalars-and-replaces-arrays-66">merge_recurses_objects_replaces_scalars_and_replaces_arrays</a> ()</code>
+  <div class="tags"><span>test</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-config--src-lib-rs.html#item-fn-merge-recurses-objects-replaces-scalars-and-replaces-arrays-66">merge_recurses_objects_replaces_scalars_and_replaces_arrays</a>() {
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> baseline = <a class="symbol-link rs-type" href="eos-config--src-document-rs.html#item-struct-ConfigDocument-11">ConfigDocument</a>::<a class="symbol-link rs-fn" href="eos-config--src-document-rs.html#method-from-yaml-str-34">from_yaml_str</a>(
+            r#&quot;
+daemon:
+  command_sessions:
+    default_yield_time_ms: 1000
+    max_session_s: 21600
+  plugin:
+    max_response_bytes: 8388608
+eos_e2e_test:
+  docker:
+    cap_add: [<span class="rs-type">SYS_ADMIN</span>, <span class="rs-type">NET_ADMIN</span>]
+&quot;#,
+        )
+        .expect(&quot;baseline parses&quot;);
+        <span class="rs-kw">let</span> override_doc = <a class="symbol-link rs-type" href="eos-config--src-document-rs.html#item-struct-ConfigDocument-11">ConfigDocument</a>::<a class="symbol-link rs-fn" href="eos-config--src-document-rs.html#method-from-yaml-str-34">from_yaml_str</a>(
+            r#&quot;
+daemon:
+  command_sessions:
+    max_session_s: 2
+eos_e2e_test:
+  docker:
+    cap_add: [<span class="rs-type">SYS_PTRACE</span>]
+&quot;#,
+        )
+        .expect(&quot;override parses&quot;);
+
+        baseline.<a class="symbol-link rs-fn" href="eos-config--src-document-rs.html#method-merge-39">merge</a>(override_doc).expect(&quot;merge succeeds&quot;);
+
+        <span class="rs-kw">let</span> merged = baseline.<a class="symbol-link rs-fn" href="eos-config--src-document-rs.html#method-into-value-57">into_value</a>();
+        assert_eq!(
+            merged[&quot;daemon&quot;][&quot;command_sessions&quot;][&quot;default_yield_time_ms&quot;],
+            serde_yaml::<span class="rs-type">Value</span>::<span class="rs-type">Number</span>(1000.into())
+        );
+        assert_eq!(
+            merged[&quot;daemon&quot;][&quot;command_sessions&quot;][&quot;max_session_s&quot;],
+            serde_yaml::<span class="rs-type">Value</span>::<span class="rs-type">Number</span>(2.into())
+        );
+        assert_eq!(
+            merged[&quot;daemon&quot;][&quot;plugin&quot;][&quot;max_response_bytes&quot;],
+            serde_yaml::<span class="rs-type">Value</span>::<span class="rs-type">Number</span>(8_388_608.into())
+        );
+        assert_eq!(
+            merged[&quot;eos_e2e_test&quot;][&quot;docker&quot;][&quot;cap_add&quot;],
+            serde_yaml::<span class="rs-type">Value</span>::<span class="rs-type">Sequence</span>(vec![serde_yaml::<span class="rs-type">Value</span>::<span class="rs-type">String</span>(&quot;<span class="rs-type">SYS_PTRACE</span>&quot;.to_owned())])
+        );
+    }
+</code></pre>
+</details>
 
   <p class="source">crates/eos-config/src/lib.rs:66</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn section_reports_unknown_field_errors private fn section_reports_unknown_field_errors () crates/eos-config/src/lib.rs  ">
+</article><article id="item-fn-section-reports-unknown-field-errors-115" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn section_reports_unknown_field_errors private fn section_reports_unknown_field_errors () crates/eos-config/src/lib.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>section_reports_unknown_field_errors</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn section_reports_unknown_field_errors ()</code>
-  <div class="tags"></div>
+  <code class="signature">fn <a class="symbol-link" href="eos-config--src-lib-rs.html#item-fn-section-reports-unknown-field-errors-115">section_reports_unknown_field_errors</a> ()</code>
+  <div class="tags"><span>test</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-config--src-lib-rs.html#item-fn-section-reports-unknown-field-errors-115">section_reports_unknown_field_errors</a>() {
+        #[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Deserialize</span>)]
+        #[serde(deny_unknown_fields)]
+        #[allow(dead_code)]
+        <span class="rs-kw">struct</span> <span class="rs-type">StrictSection</span> {
+            expected: u64,
+        }
+
+        <span class="rs-kw">let</span> doc = <a class="symbol-link rs-type" href="eos-config--src-document-rs.html#item-struct-ConfigDocument-11">ConfigDocument</a>::<a class="symbol-link rs-fn" href="eos-config--src-document-rs.html#method-from-yaml-str-34">from_yaml_str</a>(
+            r#&quot;
+daemon:
+  expected: 1
+  unexpected: <span class="rs-kw">true</span>
+&quot;#,
+        )
+        .expect(&quot;document parses&quot;);
+
+        <span class="rs-kw">let</span> err = doc
+            .section::&lt;<span class="rs-type">StrictSection</span>&gt;(&quot;daemon&quot;)
+            .expect_err(&quot;unknown field should fail&quot;);
+        <span class="rs-kw">let</span> message = err.to_string();
+
+        assert!(message.contains(&quot;daemon&quot;), &quot;{message}&quot;);
+        assert!(message.contains(&quot;unexpected&quot;), &quot;{message}&quot;);
+    }
+</code></pre>
+</details>
 
   <p class="source">crates/eos-config/src/lib.rs:115</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn section_reports_wrong_type_errors private fn section_reports_wrong_type_errors () crates/eos-config/src/lib.rs  ">
+</article><article id="item-fn-section-reports-wrong-type-errors-142" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn section_reports_wrong_type_errors private fn section_reports_wrong_type_errors () crates/eos-config/src/lib.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>section_reports_wrong_type_errors</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn section_reports_wrong_type_errors ()</code>
-  <div class="tags"></div>
+  <code class="signature">fn <a class="symbol-link" href="eos-config--src-lib-rs.html#item-fn-section-reports-wrong-type-errors-142">section_reports_wrong_type_errors</a> ()</code>
+  <div class="tags"><span>test</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-config--src-lib-rs.html#item-fn-section-reports-wrong-type-errors-142">section_reports_wrong_type_errors</a>() {
+        #[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Deserialize</span>)]
+        #[serde(deny_unknown_fields)]
+        #[allow(dead_code)]
+        <span class="rs-kw">struct</span> <span class="rs-type">StrictSection</span> {
+            expected: u64,
+        }
+
+        <span class="rs-kw">let</span> doc = <a class="symbol-link rs-type" href="eos-config--src-document-rs.html#item-struct-ConfigDocument-11">ConfigDocument</a>::<a class="symbol-link rs-fn" href="eos-config--src-document-rs.html#method-from-yaml-str-34">from_yaml_str</a>(
+            r#&quot;
+daemon:
+  expected: wrong
+&quot;#,
+        )
+        .expect(&quot;document parses&quot;);
+
+        <span class="rs-kw">let</span> err = doc
+            .section::&lt;<span class="rs-type">StrictSection</span>&gt;(&quot;daemon&quot;)
+            .expect_err(&quot;wrong field <span class="rs-kw">type</span> should fail&quot;);
+        <span class="rs-kw">let</span> message = err.to_string();
+
+        assert!(message.contains(&quot;daemon&quot;), &quot;{message}&quot;);
+        assert!(message.contains(&quot;expected&quot;), &quot;{message}&quot;);
+    }
+</code></pre>
+</details>
 
   <p class="source">crates/eos-config/src/lib.rs:142</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn load_test_override_merges_sandbox_local_test_yaml private fn load_test_override_merges_sandbox_local_test_yaml () crates/eos-config/src/lib.rs  ">
+</article><article id="item-fn-load-test-override-merges-sandbox-local-test-yaml-168" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn load_test_override_merges_sandbox_local_test_yaml private fn load_test_override_merges_sandbox_local_test_yaml () crates/eos-config/src/lib.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>load_test_override_merges_sandbox_local_test_yaml</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn load_test_override_merges_sandbox_local_test_yaml ()</code>
-  <div class="tags"></div>
+  <code class="signature">fn <a class="symbol-link" href="eos-config--src-lib-rs.html#item-fn-load-test-override-merges-sandbox-local-test-yaml-168">load_test_override_merges_sandbox_local_test_yaml</a> ()</code>
+  <div class="tags"><span>test</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-config--src-lib-rs.html#item-fn-load-test-override-merges-sandbox-local-test-yaml-168">load_test_override_merges_sandbox_local_test_yaml</a>() {
+        <span class="rs-kw">let</span> root = <a class="symbol-link rs-fn" href="eos-config--src-lib-rs.html#item-fn-test-workspace-dir-251">test_workspace_dir</a>(&quot;load-test-override&quot;);
+        fs::create_dir_all(&amp;root).expect(&quot;create test dir&quot;);
+        <span class="rs-kw">let</span> override_path = root.join(&quot;local.test.yml&quot;);
+        fs::write(
+            &amp;override_path,
+            r#&quot;
+eos_e2e_test:
+  pool:
+    keep_container: <span class="rs-kw">false</span>
+    sandboxes: 1
+&quot;#,
+        )
+        .expect(&quot;write override&quot;);
+
+        <span class="rs-kw">let</span> doc = <a class="symbol-link rs-fn" href="eos-config--src-configs-e2e-test-rs.html#method-load-test-override-269">load_test_override</a>(&amp;override_path).expect(&quot;override loads&quot;);
+        <span class="rs-kw">let</span> section = doc
+            .section::&lt;serde_yaml::<span class="rs-type">Value</span>&gt;(&quot;eos_e2e_test&quot;)
+            .expect(&quot;section loads&quot;);
+
+        assert_eq!(
+            section[&quot;pool&quot;][&quot;keep_container&quot;],
+            serde_yaml::<span class="rs-type">Value</span>::<span class="rs-type">Bool</span>(<span class="rs-kw">false</span>)
+        );
+        assert_eq!(
+            section[&quot;pool&quot;][&quot;sandboxes&quot;],
+            serde_yaml::<span class="rs-type">Value</span>::<span class="rs-type">Number</span>(1.into())
+        );
+        assert_eq!(
+            section[&quot;pool&quot;][&quot;recycle_after&quot;],
+            serde_yaml::<span class="rs-type">Value</span>::<span class="rs-type">Number</span>(50.into())
+        );
+    }
+</code></pre>
+</details>
 
   <p class="source">crates/eos-config/src/lib.rs:168</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn load_test_override_rejects_non_test_yml_path private fn load_test_override_rejects_non_test_yml_path () crates/eos-config/src/lib.rs  ">
+</article><article id="item-fn-load-test-override-rejects-non-test-yml-path-203" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn load_test_override_rejects_non_test_yml_path private fn load_test_override_rejects_non_test_yml_path () crates/eos-config/src/lib.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>load_test_override_rejects_non_test_yml_path</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn load_test_override_rejects_non_test_yml_path ()</code>
-  <div class="tags"></div>
+  <code class="signature">fn <a class="symbol-link" href="eos-config--src-lib-rs.html#item-fn-load-test-override-rejects-non-test-yml-path-203">load_test_override_rejects_non_test_yml_path</a> ()</code>
+  <div class="tags"><span>test</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-config--src-lib-rs.html#item-fn-load-test-override-rejects-non-test-yml-path-203">load_test_override_rejects_non_test_yml_path</a>() {
+        <span class="rs-kw">let</span> root = <a class="symbol-link rs-fn" href="eos-config--src-lib-rs.html#item-fn-test-workspace-dir-251">test_workspace_dir</a>(&quot;non-test-yml&quot;);
+        fs::create_dir_all(&amp;root).expect(&quot;create test dir&quot;);
+        <span class="rs-kw">let</span> override_path = root.join(&quot;local.yml&quot;);
+        fs::write(&amp;override_path, &quot;version: 1\n&quot;).expect(&quot;write override&quot;);
+
+        <span class="rs-kw">let</span> err = <a class="symbol-link rs-fn" href="eos-config--src-configs-e2e-test-rs.html#method-load-test-override-269">load_test_override</a>(&amp;override_path).expect_err(&quot;path suffix should fail&quot;);
+
+        assert!(matches!(err, <a class="symbol-link rs-type" href="eos-config--src-error-rs.html#item-enum-ConfigError-7">ConfigError</a>::<span class="rs-type">InvalidOverridePath</span> { .. }));
+        assert!(err.to_string().contains(&quot;.test.yml&quot;));
+    }
+</code></pre>
+</details>
 
   <p class="source">crates/eos-config/src/lib.rs:203</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn load_test_override_rejects_path_outside_sandbox_workspace private fn load_test_override_rejects_path_outside_sandbox_workspace () crates/eos-config/src/lib.rs  ">
+</article><article id="item-fn-load-test-override-rejects-path-outside-sandbox-workspace-216" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn load_test_override_rejects_path_outside_sandbox_workspace private fn load_test_override_rejects_path_outside_sandbox_workspace () crates/eos-config/src/lib.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>load_test_override_rejects_path_outside_sandbox_workspace</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn load_test_override_rejects_path_outside_sandbox_workspace ()</code>
-  <div class="tags"></div>
+  <code class="signature">fn <a class="symbol-link" href="eos-config--src-lib-rs.html#item-fn-load-test-override-rejects-path-outside-sandbox-workspace-216">load_test_override_rejects_path_outside_sandbox_workspace</a> ()</code>
+  <div class="tags"><span>test</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-config--src-lib-rs.html#item-fn-load-test-override-rejects-path-outside-sandbox-workspace-216">load_test_override_rejects_path_outside_sandbox_workspace</a>() {
+        <span class="rs-kw">let</span> override_path = std::env::temp_dir().join(format!(
+            &quot;eos-config-outside-{}-{}.test.yml&quot;,
+            std::process::id(),
+            <a class="symbol-link rs-fn" href="eos-config--src-lib-rs.html#item-fn-unique-suffix-270">unique_suffix</a>()
+        ));
+        fs::write(&amp;override_path, &quot;version: 1\n&quot;).expect(&quot;write override&quot;);
+
+        <span class="rs-kw">let</span> err = <a class="symbol-link rs-fn" href="eos-config--src-configs-e2e-test-rs.html#method-load-test-override-269">load_test_override</a>(&amp;override_path).expect_err(&quot;outside path should fail&quot;);
+
+        <span class="rs-kw">let</span> _ = fs::remove_file(&amp;override_path);
+        assert!(matches!(err, <a class="symbol-link rs-type" href="eos-config--src-error-rs.html#item-enum-ConfigError-7">ConfigError</a>::<span class="rs-type">InvalidOverridePath</span> { .. }));
+        assert!(err.to_string().contains(&quot;inside sandbox workspace&quot;));
+    }
+</code></pre>
+</details>
 
   <p class="source">crates/eos-config/src/lib.rs:216</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn load_test_override_rejects_symlink_to_prd_baseline private fn load_test_override_rejects_symlink_to_prd_baseline () crates/eos-config/src/lib.rs  ">
+</article><article id="item-fn-load-test-override-rejects-symlink-to-prd-baseline-232" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn load_test_override_rejects_symlink_to_prd_baseline private fn load_test_override_rejects_symlink_to_prd_baseline () crates/eos-config/src/lib.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>load_test_override_rejects_symlink_to_prd_baseline</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn load_test_override_rejects_symlink_to_prd_baseline ()</code>
-  <div class="tags"></div>
+  <code class="signature">fn <a class="symbol-link" href="eos-config--src-lib-rs.html#item-fn-load-test-override-rejects-symlink-to-prd-baseline-232">load_test_override_rejects_symlink_to_prd_baseline</a> ()</code>
+  <div class="tags"><span>cfg: unix</span><span>test</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[cfg(unix)]
+    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-config--src-lib-rs.html#item-fn-load-test-override-rejects-symlink-to-prd-baseline-232">load_test_override_rejects_symlink_to_prd_baseline</a>() {
+        <span class="rs-kw">let</span> root = <a class="symbol-link rs-fn" href="eos-config--src-lib-rs.html#item-fn-test-workspace-dir-251">test_workspace_dir</a>(&quot;prd-symlink&quot;);
+        fs::create_dir_all(&amp;root).expect(&quot;create test dir&quot;);
+        <span class="rs-kw">let</span> link_path = root.join(&quot;prd-link.test.yml&quot;);
+        <span class="rs-kw">let</span> _ = fs::remove_file(&amp;link_path);
+        std::os::unix::fs::symlink(
+            <a class="symbol-link rs-type" href="eos-config--src-paths-rs.html#item-struct-ConfigPath-5">ConfigPath</a>::<a class="symbol-link rs-fn" href="eos-config--src-paths-rs.html#method-prd-12">prd</a>().expect(&quot;resolve prd config&quot;).<a class="symbol-link rs-fn" href="eos-config--src-paths-rs.html#method-as-path-69">as_path</a>(),
+            &amp;link_path,
+        )
+        .expect(&quot;create prd symlink&quot;);
+
+        <span class="rs-kw">let</span> err = <a class="symbol-link rs-fn" href="eos-config--src-configs-e2e-test-rs.html#method-load-test-override-269">load_test_override</a>(&amp;link_path).expect_err(&quot;prd symlink should fail&quot;);
+
+        assert!(matches!(err, <a class="symbol-link rs-type" href="eos-config--src-error-rs.html#item-enum-ConfigError-7">ConfigError</a>::<span class="rs-type">InvalidOverridePath</span> { .. }));
+        assert!(err.to_string().contains(&quot;prd.yml&quot;));
+    }
+</code></pre>
+</details>
 
   <p class="source">crates/eos-config/src/lib.rs:232</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn test_workspace_dir private fn test_workspace_dir (label : &amp; str) -&gt; PathBuf crates/eos-config/src/lib.rs  ">
+</article><article id="item-fn-test-workspace-dir-251" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn test_workspace_dir private fn test_workspace_dir (label : &amp; str) -&gt; PathBuf crates/eos-config/src/lib.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>test_workspace_dir</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn test_workspace_dir (label : &amp; str) -&gt; PathBuf</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-config--src-lib-rs.html#item-fn-test-workspace-dir-251">test_workspace_dir</a> (label : &amp; str) -&gt; PathBuf</code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-config--src-lib-rs.html#item-fn-test-workspace-dir-251">test_workspace_dir</a>(label: &amp;str) -&gt; <span class="rs-type">PathBuf</span> {
+        <a class="symbol-link rs-fn" href="eos-config--src-lib-rs.html#item-fn-workspace-root-262">workspace_root</a>()
+            .join(&quot;target&quot;)
+            .join(&quot;eos-config-tests&quot;)
+            .join(format!(
+                &quot;{label}-{}-{}&quot;,
+                std::process::id(),
+                <a class="symbol-link rs-fn" href="eos-config--src-lib-rs.html#item-fn-unique-suffix-270">unique_suffix</a>()
+            ))
+    }
+</code></pre>
+</details>
 
   <p class="source">crates/eos-config/src/lib.rs:251</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn workspace_root private fn workspace_root () -&gt; PathBuf crates/eos-config/src/lib.rs  ">
+</article><article id="item-fn-workspace-root-262" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn workspace_root private fn workspace_root () -&gt; PathBuf crates/eos-config/src/lib.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>workspace_root</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn workspace_root () -&gt; PathBuf</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-config--src-lib-rs.html#item-fn-workspace-root-262">workspace_root</a> () -&gt; PathBuf</code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-config--src-lib-rs.html#item-fn-workspace-root-262">workspace_root</a>() -&gt; <span class="rs-type">PathBuf</span> {
+        <span class="rs-type">Path</span>::<a class="symbol-link rs-fn" href="eos-config--src-configs-validate-rs.html#method-new-19">new</a>(env!(&quot;<span class="rs-type">CARGO_MANIFEST_DIR</span>&quot;))
+            .ancestors()
+            .nth(2)
+            .expect(&quot;<span class="rs-kw">crate</span> lives below sandbox/crates&quot;)
+            .to_path_buf()
+    }
+</code></pre>
+</details>
 
   <p class="source">crates/eos-config/src/lib.rs:262</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn unique_suffix private fn unique_suffix () -&gt; u128 crates/eos-config/src/lib.rs  ">
+</article><article id="item-fn-unique-suffix-270" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn unique_suffix private fn unique_suffix () -&gt; u128 crates/eos-config/src/lib.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>unique_suffix</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn unique_suffix () -&gt; u128</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-config--src-lib-rs.html#item-fn-unique-suffix-270">unique_suffix</a> () -&gt; u128</code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-config--src-lib-rs.html#item-fn-unique-suffix-270">unique_suffix</a>() -&gt; u128 {
+        <span class="rs-type">SystemTime</span>::now()
+            .duration_since(<span class="rs-type">UNIX_EPOCH</span>)
+            .expect(&quot;system clock is after unix epoch&quot;)
+            .as_nanos()
+    }
+</code></pre>
+</details>
 
   <p class="source">crates/eos-config/src/lib.rs:270</p>
 </article></div>
 </section></div>
 </main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/eos-config/src/lib.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-comment">//! Generic loader for the sandbox runtime configuration document.</span>
+<span class="rs-comment">//!</span>
+<span class="rs-comment">//! This crate owns file loading, path validation, YAML parsing, merge semantics,</span>
+<span class="rs-comment">//! and typed schemas for the sandbox config sections.</span>
+
+<span class="rs-kw">pub</span> <span class="rs-kw">mod</span> configs;
+<span class="rs-kw">mod</span> document;
+<span class="rs-kw">mod</span> error;
+<span class="rs-kw">mod</span> merge;
+<span class="rs-kw">mod</span> paths;
+
+<span class="rs-kw">use</span> std::path::<span class="rs-type">Path</span>;
+
+<span class="rs-kw">pub</span> <span class="rs-kw">use</span> document::<a class="symbol-link rs-type" href="eos-config--src-document-rs.html#item-struct-ConfigDocument-11">ConfigDocument</a>;
+<span class="rs-kw">pub</span> <span class="rs-kw">use</span> error::<a class="symbol-link rs-type" href="eos-config--src-error-rs.html#item-enum-ConfigError-7">ConfigError</a>;
+<span class="rs-kw">pub</span> <span class="rs-kw">use</span> paths::<a class="symbol-link rs-type" href="eos-config--src-paths-rs.html#item-struct-ConfigPath-5">ConfigPath</a>;
+
+<span class="rs-comment">/// Load the single production baseline at `sandbox/config/prd.yml`.</span>
+<span class="rs-comment">///</span>
+<span class="rs-comment">/// # Errors</span>
+<span class="rs-comment">/// Returns an error when the baseline path cannot be resolved, read, or parsed.</span>
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-config--src-lib-rs.html#item-fn-load-prd-18">load_prd</a>() -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-config--src-document-rs.html#item-struct-ConfigDocument-11">ConfigDocument</a>, <a class="symbol-link rs-type" href="eos-config--src-error-rs.html#item-enum-ConfigError-7">ConfigError</a>&gt; {
+    <span class="rs-kw">let</span> path = <a class="symbol-link rs-type" href="eos-config--src-paths-rs.html#item-struct-ConfigPath-5">ConfigPath</a>::<a class="symbol-link rs-fn" href="eos-config--src-paths-rs.html#method-prd-12">prd</a>()?;
+    <a class="symbol-link rs-type" href="eos-config--src-document-rs.html#item-struct-ConfigDocument-11">ConfigDocument</a>::<a class="symbol-link rs-fn" href="eos-config--src-document-rs.html#method-read-18">read</a>(path.<a class="symbol-link rs-fn" href="eos-config--src-paths-rs.html#method-as-path-69">as_path</a>())
+}
+
+<span class="rs-comment">/// Load `prd.yml`, merge one test-local `*.test.yml` override, and return the</span>
+<span class="rs-comment">/// merged document.</span>
+<span class="rs-comment">///</span>
+<span class="rs-comment">/// The path parameter is for test code only; this crate intentionally exposes no</span>
+<span class="rs-comment">/// CLI or environment variable config path selection.</span>
+<span class="rs-comment">///</span>
+<span class="rs-comment">/// # Errors</span>
+<span class="rs-comment">/// Returns an error when the override path is not a valid sandbox-local</span>
+<span class="rs-comment">/// `*.test.yml`, when either file cannot be read or parsed, or when merging</span>
+<span class="rs-comment">/// fails.</span>
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-config--src-configs-e2e-test-rs.html#method-load-test-override-269">load_test_override</a>(path: <span class="rs-kw">impl</span> <span class="rs-type">AsRef</span>&lt;<span class="rs-type">Path</span>&gt;) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-config--src-document-rs.html#item-struct-ConfigDocument-11">ConfigDocument</a>, <a class="symbol-link rs-type" href="eos-config--src-error-rs.html#item-enum-ConfigError-7">ConfigError</a>&gt; {
+    <span class="rs-kw">let</span> prd = <a class="symbol-link rs-type" href="eos-config--src-paths-rs.html#item-struct-ConfigPath-5">ConfigPath</a>::<a class="symbol-link rs-fn" href="eos-config--src-paths-rs.html#method-prd-12">prd</a>()?;
+    <span class="rs-kw">let</span> override_path = <a class="symbol-link rs-type" href="eos-config--src-paths-rs.html#item-struct-ConfigPath-5">ConfigPath</a>::<a class="symbol-link rs-fn" href="eos-config--src-paths-rs.html#method-test-override-23">test_override</a>(path.as_ref())?;
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> baseline = <a class="symbol-link rs-type" href="eos-config--src-document-rs.html#item-struct-ConfigDocument-11">ConfigDocument</a>::<a class="symbol-link rs-fn" href="eos-config--src-document-rs.html#method-read-18">read</a>(prd.<a class="symbol-link rs-fn" href="eos-config--src-paths-rs.html#method-as-path-69">as_path</a>())?;
+    <span class="rs-kw">let</span> override_doc = <a class="symbol-link rs-type" href="eos-config--src-document-rs.html#item-struct-ConfigDocument-11">ConfigDocument</a>::<a class="symbol-link rs-fn" href="eos-config--src-document-rs.html#method-read-18">read</a>(override_path.<a class="symbol-link rs-fn" href="eos-config--src-paths-rs.html#method-as-path-69">as_path</a>())?;
+    baseline.<a class="symbol-link rs-fn" href="eos-config--src-document-rs.html#method-merge-39">merge</a>(override_doc)?;
+    <span class="rs-type">Ok</span>(baseline)
+}
+
+#[cfg(test)]
+<span class="rs-kw">mod</span> tests {
+    <span class="rs-kw">use</span> std::fs;
+    <span class="rs-kw">use</span> std::path::{<span class="rs-type">Path</span>, <span class="rs-type">PathBuf</span>};
+    <span class="rs-kw">use</span> std::time::{<span class="rs-type">SystemTime</span>, <span class="rs-type">UNIX_EPOCH</span>};
+
+    <span class="rs-kw">use</span> serde::<span class="rs-type">Deserialize</span>;
+
+    <span class="rs-kw">use</span> <span class="rs-kw">super</span>::*;
+
+    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-config--src-lib-rs.html#item-fn-load-prd-reads-committed-baseline-56">load_prd_reads_committed_baseline</a>() {
+        <span class="rs-kw">let</span> doc = <a class="symbol-link rs-fn" href="eos-config--src-lib-rs.html#item-fn-load-prd-18">load_prd</a>().expect(&quot;prd.yml loads&quot;);
+        <span class="rs-kw">let</span> section = doc
+            .section::&lt;serde_yaml::<span class="rs-type">Value</span>&gt;(&quot;eos_e2e_test&quot;)
+            .expect(&quot;eos_e2e_test section exists&quot;);
+
+        assert!(matches!(section, serde_yaml::<span class="rs-type">Value</span>::<span class="rs-type">Mapping</span>(_)));
+    }
+
+    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-config--src-lib-rs.html#item-fn-merge-recurses-objects-replaces-scalars-and-replaces-arrays-66">merge_recurses_objects_replaces_scalars_and_replaces_arrays</a>() {
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> baseline = <a class="symbol-link rs-type" href="eos-config--src-document-rs.html#item-struct-ConfigDocument-11">ConfigDocument</a>::<a class="symbol-link rs-fn" href="eos-config--src-document-rs.html#method-from-yaml-str-34">from_yaml_str</a>(
+            r#&quot;
+daemon:
+  command_sessions:
+    default_yield_time_ms: 1000
+    max_session_s: 21600
+  plugin:
+    max_response_bytes: 8388608
+eos_e2e_test:
+  docker:
+    cap_add: [<span class="rs-type">SYS_ADMIN</span>, <span class="rs-type">NET_ADMIN</span>]
+&quot;#,
+        )
+        .expect(&quot;baseline parses&quot;);
+        <span class="rs-kw">let</span> override_doc = <a class="symbol-link rs-type" href="eos-config--src-document-rs.html#item-struct-ConfigDocument-11">ConfigDocument</a>::<a class="symbol-link rs-fn" href="eos-config--src-document-rs.html#method-from-yaml-str-34">from_yaml_str</a>(
+            r#&quot;
+daemon:
+  command_sessions:
+    max_session_s: 2
+eos_e2e_test:
+  docker:
+    cap_add: [<span class="rs-type">SYS_PTRACE</span>]
+&quot;#,
+        )
+        .expect(&quot;override parses&quot;);
+
+        baseline.<a class="symbol-link rs-fn" href="eos-config--src-document-rs.html#method-merge-39">merge</a>(override_doc).expect(&quot;merge succeeds&quot;);
+
+        <span class="rs-kw">let</span> merged = baseline.<a class="symbol-link rs-fn" href="eos-config--src-document-rs.html#method-into-value-57">into_value</a>();
+        assert_eq!(
+            merged[&quot;daemon&quot;][&quot;command_sessions&quot;][&quot;default_yield_time_ms&quot;],
+            serde_yaml::<span class="rs-type">Value</span>::<span class="rs-type">Number</span>(1000.into())
+        );
+        assert_eq!(
+            merged[&quot;daemon&quot;][&quot;command_sessions&quot;][&quot;max_session_s&quot;],
+            serde_yaml::<span class="rs-type">Value</span>::<span class="rs-type">Number</span>(2.into())
+        );
+        assert_eq!(
+            merged[&quot;daemon&quot;][&quot;plugin&quot;][&quot;max_response_bytes&quot;],
+            serde_yaml::<span class="rs-type">Value</span>::<span class="rs-type">Number</span>(8_388_608.into())
+        );
+        assert_eq!(
+            merged[&quot;eos_e2e_test&quot;][&quot;docker&quot;][&quot;cap_add&quot;],
+            serde_yaml::<span class="rs-type">Value</span>::<span class="rs-type">Sequence</span>(vec![serde_yaml::<span class="rs-type">Value</span>::<span class="rs-type">String</span>(&quot;<span class="rs-type">SYS_PTRACE</span>&quot;.to_owned())])
+        );
+    }
+
+    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-config--src-lib-rs.html#item-fn-section-reports-unknown-field-errors-115">section_reports_unknown_field_errors</a>() {
+        #[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Deserialize</span>)]
+        #[serde(deny_unknown_fields)]
+        #[allow(dead_code)]
+        <span class="rs-kw">struct</span> <span class="rs-type">StrictSection</span> {
+            expected: u64,
+        }
+
+        <span class="rs-kw">let</span> doc = <a class="symbol-link rs-type" href="eos-config--src-document-rs.html#item-struct-ConfigDocument-11">ConfigDocument</a>::<a class="symbol-link rs-fn" href="eos-config--src-document-rs.html#method-from-yaml-str-34">from_yaml_str</a>(
+            r#&quot;
+daemon:
+  expected: 1
+  unexpected: <span class="rs-kw">true</span>
+&quot;#,
+        )
+        .expect(&quot;document parses&quot;);
+
+        <span class="rs-kw">let</span> err = doc
+            .section::&lt;<span class="rs-type">StrictSection</span>&gt;(&quot;daemon&quot;)
+            .expect_err(&quot;unknown field should fail&quot;);
+        <span class="rs-kw">let</span> message = err.to_string();
+
+        assert!(message.contains(&quot;daemon&quot;), &quot;{message}&quot;);
+        assert!(message.contains(&quot;unexpected&quot;), &quot;{message}&quot;);
+    }
+
+    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-config--src-lib-rs.html#item-fn-section-reports-wrong-type-errors-142">section_reports_wrong_type_errors</a>() {
+        #[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Deserialize</span>)]
+        #[serde(deny_unknown_fields)]
+        #[allow(dead_code)]
+        <span class="rs-kw">struct</span> <span class="rs-type">StrictSection</span> {
+            expected: u64,
+        }
+
+        <span class="rs-kw">let</span> doc = <a class="symbol-link rs-type" href="eos-config--src-document-rs.html#item-struct-ConfigDocument-11">ConfigDocument</a>::<a class="symbol-link rs-fn" href="eos-config--src-document-rs.html#method-from-yaml-str-34">from_yaml_str</a>(
+            r#&quot;
+daemon:
+  expected: wrong
+&quot;#,
+        )
+        .expect(&quot;document parses&quot;);
+
+        <span class="rs-kw">let</span> err = doc
+            .section::&lt;<span class="rs-type">StrictSection</span>&gt;(&quot;daemon&quot;)
+            .expect_err(&quot;wrong field <span class="rs-kw">type</span> should fail&quot;);
+        <span class="rs-kw">let</span> message = err.to_string();
+
+        assert!(message.contains(&quot;daemon&quot;), &quot;{message}&quot;);
+        assert!(message.contains(&quot;expected&quot;), &quot;{message}&quot;);
+    }
+
+    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-config--src-lib-rs.html#item-fn-load-test-override-merges-sandbox-local-test-yaml-168">load_test_override_merges_sandbox_local_test_yaml</a>() {
+        <span class="rs-kw">let</span> root = <a class="symbol-link rs-fn" href="eos-config--src-lib-rs.html#item-fn-test-workspace-dir-251">test_workspace_dir</a>(&quot;load-test-override&quot;);
+        fs::create_dir_all(&amp;root).expect(&quot;create test dir&quot;);
+        <span class="rs-kw">let</span> override_path = root.join(&quot;local.test.yml&quot;);
+        fs::write(
+            &amp;override_path,
+            r#&quot;
+eos_e2e_test:
+  pool:
+    keep_container: <span class="rs-kw">false</span>
+    sandboxes: 1
+&quot;#,
+        )
+        .expect(&quot;write override&quot;);
+
+        <span class="rs-kw">let</span> doc = <a class="symbol-link rs-fn" href="eos-config--src-configs-e2e-test-rs.html#method-load-test-override-269">load_test_override</a>(&amp;override_path).expect(&quot;override loads&quot;);
+        <span class="rs-kw">let</span> section = doc
+            .section::&lt;serde_yaml::<span class="rs-type">Value</span>&gt;(&quot;eos_e2e_test&quot;)
+            .expect(&quot;section loads&quot;);
+
+        assert_eq!(
+            section[&quot;pool&quot;][&quot;keep_container&quot;],
+            serde_yaml::<span class="rs-type">Value</span>::<span class="rs-type">Bool</span>(<span class="rs-kw">false</span>)
+        );
+        assert_eq!(
+            section[&quot;pool&quot;][&quot;sandboxes&quot;],
+            serde_yaml::<span class="rs-type">Value</span>::<span class="rs-type">Number</span>(1.into())
+        );
+        assert_eq!(
+            section[&quot;pool&quot;][&quot;recycle_after&quot;],
+            serde_yaml::<span class="rs-type">Value</span>::<span class="rs-type">Number</span>(50.into())
+        );
+    }
+
+    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-config--src-lib-rs.html#item-fn-load-test-override-rejects-non-test-yml-path-203">load_test_override_rejects_non_test_yml_path</a>() {
+        <span class="rs-kw">let</span> root = <a class="symbol-link rs-fn" href="eos-config--src-lib-rs.html#item-fn-test-workspace-dir-251">test_workspace_dir</a>(&quot;non-test-yml&quot;);
+        fs::create_dir_all(&amp;root).expect(&quot;create test dir&quot;);
+        <span class="rs-kw">let</span> override_path = root.join(&quot;local.yml&quot;);
+        fs::write(&amp;override_path, &quot;version: 1\n&quot;).expect(&quot;write override&quot;);
+
+        <span class="rs-kw">let</span> err = <a class="symbol-link rs-fn" href="eos-config--src-configs-e2e-test-rs.html#method-load-test-override-269">load_test_override</a>(&amp;override_path).expect_err(&quot;path suffix should fail&quot;);
+
+        assert!(matches!(err, <a class="symbol-link rs-type" href="eos-config--src-error-rs.html#item-enum-ConfigError-7">ConfigError</a>::<span class="rs-type">InvalidOverridePath</span> { .. }));
+        assert!(err.to_string().contains(&quot;.test.yml&quot;));
+    }
+
+    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-config--src-lib-rs.html#item-fn-load-test-override-rejects-path-outside-sandbox-workspace-216">load_test_override_rejects_path_outside_sandbox_workspace</a>() {
+        <span class="rs-kw">let</span> override_path = std::env::temp_dir().join(format!(
+            &quot;eos-config-outside-{}-{}.test.yml&quot;,
+            std::process::id(),
+            <a class="symbol-link rs-fn" href="eos-config--src-lib-rs.html#item-fn-unique-suffix-270">unique_suffix</a>()
+        ));
+        fs::write(&amp;override_path, &quot;version: 1\n&quot;).expect(&quot;write override&quot;);
+
+        <span class="rs-kw">let</span> err = <a class="symbol-link rs-fn" href="eos-config--src-configs-e2e-test-rs.html#method-load-test-override-269">load_test_override</a>(&amp;override_path).expect_err(&quot;outside path should fail&quot;);
+
+        <span class="rs-kw">let</span> _ = fs::remove_file(&amp;override_path);
+        assert!(matches!(err, <a class="symbol-link rs-type" href="eos-config--src-error-rs.html#item-enum-ConfigError-7">ConfigError</a>::<span class="rs-type">InvalidOverridePath</span> { .. }));
+        assert!(err.to_string().contains(&quot;inside sandbox workspace&quot;));
+    }
+
+    #[cfg(unix)]
+    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-config--src-lib-rs.html#item-fn-load-test-override-rejects-symlink-to-prd-baseline-232">load_test_override_rejects_symlink_to_prd_baseline</a>() {
+        <span class="rs-kw">let</span> root = <a class="symbol-link rs-fn" href="eos-config--src-lib-rs.html#item-fn-test-workspace-dir-251">test_workspace_dir</a>(&quot;prd-symlink&quot;);
+        fs::create_dir_all(&amp;root).expect(&quot;create test dir&quot;);
+        <span class="rs-kw">let</span> link_path = root.join(&quot;prd-link.test.yml&quot;);
+        <span class="rs-kw">let</span> _ = fs::remove_file(&amp;link_path);
+        std::os::unix::fs::symlink(
+            <a class="symbol-link rs-type" href="eos-config--src-paths-rs.html#item-struct-ConfigPath-5">ConfigPath</a>::<a class="symbol-link rs-fn" href="eos-config--src-paths-rs.html#method-prd-12">prd</a>().expect(&quot;resolve prd config&quot;).<a class="symbol-link rs-fn" href="eos-config--src-paths-rs.html#method-as-path-69">as_path</a>(),
+            &amp;link_path,
+        )
+        .expect(&quot;create prd symlink&quot;);
+
+        <span class="rs-kw">let</span> err = <a class="symbol-link rs-fn" href="eos-config--src-configs-e2e-test-rs.html#method-load-test-override-269">load_test_override</a>(&amp;link_path).expect_err(&quot;prd symlink should fail&quot;);
+
+        assert!(matches!(err, <a class="symbol-link rs-type" href="eos-config--src-error-rs.html#item-enum-ConfigError-7">ConfigError</a>::<span class="rs-type">InvalidOverridePath</span> { .. }));
+        assert!(err.to_string().contains(&quot;prd.yml&quot;));
+    }
+
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-config--src-lib-rs.html#item-fn-test-workspace-dir-251">test_workspace_dir</a>(label: &amp;str) -&gt; <span class="rs-type">PathBuf</span> {
+        <a class="symbol-link rs-fn" href="eos-config--src-lib-rs.html#item-fn-workspace-root-262">workspace_root</a>()
+            .join(&quot;target&quot;)
+            .join(&quot;eos-config-tests&quot;)
+            .join(format!(
+                &quot;{label}-{}-{}&quot;,
+                std::process::id(),
+                <a class="symbol-link rs-fn" href="eos-config--src-lib-rs.html#item-fn-unique-suffix-270">unique_suffix</a>()
+            ))
+    }
+
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-config--src-lib-rs.html#item-fn-workspace-root-262">workspace_root</a>() -&gt; <span class="rs-type">PathBuf</span> {
+        <span class="rs-type">Path</span>::<a class="symbol-link rs-fn" href="eos-config--src-configs-validate-rs.html#method-new-19">new</a>(env!(&quot;<span class="rs-type">CARGO_MANIFEST_DIR</span>&quot;))
+            .ancestors()
+            .nth(2)
+            .expect(&quot;<span class="rs-kw">crate</span> lives below sandbox/crates&quot;)
+            .to_path_buf()
+    }
+
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-config--src-lib-rs.html#item-fn-unique-suffix-270">unique_suffix</a>() -&gt; u128 {
+        <span class="rs-type">SystemTime</span>::now()
+            .duration_since(<span class="rs-type">UNIX_EPOCH</span>)
+            .expect(&quot;system clock is after unix epoch&quot;)
+            .as_nanos()
+    }
+}
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
   <script src="../assets/inventory.js"></script>
 </body>
 </html>

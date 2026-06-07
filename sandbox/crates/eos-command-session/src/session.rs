@@ -1,9 +1,10 @@
 #[cfg(target_os = "linux")]
 use std::path::{Path, PathBuf};
+#[cfg(target_os = "linux")]
 use std::sync::{Mutex, MutexGuard, PoisonError};
 use std::time::{Duration, Instant};
 
-use eos_workspace_api::FinalizeCommandRequest;
+#[cfg(target_os = "linux")]
 use serde_json::Value;
 
 #[cfg(target_os = "linux")]
@@ -14,15 +15,34 @@ use crate::process::{
 use crate::transcript::{read_transcript_since, read_transcript_stdout, read_transcript_tail};
 #[cfg(target_os = "linux")]
 use crate::wait::CommandSessionWaitTarget;
-#[cfg(any(not(target_os = "linux"), test))]
-use crate::CommandSessionConfig;
-use crate::{CommandResponse, CommandSessionError, DynCommandWorkspacePolicy};
+#[cfg(target_os = "linux")]
+use crate::CommandResponse;
+#[cfg(target_os = "linux")]
+use crate::CommandSessionError;
 
+/// The raw, policy-free result of reaping a finished command process. The
+/// substrate produces this; the owning workspace run turns it into a
+/// `CommandResponse` by publishing (complete) or discarding (cancel). Keeping the
+/// publish/discard decision out of the session is the structural guarantee that a
+/// cancelled command never reaches the OCC merge.
+#[cfg(target_os = "linux")]
+#[derive(Debug, Clone)]
+pub(crate) struct ReapedCommand {
+    pub(crate) status: String,
+    pub(crate) exit_code: i64,
+    pub(crate) runner_result: Option<Value>,
+    pub(crate) stdout: String,
+    pub(crate) elapsed_s: f64,
+    pub(crate) cancelled: bool,
+}
+
+/// PTY/process substrate for one command session. It owns the child process,
+/// the transcript, and the cancel flag — but **no** workspace policy: the run
+/// that owns this session decides publish-vs-discard.
 pub(crate) struct CommandSession {
     id: String,
     caller_id: String,
     command: String,
-    policy: Mutex<Option<DynCommandWorkspacePolicy>>,
     #[cfg(target_os = "linux")]
     process: CommandSessionProcess,
     #[cfg(target_os = "linux")]
@@ -35,7 +55,9 @@ pub(crate) struct CommandSession {
     cancelled: Mutex<bool>,
     #[cfg(target_os = "linux")]
     output_drain_grace_ms: u64,
-    finalized: Mutex<Option<CommandResponse>>,
+    /// Reaped-once guard so two pollers can't both finalize the same child.
+    #[cfg(target_os = "linux")]
+    reaped: Mutex<bool>,
     started_at: Instant,
     timeout: Option<Duration>,
 }
@@ -59,37 +81,24 @@ pub(crate) struct RunningCommandSessionParts {
 impl CommandSession {
     #[must_use]
     #[cfg(any(not(target_os = "linux"), test))]
-    pub(crate) fn new(
-        spec: CommandSessionSpec,
-        policy: DynCommandWorkspacePolicy,
-        config: &CommandSessionConfig,
-    ) -> Self {
-        Self::new_scaffold(spec, policy, config.output_drain_grace_ms)
+    pub(crate) fn new(spec: CommandSessionSpec) -> Self {
+        Self::new_scaffold(spec)
     }
 
     #[cfg(target_os = "linux")]
     #[must_use]
-    pub(crate) fn new_running(
-        spec: CommandSessionSpec,
-        policy: DynCommandWorkspacePolicy,
-        parts: RunningCommandSessionParts,
-    ) -> Self {
-        Self::new_with_process(spec, policy, parts)
+    pub(crate) fn new_running(spec: CommandSessionSpec, parts: RunningCommandSessionParts) -> Self {
+        Self::new_with_process(spec, parts)
     }
 
     #[cfg(any(not(target_os = "linux"), test))]
-    fn new_scaffold(
-        spec: CommandSessionSpec,
-        policy: DynCommandWorkspacePolicy,
-        _output_drain_grace_ms: u64,
-    ) -> Self {
+    fn new_scaffold(spec: CommandSessionSpec) -> Self {
         #[cfg(target_os = "linux")]
-        let inactive = inactive_process_parts(_output_drain_grace_ms);
+        let inactive = inactive_process_parts();
         Self {
             id: spec.id,
             caller_id: spec.caller_id,
             command: spec.command,
-            policy: Mutex::new(Some(policy)),
             #[cfg(target_os = "linux")]
             process: inactive.process,
             #[cfg(target_os = "linux")]
@@ -102,30 +111,26 @@ impl CommandSession {
             cancelled: Mutex::new(false),
             #[cfg(target_os = "linux")]
             output_drain_grace_ms: inactive.output_drain_grace_ms,
-            finalized: Mutex::new(None),
+            #[cfg(target_os = "linux")]
+            reaped: Mutex::new(false),
             started_at: Instant::now(),
             timeout: spec.timeout_seconds.and_then(duration_from_secs_f64),
         }
     }
 
     #[cfg(target_os = "linux")]
-    fn new_with_process(
-        spec: CommandSessionSpec,
-        policy: DynCommandWorkspacePolicy,
-        running: RunningCommandSessionParts,
-    ) -> Self {
+    fn new_with_process(spec: CommandSessionSpec, running: RunningCommandSessionParts) -> Self {
         Self {
             id: spec.id,
             caller_id: spec.caller_id,
             command: spec.command,
-            policy: Mutex::new(Some(policy)),
             process: running.process,
             output_path: running.output_path,
             final_path: running.final_path,
             transcript_path: running.transcript_path,
             cancelled: Mutex::new(false),
             output_drain_grace_ms: running.output_drain_grace_ms,
-            finalized: Mutex::new(None),
+            reaped: Mutex::new(false),
             started_at: Instant::now(),
             timeout: spec.timeout_seconds.and_then(duration_from_secs_f64),
         }
@@ -146,10 +151,13 @@ impl CommandSession {
         &self.command
     }
 
-    #[cfg(target_os = "linux")]
+    /// Seconds since the session started — the elapsed time the scaffold cancel
+    /// path records on the workspace outcome. (On Linux the reaped command
+    /// carries its own elapsed time.)
+    #[cfg(not(target_os = "linux"))]
     #[must_use]
-    pub(crate) fn is_cancelled(&self) -> bool {
-        *lock(&self.cancelled)
+    pub(crate) fn elapsed_s(&self) -> f64 {
+        self.started_at.elapsed().as_secs_f64()
     }
 
     #[cfg(target_os = "linux")]
@@ -211,74 +219,22 @@ impl CommandSession {
         now.duration_since(self.started_at) >= timeout
     }
 
-    /// The non-Linux scaffold has no real process or overlay, so its only
-    /// settle path is cancel, which discards (never publishes).
-    #[cfg(not(target_os = "linux"))]
-    pub(crate) fn settle_cancelled(
-        &self,
-        status: &str,
-        exit_code: Option<i64>,
-        include_session_id: bool,
-    ) -> Result<CommandResponse, CommandSessionError> {
-        self.settle_with_output(status, exit_code, None, String::new(), include_session_id, true)
-    }
-
-    /// Settle the session exactly once, building the final response by either
-    /// publishing (normal completion) or discarding (cancel). Routing cancel to
-    /// `discard_command_workspace` is the structural guarantee that a cancelled
-    /// command never reaches the OCC merge, so it can never modify the shared
-    /// workspace.
-    fn settle_with_output(
-        &self,
-        status: &str,
-        exit_code: Option<i64>,
-        runner_result: Option<Value>,
-        stdout: String,
-        include_session_id: bool,
-        cancelled: bool,
-    ) -> Result<CommandResponse, CommandSessionError> {
-        let mut finalized = lock(&self.finalized);
-        if let Some(response) = finalized.as_ref() {
-            return Ok(response.clone());
-        }
-        let policy = lock(&self.policy);
-        let policy = policy.as_ref().ok_or_else(|| {
-            CommandSessionError::Unsupported("command session has no workspace policy".to_owned())
-        })?;
-        let request = FinalizeCommandRequest {
-            runner_result,
-            command_elapsed_s: self.started_at.elapsed().as_secs_f64(),
-            status: status.to_owned(),
-            exit_code,
-            stdout,
-            stderr: String::new(),
-            command_session_id: include_session_id.then(|| self.id.clone()),
-        };
-        let outcome = if cancelled {
-            policy.discard_command_workspace(request)?
-        } else {
-            policy.finalize_command_workspace(request)?
-        };
-        let response = CommandResponse::from_workspace_outcome(outcome);
-        *finalized = Some(response.clone());
-        Ok(response)
-    }
-
-    pub(crate) fn command_session_finished(&self, status: &str) {
-        let policy = lock(&self.policy);
-        if let Some(policy) = policy.as_ref() {
-            policy.command_session_finished(&self.id, &self.caller_id, status);
-        }
-    }
-
+    /// Reap the child if it has exited, returning the raw command result. Returns
+    /// `None` while the process is still running or has already been reaped. This
+    /// only reaps the substrate — it does not publish or discard; the owning run
+    /// decides that from `ReapedCommand::cancelled`.
     #[cfg(target_os = "linux")]
-    pub(crate) fn try_finalize_process(
-        &self,
-    ) -> Option<Result<CommandResponse, CommandSessionError>> {
+    pub(crate) fn reap(&self) -> Option<ReapedCommand> {
+        let mut reaped = lock(&self.reaped);
+        if *reaped {
+            return None;
+        }
         let process_exit = match self.process.try_reap() {
             ProcessReap::Running => return None,
             ProcessReap::Exited(exit) => exit,
         };
+        *reaped = true;
+        drop(reaped);
         self.process.terminate();
         self.process
             .wait_for_reader_done(Duration::from_millis(self.output_drain_grace_ms));
@@ -289,22 +245,24 @@ impl CommandSession {
             runner.as_ref(),
             cancelled,
         );
-        let response = self.settle_with_output(
-            completion.status(),
-            Some(completion.exit_code()),
-            runner.map(|runner| runner.value().clone()),
-            self.final_stdout(),
-            true,
+        Some(ReapedCommand {
+            status: completion.status().to_owned(),
+            exit_code: completion.exit_code(),
+            runner_result: runner.map(|runner| runner.value().clone()),
+            stdout: self.final_stdout(),
+            elapsed_s: self.started_at.elapsed().as_secs_f64(),
             cancelled,
-        );
-        if let Ok(response) = response.as_ref() {
-            if let Err(error) = write_final_response(&self.final_path, response) {
-                self.remove_transcript_file();
-                return Some(Err(error));
-            }
-        }
+        })
+    }
+
+    /// Persist the run's final response to `final_path` for crash recovery and
+    /// remove the transcript. Best-effort: `final_path` is only a crash-recovery
+    /// convenience, so a write failure does not undo the already-decided
+    /// publish/discard or fail the operation.
+    #[cfg(target_os = "linux")]
+    pub(crate) fn persist_final(&self, response: &CommandResponse) {
+        let _ = write_final_response(&self.final_path, response);
         self.remove_transcript_file();
-        Some(response)
     }
 
     #[cfg(target_os = "linux")]
@@ -345,9 +303,9 @@ fn write_final_response(
 }
 
 #[cfg(target_os = "linux")]
-impl CommandSessionWaitTarget<Result<CommandResponse, CommandSessionError>> for CommandSession {
-    fn try_finalize(&self) -> Option<Result<CommandResponse, CommandSessionError>> {
-        self.try_finalize_process()
+impl CommandSessionWaitTarget<ReapedCommand> for CommandSession {
+    fn try_finalize(&self) -> Option<ReapedCommand> {
+        self.reap()
     }
 
     fn transcript_len(&self) -> u64 {
@@ -368,7 +326,7 @@ fn duration_from_secs_f64(seconds: f64) -> Option<Duration> {
 }
 
 #[cfg(all(target_os = "linux", test))]
-fn inactive_process_parts(output_drain_grace_ms: u64) -> RunningCommandSessionParts {
+fn inactive_process_parts() -> RunningCommandSessionParts {
     let writer = std::fs::OpenOptions::new()
         .read(true)
         .write(true)
@@ -379,10 +337,11 @@ fn inactive_process_parts(output_drain_grace_ms: u64) -> RunningCommandSessionPa
         output_path: PathBuf::new(),
         final_path: PathBuf::new(),
         transcript_path: PathBuf::new(),
-        output_drain_grace_ms,
+        output_drain_grace_ms: 0,
     }
 }
 
+#[cfg(target_os = "linux")]
 fn lock<T>(mutex: &Mutex<T>) -> MutexGuard<'_, T> {
     mutex.lock().unwrap_or_else(PoisonError::into_inner)
 }
@@ -391,47 +350,14 @@ fn lock<T>(mutex: &Mutex<T>) -> MutexGuard<'_, T> {
 mod tests {
     use super::*;
 
-    struct NoopPolicy;
-
-    impl eos_workspace_api::CommandWorkspacePolicy for NoopPolicy {
-        fn prepare_command_workspace(
-            &self,
-            _request: eos_workspace_api::PrepareCommandRequest,
-        ) -> Result<eos_workspace_api::PreparedCommandWorkspace, eos_workspace_api::WorkspaceApiError>
-        {
-            unreachable!("session test does not prepare")
-        }
-
-        fn finalize_command_workspace(
-            &self,
-            _request: eos_workspace_api::FinalizeCommandRequest,
-        ) -> Result<eos_workspace_api::WorkspaceCommandOutcome, eos_workspace_api::WorkspaceApiError>
-        {
-            unreachable!("session test does not finalize")
-        }
-
-        fn discard_command_workspace(
-            &self,
-            _request: eos_workspace_api::FinalizeCommandRequest,
-        ) -> Result<eos_workspace_api::WorkspaceCommandOutcome, eos_workspace_api::WorkspaceApiError>
-        {
-            unreachable!("session test does not discard")
-        }
-    }
-
     #[test]
     fn session_exposes_identity_and_expiry() {
-        let config = CommandSessionConfig::default();
-        let session = CommandSession::new(
-            CommandSessionSpec {
-                id: "cmd_1".to_owned(),
-                caller_id: "caller".to_owned(),
-                command: "echo ok".to_owned(),
-                timeout_seconds: Some(0.001),
-            },
-            Box::new(NoopPolicy),
-            &config,
-        );
+        let session = CommandSession::new(CommandSessionSpec {
+            id: "cmd_1".to_owned(),
+            caller_id: "caller".to_owned(),
+            command: "echo ok".to_owned(),
+            timeout_seconds: Some(0.001),
+        });
 
         assert_eq!(session.id(), "cmd_1");
         assert_eq!(session.caller_id(), "caller");
@@ -440,55 +366,10 @@ mod tests {
     }
 
     #[cfg(target_os = "linux")]
-    struct FinalizingPolicy;
-
-    #[cfg(target_os = "linux")]
-    impl eos_workspace_api::CommandWorkspacePolicy for FinalizingPolicy {
-        fn prepare_command_workspace(
-            &self,
-            _request: eos_workspace_api::PrepareCommandRequest,
-        ) -> Result<eos_workspace_api::PreparedCommandWorkspace, eos_workspace_api::WorkspaceApiError>
-        {
-            unreachable!("finalization test does not prepare")
-        }
-
-        fn finalize_command_workspace(
-            &self,
-            request: eos_workspace_api::FinalizeCommandRequest,
-        ) -> Result<eos_workspace_api::WorkspaceCommandOutcome, eos_workspace_api::WorkspaceApiError>
-        {
-            Ok(eos_workspace_api::WorkspaceCommandOutcome {
-                mode: eos_workspace_api::WorkspaceMode::default(),
-                success: request.command_succeeded(),
-                status: request.status,
-                exit_code: request.exit_code,
-                stdout: request.stdout,
-                stderr: request.stderr,
-                command_session_id: request.command_session_id,
-                changed_paths: Vec::new(),
-                changed_path_kinds: Default::default(),
-                mutation_source: "test".to_owned(),
-                conflict: None,
-                conflict_reason: None,
-                timings: Default::default(),
-                metadata: serde_json::Value::Null,
-            })
-        }
-
-        fn discard_command_workspace(
-            &self,
-            _request: eos_workspace_api::FinalizeCommandRequest,
-        ) -> Result<eos_workspace_api::WorkspaceCommandOutcome, eos_workspace_api::WorkspaceApiError>
-        {
-            unreachable!("finalization test does not discard")
-        }
-    }
-
-    #[cfg(target_os = "linux")]
     #[test]
-    fn process_finalization_removes_transcript_file() -> Result<(), Box<dyn std::error::Error>> {
+    fn reap_reads_transcript_and_persist_removes_it() -> Result<(), Box<dyn std::error::Error>> {
         let root = std::env::temp_dir().join(format!(
-            "eos-command-session-transcript-cleanup-{}-{}",
+            "eos-command-session-reap-{}-{}",
             std::process::id(),
             std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)?
@@ -510,7 +391,6 @@ mod tests {
                 command: "echo ok".to_owned(),
                 timeout_seconds: None,
             },
-            Box::new(FinalizingPolicy),
             RunningCommandSessionParts {
                 process: crate::process::CommandSessionProcess::inactive(writer),
                 output_path: root.join("runner-result.json"),
@@ -520,12 +400,23 @@ mod tests {
             },
         );
 
-        let result = session
-            .try_finalize_process()
-            .expect("inactive process finalizes")?;
+        let reaped = session.reap().expect("inactive process reaps");
+        assert_eq!(reaped.stdout, "captured transcript output");
+        assert!(!reaped.cancelled);
+        // Reaping is idempotent.
+        assert!(session.reap().is_none());
 
-        assert_eq!(result.command_session_id.as_deref(), Some("cmd_1"));
-        assert_eq!(result.stdout, "captured transcript output");
+        let response = CommandResponse {
+            status: "ok".to_owned(),
+            exit_code: Some(0),
+            stdout: reaped.stdout.clone(),
+            stderr: String::new(),
+            command_session_id: Some("cmd_1".to_owned()),
+            workspace_mode: Some(eos_workspace_api::WorkspaceMode::default()),
+            metadata: serde_json::Value::Null,
+        };
+        session.persist_final(&response);
+
         assert!(final_path.exists());
         let final_response: serde_json::Value =
             serde_json::from_slice(&std::fs::read(&final_path)?)?;

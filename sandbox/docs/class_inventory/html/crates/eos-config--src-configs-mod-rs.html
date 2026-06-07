@@ -8,8 +8,16 @@
 </head>
 <body>
   <header>
-    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
-    <h1>eos-config File Inventory</h1>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>eos-config File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS/sandbox &amp;&amp; cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
   </header>
   <a class="back-link" href="../index.html">sandbox</a>
 <section class="summary">
@@ -50,6 +58,30 @@
   <div class="items"></div>
 </section></div>
 </main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/eos-config/src/configs/mod.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-comment">//! Typed schemas for sections of `sandbox/config/prd.yml`.</span>
+
+#[path = &quot;command-session.rs&quot;]
+<span class="rs-kw">pub</span> <span class="rs-kw">mod</span> command_session;
+
+<span class="rs-kw">pub</span> <span class="rs-kw">mod</span> daemon;
+
+<span class="rs-kw">pub</span> <span class="rs-kw">mod</span> validate;
+
+#[path = &quot;e2e-test.rs&quot;]
+<span class="rs-kw">pub</span> <span class="rs-kw">mod</span> e2e_test;
+
+#[path = &quot;isolated-workspace.rs&quot;]
+<span class="rs-kw">pub</span> <span class="rs-kw">mod</span> isolated_workspace;
+
+<span class="rs-kw">pub</span> <span class="rs-kw">mod</span> runner;
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
   <script src="../assets/inventory.js"></script>
 </body>
 </html>

@@ -8,8 +8,16 @@
 </head>
 <body>
   <header>
-    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
-    <h1>eos-daemon File Inventory</h1>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>eos-daemon File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS/sandbox &amp;&amp; cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
   </header>
   <a class="back-link" href="../index.html">sandbox</a>
 <section class="summary">
@@ -47,89 +55,716 @@
       <span>11 methods</span>
     </div>
   </div>
-  <div class="items"><div class="group-label">File-Owned Types</div><article class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct DispatchContext pub pub struct DispatchContext&lt; 'ctx &gt; crates/eos-daemon/src/dispatch/dispatcher.rs invocation_registry Option &lt; &amp; 'ctx InFlightRegistry &gt; audit_config Option &lt; &amp; 'ctx AuditConfig &gt; file_limits Option &lt; FileLimitsConfig &gt; read_request_s Option &lt; f64 &gt; ">
+  <div class="items"><div class="group-label">File-Owned Types</div><article id="item-struct-DispatchContext-56" class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct DispatchContext pub pub struct DispatchContext&lt; 'ctx &gt; crates/eos-daemon/src/dispatch/dispatcher.rs invocation_registry Option &lt; &amp; 'ctx InFlightRegistry &gt; audit_config Option &lt; &amp; 'ctx AuditConfig &gt; file_limits Option &lt; FileLimitsConfig &gt; read_request_s Option &lt; f64 &gt; ">
   <div class="item-head">
     <span class="kind">struct</span>
     <h3>DispatchContext</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub struct DispatchContext&lt; 'ctx &gt;</code>
-  <div class="tags"></div>
-  <h4>Fields</h4><table><tbody><tr><td>private</td><td>invocation_registry</td><td><code>Option &lt; &amp; 'ctx InFlightRegistry &gt;</code></td></tr><tr><td>private</td><td>audit_config</td><td><code>Option &lt; &amp; 'ctx AuditConfig &gt;</code></td></tr><tr><td>private</td><td>file_limits</td><td><code>Option &lt; FileLimitsConfig &gt;</code></td></tr><tr><td>private</td><td>read_request_s</td><td><code>Option &lt; f64 &gt;</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr><td>constructor</td><td>with_invocation_registry</td><td><code>pub const fn with_invocation_registry (invocation_registry : &amp; 'ctx InFlightRegistry) -&gt; Self</code></td></tr><tr><td>constructor</td><td>with_runtime_config</td><td><code>pub const fn with_runtime_config (invocation_registry : &amp; 'ctx InFlightRegistry , audit_config : &amp; 'ctx AuditConfig , file_limits : FileLimitsConfig , read_request_s : f64 ,) -&gt; Self</code></td></tr><tr><td>method</td><td>invocation_registry</td><td><code>pub(crate) const fn invocation_registry (&amp; self) -&gt; Option &lt; &amp; 'ctx InFlightRegistry &gt;</code></td></tr><tr><td>method</td><td>audit_config</td><td><code>pub(crate) const fn audit_config (&amp; self) -&gt; Option &lt; &amp; 'ctx AuditConfig &gt;</code></td></tr><tr><td>method</td><td>file_limits</td><td><code>pub(crate) const fn file_limits (&amp; self) -&gt; Option &lt; FileLimitsConfig &gt;</code></td></tr><tr><td>associated-fn</td><td>empty</td><td><code>pub const fn empty () -&gt; Self</code></td></tr></tbody></table>
+  <code class="signature">pub struct <a class="symbol-link" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-DispatchContext-56">DispatchContext</a>&lt; &#x27;ctx &gt;</code>
+  <p class="docstring">Per-dispatch daemon services used by handlers that need runtime state.</p>
+  <div class="tags"><span>derive: Clone</span><span>derive: Copy</span><span>derive: Default</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>invocation_registry</td><td><code>Option &lt; &amp; &#x27;ctx <a class="symbol-link" href="eos-daemon--src-runtime-invocation-registry-rs.html#item-struct-InFlightRegistry-49">InFlightRegistry</a> &gt;</code></td></tr><tr><td>private</td><td>audit_config</td><td><code>Option &lt; &amp; &#x27;ctx AuditConfig &gt;</code></td></tr><tr><td>private</td><td>file_limits</td><td><code>Option &lt; FileLimitsConfig &gt;</code></td></tr><tr><td>private</td><td>read_request_s</td><td><code>Option &lt; f64 &gt;</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-with-invocation-registry-77"><td>constructor</td><td>with_invocation_registry</td><td><code>pub const fn <a class="symbol-link" href="eos-daemon--src-dispatch-dispatcher-rs.html#method-with-invocation-registry-77">with_invocation_registry</a> (invocation_registry : &amp; &#x27;ctx <a class="symbol-link" href="eos-daemon--src-runtime-invocation-registry-rs.html#item-struct-InFlightRegistry-49">InFlightRegistry</a>) -&gt; Self</code><p class="docstring">Context carrying the server's invocation registry.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Context carrying the server's invocation registry.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-dispatch-dispatcher-rs.html#method-with-invocation-registry-77">with_invocation_registry</a>(invocation_registry: &amp;&#x27;ctx <a class="symbol-link rs-type" href="eos-daemon--src-runtime-invocation-registry-rs.html#item-struct-InFlightRegistry-49">InFlightRegistry</a>) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">Self</span> {
+            invocation_registry: <span class="rs-type">Some</span>(invocation_registry),
+            audit_config: <span class="rs-type">None</span>,
+            file_limits: <span class="rs-type">None</span>,
+            read_request_s: <span class="rs-type">None</span>,
+        }
+    }
+</code></pre>
+</details></td></tr><tr id="method-with-runtime-config-88"><td>constructor</td><td>with_runtime_config</td><td><code>pub const fn <a class="symbol-link" href="eos-daemon--src-dispatch-dispatcher-rs.html#method-with-runtime-config-88">with_runtime_config</a> (invocation_registry : &amp; &#x27;ctx <a class="symbol-link" href="eos-daemon--src-runtime-invocation-registry-rs.html#item-struct-InFlightRegistry-49">InFlightRegistry</a> , audit_config : &amp; &#x27;ctx AuditConfig , file_limits : FileLimitsConfig , read_request_s : f64 ,) -&gt; Self</code><p class="docstring">Context carrying the server's invocation registry, audit config, file<br>byte limits, and measured request read duration.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Context carrying the server's invocation registry, audit config, file</span>
+    <span class="rs-comment">/// byte limits, and measured request read duration.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-dispatch-dispatcher-rs.html#method-with-runtime-config-88">with_runtime_config</a>(
+        invocation_registry: &amp;&#x27;ctx <a class="symbol-link rs-type" href="eos-daemon--src-runtime-invocation-registry-rs.html#item-struct-InFlightRegistry-49">InFlightRegistry</a>,
+        audit_config: &amp;&#x27;ctx <span class="rs-type">AuditConfig</span>,
+        file_limits: <span class="rs-type">FileLimitsConfig</span>,
+        read_request_s: f64,
+    ) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">Self</span> {
+            invocation_registry: <span class="rs-type">Some</span>(invocation_registry),
+            audit_config: <span class="rs-type">Some</span>(audit_config),
+            file_limits: <span class="rs-type">Some</span>(file_limits),
+            read_request_s: <span class="rs-type">Some</span>(read_request_s),
+        }
+    }
+</code></pre>
+</details></td></tr><tr id="method-invocation-registry-105"><td>method</td><td>invocation_registry</td><td><code>pub(crate) const fn <a class="symbol-link" href="eos-daemon--src-dispatch-dispatcher-rs.html#method-invocation-registry-105">invocation_registry</a> (&amp; self) -&gt; Option &lt; &amp; &#x27;ctx <a class="symbol-link" href="eos-daemon--src-runtime-invocation-registry-rs.html#item-struct-InFlightRegistry-49">InFlightRegistry</a> &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-dispatch-dispatcher-rs.html#method-invocation-registry-105">invocation_registry</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Option</span>&lt;&amp;&#x27;ctx <a class="symbol-link rs-type" href="eos-daemon--src-runtime-invocation-registry-rs.html#item-struct-InFlightRegistry-49">InFlightRegistry</a>&gt; {
+        <span class="rs-self">self</span>.invocation_registry
+    }
+</code></pre>
+</details></td></tr><tr id="method-audit-config-109"><td>method</td><td>audit_config</td><td><code>pub(crate) const fn <a class="symbol-link" href="eos-daemon--src-dispatch-dispatcher-rs.html#method-audit-config-109">audit_config</a> (&amp; self) -&gt; Option &lt; &amp; &#x27;ctx AuditConfig &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-dispatch-dispatcher-rs.html#method-audit-config-109">audit_config</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Option</span>&lt;&amp;&#x27;ctx <span class="rs-type">AuditConfig</span>&gt; {
+        <span class="rs-self">self</span>.audit_config
+    }
+</code></pre>
+</details></td></tr><tr id="method-file-limits-113"><td>method</td><td>file_limits</td><td><code>pub(crate) const fn <a class="symbol-link" href="eos-daemon--src-dispatch-dispatcher-rs.html#method-file-limits-113">file_limits</a> (&amp; self) -&gt; Option &lt; FileLimitsConfig &gt;</code><p class="docstring">Per-file read/write byte caps, when runtime config was threaded. File ops<br>fall back to the `eos_protocol::models` defaults when this is `None`.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Per-file read/write byte caps, when runtime config was threaded. File ops</span>
+    <span class="rs-comment">/// fall back to the `eos_protocol::models` defaults when this is `None`.</span>
+    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-dispatch-dispatcher-rs.html#method-file-limits-113">file_limits</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Option</span>&lt;<span class="rs-type">FileLimitsConfig</span>&gt; {
+        <span class="rs-self">self</span>.file_limits
+    }
+</code></pre>
+</details></td></tr><tr id="method-empty-66"><td>associated-fn</td><td>empty</td><td><code>pub const fn <a class="symbol-link" href="eos-daemon--src-dispatch-dispatcher-rs.html#method-empty-66">empty</a> () -&gt; Self</code><p class="docstring">Empty context for direct unit dispatch.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Empty context for direct unit dispatch.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-dispatch-dispatcher-rs.html#method-empty-66">empty</a>() -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">Self</span> {
+            invocation_registry: <span class="rs-type">None</span>,
+            audit_config: <span class="rs-type">None</span>,
+            file_limits: <span class="rs-type">None</span>,
+            read_request_s: <span class="rs-type">None</span>,
+        }
+    }
+</code></pre>
+</details></td></tr></tbody></table>
+
   <p class="source">crates/eos-daemon/src/dispatch/dispatcher.rs:56</p>
-</article><article class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct OpTable pub pub struct OpTable crates/eos-daemon/src/dispatch/dispatcher.rs handlers HashMap &lt; String , Handler &gt; ">
+</article><article id="item-struct-OpTable-120" class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct OpTable pub pub struct OpTable crates/eos-daemon/src/dispatch/dispatcher.rs handlers HashMap &lt; String , Handler &gt; ">
   <div class="item-head">
     <span class="kind">struct</span>
     <h3>OpTable</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub struct OpTable</code>
-  <div class="tags"></div>
-  <h4>Fields</h4><table><tbody><tr><td>private</td><td>handlers</td><td><code>HashMap &lt; String , Handler &gt;</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr><td>constructor</td><td>with_builtins</td><td><code>pub fn with_builtins () -&gt; Self</code></td></tr><tr><td>method</td><td>register</td><td><code>fn register (&amp; mut self , op : &amp; str , handler : Handler) -&gt; bool</code></td></tr><tr><td>method</td><td>register_builtin</td><td><code>fn register_builtin (&amp; mut self , op : &amp; str , handler : Handler)</code></td></tr><tr><td>method</td><td>dispatch</td><td><code>pub fn dispatch (&amp; self , request : &amp; Request) -&gt; Value</code></td></tr><tr><td>method</td><td>dispatch_with_context</td><td><code>pub fn dispatch_with_context (&amp; self , request : &amp; Request , context : DispatchContext &lt; '_ &gt;) -&gt; Value</code></td></tr></tbody></table>
+  <code class="signature">pub struct <a class="symbol-link" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-OpTable-120">OpTable</a></code>
+  <p class="docstring">The op routing table.<br>Re-registering the same handler under an op is a no-op; a different handler<br>under a claimed op is rejected so peer collisions surface.</p>
+  <div class="tags"><span>derive: Clone</span><span>derive: Default</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>handlers</td><td><code>HashMap &lt; String , <a class="symbol-link" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-type-Handler-50">Handler</a> &gt;</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-with-builtins-130"><td>constructor</td><td>with_builtins</td><td><code>pub fn <a class="symbol-link" href="eos-daemon--src-dispatch-dispatcher-rs.html#method-with-builtins-130">with_builtins</a> () -&gt; Self</code><p class="docstring">Build the table pre-populated with the daemon-owned builtin ops this<br>phase wires (NO `ping`).</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Build the table pre-populated with the daemon-owned builtin ops this</span>
+    <span class="rs-comment">/// phase wires (NO `ping`).</span>
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-dispatch-dispatcher-rs.html#method-with-builtins-130">with_builtins</a>() -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> table = <span class="rs-self">Self</span>::<a class="symbol-link rs-fn" href="eos-daemon.html#method-default-210">default</a>();
+        <span class="rs-kw">for</span> op <span class="rs-kw">in</span> <span class="rs-type">BUILTIN_OPS</span> {
+            table.<a class="symbol-link rs-fn" href="eos-daemon--src-dispatch-dispatcher-rs.html#method-register-builtin-154">register_builtin</a>(op.wire, op.handler);
+        }
+        table
+    }
+</code></pre>
+</details></td></tr><tr id="method-register-140"><td>method</td><td>register</td><td><code>fn <a class="symbol-link" href="eos-daemon--src-dispatch-dispatcher-rs.html#method-register-140">register</a> (&amp; mut self , op : &amp; str , handler : <a class="symbol-link" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-type-Handler-50">Handler</a>) -&gt; bool</code><p class="docstring">Register `handler` under `op`.<br>Returns `true` when the handler was inserted or already registered.<br>Returns `false` when `op` is already claimed by a different handler,<br>leaving the original route intact.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Register `handler` under `op`.</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// Returns `true` when the handler was inserted or already registered.</span>
+    <span class="rs-comment">/// Returns `false` when `op` is already claimed by a different handler,</span>
+    <span class="rs-comment">/// leaving the original route intact.</span>
+    #[must_use = &quot;registration collisions are rejected; callers must check the result&quot;]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-dispatch-dispatcher-rs.html#method-register-140">register</a>(&amp;<span class="rs-kw">mut</span> <span class="rs-self">self</span>, op: &amp;str, handler: <a class="symbol-link rs-type" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-type-Handler-50">Handler</a>) -&gt; bool {
+        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(existing) = <span class="rs-self">self</span>.handlers.<a class="symbol-link rs-fn" href="eos-daemon--src-services-occ-service-cache-rs.html#method-get-87">get</a>(op) {
+            <span class="rs-kw">return</span> std::ptr::fn_addr_eq(*existing, handler);
+        }
+        <span class="rs-self">self</span>.handlers.insert(op.to_owned(), handler);
+        <span class="rs-kw">true</span>
+    }
+</code></pre>
+</details></td></tr><tr id="method-register-builtin-154"><td>method</td><td>register_builtin</td><td><code>fn <a class="symbol-link" href="eos-daemon--src-dispatch-dispatcher-rs.html#method-register-builtin-154">register_builtin</a> (&amp; mut self , op : &amp; str , handler : <a class="symbol-link" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-type-Handler-50">Handler</a>)</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-dispatch-dispatcher-rs.html#method-register-builtin-154">register_builtin</a>(&amp;<span class="rs-kw">mut</span> <span class="rs-self">self</span>, op: &amp;str, handler: <a class="symbol-link rs-type" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-type-Handler-50">Handler</a>) {
+        assert!(
+            <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-daemon--src-dispatch-dispatcher-rs.html#method-register-140">register</a>(op, handler),
+            &quot;builtin op registered with a different handler: {op}&quot;
+        );
+    }
+</code></pre>
+</details></td></tr><tr id="method-dispatch-161"><td>method</td><td>dispatch</td><td><code>pub fn <a class="symbol-link" href="eos-daemon--src-dispatch-dispatcher-rs.html#method-dispatch-161">dispatch</a> (&amp; self , request : &amp; Request) -&gt; Value</code><p class="docstring">Route `request` to its handler, returning the response value or an error<br>envelope value. Validates the envelope, runs the handler, and on an<br>unknown op returns the `unknown_op` envelope.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Route `request` to its handler, returning the response value or an error</span>
+    <span class="rs-comment">/// envelope value. Validates the envelope, runs the handler, and on an</span>
+    <span class="rs-comment">/// unknown op returns the `unknown_op` envelope.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-dispatch-dispatcher-rs.html#method-dispatch-161">dispatch</a>(&amp;<span class="rs-self">self</span>, request: &amp;<span class="rs-type">Request</span>) -&gt; <span class="rs-type">Value</span> {
+        <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-daemon--src-dispatch-dispatcher-rs.html#method-dispatch-with-context-169">dispatch_with_context</a>(request, <a class="symbol-link rs-type" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-DispatchContext-56">DispatchContext</a>::<a class="symbol-link rs-fn" href="eos-daemon--src-dispatch-dispatcher-rs.html#method-empty-66">empty</a>())
+    }
+</code></pre>
+</details></td></tr><tr id="method-dispatch-with-context-169"><td>method</td><td>dispatch_with_context</td><td><code>pub fn <a class="symbol-link" href="eos-daemon--src-dispatch-dispatcher-rs.html#method-dispatch-with-context-169">dispatch_with_context</a> (&amp; self , request : &amp; Request , context : <a class="symbol-link" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-DispatchContext-56">DispatchContext</a> &lt; &#x27;_ &gt;) -&gt; Value</code><p class="docstring">Route `request` with daemon runtime context.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Route `request` with daemon runtime context.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-dispatch-dispatcher-rs.html#method-dispatch-with-context-169">dispatch_with_context</a>(&amp;<span class="rs-self">self</span>, request: &amp;<span class="rs-type">Request</span>, context: <a class="symbol-link rs-type" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-DispatchContext-56">DispatchContext</a>&lt;&#x27;_&gt;) -&gt; <span class="rs-type">Value</span> {
+        <span class="rs-kw">let</span> dispatch_start = <span class="rs-type">Instant</span>::now();
+        <span class="rs-kw">let</span> boot_to_dispatch_s = <a class="symbol-link rs-fn" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-fn-daemon-uptime-s-321">daemon_uptime_s</a>();
+        <span class="rs-kw">if</span> request.op.trim().is_empty() {
+            <span class="rs-kw">let</span> <span class="rs-kw">mut</span> response =
+                <a class="symbol-link rs-fn" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-fn-error-envelope-250">error_envelope</a>(<span class="rs-type">ErrorKind</span>::<span class="rs-type">InvalidEnvelope</span>, &quot;op is required&quot;, json!({}));
+            <a class="symbol-link rs-fn" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-fn-attach-runtime-timings-299">attach_runtime_timings</a>(
+                &amp;<span class="rs-kw">mut</span> response,
+                boot_to_dispatch_s,
+                dispatch_start.elapsed().as_secs_f64(),
+                context.read_request_s.unwrap_or(0.0),
+            );
+            <a class="symbol-link rs-fn" href="eos-daemon--src-audit-events-rs.html#item-fn-emit-dispatch-audit-30">emit_dispatch_audit</a>(request, &amp;response, dispatch_start.elapsed().as_secs_f64());
+            <span class="rs-kw">return</span> response;
+        }
+        <span class="rs-kw">if</span> !request.args.is_object() {
+            <span class="rs-kw">let</span> <span class="rs-kw">mut</span> response = <a class="symbol-link rs-fn" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-fn-error-envelope-250">error_envelope</a>(
+                <span class="rs-type">ErrorKind</span>::<span class="rs-type">InvalidEnvelope</span>,
+                &quot;args must be an object&quot;,
+                json!({}),
+            );
+            <a class="symbol-link rs-fn" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-fn-attach-runtime-timings-299">attach_runtime_timings</a>(
+                &amp;<span class="rs-kw">mut</span> response,
+                boot_to_dispatch_s,
+                dispatch_start.elapsed().as_secs_f64(),
+                context.read_request_s.unwrap_or(0.0),
+            );
+            <a class="symbol-link rs-fn" href="eos-daemon--src-audit-events-rs.html#item-fn-emit-dispatch-audit-30">emit_dispatch_audit</a>(request, &amp;response, dispatch_start.elapsed().as_secs_f64());
+            <span class="rs-kw">return</span> response;
+        }
+        <span class="rs-kw">let</span> <span class="rs-type">Some</span>(handler) = <span class="rs-self">self</span>.handlers.<a class="symbol-link rs-fn" href="eos-daemon--src-services-occ-service-cache-rs.html#method-get-87">get</a>(&amp;request.op) <span class="rs-kw">else</span> {
+            <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(response) = plugins::<a class="symbol-link rs-fn" href="eos-daemon--src-ops-plugins-rs.html#item-fn-dispatch-registered-op-16">dispatch_registered_op</a>(
+                &amp;request.op,
+                &amp;request.invocation_id,
+                &amp;request.args,
+                context,
+            ) {
+                <span class="rs-kw">let</span> <span class="rs-kw">mut</span> response = <span class="rs-kw">match</span> response {
+                    <span class="rs-type">Ok</span>(response) =&gt; response,
+                    <span class="rs-type">Err</span>(err) =&gt; <a class="symbol-link rs-fn" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-fn-error-envelope-250">error_envelope</a>(err.<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-error-rs.html#method-wire-kind-73">wire_kind</a>(), &amp;err.to_string(), json!({})),
+                };
+                <a class="symbol-link rs-fn" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-fn-attach-runtime-timings-299">attach_runtime_timings</a>(
+                    &amp;<span class="rs-kw">mut</span> response,
+                    boot_to_dispatch_s,
+                    dispatch_start.elapsed().as_secs_f64(),
+                    context.read_request_s.unwrap_or(0.0),
+                );
+                <a class="symbol-link rs-fn" href="eos-daemon--src-audit-events-rs.html#item-fn-emit-dispatch-audit-30">emit_dispatch_audit</a>(request, &amp;response, dispatch_start.elapsed().as_secs_f64());
+                <span class="rs-kw">return</span> response;
+            }
+            <span class="rs-kw">let</span> <span class="rs-kw">mut</span> response = <a class="symbol-link rs-fn" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-fn-error-envelope-250">error_envelope</a>(
+                <span class="rs-type">ErrorKind</span>::<span class="rs-type">UnknownOp</span>,
+                &amp;format!(&quot;unknown op: {}&quot;, request.op),
+                json!({&quot;op&quot;: request.op}),
+            );
+            <a class="symbol-link rs-fn" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-fn-attach-runtime-timings-299">attach_runtime_timings</a>(
+                &amp;<span class="rs-kw">mut</span> response,
+                boot_to_dispatch_s,
+                dispatch_start.elapsed().as_secs_f64(),
+                context.read_request_s.unwrap_or(0.0),
+            );
+            <a class="symbol-link rs-fn" href="eos-daemon--src-audit-events-rs.html#item-fn-emit-dispatch-audit-30">emit_dispatch_audit</a>(request, &amp;response, dispatch_start.elapsed().as_secs_f64());
+            <span class="rs-kw">return</span> response;
+        };
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> response = <span class="rs-kw">match</span> handler(&amp;request.args, context) {
+            <span class="rs-type">Ok</span>(response) =&gt; response,
+            <span class="rs-type">Err</span>(err) =&gt; <a class="symbol-link rs-fn" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-fn-error-envelope-250">error_envelope</a>(err.<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-error-rs.html#method-wire-kind-73">wire_kind</a>(), &amp;err.to_string(), json!({})),
+        };
+        <a class="symbol-link rs-fn" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-fn-attach-runtime-timings-299">attach_runtime_timings</a>(
+            &amp;<span class="rs-kw">mut</span> response,
+            boot_to_dispatch_s,
+            dispatch_start.elapsed().as_secs_f64(),
+            context.read_request_s.unwrap_or(0.0),
+        );
+        <a class="symbol-link rs-fn" href="eos-daemon--src-audit-events-rs.html#item-fn-emit-dispatch-audit-30">emit_dispatch_audit</a>(request, &amp;response, dispatch_start.elapsed().as_secs_f64());
+        response
+    }
+</code></pre>
+</details></td></tr></tbody></table>
+
   <p class="source">crates/eos-daemon/src/dispatch/dispatcher.rs:120</p>
-</article><div class="group-label">Aliases</div><article class="item-card" data-kind="type" data-kind-list="type" data-filter-text="type Handler pub(crate) pub(crate) type Handler = for &lt; 'ctx &gt; fn (&amp; Value , DispatchContext &lt; 'ctx &gt;) -&gt; Result &lt; Value , DaemonError &gt; crates/eos-daemon/src/dispatch/dispatcher.rs  ">
+</article><div class="group-label">Aliases</div><article id="item-type-Handler-50" class="item-card" data-kind="type" data-kind-list="type" data-filter-text="type Handler pub(crate) pub(crate) type Handler = for &lt; 'ctx &gt; fn (&amp; Value , DispatchContext &lt; 'ctx &gt;) -&gt; Result &lt; Value , DaemonError &gt; crates/eos-daemon/src/dispatch/dispatcher.rs  ">
   <div class="item-head">
     <span class="kind">type</span>
     <h3>Handler</h3>
     <span class="visibility">pub(crate)</span>
   </div>
-  <code class="signature">pub(crate) type Handler = for &lt; 'ctx &gt; fn (&amp; Value , DispatchContext &lt; 'ctx &gt;) -&gt; Result &lt; Value , DaemonError &gt;</code>
+  <code class="signature">pub(crate) type <a class="symbol-link" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-type-Handler-50">Handler</a> = for &lt; &#x27;ctx &gt; fn (&amp; Value , <a class="symbol-link" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-DispatchContext-56">DispatchContext</a> &lt; &#x27;ctx &gt;) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a> &lt; Value , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
+  <p class="docstring">A synchronous op handler: decoded args -&gt; response value.<br>The daemon keeps the routing surface explicit here and lets each op facade<br>own request shaping before delegating to its implementation service.</p>
   <div class="tags"></div>
 
   <p class="source">crates/eos-daemon/src/dispatch/dispatcher.rs:50</p>
-</article><div class="group-label">Standalone Functions</div><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn error_envelope pub pub fn error_envelope (kind : ErrorKind , message : &amp; str , details : Value) -&gt; Value crates/eos-daemon/src/dispatch/dispatcher.rs  ">
+</article><div class="group-label">Standalone Functions</div><article id="item-fn-error-envelope-250" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn error_envelope pub pub fn error_envelope (kind : ErrorKind , message : &amp; str , details : Value) -&gt; Value crates/eos-daemon/src/dispatch/dispatcher.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>error_envelope</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub fn error_envelope (kind : ErrorKind , message : &amp; str , details : Value) -&gt; Value</code>
-  <div class="tags"></div>
+  <code class="signature">pub fn <a class="symbol-link" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-fn-error-envelope-250">error_envelope</a> (kind : ErrorKind , message : &amp; str , details : Value) -&gt; Value</code>
+  <p class="docstring">Build the structured wire error envelope.<br>`warnings`/`timings` are always `[]`/`{}` at the builder. `details`<br>defaults to `{}` and `internal_error` responses receive a generated<br>`details.error_id` when the caller did not provide one.</p>
+  <div class="tags"><span>must_use</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-comment">/// Build the structured wire error envelope.</span>
+<span class="rs-comment">///</span>
+<span class="rs-comment">/// `warnings`/`timings` are always `[]`/`{}` at the builder. `details`</span>
+<span class="rs-comment">/// defaults to `{}` and `internal_error` responses receive a generated</span>
+<span class="rs-comment">/// `details.error_id` when the caller did not provide one.</span>
+#[must_use]
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-fn-error-envelope-250">error_envelope</a>(kind: <span class="rs-type">ErrorKind</span>, message: &amp;str, details: <span class="rs-type">Value</span>) -&gt; <span class="rs-type">Value</span> {
+    <span class="rs-kw">let</span> is_internal_error = kind == <span class="rs-type">ErrorKind</span>::<span class="rs-type">InternalError</span>;
+    <span class="rs-kw">let</span> kind_str = serde_json::to_value(kind).unwrap_or(<span class="rs-type">Value</span>::<span class="rs-type">Null</span>);
+    <span class="rs-kw">let</span> details = <a class="symbol-link rs-fn" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-fn-error-details-272">error_details</a>(is_internal_error, details);
+    json!({
+        &quot;success&quot;: <span class="rs-kw">false</span>,
+        &quot;warnings&quot;: [],
+        &quot;timings&quot;: {},
+        &quot;error&quot;: {
+            &quot;kind&quot;: kind_str,
+            &quot;message&quot;: message,
+            &quot;details&quot;: details,
+        },
+    })
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-daemon/src/dispatch/dispatcher.rs:250</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn daemon_uptime_s pub(crate) pub(crate) fn daemon_uptime_s () -&gt; f64 crates/eos-daemon/src/dispatch/dispatcher.rs  ">
+</article><article id="item-fn-daemon-uptime-s-321" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn daemon_uptime_s pub(crate) pub(crate) fn daemon_uptime_s () -&gt; f64 crates/eos-daemon/src/dispatch/dispatcher.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>daemon_uptime_s</h3>
     <span class="visibility">pub(crate)</span>
   </div>
-  <code class="signature">pub(crate) fn daemon_uptime_s () -&gt; f64</code>
+  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-fn-daemon-uptime-s-321">daemon_uptime_s</a> () -&gt; f64</code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-fn-daemon-uptime-s-321">daemon_uptime_s</a>() -&gt; f64 {
+    <span class="rs-kw">static</span> <span class="rs-type">START</span>: std::sync::<span class="rs-type">OnceLock</span>&lt;<span class="rs-type">Instant</span>&gt; = std::sync::<span class="rs-type">OnceLock</span>::<a class="symbol-link rs-fn" href="eos-daemon.html#method-new-89">new</a>();
+    <span class="rs-type">START</span>.get_or_init(<span class="rs-type">Instant</span>::now).elapsed().as_secs_f64()
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-daemon/src/dispatch/dispatcher.rs:321</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn error_details private fn error_details (is_internal_error : bool , details : Value) -&gt; Value crates/eos-daemon/src/dispatch/dispatcher.rs  ">
+</article><article id="item-fn-error-details-272" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn error_details private fn error_details (is_internal_error : bool , details : Value) -&gt; Value crates/eos-daemon/src/dispatch/dispatcher.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>error_details</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn error_details (is_internal_error : bool , details : Value) -&gt; Value</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-fn-error-details-272">error_details</a> (is_internal_error : bool , details : Value) -&gt; Value</code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-fn-error-details-272">error_details</a>(is_internal_error: bool, details: <span class="rs-type">Value</span>) -&gt; <span class="rs-type">Value</span> {
+    <span class="rs-kw">if</span> !is_internal_error {
+        <span class="rs-kw">return</span> <span class="rs-kw">if</span> details.is_null() {
+            json!({})
+        } <span class="rs-kw">else</span> {
+            details
+        };
+    }
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> details = <span class="rs-kw">match</span> details {
+        <span class="rs-type">Value</span>::<span class="rs-type">Null</span> =&gt; serde_json::<span class="rs-type">Map</span>::<a class="symbol-link rs-fn" href="eos-daemon.html#method-new-89">new</a>(),
+        <span class="rs-type">Value</span>::<span class="rs-type">Object</span>(details) =&gt; details,
+        other =&gt; {
+            <span class="rs-kw">let</span> <span class="rs-kw">mut</span> object = serde_json::<span class="rs-type">Map</span>::<a class="symbol-link rs-fn" href="eos-daemon.html#method-new-89">new</a>();
+            object.insert(&quot;value&quot;.to_owned(), other);
+            object
+        }
+    };
+    details
+        .entry(&quot;error_id&quot;)
+        .or_insert_with(|| <span class="rs-type">Value</span>::<span class="rs-type">String</span>(<a class="symbol-link rs-fn" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-fn-new-error-id-295">new_error_id</a>()));
+    <span class="rs-type">Value</span>::<span class="rs-type">Object</span>(details)
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-daemon/src/dispatch/dispatcher.rs:272</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn new_error_id private fn new_error_id () -&gt; String crates/eos-daemon/src/dispatch/dispatcher.rs  ">
+</article><article id="item-fn-new-error-id-295" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn new_error_id private fn new_error_id () -&gt; String crates/eos-daemon/src/dispatch/dispatcher.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>new_error_id</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn new_error_id () -&gt; String</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-fn-new-error-id-295">new_error_id</a> () -&gt; String</code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-fn-new-error-id-295">new_error_id</a>() -&gt; <span class="rs-type">String</span> {
+    uuid::<span class="rs-type">Uuid</span>::new_v4().simple().to_string()
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-daemon/src/dispatch/dispatcher.rs:295</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn attach_runtime_timings private fn attach_runtime_timings (response : &amp; mut Value , boot_to_dispatch_s : f64 , dispatch_s : f64 , read_request_s : f64 ,) crates/eos-daemon/src/dispatch/dispatcher.rs  ">
+</article><article id="item-fn-attach-runtime-timings-299" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn attach_runtime_timings private fn attach_runtime_timings (response : &amp; mut Value , boot_to_dispatch_s : f64 , dispatch_s : f64 , read_request_s : f64 ,) crates/eos-daemon/src/dispatch/dispatcher.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>attach_runtime_timings</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn attach_runtime_timings (response : &amp; mut Value , boot_to_dispatch_s : f64 , dispatch_s : f64 , read_request_s : f64 ,)</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-fn-attach-runtime-timings-299">attach_runtime_timings</a> (response : &amp; mut Value , boot_to_dispatch_s : f64 , dispatch_s : f64 , read_request_s : f64 ,)</code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-fn-attach-runtime-timings-299">attach_runtime_timings</a>(
+    response: &amp;<span class="rs-kw">mut</span> <span class="rs-type">Value</span>,
+    boot_to_dispatch_s: f64,
+    dispatch_s: f64,
+    read_request_s: f64,
+) {
+    <span class="rs-kw">let</span> <span class="rs-type">Some</span>(obj) = response.as_object_mut() <span class="rs-kw">else</span> {
+        <span class="rs-kw">return</span>;
+    };
+    <span class="rs-kw">let</span> timings = obj
+        .entry(&quot;timings&quot;)
+        .or_insert_with(|| <span class="rs-type">Value</span>::<span class="rs-type">Object</span>(serde_json::<span class="rs-type">Map</span>::<a class="symbol-link rs-fn" href="eos-daemon.html#method-new-89">new</a>()));
+    <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Value</span>::<span class="rs-type">Object</span>(timings) = timings {
+        timings.insert(
+            &quot;runtime.boot_to_dispatch_s&quot;.to_owned(),
+            json!(boot_to_dispatch_s),
+        );
+        timings.insert(&quot;runtime.dispatch_s&quot;.to_owned(), json!(dispatch_s));
+        timings.insert(&quot;runtime.read_request_s&quot;.to_owned(), json!(read_request_s));
+    }
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-daemon/src/dispatch/dispatcher.rs:299</p>
 </article></div>
 </section></div>
 </main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/eos-daemon/src/dispatch/dispatcher.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-comment">//! Op routing: the `OP_TABLE`, envelope validation, and audit wrapping.</span>
+<span class="rs-comment">//!</span>
+<span class="rs-comment">//! The daemon decodes one [`eos_protocol::Request`] and routes `op` through the</span>
+<span class="rs-comment">//! [`OpTable`]. Handlers return a JSON `Value` response; a failure becomes the</span>
+<span class="rs-comment">//! structured error envelope ([`error_envelope`]) keyed by an</span>
+<span class="rs-comment">//! [`eos_protocol::ErrorKind`]. There is NO `ping` op — liveness is</span>
+<span class="rs-comment">//! `api.v1.heartbeat`, readiness is `api.runtime.ready`.</span>
+<span class="rs-comment">//!</span>
+<span class="rs-comment">//! Built-in handlers are described in [`crate::ops::registry`]. Dynamic plugin</span>
+<span class="rs-comment">//! handlers are intentionally deferred: after a built-in miss, the dispatcher</span>
+<span class="rs-comment">//! asks the plugin service registry whether the op was installed at runtime.</span>
+
+<span class="rs-kw">use</span> std::collections::<span class="rs-type">HashMap</span>;
+#[cfg(test)]
+<span class="rs-kw">use</span> std::path::<span class="rs-type">PathBuf</span>;
+<span class="rs-kw">use</span> std::time::<span class="rs-type">Instant</span>;
+
+<span class="rs-kw">use</span> serde_json::{json, <span class="rs-type">Value</span>};
+
+#[cfg(test)]
+<span class="rs-kw">use</span> eos_layerstack::<span class="rs-type">LayerStack</span>;
+<span class="rs-kw">use</span> eos_protocol::{<span class="rs-type">ErrorKind</span>, <span class="rs-type">Request</span>};
+#[cfg(test)]
+<span class="rs-kw">use</span> eos_protocol::{<span class="rs-type">LayerChange</span>, <span class="rs-type">LayerPath</span>};
+
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::audit::events::emit_dispatch_audit;
+#[cfg(test)]
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::audit::events::{background_event_kind, emit_auto_squash_audit, uses_overlay_or_lease};
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::config::{<span class="rs-type">AuditConfig</span>, <span class="rs-type">FileLimitsConfig</span>};
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::error::<a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>;
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::invocation_registry::<a class="symbol-link rs-type" href="eos-daemon--src-runtime-invocation-registry-rs.html#item-struct-InFlightRegistry-49">InFlightRegistry</a>;
+#[cfg(test)]
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::ops::audit::{op_audit_pull, op_audit_snapshot};
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::ops::{plugins, registry::<span class="rs-type">BUILTIN_OPS</span>};
+#[cfg(test)]
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::response_timings::{
+    i64_to_f64_saturating, insert_tree_resource_timings, resource_timings, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-response-timings-rs.html#item-struct-TreeResourceStats-12">TreeResourceStats</a>,
+};
+#[cfg(test)]
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::services::occ::{
+    base_hashes_for_snapshot, hash_bytes, normalize_root_key, occ_route_metrics,
+    <a class="symbol-link rs-type" href="eos-daemon--src-services-occ-publish-rs.html#item-struct-LayerStackCommitTransaction-27">LayerStackCommitTransaction</a>, <a class="symbol-link rs-type" href="eos-daemon--src-services-occ-route-rs.html#item-struct-LayerStackRouteProvider-22">LayerStackRouteProvider</a>, <a class="symbol-link rs-type" href="eos-daemon--src-services-occ-service-cache-rs.html#item-struct-OccServiceCache-74">OccServiceCache</a>, <span class="rs-type">OCC_SERVICE_CACHE_MAX</span>,
+};
+#[cfg(test)]
+<span class="rs-kw">use</span> eos_occ::{
+    <span class="rs-type">CommitQueue</span>, <span class="rs-type">CommitTransactionPort</span>, <span class="rs-type">OccRouteProvider</span>, <span class="rs-type">OccService</span>, <span class="rs-type">OccStatus</span>, <span class="rs-type">PreparedChangeset</span>,
+    <span class="rs-type">Route</span>,
+};
+
+<span class="rs-comment">/// A synchronous op handler: decoded args -&gt; response value.</span>
+<span class="rs-comment">///</span>
+<span class="rs-comment">/// The daemon keeps the routing surface explicit here and lets each op facade</span>
+<span class="rs-comment">/// own request shaping before delegating to its implementation service.</span>
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">type</span> <a class="symbol-link rs-type" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-type-Handler-50">Handler</a> = <span class="rs-kw">for</span>&lt;&#x27;ctx&gt; <span class="rs-kw">fn</span>(&amp;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-DispatchContext-56">DispatchContext</a>&lt;&#x27;ctx&gt;) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt;;
+
+<span class="rs-comment">/// Per-dispatch daemon services used by handlers that need runtime state.</span>
+#[derive(<span class="rs-type">Clone</span>, <span class="rs-type">Copy</span>, <span class="rs-type">Default</span>)]
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-DispatchContext-56">DispatchContext</a>&lt;&#x27;ctx&gt; {
+    invocation_registry: <span class="rs-type">Option</span>&lt;&amp;&#x27;ctx <a class="symbol-link rs-type" href="eos-daemon--src-runtime-invocation-registry-rs.html#item-struct-InFlightRegistry-49">InFlightRegistry</a>&gt;,
+    audit_config: <span class="rs-type">Option</span>&lt;&amp;&#x27;ctx <span class="rs-type">AuditConfig</span>&gt;,
+    file_limits: <span class="rs-type">Option</span>&lt;<span class="rs-type">FileLimitsConfig</span>&gt;,
+    read_request_s: <span class="rs-type">Option</span>&lt;f64&gt;,
+}
+
+<span class="rs-kw">impl</span>&lt;&#x27;ctx&gt; <a class="symbol-link rs-type" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-DispatchContext-56">DispatchContext</a>&lt;&#x27;ctx&gt; {
+    <span class="rs-comment">/// Empty context for direct unit dispatch.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-dispatch-dispatcher-rs.html#method-empty-66">empty</a>() -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">Self</span> {
+            invocation_registry: <span class="rs-type">None</span>,
+            audit_config: <span class="rs-type">None</span>,
+            file_limits: <span class="rs-type">None</span>,
+            read_request_s: <span class="rs-type">None</span>,
+        }
+    }
+
+    <span class="rs-comment">/// Context carrying the server's invocation registry.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-dispatch-dispatcher-rs.html#method-with-invocation-registry-77">with_invocation_registry</a>(invocation_registry: &amp;&#x27;ctx <a class="symbol-link rs-type" href="eos-daemon--src-runtime-invocation-registry-rs.html#item-struct-InFlightRegistry-49">InFlightRegistry</a>) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">Self</span> {
+            invocation_registry: <span class="rs-type">Some</span>(invocation_registry),
+            audit_config: <span class="rs-type">None</span>,
+            file_limits: <span class="rs-type">None</span>,
+            read_request_s: <span class="rs-type">None</span>,
+        }
+    }
+
+    <span class="rs-comment">/// Context carrying the server's invocation registry, audit config, file</span>
+    <span class="rs-comment">/// byte limits, and measured request read duration.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-dispatch-dispatcher-rs.html#method-with-runtime-config-88">with_runtime_config</a>(
+        invocation_registry: &amp;&#x27;ctx <a class="symbol-link rs-type" href="eos-daemon--src-runtime-invocation-registry-rs.html#item-struct-InFlightRegistry-49">InFlightRegistry</a>,
+        audit_config: &amp;&#x27;ctx <span class="rs-type">AuditConfig</span>,
+        file_limits: <span class="rs-type">FileLimitsConfig</span>,
+        read_request_s: f64,
+    ) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">Self</span> {
+            invocation_registry: <span class="rs-type">Some</span>(invocation_registry),
+            audit_config: <span class="rs-type">Some</span>(audit_config),
+            file_limits: <span class="rs-type">Some</span>(file_limits),
+            read_request_s: <span class="rs-type">Some</span>(read_request_s),
+        }
+    }
+
+    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-dispatch-dispatcher-rs.html#method-invocation-registry-105">invocation_registry</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Option</span>&lt;&amp;&#x27;ctx <a class="symbol-link rs-type" href="eos-daemon--src-runtime-invocation-registry-rs.html#item-struct-InFlightRegistry-49">InFlightRegistry</a>&gt; {
+        <span class="rs-self">self</span>.invocation_registry
+    }
+
+    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-dispatch-dispatcher-rs.html#method-audit-config-109">audit_config</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Option</span>&lt;&amp;&#x27;ctx <span class="rs-type">AuditConfig</span>&gt; {
+        <span class="rs-self">self</span>.audit_config
+    }
+
+    <span class="rs-comment">/// Per-file read/write byte caps, when runtime config was threaded. File ops</span>
+    <span class="rs-comment">/// fall back to the `eos_protocol::models` defaults when this is `None`.</span>
+    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-dispatch-dispatcher-rs.html#method-file-limits-113">file_limits</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Option</span>&lt;<span class="rs-type">FileLimitsConfig</span>&gt; {
+        <span class="rs-self">self</span>.file_limits
+    }
+}
+
+<span class="rs-comment">/// The op routing table.</span>
+<span class="rs-comment">///</span>
+<span class="rs-comment">/// Re-registering the same handler under an op is a no-op; a different handler</span>
+<span class="rs-comment">/// under a claimed op is rejected so peer collisions surface.</span>
+#[derive(<span class="rs-type">Clone</span>, <span class="rs-type">Default</span>)]
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-OpTable-120">OpTable</a> {
+    handlers: <span class="rs-type">HashMap</span>&lt;<span class="rs-type">String</span>, <a class="symbol-link rs-type" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-type-Handler-50">Handler</a>&gt;,
+}
+
+<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-OpTable-120">OpTable</a> {
+    <span class="rs-comment">/// Build the table pre-populated with the daemon-owned builtin ops this</span>
+    <span class="rs-comment">/// phase wires (NO `ping`).</span>
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-dispatch-dispatcher-rs.html#method-with-builtins-130">with_builtins</a>() -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> table = <span class="rs-self">Self</span>::<a class="symbol-link rs-fn" href="eos-daemon.html#method-default-210">default</a>();
+        <span class="rs-kw">for</span> op <span class="rs-kw">in</span> <span class="rs-type">BUILTIN_OPS</span> {
+            table.<a class="symbol-link rs-fn" href="eos-daemon--src-dispatch-dispatcher-rs.html#method-register-builtin-154">register_builtin</a>(op.wire, op.handler);
+        }
+        table
+    }
+
+    <span class="rs-comment">/// Register `handler` under `op`.</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// Returns `true` when the handler was inserted or already registered.</span>
+    <span class="rs-comment">/// Returns `false` when `op` is already claimed by a different handler,</span>
+    <span class="rs-comment">/// leaving the original route intact.</span>
+    #[must_use = &quot;registration collisions are rejected; callers must check the result&quot;]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-dispatch-dispatcher-rs.html#method-register-140">register</a>(&amp;<span class="rs-kw">mut</span> <span class="rs-self">self</span>, op: &amp;str, handler: <a class="symbol-link rs-type" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-type-Handler-50">Handler</a>) -&gt; bool {
+        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(existing) = <span class="rs-self">self</span>.handlers.<a class="symbol-link rs-fn" href="eos-daemon--src-services-occ-service-cache-rs.html#method-get-87">get</a>(op) {
+            <span class="rs-kw">return</span> std::ptr::fn_addr_eq(*existing, handler);
+        }
+        <span class="rs-self">self</span>.handlers.insert(op.to_owned(), handler);
+        <span class="rs-kw">true</span>
+    }
+
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-dispatch-dispatcher-rs.html#method-register-builtin-154">register_builtin</a>(&amp;<span class="rs-kw">mut</span> <span class="rs-self">self</span>, op: &amp;str, handler: <a class="symbol-link rs-type" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-type-Handler-50">Handler</a>) {
+        assert!(
+            <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-daemon--src-dispatch-dispatcher-rs.html#method-register-140">register</a>(op, handler),
+            &quot;builtin op registered with a different handler: {op}&quot;
+        );
+    }
+
+    <span class="rs-comment">/// Route `request` to its handler, returning the response value or an error</span>
+    <span class="rs-comment">/// envelope value. Validates the envelope, runs the handler, and on an</span>
+    <span class="rs-comment">/// unknown op returns the `unknown_op` envelope.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-dispatch-dispatcher-rs.html#method-dispatch-161">dispatch</a>(&amp;<span class="rs-self">self</span>, request: &amp;<span class="rs-type">Request</span>) -&gt; <span class="rs-type">Value</span> {
+        <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-daemon--src-dispatch-dispatcher-rs.html#method-dispatch-with-context-169">dispatch_with_context</a>(request, <a class="symbol-link rs-type" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-DispatchContext-56">DispatchContext</a>::<a class="symbol-link rs-fn" href="eos-daemon--src-dispatch-dispatcher-rs.html#method-empty-66">empty</a>())
+    }
+
+    <span class="rs-comment">/// Route `request` with daemon runtime context.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-dispatch-dispatcher-rs.html#method-dispatch-with-context-169">dispatch_with_context</a>(&amp;<span class="rs-self">self</span>, request: &amp;<span class="rs-type">Request</span>, context: <a class="symbol-link rs-type" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-DispatchContext-56">DispatchContext</a>&lt;&#x27;_&gt;) -&gt; <span class="rs-type">Value</span> {
+        <span class="rs-kw">let</span> dispatch_start = <span class="rs-type">Instant</span>::now();
+        <span class="rs-kw">let</span> boot_to_dispatch_s = <a class="symbol-link rs-fn" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-fn-daemon-uptime-s-321">daemon_uptime_s</a>();
+        <span class="rs-kw">if</span> request.op.trim().is_empty() {
+            <span class="rs-kw">let</span> <span class="rs-kw">mut</span> response =
+                <a class="symbol-link rs-fn" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-fn-error-envelope-250">error_envelope</a>(<span class="rs-type">ErrorKind</span>::<span class="rs-type">InvalidEnvelope</span>, &quot;op is required&quot;, json!({}));
+            <a class="symbol-link rs-fn" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-fn-attach-runtime-timings-299">attach_runtime_timings</a>(
+                &amp;<span class="rs-kw">mut</span> response,
+                boot_to_dispatch_s,
+                dispatch_start.elapsed().as_secs_f64(),
+                context.read_request_s.unwrap_or(0.0),
+            );
+            <a class="symbol-link rs-fn" href="eos-daemon--src-audit-events-rs.html#item-fn-emit-dispatch-audit-30">emit_dispatch_audit</a>(request, &amp;response, dispatch_start.elapsed().as_secs_f64());
+            <span class="rs-kw">return</span> response;
+        }
+        <span class="rs-kw">if</span> !request.args.is_object() {
+            <span class="rs-kw">let</span> <span class="rs-kw">mut</span> response = <a class="symbol-link rs-fn" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-fn-error-envelope-250">error_envelope</a>(
+                <span class="rs-type">ErrorKind</span>::<span class="rs-type">InvalidEnvelope</span>,
+                &quot;args must be an object&quot;,
+                json!({}),
+            );
+            <a class="symbol-link rs-fn" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-fn-attach-runtime-timings-299">attach_runtime_timings</a>(
+                &amp;<span class="rs-kw">mut</span> response,
+                boot_to_dispatch_s,
+                dispatch_start.elapsed().as_secs_f64(),
+                context.read_request_s.unwrap_or(0.0),
+            );
+            <a class="symbol-link rs-fn" href="eos-daemon--src-audit-events-rs.html#item-fn-emit-dispatch-audit-30">emit_dispatch_audit</a>(request, &amp;response, dispatch_start.elapsed().as_secs_f64());
+            <span class="rs-kw">return</span> response;
+        }
+        <span class="rs-kw">let</span> <span class="rs-type">Some</span>(handler) = <span class="rs-self">self</span>.handlers.<a class="symbol-link rs-fn" href="eos-daemon--src-services-occ-service-cache-rs.html#method-get-87">get</a>(&amp;request.op) <span class="rs-kw">else</span> {
+            <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(response) = plugins::<a class="symbol-link rs-fn" href="eos-daemon--src-ops-plugins-rs.html#item-fn-dispatch-registered-op-16">dispatch_registered_op</a>(
+                &amp;request.op,
+                &amp;request.invocation_id,
+                &amp;request.args,
+                context,
+            ) {
+                <span class="rs-kw">let</span> <span class="rs-kw">mut</span> response = <span class="rs-kw">match</span> response {
+                    <span class="rs-type">Ok</span>(response) =&gt; response,
+                    <span class="rs-type">Err</span>(err) =&gt; <a class="symbol-link rs-fn" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-fn-error-envelope-250">error_envelope</a>(err.<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-error-rs.html#method-wire-kind-73">wire_kind</a>(), &amp;err.to_string(), json!({})),
+                };
+                <a class="symbol-link rs-fn" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-fn-attach-runtime-timings-299">attach_runtime_timings</a>(
+                    &amp;<span class="rs-kw">mut</span> response,
+                    boot_to_dispatch_s,
+                    dispatch_start.elapsed().as_secs_f64(),
+                    context.read_request_s.unwrap_or(0.0),
+                );
+                <a class="symbol-link rs-fn" href="eos-daemon--src-audit-events-rs.html#item-fn-emit-dispatch-audit-30">emit_dispatch_audit</a>(request, &amp;response, dispatch_start.elapsed().as_secs_f64());
+                <span class="rs-kw">return</span> response;
+            }
+            <span class="rs-kw">let</span> <span class="rs-kw">mut</span> response = <a class="symbol-link rs-fn" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-fn-error-envelope-250">error_envelope</a>(
+                <span class="rs-type">ErrorKind</span>::<span class="rs-type">UnknownOp</span>,
+                &amp;format!(&quot;unknown op: {}&quot;, request.op),
+                json!({&quot;op&quot;: request.op}),
+            );
+            <a class="symbol-link rs-fn" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-fn-attach-runtime-timings-299">attach_runtime_timings</a>(
+                &amp;<span class="rs-kw">mut</span> response,
+                boot_to_dispatch_s,
+                dispatch_start.elapsed().as_secs_f64(),
+                context.read_request_s.unwrap_or(0.0),
+            );
+            <a class="symbol-link rs-fn" href="eos-daemon--src-audit-events-rs.html#item-fn-emit-dispatch-audit-30">emit_dispatch_audit</a>(request, &amp;response, dispatch_start.elapsed().as_secs_f64());
+            <span class="rs-kw">return</span> response;
+        };
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> response = <span class="rs-kw">match</span> handler(&amp;request.args, context) {
+            <span class="rs-type">Ok</span>(response) =&gt; response,
+            <span class="rs-type">Err</span>(err) =&gt; <a class="symbol-link rs-fn" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-fn-error-envelope-250">error_envelope</a>(err.<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-error-rs.html#method-wire-kind-73">wire_kind</a>(), &amp;err.to_string(), json!({})),
+        };
+        <a class="symbol-link rs-fn" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-fn-attach-runtime-timings-299">attach_runtime_timings</a>(
+            &amp;<span class="rs-kw">mut</span> response,
+            boot_to_dispatch_s,
+            dispatch_start.elapsed().as_secs_f64(),
+            context.read_request_s.unwrap_or(0.0),
+        );
+        <a class="symbol-link rs-fn" href="eos-daemon--src-audit-events-rs.html#item-fn-emit-dispatch-audit-30">emit_dispatch_audit</a>(request, &amp;response, dispatch_start.elapsed().as_secs_f64());
+        response
+    }
+}
+
+<span class="rs-comment">/// Build the structured wire error envelope.</span>
+<span class="rs-comment">///</span>
+<span class="rs-comment">/// `warnings`/`timings` are always `[]`/`{}` at the builder. `details`</span>
+<span class="rs-comment">/// defaults to `{}` and `internal_error` responses receive a generated</span>
+<span class="rs-comment">/// `details.error_id` when the caller did not provide one.</span>
+#[must_use]
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-fn-error-envelope-250">error_envelope</a>(kind: <span class="rs-type">ErrorKind</span>, message: &amp;str, details: <span class="rs-type">Value</span>) -&gt; <span class="rs-type">Value</span> {
+    <span class="rs-kw">let</span> is_internal_error = kind == <span class="rs-type">ErrorKind</span>::<span class="rs-type">InternalError</span>;
+    <span class="rs-kw">let</span> kind_str = serde_json::to_value(kind).unwrap_or(<span class="rs-type">Value</span>::<span class="rs-type">Null</span>);
+    <span class="rs-kw">let</span> details = <a class="symbol-link rs-fn" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-fn-error-details-272">error_details</a>(is_internal_error, details);
+    json!({
+        &quot;success&quot;: <span class="rs-kw">false</span>,
+        &quot;warnings&quot;: [],
+        &quot;timings&quot;: {},
+        &quot;error&quot;: {
+            &quot;kind&quot;: kind_str,
+            &quot;message&quot;: message,
+            &quot;details&quot;: details,
+        },
+    })
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-fn-error-details-272">error_details</a>(is_internal_error: bool, details: <span class="rs-type">Value</span>) -&gt; <span class="rs-type">Value</span> {
+    <span class="rs-kw">if</span> !is_internal_error {
+        <span class="rs-kw">return</span> <span class="rs-kw">if</span> details.is_null() {
+            json!({})
+        } <span class="rs-kw">else</span> {
+            details
+        };
+    }
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> details = <span class="rs-kw">match</span> details {
+        <span class="rs-type">Value</span>::<span class="rs-type">Null</span> =&gt; serde_json::<span class="rs-type">Map</span>::<a class="symbol-link rs-fn" href="eos-daemon.html#method-new-89">new</a>(),
+        <span class="rs-type">Value</span>::<span class="rs-type">Object</span>(details) =&gt; details,
+        other =&gt; {
+            <span class="rs-kw">let</span> <span class="rs-kw">mut</span> object = serde_json::<span class="rs-type">Map</span>::<a class="symbol-link rs-fn" href="eos-daemon.html#method-new-89">new</a>();
+            object.insert(&quot;value&quot;.to_owned(), other);
+            object
+        }
+    };
+    details
+        .entry(&quot;error_id&quot;)
+        .or_insert_with(|| <span class="rs-type">Value</span>::<span class="rs-type">String</span>(<a class="symbol-link rs-fn" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-fn-new-error-id-295">new_error_id</a>()));
+    <span class="rs-type">Value</span>::<span class="rs-type">Object</span>(details)
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-fn-new-error-id-295">new_error_id</a>() -&gt; <span class="rs-type">String</span> {
+    uuid::<span class="rs-type">Uuid</span>::new_v4().simple().to_string()
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-fn-attach-runtime-timings-299">attach_runtime_timings</a>(
+    response: &amp;<span class="rs-kw">mut</span> <span class="rs-type">Value</span>,
+    boot_to_dispatch_s: f64,
+    dispatch_s: f64,
+    read_request_s: f64,
+) {
+    <span class="rs-kw">let</span> <span class="rs-type">Some</span>(obj) = response.as_object_mut() <span class="rs-kw">else</span> {
+        <span class="rs-kw">return</span>;
+    };
+    <span class="rs-kw">let</span> timings = obj
+        .entry(&quot;timings&quot;)
+        .or_insert_with(|| <span class="rs-type">Value</span>::<span class="rs-type">Object</span>(serde_json::<span class="rs-type">Map</span>::<a class="symbol-link rs-fn" href="eos-daemon.html#method-new-89">new</a>()));
+    <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Value</span>::<span class="rs-type">Object</span>(timings) = timings {
+        timings.insert(
+            &quot;runtime.boot_to_dispatch_s&quot;.to_owned(),
+            json!(boot_to_dispatch_s),
+        );
+        timings.insert(&quot;runtime.dispatch_s&quot;.to_owned(), json!(dispatch_s));
+        timings.insert(&quot;runtime.read_request_s&quot;.to_owned(), json!(read_request_s));
+    }
+}
+
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-fn-daemon-uptime-s-321">daemon_uptime_s</a>() -&gt; f64 {
+    <span class="rs-kw">static</span> <span class="rs-type">START</span>: std::sync::<span class="rs-type">OnceLock</span>&lt;<span class="rs-type">Instant</span>&gt; = std::sync::<span class="rs-type">OnceLock</span>::<a class="symbol-link rs-fn" href="eos-daemon.html#method-new-89">new</a>();
+    <span class="rs-type">START</span>.get_or_init(<span class="rs-type">Instant</span>::now).elapsed().as_secs_f64()
+}
+
+#[cfg(test)]
+#[path = &quot;../../tests/dispatcher/<span class="rs-kw">mod</span>.rs&quot;]
+<span class="rs-kw">mod</span> tests;
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
   <script src="../assets/inventory.js"></script>
 </body>
 </html>

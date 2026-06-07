@@ -1,16 +1,22 @@
-//! Parent-agent exit cleanup for background work.
+//! Normal-exit background cleanup for one agent run.
+//!
+//! When `run_agent` finishes naturally (the agent submitted its terminal, ran
+//! out of turns, or faulted), this finalizer tears down any background work the
+//! run still owns through the per-run supervisor handle's `teardown` (settle +
+//! abort subagents, cancel delegated workflows, and cancel command sessions in
+//! one per-caller daemon RPC). Hard cancellation (`cancel_agent_run`) goes
+//! through the same `teardown`; this is the awaited normal-exit path, with a
+//! `Drop` backstop only for an unexpected early drop.
 
 use std::sync::Arc;
 
 use eos_tools::{BackgroundSupervisorPort, WorkflowControlPort};
-use eos_types::AgentRunId;
 
 use crate::query::{QueryContext, QueryExitReason};
 
 pub(crate) struct BackgroundRunFinalizer {
     supervisor: Option<Arc<dyn BackgroundSupervisorPort>>,
     workflow_control: Option<Arc<dyn WorkflowControlPort>>,
-    agent_run_ids: Vec<AgentRunId>,
     armed: bool,
 }
 
@@ -18,12 +24,10 @@ impl BackgroundRunFinalizer {
     pub(crate) fn new(
         supervisor: Option<Arc<dyn BackgroundSupervisorPort>>,
         workflow_control: Option<Arc<dyn WorkflowControlPort>>,
-        agent_run_ids: Vec<AgentRunId>,
     ) -> Self {
         Self {
             supervisor,
             workflow_control,
-            agent_run_ids,
             armed: true,
         }
     }
@@ -34,11 +38,9 @@ impl BackgroundRunFinalizer {
             return;
         };
         let reason = finalize_reason(ctx.exit_reason, error);
-        for agent_run_id in &self.agent_run_ids {
-            supervisor
-                .cancel_for_parent_exit(Some(agent_run_id), self.workflow_control.clone(), &reason)
-                .await;
-        }
+        supervisor
+            .teardown(self.workflow_control.clone(), &reason)
+            .await;
         self.disarm();
     }
 
@@ -60,7 +62,6 @@ impl Drop for BackgroundRunFinalizer {
             return;
         };
         let workflow_control = self.workflow_control.take();
-        let agent_run_ids = std::mem::take(&mut self.agent_run_ids);
         let reason = "engine run dropped before background finalization".to_owned();
         let Ok(handle) = tokio::runtime::Handle::try_current() else {
             tracing::warn!(
@@ -69,11 +70,7 @@ impl Drop for BackgroundRunFinalizer {
             return;
         };
         handle.spawn(async move {
-            for agent_run_id in agent_run_ids {
-                supervisor
-                    .cancel_for_parent_exit(Some(&agent_run_id), workflow_control.clone(), &reason)
-                    .await;
-            }
+            supervisor.teardown(workflow_control, &reason).await;
         });
     }
 }
@@ -95,8 +92,8 @@ mod tests {
 
     use async_trait::async_trait;
     use eos_tools::{
-        BackgroundInflightReport, SpawnedSubagent, StartedSubagent, StartedWorkflowHandle,
-        ToolError, ToolResult,
+        RunningBackgroundTasks, SpawnedSubagent, StartedSubagent, StartedWorkflowHandle, ToolError,
+        ToolResult,
     };
     use eos_types::{SubagentSessionId, WorkflowSessionId};
     use tokio::sync::mpsc;
@@ -106,17 +103,17 @@ mod tests {
 
     #[derive(Debug)]
     struct RecordingSupervisor {
-        tx: mpsc::UnboundedSender<(Option<AgentRunId>, String)>,
+        tx: mpsc::UnboundedSender<String>,
     }
 
     impl eos_tools::ports::Sealed for RecordingSupervisor {}
 
-    fn empty_report() -> BackgroundInflightReport {
-        BackgroundInflightReport {
+    fn empty_report() -> RunningBackgroundTasks {
+        RunningBackgroundTasks {
             total: 0,
-            subagent: 0,
-            workflow: 0,
-            command_session: 0,
+            subagents: 0,
+            workflows: 0,
+            command_sessions: 0,
         }
     }
 
@@ -149,26 +146,15 @@ mod tests {
             Ok(ToolResult::ok("cancelled"))
         }
 
-        async fn inflight_report(
-            &self,
-            _agent_run_id: Option<&AgentRunId>,
-        ) -> BackgroundInflightReport {
+        async fn running_background_tasks(&self) -> RunningBackgroundTasks {
             empty_report()
         }
 
-        async fn cancel_subagents_for_agent_run(
-            &self,
-            _agent_run_id: &AgentRunId,
-        ) -> BackgroundInflightReport {
+        async fn cancel_subagents(&self) -> RunningBackgroundTasks {
             empty_report()
         }
 
-        async fn register_workflow(
-            &self,
-            _agent_run_id: &AgentRunId,
-            _workflow: &StartedWorkflowHandle,
-        ) {
-        }
+        async fn register_workflow(&self, _workflow: &StartedWorkflowHandle) {}
 
         async fn cancel_workflow_record(
             &self,
@@ -178,15 +164,12 @@ mod tests {
             false
         }
 
-        async fn cancel_for_parent_exit(
+        async fn teardown(
             &self,
-            agent_run_id: Option<&AgentRunId>,
             _workflow_control: Option<Arc<dyn WorkflowControlPort>>,
             reason: &str,
-        ) -> BackgroundInflightReport {
-            self.tx
-                .send((agent_run_id.cloned(), reason.to_owned()))
-                .expect("send cleanup");
+        ) -> RunningBackgroundTasks {
+            self.tx.send(reason.to_owned()).expect("send cleanup");
             empty_report()
         }
     }
@@ -195,18 +178,15 @@ mod tests {
     async fn drop_spawns_background_cleanup_when_still_armed() {
         let (tx, mut rx) = mpsc::unbounded_channel();
         let supervisor = Arc::new(RecordingSupervisor { tx });
-        let agent_run_id: AgentRunId = "run-drop".parse().expect("agent run id");
 
         {
-            let _finalizer =
-                BackgroundRunFinalizer::new(Some(supervisor), None, vec![agent_run_id.clone()]);
+            let _finalizer = BackgroundRunFinalizer::new(Some(supervisor), None);
         }
 
-        let (reported_run_id, reason) = timeout(Duration::from_millis(100), rx.recv())
+        let reason = timeout(Duration::from_millis(100), rx.recv())
             .await
             .expect("cleanup spawned")
             .expect("cleanup message");
-        assert_eq!(reported_run_id.as_ref(), Some(&agent_run_id));
         assert_eq!(reason, "engine run dropped before background finalization");
     }
 }

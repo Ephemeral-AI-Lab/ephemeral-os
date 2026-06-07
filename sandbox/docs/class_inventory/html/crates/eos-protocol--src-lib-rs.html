@@ -8,8 +8,16 @@
 </head>
 <body>
   <header>
-    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
-    <h1>eos-protocol File Inventory</h1>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>eos-protocol File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS/sandbox &amp;&amp; cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
   </header>
   <a class="back-link" href="../index.html">sandbox</a>
 <section class="summary">
@@ -50,6 +58,52 @@
   <div class="items"></div>
 </section></div>
 </main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/eos-protocol/src/lib.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-comment">//! Wire protocol, CAS byte-identity, and shared schema for the `eosd` runtime.</span>
+<span class="rs-comment">//!</span>
+<span class="rs-comment">//! Invariant: this crate is the source of truth and depends on nothing internal.</span>
+<span class="rs-comment">//! It owns the two correctness-bearing hashes (`manifest_root_hash`,</span>
+<span class="rs-comment">//! `layer_digest`) and the framed envelope encode/decode that must reproduce the</span>
+<span class="rs-comment">//! live Rust byte-for-byte (at the AV-1c byte-identity bar for the CAS hashes</span>
+<span class="rs-comment">//! and request/error envelopes; the AV-1 canonical-equal bar for responses).</span>
+#![forbid(unsafe_code)]
+
+<span class="rs-comment">// Lib tests receive dev-dependencies used by fixture integration tests. Keep</span>
+<span class="rs-comment">// `unused_crate_dependencies` usable under `--all-targets` without an allow.</span>
+#[cfg(test)]
+<span class="rs-kw">use</span> base64 <span class="rs-kw">as</span> _;
+
+<span class="rs-kw">pub</span> <span class="rs-kw">mod</span> audit;
+<span class="rs-kw">pub</span> <span class="rs-kw">mod</span> canonical;
+<span class="rs-kw">pub</span> <span class="rs-kw">mod</span> cas;
+<span class="rs-kw">pub</span> <span class="rs-kw">mod</span> envelope;
+<span class="rs-kw">pub</span> <span class="rs-kw">mod</span> ids;
+<span class="rs-kw">pub</span> <span class="rs-kw">mod</span> models;
+<span class="rs-kw">pub</span> <span class="rs-kw">mod</span> ops;
+<span class="rs-kw">pub</span> <span class="rs-kw">mod</span> version;
+
+<span class="rs-kw">pub</span> <span class="rs-kw">use</span> canonical::canonicalize;
+<span class="rs-kw">pub</span> <span class="rs-kw">use</span> cas::{
+    aggregate_layer_changes, layer_digest, manifest_root_hash, <a class="symbol-link rs-type" href="eos-protocol--src-cas-rs.html#item-enum-CasError-26">CasError</a>, <a class="symbol-link rs-type" href="eos-protocol--src-cas-rs.html#item-enum-LayerChange-209">LayerChange</a>, <a class="symbol-link rs-type" href="eos-protocol--src-cas-rs.html#item-struct-LayerPath-38">LayerPath</a>,
+    <a class="symbol-link rs-type" href="eos-protocol--src-cas-rs.html#item-struct-LayerRef-92">LayerRef</a>, <a class="symbol-link rs-type" href="eos-protocol--src-cas-rs.html#item-struct-Manifest-99">Manifest</a>,
+};
+<span class="rs-kw">pub</span> <span class="rs-kw">use</span> envelope::{
+    decode, decode_value, encode, <a class="symbol-link rs-type" href="eos-protocol--src-envelope-rs.html#item-enum-Envelope-86">Envelope</a>, <a class="symbol-link rs-type" href="eos-protocol--src-envelope-rs.html#item-struct-ErrorEnvelope-40">ErrorEnvelope</a>, <a class="symbol-link rs-type" href="eos-protocol--src-envelope-rs.html#item-enum-ErrorKind-61">ErrorKind</a>, <a class="symbol-link rs-type" href="eos-protocol--src-envelope-rs.html#item-enum-ProtocolError-16">ProtocolError</a>, <a class="symbol-link rs-type" href="eos-protocol--src-envelope-rs.html#item-struct-Request-29">Request</a>,
+};
+<span class="rs-kw">pub</span> <span class="rs-kw">use</span> ids::{<a class="symbol-link rs-type" href="eos-protocol--src-ids-rs.html#item-struct-CallerId-11">CallerId</a>, <a class="symbol-link rs-type" href="eos-protocol--src-ids-rs.html#item-struct-InvocationId-15">InvocationId</a>, <a class="symbol-link rs-type" href="eos-protocol--src-ids-rs.html#item-struct-WorkspaceHandleId-19">WorkspaceHandleId</a>};
+<span class="rs-kw">pub</span> <span class="rs-kw">use</span> models::<a class="symbol-link rs-type" href="eos-protocol--src-models-rs.html#item-enum-Intent-21">Intent</a>;
+<span class="rs-kw">pub</span> <span class="rs-kw">use</span> version::{
+    <span class="rs-type">CONNECT_FAILED</span>, <span class="rs-type">CONNECT_RETRY_DELAYS_S</span>, <span class="rs-type">DAEMON_AUTH_FIELD</span>, <span class="rs-type">DAEMON_PROTOCOL_FIELD</span>,
+    <span class="rs-type">DAEMON_PROTOCOL_VERSION</span>, <span class="rs-type">IO_FAILED</span>, <span class="rs-type">MANIFEST_SCHEMA_VERSION</span>, <span class="rs-type">MAX_REQUEST_BYTES</span>,
+    <span class="rs-type">REQUEST_READ_TIMEOUT_S</span>,
+};
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
   <script src="../assets/inventory.js"></script>
 </body>
 </html>

@@ -8,8 +8,16 @@
 </head>
 <body>
   <header>
-    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
-    <h1>eos-config File Inventory</h1>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>eos-config File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS/agent-core &amp;&amp; cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
   </header>
   <a class="back-link" href="../index.html">agent-core</a>
 <section class="summary">
@@ -50,6 +58,53 @@
   <div class="items"></div>
 </section></div>
 </main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/eos-config/src/lib.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-comment">//! eos-config — typed runtime configuration, loaded from files only.</span>
+<span class="rs-comment">//!</span>
+<span class="rs-comment">//! This crate is a generic config loader. [`load`] reads the committed</span>
+<span class="rs-comment">//! `agent-core/config/prd.yml` baseline merged with a gitignored</span>
+<span class="rs-comment">//! `agent-core/config/local.yml` override (objects recurse, scalars/arrays</span>
+<span class="rs-comment">//! replace) into a [`ConfigDocument`]; each owning crate deserializes its</span>
+<span class="rs-comment">//! top-level section via [`ConfigDocument::section`] and enforces its own ranges</span>
+<span class="rs-comment">//! with the section type's `validate()`. There is no environment-variable or CLI</span>
+<span class="rs-comment">//! config selection: config is chosen by file. It is a leaf of the dependency</span>
+<span class="rs-comment">//! DAG — no internal upstream edge (not even `eos-types`) — consumed read-only.</span>
+<span class="rs-comment">//!</span>
+<span class="rs-comment">//! It deliberately does **not** aggregate sections into a central composition</span>
+<span class="rs-comment">//! struct (there is no `CentralConfig`), persist or resolve the active model</span>
+<span class="rs-comment">//! (that is `eos-db`), hold secrets (those live only in the gitignored override),</span>
+<span class="rs-comment">//! open connections, or spawn tasks.</span>
+<span class="rs-comment">//!</span>
+<span class="rs-comment">//! The section schemas ([`DatabaseConfig`], [`ProvidersConfig`],</span>
+<span class="rs-comment">//! [`WorkflowConfig`], …) and nested fragments such as [`ModelsConfig`] live here</span>
+<span class="rs-comment">//! for now; they migrate to their owning crates' `config.rs` as those crates</span>
+<span class="rs-comment">//! stabilize.</span>
+#![forbid(unsafe_code)]
+#![warn(missing_docs)]
+
+<span class="rs-kw">mod</span> configs;
+<span class="rs-kw">mod</span> document;
+<span class="rs-kw">mod</span> error;
+<span class="rs-kw">mod</span> loader;
+<span class="rs-kw">mod</span> markdown;
+
+<span class="rs-kw">pub</span> <span class="rs-kw">use</span> configs::{
+    <a class="symbol-link rs-type" href="eos-config--src-configs-providers-rs.html#item-struct-AnthropicApiConfig-141">AnthropicApiConfig</a>, <a class="symbol-link rs-type" href="eos-config.html#item-struct-AttemptConfig-12">AttemptConfig</a>, <a class="symbol-link rs-type" href="eos-config--src-configs-providers-rs.html#item-struct-ClaudeCodingPlanConfig-193">ClaudeCodingPlanConfig</a>, <a class="symbol-link rs-type" href="eos-config--src-configs-providers-rs.html#item-struct-CodexCodingPlanConfig-167">CodexCodingPlanConfig</a>,
+    <a class="symbol-link rs-type" href="eos-config--src-configs-database-rs.html#item-struct-DatabaseConfig-62">DatabaseConfig</a>, <a class="symbol-link rs-type" href="eos-config--src-configs-database-rs.html#item-struct-DatabaseUrl-13">DatabaseUrl</a>, <a class="symbol-link rs-type" href="eos-config--src-configs-models-rs.html#item-struct-ModelRegistrationConfig-102">ModelRegistrationConfig</a>, <a class="symbol-link rs-type" href="eos-config--src-configs-models-rs.html#item-struct-ModelsConfig-15">ModelsConfig</a>, <a class="symbol-link rs-type" href="eos-config--src-configs-providers-rs.html#item-struct-OpenAiApiConfig-115">OpenAiApiConfig</a>,
+    <a class="symbol-link rs-type" href="eos-config--src-configs-providers-rs.html#item-enum-ProviderKind-97">ProviderKind</a>, <a class="symbol-link rs-type" href="eos-config--src-configs-providers-rs.html#item-struct-ProvidersConfig-219">ProvidersConfig</a>, <a class="symbol-link rs-type" href="eos-config--src-configs-providers-rs.html#item-struct-RetryConfig-12">RetryConfig</a>, <a class="symbol-link rs-type" href="eos-config--src-configs-runtime-rs.html#item-struct-RuntimeConfig-7">RuntimeConfig</a>, <a class="symbol-link rs-type" href="eos-config--src-configs-providers-rs.html#item-struct-SecretConfigValue-55">SecretConfigValue</a>, <a class="symbol-link rs-type" href="eos-config--src-configs-workflow-rs.html#item-struct-WorkflowConfig-15">WorkflowConfig</a>,
+    <span class="rs-type">DEFAULT_SQLITE_DATABASE_URL</span>, <span class="rs-type">DEFAULT_WORKFLOW_MAX_DEPTH</span>,
+};
+<span class="rs-kw">pub</span> <span class="rs-kw">use</span> document::<a class="symbol-link rs-type" href="eos-config--src-document-rs.html#item-struct-ConfigDocument-11">ConfigDocument</a>;
+<span class="rs-kw">pub</span> <span class="rs-kw">use</span> error::<a class="symbol-link rs-type" href="eos-config--src-error-rs.html#item-enum-ConfigError-3">ConfigError</a>;
+<span class="rs-kw">pub</span> <span class="rs-kw">use</span> loader::{load, load_with_override};
+<span class="rs-kw">pub</span> <span class="rs-kw">use</span> markdown::parse_markdown_frontmatter;
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
   <script src="../assets/inventory.js"></script>
 </body>
 </html>

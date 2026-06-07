@@ -8,8 +8,16 @@
 </head>
 <body>
   <header>
-    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
-    <h1>eos-tools File Inventory</h1>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>eos-tools File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS/agent-core &amp;&amp; cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
   </header>
   <a class="back-link" href="../index.html">agent-core</a>
 <section class="summary">
@@ -47,79 +55,432 @@
       <span>14 methods</span>
     </div>
   </div>
-  <div class="items"><div class="group-label">File-Owned Types</div><article class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct RootSubmissionService pub pub struct RootSubmissionService crates/eos-tools/src/tools/services.rs task_store Arc &lt; dyn TaskStore &gt; request_store Arc &lt; dyn RequestStore &gt; ">
+  <div class="items"><div class="group-label">File-Owned Types</div><article id="item-struct-RootSubmissionService-19" class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct RootSubmissionService pub pub struct RootSubmissionService crates/eos-tools/src/tools/services.rs task_store Arc &lt; dyn TaskStore &gt; request_store Arc &lt; dyn RequestStore &gt; ">
   <div class="item-head">
     <span class="kind">struct</span>
     <h3>RootSubmissionService</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub struct RootSubmissionService</code>
-  <div class="tags"><span>port/service</span></div>
-  <h4>Fields</h4><table><tbody><tr><td>pub(crate)</td><td>task_store</td><td><code>Arc &lt; dyn TaskStore &gt;</code></td></tr><tr><td>pub(crate)</td><td>request_store</td><td><code>Arc &lt; dyn RequestStore &gt;</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr><td>constructor</td><td>new</td><td><code>pub fn new (task_store : Arc &lt; dyn TaskStore &gt; , request_store : Arc &lt; dyn RequestStore &gt;) -&gt; Self</code></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl fmt :: Debug for RootSubmissionService</code></summary><table><tbody><tr><td>method</td><td>fmt</td><td><code>fn fmt (&amp; self , f : &amp; mut fmt :: Formatter &lt; '_ &gt;) -&gt; fmt :: Result</code></td></tr></tbody></table></details></div>
+  <code class="signature">pub struct <a class="symbol-link" href="eos-tools--src-tools-services-rs.html#item-struct-RootSubmissionService-19">RootSubmissionService</a></code>
+  <p class="docstring">Store access for the root terminal.</p>
+  <div class="tags"><span>derive: Clone</span><span>port/service</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub(crate)</td><td>task_store</td><td><code>Arc &lt; dyn TaskStore &gt;</code></td></tr><tr><td>pub(crate)</td><td>request_store</td><td><code>Arc &lt; dyn RequestStore &gt;</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-27"><td>constructor</td><td>new</td><td><code>pub fn <a class="symbol-link" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a> (task_store : Arc &lt; dyn TaskStore &gt; , request_store : Arc &lt; dyn RequestStore &gt;) -&gt; Self</code><p class="docstring">Build the root-submission service over persisted request/task stores.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Build the root-submission service over persisted request/task stores.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(task_store: <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <span class="rs-type">TaskStore</span>&gt;, request_store: <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <span class="rs-type">RequestStore</span>&gt;) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">Self</span> {
+            task_store,
+            request_store,
+        }
+    }
+</code></pre>
+</details></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl fmt :: Debug for <a class="symbol-link" href="eos-tools--src-tools-services-rs.html#item-struct-RootSubmissionService-19">RootSubmissionService</a></code></summary><table><tbody><tr id="method-fmt-38"><td>method</td><td>fmt</td><td><code>fn <a class="symbol-link" href="eos-tools--src-core-metadata-rs.html#method-fmt-51">fmt</a> (&amp; self , f : &amp; mut fmt :: Formatter &lt; &#x27;_ &gt;) -&gt; fmt :: Result</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-core-metadata-rs.html#method-fmt-51">fmt</a>(&amp;<span class="rs-self">self</span>, f: &amp;<span class="rs-kw">mut</span> fmt::<span class="rs-type">Formatter</span>&lt;&#x27;_&gt;) -&gt; fmt::<span class="rs-type">Result</span> {
+        f.debug_struct(&quot;<a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-RootSubmissionService-19">RootSubmissionService</a>&quot;)
+            .finish_non_exhaustive()
+    }
+</code></pre>
+</details></td></tr></tbody></table></details></div>
+
   <p class="source">crates/eos-tools/src/tools/services.rs:19</p>
-</article><article class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct AttemptSubmissionService pub pub struct AttemptSubmissionService crates/eos-tools/src/tools/services.rs port Arc &lt; dyn AttemptSubmissionPort &gt; ">
+</article><article id="item-struct-AttemptSubmissionService-44" class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct AttemptSubmissionService pub pub struct AttemptSubmissionService crates/eos-tools/src/tools/services.rs port Arc &lt; dyn AttemptSubmissionPort &gt; ">
   <div class="item-head">
     <span class="kind">struct</span>
     <h3>AttemptSubmissionService</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub struct AttemptSubmissionService</code>
-  <div class="tags"><span>port/service</span></div>
-  <h4>Fields</h4><table><tbody><tr><td>pub(crate)</td><td>port</td><td><code>Arc &lt; dyn AttemptSubmissionPort &gt;</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr><td>constructor</td><td>new</td><td><code>pub fn new (port : Arc &lt; dyn AttemptSubmissionPort &gt;) -&gt; Self</code></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl fmt :: Debug for AttemptSubmissionService</code></summary><table><tbody><tr><td>method</td><td>fmt</td><td><code>fn fmt (&amp; self , f : &amp; mut fmt :: Formatter &lt; '_ &gt;) -&gt; fmt :: Result</code></td></tr></tbody></table></details></div>
+  <code class="signature">pub struct <a class="symbol-link" href="eos-tools--src-tools-services-rs.html#item-struct-AttemptSubmissionService-44">AttemptSubmissionService</a></code>
+  <p class="docstring">Attempt terminal submission behavior.</p>
+  <div class="tags"><span>derive: Clone</span><span>port/service</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub(crate)</td><td>port</td><td><code>Arc &lt; dyn <a class="symbol-link" href="eos-tools--src-ports-mod-rs.html#item-trait-AttemptSubmissionPort-171">AttemptSubmissionPort</a> &gt;</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-51"><td>constructor</td><td>new</td><td><code>pub fn <a class="symbol-link" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a> (port : Arc &lt; dyn <a class="symbol-link" href="eos-tools--src-ports-mod-rs.html#item-trait-AttemptSubmissionPort-171">AttemptSubmissionPort</a> &gt;) -&gt; Self</code><p class="docstring">Build the attempt-submission service.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Build the attempt-submission service.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(port: <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <a class="symbol-link rs-type" href="eos-tools--src-ports-mod-rs.html#item-trait-AttemptSubmissionPort-171">AttemptSubmissionPort</a>&gt;) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">Self</span> { port }
+    }
+</code></pre>
+</details></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl fmt :: Debug for <a class="symbol-link" href="eos-tools--src-tools-services-rs.html#item-struct-AttemptSubmissionService-44">AttemptSubmissionService</a></code></summary><table><tbody><tr id="method-fmt-59"><td>method</td><td>fmt</td><td><code>fn <a class="symbol-link" href="eos-tools--src-core-metadata-rs.html#method-fmt-51">fmt</a> (&amp; self , f : &amp; mut fmt :: Formatter &lt; &#x27;_ &gt;) -&gt; fmt :: Result</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-core-metadata-rs.html#method-fmt-51">fmt</a>(&amp;<span class="rs-self">self</span>, f: &amp;<span class="rs-kw">mut</span> fmt::<span class="rs-type">Formatter</span>&lt;&#x27;_&gt;) -&gt; fmt::<span class="rs-type">Result</span> {
+        f.debug_struct(&quot;<a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-AttemptSubmissionService-44">AttemptSubmissionService</a>&quot;)
+            .finish_non_exhaustive()
+    }
+</code></pre>
+</details></td></tr></tbody></table></details></div>
+
   <p class="source">crates/eos-tools/src/tools/services.rs:44</p>
-</article><article class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct SandboxToolService pub pub struct SandboxToolService crates/eos-tools/src/tools/services.rs transport Arc &lt; dyn SandboxTransport &gt; ">
+</article><article id="item-struct-SandboxToolService-65" class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct SandboxToolService pub pub struct SandboxToolService crates/eos-tools/src/tools/services.rs transport Arc &lt; dyn SandboxTransport &gt; ">
   <div class="item-head">
     <span class="kind">struct</span>
     <h3>SandboxToolService</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub struct SandboxToolService</code>
-  <div class="tags"><span>port/service</span></div>
-  <h4>Fields</h4><table><tbody><tr><td>pub(crate)</td><td>transport</td><td><code>Arc &lt; dyn SandboxTransport &gt;</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr><td>constructor</td><td>new</td><td><code>pub fn new (transport : Arc &lt; dyn SandboxTransport &gt;) -&gt; Self</code></td></tr><tr><td>method</td><td>transport</td><td><code>pub fn transport (&amp; self) -&gt; Arc &lt; dyn SandboxTransport &gt;</code></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl fmt :: Debug for SandboxToolService</code></summary><table><tbody><tr><td>method</td><td>fmt</td><td><code>fn fmt (&amp; self , f : &amp; mut fmt :: Formatter &lt; '_ &gt;) -&gt; fmt :: Result</code></td></tr></tbody></table></details></div>
+  <code class="signature">pub struct <a class="symbol-link" href="eos-tools--src-tools-services-rs.html#item-struct-SandboxToolService-65">SandboxToolService</a></code>
+  <p class="docstring">Sandbox RPC access for file, shell, plugin, and isolated-workspace tools.</p>
+  <div class="tags"><span>derive: Clone</span><span>port/service</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub(crate)</td><td>transport</td><td><code>Arc &lt; dyn SandboxTransport &gt;</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-72"><td>constructor</td><td>new</td><td><code>pub fn <a class="symbol-link" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a> (transport : Arc &lt; dyn SandboxTransport &gt;) -&gt; Self</code><p class="docstring">Build the sandbox tool service over the daemon transport.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Build the sandbox tool service over the daemon transport.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(transport: <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <span class="rs-type">SandboxTransport</span>&gt;) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">Self</span> { transport }
+    }
+</code></pre>
+</details></td></tr><tr id="method-transport-78"><td>method</td><td>transport</td><td><code>pub fn <a class="symbol-link" href="eos-tools--src-tools-services-rs.html#method-transport-78">transport</a> (&amp; self) -&gt; Arc &lt; dyn SandboxTransport &gt;</code><p class="docstring">Clone the underlying sandbox transport for related service wiring.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Clone the underlying sandbox transport for related service wiring.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-tools-services-rs.html#method-transport-78">transport</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <span class="rs-type">SandboxTransport</span>&gt; {
+        <span class="rs-self">self</span>.transport.clone()
+    }
+</code></pre>
+</details></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl fmt :: Debug for <a class="symbol-link" href="eos-tools--src-tools-services-rs.html#item-struct-SandboxToolService-65">SandboxToolService</a></code></summary><table><tbody><tr id="method-fmt-86"><td>method</td><td>fmt</td><td><code>fn <a class="symbol-link" href="eos-tools--src-core-metadata-rs.html#method-fmt-51">fmt</a> (&amp; self , f : &amp; mut fmt :: Formatter &lt; &#x27;_ &gt;) -&gt; fmt :: Result</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-core-metadata-rs.html#method-fmt-51">fmt</a>(&amp;<span class="rs-self">self</span>, f: &amp;<span class="rs-kw">mut</span> fmt::<span class="rs-type">Formatter</span>&lt;&#x27;_&gt;) -&gt; fmt::<span class="rs-type">Result</span> {
+        f.debug_struct(&quot;<a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-SandboxToolService-65">SandboxToolService</a>&quot;).finish_non_exhaustive()
+    }
+</code></pre>
+</details></td></tr></tbody></table></details></div>
+
   <p class="source">crates/eos-tools/src/tools/services.rs:65</p>
-</article><article class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct CommandToolService pub pub struct CommandToolService crates/eos-tools/src/tools/services.rs transport Arc &lt; dyn SandboxTransport &gt; command_session_supervisor Option &lt; Arc &lt; dyn CommandSessionSupervisorPort &gt; &gt; ">
+</article><article id="item-struct-CommandToolService-91" class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct CommandToolService pub pub struct CommandToolService crates/eos-tools/src/tools/services.rs transport Arc &lt; dyn SandboxTransport &gt; command_session_supervisor Option &lt; Arc &lt; dyn CommandSessionSupervisorPort &gt; &gt; ">
   <div class="item-head">
     <span class="kind">struct</span>
     <h3>CommandToolService</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub struct CommandToolService</code>
-  <div class="tags"><span>port/service</span></div>
-  <h4>Fields</h4><table><tbody><tr><td>pub(crate)</td><td>transport</td><td><code>Arc &lt; dyn SandboxTransport &gt;</code></td></tr><tr><td>pub(crate)</td><td>command_session_supervisor</td><td><code>Option &lt; Arc &lt; dyn CommandSessionSupervisorPort &gt; &gt;</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr><td>constructor</td><td>new</td><td><code>pub fn new (transport : Arc &lt; dyn SandboxTransport &gt; , command_session_supervisor : Option &lt; Arc &lt; dyn CommandSessionSupervisorPort &gt; &gt; ,) -&gt; Self</code></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl fmt :: Debug for CommandToolService</code></summary><table><tbody><tr><td>method</td><td>fmt</td><td><code>fn fmt (&amp; self , f : &amp; mut fmt :: Formatter &lt; '_ &gt;) -&gt; fmt :: Result</code></td></tr></tbody></table></details></div>
+  <code class="signature">pub struct <a class="symbol-link" href="eos-tools--src-tools-services-rs.html#item-struct-CommandToolService-91">CommandToolService</a></code>
+  <p class="docstring">Command-session tool dependencies.</p>
+  <div class="tags"><span>derive: Clone</span><span>port/service</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub(crate)</td><td>transport</td><td><code>Arc &lt; dyn SandboxTransport &gt;</code></td></tr><tr><td>pub(crate)</td><td>command_session_supervisor</td><td><code>Option &lt; Arc &lt; dyn <a class="symbol-link" href="eos-tools--src-ports-mod-rs.html#item-trait-CommandSessionSupervisorPort-311">CommandSessionSupervisorPort</a> &gt; &gt;</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-99"><td>constructor</td><td>new</td><td><code>pub fn <a class="symbol-link" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a> (transport : Arc &lt; dyn SandboxTransport &gt; , command_session_supervisor : Option &lt; Arc &lt; dyn <a class="symbol-link" href="eos-tools--src-ports-mod-rs.html#item-trait-CommandSessionSupervisorPort-311">CommandSessionSupervisorPort</a> &gt; &gt; ,) -&gt; Self</code><p class="docstring">Build command tool services.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Build command tool services.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(
+        transport: <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <span class="rs-type">SandboxTransport</span>&gt;,
+        command_session_supervisor: <span class="rs-type">Option</span>&lt;<span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <a class="symbol-link rs-type" href="eos-tools--src-ports-mod-rs.html#item-trait-CommandSessionSupervisorPort-311">CommandSessionSupervisorPort</a>&gt;&gt;,
+    ) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">Self</span> {
+            transport,
+            command_session_supervisor,
+        }
+    }
+</code></pre>
+</details></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl fmt :: Debug for <a class="symbol-link" href="eos-tools--src-tools-services-rs.html#item-struct-CommandToolService-91">CommandToolService</a></code></summary><table><tbody><tr id="method-fmt-113"><td>method</td><td>fmt</td><td><code>fn <a class="symbol-link" href="eos-tools--src-core-metadata-rs.html#method-fmt-51">fmt</a> (&amp; self , f : &amp; mut fmt :: Formatter &lt; &#x27;_ &gt;) -&gt; fmt :: Result</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-core-metadata-rs.html#method-fmt-51">fmt</a>(&amp;<span class="rs-self">self</span>, f: &amp;<span class="rs-kw">mut</span> fmt::<span class="rs-type">Formatter</span>&lt;&#x27;_&gt;) -&gt; fmt::<span class="rs-type">Result</span> {
+        f.debug_struct(&quot;<a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-CommandToolService-91">CommandToolService</a>&quot;)
+            .field(
+                &quot;has_command_session_supervisor&quot;,
+                &amp;<span class="rs-self">self</span>.command_session_supervisor.is_some(),
+            )
+            .finish_non_exhaustive()
+    }
+</code></pre>
+</details></td></tr></tbody></table></details></div>
+
   <p class="source">crates/eos-tools/src/tools/services.rs:91</p>
-</article><article class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct SkillToolService pub pub struct SkillToolService crates/eos-tools/src/tools/services.rs skill_registry Arc &lt; SkillRegistry &gt; ">
+</article><article id="item-struct-SkillToolService-123" class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct SkillToolService pub pub struct SkillToolService crates/eos-tools/src/tools/services.rs skill_registry Arc &lt; SkillRegistry &gt; ">
   <div class="item-head">
     <span class="kind">struct</span>
     <h3>SkillToolService</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub struct SkillToolService</code>
-  <div class="tags"><span>port/service</span></div>
-  <h4>Fields</h4><table><tbody><tr><td>pub(crate)</td><td>skill_registry</td><td><code>Arc &lt; SkillRegistry &gt;</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr><td>constructor</td><td>new</td><td><code>pub fn new (skill_registry : Arc &lt; SkillRegistry &gt;) -&gt; Self</code></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl fmt :: Debug for SkillToolService</code></summary><table><tbody><tr><td>method</td><td>fmt</td><td><code>fn fmt (&amp; self , f : &amp; mut fmt :: Formatter &lt; '_ &gt;) -&gt; fmt :: Result</code></td></tr></tbody></table></details></div>
+  <code class="signature">pub struct <a class="symbol-link" href="eos-tools--src-tools-services-rs.html#item-struct-SkillToolService-123">SkillToolService</a></code>
+  <p class="docstring">Skill registry access for skill-reference tools.</p>
+  <div class="tags"><span>derive: Clone</span><span>port/service</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub(crate)</td><td>skill_registry</td><td><code>Arc &lt; SkillRegistry &gt;</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-130"><td>constructor</td><td>new</td><td><code>pub fn <a class="symbol-link" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a> (skill_registry : Arc &lt; SkillRegistry &gt;) -&gt; Self</code><p class="docstring">Build skill tool services.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Build skill tool services.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(skill_registry: <span class="rs-type">Arc</span>&lt;<span class="rs-type">SkillRegistry</span>&gt;) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">Self</span> { skill_registry }
+    }
+</code></pre>
+</details></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl fmt :: Debug for <a class="symbol-link" href="eos-tools--src-tools-services-rs.html#item-struct-SkillToolService-123">SkillToolService</a></code></summary><table><tbody><tr id="method-fmt-138"><td>method</td><td>fmt</td><td><code>fn <a class="symbol-link" href="eos-tools--src-core-metadata-rs.html#method-fmt-51">fmt</a> (&amp; self , f : &amp; mut fmt :: Formatter &lt; &#x27;_ &gt;) -&gt; fmt :: Result</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-core-metadata-rs.html#method-fmt-51">fmt</a>(&amp;<span class="rs-self">self</span>, f: &amp;<span class="rs-kw">mut</span> fmt::<span class="rs-type">Formatter</span>&lt;&#x27;_&gt;) -&gt; fmt::<span class="rs-type">Result</span> {
+        f.debug_struct(&quot;<a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-SkillToolService-123">SkillToolService</a>&quot;).finish_non_exhaustive()
+    }
+</code></pre>
+</details></td></tr></tbody></table></details></div>
+
   <p class="source">crates/eos-tools/src/tools/services.rs:123</p>
-</article><article class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct HookServices pub pub struct HookServices crates/eos-tools/src/tools/services.rs sandbox_transport Option &lt; Arc &lt; dyn SandboxTransport &gt; &gt; workflow_control Option &lt; Arc &lt; dyn WorkflowControlPort &gt; &gt; background_supervisor Option &lt; Arc &lt; dyn BackgroundSupervisorPort &gt; &gt; ">
+</article><article id="item-struct-HookServices-143" class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct HookServices pub pub struct HookServices crates/eos-tools/src/tools/services.rs sandbox_transport Option &lt; Arc &lt; dyn SandboxTransport &gt; &gt; workflow_control Option &lt; Arc &lt; dyn WorkflowControlPort &gt; &gt; background_supervisor Option &lt; Arc &lt; dyn BackgroundSupervisorPort &gt; &gt; ">
   <div class="item-head">
     <span class="kind">struct</span>
     <h3>HookServices</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub struct HookServices</code>
-  <div class="tags"></div>
-  <h4>Fields</h4><table><tbody><tr><td>pub(crate)</td><td>sandbox_transport</td><td><code>Option &lt; Arc &lt; dyn SandboxTransport &gt; &gt;</code></td></tr><tr><td>pub(crate)</td><td>workflow_control</td><td><code>Option &lt; Arc &lt; dyn WorkflowControlPort &gt; &gt;</code></td></tr><tr><td>pub(crate)</td><td>background_supervisor</td><td><code>Option &lt; Arc &lt; dyn BackgroundSupervisorPort &gt; &gt;</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr><td>constructor</td><td>new</td><td><code>pub fn new (sandbox_transport : Option &lt; Arc &lt; dyn SandboxTransport &gt; &gt; , workflow_control : Option &lt; Arc &lt; dyn WorkflowControlPort &gt; &gt; , background_supervisor : Option &lt; Arc &lt; dyn BackgroundSupervisorPort &gt; &gt; ,) -&gt; Self</code></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl fmt :: Debug for HookServices</code></summary><table><tbody><tr><td>method</td><td>fmt</td><td><code>fn fmt (&amp; self , f : &amp; mut fmt :: Formatter &lt; '_ &gt;) -&gt; fmt :: Result</code></td></tr></tbody></table></details></div>
+  <code class="signature">pub struct <a class="symbol-link" href="eos-tools--src-tools-services-rs.html#item-struct-HookServices-143">HookServices</a></code>
+  <p class="docstring">State-dependent pre-hook dependencies.</p>
+  <div class="tags"><span>derive: Clone</span><span>derive: Default</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub(crate)</td><td>sandbox_transport</td><td><code>Option &lt; Arc &lt; dyn SandboxTransport &gt; &gt;</code></td></tr><tr><td>pub(crate)</td><td>workflow_control</td><td><code>Option &lt; Arc &lt; dyn <a class="symbol-link" href="eos-tools--src-ports-mod-rs.html#item-trait-WorkflowControlPort-66">WorkflowControlPort</a> &gt; &gt;</code></td></tr><tr><td>pub(crate)</td><td>background_supervisor</td><td><code>Option &lt; Arc &lt; dyn <a class="symbol-link" href="eos-tools--src-ports-mod-rs.html#item-trait-BackgroundSupervisorPort-236">BackgroundSupervisorPort</a> &gt; &gt;</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-152"><td>constructor</td><td>new</td><td><code>pub fn <a class="symbol-link" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a> (sandbox_transport : Option &lt; Arc &lt; dyn SandboxTransport &gt; &gt; , workflow_control : Option &lt; Arc &lt; dyn <a class="symbol-link" href="eos-tools--src-ports-mod-rs.html#item-trait-WorkflowControlPort-66">WorkflowControlPort</a> &gt; &gt; , background_supervisor : Option &lt; Arc &lt; dyn <a class="symbol-link" href="eos-tools--src-ports-mod-rs.html#item-trait-BackgroundSupervisorPort-236">BackgroundSupervisorPort</a> &gt; &gt; ,) -&gt; Self</code><p class="docstring">Build hook services for tools that need downstream state during pre-hooks.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Build hook services for tools that need downstream state during pre-hooks.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(
+        sandbox_transport: <span class="rs-type">Option</span>&lt;<span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <span class="rs-type">SandboxTransport</span>&gt;&gt;,
+        workflow_control: <span class="rs-type">Option</span>&lt;<span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <a class="symbol-link rs-type" href="eos-tools--src-ports-mod-rs.html#item-trait-WorkflowControlPort-66">WorkflowControlPort</a>&gt;&gt;,
+        background_supervisor: <span class="rs-type">Option</span>&lt;<span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <a class="symbol-link rs-type" href="eos-tools--src-ports-mod-rs.html#item-trait-BackgroundSupervisorPort-236">BackgroundSupervisorPort</a>&gt;&gt;,
+    ) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">Self</span> {
+            sandbox_transport,
+            workflow_control,
+            background_supervisor,
+        }
+    }
+</code></pre>
+</details></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl fmt :: Debug for <a class="symbol-link" href="eos-tools--src-tools-services-rs.html#item-struct-HookServices-143">HookServices</a></code></summary><table><tbody><tr id="method-fmt-168"><td>method</td><td>fmt</td><td><code>fn <a class="symbol-link" href="eos-tools--src-core-metadata-rs.html#method-fmt-51">fmt</a> (&amp; self , f : &amp; mut fmt :: Formatter &lt; &#x27;_ &gt;) -&gt; fmt :: Result</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-core-metadata-rs.html#method-fmt-51">fmt</a>(&amp;<span class="rs-self">self</span>, f: &amp;<span class="rs-kw">mut</span> fmt::<span class="rs-type">Formatter</span>&lt;&#x27;_&gt;) -&gt; fmt::<span class="rs-type">Result</span> {
+        f.debug_struct(&quot;<a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-HookServices-143">HookServices</a>&quot;)
+            .field(&quot;has_sandbox_transport&quot;, &amp;<span class="rs-self">self</span>.sandbox_transport.is_some())
+            .field(&quot;has_workflow_control&quot;, &amp;<span class="rs-self">self</span>.workflow_control.is_some())
+            .field(
+                &quot;has_background_supervisor&quot;,
+                &amp;<span class="rs-self">self</span>.background_supervisor.is_some(),
+            )
+            .finish()
+    }
+</code></pre>
+</details></td></tr></tbody></table></details></div>
+
   <p class="source">crates/eos-tools/src/tools/services.rs:143</p>
-</article><article class="type-card" data-kind="struct" data-kind-list="impl method struct type-model" data-filter-text="struct InertSandboxTransport pub(crate) pub(crate) struct InertSandboxTransport crates/eos-tools/src/tools/services.rs  ">
+</article><article id="item-struct-InertSandboxTransport-180" class="type-card" data-kind="struct" data-kind-list="impl method struct type-model" data-filter-text="struct InertSandboxTransport pub(crate) pub(crate) struct InertSandboxTransport crates/eos-tools/src/tools/services.rs  ">
   <div class="item-head">
     <span class="kind">struct</span>
     <h3>InertSandboxTransport</h3>
     <span class="visibility">pub(crate)</span>
   </div>
-  <code class="signature">pub(crate) struct InertSandboxTransport</code>
-  <div class="tags"><span>port/service</span></div>
-  <h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl SandboxTransport for InertSandboxTransport</code></summary><table><tbody><tr><td>method</td><td>call</td><td><code>async fn call (&amp; self , _sandbox_id : &amp; SandboxId , _op : DaemonOp , _payload : JsonObject , _timeout_s : u32 ,) -&gt; Result &lt; JsonObject , SandboxPortError &gt;</code></td></tr></tbody></table></details></div>
+  <code class="signature">pub(crate) struct <a class="symbol-link" href="eos-tools--src-tools-services-rs.html#item-struct-InertSandboxTransport-180">InertSandboxTransport</a></code>
+  <p class="docstring">Inert transport used only when building a static registry without executable<br>services, such as schema snapshots and registry validation.</p>
+  <div class="tags"><span>derive: Debug</span><span>port/service</span></div>
+  <h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl SandboxTransport for <a class="symbol-link" href="eos-tools--src-tools-services-rs.html#item-struct-InertSandboxTransport-180">InertSandboxTransport</a></code></summary><table><tbody><tr id="method-call-187"><td>method</td><td>call</td><td><code>async fn <a class="symbol-link" href="eos-tools--src-runtime-dispatch-rs.html#item-fn-call-184">call</a> (&amp; self , _sandbox_id : &amp; SandboxId , _op : DaemonOp , _payload : JsonObject , _timeout_s : u32 ,) -&gt; Result &lt; JsonObject , SandboxPortError &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-runtime-dispatch-rs.html#item-fn-call-184">call</a>(
+        &amp;<span class="rs-self">self</span>,
+        _sandbox_id: &amp;<span class="rs-type">SandboxId</span>,
+        _op: <span class="rs-type">DaemonOp</span>,
+        _payload: <span class="rs-type">JsonObject</span>,
+        _timeout_s: u32,
+    ) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">JsonObject</span>, <span class="rs-type">SandboxPortError</span>&gt; {
+        <span class="rs-type">Ok</span>(<span class="rs-type">JsonObject</span>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>())
+    }
+</code></pre>
+</details></td></tr></tbody></table></details></div>
+
   <p class="source">crates/eos-tools/src/tools/services.rs:180</p>
 </article></div>
 </section></div>
 </main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/eos-tools/src/tools/services.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-comment">//! Local service structs captured by tool executors and hook wiring.</span>
+<span class="rs-comment">//!</span>
+<span class="rs-comment">//! These are intentionally small, family-specific dependency sets. Runtime</span>
+<span class="rs-comment">//! provider boundaries remain `dyn Trait`; closed groupings stay concrete.</span>
+
+<span class="rs-kw">use</span> std::{fmt, sync::<span class="rs-type">Arc</span>};
+
+<span class="rs-kw">use</span> async_trait::async_trait;
+<span class="rs-kw">use</span> eos_sandbox_port::{<span class="rs-type">DaemonOp</span>, <span class="rs-type">SandboxPortError</span>, <span class="rs-type">SandboxTransport</span>};
+<span class="rs-kw">use</span> eos_skills::<span class="rs-type">SkillRegistry</span>;
+<span class="rs-kw">use</span> eos_state::{<span class="rs-type">RequestStore</span>, <span class="rs-type">TaskStore</span>};
+<span class="rs-kw">use</span> eos_types::{<span class="rs-type">JsonObject</span>, <span class="rs-type">SandboxId</span>};
+
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::ports::{
+    <a class="symbol-link rs-type" href="eos-tools--src-ports-mod-rs.html#item-trait-AttemptSubmissionPort-171">AttemptSubmissionPort</a>, <a class="symbol-link rs-type" href="eos-tools--src-ports-mod-rs.html#item-trait-BackgroundSupervisorPort-236">BackgroundSupervisorPort</a>, <a class="symbol-link rs-type" href="eos-tools--src-ports-mod-rs.html#item-trait-CommandSessionSupervisorPort-311">CommandSessionSupervisorPort</a>,
+    <a class="symbol-link rs-type" href="eos-tools--src-ports-mod-rs.html#item-trait-WorkflowControlPort-66">WorkflowControlPort</a>,
+};
+
+<span class="rs-comment">/// Store access for the root terminal.</span>
+#[derive(<span class="rs-type">Clone</span>)]
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-RootSubmissionService-19">RootSubmissionService</a> {
+    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) task_store: <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <span class="rs-type">TaskStore</span>&gt;,
+    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) request_store: <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <span class="rs-type">RequestStore</span>&gt;,
+}
+
+<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-RootSubmissionService-19">RootSubmissionService</a> {
+    <span class="rs-comment">/// Build the root-submission service over persisted request/task stores.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(task_store: <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <span class="rs-type">TaskStore</span>&gt;, request_store: <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <span class="rs-type">RequestStore</span>&gt;) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">Self</span> {
+            task_store,
+            request_store,
+        }
+    }
+}
+
+<span class="rs-kw">impl</span> fmt::<span class="rs-type">Debug</span> <span class="rs-kw">for</span> <a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-RootSubmissionService-19">RootSubmissionService</a> {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-core-metadata-rs.html#method-fmt-51">fmt</a>(&amp;<span class="rs-self">self</span>, f: &amp;<span class="rs-kw">mut</span> fmt::<span class="rs-type">Formatter</span>&lt;&#x27;_&gt;) -&gt; fmt::<span class="rs-type">Result</span> {
+        f.debug_struct(&quot;<a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-RootSubmissionService-19">RootSubmissionService</a>&quot;)
+            .finish_non_exhaustive()
+    }
+}
+
+<span class="rs-comment">/// Attempt terminal submission behavior.</span>
+#[derive(<span class="rs-type">Clone</span>)]
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-AttemptSubmissionService-44">AttemptSubmissionService</a> {
+    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) port: <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <a class="symbol-link rs-type" href="eos-tools--src-ports-mod-rs.html#item-trait-AttemptSubmissionPort-171">AttemptSubmissionPort</a>&gt;,
+}
+
+<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-AttemptSubmissionService-44">AttemptSubmissionService</a> {
+    <span class="rs-comment">/// Build the attempt-submission service.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(port: <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <a class="symbol-link rs-type" href="eos-tools--src-ports-mod-rs.html#item-trait-AttemptSubmissionPort-171">AttemptSubmissionPort</a>&gt;) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">Self</span> { port }
+    }
+}
+
+<span class="rs-kw">impl</span> fmt::<span class="rs-type">Debug</span> <span class="rs-kw">for</span> <a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-AttemptSubmissionService-44">AttemptSubmissionService</a> {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-core-metadata-rs.html#method-fmt-51">fmt</a>(&amp;<span class="rs-self">self</span>, f: &amp;<span class="rs-kw">mut</span> fmt::<span class="rs-type">Formatter</span>&lt;&#x27;_&gt;) -&gt; fmt::<span class="rs-type">Result</span> {
+        f.debug_struct(&quot;<a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-AttemptSubmissionService-44">AttemptSubmissionService</a>&quot;)
+            .finish_non_exhaustive()
+    }
+}
+
+<span class="rs-comment">/// Sandbox RPC access for file, shell, plugin, and isolated-workspace tools.</span>
+#[derive(<span class="rs-type">Clone</span>)]
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-SandboxToolService-65">SandboxToolService</a> {
+    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) transport: <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <span class="rs-type">SandboxTransport</span>&gt;,
+}
+
+<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-SandboxToolService-65">SandboxToolService</a> {
+    <span class="rs-comment">/// Build the sandbox tool service over the daemon transport.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(transport: <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <span class="rs-type">SandboxTransport</span>&gt;) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">Self</span> { transport }
+    }
+
+    <span class="rs-comment">/// Clone the underlying sandbox transport for related service wiring.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-tools-services-rs.html#method-transport-78">transport</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <span class="rs-type">SandboxTransport</span>&gt; {
+        <span class="rs-self">self</span>.transport.clone()
+    }
+}
+
+<span class="rs-kw">impl</span> fmt::<span class="rs-type">Debug</span> <span class="rs-kw">for</span> <a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-SandboxToolService-65">SandboxToolService</a> {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-core-metadata-rs.html#method-fmt-51">fmt</a>(&amp;<span class="rs-self">self</span>, f: &amp;<span class="rs-kw">mut</span> fmt::<span class="rs-type">Formatter</span>&lt;&#x27;_&gt;) -&gt; fmt::<span class="rs-type">Result</span> {
+        f.debug_struct(&quot;<a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-SandboxToolService-65">SandboxToolService</a>&quot;).finish_non_exhaustive()
+    }
+}
+
+<span class="rs-comment">/// Command-session tool dependencies.</span>
+#[derive(<span class="rs-type">Clone</span>)]
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-CommandToolService-91">CommandToolService</a> {
+    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) transport: <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <span class="rs-type">SandboxTransport</span>&gt;,
+    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) command_session_supervisor: <span class="rs-type">Option</span>&lt;<span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <a class="symbol-link rs-type" href="eos-tools--src-ports-mod-rs.html#item-trait-CommandSessionSupervisorPort-311">CommandSessionSupervisorPort</a>&gt;&gt;,
+}
+
+<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-CommandToolService-91">CommandToolService</a> {
+    <span class="rs-comment">/// Build command tool services.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(
+        transport: <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <span class="rs-type">SandboxTransport</span>&gt;,
+        command_session_supervisor: <span class="rs-type">Option</span>&lt;<span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <a class="symbol-link rs-type" href="eos-tools--src-ports-mod-rs.html#item-trait-CommandSessionSupervisorPort-311">CommandSessionSupervisorPort</a>&gt;&gt;,
+    ) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">Self</span> {
+            transport,
+            command_session_supervisor,
+        }
+    }
+}
+
+<span class="rs-kw">impl</span> fmt::<span class="rs-type">Debug</span> <span class="rs-kw">for</span> <a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-CommandToolService-91">CommandToolService</a> {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-core-metadata-rs.html#method-fmt-51">fmt</a>(&amp;<span class="rs-self">self</span>, f: &amp;<span class="rs-kw">mut</span> fmt::<span class="rs-type">Formatter</span>&lt;&#x27;_&gt;) -&gt; fmt::<span class="rs-type">Result</span> {
+        f.debug_struct(&quot;<a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-CommandToolService-91">CommandToolService</a>&quot;)
+            .field(
+                &quot;has_command_session_supervisor&quot;,
+                &amp;<span class="rs-self">self</span>.command_session_supervisor.is_some(),
+            )
+            .finish_non_exhaustive()
+    }
+}
+
+<span class="rs-comment">/// Skill registry access for skill-reference tools.</span>
+#[derive(<span class="rs-type">Clone</span>)]
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-SkillToolService-123">SkillToolService</a> {
+    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) skill_registry: <span class="rs-type">Arc</span>&lt;<span class="rs-type">SkillRegistry</span>&gt;,
+}
+
+<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-SkillToolService-123">SkillToolService</a> {
+    <span class="rs-comment">/// Build skill tool services.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(skill_registry: <span class="rs-type">Arc</span>&lt;<span class="rs-type">SkillRegistry</span>&gt;) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">Self</span> { skill_registry }
+    }
+}
+
+<span class="rs-kw">impl</span> fmt::<span class="rs-type">Debug</span> <span class="rs-kw">for</span> <a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-SkillToolService-123">SkillToolService</a> {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-core-metadata-rs.html#method-fmt-51">fmt</a>(&amp;<span class="rs-self">self</span>, f: &amp;<span class="rs-kw">mut</span> fmt::<span class="rs-type">Formatter</span>&lt;&#x27;_&gt;) -&gt; fmt::<span class="rs-type">Result</span> {
+        f.debug_struct(&quot;<a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-SkillToolService-123">SkillToolService</a>&quot;).finish_non_exhaustive()
+    }
+}
+
+<span class="rs-comment">/// State-dependent pre-hook dependencies.</span>
+#[derive(<span class="rs-type">Clone</span>, <span class="rs-type">Default</span>)]
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-HookServices-143">HookServices</a> {
+    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) sandbox_transport: <span class="rs-type">Option</span>&lt;<span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <span class="rs-type">SandboxTransport</span>&gt;&gt;,
+    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) workflow_control: <span class="rs-type">Option</span>&lt;<span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <a class="symbol-link rs-type" href="eos-tools--src-ports-mod-rs.html#item-trait-WorkflowControlPort-66">WorkflowControlPort</a>&gt;&gt;,
+    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) background_supervisor: <span class="rs-type">Option</span>&lt;<span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <a class="symbol-link rs-type" href="eos-tools--src-ports-mod-rs.html#item-trait-BackgroundSupervisorPort-236">BackgroundSupervisorPort</a>&gt;&gt;,
+}
+
+<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-HookServices-143">HookServices</a> {
+    <span class="rs-comment">/// Build hook services for tools that need downstream state during pre-hooks.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(
+        sandbox_transport: <span class="rs-type">Option</span>&lt;<span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <span class="rs-type">SandboxTransport</span>&gt;&gt;,
+        workflow_control: <span class="rs-type">Option</span>&lt;<span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <a class="symbol-link rs-type" href="eos-tools--src-ports-mod-rs.html#item-trait-WorkflowControlPort-66">WorkflowControlPort</a>&gt;&gt;,
+        background_supervisor: <span class="rs-type">Option</span>&lt;<span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <a class="symbol-link rs-type" href="eos-tools--src-ports-mod-rs.html#item-trait-BackgroundSupervisorPort-236">BackgroundSupervisorPort</a>&gt;&gt;,
+    ) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">Self</span> {
+            sandbox_transport,
+            workflow_control,
+            background_supervisor,
+        }
+    }
+}
+
+<span class="rs-kw">impl</span> fmt::<span class="rs-type">Debug</span> <span class="rs-kw">for</span> <a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-HookServices-143">HookServices</a> {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-core-metadata-rs.html#method-fmt-51">fmt</a>(&amp;<span class="rs-self">self</span>, f: &amp;<span class="rs-kw">mut</span> fmt::<span class="rs-type">Formatter</span>&lt;&#x27;_&gt;) -&gt; fmt::<span class="rs-type">Result</span> {
+        f.debug_struct(&quot;<a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-HookServices-143">HookServices</a>&quot;)
+            .field(&quot;has_sandbox_transport&quot;, &amp;<span class="rs-self">self</span>.sandbox_transport.is_some())
+            .field(&quot;has_workflow_control&quot;, &amp;<span class="rs-self">self</span>.workflow_control.is_some())
+            .field(
+                &quot;has_background_supervisor&quot;,
+                &amp;<span class="rs-self">self</span>.background_supervisor.is_some(),
+            )
+            .finish()
+    }
+}
+
+<span class="rs-comment">/// Inert transport used only when building a static registry without executable</span>
+<span class="rs-comment">/// services, such as schema snapshots and registry validation.</span>
+#[derive(<span class="rs-type">Debug</span>)]
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-InertSandboxTransport-180">InertSandboxTransport</a>;
+
+#[async_trait]
+<span class="rs-kw">impl</span> <span class="rs-type">SandboxTransport</span> <span class="rs-kw">for</span> <a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-InertSandboxTransport-180">InertSandboxTransport</a> {
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-runtime-dispatch-rs.html#item-fn-call-184">call</a>(
+        &amp;<span class="rs-self">self</span>,
+        _sandbox_id: &amp;<span class="rs-type">SandboxId</span>,
+        _op: <span class="rs-type">DaemonOp</span>,
+        _payload: <span class="rs-type">JsonObject</span>,
+        _timeout_s: u32,
+    ) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">JsonObject</span>, <span class="rs-type">SandboxPortError</span>&gt; {
+        <span class="rs-type">Ok</span>(<span class="rs-type">JsonObject</span>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>())
+    }
+}
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
   <script src="../assets/inventory.js"></script>
 </body>
 </html>

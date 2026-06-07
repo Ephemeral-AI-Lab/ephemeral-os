@@ -8,8 +8,16 @@
 </head>
 <body>
   <header>
-    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
-    <h1>eos-isolated-workspace File Inventory</h1>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>eos-isolated-workspace File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS/sandbox &amp;&amp; cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
   </header>
   <a class="back-link" href="../index.html">sandbox</a>
 <section class="summary">
@@ -47,39 +55,258 @@
       <span>6 methods</span>
     </div>
   </div>
-  <div class="items"><div class="group-label">File-Owned Types</div><article class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct IsolatedCommandPolicy pub pub struct IsolatedCommandPolicy&lt; P &gt; crates/eos-isolated-workspace/src/command_session/policy.rs port P prepared Mutex &lt; bool &gt; ">
+  <div class="items"><div class="group-label">File-Owned Types</div><article id="item-struct-IsolatedCommandPolicy-12" class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct IsolatedCommandPolicy pub pub struct IsolatedCommandPolicy&lt; P &gt; crates/eos-isolated-workspace/src/command_session/policy.rs port P prepared Mutex &lt; bool &gt; ">
   <div class="item-head">
     <span class="kind">struct</span>
     <h3>IsolatedCommandPolicy</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub struct IsolatedCommandPolicy&lt; P &gt;</code>
+  <code class="signature">pub struct <a class="symbol-link" href="eos-isolated-workspace--src-command-session-policy-rs.html#item-struct-IsolatedCommandPolicy-12">IsolatedCommandPolicy</a>&lt; P &gt;</code>
   <div class="tags"></div>
-  <h4>Fields</h4><table><tbody><tr><td>private</td><td>port</td><td><code>P</code></td></tr><tr><td>private</td><td>prepared</td><td><code>Mutex &lt; bool &gt;</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr><td>constructor</td><td>new</td><td><code>pub fn new (port : P) -&gt; Self</code></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl CommandWorkspacePolicy for IsolatedCommandPolicy &lt; P &gt;</code></summary><table><tbody><tr><td>method</td><td>prepare_command_workspace</td><td><code>fn prepare_command_workspace (&amp; self , request : PrepareCommandRequest ,) -&gt; Result &lt; PreparedCommandWorkspace , WorkspaceApiError &gt;</code></td></tr><tr><td>method</td><td>command_session_started</td><td><code>fn command_session_started (&amp; self , command_session_id : &amp; str , caller_id : &amp; str)</code></td></tr><tr><td>method</td><td>command_session_finished</td><td><code>fn command_session_finished (&amp; self , command_session_id : &amp; str , caller_id : &amp; str , status : &amp; str)</code></td></tr><tr><td>method</td><td>finalize_command_workspace</td><td><code>fn finalize_command_workspace (&amp; self , request : FinalizeCommandRequest ,) -&gt; Result &lt; WorkspaceCommandOutcome , WorkspaceApiError &gt;</code></td></tr><tr><td>method</td><td>discard_command_workspace</td><td><code>fn discard_command_workspace (&amp; self , request : FinalizeCommandRequest ,) -&gt; Result &lt; WorkspaceCommandOutcome , WorkspaceApiError &gt;</code></td></tr></tbody></table></details></div>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>port</td><td><code>P</code></td></tr><tr><td>private</td><td>prepared</td><td><code>Mutex &lt; bool &gt;</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-24"><td>constructor</td><td>new</td><td><code>pub fn <a class="symbol-link" href="eos-isolated-workspace.html#method-new-37">new</a> (port : P) -&gt; Self</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-isolated-workspace.html#method-new-37">new</a>(port: <span class="rs-type">P</span>) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">Self</span> {
+            port,
+            prepared: <span class="rs-type">Mutex</span>::<a class="symbol-link rs-fn" href="eos-isolated-workspace.html#method-new-37">new</a>(<span class="rs-kw">false</span>),
+        }
+    }
+</code></pre>
+</details></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl CommandWorkspacePolicy for <a class="symbol-link" href="eos-isolated-workspace--src-command-session-policy-rs.html#item-struct-IsolatedCommandPolicy-12">IsolatedCommandPolicy</a> &lt; P &gt;</code></summary><table><tbody><tr id="method-prepare-command-workspace-37"><td>method</td><td>prepare_command_workspace</td><td><code>fn <a class="symbol-link" href="eos-isolated-workspace--src-command-session-policy-rs.html#method-prepare-command-workspace-37">prepare_command_workspace</a> (&amp; self , request : PrepareCommandRequest ,) -&gt; Result &lt; PreparedCommandWorkspace , WorkspaceApiError &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-isolated-workspace--src-command-session-policy-rs.html#method-prepare-command-workspace-37">prepare_command_workspace</a>(
+        &amp;<span class="rs-self">self</span>,
+        request: <span class="rs-type">PrepareCommandRequest</span>,
+    ) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">PreparedCommandWorkspace</span>, <span class="rs-type">WorkspaceApiError</span>&gt; {
+        <span class="rs-kw">let</span> prepared = prepare::<a class="symbol-link rs-fn" href="eos-isolated-workspace--src-command-session-policy-rs.html#method-prepare-command-workspace-37">prepare_command_workspace</a>(&amp;<span class="rs-self">self</span>.port, request)?;
+        *<a class="symbol-link rs-fn" href="eos-isolated-workspace--src-command-session-policy-rs.html#item-fn-lock-108">lock</a>(&amp;<span class="rs-self">self</span>.prepared) = <span class="rs-kw">true</span>;
+        <span class="rs-type">Ok</span>(prepared)
+    }
+</code></pre>
+</details></td></tr><tr id="method-command-session-started-46"><td>method</td><td>command_session_started</td><td><code>fn <a class="symbol-link" href="eos-isolated-workspace--src-command-session-policy-rs.html#method-command-session-started-46">command_session_started</a> (&amp; self , command_session_id : &amp; str , caller_id : &amp; str)</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-isolated-workspace--src-command-session-policy-rs.html#method-command-session-started-46">command_session_started</a>(&amp;<span class="rs-self">self</span>, command_session_id: &amp;str, caller_id: &amp;str) {
+        <span class="rs-self">self</span>.port
+            .<a class="symbol-link rs-fn" href="eos-isolated-workspace--src-command-session-policy-rs.html#method-command-session-started-46">command_session_started</a>(command_session_id, caller_id);
+    }
+</code></pre>
+</details></td></tr><tr id="method-command-session-finished-51"><td>method</td><td>command_session_finished</td><td><code>fn <a class="symbol-link" href="eos-isolated-workspace--src-command-session-policy-rs.html#method-command-session-finished-51">command_session_finished</a> (&amp; self , command_session_id : &amp; str , caller_id : &amp; str , status : &amp; str)</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-isolated-workspace--src-command-session-policy-rs.html#method-command-session-finished-51">command_session_finished</a>(&amp;<span class="rs-self">self</span>, command_session_id: &amp;str, caller_id: &amp;str, status: &amp;str) {
+        <span class="rs-self">self</span>.port
+            .<a class="symbol-link rs-fn" href="eos-isolated-workspace--src-command-session-policy-rs.html#method-command-session-finished-51">command_session_finished</a>(command_session_id, caller_id, status);
+    }
+</code></pre>
+</details></td></tr><tr id="method-finalize-command-workspace-56"><td>method</td><td>finalize_command_workspace</td><td><code>fn <a class="symbol-link" href="eos-isolated-workspace--src-command-session-finalize-rs.html#item-fn-finalize-command-workspace-11">finalize_command_workspace</a> (&amp; self , request : FinalizeCommandRequest ,) -&gt; Result &lt; WorkspaceCommandOutcome , WorkspaceApiError &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-isolated-workspace--src-command-session-finalize-rs.html#item-fn-finalize-command-workspace-11">finalize_command_workspace</a>(
+        &amp;<span class="rs-self">self</span>,
+        request: <span class="rs-type">FinalizeCommandRequest</span>,
+    ) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">WorkspaceCommandOutcome</span>, <span class="rs-type">WorkspaceApiError</span>&gt; {
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> prepared = <a class="symbol-link rs-fn" href="eos-isolated-workspace--src-command-session-policy-rs.html#item-fn-lock-108">lock</a>(&amp;<span class="rs-self">self</span>.prepared);
+        <span class="rs-kw">if</span> !*prepared {
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<span class="rs-type">WorkspaceApiError</span>::<a class="symbol-link rs-fn" href="eos-isolated-workspace.html#method-new-37">new</a>(
+                &quot;isolated_command_finalize_failed&quot;,
+                &quot;isolated command workspace is not prepared&quot;,
+            ));
+        }
+        *prepared = <span class="rs-kw">false</span>;
+        drop(prepared);
+
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> outcome = finalize::<a class="symbol-link rs-fn" href="eos-isolated-workspace--src-command-session-finalize-rs.html#item-fn-finalize-command-workspace-11">finalize_command_workspace</a>(&amp;<span class="rs-self">self</span>.port, request)?;
+        <span class="rs-kw">let</span> audit = outcome
+            .metadata
+            .get(&quot;audit&quot;)
+            .cloned()
+            .unwrap_or_else(|| serde_json::json!({}));
+        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(metadata) = outcome.metadata.as_object_mut() {
+            metadata.remove(&quot;audit&quot;);
+        }
+        <span class="rs-self">self</span>.port.<a class="symbol-link rs-fn" href="eos-isolated-workspace--src-command-session-finalize-rs.html#method-record-command-audit-159">record_command_audit</a>(<a class="symbol-link rs-fn" href="eos-isolated-workspace--src-command-session-policy-rs.html#item-fn-merge-changed-paths-101">merge_changed_paths</a>(
+            audit,
+            serde_json::json!(outcome.changed_paths),
+        ));
+        <span class="rs-type">Ok</span>(outcome)
+    }
+</code></pre>
+</details></td></tr><tr id="method-discard-command-workspace-86"><td>method</td><td>discard_command_workspace</td><td><code>fn <a class="symbol-link" href="eos-isolated-workspace--src-command-session-policy-rs.html#method-discard-command-workspace-86">discard_command_workspace</a> (&amp; self , request : FinalizeCommandRequest ,) -&gt; Result &lt; WorkspaceCommandOutcome , WorkspaceApiError &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-isolated-workspace--src-command-session-policy-rs.html#method-discard-command-workspace-86">discard_command_workspace</a>(
+        &amp;<span class="rs-self">self</span>,
+        request: <span class="rs-type">FinalizeCommandRequest</span>,
+    ) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">WorkspaceCommandOutcome</span>, <span class="rs-type">WorkspaceApiError</span>&gt; {
+        <span class="rs-comment">// A cancelled isolated command skips capture and audit entirely; the</span>
+        <span class="rs-comment">// isolated upperdir is never published and is torn down with the</span>
+        <span class="rs-comment">// namespace when the isolated session exits.</span>
+        *<a class="symbol-link rs-fn" href="eos-isolated-workspace--src-command-session-policy-rs.html#item-fn-lock-108">lock</a>(&amp;<span class="rs-self">self</span>.prepared) = <span class="rs-kw">false</span>;
+        <span class="rs-type">Ok</span>(<span class="rs-type">WorkspaceCommandOutcome</span>::discarded(
+            <span class="rs-type">WorkspaceMode</span>::<span class="rs-type">Isolated</span>,
+            request,
+        ))
+    }
+</code></pre>
+</details></td></tr></tbody></table></details></div>
+
   <p class="source">crates/eos-isolated-workspace/src/command_session/policy.rs:12</p>
-</article><div class="group-label">Standalone Functions</div><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn merge_changed_paths private fn merge_changed_paths (mut audit : Value , changed_paths : Value) -&gt; Value crates/eos-isolated-workspace/src/command_session/policy.rs  ">
+</article><div class="group-label">Standalone Functions</div><article id="item-fn-merge-changed-paths-101" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn merge_changed_paths private fn merge_changed_paths (mut audit : Value , changed_paths : Value) -&gt; Value crates/eos-isolated-workspace/src/command_session/policy.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>merge_changed_paths</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn merge_changed_paths (mut audit : Value , changed_paths : Value) -&gt; Value</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-isolated-workspace--src-command-session-policy-rs.html#item-fn-merge-changed-paths-101">merge_changed_paths</a> (mut audit : Value , changed_paths : Value) -&gt; Value</code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-isolated-workspace--src-command-session-policy-rs.html#item-fn-merge-changed-paths-101">merge_changed_paths</a>(<span class="rs-kw">mut</span> audit: <span class="rs-type">Value</span>, changed_paths: <span class="rs-type">Value</span>) -&gt; <span class="rs-type">Value</span> {
+    <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(object) = audit.as_object_mut() {
+        object.insert(&quot;changed_paths&quot;.to_owned(), changed_paths);
+    }
+    audit
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-isolated-workspace/src/command_session/policy.rs:101</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn lock private fn lock &lt; T &gt; (mutex : &amp; Mutex &lt; T &gt;) -&gt; MutexGuard &lt; '_ , T &gt; crates/eos-isolated-workspace/src/command_session/policy.rs  ">
+</article><article id="item-fn-lock-108" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn lock private fn lock &lt; T &gt; (mutex : &amp; Mutex &lt; T &gt;) -&gt; MutexGuard &lt; '_ , T &gt; crates/eos-isolated-workspace/src/command_session/policy.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>lock</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn lock &lt; T &gt; (mutex : &amp; Mutex &lt; T &gt;) -&gt; MutexGuard &lt; '_ , T &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-isolated-workspace--src-command-session-policy-rs.html#item-fn-lock-108">lock</a> &lt; T &gt; (mutex : &amp; Mutex &lt; T &gt;) -&gt; MutexGuard &lt; &#x27;_ , T &gt;</code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> lock&lt;<span class="rs-type">T</span>&gt;(mutex: &amp;<span class="rs-type">Mutex</span>&lt;<span class="rs-type">T</span>&gt;) -&gt; <span class="rs-type">MutexGuard</span>&lt;&#x27;_, <span class="rs-type">T</span>&gt; {
+    mutex.<a class="symbol-link rs-fn" href="eos-isolated-workspace--src-command-session-policy-rs.html#item-fn-lock-108">lock</a>().unwrap_or_else(<span class="rs-type">PoisonError</span>::into_inner)
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-isolated-workspace/src/command_session/policy.rs:108</p>
 </article></div>
 </section></div>
 </main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/eos-isolated-workspace/src/command_session/policy.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-kw">use</span> std::sync::{<span class="rs-type">Mutex</span>, <span class="rs-type">MutexGuard</span>, <span class="rs-type">PoisonError</span>};
+
+<span class="rs-kw">use</span> eos_workspace_api::{
+    <span class="rs-type">CommandWorkspacePolicy</span>, <span class="rs-type">FinalizeCommandRequest</span>, <span class="rs-type">PrepareCommandRequest</span>,
+    <span class="rs-type">PreparedCommandWorkspace</span>, <span class="rs-type">WorkspaceApiError</span>, <span class="rs-type">WorkspaceCommandOutcome</span>, <span class="rs-type">WorkspaceMode</span>,
+};
+<span class="rs-kw">use</span> serde_json::<span class="rs-type">Value</span>;
+
+<span class="rs-kw">use</span> <span class="rs-kw">super</span>::types::<a class="symbol-link rs-type" href="eos-isolated-workspace--src-command-session-types-rs.html#item-trait-IsolatedCommandSessionPort-31">IsolatedCommandSessionPort</a>;
+<span class="rs-kw">use</span> <span class="rs-kw">super</span>::{finalize, prepare};
+
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-isolated-workspace--src-command-session-policy-rs.html#item-struct-IsolatedCommandPolicy-12">IsolatedCommandPolicy</a>&lt;<span class="rs-type">P</span>&gt;
+<span class="rs-kw">where</span>
+    <span class="rs-type">P</span>: <a class="symbol-link rs-type" href="eos-isolated-workspace--src-command-session-types-rs.html#item-trait-IsolatedCommandSessionPort-31">IsolatedCommandSessionPort</a>,
+{
+    port: <span class="rs-type">P</span>,
+    prepared: <span class="rs-type">Mutex</span>&lt;bool&gt;,
+}
+
+<span class="rs-kw">impl</span>&lt;<span class="rs-type">P</span>&gt; <a class="symbol-link rs-type" href="eos-isolated-workspace--src-command-session-policy-rs.html#item-struct-IsolatedCommandPolicy-12">IsolatedCommandPolicy</a>&lt;<span class="rs-type">P</span>&gt;
+<span class="rs-kw">where</span>
+    <span class="rs-type">P</span>: <a class="symbol-link rs-type" href="eos-isolated-workspace--src-command-session-types-rs.html#item-trait-IsolatedCommandSessionPort-31">IsolatedCommandSessionPort</a>,
+{
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-isolated-workspace.html#method-new-37">new</a>(port: <span class="rs-type">P</span>) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">Self</span> {
+            port,
+            prepared: <span class="rs-type">Mutex</span>::<a class="symbol-link rs-fn" href="eos-isolated-workspace.html#method-new-37">new</a>(<span class="rs-kw">false</span>),
+        }
+    }
+}
+
+<span class="rs-kw">impl</span>&lt;<span class="rs-type">P</span>&gt; <span class="rs-type">CommandWorkspacePolicy</span> <span class="rs-kw">for</span> <a class="symbol-link rs-type" href="eos-isolated-workspace--src-command-session-policy-rs.html#item-struct-IsolatedCommandPolicy-12">IsolatedCommandPolicy</a>&lt;<span class="rs-type">P</span>&gt;
+<span class="rs-kw">where</span>
+    <span class="rs-type">P</span>: <a class="symbol-link rs-type" href="eos-isolated-workspace--src-command-session-types-rs.html#item-trait-IsolatedCommandSessionPort-31">IsolatedCommandSessionPort</a> + <span class="rs-type">Send</span> + <span class="rs-type">Sync</span>,
+{
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-isolated-workspace--src-command-session-policy-rs.html#method-prepare-command-workspace-37">prepare_command_workspace</a>(
+        &amp;<span class="rs-self">self</span>,
+        request: <span class="rs-type">PrepareCommandRequest</span>,
+    ) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">PreparedCommandWorkspace</span>, <span class="rs-type">WorkspaceApiError</span>&gt; {
+        <span class="rs-kw">let</span> prepared = prepare::<a class="symbol-link rs-fn" href="eos-isolated-workspace--src-command-session-policy-rs.html#method-prepare-command-workspace-37">prepare_command_workspace</a>(&amp;<span class="rs-self">self</span>.port, request)?;
+        *<a class="symbol-link rs-fn" href="eos-isolated-workspace--src-command-session-policy-rs.html#item-fn-lock-108">lock</a>(&amp;<span class="rs-self">self</span>.prepared) = <span class="rs-kw">true</span>;
+        <span class="rs-type">Ok</span>(prepared)
+    }
+
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-isolated-workspace--src-command-session-policy-rs.html#method-command-session-started-46">command_session_started</a>(&amp;<span class="rs-self">self</span>, command_session_id: &amp;str, caller_id: &amp;str) {
+        <span class="rs-self">self</span>.port
+            .<a class="symbol-link rs-fn" href="eos-isolated-workspace--src-command-session-policy-rs.html#method-command-session-started-46">command_session_started</a>(command_session_id, caller_id);
+    }
+
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-isolated-workspace--src-command-session-policy-rs.html#method-command-session-finished-51">command_session_finished</a>(&amp;<span class="rs-self">self</span>, command_session_id: &amp;str, caller_id: &amp;str, status: &amp;str) {
+        <span class="rs-self">self</span>.port
+            .<a class="symbol-link rs-fn" href="eos-isolated-workspace--src-command-session-policy-rs.html#method-command-session-finished-51">command_session_finished</a>(command_session_id, caller_id, status);
+    }
+
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-isolated-workspace--src-command-session-finalize-rs.html#item-fn-finalize-command-workspace-11">finalize_command_workspace</a>(
+        &amp;<span class="rs-self">self</span>,
+        request: <span class="rs-type">FinalizeCommandRequest</span>,
+    ) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">WorkspaceCommandOutcome</span>, <span class="rs-type">WorkspaceApiError</span>&gt; {
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> prepared = <a class="symbol-link rs-fn" href="eos-isolated-workspace--src-command-session-policy-rs.html#item-fn-lock-108">lock</a>(&amp;<span class="rs-self">self</span>.prepared);
+        <span class="rs-kw">if</span> !*prepared {
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<span class="rs-type">WorkspaceApiError</span>::<a class="symbol-link rs-fn" href="eos-isolated-workspace.html#method-new-37">new</a>(
+                &quot;isolated_command_finalize_failed&quot;,
+                &quot;isolated command workspace is not prepared&quot;,
+            ));
+        }
+        *prepared = <span class="rs-kw">false</span>;
+        drop(prepared);
+
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> outcome = finalize::<a class="symbol-link rs-fn" href="eos-isolated-workspace--src-command-session-finalize-rs.html#item-fn-finalize-command-workspace-11">finalize_command_workspace</a>(&amp;<span class="rs-self">self</span>.port, request)?;
+        <span class="rs-kw">let</span> audit = outcome
+            .metadata
+            .get(&quot;audit&quot;)
+            .cloned()
+            .unwrap_or_else(|| serde_json::json!({}));
+        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(metadata) = outcome.metadata.as_object_mut() {
+            metadata.remove(&quot;audit&quot;);
+        }
+        <span class="rs-self">self</span>.port.<a class="symbol-link rs-fn" href="eos-isolated-workspace--src-command-session-finalize-rs.html#method-record-command-audit-159">record_command_audit</a>(<a class="symbol-link rs-fn" href="eos-isolated-workspace--src-command-session-policy-rs.html#item-fn-merge-changed-paths-101">merge_changed_paths</a>(
+            audit,
+            serde_json::json!(outcome.changed_paths),
+        ));
+        <span class="rs-type">Ok</span>(outcome)
+    }
+
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-isolated-workspace--src-command-session-policy-rs.html#method-discard-command-workspace-86">discard_command_workspace</a>(
+        &amp;<span class="rs-self">self</span>,
+        request: <span class="rs-type">FinalizeCommandRequest</span>,
+    ) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">WorkspaceCommandOutcome</span>, <span class="rs-type">WorkspaceApiError</span>&gt; {
+        <span class="rs-comment">// A cancelled isolated command skips capture and audit entirely; the</span>
+        <span class="rs-comment">// isolated upperdir is never published and is torn down with the</span>
+        <span class="rs-comment">// namespace when the isolated session exits.</span>
+        *<a class="symbol-link rs-fn" href="eos-isolated-workspace--src-command-session-policy-rs.html#item-fn-lock-108">lock</a>(&amp;<span class="rs-self">self</span>.prepared) = <span class="rs-kw">false</span>;
+        <span class="rs-type">Ok</span>(<span class="rs-type">WorkspaceCommandOutcome</span>::discarded(
+            <span class="rs-type">WorkspaceMode</span>::<span class="rs-type">Isolated</span>,
+            request,
+        ))
+    }
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-isolated-workspace--src-command-session-policy-rs.html#item-fn-merge-changed-paths-101">merge_changed_paths</a>(<span class="rs-kw">mut</span> audit: <span class="rs-type">Value</span>, changed_paths: <span class="rs-type">Value</span>) -&gt; <span class="rs-type">Value</span> {
+    <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(object) = audit.as_object_mut() {
+        object.insert(&quot;changed_paths&quot;.to_owned(), changed_paths);
+    }
+    audit
+}
+
+<span class="rs-kw">fn</span> lock&lt;<span class="rs-type">T</span>&gt;(mutex: &amp;<span class="rs-type">Mutex</span>&lt;<span class="rs-type">T</span>&gt;) -&gt; <span class="rs-type">MutexGuard</span>&lt;&#x27;_, <span class="rs-type">T</span>&gt; {
+    mutex.<a class="symbol-link rs-fn" href="eos-isolated-workspace--src-command-session-policy-rs.html#item-fn-lock-108">lock</a>().unwrap_or_else(<span class="rs-type">PoisonError</span>::into_inner)
+}
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
   <script src="../assets/inventory.js"></script>
 </body>
 </html>

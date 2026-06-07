@@ -8,8 +8,16 @@
 </head>
 <body>
   <header>
-    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
-    <h1>eos-tools File Inventory</h1>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>eos-tools File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS/agent-core &amp;&amp; cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
   </header>
   <a class="back-link" href="../index.html">agent-core</a>
 <section class="summary">
@@ -47,169 +55,1310 @@
       <span>14 methods</span>
     </div>
   </div>
-  <div class="items"><div class="group-label">File-Owned Types</div><article class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct ReportSupervisor private struct ReportSupervisor crates/eos-tools/src/hooks/require_no_background_sessions.rs report BackgroundInflightReport cancel_called AtomicBool ">
+  <div class="items"><div class="group-label">File-Owned Types</div><article id="item-struct-ReportSupervisor-201" class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct ReportSupervisor private struct ReportSupervisor crates/eos-tools/src/hooks/require_no_background_sessions.rs report RunningBackgroundTasks cancel_called AtomicBool ">
   <div class="item-head">
     <span class="kind">struct</span>
     <h3>ReportSupervisor</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">struct ReportSupervisor</code>
+  <code class="signature">struct <a class="symbol-link" href="eos-tools--src-hooks-require-no-background-sessions-rs.html#item-struct-ReportSupervisor-201">ReportSupervisor</a></code>
   <div class="tags"></div>
-  <h4>Fields</h4><table><tbody><tr><td>private</td><td>report</td><td><code>BackgroundInflightReport</code></td></tr><tr><td>private</td><td>cancel_called</td><td><code>AtomicBool</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr><td>constructor</td><td>new</td><td><code>const fn new (report : BackgroundInflightReport) -&gt; Self</code></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl Sealed for ReportSupervisor</code></summary><table><tbody></tbody></table></details><details><summary><code>impl BackgroundSupervisorPort for ReportSupervisor</code></summary><table><tbody><tr><td>method</td><td>spawn</td><td><code>async fn spawn (&amp; self , _ : &amp; ExecutionMetadata , _ : &amp; str , _ : &amp; str ,) -&gt; Result &lt; SpawnedSubagent , ToolError &gt;</code></td></tr><tr><td>method</td><td>progress</td><td><code>async fn progress (&amp; self , _ : &amp; SubagentSessionId , _ : u8) -&gt; Result &lt; ToolResult , ToolError &gt;</code></td></tr><tr><td>method</td><td>cancel</td><td><code>async fn cancel (&amp; self , _ : &amp; SubagentSessionId , _ : &amp; str) -&gt; Result &lt; ToolResult , ToolError &gt;</code></td></tr><tr><td>method</td><td>inflight_report</td><td><code>async fn inflight_report (&amp; self , _ : Option &lt; &amp; AgentRunId &gt;) -&gt; BackgroundInflightReport</code></td></tr><tr><td>method</td><td>cancel_subagents_for_agent_run</td><td><code>async fn cancel_subagents_for_agent_run (&amp; self , _ : &amp; AgentRunId) -&gt; BackgroundInflightReport</code></td></tr><tr><td>method</td><td>register_workflow</td><td><code>async fn register_workflow (&amp; self , _ : &amp; AgentRunId , _ : &amp; StartedWorkflowHandle)</code></td></tr><tr><td>method</td><td>cancel_workflow_record</td><td><code>async fn cancel_workflow_record (&amp; self , _ : &amp; WorkflowSessionId , _ : &amp; str) -&gt; bool</code></td></tr><tr><td>method</td><td>cancel_for_parent_exit</td><td><code>async fn cancel_for_parent_exit (&amp; self , _ : Option &lt; &amp; AgentRunId &gt; , _ : Option &lt; Arc &lt; dyn WorkflowControlPort &gt; &gt; , _ : &amp; str ,) -&gt; BackgroundInflightReport</code></td></tr></tbody></table></details></div>
-  <p class="source">crates/eos-tools/src/hooks/require_no_background_sessions.rs:203</p>
-</article><article class="type-card" data-kind="struct" data-kind-list="impl method struct type-model" data-filter-text="struct OneOutstanding private struct OneOutstanding crates/eos-tools/src/hooks/require_no_background_sessions.rs  ">
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>report</td><td><code><a class="symbol-link" href="eos-tools--src-ports-mod-rs.html#item-struct-RunningBackgroundTasks-217">RunningBackgroundTasks</a></code></td></tr><tr><td>private</td><td>cancel_called</td><td><code>AtomicBool</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-207"><td>constructor</td><td>new</td><td><code>const fn <a class="symbol-link" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a> (report : <a class="symbol-link" href="eos-tools--src-ports-mod-rs.html#item-struct-RunningBackgroundTasks-217">RunningBackgroundTasks</a>) -&gt; Self</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>        <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(report: <a class="symbol-link rs-type" href="eos-tools--src-ports-mod-rs.html#item-struct-RunningBackgroundTasks-217">RunningBackgroundTasks</a>) -&gt; <span class="rs-self">Self</span> {
+            <span class="rs-self">Self</span> {
+                report,
+                cancel_called: <span class="rs-type">AtomicBool</span>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(<span class="rs-kw">false</span>),
+            }
+        }
+</code></pre>
+</details></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl <a class="symbol-link" href="eos-tools--src-ports-mod-rs.html#item-trait-Sealed-32">Sealed</a> for <a class="symbol-link" href="eos-tools--src-hooks-require-no-background-sessions-rs.html#item-struct-ReportSupervisor-201">ReportSupervisor</a></code></summary><table><tbody></tbody></table></details><details><summary><code>impl <a class="symbol-link" href="eos-tools--src-ports-mod-rs.html#item-trait-BackgroundSupervisorPort-236">BackgroundSupervisorPort</a> for <a class="symbol-link" href="eos-tools--src-hooks-require-no-background-sessions-rs.html#item-struct-ReportSupervisor-201">ReportSupervisor</a></code></summary><table><tbody><tr id="method-spawn-219"><td>method</td><td>spawn</td><td><code>async fn <a class="symbol-link" href="eos-tools--src-hooks-require-no-background-sessions-rs.html#method-spawn-219">spawn</a> (&amp; self , _ : &amp; <a class="symbol-link" href="eos-tools--src-core-metadata-rs.html#item-struct-ExecutionMetadata-17">ExecutionMetadata</a> , _ : &amp; str , _ : &amp; str ,) -&gt; Result &lt; <a class="symbol-link" href="eos-tools--src-ports-mod-rs.html#item-enum-SpawnedSubagent-205">SpawnedSubagent</a> , <a class="symbol-link" href="eos-tools.html#item-enum-ToolError-16">ToolError</a> &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>        <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-hooks-require-no-background-sessions-rs.html#method-spawn-219">spawn</a>(
+            &amp;<span class="rs-self">self</span>,
+            _: &amp;<a class="symbol-link rs-type" href="eos-tools--src-core-metadata-rs.html#item-struct-ExecutionMetadata-17">ExecutionMetadata</a>,
+            _: &amp;str,
+            _: &amp;str,
+        ) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-tools--src-ports-mod-rs.html#item-enum-SpawnedSubagent-205">SpawnedSubagent</a>, <a class="symbol-link rs-type" href="eos-tools.html#item-enum-ToolError-16">ToolError</a>&gt; {
+            unreachable!(&quot;not used by hook tests&quot;)
+        }
+</code></pre>
+</details></td></tr><tr id="method-progress-228"><td>method</td><td>progress</td><td><code>async fn <a class="symbol-link" href="eos-tools--src-hooks-require-no-background-sessions-rs.html#method-progress-228">progress</a> (&amp; self , _ : &amp; SubagentSessionId , _ : u8) -&gt; Result &lt; <a class="symbol-link" href="eos-tools--src-core-result-rs.html#item-struct-ToolResult-12">ToolResult</a> , <a class="symbol-link" href="eos-tools.html#item-enum-ToolError-16">ToolError</a> &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>        <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-hooks-require-no-background-sessions-rs.html#method-progress-228">progress</a>(&amp;<span class="rs-self">self</span>, _: &amp;<span class="rs-type">SubagentSessionId</span>, _: u8) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-tools--src-core-result-rs.html#item-struct-ToolResult-12">ToolResult</a>, <a class="symbol-link rs-type" href="eos-tools.html#item-enum-ToolError-16">ToolError</a>&gt; {
+            unreachable!(&quot;not used by hook tests&quot;)
+        }
+</code></pre>
+</details></td></tr><tr id="method-cancel-232"><td>method</td><td>cancel</td><td><code>async fn <a class="symbol-link" href="eos-tools--src-hooks-disallow-nested-planner-deferral-rs.html#method-cancel-82">cancel</a> (&amp; self , _ : &amp; SubagentSessionId , _ : &amp; str) -&gt; Result &lt; <a class="symbol-link" href="eos-tools--src-core-result-rs.html#item-struct-ToolResult-12">ToolResult</a> , <a class="symbol-link" href="eos-tools.html#item-enum-ToolError-16">ToolError</a> &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>        <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-hooks-disallow-nested-planner-deferral-rs.html#method-cancel-82">cancel</a>(&amp;<span class="rs-self">self</span>, _: &amp;<span class="rs-type">SubagentSessionId</span>, _: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-tools--src-core-result-rs.html#item-struct-ToolResult-12">ToolResult</a>, <a class="symbol-link rs-type" href="eos-tools.html#item-enum-ToolError-16">ToolError</a>&gt; {
+            unreachable!(&quot;not used by hook tests&quot;)
+        }
+</code></pre>
+</details></td></tr><tr id="method-running-background-tasks-236"><td>method</td><td>running_background_tasks</td><td><code>async fn <a class="symbol-link" href="eos-tools--src-hooks-require-no-background-sessions-rs.html#method-running-background-tasks-236">running_background_tasks</a> (&amp; self) -&gt; <a class="symbol-link" href="eos-tools--src-ports-mod-rs.html#item-struct-RunningBackgroundTasks-217">RunningBackgroundTasks</a></code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>        <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-hooks-require-no-background-sessions-rs.html#method-running-background-tasks-236">running_background_tasks</a>(&amp;<span class="rs-self">self</span>) -&gt; <a class="symbol-link rs-type" href="eos-tools--src-ports-mod-rs.html#item-struct-RunningBackgroundTasks-217">RunningBackgroundTasks</a> {
+            <span class="rs-self">self</span>.report
+        }
+</code></pre>
+</details></td></tr><tr id="method-cancel-subagents-240"><td>method</td><td>cancel_subagents</td><td><code>async fn <a class="symbol-link" href="eos-tools--src-hooks-require-no-background-sessions-rs.html#method-cancel-subagents-240">cancel_subagents</a> (&amp; self) -&gt; <a class="symbol-link" href="eos-tools--src-ports-mod-rs.html#item-struct-RunningBackgroundTasks-217">RunningBackgroundTasks</a></code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>        <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-hooks-require-no-background-sessions-rs.html#method-cancel-subagents-240">cancel_subagents</a>(&amp;<span class="rs-self">self</span>) -&gt; <a class="symbol-link rs-type" href="eos-tools--src-ports-mod-rs.html#item-struct-RunningBackgroundTasks-217">RunningBackgroundTasks</a> {
+            <span class="rs-self">self</span>.cancel_called.store(<span class="rs-kw">true</span>, <span class="rs-type">Ordering</span>::<span class="rs-type">Relaxed</span>);
+            <a class="symbol-link rs-type" href="eos-tools--src-ports-mod-rs.html#item-struct-RunningBackgroundTasks-217">RunningBackgroundTasks</a> {
+                subagents: 0,
+                total: <span class="rs-self">self</span>.report.workflows + <span class="rs-self">self</span>.report.command_sessions,
+                ..<span class="rs-self">self</span>.report
+            }
+        }
+</code></pre>
+</details></td></tr><tr id="method-register-workflow-249"><td>method</td><td>register_workflow</td><td><code>async fn <a class="symbol-link" href="eos-tools--src-hooks-require-no-background-sessions-rs.html#method-register-workflow-249">register_workflow</a> (&amp; self , _ : &amp; <a class="symbol-link" href="eos-tools--src-ports-mod-rs.html#item-struct-StartedWorkflowHandle-46">StartedWorkflowHandle</a>)</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>        <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-hooks-require-no-background-sessions-rs.html#method-register-workflow-249">register_workflow</a>(&amp;<span class="rs-self">self</span>, _: &amp;<a class="symbol-link rs-type" href="eos-tools--src-ports-mod-rs.html#item-struct-StartedWorkflowHandle-46">StartedWorkflowHandle</a>) {}
+</code></pre>
+</details></td></tr><tr id="method-cancel-workflow-record-251"><td>method</td><td>cancel_workflow_record</td><td><code>async fn <a class="symbol-link" href="eos-tools--src-hooks-require-no-background-sessions-rs.html#method-cancel-workflow-record-251">cancel_workflow_record</a> (&amp; self , _ : &amp; WorkflowSessionId , _ : &amp; str) -&gt; bool</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>        <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-hooks-require-no-background-sessions-rs.html#method-cancel-workflow-record-251">cancel_workflow_record</a>(&amp;<span class="rs-self">self</span>, _: &amp;<span class="rs-type">WorkflowSessionId</span>, _: &amp;str) -&gt; bool {
+            <span class="rs-kw">false</span>
+        }
+</code></pre>
+</details></td></tr><tr id="method-teardown-255"><td>method</td><td>teardown</td><td><code>async fn <a class="symbol-link" href="eos-tools--src-hooks-require-no-background-sessions-rs.html#method-teardown-255">teardown</a> (&amp; self , _ : Option &lt; Arc &lt; dyn <a class="symbol-link" href="eos-tools--src-ports-mod-rs.html#item-trait-WorkflowControlPort-66">WorkflowControlPort</a> &gt; &gt; , _ : &amp; str ,) -&gt; <a class="symbol-link" href="eos-tools--src-ports-mod-rs.html#item-struct-RunningBackgroundTasks-217">RunningBackgroundTasks</a></code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>        <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-hooks-require-no-background-sessions-rs.html#method-teardown-255">teardown</a>(
+            &amp;<span class="rs-self">self</span>,
+            _: <span class="rs-type">Option</span>&lt;<span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <a class="symbol-link rs-type" href="eos-tools--src-ports-mod-rs.html#item-trait-WorkflowControlPort-66">WorkflowControlPort</a>&gt;&gt;,
+            _: &amp;str,
+        ) -&gt; <a class="symbol-link rs-type" href="eos-tools--src-ports-mod-rs.html#item-struct-RunningBackgroundTasks-217">RunningBackgroundTasks</a> {
+            unreachable!(&quot;not used by hook tests&quot;)
+        }
+</code></pre>
+</details></td></tr></tbody></table></details></div>
+
+  <p class="source">crates/eos-tools/src/hooks/require_no_background_sessions.rs:201</p>
+</article><article id="item-struct-OneOutstanding-264" class="type-card" data-kind="struct" data-kind-list="impl method struct type-model" data-filter-text="struct OneOutstanding private struct OneOutstanding crates/eos-tools/src/hooks/require_no_background_sessions.rs  ">
   <div class="item-head">
     <span class="kind">struct</span>
     <h3>OneOutstanding</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">struct OneOutstanding</code>
+  <code class="signature">struct <a class="symbol-link" href="eos-tools--src-hooks-require-no-background-sessions-rs.html#item-struct-OneOutstanding-264">OneOutstanding</a></code>
   <div class="tags"></div>
-  <h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl Sealed for OneOutstanding</code></summary><table><tbody></tbody></table></details><details><summary><code>impl WorkflowControlPort for OneOutstanding</code></summary><table><tbody><tr><td>method</td><td>start</td><td><code>async fn start (&amp; self , _ : &amp; TaskId , _ : &amp; AgentRunId , _ : &amp; str ,) -&gt; Result &lt; StartedWorkflowHandle , ToolError &gt;</code></td></tr><tr><td>method</td><td>status</td><td><code>async fn status (&amp; self , _ : &amp; WorkflowId , _ : Option &lt; &amp; WorkflowSessionId &gt; ,) -&gt; Result &lt; String , ToolError &gt;</code></td></tr><tr><td>method</td><td>cancel</td><td><code>async fn cancel (&amp; self , _ : &amp; WorkflowSessionId , _ : &amp; str) -&gt; Result &lt; String , ToolError &gt;</code></td></tr><tr><td>method</td><td>find_outstanding</td><td><code>async fn find_outstanding (&amp; self , _ : &amp; TaskId , _ : &amp; AgentRunId ,) -&gt; Result &lt; Vec &lt; OutstandingWorkflow &gt; , ToolError &gt;</code></td></tr><tr><td>method</td><td>workflow_depth</td><td><code>async fn workflow_depth (&amp; self , _ : &amp; WorkflowId) -&gt; Result &lt; u32 , ToolError &gt;</code></td></tr></tbody></table></details></div>
-  <p class="source">crates/eos-tools/src/hooks/require_no_background_sessions.rs:267</p>
-</article><div class="group-label">Standalone Functions</div><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn run_require_no_background_sessions pub(crate) pub(crate) async fn run_require_no_background_sessions (tool : ToolName , raw_input : &amp; JsonObject , ctx : &amp; ExecutionMetadata , services : &amp; HookServices ,) -&gt; Result &lt; HookOutcome , ToolError &gt; crates/eos-tools/src/hooks/require_no_background_sessions.rs  ">
+  <h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl <a class="symbol-link" href="eos-tools--src-ports-mod-rs.html#item-trait-Sealed-32">Sealed</a> for <a class="symbol-link" href="eos-tools--src-hooks-require-no-background-sessions-rs.html#item-struct-OneOutstanding-264">OneOutstanding</a></code></summary><table><tbody></tbody></table></details><details><summary><code>impl <a class="symbol-link" href="eos-tools--src-ports-mod-rs.html#item-trait-WorkflowControlPort-66">WorkflowControlPort</a> for <a class="symbol-link" href="eos-tools--src-hooks-require-no-background-sessions-rs.html#item-struct-OneOutstanding-264">OneOutstanding</a></code></summary><table><tbody><tr id="method-start-269"><td>method</td><td>start</td><td><code>async fn <a class="symbol-link" href="eos-tools--src-hooks-disallow-nested-planner-deferral-rs.html#method-start-65">start</a> (&amp; self , _ : &amp; TaskId , _ : &amp; AgentRunId , _ : &amp; str ,) -&gt; Result &lt; <a class="symbol-link" href="eos-tools--src-ports-mod-rs.html#item-struct-StartedWorkflowHandle-46">StartedWorkflowHandle</a> , <a class="symbol-link" href="eos-tools.html#item-enum-ToolError-16">ToolError</a> &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>        <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-hooks-disallow-nested-planner-deferral-rs.html#method-start-65">start</a>(
+            &amp;<span class="rs-self">self</span>,
+            _: &amp;<span class="rs-type">TaskId</span>,
+            _: &amp;<span class="rs-type">AgentRunId</span>,
+            _: &amp;str,
+        ) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-tools--src-ports-mod-rs.html#item-struct-StartedWorkflowHandle-46">StartedWorkflowHandle</a>, <a class="symbol-link rs-type" href="eos-tools.html#item-enum-ToolError-16">ToolError</a>&gt; {
+            unreachable!(&quot;deny short-circuits before start&quot;)
+        }
+</code></pre>
+</details></td></tr><tr id="method-status-278"><td>method</td><td>status</td><td><code>async fn <a class="symbol-link" href="eos-tools--src-hooks-disallow-nested-planner-deferral-rs.html#method-status-74">status</a> (&amp; self , _ : &amp; WorkflowId , _ : Option &lt; &amp; WorkflowSessionId &gt; ,) -&gt; Result &lt; String , <a class="symbol-link" href="eos-tools.html#item-enum-ToolError-16">ToolError</a> &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>        <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-hooks-disallow-nested-planner-deferral-rs.html#method-status-74">status</a>(
+            &amp;<span class="rs-self">self</span>,
+            _: &amp;<span class="rs-type">WorkflowId</span>,
+            _: <span class="rs-type">Option</span>&lt;&amp;<span class="rs-type">WorkflowSessionId</span>&gt;,
+        ) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">String</span>, <a class="symbol-link rs-type" href="eos-tools.html#item-enum-ToolError-16">ToolError</a>&gt; {
+            unreachable!()
+        }
+</code></pre>
+</details></td></tr><tr id="method-cancel-286"><td>method</td><td>cancel</td><td><code>async fn <a class="symbol-link" href="eos-tools--src-hooks-disallow-nested-planner-deferral-rs.html#method-cancel-82">cancel</a> (&amp; self , _ : &amp; WorkflowSessionId , _ : &amp; str) -&gt; Result &lt; String , <a class="symbol-link" href="eos-tools.html#item-enum-ToolError-16">ToolError</a> &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>        <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-hooks-disallow-nested-planner-deferral-rs.html#method-cancel-82">cancel</a>(&amp;<span class="rs-self">self</span>, _: &amp;<span class="rs-type">WorkflowSessionId</span>, _: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">String</span>, <a class="symbol-link rs-type" href="eos-tools.html#item-enum-ToolError-16">ToolError</a>&gt; {
+            unreachable!()
+        }
+</code></pre>
+</details></td></tr><tr id="method-find-outstanding-290"><td>method</td><td>find_outstanding</td><td><code>async fn <a class="symbol-link" href="eos-tools--src-hooks-disallow-nested-planner-deferral-rs.html#method-find-outstanding-86">find_outstanding</a> (&amp; self , _ : &amp; TaskId , _ : &amp; AgentRunId ,) -&gt; Result &lt; Vec &lt; <a class="symbol-link" href="eos-tools--src-ports-mod-rs.html#item-struct-OutstandingWorkflow-55">OutstandingWorkflow</a> &gt; , <a class="symbol-link" href="eos-tools.html#item-enum-ToolError-16">ToolError</a> &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>        <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-hooks-disallow-nested-planner-deferral-rs.html#method-find-outstanding-86">find_outstanding</a>(
+            &amp;<span class="rs-self">self</span>,
+            _: &amp;<span class="rs-type">TaskId</span>,
+            _: &amp;<span class="rs-type">AgentRunId</span>,
+        ) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;<a class="symbol-link rs-type" href="eos-tools--src-ports-mod-rs.html#item-struct-OutstandingWorkflow-55">OutstandingWorkflow</a>&gt;, <a class="symbol-link rs-type" href="eos-tools.html#item-enum-ToolError-16">ToolError</a>&gt; {
+            <span class="rs-type">Ok</span>(vec![<a class="symbol-link rs-type" href="eos-tools--src-ports-mod-rs.html#item-struct-OutstandingWorkflow-55">OutstandingWorkflow</a> {
+                workflow_id: <span class="rs-type">WorkflowId</span>::new_v4(),
+                workflow_task_id: <span class="rs-type">WorkflowSessionId</span>::new_v4(),
+                workflow_goal: &quot;prior goal&quot;.to_owned(),
+            }])
+        }
+</code></pre>
+</details></td></tr><tr id="method-workflow-depth-302"><td>method</td><td>workflow_depth</td><td><code>async fn <a class="symbol-link" href="eos-tools--src-hooks-disallow-nested-planner-deferral-rs.html#method-workflow-depth-94">workflow_depth</a> (&amp; self , _ : &amp; WorkflowId) -&gt; Result &lt; u32 , <a class="symbol-link" href="eos-tools.html#item-enum-ToolError-16">ToolError</a> &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>        <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-hooks-disallow-nested-planner-deferral-rs.html#method-workflow-depth-94">workflow_depth</a>(&amp;<span class="rs-self">self</span>, _: &amp;<span class="rs-type">WorkflowId</span>) -&gt; <span class="rs-type">Result</span>&lt;u32, <a class="symbol-link rs-type" href="eos-tools.html#item-enum-ToolError-16">ToolError</a>&gt; {
+            <span class="rs-type">Ok</span>(1)
+        }
+</code></pre>
+</details></td></tr></tbody></table></details></div>
+
+  <p class="source">crates/eos-tools/src/hooks/require_no_background_sessions.rs:264</p>
+</article><div class="group-label">Standalone Functions</div><article id="item-fn-run-require-no-background-sessions-64" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn run_require_no_background_sessions pub(crate) pub(crate) async fn run_require_no_background_sessions (tool : ToolName , raw_input : &amp; JsonObject , ctx : &amp; ExecutionMetadata , services : &amp; HookServices ,) -&gt; Result &lt; HookOutcome , ToolError &gt; crates/eos-tools/src/hooks/require_no_background_sessions.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>run_require_no_background_sessions</h3>
     <span class="visibility">pub(crate)</span>
   </div>
-  <code class="signature">pub(crate) async fn run_require_no_background_sessions (tool : ToolName , raw_input : &amp; JsonObject , ctx : &amp; ExecutionMetadata , services : &amp; HookServices ,) -&gt; Result &lt; HookOutcome , ToolError &gt;</code>
+  <code class="signature">pub(crate) async fn <a class="symbol-link" href="eos-tools--src-hooks-require-no-background-sessions-rs.html#item-fn-run-require-no-background-sessions-64">run_require_no_background_sessions</a> (tool : <a class="symbol-link" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a> , raw_input : &amp; JsonObject , ctx : &amp; <a class="symbol-link" href="eos-tools--src-core-metadata-rs.html#item-struct-ExecutionMetadata-17">ExecutionMetadata</a> , services : &amp; <a class="symbol-link" href="eos-tools--src-tools-services-rs.html#item-struct-HookServices-143">HookServices</a> ,) -&gt; Result &lt; <a class="symbol-link" href="eos-tools--src-hooks-mod-rs.html#item-enum-HookOutcome-77">HookOutcome</a> , <a class="symbol-link" href="eos-tools.html#item-enum-ToolError-16">ToolError</a> &gt;</code>
+  <p class="docstring">`RequireNoBackgroundSessions`: cancel subagents (or, for `enter_isolated_workspace`,<br>inspect) the agent run's in-flight subagents, deny on outstanding workflows, then<br>deny on daemon command sessions (fail-OPEN only for bailout submissions on a<br>daemon error). Invariant: no workflows, no subagents, and no command sessions.</p>
   <div class="tags"><span>async</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-comment">/// `RequireNoBackgroundSessions`: cancel subagents (or, for `enter_isolated_workspace`,</span>
+<span class="rs-comment">/// inspect) the agent run's in-flight subagents, deny on outstanding workflows, then</span>
+<span class="rs-comment">/// deny on daemon command sessions (fail-OPEN only for bailout submissions on a</span>
+<span class="rs-comment">/// daemon error). Invariant: no workflows, no subagents, and no command sessions.</span>
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-hooks-require-no-background-sessions-rs.html#item-fn-run-require-no-background-sessions-64">run_require_no_background_sessions</a>(
+    tool: <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>,
+    raw_input: &amp;<span class="rs-type">JsonObject</span>,
+    ctx: &amp;<a class="symbol-link rs-type" href="eos-tools--src-core-metadata-rs.html#item-struct-ExecutionMetadata-17">ExecutionMetadata</a>,
+    services: &amp;<a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-HookServices-143">HookServices</a>,
+) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-tools--src-hooks-mod-rs.html#item-enum-HookOutcome-77">HookOutcome</a>, <a class="symbol-link rs-type" href="eos-tools.html#item-enum-ToolError-16">ToolError</a>&gt; {
+    <span class="rs-kw">let</span> agent_run_id = ctx.<a class="symbol-link rs-fn" href="eos-tools--src-core-metadata-rs.html#method-require-agent-run-id-108">require_agent_run_id</a>()?;
+
+    <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(supervisor) = &amp;services.background_supervisor {
+        <span class="rs-comment">// Terminal/exit tools settle the agent's subagents to 0; enter_isolated</span>
+        <span class="rs-comment">// only inspects (reject). After cancellation `report.subagent == 0`, so</span>
+        <span class="rs-comment">// the deny below fires only on the reject path.</span>
+        <span class="rs-kw">let</span> report = <span class="rs-kw">if</span> <a class="symbol-link rs-fn" href="eos-tools--src-hooks-require-no-background-sessions-rs.html#item-fn-cancels-inflight-subagents-21">cancels_inflight_subagents</a>(tool) {
+            supervisor.<a class="symbol-link rs-fn" href="eos-tools--src-hooks-require-no-background-sessions-rs.html#method-cancel-subagents-240">cancel_subagents</a>().<span class="rs-kw">await</span>
+        } <span class="rs-kw">else</span> {
+            supervisor.<a class="symbol-link rs-fn" href="eos-tools--src-hooks-require-no-background-sessions-rs.html#method-running-background-tasks-236">running_background_tasks</a>().<span class="rs-kw">await</span>
+        };
+        <span class="rs-kw">if</span> report.subagents &gt; 0 {
+            <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-tools--src-hooks-mod-rs.html#item-enum-HookOutcome-77">HookOutcome</a>::<span class="rs-type">Deny</span>(
+                <a class="symbol-link rs-type" href="eos-tools--src-hooks-mod-rs.html#item-struct-HookDenial-95">HookDenial</a>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(
+                    <a class="symbol-link rs-fn" href="eos-tools--src-hooks-require-no-background-sessions-rs.html#item-fn-subagent-in-flight-message-48">subagent_in_flight_message</a>(report.subagents, tool),
+                    &quot;no_background_sessions&quot;,
+                )
+                .<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-with-reason-119">with_reason</a>(&quot;ephemeral_jobs_in_flight&quot;)
+                .<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-with-count-124">with_count</a>(report.subagents),
+            ));
+        }
+    }
+
+    <span class="rs-comment">// Workflow dimension: the supervisor tracks workflow handles, but persisted</span>
+    <span class="rs-comment">// workflow lifecycle remains authoritative here. Deny while a delegated</span>
+    <span class="rs-comment">// workflow is still open.</span>
+    <span class="rs-kw">if</span> <span class="rs-kw">let</span> (<span class="rs-type">Some</span>(control), <span class="rs-type">Some</span>(task_id)) = (&amp;services.workflow_control, &amp;ctx.task_id) {
+        <span class="rs-kw">let</span> outstanding = control.<a class="symbol-link rs-fn" href="eos-tools--src-hooks-disallow-nested-planner-deferral-rs.html#method-find-outstanding-86">find_outstanding</a>(task_id, agent_run_id).<span class="rs-kw">await</span>?;
+        <span class="rs-kw">if</span> !outstanding.<a class="symbol-link rs-fn" href="eos-tools--src-registry-tool-registry-rs.html#method-is-empty-96">is_empty</a>() {
+            <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-tools--src-hooks-mod-rs.html#item-enum-HookOutcome-77">HookOutcome</a>::<span class="rs-type">Deny</span>(
+                <a class="symbol-link rs-type" href="eos-tools--src-hooks-mod-rs.html#item-struct-HookDenial-95">HookDenial</a>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(
+                    format!(
+                        &quot;<span class="rs-type">BLOCKED</span>: {} delegated workflow(s) are still outstanding <span class="rs-kw">for</span> this agent run. \
+                         <span class="rs-type">Use</span> check_workflow_status to collect them or cancel_workflow to stop them \
+                         before calling {}, then retry.&quot;,
+                        outstanding.<a class="symbol-link rs-fn" href="eos-tools--src-registry-tool-registry-rs.html#method-len-90">len</a>(),
+                        tool.<a class="symbol-link rs-fn" href="eos-tools--src-core-intent-rs.html#method-as-str-42">as_str</a>()
+                    ),
+                    &quot;no_background_sessions&quot;,
+                )
+                .<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-with-reason-119">with_reason</a>(&quot;ephemeral_jobs_in_flight&quot;)
+                .<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-with-count-124">with_count</a>(outstanding.<a class="symbol-link rs-fn" href="eos-tools--src-registry-tool-registry-rs.html#method-len-90">len</a>()),
+            ));
+        }
+    }
+
+    <span class="rs-kw">let</span> sandbox_id = <span class="rs-kw">match</span> &amp;ctx.sandbox_id {
+        <span class="rs-type">Some</span>(id) =&gt; id,
+        <span class="rs-type">None</span> =&gt; <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-tools--src-hooks-mod-rs.html#item-enum-HookOutcome-77">HookOutcome</a>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-pass-89">pass</a>()),
+    };
+
+    <span class="rs-kw">let</span> <span class="rs-type">Some</span>(transport) = &amp;services.sandbox_transport <span class="rs-kw">else</span> {
+        <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-tools--src-hooks-mod-rs.html#item-enum-HookOutcome-77">HookOutcome</a>::<span class="rs-type">Deny</span>(
+            <a class="symbol-link rs-type" href="eos-tools--src-hooks-mod-rs.html#item-struct-HookDenial-95">HookDenial</a>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(
+                format!(
+                    &quot;<span class="rs-type">BLOCKED</span>: could not confirm background-task state from the sandbox daemon, \
+                     so {} is refused to avoid orphaning <span class="rs-kw">in</span>-flight work. <span class="rs-type">Retry</span> shortly.&quot;,
+                    tool.<a class="symbol-link rs-fn" href="eos-tools--src-core-intent-rs.html#method-as-str-42">as_str</a>()
+                ),
+                &quot;no_background_sessions&quot;,
+            )
+            .<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-with-reason-119">with_reason</a>(&quot;command_session_count_unavailable&quot;),
+        ));
+    };
+
+    <span class="rs-kw">let</span> daemon = <span class="rs-kw">match</span> eos_sandbox_port::command_session_count(
+        &amp;**transport,
+        sandbox_id,
+        agent_run_id.<a class="symbol-link rs-fn" href="eos-tools--src-core-intent-rs.html#method-as-str-42">as_str</a>(),
+    )
+    .<span class="rs-kw">await</span>
+    {
+        <span class="rs-type">Ok</span>(count) =&gt; count <span class="rs-kw">as</span> usize,
+        <span class="rs-type">Err</span>(_) =&gt; {
+            <span class="rs-kw">if</span> <a class="symbol-link rs-fn" href="eos-tools--src-hooks-require-no-background-sessions-rs.html#item-fn-is-bailout-submission-35">is_bailout_submission</a>(tool, raw_input) {
+                <span class="rs-comment">// Fail-OPEN: stamp the override reason in the pass-phase</span>
+                <span class="rs-comment">// metadata so the audit trail distinguishes a bailout from a</span>
+                <span class="rs-comment">// normal pass (Rust `daemon_unavailable_bailout`).</span>
+                <span class="rs-kw">let</span> <span class="rs-kw">mut</span> meta = <span class="rs-type">JsonObject</span>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>();
+                meta.insert(&quot;policy&quot;.to_owned(), json!(&quot;no_background_sessions&quot;));
+                meta.insert(&quot;reason&quot;.to_owned(), json!(&quot;daemon_unavailable_bailout&quot;));
+                <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-tools--src-hooks-mod-rs.html#item-enum-HookOutcome-77">HookOutcome</a>::<span class="rs-type">Pass</span>(meta));
+            }
+            <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-tools--src-hooks-mod-rs.html#item-enum-HookOutcome-77">HookOutcome</a>::<span class="rs-type">Deny</span>(
+                    <a class="symbol-link rs-type" href="eos-tools--src-hooks-mod-rs.html#item-struct-HookDenial-95">HookDenial</a>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(
+                        format!(
+                            &quot;<span class="rs-type">BLOCKED</span>: could not confirm background-task state from the sandbox daemon, \
+                             so {} is refused to avoid orphaning <span class="rs-kw">in</span>-flight work. <span class="rs-type">Retry</span> shortly.&quot;,
+                            tool.<a class="symbol-link rs-fn" href="eos-tools--src-core-intent-rs.html#method-as-str-42">as_str</a>()
+                        ),
+                        &quot;no_background_sessions&quot;,
+                    )
+                    .<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-with-reason-119">with_reason</a>(&quot;command_session_count_unavailable&quot;),
+                ));
+        }
+    };
+    <span class="rs-kw">if</span> daemon &gt; 0 {
+        <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-tools--src-hooks-mod-rs.html#item-enum-HookOutcome-77">HookOutcome</a>::<span class="rs-type">Deny</span>(
+            <a class="symbol-link rs-type" href="eos-tools--src-hooks-mod-rs.html#item-struct-HookDenial-95">HookDenial</a>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(
+                <a class="symbol-link rs-fn" href="eos-tools--src-hooks-require-no-background-sessions-rs.html#item-fn-command-session-in-flight-message-56">command_session_in_flight_message</a>(daemon, tool),
+                &quot;no_background_sessions&quot;,
+            )
+            .<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-with-reason-119">with_reason</a>(&quot;ephemeral_jobs_in_flight&quot;)
+            .<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-with-count-124">with_count</a>(daemon),
+        ));
+    }
+    <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-tools--src-hooks-mod-rs.html#item-enum-HookOutcome-77">HookOutcome</a>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-pass-89">pass</a>())
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-tools/src/hooks/require_no_background_sessions.rs:64</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn cancels_inflight_subagents private fn cancels_inflight_subagents (tool : ToolName) -&gt; bool crates/eos-tools/src/hooks/require_no_background_sessions.rs  ">
+</article><article id="item-fn-cancels-inflight-subagents-21" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn cancels_inflight_subagents private fn cancels_inflight_subagents (tool : ToolName) -&gt; bool crates/eos-tools/src/hooks/require_no_background_sessions.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>cancels_inflight_subagents</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn cancels_inflight_subagents (tool : ToolName) -&gt; bool</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-tools--src-hooks-require-no-background-sessions-rs.html#item-fn-cancels-inflight-subagents-21">cancels_inflight_subagents</a> (tool : <a class="symbol-link" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>) -&gt; bool</code>
+  <p class="docstring">Whether this protected tool **cancels** the agent's in-flight subagents (the<br>four terminals + `exit_isolated_workspace`) vs only inspects them<br>(`enter_isolated_workspace`, which keeps reject semantics).</p>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-comment">/// Whether this protected tool **cancels** the agent's in-flight subagents (the</span>
+<span class="rs-comment">/// four terminals + `exit_isolated_workspace`) vs only inspects them</span>
+<span class="rs-comment">/// (`enter_isolated_workspace`, which keeps reject semantics).</span>
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-hooks-require-no-background-sessions-rs.html#item-fn-cancels-inflight-subagents-21">cancels_inflight_subagents</a>(tool: <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>) -&gt; bool {
+    matches!(
+        tool,
+        <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-submission-root-submit-root-outcome-rs.html#item-struct-SubmitRootOutcome-31">SubmitRootOutcome</a>
+            | <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-submission-generator-submit-generator-outcome-rs.html#item-struct-SubmitGeneratorOutcome-24">SubmitGeneratorOutcome</a>
+            | <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-submission-reducer-submit-reducer-outcome-rs.html#item-struct-SubmitReducerOutcome-24">SubmitReducerOutcome</a>
+            | <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-submission-planner-submit-planner-outcome-rs.html#item-struct-SubmitPlannerOutcome-50">SubmitPlannerOutcome</a>
+            | <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-isolated-workspace-exit-isolated-workspace-rs.html#item-struct-ExitIsolatedWorkspace-35">ExitIsolatedWorkspace</a>
+    )
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-tools/src/hooks/require_no_background_sessions.rs:21</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn is_bailout_submission private fn is_bailout_submission (tool : ToolName , raw_input : &amp; JsonObject) -&gt; bool crates/eos-tools/src/hooks/require_no_background_sessions.rs  ">
+</article><article id="item-fn-is-bailout-submission-35" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn is_bailout_submission private fn is_bailout_submission (tool : ToolName , raw_input : &amp; JsonObject) -&gt; bool crates/eos-tools/src/hooks/require_no_background_sessions.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>is_bailout_submission</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn is_bailout_submission (tool : ToolName , raw_input : &amp; JsonObject) -&gt; bool</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-tools--src-hooks-require-no-background-sessions-rs.html#item-fn-is-bailout-submission-35">is_bailout_submission</a> (tool : <a class="symbol-link" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a> , raw_input : &amp; JsonObject) -&gt; bool</code>
+  <p class="docstring">Whether this submission is a "bailout" that fails-open on a daemon error<br>(Rust `_is_bailout_submission`).</p>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-comment">/// Whether this submission is a "bailout" that fails-open on a daemon error</span>
+<span class="rs-comment">/// (Rust `_is_bailout_submission`).</span>
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-hooks-require-no-background-sessions-rs.html#item-fn-is-bailout-submission-35">is_bailout_submission</a>(tool: <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>, raw_input: &amp;<span class="rs-type">JsonObject</span>) -&gt; bool {
+    <span class="rs-kw">match</span> tool {
+        <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-submission-planner-submit-planner-outcome-rs.html#item-struct-SubmitPlannerOutcome-50">SubmitPlannerOutcome</a> =&gt; <a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#item-fn-deferred-goal-365">deferred_goal</a>(raw_input).is_some(),
+        <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-submission-generator-submit-generator-outcome-rs.html#item-struct-SubmitGeneratorOutcome-24">SubmitGeneratorOutcome</a> | <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-submission-reducer-submit-reducer-outcome-rs.html#item-struct-SubmitReducerOutcome-24">SubmitReducerOutcome</a> =&gt; raw_input
+            .<a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#method-get-89">get</a>(&quot;status&quot;)
+            .and_then(<span class="rs-type">Value</span>::as_str)
+            .is_some_and(|s| s == &quot;failed&quot;),
+        _ =&gt; <span class="rs-kw">false</span>,
+    }
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-tools/src/hooks/require_no_background_sessions.rs:35</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn subagent_in_flight_message private fn subagent_in_flight_message (count : usize , tool : ToolName) -&gt; String crates/eos-tools/src/hooks/require_no_background_sessions.rs  ">
+</article><article id="item-fn-subagent-in-flight-message-48" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn subagent_in_flight_message private fn subagent_in_flight_message (count : usize , tool : ToolName) -&gt; String crates/eos-tools/src/hooks/require_no_background_sessions.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>subagent_in_flight_message</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn subagent_in_flight_message (count : usize , tool : ToolName) -&gt; String</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-tools--src-hooks-require-no-background-sessions-rs.html#item-fn-subagent-in-flight-message-48">subagent_in_flight_message</a> (count : usize , tool : <a class="symbol-link" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>) -&gt; String</code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-hooks-require-no-background-sessions-rs.html#item-fn-subagent-in-flight-message-48">subagent_in_flight_message</a>(count: usize, tool: <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>) -&gt; <span class="rs-type">String</span> {
+    format!(
+        &quot;<span class="rs-type">BLOCKED</span>: {count} subagent background task(s) are still <span class="rs-kw">in</span> flight <span class="rs-kw">for</span> this agent run. \
+         <span class="rs-type">Wait</span> <span class="rs-kw">for</span> them to finish or cancel them before calling {}, then retry.&quot;,
+        tool.<a class="symbol-link rs-fn" href="eos-tools--src-core-intent-rs.html#method-as-str-42">as_str</a>()
+    )
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-tools/src/hooks/require_no_background_sessions.rs:48</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn command_session_in_flight_message private fn command_session_in_flight_message (count : usize , tool : ToolName) -&gt; String crates/eos-tools/src/hooks/require_no_background_sessions.rs  ">
+</article><article id="item-fn-command-session-in-flight-message-56" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn command_session_in_flight_message private fn command_session_in_flight_message (count : usize , tool : ToolName) -&gt; String crates/eos-tools/src/hooks/require_no_background_sessions.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>command_session_in_flight_message</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn command_session_in_flight_message (count : usize , tool : ToolName) -&gt; String</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-tools--src-hooks-require-no-background-sessions-rs.html#item-fn-command-session-in-flight-message-56">command_session_in_flight_message</a> (count : usize , tool : <a class="symbol-link" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>) -&gt; String</code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-hooks-require-no-background-sessions-rs.html#item-fn-command-session-in-flight-message-56">command_session_in_flight_message</a>(count: usize, tool: <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>) -&gt; <span class="rs-type">String</span> {
+    format!(
+        &quot;<span class="rs-type">BLOCKED</span>: {count} command session background task(s) are still <span class="rs-kw">in</span> flight <span class="rs-kw">for</span> this agent run. \
+         <span class="rs-type">Finish</span> or interrupt active command sessions before calling {}, then retry.&quot;,
+        tool.<a class="symbol-link rs-fn" href="eos-tools--src-core-intent-rs.html#method-as-str-42">as_str</a>()
+    )
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-tools/src/hooks/require_no_background_sessions.rs:56</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn report private const fn report (subagent : usize , workflow : usize , command_session : usize ,) -&gt; BackgroundInflightReport crates/eos-tools/src/hooks/require_no_background_sessions.rs  ">
+</article><article id="item-fn-report-307" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn report private const fn report (subagents : usize , workflows : usize , command_sessions : usize ,) -&gt; RunningBackgroundTasks crates/eos-tools/src/hooks/require_no_background_sessions.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>report</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">const fn report (subagent : usize , workflow : usize , command_session : usize ,) -&gt; BackgroundInflightReport</code>
+  <code class="signature">const fn <a class="symbol-link" href="eos-tools--src-hooks-require-no-background-sessions-rs.html#item-fn-report-307">report</a> (subagents : usize , workflows : usize , command_sessions : usize ,) -&gt; <a class="symbol-link" href="eos-tools--src-ports-mod-rs.html#item-struct-RunningBackgroundTasks-217">RunningBackgroundTasks</a></code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-hooks-require-no-background-sessions-rs.html#item-fn-report-307">report</a>(
+        subagents: usize,
+        workflows: usize,
+        command_sessions: usize,
+    ) -&gt; <a class="symbol-link rs-type" href="eos-tools--src-ports-mod-rs.html#item-struct-RunningBackgroundTasks-217">RunningBackgroundTasks</a> {
+        <a class="symbol-link rs-type" href="eos-tools--src-ports-mod-rs.html#item-struct-RunningBackgroundTasks-217">RunningBackgroundTasks</a> {
+            total: subagents + workflows + command_sessions,
+            subagents,
+            workflows,
+            command_sessions,
+        }
+    }
+</code></pre>
+</details>
 
-  <p class="source">crates/eos-tools/src/hooks/require_no_background_sessions.rs:310</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn json_object private fn json_object (value : Value) -&gt; JsonObject crates/eos-tools/src/hooks/require_no_background_sessions.rs  ">
+  <p class="source">crates/eos-tools/src/hooks/require_no_background_sessions.rs:307</p>
+</article><article id="item-fn-json-object-320" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn json_object private fn json_object (value : Value) -&gt; JsonObject crates/eos-tools/src/hooks/require_no_background_sessions.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>json_object</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn json_object (value : Value) -&gt; JsonObject</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-tools--src-hooks-require-no-background-sessions-rs.html#item-fn-json-object-320">json_object</a> (value : Value) -&gt; JsonObject</code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-hooks-require-no-background-sessions-rs.html#item-fn-json-object-320">json_object</a>(value: <span class="rs-type">Value</span>) -&gt; <span class="rs-type">JsonObject</span> {
+        <span class="rs-kw">match</span> value {
+            <span class="rs-type">Value</span>::<span class="rs-type">Object</span>(object) =&gt; object,
+            _ =&gt; <span class="rs-type">JsonObject</span>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(),
+        }
+    }
+</code></pre>
+</details>
 
-  <p class="source">crates/eos-tools/src/hooks/require_no_background_sessions.rs:323</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn bind_agent_run private fn bind_agent_run (ctx : &amp; mut ExecutionMetadata) crates/eos-tools/src/hooks/require_no_background_sessions.rs  ">
+  <p class="source">crates/eos-tools/src/hooks/require_no_background_sessions.rs:320</p>
+</article><article id="item-fn-bind-agent-run-327" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn bind_agent_run private fn bind_agent_run (ctx : &amp; mut ExecutionMetadata) crates/eos-tools/src/hooks/require_no_background_sessions.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>bind_agent_run</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn bind_agent_run (ctx : &amp; mut ExecutionMetadata)</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-tools--src-hooks-require-no-background-sessions-rs.html#item-fn-bind-agent-run-327">bind_agent_run</a> (ctx : &amp; mut <a class="symbol-link" href="eos-tools--src-core-metadata-rs.html#item-struct-ExecutionMetadata-17">ExecutionMetadata</a>)</code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-hooks-require-no-background-sessions-rs.html#item-fn-bind-agent-run-327">bind_agent_run</a>(ctx: &amp;<span class="rs-kw">mut</span> <a class="symbol-link rs-type" href="eos-tools--src-core-metadata-rs.html#item-struct-ExecutionMetadata-17">ExecutionMetadata</a>) {
+        <span class="rs-kw">let</span> agent_run_id: <span class="rs-type">AgentRunId</span> = &quot;agent-run-test&quot;.parse().expect(&quot;agent run id&quot;);
+        ctx.agent_run_id = <span class="rs-type">Some</span>(agent_run_id);
+    }
+</code></pre>
+</details>
 
-  <p class="source">crates/eos-tools/src/hooks/require_no_background_sessions.rs:330</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn bailout_pass_carries_daemon_unavailable_reason private async fn bailout_pass_carries_daemon_unavailable_reason () crates/eos-tools/src/hooks/require_no_background_sessions.rs  ">
+  <p class="source">crates/eos-tools/src/hooks/require_no_background_sessions.rs:327</p>
+</article><article id="item-fn-bailout-pass-carries-daemon-unavailable-reason-335" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn bailout_pass_carries_daemon_unavailable_reason private async fn bailout_pass_carries_daemon_unavailable_reason () crates/eos-tools/src/hooks/require_no_background_sessions.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>bailout_pass_carries_daemon_unavailable_reason</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">async fn bailout_pass_carries_daemon_unavailable_reason ()</code>
-  <div class="tags"><span>async</span></div>
+  <code class="signature">async fn <a class="symbol-link" href="eos-tools--src-hooks-require-no-background-sessions-rs.html#item-fn-bailout-pass-carries-daemon-unavailable-reason-335">bailout_pass_carries_daemon_unavailable_reason</a> ()</code>
+  <div class="tags"><span>async</span><span>tokio::test</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[tokio::test]
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-hooks-require-no-background-sessions-rs.html#item-fn-bailout-pass-carries-daemon-unavailable-reason-335">bailout_pass_carries_daemon_unavailable_reason</a>() {
+        <span class="rs-kw">use</span> eos_sandbox_port::<span class="rs-type">SandboxPortError</span>;
 
-  <p class="source">crates/eos-tools/src/hooks/require_no_background_sessions.rs:338</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn outstanding_workflow_denies_terminal private async fn outstanding_workflow_denies_terminal () crates/eos-tools/src/hooks/require_no_background_sessions.rs  ">
+        <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::support::{metadata, <span class="rs-type">FakeTransport</span>};
+
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> ctx = metadata();
+        <a class="symbol-link rs-fn" href="eos-tools--src-hooks-require-no-background-sessions-rs.html#item-fn-bind-agent-run-327">bind_agent_run</a>(&amp;<span class="rs-kw">mut</span> ctx);
+        ctx.sandbox_id = <span class="rs-type">Some</span>(&quot;sandbox-1&quot;.parse().expect(&quot;sandbox id&quot;));
+        <span class="rs-comment">// Every daemon RPC (here, command_session_count) errors.</span>
+        <span class="rs-kw">let</span> services = <span class="rs-kw">crate</span>::tools::<a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-HookServices-143">HookServices</a>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(
+            <span class="rs-type">Some</span>(<span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(<span class="rs-type">FakeTransport</span>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(|_, _| {
+                <span class="rs-type">Err</span>(<span class="rs-type">SandboxPortError</span>::<span class="rs-type">Transport</span> {
+                    code: <span class="rs-type">None</span>,
+                    message: &quot;daemon down&quot;.to_owned(),
+                })
+            }))),
+            <span class="rs-type">None</span>,
+            <span class="rs-type">None</span>,
+        );
+
+        <span class="rs-comment">// A failed generator submission qualifies as a bailout.</span>
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> input = <span class="rs-type">JsonObject</span>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>();
+        input.insert(&quot;status&quot;.to_owned(), <span class="rs-type">Value</span>::<span class="rs-type">String</span>(&quot;failed&quot;.to_owned()));
+
+        <span class="rs-kw">let</span> outcome = <a class="symbol-link rs-fn" href="eos-tools--src-hooks-require-no-background-sessions-rs.html#item-fn-run-require-no-background-sessions-64">run_require_no_background_sessions</a>(
+            <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-submission-generator-submit-generator-outcome-rs.html#item-struct-SubmitGeneratorOutcome-24">SubmitGeneratorOutcome</a>,
+            &amp;input,
+            &amp;ctx,
+            &amp;services,
+        )
+        .<span class="rs-kw">await</span>
+        .expect(&quot;hook ran&quot;);
+        <span class="rs-kw">match</span> outcome {
+            <a class="symbol-link rs-type" href="eos-tools--src-hooks-mod-rs.html#item-enum-HookOutcome-77">HookOutcome</a>::<span class="rs-type">Pass</span>(meta) =&gt; {
+                assert_eq!(meta[&quot;reason&quot;], json!(&quot;daemon_unavailable_bailout&quot;));
+                assert_eq!(meta[&quot;policy&quot;], json!(&quot;no_background_sessions&quot;));
+            }
+            other =&gt; panic!(&quot;expected a bailout pass, got {other:?}&quot;),
+        }
+    }
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-tools/src/hooks/require_no_background_sessions.rs:335</p>
+</article><article id="item-fn-outstanding-workflow-denies-terminal-380" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn outstanding_workflow_denies_terminal private async fn outstanding_workflow_denies_terminal () crates/eos-tools/src/hooks/require_no_background_sessions.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>outstanding_workflow_denies_terminal</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">async fn outstanding_workflow_denies_terminal ()</code>
-  <div class="tags"><span>async</span></div>
+  <code class="signature">async fn <a class="symbol-link" href="eos-tools--src-hooks-require-no-background-sessions-rs.html#item-fn-outstanding-workflow-denies-terminal-380">outstanding_workflow_denies_terminal</a> ()</code>
+  <div class="tags"><span>async</span><span>tokio::test</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[tokio::test]
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-hooks-require-no-background-sessions-rs.html#item-fn-outstanding-workflow-denies-terminal-380">outstanding_workflow_denies_terminal</a>() {
+        <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::support::metadata;
 
-  <p class="source">crates/eos-tools/src/hooks/require_no_background_sessions.rs:383</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn enter_isolated_workspace_denies_inflight_subagents_without_cancelling private async fn enter_isolated_workspace_denies_inflight_subagents_without_cancelling () crates/eos-tools/src/hooks/require_no_background_sessions.rs  ">
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> ctx = metadata();
+        <a class="symbol-link rs-fn" href="eos-tools--src-hooks-require-no-background-sessions-rs.html#item-fn-bind-agent-run-327">bind_agent_run</a>(&amp;<span class="rs-kw">mut</span> ctx);
+        ctx.task_id = <span class="rs-type">Some</span>(&quot;parent&quot;.parse().expect(&quot;task id&quot;));
+        <span class="rs-kw">let</span> services = <span class="rs-kw">crate</span>::tools::<a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-HookServices-143">HookServices</a>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(<span class="rs-type">None</span>, <span class="rs-type">Some</span>(<span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(<a class="symbol-link rs-type" href="eos-tools--src-hooks-require-no-background-sessions-rs.html#item-struct-OneOutstanding-264">OneOutstanding</a>)), <span class="rs-type">None</span>);
+
+        <span class="rs-kw">let</span> outcome = <a class="symbol-link rs-fn" href="eos-tools--src-hooks-require-no-background-sessions-rs.html#item-fn-run-require-no-background-sessions-64">run_require_no_background_sessions</a>(
+            <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-submission-root-submit-root-outcome-rs.html#item-struct-SubmitRootOutcome-31">SubmitRootOutcome</a>,
+            &amp;<span class="rs-type">JsonObject</span>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(),
+            &amp;ctx,
+            &amp;services,
+        )
+        .<span class="rs-kw">await</span>
+        .expect(&quot;hook ran&quot;);
+        <span class="rs-kw">match</span> outcome {
+            <a class="symbol-link rs-type" href="eos-tools--src-hooks-mod-rs.html#item-enum-HookOutcome-77">HookOutcome</a>::<span class="rs-type">Deny</span>(denial) =&gt; {
+                assert!(
+                    denial.message.contains(&quot;delegated workflow&quot;),
+                    &quot;{}&quot;,
+                    denial.message
+                );
+                assert_eq!(denial.extra.<a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#method-get-89">get</a>(&quot;count&quot;).and_then(<span class="rs-type">Value</span>::as_u64), <span class="rs-type">Some</span>(1));
+            }
+            other =&gt; panic!(&quot;expected a workflow deny, got {other:?}&quot;),
+        }
+    }
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-tools/src/hooks/require_no_background_sessions.rs:380</p>
+</article><article id="item-fn-enter-isolated-workspace-denies-inflight-subagents-without-cancelling-410" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn enter_isolated_workspace_denies_inflight_subagents_without_cancelling private async fn enter_isolated_workspace_denies_inflight_subagents_without_cancelling () crates/eos-tools/src/hooks/require_no_background_sessions.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>enter_isolated_workspace_denies_inflight_subagents_without_cancelling</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">async fn enter_isolated_workspace_denies_inflight_subagents_without_cancelling ()</code>
-  <div class="tags"><span>async</span></div>
+  <code class="signature">async fn <a class="symbol-link" href="eos-tools--src-hooks-require-no-background-sessions-rs.html#item-fn-enter-isolated-workspace-denies-inflight-subagents-without-cancelling-410">enter_isolated_workspace_denies_inflight_subagents_without_cancelling</a> ()</code>
+  <div class="tags"><span>async</span><span>tokio::test</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[tokio::test]
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-hooks-require-no-background-sessions-rs.html#item-fn-enter-isolated-workspace-denies-inflight-subagents-without-cancelling-410">enter_isolated_workspace_denies_inflight_subagents_without_cancelling</a>() {
+        <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::support::metadata;
 
-  <p class="source">crates/eos-tools/src/hooks/require_no_background_sessions.rs:413</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn enter_isolated_workspace_denies_outstanding_workflows private async fn enter_isolated_workspace_denies_outstanding_workflows () crates/eos-tools/src/hooks/require_no_background_sessions.rs  ">
+        <span class="rs-kw">let</span> supervisor = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(<a class="symbol-link rs-type" href="eos-tools--src-hooks-require-no-background-sessions-rs.html#item-struct-ReportSupervisor-201">ReportSupervisor</a>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(<a class="symbol-link rs-fn" href="eos-tools--src-hooks-require-no-background-sessions-rs.html#item-fn-report-307">report</a>(1, 0, 0)));
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> ctx = metadata();
+        <a class="symbol-link rs-fn" href="eos-tools--src-hooks-require-no-background-sessions-rs.html#item-fn-bind-agent-run-327">bind_agent_run</a>(&amp;<span class="rs-kw">mut</span> ctx);
+        <span class="rs-kw">let</span> services = <span class="rs-kw">crate</span>::tools::<a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-HookServices-143">HookServices</a>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(<span class="rs-type">None</span>, <span class="rs-type">None</span>, <span class="rs-type">Some</span>(supervisor.clone()));
+
+        <span class="rs-kw">let</span> outcome = <a class="symbol-link rs-fn" href="eos-tools--src-hooks-require-no-background-sessions-rs.html#item-fn-run-require-no-background-sessions-64">run_require_no_background_sessions</a>(
+            <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-isolated-workspace-enter-isolated-workspace-rs.html#item-struct-EnterIsolatedWorkspace-30">EnterIsolatedWorkspace</a>,
+            &amp;<span class="rs-type">JsonObject</span>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(),
+            &amp;ctx,
+            &amp;services,
+        )
+        .<span class="rs-kw">await</span>
+        .expect(&quot;hook ran&quot;);
+
+        <span class="rs-kw">match</span> outcome {
+            <a class="symbol-link rs-type" href="eos-tools--src-hooks-mod-rs.html#item-enum-HookOutcome-77">HookOutcome</a>::<span class="rs-type">Deny</span>(denial) =&gt; {
+                assert!(denial.message.contains(&quot;subagent&quot;), &quot;{}&quot;, denial.message);
+                assert_eq!(denial.reason.as_deref(), <span class="rs-type">Some</span>(&quot;ephemeral_jobs_in_flight&quot;));
+                assert_eq!(denial.extra.<a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#method-get-89">get</a>(&quot;count&quot;).and_then(<span class="rs-type">Value</span>::as_u64), <span class="rs-type">Some</span>(1));
+            }
+            other =&gt; panic!(&quot;expected a subagent deny, got {other:?}&quot;),
+        }
+        assert!(
+            !supervisor.cancel_called.load(<span class="rs-type">Ordering</span>::<span class="rs-type">Relaxed</span>),
+            &quot;enter must inspect, not cancel, subagents&quot;
+        );
+    }
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-tools/src/hooks/require_no_background_sessions.rs:410</p>
+</article><article id="item-fn-enter-isolated-workspace-denies-outstanding-workflows-442" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn enter_isolated_workspace_denies_outstanding_workflows private async fn enter_isolated_workspace_denies_outstanding_workflows () crates/eos-tools/src/hooks/require_no_background_sessions.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>enter_isolated_workspace_denies_outstanding_workflows</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">async fn enter_isolated_workspace_denies_outstanding_workflows ()</code>
-  <div class="tags"><span>async</span></div>
+  <code class="signature">async fn <a class="symbol-link" href="eos-tools--src-hooks-require-no-background-sessions-rs.html#item-fn-enter-isolated-workspace-denies-outstanding-workflows-442">enter_isolated_workspace_denies_outstanding_workflows</a> ()</code>
+  <div class="tags"><span>async</span><span>tokio::test</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[tokio::test]
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-hooks-require-no-background-sessions-rs.html#item-fn-enter-isolated-workspace-denies-outstanding-workflows-442">enter_isolated_workspace_denies_outstanding_workflows</a>() {
+        <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::support::metadata;
 
-  <p class="source">crates/eos-tools/src/hooks/require_no_background_sessions.rs:445</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn enter_isolated_workspace_denies_daemon_command_sessions private async fn enter_isolated_workspace_denies_daemon_command_sessions () crates/eos-tools/src/hooks/require_no_background_sessions.rs  ">
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> ctx = metadata();
+        <a class="symbol-link rs-fn" href="eos-tools--src-hooks-require-no-background-sessions-rs.html#item-fn-bind-agent-run-327">bind_agent_run</a>(&amp;<span class="rs-kw">mut</span> ctx);
+        ctx.task_id = <span class="rs-type">Some</span>(&quot;parent&quot;.parse().expect(&quot;task id&quot;));
+        <span class="rs-kw">let</span> services = <span class="rs-kw">crate</span>::tools::<a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-HookServices-143">HookServices</a>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(<span class="rs-type">None</span>, <span class="rs-type">Some</span>(<span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(<a class="symbol-link rs-type" href="eos-tools--src-hooks-require-no-background-sessions-rs.html#item-struct-OneOutstanding-264">OneOutstanding</a>)), <span class="rs-type">None</span>);
+
+        <span class="rs-kw">let</span> outcome = <a class="symbol-link rs-fn" href="eos-tools--src-hooks-require-no-background-sessions-rs.html#item-fn-run-require-no-background-sessions-64">run_require_no_background_sessions</a>(
+            <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-isolated-workspace-enter-isolated-workspace-rs.html#item-struct-EnterIsolatedWorkspace-30">EnterIsolatedWorkspace</a>,
+            &amp;<span class="rs-type">JsonObject</span>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(),
+            &amp;ctx,
+            &amp;services,
+        )
+        .<span class="rs-kw">await</span>
+        .expect(&quot;hook ran&quot;);
+
+        <span class="rs-kw">match</span> outcome {
+            <a class="symbol-link rs-type" href="eos-tools--src-hooks-mod-rs.html#item-enum-HookOutcome-77">HookOutcome</a>::<span class="rs-type">Deny</span>(denial) =&gt; {
+                assert!(
+                    denial.message.contains(&quot;delegated workflow&quot;),
+                    &quot;{}&quot;,
+                    denial.message
+                );
+                assert_eq!(denial.reason.as_deref(), <span class="rs-type">Some</span>(&quot;ephemeral_jobs_in_flight&quot;));
+                assert_eq!(denial.extra.<a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#method-get-89">get</a>(&quot;count&quot;).and_then(<span class="rs-type">Value</span>::as_u64), <span class="rs-type">Some</span>(1));
+            }
+            other =&gt; panic!(&quot;expected a workflow deny, got {other:?}&quot;),
+        }
+    }
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-tools/src/hooks/require_no_background_sessions.rs:442</p>
+</article><article id="item-fn-enter-isolated-workspace-denies-daemon-command-sessions-474" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn enter_isolated_workspace_denies_daemon_command_sessions private async fn enter_isolated_workspace_denies_daemon_command_sessions () crates/eos-tools/src/hooks/require_no_background_sessions.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>enter_isolated_workspace_denies_daemon_command_sessions</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">async fn enter_isolated_workspace_denies_daemon_command_sessions ()</code>
-  <div class="tags"><span>async</span></div>
+  <code class="signature">async fn <a class="symbol-link" href="eos-tools--src-hooks-require-no-background-sessions-rs.html#item-fn-enter-isolated-workspace-denies-daemon-command-sessions-474">enter_isolated_workspace_denies_daemon_command_sessions</a> ()</code>
+  <div class="tags"><span>async</span><span>tokio::test</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[tokio::test]
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-hooks-require-no-background-sessions-rs.html#item-fn-enter-isolated-workspace-denies-daemon-command-sessions-474">enter_isolated_workspace_denies_daemon_command_sessions</a>() {
+        <span class="rs-kw">use</span> eos_sandbox_port::<span class="rs-type">DaemonOp</span>;
 
-  <p class="source">crates/eos-tools/src/hooks/require_no_background_sessions.rs:477</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn exit_isolated_workspace_cancels_subagents_then_denies_command_sessions private async fn exit_isolated_workspace_cancels_subagents_then_denies_command_sessions () crates/eos-tools/src/hooks/require_no_background_sessions.rs  ">
+        <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::support::{metadata, <span class="rs-type">FakeTransport</span>};
+
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> ctx = metadata();
+        <a class="symbol-link rs-fn" href="eos-tools--src-hooks-require-no-background-sessions-rs.html#item-fn-bind-agent-run-327">bind_agent_run</a>(&amp;<span class="rs-kw">mut</span> ctx);
+        ctx.sandbox_id = <span class="rs-type">Some</span>(&quot;sandbox-1&quot;.parse().expect(&quot;sandbox id&quot;));
+        <span class="rs-kw">let</span> services = <span class="rs-kw">crate</span>::tools::<a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-HookServices-143">HookServices</a>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(
+            <span class="rs-type">Some</span>(<span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(<span class="rs-type">FakeTransport</span>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(|op, _| <span class="rs-kw">match</span> op {
+                <span class="rs-type">DaemonOp</span>::<span class="rs-type">CommandSessionCount</span> =&gt; <span class="rs-type">Ok</span>(<a class="symbol-link rs-fn" href="eos-tools--src-hooks-require-no-background-sessions-rs.html#item-fn-json-object-320">json_object</a>(json!({&quot;count&quot;: 2}))),
+                _ =&gt; <span class="rs-type">Ok</span>(<span class="rs-type">JsonObject</span>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>()),
+            }))),
+            <span class="rs-type">None</span>,
+            <span class="rs-type">None</span>,
+        );
+
+        <span class="rs-kw">let</span> outcome = <a class="symbol-link rs-fn" href="eos-tools--src-hooks-require-no-background-sessions-rs.html#item-fn-run-require-no-background-sessions-64">run_require_no_background_sessions</a>(
+            <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-isolated-workspace-enter-isolated-workspace-rs.html#item-struct-EnterIsolatedWorkspace-30">EnterIsolatedWorkspace</a>,
+            &amp;<span class="rs-type">JsonObject</span>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(),
+            &amp;ctx,
+            &amp;services,
+        )
+        .<span class="rs-kw">await</span>
+        .expect(&quot;hook ran&quot;);
+
+        <span class="rs-kw">match</span> outcome {
+            <a class="symbol-link rs-type" href="eos-tools--src-hooks-mod-rs.html#item-enum-HookOutcome-77">HookOutcome</a>::<span class="rs-type">Deny</span>(denial) =&gt; {
+                assert!(
+                    denial.message.contains(&quot;command session&quot;),
+                    &quot;{}&quot;,
+                    denial.message
+                );
+                assert_eq!(denial.reason.as_deref(), <span class="rs-type">Some</span>(&quot;ephemeral_jobs_in_flight&quot;));
+                assert_eq!(denial.extra.<a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#method-get-89">get</a>(&quot;count&quot;).and_then(<span class="rs-type">Value</span>::as_u64), <span class="rs-type">Some</span>(2));
+            }
+            other =&gt; panic!(&quot;expected a command-session deny, got {other:?}&quot;),
+        }
+    }
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-tools/src/hooks/require_no_background_sessions.rs:474</p>
+</article><article id="item-fn-exit-isolated-workspace-cancels-subagents-then-denies-command-sessions-515" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn exit_isolated_workspace_cancels_subagents_then_denies_command_sessions private async fn exit_isolated_workspace_cancels_subagents_then_denies_command_sessions () crates/eos-tools/src/hooks/require_no_background_sessions.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>exit_isolated_workspace_cancels_subagents_then_denies_command_sessions</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">async fn exit_isolated_workspace_cancels_subagents_then_denies_command_sessions ()</code>
-  <div class="tags"><span>async</span></div>
+  <code class="signature">async fn <a class="symbol-link" href="eos-tools--src-hooks-require-no-background-sessions-rs.html#item-fn-exit-isolated-workspace-cancels-subagents-then-denies-command-sessions-515">exit_isolated_workspace_cancels_subagents_then_denies_command_sessions</a> ()</code>
+  <div class="tags"><span>async</span><span>tokio::test</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[tokio::test]
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-hooks-require-no-background-sessions-rs.html#item-fn-exit-isolated-workspace-cancels-subagents-then-denies-command-sessions-515">exit_isolated_workspace_cancels_subagents_then_denies_command_sessions</a>() {
+        <span class="rs-kw">use</span> eos_sandbox_port::<span class="rs-type">DaemonOp</span>;
 
-  <p class="source">crates/eos-tools/src/hooks/require_no_background_sessions.rs:518</p>
+        <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::support::{metadata, <span class="rs-type">FakeTransport</span>};
+
+        <span class="rs-kw">let</span> supervisor = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(<a class="symbol-link rs-type" href="eos-tools--src-hooks-require-no-background-sessions-rs.html#item-struct-ReportSupervisor-201">ReportSupervisor</a>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(<a class="symbol-link rs-fn" href="eos-tools--src-hooks-require-no-background-sessions-rs.html#item-fn-report-307">report</a>(3, 0, 0)));
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> ctx = metadata();
+        <a class="symbol-link rs-fn" href="eos-tools--src-hooks-require-no-background-sessions-rs.html#item-fn-bind-agent-run-327">bind_agent_run</a>(&amp;<span class="rs-kw">mut</span> ctx);
+        ctx.sandbox_id = <span class="rs-type">Some</span>(&quot;sandbox-1&quot;.parse().expect(&quot;sandbox id&quot;));
+        <span class="rs-kw">let</span> services = <span class="rs-kw">crate</span>::tools::<a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-HookServices-143">HookServices</a>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(
+            <span class="rs-type">Some</span>(<span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(<span class="rs-type">FakeTransport</span>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(|op, _| <span class="rs-kw">match</span> op {
+                <span class="rs-type">DaemonOp</span>::<span class="rs-type">CommandSessionCount</span> =&gt; <span class="rs-type">Ok</span>(<a class="symbol-link rs-fn" href="eos-tools--src-hooks-require-no-background-sessions-rs.html#item-fn-json-object-320">json_object</a>(json!({&quot;count&quot;: 1}))),
+                _ =&gt; <span class="rs-type">Ok</span>(<span class="rs-type">JsonObject</span>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>()),
+            }))),
+            <span class="rs-type">None</span>,
+            <span class="rs-type">Some</span>(supervisor.clone()),
+        );
+
+        <span class="rs-kw">let</span> outcome = <a class="symbol-link rs-fn" href="eos-tools--src-hooks-require-no-background-sessions-rs.html#item-fn-run-require-no-background-sessions-64">run_require_no_background_sessions</a>(
+            <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-isolated-workspace-exit-isolated-workspace-rs.html#item-struct-ExitIsolatedWorkspace-35">ExitIsolatedWorkspace</a>,
+            &amp;<span class="rs-type">JsonObject</span>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(),
+            &amp;ctx,
+            &amp;services,
+        )
+        .<span class="rs-kw">await</span>
+        .expect(&quot;hook ran&quot;);
+
+        assert!(
+            supervisor.cancel_called.load(<span class="rs-type">Ordering</span>::<span class="rs-type">Relaxed</span>),
+            &quot;exit should settle subagent records before checking daemon sessions&quot;
+        );
+        <span class="rs-kw">match</span> outcome {
+            <a class="symbol-link rs-type" href="eos-tools--src-hooks-mod-rs.html#item-enum-HookOutcome-77">HookOutcome</a>::<span class="rs-type">Deny</span>(denial) =&gt; {
+                assert!(
+                    denial.message.contains(&quot;command session&quot;),
+                    &quot;{}&quot;,
+                    denial.message
+                );
+                assert_eq!(denial.reason.as_deref(), <span class="rs-type">Some</span>(&quot;ephemeral_jobs_in_flight&quot;));
+                assert_eq!(denial.extra.<a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#method-get-89">get</a>(&quot;count&quot;).and_then(<span class="rs-type">Value</span>::as_u64), <span class="rs-type">Some</span>(1));
+            }
+            other =&gt; panic!(&quot;expected a command-session deny, got {other:?}&quot;),
+        }
+    }
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-tools/src/hooks/require_no_background_sessions.rs:515</p>
 </article></div>
 </section></div>
 </main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/eos-tools/src/hooks/require_no_background_sessions.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-comment">//! `RequireNoBackgroundSessions` is the agent-facing isolated/terminal guard for</span>
+<span class="rs-comment">//! every background lane: outstanding delegated workflows, in-flight subagents,</span>
+<span class="rs-comment">//! and daemon-visible command sessions.</span>
+<span class="rs-comment">//!</span>
+<span class="rs-comment">//! Terminal tools and `exit_isolated_workspace` settle in-process subagent</span>
+<span class="rs-comment">//! records before checking the remaining lanes. `enter_isolated_workspace`</span>
+<span class="rs-comment">//! remains inspect-only. Workflows stay owned by persisted workflow state via</span>
+<span class="rs-comment">//! [`WorkflowControlPort::find_outstanding`], and command sessions stay owned by</span>
+<span class="rs-comment">//! the sandbox daemon via `api.v1.command_session_count`.</span>
+
+<span class="rs-kw">use</span> eos_types::<span class="rs-type">JsonObject</span>;
+<span class="rs-kw">use</span> serde_json::{json, <span class="rs-type">Value</span>};
+
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::core::error::<a class="symbol-link rs-type" href="eos-tools.html#item-enum-ToolError-16">ToolError</a>;
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::core::metadata::<a class="symbol-link rs-type" href="eos-tools--src-core-metadata-rs.html#item-struct-ExecutionMetadata-17">ExecutionMetadata</a>;
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::core::name::<a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>;
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::tools::<a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-HookServices-143">HookServices</a>;
+
+<span class="rs-kw">use</span> <span class="rs-kw">super</span>::{deferred_goal, <a class="symbol-link rs-type" href="eos-tools--src-hooks-mod-rs.html#item-struct-HookDenial-95">HookDenial</a>, <a class="symbol-link rs-type" href="eos-tools--src-hooks-mod-rs.html#item-enum-HookOutcome-77">HookOutcome</a>};
+
+<span class="rs-comment">/// Whether this protected tool **cancels** the agent's in-flight subagents (the</span>
+<span class="rs-comment">/// four terminals + `exit_isolated_workspace`) vs only inspects them</span>
+<span class="rs-comment">/// (`enter_isolated_workspace`, which keeps reject semantics).</span>
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-hooks-require-no-background-sessions-rs.html#item-fn-cancels-inflight-subagents-21">cancels_inflight_subagents</a>(tool: <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>) -&gt; bool {
+    matches!(
+        tool,
+        <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-submission-root-submit-root-outcome-rs.html#item-struct-SubmitRootOutcome-31">SubmitRootOutcome</a>
+            | <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-submission-generator-submit-generator-outcome-rs.html#item-struct-SubmitGeneratorOutcome-24">SubmitGeneratorOutcome</a>
+            | <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-submission-reducer-submit-reducer-outcome-rs.html#item-struct-SubmitReducerOutcome-24">SubmitReducerOutcome</a>
+            | <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-submission-planner-submit-planner-outcome-rs.html#item-struct-SubmitPlannerOutcome-50">SubmitPlannerOutcome</a>
+            | <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-isolated-workspace-exit-isolated-workspace-rs.html#item-struct-ExitIsolatedWorkspace-35">ExitIsolatedWorkspace</a>
+    )
+}
+
+<span class="rs-comment">/// Whether this submission is a "bailout" that fails-open on a daemon error</span>
+<span class="rs-comment">/// (Rust `_is_bailout_submission`).</span>
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-hooks-require-no-background-sessions-rs.html#item-fn-is-bailout-submission-35">is_bailout_submission</a>(tool: <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>, raw_input: &amp;<span class="rs-type">JsonObject</span>) -&gt; bool {
+    <span class="rs-kw">match</span> tool {
+        <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-submission-planner-submit-planner-outcome-rs.html#item-struct-SubmitPlannerOutcome-50">SubmitPlannerOutcome</a> =&gt; <a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#item-fn-deferred-goal-365">deferred_goal</a>(raw_input).is_some(),
+        <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-submission-generator-submit-generator-outcome-rs.html#item-struct-SubmitGeneratorOutcome-24">SubmitGeneratorOutcome</a> | <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-submission-reducer-submit-reducer-outcome-rs.html#item-struct-SubmitReducerOutcome-24">SubmitReducerOutcome</a> =&gt; raw_input
+            .<a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#method-get-89">get</a>(&quot;status&quot;)
+            .and_then(<span class="rs-type">Value</span>::as_str)
+            .is_some_and(|s| s == &quot;failed&quot;),
+        _ =&gt; <span class="rs-kw">false</span>,
+    }
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-hooks-require-no-background-sessions-rs.html#item-fn-subagent-in-flight-message-48">subagent_in_flight_message</a>(count: usize, tool: <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>) -&gt; <span class="rs-type">String</span> {
+    format!(
+        &quot;<span class="rs-type">BLOCKED</span>: {count} subagent background task(s) are still <span class="rs-kw">in</span> flight <span class="rs-kw">for</span> this agent run. \
+         <span class="rs-type">Wait</span> <span class="rs-kw">for</span> them to finish or cancel them before calling {}, then retry.&quot;,
+        tool.<a class="symbol-link rs-fn" href="eos-tools--src-core-intent-rs.html#method-as-str-42">as_str</a>()
+    )
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-hooks-require-no-background-sessions-rs.html#item-fn-command-session-in-flight-message-56">command_session_in_flight_message</a>(count: usize, tool: <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>) -&gt; <span class="rs-type">String</span> {
+    format!(
+        &quot;<span class="rs-type">BLOCKED</span>: {count} command session background task(s) are still <span class="rs-kw">in</span> flight <span class="rs-kw">for</span> this agent run. \
+         <span class="rs-type">Finish</span> or interrupt active command sessions before calling {}, then retry.&quot;,
+        tool.<a class="symbol-link rs-fn" href="eos-tools--src-core-intent-rs.html#method-as-str-42">as_str</a>()
+    )
+}
+
+<span class="rs-comment">/// `RequireNoBackgroundSessions`: cancel subagents (or, for `enter_isolated_workspace`,</span>
+<span class="rs-comment">/// inspect) the agent run's in-flight subagents, deny on outstanding workflows, then</span>
+<span class="rs-comment">/// deny on daemon command sessions (fail-OPEN only for bailout submissions on a</span>
+<span class="rs-comment">/// daemon error). Invariant: no workflows, no subagents, and no command sessions.</span>
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-hooks-require-no-background-sessions-rs.html#item-fn-run-require-no-background-sessions-64">run_require_no_background_sessions</a>(
+    tool: <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>,
+    raw_input: &amp;<span class="rs-type">JsonObject</span>,
+    ctx: &amp;<a class="symbol-link rs-type" href="eos-tools--src-core-metadata-rs.html#item-struct-ExecutionMetadata-17">ExecutionMetadata</a>,
+    services: &amp;<a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-HookServices-143">HookServices</a>,
+) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-tools--src-hooks-mod-rs.html#item-enum-HookOutcome-77">HookOutcome</a>, <a class="symbol-link rs-type" href="eos-tools.html#item-enum-ToolError-16">ToolError</a>&gt; {
+    <span class="rs-kw">let</span> agent_run_id = ctx.<a class="symbol-link rs-fn" href="eos-tools--src-core-metadata-rs.html#method-require-agent-run-id-108">require_agent_run_id</a>()?;
+
+    <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(supervisor) = &amp;services.background_supervisor {
+        <span class="rs-comment">// Terminal/exit tools settle the agent's subagents to 0; enter_isolated</span>
+        <span class="rs-comment">// only inspects (reject). After cancellation `report.subagent == 0`, so</span>
+        <span class="rs-comment">// the deny below fires only on the reject path.</span>
+        <span class="rs-kw">let</span> report = <span class="rs-kw">if</span> <a class="symbol-link rs-fn" href="eos-tools--src-hooks-require-no-background-sessions-rs.html#item-fn-cancels-inflight-subagents-21">cancels_inflight_subagents</a>(tool) {
+            supervisor.<a class="symbol-link rs-fn" href="eos-tools--src-hooks-require-no-background-sessions-rs.html#method-cancel-subagents-240">cancel_subagents</a>().<span class="rs-kw">await</span>
+        } <span class="rs-kw">else</span> {
+            supervisor.<a class="symbol-link rs-fn" href="eos-tools--src-hooks-require-no-background-sessions-rs.html#method-running-background-tasks-236">running_background_tasks</a>().<span class="rs-kw">await</span>
+        };
+        <span class="rs-kw">if</span> report.subagents &gt; 0 {
+            <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-tools--src-hooks-mod-rs.html#item-enum-HookOutcome-77">HookOutcome</a>::<span class="rs-type">Deny</span>(
+                <a class="symbol-link rs-type" href="eos-tools--src-hooks-mod-rs.html#item-struct-HookDenial-95">HookDenial</a>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(
+                    <a class="symbol-link rs-fn" href="eos-tools--src-hooks-require-no-background-sessions-rs.html#item-fn-subagent-in-flight-message-48">subagent_in_flight_message</a>(report.subagents, tool),
+                    &quot;no_background_sessions&quot;,
+                )
+                .<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-with-reason-119">with_reason</a>(&quot;ephemeral_jobs_in_flight&quot;)
+                .<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-with-count-124">with_count</a>(report.subagents),
+            ));
+        }
+    }
+
+    <span class="rs-comment">// Workflow dimension: the supervisor tracks workflow handles, but persisted</span>
+    <span class="rs-comment">// workflow lifecycle remains authoritative here. Deny while a delegated</span>
+    <span class="rs-comment">// workflow is still open.</span>
+    <span class="rs-kw">if</span> <span class="rs-kw">let</span> (<span class="rs-type">Some</span>(control), <span class="rs-type">Some</span>(task_id)) = (&amp;services.workflow_control, &amp;ctx.task_id) {
+        <span class="rs-kw">let</span> outstanding = control.<a class="symbol-link rs-fn" href="eos-tools--src-hooks-disallow-nested-planner-deferral-rs.html#method-find-outstanding-86">find_outstanding</a>(task_id, agent_run_id).<span class="rs-kw">await</span>?;
+        <span class="rs-kw">if</span> !outstanding.<a class="symbol-link rs-fn" href="eos-tools--src-registry-tool-registry-rs.html#method-is-empty-96">is_empty</a>() {
+            <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-tools--src-hooks-mod-rs.html#item-enum-HookOutcome-77">HookOutcome</a>::<span class="rs-type">Deny</span>(
+                <a class="symbol-link rs-type" href="eos-tools--src-hooks-mod-rs.html#item-struct-HookDenial-95">HookDenial</a>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(
+                    format!(
+                        &quot;<span class="rs-type">BLOCKED</span>: {} delegated workflow(s) are still outstanding <span class="rs-kw">for</span> this agent run. \
+                         <span class="rs-type">Use</span> check_workflow_status to collect them or cancel_workflow to stop them \
+                         before calling {}, then retry.&quot;,
+                        outstanding.<a class="symbol-link rs-fn" href="eos-tools--src-registry-tool-registry-rs.html#method-len-90">len</a>(),
+                        tool.<a class="symbol-link rs-fn" href="eos-tools--src-core-intent-rs.html#method-as-str-42">as_str</a>()
+                    ),
+                    &quot;no_background_sessions&quot;,
+                )
+                .<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-with-reason-119">with_reason</a>(&quot;ephemeral_jobs_in_flight&quot;)
+                .<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-with-count-124">with_count</a>(outstanding.<a class="symbol-link rs-fn" href="eos-tools--src-registry-tool-registry-rs.html#method-len-90">len</a>()),
+            ));
+        }
+    }
+
+    <span class="rs-kw">let</span> sandbox_id = <span class="rs-kw">match</span> &amp;ctx.sandbox_id {
+        <span class="rs-type">Some</span>(id) =&gt; id,
+        <span class="rs-type">None</span> =&gt; <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-tools--src-hooks-mod-rs.html#item-enum-HookOutcome-77">HookOutcome</a>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-pass-89">pass</a>()),
+    };
+
+    <span class="rs-kw">let</span> <span class="rs-type">Some</span>(transport) = &amp;services.sandbox_transport <span class="rs-kw">else</span> {
+        <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-tools--src-hooks-mod-rs.html#item-enum-HookOutcome-77">HookOutcome</a>::<span class="rs-type">Deny</span>(
+            <a class="symbol-link rs-type" href="eos-tools--src-hooks-mod-rs.html#item-struct-HookDenial-95">HookDenial</a>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(
+                format!(
+                    &quot;<span class="rs-type">BLOCKED</span>: could not confirm background-task state from the sandbox daemon, \
+                     so {} is refused to avoid orphaning <span class="rs-kw">in</span>-flight work. <span class="rs-type">Retry</span> shortly.&quot;,
+                    tool.<a class="symbol-link rs-fn" href="eos-tools--src-core-intent-rs.html#method-as-str-42">as_str</a>()
+                ),
+                &quot;no_background_sessions&quot;,
+            )
+            .<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-with-reason-119">with_reason</a>(&quot;command_session_count_unavailable&quot;),
+        ));
+    };
+
+    <span class="rs-kw">let</span> daemon = <span class="rs-kw">match</span> eos_sandbox_port::command_session_count(
+        &amp;**transport,
+        sandbox_id,
+        agent_run_id.<a class="symbol-link rs-fn" href="eos-tools--src-core-intent-rs.html#method-as-str-42">as_str</a>(),
+    )
+    .<span class="rs-kw">await</span>
+    {
+        <span class="rs-type">Ok</span>(count) =&gt; count <span class="rs-kw">as</span> usize,
+        <span class="rs-type">Err</span>(_) =&gt; {
+            <span class="rs-kw">if</span> <a class="symbol-link rs-fn" href="eos-tools--src-hooks-require-no-background-sessions-rs.html#item-fn-is-bailout-submission-35">is_bailout_submission</a>(tool, raw_input) {
+                <span class="rs-comment">// Fail-OPEN: stamp the override reason in the pass-phase</span>
+                <span class="rs-comment">// metadata so the audit trail distinguishes a bailout from a</span>
+                <span class="rs-comment">// normal pass (Rust `daemon_unavailable_bailout`).</span>
+                <span class="rs-kw">let</span> <span class="rs-kw">mut</span> meta = <span class="rs-type">JsonObject</span>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>();
+                meta.insert(&quot;policy&quot;.to_owned(), json!(&quot;no_background_sessions&quot;));
+                meta.insert(&quot;reason&quot;.to_owned(), json!(&quot;daemon_unavailable_bailout&quot;));
+                <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-tools--src-hooks-mod-rs.html#item-enum-HookOutcome-77">HookOutcome</a>::<span class="rs-type">Pass</span>(meta));
+            }
+            <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-tools--src-hooks-mod-rs.html#item-enum-HookOutcome-77">HookOutcome</a>::<span class="rs-type">Deny</span>(
+                    <a class="symbol-link rs-type" href="eos-tools--src-hooks-mod-rs.html#item-struct-HookDenial-95">HookDenial</a>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(
+                        format!(
+                            &quot;<span class="rs-type">BLOCKED</span>: could not confirm background-task state from the sandbox daemon, \
+                             so {} is refused to avoid orphaning <span class="rs-kw">in</span>-flight work. <span class="rs-type">Retry</span> shortly.&quot;,
+                            tool.<a class="symbol-link rs-fn" href="eos-tools--src-core-intent-rs.html#method-as-str-42">as_str</a>()
+                        ),
+                        &quot;no_background_sessions&quot;,
+                    )
+                    .<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-with-reason-119">with_reason</a>(&quot;command_session_count_unavailable&quot;),
+                ));
+        }
+    };
+    <span class="rs-kw">if</span> daemon &gt; 0 {
+        <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-tools--src-hooks-mod-rs.html#item-enum-HookOutcome-77">HookOutcome</a>::<span class="rs-type">Deny</span>(
+            <a class="symbol-link rs-type" href="eos-tools--src-hooks-mod-rs.html#item-struct-HookDenial-95">HookDenial</a>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(
+                <a class="symbol-link rs-fn" href="eos-tools--src-hooks-require-no-background-sessions-rs.html#item-fn-command-session-in-flight-message-56">command_session_in_flight_message</a>(daemon, tool),
+                &quot;no_background_sessions&quot;,
+            )
+            .<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-with-reason-119">with_reason</a>(&quot;ephemeral_jobs_in_flight&quot;)
+            .<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-with-count-124">with_count</a>(daemon),
+        ));
+    }
+    <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-tools--src-hooks-mod-rs.html#item-enum-HookOutcome-77">HookOutcome</a>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-pass-89">pass</a>())
+}
+
+#[cfg(test)]
+<span class="rs-kw">mod</span> tests {
+    <span class="rs-kw">use</span> <span class="rs-kw">super</span>::*;
+
+    <span class="rs-kw">use</span> std::sync::{
+        atomic::{<span class="rs-type">AtomicBool</span>, <span class="rs-type">Ordering</span>},
+        <span class="rs-type">Arc</span>,
+    };
+
+    <span class="rs-kw">use</span> async_trait::async_trait;
+    <span class="rs-kw">use</span> eos_types::{<span class="rs-type">AgentRunId</span>, <span class="rs-type">SubagentSessionId</span>, <span class="rs-type">TaskId</span>, <span class="rs-type">WorkflowId</span>, <span class="rs-type">WorkflowSessionId</span>};
+
+    <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::ports::{
+        <a class="symbol-link rs-type" href="eos-tools--src-ports-mod-rs.html#item-struct-RunningBackgroundTasks-217">RunningBackgroundTasks</a>, <a class="symbol-link rs-type" href="eos-tools--src-ports-mod-rs.html#item-trait-BackgroundSupervisorPort-236">BackgroundSupervisorPort</a>, <a class="symbol-link rs-type" href="eos-tools--src-ports-mod-rs.html#item-struct-OutstandingWorkflow-55">OutstandingWorkflow</a>, <a class="symbol-link rs-type" href="eos-tools--src-ports-mod-rs.html#item-trait-Sealed-32">Sealed</a>,
+        <a class="symbol-link rs-type" href="eos-tools--src-ports-mod-rs.html#item-enum-SpawnedSubagent-205">SpawnedSubagent</a>, <a class="symbol-link rs-type" href="eos-tools--src-ports-mod-rs.html#item-struct-StartedWorkflowHandle-46">StartedWorkflowHandle</a>, <a class="symbol-link rs-type" href="eos-tools--src-ports-mod-rs.html#item-trait-WorkflowControlPort-66">WorkflowControlPort</a>,
+    };
+    <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::<a class="symbol-link rs-type" href="eos-tools--src-core-result-rs.html#item-struct-ToolResult-12">ToolResult</a>;
+
+    <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-tools--src-hooks-require-no-background-sessions-rs.html#item-struct-ReportSupervisor-201">ReportSupervisor</a> {
+        report: <a class="symbol-link rs-type" href="eos-tools--src-ports-mod-rs.html#item-struct-RunningBackgroundTasks-217">RunningBackgroundTasks</a>,
+        cancel_called: <span class="rs-type">AtomicBool</span>,
+    }
+
+    <span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-tools--src-hooks-require-no-background-sessions-rs.html#item-struct-ReportSupervisor-201">ReportSupervisor</a> {
+        <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(report: <a class="symbol-link rs-type" href="eos-tools--src-ports-mod-rs.html#item-struct-RunningBackgroundTasks-217">RunningBackgroundTasks</a>) -&gt; <span class="rs-self">Self</span> {
+            <span class="rs-self">Self</span> {
+                report,
+                cancel_called: <span class="rs-type">AtomicBool</span>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(<span class="rs-kw">false</span>),
+            }
+        }
+    }
+
+    <span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-tools--src-ports-mod-rs.html#item-trait-Sealed-32">Sealed</a> <span class="rs-kw">for</span> <a class="symbol-link rs-type" href="eos-tools--src-hooks-require-no-background-sessions-rs.html#item-struct-ReportSupervisor-201">ReportSupervisor</a> {}
+
+    #[async_trait]
+    <span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-tools--src-ports-mod-rs.html#item-trait-BackgroundSupervisorPort-236">BackgroundSupervisorPort</a> <span class="rs-kw">for</span> <a class="symbol-link rs-type" href="eos-tools--src-hooks-require-no-background-sessions-rs.html#item-struct-ReportSupervisor-201">ReportSupervisor</a> {
+        <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-hooks-require-no-background-sessions-rs.html#method-spawn-219">spawn</a>(
+            &amp;<span class="rs-self">self</span>,
+            _: &amp;<a class="symbol-link rs-type" href="eos-tools--src-core-metadata-rs.html#item-struct-ExecutionMetadata-17">ExecutionMetadata</a>,
+            _: &amp;str,
+            _: &amp;str,
+        ) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-tools--src-ports-mod-rs.html#item-enum-SpawnedSubagent-205">SpawnedSubagent</a>, <a class="symbol-link rs-type" href="eos-tools.html#item-enum-ToolError-16">ToolError</a>&gt; {
+            unreachable!(&quot;not used by hook tests&quot;)
+        }
+
+        <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-hooks-require-no-background-sessions-rs.html#method-progress-228">progress</a>(&amp;<span class="rs-self">self</span>, _: &amp;<span class="rs-type">SubagentSessionId</span>, _: u8) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-tools--src-core-result-rs.html#item-struct-ToolResult-12">ToolResult</a>, <a class="symbol-link rs-type" href="eos-tools.html#item-enum-ToolError-16">ToolError</a>&gt; {
+            unreachable!(&quot;not used by hook tests&quot;)
+        }
+
+        <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-hooks-disallow-nested-planner-deferral-rs.html#method-cancel-82">cancel</a>(&amp;<span class="rs-self">self</span>, _: &amp;<span class="rs-type">SubagentSessionId</span>, _: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-tools--src-core-result-rs.html#item-struct-ToolResult-12">ToolResult</a>, <a class="symbol-link rs-type" href="eos-tools.html#item-enum-ToolError-16">ToolError</a>&gt; {
+            unreachable!(&quot;not used by hook tests&quot;)
+        }
+
+        <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-hooks-require-no-background-sessions-rs.html#method-running-background-tasks-236">running_background_tasks</a>(&amp;<span class="rs-self">self</span>) -&gt; <a class="symbol-link rs-type" href="eos-tools--src-ports-mod-rs.html#item-struct-RunningBackgroundTasks-217">RunningBackgroundTasks</a> {
+            <span class="rs-self">self</span>.report
+        }
+
+        <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-hooks-require-no-background-sessions-rs.html#method-cancel-subagents-240">cancel_subagents</a>(&amp;<span class="rs-self">self</span>) -&gt; <a class="symbol-link rs-type" href="eos-tools--src-ports-mod-rs.html#item-struct-RunningBackgroundTasks-217">RunningBackgroundTasks</a> {
+            <span class="rs-self">self</span>.cancel_called.store(<span class="rs-kw">true</span>, <span class="rs-type">Ordering</span>::<span class="rs-type">Relaxed</span>);
+            <a class="symbol-link rs-type" href="eos-tools--src-ports-mod-rs.html#item-struct-RunningBackgroundTasks-217">RunningBackgroundTasks</a> {
+                subagents: 0,
+                total: <span class="rs-self">self</span>.report.workflows + <span class="rs-self">self</span>.report.command_sessions,
+                ..<span class="rs-self">self</span>.report
+            }
+        }
+
+        <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-hooks-require-no-background-sessions-rs.html#method-register-workflow-249">register_workflow</a>(&amp;<span class="rs-self">self</span>, _: &amp;<a class="symbol-link rs-type" href="eos-tools--src-ports-mod-rs.html#item-struct-StartedWorkflowHandle-46">StartedWorkflowHandle</a>) {}
+
+        <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-hooks-require-no-background-sessions-rs.html#method-cancel-workflow-record-251">cancel_workflow_record</a>(&amp;<span class="rs-self">self</span>, _: &amp;<span class="rs-type">WorkflowSessionId</span>, _: &amp;str) -&gt; bool {
+            <span class="rs-kw">false</span>
+        }
+
+        <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-hooks-require-no-background-sessions-rs.html#method-teardown-255">teardown</a>(
+            &amp;<span class="rs-self">self</span>,
+            _: <span class="rs-type">Option</span>&lt;<span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <a class="symbol-link rs-type" href="eos-tools--src-ports-mod-rs.html#item-trait-WorkflowControlPort-66">WorkflowControlPort</a>&gt;&gt;,
+            _: &amp;str,
+        ) -&gt; <a class="symbol-link rs-type" href="eos-tools--src-ports-mod-rs.html#item-struct-RunningBackgroundTasks-217">RunningBackgroundTasks</a> {
+            unreachable!(&quot;not used by hook tests&quot;)
+        }
+    }
+
+    <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-tools--src-hooks-require-no-background-sessions-rs.html#item-struct-OneOutstanding-264">OneOutstanding</a>;
+    <span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-tools--src-ports-mod-rs.html#item-trait-Sealed-32">Sealed</a> <span class="rs-kw">for</span> <a class="symbol-link rs-type" href="eos-tools--src-hooks-require-no-background-sessions-rs.html#item-struct-OneOutstanding-264">OneOutstanding</a> {}
+
+    #[async_trait]
+    <span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-tools--src-ports-mod-rs.html#item-trait-WorkflowControlPort-66">WorkflowControlPort</a> <span class="rs-kw">for</span> <a class="symbol-link rs-type" href="eos-tools--src-hooks-require-no-background-sessions-rs.html#item-struct-OneOutstanding-264">OneOutstanding</a> {
+        <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-hooks-disallow-nested-planner-deferral-rs.html#method-start-65">start</a>(
+            &amp;<span class="rs-self">self</span>,
+            _: &amp;<span class="rs-type">TaskId</span>,
+            _: &amp;<span class="rs-type">AgentRunId</span>,
+            _: &amp;str,
+        ) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-tools--src-ports-mod-rs.html#item-struct-StartedWorkflowHandle-46">StartedWorkflowHandle</a>, <a class="symbol-link rs-type" href="eos-tools.html#item-enum-ToolError-16">ToolError</a>&gt; {
+            unreachable!(&quot;deny short-circuits before start&quot;)
+        }
+
+        <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-hooks-disallow-nested-planner-deferral-rs.html#method-status-74">status</a>(
+            &amp;<span class="rs-self">self</span>,
+            _: &amp;<span class="rs-type">WorkflowId</span>,
+            _: <span class="rs-type">Option</span>&lt;&amp;<span class="rs-type">WorkflowSessionId</span>&gt;,
+        ) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">String</span>, <a class="symbol-link rs-type" href="eos-tools.html#item-enum-ToolError-16">ToolError</a>&gt; {
+            unreachable!()
+        }
+
+        <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-hooks-disallow-nested-planner-deferral-rs.html#method-cancel-82">cancel</a>(&amp;<span class="rs-self">self</span>, _: &amp;<span class="rs-type">WorkflowSessionId</span>, _: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">String</span>, <a class="symbol-link rs-type" href="eos-tools.html#item-enum-ToolError-16">ToolError</a>&gt; {
+            unreachable!()
+        }
+
+        <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-hooks-disallow-nested-planner-deferral-rs.html#method-find-outstanding-86">find_outstanding</a>(
+            &amp;<span class="rs-self">self</span>,
+            _: &amp;<span class="rs-type">TaskId</span>,
+            _: &amp;<span class="rs-type">AgentRunId</span>,
+        ) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;<a class="symbol-link rs-type" href="eos-tools--src-ports-mod-rs.html#item-struct-OutstandingWorkflow-55">OutstandingWorkflow</a>&gt;, <a class="symbol-link rs-type" href="eos-tools.html#item-enum-ToolError-16">ToolError</a>&gt; {
+            <span class="rs-type">Ok</span>(vec![<a class="symbol-link rs-type" href="eos-tools--src-ports-mod-rs.html#item-struct-OutstandingWorkflow-55">OutstandingWorkflow</a> {
+                workflow_id: <span class="rs-type">WorkflowId</span>::new_v4(),
+                workflow_task_id: <span class="rs-type">WorkflowSessionId</span>::new_v4(),
+                workflow_goal: &quot;prior goal&quot;.to_owned(),
+            }])
+        }
+
+        <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-hooks-disallow-nested-planner-deferral-rs.html#method-workflow-depth-94">workflow_depth</a>(&amp;<span class="rs-self">self</span>, _: &amp;<span class="rs-type">WorkflowId</span>) -&gt; <span class="rs-type">Result</span>&lt;u32, <a class="symbol-link rs-type" href="eos-tools.html#item-enum-ToolError-16">ToolError</a>&gt; {
+            <span class="rs-type">Ok</span>(1)
+        }
+    }
+
+    <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-hooks-require-no-background-sessions-rs.html#item-fn-report-307">report</a>(
+        subagents: usize,
+        workflows: usize,
+        command_sessions: usize,
+    ) -&gt; <a class="symbol-link rs-type" href="eos-tools--src-ports-mod-rs.html#item-struct-RunningBackgroundTasks-217">RunningBackgroundTasks</a> {
+        <a class="symbol-link rs-type" href="eos-tools--src-ports-mod-rs.html#item-struct-RunningBackgroundTasks-217">RunningBackgroundTasks</a> {
+            total: subagents + workflows + command_sessions,
+            subagents,
+            workflows,
+            command_sessions,
+        }
+    }
+
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-hooks-require-no-background-sessions-rs.html#item-fn-json-object-320">json_object</a>(value: <span class="rs-type">Value</span>) -&gt; <span class="rs-type">JsonObject</span> {
+        <span class="rs-kw">match</span> value {
+            <span class="rs-type">Value</span>::<span class="rs-type">Object</span>(object) =&gt; object,
+            _ =&gt; <span class="rs-type">JsonObject</span>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(),
+        }
+    }
+
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-hooks-require-no-background-sessions-rs.html#item-fn-bind-agent-run-327">bind_agent_run</a>(ctx: &amp;<span class="rs-kw">mut</span> <a class="symbol-link rs-type" href="eos-tools--src-core-metadata-rs.html#item-struct-ExecutionMetadata-17">ExecutionMetadata</a>) {
+        <span class="rs-kw">let</span> agent_run_id: <span class="rs-type">AgentRunId</span> = &quot;agent-run-test&quot;.parse().expect(&quot;agent run id&quot;);
+        ctx.agent_run_id = <span class="rs-type">Some</span>(agent_run_id);
+    }
+
+    <span class="rs-comment">// A daemon-count failure on a *bailout* submission fails OPEN, and the</span>
+    <span class="rs-comment">// pass-phase metadata records the override reason (Rust parity:</span>
+    <span class="rs-comment">// `daemon_unavailable_bailout`).</span>
+    #[tokio::test]
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-hooks-require-no-background-sessions-rs.html#item-fn-bailout-pass-carries-daemon-unavailable-reason-335">bailout_pass_carries_daemon_unavailable_reason</a>() {
+        <span class="rs-kw">use</span> eos_sandbox_port::<span class="rs-type">SandboxPortError</span>;
+
+        <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::support::{metadata, <span class="rs-type">FakeTransport</span>};
+
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> ctx = metadata();
+        <a class="symbol-link rs-fn" href="eos-tools--src-hooks-require-no-background-sessions-rs.html#item-fn-bind-agent-run-327">bind_agent_run</a>(&amp;<span class="rs-kw">mut</span> ctx);
+        ctx.sandbox_id = <span class="rs-type">Some</span>(&quot;sandbox-1&quot;.parse().expect(&quot;sandbox id&quot;));
+        <span class="rs-comment">// Every daemon RPC (here, command_session_count) errors.</span>
+        <span class="rs-kw">let</span> services = <span class="rs-kw">crate</span>::tools::<a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-HookServices-143">HookServices</a>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(
+            <span class="rs-type">Some</span>(<span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(<span class="rs-type">FakeTransport</span>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(|_, _| {
+                <span class="rs-type">Err</span>(<span class="rs-type">SandboxPortError</span>::<span class="rs-type">Transport</span> {
+                    code: <span class="rs-type">None</span>,
+                    message: &quot;daemon down&quot;.to_owned(),
+                })
+            }))),
+            <span class="rs-type">None</span>,
+            <span class="rs-type">None</span>,
+        );
+
+        <span class="rs-comment">// A failed generator submission qualifies as a bailout.</span>
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> input = <span class="rs-type">JsonObject</span>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>();
+        input.insert(&quot;status&quot;.to_owned(), <span class="rs-type">Value</span>::<span class="rs-type">String</span>(&quot;failed&quot;.to_owned()));
+
+        <span class="rs-kw">let</span> outcome = <a class="symbol-link rs-fn" href="eos-tools--src-hooks-require-no-background-sessions-rs.html#item-fn-run-require-no-background-sessions-64">run_require_no_background_sessions</a>(
+            <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-submission-generator-submit-generator-outcome-rs.html#item-struct-SubmitGeneratorOutcome-24">SubmitGeneratorOutcome</a>,
+            &amp;input,
+            &amp;ctx,
+            &amp;services,
+        )
+        .<span class="rs-kw">await</span>
+        .expect(&quot;hook ran&quot;);
+        <span class="rs-kw">match</span> outcome {
+            <a class="symbol-link rs-type" href="eos-tools--src-hooks-mod-rs.html#item-enum-HookOutcome-77">HookOutcome</a>::<span class="rs-type">Pass</span>(meta) =&gt; {
+                assert_eq!(meta[&quot;reason&quot;], json!(&quot;daemon_unavailable_bailout&quot;));
+                assert_eq!(meta[&quot;policy&quot;], json!(&quot;no_background_sessions&quot;));
+            }
+            other =&gt; panic!(&quot;expected a bailout pass, got {other:?}&quot;),
+        }
+    }
+
+    <span class="rs-comment">// The workflow dimension: a terminal is denied while a delegated workflow is</span>
+    <span class="rs-comment">// still outstanding, gated on the authoritative WorkflowControlPort rather</span>
+    <span class="rs-comment">// than a supervisor handle record.</span>
+    #[tokio::test]
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-hooks-require-no-background-sessions-rs.html#item-fn-outstanding-workflow-denies-terminal-380">outstanding_workflow_denies_terminal</a>() {
+        <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::support::metadata;
+
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> ctx = metadata();
+        <a class="symbol-link rs-fn" href="eos-tools--src-hooks-require-no-background-sessions-rs.html#item-fn-bind-agent-run-327">bind_agent_run</a>(&amp;<span class="rs-kw">mut</span> ctx);
+        ctx.task_id = <span class="rs-type">Some</span>(&quot;parent&quot;.parse().expect(&quot;task id&quot;));
+        <span class="rs-kw">let</span> services = <span class="rs-kw">crate</span>::tools::<a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-HookServices-143">HookServices</a>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(<span class="rs-type">None</span>, <span class="rs-type">Some</span>(<span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(<a class="symbol-link rs-type" href="eos-tools--src-hooks-require-no-background-sessions-rs.html#item-struct-OneOutstanding-264">OneOutstanding</a>)), <span class="rs-type">None</span>);
+
+        <span class="rs-kw">let</span> outcome = <a class="symbol-link rs-fn" href="eos-tools--src-hooks-require-no-background-sessions-rs.html#item-fn-run-require-no-background-sessions-64">run_require_no_background_sessions</a>(
+            <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-submission-root-submit-root-outcome-rs.html#item-struct-SubmitRootOutcome-31">SubmitRootOutcome</a>,
+            &amp;<span class="rs-type">JsonObject</span>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(),
+            &amp;ctx,
+            &amp;services,
+        )
+        .<span class="rs-kw">await</span>
+        .expect(&quot;hook ran&quot;);
+        <span class="rs-kw">match</span> outcome {
+            <a class="symbol-link rs-type" href="eos-tools--src-hooks-mod-rs.html#item-enum-HookOutcome-77">HookOutcome</a>::<span class="rs-type">Deny</span>(denial) =&gt; {
+                assert!(
+                    denial.message.contains(&quot;delegated workflow&quot;),
+                    &quot;{}&quot;,
+                    denial.message
+                );
+                assert_eq!(denial.extra.<a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#method-get-89">get</a>(&quot;count&quot;).and_then(<span class="rs-type">Value</span>::as_u64), <span class="rs-type">Some</span>(1));
+            }
+            other =&gt; panic!(&quot;expected a workflow deny, got {other:?}&quot;),
+        }
+    }
+
+    #[tokio::test]
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-hooks-require-no-background-sessions-rs.html#item-fn-enter-isolated-workspace-denies-inflight-subagents-without-cancelling-410">enter_isolated_workspace_denies_inflight_subagents_without_cancelling</a>() {
+        <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::support::metadata;
+
+        <span class="rs-kw">let</span> supervisor = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(<a class="symbol-link rs-type" href="eos-tools--src-hooks-require-no-background-sessions-rs.html#item-struct-ReportSupervisor-201">ReportSupervisor</a>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(<a class="symbol-link rs-fn" href="eos-tools--src-hooks-require-no-background-sessions-rs.html#item-fn-report-307">report</a>(1, 0, 0)));
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> ctx = metadata();
+        <a class="symbol-link rs-fn" href="eos-tools--src-hooks-require-no-background-sessions-rs.html#item-fn-bind-agent-run-327">bind_agent_run</a>(&amp;<span class="rs-kw">mut</span> ctx);
+        <span class="rs-kw">let</span> services = <span class="rs-kw">crate</span>::tools::<a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-HookServices-143">HookServices</a>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(<span class="rs-type">None</span>, <span class="rs-type">None</span>, <span class="rs-type">Some</span>(supervisor.clone()));
+
+        <span class="rs-kw">let</span> outcome = <a class="symbol-link rs-fn" href="eos-tools--src-hooks-require-no-background-sessions-rs.html#item-fn-run-require-no-background-sessions-64">run_require_no_background_sessions</a>(
+            <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-isolated-workspace-enter-isolated-workspace-rs.html#item-struct-EnterIsolatedWorkspace-30">EnterIsolatedWorkspace</a>,
+            &amp;<span class="rs-type">JsonObject</span>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(),
+            &amp;ctx,
+            &amp;services,
+        )
+        .<span class="rs-kw">await</span>
+        .expect(&quot;hook ran&quot;);
+
+        <span class="rs-kw">match</span> outcome {
+            <a class="symbol-link rs-type" href="eos-tools--src-hooks-mod-rs.html#item-enum-HookOutcome-77">HookOutcome</a>::<span class="rs-type">Deny</span>(denial) =&gt; {
+                assert!(denial.message.contains(&quot;subagent&quot;), &quot;{}&quot;, denial.message);
+                assert_eq!(denial.reason.as_deref(), <span class="rs-type">Some</span>(&quot;ephemeral_jobs_in_flight&quot;));
+                assert_eq!(denial.extra.<a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#method-get-89">get</a>(&quot;count&quot;).and_then(<span class="rs-type">Value</span>::as_u64), <span class="rs-type">Some</span>(1));
+            }
+            other =&gt; panic!(&quot;expected a subagent deny, got {other:?}&quot;),
+        }
+        assert!(
+            !supervisor.cancel_called.load(<span class="rs-type">Ordering</span>::<span class="rs-type">Relaxed</span>),
+            &quot;enter must inspect, not cancel, subagents&quot;
+        );
+    }
+
+    #[tokio::test]
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-hooks-require-no-background-sessions-rs.html#item-fn-enter-isolated-workspace-denies-outstanding-workflows-442">enter_isolated_workspace_denies_outstanding_workflows</a>() {
+        <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::support::metadata;
+
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> ctx = metadata();
+        <a class="symbol-link rs-fn" href="eos-tools--src-hooks-require-no-background-sessions-rs.html#item-fn-bind-agent-run-327">bind_agent_run</a>(&amp;<span class="rs-kw">mut</span> ctx);
+        ctx.task_id = <span class="rs-type">Some</span>(&quot;parent&quot;.parse().expect(&quot;task id&quot;));
+        <span class="rs-kw">let</span> services = <span class="rs-kw">crate</span>::tools::<a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-HookServices-143">HookServices</a>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(<span class="rs-type">None</span>, <span class="rs-type">Some</span>(<span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(<a class="symbol-link rs-type" href="eos-tools--src-hooks-require-no-background-sessions-rs.html#item-struct-OneOutstanding-264">OneOutstanding</a>)), <span class="rs-type">None</span>);
+
+        <span class="rs-kw">let</span> outcome = <a class="symbol-link rs-fn" href="eos-tools--src-hooks-require-no-background-sessions-rs.html#item-fn-run-require-no-background-sessions-64">run_require_no_background_sessions</a>(
+            <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-isolated-workspace-enter-isolated-workspace-rs.html#item-struct-EnterIsolatedWorkspace-30">EnterIsolatedWorkspace</a>,
+            &amp;<span class="rs-type">JsonObject</span>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(),
+            &amp;ctx,
+            &amp;services,
+        )
+        .<span class="rs-kw">await</span>
+        .expect(&quot;hook ran&quot;);
+
+        <span class="rs-kw">match</span> outcome {
+            <a class="symbol-link rs-type" href="eos-tools--src-hooks-mod-rs.html#item-enum-HookOutcome-77">HookOutcome</a>::<span class="rs-type">Deny</span>(denial) =&gt; {
+                assert!(
+                    denial.message.contains(&quot;delegated workflow&quot;),
+                    &quot;{}&quot;,
+                    denial.message
+                );
+                assert_eq!(denial.reason.as_deref(), <span class="rs-type">Some</span>(&quot;ephemeral_jobs_in_flight&quot;));
+                assert_eq!(denial.extra.<a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#method-get-89">get</a>(&quot;count&quot;).and_then(<span class="rs-type">Value</span>::as_u64), <span class="rs-type">Some</span>(1));
+            }
+            other =&gt; panic!(&quot;expected a workflow deny, got {other:?}&quot;),
+        }
+    }
+
+    #[tokio::test]
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-hooks-require-no-background-sessions-rs.html#item-fn-enter-isolated-workspace-denies-daemon-command-sessions-474">enter_isolated_workspace_denies_daemon_command_sessions</a>() {
+        <span class="rs-kw">use</span> eos_sandbox_port::<span class="rs-type">DaemonOp</span>;
+
+        <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::support::{metadata, <span class="rs-type">FakeTransport</span>};
+
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> ctx = metadata();
+        <a class="symbol-link rs-fn" href="eos-tools--src-hooks-require-no-background-sessions-rs.html#item-fn-bind-agent-run-327">bind_agent_run</a>(&amp;<span class="rs-kw">mut</span> ctx);
+        ctx.sandbox_id = <span class="rs-type">Some</span>(&quot;sandbox-1&quot;.parse().expect(&quot;sandbox id&quot;));
+        <span class="rs-kw">let</span> services = <span class="rs-kw">crate</span>::tools::<a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-HookServices-143">HookServices</a>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(
+            <span class="rs-type">Some</span>(<span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(<span class="rs-type">FakeTransport</span>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(|op, _| <span class="rs-kw">match</span> op {
+                <span class="rs-type">DaemonOp</span>::<span class="rs-type">CommandSessionCount</span> =&gt; <span class="rs-type">Ok</span>(<a class="symbol-link rs-fn" href="eos-tools--src-hooks-require-no-background-sessions-rs.html#item-fn-json-object-320">json_object</a>(json!({&quot;count&quot;: 2}))),
+                _ =&gt; <span class="rs-type">Ok</span>(<span class="rs-type">JsonObject</span>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>()),
+            }))),
+            <span class="rs-type">None</span>,
+            <span class="rs-type">None</span>,
+        );
+
+        <span class="rs-kw">let</span> outcome = <a class="symbol-link rs-fn" href="eos-tools--src-hooks-require-no-background-sessions-rs.html#item-fn-run-require-no-background-sessions-64">run_require_no_background_sessions</a>(
+            <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-isolated-workspace-enter-isolated-workspace-rs.html#item-struct-EnterIsolatedWorkspace-30">EnterIsolatedWorkspace</a>,
+            &amp;<span class="rs-type">JsonObject</span>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(),
+            &amp;ctx,
+            &amp;services,
+        )
+        .<span class="rs-kw">await</span>
+        .expect(&quot;hook ran&quot;);
+
+        <span class="rs-kw">match</span> outcome {
+            <a class="symbol-link rs-type" href="eos-tools--src-hooks-mod-rs.html#item-enum-HookOutcome-77">HookOutcome</a>::<span class="rs-type">Deny</span>(denial) =&gt; {
+                assert!(
+                    denial.message.contains(&quot;command session&quot;),
+                    &quot;{}&quot;,
+                    denial.message
+                );
+                assert_eq!(denial.reason.as_deref(), <span class="rs-type">Some</span>(&quot;ephemeral_jobs_in_flight&quot;));
+                assert_eq!(denial.extra.<a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#method-get-89">get</a>(&quot;count&quot;).and_then(<span class="rs-type">Value</span>::as_u64), <span class="rs-type">Some</span>(2));
+            }
+            other =&gt; panic!(&quot;expected a command-session deny, got {other:?}&quot;),
+        }
+    }
+
+    #[tokio::test]
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-hooks-require-no-background-sessions-rs.html#item-fn-exit-isolated-workspace-cancels-subagents-then-denies-command-sessions-515">exit_isolated_workspace_cancels_subagents_then_denies_command_sessions</a>() {
+        <span class="rs-kw">use</span> eos_sandbox_port::<span class="rs-type">DaemonOp</span>;
+
+        <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::support::{metadata, <span class="rs-type">FakeTransport</span>};
+
+        <span class="rs-kw">let</span> supervisor = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(<a class="symbol-link rs-type" href="eos-tools--src-hooks-require-no-background-sessions-rs.html#item-struct-ReportSupervisor-201">ReportSupervisor</a>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(<a class="symbol-link rs-fn" href="eos-tools--src-hooks-require-no-background-sessions-rs.html#item-fn-report-307">report</a>(3, 0, 0)));
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> ctx = metadata();
+        <a class="symbol-link rs-fn" href="eos-tools--src-hooks-require-no-background-sessions-rs.html#item-fn-bind-agent-run-327">bind_agent_run</a>(&amp;<span class="rs-kw">mut</span> ctx);
+        ctx.sandbox_id = <span class="rs-type">Some</span>(&quot;sandbox-1&quot;.parse().expect(&quot;sandbox id&quot;));
+        <span class="rs-kw">let</span> services = <span class="rs-kw">crate</span>::tools::<a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-HookServices-143">HookServices</a>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(
+            <span class="rs-type">Some</span>(<span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(<span class="rs-type">FakeTransport</span>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(|op, _| <span class="rs-kw">match</span> op {
+                <span class="rs-type">DaemonOp</span>::<span class="rs-type">CommandSessionCount</span> =&gt; <span class="rs-type">Ok</span>(<a class="symbol-link rs-fn" href="eos-tools--src-hooks-require-no-background-sessions-rs.html#item-fn-json-object-320">json_object</a>(json!({&quot;count&quot;: 1}))),
+                _ =&gt; <span class="rs-type">Ok</span>(<span class="rs-type">JsonObject</span>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>()),
+            }))),
+            <span class="rs-type">None</span>,
+            <span class="rs-type">Some</span>(supervisor.clone()),
+        );
+
+        <span class="rs-kw">let</span> outcome = <a class="symbol-link rs-fn" href="eos-tools--src-hooks-require-no-background-sessions-rs.html#item-fn-run-require-no-background-sessions-64">run_require_no_background_sessions</a>(
+            <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-isolated-workspace-exit-isolated-workspace-rs.html#item-struct-ExitIsolatedWorkspace-35">ExitIsolatedWorkspace</a>,
+            &amp;<span class="rs-type">JsonObject</span>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(),
+            &amp;ctx,
+            &amp;services,
+        )
+        .<span class="rs-kw">await</span>
+        .expect(&quot;hook ran&quot;);
+
+        assert!(
+            supervisor.cancel_called.load(<span class="rs-type">Ordering</span>::<span class="rs-type">Relaxed</span>),
+            &quot;exit should settle subagent records before checking daemon sessions&quot;
+        );
+        <span class="rs-kw">match</span> outcome {
+            <a class="symbol-link rs-type" href="eos-tools--src-hooks-mod-rs.html#item-enum-HookOutcome-77">HookOutcome</a>::<span class="rs-type">Deny</span>(denial) =&gt; {
+                assert!(
+                    denial.message.contains(&quot;command session&quot;),
+                    &quot;{}&quot;,
+                    denial.message
+                );
+                assert_eq!(denial.reason.as_deref(), <span class="rs-type">Some</span>(&quot;ephemeral_jobs_in_flight&quot;));
+                assert_eq!(denial.extra.<a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#method-get-89">get</a>(&quot;count&quot;).and_then(<span class="rs-type">Value</span>::as_u64), <span class="rs-type">Some</span>(1));
+            }
+            other =&gt; panic!(&quot;expected a command-session deny, got {other:?}&quot;),
+        }
+    }
+}
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
   <script src="../assets/inventory.js"></script>
 </body>
 </html>

@@ -8,8 +8,16 @@
 </head>
 <body>
   <header>
-    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
-    <h1>eos-daemon File Inventory</h1>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>eos-daemon File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS/sandbox &amp;&amp; cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
   </header>
   <a class="back-link" href="../index.html">sandbox</a>
 <section class="summary">
@@ -47,59 +55,140 @@
       <span>0 methods</span>
     </div>
   </div>
-  <div class="items"><div class="group-label">Standalone Functions</div><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn op_enter pub(crate) pub(crate) fn op_enter (args : &amp; Value , context : DispatchContext &lt; '_ &gt;) -&gt; Result &lt; Value , DaemonError &gt; crates/eos-daemon/src/ops/isolated_workspace.rs  ">
+  <div class="items"><div class="group-label">Standalone Functions</div><article id="item-fn-op-enter-8" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn op_enter pub(crate) pub(crate) fn op_enter (args : &amp; Value , context : DispatchContext &lt; '_ &gt;) -&gt; Result &lt; Value , DaemonError &gt; crates/eos-daemon/src/ops/isolated_workspace.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>op_enter</h3>
     <span class="visibility">pub(crate)</span>
   </div>
-  <code class="signature">pub(crate) fn op_enter (args : &amp; Value , context : DispatchContext &lt; '_ &gt;) -&gt; Result &lt; Value , DaemonError &gt;</code>
+  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-daemon--src-ops-isolated-workspace-rs.html#item-fn-op-enter-8">op_enter</a> (args : &amp; Value , context : <a class="symbol-link" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-DispatchContext-56">DispatchContext</a> &lt; &#x27;_ &gt;) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a> &lt; Value , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-ops-isolated-workspace-rs.html#item-fn-op-enter-8">op_enter</a>(args: &amp;<span class="rs-type">Value</span>, context: <a class="symbol-link rs-type" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-DispatchContext-56">DispatchContext</a>&lt;&#x27;_&gt;) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+    <span class="rs-kw">crate</span>::services::isolated_workspace::<a class="symbol-link rs-fn" href="eos-daemon--src-ops-isolated-workspace-rs.html#item-fn-op-enter-8">op_enter</a>(args, context)
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-daemon/src/ops/isolated_workspace.rs:8</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn op_exit pub(crate) pub(crate) fn op_exit (args : &amp; Value , context : DispatchContext &lt; '_ &gt;) -&gt; Result &lt; Value , DaemonError &gt; crates/eos-daemon/src/ops/isolated_workspace.rs  ">
+</article><article id="item-fn-op-exit-12" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn op_exit pub(crate) pub(crate) fn op_exit (args : &amp; Value , context : DispatchContext &lt; '_ &gt;) -&gt; Result &lt; Value , DaemonError &gt; crates/eos-daemon/src/ops/isolated_workspace.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>op_exit</h3>
     <span class="visibility">pub(crate)</span>
   </div>
-  <code class="signature">pub(crate) fn op_exit (args : &amp; Value , context : DispatchContext &lt; '_ &gt;) -&gt; Result &lt; Value , DaemonError &gt;</code>
+  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-daemon--src-ops-isolated-workspace-rs.html#item-fn-op-exit-12">op_exit</a> (args : &amp; Value , context : <a class="symbol-link" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-DispatchContext-56">DispatchContext</a> &lt; &#x27;_ &gt;) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a> &lt; Value , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-ops-isolated-workspace-rs.html#item-fn-op-exit-12">op_exit</a>(args: &amp;<span class="rs-type">Value</span>, context: <a class="symbol-link rs-type" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-DispatchContext-56">DispatchContext</a>&lt;&#x27;_&gt;) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+    <span class="rs-kw">crate</span>::services::isolated_workspace::<a class="symbol-link rs-fn" href="eos-daemon--src-ops-isolated-workspace-rs.html#item-fn-op-exit-12">op_exit</a>(args, context)
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-daemon/src/ops/isolated_workspace.rs:12</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn op_status pub(crate) pub(crate) fn op_status (args : &amp; Value , context : DispatchContext &lt; '_ &gt;) -&gt; Result &lt; Value , DaemonError &gt; crates/eos-daemon/src/ops/isolated_workspace.rs  ">
+</article><article id="item-fn-op-status-16" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn op_status pub(crate) pub(crate) fn op_status (args : &amp; Value , context : DispatchContext &lt; '_ &gt;) -&gt; Result &lt; Value , DaemonError &gt; crates/eos-daemon/src/ops/isolated_workspace.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>op_status</h3>
     <span class="visibility">pub(crate)</span>
   </div>
-  <code class="signature">pub(crate) fn op_status (args : &amp; Value , context : DispatchContext &lt; '_ &gt;) -&gt; Result &lt; Value , DaemonError &gt;</code>
+  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-daemon--src-ops-isolated-workspace-rs.html#item-fn-op-status-16">op_status</a> (args : &amp; Value , context : <a class="symbol-link" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-DispatchContext-56">DispatchContext</a> &lt; &#x27;_ &gt;) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a> &lt; Value , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-ops-isolated-workspace-rs.html#item-fn-op-status-16">op_status</a>(args: &amp;<span class="rs-type">Value</span>, context: <a class="symbol-link rs-type" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-DispatchContext-56">DispatchContext</a>&lt;&#x27;_&gt;) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+    <span class="rs-kw">crate</span>::services::isolated_workspace::<a class="symbol-link rs-fn" href="eos-daemon--src-ops-isolated-workspace-rs.html#item-fn-op-status-16">op_status</a>(args, context)
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-daemon/src/ops/isolated_workspace.rs:16</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn op_list_open pub(crate) pub(crate) fn op_list_open (args : &amp; Value , context : DispatchContext &lt; '_ &gt; ,) -&gt; Result &lt; Value , DaemonError &gt; crates/eos-daemon/src/ops/isolated_workspace.rs  ">
+</article><article id="item-fn-op-list-open-20" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn op_list_open pub(crate) pub(crate) fn op_list_open (args : &amp; Value , context : DispatchContext &lt; '_ &gt; ,) -&gt; Result &lt; Value , DaemonError &gt; crates/eos-daemon/src/ops/isolated_workspace.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>op_list_open</h3>
     <span class="visibility">pub(crate)</span>
   </div>
-  <code class="signature">pub(crate) fn op_list_open (args : &amp; Value , context : DispatchContext &lt; '_ &gt; ,) -&gt; Result &lt; Value , DaemonError &gt;</code>
+  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-daemon--src-ops-isolated-workspace-rs.html#item-fn-op-list-open-20">op_list_open</a> (args : &amp; Value , context : <a class="symbol-link" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-DispatchContext-56">DispatchContext</a> &lt; &#x27;_ &gt; ,) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a> &lt; Value , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-ops-isolated-workspace-rs.html#item-fn-op-list-open-20">op_list_open</a>(
+    args: &amp;<span class="rs-type">Value</span>,
+    context: <a class="symbol-link rs-type" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-DispatchContext-56">DispatchContext</a>&lt;&#x27;_&gt;,
+) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+    <span class="rs-kw">crate</span>::services::isolated_workspace::<a class="symbol-link rs-fn" href="eos-daemon--src-ops-isolated-workspace-rs.html#item-fn-op-list-open-20">op_list_open</a>(args, context)
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-daemon/src/ops/isolated_workspace.rs:20</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn op_test_reset pub(crate) pub(crate) fn op_test_reset (args : &amp; Value , context : DispatchContext &lt; '_ &gt; ,) -&gt; Result &lt; Value , DaemonError &gt; crates/eos-daemon/src/ops/isolated_workspace.rs  ">
+</article><article id="item-fn-op-test-reset-27" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn op_test_reset pub(crate) pub(crate) fn op_test_reset (args : &amp; Value , context : DispatchContext &lt; '_ &gt; ,) -&gt; Result &lt; Value , DaemonError &gt; crates/eos-daemon/src/ops/isolated_workspace.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>op_test_reset</h3>
     <span class="visibility">pub(crate)</span>
   </div>
-  <code class="signature">pub(crate) fn op_test_reset (args : &amp; Value , context : DispatchContext &lt; '_ &gt; ,) -&gt; Result &lt; Value , DaemonError &gt;</code>
+  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-daemon--src-ops-isolated-workspace-rs.html#item-fn-op-test-reset-27">op_test_reset</a> (args : &amp; Value , context : <a class="symbol-link" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-DispatchContext-56">DispatchContext</a> &lt; &#x27;_ &gt; ,) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a> &lt; Value , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-ops-isolated-workspace-rs.html#item-fn-op-test-reset-27">op_test_reset</a>(
+    args: &amp;<span class="rs-type">Value</span>,
+    context: <a class="symbol-link rs-type" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-DispatchContext-56">DispatchContext</a>&lt;&#x27;_&gt;,
+) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+    <span class="rs-kw">crate</span>::services::isolated_workspace::<a class="symbol-link rs-fn" href="eos-daemon--src-ops-isolated-workspace-rs.html#item-fn-op-test-reset-27">op_test_reset</a>(args, context)
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-daemon/src/ops/isolated_workspace.rs:27</p>
 </article></div>
 </section></div>
 </main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/eos-daemon/src/ops/isolated_workspace.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-comment">//! Isolated-workspace daemon operation handlers.</span>
+
+<span class="rs-kw">use</span> serde_json::<span class="rs-type">Value</span>;
+
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::dispatcher::<a class="symbol-link rs-type" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-DispatchContext-56">DispatchContext</a>;
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::error::<a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>;
+
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-ops-isolated-workspace-rs.html#item-fn-op-enter-8">op_enter</a>(args: &amp;<span class="rs-type">Value</span>, context: <a class="symbol-link rs-type" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-DispatchContext-56">DispatchContext</a>&lt;&#x27;_&gt;) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+    <span class="rs-kw">crate</span>::services::isolated_workspace::<a class="symbol-link rs-fn" href="eos-daemon--src-ops-isolated-workspace-rs.html#item-fn-op-enter-8">op_enter</a>(args, context)
+}
+
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-ops-isolated-workspace-rs.html#item-fn-op-exit-12">op_exit</a>(args: &amp;<span class="rs-type">Value</span>, context: <a class="symbol-link rs-type" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-DispatchContext-56">DispatchContext</a>&lt;&#x27;_&gt;) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+    <span class="rs-kw">crate</span>::services::isolated_workspace::<a class="symbol-link rs-fn" href="eos-daemon--src-ops-isolated-workspace-rs.html#item-fn-op-exit-12">op_exit</a>(args, context)
+}
+
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-ops-isolated-workspace-rs.html#item-fn-op-status-16">op_status</a>(args: &amp;<span class="rs-type">Value</span>, context: <a class="symbol-link rs-type" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-DispatchContext-56">DispatchContext</a>&lt;&#x27;_&gt;) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+    <span class="rs-kw">crate</span>::services::isolated_workspace::<a class="symbol-link rs-fn" href="eos-daemon--src-ops-isolated-workspace-rs.html#item-fn-op-status-16">op_status</a>(args, context)
+}
+
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-ops-isolated-workspace-rs.html#item-fn-op-list-open-20">op_list_open</a>(
+    args: &amp;<span class="rs-type">Value</span>,
+    context: <a class="symbol-link rs-type" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-DispatchContext-56">DispatchContext</a>&lt;&#x27;_&gt;,
+) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+    <span class="rs-kw">crate</span>::services::isolated_workspace::<a class="symbol-link rs-fn" href="eos-daemon--src-ops-isolated-workspace-rs.html#item-fn-op-list-open-20">op_list_open</a>(args, context)
+}
+
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-ops-isolated-workspace-rs.html#item-fn-op-test-reset-27">op_test_reset</a>(
+    args: &amp;<span class="rs-type">Value</span>,
+    context: <a class="symbol-link rs-type" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-struct-DispatchContext-56">DispatchContext</a>&lt;&#x27;_&gt;,
+) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+    <span class="rs-kw">crate</span>::services::isolated_workspace::<a class="symbol-link rs-fn" href="eos-daemon--src-ops-isolated-workspace-rs.html#item-fn-op-test-reset-27">op_test_reset</a>(args, context)
+}
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
   <script src="../assets/inventory.js"></script>
 </body>
 </html>

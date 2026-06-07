@@ -8,8 +8,16 @@
 </head>
 <body>
   <header>
-    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
-    <h1>eos-plugin File Inventory</h1>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>eos-plugin File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS/sandbox &amp;&amp; cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
   </header>
   <a class="back-link" href="../index.html">sandbox</a>
 <section class="summary">
@@ -47,249 +55,1233 @@
       <span>8 methods</span>
     </div>
   </div>
-  <div class="items"><div class="group-label">File-Owned Types</div><article class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct PluginManifest pub pub struct PluginManifest crates/eos-plugin/src/manifest.rs plugin_id String plugin_version String plugin_digest String package PluginPackageManifest setup Option &lt; PluginSetupManifest &gt; services Vec &lt; PluginServiceManifest &gt; operations Vec &lt; PluginOperationManifest &gt; ">
+  <div class="items"><div class="group-label">File-Owned Types</div><article id="item-struct-PluginManifest-19" class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct PluginManifest pub pub struct PluginManifest crates/eos-plugin/src/manifest.rs plugin_id String plugin_version String plugin_digest String package PluginPackageManifest setup Option &lt; PluginSetupManifest &gt; services Vec &lt; PluginServiceManifest &gt; operations Vec &lt; PluginOperationManifest &gt; ">
   <div class="item-head">
     <span class="kind">struct</span>
     <h3>PluginManifest</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub struct PluginManifest</code>
-  <div class="tags"><span>serde</span></div>
-  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>plugin_id</td><td><code>String</code></td></tr><tr><td>pub</td><td>plugin_version</td><td><code>String</code></td></tr><tr><td>pub</td><td>plugin_digest</td><td><code>String</code></td></tr><tr><td>pub</td><td>package</td><td><code>PluginPackageManifest</code></td></tr><tr><td>pub</td><td>setup</td><td><code>Option &lt; PluginSetupManifest &gt;</code></td></tr><tr><td>pub</td><td>services</td><td><code>Vec &lt; PluginServiceManifest &gt;</code></td></tr><tr><td>pub</td><td>operations</td><td><code>Vec &lt; PluginOperationManifest &gt;</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr><td>method</td><td>validate</td><td><code>pub fn validate (&amp; self) -&gt; Result &lt; () &gt;</code></td></tr><tr><td>method</td><td>package_marker_digest</td><td><code>pub fn package_marker_digest (&amp; self) -&gt; &amp; str</code></td></tr><tr><td>method</td><td>setup_marker_digest</td><td><code>pub fn setup_marker_digest (&amp; self) -&gt; Option &lt; &amp; str &gt;</code></td></tr></tbody></table>
+  <code class="signature">pub struct <a class="symbol-link" href="eos-plugin--src-manifest-rs.html#item-struct-PluginManifest-19">PluginManifest</a></code>
+  <p class="docstring">Top-level plugin manifest consumed by `api.plugin.ensure`.</p>
+  <div class="tags"><span>derive: Clone</span><span>derive: Debug</span><span>derive: Deserialize</span><span>derive: Eq</span><span>derive: PartialEq</span><span>derive: Serialize</span><span>serde</span><span>serde: deny_unknown_fields</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>plugin_id</td><td><code>String</code></td></tr><tr><td>pub</td><td>plugin_version</td><td><code>String</code></td></tr><tr><td>pub</td><td>plugin_digest</td><td><code>String</code></td></tr><tr><td>pub</td><td>package</td><td><code><a class="symbol-link" href="eos-plugin--src-manifest-rs.html#item-struct-PluginPackageManifest-94">PluginPackageManifest</a></code></td></tr><tr><td>pub</td><td>setup</td><td><code>Option &lt; <a class="symbol-link" href="eos-plugin--src-manifest-rs.html#item-struct-PluginSetupManifest-129">PluginSetupManifest</a> &gt;</code></td></tr><tr><td>pub</td><td>services</td><td><code>Vec &lt; <a class="symbol-link" href="eos-plugin--src-manifest-rs.html#item-struct-PluginServiceManifest-157">PluginServiceManifest</a> &gt;</code></td></tr><tr><td>pub</td><td>operations</td><td><code>Vec &lt; <a class="symbol-link" href="eos-plugin--src-manifest-rs.html#item-struct-PluginOperationManifest-206">PluginOperationManifest</a> &gt;</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-validate-37"><td>method</td><td>validate</td><td><code>pub fn <a class="symbol-link" href="eos-plugin--src-manifest-rs.html#method-validate-37">validate</a> (&amp; self) -&gt; <a class="symbol-link" href="eos-plugin.html#item-type-Result-49">Result</a> &lt; () &gt;</code><p class="docstring">Validate manifest identity, service uniqueness, and operation references.<br># Errors<br>Returns [`PluginError::Manifest`] when identifiers are malformed, required<br>fields are empty, services or operations are duplicated, or an operation<br>references an unknown service.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Validate manifest identity, service uniqueness, and operation references.</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// # Errors</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// Returns [`PluginError::Manifest`] when identifiers are malformed, required</span>
+    <span class="rs-comment">/// fields are empty, services or operations are duplicated, or an operation</span>
+    <span class="rs-comment">/// references an unknown service.</span>
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#method-validate-37">validate</a>(&amp;<span class="rs-self">self</span>) -&gt; <a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>&lt;()&gt; {
+        <a class="symbol-link rs-fn" href="eos-plugin--src-service-rs.html#item-fn-validate-plugin-id-162">validate_plugin_id</a>(&quot;plugin_id&quot;, &amp;<span class="rs-self">self</span>.plugin_id)?;
+        <a class="symbol-link rs-fn" href="eos-plugin--src-service-rs.html#item-fn-require-non-empty-176">require_non_empty</a>(&quot;plugin_version&quot;, &amp;<span class="rs-self">self</span>.plugin_version)?;
+        <a class="symbol-link rs-fn" href="eos-plugin--src-service-rs.html#item-fn-require-non-empty-176">require_non_empty</a>(&quot;plugin_digest&quot;, &amp;<span class="rs-self">self</span>.plugin_digest)?;
+        <span class="rs-self">self</span>.package.<a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#method-validate-37">validate</a>()?;
+        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(setup) = &amp;<span class="rs-self">self</span>.setup {
+            setup.<a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#method-validate-37">validate</a>()?;
+        }
+
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> service_ids = <span class="rs-type">BTreeSet</span>::<a class="symbol-link rs-fn" href="eos-plugin--src-service-rs.html#method-new-77">new</a>();
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> service_modes = <span class="rs-type">BTreeMap</span>::<a class="symbol-link rs-fn" href="eos-plugin--src-service-rs.html#method-new-77">new</a>();
+        <span class="rs-kw">for</span> service <span class="rs-kw">in</span> &amp;<span class="rs-self">self</span>.services {
+            service.<a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#method-validate-37">validate</a>()?;
+            <span class="rs-kw">if</span> !service_ids.insert(service.service_id.as_str()) {
+                <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-plugin.html#item-enum-PluginError-5">PluginError</a>::<span class="rs-type">Manifest</span>(format!(
+                    &quot;duplicate service_id {}&quot;,
+                    service.service_id
+                )));
+            }
+            service_modes.insert(service.service_id.as_str(), service.service_mode);
+        }
+
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> op_names = <span class="rs-type">BTreeSet</span>::<a class="symbol-link rs-fn" href="eos-plugin--src-service-rs.html#method-new-77">new</a>();
+        <span class="rs-kw">for</span> operation <span class="rs-kw">in</span> &amp;<span class="rs-self">self</span>.operations {
+            operation.<a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#method-validate-37">validate</a>(&amp;service_modes)?;
+            <span class="rs-kw">if</span> !op_names.insert(operation.op_name.as_str()) {
+                <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-plugin.html#item-enum-PluginError-5">PluginError</a>::<span class="rs-type">Manifest</span>(format!(
+                    &quot;duplicate op_name {}&quot;,
+                    operation.op_name
+                )));
+            }
+        }
+        <span class="rs-type">Ok</span>(())
+    }
+</code></pre>
+</details></td></tr><tr id="method-package-marker-digest-79"><td>method</td><td>package_marker_digest</td><td><code>pub fn <a class="symbol-link" href="eos-plugin--src-manifest-rs.html#method-package-marker-digest-79">package_marker_digest</a> (&amp; self) -&gt; &amp; str</code><p class="docstring">Digest recorded in [`PACKAGE_SHA256_MARKER`] for package idempotency.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Digest recorded in [`PACKAGE_SHA256_MARKER`] for package idempotency.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#method-package-marker-digest-79">package_marker_digest</a>(&amp;<span class="rs-self">self</span>) -&gt; &amp;str {
+        &amp;<span class="rs-self">self</span>.plugin_digest
+    }
+</code></pre>
+</details></td></tr><tr id="method-setup-marker-digest-85"><td>method</td><td>setup_marker_digest</td><td><code>pub fn <a class="symbol-link" href="eos-plugin--src-manifest-rs.html#method-setup-marker-digest-85">setup_marker_digest</a> (&amp; self) -&gt; Option &lt; &amp; str &gt;</code><p class="docstring">Digest recorded in [`SETUP_SHA256_MARKER`] after setup succeeds.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Digest recorded in [`SETUP_SHA256_MARKER`] after setup succeeds.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#method-setup-marker-digest-85">setup_marker_digest</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Option</span>&lt;&amp;str&gt; {
+        <span class="rs-self">self</span>.setup
+            .as_ref()
+            .map(|setup| setup.setup_marker_digest.as_str())
+    }
+</code></pre>
+</details></td></tr></tbody></table>
+
   <p class="source">crates/eos-plugin/src/manifest.rs:19</p>
-</article><article class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct PluginPackageManifest pub pub struct PluginPackageManifest crates/eos-plugin/src/manifest.rs runtime_dir String dependency_scope PluginDependencyScope ">
+</article><article id="item-struct-PluginPackageManifest-94" class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct PluginPackageManifest pub pub struct PluginPackageManifest crates/eos-plugin/src/manifest.rs runtime_dir String dependency_scope PluginDependencyScope ">
   <div class="item-head">
     <span class="kind">struct</span>
     <h3>PluginPackageManifest</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub struct PluginPackageManifest</code>
-  <div class="tags"><span>serde</span></div>
-  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>runtime_dir</td><td><code>String</code></td></tr><tr><td>pub</td><td>dependency_scope</td><td><code>PluginDependencyScope</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr><td>method</td><td>validate</td><td><code>fn validate (&amp; self) -&gt; Result &lt; () &gt;</code></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl Default for PluginPackageManifest</code></summary><table><tbody><tr><td>constructor</td><td>default</td><td><code>fn default () -&gt; Self</code></td></tr></tbody></table></details></div>
+  <code class="signature">pub struct <a class="symbol-link" href="eos-plugin--src-manifest-rs.html#item-struct-PluginPackageManifest-94">PluginPackageManifest</a></code>
+  <p class="docstring">Package-root contract for an installed plugin payload.</p>
+  <div class="tags"><span>derive: Clone</span><span>derive: Debug</span><span>derive: Deserialize</span><span>derive: Eq</span><span>derive: PartialEq</span><span>derive: Serialize</span><span>serde</span><span>serde: deny_unknown_fields</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>runtime_dir</td><td><code>String</code></td></tr><tr><td>pub</td><td>dependency_scope</td><td><code><a class="symbol-link" href="eos-plugin--src-manifest-rs.html#item-enum-PluginDependencyScope-119">PluginDependencyScope</a></code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-validate-114"><td>method</td><td>validate</td><td><code>fn <a class="symbol-link" href="eos-plugin--src-manifest-rs.html#method-validate-37">validate</a> (&amp; self) -&gt; <a class="symbol-link" href="eos-plugin.html#item-type-Result-49">Result</a> &lt; () &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#method-validate-37">validate</a>(&amp;<span class="rs-self">self</span>) -&gt; <a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>&lt;()&gt; {
+        <a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#item-fn-validate-relative-package-path-279">validate_relative_package_path</a>(&quot;package.runtime_dir&quot;, &amp;<span class="rs-self">self</span>.runtime_dir)
+    }
+</code></pre>
+</details></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl Default for <a class="symbol-link" href="eos-plugin--src-manifest-rs.html#item-struct-PluginPackageManifest-94">PluginPackageManifest</a></code></summary><table><tbody><tr id="method-default-105"><td>constructor</td><td>default</td><td><code>fn <a class="symbol-link" href="eos-plugin--src-manifest-rs.html#method-default-105">default</a> () -&gt; Self</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#method-default-105">default</a>() -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">Self</span> {
+            runtime_dir: <a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#item-fn-default-runtime-dir-275">default_runtime_dir</a>(),
+            dependency_scope: <a class="symbol-link rs-type" href="eos-plugin--src-manifest-rs.html#item-enum-PluginDependencyScope-119">PluginDependencyScope</a>::<span class="rs-type">PackageDigest</span>,
+        }
+    }
+</code></pre>
+</details></td></tr></tbody></table></details></div>
+
   <p class="source">crates/eos-plugin/src/manifest.rs:94</p>
-</article><article class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct PluginSetupManifest pub pub struct PluginSetupManifest crates/eos-plugin/src/manifest.rs command Vec &lt; String &gt; working_dir String setup_marker_digest String timeout_ms u64 ">
+</article><article id="item-struct-PluginSetupManifest-129" class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct PluginSetupManifest pub pub struct PluginSetupManifest crates/eos-plugin/src/manifest.rs command Vec &lt; String &gt; working_dir String setup_marker_digest String timeout_ms u64 ">
   <div class="item-head">
     <span class="kind">struct</span>
     <h3>PluginSetupManifest</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub struct PluginSetupManifest</code>
-  <div class="tags"><span>serde</span></div>
-  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>command</td><td><code>Vec &lt; String &gt;</code></td></tr><tr><td>pub</td><td>working_dir</td><td><code>String</code></td></tr><tr><td>pub</td><td>setup_marker_digest</td><td><code>String</code></td></tr><tr><td>pub</td><td>timeout_ms</td><td><code>u64</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr><td>method</td><td>validate</td><td><code>fn validate (&amp; self) -&gt; Result &lt; () &gt;</code></td></tr></tbody></table>
+  <code class="signature">pub struct <a class="symbol-link" href="eos-plugin--src-manifest-rs.html#item-struct-PluginSetupManifest-129">PluginSetupManifest</a></code>
+  <p class="docstring">Optional setup command executed by the daemon after package publish.</p>
+  <div class="tags"><span>derive: Clone</span><span>derive: Debug</span><span>derive: Deserialize</span><span>derive: Eq</span><span>derive: PartialEq</span><span>derive: Serialize</span><span>serde</span><span>serde: deny_unknown_fields</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>command</td><td><code>Vec &lt; String &gt;</code></td></tr><tr><td>pub</td><td>working_dir</td><td><code>String</code></td></tr><tr><td>pub</td><td>setup_marker_digest</td><td><code>String</code></td></tr><tr><td>pub</td><td>timeout_ms</td><td><code>u64</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-validate-140"><td>method</td><td>validate</td><td><code>fn <a class="symbol-link" href="eos-plugin--src-manifest-rs.html#method-validate-37">validate</a> (&amp; self) -&gt; <a class="symbol-link" href="eos-plugin.html#item-type-Result-49">Result</a> &lt; () &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#method-validate-37">validate</a>(&amp;<span class="rs-self">self</span>) -&gt; <a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>&lt;()&gt; {
+        <span class="rs-kw">if</span> <span class="rs-self">self</span>.command.is_empty() {
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-plugin.html#item-enum-PluginError-5">PluginError</a>::<span class="rs-type">Manifest</span>(
+                &quot;setup.command must not be empty&quot;.to_owned(),
+            ));
+        }
+        <a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#item-fn-validate-relative-package-path-279">validate_relative_package_path</a>(&quot;setup.working_dir&quot;, &amp;<span class="rs-self">self</span>.working_dir)?;
+        <a class="symbol-link rs-fn" href="eos-plugin--src-service-rs.html#item-fn-require-non-empty-176">require_non_empty</a>(&quot;setup_marker_digest&quot;, &amp;<span class="rs-self">self</span>.setup_marker_digest)?;
+        <span class="rs-kw">if</span> <span class="rs-self">self</span>.timeout_ms == 0 {
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-plugin.html#item-enum-PluginError-5">PluginError</a>::<span class="rs-type">Manifest</span>(
+                &quot;setup.timeout_ms must be positive&quot;.to_owned(),
+            ));
+        }
+        <span class="rs-type">Ok</span>(())
+    }
+</code></pre>
+</details></td></tr></tbody></table>
+
   <p class="source">crates/eos-plugin/src/manifest.rs:129</p>
-</article><article class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct PluginServiceManifest pub pub struct PluginServiceManifest crates/eos-plugin/src/manifest.rs service_id String service_profile_digest String service_mode ServiceMode refresh_strategy RefreshStrategy command Vec &lt; String &gt; working_dir Option &lt; String &gt; ppc_protocol_version u32 ">
+</article><article id="item-struct-PluginServiceManifest-157" class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct PluginServiceManifest pub pub struct PluginServiceManifest crates/eos-plugin/src/manifest.rs service_id String service_profile_digest String service_mode ServiceMode refresh_strategy RefreshStrategy command Vec &lt; String &gt; working_dir Option &lt; String &gt; ppc_protocol_version u32 ">
   <div class="item-head">
     <span class="kind">struct</span>
     <h3>PluginServiceManifest</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub struct PluginServiceManifest</code>
-  <div class="tags"><span>serde</span></div>
-  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>service_id</td><td><code>String</code></td></tr><tr><td>pub</td><td>service_profile_digest</td><td><code>String</code></td></tr><tr><td>pub</td><td>service_mode</td><td><code>ServiceMode</code></td></tr><tr><td>pub</td><td>refresh_strategy</td><td><code>RefreshStrategy</code></td></tr><tr><td>pub</td><td>command</td><td><code>Vec &lt; String &gt;</code></td></tr><tr><td>pub</td><td>working_dir</td><td><code>Option &lt; String &gt;</code></td></tr><tr><td>pub</td><td>ppc_protocol_version</td><td><code>u32</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr><td>method</td><td>validate</td><td><code>pub fn validate (&amp; self) -&gt; Result &lt; () &gt;</code></td></tr></tbody></table>
+  <code class="signature">pub struct <a class="symbol-link" href="eos-plugin--src-manifest-rs.html#item-struct-PluginServiceManifest-157">PluginServiceManifest</a></code>
+  <p class="docstring">One service declared by a plugin payload.</p>
+  <div class="tags"><span>derive: Clone</span><span>derive: Debug</span><span>derive: Deserialize</span><span>derive: Eq</span><span>derive: PartialEq</span><span>derive: Serialize</span><span>serde</span><span>serde: deny_unknown_fields</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>service_id</td><td><code>String</code></td></tr><tr><td>pub</td><td>service_profile_digest</td><td><code>String</code></td></tr><tr><td>pub</td><td>service_mode</td><td><code><a class="symbol-link" href="eos-plugin--src-service-rs.html#item-enum-ServiceMode-12">ServiceMode</a></code></td></tr><tr><td>pub</td><td>refresh_strategy</td><td><code><a class="symbol-link" href="eos-plugin--src-service-rs.html#item-enum-RefreshStrategy-24">RefreshStrategy</a></code></td></tr><tr><td>pub</td><td>command</td><td><code>Vec &lt; String &gt;</code></td></tr><tr><td>pub</td><td>working_dir</td><td><code>Option &lt; String &gt;</code></td></tr><tr><td>pub</td><td>ppc_protocol_version</td><td><code>u32</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-validate-174"><td>method</td><td>validate</td><td><code>pub fn <a class="symbol-link" href="eos-plugin--src-manifest-rs.html#method-validate-37">validate</a> (&amp; self) -&gt; <a class="symbol-link" href="eos-plugin.html#item-type-Result-49">Result</a> &lt; () &gt;</code><p class="docstring">Validate this service declaration.<br># Errors<br>Returns [`PluginError::Manifest`] when the service identity/profile is<br>invalid, the PPC protocol is zero, or an executable service mode lacks a<br>launch command.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Validate this service declaration.</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// # Errors</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// Returns [`PluginError::Manifest`] when the service identity/profile is</span>
+    <span class="rs-comment">/// invalid, the PPC protocol is zero, or an executable service mode lacks a</span>
+    <span class="rs-comment">/// launch command.</span>
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#method-validate-37">validate</a>(&amp;<span class="rs-self">self</span>) -&gt; <a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>&lt;()&gt; {
+        <a class="symbol-link rs-fn" href="eos-plugin--src-service-rs.html#item-fn-validate-identifier-139">validate_identifier</a>(&quot;service_id&quot;, &amp;<span class="rs-self">self</span>.service_id)?;
+        <a class="symbol-link rs-fn" href="eos-plugin--src-service-rs.html#item-fn-require-non-empty-176">require_non_empty</a>(&quot;service_profile_digest&quot;, &amp;<span class="rs-self">self</span>.service_profile_digest)?;
+        <span class="rs-kw">if</span> <span class="rs-self">self</span>.ppc_protocol_version == 0 {
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-plugin.html#item-enum-PluginError-5">PluginError</a>::<span class="rs-type">Manifest</span>(
+                &quot;ppc_protocol_version must be positive&quot;.to_owned(),
+            ));
+        }
+        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(working_dir) = &amp;<span class="rs-self">self</span>.working_dir {
+            <a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#item-fn-validate-relative-package-path-279">validate_relative_package_path</a>(&quot;service.working_dir&quot;, working_dir)?;
+        }
+        <span class="rs-kw">if</span> matches!(
+            <span class="rs-self">self</span>.service_mode,
+            <a class="symbol-link rs-type" href="eos-plugin--src-service-rs.html#item-enum-ServiceMode-12">ServiceMode</a>::<span class="rs-type">WorkspaceSnapshotRefresh</span> | <a class="symbol-link rs-type" href="eos-plugin--src-service-rs.html#item-enum-ServiceMode-12">ServiceMode</a>::<span class="rs-type">OneshotOverlay</span>
+        ) &amp;&amp; <span class="rs-self">self</span>.command.is_empty()
+        {
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-plugin.html#item-enum-PluginError-5">PluginError</a>::<span class="rs-type">Manifest</span>(format!(
+                &quot;service {} requires a launch command&quot;,
+                <span class="rs-self">self</span>.service_id
+            )));
+        }
+        <span class="rs-type">Ok</span>(())
+    }
+</code></pre>
+</details></td></tr></tbody></table>
+
   <p class="source">crates/eos-plugin/src/manifest.rs:157</p>
-</article><article class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct PluginOperationManifest pub pub struct PluginOperationManifest crates/eos-plugin/src/manifest.rs op_name String intent Intent auto_workspace_overlay bool service_id Option &lt; String &gt; timeout_ms Option &lt; u64 &gt; ">
+</article><article id="item-struct-PluginOperationManifest-206" class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct PluginOperationManifest pub pub struct PluginOperationManifest crates/eos-plugin/src/manifest.rs op_name String intent Intent auto_workspace_overlay bool service_id Option &lt; String &gt; timeout_ms Option &lt; u64 &gt; ">
   <div class="item-head">
     <span class="kind">struct</span>
     <h3>PluginOperationManifest</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub struct PluginOperationManifest</code>
-  <div class="tags"><span>serde</span></div>
-  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>op_name</td><td><code>String</code></td></tr><tr><td>pub</td><td>intent</td><td><code>Intent</code></td></tr><tr><td>pub</td><td>auto_workspace_overlay</td><td><code>bool</code></td></tr><tr><td>pub</td><td>service_id</td><td><code>Option &lt; String &gt;</code></td></tr><tr><td>pub</td><td>timeout_ms</td><td><code>Option &lt; u64 &gt;</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr><td>method</td><td>validate</td><td><code>fn validate (&amp; self , service_modes : &amp; BTreeMap &lt; &amp; str , ServiceMode &gt;) -&gt; Result &lt; () &gt;</code></td></tr></tbody></table>
+  <code class="signature">pub struct <a class="symbol-link" href="eos-plugin--src-manifest-rs.html#item-struct-PluginOperationManifest-206">PluginOperationManifest</a></code>
+  <p class="docstring">One public `plugin.&lt;plugin&gt;.&lt;op&gt;` operation.</p>
+  <div class="tags"><span>derive: Clone</span><span>derive: Debug</span><span>derive: Deserialize</span><span>derive: Eq</span><span>derive: PartialEq</span><span>derive: Serialize</span><span>serde</span><span>serde: deny_unknown_fields</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>op_name</td><td><code>String</code></td></tr><tr><td>pub</td><td>intent</td><td><code>Intent</code></td></tr><tr><td>pub</td><td>auto_workspace_overlay</td><td><code>bool</code></td></tr><tr><td>pub</td><td>service_id</td><td><code>Option &lt; String &gt;</code></td></tr><tr><td>pub</td><td>timeout_ms</td><td><code>Option &lt; u64 &gt;</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-validate-221"><td>method</td><td>validate</td><td><code>fn <a class="symbol-link" href="eos-plugin--src-manifest-rs.html#method-validate-37">validate</a> (&amp; self , service_modes : &amp; BTreeMap &lt; &amp; str , <a class="symbol-link" href="eos-plugin--src-service-rs.html#item-enum-ServiceMode-12">ServiceMode</a> &gt;) -&gt; <a class="symbol-link" href="eos-plugin.html#item-type-Result-49">Result</a> &lt; () &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#method-validate-37">validate</a>(&amp;<span class="rs-self">self</span>, service_modes: &amp;<span class="rs-type">BTreeMap</span>&lt;&amp;str, <a class="symbol-link rs-type" href="eos-plugin--src-service-rs.html#item-enum-ServiceMode-12">ServiceMode</a>&gt;) -&gt; <a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>&lt;()&gt; {
+        <a class="symbol-link rs-fn" href="eos-plugin--src-service-rs.html#item-fn-require-non-empty-176">require_non_empty</a>(&quot;op_name&quot;, &amp;<span class="rs-self">self</span>.op_name)?;
+        <span class="rs-kw">if</span> <span class="rs-self">self</span>.intent == <span class="rs-type">Intent</span>::<span class="rs-type">Lifecycle</span> {
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-plugin.html#item-enum-PluginError-5">PluginError</a>::<span class="rs-type">Manifest</span>(
+                &quot;<span class="rs-type">Intent</span>::<span class="rs-type">Lifecycle</span> is reserved <span class="rs-kw">for</span> sandbox lifecycle ops&quot;.to_owned(),
+            ));
+        }
+        <span class="rs-kw">if</span> <span class="rs-self">self</span>.intent == <span class="rs-type">Intent</span>::<span class="rs-type">ReadOnly</span> &amp;&amp; <span class="rs-self">self</span>.service_id.is_none() {
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-plugin.html#item-enum-PluginError-5">PluginError</a>::<span class="rs-type">Manifest</span>(format!(
+                &quot;read-only op {} must reference a service_id&quot;,
+                <span class="rs-self">self</span>.op_name
+            )));
+        }
+        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(service_id) = &amp;<span class="rs-self">self</span>.service_id {
+            <a class="symbol-link rs-fn" href="eos-plugin--src-service-rs.html#item-fn-validate-identifier-139">validate_identifier</a>(&quot;service_id&quot;, service_id)?;
+            <span class="rs-kw">if</span> !service_modes.contains_key(service_id.as_str()) {
+                <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-plugin.html#item-enum-PluginError-5">PluginError</a>::<span class="rs-type">Manifest</span>(format!(
+                    &quot;op {} references unknown service_id {}&quot;,
+                    <span class="rs-self">self</span>.op_name, service_id
+                )));
+            }
+        }
+        <span class="rs-kw">if</span> <span class="rs-self">self</span>.intent == <span class="rs-type">Intent</span>::<span class="rs-type">WriteAllowed</span> &amp;&amp; <span class="rs-self">self</span>.auto_workspace_overlay {
+            <span class="rs-kw">let</span> <span class="rs-type">Some</span>(service_id) = &amp;<span class="rs-self">self</span>.service_id <span class="rs-kw">else</span> {
+                <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-plugin.html#item-enum-PluginError-5">PluginError</a>::<span class="rs-type">Manifest</span>(format!(
+                    &quot;write op {} with auto_workspace_overlay requires an oneshot_overlay service&quot;,
+                    <span class="rs-self">self</span>.op_name
+                )));
+            };
+            <span class="rs-kw">if</span> service_modes.get(service_id.as_str()) != <span class="rs-type">Some</span>(&amp;<a class="symbol-link rs-type" href="eos-plugin--src-service-rs.html#item-enum-ServiceMode-12">ServiceMode</a>::<span class="rs-type">OneshotOverlay</span>) {
+                <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-plugin.html#item-enum-PluginError-5">PluginError</a>::<span class="rs-type">Manifest</span>(format!(
+                    &quot;write op {} with auto_workspace_overlay requires an oneshot_overlay service&quot;,
+                    <span class="rs-self">self</span>.op_name
+                )));
+            }
+        }
+        <span class="rs-kw">if</span> <span class="rs-self">self</span>.timeout_ms == <span class="rs-type">Some</span>(0) {
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-plugin.html#item-enum-PluginError-5">PluginError</a>::<span class="rs-type">Manifest</span>(format!(
+                &quot;op {} timeout_ms must be positive&quot;,
+                <span class="rs-self">self</span>.op_name
+            )));
+        }
+        <span class="rs-type">Ok</span>(())
+    }
+</code></pre>
+</details></td></tr></tbody></table>
+
   <p class="source">crates/eos-plugin/src/manifest.rs:206</p>
-</article><article class="type-card" data-kind="enum" data-kind-list="enum field type-model" data-filter-text="enum PluginDependencyScope pub pub enum PluginDependencyScope crates/eos-plugin/src/manifest.rs  ">
+</article><article id="item-enum-PluginDependencyScope-119" class="type-card" data-kind="enum" data-kind-list="enum field type-model" data-filter-text="enum PluginDependencyScope pub pub enum PluginDependencyScope crates/eos-plugin/src/manifest.rs  ">
   <div class="item-head">
     <span class="kind">enum</span>
     <h3>PluginDependencyScope</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub enum PluginDependencyScope</code>
-  <div class="tags"><span>serde</span></div>
+  <code class="signature">pub enum <a class="symbol-link" href="eos-plugin--src-manifest-rs.html#item-enum-PluginDependencyScope-119">PluginDependencyScope</a></code>
+  <p class="docstring">Dependency isolation scope for package-managed runtime dependencies.</p>
+  <div class="tags"><span>derive: Clone</span><span>derive: Copy</span><span>derive: Debug</span><span>derive: Default</span><span>derive: Deserialize</span><span>derive: Eq</span><span>derive: PartialEq</span><span>derive: Serialize</span><span>non_exhaustive</span><span>serde</span><span>serde: rename_all</span></div>
   <h4>Variants</h4><table><tbody><tr><td>PackageDigest</td><td><code></code></td></tr></tbody></table>
+
   <p class="source">crates/eos-plugin/src/manifest.rs:119</p>
-</article><div class="group-label">Aliases</div><article class="item-card" data-kind="type" data-kind-list="type" data-filter-text="type TestResult private type TestResult = std :: result :: Result &lt; () , PluginError &gt; crates/eos-plugin/src/manifest.rs  ">
+</article><div class="group-label">Aliases</div><article id="item-type-TestResult-298" class="item-card" data-kind="type" data-kind-list="type" data-filter-text="type TestResult private type TestResult = std :: result :: Result &lt; () , PluginError &gt; crates/eos-plugin/src/manifest.rs  ">
   <div class="item-head">
     <span class="kind">type</span>
     <h3>TestResult</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">type TestResult = std :: result :: Result &lt; () , PluginError &gt;</code>
+  <code class="signature">type <a class="symbol-link" href="eos-plugin--src-manifest-rs.html#item-type-TestResult-298">TestResult</a> = std :: result :: <a class="symbol-link" href="eos-plugin.html#item-type-Result-49">Result</a> &lt; () , <a class="symbol-link" href="eos-plugin.html#item-enum-PluginError-5">PluginError</a> &gt;</code>
   <div class="tags"></div>
 
   <p class="source">crates/eos-plugin/src/manifest.rs:298</p>
-</article><div class="group-label">Standalone Functions</div><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn default_ppc_protocol private const fn default_ppc_protocol () -&gt; u32 crates/eos-plugin/src/manifest.rs  ">
+</article><div class="group-label">Standalone Functions</div><article id="item-fn-default-ppc-protocol-267" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn default_ppc_protocol private const fn default_ppc_protocol () -&gt; u32 crates/eos-plugin/src/manifest.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>default_ppc_protocol</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">const fn default_ppc_protocol () -&gt; u32</code>
+  <code class="signature">const fn <a class="symbol-link" href="eos-plugin--src-manifest-rs.html#item-fn-default-ppc-protocol-267">default_ppc_protocol</a> () -&gt; u32</code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#item-fn-default-ppc-protocol-267">default_ppc_protocol</a>() -&gt; u32 {
+    1
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-plugin/src/manifest.rs:267</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn default_auto_workspace_overlay private const fn default_auto_workspace_overlay () -&gt; bool crates/eos-plugin/src/manifest.rs  ">
+</article><article id="item-fn-default-auto-workspace-overlay-271" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn default_auto_workspace_overlay private const fn default_auto_workspace_overlay () -&gt; bool crates/eos-plugin/src/manifest.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>default_auto_workspace_overlay</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">const fn default_auto_workspace_overlay () -&gt; bool</code>
+  <code class="signature">const fn <a class="symbol-link" href="eos-plugin--src-manifest-rs.html#item-fn-default-auto-workspace-overlay-271">default_auto_workspace_overlay</a> () -&gt; bool</code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#item-fn-default-auto-workspace-overlay-271">default_auto_workspace_overlay</a>() -&gt; bool {
+    <span class="rs-kw">true</span>
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-plugin/src/manifest.rs:271</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn default_runtime_dir private fn default_runtime_dir () -&gt; String crates/eos-plugin/src/manifest.rs  ">
+</article><article id="item-fn-default-runtime-dir-275" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn default_runtime_dir private fn default_runtime_dir () -&gt; String crates/eos-plugin/src/manifest.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>default_runtime_dir</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn default_runtime_dir () -&gt; String</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-plugin--src-manifest-rs.html#item-fn-default-runtime-dir-275">default_runtime_dir</a> () -&gt; String</code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#item-fn-default-runtime-dir-275">default_runtime_dir</a>() -&gt; <span class="rs-type">String</span> {
+    &quot;runtime&quot;.to_owned()
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-plugin/src/manifest.rs:275</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn validate_relative_package_path private fn validate_relative_package_path (field : &amp; str , value : &amp; str) -&gt; Result &lt; () &gt; crates/eos-plugin/src/manifest.rs  ">
+</article><article id="item-fn-validate-relative-package-path-279" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn validate_relative_package_path private fn validate_relative_package_path (field : &amp; str , value : &amp; str) -&gt; Result &lt; () &gt; crates/eos-plugin/src/manifest.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>validate_relative_package_path</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn validate_relative_package_path (field : &amp; str , value : &amp; str) -&gt; Result &lt; () &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-plugin--src-manifest-rs.html#item-fn-validate-relative-package-path-279">validate_relative_package_path</a> (field : &amp; str , value : &amp; str) -&gt; <a class="symbol-link" href="eos-plugin.html#item-type-Result-49">Result</a> &lt; () &gt;</code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#item-fn-validate-relative-package-path-279">validate_relative_package_path</a>(field: &amp;str, value: &amp;str) -&gt; <a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>&lt;()&gt; {
+    <a class="symbol-link rs-fn" href="eos-plugin--src-service-rs.html#item-fn-require-non-empty-176">require_non_empty</a>(field, value)?;
+    <span class="rs-kw">if</span> value.starts_with(&#x27;/&#x27;) {
+        <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-plugin.html#item-enum-PluginError-5">PluginError</a>::<span class="rs-type">Manifest</span>(format!(&quot;{field} must be relative&quot;)));
+    }
+    <span class="rs-kw">for</span> component <span class="rs-kw">in</span> value.split(&#x27;/&#x27;) {
+        <span class="rs-kw">if</span> component == &quot;..&quot; {
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-plugin.html#item-enum-PluginError-5">PluginError</a>::<span class="rs-type">Manifest</span>(format!(
+                &quot;{field} must not contain path traversal&quot;
+            )));
+        }
+    }
+    <span class="rs-type">Ok</span>(())
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-plugin/src/manifest.rs:279</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn manifest private fn manifest () -&gt; PluginManifest crates/eos-plugin/src/manifest.rs  ">
+</article><article id="item-fn-manifest-300" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn manifest private fn manifest () -&gt; PluginManifest crates/eos-plugin/src/manifest.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>manifest</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn manifest () -&gt; PluginManifest</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-plugin--src-manifest-rs.html#item-fn-manifest-300">manifest</a> () -&gt; <a class="symbol-link" href="eos-plugin--src-manifest-rs.html#item-struct-PluginManifest-19">PluginManifest</a></code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#item-fn-manifest-300">manifest</a>() -&gt; <a class="symbol-link rs-type" href="eos-plugin--src-manifest-rs.html#item-struct-PluginManifest-19">PluginManifest</a> {
+        <a class="symbol-link rs-type" href="eos-plugin--src-manifest-rs.html#item-struct-PluginManifest-19">PluginManifest</a> {
+            plugin_id: &quot;generic&quot;.to_owned(),
+            plugin_version: &quot;0.1.0&quot;.to_owned(),
+            plugin_digest: &quot;digest-a&quot;.to_owned(),
+            package: <a class="symbol-link rs-type" href="eos-plugin--src-manifest-rs.html#item-struct-PluginPackageManifest-94">PluginPackageManifest</a>::<a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#method-default-105">default</a>(),
+            setup: <span class="rs-type">Some</span>(<a class="symbol-link rs-type" href="eos-plugin--src-manifest-rs.html#item-struct-PluginSetupManifest-129">PluginSetupManifest</a> {
+                command: vec![&quot;./setup.sh&quot;.to_owned()],
+                working_dir: &quot;runtime&quot;.to_owned(),
+                setup_marker_digest: &quot;setup-a&quot;.to_owned(),
+                timeout_ms: 30_000,
+            }),
+            services: vec![<a class="symbol-link rs-type" href="eos-plugin--src-manifest-rs.html#item-struct-PluginServiceManifest-157">PluginServiceManifest</a> {
+                service_id: &quot;worker&quot;.to_owned(),
+                service_profile_digest: &quot;profile-a&quot;.to_owned(),
+                service_mode: <a class="symbol-link rs-type" href="eos-plugin--src-service-rs.html#item-enum-ServiceMode-12">ServiceMode</a>::<span class="rs-type">WorkspaceSnapshotRefresh</span>,
+                refresh_strategy: <a class="symbol-link rs-type" href="eos-plugin--src-service-rs.html#item-enum-RefreshStrategy-24">RefreshStrategy</a>::<span class="rs-type">RemountWorkspaceAndNotify</span>,
+                command: vec![&quot;generic-service&quot;.to_owned(), &quot;--stdio&quot;.to_owned()],
+                working_dir: <span class="rs-type">Some</span>(&quot;runtime&quot;.to_owned()),
+                ppc_protocol_version: 1,
+            }],
+            operations: vec![<a class="symbol-link rs-type" href="eos-plugin--src-manifest-rs.html#item-struct-PluginOperationManifest-206">PluginOperationManifest</a> {
+                op_name: &quot;hover&quot;.to_owned(),
+                intent: <span class="rs-type">Intent</span>::<span class="rs-type">ReadOnly</span>,
+                auto_workspace_overlay: <span class="rs-kw">true</span>,
+                service_id: <span class="rs-type">Some</span>(&quot;worker&quot;.to_owned()),
+                timeout_ms: <span class="rs-type">Some</span>(5_000),
+            }],
+        }
+    }
+</code></pre>
+</details>
 
   <p class="source">crates/eos-plugin/src/manifest.rs:300</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn validates_read_only_service_manifest private fn validates_read_only_service_manifest () -&gt; TestResult crates/eos-plugin/src/manifest.rs  ">
+</article><article id="item-fn-validates-read-only-service-manifest-331" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn validates_read_only_service_manifest private fn validates_read_only_service_manifest () -&gt; TestResult crates/eos-plugin/src/manifest.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>validates_read_only_service_manifest</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn validates_read_only_service_manifest () -&gt; TestResult</code>
-  <div class="tags"></div>
+  <code class="signature">fn <a class="symbol-link" href="eos-plugin--src-manifest-rs.html#item-fn-validates-read-only-service-manifest-331">validates_read_only_service_manifest</a> () -&gt; <a class="symbol-link" href="eos-plugin--src-manifest-rs.html#item-type-TestResult-298">TestResult</a></code>
+  <div class="tags"><span>test</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#item-fn-validates-read-only-service-manifest-331">validates_read_only_service_manifest</a>() -&gt; <a class="symbol-link rs-type" href="eos-plugin--src-manifest-rs.html#item-type-TestResult-298">TestResult</a> {
+        <a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#item-fn-manifest-300">manifest</a>().<a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#method-validate-37">validate</a>()?;
+        <span class="rs-type">Ok</span>(())
+    }
+</code></pre>
+</details>
 
   <p class="source">crates/eos-plugin/src/manifest.rs:331</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn rejects_read_only_op_without_service private fn rejects_read_only_op_without_service () crates/eos-plugin/src/manifest.rs  ">
+</article><article id="item-fn-rejects-read-only-op-without-service-337" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn rejects_read_only_op_without_service private fn rejects_read_only_op_without_service () crates/eos-plugin/src/manifest.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>rejects_read_only_op_without_service</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn rejects_read_only_op_without_service ()</code>
-  <div class="tags"></div>
+  <code class="signature">fn <a class="symbol-link" href="eos-plugin--src-manifest-rs.html#item-fn-rejects-read-only-op-without-service-337">rejects_read_only_op_without_service</a> ()</code>
+  <div class="tags"><span>test</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#item-fn-rejects-read-only-op-without-service-337">rejects_read_only_op_without_service</a>() {
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> manifest = <a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#item-fn-manifest-300">manifest</a>();
+        manifest.operations[0].service_id = <span class="rs-type">None</span>;
+        assert!(matches!(
+            manifest.<a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#method-validate-37">validate</a>(),
+            <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-plugin.html#item-enum-PluginError-5">PluginError</a>::<span class="rs-type">Manifest</span>(message)) <span class="rs-kw">if</span> message.contains(&quot;must reference&quot;)
+        ));
+    }
+</code></pre>
+</details>
 
   <p class="source">crates/eos-plugin/src/manifest.rs:337</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn rejects_duplicate_operation_names private fn rejects_duplicate_operation_names () crates/eos-plugin/src/manifest.rs  ">
+</article><article id="item-fn-rejects-duplicate-operation-names-347" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn rejects_duplicate_operation_names private fn rejects_duplicate_operation_names () crates/eos-plugin/src/manifest.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>rejects_duplicate_operation_names</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn rejects_duplicate_operation_names ()</code>
-  <div class="tags"></div>
+  <code class="signature">fn <a class="symbol-link" href="eos-plugin--src-manifest-rs.html#item-fn-rejects-duplicate-operation-names-347">rejects_duplicate_operation_names</a> ()</code>
+  <div class="tags"><span>test</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#item-fn-rejects-duplicate-operation-names-347">rejects_duplicate_operation_names</a>() {
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> manifest = <a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#item-fn-manifest-300">manifest</a>();
+        manifest.operations.push(manifest.operations[0].clone());
+        assert!(matches!(
+            manifest.<a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#method-validate-37">validate</a>(),
+            <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-plugin.html#item-enum-PluginError-5">PluginError</a>::<span class="rs-type">Manifest</span>(message)) <span class="rs-kw">if</span> message.contains(&quot;duplicate op_name&quot;)
+        ));
+    }
+</code></pre>
+</details>
 
   <p class="source">crates/eos-plugin/src/manifest.rs:347</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn plugin_id_matches_rust_name_rule private fn plugin_id_matches_rust_name_rule () crates/eos-plugin/src/manifest.rs  ">
+</article><article id="item-fn-plugin-id-matches-rust-name-rule-357" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn plugin_id_matches_rust_name_rule private fn plugin_id_matches_rust_name_rule () crates/eos-plugin/src/manifest.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>plugin_id_matches_rust_name_rule</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn plugin_id_matches_rust_name_rule ()</code>
-  <div class="tags"></div>
+  <code class="signature">fn <a class="symbol-link" href="eos-plugin--src-manifest-rs.html#item-fn-plugin-id-matches-rust-name-rule-357">plugin_id_matches_rust_name_rule</a> ()</code>
+  <div class="tags"><span>test</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#item-fn-plugin-id-matches-rust-name-rule-357">plugin_id_matches_rust_name_rule</a>() {
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> valid_manifest = <a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#item-fn-manifest-300">manifest</a>();
+        valid_manifest.plugin_id = &quot;_Lsp9&quot;.to_owned();
+        assert!(valid_manifest.<a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#method-validate-37">validate</a>().is_ok());
+
+        <span class="rs-kw">for</span> invalid <span class="rs-kw">in</span> [&quot;my-plugin&quot;, &quot;my.plugin&quot;, &quot;9plugin&quot;, &quot;&quot;] {
+            <span class="rs-kw">let</span> <span class="rs-kw">mut</span> manifest = <a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#item-fn-manifest-300">manifest</a>();
+            manifest.plugin_id = invalid.to_owned();
+            assert!(matches!(
+                manifest.<a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#method-validate-37">validate</a>(),
+                <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-plugin.html#item-enum-PluginError-5">PluginError</a>::<span class="rs-type">Manifest</span>(message)) <span class="rs-kw">if</span> message.contains(&quot;plugin_id&quot;)
+            ));
+        }
+    }
+</code></pre>
+</details>
 
   <p class="source">crates/eos-plugin/src/manifest.rs:357</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn op_name_is_only_non_empty_at_manifest_boundary private fn op_name_is_only_non_empty_at_manifest_boundary () -&gt; TestResult crates/eos-plugin/src/manifest.rs  ">
+</article><article id="item-fn-op-name-is-only-non-empty-at-manifest-boundary-373" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn op_name_is_only_non_empty_at_manifest_boundary private fn op_name_is_only_non_empty_at_manifest_boundary () -&gt; TestResult crates/eos-plugin/src/manifest.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>op_name_is_only_non_empty_at_manifest_boundary</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn op_name_is_only_non_empty_at_manifest_boundary () -&gt; TestResult</code>
-  <div class="tags"></div>
+  <code class="signature">fn <a class="symbol-link" href="eos-plugin--src-manifest-rs.html#item-fn-op-name-is-only-non-empty-at-manifest-boundary-373">op_name_is_only_non_empty_at_manifest_boundary</a> () -&gt; <a class="symbol-link" href="eos-plugin--src-manifest-rs.html#item-type-TestResult-298">TestResult</a></code>
+  <div class="tags"><span>test</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#item-fn-op-name-is-only-non-empty-at-manifest-boundary-373">op_name_is_only_non_empty_at_manifest_boundary</a>() -&gt; <a class="symbol-link rs-type" href="eos-plugin--src-manifest-rs.html#item-type-TestResult-298">TestResult</a> {
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> manifest = <a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#item-fn-manifest-300">manifest</a>();
+        manifest.operations[0].op_name = &quot;1 weird.op&quot;.to_owned();
+        manifest.<a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#method-validate-37">validate</a>()?;
+
+        manifest.operations[0].op_name = &quot;   &quot;.to_owned();
+        assert!(matches!(
+            manifest.<a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#method-validate-37">validate</a>(),
+            <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-plugin.html#item-enum-PluginError-5">PluginError</a>::<span class="rs-type">Manifest</span>(message)) <span class="rs-kw">if</span> message.contains(&quot;op_name is required&quot;)
+        ));
+        <span class="rs-type">Ok</span>(())
+    }
+</code></pre>
+</details>
 
   <p class="source">crates/eos-plugin/src/manifest.rs:373</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn accepts_package_and_setup_contract private fn accepts_package_and_setup_contract () -&gt; TestResult crates/eos-plugin/src/manifest.rs  ">
+</article><article id="item-fn-accepts-package-and-setup-contract-387" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn accepts_package_and_setup_contract private fn accepts_package_and_setup_contract () -&gt; TestResult crates/eos-plugin/src/manifest.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>accepts_package_and_setup_contract</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn accepts_package_and_setup_contract () -&gt; TestResult</code>
-  <div class="tags"></div>
+  <code class="signature">fn <a class="symbol-link" href="eos-plugin--src-manifest-rs.html#item-fn-accepts-package-and-setup-contract-387">accepts_package_and_setup_contract</a> () -&gt; <a class="symbol-link" href="eos-plugin--src-manifest-rs.html#item-type-TestResult-298">TestResult</a></code>
+  <div class="tags"><span>test</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#item-fn-accepts-package-and-setup-contract-387">accepts_package_and_setup_contract</a>() -&gt; <a class="symbol-link rs-type" href="eos-plugin--src-manifest-rs.html#item-type-TestResult-298">TestResult</a> {
+        <span class="rs-kw">let</span> manifest = <a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#item-fn-manifest-300">manifest</a>();
+        manifest.<a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#method-validate-37">validate</a>()?;
+        assert_eq!(manifest.package.runtime_dir, &quot;runtime&quot;);
+        assert_eq!(manifest.<a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#method-package-marker-digest-79">package_marker_digest</a>(), &quot;digest-a&quot;);
+        assert_eq!(manifest.<a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#method-setup-marker-digest-85">setup_marker_digest</a>(), <span class="rs-type">Some</span>(&quot;setup-a&quot;));
+        assert_eq!(<span class="rs-type">PACKAGE_SHA256_MARKER</span>, &quot;.package-sha256&quot;);
+        assert_eq!(<span class="rs-type">SETUP_SHA256_MARKER</span>, &quot;.setup-sha256&quot;);
+        <span class="rs-type">Ok</span>(())
+    }
+</code></pre>
+</details>
 
   <p class="source">crates/eos-plugin/src/manifest.rs:387</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn rejects_unknown_manifest_field private fn rejects_unknown_manifest_field () crates/eos-plugin/src/manifest.rs  ">
+</article><article id="item-fn-rejects-unknown-manifest-field-399" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn rejects_unknown_manifest_field private fn rejects_unknown_manifest_field () crates/eos-plugin/src/manifest.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>rejects_unknown_manifest_field</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn rejects_unknown_manifest_field ()</code>
-  <div class="tags"></div>
+  <code class="signature">fn <a class="symbol-link" href="eos-plugin--src-manifest-rs.html#item-fn-rejects-unknown-manifest-field-399">rejects_unknown_manifest_field</a> ()</code>
+  <div class="tags"><span>test</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#item-fn-rejects-unknown-manifest-field-399">rejects_unknown_manifest_field</a>() {
+        <span class="rs-kw">let</span> value = serde_json::json!({
+            &quot;plugin_id&quot;: &quot;generic&quot;,
+            &quot;plugin_version&quot;: &quot;0.1.0&quot;,
+            &quot;plugin_digest&quot;: &quot;digest-a&quot;,
+            &quot;unexpected&quot;: <span class="rs-kw">true</span>,
+            &quot;services&quot;: [],
+            &quot;operations&quot;: []
+        });
+        assert!(serde_json::from_value::&lt;<a class="symbol-link rs-type" href="eos-plugin--src-manifest-rs.html#item-struct-PluginManifest-19">PluginManifest</a>&gt;(value).is_err());
+    }
+</code></pre>
+</details>
 
   <p class="source">crates/eos-plugin/src/manifest.rs:399</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn rejects_package_and_setup_paths_outside_package_tree private fn rejects_package_and_setup_paths_outside_package_tree () crates/eos-plugin/src/manifest.rs  ">
+</article><article id="item-fn-rejects-package-and-setup-paths-outside-package-tree-412" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn rejects_package_and_setup_paths_outside_package_tree private fn rejects_package_and_setup_paths_outside_package_tree () crates/eos-plugin/src/manifest.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>rejects_package_and_setup_paths_outside_package_tree</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn rejects_package_and_setup_paths_outside_package_tree ()</code>
-  <div class="tags"></div>
+  <code class="signature">fn <a class="symbol-link" href="eos-plugin--src-manifest-rs.html#item-fn-rejects-package-and-setup-paths-outside-package-tree-412">rejects_package_and_setup_paths_outside_package_tree</a> ()</code>
+  <div class="tags"><span>test</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#item-fn-rejects-package-and-setup-paths-outside-package-tree-412">rejects_package_and_setup_paths_outside_package_tree</a>() {
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> absolute_package = <a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#item-fn-manifest-300">manifest</a>();
+        absolute_package.package.runtime_dir = &quot;/runtime&quot;.to_owned();
+        assert!(matches!(
+            absolute_package.<a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#method-validate-37">validate</a>(),
+            <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-plugin.html#item-enum-PluginError-5">PluginError</a>::<span class="rs-type">Manifest</span>(message)) <span class="rs-kw">if</span> message.contains(&quot;package.runtime_dir&quot;)
+        ));
+
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> traversing_package = <a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#item-fn-manifest-300">manifest</a>();
+        traversing_package.package.runtime_dir = &quot;../runtime&quot;.to_owned();
+        assert!(matches!(
+            traversing_package.<a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#method-validate-37">validate</a>(),
+            <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-plugin.html#item-enum-PluginError-5">PluginError</a>::<span class="rs-type">Manifest</span>(message)) <span class="rs-kw">if</span> message.contains(&quot;path traversal&quot;)
+        ));
+
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> traversing_setup = <a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#item-fn-manifest-300">manifest</a>();
+        traversing_setup
+            .setup
+            .as_mut()
+            .expect(&quot;test fixture includes setup&quot;)
+            .working_dir = &quot;runtime/../escape&quot;.to_owned();
+        assert!(matches!(
+            traversing_setup.<a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#method-validate-37">validate</a>(),
+            <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-plugin.html#item-enum-PluginError-5">PluginError</a>::<span class="rs-type">Manifest</span>(message)) <span class="rs-kw">if</span> message.contains(&quot;setup.working_dir&quot;)
+        ));
+    }
+</code></pre>
+</details>
 
   <p class="source">crates/eos-plugin/src/manifest.rs:412</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn rejects_service_working_dir_outside_package_tree private fn rejects_service_working_dir_outside_package_tree () crates/eos-plugin/src/manifest.rs  ">
+</article><article id="item-fn-rejects-service-working-dir-outside-package-tree-440" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn rejects_service_working_dir_outside_package_tree private fn rejects_service_working_dir_outside_package_tree () crates/eos-plugin/src/manifest.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>rejects_service_working_dir_outside_package_tree</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn rejects_service_working_dir_outside_package_tree ()</code>
-  <div class="tags"></div>
+  <code class="signature">fn <a class="symbol-link" href="eos-plugin--src-manifest-rs.html#item-fn-rejects-service-working-dir-outside-package-tree-440">rejects_service_working_dir_outside_package_tree</a> ()</code>
+  <div class="tags"><span>test</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#item-fn-rejects-service-working-dir-outside-package-tree-440">rejects_service_working_dir_outside_package_tree</a>() {
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> manifest = <a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#item-fn-manifest-300">manifest</a>();
+        manifest.services[0].working_dir = <span class="rs-type">Some</span>(&quot;/runtime&quot;.to_owned());
+        assert!(matches!(
+            manifest.<a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#method-validate-37">validate</a>(),
+            <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-plugin.html#item-enum-PluginError-5">PluginError</a>::<span class="rs-type">Manifest</span>(message)) <span class="rs-kw">if</span> message.contains(&quot;service.working_dir&quot;)
+        ));
+    }
+</code></pre>
+</details>
 
   <p class="source">crates/eos-plugin/src/manifest.rs:440</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn digest_fields_drive_marker_and_service_identity private fn digest_fields_drive_marker_and_service_identity () -&gt; TestResult crates/eos-plugin/src/manifest.rs  ">
+</article><article id="item-fn-digest-fields-drive-marker-and-service-identity-450" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn digest_fields_drive_marker_and_service_identity private fn digest_fields_drive_marker_and_service_identity () -&gt; TestResult crates/eos-plugin/src/manifest.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>digest_fields_drive_marker_and_service_identity</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn digest_fields_drive_marker_and_service_identity () -&gt; TestResult</code>
-  <div class="tags"></div>
+  <code class="signature">fn <a class="symbol-link" href="eos-plugin--src-manifest-rs.html#item-fn-digest-fields-drive-marker-and-service-identity-450">digest_fields_drive_marker_and_service_identity</a> () -&gt; <a class="symbol-link" href="eos-plugin--src-manifest-rs.html#item-type-TestResult-298">TestResult</a></code>
+  <div class="tags"><span>test</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#item-fn-digest-fields-drive-marker-and-service-identity-450">digest_fields_drive_marker_and_service_identity</a>() -&gt; <a class="symbol-link rs-type" href="eos-plugin--src-manifest-rs.html#item-type-TestResult-298">TestResult</a> {
+        <span class="rs-kw">let</span> base = <a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#item-fn-manifest-300">manifest</a>();
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> package_changed = base.clone();
+        package_changed.plugin_digest = &quot;digest-b&quot;.to_owned();
+        assert_ne!(
+            base.<a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#method-package-marker-digest-79">package_marker_digest</a>(),
+            package_changed.<a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#method-package-marker-digest-79">package_marker_digest</a>()
+        );
+
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> setup_changed = base.clone();
+        setup_changed
+            .setup
+            .as_mut()
+            .expect(&quot;test fixture includes setup&quot;)
+            .setup_marker_digest = &quot;setup-b&quot;.to_owned();
+        assert_ne!(
+            base.<a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#method-setup-marker-digest-85">setup_marker_digest</a>(),
+            setup_changed.<a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#method-setup-marker-digest-85">setup_marker_digest</a>()
+        );
+
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> service_changed = base.clone();
+        service_changed.services[0].service_profile_digest = &quot;profile-b&quot;.to_owned();
+        assert_ne!(
+            base.services[0].service_profile_digest,
+            service_changed.services[0].service_profile_digest
+        );
+        <span class="rs-type">Ok</span>(())
+    }
+</code></pre>
+</details>
 
   <p class="source">crates/eos-plugin/src/manifest.rs:450</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn auto_overlay_write_requires_oneshot_service private fn auto_overlay_write_requires_oneshot_service () crates/eos-plugin/src/manifest.rs  ">
+</article><article id="item-fn-auto-overlay-write-requires-oneshot-service-480" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn auto_overlay_write_requires_oneshot_service private fn auto_overlay_write_requires_oneshot_service () crates/eos-plugin/src/manifest.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>auto_overlay_write_requires_oneshot_service</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn auto_overlay_write_requires_oneshot_service ()</code>
-  <div class="tags"></div>
+  <code class="signature">fn <a class="symbol-link" href="eos-plugin--src-manifest-rs.html#item-fn-auto-overlay-write-requires-oneshot-service-480">auto_overlay_write_requires_oneshot_service</a> ()</code>
+  <div class="tags"><span>test</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#item-fn-auto-overlay-write-requires-oneshot-service-480">auto_overlay_write_requires_oneshot_service</a>() {
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> manifest = <a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#item-fn-manifest-300">manifest</a>();
+        manifest.operations[0].intent = <span class="rs-type">Intent</span>::<span class="rs-type">WriteAllowed</span>;
+        manifest.operations[0].auto_workspace_overlay = <span class="rs-kw">true</span>;
+        assert!(matches!(
+            manifest.<a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#method-validate-37">validate</a>(),
+            <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-plugin.html#item-enum-PluginError-5">PluginError</a>::<span class="rs-type">Manifest</span>(message)) <span class="rs-kw">if</span> message.contains(&quot;oneshot_overlay&quot;)
+        ));
+
+        manifest.services[0].service_mode = <a class="symbol-link rs-type" href="eos-plugin--src-service-rs.html#item-enum-ServiceMode-12">ServiceMode</a>::<span class="rs-type">OneshotOverlay</span>;
+        manifest.services[0].refresh_strategy = <a class="symbol-link rs-type" href="eos-plugin--src-service-rs.html#item-enum-RefreshStrategy-24">RefreshStrategy</a>::<span class="rs-type">RestartService</span>;
+        assert!(manifest.<a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#method-validate-37">validate</a>().is_ok());
+    }
+</code></pre>
+</details>
 
   <p class="source">crates/eos-plugin/src/manifest.rs:480</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn oneshot_overlay_service_requires_command private fn oneshot_overlay_service_requires_command () crates/eos-plugin/src/manifest.rs  ">
+</article><article id="item-fn-oneshot-overlay-service-requires-command-495" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn oneshot_overlay_service_requires_command private fn oneshot_overlay_service_requires_command () crates/eos-plugin/src/manifest.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>oneshot_overlay_service_requires_command</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn oneshot_overlay_service_requires_command ()</code>
-  <div class="tags"></div>
+  <code class="signature">fn <a class="symbol-link" href="eos-plugin--src-manifest-rs.html#item-fn-oneshot-overlay-service-requires-command-495">oneshot_overlay_service_requires_command</a> ()</code>
+  <div class="tags"><span>test</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#item-fn-oneshot-overlay-service-requires-command-495">oneshot_overlay_service_requires_command</a>() {
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> manifest = <a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#item-fn-manifest-300">manifest</a>();
+        manifest.services[0].service_mode = <a class="symbol-link rs-type" href="eos-plugin--src-service-rs.html#item-enum-ServiceMode-12">ServiceMode</a>::<span class="rs-type">OneshotOverlay</span>;
+        manifest.services[0].command.clear();
+        assert!(matches!(
+            manifest.<a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#method-validate-37">validate</a>(),
+            <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-plugin.html#item-enum-PluginError-5">PluginError</a>::<span class="rs-type">Manifest</span>(message)) <span class="rs-kw">if</span> message.contains(&quot;requires a launch command&quot;)
+        ));
+    }
+</code></pre>
+</details>
 
   <p class="source">crates/eos-plugin/src/manifest.rs:495</p>
 </article></div>
 </section></div>
 </main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/eos-plugin/src/manifest.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-comment">//! Plugin manifest contracts.</span>
+
+<span class="rs-kw">use</span> std::collections::{<span class="rs-type">BTreeMap</span>, <span class="rs-type">BTreeSet</span>};
+
+<span class="rs-kw">use</span> eos_protocol::<span class="rs-type">Intent</span>;
+<span class="rs-kw">use</span> serde::{<span class="rs-type">Deserialize</span>, <span class="rs-type">Serialize</span>};
+
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::error::{<a class="symbol-link rs-type" href="eos-plugin.html#item-enum-PluginError-5">PluginError</a>, <a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>};
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::service::{
+    require_non_empty, validate_identifier, validate_plugin_id, <a class="symbol-link rs-type" href="eos-plugin--src-service-rs.html#item-enum-RefreshStrategy-24">RefreshStrategy</a>, <a class="symbol-link rs-type" href="eos-plugin--src-service-rs.html#item-enum-ServiceMode-12">ServiceMode</a>,
+};
+
+<span class="rs-comment">/// Digest marker written after a package tree is accepted.</span>
+<span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-type">PACKAGE_SHA256_MARKER</span>: &amp;str = &quot;.package-sha256&quot;;
+
+<span class="rs-comment">/// Digest marker written after setup completes successfully.</span>
+<span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-type">SETUP_SHA256_MARKER</span>: &amp;str = &quot;.setup-sha256&quot;;
+
+<span class="rs-comment">/// Top-level plugin manifest consumed by `api.plugin.ensure`.</span>
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Eq</span>, <span class="rs-type">Serialize</span>, <span class="rs-type">Deserialize</span>)]
+#[serde(deny_unknown_fields)]
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-plugin--src-manifest-rs.html#item-struct-PluginManifest-19">PluginManifest</a> {
+    <span class="rs-kw">pub</span> plugin_id: <span class="rs-type">String</span>,
+    <span class="rs-kw">pub</span> plugin_version: <span class="rs-type">String</span>,
+    <span class="rs-kw">pub</span> plugin_digest: <span class="rs-type">String</span>,
+    #[serde(default)]
+    <span class="rs-kw">pub</span> package: <a class="symbol-link rs-type" href="eos-plugin--src-manifest-rs.html#item-struct-PluginPackageManifest-94">PluginPackageManifest</a>,
+    #[serde(default, skip_serializing_if = &quot;<span class="rs-type">Option</span>::is_none&quot;)]
+    <span class="rs-kw">pub</span> setup: <span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-plugin--src-manifest-rs.html#item-struct-PluginSetupManifest-129">PluginSetupManifest</a>&gt;,
+    #[serde(default)]
+    <span class="rs-kw">pub</span> services: <span class="rs-type">Vec</span>&lt;<a class="symbol-link rs-type" href="eos-plugin--src-manifest-rs.html#item-struct-PluginServiceManifest-157">PluginServiceManifest</a>&gt;,
+    #[serde(default)]
+    <span class="rs-kw">pub</span> operations: <span class="rs-type">Vec</span>&lt;<a class="symbol-link rs-type" href="eos-plugin--src-manifest-rs.html#item-struct-PluginOperationManifest-206">PluginOperationManifest</a>&gt;,
+}
+
+<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-plugin--src-manifest-rs.html#item-struct-PluginManifest-19">PluginManifest</a> {
+    <span class="rs-comment">/// Validate manifest identity, service uniqueness, and operation references.</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// # Errors</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// Returns [`PluginError::Manifest`] when identifiers are malformed, required</span>
+    <span class="rs-comment">/// fields are empty, services or operations are duplicated, or an operation</span>
+    <span class="rs-comment">/// references an unknown service.</span>
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#method-validate-37">validate</a>(&amp;<span class="rs-self">self</span>) -&gt; <a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>&lt;()&gt; {
+        <a class="symbol-link rs-fn" href="eos-plugin--src-service-rs.html#item-fn-validate-plugin-id-162">validate_plugin_id</a>(&quot;plugin_id&quot;, &amp;<span class="rs-self">self</span>.plugin_id)?;
+        <a class="symbol-link rs-fn" href="eos-plugin--src-service-rs.html#item-fn-require-non-empty-176">require_non_empty</a>(&quot;plugin_version&quot;, &amp;<span class="rs-self">self</span>.plugin_version)?;
+        <a class="symbol-link rs-fn" href="eos-plugin--src-service-rs.html#item-fn-require-non-empty-176">require_non_empty</a>(&quot;plugin_digest&quot;, &amp;<span class="rs-self">self</span>.plugin_digest)?;
+        <span class="rs-self">self</span>.package.<a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#method-validate-37">validate</a>()?;
+        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(setup) = &amp;<span class="rs-self">self</span>.setup {
+            setup.<a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#method-validate-37">validate</a>()?;
+        }
+
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> service_ids = <span class="rs-type">BTreeSet</span>::<a class="symbol-link rs-fn" href="eos-plugin--src-service-rs.html#method-new-77">new</a>();
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> service_modes = <span class="rs-type">BTreeMap</span>::<a class="symbol-link rs-fn" href="eos-plugin--src-service-rs.html#method-new-77">new</a>();
+        <span class="rs-kw">for</span> service <span class="rs-kw">in</span> &amp;<span class="rs-self">self</span>.services {
+            service.<a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#method-validate-37">validate</a>()?;
+            <span class="rs-kw">if</span> !service_ids.insert(service.service_id.as_str()) {
+                <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-plugin.html#item-enum-PluginError-5">PluginError</a>::<span class="rs-type">Manifest</span>(format!(
+                    &quot;duplicate service_id {}&quot;,
+                    service.service_id
+                )));
+            }
+            service_modes.insert(service.service_id.as_str(), service.service_mode);
+        }
+
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> op_names = <span class="rs-type">BTreeSet</span>::<a class="symbol-link rs-fn" href="eos-plugin--src-service-rs.html#method-new-77">new</a>();
+        <span class="rs-kw">for</span> operation <span class="rs-kw">in</span> &amp;<span class="rs-self">self</span>.operations {
+            operation.<a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#method-validate-37">validate</a>(&amp;service_modes)?;
+            <span class="rs-kw">if</span> !op_names.insert(operation.op_name.as_str()) {
+                <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-plugin.html#item-enum-PluginError-5">PluginError</a>::<span class="rs-type">Manifest</span>(format!(
+                    &quot;duplicate op_name {}&quot;,
+                    operation.op_name
+                )));
+            }
+        }
+        <span class="rs-type">Ok</span>(())
+    }
+
+    <span class="rs-comment">/// Digest recorded in [`PACKAGE_SHA256_MARKER`] for package idempotency.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#method-package-marker-digest-79">package_marker_digest</a>(&amp;<span class="rs-self">self</span>) -&gt; &amp;str {
+        &amp;<span class="rs-self">self</span>.plugin_digest
+    }
+
+    <span class="rs-comment">/// Digest recorded in [`SETUP_SHA256_MARKER`] after setup succeeds.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#method-setup-marker-digest-85">setup_marker_digest</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Option</span>&lt;&amp;str&gt; {
+        <span class="rs-self">self</span>.setup
+            .as_ref()
+            .map(|setup| setup.setup_marker_digest.as_str())
+    }
+}
+
+<span class="rs-comment">/// Package-root contract for an installed plugin payload.</span>
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Eq</span>, <span class="rs-type">Serialize</span>, <span class="rs-type">Deserialize</span>)]
+#[serde(deny_unknown_fields)]
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-plugin--src-manifest-rs.html#item-struct-PluginPackageManifest-94">PluginPackageManifest</a> {
+    #[serde(default = &quot;default_runtime_dir&quot;)]
+    <span class="rs-kw">pub</span> runtime_dir: <span class="rs-type">String</span>,
+    #[serde(default)]
+    <span class="rs-kw">pub</span> dependency_scope: <a class="symbol-link rs-type" href="eos-plugin--src-manifest-rs.html#item-enum-PluginDependencyScope-119">PluginDependencyScope</a>,
+}
+
+<span class="rs-kw">impl</span> <span class="rs-type">Default</span> <span class="rs-kw">for</span> <a class="symbol-link rs-type" href="eos-plugin--src-manifest-rs.html#item-struct-PluginPackageManifest-94">PluginPackageManifest</a> {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#method-default-105">default</a>() -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">Self</span> {
+            runtime_dir: <a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#item-fn-default-runtime-dir-275">default_runtime_dir</a>(),
+            dependency_scope: <a class="symbol-link rs-type" href="eos-plugin--src-manifest-rs.html#item-enum-PluginDependencyScope-119">PluginDependencyScope</a>::<span class="rs-type">PackageDigest</span>,
+        }
+    }
+}
+
+<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-plugin--src-manifest-rs.html#item-struct-PluginPackageManifest-94">PluginPackageManifest</a> {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#method-validate-37">validate</a>(&amp;<span class="rs-self">self</span>) -&gt; <a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>&lt;()&gt; {
+        <a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#item-fn-validate-relative-package-path-279">validate_relative_package_path</a>(&quot;package.runtime_dir&quot;, &amp;<span class="rs-self">self</span>.runtime_dir)
+    }
+}
+
+<span class="rs-comment">/// Dependency isolation scope for package-managed runtime dependencies.</span>
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">Copy</span>, <span class="rs-type">Default</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Eq</span>, <span class="rs-type">Serialize</span>, <span class="rs-type">Deserialize</span>)]
+#[serde(rename_all = &quot;snake_case&quot;)]
+#[non_exhaustive]
+<span class="rs-kw">pub</span> <span class="rs-kw">enum</span> <a class="symbol-link rs-type" href="eos-plugin--src-manifest-rs.html#item-enum-PluginDependencyScope-119">PluginDependencyScope</a> {
+    <span class="rs-comment">/// Dependencies live under `/eos/runtime/packages/&lt;plugin&gt;/&lt;digest&gt;/`.</span>
+    #[default]
+    <span class="rs-type">PackageDigest</span>,
+}
+
+<span class="rs-comment">/// Optional setup command executed by the daemon after package publish.</span>
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Eq</span>, <span class="rs-type">Serialize</span>, <span class="rs-type">Deserialize</span>)]
+#[serde(deny_unknown_fields)]
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-plugin--src-manifest-rs.html#item-struct-PluginSetupManifest-129">PluginSetupManifest</a> {
+    <span class="rs-kw">pub</span> command: <span class="rs-type">Vec</span>&lt;<span class="rs-type">String</span>&gt;,
+    <span class="rs-kw">pub</span> working_dir: <span class="rs-type">String</span>,
+    <span class="rs-kw">pub</span> setup_marker_digest: <span class="rs-type">String</span>,
+    <span class="rs-kw">pub</span> timeout_ms: u64,
+}
+
+<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-plugin--src-manifest-rs.html#item-struct-PluginSetupManifest-129">PluginSetupManifest</a> {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#method-validate-37">validate</a>(&amp;<span class="rs-self">self</span>) -&gt; <a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>&lt;()&gt; {
+        <span class="rs-kw">if</span> <span class="rs-self">self</span>.command.is_empty() {
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-plugin.html#item-enum-PluginError-5">PluginError</a>::<span class="rs-type">Manifest</span>(
+                &quot;setup.command must not be empty&quot;.to_owned(),
+            ));
+        }
+        <a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#item-fn-validate-relative-package-path-279">validate_relative_package_path</a>(&quot;setup.working_dir&quot;, &amp;<span class="rs-self">self</span>.working_dir)?;
+        <a class="symbol-link rs-fn" href="eos-plugin--src-service-rs.html#item-fn-require-non-empty-176">require_non_empty</a>(&quot;setup_marker_digest&quot;, &amp;<span class="rs-self">self</span>.setup_marker_digest)?;
+        <span class="rs-kw">if</span> <span class="rs-self">self</span>.timeout_ms == 0 {
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-plugin.html#item-enum-PluginError-5">PluginError</a>::<span class="rs-type">Manifest</span>(
+                &quot;setup.timeout_ms must be positive&quot;.to_owned(),
+            ));
+        }
+        <span class="rs-type">Ok</span>(())
+    }
+}
+
+<span class="rs-comment">/// One service declared by a plugin payload.</span>
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Eq</span>, <span class="rs-type">Serialize</span>, <span class="rs-type">Deserialize</span>)]
+#[serde(deny_unknown_fields)]
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-plugin--src-manifest-rs.html#item-struct-PluginServiceManifest-157">PluginServiceManifest</a> {
+    <span class="rs-kw">pub</span> service_id: <span class="rs-type">String</span>,
+    <span class="rs-kw">pub</span> service_profile_digest: <span class="rs-type">String</span>,
+    <span class="rs-kw">pub</span> service_mode: <a class="symbol-link rs-type" href="eos-plugin--src-service-rs.html#item-enum-ServiceMode-12">ServiceMode</a>,
+    <span class="rs-kw">pub</span> refresh_strategy: <a class="symbol-link rs-type" href="eos-plugin--src-service-rs.html#item-enum-RefreshStrategy-24">RefreshStrategy</a>,
+    #[serde(default)]
+    <span class="rs-kw">pub</span> command: <span class="rs-type">Vec</span>&lt;<span class="rs-type">String</span>&gt;,
+    #[serde(default, skip_serializing_if = &quot;<span class="rs-type">Option</span>::is_none&quot;)]
+    <span class="rs-kw">pub</span> working_dir: <span class="rs-type">Option</span>&lt;<span class="rs-type">String</span>&gt;,
+    #[serde(default = &quot;default_ppc_protocol&quot;)]
+    <span class="rs-kw">pub</span> ppc_protocol_version: u32,
+}
+
+<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-plugin--src-manifest-rs.html#item-struct-PluginServiceManifest-157">PluginServiceManifest</a> {
+    <span class="rs-comment">/// Validate this service declaration.</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// # Errors</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// Returns [`PluginError::Manifest`] when the service identity/profile is</span>
+    <span class="rs-comment">/// invalid, the PPC protocol is zero, or an executable service mode lacks a</span>
+    <span class="rs-comment">/// launch command.</span>
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#method-validate-37">validate</a>(&amp;<span class="rs-self">self</span>) -&gt; <a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>&lt;()&gt; {
+        <a class="symbol-link rs-fn" href="eos-plugin--src-service-rs.html#item-fn-validate-identifier-139">validate_identifier</a>(&quot;service_id&quot;, &amp;<span class="rs-self">self</span>.service_id)?;
+        <a class="symbol-link rs-fn" href="eos-plugin--src-service-rs.html#item-fn-require-non-empty-176">require_non_empty</a>(&quot;service_profile_digest&quot;, &amp;<span class="rs-self">self</span>.service_profile_digest)?;
+        <span class="rs-kw">if</span> <span class="rs-self">self</span>.ppc_protocol_version == 0 {
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-plugin.html#item-enum-PluginError-5">PluginError</a>::<span class="rs-type">Manifest</span>(
+                &quot;ppc_protocol_version must be positive&quot;.to_owned(),
+            ));
+        }
+        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(working_dir) = &amp;<span class="rs-self">self</span>.working_dir {
+            <a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#item-fn-validate-relative-package-path-279">validate_relative_package_path</a>(&quot;service.working_dir&quot;, working_dir)?;
+        }
+        <span class="rs-kw">if</span> matches!(
+            <span class="rs-self">self</span>.service_mode,
+            <a class="symbol-link rs-type" href="eos-plugin--src-service-rs.html#item-enum-ServiceMode-12">ServiceMode</a>::<span class="rs-type">WorkspaceSnapshotRefresh</span> | <a class="symbol-link rs-type" href="eos-plugin--src-service-rs.html#item-enum-ServiceMode-12">ServiceMode</a>::<span class="rs-type">OneshotOverlay</span>
+        ) &amp;&amp; <span class="rs-self">self</span>.command.is_empty()
+        {
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-plugin.html#item-enum-PluginError-5">PluginError</a>::<span class="rs-type">Manifest</span>(format!(
+                &quot;service {} requires a launch command&quot;,
+                <span class="rs-self">self</span>.service_id
+            )));
+        }
+        <span class="rs-type">Ok</span>(())
+    }
+}
+
+<span class="rs-comment">/// One public `plugin.&lt;plugin&gt;.&lt;op&gt;` operation.</span>
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Eq</span>, <span class="rs-type">Serialize</span>, <span class="rs-type">Deserialize</span>)]
+#[serde(deny_unknown_fields)]
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-plugin--src-manifest-rs.html#item-struct-PluginOperationManifest-206">PluginOperationManifest</a> {
+    <span class="rs-kw">pub</span> op_name: <span class="rs-type">String</span>,
+    <span class="rs-kw">pub</span> intent: <span class="rs-type">Intent</span>,
+    #[serde(default = &quot;default_auto_workspace_overlay&quot;)]
+    <span class="rs-kw">pub</span> auto_workspace_overlay: bool,
+    #[serde(default, skip_serializing_if = &quot;<span class="rs-type">Option</span>::is_none&quot;)]
+    <span class="rs-kw">pub</span> service_id: <span class="rs-type">Option</span>&lt;<span class="rs-type">String</span>&gt;,
+    #[serde(default, skip_serializing_if = &quot;<span class="rs-type">Option</span>::is_none&quot;)]
+    <span class="rs-kw">pub</span> timeout_ms: <span class="rs-type">Option</span>&lt;u64&gt;,
+}
+
+<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-plugin--src-manifest-rs.html#item-struct-PluginOperationManifest-206">PluginOperationManifest</a> {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#method-validate-37">validate</a>(&amp;<span class="rs-self">self</span>, service_modes: &amp;<span class="rs-type">BTreeMap</span>&lt;&amp;str, <a class="symbol-link rs-type" href="eos-plugin--src-service-rs.html#item-enum-ServiceMode-12">ServiceMode</a>&gt;) -&gt; <a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>&lt;()&gt; {
+        <a class="symbol-link rs-fn" href="eos-plugin--src-service-rs.html#item-fn-require-non-empty-176">require_non_empty</a>(&quot;op_name&quot;, &amp;<span class="rs-self">self</span>.op_name)?;
+        <span class="rs-kw">if</span> <span class="rs-self">self</span>.intent == <span class="rs-type">Intent</span>::<span class="rs-type">Lifecycle</span> {
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-plugin.html#item-enum-PluginError-5">PluginError</a>::<span class="rs-type">Manifest</span>(
+                &quot;<span class="rs-type">Intent</span>::<span class="rs-type">Lifecycle</span> is reserved <span class="rs-kw">for</span> sandbox lifecycle ops&quot;.to_owned(),
+            ));
+        }
+        <span class="rs-kw">if</span> <span class="rs-self">self</span>.intent == <span class="rs-type">Intent</span>::<span class="rs-type">ReadOnly</span> &amp;&amp; <span class="rs-self">self</span>.service_id.is_none() {
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-plugin.html#item-enum-PluginError-5">PluginError</a>::<span class="rs-type">Manifest</span>(format!(
+                &quot;read-only op {} must reference a service_id&quot;,
+                <span class="rs-self">self</span>.op_name
+            )));
+        }
+        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(service_id) = &amp;<span class="rs-self">self</span>.service_id {
+            <a class="symbol-link rs-fn" href="eos-plugin--src-service-rs.html#item-fn-validate-identifier-139">validate_identifier</a>(&quot;service_id&quot;, service_id)?;
+            <span class="rs-kw">if</span> !service_modes.contains_key(service_id.as_str()) {
+                <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-plugin.html#item-enum-PluginError-5">PluginError</a>::<span class="rs-type">Manifest</span>(format!(
+                    &quot;op {} references unknown service_id {}&quot;,
+                    <span class="rs-self">self</span>.op_name, service_id
+                )));
+            }
+        }
+        <span class="rs-kw">if</span> <span class="rs-self">self</span>.intent == <span class="rs-type">Intent</span>::<span class="rs-type">WriteAllowed</span> &amp;&amp; <span class="rs-self">self</span>.auto_workspace_overlay {
+            <span class="rs-kw">let</span> <span class="rs-type">Some</span>(service_id) = &amp;<span class="rs-self">self</span>.service_id <span class="rs-kw">else</span> {
+                <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-plugin.html#item-enum-PluginError-5">PluginError</a>::<span class="rs-type">Manifest</span>(format!(
+                    &quot;write op {} with auto_workspace_overlay requires an oneshot_overlay service&quot;,
+                    <span class="rs-self">self</span>.op_name
+                )));
+            };
+            <span class="rs-kw">if</span> service_modes.get(service_id.as_str()) != <span class="rs-type">Some</span>(&amp;<a class="symbol-link rs-type" href="eos-plugin--src-service-rs.html#item-enum-ServiceMode-12">ServiceMode</a>::<span class="rs-type">OneshotOverlay</span>) {
+                <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-plugin.html#item-enum-PluginError-5">PluginError</a>::<span class="rs-type">Manifest</span>(format!(
+                    &quot;write op {} with auto_workspace_overlay requires an oneshot_overlay service&quot;,
+                    <span class="rs-self">self</span>.op_name
+                )));
+            }
+        }
+        <span class="rs-kw">if</span> <span class="rs-self">self</span>.timeout_ms == <span class="rs-type">Some</span>(0) {
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-plugin.html#item-enum-PluginError-5">PluginError</a>::<span class="rs-type">Manifest</span>(format!(
+                &quot;op {} timeout_ms must be positive&quot;,
+                <span class="rs-self">self</span>.op_name
+            )));
+        }
+        <span class="rs-type">Ok</span>(())
+    }
+}
+
+<span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#item-fn-default-ppc-protocol-267">default_ppc_protocol</a>() -&gt; u32 {
+    1
+}
+
+<span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#item-fn-default-auto-workspace-overlay-271">default_auto_workspace_overlay</a>() -&gt; bool {
+    <span class="rs-kw">true</span>
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#item-fn-default-runtime-dir-275">default_runtime_dir</a>() -&gt; <span class="rs-type">String</span> {
+    &quot;runtime&quot;.to_owned()
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#item-fn-validate-relative-package-path-279">validate_relative_package_path</a>(field: &amp;str, value: &amp;str) -&gt; <a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>&lt;()&gt; {
+    <a class="symbol-link rs-fn" href="eos-plugin--src-service-rs.html#item-fn-require-non-empty-176">require_non_empty</a>(field, value)?;
+    <span class="rs-kw">if</span> value.starts_with(&#x27;/&#x27;) {
+        <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-plugin.html#item-enum-PluginError-5">PluginError</a>::<span class="rs-type">Manifest</span>(format!(&quot;{field} must be relative&quot;)));
+    }
+    <span class="rs-kw">for</span> component <span class="rs-kw">in</span> value.split(&#x27;/&#x27;) {
+        <span class="rs-kw">if</span> component == &quot;..&quot; {
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-plugin.html#item-enum-PluginError-5">PluginError</a>::<span class="rs-type">Manifest</span>(format!(
+                &quot;{field} must not contain path traversal&quot;
+            )));
+        }
+    }
+    <span class="rs-type">Ok</span>(())
+}
+
+#[cfg(test)]
+<span class="rs-kw">mod</span> tests {
+    <span class="rs-kw">use</span> <span class="rs-kw">super</span>::*;
+
+    <span class="rs-kw">type</span> <a class="symbol-link rs-type" href="eos-plugin--src-manifest-rs.html#item-type-TestResult-298">TestResult</a> = std::result::<a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>&lt;(), <a class="symbol-link rs-type" href="eos-plugin.html#item-enum-PluginError-5">PluginError</a>&gt;;
+
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#item-fn-manifest-300">manifest</a>() -&gt; <a class="symbol-link rs-type" href="eos-plugin--src-manifest-rs.html#item-struct-PluginManifest-19">PluginManifest</a> {
+        <a class="symbol-link rs-type" href="eos-plugin--src-manifest-rs.html#item-struct-PluginManifest-19">PluginManifest</a> {
+            plugin_id: &quot;generic&quot;.to_owned(),
+            plugin_version: &quot;0.1.0&quot;.to_owned(),
+            plugin_digest: &quot;digest-a&quot;.to_owned(),
+            package: <a class="symbol-link rs-type" href="eos-plugin--src-manifest-rs.html#item-struct-PluginPackageManifest-94">PluginPackageManifest</a>::<a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#method-default-105">default</a>(),
+            setup: <span class="rs-type">Some</span>(<a class="symbol-link rs-type" href="eos-plugin--src-manifest-rs.html#item-struct-PluginSetupManifest-129">PluginSetupManifest</a> {
+                command: vec![&quot;./setup.sh&quot;.to_owned()],
+                working_dir: &quot;runtime&quot;.to_owned(),
+                setup_marker_digest: &quot;setup-a&quot;.to_owned(),
+                timeout_ms: 30_000,
+            }),
+            services: vec![<a class="symbol-link rs-type" href="eos-plugin--src-manifest-rs.html#item-struct-PluginServiceManifest-157">PluginServiceManifest</a> {
+                service_id: &quot;worker&quot;.to_owned(),
+                service_profile_digest: &quot;profile-a&quot;.to_owned(),
+                service_mode: <a class="symbol-link rs-type" href="eos-plugin--src-service-rs.html#item-enum-ServiceMode-12">ServiceMode</a>::<span class="rs-type">WorkspaceSnapshotRefresh</span>,
+                refresh_strategy: <a class="symbol-link rs-type" href="eos-plugin--src-service-rs.html#item-enum-RefreshStrategy-24">RefreshStrategy</a>::<span class="rs-type">RemountWorkspaceAndNotify</span>,
+                command: vec![&quot;generic-service&quot;.to_owned(), &quot;--stdio&quot;.to_owned()],
+                working_dir: <span class="rs-type">Some</span>(&quot;runtime&quot;.to_owned()),
+                ppc_protocol_version: 1,
+            }],
+            operations: vec![<a class="symbol-link rs-type" href="eos-plugin--src-manifest-rs.html#item-struct-PluginOperationManifest-206">PluginOperationManifest</a> {
+                op_name: &quot;hover&quot;.to_owned(),
+                intent: <span class="rs-type">Intent</span>::<span class="rs-type">ReadOnly</span>,
+                auto_workspace_overlay: <span class="rs-kw">true</span>,
+                service_id: <span class="rs-type">Some</span>(&quot;worker&quot;.to_owned()),
+                timeout_ms: <span class="rs-type">Some</span>(5_000),
+            }],
+        }
+    }
+
+    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#item-fn-validates-read-only-service-manifest-331">validates_read_only_service_manifest</a>() -&gt; <a class="symbol-link rs-type" href="eos-plugin--src-manifest-rs.html#item-type-TestResult-298">TestResult</a> {
+        <a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#item-fn-manifest-300">manifest</a>().<a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#method-validate-37">validate</a>()?;
+        <span class="rs-type">Ok</span>(())
+    }
+
+    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#item-fn-rejects-read-only-op-without-service-337">rejects_read_only_op_without_service</a>() {
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> manifest = <a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#item-fn-manifest-300">manifest</a>();
+        manifest.operations[0].service_id = <span class="rs-type">None</span>;
+        assert!(matches!(
+            manifest.<a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#method-validate-37">validate</a>(),
+            <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-plugin.html#item-enum-PluginError-5">PluginError</a>::<span class="rs-type">Manifest</span>(message)) <span class="rs-kw">if</span> message.contains(&quot;must reference&quot;)
+        ));
+    }
+
+    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#item-fn-rejects-duplicate-operation-names-347">rejects_duplicate_operation_names</a>() {
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> manifest = <a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#item-fn-manifest-300">manifest</a>();
+        manifest.operations.push(manifest.operations[0].clone());
+        assert!(matches!(
+            manifest.<a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#method-validate-37">validate</a>(),
+            <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-plugin.html#item-enum-PluginError-5">PluginError</a>::<span class="rs-type">Manifest</span>(message)) <span class="rs-kw">if</span> message.contains(&quot;duplicate op_name&quot;)
+        ));
+    }
+
+    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#item-fn-plugin-id-matches-rust-name-rule-357">plugin_id_matches_rust_name_rule</a>() {
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> valid_manifest = <a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#item-fn-manifest-300">manifest</a>();
+        valid_manifest.plugin_id = &quot;_Lsp9&quot;.to_owned();
+        assert!(valid_manifest.<a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#method-validate-37">validate</a>().is_ok());
+
+        <span class="rs-kw">for</span> invalid <span class="rs-kw">in</span> [&quot;my-plugin&quot;, &quot;my.plugin&quot;, &quot;9plugin&quot;, &quot;&quot;] {
+            <span class="rs-kw">let</span> <span class="rs-kw">mut</span> manifest = <a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#item-fn-manifest-300">manifest</a>();
+            manifest.plugin_id = invalid.to_owned();
+            assert!(matches!(
+                manifest.<a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#method-validate-37">validate</a>(),
+                <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-plugin.html#item-enum-PluginError-5">PluginError</a>::<span class="rs-type">Manifest</span>(message)) <span class="rs-kw">if</span> message.contains(&quot;plugin_id&quot;)
+            ));
+        }
+    }
+
+    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#item-fn-op-name-is-only-non-empty-at-manifest-boundary-373">op_name_is_only_non_empty_at_manifest_boundary</a>() -&gt; <a class="symbol-link rs-type" href="eos-plugin--src-manifest-rs.html#item-type-TestResult-298">TestResult</a> {
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> manifest = <a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#item-fn-manifest-300">manifest</a>();
+        manifest.operations[0].op_name = &quot;1 weird.op&quot;.to_owned();
+        manifest.<a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#method-validate-37">validate</a>()?;
+
+        manifest.operations[0].op_name = &quot;   &quot;.to_owned();
+        assert!(matches!(
+            manifest.<a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#method-validate-37">validate</a>(),
+            <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-plugin.html#item-enum-PluginError-5">PluginError</a>::<span class="rs-type">Manifest</span>(message)) <span class="rs-kw">if</span> message.contains(&quot;op_name is required&quot;)
+        ));
+        <span class="rs-type">Ok</span>(())
+    }
+
+    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#item-fn-accepts-package-and-setup-contract-387">accepts_package_and_setup_contract</a>() -&gt; <a class="symbol-link rs-type" href="eos-plugin--src-manifest-rs.html#item-type-TestResult-298">TestResult</a> {
+        <span class="rs-kw">let</span> manifest = <a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#item-fn-manifest-300">manifest</a>();
+        manifest.<a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#method-validate-37">validate</a>()?;
+        assert_eq!(manifest.package.runtime_dir, &quot;runtime&quot;);
+        assert_eq!(manifest.<a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#method-package-marker-digest-79">package_marker_digest</a>(), &quot;digest-a&quot;);
+        assert_eq!(manifest.<a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#method-setup-marker-digest-85">setup_marker_digest</a>(), <span class="rs-type">Some</span>(&quot;setup-a&quot;));
+        assert_eq!(<span class="rs-type">PACKAGE_SHA256_MARKER</span>, &quot;.package-sha256&quot;);
+        assert_eq!(<span class="rs-type">SETUP_SHA256_MARKER</span>, &quot;.setup-sha256&quot;);
+        <span class="rs-type">Ok</span>(())
+    }
+
+    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#item-fn-rejects-unknown-manifest-field-399">rejects_unknown_manifest_field</a>() {
+        <span class="rs-kw">let</span> value = serde_json::json!({
+            &quot;plugin_id&quot;: &quot;generic&quot;,
+            &quot;plugin_version&quot;: &quot;0.1.0&quot;,
+            &quot;plugin_digest&quot;: &quot;digest-a&quot;,
+            &quot;unexpected&quot;: <span class="rs-kw">true</span>,
+            &quot;services&quot;: [],
+            &quot;operations&quot;: []
+        });
+        assert!(serde_json::from_value::&lt;<a class="symbol-link rs-type" href="eos-plugin--src-manifest-rs.html#item-struct-PluginManifest-19">PluginManifest</a>&gt;(value).is_err());
+    }
+
+    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#item-fn-rejects-package-and-setup-paths-outside-package-tree-412">rejects_package_and_setup_paths_outside_package_tree</a>() {
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> absolute_package = <a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#item-fn-manifest-300">manifest</a>();
+        absolute_package.package.runtime_dir = &quot;/runtime&quot;.to_owned();
+        assert!(matches!(
+            absolute_package.<a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#method-validate-37">validate</a>(),
+            <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-plugin.html#item-enum-PluginError-5">PluginError</a>::<span class="rs-type">Manifest</span>(message)) <span class="rs-kw">if</span> message.contains(&quot;package.runtime_dir&quot;)
+        ));
+
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> traversing_package = <a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#item-fn-manifest-300">manifest</a>();
+        traversing_package.package.runtime_dir = &quot;../runtime&quot;.to_owned();
+        assert!(matches!(
+            traversing_package.<a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#method-validate-37">validate</a>(),
+            <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-plugin.html#item-enum-PluginError-5">PluginError</a>::<span class="rs-type">Manifest</span>(message)) <span class="rs-kw">if</span> message.contains(&quot;path traversal&quot;)
+        ));
+
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> traversing_setup = <a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#item-fn-manifest-300">manifest</a>();
+        traversing_setup
+            .setup
+            .as_mut()
+            .expect(&quot;test fixture includes setup&quot;)
+            .working_dir = &quot;runtime/../escape&quot;.to_owned();
+        assert!(matches!(
+            traversing_setup.<a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#method-validate-37">validate</a>(),
+            <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-plugin.html#item-enum-PluginError-5">PluginError</a>::<span class="rs-type">Manifest</span>(message)) <span class="rs-kw">if</span> message.contains(&quot;setup.working_dir&quot;)
+        ));
+    }
+
+    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#item-fn-rejects-service-working-dir-outside-package-tree-440">rejects_service_working_dir_outside_package_tree</a>() {
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> manifest = <a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#item-fn-manifest-300">manifest</a>();
+        manifest.services[0].working_dir = <span class="rs-type">Some</span>(&quot;/runtime&quot;.to_owned());
+        assert!(matches!(
+            manifest.<a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#method-validate-37">validate</a>(),
+            <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-plugin.html#item-enum-PluginError-5">PluginError</a>::<span class="rs-type">Manifest</span>(message)) <span class="rs-kw">if</span> message.contains(&quot;service.working_dir&quot;)
+        ));
+    }
+
+    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#item-fn-digest-fields-drive-marker-and-service-identity-450">digest_fields_drive_marker_and_service_identity</a>() -&gt; <a class="symbol-link rs-type" href="eos-plugin--src-manifest-rs.html#item-type-TestResult-298">TestResult</a> {
+        <span class="rs-kw">let</span> base = <a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#item-fn-manifest-300">manifest</a>();
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> package_changed = base.clone();
+        package_changed.plugin_digest = &quot;digest-b&quot;.to_owned();
+        assert_ne!(
+            base.<a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#method-package-marker-digest-79">package_marker_digest</a>(),
+            package_changed.<a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#method-package-marker-digest-79">package_marker_digest</a>()
+        );
+
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> setup_changed = base.clone();
+        setup_changed
+            .setup
+            .as_mut()
+            .expect(&quot;test fixture includes setup&quot;)
+            .setup_marker_digest = &quot;setup-b&quot;.to_owned();
+        assert_ne!(
+            base.<a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#method-setup-marker-digest-85">setup_marker_digest</a>(),
+            setup_changed.<a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#method-setup-marker-digest-85">setup_marker_digest</a>()
+        );
+
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> service_changed = base.clone();
+        service_changed.services[0].service_profile_digest = &quot;profile-b&quot;.to_owned();
+        assert_ne!(
+            base.services[0].service_profile_digest,
+            service_changed.services[0].service_profile_digest
+        );
+        <span class="rs-type">Ok</span>(())
+    }
+
+    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#item-fn-auto-overlay-write-requires-oneshot-service-480">auto_overlay_write_requires_oneshot_service</a>() {
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> manifest = <a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#item-fn-manifest-300">manifest</a>();
+        manifest.operations[0].intent = <span class="rs-type">Intent</span>::<span class="rs-type">WriteAllowed</span>;
+        manifest.operations[0].auto_workspace_overlay = <span class="rs-kw">true</span>;
+        assert!(matches!(
+            manifest.<a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#method-validate-37">validate</a>(),
+            <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-plugin.html#item-enum-PluginError-5">PluginError</a>::<span class="rs-type">Manifest</span>(message)) <span class="rs-kw">if</span> message.contains(&quot;oneshot_overlay&quot;)
+        ));
+
+        manifest.services[0].service_mode = <a class="symbol-link rs-type" href="eos-plugin--src-service-rs.html#item-enum-ServiceMode-12">ServiceMode</a>::<span class="rs-type">OneshotOverlay</span>;
+        manifest.services[0].refresh_strategy = <a class="symbol-link rs-type" href="eos-plugin--src-service-rs.html#item-enum-RefreshStrategy-24">RefreshStrategy</a>::<span class="rs-type">RestartService</span>;
+        assert!(manifest.<a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#method-validate-37">validate</a>().is_ok());
+    }
+
+    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#item-fn-oneshot-overlay-service-requires-command-495">oneshot_overlay_service_requires_command</a>() {
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> manifest = <a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#item-fn-manifest-300">manifest</a>();
+        manifest.services[0].service_mode = <a class="symbol-link rs-type" href="eos-plugin--src-service-rs.html#item-enum-ServiceMode-12">ServiceMode</a>::<span class="rs-type">OneshotOverlay</span>;
+        manifest.services[0].command.clear();
+        assert!(matches!(
+            manifest.<a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#method-validate-37">validate</a>(),
+            <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-plugin.html#item-enum-PluginError-5">PluginError</a>::<span class="rs-type">Manifest</span>(message)) <span class="rs-kw">if</span> message.contains(&quot;requires a launch command&quot;)
+        ));
+    }
+}
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
   <script src="../assets/inventory.js"></script>
 </body>
 </html>

@@ -8,8 +8,16 @@
 </head>
 <body>
   <header>
-    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
-    <h1>eos-workspace-api File Inventory</h1>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>eos-workspace-api File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS/sandbox &amp;&amp; cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
   </header>
   <a class="back-link" href="../index.html">sandbox</a>
 <section class="summary">
@@ -47,69 +55,309 @@
       <span>7 methods</span>
     </div>
   </div>
-  <div class="items"><div class="group-label">File-Owned Types</div><article class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct PrepareCommandRequest pub pub struct PrepareCommandRequest crates/eos-workspace-api/src/command_session.rs caller_id String command_session_id String invocation_id String cmd String timeout_seconds Option &lt; f64 &gt; ">
+  <div class="items"><div class="group-label">File-Owned Types</div><article id="item-struct-PrepareCommandRequest-9" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct PrepareCommandRequest pub pub struct PrepareCommandRequest crates/eos-workspace-api/src/command_session.rs caller_id String command_session_id String invocation_id String cmd String timeout_seconds Option &lt; f64 &gt; ">
   <div class="item-head">
     <span class="kind">struct</span>
     <h3>PrepareCommandRequest</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub struct PrepareCommandRequest</code>
-  <div class="tags"><span>dto</span><span>serde</span></div>
+  <code class="signature">pub struct <a class="symbol-link" href="eos-workspace-api.html#item-struct-PrepareCommandRequest-9">PrepareCommandRequest</a></code>
+  <p class="docstring">Input needed for a workspace-mode crate to prepare command execution.</p>
+  <div class="tags"><span>derive: Clone</span><span>derive: Debug</span><span>derive: Deserialize</span><span>derive: PartialEq</span><span>derive: Serialize</span><span>dto</span><span>serde</span></div>
   <h4>Fields</h4><table><tbody><tr><td>pub</td><td>caller_id</td><td><code>String</code></td></tr><tr><td>pub</td><td>command_session_id</td><td><code>String</code></td></tr><tr><td>pub</td><td>invocation_id</td><td><code>String</code></td></tr><tr><td>pub</td><td>cmd</td><td><code>String</code></td></tr><tr><td>pub</td><td>timeout_seconds</td><td><code>Option &lt; f64 &gt;</code></td></tr></tbody></table>
+
   <p class="source">crates/eos-workspace-api/src/command_session.rs:9</p>
-</article><article class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct PreparedCommandWorkspace pub pub struct PreparedCommandWorkspace crates/eos-workspace-api/src/command_session.rs run_request Value request_path PathBuf output_path PathBuf final_path PathBuf session_dir PathBuf transcript_path PathBuf ">
+</article><article id="item-struct-PreparedCommandWorkspace-20" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct PreparedCommandWorkspace pub pub struct PreparedCommandWorkspace crates/eos-workspace-api/src/command_session.rs run_request Value request_path PathBuf output_path PathBuf final_path PathBuf session_dir PathBuf transcript_path PathBuf ">
   <div class="item-head">
     <span class="kind">struct</span>
     <h3>PreparedCommandWorkspace</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub struct PreparedCommandWorkspace</code>
-  <div class="tags"><span>serde</span></div>
+  <code class="signature">pub struct <a class="symbol-link" href="eos-workspace-api.html#item-struct-PreparedCommandWorkspace-20">PreparedCommandWorkspace</a></code>
+  <p class="docstring">Prepared workspace context returned to daemon-owned command-session control.</p>
+  <div class="tags"><span>derive: Clone</span><span>derive: Debug</span><span>derive: Deserialize</span><span>derive: PartialEq</span><span>derive: Serialize</span><span>serde</span></div>
   <h4>Fields</h4><table><tbody><tr><td>pub</td><td>run_request</td><td><code>Value</code></td></tr><tr><td>pub</td><td>request_path</td><td><code>PathBuf</code></td></tr><tr><td>pub</td><td>output_path</td><td><code>PathBuf</code></td></tr><tr><td>pub</td><td>final_path</td><td><code>PathBuf</code></td></tr><tr><td>pub</td><td>session_dir</td><td><code>PathBuf</code></td></tr><tr><td>pub</td><td>transcript_path</td><td><code>PathBuf</code></td></tr></tbody></table>
+
   <p class="source">crates/eos-workspace-api/src/command_session.rs:20</p>
-</article><article class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct FinalizeCommandRequest pub pub struct FinalizeCommandRequest crates/eos-workspace-api/src/command_session.rs runner_result Option &lt; Value &gt; command_elapsed_s f64 status String exit_code Option &lt; i64 &gt; stdout String stderr String command_session_id Option &lt; String &gt; ">
+</article><article id="item-struct-FinalizeCommandRequest-31" class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct FinalizeCommandRequest pub pub struct FinalizeCommandRequest crates/eos-workspace-api/src/command_session.rs runner_result Option &lt; Value &gt; command_elapsed_s f64 status String exit_code Option &lt; i64 &gt; stdout String stderr String command_session_id Option &lt; String &gt; ">
   <div class="item-head">
     <span class="kind">struct</span>
     <h3>FinalizeCommandRequest</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub struct FinalizeCommandRequest</code>
-  <div class="tags"><span>dto</span><span>serde</span></div>
-  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>runner_result</td><td><code>Option &lt; Value &gt;</code></td></tr><tr><td>pub</td><td>command_elapsed_s</td><td><code>f64</code></td></tr><tr><td>pub</td><td>status</td><td><code>String</code></td></tr><tr><td>pub</td><td>exit_code</td><td><code>Option &lt; i64 &gt;</code></td></tr><tr><td>pub</td><td>stdout</td><td><code>String</code></td></tr><tr><td>pub</td><td>stderr</td><td><code>String</code></td></tr><tr><td>pub</td><td>command_session_id</td><td><code>Option &lt; String &gt;</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr><td>method</td><td>command_succeeded</td><td><code>pub fn command_succeeded (&amp; self) -&gt; bool</code></td></tr></tbody></table>
+  <code class="signature">pub struct <a class="symbol-link" href="eos-workspace-api.html#item-struct-FinalizeCommandRequest-31">FinalizeCommandRequest</a></code>
+  <p class="docstring">Input needed for mode-specific command workspace finalization.</p>
+  <div class="tags"><span>derive: Clone</span><span>derive: Debug</span><span>derive: Deserialize</span><span>derive: PartialEq</span><span>derive: Serialize</span><span>dto</span><span>serde</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>runner_result</td><td><code>Option &lt; Value &gt;</code></td></tr><tr><td>pub</td><td>command_elapsed_s</td><td><code>f64</code></td></tr><tr><td>pub</td><td>status</td><td><code>String</code></td></tr><tr><td>pub</td><td>exit_code</td><td><code>Option &lt; i64 &gt;</code></td></tr><tr><td>pub</td><td>stdout</td><td><code>String</code></td></tr><tr><td>pub</td><td>stderr</td><td><code>String</code></td></tr><tr><td>pub</td><td>command_session_id</td><td><code>Option &lt; String &gt;</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-command-succeeded-50"><td>method</td><td>command_succeeded</td><td><code>pub fn <a class="symbol-link" href="eos-workspace-api.html#method-command-succeeded-50">command_succeeded</a> (&amp; self) -&gt; bool</code><p class="docstring">True only when the runner reports an explicitly successful command.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// True only when the runner reports an explicitly successful command.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-api.html#method-command-succeeded-50">command_succeeded</a>(&amp;<span class="rs-self">self</span>) -&gt; bool {
+        <span class="rs-self">self</span>.status == &quot;ok&quot; &amp;&amp; <span class="rs-self">self</span>.exit_code == <span class="rs-type">Some</span>(0)
+    }
+</code></pre>
+</details></td></tr></tbody></table>
+
   <p class="source">crates/eos-workspace-api/src/command_session.rs:31</p>
-</article><article class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct WorkspaceCommandOutcome pub pub struct WorkspaceCommandOutcome crates/eos-workspace-api/src/command_session.rs mode WorkspaceMode success bool status String exit_code Option &lt; i64 &gt; stdout String stderr String command_session_id Option &lt; String &gt; changed_paths Vec &lt; String &gt; changed_path_kinds ChangedPathKinds mutation_source String conflict Option &lt; WorkspaceConflict &gt; conflict_reason Option &lt; String &gt; timings WorkspaceTimings metadata Value ">
+</article><article id="item-struct-WorkspaceCommandOutcome-57" class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct WorkspaceCommandOutcome pub pub struct WorkspaceCommandOutcome crates/eos-workspace-api/src/command_session.rs mode WorkspaceMode success bool status String exit_code Option &lt; i64 &gt; stdout String stderr String command_session_id Option &lt; String &gt; changed_paths Vec &lt; String &gt; changed_path_kinds ChangedPathKinds mutation_source String conflict Option &lt; WorkspaceConflict &gt; conflict_reason Option &lt; String &gt; timings WorkspaceTimings metadata Value ">
   <div class="item-head">
     <span class="kind">struct</span>
     <h3>WorkspaceCommandOutcome</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub struct WorkspaceCommandOutcome</code>
-  <div class="tags"><span>serde</span></div>
-  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>mode</td><td><code>WorkspaceMode</code></td></tr><tr><td>pub</td><td>success</td><td><code>bool</code></td></tr><tr><td>pub</td><td>status</td><td><code>String</code></td></tr><tr><td>pub</td><td>exit_code</td><td><code>Option &lt; i64 &gt;</code></td></tr><tr><td>pub</td><td>stdout</td><td><code>String</code></td></tr><tr><td>pub</td><td>stderr</td><td><code>String</code></td></tr><tr><td>pub</td><td>command_session_id</td><td><code>Option &lt; String &gt;</code></td></tr><tr><td>pub</td><td>changed_paths</td><td><code>Vec &lt; String &gt;</code></td></tr><tr><td>pub</td><td>changed_path_kinds</td><td><code>ChangedPathKinds</code></td></tr><tr><td>pub</td><td>mutation_source</td><td><code>String</code></td></tr><tr><td>pub</td><td>conflict</td><td><code>Option &lt; WorkspaceConflict &gt;</code></td></tr><tr><td>pub</td><td>conflict_reason</td><td><code>Option &lt; String &gt;</code></td></tr><tr><td>pub</td><td>timings</td><td><code>WorkspaceTimings</code></td></tr><tr><td>pub</td><td>metadata</td><td><code>Value</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr><td>associated-fn</td><td>discarded</td><td><code>pub fn discarded (mode : WorkspaceMode , request : FinalizeCommandRequest) -&gt; Self</code></td></tr></tbody></table>
+  <code class="signature">pub struct <a class="symbol-link" href="eos-workspace-api.html#item-struct-WorkspaceCommandOutcome-57">WorkspaceCommandOutcome</a></code>
+  <p class="docstring">Normalized command outcome before daemon persistence/parking.</p>
+  <div class="tags"><span>derive: Clone</span><span>derive: Debug</span><span>derive: Deserialize</span><span>derive: PartialEq</span><span>derive: Serialize</span><span>serde</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>mode</td><td><code><a class="symbol-link" href="eos-workspace-api--src-mode-rs.html#item-enum-WorkspaceMode-3">WorkspaceMode</a></code></td></tr><tr><td>pub</td><td>success</td><td><code>bool</code></td></tr><tr><td>pub</td><td>status</td><td><code>String</code></td></tr><tr><td>pub</td><td>exit_code</td><td><code>Option &lt; i64 &gt;</code></td></tr><tr><td>pub</td><td>stdout</td><td><code>String</code></td></tr><tr><td>pub</td><td>stderr</td><td><code>String</code></td></tr><tr><td>pub</td><td>command_session_id</td><td><code>Option &lt; String &gt;</code></td></tr><tr><td>pub</td><td>changed_paths</td><td><code>Vec &lt; String &gt;</code></td></tr><tr><td>pub</td><td>changed_path_kinds</td><td><code><a class="symbol-link" href="eos-workspace-api--src-response-rs.html#item-type-ChangedPathKinds-26">ChangedPathKinds</a></code></td></tr><tr><td>pub</td><td>mutation_source</td><td><code>String</code></td></tr><tr><td>pub</td><td>conflict</td><td><code>Option &lt; <a class="symbol-link" href="eos-workspace-api--src-response-rs.html#item-struct-WorkspaceConflict-29">WorkspaceConflict</a> &gt;</code></td></tr><tr><td>pub</td><td>conflict_reason</td><td><code>Option &lt; String &gt;</code></td></tr><tr><td>pub</td><td>timings</td><td><code><a class="symbol-link" href="eos-workspace-api--src-response-rs.html#item-type-WorkspaceTimings-7">WorkspaceTimings</a></code></td></tr><tr><td>pub</td><td>metadata</td><td><code>Value</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-discarded-88"><td>associated-fn</td><td>discarded</td><td><code>pub fn <a class="symbol-link" href="eos-workspace-api.html#method-discarded-88">discarded</a> (mode : <a class="symbol-link" href="eos-workspace-api--src-mode-rs.html#item-enum-WorkspaceMode-3">WorkspaceMode</a> , request : <a class="symbol-link" href="eos-workspace-api.html#item-struct-FinalizeCommandRequest-31">FinalizeCommandRequest</a>) -&gt; Self</code><p class="docstring">Outcome for a discarded (cancelled) command workspace: it carries the<br>command's status and output but no published paths, because a cancelled<br>command never merges into the shared workspace.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Outcome for a discarded (cancelled) command workspace: it carries the</span>
+    <span class="rs-comment">/// command's status and output but no published paths, because a cancelled</span>
+    <span class="rs-comment">/// command never merges into the shared workspace.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-api.html#method-discarded-88">discarded</a>(mode: <a class="symbol-link rs-type" href="eos-workspace-api--src-mode-rs.html#item-enum-WorkspaceMode-3">WorkspaceMode</a>, request: <a class="symbol-link rs-type" href="eos-workspace-api.html#item-struct-FinalizeCommandRequest-31">FinalizeCommandRequest</a>) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">Self</span> {
+            mode,
+            success: <span class="rs-kw">false</span>,
+            status: request.status,
+            exit_code: request.exit_code,
+            stdout: request.stdout,
+            stderr: request.stderr,
+            command_session_id: request.command_session_id,
+            changed_paths: <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-workspace-api--src-read-view-rs.html#method-new-12">new</a>(),
+            changed_path_kinds: <a class="symbol-link rs-type" href="eos-workspace-api--src-response-rs.html#item-type-ChangedPathKinds-26">ChangedPathKinds</a>::default(),
+            mutation_source: <span class="rs-type">String</span>::<a class="symbol-link rs-fn" href="eos-workspace-api--src-read-view-rs.html#method-new-12">new</a>(),
+            conflict: <span class="rs-type">None</span>,
+            conflict_reason: <span class="rs-type">None</span>,
+            timings: <a class="symbol-link rs-type" href="eos-workspace-api--src-response-rs.html#item-type-WorkspaceTimings-7">WorkspaceTimings</a>::default(),
+            metadata: <span class="rs-type">Value</span>::<span class="rs-type">Null</span>,
+        }
+    }
+</code></pre>
+</details></td></tr></tbody></table>
+
   <p class="source">crates/eos-workspace-api/src/command_session.rs:57</p>
-</article><article class="type-card" data-kind="trait" data-kind-list="method trait type-model" data-filter-text="trait CommandWorkspacePolicy pub pub trait CommandWorkspacePolicy crates/eos-workspace-api/src/command_session.rs  prepare_command_workspace fn prepare_command_workspace (&amp; self , request : PrepareCommandRequest ,) -&gt; Result &lt; PreparedCommandWorkspace , WorkspaceApiError &gt; command_session_started fn command_session_started (&amp; self , command_session_id : &amp; str , caller_id : &amp; str) command_session_finished fn command_session_finished (&amp; self , command_session_id : &amp; str , caller_id : &amp; str , status : &amp; str) finalize_command_workspace fn finalize_command_workspace (&amp; self , request : FinalizeCommandRequest ,) -&gt; Result &lt; WorkspaceCommandOutcome , WorkspaceApiError &gt; discard_command_workspace fn discard_command_workspace (&amp; self , request : FinalizeCommandRequest ,) -&gt; Result &lt; WorkspaceCommandOutcome , WorkspaceApiError &gt;">
+</article><article id="item-trait-CommandWorkspacePolicy-112" class="type-card" data-kind="trait" data-kind-list="method trait type-model" data-filter-text="trait CommandWorkspacePolicy pub pub trait CommandWorkspacePolicy crates/eos-workspace-api/src/command_session.rs  prepare_command_workspace fn prepare_command_workspace (&amp; self , request : PrepareCommandRequest ,) -&gt; Result &lt; PreparedCommandWorkspace , WorkspaceApiError &gt; command_session_started fn command_session_started (&amp; self , command_session_id : &amp; str , caller_id : &amp; str) command_session_finished fn command_session_finished (&amp; self , command_session_id : &amp; str , caller_id : &amp; str , status : &amp; str) finalize_command_workspace fn finalize_command_workspace (&amp; self , request : FinalizeCommandRequest ,) -&gt; Result &lt; WorkspaceCommandOutcome , WorkspaceApiError &gt; discard_command_workspace fn discard_command_workspace (&amp; self , request : FinalizeCommandRequest ,) -&gt; Result &lt; WorkspaceCommandOutcome , WorkspaceApiError &gt;">
   <div class="item-head">
     <span class="kind">trait</span>
     <h3>CommandWorkspacePolicy</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub trait CommandWorkspacePolicy</code>
+  <code class="signature">pub trait <a class="symbol-link" href="eos-workspace-api.html#item-trait-CommandWorkspacePolicy-112">CommandWorkspacePolicy</a></code>
+  <p class="docstring">Mode-specific command workspace policy. Daemon-owned PTY/process/session<br>registry behavior stays outside this trait.</p>
   <div class="tags"></div>
-  <h4>Methods</h4><table><tbody><tr><td>required</td><td>prepare_command_workspace</td><td><code>fn prepare_command_workspace (&amp; self , request : PrepareCommandRequest ,) -&gt; Result &lt; PreparedCommandWorkspace , WorkspaceApiError &gt;</code></td></tr><tr><td>required</td><td>finalize_command_workspace</td><td><code>fn finalize_command_workspace (&amp; self , request : FinalizeCommandRequest ,) -&gt; Result &lt; WorkspaceCommandOutcome , WorkspaceApiError &gt;</code></td></tr><tr><td>required</td><td>discard_command_workspace</td><td><code>fn discard_command_workspace (&amp; self , request : FinalizeCommandRequest ,) -&gt; Result &lt; WorkspaceCommandOutcome , WorkspaceApiError &gt;</code></td></tr><tr><td>provided</td><td>command_session_started</td><td><code>fn command_session_started (&amp; self , command_session_id : &amp; str , caller_id : &amp; str)</code></td></tr><tr><td>provided</td><td>command_session_finished</td><td><code>fn command_session_finished (&amp; self , command_session_id : &amp; str , caller_id : &amp; str , status : &amp; str)</code></td></tr></tbody></table>
+  <h4>Methods</h4><table><tbody><tr id="method-prepare-command-workspace-115"><td>required</td><td>prepare_command_workspace</td><td><code>fn <a class="symbol-link" href="eos-workspace-api.html#method-prepare-command-workspace-115">prepare_command_workspace</a> (&amp; self , request : <a class="symbol-link" href="eos-workspace-api.html#item-struct-PrepareCommandRequest-9">PrepareCommandRequest</a> ,) -&gt; Result &lt; <a class="symbol-link" href="eos-workspace-api.html#item-struct-PreparedCommandWorkspace-20">PreparedCommandWorkspace</a> , <a class="symbol-link" href="eos-workspace-api--src-response-rs.html#item-struct-WorkspaceApiError-53">WorkspaceApiError</a> &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-api.html#method-prepare-command-workspace-115">prepare_command_workspace</a>(
+        &amp;<span class="rs-self">self</span>,
+        request: <a class="symbol-link rs-type" href="eos-workspace-api.html#item-struct-PrepareCommandRequest-9">PrepareCommandRequest</a>,
+    ) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-workspace-api.html#item-struct-PreparedCommandWorkspace-20">PreparedCommandWorkspace</a>, <a class="symbol-link rs-type" href="eos-workspace-api--src-response-rs.html#item-struct-WorkspaceApiError-53">WorkspaceApiError</a>&gt;;
+</code></pre>
+</details></td></tr><tr id="method-finalize-command-workspace-128"><td>required</td><td>finalize_command_workspace</td><td><code>fn <a class="symbol-link" href="eos-workspace-api.html#method-finalize-command-workspace-128">finalize_command_workspace</a> (&amp; self , request : <a class="symbol-link" href="eos-workspace-api.html#item-struct-FinalizeCommandRequest-31">FinalizeCommandRequest</a> ,) -&gt; Result &lt; <a class="symbol-link" href="eos-workspace-api.html#item-struct-WorkspaceCommandOutcome-57">WorkspaceCommandOutcome</a> , <a class="symbol-link" href="eos-workspace-api--src-response-rs.html#item-struct-WorkspaceApiError-53">WorkspaceApiError</a> &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-api.html#method-finalize-command-workspace-128">finalize_command_workspace</a>(
+        &amp;<span class="rs-self">self</span>,
+        request: <a class="symbol-link rs-type" href="eos-workspace-api.html#item-struct-FinalizeCommandRequest-31">FinalizeCommandRequest</a>,
+    ) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-workspace-api.html#item-struct-WorkspaceCommandOutcome-57">WorkspaceCommandOutcome</a>, <a class="symbol-link rs-type" href="eos-workspace-api--src-response-rs.html#item-struct-WorkspaceApiError-53">WorkspaceApiError</a>&gt;;
+</code></pre>
+</details></td></tr><tr id="method-discard-command-workspace-133"><td>required</td><td>discard_command_workspace</td><td><code>fn <a class="symbol-link" href="eos-workspace-api.html#method-discard-command-workspace-133">discard_command_workspace</a> (&amp; self , request : <a class="symbol-link" href="eos-workspace-api.html#item-struct-FinalizeCommandRequest-31">FinalizeCommandRequest</a> ,) -&gt; Result &lt; <a class="symbol-link" href="eos-workspace-api.html#item-struct-WorkspaceCommandOutcome-57">WorkspaceCommandOutcome</a> , <a class="symbol-link" href="eos-workspace-api--src-response-rs.html#item-struct-WorkspaceApiError-53">WorkspaceApiError</a> &gt;</code><p class="docstring">Discard a prepared command workspace WITHOUT publishing: release the<br>snapshot lease and remove the run dirs, then report a cancelled outcome<br>carrying no changed paths. This is the cancel branch of session<br>settlement; because it never reaches the publish/OCC merge, a cancelled<br>command can never modify the shared workspace.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Discard a prepared command workspace WITHOUT publishing: release the</span>
+    <span class="rs-comment">/// snapshot lease and remove the run dirs, then report a cancelled outcome</span>
+    <span class="rs-comment">/// carrying no changed paths. This is the cancel branch of session</span>
+    <span class="rs-comment">/// settlement; because it never reaches the publish/OCC merge, a cancelled</span>
+    <span class="rs-comment">/// command can never modify the shared workspace.</span>
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-api.html#method-discard-command-workspace-133">discard_command_workspace</a>(
+        &amp;<span class="rs-self">self</span>,
+        request: <a class="symbol-link rs-type" href="eos-workspace-api.html#item-struct-FinalizeCommandRequest-31">FinalizeCommandRequest</a>,
+    ) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-workspace-api.html#item-struct-WorkspaceCommandOutcome-57">WorkspaceCommandOutcome</a>, <a class="symbol-link rs-type" href="eos-workspace-api--src-response-rs.html#item-struct-WorkspaceApiError-53">WorkspaceApiError</a>&gt;;
+</code></pre>
+</details></td></tr><tr id="method-command-session-started-120"><td>provided</td><td>command_session_started</td><td><code>fn <a class="symbol-link" href="eos-workspace-api.html#method-command-session-started-120">command_session_started</a> (&amp; self , command_session_id : &amp; str , caller_id : &amp; str)</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-api.html#method-command-session-started-120">command_session_started</a>(&amp;<span class="rs-self">self</span>, command_session_id: &amp;str, caller_id: &amp;str) {
+        <span class="rs-kw">let</span> _ = (command_session_id, caller_id);
+    }
+</code></pre>
+</details></td></tr><tr id="method-command-session-finished-124"><td>provided</td><td>command_session_finished</td><td><code>fn <a class="symbol-link" href="eos-workspace-api.html#method-command-session-finished-124">command_session_finished</a> (&amp; self , command_session_id : &amp; str , caller_id : &amp; str , status : &amp; str)</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-api.html#method-command-session-finished-124">command_session_finished</a>(&amp;<span class="rs-self">self</span>, command_session_id: &amp;str, caller_id: &amp;str, status: &amp;str) {
+        <span class="rs-kw">let</span> _ = (command_session_id, caller_id, status);
+    }
+</code></pre>
+</details></td></tr></tbody></table>
+
   <p class="source">crates/eos-workspace-api/src/command_session.rs:112</p>
-</article><div class="group-label">Standalone Functions</div><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn _assert_command_workspace_policy_object_safe private fn _assert_command_workspace_policy_object_safe (_ : &amp; dyn CommandWorkspacePolicy) crates/eos-workspace-api/src/command_session.rs  ">
+</article><div class="group-label">Standalone Functions</div><article id="item-fn--assert-command-workspace-policy-object-safe-146" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn _assert_command_workspace_policy_object_safe private fn _assert_command_workspace_policy_object_safe (_ : &amp; dyn CommandWorkspacePolicy) crates/eos-workspace-api/src/command_session.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>_assert_command_workspace_policy_object_safe</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn _assert_command_workspace_policy_object_safe (_ : &amp; dyn CommandWorkspacePolicy)</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-workspace-api.html#item-fn--assert-command-workspace-policy-object-safe-146">_assert_command_workspace_policy_object_safe</a> (_ : &amp; dyn <a class="symbol-link" href="eos-workspace-api.html#item-trait-CommandWorkspacePolicy-112">CommandWorkspacePolicy</a>)</code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-api.html#item-fn--assert-command-workspace-policy-object-safe-146">_assert_command_workspace_policy_object_safe</a>(_: &amp;<span class="rs-kw">dyn</span> <a class="symbol-link rs-type" href="eos-workspace-api.html#item-trait-CommandWorkspacePolicy-112">CommandWorkspacePolicy</a>) {}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-workspace-api/src/command_session.rs:146</p>
 </article></div>
 </section></div>
 </main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/eos-workspace-api/src/command_session.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-kw">use</span> std::path::<span class="rs-type">PathBuf</span>;
+
+<span class="rs-kw">use</span> serde::{<span class="rs-type">Deserialize</span>, <span class="rs-type">Serialize</span>};
+<span class="rs-kw">use</span> serde_json::<span class="rs-type">Value</span>;
+
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::mode::<a class="symbol-link rs-type" href="eos-workspace-api--src-mode-rs.html#item-enum-WorkspaceMode-3">WorkspaceMode</a>;
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::response::{<a class="symbol-link rs-type" href="eos-workspace-api--src-response-rs.html#item-type-ChangedPathKinds-26">ChangedPathKinds</a>, <a class="symbol-link rs-type" href="eos-workspace-api--src-response-rs.html#item-struct-WorkspaceApiError-53">WorkspaceApiError</a>, <a class="symbol-link rs-type" href="eos-workspace-api--src-response-rs.html#item-struct-WorkspaceConflict-29">WorkspaceConflict</a>, <a class="symbol-link rs-type" href="eos-workspace-api--src-response-rs.html#item-type-WorkspaceTimings-7">WorkspaceTimings</a>};
+
+<span class="rs-comment">/// Input needed for a workspace-mode crate to prepare command execution.</span>
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Serialize</span>, <span class="rs-type">Deserialize</span>)]
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-workspace-api.html#item-struct-PrepareCommandRequest-9">PrepareCommandRequest</a> {
+    <span class="rs-kw">pub</span> caller_id: <span class="rs-type">String</span>,
+    <span class="rs-kw">pub</span> command_session_id: <span class="rs-type">String</span>,
+    <span class="rs-kw">pub</span> invocation_id: <span class="rs-type">String</span>,
+    <span class="rs-kw">pub</span> cmd: <span class="rs-type">String</span>,
+    #[serde(default, skip_serializing_if = &quot;<span class="rs-type">Option</span>::is_none&quot;)]
+    <span class="rs-kw">pub</span> timeout_seconds: <span class="rs-type">Option</span>&lt;f64&gt;,
+}
+
+<span class="rs-comment">/// Prepared workspace context returned to daemon-owned command-session control.</span>
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Serialize</span>, <span class="rs-type">Deserialize</span>)]
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-workspace-api.html#item-struct-PreparedCommandWorkspace-20">PreparedCommandWorkspace</a> {
+    <span class="rs-kw">pub</span> run_request: <span class="rs-type">Value</span>,
+    <span class="rs-kw">pub</span> request_path: <span class="rs-type">PathBuf</span>,
+    <span class="rs-kw">pub</span> output_path: <span class="rs-type">PathBuf</span>,
+    <span class="rs-kw">pub</span> final_path: <span class="rs-type">PathBuf</span>,
+    <span class="rs-kw">pub</span> session_dir: <span class="rs-type">PathBuf</span>,
+    <span class="rs-kw">pub</span> transcript_path: <span class="rs-type">PathBuf</span>,
+}
+
+<span class="rs-comment">/// Input needed for mode-specific command workspace finalization.</span>
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Serialize</span>, <span class="rs-type">Deserialize</span>)]
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-workspace-api.html#item-struct-FinalizeCommandRequest-31">FinalizeCommandRequest</a> {
+    #[serde(default, skip_serializing_if = &quot;<span class="rs-type">Option</span>::is_none&quot;)]
+    <span class="rs-kw">pub</span> runner_result: <span class="rs-type">Option</span>&lt;<span class="rs-type">Value</span>&gt;,
+    #[serde(default)]
+    <span class="rs-kw">pub</span> command_elapsed_s: f64,
+    <span class="rs-kw">pub</span> status: <span class="rs-type">String</span>,
+    #[serde(default, skip_serializing_if = &quot;<span class="rs-type">Option</span>::is_none&quot;)]
+    <span class="rs-kw">pub</span> exit_code: <span class="rs-type">Option</span>&lt;i64&gt;,
+    #[serde(default)]
+    <span class="rs-kw">pub</span> stdout: <span class="rs-type">String</span>,
+    #[serde(default)]
+    <span class="rs-kw">pub</span> stderr: <span class="rs-type">String</span>,
+    #[serde(default, skip_serializing_if = &quot;<span class="rs-type">Option</span>::is_none&quot;)]
+    <span class="rs-kw">pub</span> command_session_id: <span class="rs-type">Option</span>&lt;<span class="rs-type">String</span>&gt;,
+}
+
+<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-workspace-api.html#item-struct-FinalizeCommandRequest-31">FinalizeCommandRequest</a> {
+    <span class="rs-comment">/// True only when the runner reports an explicitly successful command.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-api.html#method-command-succeeded-50">command_succeeded</a>(&amp;<span class="rs-self">self</span>) -&gt; bool {
+        <span class="rs-self">self</span>.status == &quot;ok&quot; &amp;&amp; <span class="rs-self">self</span>.exit_code == <span class="rs-type">Some</span>(0)
+    }
+}
+
+<span class="rs-comment">/// Normalized command outcome before daemon persistence/parking.</span>
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Serialize</span>, <span class="rs-type">Deserialize</span>)]
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-workspace-api.html#item-struct-WorkspaceCommandOutcome-57">WorkspaceCommandOutcome</a> {
+    <span class="rs-kw">pub</span> mode: <a class="symbol-link rs-type" href="eos-workspace-api--src-mode-rs.html#item-enum-WorkspaceMode-3">WorkspaceMode</a>,
+    <span class="rs-kw">pub</span> success: bool,
+    <span class="rs-kw">pub</span> status: <span class="rs-type">String</span>,
+    #[serde(default, skip_serializing_if = &quot;<span class="rs-type">Option</span>::is_none&quot;)]
+    <span class="rs-kw">pub</span> exit_code: <span class="rs-type">Option</span>&lt;i64&gt;,
+    #[serde(default)]
+    <span class="rs-kw">pub</span> stdout: <span class="rs-type">String</span>,
+    #[serde(default)]
+    <span class="rs-kw">pub</span> stderr: <span class="rs-type">String</span>,
+    #[serde(default, skip_serializing_if = &quot;<span class="rs-type">Option</span>::is_none&quot;)]
+    <span class="rs-kw">pub</span> command_session_id: <span class="rs-type">Option</span>&lt;<span class="rs-type">String</span>&gt;,
+    #[serde(default)]
+    <span class="rs-kw">pub</span> changed_paths: <span class="rs-type">Vec</span>&lt;<span class="rs-type">String</span>&gt;,
+    #[serde(default)]
+    <span class="rs-kw">pub</span> changed_path_kinds: <a class="symbol-link rs-type" href="eos-workspace-api--src-response-rs.html#item-type-ChangedPathKinds-26">ChangedPathKinds</a>,
+    #[serde(default)]
+    <span class="rs-kw">pub</span> mutation_source: <span class="rs-type">String</span>,
+    #[serde(default, skip_serializing_if = &quot;<span class="rs-type">Option</span>::is_none&quot;)]
+    <span class="rs-kw">pub</span> conflict: <span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-workspace-api--src-response-rs.html#item-struct-WorkspaceConflict-29">WorkspaceConflict</a>&gt;,
+    #[serde(default, skip_serializing_if = &quot;<span class="rs-type">Option</span>::is_none&quot;)]
+    <span class="rs-kw">pub</span> conflict_reason: <span class="rs-type">Option</span>&lt;<span class="rs-type">String</span>&gt;,
+    #[serde(default)]
+    <span class="rs-kw">pub</span> timings: <a class="symbol-link rs-type" href="eos-workspace-api--src-response-rs.html#item-type-WorkspaceTimings-7">WorkspaceTimings</a>,
+    #[serde(default)]
+    <span class="rs-kw">pub</span> metadata: <span class="rs-type">Value</span>,
+}
+
+<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-workspace-api.html#item-struct-WorkspaceCommandOutcome-57">WorkspaceCommandOutcome</a> {
+    <span class="rs-comment">/// Outcome for a discarded (cancelled) command workspace: it carries the</span>
+    <span class="rs-comment">/// command's status and output but no published paths, because a cancelled</span>
+    <span class="rs-comment">/// command never merges into the shared workspace.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-api.html#method-discarded-88">discarded</a>(mode: <a class="symbol-link rs-type" href="eos-workspace-api--src-mode-rs.html#item-enum-WorkspaceMode-3">WorkspaceMode</a>, request: <a class="symbol-link rs-type" href="eos-workspace-api.html#item-struct-FinalizeCommandRequest-31">FinalizeCommandRequest</a>) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">Self</span> {
+            mode,
+            success: <span class="rs-kw">false</span>,
+            status: request.status,
+            exit_code: request.exit_code,
+            stdout: request.stdout,
+            stderr: request.stderr,
+            command_session_id: request.command_session_id,
+            changed_paths: <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-workspace-api--src-read-view-rs.html#method-new-12">new</a>(),
+            changed_path_kinds: <a class="symbol-link rs-type" href="eos-workspace-api--src-response-rs.html#item-type-ChangedPathKinds-26">ChangedPathKinds</a>::default(),
+            mutation_source: <span class="rs-type">String</span>::<a class="symbol-link rs-fn" href="eos-workspace-api--src-read-view-rs.html#method-new-12">new</a>(),
+            conflict: <span class="rs-type">None</span>,
+            conflict_reason: <span class="rs-type">None</span>,
+            timings: <a class="symbol-link rs-type" href="eos-workspace-api--src-response-rs.html#item-type-WorkspaceTimings-7">WorkspaceTimings</a>::default(),
+            metadata: <span class="rs-type">Value</span>::<span class="rs-type">Null</span>,
+        }
+    }
+}
+
+<span class="rs-comment">/// Mode-specific command workspace policy. Daemon-owned PTY/process/session</span>
+<span class="rs-comment">/// registry behavior stays outside this trait.</span>
+<span class="rs-kw">pub</span> <span class="rs-kw">trait</span> <a class="symbol-link rs-type" href="eos-workspace-api.html#item-trait-CommandWorkspacePolicy-112">CommandWorkspacePolicy</a>: <span class="rs-type">Send</span> + <span class="rs-type">Sync</span> {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-api.html#method-prepare-command-workspace-115">prepare_command_workspace</a>(
+        &amp;<span class="rs-self">self</span>,
+        request: <a class="symbol-link rs-type" href="eos-workspace-api.html#item-struct-PrepareCommandRequest-9">PrepareCommandRequest</a>,
+    ) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-workspace-api.html#item-struct-PreparedCommandWorkspace-20">PreparedCommandWorkspace</a>, <a class="symbol-link rs-type" href="eos-workspace-api--src-response-rs.html#item-struct-WorkspaceApiError-53">WorkspaceApiError</a>&gt;;
+
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-api.html#method-command-session-started-120">command_session_started</a>(&amp;<span class="rs-self">self</span>, command_session_id: &amp;str, caller_id: &amp;str) {
+        <span class="rs-kw">let</span> _ = (command_session_id, caller_id);
+    }
+
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-api.html#method-command-session-finished-124">command_session_finished</a>(&amp;<span class="rs-self">self</span>, command_session_id: &amp;str, caller_id: &amp;str, status: &amp;str) {
+        <span class="rs-kw">let</span> _ = (command_session_id, caller_id, status);
+    }
+
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-api.html#method-finalize-command-workspace-128">finalize_command_workspace</a>(
+        &amp;<span class="rs-self">self</span>,
+        request: <a class="symbol-link rs-type" href="eos-workspace-api.html#item-struct-FinalizeCommandRequest-31">FinalizeCommandRequest</a>,
+    ) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-workspace-api.html#item-struct-WorkspaceCommandOutcome-57">WorkspaceCommandOutcome</a>, <a class="symbol-link rs-type" href="eos-workspace-api--src-response-rs.html#item-struct-WorkspaceApiError-53">WorkspaceApiError</a>&gt;;
+
+    <span class="rs-comment">/// Discard a prepared command workspace WITHOUT publishing: release the</span>
+    <span class="rs-comment">/// snapshot lease and remove the run dirs, then report a cancelled outcome</span>
+    <span class="rs-comment">/// carrying no changed paths. This is the cancel branch of session</span>
+    <span class="rs-comment">/// settlement; because it never reaches the publish/OCC merge, a cancelled</span>
+    <span class="rs-comment">/// command can never modify the shared workspace.</span>
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-api.html#method-discard-command-workspace-133">discard_command_workspace</a>(
+        &amp;<span class="rs-self">self</span>,
+        request: <a class="symbol-link rs-type" href="eos-workspace-api.html#item-struct-FinalizeCommandRequest-31">FinalizeCommandRequest</a>,
+    ) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-workspace-api.html#item-struct-WorkspaceCommandOutcome-57">WorkspaceCommandOutcome</a>, <a class="symbol-link rs-type" href="eos-workspace-api--src-response-rs.html#item-struct-WorkspaceApiError-53">WorkspaceApiError</a>&gt;;
+}
+
+<span class="rs-kw">const</span> _: <span class="rs-kw">fn</span>(&amp;<span class="rs-kw">dyn</span> <a class="symbol-link rs-type" href="eos-workspace-api.html#item-trait-CommandWorkspacePolicy-112">CommandWorkspacePolicy</a>) = _assert_command_workspace_policy_object_safe;
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workspace-api.html#item-fn--assert-command-workspace-policy-object-safe-146">_assert_command_workspace_policy_object_safe</a>(_: &amp;<span class="rs-kw">dyn</span> <a class="symbol-link rs-type" href="eos-workspace-api.html#item-trait-CommandWorkspacePolicy-112">CommandWorkspacePolicy</a>) {}
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
   <script src="../assets/inventory.js"></script>
 </body>
 </html>

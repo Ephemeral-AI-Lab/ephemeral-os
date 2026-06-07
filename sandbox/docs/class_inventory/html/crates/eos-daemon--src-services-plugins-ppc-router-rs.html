@@ -8,8 +8,16 @@
 </head>
 <body>
   <header>
-    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
-    <h1>eos-daemon File Inventory</h1>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>eos-daemon File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS/sandbox &amp;&amp; cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
   </header>
   <a class="back-link" href="../index.html">sandbox</a>
 <section class="summary">
@@ -47,59 +55,465 @@
       <span>5 methods</span>
     </div>
   </div>
-  <div class="items"><div class="group-label">File-Owned Types</div><article class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct PpcClient pub(super) pub(super) struct PpcClient crates/eos-daemon/src/services/plugins/ppc_router.rs writer FrameWriter pending PendingCalls ">
+  <div class="items"><div class="group-label">File-Owned Types</div><article id="item-struct-PpcClient-34" class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct PpcClient pub(super) pub(super) struct PpcClient crates/eos-daemon/src/services/plugins/ppc_router.rs writer FrameWriter pending PendingCalls ">
   <div class="item-head">
     <span class="kind">struct</span>
     <h3>PpcClient</h3>
     <span class="visibility">pub(super)</span>
   </div>
-  <code class="signature">pub(super) struct PpcClient</code>
+  <code class="signature">pub(super) struct <a class="symbol-link" href="eos-daemon--src-services-plugins-ppc-router-rs.html#item-struct-PpcClient-34">PpcClient</a></code>
   <div class="tags"><span>port/service</span></div>
-  <h4>Fields</h4><table><tbody><tr><td>private</td><td>writer</td><td><code>FrameWriter</code></td></tr><tr><td>private</td><td>pending</td><td><code>PendingCalls</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr><td>constructor</td><td>new</td><td><code>pub(super) fn new (stream : UnixStream) -&gt; Result &lt; Self , DaemonError &gt;</code></td></tr><tr><td>method</td><td>round_trip</td><td><code>pub(super) fn round_trip (&amp; self , request : &amp; PpcEnvelope , timeout : Duration ,) -&gt; Result &lt; PpcEnvelope , DaemonError &gt;</code></td></tr><tr><td>method</td><td>round_trip_with_callbacks</td><td><code>pub(super) fn round_trip_with_callbacks &lt; F &gt; (&amp; self , request : &amp; PpcEnvelope , timeout : Duration , handle_callback : F ,) -&gt; Result &lt; PpcEnvelope , DaemonError &gt; where F : FnMut (PpcEnvelope) -&gt; Result &lt; PpcEnvelope , DaemonError &gt; + Send + 'static ,</code></td></tr><tr><td>method</td><td>send_request</td><td><code>fn send_request (&amp; self , request : &amp; PpcEnvelope , timeout : Duration , callback_handler : Option &lt; CallbackHandler &gt; ,) -&gt; Result &lt; PpcEnvelope , DaemonError &gt;</code></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl std :: fmt :: Debug for PpcClient</code></summary><table><tbody><tr><td>method</td><td>fmt</td><td><code>fn fmt (&amp; self , formatter : &amp; mut std :: fmt :: Formatter &lt; '_ &gt;) -&gt; std :: fmt :: Result</code></td></tr></tbody></table></details></div>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>writer</td><td><code><a class="symbol-link" href="eos-daemon--src-services-plugins-ppc-router-frame-io-rs.html#item-struct-FrameWriter-14">FrameWriter</a></code></td></tr><tr><td>private</td><td>pending</td><td><code><a class="symbol-link" href="eos-daemon--src-services-plugins-ppc-router-pending-rs.html#item-struct-PendingCalls-14">PendingCalls</a></code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-46"><td>constructor</td><td>new</td><td><code>pub(super) fn <a class="symbol-link" href="eos-daemon.html#method-new-89">new</a> (stream : UnixStream) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a> &lt; Self , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon.html#method-new-89">new</a>(stream: <span class="rs-type">UnixStream</span>) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a>&lt;<span class="rs-self">Self</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+        <span class="rs-kw">let</span> reader_stream = stream.try_clone()?;
+        <span class="rs-kw">let</span> writer = <a class="symbol-link rs-type" href="eos-daemon--src-services-plugins-ppc-router-frame-io-rs.html#item-struct-FrameWriter-14">FrameWriter</a>::<a class="symbol-link rs-fn" href="eos-daemon.html#method-new-89">new</a>(stream);
+        <span class="rs-kw">let</span> pending = <a class="symbol-link rs-type" href="eos-daemon--src-services-plugins-ppc-router-pending-rs.html#item-struct-PendingCalls-14">PendingCalls</a>::<a class="symbol-link rs-fn" href="eos-daemon.html#method-default-210">default</a>();
+        <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-ppc-router-rs.html#item-fn-spawn-reader-thread-121">spawn_reader_thread</a>(reader_stream, writer.clone(), pending.clone())?;
+        <span class="rs-type">Ok</span>(<span class="rs-self">Self</span> { writer, pending })
+    }
+</code></pre>
+</details></td></tr><tr id="method-round-trip-54"><td>method</td><td>round_trip</td><td><code>pub(super) fn <a class="symbol-link" href="eos-daemon--src-services-plugins-ppc-router-rs.html#method-round-trip-54">round_trip</a> (&amp; self , request : &amp; PpcEnvelope , timeout : Duration ,) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a> &lt; PpcEnvelope , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-ppc-router-rs.html#method-round-trip-54">round_trip</a>(
+        &amp;<span class="rs-self">self</span>,
+        request: &amp;<span class="rs-type">PpcEnvelope</span>,
+        timeout: <span class="rs-type">Duration</span>,
+    ) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a>&lt;<span class="rs-type">PpcEnvelope</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+        <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-ppc-router-rs.html#method-send-request-81">send_request</a>(request, timeout, <span class="rs-type">None</span>)
+    }
+</code></pre>
+</details></td></tr><tr id="method-round-trip-with-callbacks-62"><td>method</td><td>round_trip_with_callbacks</td><td><code>pub(super) fn <a class="symbol-link" href="eos-daemon--src-services-plugins-ppc-router-rs.html#method-round-trip-with-callbacks-62">round_trip_with_callbacks</a> &lt; F &gt; (&amp; self , request : &amp; PpcEnvelope , timeout : Duration , handle_callback : F ,) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a> &lt; PpcEnvelope , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt; where F : FnMut (PpcEnvelope) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a> &lt; PpcEnvelope , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt; + Send + &#x27;static ,</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> round_trip_with_callbacks&lt;<span class="rs-type">F</span>&gt;(
+        &amp;<span class="rs-self">self</span>,
+        request: &amp;<span class="rs-type">PpcEnvelope</span>,
+        timeout: <span class="rs-type">Duration</span>,
+        handle_callback: <span class="rs-type">F</span>,
+    ) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a>&lt;<span class="rs-type">PpcEnvelope</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt;
+    <span class="rs-kw">where</span>
+        <span class="rs-type">F</span>: <span class="rs-type">FnMut</span>(<span class="rs-type">PpcEnvelope</span>) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a>&lt;<span class="rs-type">PpcEnvelope</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; + <span class="rs-type">Send</span> + &#x27;<span class="rs-kw">static</span>,
+    {
+        <span class="rs-kw">let</span> callback = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-daemon.html#method-new-89">new</a>(<span class="rs-type">Mutex</span>::<a class="symbol-link rs-fn" href="eos-daemon.html#method-new-89">new</a>(handle_callback));
+        <span class="rs-kw">let</span> handler: <a class="symbol-link rs-type" href="eos-daemon--src-services-plugins-ppc-router-pending-rs.html#item-type-CallbackHandler-10">CallbackHandler</a> = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-daemon.html#method-new-89">new</a>(<span class="rs-kw">move</span> |frame| {
+            <span class="rs-kw">let</span> <span class="rs-kw">mut</span> callback = callback
+                .<a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-ppc-router-pending-rs.html#method-lock-142">lock</a>()
+                .map_err(|_| <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>::<span class="rs-type">StateLockPoisoned</span>(&quot;plugin ppc callback handler&quot;))?;
+            callback(frame)
+        });
+        <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-ppc-router-rs.html#method-send-request-81">send_request</a>(request, timeout, <span class="rs-type">Some</span>(handler))
+    }
+</code></pre>
+</details></td></tr><tr id="method-send-request-81"><td>method</td><td>send_request</td><td><code>fn <a class="symbol-link" href="eos-daemon--src-services-plugins-ppc-router-rs.html#method-send-request-81">send_request</a> (&amp; self , request : &amp; PpcEnvelope , timeout : Duration , callback_handler : Option &lt; <a class="symbol-link" href="eos-daemon--src-services-plugins-ppc-router-pending-rs.html#item-type-CallbackHandler-10">CallbackHandler</a> &gt; ,) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a> &lt; PpcEnvelope , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-ppc-router-rs.html#method-send-request-81">send_request</a>(
+        &amp;<span class="rs-self">self</span>,
+        request: &amp;<span class="rs-type">PpcEnvelope</span>,
+        timeout: <span class="rs-type">Duration</span>,
+        callback_handler: <span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-daemon--src-services-plugins-ppc-router-pending-rs.html#item-type-CallbackHandler-10">CallbackHandler</a>&gt;,
+    ) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a>&lt;<span class="rs-type">PpcEnvelope</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+        <span class="rs-kw">if</span> request.direction != <span class="rs-type">PpcDirection</span>::<span class="rs-type">Request</span> {
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<span class="rs-type">PluginError</span>::<span class="rs-type">Ppc</span>(
+                &quot;daemon <span class="rs-type">PPC</span> round trip requires a request envelope&quot;.to_owned(),
+            )
+            .into());
+        }
+
+        <span class="rs-kw">let</span> message_id = request.message_id.clone();
+        <span class="rs-kw">let</span> reply_rx = <span class="rs-self">self</span>
+            .pending
+            .<a class="symbol-link rs-fn" href="eos-daemon--src-dispatch-dispatcher-rs.html#method-register-140">register</a>(message_id.clone(), callback_handler)?;
+
+        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Err</span>(err) = <span class="rs-self">self</span>.writer.<a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-ppc-router-frame-io-rs.html#method-write-with-timeout-26">write_with_timeout</a>(request, timeout) {
+            <span class="rs-kw">let</span> _ = <span class="rs-self">self</span>.pending.<a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-ppc-router-pending-rs.html#method-discard-48">discard</a>(&amp;message_id);
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(err);
+        }
+
+        <span class="rs-kw">match</span> reply_rx.recv_timeout(timeout) {
+            <span class="rs-type">Ok</span>(result) =&gt; result,
+            <span class="rs-type">Err</span>(mpsc::<span class="rs-type">RecvTimeoutError</span>::<span class="rs-type">Timeout</span>) =&gt; {
+                <span class="rs-kw">let</span> _ = <span class="rs-self">self</span>.pending.<a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-ppc-router-pending-rs.html#method-discard-48">discard</a>(&amp;message_id);
+                <span class="rs-type">Err</span>(<span class="rs-type">PluginError</span>::<span class="rs-type">Ppc</span>(format!(
+                    &quot;timed out waiting <span class="rs-kw">for</span> plugin <span class="rs-type">PPC</span> reply {message_id}&quot;
+                ))
+                .into())
+            }
+            <span class="rs-type">Err</span>(mpsc::<span class="rs-type">RecvTimeoutError</span>::<span class="rs-type">Disconnected</span>) =&gt; <span class="rs-type">Err</span>(<span class="rs-type">PluginError</span>::<span class="rs-type">Ppc</span>(format!(
+                &quot;plugin <span class="rs-type">PPC</span> reply channel closed <span class="rs-kw">for</span> {message_id}&quot;
+            ))
+            .into()),
+        }
+    }
+</code></pre>
+</details></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl std :: fmt :: Debug for <a class="symbol-link" href="eos-daemon--src-services-plugins-ppc-router-rs.html#item-struct-PpcClient-34">PpcClient</a></code></summary><table><tbody><tr id="method-fmt-40"><td>method</td><td>fmt</td><td><code>fn <a class="symbol-link" href="eos-daemon--src-services-plugins-ppc-router-rs.html#method-fmt-40">fmt</a> (&amp; self , formatter : &amp; mut std :: fmt :: Formatter &lt; &#x27;_ &gt;) -&gt; std :: fmt :: <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a></code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-ppc-router-rs.html#method-fmt-40">fmt</a>(&amp;<span class="rs-self">self</span>, formatter: &amp;<span class="rs-kw">mut</span> std::fmt::<span class="rs-type">Formatter</span>&lt;&#x27;_&gt;) -&gt; std::fmt::<a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a> {
+        formatter.debug_struct(&quot;<a class="symbol-link rs-type" href="eos-daemon--src-services-plugins-ppc-router-rs.html#item-struct-PpcClient-34">PpcClient</a>&quot;).finish_non_exhaustive()
+    }
+</code></pre>
+</details></td></tr></tbody></table></details></div>
+
   <p class="source">crates/eos-daemon/src/services/plugins/ppc_router.rs:34</p>
-</article><div class="group-label">Standalone Functions</div><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn spawn_reader_thread private fn spawn_reader_thread (mut stream : UnixStream , writer : FrameWriter , pending : PendingCalls ,) -&gt; Result &lt; () , DaemonError &gt; crates/eos-daemon/src/services/plugins/ppc_router.rs  ">
+</article><div class="group-label">Standalone Functions</div><article id="item-fn-spawn-reader-thread-121" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn spawn_reader_thread private fn spawn_reader_thread (mut stream : UnixStream , writer : FrameWriter , pending : PendingCalls ,) -&gt; Result &lt; () , DaemonError &gt; crates/eos-daemon/src/services/plugins/ppc_router.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>spawn_reader_thread</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn spawn_reader_thread (mut stream : UnixStream , writer : FrameWriter , pending : PendingCalls ,) -&gt; Result &lt; () , DaemonError &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-daemon--src-services-plugins-ppc-router-rs.html#item-fn-spawn-reader-thread-121">spawn_reader_thread</a> (mut stream : UnixStream , writer : <a class="symbol-link" href="eos-daemon--src-services-plugins-ppc-router-frame-io-rs.html#item-struct-FrameWriter-14">FrameWriter</a> , pending : <a class="symbol-link" href="eos-daemon--src-services-plugins-ppc-router-pending-rs.html#item-struct-PendingCalls-14">PendingCalls</a> ,) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a> &lt; () , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-ppc-router-rs.html#item-fn-spawn-reader-thread-121">spawn_reader_thread</a>(
+    <span class="rs-kw">mut</span> stream: <span class="rs-type">UnixStream</span>,
+    writer: <a class="symbol-link rs-type" href="eos-daemon--src-services-plugins-ppc-router-frame-io-rs.html#item-struct-FrameWriter-14">FrameWriter</a>,
+    pending: <a class="symbol-link rs-type" href="eos-daemon--src-services-plugins-ppc-router-pending-rs.html#item-struct-PendingCalls-14">PendingCalls</a>,
+) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a>&lt;(), <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+    thread::<span class="rs-type">Builder</span>::<a class="symbol-link rs-fn" href="eos-daemon.html#method-new-89">new</a>()
+        .name(&quot;eos-plugin-ppc-reader&quot;.to_owned())
+        .<a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-process-rs.html#method-spawn-176">spawn</a>(<span class="rs-kw">move</span> || <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-ppc-router-rs.html#item-fn-reader-loop-132">reader_loop</a>(&amp;<span class="rs-kw">mut</span> stream, &amp;writer, &amp;pending))?;
+    <span class="rs-type">Ok</span>(())
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-daemon/src/services/plugins/ppc_router.rs:121</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn reader_loop private fn reader_loop (stream : &amp; mut UnixStream , writer : &amp; FrameWriter , pending : &amp; PendingCalls) crates/eos-daemon/src/services/plugins/ppc_router.rs  ">
+</article><article id="item-fn-reader-loop-132" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn reader_loop private fn reader_loop (stream : &amp; mut UnixStream , writer : &amp; FrameWriter , pending : &amp; PendingCalls) crates/eos-daemon/src/services/plugins/ppc_router.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>reader_loop</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn reader_loop (stream : &amp; mut UnixStream , writer : &amp; FrameWriter , pending : &amp; PendingCalls)</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-daemon--src-services-plugins-ppc-router-rs.html#item-fn-reader-loop-132">reader_loop</a> (stream : &amp; mut UnixStream , writer : &amp; <a class="symbol-link" href="eos-daemon--src-services-plugins-ppc-router-frame-io-rs.html#item-struct-FrameWriter-14">FrameWriter</a> , pending : &amp; <a class="symbol-link" href="eos-daemon--src-services-plugins-ppc-router-pending-rs.html#item-struct-PendingCalls-14">PendingCalls</a>)</code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-ppc-router-rs.html#item-fn-reader-loop-132">reader_loop</a>(stream: &amp;<span class="rs-kw">mut</span> <span class="rs-type">UnixStream</span>, writer: &amp;<a class="symbol-link rs-type" href="eos-daemon--src-services-plugins-ppc-router-frame-io-rs.html#item-struct-FrameWriter-14">FrameWriter</a>, pending: &amp;<a class="symbol-link rs-type" href="eos-daemon--src-services-plugins-ppc-router-pending-rs.html#item-struct-PendingCalls-14">PendingCalls</a>) {
+    loop {
+        <span class="rs-kw">let</span> frame = <span class="rs-kw">match</span> frame_io::<a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-ppc-router-frame-io-rs.html#item-fn-read-envelope-56">read_envelope</a>(stream) {
+            <span class="rs-type">Ok</span>(frame) =&gt; frame,
+            <span class="rs-type">Err</span>(err) =&gt; {
+                pending.<a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-ppc-router-pending-rs.html#method-fail-all-80">fail_all</a>(err.to_string());
+                <span class="rs-kw">return</span>;
+            }
+        };
+
+        <span class="rs-kw">match</span> frame.direction {
+            <span class="rs-type">PpcDirection</span>::<span class="rs-type">Reply</span> =&gt; pending.<a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-ppc-router-pending-rs.html#method-complete-reply-53">complete_reply</a>(frame),
+            <span class="rs-type">PpcDirection</span>::<span class="rs-type">Request</span> =&gt; <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-ppc-router-rs.html#item-fn-handle-callback-149">handle_callback</a>(frame, writer, pending),
+        }
+    }
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-daemon/src/services/plugins/ppc_router.rs:132</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn handle_callback private fn handle_callback (frame : PpcEnvelope , writer : &amp; FrameWriter , pending : &amp; PendingCalls) crates/eos-daemon/src/services/plugins/ppc_router.rs  ">
+</article><article id="item-fn-handle-callback-149" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn handle_callback private fn handle_callback (frame : PpcEnvelope , writer : &amp; FrameWriter , pending : &amp; PendingCalls) crates/eos-daemon/src/services/plugins/ppc_router.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>handle_callback</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn handle_callback (frame : PpcEnvelope , writer : &amp; FrameWriter , pending : &amp; PendingCalls)</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-daemon--src-services-plugins-ppc-router-rs.html#item-fn-handle-callback-149">handle_callback</a> (frame : PpcEnvelope , writer : &amp; <a class="symbol-link" href="eos-daemon--src-services-plugins-ppc-router-frame-io-rs.html#item-struct-FrameWriter-14">FrameWriter</a> , pending : &amp; <a class="symbol-link" href="eos-daemon--src-services-plugins-ppc-router-pending-rs.html#item-struct-PendingCalls-14">PendingCalls</a>)</code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-ppc-router-rs.html#item-fn-handle-callback-149">handle_callback</a>(frame: <span class="rs-type">PpcEnvelope</span>, writer: &amp;<a class="symbol-link rs-type" href="eos-daemon--src-services-plugins-ppc-router-frame-io-rs.html#item-struct-FrameWriter-14">FrameWriter</a>, pending: &amp;<a class="symbol-link rs-type" href="eos-daemon--src-services-plugins-ppc-router-pending-rs.html#item-struct-PendingCalls-14">PendingCalls</a>) {
+    <span class="rs-kw">let</span> callback_message_id = frame.message_id.clone();
+    <span class="rs-kw">let</span> (owner_id, handler) = <span class="rs-kw">match</span> pending.<a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-ppc-router-pending-rs.html#method-callback-handler-for-frame-95">callback_handler_for_frame</a>(&amp;frame) {
+        <span class="rs-type">Ok</span>(found) =&gt; found,
+        <span class="rs-type">Err</span>(message) =&gt; {
+            <span class="rs-kw">let</span> _ = <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-ppc-router-rs.html#item-fn-write-callback-error-190">write_callback_error</a>(writer, &amp;callback_message_id, &amp;message);
+            <span class="rs-kw">return</span>;
+        }
+    };
+
+    <span class="rs-kw">match</span> handler(frame) {
+        <span class="rs-type">Ok</span>(reply) =&gt; {
+            <span class="rs-kw">if</span> reply.direction != <span class="rs-type">PpcDirection</span>::<span class="rs-type">Reply</span> {
+                pending.<a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-ppc-router-pending-rs.html#method-fail-one-69">fail_one</a>(
+                    &amp;owner_id,
+                    &quot;plugin <span class="rs-type">PPC</span> callback response must <span class="rs-kw">use</span> reply direction&quot;.to_owned(),
+                );
+                <span class="rs-kw">return</span>;
+            }
+            <span class="rs-kw">if</span> reply.message_id != callback_message_id {
+                pending.<a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-ppc-router-pending-rs.html#method-fail-one-69">fail_one</a>(
+                    &amp;owner_id,
+                    format!(
+                        &quot;plugin <span class="rs-type">PPC</span> callback response message_id {} did not <span class="rs-kw">match</span> callback {}&quot;,
+                        reply.message_id, callback_message_id
+                    ),
+                );
+                <span class="rs-kw">return</span>;
+            }
+            <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Err</span>(err) = writer.<a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-ppc-router-frame-io-rs.html#method-write-34">write</a>(&amp;reply) {
+                pending.<a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-ppc-router-pending-rs.html#method-fail-one-69">fail_one</a>(&amp;owner_id, err.to_string());
+            }
+        }
+        <span class="rs-type">Err</span>(err) =&gt; {
+            <span class="rs-kw">let</span> message = err.to_string();
+            <span class="rs-kw">let</span> _ = <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-ppc-router-rs.html#item-fn-write-callback-error-190">write_callback_error</a>(writer, &amp;callback_message_id, &amp;message);
+            pending.<a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-ppc-router-pending-rs.html#method-fail-one-69">fail_one</a>(&amp;owner_id, message);
+        }
+    }
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-daemon/src/services/plugins/ppc_router.rs:149</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn write_callback_error private fn write_callback_error (writer : &amp; FrameWriter , callback_message_id : &amp; str , message : &amp; str ,) -&gt; Result &lt; () , DaemonError &gt; crates/eos-daemon/src/services/plugins/ppc_router.rs  ">
+</article><article id="item-fn-write-callback-error-190" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn write_callback_error private fn write_callback_error (writer : &amp; FrameWriter , callback_message_id : &amp; str , message : &amp; str ,) -&gt; Result &lt; () , DaemonError &gt; crates/eos-daemon/src/services/plugins/ppc_router.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>write_callback_error</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn write_callback_error (writer : &amp; FrameWriter , callback_message_id : &amp; str , message : &amp; str ,) -&gt; Result &lt; () , DaemonError &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-daemon--src-services-plugins-ppc-router-rs.html#item-fn-write-callback-error-190">write_callback_error</a> (writer : &amp; <a class="symbol-link" href="eos-daemon--src-services-plugins-ppc-router-frame-io-rs.html#item-struct-FrameWriter-14">FrameWriter</a> , callback_message_id : &amp; str , message : &amp; str ,) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a> &lt; () , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-ppc-router-rs.html#item-fn-write-callback-error-190">write_callback_error</a>(
+    writer: &amp;<a class="symbol-link rs-type" href="eos-daemon--src-services-plugins-ppc-router-frame-io-rs.html#item-struct-FrameWriter-14">FrameWriter</a>,
+    callback_message_id: &amp;str,
+    message: &amp;str,
+) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a>&lt;(), <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+    <span class="rs-kw">let</span> body = json!({
+        &quot;success&quot;: <span class="rs-kw">false</span>,
+        &quot;error&quot;: {
+            &quot;kind&quot;: &quot;ppc_callback_error&quot;,
+            &quot;message&quot;: message,
+        },
+    });
+    writer.<a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-ppc-router-frame-io-rs.html#method-write-34">write</a>(&amp;<span class="rs-type">PpcEnvelope</span> {
+        message_id: callback_message_id.to_owned(),
+        direction: <span class="rs-type">PpcDirection</span>::<span class="rs-type">Reply</span>,
+        op: &quot;reply&quot;.to_owned(),
+        body: body.to_string(),
+    })
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-daemon/src/services/plugins/ppc_router.rs:190</p>
 </article></div>
 </section></div>
 </main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/eos-daemon/src/services/plugins/ppc_router.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-comment">//! Daemon-side PPC request/reply transport.</span>
+<span class="rs-comment">//!</span>
+<span class="rs-comment">//! This is the boundary the daemon uses once a plugin service has connected its</span>
+<span class="rs-comment">//! `AF_UNIX` socket. Daemon callers use a synchronous API, but plugin operation</span>
+<span class="rs-comment">//! serialization is forbidden: the connection itself can carry many in-flight</span>
+<span class="rs-comment">//! operation requests. A dedicated reader thread routes reply frames by</span>
+<span class="rs-comment">//! `message_id`; self-managed plugin operations can also service</span>
+<span class="rs-comment">//! plugin-originated callback requests on the same socket before their final</span>
+<span class="rs-comment">//! operation reply arrives. Concurrent callback-capable operations are routed by</span>
+<span class="rs-comment">//! `parent_message_id` in the callback body.</span>
+
+<span class="rs-kw">mod</span> frame_io;
+<span class="rs-kw">mod</span> pending;
+
+#[cfg(test)]
+#[path = &quot;../../../tests/plugin/ppc_router/<span class="rs-kw">mod</span>.rs&quot;]
+<span class="rs-kw">mod</span> tests;
+
+<span class="rs-kw">use</span> std::os::unix::net::<span class="rs-type">UnixStream</span>;
+<span class="rs-kw">use</span> std::sync::{mpsc, <span class="rs-type">Arc</span>, <span class="rs-type">Mutex</span>};
+<span class="rs-kw">use</span> std::thread;
+<span class="rs-kw">use</span> std::time::<span class="rs-type">Duration</span>;
+
+<span class="rs-kw">use</span> eos_plugin::{<span class="rs-type">PluginError</span>, <span class="rs-type">PpcDirection</span>, <span class="rs-type">PpcEnvelope</span>};
+<span class="rs-kw">use</span> serde_json::json;
+
+<span class="rs-kw">use</span> <span class="rs-self">self</span>::frame_io::<a class="symbol-link rs-type" href="eos-daemon--src-services-plugins-ppc-router-frame-io-rs.html#item-struct-FrameWriter-14">FrameWriter</a>;
+<span class="rs-kw">use</span> <span class="rs-self">self</span>::pending::{<a class="symbol-link rs-type" href="eos-daemon--src-services-plugins-ppc-router-pending-rs.html#item-type-CallbackHandler-10">CallbackHandler</a>, <a class="symbol-link rs-type" href="eos-daemon--src-services-plugins-ppc-router-pending-rs.html#item-struct-PendingCalls-14">PendingCalls</a>};
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::error::<a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>;
+
+#[cfg(test)]
+<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">use</span> <span class="rs-self">self</span>::frame_io::read_frame;
+
+<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-daemon--src-services-plugins-ppc-router-rs.html#item-struct-PpcClient-34">PpcClient</a> {
+    writer: <a class="symbol-link rs-type" href="eos-daemon--src-services-plugins-ppc-router-frame-io-rs.html#item-struct-FrameWriter-14">FrameWriter</a>,
+    pending: <a class="symbol-link rs-type" href="eos-daemon--src-services-plugins-ppc-router-pending-rs.html#item-struct-PendingCalls-14">PendingCalls</a>,
+}
+
+<span class="rs-kw">impl</span> std::fmt::<span class="rs-type">Debug</span> <span class="rs-kw">for</span> <a class="symbol-link rs-type" href="eos-daemon--src-services-plugins-ppc-router-rs.html#item-struct-PpcClient-34">PpcClient</a> {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-ppc-router-rs.html#method-fmt-40">fmt</a>(&amp;<span class="rs-self">self</span>, formatter: &amp;<span class="rs-kw">mut</span> std::fmt::<span class="rs-type">Formatter</span>&lt;&#x27;_&gt;) -&gt; std::fmt::<a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a> {
+        formatter.debug_struct(&quot;<a class="symbol-link rs-type" href="eos-daemon--src-services-plugins-ppc-router-rs.html#item-struct-PpcClient-34">PpcClient</a>&quot;).finish_non_exhaustive()
+    }
+}
+
+<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-daemon--src-services-plugins-ppc-router-rs.html#item-struct-PpcClient-34">PpcClient</a> {
+    <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon.html#method-new-89">new</a>(stream: <span class="rs-type">UnixStream</span>) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a>&lt;<span class="rs-self">Self</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+        <span class="rs-kw">let</span> reader_stream = stream.try_clone()?;
+        <span class="rs-kw">let</span> writer = <a class="symbol-link rs-type" href="eos-daemon--src-services-plugins-ppc-router-frame-io-rs.html#item-struct-FrameWriter-14">FrameWriter</a>::<a class="symbol-link rs-fn" href="eos-daemon.html#method-new-89">new</a>(stream);
+        <span class="rs-kw">let</span> pending = <a class="symbol-link rs-type" href="eos-daemon--src-services-plugins-ppc-router-pending-rs.html#item-struct-PendingCalls-14">PendingCalls</a>::<a class="symbol-link rs-fn" href="eos-daemon.html#method-default-210">default</a>();
+        <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-ppc-router-rs.html#item-fn-spawn-reader-thread-121">spawn_reader_thread</a>(reader_stream, writer.clone(), pending.clone())?;
+        <span class="rs-type">Ok</span>(<span class="rs-self">Self</span> { writer, pending })
+    }
+
+    <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-ppc-router-rs.html#method-round-trip-54">round_trip</a>(
+        &amp;<span class="rs-self">self</span>,
+        request: &amp;<span class="rs-type">PpcEnvelope</span>,
+        timeout: <span class="rs-type">Duration</span>,
+    ) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a>&lt;<span class="rs-type">PpcEnvelope</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+        <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-ppc-router-rs.html#method-send-request-81">send_request</a>(request, timeout, <span class="rs-type">None</span>)
+    }
+
+    <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> round_trip_with_callbacks&lt;<span class="rs-type">F</span>&gt;(
+        &amp;<span class="rs-self">self</span>,
+        request: &amp;<span class="rs-type">PpcEnvelope</span>,
+        timeout: <span class="rs-type">Duration</span>,
+        handle_callback: <span class="rs-type">F</span>,
+    ) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a>&lt;<span class="rs-type">PpcEnvelope</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt;
+    <span class="rs-kw">where</span>
+        <span class="rs-type">F</span>: <span class="rs-type">FnMut</span>(<span class="rs-type">PpcEnvelope</span>) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a>&lt;<span class="rs-type">PpcEnvelope</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; + <span class="rs-type">Send</span> + &#x27;<span class="rs-kw">static</span>,
+    {
+        <span class="rs-kw">let</span> callback = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-daemon.html#method-new-89">new</a>(<span class="rs-type">Mutex</span>::<a class="symbol-link rs-fn" href="eos-daemon.html#method-new-89">new</a>(handle_callback));
+        <span class="rs-kw">let</span> handler: <a class="symbol-link rs-type" href="eos-daemon--src-services-plugins-ppc-router-pending-rs.html#item-type-CallbackHandler-10">CallbackHandler</a> = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-daemon.html#method-new-89">new</a>(<span class="rs-kw">move</span> |frame| {
+            <span class="rs-kw">let</span> <span class="rs-kw">mut</span> callback = callback
+                .<a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-ppc-router-pending-rs.html#method-lock-142">lock</a>()
+                .map_err(|_| <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>::<span class="rs-type">StateLockPoisoned</span>(&quot;plugin ppc callback handler&quot;))?;
+            callback(frame)
+        });
+        <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-ppc-router-rs.html#method-send-request-81">send_request</a>(request, timeout, <span class="rs-type">Some</span>(handler))
+    }
+
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-ppc-router-rs.html#method-send-request-81">send_request</a>(
+        &amp;<span class="rs-self">self</span>,
+        request: &amp;<span class="rs-type">PpcEnvelope</span>,
+        timeout: <span class="rs-type">Duration</span>,
+        callback_handler: <span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-daemon--src-services-plugins-ppc-router-pending-rs.html#item-type-CallbackHandler-10">CallbackHandler</a>&gt;,
+    ) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a>&lt;<span class="rs-type">PpcEnvelope</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+        <span class="rs-kw">if</span> request.direction != <span class="rs-type">PpcDirection</span>::<span class="rs-type">Request</span> {
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<span class="rs-type">PluginError</span>::<span class="rs-type">Ppc</span>(
+                &quot;daemon <span class="rs-type">PPC</span> round trip requires a request envelope&quot;.to_owned(),
+            )
+            .into());
+        }
+
+        <span class="rs-kw">let</span> message_id = request.message_id.clone();
+        <span class="rs-kw">let</span> reply_rx = <span class="rs-self">self</span>
+            .pending
+            .<a class="symbol-link rs-fn" href="eos-daemon--src-dispatch-dispatcher-rs.html#method-register-140">register</a>(message_id.clone(), callback_handler)?;
+
+        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Err</span>(err) = <span class="rs-self">self</span>.writer.<a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-ppc-router-frame-io-rs.html#method-write-with-timeout-26">write_with_timeout</a>(request, timeout) {
+            <span class="rs-kw">let</span> _ = <span class="rs-self">self</span>.pending.<a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-ppc-router-pending-rs.html#method-discard-48">discard</a>(&amp;message_id);
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(err);
+        }
+
+        <span class="rs-kw">match</span> reply_rx.recv_timeout(timeout) {
+            <span class="rs-type">Ok</span>(result) =&gt; result,
+            <span class="rs-type">Err</span>(mpsc::<span class="rs-type">RecvTimeoutError</span>::<span class="rs-type">Timeout</span>) =&gt; {
+                <span class="rs-kw">let</span> _ = <span class="rs-self">self</span>.pending.<a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-ppc-router-pending-rs.html#method-discard-48">discard</a>(&amp;message_id);
+                <span class="rs-type">Err</span>(<span class="rs-type">PluginError</span>::<span class="rs-type">Ppc</span>(format!(
+                    &quot;timed out waiting <span class="rs-kw">for</span> plugin <span class="rs-type">PPC</span> reply {message_id}&quot;
+                ))
+                .into())
+            }
+            <span class="rs-type">Err</span>(mpsc::<span class="rs-type">RecvTimeoutError</span>::<span class="rs-type">Disconnected</span>) =&gt; <span class="rs-type">Err</span>(<span class="rs-type">PluginError</span>::<span class="rs-type">Ppc</span>(format!(
+                &quot;plugin <span class="rs-type">PPC</span> reply channel closed <span class="rs-kw">for</span> {message_id}&quot;
+            ))
+            .into()),
+        }
+    }
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-ppc-router-rs.html#item-fn-spawn-reader-thread-121">spawn_reader_thread</a>(
+    <span class="rs-kw">mut</span> stream: <span class="rs-type">UnixStream</span>,
+    writer: <a class="symbol-link rs-type" href="eos-daemon--src-services-plugins-ppc-router-frame-io-rs.html#item-struct-FrameWriter-14">FrameWriter</a>,
+    pending: <a class="symbol-link rs-type" href="eos-daemon--src-services-plugins-ppc-router-pending-rs.html#item-struct-PendingCalls-14">PendingCalls</a>,
+) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a>&lt;(), <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+    thread::<span class="rs-type">Builder</span>::<a class="symbol-link rs-fn" href="eos-daemon.html#method-new-89">new</a>()
+        .name(&quot;eos-plugin-ppc-reader&quot;.to_owned())
+        .<a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-process-rs.html#method-spawn-176">spawn</a>(<span class="rs-kw">move</span> || <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-ppc-router-rs.html#item-fn-reader-loop-132">reader_loop</a>(&amp;<span class="rs-kw">mut</span> stream, &amp;writer, &amp;pending))?;
+    <span class="rs-type">Ok</span>(())
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-ppc-router-rs.html#item-fn-reader-loop-132">reader_loop</a>(stream: &amp;<span class="rs-kw">mut</span> <span class="rs-type">UnixStream</span>, writer: &amp;<a class="symbol-link rs-type" href="eos-daemon--src-services-plugins-ppc-router-frame-io-rs.html#item-struct-FrameWriter-14">FrameWriter</a>, pending: &amp;<a class="symbol-link rs-type" href="eos-daemon--src-services-plugins-ppc-router-pending-rs.html#item-struct-PendingCalls-14">PendingCalls</a>) {
+    loop {
+        <span class="rs-kw">let</span> frame = <span class="rs-kw">match</span> frame_io::<a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-ppc-router-frame-io-rs.html#item-fn-read-envelope-56">read_envelope</a>(stream) {
+            <span class="rs-type">Ok</span>(frame) =&gt; frame,
+            <span class="rs-type">Err</span>(err) =&gt; {
+                pending.<a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-ppc-router-pending-rs.html#method-fail-all-80">fail_all</a>(err.to_string());
+                <span class="rs-kw">return</span>;
+            }
+        };
+
+        <span class="rs-kw">match</span> frame.direction {
+            <span class="rs-type">PpcDirection</span>::<span class="rs-type">Reply</span> =&gt; pending.<a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-ppc-router-pending-rs.html#method-complete-reply-53">complete_reply</a>(frame),
+            <span class="rs-type">PpcDirection</span>::<span class="rs-type">Request</span> =&gt; <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-ppc-router-rs.html#item-fn-handle-callback-149">handle_callback</a>(frame, writer, pending),
+        }
+    }
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-ppc-router-rs.html#item-fn-handle-callback-149">handle_callback</a>(frame: <span class="rs-type">PpcEnvelope</span>, writer: &amp;<a class="symbol-link rs-type" href="eos-daemon--src-services-plugins-ppc-router-frame-io-rs.html#item-struct-FrameWriter-14">FrameWriter</a>, pending: &amp;<a class="symbol-link rs-type" href="eos-daemon--src-services-plugins-ppc-router-pending-rs.html#item-struct-PendingCalls-14">PendingCalls</a>) {
+    <span class="rs-kw">let</span> callback_message_id = frame.message_id.clone();
+    <span class="rs-kw">let</span> (owner_id, handler) = <span class="rs-kw">match</span> pending.<a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-ppc-router-pending-rs.html#method-callback-handler-for-frame-95">callback_handler_for_frame</a>(&amp;frame) {
+        <span class="rs-type">Ok</span>(found) =&gt; found,
+        <span class="rs-type">Err</span>(message) =&gt; {
+            <span class="rs-kw">let</span> _ = <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-ppc-router-rs.html#item-fn-write-callback-error-190">write_callback_error</a>(writer, &amp;callback_message_id, &amp;message);
+            <span class="rs-kw">return</span>;
+        }
+    };
+
+    <span class="rs-kw">match</span> handler(frame) {
+        <span class="rs-type">Ok</span>(reply) =&gt; {
+            <span class="rs-kw">if</span> reply.direction != <span class="rs-type">PpcDirection</span>::<span class="rs-type">Reply</span> {
+                pending.<a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-ppc-router-pending-rs.html#method-fail-one-69">fail_one</a>(
+                    &amp;owner_id,
+                    &quot;plugin <span class="rs-type">PPC</span> callback response must <span class="rs-kw">use</span> reply direction&quot;.to_owned(),
+                );
+                <span class="rs-kw">return</span>;
+            }
+            <span class="rs-kw">if</span> reply.message_id != callback_message_id {
+                pending.<a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-ppc-router-pending-rs.html#method-fail-one-69">fail_one</a>(
+                    &amp;owner_id,
+                    format!(
+                        &quot;plugin <span class="rs-type">PPC</span> callback response message_id {} did not <span class="rs-kw">match</span> callback {}&quot;,
+                        reply.message_id, callback_message_id
+                    ),
+                );
+                <span class="rs-kw">return</span>;
+            }
+            <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Err</span>(err) = writer.<a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-ppc-router-frame-io-rs.html#method-write-34">write</a>(&amp;reply) {
+                pending.<a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-ppc-router-pending-rs.html#method-fail-one-69">fail_one</a>(&amp;owner_id, err.to_string());
+            }
+        }
+        <span class="rs-type">Err</span>(err) =&gt; {
+            <span class="rs-kw">let</span> message = err.to_string();
+            <span class="rs-kw">let</span> _ = <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-ppc-router-rs.html#item-fn-write-callback-error-190">write_callback_error</a>(writer, &amp;callback_message_id, &amp;message);
+            pending.<a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-ppc-router-pending-rs.html#method-fail-one-69">fail_one</a>(&amp;owner_id, message);
+        }
+    }
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-ppc-router-rs.html#item-fn-write-callback-error-190">write_callback_error</a>(
+    writer: &amp;<a class="symbol-link rs-type" href="eos-daemon--src-services-plugins-ppc-router-frame-io-rs.html#item-struct-FrameWriter-14">FrameWriter</a>,
+    callback_message_id: &amp;str,
+    message: &amp;str,
+) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a>&lt;(), <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+    <span class="rs-kw">let</span> body = json!({
+        &quot;success&quot;: <span class="rs-kw">false</span>,
+        &quot;error&quot;: {
+            &quot;kind&quot;: &quot;ppc_callback_error&quot;,
+            &quot;message&quot;: message,
+        },
+    });
+    writer.<a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-ppc-router-frame-io-rs.html#method-write-34">write</a>(&amp;<span class="rs-type">PpcEnvelope</span> {
+        message_id: callback_message_id.to_owned(),
+        direction: <span class="rs-type">PpcDirection</span>::<span class="rs-type">Reply</span>,
+        op: &quot;reply&quot;.to_owned(),
+        body: body.to_string(),
+    })
+}
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
   <script src="../assets/inventory.js"></script>
 </body>
 </html>

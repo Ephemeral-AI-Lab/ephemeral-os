@@ -8,8 +8,16 @@
 </head>
 <body>
   <header>
-    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
-    <h1>eos-occ File Inventory</h1>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>eos-occ File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS/sandbox &amp;&amp; cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
   </header>
   <a class="back-link" href="../index.html">sandbox</a>
 <section class="summary">
@@ -47,19 +55,83 @@
       <span>0 methods</span>
     </div>
   </div>
-  <div class="items"><div class="group-label">File-Owned Types</div><article class="type-card" data-kind="enum" data-kind-list="enum field type-model" data-filter-text="enum OccError pub pub enum OccError crates/eos-occ/src/error.rs  ">
+  <div class="items"><div class="group-label">File-Owned Types</div><article id="item-enum-OccError-9" class="type-card" data-kind="enum" data-kind-list="enum field type-model" data-filter-text="enum OccError pub pub enum OccError crates/eos-occ/src/error.rs  ">
   <div class="item-head">
     <span class="kind">enum</span>
     <h3>OccError</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub enum OccError</code>
-  <div class="tags"><span>error</span></div>
-  <h4>Variants</h4><table><tbody><tr><td>QueueClosed</td><td><code></code></td></tr><tr><td>QueueNotStarted</td><td><code></code></td></tr><tr><td>WorkerStart</td><td><code>0: String</code></td></tr><tr><td>WorkerPanicked</td><td><code></code></td></tr><tr><td>QueueStatePoisoned</td><td><code>0: &amp; 'static str</code></td></tr><tr><td>ReplyDisconnected</td><td><code></code></td></tr><tr><td>CasRetryExhausted</td><td><code>attempts: u32</code></td></tr><tr><td>RoutePreparation</td><td><code>0: String</code></td></tr><tr><td>Cas</td><td><code>0: CasError</code></td></tr></tbody></table>
+  <code class="signature">pub enum <a class="symbol-link" href="eos-occ--src-error-rs.html#item-enum-OccError-9">OccError</a></code>
+  <p class="docstring">Errors raised by the OCC publish path.</p>
+  <div class="tags"><span>derive: Debug</span><span>derive: thiserror::Error</span><span>error</span><span>non_exhaustive</span></div>
+  <h4>Variants</h4><table><tbody><tr><td>QueueClosed</td><td><code></code></td></tr><tr><td>QueueNotStarted</td><td><code></code></td></tr><tr><td>WorkerStart</td><td><code>0: String</code></td></tr><tr><td>WorkerPanicked</td><td><code></code></td></tr><tr><td>QueueStatePoisoned</td><td><code>0: &amp; &#x27;static str</code></td></tr><tr><td>ReplyDisconnected</td><td><code></code></td></tr><tr><td>CasRetryExhausted</td><td><code>attempts: u32</code></td></tr><tr><td>RoutePreparation</td><td><code>0: String</code></td></tr><tr><td>Cas</td><td><code>0: CasError</code></td></tr></tbody></table>
+
   <p class="source">crates/eos-occ/src/error.rs:9</p>
 </article></div>
 </section></div>
 </main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/eos-occ/src/error.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-comment">//! OCC error type.</span>
+<span class="rs-comment">//!</span>
+<span class="rs-comment">//! `thiserror` enum per crate (no `Box&lt;dyn Error&gt;` in the public API). Source</span>
+<span class="rs-comment">//! conversions use `#[from]`; messages are lowercase with no trailing</span>
+<span class="rs-comment">//! punctuation.</span>
+
+<span class="rs-kw">use</span> eos_protocol::<span class="rs-type">CasError</span>;
+
+<span class="rs-comment">/// Errors raised by the OCC publish path.</span>
+#[derive(<span class="rs-type">Debug</span>, thiserror::<span class="rs-type">Error</span>)]
+#[non_exhaustive]
+<span class="rs-kw">pub</span> <span class="rs-kw">enum</span> <a class="symbol-link rs-type" href="eos-occ--src-error-rs.html#item-enum-OccError-9">OccError</a> {
+    <span class="rs-comment">/// The commit queue was closed before the publish could be enqueued.</span>
+    #[error(&quot;occ commit queue is closed&quot;)]
+    <span class="rs-type">QueueClosed</span>,
+
+    <span class="rs-comment">/// The commit queue worker thread was never started.</span>
+    #[error(&quot;occ commit queue has not been started&quot;)]
+    <span class="rs-type">QueueNotStarted</span>,
+
+    <span class="rs-comment">/// The commit queue worker thread could not be started.</span>
+    #[error(&quot;occ commit queue worker failed to start: {0}&quot;)]
+    <span class="rs-type">WorkerStart</span>(<span class="rs-type">String</span>),
+
+    <span class="rs-comment">/// The commit queue worker thread panicked while closing.</span>
+    #[error(&quot;occ commit queue worker panicked&quot;)]
+    <span class="rs-type">WorkerPanicked</span>,
+
+    <span class="rs-comment">/// A process-local commit queue mutex was poisoned.</span>
+    #[error(&quot;occ commit queue state lock poisoned: {0}&quot;)]
+    <span class="rs-type">QueueStatePoisoned</span>(&amp;&#x27;<span class="rs-kw">static</span> str),
+
+    <span class="rs-comment">/// The single-writer reply channel dropped before delivering a result.</span>
+    #[error(&quot;occ commit reply channel disconnected&quot;)]
+    <span class="rs-type">ReplyDisconnected</span>,
+
+    <span class="rs-comment">/// The layer-stack publisher rejected every CAS retry attempt.</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// The publish surfaces a per-path `OccStatus::AbortedVersion` result</span>
+    <span class="rs-comment">/// rather than looping; this error carries the exhausted attempt count.</span>
+    #[error(&quot;cas mismatch retry budget exhausted after {attempts} attempts&quot;)]
+    <span class="rs-type">CasRetryExhausted</span> {
+        <span class="rs-comment">/// Number of attempts spent before giving up (`MAX_OCC_CAS_RETRIES`).</span>
+        attempts: u32,
+    },
+
+    <span class="rs-comment">/// Route/base-hash preparation failed before enqueueing.</span>
+    #[error(&quot;occ route preparation failed: {0}&quot;)]
+    <span class="rs-type">RoutePreparation</span>(<span class="rs-type">String</span>),
+
+    <span class="rs-comment">/// A path/hash from `eos-protocol` failed to parse or validate.</span>
+    #[error(transparent)]
+    <span class="rs-type">Cas</span>(#[from] <span class="rs-type">CasError</span>),
+}
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
   <script src="../assets/inventory.js"></script>
 </body>
 </html>

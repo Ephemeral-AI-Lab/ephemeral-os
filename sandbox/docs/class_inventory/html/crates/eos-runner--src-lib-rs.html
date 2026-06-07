@@ -8,8 +8,16 @@
 </head>
 <body>
   <header>
-    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
-    <h1>eos-runner File Inventory</h1>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>eos-runner File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS/sandbox &amp;&amp; cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
   </header>
   <a class="back-link" href="../index.html">sandbox</a>
 <section class="summary">
@@ -47,19 +55,129 @@
       <span>0 methods</span>
     </div>
   </div>
-  <div class="items"><div class="group-label">Standalone Functions</div><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn run pub pub fn run (request : &amp; RunRequest , config : &amp; config :: RunnerConfig) -&gt; Result &lt; RunResult , RunnerError &gt; crates/eos-runner/src/lib.rs  ">
+  <div class="items"><div class="group-label">Standalone Functions</div><article id="item-fn-run-58" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn run pub pub fn run (request : &amp; RunRequest , config : &amp; config :: RunnerConfig) -&gt; Result &lt; RunResult , RunnerError &gt; crates/eos-runner/src/lib.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>run</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub fn run (request : &amp; RunRequest , config : &amp; config :: RunnerConfig) -&gt; Result &lt; RunResult , RunnerError &gt;</code>
+  <code class="signature">pub fn <a class="symbol-link" href="eos-runner--src-lib-rs.html#item-fn-run-58">run</a> (request : &amp; <a class="symbol-link" href="eos-runner--src-request-rs.html#item-struct-RunRequest-135">RunRequest</a> , config : &amp; config :: RunnerConfig) -&gt; Result &lt; <a class="symbol-link" href="eos-runner--src-request-rs.html#item-struct-RunResult-167">RunResult</a> , <a class="symbol-link" href="eos-runner.html#item-enum-RunnerError-11">RunnerError</a> &gt;</code>
+  <p class="docstring">Execute one tool call through the runner, dispatching on [`RunRequest::mode`].<br>This is the crate's single entry point: the daemon hands a fully-resolved<br>[`RunRequest`] (already knowing whether it wants a fresh namespace or a setns<br>into an existing one) and the runner performs the syscalls on this<br>single-threaded caller.<br>Fresh-ns mode mounts the workspace overlay after `unshare`, mirroring the<br>Rust entrypoint's `mount_overlay` call.<br># Errors<br>Returns [`RunnerError`] when the request is invalid for the selected mode,<br>namespace setup fails, overlay mounting fails, or child execution fails.</p>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-comment">/// Execute one tool call through the runner, dispatching on [`RunRequest::mode`].</span>
+<span class="rs-comment">///</span>
+<span class="rs-comment">/// This is the crate's single entry point: the daemon hands a fully-resolved</span>
+<span class="rs-comment">/// [`RunRequest`] (already knowing whether it wants a fresh namespace or a setns</span>
+<span class="rs-comment">/// into an existing one) and the runner performs the syscalls on this</span>
+<span class="rs-comment">/// single-threaded caller.</span>
+<span class="rs-comment">///</span>
+<span class="rs-comment">/// Fresh-ns mode mounts the workspace overlay after `unshare`, mirroring the</span>
+<span class="rs-comment">/// Rust entrypoint's `mount_overlay` call.</span>
+<span class="rs-comment">///</span>
+<span class="rs-comment">/// # Errors</span>
+<span class="rs-comment">///</span>
+<span class="rs-comment">/// Returns [`RunnerError`] when the request is invalid for the selected mode,</span>
+<span class="rs-comment">/// namespace setup fails, overlay mounting fails, or child execution fails.</span>
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runner--src-lib-rs.html#item-fn-run-58">run</a>(request: &amp;<a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-RunRequest-135">RunRequest</a>, config: &amp;config::<span class="rs-type">RunnerConfig</span>) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-RunResult-167">RunResult</a>, <a class="symbol-link rs-type" href="eos-runner.html#item-enum-RunnerError-11">RunnerError</a>&gt; {
+    <span class="rs-kw">match</span> request.mode {
+        <a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-enum-RunMode-17">RunMode</a>::<span class="rs-type">FreshNs</span> =&gt; fresh_ns::<a class="symbol-link rs-fn" href="eos-runner--src-fresh-ns-rs.html#item-fn-run-fresh-ns-54">run_fresh_ns</a>(request, config),
+        <a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-enum-RunMode-17">RunMode</a>::<span class="rs-type">SetNs</span> =&gt; setns::<a class="symbol-link rs-fn" href="eos-runner--src-setns-rs.html#item-fn-run-setns-39">run_setns</a>(request),
+    }
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-runner/src/lib.rs:58</p>
 </article></div>
 </section></div>
 </main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/eos-runner/src/lib.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-comment">//! Namespace runner: the syscalls the kernel forces into a single-threaded caller.</span>
+<span class="rs-comment">//!</span>
+<span class="rs-comment">//! # Invariant this crate owns</span>
+<span class="rs-comment">//!</span>
+<span class="rs-comment">//! `eos-runner` is **single-threaded and syscall-only — NO tokio**, and that is a</span>
+<span class="rs-comment">//! *kernel requirement, not a style choice*: `unshare(CLONE_NEWUSER|…)` (fresh-ns</span>
+<span class="rs-comment">//! mode) and `setns()` into a user namespace (setns mode) both require the calling</span>
+<span class="rs-comment">//! process/thread to be the only thread in the process, or the syscall fails with</span>
+<span class="rs-comment">//! `EINVAL`. Spawning this work inline in the multithreaded tokio daemon would</span>
+<span class="rs-comment">//! break it; instead the daemon execs a dedicated single-threaded child whose body</span>
+<span class="rs-comment">//! lives here. The R10 import discipline of the Rust helpers — never pull</span>
+<span class="rs-comment">//! `logging` / `asyncio` / `subprocess` before the syscall — maps in Rust to *not</span>
+<span class="rs-comment">//! depending on tokio*: this crate's `Cargo.toml` deliberately omits it.</span>
+<span class="rs-comment">//!</span>
+<span class="rs-comment">//! # Two modes</span>
+<span class="rs-comment">//!</span>
+<span class="rs-comment">//! 1. **Fresh-ns** ([`RunMode::FreshNs`]): `unshare(CLONE_NEWUSER|CLONE_NEWNS|…)` →</span>
+<span class="rs-comment">//!    write `uid_map`/`gid_map` → mount the overlay through</span>
+<span class="rs-comment">//!    [`eos_overlay::mount_overlay`] → spawn the tool → construct the result</span>
+<span class="rs-comment">//!    JSON → cleanup. One tool call per fresh namespace.</span>
+<span class="rs-comment">//! 2. **Setns** ([`RunMode::SetNs`]): per isolated call, `setns()` into the</span>
+<span class="rs-comment">//!    ns-holder's pre-opened namespace FDs (`user`, then `mnt`, then `pid`, then</span>
+<span class="rs-comment">//!    `net` — order is load-bearing) → `fork` → the child `execvp`s the command.</span>
+<span class="rs-comment">//!</span>
+<span class="rs-comment">//! # Process group / cancellation</span>
+<span class="rs-comment">//!</span>
+<span class="rs-comment">//! Both modes start the child in its own session/process group (the equivalent of</span>
+<span class="rs-comment">//! Rust `start_new_session=True`) so the daemon can `killpg` the whole group from</span>
+<span class="rs-comment">//! outside — cancel kills the entire tree, not just the immediate child.</span>
+<span class="rs-comment">//!</span>
+<span class="rs-comment">//! # Build-time guarantee</span>
+<span class="rs-comment">//!</span>
+<span class="rs-comment">//! Linux-only syscall bodies are gated behind `#[cfg(target_os = "linux")]`; the</span>
+<span class="rs-comment">//! non-Linux arms return [`RunnerError::Unsupported`] so the workspace stays green</span>
+<span class="rs-comment">//! on the macOS dev host. Raw syscall sites carry focused `// SAFETY:` notes, and</span>
+<span class="rs-comment">//! `#![deny(unsafe_op_in_unsafe_fn)]` keeps that annotation discipline enforced.</span>
+<span class="rs-comment">//!</span>
+<span class="rs-comment">//! Internal deps: `eos-protocol` (verb [`Intent`](eos_protocol::Intent)); `eos-overlay`</span>
+<span class="rs-comment">//! (kernel overlay mount and upper-dir capture primitives).</span>
+#![deny(unsafe_op_in_unsafe_fn)]
+
+<span class="rs-kw">pub</span> <span class="rs-kw">mod</span> error;
+<span class="rs-kw">pub</span> <span class="rs-kw">mod</span> fresh_ns;
+#[cfg(target_os = &quot;linux&quot;)]
+<span class="rs-kw">mod</span> mount_mask;
+#[cfg(target_os = &quot;linux&quot;)]
+<span class="rs-kw">mod</span> path;
+<span class="rs-kw">pub</span> <span class="rs-kw">mod</span> request;
+<span class="rs-kw">pub</span> <span class="rs-kw">mod</span> setns;
+
+<span class="rs-kw">pub</span> <span class="rs-kw">mod</span> config {
+    <span class="rs-kw">pub</span> <span class="rs-kw">use</span> eos_config::configs::runner::*;
+}
+
+<span class="rs-kw">pub</span> <span class="rs-kw">use</span> error::<a class="symbol-link rs-type" href="eos-runner.html#item-enum-RunnerError-11">RunnerError</a>;
+<span class="rs-kw">pub</span> <span class="rs-kw">use</span> request::{<a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-Fd-29">Fd</a>, <a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-NsFds-41">NsFds</a>, <a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-enum-RunMode-17">RunMode</a>, <a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-RunRequest-135">RunRequest</a>, <a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-RunResult-167">RunResult</a>, <a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-enum-RunnerVerb-58">RunnerVerb</a>, <a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-ToolCall-119">ToolCall</a>, <a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-WorkspaceRoot-37">WorkspaceRoot</a>};
+
+<span class="rs-comment">/// Execute one tool call through the runner, dispatching on [`RunRequest::mode`].</span>
+<span class="rs-comment">///</span>
+<span class="rs-comment">/// This is the crate's single entry point: the daemon hands a fully-resolved</span>
+<span class="rs-comment">/// [`RunRequest`] (already knowing whether it wants a fresh namespace or a setns</span>
+<span class="rs-comment">/// into an existing one) and the runner performs the syscalls on this</span>
+<span class="rs-comment">/// single-threaded caller.</span>
+<span class="rs-comment">///</span>
+<span class="rs-comment">/// Fresh-ns mode mounts the workspace overlay after `unshare`, mirroring the</span>
+<span class="rs-comment">/// Rust entrypoint's `mount_overlay` call.</span>
+<span class="rs-comment">///</span>
+<span class="rs-comment">/// # Errors</span>
+<span class="rs-comment">///</span>
+<span class="rs-comment">/// Returns [`RunnerError`] when the request is invalid for the selected mode,</span>
+<span class="rs-comment">/// namespace setup fails, overlay mounting fails, or child execution fails.</span>
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runner--src-lib-rs.html#item-fn-run-58">run</a>(request: &amp;<a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-RunRequest-135">RunRequest</a>, config: &amp;config::<span class="rs-type">RunnerConfig</span>) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-RunResult-167">RunResult</a>, <a class="symbol-link rs-type" href="eos-runner.html#item-enum-RunnerError-11">RunnerError</a>&gt; {
+    <span class="rs-kw">match</span> request.mode {
+        <a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-enum-RunMode-17">RunMode</a>::<span class="rs-type">FreshNs</span> =&gt; fresh_ns::<a class="symbol-link rs-fn" href="eos-runner--src-fresh-ns-rs.html#item-fn-run-fresh-ns-54">run_fresh_ns</a>(request, config),
+        <a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-enum-RunMode-17">RunMode</a>::<span class="rs-type">SetNs</span> =&gt; setns::<a class="symbol-link rs-fn" href="eos-runner--src-setns-rs.html#item-fn-run-setns-39">run_setns</a>(request),
+    }
+}
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
   <script src="../assets/inventory.js"></script>
 </body>
 </html>

@@ -8,8 +8,16 @@
 </head>
 <body>
   <header>
-    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
-    <h1>eos-plugin File Inventory</h1>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>eos-plugin File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS/sandbox &amp;&amp; cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
   </header>
   <a class="back-link" href="../index.html">sandbox</a>
 <section class="summary">
@@ -50,6 +58,68 @@
   <div class="items"></div>
 </section></div>
 </main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/eos-plugin/src/lib.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-comment">//! Plugin PPC contracts — manifest/service metadata plus a bidirectional,</span>
+<span class="rs-comment">//! message-id'd plugin-process channel.</span>
+<span class="rs-comment">//!</span>
+<span class="rs-comment">//! # Invariant this crate owns</span>
+<span class="rs-comment">//!</span>
+<span class="rs-comment">//! The Rust path loaded a plugin handler with `dynamic loading.import_module(...)`</span>
+<span class="rs-comment">//! in-process per call. The Rust path replaces that with daemon-owned service</span>
+<span class="rs-comment">//! processes connected over a bidirectional PPC channel on an `AF_UNIX` socket.</span>
+<span class="rs-comment">//! This crate deliberately owns only the pure contract pieces: plugin manifests,</span>
+<span class="rs-comment">//! service keys/status, refresh messages, public op names, and PPC frames. The</span>
+<span class="rs-comment">//! live process registry, per-op overlay, and OCC callback handling stay in</span>
+<span class="rs-comment">//! `eos-daemon`.</span>
+<span class="rs-comment">//!</span>
+<span class="rs-comment">//! Isolated mode BLOCKS all plugin ops ([`PluginError::ForbiddenInIsolatedWorkspace`]).</span>
+<span class="rs-comment">//!</span>
+<span class="rs-comment">//! # MF-1 — ONE single writer per `layer_stack_root` (STATE LOUDLY)</span>
+<span class="rs-comment">//!</span>
+<span class="rs-comment">//! The self-managed OCC commit callback MUST route through the SAME</span>
+<span class="rs-comment">//! per-`layer_stack_root` single `occ-commit-queue` writer + storage lease as the</span>
+<span class="rs-comment">//! primary `WRITE_ALLOWED` path — NEVER a second writer instance. This crate</span>
+<span class="rs-comment">//! cannot publish and does not define a publish port; `eos-daemon` owns the</span>
+<span class="rs-comment">//! callback handler and routes it through its existing per-root OCC writer.</span>
+<span class="rs-comment">//!</span>
+<span class="rs-comment">//! # Build-time guarantee — NOT `eos-occ`</span>
+<span class="rs-comment">//!</span>
+<span class="rs-comment">//! This crate does NOT depend on `eos-occ`, `eos-overlay`, `eos-layerstack`,</span>
+<span class="rs-comment">//! `nix`, or `tokio`. Snapshot, overlay, publish, process, and</span>
+<span class="rs-comment">//! namespace behavior are daemon-side responsibilities.</span>
+<span class="rs-comment">//!</span>
+<span class="rs-comment">//! # Runtime payload (NOT a Cargo dependency)</span>
+<span class="rs-comment">//!</span>
+<span class="rs-comment">//! Plugin payload runtimes are package content provisioned into daemon-managed</span>
+<span class="rs-comment">//! service processes. They are runtime artifacts, not core dependencies of this</span>
+<span class="rs-comment">//! crate.</span>
+#![forbid(unsafe_code)]
+
+<span class="rs-kw">pub</span> <span class="rs-kw">mod</span> error;
+<span class="rs-kw">pub</span> <span class="rs-kw">mod</span> manifest;
+<span class="rs-kw">pub</span> <span class="rs-kw">mod</span> ppc;
+<span class="rs-kw">pub</span> <span class="rs-kw">mod</span> refresh;
+<span class="rs-kw">pub</span> <span class="rs-kw">mod</span> registry;
+<span class="rs-kw">pub</span> <span class="rs-kw">mod</span> service;
+<span class="rs-kw">pub</span> <span class="rs-kw">mod</span> service_registry;
+
+<span class="rs-kw">pub</span> <span class="rs-kw">use</span> error::{<a class="symbol-link rs-type" href="eos-plugin.html#item-enum-PluginError-5">PluginError</a>, <a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>};
+<span class="rs-kw">pub</span> <span class="rs-kw">use</span> manifest::{
+    <a class="symbol-link rs-type" href="eos-plugin--src-manifest-rs.html#item-enum-PluginDependencyScope-119">PluginDependencyScope</a>, <a class="symbol-link rs-type" href="eos-plugin--src-manifest-rs.html#item-struct-PluginManifest-19">PluginManifest</a>, <a class="symbol-link rs-type" href="eos-plugin--src-manifest-rs.html#item-struct-PluginOperationManifest-206">PluginOperationManifest</a>, <a class="symbol-link rs-type" href="eos-plugin--src-manifest-rs.html#item-struct-PluginPackageManifest-94">PluginPackageManifest</a>,
+    <a class="symbol-link rs-type" href="eos-plugin--src-manifest-rs.html#item-struct-PluginServiceManifest-157">PluginServiceManifest</a>, <a class="symbol-link rs-type" href="eos-plugin--src-manifest-rs.html#item-struct-PluginSetupManifest-129">PluginSetupManifest</a>, <span class="rs-type">PACKAGE_SHA256_MARKER</span>, <span class="rs-type">SETUP_SHA256_MARKER</span>,
+};
+<span class="rs-kw">pub</span> <span class="rs-kw">use</span> ppc::{<a class="symbol-link rs-type" href="eos-plugin--src-ppc-rs.html#item-enum-PpcDirection-25">PpcDirection</a>, <a class="symbol-link rs-type" href="eos-plugin--src-ppc-rs.html#item-struct-PpcEnvelope-35">PpcEnvelope</a>};
+<span class="rs-kw">pub</span> <span class="rs-kw">use</span> refresh::{<a class="symbol-link rs-type" href="eos-plugin--src-refresh-rs.html#item-struct-RefreshAck-61">RefreshAck</a>, <a class="symbol-link rs-type" href="eos-plugin--src-refresh-rs.html#item-enum-RefreshRequest-11">RefreshRequest</a>};
+<span class="rs-kw">pub</span> <span class="rs-kw">use</span> registry::public_op_name;
+<span class="rs-kw">pub</span> <span class="rs-kw">use</span> service::{<a class="symbol-link rs-type" href="eos-plugin--src-service-rs.html#item-struct-PluginServiceKey-39">PluginServiceKey</a>, <a class="symbol-link rs-type" href="eos-plugin--src-service-rs.html#item-struct-PluginServiceKeyParts-62">PluginServiceKeyParts</a>, <a class="symbol-link rs-type" href="eos-plugin--src-service-rs.html#item-enum-RefreshStrategy-24">RefreshStrategy</a>, <a class="symbol-link rs-type" href="eos-plugin--src-service-rs.html#item-enum-ServiceMode-12">ServiceMode</a>};
+<span class="rs-kw">pub</span> <span class="rs-kw">use</span> service_registry::{<a class="symbol-link rs-type" href="eos-plugin--src-service-registry-rs.html#item-enum-PluginServiceState-11">PluginServiceState</a>, <a class="symbol-link rs-type" href="eos-plugin--src-service-registry-rs.html#item-struct-PluginServiceStatus-25">PluginServiceStatus</a>};
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
   <script src="../assets/inventory.js"></script>
 </body>
 </html>

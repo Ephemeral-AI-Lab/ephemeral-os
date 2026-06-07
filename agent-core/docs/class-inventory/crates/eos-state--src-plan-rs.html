@@ -8,8 +8,16 @@
 </head>
 <body>
   <header>
-    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
-    <h1>eos-state File Inventory</h1>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>eos-state File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS/agent-core &amp;&amp; cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
   </header>
   <a class="back-link" href="../index.html">agent-core</a>
 <section class="summary">
@@ -47,59 +55,549 @@
       <span>25 methods</span>
     </div>
   </div>
-  <div class="items"><div class="group-label">File-Owned Types</div><article class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct PlanNodeId pub pub struct PlanNodeId crates/eos-state/src/plan.rs 0 String ">
+  <div class="items"><div class="group-label">File-Owned Types</div><article id="item-struct-PlanNodeId-10" class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct PlanNodeId pub pub struct PlanNodeId crates/eos-state/src/plan.rs 0 String ">
   <div class="item-head">
     <span class="kind">struct</span>
     <h3>PlanNodeId</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub struct PlanNodeId</code>
-  <div class="tags"><span>serde</span></div>
-  <h4>Fields</h4><table><tbody><tr><td>private</td><td>0</td><td><code>String</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr><td>constructor</td><td>new</td><td><code>pub fn new (value : impl Into &lt; String &gt;) -&gt; Result &lt; Self , CoreError &gt;</code></td></tr><tr><td>method</td><td>as_str</td><td><code>pub fn as_str (&amp; self) -&gt; &amp; str</code></td></tr><tr><td>method</td><td>into_string</td><td><code>pub fn into_string (self) -&gt; String</code></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl std :: fmt :: Display for PlanNodeId</code></summary><table><tbody><tr><td>method</td><td>fmt</td><td><code>fn fmt (&amp; self , f : &amp; mut std :: fmt :: Formatter &lt; '_ &gt;) -&gt; std :: fmt :: Result</code></td></tr></tbody></table></details><details><summary><code>impl TryFrom &lt; String &gt; for PlanNodeId</code></summary><table><tbody><tr><td>constructor</td><td>try_from</td><td><code>fn try_from (value : String) -&gt; Result &lt; Self , Self :: Error &gt;</code></td></tr></tbody></table></details><details><summary><code>impl TryFrom &lt; &amp; str &gt; for PlanNodeId</code></summary><table><tbody><tr><td>constructor</td><td>try_from</td><td><code>fn try_from (value : &amp; str) -&gt; Result &lt; Self , Self :: Error &gt;</code></td></tr></tbody></table></details></div>
+  <code class="signature">pub struct <a class="symbol-link" href="eos-state--src-plan-rs.html#item-struct-PlanNodeId-10">PlanNodeId</a></code>
+  <p class="docstring">Planner-local DAG node id.</p>
+  <div class="tags"><span>derive: Clone</span><span>derive: Debug</span><span>derive: Deserialize</span><span>derive: Eq</span><span>derive: Hash</span><span>derive: JsonSchema</span><span>derive: Ord</span><span>derive: PartialEq</span><span>derive: PartialOrd</span><span>derive: Serialize</span><span>serde</span><span>serde: transparent</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>0</td><td><code>String</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-18"><td>constructor</td><td>new</td><td><code>pub fn <a class="symbol-link" href="eos-state--src-plan-rs.html#method-new-18">new</a> (value : impl Into &lt; String &gt;) -&gt; Result &lt; Self , CoreError &gt;</code><p class="docstring">Construct a nonblank planner-local node id.<br># Errors<br>Returns [`CoreError`] when the id is blank.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Construct a nonblank planner-local node id.</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// # Errors</span>
+    <span class="rs-comment">/// Returns [`CoreError`] when the id is blank.</span>
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-plan-rs.html#method-new-18">new</a>(value: <span class="rs-kw">impl</span> <span class="rs-type">Into</span>&lt;<span class="rs-type">String</span>&gt;) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-self">Self</span>, <span class="rs-type">CoreError</span>&gt; {
+        <span class="rs-kw">let</span> value = value.into();
+        <span class="rs-kw">if</span> value.trim().is_empty() {
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<span class="rs-type">CoreError</span>::<span class="rs-type">Store</span>(&quot;plan node id must be nonblank&quot;.to_owned()));
+        }
+        <span class="rs-type">Ok</span>(<span class="rs-self">Self</span>(value))
+    }
+</code></pre>
+</details></td></tr><tr id="method-as-str-30"><td>method</td><td>as_str</td><td><code>pub fn <a class="symbol-link" href="eos-state--src-attempt-rs.html#method-as-str-42">as_str</a> (&amp; self) -&gt; &amp; str</code><p class="docstring">Borrow the raw node id.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Borrow the raw node id.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-attempt-rs.html#method-as-str-42">as_str</a>(&amp;<span class="rs-self">self</span>) -&gt; &amp;str {
+        &amp;<span class="rs-self">self</span>.0
+    }
+</code></pre>
+</details></td></tr><tr id="method-into-string-36"><td>method</td><td>into_string</td><td><code>pub fn <a class="symbol-link" href="eos-state--src-plan-rs.html#method-into-string-36">into_string</a> (self) -&gt; String</code><p class="docstring">Consume the value and return the raw node id.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Consume the value and return the raw node id.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-plan-rs.html#method-into-string-36">into_string</a>(<span class="rs-self">self</span>) -&gt; <span class="rs-type">String</span> {
+        <span class="rs-self">self</span>.0
+    }
+</code></pre>
+</details></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl std :: fmt :: Display for <a class="symbol-link" href="eos-state--src-plan-rs.html#item-struct-PlanNodeId-10">PlanNodeId</a></code></summary><table><tbody><tr id="method-fmt-44"><td>method</td><td>fmt</td><td><code>fn <a class="symbol-link" href="eos-state--src-plan-rs.html#method-fmt-44">fmt</a> (&amp; self , f : &amp; mut std :: fmt :: Formatter &lt; &#x27;_ &gt;) -&gt; std :: fmt :: Result</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-plan-rs.html#method-fmt-44">fmt</a>(&amp;<span class="rs-self">self</span>, f: &amp;<span class="rs-kw">mut</span> std::fmt::<span class="rs-type">Formatter</span>&lt;&#x27;_&gt;) -&gt; std::fmt::<span class="rs-type">Result</span> {
+        <span class="rs-self">self</span>.0.<a class="symbol-link rs-fn" href="eos-state--src-plan-rs.html#method-fmt-44">fmt</a>(f)
+    }
+</code></pre>
+</details></td></tr></tbody></table></details><details><summary><code>impl TryFrom &lt; String &gt; for <a class="symbol-link" href="eos-state--src-plan-rs.html#item-struct-PlanNodeId-10">PlanNodeId</a></code></summary><table><tbody><tr id="method-try-from-52"><td>constructor</td><td>try_from</td><td><code>fn <a class="symbol-link" href="eos-state--src-plan-rs.html#method-try-from-52">try_from</a> (value : String) -&gt; Result &lt; Self , Self :: Error &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-plan-rs.html#method-try-from-52">try_from</a>(value: <span class="rs-type">String</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-self">Self</span>, <span class="rs-self">Self</span>::<span class="rs-type">Error</span>&gt; {
+        <span class="rs-self">Self</span>::<a class="symbol-link rs-fn" href="eos-state--src-plan-rs.html#method-new-18">new</a>(value)
+    }
+</code></pre>
+</details></td></tr></tbody></table></details><details><summary><code>impl TryFrom &lt; &amp; str &gt; for <a class="symbol-link" href="eos-state--src-plan-rs.html#item-struct-PlanNodeId-10">PlanNodeId</a></code></summary><table><tbody><tr id="method-try-from-60"><td>constructor</td><td>try_from</td><td><code>fn <a class="symbol-link" href="eos-state--src-plan-rs.html#method-try-from-52">try_from</a> (value : &amp; str) -&gt; Result &lt; Self , Self :: Error &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-plan-rs.html#method-try-from-52">try_from</a>(value: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-self">Self</span>, <span class="rs-self">Self</span>::<span class="rs-type">Error</span>&gt; {
+        <span class="rs-self">Self</span>::<a class="symbol-link rs-fn" href="eos-state--src-plan-rs.html#method-new-18">new</a>(value.to_owned())
+    }
+</code></pre>
+</details></td></tr></tbody></table></details></div>
+
   <p class="source">crates/eos-state/src/plan.rs:10</p>
-</article><article class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct DeferredGoal pub pub struct DeferredGoal crates/eos-state/src/plan.rs 0 String ">
+</article><article id="item-struct-DeferredGoal-65" class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct DeferredGoal pub pub struct DeferredGoal crates/eos-state/src/plan.rs 0 String ">
   <div class="item-head">
     <span class="kind">struct</span>
     <h3>DeferredGoal</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub struct DeferredGoal</code>
-  <div class="tags"><span>serde</span></div>
-  <h4>Fields</h4><table><tbody><tr><td>private</td><td>0</td><td><code>String</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr><td>constructor</td><td>new</td><td><code>pub fn new (value : impl Into &lt; String &gt;) -&gt; Result &lt; Self , CoreError &gt;</code></td></tr><tr><td>method</td><td>as_str</td><td><code>pub fn as_str (&amp; self) -&gt; &amp; str</code></td></tr><tr><td>method</td><td>into_string</td><td><code>pub fn into_string (self) -&gt; String</code></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl std :: fmt :: Display for DeferredGoal</code></summary><table><tbody><tr><td>method</td><td>fmt</td><td><code>fn fmt (&amp; self , f : &amp; mut std :: fmt :: Formatter &lt; '_ &gt;) -&gt; std :: fmt :: Result</code></td></tr></tbody></table></details><details><summary><code>impl TryFrom &lt; String &gt; for DeferredGoal</code></summary><table><tbody><tr><td>constructor</td><td>try_from</td><td><code>fn try_from (value : String) -&gt; Result &lt; Self , Self :: Error &gt;</code></td></tr></tbody></table></details><details><summary><code>impl TryFrom &lt; &amp; str &gt; for DeferredGoal</code></summary><table><tbody><tr><td>constructor</td><td>try_from</td><td><code>fn try_from (value : &amp; str) -&gt; Result &lt; Self , Self :: Error &gt;</code></td></tr></tbody></table></details></div>
+  <code class="signature">pub struct <a class="symbol-link" href="eos-state--src-plan-rs.html#item-struct-DeferredGoal-65">DeferredGoal</a></code>
+  <p class="docstring">Goal carried to the next workflow iteration.</p>
+  <div class="tags"><span>derive: Clone</span><span>derive: Debug</span><span>derive: Deserialize</span><span>derive: Eq</span><span>derive: Hash</span><span>derive: JsonSchema</span><span>derive: PartialEq</span><span>derive: Serialize</span><span>serde</span><span>serde: transparent</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>0</td><td><code>String</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-71"><td>constructor</td><td>new</td><td><code>pub fn <a class="symbol-link" href="eos-state--src-plan-rs.html#method-new-18">new</a> (value : impl Into &lt; String &gt;) -&gt; Result &lt; Self , CoreError &gt;</code><p class="docstring">Construct a nonblank deferred goal.<br># Errors<br>Returns [`CoreError`] when the goal is blank.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Construct a nonblank deferred goal.</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// # Errors</span>
+    <span class="rs-comment">/// Returns [`CoreError`] when the goal is blank.</span>
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-plan-rs.html#method-new-18">new</a>(value: <span class="rs-kw">impl</span> <span class="rs-type">Into</span>&lt;<span class="rs-type">String</span>&gt;) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-self">Self</span>, <span class="rs-type">CoreError</span>&gt; {
+        <span class="rs-kw">let</span> value = value.into();
+        <span class="rs-kw">if</span> value.trim().is_empty() {
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<span class="rs-type">CoreError</span>::<span class="rs-type">Store</span>(
+                &quot;deferred goal must be nonblank&quot;.to_owned(),
+            ));
+        }
+        <span class="rs-type">Ok</span>(<span class="rs-self">Self</span>(value))
+    }
+</code></pre>
+</details></td></tr><tr id="method-as-str-85"><td>method</td><td>as_str</td><td><code>pub fn <a class="symbol-link" href="eos-state--src-attempt-rs.html#method-as-str-42">as_str</a> (&amp; self) -&gt; &amp; str</code><p class="docstring">Borrow the raw goal text.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Borrow the raw goal text.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-attempt-rs.html#method-as-str-42">as_str</a>(&amp;<span class="rs-self">self</span>) -&gt; &amp;str {
+        &amp;<span class="rs-self">self</span>.0
+    }
+</code></pre>
+</details></td></tr><tr id="method-into-string-91"><td>method</td><td>into_string</td><td><code>pub fn <a class="symbol-link" href="eos-state--src-plan-rs.html#method-into-string-36">into_string</a> (self) -&gt; String</code><p class="docstring">Consume the value and return the raw goal text.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Consume the value and return the raw goal text.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-plan-rs.html#method-into-string-36">into_string</a>(<span class="rs-self">self</span>) -&gt; <span class="rs-type">String</span> {
+        <span class="rs-self">self</span>.0
+    }
+</code></pre>
+</details></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl std :: fmt :: Display for <a class="symbol-link" href="eos-state--src-plan-rs.html#item-struct-DeferredGoal-65">DeferredGoal</a></code></summary><table><tbody><tr id="method-fmt-99"><td>method</td><td>fmt</td><td><code>fn <a class="symbol-link" href="eos-state--src-plan-rs.html#method-fmt-44">fmt</a> (&amp; self , f : &amp; mut std :: fmt :: Formatter &lt; &#x27;_ &gt;) -&gt; std :: fmt :: Result</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-plan-rs.html#method-fmt-44">fmt</a>(&amp;<span class="rs-self">self</span>, f: &amp;<span class="rs-kw">mut</span> std::fmt::<span class="rs-type">Formatter</span>&lt;&#x27;_&gt;) -&gt; std::fmt::<span class="rs-type">Result</span> {
+        <span class="rs-self">self</span>.0.<a class="symbol-link rs-fn" href="eos-state--src-plan-rs.html#method-fmt-44">fmt</a>(f)
+    }
+</code></pre>
+</details></td></tr></tbody></table></details><details><summary><code>impl TryFrom &lt; String &gt; for <a class="symbol-link" href="eos-state--src-plan-rs.html#item-struct-DeferredGoal-65">DeferredGoal</a></code></summary><table><tbody><tr id="method-try-from-107"><td>constructor</td><td>try_from</td><td><code>fn <a class="symbol-link" href="eos-state--src-plan-rs.html#method-try-from-52">try_from</a> (value : String) -&gt; Result &lt; Self , Self :: Error &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-plan-rs.html#method-try-from-52">try_from</a>(value: <span class="rs-type">String</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-self">Self</span>, <span class="rs-self">Self</span>::<span class="rs-type">Error</span>&gt; {
+        <span class="rs-self">Self</span>::<a class="symbol-link rs-fn" href="eos-state--src-plan-rs.html#method-new-18">new</a>(value)
+    }
+</code></pre>
+</details></td></tr></tbody></table></details><details><summary><code>impl TryFrom &lt; &amp; str &gt; for <a class="symbol-link" href="eos-state--src-plan-rs.html#item-struct-DeferredGoal-65">DeferredGoal</a></code></summary><table><tbody><tr id="method-try-from-115"><td>constructor</td><td>try_from</td><td><code>fn <a class="symbol-link" href="eos-state--src-plan-rs.html#method-try-from-52">try_from</a> (value : &amp; str) -&gt; Result &lt; Self , Self :: Error &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-plan-rs.html#method-try-from-52">try_from</a>(value: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-self">Self</span>, <span class="rs-self">Self</span>::<span class="rs-type">Error</span>&gt; {
+        <span class="rs-self">Self</span>::<a class="symbol-link rs-fn" href="eos-state--src-plan-rs.html#method-new-18">new</a>(value.to_owned())
+    }
+</code></pre>
+</details></td></tr></tbody></table></details></div>
+
   <p class="source">crates/eos-state/src/plan.rs:65</p>
-</article><article class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct AttemptBudget pub pub struct AttemptBudget crates/eos-state/src/plan.rs 0 NonZeroU32 ">
+</article><article id="item-struct-AttemptBudget-168" class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct AttemptBudget pub pub struct AttemptBudget crates/eos-state/src/plan.rs 0 NonZeroU32 ">
   <div class="item-head">
     <span class="kind">struct</span>
     <h3>AttemptBudget</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub struct AttemptBudget</code>
-  <div class="tags"><span>serde</span></div>
-  <h4>Fields</h4><table><tbody><tr><td>private</td><td>0</td><td><code>NonZeroU32</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr><td>constructor</td><td>new</td><td><code>pub const fn new (value : NonZeroU32) -&gt; Self</code></td></tr><tr><td>method</td><td>get</td><td><code>pub const fn get (self) -&gt; u32</code></td></tr><tr><td>method</td><td>as_i64</td><td><code>pub const fn as_i64 (self) -&gt; i64</code></td></tr><tr><td>associated-fn</td><td>try_from_u32</td><td><code>pub fn try_from_u32 (value : u32) -&gt; Result &lt; Self , CoreError &gt;</code></td></tr><tr><td>associated-fn</td><td>try_from_i64</td><td><code>pub fn try_from_i64 (value : i64) -&gt; Result &lt; Self , CoreError &gt;</code></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl Default for AttemptBudget</code></summary><table><tbody><tr><td>constructor</td><td>default</td><td><code>fn default () -&gt; Self</code></td></tr></tbody></table></details><details><summary><code>impl TryFrom &lt; u32 &gt; for AttemptBudget</code></summary><table><tbody><tr><td>constructor</td><td>try_from</td><td><code>fn try_from (value : u32) -&gt; Result &lt; Self , Self :: Error &gt;</code></td></tr></tbody></table></details><details><summary><code>impl TryFrom &lt; i64 &gt; for AttemptBudget</code></summary><table><tbody><tr><td>constructor</td><td>try_from</td><td><code>fn try_from (value : i64) -&gt; Result &lt; Self , Self :: Error &gt;</code></td></tr></tbody></table></details></div>
+  <code class="signature">pub struct <a class="symbol-link" href="eos-state--src-plan-rs.html#item-struct-AttemptBudget-168">AttemptBudget</a></code>
+  <p class="docstring">Validated attempt budget.</p>
+  <div class="tags"><span>derive: Clone</span><span>derive: Copy</span><span>derive: Debug</span><span>derive: Deserialize</span><span>derive: Eq</span><span>derive: Hash</span><span>derive: JsonSchema</span><span>derive: PartialEq</span><span>derive: Serialize</span><span>serde</span><span>serde: transparent</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>0</td><td><code>NonZeroU32</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-174"><td>constructor</td><td>new</td><td><code>pub const fn <a class="symbol-link" href="eos-state--src-plan-rs.html#method-new-18">new</a> (value : NonZeroU32) -&gt; Self</code><p class="docstring">Construct a budget from a nonzero count.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Construct a budget from a nonzero count.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-plan-rs.html#method-new-18">new</a>(value: <span class="rs-type">NonZeroU32</span>) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">Self</span>(value)
+    }
+</code></pre>
+</details></td></tr><tr id="method-get-201"><td>method</td><td>get</td><td><code>pub const fn <a class="symbol-link" href="eos-state--src-plan-rs.html#method-get-201">get</a> (self) -&gt; u32</code><p class="docstring">Return the budget as a plain count.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Return the budget as a plain count.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-plan-rs.html#method-get-201">get</a>(<span class="rs-self">self</span>) -&gt; u32 {
+        <span class="rs-self">self</span>.0.<a class="symbol-link rs-fn" href="eos-state--src-plan-rs.html#method-get-201">get</a>()
+    }
+</code></pre>
+</details></td></tr><tr id="method-as-i64-207"><td>method</td><td>as_i64</td><td><code>pub const fn <a class="symbol-link" href="eos-state--src-plan-rs.html#method-as-i64-207">as_i64</a> (self) -&gt; i64</code><p class="docstring">Return the database integer representation.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Return the database integer representation.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-plan-rs.html#method-as-i64-207">as_i64</a>(<span class="rs-self">self</span>) -&gt; i64 {
+        <span class="rs-self">self</span>.0.<a class="symbol-link rs-fn" href="eos-state--src-plan-rs.html#method-get-201">get</a>() <span class="rs-kw">as</span> i64
+    }
+</code></pre>
+</details></td></tr><tr id="method-try-from-u32-180"><td>associated-fn</td><td>try_from_u32</td><td><code>pub fn <a class="symbol-link" href="eos-state--src-plan-rs.html#method-try-from-u32-180">try_from_u32</a> (value : u32) -&gt; Result &lt; Self , CoreError &gt;</code><p class="docstring">Try to construct a budget from a `u32`.<br># Errors<br>Returns [`CoreError`] when the count is zero.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Try to construct a budget from a `u32`.</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// # Errors</span>
+    <span class="rs-comment">/// Returns [`CoreError`] when the count is zero.</span>
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-plan-rs.html#method-try-from-u32-180">try_from_u32</a>(value: u32) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-self">Self</span>, <span class="rs-type">CoreError</span>&gt; {
+        <span class="rs-type">NonZeroU32</span>::<a class="symbol-link rs-fn" href="eos-state--src-plan-rs.html#method-new-18">new</a>(value)
+            .map(<span class="rs-self">Self</span>)
+            .ok_or_else(|| <span class="rs-type">CoreError</span>::<span class="rs-type">Store</span>(&quot;attempt budget must be greater than zero&quot;.to_owned()))
+    }
+</code></pre>
+</details></td></tr><tr id="method-try-from-i64-190"><td>associated-fn</td><td>try_from_i64</td><td><code>pub fn <a class="symbol-link" href="eos-state--src-plan-rs.html#method-try-from-i64-190">try_from_i64</a> (value : i64) -&gt; Result &lt; Self , CoreError &gt;</code><p class="docstring">Try to construct a budget from the database integer representation.<br># Errors<br>Returns [`CoreError`] when the count is zero, negative, or too large.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Try to construct a budget from the database integer representation.</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// # Errors</span>
+    <span class="rs-comment">/// Returns [`CoreError`] when the count is zero, negative, or too large.</span>
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-plan-rs.html#method-try-from-i64-190">try_from_i64</a>(value: i64) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-self">Self</span>, <span class="rs-type">CoreError</span>&gt; {
+        <span class="rs-kw">let</span> value = u32::<a class="symbol-link rs-fn" href="eos-state--src-plan-rs.html#method-try-from-52">try_from</a>(value).map_err(|_| {
+            <span class="rs-type">CoreError</span>::<span class="rs-type">Store</span>(&quot;attempt budget must fit u32 and be greater than zero&quot;.to_owned())
+        })?;
+        <span class="rs-self">Self</span>::<a class="symbol-link rs-fn" href="eos-state--src-plan-rs.html#method-try-from-u32-180">try_from_u32</a>(value)
+    }
+</code></pre>
+</details></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl Default for <a class="symbol-link" href="eos-state--src-plan-rs.html#item-struct-AttemptBudget-168">AttemptBudget</a></code></summary><table><tbody><tr id="method-default-215"><td>constructor</td><td>default</td><td><code>fn <a class="symbol-link" href="eos-state--src-pagination-rs.html#method-default-24">default</a> () -&gt; Self</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-pagination-rs.html#method-default-24">default</a>() -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">Self</span>(<span class="rs-type">NonZeroU32</span>::<a class="symbol-link rs-fn" href="eos-state--src-plan-rs.html#method-new-18">new</a>(2).unwrap_or(<span class="rs-type">NonZeroU32</span>::<span class="rs-type">MIN</span>))
+    }
+</code></pre>
+</details></td></tr></tbody></table></details><details><summary><code>impl TryFrom &lt; u32 &gt; for <a class="symbol-link" href="eos-state--src-plan-rs.html#item-struct-AttemptBudget-168">AttemptBudget</a></code></summary><table><tbody><tr id="method-try-from-223"><td>constructor</td><td>try_from</td><td><code>fn <a class="symbol-link" href="eos-state--src-plan-rs.html#method-try-from-52">try_from</a> (value : u32) -&gt; Result &lt; Self , Self :: Error &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-plan-rs.html#method-try-from-52">try_from</a>(value: u32) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-self">Self</span>, <span class="rs-self">Self</span>::<span class="rs-type">Error</span>&gt; {
+        <span class="rs-self">Self</span>::<a class="symbol-link rs-fn" href="eos-state--src-plan-rs.html#method-try-from-u32-180">try_from_u32</a>(value)
+    }
+</code></pre>
+</details></td></tr></tbody></table></details><details><summary><code>impl TryFrom &lt; i64 &gt; for <a class="symbol-link" href="eos-state--src-plan-rs.html#item-struct-AttemptBudget-168">AttemptBudget</a></code></summary><table><tbody><tr id="method-try-from-231"><td>constructor</td><td>try_from</td><td><code>fn <a class="symbol-link" href="eos-state--src-plan-rs.html#method-try-from-52">try_from</a> (value : i64) -&gt; Result &lt; Self , Self :: Error &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-plan-rs.html#method-try-from-52">try_from</a>(value: i64) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-self">Self</span>, <span class="rs-self">Self</span>::<span class="rs-type">Error</span>&gt; {
+        <span class="rs-self">Self</span>::<a class="symbol-link rs-fn" href="eos-state--src-plan-rs.html#method-try-from-i64-190">try_from_i64</a>(value)
+    }
+</code></pre>
+</details></td></tr></tbody></table></details></div>
+
   <p class="source">crates/eos-state/src/plan.rs:168</p>
-</article><article class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct MaterializedPlan pub pub struct MaterializedPlan crates/eos-state/src/plan.rs planner_task_id TaskId disposition PlanDisposition generator_task_ids Vec &lt; TaskId &gt; reducer_task_ids Vec &lt; TaskId &gt; ">
+</article><article id="item-struct-MaterializedPlan-236" class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct MaterializedPlan pub pub struct MaterializedPlan crates/eos-state/src/plan.rs planner_task_id TaskId disposition PlanDisposition generator_task_ids Vec &lt; TaskId &gt; reducer_task_ids Vec &lt; TaskId &gt; ">
   <div class="item-head">
     <span class="kind">struct</span>
     <h3>MaterializedPlan</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub struct MaterializedPlan</code>
-  <div class="tags"><span>serde</span></div>
-  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>planner_task_id</td><td><code>TaskId</code></td></tr><tr><td>pub</td><td>disposition</td><td><code>PlanDisposition</code></td></tr><tr><td>pub</td><td>generator_task_ids</td><td><code>Vec &lt; TaskId &gt;</code></td></tr><tr><td>pub</td><td>reducer_task_ids</td><td><code>Vec &lt; TaskId &gt;</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr><td>method</td><td>deferred_goal</td><td><code>pub const fn deferred_goal (&amp; self) -&gt; Option &lt; &amp; DeferredGoal &gt;</code></td></tr></tbody></table>
+  <code class="signature">pub struct <a class="symbol-link" href="eos-state--src-plan-rs.html#item-struct-MaterializedPlan-236">MaterializedPlan</a></code>
+  <p class="docstring">Resolved persisted task ids for a planner-authored attempt plan.</p>
+  <div class="tags"><span>derive: Clone</span><span>derive: Debug</span><span>derive: Deserialize</span><span>derive: Eq</span><span>derive: JsonSchema</span><span>derive: PartialEq</span><span>derive: Serialize</span><span>serde</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>planner_task_id</td><td><code>TaskId</code></td></tr><tr><td>pub</td><td>disposition</td><td><code><a class="symbol-link" href="eos-state--src-plan-rs.html#item-enum-PlanDisposition-120">PlanDisposition</a></code></td></tr><tr><td>pub</td><td>generator_task_ids</td><td><code>Vec &lt; TaskId &gt;</code></td></tr><tr><td>pub</td><td>reducer_task_ids</td><td><code>Vec &lt; TaskId &gt;</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-deferred-goal-250"><td>method</td><td>deferred_goal</td><td><code>pub const fn <a class="symbol-link" href="eos-state--src-plan-rs.html#method-deferred-goal-158">deferred_goal</a> (&amp; self) -&gt; Option &lt; &amp; <a class="symbol-link" href="eos-state--src-plan-rs.html#item-struct-DeferredGoal-65">DeferredGoal</a> &gt;</code><p class="docstring">Deferred goal, if the materialized plan continues the workflow.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Deferred goal, if the materialized plan continues the workflow.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-plan-rs.html#method-deferred-goal-158">deferred_goal</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Option</span>&lt;&amp;<a class="symbol-link rs-type" href="eos-state--src-plan-rs.html#item-struct-DeferredGoal-65">DeferredGoal</a>&gt; {
+        <span class="rs-self">self</span>.disposition.<a class="symbol-link rs-fn" href="eos-state--src-plan-rs.html#method-deferred-goal-158">deferred_goal</a>()
+    }
+</code></pre>
+</details></td></tr></tbody></table>
+
   <p class="source">crates/eos-state/src/plan.rs:236</p>
-</article><article class="type-card" data-kind="enum" data-kind-list="enum field impl method type-model" data-filter-text="enum PlanDisposition pub pub enum PlanDisposition crates/eos-state/src/plan.rs  ">
+</article><article id="item-enum-PlanDisposition-120" class="type-card" data-kind="enum" data-kind-list="enum field impl method type-model" data-filter-text="enum PlanDisposition pub pub enum PlanDisposition crates/eos-state/src/plan.rs  ">
   <div class="item-head">
     <span class="kind">enum</span>
     <h3>PlanDisposition</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub enum PlanDisposition</code>
-  <div class="tags"><span>serde</span></div>
-  <h4>Variants</h4><table><tbody><tr><td>Complete</td><td><code></code></td></tr><tr><td>Defer</td><td><code>0: DeferredGoal</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr><td>constructor</td><td>from_deferred_goal</td><td><code>pub fn from_deferred_goal (goal : Option &lt; DeferredGoal &gt;) -&gt; Self</code></td></tr><tr><td>method</td><td>kind_label</td><td><code>pub const fn kind_label (&amp; self) -&gt; &amp; 'static str</code></td></tr><tr><td>method</td><td>submission_kind_label</td><td><code>pub const fn submission_kind_label (&amp; self) -&gt; &amp; 'static str</code></td></tr><tr><td>method</td><td>deferred_goal</td><td><code>pub const fn deferred_goal (&amp; self) -&gt; Option &lt; &amp; DeferredGoal &gt;</code></td></tr></tbody></table>
+  <code class="signature">pub enum <a class="symbol-link" href="eos-state--src-plan-rs.html#item-enum-PlanDisposition-120">PlanDisposition</a></code>
+  <p class="docstring">Planner disposition after the current iteration's reducers complete.</p>
+  <div class="tags"><span>derive: Clone</span><span>derive: Debug</span><span>derive: Deserialize</span><span>derive: Eq</span><span>derive: JsonSchema</span><span>derive: PartialEq</span><span>derive: Serialize</span><span>serde</span><span>serde: rename_all</span></div>
+  <h4>Variants</h4><table><tbody><tr><td>Complete</td><td><code></code></td></tr><tr><td>Defer</td><td><code>0: <a class="symbol-link" href="eos-state--src-plan-rs.html#item-struct-DeferredGoal-65">DeferredGoal</a></code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-from-deferred-goal-131"><td>constructor</td><td>from_deferred_goal</td><td><code>pub fn <a class="symbol-link" href="eos-state--src-plan-rs.html#method-from-deferred-goal-131">from_deferred_goal</a> (goal : Option &lt; <a class="symbol-link" href="eos-state--src-plan-rs.html#item-struct-DeferredGoal-65">DeferredGoal</a> &gt;) -&gt; Self</code><p class="docstring">Build a disposition from an optional typed deferred goal.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Build a disposition from an optional typed deferred goal.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-plan-rs.html#method-from-deferred-goal-131">from_deferred_goal</a>(goal: <span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-state--src-plan-rs.html#item-struct-DeferredGoal-65">DeferredGoal</a>&gt;) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-kw">match</span> goal {
+            <span class="rs-type">Some</span>(goal) =&gt; <span class="rs-self">Self</span>::<span class="rs-type">Defer</span>(goal),
+            <span class="rs-type">None</span> =&gt; <span class="rs-self">Self</span>::<span class="rs-type">Complete</span>,
+        }
+    }
+</code></pre>
+</details></td></tr><tr id="method-kind-label-140"><td>method</td><td>kind_label</td><td><code>pub const fn <a class="symbol-link" href="eos-state--src-plan-rs.html#method-kind-label-140">kind_label</a> (&amp; self) -&gt; &amp; &#x27;static str</code><p class="docstring">The legacy planner-result label stored in terminal result metadata.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// The legacy planner-result label stored in terminal result metadata.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-plan-rs.html#method-kind-label-140">kind_label</a>(&amp;<span class="rs-self">self</span>) -&gt; &amp;&#x27;<span class="rs-kw">static</span> str {
+        <span class="rs-kw">match</span> <span class="rs-self">self</span> {
+            <span class="rs-self">Self</span>::<span class="rs-type">Complete</span> =&gt; &quot;completes&quot;,
+            <span class="rs-self">Self</span>::<span class="rs-type">Defer</span>(_) =&gt; &quot;defers&quot;,
+        }
+    }
+</code></pre>
+</details></td></tr><tr id="method-submission-kind-label-149"><td>method</td><td>submission_kind_label</td><td><code>pub const fn <a class="symbol-link" href="eos-state--src-plan-rs.html#method-submission-kind-label-149">submission_kind_label</a> (&amp; self) -&gt; &amp; &#x27;static str</code><p class="docstring">The model-facing submission kind label.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// The model-facing submission kind label.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-plan-rs.html#method-submission-kind-label-149">submission_kind_label</a>(&amp;<span class="rs-self">self</span>) -&gt; &amp;&#x27;<span class="rs-kw">static</span> str {
+        <span class="rs-kw">match</span> <span class="rs-self">self</span> {
+            <span class="rs-self">Self</span>::<span class="rs-type">Complete</span> =&gt; &quot;planner_completes&quot;,
+            <span class="rs-self">Self</span>::<span class="rs-type">Defer</span>(_) =&gt; &quot;planner_defers&quot;,
+        }
+    }
+</code></pre>
+</details></td></tr><tr id="method-deferred-goal-158"><td>method</td><td>deferred_goal</td><td><code>pub const fn <a class="symbol-link" href="eos-state--src-plan-rs.html#method-deferred-goal-158">deferred_goal</a> (&amp; self) -&gt; Option &lt; &amp; <a class="symbol-link" href="eos-state--src-plan-rs.html#item-struct-DeferredGoal-65">DeferredGoal</a> &gt;</code><p class="docstring">Deferred goal, if this disposition continues the workflow.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Deferred goal, if this disposition continues the workflow.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-plan-rs.html#method-deferred-goal-158">deferred_goal</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Option</span>&lt;&amp;<a class="symbol-link rs-type" href="eos-state--src-plan-rs.html#item-struct-DeferredGoal-65">DeferredGoal</a>&gt; {
+        <span class="rs-kw">match</span> <span class="rs-self">self</span> {
+            <span class="rs-self">Self</span>::<span class="rs-type">Complete</span> =&gt; <span class="rs-type">None</span>,
+            <span class="rs-self">Self</span>::<span class="rs-type">Defer</span>(goal) =&gt; <span class="rs-type">Some</span>(goal),
+        }
+    }
+</code></pre>
+</details></td></tr></tbody></table>
+
   <p class="source">crates/eos-state/src/plan.rs:120</p>
 </article></div>
 </section></div>
 </main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/eos-state/src/plan.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-comment">//! Type-driven planner values shared by tools, workflow, and persistence.</span>
+
+<span class="rs-kw">use</span> std::num::<span class="rs-type">NonZeroU32</span>;
+
+<span class="rs-kw">use</span> schemars::<span class="rs-type">JsonSchema</span>;
+<span class="rs-kw">use</span> serde::{<span class="rs-type">Deserialize</span>, <span class="rs-type">Serialize</span>};
+
+<span class="rs-kw">use</span> eos_types::{<span class="rs-type">CoreError</span>, <span class="rs-type">TaskId</span>};
+
+<span class="rs-comment">/// Planner-local DAG node id.</span>
+#[derive(
+    <span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Eq</span>, <span class="rs-type">PartialOrd</span>, <span class="rs-type">Ord</span>, <span class="rs-type">Hash</span>, <span class="rs-type">Serialize</span>, <span class="rs-type">Deserialize</span>, <span class="rs-type">JsonSchema</span>,
+)]
+#[serde(transparent)]
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-state--src-plan-rs.html#item-struct-PlanNodeId-10">PlanNodeId</a>(<span class="rs-type">String</span>);
+
+<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-state--src-plan-rs.html#item-struct-PlanNodeId-10">PlanNodeId</a> {
+    <span class="rs-comment">/// Construct a nonblank planner-local node id.</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// # Errors</span>
+    <span class="rs-comment">/// Returns [`CoreError`] when the id is blank.</span>
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-plan-rs.html#method-new-18">new</a>(value: <span class="rs-kw">impl</span> <span class="rs-type">Into</span>&lt;<span class="rs-type">String</span>&gt;) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-self">Self</span>, <span class="rs-type">CoreError</span>&gt; {
+        <span class="rs-kw">let</span> value = value.into();
+        <span class="rs-kw">if</span> value.trim().is_empty() {
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<span class="rs-type">CoreError</span>::<span class="rs-type">Store</span>(&quot;plan node id must be nonblank&quot;.to_owned()));
+        }
+        <span class="rs-type">Ok</span>(<span class="rs-self">Self</span>(value))
+    }
+
+    <span class="rs-comment">/// Borrow the raw node id.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-attempt-rs.html#method-as-str-42">as_str</a>(&amp;<span class="rs-self">self</span>) -&gt; &amp;str {
+        &amp;<span class="rs-self">self</span>.0
+    }
+
+    <span class="rs-comment">/// Consume the value and return the raw node id.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-plan-rs.html#method-into-string-36">into_string</a>(<span class="rs-self">self</span>) -&gt; <span class="rs-type">String</span> {
+        <span class="rs-self">self</span>.0
+    }
+}
+
+<span class="rs-kw">impl</span> std::fmt::<span class="rs-type">Display</span> <span class="rs-kw">for</span> <a class="symbol-link rs-type" href="eos-state--src-plan-rs.html#item-struct-PlanNodeId-10">PlanNodeId</a> {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-plan-rs.html#method-fmt-44">fmt</a>(&amp;<span class="rs-self">self</span>, f: &amp;<span class="rs-kw">mut</span> std::fmt::<span class="rs-type">Formatter</span>&lt;&#x27;_&gt;) -&gt; std::fmt::<span class="rs-type">Result</span> {
+        <span class="rs-self">self</span>.0.<a class="symbol-link rs-fn" href="eos-state--src-plan-rs.html#method-fmt-44">fmt</a>(f)
+    }
+}
+
+<span class="rs-kw">impl</span> <span class="rs-type">TryFrom</span>&lt;<span class="rs-type">String</span>&gt; <span class="rs-kw">for</span> <a class="symbol-link rs-type" href="eos-state--src-plan-rs.html#item-struct-PlanNodeId-10">PlanNodeId</a> {
+    <span class="rs-kw">type</span> <span class="rs-type">Error</span> = <span class="rs-type">CoreError</span>;
+
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-plan-rs.html#method-try-from-52">try_from</a>(value: <span class="rs-type">String</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-self">Self</span>, <span class="rs-self">Self</span>::<span class="rs-type">Error</span>&gt; {
+        <span class="rs-self">Self</span>::<a class="symbol-link rs-fn" href="eos-state--src-plan-rs.html#method-new-18">new</a>(value)
+    }
+}
+
+<span class="rs-kw">impl</span> <span class="rs-type">TryFrom</span>&lt;&amp;str&gt; <span class="rs-kw">for</span> <a class="symbol-link rs-type" href="eos-state--src-plan-rs.html#item-struct-PlanNodeId-10">PlanNodeId</a> {
+    <span class="rs-kw">type</span> <span class="rs-type">Error</span> = <span class="rs-type">CoreError</span>;
+
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-plan-rs.html#method-try-from-52">try_from</a>(value: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-self">Self</span>, <span class="rs-self">Self</span>::<span class="rs-type">Error</span>&gt; {
+        <span class="rs-self">Self</span>::<a class="symbol-link rs-fn" href="eos-state--src-plan-rs.html#method-new-18">new</a>(value.to_owned())
+    }
+}
+
+<span class="rs-comment">/// Goal carried to the next workflow iteration.</span>
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Eq</span>, <span class="rs-type">Hash</span>, <span class="rs-type">Serialize</span>, <span class="rs-type">Deserialize</span>, <span class="rs-type">JsonSchema</span>)]
+#[serde(transparent)]
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-state--src-plan-rs.html#item-struct-DeferredGoal-65">DeferredGoal</a>(<span class="rs-type">String</span>);
+
+<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-state--src-plan-rs.html#item-struct-DeferredGoal-65">DeferredGoal</a> {
+    <span class="rs-comment">/// Construct a nonblank deferred goal.</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// # Errors</span>
+    <span class="rs-comment">/// Returns [`CoreError`] when the goal is blank.</span>
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-plan-rs.html#method-new-18">new</a>(value: <span class="rs-kw">impl</span> <span class="rs-type">Into</span>&lt;<span class="rs-type">String</span>&gt;) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-self">Self</span>, <span class="rs-type">CoreError</span>&gt; {
+        <span class="rs-kw">let</span> value = value.into();
+        <span class="rs-kw">if</span> value.trim().is_empty() {
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<span class="rs-type">CoreError</span>::<span class="rs-type">Store</span>(
+                &quot;deferred goal must be nonblank&quot;.to_owned(),
+            ));
+        }
+        <span class="rs-type">Ok</span>(<span class="rs-self">Self</span>(value))
+    }
+
+    <span class="rs-comment">/// Borrow the raw goal text.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-attempt-rs.html#method-as-str-42">as_str</a>(&amp;<span class="rs-self">self</span>) -&gt; &amp;str {
+        &amp;<span class="rs-self">self</span>.0
+    }
+
+    <span class="rs-comment">/// Consume the value and return the raw goal text.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-plan-rs.html#method-into-string-36">into_string</a>(<span class="rs-self">self</span>) -&gt; <span class="rs-type">String</span> {
+        <span class="rs-self">self</span>.0
+    }
+}
+
+<span class="rs-kw">impl</span> std::fmt::<span class="rs-type">Display</span> <span class="rs-kw">for</span> <a class="symbol-link rs-type" href="eos-state--src-plan-rs.html#item-struct-DeferredGoal-65">DeferredGoal</a> {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-plan-rs.html#method-fmt-44">fmt</a>(&amp;<span class="rs-self">self</span>, f: &amp;<span class="rs-kw">mut</span> std::fmt::<span class="rs-type">Formatter</span>&lt;&#x27;_&gt;) -&gt; std::fmt::<span class="rs-type">Result</span> {
+        <span class="rs-self">self</span>.0.<a class="symbol-link rs-fn" href="eos-state--src-plan-rs.html#method-fmt-44">fmt</a>(f)
+    }
+}
+
+<span class="rs-kw">impl</span> <span class="rs-type">TryFrom</span>&lt;<span class="rs-type">String</span>&gt; <span class="rs-kw">for</span> <a class="symbol-link rs-type" href="eos-state--src-plan-rs.html#item-struct-DeferredGoal-65">DeferredGoal</a> {
+    <span class="rs-kw">type</span> <span class="rs-type">Error</span> = <span class="rs-type">CoreError</span>;
+
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-plan-rs.html#method-try-from-52">try_from</a>(value: <span class="rs-type">String</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-self">Self</span>, <span class="rs-self">Self</span>::<span class="rs-type">Error</span>&gt; {
+        <span class="rs-self">Self</span>::<a class="symbol-link rs-fn" href="eos-state--src-plan-rs.html#method-new-18">new</a>(value)
+    }
+}
+
+<span class="rs-kw">impl</span> <span class="rs-type">TryFrom</span>&lt;&amp;str&gt; <span class="rs-kw">for</span> <a class="symbol-link rs-type" href="eos-state--src-plan-rs.html#item-struct-DeferredGoal-65">DeferredGoal</a> {
+    <span class="rs-kw">type</span> <span class="rs-type">Error</span> = <span class="rs-type">CoreError</span>;
+
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-plan-rs.html#method-try-from-52">try_from</a>(value: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-self">Self</span>, <span class="rs-self">Self</span>::<span class="rs-type">Error</span>&gt; {
+        <span class="rs-self">Self</span>::<a class="symbol-link rs-fn" href="eos-state--src-plan-rs.html#method-new-18">new</a>(value.to_owned())
+    }
+}
+
+<span class="rs-comment">/// Planner disposition after the current iteration's reducers complete.</span>
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Eq</span>, <span class="rs-type">Serialize</span>, <span class="rs-type">Deserialize</span>, <span class="rs-type">JsonSchema</span>)]
+#[serde(rename_all = &quot;snake_case&quot;)]
+<span class="rs-kw">pub</span> <span class="rs-kw">enum</span> <a class="symbol-link rs-type" href="eos-state--src-plan-rs.html#item-enum-PlanDisposition-120">PlanDisposition</a> {
+    <span class="rs-comment">/// The plan covers the current iteration goal.</span>
+    <span class="rs-type">Complete</span>,
+    <span class="rs-comment">/// The plan intentionally defers remaining current-iteration items.</span>
+    <span class="rs-type">Defer</span>(<a class="symbol-link rs-type" href="eos-state--src-plan-rs.html#item-struct-DeferredGoal-65">DeferredGoal</a>),
+}
+
+<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-state--src-plan-rs.html#item-enum-PlanDisposition-120">PlanDisposition</a> {
+    <span class="rs-comment">/// Build a disposition from an optional typed deferred goal.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-plan-rs.html#method-from-deferred-goal-131">from_deferred_goal</a>(goal: <span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-state--src-plan-rs.html#item-struct-DeferredGoal-65">DeferredGoal</a>&gt;) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-kw">match</span> goal {
+            <span class="rs-type">Some</span>(goal) =&gt; <span class="rs-self">Self</span>::<span class="rs-type">Defer</span>(goal),
+            <span class="rs-type">None</span> =&gt; <span class="rs-self">Self</span>::<span class="rs-type">Complete</span>,
+        }
+    }
+
+    <span class="rs-comment">/// The legacy planner-result label stored in terminal result metadata.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-plan-rs.html#method-kind-label-140">kind_label</a>(&amp;<span class="rs-self">self</span>) -&gt; &amp;&#x27;<span class="rs-kw">static</span> str {
+        <span class="rs-kw">match</span> <span class="rs-self">self</span> {
+            <span class="rs-self">Self</span>::<span class="rs-type">Complete</span> =&gt; &quot;completes&quot;,
+            <span class="rs-self">Self</span>::<span class="rs-type">Defer</span>(_) =&gt; &quot;defers&quot;,
+        }
+    }
+
+    <span class="rs-comment">/// The model-facing submission kind label.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-plan-rs.html#method-submission-kind-label-149">submission_kind_label</a>(&amp;<span class="rs-self">self</span>) -&gt; &amp;&#x27;<span class="rs-kw">static</span> str {
+        <span class="rs-kw">match</span> <span class="rs-self">self</span> {
+            <span class="rs-self">Self</span>::<span class="rs-type">Complete</span> =&gt; &quot;planner_completes&quot;,
+            <span class="rs-self">Self</span>::<span class="rs-type">Defer</span>(_) =&gt; &quot;planner_defers&quot;,
+        }
+    }
+
+    <span class="rs-comment">/// Deferred goal, if this disposition continues the workflow.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-plan-rs.html#method-deferred-goal-158">deferred_goal</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Option</span>&lt;&amp;<a class="symbol-link rs-type" href="eos-state--src-plan-rs.html#item-struct-DeferredGoal-65">DeferredGoal</a>&gt; {
+        <span class="rs-kw">match</span> <span class="rs-self">self</span> {
+            <span class="rs-self">Self</span>::<span class="rs-type">Complete</span> =&gt; <span class="rs-type">None</span>,
+            <span class="rs-self">Self</span>::<span class="rs-type">Defer</span>(goal) =&gt; <span class="rs-type">Some</span>(goal),
+        }
+    }
+}
+
+<span class="rs-comment">/// Validated attempt budget.</span>
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">Copy</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Eq</span>, <span class="rs-type">Hash</span>, <span class="rs-type">Serialize</span>, <span class="rs-type">Deserialize</span>, <span class="rs-type">JsonSchema</span>)]
+#[serde(transparent)]
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-state--src-plan-rs.html#item-struct-AttemptBudget-168">AttemptBudget</a>(<span class="rs-type">NonZeroU32</span>);
+
+<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-state--src-plan-rs.html#item-struct-AttemptBudget-168">AttemptBudget</a> {
+    <span class="rs-comment">/// Construct a budget from a nonzero count.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-plan-rs.html#method-new-18">new</a>(value: <span class="rs-type">NonZeroU32</span>) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">Self</span>(value)
+    }
+
+    <span class="rs-comment">/// Try to construct a budget from a `u32`.</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// # Errors</span>
+    <span class="rs-comment">/// Returns [`CoreError`] when the count is zero.</span>
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-plan-rs.html#method-try-from-u32-180">try_from_u32</a>(value: u32) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-self">Self</span>, <span class="rs-type">CoreError</span>&gt; {
+        <span class="rs-type">NonZeroU32</span>::<a class="symbol-link rs-fn" href="eos-state--src-plan-rs.html#method-new-18">new</a>(value)
+            .map(<span class="rs-self">Self</span>)
+            .ok_or_else(|| <span class="rs-type">CoreError</span>::<span class="rs-type">Store</span>(&quot;attempt budget must be greater than zero&quot;.to_owned()))
+    }
+
+    <span class="rs-comment">/// Try to construct a budget from the database integer representation.</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// # Errors</span>
+    <span class="rs-comment">/// Returns [`CoreError`] when the count is zero, negative, or too large.</span>
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-plan-rs.html#method-try-from-i64-190">try_from_i64</a>(value: i64) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-self">Self</span>, <span class="rs-type">CoreError</span>&gt; {
+        <span class="rs-kw">let</span> value = u32::<a class="symbol-link rs-fn" href="eos-state--src-plan-rs.html#method-try-from-52">try_from</a>(value).map_err(|_| {
+            <span class="rs-type">CoreError</span>::<span class="rs-type">Store</span>(&quot;attempt budget must fit u32 and be greater than zero&quot;.to_owned())
+        })?;
+        <span class="rs-self">Self</span>::<a class="symbol-link rs-fn" href="eos-state--src-plan-rs.html#method-try-from-u32-180">try_from_u32</a>(value)
+    }
+
+    <span class="rs-comment">/// Return the budget as a plain count.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-plan-rs.html#method-get-201">get</a>(<span class="rs-self">self</span>) -&gt; u32 {
+        <span class="rs-self">self</span>.0.<a class="symbol-link rs-fn" href="eos-state--src-plan-rs.html#method-get-201">get</a>()
+    }
+
+    <span class="rs-comment">/// Return the database integer representation.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-plan-rs.html#method-as-i64-207">as_i64</a>(<span class="rs-self">self</span>) -&gt; i64 {
+        <span class="rs-self">self</span>.0.<a class="symbol-link rs-fn" href="eos-state--src-plan-rs.html#method-get-201">get</a>() <span class="rs-kw">as</span> i64
+    }
+}
+
+<span class="rs-kw">impl</span> <span class="rs-type">Default</span> <span class="rs-kw">for</span> <a class="symbol-link rs-type" href="eos-state--src-plan-rs.html#item-struct-AttemptBudget-168">AttemptBudget</a> {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-pagination-rs.html#method-default-24">default</a>() -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">Self</span>(<span class="rs-type">NonZeroU32</span>::<a class="symbol-link rs-fn" href="eos-state--src-plan-rs.html#method-new-18">new</a>(2).unwrap_or(<span class="rs-type">NonZeroU32</span>::<span class="rs-type">MIN</span>))
+    }
+}
+
+<span class="rs-kw">impl</span> <span class="rs-type">TryFrom</span>&lt;u32&gt; <span class="rs-kw">for</span> <a class="symbol-link rs-type" href="eos-state--src-plan-rs.html#item-struct-AttemptBudget-168">AttemptBudget</a> {
+    <span class="rs-kw">type</span> <span class="rs-type">Error</span> = <span class="rs-type">CoreError</span>;
+
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-plan-rs.html#method-try-from-52">try_from</a>(value: u32) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-self">Self</span>, <span class="rs-self">Self</span>::<span class="rs-type">Error</span>&gt; {
+        <span class="rs-self">Self</span>::<a class="symbol-link rs-fn" href="eos-state--src-plan-rs.html#method-try-from-u32-180">try_from_u32</a>(value)
+    }
+}
+
+<span class="rs-kw">impl</span> <span class="rs-type">TryFrom</span>&lt;i64&gt; <span class="rs-kw">for</span> <a class="symbol-link rs-type" href="eos-state--src-plan-rs.html#item-struct-AttemptBudget-168">AttemptBudget</a> {
+    <span class="rs-kw">type</span> <span class="rs-type">Error</span> = <span class="rs-type">CoreError</span>;
+
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-plan-rs.html#method-try-from-52">try_from</a>(value: i64) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-self">Self</span>, <span class="rs-self">Self</span>::<span class="rs-type">Error</span>&gt; {
+        <span class="rs-self">Self</span>::<a class="symbol-link rs-fn" href="eos-state--src-plan-rs.html#method-try-from-i64-190">try_from_i64</a>(value)
+    }
+}
+
+<span class="rs-comment">/// Resolved persisted task ids for a planner-authored attempt plan.</span>
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Eq</span>, <span class="rs-type">Serialize</span>, <span class="rs-type">Deserialize</span>, <span class="rs-type">JsonSchema</span>)]
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-state--src-plan-rs.html#item-struct-MaterializedPlan-236">MaterializedPlan</a> {
+    <span class="rs-comment">/// Planner task that authored the plan.</span>
+    <span class="rs-kw">pub</span> planner_task_id: <span class="rs-type">TaskId</span>,
+    <span class="rs-comment">/// Whether the plan completes or defers.</span>
+    <span class="rs-kw">pub</span> disposition: <a class="symbol-link rs-type" href="eos-state--src-plan-rs.html#item-enum-PlanDisposition-120">PlanDisposition</a>,
+    <span class="rs-comment">/// Persisted generator task ids.</span>
+    <span class="rs-kw">pub</span> generator_task_ids: <span class="rs-type">Vec</span>&lt;<span class="rs-type">TaskId</span>&gt;,
+    <span class="rs-comment">/// Persisted reducer task ids.</span>
+    <span class="rs-kw">pub</span> reducer_task_ids: <span class="rs-type">Vec</span>&lt;<span class="rs-type">TaskId</span>&gt;,
+}
+
+<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-state--src-plan-rs.html#item-struct-MaterializedPlan-236">MaterializedPlan</a> {
+    <span class="rs-comment">/// Deferred goal, if the materialized plan continues the workflow.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-plan-rs.html#method-deferred-goal-158">deferred_goal</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Option</span>&lt;&amp;<a class="symbol-link rs-type" href="eos-state--src-plan-rs.html#item-struct-DeferredGoal-65">DeferredGoal</a>&gt; {
+        <span class="rs-self">self</span>.disposition.<a class="symbol-link rs-fn" href="eos-state--src-plan-rs.html#method-deferred-goal-158">deferred_goal</a>()
+    }
+}
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
   <script src="../assets/inventory.js"></script>
 </body>
 </html>

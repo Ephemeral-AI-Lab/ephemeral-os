@@ -8,8 +8,16 @@
 </head>
 <body>
   <header>
-    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
-    <h1>eos-protocol File Inventory</h1>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>eos-protocol File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS/sandbox &amp;&amp; cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
   </header>
   <a class="back-link" href="../index.html">sandbox</a>
 <section class="summary">
@@ -47,19 +55,101 @@
       <span>0 methods</span>
     </div>
   </div>
-  <div class="items"><div class="group-label">Standalone Functions</div><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn constants_match_rust private fn constants_match_rust () crates/eos-protocol/src/version.rs  ">
+  <div class="items"><div class="group-label">Standalone Functions</div><article id="item-fn-constants-match-rust-40" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn constants_match_rust private fn constants_match_rust () crates/eos-protocol/src/version.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>constants_match_rust</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn constants_match_rust ()</code>
-  <div class="tags"></div>
+  <code class="signature">fn <a class="symbol-link" href="eos-protocol--src-version-rs.html#item-fn-constants-match-rust-40">constants_match_rust</a> ()</code>
+  <div class="tags"><span>test</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-protocol--src-version-rs.html#item-fn-constants-match-rust-40">constants_match_rust</a>() {
+        assert_eq!(<span class="rs-type">DAEMON_PROTOCOL_VERSION</span>, 1);
+        assert_eq!(<span class="rs-type">DAEMON_PROTOCOL_FIELD</span>, &quot;_eos_daemon_protocol_version&quot;);
+        assert_eq!(<span class="rs-type">DAEMON_AUTH_FIELD</span>, &quot;_eos_daemon_auth_token&quot;);
+        assert_eq!(<span class="rs-type">MANIFEST_SCHEMA_VERSION</span>, 1);
+        assert_eq!(<span class="rs-type">CONNECT_FAILED</span>, 97);
+        assert_eq!(<span class="rs-type">IO_FAILED</span>, 98);
+        assert_eq!(<span class="rs-type">MAX_REQUEST_BYTES</span>, 16_777_216);
+        assert!((<span class="rs-type">REQUEST_READ_TIMEOUT_S</span> - 30.0).abs() &lt; f64::<span class="rs-type">EPSILON</span>);
+        assert_eq!(
+            <span class="rs-type">CONNECT_RETRY_DELAYS_S</span>.map(f64::to_bits),
+            [0.25_f64, 0.5, 1.0, 2.0].map(f64::to_bits)
+        );
+    }
+</code></pre>
+</details>
 
   <p class="source">crates/eos-protocol/src/version.rs:40</p>
 </article></div>
 </section></div>
 </main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/eos-protocol/src/version.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-comment">//! Frozen wire/protocol constants.</span>
+<span class="rs-comment">//!</span>
+<span class="rs-comment">//! Invariant: these values mirror the live Rust daemon byte-for-byte. The</span>
+<span class="rs-comment">//! protocol-version field is carried INSIDE `args` and the daemon never reads</span>
+<span class="rs-comment">//! it (an inert versioning hook) — see [`crate::envelope`].</span>
+
+<span class="rs-comment">/// Daemon protocol version. Carried inside request `args`, never gated on by the</span>
+<span class="rs-comment">/// daemon.</span>
+<span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-type">DAEMON_PROTOCOL_VERSION</span>: i64 = 1;
+
+<span class="rs-comment">/// Key under which [`DAEMON_PROTOCOL_VERSION`] is injected into request `args`.</span>
+<span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-type">DAEMON_PROTOCOL_FIELD</span>: &amp;str = &quot;_eos_daemon_protocol_version&quot;;
+
+<span class="rs-comment">/// Top-level (TCP-only, conditional) auth-token envelope key; popped before</span>
+<span class="rs-comment">/// dispatch.</span>
+<span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-type">DAEMON_AUTH_FIELD</span>: &amp;str = &quot;_eos_daemon_auth_token&quot;;
+
+<span class="rs-comment">/// On-disk manifest schema version (the current and only supported schema).</span>
+<span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-type">MANIFEST_SCHEMA_VERSION</span>: i64 = 1;
+
+<span class="rs-comment">/// Thin-client exit code: connect to the daemon socket failed.</span>
+<span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-type">CONNECT_FAILED</span>: i32 = 97;
+
+<span class="rs-comment">/// Thin-client exit code: connected but the request/response stream failed.</span>
+<span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-type">IO_FAILED</span>: i32 = 98;
+
+<span class="rs-comment">/// Maximum single-request size (16 MiB); the readline buffer `limit=`.</span>
+<span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-type">MAX_REQUEST_BYTES</span>: usize = 16 * 1024 * 1024;
+
+<span class="rs-comment">/// Per-request read timeout (seconds) wrapping `reader.readline()`.</span>
+<span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-type">REQUEST_READ_TIMEOUT_S</span>: f64 = 30.0;
+
+<span class="rs-comment">/// Post-respawn connect-retry backoff delays (seconds).</span>
+<span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-type">CONNECT_RETRY_DELAYS_S</span>: [f64; 4] = [0.25, 0.5, 1.0, 2.0];
+
+#[cfg(test)]
+<span class="rs-kw">mod</span> tests {
+    <span class="rs-kw">use</span> <span class="rs-kw">super</span>::*;
+
+    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-protocol--src-version-rs.html#item-fn-constants-match-rust-40">constants_match_rust</a>() {
+        assert_eq!(<span class="rs-type">DAEMON_PROTOCOL_VERSION</span>, 1);
+        assert_eq!(<span class="rs-type">DAEMON_PROTOCOL_FIELD</span>, &quot;_eos_daemon_protocol_version&quot;);
+        assert_eq!(<span class="rs-type">DAEMON_AUTH_FIELD</span>, &quot;_eos_daemon_auth_token&quot;);
+        assert_eq!(<span class="rs-type">MANIFEST_SCHEMA_VERSION</span>, 1);
+        assert_eq!(<span class="rs-type">CONNECT_FAILED</span>, 97);
+        assert_eq!(<span class="rs-type">IO_FAILED</span>, 98);
+        assert_eq!(<span class="rs-type">MAX_REQUEST_BYTES</span>, 16_777_216);
+        assert!((<span class="rs-type">REQUEST_READ_TIMEOUT_S</span> - 30.0).abs() &lt; f64::<span class="rs-type">EPSILON</span>);
+        assert_eq!(
+            <span class="rs-type">CONNECT_RETRY_DELAYS_S</span>.map(f64::to_bits),
+            [0.25_f64, 0.5, 1.0, 2.0].map(f64::to_bits)
+        );
+    }
+}
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
   <script src="../assets/inventory.js"></script>
 </body>
 </html>

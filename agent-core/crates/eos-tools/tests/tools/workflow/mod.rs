@@ -14,7 +14,7 @@ use crate::core::error::ToolError;
 use crate::core::metadata::ExecutionMetadata;
 use crate::core::result::ToolResult;
 use crate::ports::{
-    BackgroundInflightReport, BackgroundSupervisorPort, OutstandingWorkflow, Sealed,
+    RunningBackgroundTasks, BackgroundSupervisorPort, OutstandingWorkflow, Sealed,
     SpawnedSubagent, StartedWorkflowHandle, WorkflowControlPort,
 };
 use crate::runtime::executor::ToolExecutor;
@@ -62,30 +62,20 @@ impl BackgroundSupervisorPort for RecordingSupervisor {
         unreachable!()
     }
 
-    async fn inflight_report(
-        &self,
-        _agent_run_id: Option<&AgentRunId>,
-    ) -> BackgroundInflightReport {
-        BackgroundInflightReport {
+    async fn running_background_tasks(&self) -> RunningBackgroundTasks {
+        RunningBackgroundTasks {
             total: 0,
-            subagent: 0,
-            workflow: 0,
-            command_session: 0,
+            subagents: 0,
+            workflows: 0,
+            command_sessions: 0,
         }
     }
 
-    async fn cancel_subagents_for_agent_run(
-        &self,
-        agent_run_id: &AgentRunId,
-    ) -> BackgroundInflightReport {
-        self.inflight_report(Some(agent_run_id)).await
+    async fn cancel_subagents(&self) -> RunningBackgroundTasks {
+        self.running_background_tasks().await
     }
 
-    async fn register_workflow(
-        &self,
-        _agent_run_id: &AgentRunId,
-        workflow: &StartedWorkflowHandle,
-    ) {
+    async fn register_workflow(&self, workflow: &StartedWorkflowHandle) {
         self.workflows
             .lock()
             .unwrap()
@@ -104,13 +94,12 @@ impl BackgroundSupervisorPort for RecordingSupervisor {
         true
     }
 
-    async fn cancel_for_parent_exit(
+    async fn teardown(
         &self,
-        agent_run_id: Option<&AgentRunId>,
         _workflow_control: Option<Arc<dyn WorkflowControlPort>>,
         _reason: &str,
-    ) -> BackgroundInflightReport {
-        self.inflight_report(agent_run_id).await
+    ) -> RunningBackgroundTasks {
+        self.running_background_tasks().await
     }
 }
 

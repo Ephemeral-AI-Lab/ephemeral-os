@@ -29,7 +29,7 @@ fn main() -> Result<()> {
     fs::create_dir_all(out_dir.join("assets"))?;
     fs::create_dir_all(out_dir.join("crates"))?;
     write_json(&out_dir, &inventory)?;
-    write_assets(&out_dir)?;
+    write_assets(&out_dir, &inventory)?;
     write_index(&out_dir, &inventory)?;
     for krate in &inventory.crates {
         write_crate_page(&out_dir, krate)?;
@@ -100,6 +100,7 @@ fn scan_crate(workspace: &Path, crate_dir: &Path) -> Result<CrateInventory> {
         modules.push(ModuleInventory {
             path: rel_file,
             module: module_path,
+            source,
             items,
         });
     }
@@ -160,6 +161,7 @@ fn struct_item(item: &syn::ItemStruct, file: &str, module: &str) -> ItemInventor
         methods: Vec::new(),
         impl_target: None,
         trait_name: None,
+        docs: doc_comments(&item.attrs),
         source: None,
         tags: tags_for_type(&item.attrs, &item.ident.to_string()),
         file: file.to_string(),
@@ -192,6 +194,7 @@ fn enum_item(item: &syn::ItemEnum, file: &str, module: &str) -> ItemInventory {
         methods: Vec::new(),
         impl_target: None,
         trait_name: None,
+        docs: doc_comments(&item.attrs),
         source: None,
         tags: tags_for_type(&item.attrs, &item.ident.to_string()),
         file: file.to_string(),
@@ -213,6 +216,7 @@ fn trait_item(item: &syn::ItemTrait, source: &str, file: &str, module: &str) -> 
                 } else {
                     "required".to_string()
                 },
+                docs: doc_comments(&method.attrs),
                 source: source_snippet(source, method.span()),
                 line: line(method.span()),
             }),
@@ -234,6 +238,7 @@ fn trait_item(item: &syn::ItemTrait, source: &str, file: &str, module: &str) -> 
         methods,
         impl_target: None,
         trait_name: None,
+        docs: doc_comments(&item.attrs),
         source: None,
         tags: tags_for_type(&item.attrs, &item.ident.to_string()),
         file: file.to_string(),
@@ -259,6 +264,7 @@ fn type_item(item: &syn::ItemType, file: &str, module: &str) -> ItemInventory {
         methods: Vec::new(),
         impl_target: None,
         trait_name: None,
+        docs: doc_comments(&item.attrs),
         source: None,
         tags: tags_for_type(&item.attrs, &item.ident.to_string()),
         file: file.to_string(),
@@ -282,8 +288,9 @@ fn fn_item(item: &syn::ItemFn, source: &str, file: &str, module: &str) -> ItemIn
         methods: Vec::new(),
         impl_target: None,
         trait_name: None,
+        docs: doc_comments(&item.attrs),
         source: Some(source_snippet(source, item.span())),
-        tags: tags_for_fn(&item.sig),
+        tags: tags_for_fn(&item.attrs, &item.sig),
         file: file.to_string(),
         module: module.to_string(),
         line: line(item.span()),
@@ -312,6 +319,7 @@ fn impl_item(item: &syn::ItemImpl, source: &str, file: &str, module: &str) -> It
                     method.sig.to_token_stream()
                 ),
                 kind: method_kind(&method.sig),
+                docs: doc_comments(&method.attrs),
                 source: source_snippet(source, method.span()),
                 line: line(method.span()),
             }),
@@ -323,6 +331,7 @@ fn impl_item(item: &syn::ItemImpl, source: &str, file: &str, module: &str) -> It
     if trait_name.is_some() {
         tags.insert("trait-impl".to_string());
     }
+    tags.extend(attribute_tags(&item.attrs));
     ItemInventory {
         kind: "impl".to_string(),
         name,
@@ -336,6 +345,7 @@ fn impl_item(item: &syn::ItemImpl, source: &str, file: &str, module: &str) -> It
         methods,
         impl_target: Some(target),
         trait_name,
+        docs: doc_comments(&item.attrs),
         source: None,
         tags: tags.into_iter().collect(),
         file: file.to_string(),
@@ -359,8 +369,32 @@ fn fields(fields: &syn::Fields) -> Vec<FieldInventory> {
         .collect()
 }
 
+fn doc_comments(attrs: &[syn::Attribute]) -> Option<String> {
+    let lines = attrs
+        .iter()
+        .filter(|attr| attr.path().is_ident("doc"))
+        .filter_map(|attr| match &attr.meta {
+            syn::Meta::NameValue(meta) => match &meta.value {
+                syn::Expr::Lit(expr) => match &expr.lit {
+                    syn::Lit::Str(value) => Some(value.value().trim().to_string()),
+                    _ => None,
+                },
+                _ => None,
+            },
+            _ => None,
+        })
+        .collect::<Vec<_>>();
+    let text = lines.join("\n").trim().to_string();
+    if text.is_empty() {
+        None
+    } else {
+        Some(text)
+    }
+}
+
 fn tags_for_type(attrs: &[syn::Attribute], name: &str) -> Vec<String> {
     let mut tags = BTreeSet::new();
+    tags.extend(attribute_tags(attrs));
     let lower = name.to_ascii_lowercase();
     if lower.ends_with("dto") || lower.contains("request") || lower.contains("response") {
         tags.insert("dto".to_string());
@@ -383,8 +417,9 @@ fn tags_for_type(attrs: &[syn::Attribute], name: &str) -> Vec<String> {
     tags.into_iter().collect()
 }
 
-fn tags_for_fn(sig: &syn::Signature) -> Vec<String> {
+fn tags_for_fn(attrs: &[syn::Attribute], sig: &syn::Signature) -> Vec<String> {
     let mut tags = BTreeSet::new();
+    tags.extend(attribute_tags(attrs));
     if sig.asyncness.is_some() {
         tags.insert("async".to_string());
     }
@@ -395,6 +430,90 @@ fn tags_for_fn(sig: &syn::Signature) -> Vec<String> {
         tags.insert("constructor".to_string());
     }
     tags.into_iter().collect()
+}
+
+fn attribute_tags(attrs: &[syn::Attribute]) -> BTreeSet<String> {
+    let mut tags = BTreeSet::new();
+    for attr in attrs {
+        if attr.path().is_ident("doc") {
+            continue;
+        }
+        let path = attr.path().to_token_stream().to_string().replace(' ', "");
+        match &attr.meta {
+            syn::Meta::Path(_) => {
+                tags.insert(path);
+            }
+            syn::Meta::List(list) => {
+                let content = normalize_attr_tokens(&list.tokens.to_string());
+                if path == "derive" {
+                    for value in split_attr_args(&content) {
+                        if !value.is_empty() {
+                            tags.insert(format!("derive: {value}"));
+                        }
+                    }
+                } else {
+                    for value in split_attr_args(&content) {
+                        let label = attr_arg_label(&value);
+                        if !label.is_empty() {
+                            tags.insert(format!("{path}: {label}"));
+                        }
+                    }
+                }
+            }
+            syn::Meta::NameValue(value) => {
+                let label = normalize_attr_tokens(&value.value.to_token_stream().to_string());
+                tags.insert(format!("{path}: {}", trim_attr_label(&label)));
+            }
+        }
+    }
+    tags
+}
+
+fn split_attr_args(content: &str) -> Vec<String> {
+    let mut parts = Vec::new();
+    let mut start = 0;
+    let mut depth = 0usize;
+    for (index, ch) in content.char_indices() {
+        match ch {
+            '(' | '[' | '{' => depth += 1,
+            ')' | ']' | '}' => depth = depth.saturating_sub(1),
+            ',' if depth == 0 => {
+                parts.push(trim_attr_label(&content[start..index]));
+                start = index + ch.len_utf8();
+            }
+            _ => {}
+        }
+    }
+    parts.push(trim_attr_label(&content[start..]));
+    parts
+}
+
+fn attr_arg_label(value: &str) -> String {
+    let value = trim_attr_label(value);
+    let end = value.find(['=', '(']).unwrap_or(value.len());
+    trim_attr_label(&value[..end])
+}
+
+fn trim_attr_label(value: &str) -> String {
+    let value = value.trim();
+    let value = value.strip_prefix('"').unwrap_or(value);
+    let value = value.strip_suffix('"').unwrap_or(value);
+    let mut chars = value.chars();
+    let short = chars.by_ref().take(64).collect::<String>();
+    if chars.next().is_some() {
+        format!("{short}...")
+    } else {
+        short
+    }
+}
+
+fn normalize_attr_tokens(value: &str) -> String {
+    value
+        .replace(" :: ", "::")
+        .replace(" ,", ",")
+        .replace("( ", "(")
+        .replace(" )", ")")
+        .replace(" = ", "=")
 }
 
 fn method_kind(sig: &syn::Signature) -> String {
@@ -441,6 +560,7 @@ fn source_snippet(source: &str, span: Span) -> String {
         .lines()
         .skip(start)
         .take(end.saturating_sub(start))
+        .map(str::trim_end)
         .collect::<Vec<_>>()
         .join("\n")
 }
@@ -479,9 +599,14 @@ fn write_json(out_dir: &Path, inventory: &Inventory) -> Result<()> {
     Ok(())
 }
 
-fn write_assets(out_dir: &Path) -> Result<()> {
+fn write_assets(out_dir: &Path, inventory: &Inventory) -> Result<()> {
     fs::write(out_dir.join("assets/inventory.css"), CSS)?;
     fs::write(out_dir.join("assets/inventory.js"), JS)?;
+    let json = serde_json::to_string(inventory)?;
+    fs::write(
+        out_dir.join("assets/inventory-data.js"),
+        format!("window.CLASS_INVENTORY = {json};\n"),
+    )?;
     Ok(())
 }
 
@@ -541,8 +666,9 @@ fn write_index(out_dir: &Path, inventory: &Inventory) -> Result<()> {
 }
 
 fn write_crate_page(out_dir: &Path, krate: &CrateInventory) -> Result<()> {
+    let links = SymbolLinks::from_crate(krate);
     for module in &krate.modules {
-        write_crate_file_page(out_dir, krate, module)?;
+        write_crate_file_page(out_dir, krate, module, &links)?;
     }
     Ok(())
 }
@@ -551,11 +677,13 @@ fn write_crate_file_page(
     out_dir: &Path,
     krate: &CrateInventory,
     module: &ModuleInventory,
+    links: &SymbolLinks,
 ) -> Result<()> {
     let module_stats = ModuleStats::from_module(module);
     let display_path = display_file_path(&krate.name, &module.path);
     let module_nav = file_tree_nav(krate, &module.path);
-    let items = module_inventory_body(module);
+    let items = module_inventory_body(module, links);
+    let source_section = file_source_section(module, links);
     let section = format!(
         r#"<section class="module-section" data-filter-text="{filter}">
   <div class="module-head">
@@ -620,13 +748,15 @@ fn write_crate_file_page(
 <main class="crate-layout">
   <nav class="module-nav">{}</nav>
   <div class="module-list" id="filter-root">{}</div>
-</main>"#,
+</main>
+{}"#,
             krate.modules.len(),
             krate.stats.items,
             krate.stats.fields,
             krate.stats.methods,
             module_nav,
-            section
+            section,
+            source_section
         ),
         "../",
     );
@@ -728,7 +858,7 @@ fn display_file_path(crate_name: &str, path: &str) -> String {
     path.strip_prefix(&prefix).unwrap_or(path).to_string()
 }
 
-fn module_inventory_body(module: &ModuleInventory) -> String {
+fn module_inventory_body(module: &ModuleInventory, links: &SymbolLinks) -> String {
     let impls_by_target = impls_by_target(module);
     let mut attached_impl_lines = BTreeSet::new();
     let mut body = String::new();
@@ -750,7 +880,7 @@ fn module_inventory_body(module: &ModuleInventory) -> String {
             for impl_item in &impls {
                 attached_impl_lines.insert(impl_item.line);
             }
-            body.push_str(&type_card(item, &impls));
+            body.push_str(&type_card(item, &impls, links));
         }
     }
 
@@ -763,7 +893,7 @@ fn module_inventory_body(module: &ModuleInventory) -> String {
     if !aliases.is_empty() {
         body.push_str(r#"<div class="group-label">Aliases</div>"#);
         for item in aliases {
-            body.push_str(&item_card(item));
+            body.push_str(&item_card(item, links));
         }
     }
 
@@ -776,7 +906,7 @@ fn module_inventory_body(module: &ModuleInventory) -> String {
     if !fns.is_empty() {
         body.push_str(r#"<div class="group-label">Standalone Functions</div>"#);
         for item in fns {
-            body.push_str(&item_card(item));
+            body.push_str(&item_card(item, links));
         }
     }
 
@@ -789,7 +919,7 @@ fn module_inventory_body(module: &ModuleInventory) -> String {
     if !remaining_impls.is_empty() {
         body.push_str(r#"<div class="group-label">Other Implementations</div>"#);
         for item in remaining_impls {
-            body.push_str(&item_card(item));
+            body.push_str(&item_card(item, links));
         }
     }
 
@@ -812,9 +942,9 @@ fn impls_by_target(module: &ModuleInventory) -> BTreeMap<String, Vec<&ItemInvent
     impls
 }
 
-fn type_card(item: &ItemInventory, impls: &[&ItemInventory]) -> String {
+fn type_card(item: &ItemInventory, impls: &[&ItemInventory], links: &SymbolLinks) -> String {
     let mut details = String::new();
-    details.push_str(&item_details(item));
+    details.push_str(&item_details(item, links));
     let mut inherent_methods = Vec::new();
     let mut trait_impls = Vec::new();
     for impl_item in impls {
@@ -828,15 +958,15 @@ fn type_card(item: &ItemInventory, impls: &[&ItemInventory]) -> String {
     trait_impls.sort_by(|a, b| item_rank(a).cmp(&item_rank(b)));
     if !inherent_methods.is_empty() {
         details.push_str("<h4>Methods Implemented For This Type</h4>");
-        details.push_str(&method_table(&inherent_methods));
+        details.push_str(&method_table(&inherent_methods, links));
     }
     if !trait_impls.is_empty() {
         details.push_str("<h4>Trait Implementations For This Type</h4><div class=\"impl-list\">");
         for impl_item in trait_impls {
             details.push_str(&format!(
                 r#"<details><summary><code>{}</code></summary>{}</details>"#,
-                esc(&impl_item.signature),
-                method_table(&impl_item.methods.iter().collect::<Vec<_>>())
+                link_signature(&impl_item.signature, links),
+                method_table(&impl_item.methods.iter().collect::<Vec<_>>(), links)
             ));
         }
         details.push_str("</div>");
@@ -846,15 +976,15 @@ fn type_card(item: &ItemInventory, impls: &[&ItemInventory]) -> String {
     } else {
         "type-model impl method"
     };
-    decorated_card(item, "type-card", kind_prefix, &details)
+    decorated_card(item, "type-card", kind_prefix, &details, links)
 }
 
-fn item_card(item: &ItemInventory) -> String {
-    let details = item_details(item);
-    decorated_card(item, "item-card", &item.kind, &details)
+fn item_card(item: &ItemInventory, links: &SymbolLinks) -> String {
+    let details = item_details(item, links);
+    decorated_card(item, "item-card", &item.kind, &details, links)
 }
 
-fn item_details(item: &ItemInventory) -> String {
+fn item_details(item: &ItemInventory, links: &SymbolLinks) -> String {
     let mut details = String::new();
     if !item.fields.is_empty() {
         details.push_str("<h4>Fields</h4><table><tbody>");
@@ -863,7 +993,7 @@ fn item_details(item: &ItemInventory) -> String {
                 "<tr><td>{}</td><td>{}</td><td><code>{}</code></td></tr>",
                 esc(&field.visibility),
                 esc(&field.name),
-                esc(&field.ty)
+                link_signature(&field.ty, links)
             ));
         }
         details.push_str("</tbody></table>");
@@ -880,7 +1010,7 @@ fn item_details(item: &ItemInventory) -> String {
             details.push_str(&format!(
                 "<tr><td>{}</td><td><code>{}</code></td></tr>",
                 esc(&variant.name),
-                esc(&fields)
+                link_signature(&fields, links)
             ));
         }
         details.push_str("</tbody></table>");
@@ -889,30 +1019,33 @@ fn item_details(item: &ItemInventory) -> String {
         details.push_str("<h4>Methods</h4>");
         let mut methods = item.methods.iter().collect::<Vec<_>>();
         methods.sort_by(|a, b| method_rank(a).cmp(&method_rank(b)));
-        details.push_str(&method_table(&methods));
+        details.push_str(&method_table(&methods, links));
     }
     if let Some(source) = &item.source {
-        details.push_str(&function_source_block(source));
+        details.push_str(&function_source_block(source, links));
     }
     details
 }
 
-fn method_table(methods: &[&MethodInventory]) -> String {
+fn method_table(methods: &[&MethodInventory], links: &SymbolLinks) -> String {
     let mut rows = String::new();
     for method in methods {
-        let source = function_source_block(&method.source);
+        let source = function_source_block(&method.source, links);
+        let docs = docs_block(method.docs.as_deref());
         rows.push_str(&format!(
-            "<tr><td>{}</td><td>{}</td><td><code>{}</code>{}</td></tr>",
-            esc(&method.kind),
-            esc(&method.name),
-            esc(&method.signature),
-            source
+            r#"<tr id="{anchor}"><td>{kind}</td><td>{name}</td><td><code>{signature}</code>{docs}{source}</td></tr>"#,
+            anchor = esc(&method_anchor(&method.name, method.line)),
+            kind = esc(&method.kind),
+            name = esc(&method.name),
+            signature = link_signature(&method.signature, links),
+            docs = docs,
+            source = source,
         ));
     }
     format!("<table><tbody>{rows}</tbody></table>")
 }
 
-fn function_source_block(source: &str) -> String {
+fn function_source_block(source: &str, links: &SymbolLinks) -> String {
     if source.trim().is_empty() {
         return String::new();
     }
@@ -921,15 +1054,215 @@ fn function_source_block(source: &str) -> String {
   <summary>code</summary>
   <pre><code>{}</code></pre>
 </details>"#,
-        esc(source)
+        highlight_rust(source, links)
     )
 }
+
+fn file_source_section(module: &ModuleInventory, links: &SymbolLinks) -> String {
+    if module.source.trim().is_empty() {
+        return String::new();
+    }
+    format!(
+        r#"<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">{}</p>
+  </div>
+  <pre class="file-source"><code>{}</code></pre>
+</section>"#,
+        esc(&module.path),
+        highlight_rust(&module.source, links)
+    )
+}
+
+#[derive(Default)]
+struct SymbolLinks {
+    targets: BTreeMap<String, String>,
+}
+
+impl SymbolLinks {
+    fn from_crate(krate: &CrateInventory) -> Self {
+        let mut links = Self::default();
+        for module in &krate.modules {
+            let page = crate_file_page_name(krate, module);
+            for item in &module.items {
+                let anchor = item_anchor(&item.kind, &item.name, item.line);
+                if is_linkable_item(item) {
+                    links
+                        .targets
+                        .entry(item.name.clone())
+                        .or_insert_with(|| format!("{page}#{anchor}"));
+                }
+                for method in &item.methods {
+                    links.targets.entry(method.name.clone()).or_insert_with(|| {
+                        format!("{page}#{}", method_anchor(&method.name, method.line))
+                    });
+                }
+            }
+        }
+        links
+    }
+
+    fn target(&self, symbol: &str) -> Option<&str> {
+        self.targets.get(symbol).map(String::as_str)
+    }
+}
+
+fn is_linkable_item(item: &ItemInventory) -> bool {
+    matches!(
+        item.kind.as_str(),
+        "struct" | "enum" | "trait" | "type" | "fn"
+    )
+}
+
+fn item_anchor(kind: &str, name: &str, line: usize) -> String {
+    format!("item-{}-{}-{line}", slug(kind), slug(name))
+}
+
+fn method_anchor(name: &str, line: usize) -> String {
+    format!("method-{}-{line}", slug(name))
+}
+
+fn link_signature(signature: &str, links: &SymbolLinks) -> String {
+    let mut out = String::new();
+    let mut chars = signature.char_indices().peekable();
+    let mut previous_identifier = String::new();
+    while let Some((start, ch)) = chars.next() {
+        if ch == '&' {
+            out.push_str("&amp;");
+        } else if ch == '<' {
+            out.push_str("&lt;");
+        } else if ch == '>' {
+            out.push_str("&gt;");
+        } else if ch == '"' {
+            out.push_str("&quot;");
+        } else if ch == '\'' {
+            out.push_str("&#x27;");
+        } else if ch.is_ascii_alphabetic() || ch == '_' {
+            let mut end = start + ch.len_utf8();
+            while let Some((next_index, next_ch)) = chars.peek().copied() {
+                if next_ch.is_ascii_alphanumeric() || next_ch == '_' {
+                    chars.next();
+                    end = next_index + next_ch.len_utf8();
+                } else {
+                    break;
+                }
+            }
+            let token = &signature[start..end];
+            let should_link =
+                token.chars().next().is_some_and(char::is_uppercase) || previous_identifier == "fn";
+            if should_link {
+                if let Some(target) = links.target(token) {
+                    out.push_str(&format!(
+                        r#"<a class="symbol-link" href="{}">{}</a>"#,
+                        esc(target),
+                        esc(token)
+                    ));
+                } else {
+                    out.push_str(&esc(token));
+                }
+            } else {
+                out.push_str(&esc(token));
+            }
+            previous_identifier.clear();
+            previous_identifier.push_str(token);
+        } else {
+            out.push(ch);
+        }
+    }
+    out
+}
+
+fn highlight_rust(source: &str, links: &SymbolLinks) -> String {
+    let mut out = String::new();
+    for line in source.lines() {
+        if let Some(comment_index) = line.find("//") {
+            out.push_str(&highlight_rust_code(&line[..comment_index], links));
+            out.push_str(r#"<span class="rs-comment">"#);
+            out.push_str(&esc(&line[comment_index..]));
+            out.push_str("</span>\n");
+        } else {
+            out.push_str(&highlight_rust_code(line, links));
+            out.push('\n');
+        }
+    }
+    out
+}
+
+fn highlight_rust_code(code: &str, links: &SymbolLinks) -> String {
+    let mut out = String::new();
+    let mut chars = code.char_indices().peekable();
+    while let Some((start, ch)) = chars.next() {
+        if ch == '&' {
+            out.push_str("&amp;");
+        } else if ch == '<' {
+            out.push_str("&lt;");
+        } else if ch == '>' {
+            out.push_str("&gt;");
+        } else if ch == '"' {
+            out.push_str("&quot;");
+        } else if ch == '\'' {
+            out.push_str("&#x27;");
+        } else if ch.is_ascii_alphabetic() || ch == '_' {
+            let mut end = start + ch.len_utf8();
+            while let Some((next_index, next_ch)) = chars.peek().copied() {
+                if next_ch.is_ascii_alphanumeric() || next_ch == '_' {
+                    chars.next();
+                    end = next_index + next_ch.len_utf8();
+                } else {
+                    break;
+                }
+            }
+            let token = &code[start..end];
+            let next_sig = code[end..].chars().find(|next| !next.is_ascii_whitespace());
+            let can_link =
+                token.chars().next().is_some_and(char::is_uppercase) || next_sig == Some('(');
+            let rendered = if RUST_KEYWORDS.contains(&token) {
+                format!(r#"<span class="rs-kw">{}</span>"#, esc(token))
+            } else if token == "self" || token == "Self" {
+                format!(r#"<span class="rs-self">{}</span>"#, esc(token))
+            } else if can_link {
+                if let Some(target) = links.target(token) {
+                    let class = if token.chars().next().is_some_and(char::is_uppercase) {
+                        "symbol-link rs-type"
+                    } else {
+                        "symbol-link rs-fn"
+                    };
+                    format!(
+                        r#"<a class="{class}" href="{}">{}</a>"#,
+                        esc(target),
+                        esc(token)
+                    )
+                } else if token.chars().next().is_some_and(char::is_uppercase) {
+                    format!(r#"<span class="rs-type">{}</span>"#, esc(token))
+                } else {
+                    esc(token)
+                }
+            } else if token.chars().next().is_some_and(char::is_uppercase) {
+                format!(r#"<span class="rs-type">{}</span>"#, esc(token))
+            } else {
+                esc(token)
+            };
+            out.push_str(&rendered);
+        } else {
+            out.push(ch);
+        }
+    }
+    out
+}
+
+const RUST_KEYWORDS: &[&str] = &[
+    "as", "async", "await", "break", "const", "continue", "crate", "dyn", "else", "enum", "false",
+    "fn", "for", "if", "impl", "in", "let", "match", "mod", "move", "mut", "pub", "ref", "return",
+    "static", "struct", "super", "trait", "true", "type", "unsafe", "use", "where", "while",
+];
 
 fn decorated_card(
     item: &ItemInventory,
     class_name: &str,
     kind_list_prefix: &str,
     details: &str,
+    links: &SymbolLinks,
 ) -> String {
     let tags = item
         .tags
@@ -937,19 +1270,31 @@ fn decorated_card(
         .map(|tag| format!("<span>{}</span>", esc(tag)))
         .collect::<String>();
     let kind_list = card_kind_list(kind_list_prefix, item);
+    let details_block = if details.is_empty() {
+        String::new()
+    } else {
+        format!("  {details}\n")
+    };
+    let docs_block = docs_block(item.docs.as_deref());
+    let docs_line = if docs_block.is_empty() {
+        String::new()
+    } else {
+        format!("  {docs_block}\n")
+    };
     format!(
-        r#"<article class="{class_name}" data-kind="{kind}" data-kind-list="{kind_list}" data-filter-text="{filter}">
+        r#"<article id="{anchor}" class="{class_name}" data-kind="{kind}" data-kind-list="{kind_list}" data-filter-text="{filter}">
   <div class="item-head">
     <span class="kind">{kind}</span>
     <h3>{name}</h3>
     <span class="visibility">{visibility}</span>
   </div>
   <code class="signature">{signature}</code>
-  <div class="tags">{tags}</div>
-  {details}
+{docs_line}  <div class="tags">{tags}</div>
+{details_block}
   <p class="source">{file}:{line}</p>
 </article>"#,
         class_name = class_name,
+        anchor = esc(&item_anchor(&item.kind, &item.name, item.line)),
         kind = esc(&item.kind),
         kind_list = esc(&kind_list),
         filter = esc(&format!(
@@ -972,12 +1317,31 @@ fn decorated_card(
         )),
         name = esc(&item.name),
         visibility = esc(&item.visibility),
-        signature = esc(&item.signature),
+        signature = link_signature(&item.signature, links),
+        docs_line = docs_line,
         tags = tags,
-        details = details,
+        details_block = details_block,
         file = esc(&item.file),
         line = item.line,
     )
+}
+
+fn docs_block(docs: Option<&str>) -> String {
+    let Some(docs) = docs else {
+        return String::new();
+    };
+    let docs = docs.trim();
+    if docs.is_empty() {
+        return String::new();
+    }
+    let body = docs
+        .split('\n')
+        .map(str::trim)
+        .filter(|line| !line.is_empty())
+        .map(esc)
+        .collect::<Vec<_>>()
+        .join("<br>");
+    format!(r#"<p class="docstring">{body}</p>"#)
 }
 
 fn card_kind_list(prefix: &str, item: &ItemInventory) -> String {
@@ -1075,10 +1439,19 @@ fn page_shell(title: &str, h1: &str, body: &str, asset_prefix: &str) -> String {
 </head>
 <body>
   <header>
-    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
-    <h1>{h1}</h1>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>{h1}</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="{refresh_command}">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
   </header>
   {body}
+  <script src="{asset_prefix}assets/inventory-data.js"></script>
   <script src="{asset_prefix}assets/inventory.js"></script>
 </body>
 </html>"#,
@@ -1086,6 +1459,7 @@ fn page_shell(title: &str, h1: &str, body: &str, asset_prefix: &str) -> String {
         h1 = esc(h1),
         body = body,
         asset_prefix = asset_prefix,
+        refresh_command = esc(REFRESH_COMMAND),
     )
 }
 
@@ -1119,6 +1493,8 @@ struct CrateInventory {
 struct ModuleInventory {
     path: String,
     module: String,
+    #[serde(skip_serializing)]
+    source: String,
     items: Vec<ItemInventory>,
 }
 
@@ -1133,6 +1509,7 @@ struct ItemInventory {
     methods: Vec<MethodInventory>,
     impl_target: Option<String>,
     trait_name: Option<String>,
+    docs: Option<String>,
     #[serde(skip_serializing)]
     source: Option<String>,
     tags: Vec<String>,
@@ -1159,6 +1536,7 @@ struct MethodInventory {
     name: String,
     signature: String,
     kind: String,
+    docs: Option<String>,
     #[serde(skip_serializing)]
     source: String,
     line: usize,
@@ -1256,6 +1634,12 @@ header, .summary, .toolbar, .crate-grid, .crate-layout {
   margin: 0 auto;
 }
 header { padding: 28px 0 16px; }
+.header-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
 .eyebrow {
   margin: 0 0 4px;
   color: var(--accent);
@@ -1264,6 +1648,31 @@ header { padding: 28px 0 16px; }
   text-transform: uppercase;
 }
 h1 { margin: 0; font-size: 30px; letter-spacing: 0; }
+.refresh-control {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 38px;
+}
+button {
+  height: 34px;
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+  background: var(--accent);
+  color: #fff;
+  padding: 0 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+button:disabled {
+  cursor: wait;
+  opacity: 0.7;
+}
+#refresh-status {
+  min-width: 88px;
+  color: var(--muted);
+  font-size: 12px;
+}
 .back-link { display: block; width: min(1440px, calc(100vw - 32px)); margin: 0 auto 8px; color: var(--accent); }
 .summary {
   display: grid;
@@ -1284,6 +1693,52 @@ h1 { margin: 0; font-size: 30px; letter-spacing: 0; }
   gap: 10px;
   margin-bottom: 14px;
 }
+.global-results {
+  width: min(1440px, calc(100vw - 32px));
+  margin: -6px auto 14px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.global-results-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 10px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+  border-bottom: 1px solid var(--line);
+}
+.global-results a {
+  display: grid;
+  grid-template-columns: 92px minmax(0, 1fr) auto;
+  gap: 10px;
+  padding: 8px 10px;
+  color: inherit;
+  text-decoration: none;
+  border-top: 1px solid var(--line);
+}
+.global-results a:first-of-type { border-top: 0; }
+.global-results a:hover { background: #eef8f6; }
+.result-kind {
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+.result-main {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.result-main strong { display: block; }
+.result-main small, .result-path {
+  color: var(--muted);
+  font-size: 12px;
+}
+.result-path { text-align: right; overflow-wrap: anywhere; }
 input, select {
   height: 38px;
   border: 1px solid var(--line);
@@ -1451,6 +1906,24 @@ h2 { margin: 0 0 3px; font-size: 20px; letter-spacing: 0; }
   border-radius: 6px;
   white-space: pre;
 }
+.docstring {
+  margin: 8px 0 0;
+  max-width: 900px;
+  color: #374151;
+  background: #f8fafc;
+  border-left: 3px solid var(--line);
+  padding: 7px 9px;
+  border-radius: 4px;
+}
+.symbol-link {
+  color: #0369a1;
+  text-decoration: none;
+  border-bottom: 1px dotted #0369a1;
+}
+.symbol-link:hover {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
 code {
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
   font-size: 12px;
@@ -1496,10 +1969,44 @@ summary {
   overflow: auto;
   margin: 6px 0 0;
   padding: 10px;
-  background: #0f172a;
-  color: #e5eefb;
+  background: #fbfcfe;
+  color: #1f2937;
+  border: 1px solid var(--line);
   border-radius: 6px;
 }
+.file-source-section {
+  width: min(1440px, calc(100vw - 32px));
+  margin: 0 auto 42px;
+}
+.source-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 12px;
+  margin: 12px 0 8px;
+}
+.source-head h2 {
+  margin: 0;
+  font-size: 18px;
+}
+.source-head .path {
+  margin: 0;
+  text-align: right;
+}
+.file-source {
+  overflow: auto;
+  margin: 0;
+  padding: 12px;
+  background: #fbfcfe;
+  color: #1f2937;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+.rs-kw { color: #1d4ed8; font-weight: 700; }
+.rs-type { color: #a16207; }
+.rs-self { color: #7c3aed; }
+.rs-fn { color: #047857; }
+.rs-comment { color: #64748b; }
 table {
   width: 100%;
   border-collapse: collapse;
@@ -1514,6 +2021,7 @@ td:first-child { width: 120px; color: var(--muted); }
 .is-hidden { display: none !important; }
 
 @media (max-width: 860px) {
+  .header-row { flex-direction: column; }
   .summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .toolbar { flex-direction: column; }
   .crate-layout { grid-template-columns: 1fr; }
@@ -1526,11 +2034,25 @@ td:first-child { width: 120px; color: var(--muted); }
 const JS: &str = r##"const filterInput = document.querySelector("#filter");
 const kindFilter = document.querySelector("#kind-filter");
 const root = document.querySelector("#filter-root");
+const refreshButton = document.querySelector("#refresh-inventory");
+const refreshStatus = document.querySelector("#refresh-status");
+const refreshEndpoint = "/__class_inventory_refresh";
+const globalResults = document.createElement("section");
+globalResults.id = "global-results";
+globalResults.className = "global-results";
+globalResults.hidden = true;
+document.querySelector(".toolbar")?.after(globalResults);
+
+if (refreshButton && window.location.protocol === "file:") {
+  refreshButton.textContent = "Reload";
+  refreshButton.title = "Chrome cannot run local commands from file://. Click to copy the refresh command.";
+}
 
 function applyFilter() {
   if (!root) return;
   const query = (filterInput?.value || "").trim().toLowerCase();
   const kind = kindFilter?.value || "";
+  renderGlobalResults(query);
   const richCards = root.querySelectorAll(".crate-card, .item-card, .type-card");
   richCards.forEach((card) => {
     const text = (card.dataset.filterText || card.textContent || "").toLowerCase();
@@ -1547,4 +2069,179 @@ function applyFilter() {
 
 filterInput?.addEventListener("input", applyFilter);
 kindFilter?.addEventListener("change", applyFilter);
+
+function renderGlobalResults(query) {
+  if (!globalResults) return;
+  if (!query || query.length < 2 || !window.CLASS_INVENTORY) {
+    globalResults.hidden = true;
+    globalResults.innerHTML = "";
+    return;
+  }
+  const terms = query.split(/\s+/).filter(Boolean);
+  const matches = symbolIndex()
+    .map((entry) => ({ entry, score: scoreEntry(entry, terms) }))
+    .filter((match) => match.score > 0)
+    .sort((a, b) => b.score - a.score || a.entry.name.localeCompare(b.entry.name))
+    .slice(0, 40);
+  if (!matches.length) {
+    globalResults.hidden = false;
+    globalResults.innerHTML = `<div class="global-results-head"><span>All-symbol search</span><span>No matches</span></div>`;
+    return;
+  }
+  const rows = matches
+    .map(({ entry }) => `<a href="${escapeAttr(entry.href)}"><span class="result-kind">${escapeHtml(entry.kind)}</span><span class="result-main"><strong>${escapeHtml(entry.name)}</strong><small>${escapeHtml(entry.detail)}</small></span><span class="result-path">${escapeHtml(entry.path)}</span></a>`)
+    .join("");
+  globalResults.hidden = false;
+  globalResults.innerHTML = `<div class="global-results-head"><span>All-symbol search</span><span>${matches.length} matches</span></div>${rows}`;
+}
+
+let cachedSymbolIndex;
+
+function symbolIndex() {
+  if (cachedSymbolIndex) return cachedSymbolIndex;
+  const inventory = window.CLASS_INVENTORY;
+  const entries = [];
+  const cratesPrefix = location.pathname.includes("/crates/") ? "" : "crates/";
+  for (const crateInfo of inventory?.crates || []) {
+    for (const moduleInfo of crateInfo.modules || []) {
+      const page = `${cratesPrefix}${crateFilePageName(crateInfo, moduleInfo)}`;
+      const filePath = moduleInfo.path || "";
+      entries.push({
+        kind: "file",
+        name: displayFilePath(crateInfo.name, filePath),
+        detail: `${crateInfo.name} module ${moduleInfo.module}`,
+        path: filePath,
+        href: page,
+        search: `${crateInfo.name} ${moduleInfo.module} ${filePath}`,
+      });
+      for (const item of moduleInfo.items || []) {
+        const itemHref = `${page}#${itemAnchor(item.kind, item.name, item.line)}`;
+        entries.push({
+          kind: item.kind,
+          name: item.name,
+          detail: item.signature || "",
+          path: filePath,
+          href: itemHref,
+          search: `${crateInfo.name} ${moduleInfo.module} ${filePath} ${item.kind} ${item.name} ${item.signature || ""} ${item.docs || ""}`,
+        });
+        for (const field of item.fields || []) {
+          entries.push({
+            kind: "field",
+            name: `${item.name}.${field.name}`,
+            detail: `${field.name}: ${field.ty}`,
+            path: filePath,
+            href: itemHref,
+            search: `${crateInfo.name} ${moduleInfo.module} ${filePath} field ${item.name} ${field.name} ${field.ty}`,
+          });
+        }
+        for (const variant of item.variants || []) {
+          entries.push({
+            kind: "variant",
+            name: `${item.name}::${variant.name}`,
+            detail: item.name,
+            path: filePath,
+            href: itemHref,
+            search: `${crateInfo.name} ${moduleInfo.module} ${filePath} variant ${item.name} ${variant.name}`,
+          });
+        }
+        for (const method of item.methods || []) {
+          entries.push({
+            kind: method.kind || "method",
+            name: `${ownerName(item)}.${method.name}`,
+            detail: method.signature || "",
+            path: filePath,
+            href: `${page}#${methodAnchor(method.name, method.line)}`,
+            search: `${crateInfo.name} ${moduleInfo.module} ${filePath} method ${ownerName(item)} ${method.name} ${method.signature || ""} ${method.docs || ""}`,
+          });
+        }
+      }
+    }
+  }
+  cachedSymbolIndex = entries;
+  return entries;
+}
+
+function scoreEntry(entry, terms) {
+  const search = entry.search.toLowerCase();
+  let score = 0;
+  for (const term of terms) {
+    const name = entry.name.toLowerCase();
+    if (name === term) score += 100;
+    else if (name.startsWith(term)) score += 60;
+    else if (name.includes(term)) score += 35;
+    else if (search.includes(term)) score += 10;
+    else return 0;
+  }
+  if (["struct", "enum", "trait"].includes(entry.kind)) score += 8;
+  if (entry.kind === "method" || entry.kind === "constructor") score += 4;
+  return score;
+}
+
+function crateFilePageName(crateInfo, moduleInfo) {
+  const first = crateInfo.modules?.[0];
+  if (!first || moduleInfo.path === first.path) return `${crateInfo.name}.html`;
+  return `${crateInfo.name}--${slug(displayFilePath(crateInfo.name, moduleInfo.path))}.html`;
+}
+
+function displayFilePath(crateName, filePath) {
+  const prefix = `crates/${crateName}/`;
+  return filePath.startsWith(prefix) ? filePath.slice(prefix.length) : filePath;
+}
+
+function itemAnchor(kind, name, line) {
+  return `item-${slug(kind)}-${slug(name)}-${line}`;
+}
+
+function methodAnchor(name, line) {
+  return `method-${slug(name)}-${line}`;
+}
+
+function slug(value) {
+  return String(value || "").split("").map((ch) => /[A-Za-z0-9]/.test(ch) ? ch : "-").join("");
+}
+
+function ownerName(item) {
+  return (item.impl_target || item.name || "").split("<")[0].split("::").pop().trim() || item.name;
+}
+
+function escapeHtml(value) {
+  return String(value || "").replace(/[&<>"']/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#39;" }[ch]));
+}
+
+function escapeAttr(value) {
+  return escapeHtml(value);
+}
+
+refreshButton?.addEventListener("click", async () => {
+  if (window.location.protocol === "file:") {
+    const command = refreshButton.dataset.refreshCommand || "";
+    try {
+      await navigator.clipboard.writeText(command);
+      if (refreshStatus) refreshStatus.textContent = "Copied; reloading";
+    } catch (error) {
+      window.prompt("Run this command, then reload this HTML file:", command);
+      if (refreshStatus) refreshStatus.textContent = "Reloading";
+    }
+    window.setTimeout(() => window.location.reload(), 900);
+    return;
+  }
+  refreshButton.disabled = true;
+  if (refreshStatus) refreshStatus.textContent = "Refreshing";
+  try {
+    const response = await fetch(refreshEndpoint, { method: "POST" });
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok || result.ok === false) {
+      throw new Error(result.error || `refresh failed (${response.status})`);
+    }
+    if (refreshStatus) refreshStatus.textContent = "Reloading";
+    window.location.reload();
+  } catch (error) {
+    if (refreshStatus) refreshStatus.textContent = "Refresh unavailable";
+    console.error(error);
+    refreshButton.disabled = false;
+  }
+});
 "##;
+
+const REFRESH_COMMAND: &str =
+    "cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS/sandbox && cargo run --manifest-path scripts/class-inventory/Cargo.toml";

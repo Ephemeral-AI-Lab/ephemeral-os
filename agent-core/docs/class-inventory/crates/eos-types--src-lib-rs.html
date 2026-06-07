@@ -8,8 +8,16 @@
 </head>
 <body>
   <header>
-    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
-    <h1>eos-types File Inventory</h1>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>eos-types File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS/agent-core &amp;&amp; cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
   </header>
   <a class="back-link" href="../index.html">agent-core</a>
 <section class="summary">
@@ -50,6 +58,40 @@
   <div class="items"></div>
 </section></div>
 </main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/eos-types/src/lib.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-comment">//! eos-types — shared id, timestamp, clock, json, and error primitives.</span>
+<span class="rs-comment">//!</span>
+<span class="rs-comment">//! This is the leaf crate of the agent-core dependency DAG: the small,</span>
+<span class="rs-comment">//! dependency-light value primitives every other crate shares. It holds the</span>
+<span class="rs-comment">//! twelve typed string ids, the [`UtcDateTime`] wrapper, the [`Clock`] trait</span>
+<span class="rs-comment">//! seam, the transitional [`JsonObject`] alias, and the minimal [`CoreError`].</span>
+<span class="rs-comment">//! It deliberately holds no domain state, status enums, SQL, HTTP, or config —</span>
+<span class="rs-comment">//! those belong to their owning crates.</span>
+<span class="rs-comment">//!</span>
+<span class="rs-comment">//! The public surface is re-exported flatly, so consumers write</span>
+<span class="rs-comment">//! `use eos_types::{TaskId, UtcDateTime, Clock, JsonObject};`.</span>
+#![forbid(unsafe_code)]
+#![warn(missing_docs)]
+
+<span class="rs-kw">mod</span> error;
+<span class="rs-kw">mod</span> ids;
+<span class="rs-kw">mod</span> json;
+<span class="rs-kw">mod</span> time;
+
+<span class="rs-kw">pub</span> <span class="rs-kw">use</span> error::<a class="symbol-link rs-type" href="eos-types.html#item-enum-CoreError-9">CoreError</a>;
+<span class="rs-kw">pub</span> <span class="rs-kw">use</span> ids::{
+    <span class="rs-type">AgentRunId</span>, <span class="rs-type">AttemptId</span>, <span class="rs-type">CommandSessionId</span>, <span class="rs-type">InvocationId</span>, <span class="rs-type">IterationId</span>, <span class="rs-type">RequestId</span>, <span class="rs-type">SandboxId</span>,
+    <span class="rs-type">SubagentSessionId</span>, <span class="rs-type">TaskId</span>, <span class="rs-type">ToolUseId</span>, <span class="rs-type">WorkflowId</span>, <span class="rs-type">WorkflowSessionId</span>,
+};
+<span class="rs-kw">pub</span> <span class="rs-kw">use</span> json::<a class="symbol-link rs-type" href="eos-types--src-json-rs.html#item-type-JsonObject-8">JsonObject</a>;
+<span class="rs-kw">pub</span> <span class="rs-kw">use</span> time::{<a class="symbol-link rs-type" href="eos-types--src-time-rs.html#item-trait-Clock-99">Clock</a>, <a class="symbol-link rs-type" href="eos-types--src-time-rs.html#item-struct-SystemClock-106">SystemClock</a>, <a class="symbol-link rs-type" href="eos-types--src-time-rs.html#item-struct-TestClock-116">TestClock</a>, <a class="symbol-link rs-type" href="eos-types--src-time-rs.html#item-struct-UtcDateTime-14">UtcDateTime</a>};
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
   <script src="../assets/inventory.js"></script>
 </body>
 </html>

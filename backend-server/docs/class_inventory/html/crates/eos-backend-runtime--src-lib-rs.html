@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>eos-backend-runtime · src/lib.rs</title>
+  <link rel="stylesheet" href="../assets/inventory.css">
+</head>
+<body>
+  <header>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>eos-backend-runtime File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS/backend-server &amp;&amp; cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
+  </header>
+  <a class="back-link" href="../index.html">backend-server</a>
+<section class="summary">
+  <div><b>7</b><span>modules</span></div>
+  <div><b>55</b><span>items</span></div>
+  <div><b>61</b><span>fields</span></div>
+  <div><b>46</b><span>methods</span></div>
+</section>
+<section class="toolbar">
+  <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
+  <select id="kind-filter">
+    <option value="">All items</option>
+    <option value="type-model">Type model</option>
+    <option value="struct">Structs</option>
+    <option value="enum">Enums</option>
+    <option value="trait">Traits</option>
+    <option value="impl">Impls</option>
+    <option value="fn">Functions</option>
+    <option value="type">Aliases</option>
+  </select>
+</section>
+<main class="crate-layout">
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><a class="file-link" href="eos-backend-runtime.html"><span>event_bus.rs</span><small>4/6</small></a></li><li><a class="file-link" href="eos-backend-runtime--src-host-rs.html"><span>host.rs</span><small>3/0</small></a></li><li><a class="file-link" href="eos-backend-runtime--src-launcher-rs.html"><span>launcher.rs</span><small>5/0</small></a></li><li><a class="file-link active" href="eos-backend-runtime--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-backend-runtime--src-reaper-rs.html"><span>reaper.rs</span><small>2/0</small></a></li><li><a class="file-link" href="eos-backend-runtime--src-sandbox-manager-rs.html"><span>sandbox_manager.rs</span><small>10/3</small></a></li><li><a class="file-link" href="eos-backend-runtime--src-status-rs.html"><span>status.rs</span><small>0/1</small></a></li></ul></li></ul></nav>
+  <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="lib crates/eos-backend-runtime/src/lib.rs ">
+  <div class="module-head">
+    <div>
+      <h2>src/lib.rs</h2>
+      <p class="path">module <code>lib</code></p>
+    </div>
+    <div class="module-stats">
+      <span>file owns</span>
+      <span>0 types</span>
+      <span>0 impls</span>
+      <span>0 fns</span>
+      <span>0 methods</span>
+    </div>
+  </div>
+  <div class="items"></div>
+</section></div>
+</main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/eos-backend-runtime/src/lib.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-comment">//! `eos-backend-runtime` — backend-owned sandbox lifecycle and run orchestration.</span>
+<span class="rs-comment">//!</span>
+<span class="rs-comment">//! [`SandboxManager`] (Phase 4) is the in-memory owner of sandbox setup, binding,</span>
+<span class="rs-comment">//! refcounting, delete policy, and teardown; it composes the Docker/daemon host</span>
+<span class="rs-comment">//! (`eos-sandbox-host`) behind one shared registry and implements the</span>
+<span class="rs-comment">//! [`SandboxGateway`](eos_sandbox_port::SandboxGateway) port so `eos-runtime` can</span>
+<span class="rs-comment">//! be wired against it without importing the host.</span>
+<span class="rs-comment">//!</span>
+<span class="rs-comment">//! Phase 5 adds the run orchestration that consumes the manager:</span>
+<span class="rs-comment">//!</span>
+<span class="rs-comment">//! - [`RunLauncher`] accepts a request, persists `run_meta`, drives agent-core to</span>
+<span class="rs-comment">//!   completion through the [`RunHost`] seam, and finalizes through the reaper;</span>
+<span class="rs-comment">//!   cancellation is backend-local (a [`tokio_util::sync::CancellationToken`]),</span>
+<span class="rs-comment">//!   never written into agent-core state.</span>
+<span class="rs-comment">//! - [`EventBus`] turns agent-core's synchronous stream callback into replay-safe</span>
+<span class="rs-comment">//!   persistence: a non-async classifying callback, an async persist-before-</span>
+<span class="rs-comment">//!   broadcast drainer, and a [`EventBus::subscribe`] handoff with no gap.</span>
+<span class="rs-comment">//! - [`resolve_api_status`] joins backend and agent-core status into the API</span>
+<span class="rs-comment">//!   vocabulary.</span>
+#![warn(missing_docs)]
+
+<span class="rs-kw">mod</span> event_bus;
+<span class="rs-kw">mod</span> host;
+<span class="rs-kw">mod</span> launcher;
+<span class="rs-kw">mod</span> reaper;
+<span class="rs-kw">mod</span> sandbox_manager;
+<span class="rs-kw">mod</span> status;
+
+<span class="rs-kw">pub</span> <span class="rs-kw">use</span> event_bus::{<a class="symbol-link rs-type" href="eos-backend-runtime.html#item-struct-EventBus-87">EventBus</a>, <a class="symbol-link rs-type" href="eos-backend-runtime.html#item-struct-EventSubscription-339">EventSubscription</a>};
+<span class="rs-kw">pub</span> <span class="rs-kw">use</span> host::{<a class="symbol-link rs-type" href="eos-backend-runtime--src-host-rs.html#item-trait-RunHost-33">RunHost</a>, <a class="symbol-link rs-type" href="eos-backend-runtime--src-host-rs.html#item-enum-RunOutcome-22">RunOutcome</a>, <a class="symbol-link rs-type" href="eos-backend-runtime--src-host-rs.html#item-struct-RuntimeHost-53">RuntimeHost</a>};
+<span class="rs-kw">pub</span> <span class="rs-kw">use</span> launcher::{<a class="symbol-link rs-type" href="eos-backend-runtime--src-launcher-rs.html#item-enum-CancelOutcome-44">CancelOutcome</a>, <a class="symbol-link rs-type" href="eos-backend-runtime--src-launcher-rs.html#item-enum-LaunchError-34">LaunchError</a>, <a class="symbol-link rs-type" href="eos-backend-runtime--src-launcher-rs.html#item-struct-RunLauncher-158">RunLauncher</a>};
+<span class="rs-kw">pub</span> <span class="rs-kw">use</span> sandbox_manager::{<a class="symbol-link rs-type" href="eos-backend-runtime--src-sandbox-manager-rs.html#item-enum-DeleteRejection-61">DeleteRejection</a>, <a class="symbol-link rs-type" href="eos-backend-runtime--src-sandbox-manager-rs.html#item-struct-SandboxManager-452">SandboxManager</a>, <a class="symbol-link rs-type" href="eos-backend-runtime--src-sandbox-manager-rs.html#item-enum-SandboxManagerError-80">SandboxManagerError</a>};
+<span class="rs-kw">pub</span> <span class="rs-kw">use</span> status::resolve_api_status;
+
+<span class="rs-comment">// Shared Phase 5 test doubles/helpers (manager fakes, temp store, fake run host).</span>
+<span class="rs-comment">// Body lives under the crate `tests/` tree (spec §Backend Test Layout); declared</span>
+<span class="rs-comment">// here so the reaper/launcher test modules can reach it crate-internally and the</span>
+<span class="rs-comment">// fakes can implement the `pub(crate)` `SandboxTeardown` seam.</span>
+#[cfg(test)]
+#[path = &quot;../tests/support/<span class="rs-kw">mod</span>.rs&quot;]
+<span class="rs-kw">mod</span> test_support;
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
+  <script src="../assets/inventory.js"></script>
+</body>
+</html>

@@ -8,8 +8,16 @@
 </head>
 <body>
   <header>
-    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
-    <h1>eos-overlay File Inventory</h1>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>eos-overlay File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS/sandbox &amp;&amp; cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
   </header>
   <a class="back-link" href="../index.html">sandbox</a>
 <section class="summary">
@@ -47,219 +55,1210 @@
       <span>4 methods</span>
     </div>
   </div>
-  <div class="items"><div class="group-label">File-Owned Types</div><article class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct OverlayPathChange pub pub struct OverlayPathChange crates/eos-overlay/src/path_change.rs path String kind OverlayPathChangeKind content_path Option &lt; String &gt; final_hash Option &lt; String &gt; ">
+  <div class="items"><div class="group-label">File-Owned Types</div><article id="item-struct-OverlayPathChange-34" class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct OverlayPathChange pub pub struct OverlayPathChange crates/eos-overlay/src/path_change.rs path String kind OverlayPathChangeKind content_path Option &lt; String &gt; final_hash Option &lt; String &gt; ">
   <div class="item-head">
     <span class="kind">struct</span>
     <h3>OverlayPathChange</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub struct OverlayPathChange</code>
-  <div class="tags"></div>
-  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>path</td><td><code>String</code></td></tr><tr><td>pub</td><td>kind</td><td><code>OverlayPathChangeKind</code></td></tr><tr><td>pub</td><td>content_path</td><td><code>Option &lt; String &gt;</code></td></tr><tr><td>pub</td><td>final_hash</td><td><code>Option &lt; String &gt;</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr><td>constructor</td><td>new</td><td><code>pub fn new (path : &amp; str , kind : OverlayPathChangeKind , content_path : Option &lt; String &gt; , final_hash : Option &lt; String &gt; ,) -&gt; Result &lt; Self &gt;</code></td></tr><tr><td>method</td><td>into_layer_change</td><td><code>pub fn into_layer_change (self) -&gt; Result &lt; LayerChange &gt;</code></td></tr></tbody></table>
+  <code class="signature">pub struct <a class="symbol-link" href="eos-overlay--src-path-change-rs.html#item-struct-OverlayPathChange-34">OverlayPathChange</a></code>
+  <p class="docstring">A single change captured from the overlay upperdir.<br>Before layer-stack policy is applied. `path` is normalized; `write`/`symlink`<br>carry a staged `content_path` + `final_hash`, the others carry neither.</p>
+  <div class="tags"><span>derive: Clone</span><span>derive: Debug</span><span>derive: Eq</span><span>derive: PartialEq</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>path</td><td><code>String</code></td></tr><tr><td>pub</td><td>kind</td><td><code><a class="symbol-link" href="eos-overlay--src-path-change-rs.html#item-enum-OverlayPathChangeKind-21">OverlayPathChangeKind</a></code></td></tr><tr><td>pub</td><td>content_path</td><td><code>Option &lt; String &gt;</code></td></tr><tr><td>pub</td><td>final_hash</td><td><code>Option &lt; String &gt;</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-51"><td>constructor</td><td>new</td><td><code>pub fn <a class="symbol-link" href="eos-overlay--src-path-change-rs.html#method-new-51">new</a> (path : &amp; str , kind : <a class="symbol-link" href="eos-overlay--src-path-change-rs.html#item-enum-OverlayPathChangeKind-21">OverlayPathChangeKind</a> , content_path : Option &lt; String &gt; , final_hash : Option &lt; String &gt; ,) -&gt; <a class="symbol-link" href="eos-overlay.html#item-type-Result-50">Result</a> &lt; Self &gt;</code><p class="docstring">Validate-and-construct: normalize the path (root allowed only for<br>`opaque_dir`), require<br>`content_path`+`final_hash` for `write`/`symlink`, forbid them otherwise.<br># Errors<br>Returns [`OverlayError::InvalidPathChange`] when path normalization or<br>per-kind payload validation fails.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Validate-and-construct: normalize the path (root allowed only for</span>
+    <span class="rs-comment">/// `opaque_dir`), require</span>
+    <span class="rs-comment">/// `content_path`+`final_hash` for `write`/`symlink`, forbid them otherwise.</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// # Errors</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// Returns [`OverlayError::InvalidPathChange`] when path normalization or</span>
+    <span class="rs-comment">/// per-kind payload validation fails.</span>
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-overlay--src-path-change-rs.html#method-new-51">new</a>(
+        path: &amp;str,
+        kind: <a class="symbol-link rs-type" href="eos-overlay--src-path-change-rs.html#item-enum-OverlayPathChangeKind-21">OverlayPathChangeKind</a>,
+        content_path: <span class="rs-type">Option</span>&lt;<span class="rs-type">String</span>&gt;,
+        final_hash: <span class="rs-type">Option</span>&lt;<span class="rs-type">String</span>&gt;,
+    ) -&gt; <a class="symbol-link rs-type" href="eos-overlay.html#item-type-Result-50">Result</a>&lt;<span class="rs-self">Self</span>&gt; {
+        <span class="rs-kw">let</span> path = <a class="symbol-link rs-fn" href="eos-overlay--src-path-change-rs.html#item-fn-normalize-overlay-path-276">normalize_overlay_path</a>(path, kind == <a class="symbol-link rs-type" href="eos-overlay--src-path-change-rs.html#item-enum-OverlayPathChangeKind-21">OverlayPathChangeKind</a>::<span class="rs-type">OpaqueDir</span>)?;
+        <span class="rs-kw">match</span> kind {
+            <a class="symbol-link rs-type" href="eos-overlay--src-path-change-rs.html#item-enum-OverlayPathChangeKind-21">OverlayPathChangeKind</a>::<span class="rs-type">Write</span> | <a class="symbol-link rs-type" href="eos-overlay--src-path-change-rs.html#item-enum-OverlayPathChangeKind-21">OverlayPathChangeKind</a>::<span class="rs-type">Symlink</span> =&gt; {
+                <span class="rs-kw">if</span> content_path.as_deref().unwrap_or_default().is_empty() {
+                    <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-overlay.html#item-enum-OverlayError-8">OverlayError</a>::<span class="rs-type">InvalidPathChange</span>(format!(
+                        &quot;{kind:?} changes require content_path&quot;
+                    )));
+                }
+                <span class="rs-kw">if</span> final_hash.as_deref().unwrap_or_default().is_empty() {
+                    <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-overlay.html#item-enum-OverlayError-8">OverlayError</a>::<span class="rs-type">InvalidPathChange</span>(format!(
+                        &quot;{kind:?} changes require final_hash&quot;
+                    )));
+                }
+            }
+            <a class="symbol-link rs-type" href="eos-overlay--src-path-change-rs.html#item-enum-OverlayPathChangeKind-21">OverlayPathChangeKind</a>::<span class="rs-type">Delete</span> | <a class="symbol-link rs-type" href="eos-overlay--src-path-change-rs.html#item-enum-OverlayPathChangeKind-21">OverlayPathChangeKind</a>::<span class="rs-type">OpaqueDir</span> =&gt; {
+                <span class="rs-kw">if</span> content_path.is_some() {
+                    <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-overlay.html#item-enum-OverlayError-8">OverlayError</a>::<span class="rs-type">InvalidPathChange</span>(format!(
+                        &quot;{kind:?} changes must not carry content_path&quot;
+                    )));
+                }
+                <span class="rs-kw">if</span> final_hash.is_some() {
+                    <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-overlay.html#item-enum-OverlayError-8">OverlayError</a>::<span class="rs-type">InvalidPathChange</span>(format!(
+                        &quot;{kind:?} changes must not carry final_hash&quot;
+                    )));
+                }
+            }
+        }
+        <span class="rs-type">Ok</span>(<span class="rs-self">Self</span> {
+            path,
+            kind,
+            content_path,
+            final_hash,
+        })
+    }
+</code></pre>
+</details></td></tr><tr id="method-into-layer-change-100"><td>method</td><td>into_layer_change</td><td><code>pub fn <a class="symbol-link" href="eos-overlay--src-path-change-rs.html#method-into-layer-change-100">into_layer_change</a> (self) -&gt; <a class="symbol-link" href="eos-overlay.html#item-type-Result-50">Result</a> &lt; LayerChange &gt;</code><p class="docstring">Convert this overlay-side change into the storage-level<br>`eos_protocol::LayerChange`. ONE-WAY: occ consumes this; overlay never<br>imports occ. `write` threads the precomputed `content_path`/`final_hash`;<br>`symlink` reads the link target (`os.readlink`).<br># Errors<br>Returns [`OverlayError`] when the captured path is invalid or when staged<br>content/link-target reads fail.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Convert this overlay-side change into the storage-level</span>
+    <span class="rs-comment">/// `eos_protocol::LayerChange`. ONE-WAY: occ consumes this; overlay never</span>
+    <span class="rs-comment">/// imports occ. `write` threads the precomputed `content_path`/`final_hash`;</span>
+    <span class="rs-comment">/// `symlink` reads the link target (`os.readlink`).</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// # Errors</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// Returns [`OverlayError`] when the captured path is invalid or when staged</span>
+    <span class="rs-comment">/// content/link-target reads fail.</span>
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-overlay--src-path-change-rs.html#method-into-layer-change-100">into_layer_change</a>(<span class="rs-self">self</span>) -&gt; <a class="symbol-link rs-type" href="eos-overlay.html#item-type-Result-50">Result</a>&lt;<span class="rs-type">LayerChange</span>&gt; {
+        <span class="rs-kw">let</span> path = <span class="rs-type">LayerPath</span>::parse(&amp;<span class="rs-self">self</span>.path)?;
+        <span class="rs-kw">match</span> <span class="rs-self">self</span>.kind {
+            <a class="symbol-link rs-type" href="eos-overlay--src-path-change-rs.html#item-enum-OverlayPathChangeKind-21">OverlayPathChangeKind</a>::<span class="rs-type">Write</span> =&gt; {
+                <span class="rs-kw">let</span> content_path = <span class="rs-self">self</span>.content_path.ok_or_else(|| {
+                    <a class="symbol-link rs-type" href="eos-overlay.html#item-enum-OverlayError-8">OverlayError</a>::<span class="rs-type">InvalidPathChange</span>(&quot;write changes require content_path&quot;.to_owned())
+                })?;
+                <span class="rs-kw">let</span> content = std::fs::read(content_path).map_err(<a class="symbol-link rs-type" href="eos-overlay.html#item-enum-OverlayError-8">OverlayError</a>::<span class="rs-type">Capture</span>)?;
+                <span class="rs-type">Ok</span>(<span class="rs-type">LayerChange</span>::<span class="rs-type">Write</span> { path, content })
+            }
+            <a class="symbol-link rs-type" href="eos-overlay--src-path-change-rs.html#item-enum-OverlayPathChangeKind-21">OverlayPathChangeKind</a>::<span class="rs-type">Delete</span> =&gt; <span class="rs-type">Ok</span>(<span class="rs-type">LayerChange</span>::<span class="rs-type">Delete</span> { path }),
+            <a class="symbol-link rs-type" href="eos-overlay--src-path-change-rs.html#item-enum-OverlayPathChangeKind-21">OverlayPathChangeKind</a>::<span class="rs-type">Symlink</span> =&gt; {
+                <span class="rs-kw">let</span> content_path = <span class="rs-self">self</span>.content_path.ok_or_else(|| {
+                    <a class="symbol-link rs-type" href="eos-overlay.html#item-enum-OverlayError-8">OverlayError</a>::<span class="rs-type">InvalidPathChange</span>(
+                        &quot;symlink changes require content_path&quot;.to_owned(),
+                    )
+                })?;
+                <span class="rs-kw">let</span> source_path = std::fs::read_link(content_path)
+                    .map_err(<a class="symbol-link rs-type" href="eos-overlay.html#item-enum-OverlayError-8">OverlayError</a>::<span class="rs-type">Capture</span>)?
+                    .to_string_lossy()
+                    .into_owned();
+                <span class="rs-type">Ok</span>(<span class="rs-type">LayerChange</span>::<span class="rs-type">Symlink</span> { path, source_path })
+            }
+            <a class="symbol-link rs-type" href="eos-overlay--src-path-change-rs.html#item-enum-OverlayPathChangeKind-21">OverlayPathChangeKind</a>::<span class="rs-type">OpaqueDir</span> =&gt; <span class="rs-type">Ok</span>(<span class="rs-type">LayerChange</span>::<span class="rs-type">OpaqueDir</span> { path }),
+        }
+    }
+</code></pre>
+</details></td></tr></tbody></table>
+
   <p class="source">crates/eos-overlay/src/path_change.rs:34</p>
-</article><article class="type-card" data-kind="enum" data-kind-list="enum field type-model" data-filter-text="enum OverlayPathChangeKind pub pub enum OverlayPathChangeKind crates/eos-overlay/src/path_change.rs  ">
+</article><article id="item-enum-OverlayPathChangeKind-21" class="type-card" data-kind="enum" data-kind-list="enum field type-model" data-filter-text="enum OverlayPathChangeKind pub pub enum OverlayPathChangeKind crates/eos-overlay/src/path_change.rs  ">
   <div class="item-head">
     <span class="kind">enum</span>
     <h3>OverlayPathChangeKind</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub enum OverlayPathChangeKind</code>
-  <div class="tags"></div>
+  <code class="signature">pub enum <a class="symbol-link" href="eos-overlay--src-path-change-rs.html#item-enum-OverlayPathChangeKind-21">OverlayPathChangeKind</a></code>
+  <p class="docstring">The kind of a captured overlay path change.</p>
+  <div class="tags"><span>derive: Clone</span><span>derive: Copy</span><span>derive: Debug</span><span>derive: Eq</span><span>derive: PartialEq</span></div>
   <h4>Variants</h4><table><tbody><tr><td>Write</td><td><code></code></td></tr><tr><td>Delete</td><td><code></code></td></tr><tr><td>Symlink</td><td><code></code></td></tr><tr><td>OpaqueDir</td><td><code></code></td></tr></tbody></table>
+
   <p class="source">crates/eos-overlay/src/path_change.rs:21</p>
-</article><article class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct Fixture private struct Fixture crates/eos-overlay/src/path_change.rs base PathBuf ">
+</article><article id="item-struct-Fixture-470" class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct Fixture private struct Fixture crates/eos-overlay/src/path_change.rs base PathBuf ">
   <div class="item-head">
     <span class="kind">struct</span>
     <h3>Fixture</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">struct Fixture</code>
+  <code class="signature">struct <a class="symbol-link" href="eos-overlay--src-path-change-rs.html#item-struct-Fixture-470">Fixture</a></code>
   <div class="tags"></div>
-  <h4>Fields</h4><table><tbody><tr><td>private</td><td>base</td><td><code>PathBuf</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr><td>constructor</td><td>new</td><td><code>fn new (label : &amp; str) -&gt; TestResult &lt; Self &gt;</code></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl Drop for Fixture</code></summary><table><tbody><tr><td>method</td><td>drop</td><td><code>fn drop (&amp; mut self)</code></td></tr></tbody></table></details></div>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>base</td><td><code>PathBuf</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-475"><td>constructor</td><td>new</td><td><code>fn <a class="symbol-link" href="eos-overlay--src-path-change-rs.html#method-new-51">new</a> (label : &amp; str) -&gt; <a class="symbol-link" href="eos-overlay--src-kernel-mount-rs.html#item-type-TestResult-385">TestResult</a> &lt; Self &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>        <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-overlay--src-path-change-rs.html#method-new-51">new</a>(label: &amp;str) -&gt; <a class="symbol-link rs-type" href="eos-overlay--src-kernel-mount-rs.html#item-type-TestResult-385">TestResult</a>&lt;<span class="rs-self">Self</span>&gt; {
+            <span class="rs-kw">static</span> <span class="rs-type">COUNTER</span>: <span class="rs-type">AtomicU64</span> = <span class="rs-type">AtomicU64</span>::<a class="symbol-link rs-fn" href="eos-overlay--src-path-change-rs.html#method-new-51">new</a>(0);
+            <span class="rs-kw">let</span> base = std::env::temp_dir().join(format!(
+                &quot;eos-overlay-{label}-{}-{}&quot;,
+                std::process::id(),
+                <span class="rs-type">COUNTER</span>.fetch_add(1, <span class="rs-type">Ordering</span>::<span class="rs-type">Relaxed</span>)
+            ));
+            <span class="rs-kw">let</span> _ = std::fs::remove_dir_all(&amp;base);
+            std::fs::create_dir_all(&amp;base)?;
+            <span class="rs-type">Ok</span>(<span class="rs-self">Self</span> { base })
+        }
+</code></pre>
+</details></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl Drop for <a class="symbol-link" href="eos-overlay--src-path-change-rs.html#item-struct-Fixture-470">Fixture</a></code></summary><table><tbody><tr id="method-drop-489"><td>method</td><td>drop</td><td><code>fn <a class="symbol-link" href="eos-overlay--src-kernel-mount-rs.html#method-drop-70">drop</a> (&amp; mut self)</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>        <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-overlay--src-kernel-mount-rs.html#method-drop-70">drop</a>(&amp;<span class="rs-kw">mut</span> <span class="rs-self">self</span>) {
+            <span class="rs-kw">let</span> _ = std::fs::remove_dir_all(&amp;<span class="rs-self">self</span>.base);
+        }
+</code></pre>
+</details></td></tr></tbody></table></details></div>
+
   <p class="source">crates/eos-overlay/src/path_change.rs:470</p>
-</article><div class="group-label">Aliases</div><article class="item-card" data-kind="type" data-kind-list="type" data-filter-text="type TestResult private type TestResult&lt; T = () &gt; = std :: result :: Result &lt; T , Box &lt; dyn std :: error :: Error + Send + Sync &gt; &gt; crates/eos-overlay/src/path_change.rs  ">
+</article><div class="group-label">Aliases</div><article id="item-type-TestResult-421" class="item-card" data-kind="type" data-kind-list="type" data-filter-text="type TestResult private type TestResult&lt; T = () &gt; = std :: result :: Result &lt; T , Box &lt; dyn std :: error :: Error + Send + Sync &gt; &gt; crates/eos-overlay/src/path_change.rs  ">
   <div class="item-head">
     <span class="kind">type</span>
     <h3>TestResult</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">type TestResult&lt; T = () &gt; = std :: result :: Result &lt; T , Box &lt; dyn std :: error :: Error + Send + Sync &gt; &gt;</code>
+  <code class="signature">type <a class="symbol-link" href="eos-overlay--src-kernel-mount-rs.html#item-type-TestResult-385">TestResult</a>&lt; T = () &gt; = std :: result :: <a class="symbol-link" href="eos-overlay.html#item-type-Result-50">Result</a> &lt; T , Box &lt; dyn std :: error :: Error + Send + Sync &gt; &gt;</code>
   <div class="tags"></div>
 
   <p class="source">crates/eos-overlay/src/path_change.rs:421</p>
-</article><div class="group-label">Standalone Functions</div><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn capture_upperdir pub pub fn capture_upperdir (upperdir : &amp; Path) -&gt; Result &lt; Vec &lt; LayerChange &gt; &gt; crates/eos-overlay/src/path_change.rs  ">
+</article><div class="group-label">Standalone Functions</div><article id="item-fn-capture-upperdir-137" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn capture_upperdir pub pub fn capture_upperdir (upperdir : &amp; Path) -&gt; Result &lt; Vec &lt; LayerChange &gt; &gt; crates/eos-overlay/src/path_change.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>capture_upperdir</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub fn capture_upperdir (upperdir : &amp; Path) -&gt; Result &lt; Vec &lt; LayerChange &gt; &gt;</code>
+  <code class="signature">pub fn <a class="symbol-link" href="eos-overlay--src-path-change-rs.html#item-fn-capture-upperdir-137">capture_upperdir</a> (upperdir : &amp; Path) -&gt; <a class="symbol-link" href="eos-overlay.html#item-type-Result-50">Result</a> &lt; Vec &lt; LayerChange &gt; &gt;</code>
+  <p class="docstring">Walk the overlay `upperdir` and capture the full write set.<br>Walks ONLY the upperdir (never the lower layers): capture + publish is one<br>atomic unit, so the returned set is the complete delta for this op. Overlay<br>whiteouts -&gt; `Delete`, opaque markers -&gt; `OpaqueDir`, symlinks -&gt; `Symlink`,<br>regular files -&gt; `Write`.<br># Errors<br>Returns [`OverlayError`] when upperdir traversal, path normalization, xattr<br>probing, hashing, or staged content conversion fails.</p>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-comment">/// Walk the overlay `upperdir` and capture the full write set.</span>
+<span class="rs-comment">///</span>
+<span class="rs-comment">/// Walks ONLY the upperdir (never the lower layers): capture + publish is one</span>
+<span class="rs-comment">/// atomic unit, so the returned set is the complete delta for this op. Overlay</span>
+<span class="rs-comment">/// whiteouts -&gt; `Delete`, opaque markers -&gt; `OpaqueDir`, symlinks -&gt; `Symlink`,</span>
+<span class="rs-comment">/// regular files -&gt; `Write`.</span>
+<span class="rs-comment">///</span>
+<span class="rs-comment">/// # Errors</span>
+<span class="rs-comment">///</span>
+<span class="rs-comment">/// Returns [`OverlayError`] when upperdir traversal, path normalization, xattr</span>
+<span class="rs-comment">/// probing, hashing, or staged content conversion fails.</span>
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-overlay--src-path-change-rs.html#item-fn-capture-upperdir-137">capture_upperdir</a>(upperdir: &amp;<span class="rs-type">Path</span>) -&gt; <a class="symbol-link rs-type" href="eos-overlay.html#item-type-Result-50">Result</a>&lt;<span class="rs-type">Vec</span>&lt;<span class="rs-type">LayerChange</span>&gt;&gt; {
+    std::fs::create_dir_all(upperdir).map_err(<a class="symbol-link rs-type" href="eos-overlay.html#item-enum-OverlayError-8">OverlayError</a>::<span class="rs-type">Capture</span>)?;
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> emitted_opaque_dirs = <span class="rs-type">HashSet</span>::<a class="symbol-link rs-fn" href="eos-overlay--src-path-change-rs.html#method-new-51">new</a>();
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> changes = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-overlay--src-path-change-rs.html#method-new-51">new</a>();
+    <a class="symbol-link rs-fn" href="eos-overlay--src-path-change-rs.html#item-fn-walk-upperdir-159">walk_upperdir</a>(upperdir, upperdir, &amp;<span class="rs-kw">mut</span> emitted_opaque_dirs, &amp;<span class="rs-kw">mut</span> changes)?;
+    changes
+        .into_iter()
+        .map(<a class="symbol-link rs-type" href="eos-overlay--src-path-change-rs.html#item-struct-OverlayPathChange-34">OverlayPathChange</a>::into_layer_change)
+        .collect()
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-overlay/src/path_change.rs:137</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn walk_upperdir private fn walk_upperdir (root : &amp; Path , dir : &amp; Path , emitted_opaque_dirs : &amp; mut HashSet &lt; String &gt; , changes : &amp; mut Vec &lt; OverlayPathChange &gt; ,) -&gt; Result &lt; () &gt; crates/eos-overlay/src/path_change.rs  ">
+</article><article id="item-fn-walk-upperdir-159" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn walk_upperdir private fn walk_upperdir (root : &amp; Path , dir : &amp; Path , emitted_opaque_dirs : &amp; mut HashSet &lt; String &gt; , changes : &amp; mut Vec &lt; OverlayPathChange &gt; ,) -&gt; Result &lt; () &gt; crates/eos-overlay/src/path_change.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>walk_upperdir</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn walk_upperdir (root : &amp; Path , dir : &amp; Path , emitted_opaque_dirs : &amp; mut HashSet &lt; String &gt; , changes : &amp; mut Vec &lt; OverlayPathChange &gt; ,) -&gt; Result &lt; () &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-overlay--src-path-change-rs.html#item-fn-walk-upperdir-159">walk_upperdir</a> (root : &amp; Path , dir : &amp; Path , emitted_opaque_dirs : &amp; mut HashSet &lt; String &gt; , changes : &amp; mut Vec &lt; <a class="symbol-link" href="eos-overlay--src-path-change-rs.html#item-struct-OverlayPathChange-34">OverlayPathChange</a> &gt; ,) -&gt; <a class="symbol-link" href="eos-overlay.html#item-type-Result-50">Result</a> &lt; () &gt;</code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-overlay--src-path-change-rs.html#item-fn-walk-upperdir-159">walk_upperdir</a>(
+    root: &amp;<span class="rs-type">Path</span>,
+    dir: &amp;<span class="rs-type">Path</span>,
+    emitted_opaque_dirs: &amp;<span class="rs-kw">mut</span> <span class="rs-type">HashSet</span>&lt;<span class="rs-type">String</span>&gt;,
+    changes: &amp;<span class="rs-kw">mut</span> <span class="rs-type">Vec</span>&lt;<a class="symbol-link rs-type" href="eos-overlay--src-path-change-rs.html#item-struct-OverlayPathChange-34">OverlayPathChange</a>&gt;,
+) -&gt; <a class="symbol-link rs-type" href="eos-overlay.html#item-type-Result-50">Result</a>&lt;()&gt; {
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> entries = std::fs::read_dir(dir)
+        .map_err(<a class="symbol-link rs-type" href="eos-overlay.html#item-enum-OverlayError-8">OverlayError</a>::<span class="rs-type">Capture</span>)?
+        .collect::&lt;std::result::<a class="symbol-link rs-type" href="eos-overlay.html#item-type-Result-50">Result</a>&lt;<span class="rs-type">Vec</span>&lt;_&gt;, _&gt;&gt;()
+        .map_err(<a class="symbol-link rs-type" href="eos-overlay.html#item-enum-OverlayError-8">OverlayError</a>::<span class="rs-type">Capture</span>)?;
+    entries.sort_by_key(std::fs::<span class="rs-type">DirEntry</span>::file_name);
+
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> dirs = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-overlay--src-path-change-rs.html#method-new-51">new</a>();
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> files = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-overlay--src-path-change-rs.html#method-new-51">new</a>();
+    <span class="rs-kw">for</span> entry <span class="rs-kw">in</span> entries {
+        <span class="rs-kw">let</span> file_type = entry.file_type().map_err(<a class="symbol-link rs-type" href="eos-overlay.html#item-enum-OverlayError-8">OverlayError</a>::<span class="rs-type">Capture</span>)?;
+        <span class="rs-kw">if</span> file_type.is_dir() {
+            dirs.push(entry.path());
+        } <span class="rs-kw">else</span> {
+            files.push(entry.path());
+        }
+    }
+
+    <span class="rs-kw">for</span> entry <span class="rs-kw">in</span> files {
+        <a class="symbol-link rs-fn" href="eos-overlay--src-path-change-rs.html#item-fn-capture-file-entry-204">capture_file_entry</a>(root, &amp;entry, emitted_opaque_dirs, changes)?;
+    }
+    <span class="rs-kw">for</span> entry <span class="rs-kw">in</span> &amp;dirs {
+        <span class="rs-kw">if</span> <a class="symbol-link rs-fn" href="eos-overlay--src-path-change-rs.html#item-fn-has-overlay-opaque-xattr-333">has_overlay_opaque_xattr</a>(entry) {
+            <span class="rs-kw">let</span> opaque_path = <a class="symbol-link rs-fn" href="eos-overlay--src-path-change-rs.html#item-fn-relative-overlay-path-292">relative_overlay_path</a>(root, entry)?;
+            <span class="rs-kw">if</span> emitted_opaque_dirs.insert(opaque_path.clone()) {
+                changes.push(<a class="symbol-link rs-type" href="eos-overlay--src-path-change-rs.html#item-struct-OverlayPathChange-34">OverlayPathChange</a>::<a class="symbol-link rs-fn" href="eos-overlay--src-path-change-rs.html#method-new-51">new</a>(
+                    &amp;opaque_path,
+                    <a class="symbol-link rs-type" href="eos-overlay--src-path-change-rs.html#item-enum-OverlayPathChangeKind-21">OverlayPathChangeKind</a>::<span class="rs-type">OpaqueDir</span>,
+                    <span class="rs-type">None</span>,
+                    <span class="rs-type">None</span>,
+                )?);
+            }
+        }
+    }
+    <span class="rs-kw">for</span> entry <span class="rs-kw">in</span> dirs {
+        <a class="symbol-link rs-fn" href="eos-overlay--src-path-change-rs.html#item-fn-walk-upperdir-159">walk_upperdir</a>(root, &amp;entry, emitted_opaque_dirs, changes)?;
+    }
+    <span class="rs-type">Ok</span>(())
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-overlay/src/path_change.rs:159</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn capture_file_entry private fn capture_file_entry (root : &amp; Path , entry : &amp; Path , emitted_opaque_dirs : &amp; mut HashSet &lt; String &gt; , changes : &amp; mut Vec &lt; OverlayPathChange &gt; ,) -&gt; Result &lt; () &gt; crates/eos-overlay/src/path_change.rs  ">
+</article><article id="item-fn-capture-file-entry-204" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn capture_file_entry private fn capture_file_entry (root : &amp; Path , entry : &amp; Path , emitted_opaque_dirs : &amp; mut HashSet &lt; String &gt; , changes : &amp; mut Vec &lt; OverlayPathChange &gt; ,) -&gt; Result &lt; () &gt; crates/eos-overlay/src/path_change.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>capture_file_entry</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn capture_file_entry (root : &amp; Path , entry : &amp; Path , emitted_opaque_dirs : &amp; mut HashSet &lt; String &gt; , changes : &amp; mut Vec &lt; OverlayPathChange &gt; ,) -&gt; Result &lt; () &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-overlay--src-path-change-rs.html#item-fn-capture-file-entry-204">capture_file_entry</a> (root : &amp; Path , entry : &amp; Path , emitted_opaque_dirs : &amp; mut HashSet &lt; String &gt; , changes : &amp; mut Vec &lt; <a class="symbol-link" href="eos-overlay--src-path-change-rs.html#item-struct-OverlayPathChange-34">OverlayPathChange</a> &gt; ,) -&gt; <a class="symbol-link" href="eos-overlay.html#item-type-Result-50">Result</a> &lt; () &gt;</code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-overlay--src-path-change-rs.html#item-fn-capture-file-entry-204">capture_file_entry</a>(
+    root: &amp;<span class="rs-type">Path</span>,
+    entry: &amp;<span class="rs-type">Path</span>,
+    emitted_opaque_dirs: &amp;<span class="rs-kw">mut</span> <span class="rs-type">HashSet</span>&lt;<span class="rs-type">String</span>&gt;,
+    changes: &amp;<span class="rs-kw">mut</span> <span class="rs-type">Vec</span>&lt;<a class="symbol-link rs-type" href="eos-overlay--src-path-change-rs.html#item-struct-OverlayPathChange-34">OverlayPathChange</a>&gt;,
+) -&gt; <a class="symbol-link rs-type" href="eos-overlay.html#item-type-Result-50">Result</a>&lt;()&gt; {
+    <span class="rs-kw">let</span> rel = <a class="symbol-link rs-fn" href="eos-overlay--src-path-change-rs.html#item-fn-relative-path-285">relative_path</a>(root, entry)?;
+    <span class="rs-kw">let</span> name = entry
+        .file_name()
+        .and_then(|name| name.to_str())
+        .unwrap_or_default();
+    <span class="rs-kw">if</span> name == <span class="rs-type">OPAQUE_MARKER</span> {
+        <span class="rs-kw">let</span> opaque_path = rel.parent().map(relative_to_string).unwrap_or_default();
+        <span class="rs-kw">if</span> emitted_opaque_dirs.insert(opaque_path.clone()) {
+            changes.push(<a class="symbol-link rs-type" href="eos-overlay--src-path-change-rs.html#item-struct-OverlayPathChange-34">OverlayPathChange</a>::<a class="symbol-link rs-fn" href="eos-overlay--src-path-change-rs.html#method-new-51">new</a>(
+                &amp;opaque_path,
+                <a class="symbol-link rs-type" href="eos-overlay--src-path-change-rs.html#item-enum-OverlayPathChangeKind-21">OverlayPathChangeKind</a>::<span class="rs-type">OpaqueDir</span>,
+                <span class="rs-type">None</span>,
+                <span class="rs-type">None</span>,
+            )?);
+        }
+        <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(());
+    }
+    <span class="rs-kw">if</span> <a class="symbol-link rs-fn" href="eos-overlay--src-path-change-rs.html#item-fn-is-whiteout-marker-303">is_whiteout_marker</a>(name) {
+        <span class="rs-kw">let</span> target = <a class="symbol-link rs-fn" href="eos-overlay--src-path-change-rs.html#item-fn-whiteout-target-307">whiteout_target</a>(&amp;rel);
+        changes.push(<a class="symbol-link rs-type" href="eos-overlay--src-path-change-rs.html#item-struct-OverlayPathChange-34">OverlayPathChange</a>::<a class="symbol-link rs-fn" href="eos-overlay--src-path-change-rs.html#method-new-51">new</a>(
+            &amp;<a class="symbol-link rs-fn" href="eos-overlay--src-path-change-rs.html#item-fn-relative-to-string-296">relative_to_string</a>(&amp;target),
+            <a class="symbol-link rs-type" href="eos-overlay--src-path-change-rs.html#item-enum-OverlayPathChangeKind-21">OverlayPathChangeKind</a>::<span class="rs-type">Delete</span>,
+            <span class="rs-type">None</span>,
+            <span class="rs-type">None</span>,
+        )?);
+        <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(());
+    }
+    <span class="rs-kw">if</span> <a class="symbol-link rs-fn" href="eos-overlay--src-path-change-rs.html#item-fn-is-overlay-whiteout-321">is_overlay_whiteout</a>(entry)? {
+        changes.push(<a class="symbol-link rs-type" href="eos-overlay--src-path-change-rs.html#item-struct-OverlayPathChange-34">OverlayPathChange</a>::<a class="symbol-link rs-fn" href="eos-overlay--src-path-change-rs.html#method-new-51">new</a>(
+            &amp;<a class="symbol-link rs-fn" href="eos-overlay--src-path-change-rs.html#item-fn-relative-to-string-296">relative_to_string</a>(&amp;rel),
+            <a class="symbol-link rs-type" href="eos-overlay--src-path-change-rs.html#item-enum-OverlayPathChangeKind-21">OverlayPathChangeKind</a>::<span class="rs-type">Delete</span>,
+            <span class="rs-type">None</span>,
+            <span class="rs-type">None</span>,
+        )?);
+        <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(());
+    }
+    <span class="rs-kw">let</span> meta = std::fs::symlink_metadata(entry).map_err(<a class="symbol-link rs-type" href="eos-overlay.html#item-enum-OverlayError-8">OverlayError</a>::<span class="rs-type">Capture</span>)?;
+    <span class="rs-kw">if</span> meta.file_type().is_symlink() {
+        changes.push(<a class="symbol-link rs-fn" href="eos-overlay--src-path-change-rs.html#item-fn-content-change-263">content_change</a>(
+            <a class="symbol-link rs-type" href="eos-overlay--src-path-change-rs.html#item-enum-OverlayPathChangeKind-21">OverlayPathChangeKind</a>::<span class="rs-type">Symlink</span>,
+            &amp;<a class="symbol-link rs-fn" href="eos-overlay--src-path-change-rs.html#item-fn-relative-to-string-296">relative_to_string</a>(&amp;rel),
+            entry,
+        )?);
+    } <span class="rs-kw">else</span> <span class="rs-kw">if</span> meta.is_file() {
+        changes.push(<a class="symbol-link rs-fn" href="eos-overlay--src-path-change-rs.html#item-fn-content-change-263">content_change</a>(
+            <a class="symbol-link rs-type" href="eos-overlay--src-path-change-rs.html#item-enum-OverlayPathChangeKind-21">OverlayPathChangeKind</a>::<span class="rs-type">Write</span>,
+            &amp;<a class="symbol-link rs-fn" href="eos-overlay--src-path-change-rs.html#item-fn-relative-to-string-296">relative_to_string</a>(&amp;rel),
+            entry,
+        )?);
+    }
+    <span class="rs-type">Ok</span>(())
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-overlay/src/path_change.rs:204</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn content_change private fn content_change (kind : OverlayPathChangeKind , path : &amp; str , entry : &amp; Path ,) -&gt; Result &lt; OverlayPathChange &gt; crates/eos-overlay/src/path_change.rs  ">
+</article><article id="item-fn-content-change-263" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn content_change private fn content_change (kind : OverlayPathChangeKind , path : &amp; str , entry : &amp; Path ,) -&gt; Result &lt; OverlayPathChange &gt; crates/eos-overlay/src/path_change.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>content_change</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn content_change (kind : OverlayPathChangeKind , path : &amp; str , entry : &amp; Path ,) -&gt; Result &lt; OverlayPathChange &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-overlay--src-path-change-rs.html#item-fn-content-change-263">content_change</a> (kind : <a class="symbol-link" href="eos-overlay--src-path-change-rs.html#item-enum-OverlayPathChangeKind-21">OverlayPathChangeKind</a> , path : &amp; str , entry : &amp; Path ,) -&gt; <a class="symbol-link" href="eos-overlay.html#item-type-Result-50">Result</a> &lt; <a class="symbol-link" href="eos-overlay--src-path-change-rs.html#item-struct-OverlayPathChange-34">OverlayPathChange</a> &gt;</code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-overlay--src-path-change-rs.html#item-fn-content-change-263">content_change</a>(
+    kind: <a class="symbol-link rs-type" href="eos-overlay--src-path-change-rs.html#item-enum-OverlayPathChangeKind-21">OverlayPathChangeKind</a>,
+    path: &amp;str,
+    entry: &amp;<span class="rs-type">Path</span>,
+) -&gt; <a class="symbol-link rs-type" href="eos-overlay.html#item-type-Result-50">Result</a>&lt;<a class="symbol-link rs-type" href="eos-overlay--src-path-change-rs.html#item-struct-OverlayPathChange-34">OverlayPathChange</a>&gt; {
+    <a class="symbol-link rs-type" href="eos-overlay--src-path-change-rs.html#item-struct-OverlayPathChange-34">OverlayPathChange</a>::<a class="symbol-link rs-fn" href="eos-overlay--src-path-change-rs.html#method-new-51">new</a>(
+        path,
+        kind,
+        <span class="rs-type">Some</span>(entry.to_string_lossy().into_owned()),
+        <span class="rs-type">Some</span>(<a class="symbol-link rs-fn" href="eos-overlay--src-path-change-rs.html#item-fn-content-hash-338">content_hash</a>(entry, kind == <a class="symbol-link rs-type" href="eos-overlay--src-path-change-rs.html#item-enum-OverlayPathChangeKind-21">OverlayPathChangeKind</a>::<span class="rs-type">Symlink</span>)?),
+    )
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-overlay/src/path_change.rs:263</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn normalize_overlay_path private fn normalize_overlay_path (path : &amp; str , allow_root : bool) -&gt; Result &lt; String &gt; crates/eos-overlay/src/path_change.rs  ">
+</article><article id="item-fn-normalize-overlay-path-276" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn normalize_overlay_path private fn normalize_overlay_path (path : &amp; str , allow_root : bool) -&gt; Result &lt; String &gt; crates/eos-overlay/src/path_change.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>normalize_overlay_path</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn normalize_overlay_path (path : &amp; str , allow_root : bool) -&gt; Result &lt; String &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-overlay--src-path-change-rs.html#item-fn-normalize-overlay-path-276">normalize_overlay_path</a> (path : &amp; str , allow_root : bool) -&gt; <a class="symbol-link" href="eos-overlay.html#item-type-Result-50">Result</a> &lt; String &gt;</code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-overlay--src-path-change-rs.html#item-fn-normalize-overlay-path-276">normalize_overlay_path</a>(path: &amp;str, allow_root: bool) -&gt; <a class="symbol-link rs-type" href="eos-overlay.html#item-type-Result-50">Result</a>&lt;<span class="rs-type">String</span>&gt; {
+    <span class="rs-kw">let</span> raw = path.replace(&#x27;\\&#x27;, &quot;/&quot;);
+    <span class="rs-kw">let</span> raw = raw.trim();
+    <span class="rs-kw">if</span> allow_root &amp;&amp; (raw.is_empty() || raw == &quot;.&quot;) {
+        <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<span class="rs-type">String</span>::<a class="symbol-link rs-fn" href="eos-overlay--src-path-change-rs.html#method-new-51">new</a>());
+    }
+    <span class="rs-type">Ok</span>(<span class="rs-type">LayerPath</span>::parse(raw)?.as_str().to_owned())
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-overlay/src/path_change.rs:276</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn relative_path private fn relative_path (root : &amp; Path , entry : &amp; Path) -&gt; Result &lt; PathBuf &gt; crates/eos-overlay/src/path_change.rs  ">
+</article><article id="item-fn-relative-path-285" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn relative_path private fn relative_path (root : &amp; Path , entry : &amp; Path) -&gt; Result &lt; PathBuf &gt; crates/eos-overlay/src/path_change.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>relative_path</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn relative_path (root : &amp; Path , entry : &amp; Path) -&gt; Result &lt; PathBuf &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-overlay--src-path-change-rs.html#item-fn-relative-path-285">relative_path</a> (root : &amp; Path , entry : &amp; Path) -&gt; <a class="symbol-link" href="eos-overlay.html#item-type-Result-50">Result</a> &lt; PathBuf &gt;</code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-overlay--src-path-change-rs.html#item-fn-relative-path-285">relative_path</a>(root: &amp;<span class="rs-type">Path</span>, entry: &amp;<span class="rs-type">Path</span>) -&gt; <a class="symbol-link rs-type" href="eos-overlay.html#item-type-Result-50">Result</a>&lt;<span class="rs-type">PathBuf</span>&gt; {
+    entry
+        .strip_prefix(root)
+        .map(<span class="rs-type">Path</span>::to_path_buf)
+        .map_err(|err| <a class="symbol-link rs-type" href="eos-overlay.html#item-enum-OverlayError-8">OverlayError</a>::<span class="rs-type">InvalidPathChange</span>(err.to_string()))
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-overlay/src/path_change.rs:285</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn relative_overlay_path private fn relative_overlay_path (root : &amp; Path , entry : &amp; Path) -&gt; Result &lt; String &gt; crates/eos-overlay/src/path_change.rs  ">
+</article><article id="item-fn-relative-overlay-path-292" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn relative_overlay_path private fn relative_overlay_path (root : &amp; Path , entry : &amp; Path) -&gt; Result &lt; String &gt; crates/eos-overlay/src/path_change.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>relative_overlay_path</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn relative_overlay_path (root : &amp; Path , entry : &amp; Path) -&gt; Result &lt; String &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-overlay--src-path-change-rs.html#item-fn-relative-overlay-path-292">relative_overlay_path</a> (root : &amp; Path , entry : &amp; Path) -&gt; <a class="symbol-link" href="eos-overlay.html#item-type-Result-50">Result</a> &lt; String &gt;</code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-overlay--src-path-change-rs.html#item-fn-relative-overlay-path-292">relative_overlay_path</a>(root: &amp;<span class="rs-type">Path</span>, entry: &amp;<span class="rs-type">Path</span>) -&gt; <a class="symbol-link rs-type" href="eos-overlay.html#item-type-Result-50">Result</a>&lt;<span class="rs-type">String</span>&gt; {
+    <a class="symbol-link rs-fn" href="eos-overlay--src-path-change-rs.html#item-fn-relative-path-285">relative_path</a>(root, entry).map(|path| <a class="symbol-link rs-fn" href="eos-overlay--src-path-change-rs.html#item-fn-relative-to-string-296">relative_to_string</a>(&amp;path))
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-overlay/src/path_change.rs:292</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn relative_to_string private fn relative_to_string (path : &amp; Path) -&gt; String crates/eos-overlay/src/path_change.rs  ">
+</article><article id="item-fn-relative-to-string-296" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn relative_to_string private fn relative_to_string (path : &amp; Path) -&gt; String crates/eos-overlay/src/path_change.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>relative_to_string</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn relative_to_string (path : &amp; Path) -&gt; String</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-overlay--src-path-change-rs.html#item-fn-relative-to-string-296">relative_to_string</a> (path : &amp; Path) -&gt; String</code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-overlay--src-path-change-rs.html#item-fn-relative-to-string-296">relative_to_string</a>(path: &amp;<span class="rs-type">Path</span>) -&gt; <span class="rs-type">String</span> {
+    path.components()
+        .map(|component| component.as_os_str().to_string_lossy())
+        .collect::&lt;<span class="rs-type">Vec</span>&lt;_&gt;&gt;()
+        .join(&quot;/&quot;)
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-overlay/src/path_change.rs:296</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn is_whiteout_marker private fn is_whiteout_marker (name : &amp; str) -&gt; bool crates/eos-overlay/src/path_change.rs  ">
+</article><article id="item-fn-is-whiteout-marker-303" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn is_whiteout_marker private fn is_whiteout_marker (name : &amp; str) -&gt; bool crates/eos-overlay/src/path_change.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>is_whiteout_marker</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn is_whiteout_marker (name : &amp; str) -&gt; bool</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-overlay--src-path-change-rs.html#item-fn-is-whiteout-marker-303">is_whiteout_marker</a> (name : &amp; str) -&gt; bool</code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-overlay--src-path-change-rs.html#item-fn-is-whiteout-marker-303">is_whiteout_marker</a>(name: &amp;str) -&gt; bool {
+    name.starts_with(<span class="rs-type">WHITEOUT_PREFIX</span>) &amp;&amp; name != <span class="rs-type">OPAQUE_MARKER</span> &amp;&amp; name.len() &gt; <span class="rs-type">WHITEOUT_PREFIX</span>.len()
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-overlay/src/path_change.rs:303</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn whiteout_target private fn whiteout_target (rel : &amp; Path) -&gt; PathBuf crates/eos-overlay/src/path_change.rs  ">
+</article><article id="item-fn-whiteout-target-307" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn whiteout_target private fn whiteout_target (rel : &amp; Path) -&gt; PathBuf crates/eos-overlay/src/path_change.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>whiteout_target</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn whiteout_target (rel : &amp; Path) -&gt; PathBuf</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-overlay--src-path-change-rs.html#item-fn-whiteout-target-307">whiteout_target</a> (rel : &amp; Path) -&gt; PathBuf</code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-overlay--src-path-change-rs.html#item-fn-whiteout-target-307">whiteout_target</a>(rel: &amp;<span class="rs-type">Path</span>) -&gt; <span class="rs-type">PathBuf</span> {
+    <span class="rs-kw">let</span> name = rel
+        .file_name()
+        .and_then(|name| name.to_str())
+        .unwrap_or_default();
+    <span class="rs-kw">let</span> target_name = &amp;name[<span class="rs-type">WHITEOUT_PREFIX</span>.len()..];
+    rel.parent()
+        .filter(|parent| !parent.as_os_str().is_empty())
+        .map_or_else(
+            || <span class="rs-type">PathBuf</span>::from(target_name),
+            |parent| parent.join(target_name),
+        )
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-overlay/src/path_change.rs:307</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn is_overlay_whiteout private fn is_overlay_whiteout (entry : &amp; Path) -&gt; Result &lt; bool &gt; crates/eos-overlay/src/path_change.rs  ">
+</article><article id="item-fn-is-overlay-whiteout-321" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn is_overlay_whiteout private fn is_overlay_whiteout (entry : &amp; Path) -&gt; Result &lt; bool &gt; crates/eos-overlay/src/path_change.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>is_overlay_whiteout</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn is_overlay_whiteout (entry : &amp; Path) -&gt; Result &lt; bool &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-overlay--src-path-change-rs.html#item-fn-is-overlay-whiteout-321">is_overlay_whiteout</a> (entry : &amp; Path) -&gt; <a class="symbol-link" href="eos-overlay.html#item-type-Result-50">Result</a> &lt; bool &gt;</code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-overlay--src-path-change-rs.html#item-fn-is-overlay-whiteout-321">is_overlay_whiteout</a>(entry: &amp;<span class="rs-type">Path</span>) -&gt; <a class="symbol-link rs-type" href="eos-overlay.html#item-type-Result-50">Result</a>&lt;bool&gt; {
+    <span class="rs-kw">let</span> meta = std::fs::symlink_metadata(entry).map_err(<a class="symbol-link rs-type" href="eos-overlay.html#item-enum-OverlayError-8">OverlayError</a>::<span class="rs-type">Capture</span>)?;
+    #[cfg(unix)]
+    {
+        <span class="rs-kw">use</span> std::os::unix::fs::{<span class="rs-type">FileTypeExt</span>, <span class="rs-type">MetadataExt</span>};
+        <span class="rs-kw">if</span> meta.file_type().is_char_device() &amp;&amp; meta.rdev() == 0 {
+            <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<span class="rs-kw">true</span>);
+        }
+    }
+    <span class="rs-type">Ok</span>(meta.is_file() &amp;&amp; meta.len() == 0 &amp;&amp; <a class="symbol-link rs-fn" href="eos-overlay--src-path-change-rs.html#item-fn-xattr-value-353">xattr_value</a>(entry, &quot;user.overlay.whiteout&quot;)?.is_some())
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-overlay/src/path_change.rs:321</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn has_overlay_opaque_xattr private fn has_overlay_opaque_xattr (entry : &amp; Path) -&gt; bool crates/eos-overlay/src/path_change.rs  ">
+</article><article id="item-fn-has-overlay-opaque-xattr-333" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn has_overlay_opaque_xattr private fn has_overlay_opaque_xattr (entry : &amp; Path) -&gt; bool crates/eos-overlay/src/path_change.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>has_overlay_opaque_xattr</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn has_overlay_opaque_xattr (entry : &amp; Path) -&gt; bool</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-overlay--src-path-change-rs.html#item-fn-has-overlay-opaque-xattr-333">has_overlay_opaque_xattr</a> (entry : &amp; Path) -&gt; bool</code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-overlay--src-path-change-rs.html#item-fn-has-overlay-opaque-xattr-333">has_overlay_opaque_xattr</a>(entry: &amp;<span class="rs-type">Path</span>) -&gt; bool {
+    matches!(<a class="symbol-link rs-fn" href="eos-overlay--src-path-change-rs.html#item-fn-xattr-value-353">xattr_value</a>(entry, &quot;trusted.overlay.opaque&quot;), <span class="rs-type">Ok</span>(<span class="rs-type">Some</span>(value)) <span class="rs-kw">if</span> value == b&quot;y&quot;)
+        || matches!(<a class="symbol-link rs-fn" href="eos-overlay--src-path-change-rs.html#item-fn-xattr-value-353">xattr_value</a>(entry, &quot;user.overlay.opaque&quot;), <span class="rs-type">Ok</span>(<span class="rs-type">Some</span>(value)) <span class="rs-kw">if</span> value == b&quot;y&quot;)
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-overlay/src/path_change.rs:333</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn content_hash private fn content_hash (path : &amp; Path , symlink : bool) -&gt; Result &lt; String &gt; crates/eos-overlay/src/path_change.rs  ">
+</article><article id="item-fn-content-hash-338" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn content_hash private fn content_hash (path : &amp; Path , symlink : bool) -&gt; Result &lt; String &gt; crates/eos-overlay/src/path_change.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>content_hash</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn content_hash (path : &amp; Path , symlink : bool) -&gt; Result &lt; String &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-overlay--src-path-change-rs.html#item-fn-content-hash-338">content_hash</a> (path : &amp; Path , symlink : bool) -&gt; <a class="symbol-link" href="eos-overlay.html#item-type-Result-50">Result</a> &lt; String &gt;</code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-overlay--src-path-change-rs.html#item-fn-content-hash-338">content_hash</a>(path: &amp;<span class="rs-type">Path</span>, symlink: bool) -&gt; <a class="symbol-link rs-type" href="eos-overlay.html#item-type-Result-50">Result</a>&lt;<span class="rs-type">String</span>&gt; {
+    <span class="rs-kw">let</span> data = <span class="rs-kw">if</span> symlink {
+        std::fs::read_link(path)
+            .map_err(<a class="symbol-link rs-type" href="eos-overlay.html#item-enum-OverlayError-8">OverlayError</a>::<span class="rs-type">Capture</span>)?
+            .to_string_lossy()
+            .into_owned()
+            .into_bytes()
+    } <span class="rs-kw">else</span> {
+        std::fs::read(path).map_err(<a class="symbol-link rs-type" href="eos-overlay.html#item-enum-OverlayError-8">OverlayError</a>::<span class="rs-type">Capture</span>)?
+    };
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> hasher = <span class="rs-type">Sha256</span>::<a class="symbol-link rs-fn" href="eos-overlay--src-path-change-rs.html#method-new-51">new</a>();
+    hasher.update(data);
+    <span class="rs-type">Ok</span>(format!(&quot;{:x}&quot;, hasher.finalize()))
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-overlay/src/path_change.rs:338</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn xattr_value private fn xattr_value (path : &amp; Path , name : &amp; str) -&gt; Result &lt; Option &lt; Vec &lt; u8 &gt; &gt; &gt; crates/eos-overlay/src/path_change.rs  ">
+</article><article id="item-fn-xattr-value-353" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn xattr_value private fn xattr_value (path : &amp; Path , name : &amp; str) -&gt; Result &lt; Option &lt; Vec &lt; u8 &gt; &gt; &gt; crates/eos-overlay/src/path_change.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>xattr_value</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn xattr_value (path : &amp; Path , name : &amp; str) -&gt; Result &lt; Option &lt; Vec &lt; u8 &gt; &gt; &gt;</code>
-  <div class="tags"></div>
+  <code class="signature">fn <a class="symbol-link" href="eos-overlay--src-path-change-rs.html#item-fn-xattr-value-353">xattr_value</a> (path : &amp; Path , name : &amp; str) -&gt; <a class="symbol-link" href="eos-overlay.html#item-type-Result-50">Result</a> &lt; Option &lt; Vec &lt; u8 &gt; &gt; &gt;</code>
+  <div class="tags"><span>cfg: target_os</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>#[cfg(target_os = &quot;linux&quot;)]
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-overlay--src-path-change-rs.html#item-fn-xattr-value-353">xattr_value</a>(path: &amp;<span class="rs-type">Path</span>, name: &amp;str) -&gt; <a class="symbol-link rs-type" href="eos-overlay.html#item-type-Result-50">Result</a>&lt;<span class="rs-type">Option</span>&lt;<span class="rs-type">Vec</span>&lt;u8&gt;&gt;&gt; {
+    <span class="rs-kw">use</span> std::ffi::<span class="rs-type">CString</span>;
+    <span class="rs-kw">use</span> std::os::unix::ffi::<span class="rs-type">OsStrExt</span>;
+
+    <span class="rs-kw">let</span> path = <span class="rs-type">CString</span>::<a class="symbol-link rs-fn" href="eos-overlay--src-path-change-rs.html#method-new-51">new</a>(path.as_os_str().as_bytes())
+        .map_err(|err| <a class="symbol-link rs-type" href="eos-overlay.html#item-enum-OverlayError-8">OverlayError</a>::<span class="rs-type">InvalidPathChange</span>(err.to_string()))?;
+    <span class="rs-kw">let</span> name =
+        <span class="rs-type">CString</span>::<a class="symbol-link rs-fn" href="eos-overlay--src-path-change-rs.html#method-new-51">new</a>(name).map_err(|err| <a class="symbol-link rs-type" href="eos-overlay.html#item-enum-OverlayError-8">OverlayError</a>::<span class="rs-type">InvalidPathChange</span>(err.to_string()))?;
+    <span class="rs-comment">// SAFETY: `path` and `name` are live NUL-terminated C strings, and a null</span>
+    <span class="rs-comment">// value pointer with size 0 is the documented probe form for getxattr.</span>
+    <span class="rs-kw">let</span> len = <span class="rs-kw">unsafe</span> { libc::getxattr(path.as_ptr(), name.as_ptr(), std::ptr::null_mut(), 0) };
+    <span class="rs-kw">if</span> len &lt; 0 {
+        <span class="rs-kw">let</span> err = std::io::<span class="rs-type">Error</span>::last_os_error();
+        <span class="rs-kw">return</span> <span class="rs-kw">match</span> err.raw_os_error() {
+            <span class="rs-type">Some</span>(libc::<span class="rs-type">ENODATA</span> | libc::<span class="rs-type">EOPNOTSUPP</span>) =&gt; <span class="rs-type">Ok</span>(<span class="rs-type">None</span>),
+            _ =&gt; <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-overlay.html#item-enum-OverlayError-8">OverlayError</a>::<span class="rs-type">Capture</span>(err)),
+        };
+    }
+    <span class="rs-kw">let</span> len = usize::try_from(len).map_err(|_| {
+        <a class="symbol-link rs-type" href="eos-overlay.html#item-enum-OverlayError-8">OverlayError</a>::<span class="rs-type">Capture</span>(std::io::<span class="rs-type">Error</span>::<a class="symbol-link rs-fn" href="eos-overlay--src-path-change-rs.html#method-new-51">new</a>(
+            std::io::<span class="rs-type">ErrorKind</span>::<span class="rs-type">InvalidData</span>,
+            &quot;xattr length does not fit usize&quot;,
+        ))
+    })?;
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> buffer = vec![0u8; len];
+    <span class="rs-comment">// SAFETY: `buffer` is allocated with the size returned by the first</span>
+    <span class="rs-comment">// getxattr call, and its mutable pointer remains valid for `buffer.len()`</span>
+    <span class="rs-comment">// bytes for the duration of this FFI call.</span>
+    <span class="rs-kw">let</span> read = <span class="rs-kw">unsafe</span> {
+        libc::getxattr(
+            path.as_ptr(),
+            name.as_ptr(),
+            buffer.as_mut_ptr().cast(),
+            buffer.len(),
+        )
+    };
+    <span class="rs-kw">if</span> read &lt; 0 {
+        <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-overlay.html#item-enum-OverlayError-8">OverlayError</a>::<span class="rs-type">Capture</span>(std::io::<span class="rs-type">Error</span>::last_os_error()));
+    }
+    <span class="rs-kw">let</span> read = usize::try_from(read).map_err(|_| {
+        <a class="symbol-link rs-type" href="eos-overlay.html#item-enum-OverlayError-8">OverlayError</a>::<span class="rs-type">Capture</span>(std::io::<span class="rs-type">Error</span>::<a class="symbol-link rs-fn" href="eos-overlay--src-path-change-rs.html#method-new-51">new</a>(
+            std::io::<span class="rs-type">ErrorKind</span>::<span class="rs-type">InvalidData</span>,
+            &quot;xattr read length does not fit usize&quot;,
+        ))
+    })?;
+    buffer.truncate(read);
+    <span class="rs-type">Ok</span>(<span class="rs-type">Some</span>(buffer))
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-overlay/src/path_change.rs:353</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn xattr_value private const fn xattr_value (_path : &amp; Path , _name : &amp; str) -&gt; Result &lt; Option &lt; Vec &lt; u8 &gt; &gt; &gt; crates/eos-overlay/src/path_change.rs  ">
+</article><article id="item-fn-xattr-value-403" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn xattr_value private const fn xattr_value (_path : &amp; Path , _name : &amp; str) -&gt; Result &lt; Option &lt; Vec &lt; u8 &gt; &gt; &gt; crates/eos-overlay/src/path_change.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>xattr_value</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">const fn xattr_value (_path : &amp; Path , _name : &amp; str) -&gt; Result &lt; Option &lt; Vec &lt; u8 &gt; &gt; &gt;</code>
-  <div class="tags"></div>
+  <code class="signature">const fn <a class="symbol-link" href="eos-overlay--src-path-change-rs.html#item-fn-xattr-value-353">xattr_value</a> (_path : &amp; Path , _name : &amp; str) -&gt; <a class="symbol-link" href="eos-overlay.html#item-type-Result-50">Result</a> &lt; Option &lt; Vec &lt; u8 &gt; &gt; &gt;</code>
+  <div class="tags"><span>cfg: not</span><span>expect: clippy::unnecessary_wraps</span><span>expect: reason</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>#[cfg(not(target_os = &quot;linux&quot;))]
+<span class="rs-comment">// Keep the same fallible helper signature as Linux so whiteout/opaque detection</span>
+<span class="rs-comment">// call sites stay cfg-free; xattrs simply do not contribute off Linux.</span>
+#[expect(
+    clippy::unnecessary_wraps,
+    reason = &quot;non-<span class="rs-type">Linux</span> parity keeps the <span class="rs-type">Linux</span> fallible helper signature&quot;
+)]
+<span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-overlay--src-path-change-rs.html#item-fn-xattr-value-353">xattr_value</a>(_path: &amp;<span class="rs-type">Path</span>, _name: &amp;str) -&gt; <a class="symbol-link rs-type" href="eos-overlay.html#item-type-Result-50">Result</a>&lt;<span class="rs-type">Option</span>&lt;<span class="rs-type">Vec</span>&lt;u8&gt;&gt;&gt; {
+    <span class="rs-type">Ok</span>(<span class="rs-type">None</span>)
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-overlay/src/path_change.rs:403</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn validates_overlay_path_change_fields private fn validates_overlay_path_change_fields () crates/eos-overlay/src/path_change.rs  ">
+</article><article id="item-fn-validates-overlay-path-change-fields-423" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn validates_overlay_path_change_fields private fn validates_overlay_path_change_fields () crates/eos-overlay/src/path_change.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>validates_overlay_path_change_fields</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn validates_overlay_path_change_fields ()</code>
-  <div class="tags"></div>
+  <code class="signature">fn <a class="symbol-link" href="eos-overlay--src-path-change-rs.html#item-fn-validates-overlay-path-change-fields-423">validates_overlay_path_change_fields</a> ()</code>
+  <div class="tags"><span>test</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-overlay--src-path-change-rs.html#item-fn-validates-overlay-path-change-fields-423">validates_overlay_path_change_fields</a>() {
+        assert!(<a class="symbol-link rs-type" href="eos-overlay--src-path-change-rs.html#item-struct-OverlayPathChange-34">OverlayPathChange</a>::<a class="symbol-link rs-fn" href="eos-overlay--src-path-change-rs.html#method-new-51">new</a>(
+            &quot;a.txt&quot;,
+            <a class="symbol-link rs-type" href="eos-overlay--src-path-change-rs.html#item-enum-OverlayPathChangeKind-21">OverlayPathChangeKind</a>::<span class="rs-type">Write</span>,
+            <span class="rs-type">Some</span>(&quot;/tmp/a&quot;.to_owned()),
+            <span class="rs-type">Some</span>(&quot;hash&quot;.to_owned()),
+        )
+        .is_ok());
+        assert!(<a class="symbol-link rs-type" href="eos-overlay--src-path-change-rs.html#item-struct-OverlayPathChange-34">OverlayPathChange</a>::<a class="symbol-link rs-fn" href="eos-overlay--src-path-change-rs.html#method-new-51">new</a>(&quot;a.txt&quot;, <a class="symbol-link rs-type" href="eos-overlay--src-path-change-rs.html#item-enum-OverlayPathChangeKind-21">OverlayPathChangeKind</a>::<span class="rs-type">Write</span>, <span class="rs-type">None</span>, <span class="rs-type">None</span>).is_err());
+        assert!(<a class="symbol-link rs-type" href="eos-overlay--src-path-change-rs.html#item-struct-OverlayPathChange-34">OverlayPathChange</a>::<a class="symbol-link rs-fn" href="eos-overlay--src-path-change-rs.html#method-new-51">new</a>(
+            &quot;a.txt&quot;,
+            <a class="symbol-link rs-type" href="eos-overlay--src-path-change-rs.html#item-enum-OverlayPathChangeKind-21">OverlayPathChangeKind</a>::<span class="rs-type">Delete</span>,
+            <span class="rs-type">Some</span>(&quot;/tmp/a&quot;.to_owned()),
+            <span class="rs-type">None</span>,
+        )
+        .is_err());
+    }
+</code></pre>
+</details>
 
   <p class="source">crates/eos-overlay/src/path_change.rs:423</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn captures_upperdir_files_whiteouts_symlinks_and_opaque_markers private fn captures_upperdir_files_whiteouts_symlinks_and_opaque_markers () -&gt; TestResult crates/eos-overlay/src/path_change.rs  ">
+</article><article id="item-fn-captures-upperdir-files-whiteouts-symlinks-and-opaque-markers-442" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn captures_upperdir_files_whiteouts_symlinks_and_opaque_markers private fn captures_upperdir_files_whiteouts_symlinks_and_opaque_markers () -&gt; TestResult crates/eos-overlay/src/path_change.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>captures_upperdir_files_whiteouts_symlinks_and_opaque_markers</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn captures_upperdir_files_whiteouts_symlinks_and_opaque_markers () -&gt; TestResult</code>
-  <div class="tags"></div>
+  <code class="signature">fn <a class="symbol-link" href="eos-overlay--src-path-change-rs.html#item-fn-captures-upperdir-files-whiteouts-symlinks-and-opaque-markers-442">captures_upperdir_files_whiteouts_symlinks_and_opaque_markers</a> () -&gt; <a class="symbol-link" href="eos-overlay--src-kernel-mount-rs.html#item-type-TestResult-385">TestResult</a></code>
+  <div class="tags"><span>test</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-overlay--src-path-change-rs.html#item-fn-captures-upperdir-files-whiteouts-symlinks-and-opaque-markers-442">captures_upperdir_files_whiteouts_symlinks_and_opaque_markers</a>() -&gt; <a class="symbol-link rs-type" href="eos-overlay--src-kernel-mount-rs.html#item-type-TestResult-385">TestResult</a> {
+        <span class="rs-kw">let</span> fixture = <a class="symbol-link rs-type" href="eos-overlay--src-path-change-rs.html#item-struct-Fixture-470">Fixture</a>::<a class="symbol-link rs-fn" href="eos-overlay--src-path-change-rs.html#method-new-51">new</a>(&quot;capture_upperdir&quot;)?;
+        std::fs::create_dir_all(fixture.base.join(&quot;dir&quot;))?;
+        std::fs::write(fixture.base.join(&quot;dir/file.txt&quot;), b&quot;hello&quot;)?;
+        std::fs::write(fixture.base.join(&quot;.wh.old.txt&quot;), b&quot;&quot;)?;
+        std::fs::write(fixture.base.join(&quot;dir&quot;).join(<span class="rs-type">OPAQUE_MARKER</span>), b&quot;&quot;)?;
+        std::os::unix::fs::symlink(&quot;../target&quot;, fixture.base.join(&quot;link&quot;))?;
+
+        <span class="rs-kw">let</span> changes = <a class="symbol-link rs-fn" href="eos-overlay--src-path-change-rs.html#item-fn-capture-upperdir-137">capture_upperdir</a>(&amp;fixture.base)?;
+
+        assert!(changes.contains(&amp;<span class="rs-type">LayerChange</span>::<span class="rs-type">Write</span> {
+            path: <span class="rs-type">LayerPath</span>::parse(&quot;dir/file.txt&quot;)?,
+            content: b&quot;hello&quot;.to_vec(),
+        }));
+        assert!(changes.contains(&amp;<span class="rs-type">LayerChange</span>::<span class="rs-type">Delete</span> {
+            path: <span class="rs-type">LayerPath</span>::parse(&quot;old.txt&quot;)?,
+        }));
+        assert!(changes.contains(&amp;<span class="rs-type">LayerChange</span>::<span class="rs-type">Symlink</span> {
+            path: <span class="rs-type">LayerPath</span>::parse(&quot;link&quot;)?,
+            source_path: &quot;../target&quot;.to_owned(),
+        }));
+        assert!(changes.contains(&amp;<span class="rs-type">LayerChange</span>::<span class="rs-type">OpaqueDir</span> {
+            path: <span class="rs-type">LayerPath</span>::parse(&quot;dir&quot;)?,
+        }));
+        <span class="rs-type">Ok</span>(())
+    }
+</code></pre>
+</details>
 
   <p class="source">crates/eos-overlay/src/path_change.rs:442</p>
 </article></div>
 </section></div>
 </main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/eos-overlay/src/path_change.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-comment">//! Policy-blind path changes captured from a snapshot overlay, plus the</span>
+<span class="rs-comment">//! ONE-WAY conversion into `eos_protocol::LayerChange`.</span>
+<span class="rs-comment">//!</span>
+<span class="rs-comment">//! This conversion lives HERE (occ depends on it one-way; overlay has NO occ</span>
+<span class="rs-comment">//! dep — the `occ → overlay` edge stays acyclic). The capture half walks ONLY</span>
+<span class="rs-comment">//! the overlay `upperdir`: capture + publish is one atomic unit per op, so a</span>
+<span class="rs-comment">//! consumer never observes a partial write set. Other agents never see a</span>
+<span class="rs-comment">//! half-captured upperdir.</span>
+
+<span class="rs-kw">use</span> std::collections::<span class="rs-type">HashSet</span>;
+<span class="rs-kw">use</span> std::path::{<span class="rs-type">Path</span>, <span class="rs-type">PathBuf</span>};
+
+<span class="rs-kw">use</span> eos_protocol::{<span class="rs-type">LayerChange</span>, <span class="rs-type">LayerPath</span>};
+<span class="rs-kw">use</span> sha2::{<span class="rs-type">Digest</span>, <span class="rs-type">Sha256</span>};
+
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::error::{<a class="symbol-link rs-type" href="eos-overlay.html#item-enum-OverlayError-8">OverlayError</a>, <a class="symbol-link rs-type" href="eos-overlay.html#item-type-Result-50">Result</a>};
+
+<span class="rs-kw">const</span> <span class="rs-type">WHITEOUT_PREFIX</span>: &amp;str = &quot;.wh.&quot;;
+<span class="rs-kw">const</span> <span class="rs-type">OPAQUE_MARKER</span>: &amp;str = &quot;.wh..wh..opq&quot;;
+
+<span class="rs-comment">/// The kind of a captured overlay path change.</span>
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">Copy</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Eq</span>)]
+<span class="rs-kw">pub</span> <span class="rs-kw">enum</span> <a class="symbol-link rs-type" href="eos-overlay--src-path-change-rs.html#item-enum-OverlayPathChangeKind-21">OverlayPathChangeKind</a> {
+    <span class="rs-comment">/// File content write; `content_path` + `final_hash` required.</span>
+    <span class="rs-type">Write</span>,
+    <span class="rs-comment">/// File/dir removal (overlay whiteout).</span>
+    <span class="rs-type">Delete</span>,
+    <span class="rs-comment">/// Symlink; `content_path` (link target capture) + `final_hash` required.</span>
+    <span class="rs-type">Symlink</span>,
+    <span class="rs-comment">/// Opaque-directory marker (root path allowed).</span>
+    <span class="rs-type">OpaqueDir</span>,
+}
+
+<span class="rs-comment">/// A single change captured from the overlay upperdir.</span>
+<span class="rs-comment">///</span>
+<span class="rs-comment">/// Before layer-stack policy is applied. `path` is normalized; `write`/`symlink`</span>
+<span class="rs-comment">/// carry a staged `content_path` + `final_hash`, the others carry neither.</span>
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Eq</span>)]
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-overlay--src-path-change-rs.html#item-struct-OverlayPathChange-34">OverlayPathChange</a> {
+    <span class="rs-comment">/// Normalized relative layer path (root `""` allowed only for `opaque_dir`).</span>
+    <span class="rs-kw">pub</span> path: <span class="rs-type">String</span>,
+    <span class="rs-comment">/// The change kind.</span>
+    <span class="rs-kw">pub</span> kind: <a class="symbol-link rs-type" href="eos-overlay--src-path-change-rs.html#item-enum-OverlayPathChangeKind-21">OverlayPathChangeKind</a>,
+    <span class="rs-comment">/// Staged content path on disk (`write`/`symlink` only).</span>
+    <span class="rs-kw">pub</span> content_path: <span class="rs-type">Option</span>&lt;<span class="rs-type">String</span>&gt;,
+    <span class="rs-comment">/// `sha256` hex of the staged content (`write`/`symlink` only).</span>
+    <span class="rs-kw">pub</span> final_hash: <span class="rs-type">Option</span>&lt;<span class="rs-type">String</span>&gt;,
+}
+
+<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-overlay--src-path-change-rs.html#item-struct-OverlayPathChange-34">OverlayPathChange</a> {
+    <span class="rs-comment">/// Validate-and-construct: normalize the path (root allowed only for</span>
+    <span class="rs-comment">/// `opaque_dir`), require</span>
+    <span class="rs-comment">/// `content_path`+`final_hash` for `write`/`symlink`, forbid them otherwise.</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// # Errors</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// Returns [`OverlayError::InvalidPathChange`] when path normalization or</span>
+    <span class="rs-comment">/// per-kind payload validation fails.</span>
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-overlay--src-path-change-rs.html#method-new-51">new</a>(
+        path: &amp;str,
+        kind: <a class="symbol-link rs-type" href="eos-overlay--src-path-change-rs.html#item-enum-OverlayPathChangeKind-21">OverlayPathChangeKind</a>,
+        content_path: <span class="rs-type">Option</span>&lt;<span class="rs-type">String</span>&gt;,
+        final_hash: <span class="rs-type">Option</span>&lt;<span class="rs-type">String</span>&gt;,
+    ) -&gt; <a class="symbol-link rs-type" href="eos-overlay.html#item-type-Result-50">Result</a>&lt;<span class="rs-self">Self</span>&gt; {
+        <span class="rs-kw">let</span> path = <a class="symbol-link rs-fn" href="eos-overlay--src-path-change-rs.html#item-fn-normalize-overlay-path-276">normalize_overlay_path</a>(path, kind == <a class="symbol-link rs-type" href="eos-overlay--src-path-change-rs.html#item-enum-OverlayPathChangeKind-21">OverlayPathChangeKind</a>::<span class="rs-type">OpaqueDir</span>)?;
+        <span class="rs-kw">match</span> kind {
+            <a class="symbol-link rs-type" href="eos-overlay--src-path-change-rs.html#item-enum-OverlayPathChangeKind-21">OverlayPathChangeKind</a>::<span class="rs-type">Write</span> | <a class="symbol-link rs-type" href="eos-overlay--src-path-change-rs.html#item-enum-OverlayPathChangeKind-21">OverlayPathChangeKind</a>::<span class="rs-type">Symlink</span> =&gt; {
+                <span class="rs-kw">if</span> content_path.as_deref().unwrap_or_default().is_empty() {
+                    <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-overlay.html#item-enum-OverlayError-8">OverlayError</a>::<span class="rs-type">InvalidPathChange</span>(format!(
+                        &quot;{kind:?} changes require content_path&quot;
+                    )));
+                }
+                <span class="rs-kw">if</span> final_hash.as_deref().unwrap_or_default().is_empty() {
+                    <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-overlay.html#item-enum-OverlayError-8">OverlayError</a>::<span class="rs-type">InvalidPathChange</span>(format!(
+                        &quot;{kind:?} changes require final_hash&quot;
+                    )));
+                }
+            }
+            <a class="symbol-link rs-type" href="eos-overlay--src-path-change-rs.html#item-enum-OverlayPathChangeKind-21">OverlayPathChangeKind</a>::<span class="rs-type">Delete</span> | <a class="symbol-link rs-type" href="eos-overlay--src-path-change-rs.html#item-enum-OverlayPathChangeKind-21">OverlayPathChangeKind</a>::<span class="rs-type">OpaqueDir</span> =&gt; {
+                <span class="rs-kw">if</span> content_path.is_some() {
+                    <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-overlay.html#item-enum-OverlayError-8">OverlayError</a>::<span class="rs-type">InvalidPathChange</span>(format!(
+                        &quot;{kind:?} changes must not carry content_path&quot;
+                    )));
+                }
+                <span class="rs-kw">if</span> final_hash.is_some() {
+                    <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-overlay.html#item-enum-OverlayError-8">OverlayError</a>::<span class="rs-type">InvalidPathChange</span>(format!(
+                        &quot;{kind:?} changes must not carry final_hash&quot;
+                    )));
+                }
+            }
+        }
+        <span class="rs-type">Ok</span>(<span class="rs-self">Self</span> {
+            path,
+            kind,
+            content_path,
+            final_hash,
+        })
+    }
+
+    <span class="rs-comment">/// Convert this overlay-side change into the storage-level</span>
+    <span class="rs-comment">/// `eos_protocol::LayerChange`. ONE-WAY: occ consumes this; overlay never</span>
+    <span class="rs-comment">/// imports occ. `write` threads the precomputed `content_path`/`final_hash`;</span>
+    <span class="rs-comment">/// `symlink` reads the link target (`os.readlink`).</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// # Errors</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// Returns [`OverlayError`] when the captured path is invalid or when staged</span>
+    <span class="rs-comment">/// content/link-target reads fail.</span>
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-overlay--src-path-change-rs.html#method-into-layer-change-100">into_layer_change</a>(<span class="rs-self">self</span>) -&gt; <a class="symbol-link rs-type" href="eos-overlay.html#item-type-Result-50">Result</a>&lt;<span class="rs-type">LayerChange</span>&gt; {
+        <span class="rs-kw">let</span> path = <span class="rs-type">LayerPath</span>::parse(&amp;<span class="rs-self">self</span>.path)?;
+        <span class="rs-kw">match</span> <span class="rs-self">self</span>.kind {
+            <a class="symbol-link rs-type" href="eos-overlay--src-path-change-rs.html#item-enum-OverlayPathChangeKind-21">OverlayPathChangeKind</a>::<span class="rs-type">Write</span> =&gt; {
+                <span class="rs-kw">let</span> content_path = <span class="rs-self">self</span>.content_path.ok_or_else(|| {
+                    <a class="symbol-link rs-type" href="eos-overlay.html#item-enum-OverlayError-8">OverlayError</a>::<span class="rs-type">InvalidPathChange</span>(&quot;write changes require content_path&quot;.to_owned())
+                })?;
+                <span class="rs-kw">let</span> content = std::fs::read(content_path).map_err(<a class="symbol-link rs-type" href="eos-overlay.html#item-enum-OverlayError-8">OverlayError</a>::<span class="rs-type">Capture</span>)?;
+                <span class="rs-type">Ok</span>(<span class="rs-type">LayerChange</span>::<span class="rs-type">Write</span> { path, content })
+            }
+            <a class="symbol-link rs-type" href="eos-overlay--src-path-change-rs.html#item-enum-OverlayPathChangeKind-21">OverlayPathChangeKind</a>::<span class="rs-type">Delete</span> =&gt; <span class="rs-type">Ok</span>(<span class="rs-type">LayerChange</span>::<span class="rs-type">Delete</span> { path }),
+            <a class="symbol-link rs-type" href="eos-overlay--src-path-change-rs.html#item-enum-OverlayPathChangeKind-21">OverlayPathChangeKind</a>::<span class="rs-type">Symlink</span> =&gt; {
+                <span class="rs-kw">let</span> content_path = <span class="rs-self">self</span>.content_path.ok_or_else(|| {
+                    <a class="symbol-link rs-type" href="eos-overlay.html#item-enum-OverlayError-8">OverlayError</a>::<span class="rs-type">InvalidPathChange</span>(
+                        &quot;symlink changes require content_path&quot;.to_owned(),
+                    )
+                })?;
+                <span class="rs-kw">let</span> source_path = std::fs::read_link(content_path)
+                    .map_err(<a class="symbol-link rs-type" href="eos-overlay.html#item-enum-OverlayError-8">OverlayError</a>::<span class="rs-type">Capture</span>)?
+                    .to_string_lossy()
+                    .into_owned();
+                <span class="rs-type">Ok</span>(<span class="rs-type">LayerChange</span>::<span class="rs-type">Symlink</span> { path, source_path })
+            }
+            <a class="symbol-link rs-type" href="eos-overlay--src-path-change-rs.html#item-enum-OverlayPathChangeKind-21">OverlayPathChangeKind</a>::<span class="rs-type">OpaqueDir</span> =&gt; <span class="rs-type">Ok</span>(<span class="rs-type">LayerChange</span>::<span class="rs-type">OpaqueDir</span> { path }),
+        }
+    }
+}
+
+<span class="rs-comment">/// Walk the overlay `upperdir` and capture the full write set.</span>
+<span class="rs-comment">///</span>
+<span class="rs-comment">/// Walks ONLY the upperdir (never the lower layers): capture + publish is one</span>
+<span class="rs-comment">/// atomic unit, so the returned set is the complete delta for this op. Overlay</span>
+<span class="rs-comment">/// whiteouts -&gt; `Delete`, opaque markers -&gt; `OpaqueDir`, symlinks -&gt; `Symlink`,</span>
+<span class="rs-comment">/// regular files -&gt; `Write`.</span>
+<span class="rs-comment">///</span>
+<span class="rs-comment">/// # Errors</span>
+<span class="rs-comment">///</span>
+<span class="rs-comment">/// Returns [`OverlayError`] when upperdir traversal, path normalization, xattr</span>
+<span class="rs-comment">/// probing, hashing, or staged content conversion fails.</span>
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-overlay--src-path-change-rs.html#item-fn-capture-upperdir-137">capture_upperdir</a>(upperdir: &amp;<span class="rs-type">Path</span>) -&gt; <a class="symbol-link rs-type" href="eos-overlay.html#item-type-Result-50">Result</a>&lt;<span class="rs-type">Vec</span>&lt;<span class="rs-type">LayerChange</span>&gt;&gt; {
+    std::fs::create_dir_all(upperdir).map_err(<a class="symbol-link rs-type" href="eos-overlay.html#item-enum-OverlayError-8">OverlayError</a>::<span class="rs-type">Capture</span>)?;
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> emitted_opaque_dirs = <span class="rs-type">HashSet</span>::<a class="symbol-link rs-fn" href="eos-overlay--src-path-change-rs.html#method-new-51">new</a>();
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> changes = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-overlay--src-path-change-rs.html#method-new-51">new</a>();
+    <a class="symbol-link rs-fn" href="eos-overlay--src-path-change-rs.html#item-fn-walk-upperdir-159">walk_upperdir</a>(upperdir, upperdir, &amp;<span class="rs-kw">mut</span> emitted_opaque_dirs, &amp;<span class="rs-kw">mut</span> changes)?;
+    changes
+        .into_iter()
+        .map(<a class="symbol-link rs-type" href="eos-overlay--src-path-change-rs.html#item-struct-OverlayPathChange-34">OverlayPathChange</a>::into_layer_change)
+        .collect()
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-overlay--src-path-change-rs.html#item-fn-walk-upperdir-159">walk_upperdir</a>(
+    root: &amp;<span class="rs-type">Path</span>,
+    dir: &amp;<span class="rs-type">Path</span>,
+    emitted_opaque_dirs: &amp;<span class="rs-kw">mut</span> <span class="rs-type">HashSet</span>&lt;<span class="rs-type">String</span>&gt;,
+    changes: &amp;<span class="rs-kw">mut</span> <span class="rs-type">Vec</span>&lt;<a class="symbol-link rs-type" href="eos-overlay--src-path-change-rs.html#item-struct-OverlayPathChange-34">OverlayPathChange</a>&gt;,
+) -&gt; <a class="symbol-link rs-type" href="eos-overlay.html#item-type-Result-50">Result</a>&lt;()&gt; {
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> entries = std::fs::read_dir(dir)
+        .map_err(<a class="symbol-link rs-type" href="eos-overlay.html#item-enum-OverlayError-8">OverlayError</a>::<span class="rs-type">Capture</span>)?
+        .collect::&lt;std::result::<a class="symbol-link rs-type" href="eos-overlay.html#item-type-Result-50">Result</a>&lt;<span class="rs-type">Vec</span>&lt;_&gt;, _&gt;&gt;()
+        .map_err(<a class="symbol-link rs-type" href="eos-overlay.html#item-enum-OverlayError-8">OverlayError</a>::<span class="rs-type">Capture</span>)?;
+    entries.sort_by_key(std::fs::<span class="rs-type">DirEntry</span>::file_name);
+
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> dirs = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-overlay--src-path-change-rs.html#method-new-51">new</a>();
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> files = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-overlay--src-path-change-rs.html#method-new-51">new</a>();
+    <span class="rs-kw">for</span> entry <span class="rs-kw">in</span> entries {
+        <span class="rs-kw">let</span> file_type = entry.file_type().map_err(<a class="symbol-link rs-type" href="eos-overlay.html#item-enum-OverlayError-8">OverlayError</a>::<span class="rs-type">Capture</span>)?;
+        <span class="rs-kw">if</span> file_type.is_dir() {
+            dirs.push(entry.path());
+        } <span class="rs-kw">else</span> {
+            files.push(entry.path());
+        }
+    }
+
+    <span class="rs-kw">for</span> entry <span class="rs-kw">in</span> files {
+        <a class="symbol-link rs-fn" href="eos-overlay--src-path-change-rs.html#item-fn-capture-file-entry-204">capture_file_entry</a>(root, &amp;entry, emitted_opaque_dirs, changes)?;
+    }
+    <span class="rs-kw">for</span> entry <span class="rs-kw">in</span> &amp;dirs {
+        <span class="rs-kw">if</span> <a class="symbol-link rs-fn" href="eos-overlay--src-path-change-rs.html#item-fn-has-overlay-opaque-xattr-333">has_overlay_opaque_xattr</a>(entry) {
+            <span class="rs-kw">let</span> opaque_path = <a class="symbol-link rs-fn" href="eos-overlay--src-path-change-rs.html#item-fn-relative-overlay-path-292">relative_overlay_path</a>(root, entry)?;
+            <span class="rs-kw">if</span> emitted_opaque_dirs.insert(opaque_path.clone()) {
+                changes.push(<a class="symbol-link rs-type" href="eos-overlay--src-path-change-rs.html#item-struct-OverlayPathChange-34">OverlayPathChange</a>::<a class="symbol-link rs-fn" href="eos-overlay--src-path-change-rs.html#method-new-51">new</a>(
+                    &amp;opaque_path,
+                    <a class="symbol-link rs-type" href="eos-overlay--src-path-change-rs.html#item-enum-OverlayPathChangeKind-21">OverlayPathChangeKind</a>::<span class="rs-type">OpaqueDir</span>,
+                    <span class="rs-type">None</span>,
+                    <span class="rs-type">None</span>,
+                )?);
+            }
+        }
+    }
+    <span class="rs-kw">for</span> entry <span class="rs-kw">in</span> dirs {
+        <a class="symbol-link rs-fn" href="eos-overlay--src-path-change-rs.html#item-fn-walk-upperdir-159">walk_upperdir</a>(root, &amp;entry, emitted_opaque_dirs, changes)?;
+    }
+    <span class="rs-type">Ok</span>(())
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-overlay--src-path-change-rs.html#item-fn-capture-file-entry-204">capture_file_entry</a>(
+    root: &amp;<span class="rs-type">Path</span>,
+    entry: &amp;<span class="rs-type">Path</span>,
+    emitted_opaque_dirs: &amp;<span class="rs-kw">mut</span> <span class="rs-type">HashSet</span>&lt;<span class="rs-type">String</span>&gt;,
+    changes: &amp;<span class="rs-kw">mut</span> <span class="rs-type">Vec</span>&lt;<a class="symbol-link rs-type" href="eos-overlay--src-path-change-rs.html#item-struct-OverlayPathChange-34">OverlayPathChange</a>&gt;,
+) -&gt; <a class="symbol-link rs-type" href="eos-overlay.html#item-type-Result-50">Result</a>&lt;()&gt; {
+    <span class="rs-kw">let</span> rel = <a class="symbol-link rs-fn" href="eos-overlay--src-path-change-rs.html#item-fn-relative-path-285">relative_path</a>(root, entry)?;
+    <span class="rs-kw">let</span> name = entry
+        .file_name()
+        .and_then(|name| name.to_str())
+        .unwrap_or_default();
+    <span class="rs-kw">if</span> name == <span class="rs-type">OPAQUE_MARKER</span> {
+        <span class="rs-kw">let</span> opaque_path = rel.parent().map(relative_to_string).unwrap_or_default();
+        <span class="rs-kw">if</span> emitted_opaque_dirs.insert(opaque_path.clone()) {
+            changes.push(<a class="symbol-link rs-type" href="eos-overlay--src-path-change-rs.html#item-struct-OverlayPathChange-34">OverlayPathChange</a>::<a class="symbol-link rs-fn" href="eos-overlay--src-path-change-rs.html#method-new-51">new</a>(
+                &amp;opaque_path,
+                <a class="symbol-link rs-type" href="eos-overlay--src-path-change-rs.html#item-enum-OverlayPathChangeKind-21">OverlayPathChangeKind</a>::<span class="rs-type">OpaqueDir</span>,
+                <span class="rs-type">None</span>,
+                <span class="rs-type">None</span>,
+            )?);
+        }
+        <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(());
+    }
+    <span class="rs-kw">if</span> <a class="symbol-link rs-fn" href="eos-overlay--src-path-change-rs.html#item-fn-is-whiteout-marker-303">is_whiteout_marker</a>(name) {
+        <span class="rs-kw">let</span> target = <a class="symbol-link rs-fn" href="eos-overlay--src-path-change-rs.html#item-fn-whiteout-target-307">whiteout_target</a>(&amp;rel);
+        changes.push(<a class="symbol-link rs-type" href="eos-overlay--src-path-change-rs.html#item-struct-OverlayPathChange-34">OverlayPathChange</a>::<a class="symbol-link rs-fn" href="eos-overlay--src-path-change-rs.html#method-new-51">new</a>(
+            &amp;<a class="symbol-link rs-fn" href="eos-overlay--src-path-change-rs.html#item-fn-relative-to-string-296">relative_to_string</a>(&amp;target),
+            <a class="symbol-link rs-type" href="eos-overlay--src-path-change-rs.html#item-enum-OverlayPathChangeKind-21">OverlayPathChangeKind</a>::<span class="rs-type">Delete</span>,
+            <span class="rs-type">None</span>,
+            <span class="rs-type">None</span>,
+        )?);
+        <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(());
+    }
+    <span class="rs-kw">if</span> <a class="symbol-link rs-fn" href="eos-overlay--src-path-change-rs.html#item-fn-is-overlay-whiteout-321">is_overlay_whiteout</a>(entry)? {
+        changes.push(<a class="symbol-link rs-type" href="eos-overlay--src-path-change-rs.html#item-struct-OverlayPathChange-34">OverlayPathChange</a>::<a class="symbol-link rs-fn" href="eos-overlay--src-path-change-rs.html#method-new-51">new</a>(
+            &amp;<a class="symbol-link rs-fn" href="eos-overlay--src-path-change-rs.html#item-fn-relative-to-string-296">relative_to_string</a>(&amp;rel),
+            <a class="symbol-link rs-type" href="eos-overlay--src-path-change-rs.html#item-enum-OverlayPathChangeKind-21">OverlayPathChangeKind</a>::<span class="rs-type">Delete</span>,
+            <span class="rs-type">None</span>,
+            <span class="rs-type">None</span>,
+        )?);
+        <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(());
+    }
+    <span class="rs-kw">let</span> meta = std::fs::symlink_metadata(entry).map_err(<a class="symbol-link rs-type" href="eos-overlay.html#item-enum-OverlayError-8">OverlayError</a>::<span class="rs-type">Capture</span>)?;
+    <span class="rs-kw">if</span> meta.file_type().is_symlink() {
+        changes.push(<a class="symbol-link rs-fn" href="eos-overlay--src-path-change-rs.html#item-fn-content-change-263">content_change</a>(
+            <a class="symbol-link rs-type" href="eos-overlay--src-path-change-rs.html#item-enum-OverlayPathChangeKind-21">OverlayPathChangeKind</a>::<span class="rs-type">Symlink</span>,
+            &amp;<a class="symbol-link rs-fn" href="eos-overlay--src-path-change-rs.html#item-fn-relative-to-string-296">relative_to_string</a>(&amp;rel),
+            entry,
+        )?);
+    } <span class="rs-kw">else</span> <span class="rs-kw">if</span> meta.is_file() {
+        changes.push(<a class="symbol-link rs-fn" href="eos-overlay--src-path-change-rs.html#item-fn-content-change-263">content_change</a>(
+            <a class="symbol-link rs-type" href="eos-overlay--src-path-change-rs.html#item-enum-OverlayPathChangeKind-21">OverlayPathChangeKind</a>::<span class="rs-type">Write</span>,
+            &amp;<a class="symbol-link rs-fn" href="eos-overlay--src-path-change-rs.html#item-fn-relative-to-string-296">relative_to_string</a>(&amp;rel),
+            entry,
+        )?);
+    }
+    <span class="rs-type">Ok</span>(())
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-overlay--src-path-change-rs.html#item-fn-content-change-263">content_change</a>(
+    kind: <a class="symbol-link rs-type" href="eos-overlay--src-path-change-rs.html#item-enum-OverlayPathChangeKind-21">OverlayPathChangeKind</a>,
+    path: &amp;str,
+    entry: &amp;<span class="rs-type">Path</span>,
+) -&gt; <a class="symbol-link rs-type" href="eos-overlay.html#item-type-Result-50">Result</a>&lt;<a class="symbol-link rs-type" href="eos-overlay--src-path-change-rs.html#item-struct-OverlayPathChange-34">OverlayPathChange</a>&gt; {
+    <a class="symbol-link rs-type" href="eos-overlay--src-path-change-rs.html#item-struct-OverlayPathChange-34">OverlayPathChange</a>::<a class="symbol-link rs-fn" href="eos-overlay--src-path-change-rs.html#method-new-51">new</a>(
+        path,
+        kind,
+        <span class="rs-type">Some</span>(entry.to_string_lossy().into_owned()),
+        <span class="rs-type">Some</span>(<a class="symbol-link rs-fn" href="eos-overlay--src-path-change-rs.html#item-fn-content-hash-338">content_hash</a>(entry, kind == <a class="symbol-link rs-type" href="eos-overlay--src-path-change-rs.html#item-enum-OverlayPathChangeKind-21">OverlayPathChangeKind</a>::<span class="rs-type">Symlink</span>)?),
+    )
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-overlay--src-path-change-rs.html#item-fn-normalize-overlay-path-276">normalize_overlay_path</a>(path: &amp;str, allow_root: bool) -&gt; <a class="symbol-link rs-type" href="eos-overlay.html#item-type-Result-50">Result</a>&lt;<span class="rs-type">String</span>&gt; {
+    <span class="rs-kw">let</span> raw = path.replace(&#x27;\\&#x27;, &quot;/&quot;);
+    <span class="rs-kw">let</span> raw = raw.trim();
+    <span class="rs-kw">if</span> allow_root &amp;&amp; (raw.is_empty() || raw == &quot;.&quot;) {
+        <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<span class="rs-type">String</span>::<a class="symbol-link rs-fn" href="eos-overlay--src-path-change-rs.html#method-new-51">new</a>());
+    }
+    <span class="rs-type">Ok</span>(<span class="rs-type">LayerPath</span>::parse(raw)?.as_str().to_owned())
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-overlay--src-path-change-rs.html#item-fn-relative-path-285">relative_path</a>(root: &amp;<span class="rs-type">Path</span>, entry: &amp;<span class="rs-type">Path</span>) -&gt; <a class="symbol-link rs-type" href="eos-overlay.html#item-type-Result-50">Result</a>&lt;<span class="rs-type">PathBuf</span>&gt; {
+    entry
+        .strip_prefix(root)
+        .map(<span class="rs-type">Path</span>::to_path_buf)
+        .map_err(|err| <a class="symbol-link rs-type" href="eos-overlay.html#item-enum-OverlayError-8">OverlayError</a>::<span class="rs-type">InvalidPathChange</span>(err.to_string()))
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-overlay--src-path-change-rs.html#item-fn-relative-overlay-path-292">relative_overlay_path</a>(root: &amp;<span class="rs-type">Path</span>, entry: &amp;<span class="rs-type">Path</span>) -&gt; <a class="symbol-link rs-type" href="eos-overlay.html#item-type-Result-50">Result</a>&lt;<span class="rs-type">String</span>&gt; {
+    <a class="symbol-link rs-fn" href="eos-overlay--src-path-change-rs.html#item-fn-relative-path-285">relative_path</a>(root, entry).map(|path| <a class="symbol-link rs-fn" href="eos-overlay--src-path-change-rs.html#item-fn-relative-to-string-296">relative_to_string</a>(&amp;path))
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-overlay--src-path-change-rs.html#item-fn-relative-to-string-296">relative_to_string</a>(path: &amp;<span class="rs-type">Path</span>) -&gt; <span class="rs-type">String</span> {
+    path.components()
+        .map(|component| component.as_os_str().to_string_lossy())
+        .collect::&lt;<span class="rs-type">Vec</span>&lt;_&gt;&gt;()
+        .join(&quot;/&quot;)
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-overlay--src-path-change-rs.html#item-fn-is-whiteout-marker-303">is_whiteout_marker</a>(name: &amp;str) -&gt; bool {
+    name.starts_with(<span class="rs-type">WHITEOUT_PREFIX</span>) &amp;&amp; name != <span class="rs-type">OPAQUE_MARKER</span> &amp;&amp; name.len() &gt; <span class="rs-type">WHITEOUT_PREFIX</span>.len()
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-overlay--src-path-change-rs.html#item-fn-whiteout-target-307">whiteout_target</a>(rel: &amp;<span class="rs-type">Path</span>) -&gt; <span class="rs-type">PathBuf</span> {
+    <span class="rs-kw">let</span> name = rel
+        .file_name()
+        .and_then(|name| name.to_str())
+        .unwrap_or_default();
+    <span class="rs-kw">let</span> target_name = &amp;name[<span class="rs-type">WHITEOUT_PREFIX</span>.len()..];
+    rel.parent()
+        .filter(|parent| !parent.as_os_str().is_empty())
+        .map_or_else(
+            || <span class="rs-type">PathBuf</span>::from(target_name),
+            |parent| parent.join(target_name),
+        )
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-overlay--src-path-change-rs.html#item-fn-is-overlay-whiteout-321">is_overlay_whiteout</a>(entry: &amp;<span class="rs-type">Path</span>) -&gt; <a class="symbol-link rs-type" href="eos-overlay.html#item-type-Result-50">Result</a>&lt;bool&gt; {
+    <span class="rs-kw">let</span> meta = std::fs::symlink_metadata(entry).map_err(<a class="symbol-link rs-type" href="eos-overlay.html#item-enum-OverlayError-8">OverlayError</a>::<span class="rs-type">Capture</span>)?;
+    #[cfg(unix)]
+    {
+        <span class="rs-kw">use</span> std::os::unix::fs::{<span class="rs-type">FileTypeExt</span>, <span class="rs-type">MetadataExt</span>};
+        <span class="rs-kw">if</span> meta.file_type().is_char_device() &amp;&amp; meta.rdev() == 0 {
+            <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<span class="rs-kw">true</span>);
+        }
+    }
+    <span class="rs-type">Ok</span>(meta.is_file() &amp;&amp; meta.len() == 0 &amp;&amp; <a class="symbol-link rs-fn" href="eos-overlay--src-path-change-rs.html#item-fn-xattr-value-353">xattr_value</a>(entry, &quot;user.overlay.whiteout&quot;)?.is_some())
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-overlay--src-path-change-rs.html#item-fn-has-overlay-opaque-xattr-333">has_overlay_opaque_xattr</a>(entry: &amp;<span class="rs-type">Path</span>) -&gt; bool {
+    matches!(<a class="symbol-link rs-fn" href="eos-overlay--src-path-change-rs.html#item-fn-xattr-value-353">xattr_value</a>(entry, &quot;trusted.overlay.opaque&quot;), <span class="rs-type">Ok</span>(<span class="rs-type">Some</span>(value)) <span class="rs-kw">if</span> value == b&quot;y&quot;)
+        || matches!(<a class="symbol-link rs-fn" href="eos-overlay--src-path-change-rs.html#item-fn-xattr-value-353">xattr_value</a>(entry, &quot;user.overlay.opaque&quot;), <span class="rs-type">Ok</span>(<span class="rs-type">Some</span>(value)) <span class="rs-kw">if</span> value == b&quot;y&quot;)
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-overlay--src-path-change-rs.html#item-fn-content-hash-338">content_hash</a>(path: &amp;<span class="rs-type">Path</span>, symlink: bool) -&gt; <a class="symbol-link rs-type" href="eos-overlay.html#item-type-Result-50">Result</a>&lt;<span class="rs-type">String</span>&gt; {
+    <span class="rs-kw">let</span> data = <span class="rs-kw">if</span> symlink {
+        std::fs::read_link(path)
+            .map_err(<a class="symbol-link rs-type" href="eos-overlay.html#item-enum-OverlayError-8">OverlayError</a>::<span class="rs-type">Capture</span>)?
+            .to_string_lossy()
+            .into_owned()
+            .into_bytes()
+    } <span class="rs-kw">else</span> {
+        std::fs::read(path).map_err(<a class="symbol-link rs-type" href="eos-overlay.html#item-enum-OverlayError-8">OverlayError</a>::<span class="rs-type">Capture</span>)?
+    };
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> hasher = <span class="rs-type">Sha256</span>::<a class="symbol-link rs-fn" href="eos-overlay--src-path-change-rs.html#method-new-51">new</a>();
+    hasher.update(data);
+    <span class="rs-type">Ok</span>(format!(&quot;{:x}&quot;, hasher.finalize()))
+}
+
+#[cfg(target_os = &quot;linux&quot;)]
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-overlay--src-path-change-rs.html#item-fn-xattr-value-353">xattr_value</a>(path: &amp;<span class="rs-type">Path</span>, name: &amp;str) -&gt; <a class="symbol-link rs-type" href="eos-overlay.html#item-type-Result-50">Result</a>&lt;<span class="rs-type">Option</span>&lt;<span class="rs-type">Vec</span>&lt;u8&gt;&gt;&gt; {
+    <span class="rs-kw">use</span> std::ffi::<span class="rs-type">CString</span>;
+    <span class="rs-kw">use</span> std::os::unix::ffi::<span class="rs-type">OsStrExt</span>;
+
+    <span class="rs-kw">let</span> path = <span class="rs-type">CString</span>::<a class="symbol-link rs-fn" href="eos-overlay--src-path-change-rs.html#method-new-51">new</a>(path.as_os_str().as_bytes())
+        .map_err(|err| <a class="symbol-link rs-type" href="eos-overlay.html#item-enum-OverlayError-8">OverlayError</a>::<span class="rs-type">InvalidPathChange</span>(err.to_string()))?;
+    <span class="rs-kw">let</span> name =
+        <span class="rs-type">CString</span>::<a class="symbol-link rs-fn" href="eos-overlay--src-path-change-rs.html#method-new-51">new</a>(name).map_err(|err| <a class="symbol-link rs-type" href="eos-overlay.html#item-enum-OverlayError-8">OverlayError</a>::<span class="rs-type">InvalidPathChange</span>(err.to_string()))?;
+    <span class="rs-comment">// SAFETY: `path` and `name` are live NUL-terminated C strings, and a null</span>
+    <span class="rs-comment">// value pointer with size 0 is the documented probe form for getxattr.</span>
+    <span class="rs-kw">let</span> len = <span class="rs-kw">unsafe</span> { libc::getxattr(path.as_ptr(), name.as_ptr(), std::ptr::null_mut(), 0) };
+    <span class="rs-kw">if</span> len &lt; 0 {
+        <span class="rs-kw">let</span> err = std::io::<span class="rs-type">Error</span>::last_os_error();
+        <span class="rs-kw">return</span> <span class="rs-kw">match</span> err.raw_os_error() {
+            <span class="rs-type">Some</span>(libc::<span class="rs-type">ENODATA</span> | libc::<span class="rs-type">EOPNOTSUPP</span>) =&gt; <span class="rs-type">Ok</span>(<span class="rs-type">None</span>),
+            _ =&gt; <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-overlay.html#item-enum-OverlayError-8">OverlayError</a>::<span class="rs-type">Capture</span>(err)),
+        };
+    }
+    <span class="rs-kw">let</span> len = usize::try_from(len).map_err(|_| {
+        <a class="symbol-link rs-type" href="eos-overlay.html#item-enum-OverlayError-8">OverlayError</a>::<span class="rs-type">Capture</span>(std::io::<span class="rs-type">Error</span>::<a class="symbol-link rs-fn" href="eos-overlay--src-path-change-rs.html#method-new-51">new</a>(
+            std::io::<span class="rs-type">ErrorKind</span>::<span class="rs-type">InvalidData</span>,
+            &quot;xattr length does not fit usize&quot;,
+        ))
+    })?;
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> buffer = vec![0u8; len];
+    <span class="rs-comment">// SAFETY: `buffer` is allocated with the size returned by the first</span>
+    <span class="rs-comment">// getxattr call, and its mutable pointer remains valid for `buffer.len()`</span>
+    <span class="rs-comment">// bytes for the duration of this FFI call.</span>
+    <span class="rs-kw">let</span> read = <span class="rs-kw">unsafe</span> {
+        libc::getxattr(
+            path.as_ptr(),
+            name.as_ptr(),
+            buffer.as_mut_ptr().cast(),
+            buffer.len(),
+        )
+    };
+    <span class="rs-kw">if</span> read &lt; 0 {
+        <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-overlay.html#item-enum-OverlayError-8">OverlayError</a>::<span class="rs-type">Capture</span>(std::io::<span class="rs-type">Error</span>::last_os_error()));
+    }
+    <span class="rs-kw">let</span> read = usize::try_from(read).map_err(|_| {
+        <a class="symbol-link rs-type" href="eos-overlay.html#item-enum-OverlayError-8">OverlayError</a>::<span class="rs-type">Capture</span>(std::io::<span class="rs-type">Error</span>::<a class="symbol-link rs-fn" href="eos-overlay--src-path-change-rs.html#method-new-51">new</a>(
+            std::io::<span class="rs-type">ErrorKind</span>::<span class="rs-type">InvalidData</span>,
+            &quot;xattr read length does not fit usize&quot;,
+        ))
+    })?;
+    buffer.truncate(read);
+    <span class="rs-type">Ok</span>(<span class="rs-type">Some</span>(buffer))
+}
+
+#[cfg(not(target_os = &quot;linux&quot;))]
+<span class="rs-comment">// Keep the same fallible helper signature as Linux so whiteout/opaque detection</span>
+<span class="rs-comment">// call sites stay cfg-free; xattrs simply do not contribute off Linux.</span>
+#[expect(
+    clippy::unnecessary_wraps,
+    reason = &quot;non-<span class="rs-type">Linux</span> parity keeps the <span class="rs-type">Linux</span> fallible helper signature&quot;
+)]
+<span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-overlay--src-path-change-rs.html#item-fn-xattr-value-353">xattr_value</a>(_path: &amp;<span class="rs-type">Path</span>, _name: &amp;str) -&gt; <a class="symbol-link rs-type" href="eos-overlay.html#item-type-Result-50">Result</a>&lt;<span class="rs-type">Option</span>&lt;<span class="rs-type">Vec</span>&lt;u8&gt;&gt;&gt; {
+    <span class="rs-type">Ok</span>(<span class="rs-type">None</span>)
+}
+
+#[cfg(test)]
+<span class="rs-kw">mod</span> tests {
+    <span class="rs-kw">use</span> std::path::<span class="rs-type">PathBuf</span>;
+    <span class="rs-kw">use</span> std::sync::atomic::{<span class="rs-type">AtomicU64</span>, <span class="rs-type">Ordering</span>};
+
+    <span class="rs-kw">use</span> <span class="rs-kw">super</span>::*;
+
+    <span class="rs-kw">type</span> <a class="symbol-link rs-type" href="eos-overlay--src-kernel-mount-rs.html#item-type-TestResult-385">TestResult</a>&lt;<span class="rs-type">T</span> = ()&gt; = std::result::<a class="symbol-link rs-type" href="eos-overlay.html#item-type-Result-50">Result</a>&lt;<span class="rs-type">T</span>, <span class="rs-type">Box</span>&lt;<span class="rs-kw">dyn</span> std::error::<span class="rs-type">Error</span> + <span class="rs-type">Send</span> + <span class="rs-type">Sync</span>&gt;&gt;;
+
+    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-overlay--src-path-change-rs.html#item-fn-validates-overlay-path-change-fields-423">validates_overlay_path_change_fields</a>() {
+        assert!(<a class="symbol-link rs-type" href="eos-overlay--src-path-change-rs.html#item-struct-OverlayPathChange-34">OverlayPathChange</a>::<a class="symbol-link rs-fn" href="eos-overlay--src-path-change-rs.html#method-new-51">new</a>(
+            &quot;a.txt&quot;,
+            <a class="symbol-link rs-type" href="eos-overlay--src-path-change-rs.html#item-enum-OverlayPathChangeKind-21">OverlayPathChangeKind</a>::<span class="rs-type">Write</span>,
+            <span class="rs-type">Some</span>(&quot;/tmp/a&quot;.to_owned()),
+            <span class="rs-type">Some</span>(&quot;hash&quot;.to_owned()),
+        )
+        .is_ok());
+        assert!(<a class="symbol-link rs-type" href="eos-overlay--src-path-change-rs.html#item-struct-OverlayPathChange-34">OverlayPathChange</a>::<a class="symbol-link rs-fn" href="eos-overlay--src-path-change-rs.html#method-new-51">new</a>(&quot;a.txt&quot;, <a class="symbol-link rs-type" href="eos-overlay--src-path-change-rs.html#item-enum-OverlayPathChangeKind-21">OverlayPathChangeKind</a>::<span class="rs-type">Write</span>, <span class="rs-type">None</span>, <span class="rs-type">None</span>).is_err());
+        assert!(<a class="symbol-link rs-type" href="eos-overlay--src-path-change-rs.html#item-struct-OverlayPathChange-34">OverlayPathChange</a>::<a class="symbol-link rs-fn" href="eos-overlay--src-path-change-rs.html#method-new-51">new</a>(
+            &quot;a.txt&quot;,
+            <a class="symbol-link rs-type" href="eos-overlay--src-path-change-rs.html#item-enum-OverlayPathChangeKind-21">OverlayPathChangeKind</a>::<span class="rs-type">Delete</span>,
+            <span class="rs-type">Some</span>(&quot;/tmp/a&quot;.to_owned()),
+            <span class="rs-type">None</span>,
+        )
+        .is_err());
+    }
+
+    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-overlay--src-path-change-rs.html#item-fn-captures-upperdir-files-whiteouts-symlinks-and-opaque-markers-442">captures_upperdir_files_whiteouts_symlinks_and_opaque_markers</a>() -&gt; <a class="symbol-link rs-type" href="eos-overlay--src-kernel-mount-rs.html#item-type-TestResult-385">TestResult</a> {
+        <span class="rs-kw">let</span> fixture = <a class="symbol-link rs-type" href="eos-overlay--src-path-change-rs.html#item-struct-Fixture-470">Fixture</a>::<a class="symbol-link rs-fn" href="eos-overlay--src-path-change-rs.html#method-new-51">new</a>(&quot;capture_upperdir&quot;)?;
+        std::fs::create_dir_all(fixture.base.join(&quot;dir&quot;))?;
+        std::fs::write(fixture.base.join(&quot;dir/file.txt&quot;), b&quot;hello&quot;)?;
+        std::fs::write(fixture.base.join(&quot;.wh.old.txt&quot;), b&quot;&quot;)?;
+        std::fs::write(fixture.base.join(&quot;dir&quot;).join(<span class="rs-type">OPAQUE_MARKER</span>), b&quot;&quot;)?;
+        std::os::unix::fs::symlink(&quot;../target&quot;, fixture.base.join(&quot;link&quot;))?;
+
+        <span class="rs-kw">let</span> changes = <a class="symbol-link rs-fn" href="eos-overlay--src-path-change-rs.html#item-fn-capture-upperdir-137">capture_upperdir</a>(&amp;fixture.base)?;
+
+        assert!(changes.contains(&amp;<span class="rs-type">LayerChange</span>::<span class="rs-type">Write</span> {
+            path: <span class="rs-type">LayerPath</span>::parse(&quot;dir/file.txt&quot;)?,
+            content: b&quot;hello&quot;.to_vec(),
+        }));
+        assert!(changes.contains(&amp;<span class="rs-type">LayerChange</span>::<span class="rs-type">Delete</span> {
+            path: <span class="rs-type">LayerPath</span>::parse(&quot;old.txt&quot;)?,
+        }));
+        assert!(changes.contains(&amp;<span class="rs-type">LayerChange</span>::<span class="rs-type">Symlink</span> {
+            path: <span class="rs-type">LayerPath</span>::parse(&quot;link&quot;)?,
+            source_path: &quot;../target&quot;.to_owned(),
+        }));
+        assert!(changes.contains(&amp;<span class="rs-type">LayerChange</span>::<span class="rs-type">OpaqueDir</span> {
+            path: <span class="rs-type">LayerPath</span>::parse(&quot;dir&quot;)?,
+        }));
+        <span class="rs-type">Ok</span>(())
+    }
+
+    <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-overlay--src-path-change-rs.html#item-struct-Fixture-470">Fixture</a> {
+        base: <span class="rs-type">PathBuf</span>,
+    }
+
+    <span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-overlay--src-path-change-rs.html#item-struct-Fixture-470">Fixture</a> {
+        <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-overlay--src-path-change-rs.html#method-new-51">new</a>(label: &amp;str) -&gt; <a class="symbol-link rs-type" href="eos-overlay--src-kernel-mount-rs.html#item-type-TestResult-385">TestResult</a>&lt;<span class="rs-self">Self</span>&gt; {
+            <span class="rs-kw">static</span> <span class="rs-type">COUNTER</span>: <span class="rs-type">AtomicU64</span> = <span class="rs-type">AtomicU64</span>::<a class="symbol-link rs-fn" href="eos-overlay--src-path-change-rs.html#method-new-51">new</a>(0);
+            <span class="rs-kw">let</span> base = std::env::temp_dir().join(format!(
+                &quot;eos-overlay-{label}-{}-{}&quot;,
+                std::process::id(),
+                <span class="rs-type">COUNTER</span>.fetch_add(1, <span class="rs-type">Ordering</span>::<span class="rs-type">Relaxed</span>)
+            ));
+            <span class="rs-kw">let</span> _ = std::fs::remove_dir_all(&amp;base);
+            std::fs::create_dir_all(&amp;base)?;
+            <span class="rs-type">Ok</span>(<span class="rs-self">Self</span> { base })
+        }
+    }
+
+    <span class="rs-kw">impl</span> <span class="rs-type">Drop</span> <span class="rs-kw">for</span> <a class="symbol-link rs-type" href="eos-overlay--src-path-change-rs.html#item-struct-Fixture-470">Fixture</a> {
+        <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-overlay--src-kernel-mount-rs.html#method-drop-70">drop</a>(&amp;<span class="rs-kw">mut</span> <span class="rs-self">self</span>) {
+            <span class="rs-kw">let</span> _ = std::fs::remove_dir_all(&amp;<span class="rs-self">self</span>.base);
+        }
+    }
+}
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
   <script src="../assets/inventory.js"></script>
 </body>
 </html>

@@ -8,8 +8,16 @@
 </head>
 <body>
   <header>
-    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
-    <h1>eos-plugin-catalog File Inventory</h1>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>eos-plugin-catalog File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS/agent-core &amp;&amp; cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
   </header>
   <a class="back-link" href="../index.html">agent-core</a>
 <section class="summary">
@@ -50,6 +58,50 @@
   <div class="items"></div>
 </section></div>
 </main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/eos-plugin-catalog/src/lib.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-comment">//! `eos-plugin-catalog` — the static plugin catalog.</span>
+<span class="rs-comment">//!</span>
+<span class="rs-comment">//! This crate turns the on-disk plugin catalog into validated, in-memory</span>
+<span class="rs-comment">//! metadata the runtime can bind into real tools. It parses each plugin's</span>
+<span class="rs-comment">//! `plugin.md` frontmatter into a [`PluginManifest`], discovers all manifests</span>
+<span class="rs-comment">//! under one configured catalog root as an immutable [`PluginCatalog`], supplies</span>
+<span class="rs-comment">//! the catalog-native model-facing [`PluginToolSpec`] sources (today the 10 LSP</span>
+<span class="rs-comment">//! specs), and returns neutral plugin package descriptors consumed by sandbox</span>
+<span class="rs-comment">//! setup APIs.</span>
+<span class="rs-comment">//!</span>
+<span class="rs-comment">//! It deliberately does **not** import or execute plugin tool modules (no</span>
+<span class="rs-comment">//! `importlib`/`BaseTool` binding — GC-plugin-catalog-01), own</span>
+<span class="rs-comment">//! `eos_llm_client::ToolSpec`/`ToolExecutor`/`ToolRegistry` (those are bound in</span>
+<span class="rs-comment">//! `eos-runtime` — GC-plugin-catalog-04), run `setup`/`runtime` scripts or hold</span>
+<span class="rs-comment">//! any Pyright/LSP session (GC-plugin-catalog-05), or traverse outside the</span>
+<span class="rs-comment">//! configured catalog root.</span>
+#![forbid(unsafe_code)]
+#![warn(missing_docs)]
+
+<span class="rs-kw">mod</span> discovery;
+<span class="rs-kw">mod</span> error;
+<span class="rs-kw">mod</span> frontmatter;
+<span class="rs-kw">mod</span> manifest;
+<span class="rs-kw">mod</span> names;
+<span class="rs-kw">mod</span> package;
+#[cfg(test)]
+#[path = &quot;../tests/support/<span class="rs-kw">mod</span>.rs&quot;]
+<span class="rs-kw">mod</span> support;
+<span class="rs-kw">mod</span> tool_specs;
+
+<span class="rs-kw">pub</span> <span class="rs-kw">use</span> discovery::<a class="symbol-link rs-type" href="eos-plugin-catalog.html#item-struct-PluginCatalog-18">PluginCatalog</a>;
+<span class="rs-kw">pub</span> <span class="rs-kw">use</span> error::<a class="symbol-link rs-type" href="eos-plugin-catalog--src-error-rs.html#item-enum-PluginCatalogError-11">PluginCatalogError</a>;
+<span class="rs-kw">pub</span> <span class="rs-kw">use</span> manifest::{<a class="symbol-link rs-type" href="eos-plugin-catalog--src-manifest-rs.html#item-enum-PluginKind-23">PluginKind</a>, <a class="symbol-link rs-type" href="eos-plugin-catalog--src-manifest-rs.html#item-struct-PluginManifest-70">PluginManifest</a>, <a class="symbol-link rs-type" href="eos-plugin-catalog--src-manifest-rs.html#item-struct-ToolEntry-59">ToolEntry</a>};
+<span class="rs-kw">pub</span> <span class="rs-kw">use</span> names::{<a class="symbol-link rs-type" href="eos-plugin-catalog--src-names-rs.html#item-struct-PluginName-19">PluginName</a>, <a class="symbol-link rs-type" href="eos-plugin-catalog--src-names-rs.html#item-struct-PluginResolvedPath-76">PluginResolvedPath</a>, <a class="symbol-link rs-type" href="eos-plugin-catalog--src-names-rs.html#item-struct-PluginToolName-51">PluginToolName</a>};
+<span class="rs-kw">pub</span> <span class="rs-kw">use</span> package::{lsp_plugin_package_descriptor, plugin_package_descriptor};
+<span class="rs-kw">pub</span> <span class="rs-kw">use</span> tool_specs::{plugin_tool_specs, <a class="symbol-link rs-type" href="eos-plugin-catalog--src-tool-specs-rs.html#item-struct-PluginToolSpec-25">PluginToolSpec</a>};
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
   <script src="../assets/inventory.js"></script>
 </body>
 </html>

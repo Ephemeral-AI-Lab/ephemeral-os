@@ -1,19 +1,22 @@
-//! Engine background supervisor: subagent driver, command-session supervision,
-//! and the command-completion heartbeat.
+//! Engine background supervisor: per-agent-run subagent / workflow / command
+//! lanes, the command-completion heartbeat (owned by the command lane), and
+//! parent-exit / cancellation teardown.
 
 mod command_session;
 mod factory;
 mod handle;
-mod heartbeat;
+mod lanes;
+mod notifications;
 mod parent_exit;
 mod subagent;
 mod supervisor;
 
-pub use command_session::CommandSessionRecord;
 pub use factory::BackgroundSupervisorFactory;
 pub use handle::BackgroundSupervisorHandle;
-pub use heartbeat::spawn_command_completion_heartbeat;
-pub(crate) use parent_exit::BackgroundRunFinalizer;
-pub use supervisor::{
-    BackgroundTaskStatus, BackgroundTaskSupervisor, SubagentRecord, WorkflowBackgroundRecord,
+pub use lanes::{
+    BackgroundTaskStatus, CommandSessionHandle, CommandSessionRecord, SubagentHandle,
+    SubagentRecord, WorkflowBackgroundRecord, WorkflowHandle,
 };
+pub use notifications::{BackgroundCompletion, BackgroundNotificationEmitter};
+pub(crate) use parent_exit::BackgroundRunFinalizer;
+pub use supervisor::BackgroundTaskSupervisor;

@@ -8,8 +8,16 @@
 </head>
 <body>
   <header>
-    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
-    <h1>eos-skills File Inventory</h1>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>eos-skills File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS/agent-core &amp;&amp; cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
   </header>
   <a class="back-link" href="../index.html">agent-core</a>
 <section class="summary">
@@ -47,19 +55,68 @@
       <span>0 methods</span>
     </div>
   </div>
-  <div class="items"><div class="group-label">File-Owned Types</div><article class="type-card" data-kind="enum" data-kind-list="enum field type-model" data-filter-text="enum SkillLoadError pub pub enum SkillLoadError crates/eos-skills/src/error.rs  ">
+  <div class="items"><div class="group-label">File-Owned Types</div><article id="item-enum-SkillLoadError-5" class="type-card" data-kind="enum" data-kind-list="enum field type-model" data-filter-text="enum SkillLoadError pub pub enum SkillLoadError crates/eos-skills/src/error.rs  ">
   <div class="item-head">
     <span class="kind">enum</span>
     <h3>SkillLoadError</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub enum SkillLoadError</code>
-  <div class="tags"><span>error</span></div>
+  <code class="signature">pub enum <a class="symbol-link" href="eos-skills--src-error-rs.html#item-enum-SkillLoadError-5">SkillLoadError</a></code>
+  <p class="docstring">Failures raised while loading skills from the configured skill root.<br>There is deliberately **no** malformed-frontmatter variant: matching Rust's<br>`parse_markdown_frontmatter`, broken YAML is swallowed and the loader falls<br>back to the heading/first-paragraph metadata scan rather than failing the load.</p>
+  <div class="tags"><span>derive: Debug</span><span>derive: thiserror::Error</span><span>error</span><span>non_exhaustive</span></div>
   <h4>Variants</h4><table><tbody><tr><td>RootNotDir</td><td><code>0: PathBuf</code></td></tr><tr><td>ReadDir</td><td><code>path: PathBuf, cause: std :: io :: Error</code></td></tr><tr><td>ReadFile</td><td><code>path: PathBuf, cause: std :: io :: Error</code></td></tr><tr><td>InvalidName</td><td><code>0: String</code></td></tr></tbody></table>
+
   <p class="source">crates/eos-skills/src/error.rs:5</p>
 </article></div>
 </section></div>
 </main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/eos-skills/src/error.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-comment">//! [`SkillLoadError`] — this crate's single library error enum (`err-thiserror-lib`).</span>
+
+<span class="rs-kw">use</span> std::path::<span class="rs-type">PathBuf</span>;
+
+<span class="rs-comment">/// Failures raised while loading skills from the configured skill root.</span>
+<span class="rs-comment">///</span>
+<span class="rs-comment">/// There is deliberately **no** malformed-frontmatter variant: matching Rust's</span>
+<span class="rs-comment">/// `parse_markdown_frontmatter`, broken YAML is swallowed and the loader falls</span>
+<span class="rs-comment">/// back to the heading/first-paragraph metadata scan rather than failing the load.</span>
+#[derive(<span class="rs-type">Debug</span>, thiserror::<span class="rs-type">Error</span>)]
+#[non_exhaustive]
+<span class="rs-kw">pub</span> <span class="rs-kw">enum</span> <a class="symbol-link rs-type" href="eos-skills--src-error-rs.html#item-enum-SkillLoadError-5">SkillLoadError</a> {
+    <span class="rs-comment">/// The skill root exists but is not a directory — a config error, so the</span>
+    <span class="rs-comment">/// loader fails fast rather than treating it as "no skills".</span>
+    #[error(&quot;skill root is not a directory: {0}&quot;)]
+    <span class="rs-type">RootNotDir</span>(<span class="rs-type">PathBuf</span>),
+    <span class="rs-comment">/// Listing a directory (the root or a `references/` subdirectory) failed.</span>
+    #[error(&quot;failed to read skill directory {path}&quot;)]
+    <span class="rs-type">ReadDir</span> {
+        <span class="rs-comment">/// The directory whose listing failed.</span>
+        path: <span class="rs-type">PathBuf</span>,
+        <span class="rs-comment">/// The underlying I/O error.</span>
+        #[source]
+        cause: std::io::<span class="rs-type">Error</span>,
+    },
+    <span class="rs-comment">/// Reading a `SKILL.md` or `references/*.md` file failed.</span>
+    #[error(&quot;failed to read skill file {path}&quot;)]
+    <span class="rs-type">ReadFile</span> {
+        <span class="rs-comment">/// The file whose read failed.</span>
+        path: <span class="rs-type">PathBuf</span>,
+        <span class="rs-comment">/// The underlying I/O error.</span>
+        #[source]
+        cause: std::io::<span class="rs-type">Error</span>,
+    },
+    <span class="rs-comment">/// A parsed skill or reference name was empty or carried a path component</span>
+    <span class="rs-comment">/// (defense-in-depth; see [`crate::SkillName`]).</span>
+    #[error(&quot;invalid skill name {0:?}&quot;)]
+    <span class="rs-type">InvalidName</span>(<span class="rs-type">String</span>),
+}
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
   <script src="../assets/inventory.js"></script>
 </body>
 </html>

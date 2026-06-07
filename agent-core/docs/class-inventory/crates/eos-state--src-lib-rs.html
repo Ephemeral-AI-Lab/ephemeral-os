@@ -8,8 +8,16 @@
 </head>
 <body>
   <header>
-    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
-    <h1>eos-state File Inventory</h1>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>eos-state File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS/agent-core &amp;&amp; cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
   </header>
   <a class="back-link" href="../index.html">agent-core</a>
 <section class="summary">
@@ -50,6 +58,76 @@
   <div class="items"></div>
 </section></div>
 </main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/eos-state/src/lib.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-comment">//! eos-state — pure agent-core domain state, outcome projections, terminal</span>
+<span class="rs-comment">//! submission DTOs, and the per-entity async `Store` traits.</span>
+<span class="rs-comment">//!</span>
+<span class="rs-comment">//! This is the upstream domain contract that `eos-db` implements and that</span>
+<span class="rs-comment">//! `eos-tools`/`eos-engine`/`eos-workflow`/`eos-runtime` consume. It defines</span>
+<span class="rs-comment">//! *what is stored and what shapes flow between layers*; it never executes I/O.</span>
+#![forbid(unsafe_code)]
+#![warn(missing_docs)]
+
+<span class="rs-kw">mod</span> agent_run;
+<span class="rs-kw">mod</span> attempt;
+<span class="rs-kw">mod</span> iteration;
+<span class="rs-kw">mod</span> model;
+<span class="rs-kw">mod</span> outcomes;
+<span class="rs-kw">mod</span> pagination;
+<span class="rs-kw">mod</span> plan;
+<span class="rs-kw">mod</span> request;
+<span class="rs-kw">mod</span> store;
+<span class="rs-kw">mod</span> submissions;
+<span class="rs-kw">mod</span> task;
+<span class="rs-kw">mod</span> workflow;
+
+#[cfg(test)]
+#[path = &quot;../tests/support/<span class="rs-kw">mod</span>.rs&quot;]
+<span class="rs-kw">mod</span> support;
+
+<span class="rs-kw">pub</span> <span class="rs-kw">use</span> agent_run::<a class="symbol-link rs-type" href="eos-state.html#item-struct-AgentRun-8">AgentRun</a>;
+<span class="rs-kw">pub</span> <span class="rs-kw">use</span> attempt::{
+    <a class="symbol-link rs-type" href="eos-state--src-attempt-rs.html#item-struct-Attempt-222">Attempt</a>, <a class="symbol-link rs-type" href="eos-state--src-attempt-rs.html#item-enum-AttemptClosure-65">AttemptClosure</a>, <a class="symbol-link rs-type" href="eos-state--src-attempt-rs.html#item-enum-AttemptFailReason-54">AttemptFailReason</a>, <a class="symbol-link rs-type" href="eos-state--src-attempt-rs.html#item-enum-AttemptStage-15">AttemptStage</a>, <a class="symbol-link rs-type" href="eos-state--src-attempt-rs.html#item-enum-AttemptState-137">AttemptState</a>, <a class="symbol-link rs-type" href="eos-state--src-attempt-rs.html#item-enum-AttemptStatus-27">AttemptStatus</a>,
+};
+<span class="rs-kw">pub</span> <span class="rs-kw">use</span> iteration::{<a class="symbol-link rs-type" href="eos-state--src-iteration-rs.html#item-struct-Iteration-56">Iteration</a>, <a class="symbol-link rs-type" href="eos-state--src-iteration-rs.html#item-enum-IterationCreationReason-26">IterationCreationReason</a>, <a class="symbol-link rs-type" href="eos-state--src-iteration-rs.html#item-enum-IterationOutcome-36">IterationOutcome</a>, <a class="symbol-link rs-type" href="eos-state--src-iteration-rs.html#item-enum-IterationStatus-12">IterationStatus</a>};
+<span class="rs-kw">pub</span> <span class="rs-kw">use</span> model::<a class="symbol-link rs-type" href="eos-state--src-model-rs.html#item-struct-ModelRegistration-12">ModelRegistration</a>;
+<span class="rs-kw">pub</span> <span class="rs-kw">use</span> outcomes::{
+    attempt_execution_outcomes, execution_outcome_for_submission, latest_iteration, present_status,
+    project_attempt_outcomes, project_iteration_outcomes, <a class="symbol-link rs-type" href="eos-state--src-outcomes-rs.html#item-enum-ExecutionRole-45">ExecutionRole</a>, <a class="symbol-link rs-type" href="eos-state--src-outcomes-rs.html#item-struct-ExecutionTaskOutcome-67">ExecutionTaskOutcome</a>,
+    <a class="symbol-link rs-type" href="eos-state--src-outcomes-rs.html#item-enum-TaskOutcomeStatus-23">TaskOutcomeStatus</a>, <span class="rs-type">NO_OUTCOME</span>,
+};
+<span class="rs-kw">pub</span> <span class="rs-kw">use</span> pagination::{<a class="symbol-link rs-type" href="eos-state--src-pagination-rs.html#item-struct-Page-14">Page</a>, <a class="symbol-link rs-type" href="eos-state--src-pagination-rs.html#item-struct-PageResult-33">PageResult</a>, <a class="symbol-link rs-type" href="eos-state--src-pagination-rs.html#item-struct-RequestListFilter-43">RequestListFilter</a>};
+<span class="rs-kw">pub</span> <span class="rs-kw">use</span> plan::{<a class="symbol-link rs-type" href="eos-state--src-plan-rs.html#item-struct-AttemptBudget-168">AttemptBudget</a>, <a class="symbol-link rs-type" href="eos-state--src-plan-rs.html#item-struct-DeferredGoal-65">DeferredGoal</a>, <a class="symbol-link rs-type" href="eos-state--src-plan-rs.html#item-struct-MaterializedPlan-236">MaterializedPlan</a>, <a class="symbol-link rs-type" href="eos-state--src-plan-rs.html#item-enum-PlanDisposition-120">PlanDisposition</a>, <a class="symbol-link rs-type" href="eos-state--src-plan-rs.html#item-struct-PlanNodeId-10">PlanNodeId</a>};
+<span class="rs-kw">pub</span> <span class="rs-kw">use</span> request::{<a class="symbol-link rs-type" href="eos-state--src-request-rs.html#item-struct-Request-30">Request</a>, <a class="symbol-link rs-type" href="eos-state--src-request-rs.html#item-enum-RequestStatus-8">RequestStatus</a>};
+<span class="rs-kw">pub</span> <span class="rs-kw">use</span> store::{
+    <a class="symbol-link rs-type" href="eos-state--src-store-rs.html#item-trait-AgentRunStore-256">AgentRunStore</a>, <a class="symbol-link rs-type" href="eos-state--src-store-rs.html#item-trait-AttemptStore-175">AttemptStore</a>, <a class="symbol-link rs-type" href="eos-state--src-store-rs.html#item-trait-IterationStore-120">IterationStore</a>, <a class="symbol-link rs-type" href="eos-state--src-store-rs.html#item-trait-ModelStore-287">ModelStore</a>, <a class="symbol-link rs-type" href="eos-state--src-store-rs.html#item-trait-RequestStore-213">RequestStore</a>, <a class="symbol-link rs-type" href="eos-state--src-store-rs.html#item-trait-Sealed-34">Sealed</a>, <a class="symbol-link rs-type" href="eos-state--src-store-rs.html#item-type-StoreError-31">StoreError</a>,
+    <a class="symbol-link rs-type" href="eos-state--src-store-rs.html#item-trait-TaskStore-82">TaskStore</a>, <a class="symbol-link rs-type" href="eos-state--src-store-rs.html#item-trait-WorkflowStore-44">WorkflowStore</a>,
+};
+<span class="rs-kw">pub</span> <span class="rs-kw">use</span> submissions::{
+    <a class="symbol-link rs-type" href="eos-state--src-submissions-rs.html#item-struct-GeneratorSubmission-44">GeneratorSubmission</a>, <a class="symbol-link rs-type" href="eos-state--src-submissions-rs.html#item-enum-PlannerFailReason-14">PlannerFailReason</a>, <a class="symbol-link rs-type" href="eos-state--src-submissions-rs.html#item-struct-PlannerFailureSubmission-33">PlannerFailureSubmission</a>, <a class="symbol-link rs-type" href="eos-state--src-submissions-rs.html#item-struct-PlannerSubmission-23">PlannerSubmission</a>,
+    <a class="symbol-link rs-type" href="eos-state--src-submissions-rs.html#item-struct-ReducerSubmission-59">ReducerSubmission</a>,
+};
+<span class="rs-kw">pub</span> <span class="rs-kw">use</span> task::{<a class="symbol-link rs-type" href="eos-state--src-task-rs.html#item-struct-Task-66">Task</a>, <a class="symbol-link rs-type" href="eos-state--src-task-rs.html#item-enum-TaskRole-42">TaskRole</a>, <a class="symbol-link rs-type" href="eos-state--src-task-rs.html#item-enum-TaskStatus-14">TaskStatus</a>, <span class="rs-type">TASK_AGENT_ROLES</span>};
+<span class="rs-kw">pub</span> <span class="rs-kw">use</span> workflow::{<a class="symbol-link rs-type" href="eos-state--src-workflow-rs.html#item-struct-Workflow-52">Workflow</a>, <a class="symbol-link rs-type" href="eos-state--src-workflow-rs.html#item-enum-WorkflowOutcome-25">WorkflowOutcome</a>, <a class="symbol-link rs-type" href="eos-state--src-workflow-rs.html#item-enum-WorkflowStatus-11">WorkflowStatus</a>};
+
+<span class="rs-comment">// Re-export the upstream value primitives that appear in this crate's public</span>
+<span class="rs-comment">// API so downstream crates (notably `eos-db`) can name them without a direct</span>
+<span class="rs-comment">// `eos-types` dependency edge, preserving the `eos-db -&gt; {state, config}` topology.</span>
+<span class="rs-kw">pub</span> <span class="rs-kw">use</span> eos_types::{
+    <span class="rs-type">AgentRunId</span>, <span class="rs-type">AttemptId</span>, <span class="rs-type">CoreError</span>, <span class="rs-type">IterationId</span>, <span class="rs-type">JsonObject</span>, <span class="rs-type">RequestId</span>, <span class="rs-type">SandboxId</span>, <span class="rs-type">TaskId</span>,
+    <span class="rs-type">UtcDateTime</span>, <span class="rs-type">WorkflowId</span>,
+};
+
+#[cfg(test)]
+#[path = &quot;../tests/unit/<span class="rs-kw">mod</span>.rs&quot;]
+<span class="rs-kw">mod</span> tests;
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
   <script src="../assets/inventory.js"></script>
 </body>
 </html>

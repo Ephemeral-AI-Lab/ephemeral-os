@@ -1,0 +1,218 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>eos-sandbox-host · src/registry.rs</title>
+  <link rel="stylesheet" href="../assets/inventory.css">
+</head>
+<body>
+  <header>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>eos-sandbox-host File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS/backend-server &amp;&amp; cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
+  </header>
+  <a class="back-link" href="../index.html">backend-server</a>
+<section class="summary">
+  <div><b>14</b><span>modules</span></div>
+  <div><b>122</b><span>items</span></div>
+  <div><b>72</b><span>fields</span></div>
+  <div><b>76</b><span>methods</span></div>
+</section>
+<section class="toolbar">
+  <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
+  <select id="kind-filter">
+    <option value="">All items</option>
+    <option value="type-model">Type model</option>
+    <option value="struct">Structs</option>
+    <option value="enum">Enums</option>
+    <option value="trait">Traits</option>
+    <option value="impl">Impls</option>
+    <option value="fn">Functions</option>
+    <option value="type">Aliases</option>
+  </select>
+</section>
+<main class="crate-layout">
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><a class="file-link" href="eos-sandbox-host.html"><span>bootstrap_artifact.rs</span><small>0/9</small></a></li><li><span class="folder">daemon_client</span><ul class="file-tree"><li><a class="file-link" href="eos-sandbox-host--src-daemon-client-codec-rs.html"><span>codec.rs</span><small>0/18</small></a></li><li><a class="file-link" href="eos-sandbox-host--src-daemon-client-shell-rs.html"><span>shell.rs</span><small>0/6</small></a></li><li><a class="file-link" href="eos-sandbox-host--src-daemon-client-tcp-rs.html"><span>tcp.rs</span><small>1/5</small></a></li></ul></li><li><a class="file-link" href="eos-sandbox-host--src-daemon-client-rs.html"><span>daemon_client.rs</span><small>1/2</small></a></li><li><a class="file-link" href="eos-sandbox-host--src-docker-rs.html"><span>docker.rs</span><small>1/13</small></a></li><li><a class="file-link" href="eos-sandbox-host--src-error-rs.html"><span>error.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-sandbox-host--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-sandbox-host--src-lifecycle-rs.html"><span>lifecycle.rs</span><small>2/5</small></a></li><li><a class="file-link" href="eos-sandbox-host--src-plugin-package-rs.html"><span>plugin_package.rs</span><small>0/8</small></a></li><li><a class="file-link" href="eos-sandbox-host--src-provider-rs.html"><span>provider.rs</span><small>12/2</small></a></li><li><a class="file-link" href="eos-sandbox-host--src-provisioning-rs.html"><span>provisioning.rs</span><small>1/2</small></a></li><li><a class="file-link active" href="eos-sandbox-host--src-registry-rs.html"><span>registry.rs</span><small>1/1</small></a></li><li><a class="file-link" href="eos-sandbox-host--src-sandbox-upload-rs.html"><span>sandbox_upload.rs</span><small>3/8</small></a></li></ul></li></ul></nav>
+  <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="registry crates/eos-sandbox-host/src/registry.rs resolve_provider_kind ProviderRegistry impl ProviderRegistry">
+  <div class="module-head">
+    <div>
+      <h2>src/registry.rs</h2>
+      <p class="path">module <code>registry</code></p>
+    </div>
+    <div class="module-stats">
+      <span>file owns</span>
+      <span>1 types</span>
+      <span>1 impls</span>
+      <span>1 fns</span>
+      <span>3 methods</span>
+    </div>
+  </div>
+  <div class="items"><div class="group-label">File-Owned Types</div><article id="item-struct-ProviderRegistry-23" class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct ProviderRegistry pub pub struct ProviderRegistry crates/eos-sandbox-host/src/registry.rs adapter RwLock &lt; Option &lt; Arc &lt; dyn ProviderAdapter &gt; &gt; &gt; ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>ProviderRegistry</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub struct <a class="symbol-link" href="eos-sandbox-host--src-registry-rs.html#item-struct-ProviderRegistry-23">ProviderRegistry</a></code>
+  <p class="docstring">Process-local holder for the single provider adapter, held as<br>`Arc&lt;ProviderRegistry&gt;` and seeded once at the composition root.<br>The host is Docker-only, so there is exactly one adapter and no per-sandbox<br>routing. Reads dominate, so the slot lives behind `parking_lot::RwLock`<br>(`own-rwlock-readers`); every read clones the `Arc` out and drops the guard<br>before any `.await` (`async-no-lock-await`).</p>
+  <div class="tags"><span>derive: Debug</span><span>derive: Default</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>adapter</td><td><code>RwLock &lt; Option &lt; Arc &lt; dyn <a class="symbol-link" href="eos-sandbox-host--src-provider-rs.html#item-trait-ProviderAdapter-271">ProviderAdapter</a> &gt; &gt; &gt;</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-36"><td>constructor</td><td>new</td><td><code>pub fn <a class="symbol-link" href="eos-sandbox-host--src-daemon-client-rs.html#method-new-119">new</a> () -&gt; Self</code><p class="docstring">Construct an empty registry (no adapter seeded).</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Construct an empty registry (no adapter seeded).</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-host--src-daemon-client-rs.html#method-new-119">new</a>() -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">Self</span> {
+            adapter: <span class="rs-type">RwLock</span>::<a class="symbol-link rs-fn" href="eos-sandbox-host--src-daemon-client-rs.html#method-new-119">new</a>(<span class="rs-type">None</span>),
+        }
+    }
+</code></pre>
+</details></td></tr><tr id="method-seed-44"><td>method</td><td>seed</td><td><code>pub fn <a class="symbol-link" href="eos-sandbox-host--src-registry-rs.html#method-seed-44">seed</a> (&amp; self , adapter : Arc &lt; dyn <a class="symbol-link" href="eos-sandbox-host--src-provider-rs.html#item-trait-ProviderAdapter-271">ProviderAdapter</a> &gt;)</code><p class="docstring">Seed the provider adapter. The first seed wins: repeat calls are no-ops,<br>with a warning if a different provider kind tries to replace the live one.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Seed the provider adapter. The first seed wins: repeat calls are no-ops,</span>
+    <span class="rs-comment">/// with a warning if a different provider kind tries to replace the live one.</span>
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-host--src-registry-rs.html#method-seed-44">seed</a>(&amp;<span class="rs-self">self</span>, adapter: <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <a class="symbol-link rs-type" href="eos-sandbox-host--src-provider-rs.html#item-trait-ProviderAdapter-271">ProviderAdapter</a>&gt;) {
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> slot = <span class="rs-self">self</span>.adapter.write();
+        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(existing) = slot.as_ref() {
+            <span class="rs-kw">if</span> existing.<a class="symbol-link rs-fn" href="eos-sandbox-host--src-docker-rs.html#method-kind-96">kind</a>() != adapter.<a class="symbol-link rs-fn" href="eos-sandbox-host--src-docker-rs.html#method-kind-96">kind</a>() {
+                tracing::warn!(
+                    first = existing.<a class="symbol-link rs-fn" href="eos-sandbox-host--src-docker-rs.html#method-kind-96">kind</a>().<a class="symbol-link rs-fn" href="eos-sandbox-host--src-provider-rs.html#method-as-str-35">as_str</a>(),
+                    now = adapter.<a class="symbol-link rs-fn" href="eos-sandbox-host--src-docker-rs.html#method-kind-96">kind</a>().<a class="symbol-link rs-fn" href="eos-sandbox-host--src-provider-rs.html#method-as-str-35">as_str</a>(),
+                    &quot;sandbox provider already seeded; ignoring replacement&quot;
+                );
+            }
+            <span class="rs-kw">return</span>;
+        }
+        *slot = <span class="rs-type">Some</span>(adapter);
+    }
+</code></pre>
+</details></td></tr><tr id="method-adapter-61"><td>method</td><td>adapter</td><td><code>pub fn <a class="symbol-link" href="eos-sandbox-host--src-registry-rs.html#method-adapter-61">adapter</a> (&amp; self) -&gt; Result &lt; Arc &lt; dyn <a class="symbol-link" href="eos-sandbox-host--src-provider-rs.html#item-trait-ProviderAdapter-271">ProviderAdapter</a> &gt; , <a class="symbol-link" href="eos-sandbox-host--src-error-rs.html#item-enum-SandboxHostError-5">SandboxHostError</a> &gt;</code><p class="docstring">The provider adapter, or [`SandboxHostError::NoProvider`] if the<br>registry has not been seeded.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// The provider adapter, or [`SandboxHostError::NoProvider`] if the</span>
+    <span class="rs-comment">/// registry has not been seeded.</span>
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-host--src-registry-rs.html#method-adapter-61">adapter</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <a class="symbol-link rs-type" href="eos-sandbox-host--src-provider-rs.html#item-trait-ProviderAdapter-271">ProviderAdapter</a>&gt;, <a class="symbol-link rs-type" href="eos-sandbox-host--src-error-rs.html#item-enum-SandboxHostError-5">SandboxHostError</a>&gt; {
+        <span class="rs-self">self</span>.adapter
+            .read()
+            .clone()
+            .ok_or(<a class="symbol-link rs-type" href="eos-sandbox-host--src-error-rs.html#item-enum-SandboxHostError-5">SandboxHostError</a>::<span class="rs-type">NoProvider</span>)
+    }
+</code></pre>
+</details></td></tr></tbody></table>
+
+  <p class="source">crates/eos-sandbox-host/src/registry.rs:23</p>
+</article><div class="group-label">Standalone Functions</div><article id="item-fn-resolve-provider-kind-15" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn resolve_provider_kind pub pub fn resolve_provider_kind () -&gt; ProviderKind crates/eos-sandbox-host/src/registry.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>resolve_provider_kind</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub fn <a class="symbol-link" href="eos-sandbox-host--src-registry-rs.html#item-fn-resolve-provider-kind-15">resolve_provider_kind</a> () -&gt; <a class="symbol-link" href="eos-sandbox-host--src-provider-rs.html#item-enum-ProviderKind-22">ProviderKind</a></code>
+  <p class="docstring">The sandbox provider kind. agent-core is Docker-only, and sandbox<br>configuration (including any provider selection) is owned by the ephemeral-os<br>sandbox module — so this is a fixed host-side constant, not central config.</p>
+  <div class="tags"><span>must_use</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-comment">/// The sandbox provider kind. agent-core is Docker-only, and sandbox</span>
+<span class="rs-comment">/// configuration (including any provider selection) is owned by the ephemeral-os</span>
+<span class="rs-comment">/// sandbox module — so this is a fixed host-side constant, not central config.</span>
+#[must_use]
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-host--src-registry-rs.html#item-fn-resolve-provider-kind-15">resolve_provider_kind</a>() -&gt; <a class="symbol-link rs-type" href="eos-sandbox-host--src-provider-rs.html#item-enum-ProviderKind-22">ProviderKind</a> {
+    <a class="symbol-link rs-type" href="eos-sandbox-host--src-provider-rs.html#item-enum-ProviderKind-22">ProviderKind</a>::<span class="rs-type">Docker</span>
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-sandbox-host/src/registry.rs:15</p>
+</article></div>
+</section></div>
+</main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/eos-sandbox-host/src/registry.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-comment">//! The provider registry as explicit application state (GC-02), plus the</span>
+<span class="rs-comment">//! Docker-only provider-selection resolver.</span>
+<span class="rs-comment">//!</span>
+<span class="rs-comment">//! The composition root builds one `Arc&lt;ProviderRegistry&gt;` and seeds the single</span>
+<span class="rs-comment">//! provider adapter. The seed is first-call-wins, so no separate bootstrap</span>
+<span class="rs-comment">//! singleton is needed.</span>
+
+<span class="rs-kw">use</span> std::sync::<span class="rs-type">Arc</span>;
+
+<span class="rs-kw">use</span> parking_lot::<span class="rs-type">RwLock</span>;
+
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::error::<a class="symbol-link rs-type" href="eos-sandbox-host--src-error-rs.html#item-enum-SandboxHostError-5">SandboxHostError</a>;
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::provider::{<a class="symbol-link rs-type" href="eos-sandbox-host--src-provider-rs.html#item-trait-ProviderAdapter-271">ProviderAdapter</a>, <a class="symbol-link rs-type" href="eos-sandbox-host--src-provider-rs.html#item-enum-ProviderKind-22">ProviderKind</a>};
+
+<span class="rs-comment">/// The sandbox provider kind. agent-core is Docker-only, and sandbox</span>
+<span class="rs-comment">/// configuration (including any provider selection) is owned by the ephemeral-os</span>
+<span class="rs-comment">/// sandbox module — so this is a fixed host-side constant, not central config.</span>
+#[must_use]
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-host--src-registry-rs.html#item-fn-resolve-provider-kind-15">resolve_provider_kind</a>() -&gt; <a class="symbol-link rs-type" href="eos-sandbox-host--src-provider-rs.html#item-enum-ProviderKind-22">ProviderKind</a> {
+    <a class="symbol-link rs-type" href="eos-sandbox-host--src-provider-rs.html#item-enum-ProviderKind-22">ProviderKind</a>::<span class="rs-type">Docker</span>
+}
+
+<span class="rs-comment">/// Process-local holder for the single provider adapter, held as</span>
+<span class="rs-comment">/// `Arc&lt;ProviderRegistry&gt;` and seeded once at the composition root.</span>
+<span class="rs-comment">///</span>
+<span class="rs-comment">/// The host is Docker-only, so there is exactly one adapter and no per-sandbox</span>
+<span class="rs-comment">/// routing. Reads dominate, so the slot lives behind `parking_lot::RwLock`</span>
+<span class="rs-comment">/// (`own-rwlock-readers`); every read clones the `Arc` out and drops the guard</span>
+<span class="rs-comment">/// before any `.await` (`async-no-lock-await`).</span>
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Default</span>)]
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-sandbox-host--src-registry-rs.html#item-struct-ProviderRegistry-23">ProviderRegistry</a> {
+    adapter: <span class="rs-type">RwLock</span>&lt;<span class="rs-type">Option</span>&lt;<span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <a class="symbol-link rs-type" href="eos-sandbox-host--src-provider-rs.html#item-trait-ProviderAdapter-271">ProviderAdapter</a>&gt;&gt;&gt;,
+}
+
+<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-sandbox-host--src-registry-rs.html#item-struct-ProviderRegistry-23">ProviderRegistry</a> {
+    <span class="rs-comment">/// Construct an empty registry (no adapter seeded).</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-host--src-daemon-client-rs.html#method-new-119">new</a>() -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">Self</span> {
+            adapter: <span class="rs-type">RwLock</span>::<a class="symbol-link rs-fn" href="eos-sandbox-host--src-daemon-client-rs.html#method-new-119">new</a>(<span class="rs-type">None</span>),
+        }
+    }
+
+    <span class="rs-comment">/// Seed the provider adapter. The first seed wins: repeat calls are no-ops,</span>
+    <span class="rs-comment">/// with a warning if a different provider kind tries to replace the live one.</span>
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-host--src-registry-rs.html#method-seed-44">seed</a>(&amp;<span class="rs-self">self</span>, adapter: <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <a class="symbol-link rs-type" href="eos-sandbox-host--src-provider-rs.html#item-trait-ProviderAdapter-271">ProviderAdapter</a>&gt;) {
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> slot = <span class="rs-self">self</span>.adapter.write();
+        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(existing) = slot.as_ref() {
+            <span class="rs-kw">if</span> existing.<a class="symbol-link rs-fn" href="eos-sandbox-host--src-docker-rs.html#method-kind-96">kind</a>() != adapter.<a class="symbol-link rs-fn" href="eos-sandbox-host--src-docker-rs.html#method-kind-96">kind</a>() {
+                tracing::warn!(
+                    first = existing.<a class="symbol-link rs-fn" href="eos-sandbox-host--src-docker-rs.html#method-kind-96">kind</a>().<a class="symbol-link rs-fn" href="eos-sandbox-host--src-provider-rs.html#method-as-str-35">as_str</a>(),
+                    now = adapter.<a class="symbol-link rs-fn" href="eos-sandbox-host--src-docker-rs.html#method-kind-96">kind</a>().<a class="symbol-link rs-fn" href="eos-sandbox-host--src-provider-rs.html#method-as-str-35">as_str</a>(),
+                    &quot;sandbox provider already seeded; ignoring replacement&quot;
+                );
+            }
+            <span class="rs-kw">return</span>;
+        }
+        *slot = <span class="rs-type">Some</span>(adapter);
+    }
+
+    <span class="rs-comment">/// The provider adapter, or [`SandboxHostError::NoProvider`] if the</span>
+    <span class="rs-comment">/// registry has not been seeded.</span>
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-host--src-registry-rs.html#method-adapter-61">adapter</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <a class="symbol-link rs-type" href="eos-sandbox-host--src-provider-rs.html#item-trait-ProviderAdapter-271">ProviderAdapter</a>&gt;, <a class="symbol-link rs-type" href="eos-sandbox-host--src-error-rs.html#item-enum-SandboxHostError-5">SandboxHostError</a>&gt; {
+        <span class="rs-self">self</span>.adapter
+            .read()
+            .clone()
+            .ok_or(<a class="symbol-link rs-type" href="eos-sandbox-host--src-error-rs.html#item-enum-SandboxHostError-5">SandboxHostError</a>::<span class="rs-type">NoProvider</span>)
+    }
+}
+
+#[cfg(test)]
+#[path = &quot;../tests/registry/<span class="rs-kw">mod</span>.rs&quot;]
+<span class="rs-kw">mod</span> tests;
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
+  <script src="../assets/inventory.js"></script>
+</body>
+</html>

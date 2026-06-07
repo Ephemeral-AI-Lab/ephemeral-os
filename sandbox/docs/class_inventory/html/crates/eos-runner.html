@@ -8,8 +8,16 @@
 </head>
 <body>
   <header>
-    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
-    <h1>eos-runner File Inventory</h1>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>eos-runner File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS/sandbox &amp;&amp; cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
   </header>
   <a class="back-link" href="../index.html">sandbox</a>
 <section class="summary">
@@ -47,19 +55,95 @@
       <span>2 methods</span>
     </div>
   </div>
-  <div class="items"><div class="group-label">File-Owned Types</div><article class="type-card" data-kind="enum" data-kind-list="enum field impl method type-model" data-filter-text="enum RunnerError pub pub enum RunnerError crates/eos-runner/src/error.rs  ">
+  <div class="items"><div class="group-label">File-Owned Types</div><article id="item-enum-RunnerError-11" class="type-card" data-kind="enum" data-kind-list="enum field impl method type-model" data-filter-text="enum RunnerError pub pub enum RunnerError crates/eos-runner/src/error.rs  ">
   <div class="item-head">
     <span class="kind">enum</span>
     <h3>RunnerError</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub enum RunnerError</code>
-  <div class="tags"><span>error</span></div>
-  <h4>Variants</h4><table><tbody><tr><td>Syscall</td><td><code>0: std :: io :: Error</code></td></tr><tr><td>InvalidRequest</td><td><code>0: String</code></td></tr><tr><td>Overlay</td><td><code>0: eos_overlay :: OverlayError</code></td></tr><tr><td>Child</td><td><code>0: std :: io :: Error</code></td></tr><tr><td>TimedOut</td><td><code></code></td></tr><tr><td>Unsupported</td><td><code></code></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl From &lt; std :: io :: Error &gt; for RunnerError</code></summary><table><tbody><tr><td>constructor</td><td>from</td><td><code>fn from (err : std :: io :: Error) -&gt; Self</code></td></tr></tbody></table></details><details><summary><code>impl From &lt; eos_overlay :: OverlayError &gt; for RunnerError</code></summary><table><tbody><tr><td>constructor</td><td>from</td><td><code>fn from (err : eos_overlay :: OverlayError) -&gt; Self</code></td></tr></tbody></table></details></div>
+  <code class="signature">pub enum <a class="symbol-link" href="eos-runner.html#item-enum-RunnerError-11">RunnerError</a></code>
+  <p class="docstring">Failures returned by the namespace runner.</p>
+  <div class="tags"><span>derive: Debug</span><span>derive: Error</span><span>error</span><span>non_exhaustive</span></div>
+  <h4>Variants</h4><table><tbody><tr><td>Syscall</td><td><code>0: std :: io :: Error</code></td></tr><tr><td>InvalidRequest</td><td><code>0: String</code></td></tr><tr><td>Overlay</td><td><code>0: eos_overlay :: OverlayError</code></td></tr><tr><td>Child</td><td><code>0: std :: io :: Error</code></td></tr><tr><td>TimedOut</td><td><code></code></td></tr><tr><td>Unsupported</td><td><code></code></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl From &lt; std :: io :: Error &gt; for <a class="symbol-link" href="eos-runner.html#item-enum-RunnerError-11">RunnerError</a></code></summary><table><tbody><tr id="method-from-45"><td>constructor</td><td>from</td><td><code>fn <a class="symbol-link" href="eos-runner.html#method-from-45">from</a> (err : std :: io :: Error) -&gt; Self</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runner.html#method-from-45">from</a>(err: std::io::<span class="rs-type">Error</span>) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">Self</span>::<span class="rs-type">Syscall</span>(err)
+    }
+</code></pre>
+</details></td></tr></tbody></table></details><details><summary><code>impl From &lt; eos_overlay :: OverlayError &gt; for <a class="symbol-link" href="eos-runner.html#item-enum-RunnerError-11">RunnerError</a></code></summary><table><tbody><tr id="method-from-51"><td>constructor</td><td>from</td><td><code>fn <a class="symbol-link" href="eos-runner.html#method-from-45">from</a> (err : eos_overlay :: OverlayError) -&gt; Self</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runner.html#method-from-45">from</a>(err: eos_overlay::<span class="rs-type">OverlayError</span>) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">Self</span>::<span class="rs-type">Overlay</span>(err)
+    }
+</code></pre>
+</details></td></tr></tbody></table></details></div>
+
   <p class="source">crates/eos-runner/src/error.rs:11</p>
 </article></div>
 </section></div>
 </main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/eos-runner/src/error.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-comment">//! Runner error type.</span>
+<span class="rs-comment">//!</span>
+<span class="rs-comment">//! Per the workspace non-negotiables: library errors are `thiserror` enums with</span>
+<span class="rs-comment">//! lowercase, punctuation-free messages and `#[from]` source conversions. The</span>
+<span class="rs-comment">//! kinds below mirror the active runner failure surfaces: invalid requests,</span>
+<span class="rs-comment">//! child process failures, overlay mount failures, timeouts, and the syscall</span>
+<span class="rs-comment">//! errnos raised by `setns` / `unshare`.</span>
+
+<span class="rs-kw">use</span> thiserror::<span class="rs-type">Error</span>;
+
+<span class="rs-comment">/// Failures returned by the namespace runner.</span>
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Error</span>)]
+#[non_exhaustive]
+<span class="rs-kw">pub</span> <span class="rs-kw">enum</span> <a class="symbol-link rs-type" href="eos-runner.html#item-enum-RunnerError-11">RunnerError</a> {
+    <span class="rs-comment">/// A namespace syscall (`unshare`, `setns`, `mount`, `move_mount`) failed.</span>
+    <span class="rs-comment">/// Wraps the raw `errno`-bearing OS error.</span>
+    #[error(&quot;namespace syscall failed&quot;)]
+    <span class="rs-type">Syscall</span>(#[source] std::io::<span class="rs-type">Error</span>),
+
+    <span class="rs-comment">/// The request payload is structurally valid JSON but cannot be executed by</span>
+    <span class="rs-comment">/// this runner mode.</span>
+    #[error(&quot;invalid namespace runner request: {0}&quot;)]
+    <span class="rs-type">InvalidRequest</span>(<span class="rs-type">String</span>),
+
+    <span class="rs-comment">/// Overlay mounting failed.</span>
+    #[error(&quot;overlay mount failed&quot;)]
+    <span class="rs-type">Overlay</span>(#[source] eos_overlay::<span class="rs-type">OverlayError</span>),
+
+    <span class="rs-comment">/// Spawning, exec'ing, or waiting on the child process failed.</span>
+    #[error(&quot;child process failed&quot;)]
+    <span class="rs-type">Child</span>(#[source] std::io::<span class="rs-type">Error</span>),
+
+    <span class="rs-comment">/// The tool call exceeded its timeout; the group was `SIGKILL`ed.</span>
+    #[error(&quot;tool call timed out&quot;)]
+    <span class="rs-type">TimedOut</span>,
+
+    <span class="rs-comment">/// Reached on a non-Linux host: the namespace syscalls do not exist. Lets</span>
+    <span class="rs-comment">/// the workspace compile and link on the macOS dev host (real runs are</span>
+    <span class="rs-comment">/// Linux/musl only).</span>
+    #[error(&quot;namespace runner is only supported on linux&quot;)]
+    <span class="rs-type">Unsupported</span>,
+}
+
+<span class="rs-kw">impl</span> <span class="rs-type">From</span>&lt;std::io::<span class="rs-type">Error</span>&gt; <span class="rs-kw">for</span> <a class="symbol-link rs-type" href="eos-runner.html#item-enum-RunnerError-11">RunnerError</a> {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runner.html#method-from-45">from</a>(err: std::io::<span class="rs-type">Error</span>) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">Self</span>::<span class="rs-type">Syscall</span>(err)
+    }
+}
+
+<span class="rs-kw">impl</span> <span class="rs-type">From</span>&lt;eos_overlay::<span class="rs-type">OverlayError</span>&gt; <span class="rs-kw">for</span> <a class="symbol-link rs-type" href="eos-runner.html#item-enum-RunnerError-11">RunnerError</a> {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runner.html#method-from-45">from</a>(err: eos_overlay::<span class="rs-type">OverlayError</span>) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">Self</span>::<span class="rs-type">Overlay</span>(err)
+    }
+}
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
   <script src="../assets/inventory.js"></script>
 </body>
 </html>

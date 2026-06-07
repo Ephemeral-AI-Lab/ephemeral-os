@@ -3,7 +3,7 @@
 use std::sync::{Arc, Mutex};
 
 use async_trait::async_trait;
-use eos_types::{AgentRunId, JsonObject, SubagentSessionId, WorkflowSessionId};
+use eos_types::{JsonObject, SubagentSessionId, WorkflowSessionId};
 use serde_json::json;
 
 use super::super::{
@@ -14,7 +14,7 @@ use crate::core::error::ToolError;
 use crate::core::metadata::ExecutionMetadata;
 use crate::core::result::ToolResult;
 use crate::ports::{
-    BackgroundInflightReport, BackgroundSupervisorPort, Sealed, SpawnedSubagent, StartedSubagent,
+    RunningBackgroundTasks, BackgroundSupervisorPort, Sealed, SpawnedSubagent, StartedSubagent,
     StartedWorkflowHandle, WorkflowControlPort,
 };
 use crate::runtime::executor::ToolExecutor;
@@ -60,36 +60,25 @@ impl BackgroundSupervisorPort for FakeBackgroundSupervisor {
         Ok(ToolResult::ok("cancelled"))
     }
 
-    async fn inflight_report(
-        &self,
-        _agent_run_id: Option<&AgentRunId>,
-    ) -> BackgroundInflightReport {
-        BackgroundInflightReport {
+    async fn running_background_tasks(&self) -> RunningBackgroundTasks {
+        RunningBackgroundTasks {
             total: 0,
-            subagent: 0,
-            workflow: 0,
-            command_session: 0,
+            subagents: 0,
+            workflows: 0,
+            command_sessions: 0,
         }
     }
 
-    async fn cancel_subagents_for_agent_run(
-        &self,
-        _agent_run_id: &AgentRunId,
-    ) -> BackgroundInflightReport {
-        BackgroundInflightReport {
+    async fn cancel_subagents(&self) -> RunningBackgroundTasks {
+        RunningBackgroundTasks {
             total: 0,
-            subagent: 0,
-            workflow: 0,
-            command_session: 0,
+            subagents: 0,
+            workflows: 0,
+            command_sessions: 0,
         }
     }
 
-    async fn register_workflow(
-        &self,
-        _agent_run_id: &AgentRunId,
-        _workflow: &StartedWorkflowHandle,
-    ) {
-    }
+    async fn register_workflow(&self, _workflow: &StartedWorkflowHandle) {}
 
     async fn cancel_workflow_record(
         &self,
@@ -99,17 +88,16 @@ impl BackgroundSupervisorPort for FakeBackgroundSupervisor {
         false
     }
 
-    async fn cancel_for_parent_exit(
+    async fn teardown(
         &self,
-        _agent_run_id: Option<&AgentRunId>,
         _workflow_control: Option<Arc<dyn WorkflowControlPort>>,
         _reason: &str,
-    ) -> BackgroundInflightReport {
-        BackgroundInflightReport {
+    ) -> RunningBackgroundTasks {
+        RunningBackgroundTasks {
             total: 0,
-            subagent: 0,
-            workflow: 0,
-            command_session: 0,
+            subagents: 0,
+            workflows: 0,
+            command_sessions: 0,
         }
     }
 }

@@ -8,8 +8,16 @@
 </head>
 <body>
   <header>
-    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
-    <h1>eos-skills File Inventory</h1>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>eos-skills File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS/agent-core &amp;&amp; cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
   </header>
   <a class="back-link" href="../index.html">agent-core</a>
 <section class="summary">
@@ -47,39 +55,219 @@
       <span>4 methods</span>
     </div>
   </div>
-  <div class="items"><div class="group-label">File-Owned Types</div><article class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct SkillRegistry pub pub struct SkillRegistry crates/eos-skills/src/registry.rs skills BTreeMap &lt; SkillName , SkillDefinition &gt; ">
+  <div class="items"><div class="group-label">File-Owned Types</div><article id="item-struct-SkillRegistry-12" class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct SkillRegistry pub pub struct SkillRegistry crates/eos-skills/src/registry.rs skills BTreeMap &lt; SkillName , SkillDefinition &gt; ">
   <div class="item-head">
     <span class="kind">struct</span>
     <h3>SkillRegistry</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub struct SkillRegistry</code>
-  <div class="tags"></div>
-  <h4>Fields</h4><table><tbody><tr><td>pub(crate)</td><td>skills</td><td><code>BTreeMap &lt; SkillName , SkillDefinition &gt;</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr><td>constructor</td><td>new</td><td><code>pub fn new () -&gt; Self</code></td></tr><tr><td>method</td><td>register</td><td><code>pub fn register (&amp; mut self , skill : SkillDefinition)</code></td></tr><tr><td>method</td><td>get</td><td><code>pub fn get (&amp; self , name : &amp; SkillName) -&gt; Option &lt; &amp; SkillDefinition &gt;</code></td></tr><tr><td>method</td><td>list_skills</td><td><code>pub fn list_skills (&amp; self) -&gt; impl Iterator &lt; Item = &amp; SkillDefinition &gt;</code></td></tr></tbody></table>
+  <code class="signature">pub struct <a class="symbol-link" href="eos-skills--src-registry-rs.html#item-struct-SkillRegistry-12">SkillRegistry</a></code>
+  <p class="docstring">Stores loaded skills by [`SkillName`]. Built once at the composition root and<br>then shared immutably as `Arc&lt;SkillRegistry&gt;`.</p>
+  <div class="tags"><span>derive: Clone</span><span>derive: Debug</span><span>derive: Default</span><span>derive: Eq</span><span>derive: PartialEq</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub(crate)</td><td>skills</td><td><code>BTreeMap &lt; <a class="symbol-link" href="eos-skills--src-definition-rs.html#item-struct-SkillName-22">SkillName</a> , <a class="symbol-link" href="eos-skills--src-definition-rs.html#item-struct-SkillDefinition-93">SkillDefinition</a> &gt;</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-20"><td>constructor</td><td>new</td><td><code>pub fn <a class="symbol-link" href="eos-skills--src-registry-rs.html#method-new-20">new</a> () -&gt; Self</code><p class="docstring">An empty registry.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// An empty registry.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-skills--src-registry-rs.html#method-new-20">new</a>() -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">Self</span>::default()
+    }
+</code></pre>
+</details></td></tr><tr id="method-register-26"><td>method</td><td>register</td><td><code>pub fn <a class="symbol-link" href="eos-skills--src-registry-rs.html#method-register-26">register</a> (&amp; mut self , skill : <a class="symbol-link" href="eos-skills--src-definition-rs.html#item-struct-SkillDefinition-93">SkillDefinition</a>)</code><p class="docstring">Insert one skill, replacing any same-named entry (last-wins, matching the<br>Rust dict assignment `self._skills[skill.name] = skill`).</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Insert one skill, replacing any same-named entry (last-wins, matching the</span>
+    <span class="rs-comment">/// Rust dict assignment `self._skills[skill.name] = skill`).</span>
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-skills--src-registry-rs.html#method-register-26">register</a>(&amp;<span class="rs-kw">mut</span> <span class="rs-self">self</span>, skill: <a class="symbol-link rs-type" href="eos-skills--src-definition-rs.html#item-struct-SkillDefinition-93">SkillDefinition</a>) {
+        <span class="rs-self">self</span>.skills.insert(skill.name.clone(), skill);
+    }
+</code></pre>
+</details></td></tr><tr id="method-get-32"><td>method</td><td>get</td><td><code>pub fn <a class="symbol-link" href="eos-skills--src-registry-rs.html#method-get-32">get</a> (&amp; self , name : &amp; <a class="symbol-link" href="eos-skills--src-definition-rs.html#item-struct-SkillName-22">SkillName</a>) -&gt; Option &lt; &amp; <a class="symbol-link" href="eos-skills--src-definition-rs.html#item-struct-SkillDefinition-93">SkillDefinition</a> &gt;</code><p class="docstring">Look up a skill by name; `None` if absent.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Look up a skill by name; `None` if absent.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-skills--src-registry-rs.html#method-get-32">get</a>(&amp;<span class="rs-self">self</span>, name: &amp;<a class="symbol-link rs-type" href="eos-skills--src-definition-rs.html#item-struct-SkillName-22">SkillName</a>) -&gt; <span class="rs-type">Option</span>&lt;&amp;<a class="symbol-link rs-type" href="eos-skills--src-definition-rs.html#item-struct-SkillDefinition-93">SkillDefinition</a>&gt; {
+        <span class="rs-self">self</span>.skills.<a class="symbol-link rs-fn" href="eos-skills--src-registry-rs.html#method-get-32">get</a>(name)
+    }
+</code></pre>
+</details></td></tr><tr id="method-list-skills-38"><td>method</td><td>list_skills</td><td><code>pub fn <a class="symbol-link" href="eos-skills--src-registry-rs.html#method-list-skills-38">list_skills</a> (&amp; self) -&gt; impl Iterator &lt; Item = &amp; <a class="symbol-link" href="eos-skills--src-definition-rs.html#item-struct-SkillDefinition-93">SkillDefinition</a> &gt;</code><p class="docstring">All skills in [`SkillName`] order (the `BTreeMap` guarantees the sort).</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// All skills in [`SkillName`] order (the `BTreeMap` guarantees the sort).</span>
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-skills--src-registry-rs.html#method-list-skills-38">list_skills</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-kw">impl</span> <span class="rs-type">Iterator</span>&lt;<span class="rs-type">Item</span> = &amp;<a class="symbol-link rs-type" href="eos-skills--src-definition-rs.html#item-struct-SkillDefinition-93">SkillDefinition</a>&gt; {
+        <span class="rs-self">self</span>.skills.values()
+    }
+</code></pre>
+</details></td></tr></tbody></table>
+
   <p class="source">crates/eos-skills/src/registry.rs:12</p>
-</article><div class="group-label">Standalone Functions</div><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn def private fn def (name : &amp; str , description : &amp; str) -&gt; SkillDefinition crates/eos-skills/src/registry.rs  ">
+</article><div class="group-label">Standalone Functions</div><article id="item-fn-def-50" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn def private fn def (name : &amp; str , description : &amp; str) -&gt; SkillDefinition crates/eos-skills/src/registry.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>def</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn def (name : &amp; str , description : &amp; str) -&gt; SkillDefinition</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-skills--src-registry-rs.html#item-fn-def-50">def</a> (name : &amp; str , description : &amp; str) -&gt; <a class="symbol-link" href="eos-skills--src-definition-rs.html#item-struct-SkillDefinition-93">SkillDefinition</a></code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-skills--src-registry-rs.html#item-fn-def-50">def</a>(name: &amp;str, description: &amp;str) -&gt; <a class="symbol-link rs-type" href="eos-skills--src-definition-rs.html#item-struct-SkillDefinition-93">SkillDefinition</a> {
+        <a class="symbol-link rs-type" href="eos-skills--src-definition-rs.html#item-struct-SkillDefinition-93">SkillDefinition</a> {
+            name: <a class="symbol-link rs-type" href="eos-skills--src-definition-rs.html#item-struct-SkillName-22">SkillName</a>::<a class="symbol-link rs-fn" href="eos-skills--src-definition-rs.html#method-parse-33">parse</a>(name).unwrap(),
+            description: description.to_owned(),
+            content: <span class="rs-type">String</span>::<a class="symbol-link rs-fn" href="eos-skills--src-registry-rs.html#method-new-20">new</a>(),
+            source: <a class="symbol-link rs-type" href="eos-skills--src-definition-rs.html#item-enum-SkillSource-84">SkillSource</a>::<span class="rs-type">Bundled</span>,
+            path: <span class="rs-type">None</span>,
+            references: <span class="rs-type">BTreeMap</span>::<a class="symbol-link rs-fn" href="eos-skills--src-registry-rs.html#method-new-20">new</a>(),
+        }
+    }
+</code></pre>
+</details>
 
   <p class="source">crates/eos-skills/src/registry.rs:50</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn register_get_list_semantics private fn register_get_list_semantics () crates/eos-skills/src/registry.rs  ">
+</article><article id="item-fn-register-get-list-semantics-63" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn register_get_list_semantics private fn register_get_list_semantics () crates/eos-skills/src/registry.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>register_get_list_semantics</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn register_get_list_semantics ()</code>
-  <div class="tags"></div>
+  <code class="signature">fn <a class="symbol-link" href="eos-skills--src-registry-rs.html#item-fn-register-get-list-semantics-63">register_get_list_semantics</a> ()</code>
+  <div class="tags"><span>test</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-skills--src-registry-rs.html#item-fn-register-get-list-semantics-63">register_get_list_semantics</a>() {
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> registry = <a class="symbol-link rs-type" href="eos-skills--src-registry-rs.html#item-struct-SkillRegistry-12">SkillRegistry</a>::<a class="symbol-link rs-fn" href="eos-skills--src-registry-rs.html#method-new-20">new</a>();
+        registry.<a class="symbol-link rs-fn" href="eos-skills--src-registry-rs.html#method-register-26">register</a>(<a class="symbol-link rs-fn" href="eos-skills--src-registry-rs.html#item-fn-def-50">def</a>(&quot;banana&quot;, &quot;first&quot;));
+        registry.<a class="symbol-link rs-fn" href="eos-skills--src-registry-rs.html#method-register-26">register</a>(<a class="symbol-link rs-fn" href="eos-skills--src-registry-rs.html#item-fn-def-50">def</a>(&quot;apple&quot;, &quot;first&quot;));
+
+        <span class="rs-comment">// get: hit and miss.</span>
+        assert_eq!(
+            registry.<a class="symbol-link rs-fn" href="eos-skills--src-registry-rs.html#method-get-32">get</a>(&amp;<a class="symbol-link rs-type" href="eos-skills--src-definition-rs.html#item-struct-SkillName-22">SkillName</a>::<a class="symbol-link rs-fn" href="eos-skills--src-definition-rs.html#method-parse-33">parse</a>(&quot;apple&quot;).unwrap()),
+            <span class="rs-type">Some</span>(&amp;<a class="symbol-link rs-fn" href="eos-skills--src-registry-rs.html#item-fn-def-50">def</a>(&quot;apple&quot;, &quot;first&quot;))
+        );
+        assert!(registry
+            .<a class="symbol-link rs-fn" href="eos-skills--src-registry-rs.html#method-get-32">get</a>(&amp;<a class="symbol-link rs-type" href="eos-skills--src-definition-rs.html#item-struct-SkillName-22">SkillName</a>::<a class="symbol-link rs-fn" href="eos-skills--src-definition-rs.html#method-parse-33">parse</a>(&quot;missing&quot;).unwrap())
+            .is_none());
+
+        <span class="rs-comment">// last-wins: re-registering "apple" replaces it.</span>
+        registry.<a class="symbol-link rs-fn" href="eos-skills--src-registry-rs.html#method-register-26">register</a>(<a class="symbol-link rs-fn" href="eos-skills--src-registry-rs.html#item-fn-def-50">def</a>(&quot;apple&quot;, &quot;second&quot;));
+        assert_eq!(
+            registry
+                .<a class="symbol-link rs-fn" href="eos-skills--src-registry-rs.html#method-get-32">get</a>(&amp;<a class="symbol-link rs-type" href="eos-skills--src-definition-rs.html#item-struct-SkillName-22">SkillName</a>::<a class="symbol-link rs-fn" href="eos-skills--src-definition-rs.html#method-parse-33">parse</a>(&quot;apple&quot;).unwrap())
+                .unwrap()
+                .description,
+            &quot;second&quot;
+        );
+
+        <span class="rs-comment">// list_skills is key-sorted regardless of insertion order.</span>
+        <span class="rs-kw">let</span> names: <span class="rs-type">Vec</span>&lt;&amp;str&gt; = registry.<a class="symbol-link rs-fn" href="eos-skills--src-registry-rs.html#method-list-skills-38">list_skills</a>().map(|s| s.name.<a class="symbol-link rs-fn" href="eos-skills--src-definition-rs.html#method-as-str-47">as_str</a>()).collect();
+        assert_eq!(names, vec![&quot;apple&quot;, &quot;banana&quot;]);
+    }
+</code></pre>
+</details>
 
   <p class="source">crates/eos-skills/src/registry.rs:63</p>
 </article></div>
 </section></div>
 </main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/eos-skills/src/registry.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-comment">//! [`SkillRegistry`] — an immutable, name-keyed skill lookup over a `BTreeMap`.</span>
+<span class="rs-comment">//!</span>
+<span class="rs-comment">//! The `BTreeMap&lt;SkillName, _&gt;` makes `list_skills` ordering an invariant of the</span>
+<span class="rs-comment">//! data structure rather than a per-call sort (Rust `registry.py` sorts on</span>
+<span class="rs-comment">//! every `list_skills`). The filesystem constructor lives in</span>
+<span class="rs-comment">//! [`crate::loader`]; this module owns the in-memory contract only.</span>
+
+<span class="rs-kw">use</span> std::collections::<span class="rs-type">BTreeMap</span>;
+
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::definition::{<a class="symbol-link rs-type" href="eos-skills--src-definition-rs.html#item-struct-SkillDefinition-93">SkillDefinition</a>, <a class="symbol-link rs-type" href="eos-skills--src-definition-rs.html#item-struct-SkillName-22">SkillName</a>};
+
+<span class="rs-comment">/// Stores loaded skills by [`SkillName`]. Built once at the composition root and</span>
+<span class="rs-comment">/// then shared immutably as `Arc&lt;SkillRegistry&gt;`.</span>
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Eq</span>, <span class="rs-type">Default</span>)]
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-skills--src-registry-rs.html#item-struct-SkillRegistry-12">SkillRegistry</a> {
+    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) skills: <span class="rs-type">BTreeMap</span>&lt;<a class="symbol-link rs-type" href="eos-skills--src-definition-rs.html#item-struct-SkillName-22">SkillName</a>, <a class="symbol-link rs-type" href="eos-skills--src-definition-rs.html#item-struct-SkillDefinition-93">SkillDefinition</a>&gt;,
+}
+
+<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-skills--src-registry-rs.html#item-struct-SkillRegistry-12">SkillRegistry</a> {
+    <span class="rs-comment">/// An empty registry.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-skills--src-registry-rs.html#method-new-20">new</a>() -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">Self</span>::default()
+    }
+
+    <span class="rs-comment">/// Insert one skill, replacing any same-named entry (last-wins, matching the</span>
+    <span class="rs-comment">/// Rust dict assignment `self._skills[skill.name] = skill`).</span>
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-skills--src-registry-rs.html#method-register-26">register</a>(&amp;<span class="rs-kw">mut</span> <span class="rs-self">self</span>, skill: <a class="symbol-link rs-type" href="eos-skills--src-definition-rs.html#item-struct-SkillDefinition-93">SkillDefinition</a>) {
+        <span class="rs-self">self</span>.skills.insert(skill.name.clone(), skill);
+    }
+
+    <span class="rs-comment">/// Look up a skill by name; `None` if absent.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-skills--src-registry-rs.html#method-get-32">get</a>(&amp;<span class="rs-self">self</span>, name: &amp;<a class="symbol-link rs-type" href="eos-skills--src-definition-rs.html#item-struct-SkillName-22">SkillName</a>) -&gt; <span class="rs-type">Option</span>&lt;&amp;<a class="symbol-link rs-type" href="eos-skills--src-definition-rs.html#item-struct-SkillDefinition-93">SkillDefinition</a>&gt; {
+        <span class="rs-self">self</span>.skills.<a class="symbol-link rs-fn" href="eos-skills--src-registry-rs.html#method-get-32">get</a>(name)
+    }
+
+    <span class="rs-comment">/// All skills in [`SkillName`] order (the `BTreeMap` guarantees the sort).</span>
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-skills--src-registry-rs.html#method-list-skills-38">list_skills</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-kw">impl</span> <span class="rs-type">Iterator</span>&lt;<span class="rs-type">Item</span> = &amp;<a class="symbol-link rs-type" href="eos-skills--src-definition-rs.html#item-struct-SkillDefinition-93">SkillDefinition</a>&gt; {
+        <span class="rs-self">self</span>.skills.values()
+    }
+}
+
+#[cfg(test)]
+<span class="rs-kw">mod</span> tests {
+    #![allow(clippy::unwrap_used)] <span class="rs-comment">// unwrap is permitted in tests (err-no-unwrap-prod)</span>
+    <span class="rs-kw">use</span> <span class="rs-kw">super</span>::*;
+    <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::definition::<a class="symbol-link rs-type" href="eos-skills--src-definition-rs.html#item-enum-SkillSource-84">SkillSource</a>;
+
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-skills--src-registry-rs.html#item-fn-def-50">def</a>(name: &amp;str, description: &amp;str) -&gt; <a class="symbol-link rs-type" href="eos-skills--src-definition-rs.html#item-struct-SkillDefinition-93">SkillDefinition</a> {
+        <a class="symbol-link rs-type" href="eos-skills--src-definition-rs.html#item-struct-SkillDefinition-93">SkillDefinition</a> {
+            name: <a class="symbol-link rs-type" href="eos-skills--src-definition-rs.html#item-struct-SkillName-22">SkillName</a>::<a class="symbol-link rs-fn" href="eos-skills--src-definition-rs.html#method-parse-33">parse</a>(name).unwrap(),
+            description: description.to_owned(),
+            content: <span class="rs-type">String</span>::<a class="symbol-link rs-fn" href="eos-skills--src-registry-rs.html#method-new-20">new</a>(),
+            source: <a class="symbol-link rs-type" href="eos-skills--src-definition-rs.html#item-enum-SkillSource-84">SkillSource</a>::<span class="rs-type">Bundled</span>,
+            path: <span class="rs-type">None</span>,
+            references: <span class="rs-type">BTreeMap</span>::<a class="symbol-link rs-fn" href="eos-skills--src-registry-rs.html#method-new-20">new</a>(),
+        }
+    }
+
+    <span class="rs-comment">// AC-skills-07: register is last-wins by SkillName; get returns Option;</span>
+    <span class="rs-comment">// list_skills is SkillName-sorted.</span>
+    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-skills--src-registry-rs.html#item-fn-register-get-list-semantics-63">register_get_list_semantics</a>() {
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> registry = <a class="symbol-link rs-type" href="eos-skills--src-registry-rs.html#item-struct-SkillRegistry-12">SkillRegistry</a>::<a class="symbol-link rs-fn" href="eos-skills--src-registry-rs.html#method-new-20">new</a>();
+        registry.<a class="symbol-link rs-fn" href="eos-skills--src-registry-rs.html#method-register-26">register</a>(<a class="symbol-link rs-fn" href="eos-skills--src-registry-rs.html#item-fn-def-50">def</a>(&quot;banana&quot;, &quot;first&quot;));
+        registry.<a class="symbol-link rs-fn" href="eos-skills--src-registry-rs.html#method-register-26">register</a>(<a class="symbol-link rs-fn" href="eos-skills--src-registry-rs.html#item-fn-def-50">def</a>(&quot;apple&quot;, &quot;first&quot;));
+
+        <span class="rs-comment">// get: hit and miss.</span>
+        assert_eq!(
+            registry.<a class="symbol-link rs-fn" href="eos-skills--src-registry-rs.html#method-get-32">get</a>(&amp;<a class="symbol-link rs-type" href="eos-skills--src-definition-rs.html#item-struct-SkillName-22">SkillName</a>::<a class="symbol-link rs-fn" href="eos-skills--src-definition-rs.html#method-parse-33">parse</a>(&quot;apple&quot;).unwrap()),
+            <span class="rs-type">Some</span>(&amp;<a class="symbol-link rs-fn" href="eos-skills--src-registry-rs.html#item-fn-def-50">def</a>(&quot;apple&quot;, &quot;first&quot;))
+        );
+        assert!(registry
+            .<a class="symbol-link rs-fn" href="eos-skills--src-registry-rs.html#method-get-32">get</a>(&amp;<a class="symbol-link rs-type" href="eos-skills--src-definition-rs.html#item-struct-SkillName-22">SkillName</a>::<a class="symbol-link rs-fn" href="eos-skills--src-definition-rs.html#method-parse-33">parse</a>(&quot;missing&quot;).unwrap())
+            .is_none());
+
+        <span class="rs-comment">// last-wins: re-registering "apple" replaces it.</span>
+        registry.<a class="symbol-link rs-fn" href="eos-skills--src-registry-rs.html#method-register-26">register</a>(<a class="symbol-link rs-fn" href="eos-skills--src-registry-rs.html#item-fn-def-50">def</a>(&quot;apple&quot;, &quot;second&quot;));
+        assert_eq!(
+            registry
+                .<a class="symbol-link rs-fn" href="eos-skills--src-registry-rs.html#method-get-32">get</a>(&amp;<a class="symbol-link rs-type" href="eos-skills--src-definition-rs.html#item-struct-SkillName-22">SkillName</a>::<a class="symbol-link rs-fn" href="eos-skills--src-definition-rs.html#method-parse-33">parse</a>(&quot;apple&quot;).unwrap())
+                .unwrap()
+                .description,
+            &quot;second&quot;
+        );
+
+        <span class="rs-comment">// list_skills is key-sorted regardless of insertion order.</span>
+        <span class="rs-kw">let</span> names: <span class="rs-type">Vec</span>&lt;&amp;str&gt; = registry.<a class="symbol-link rs-fn" href="eos-skills--src-registry-rs.html#method-list-skills-38">list_skills</a>().map(|s| s.name.<a class="symbol-link rs-fn" href="eos-skills--src-definition-rs.html#method-as-str-47">as_str</a>()).collect();
+        assert_eq!(names, vec![&quot;apple&quot;, &quot;banana&quot;]);
+    }
+}
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
   <script src="../assets/inventory.js"></script>
 </body>
 </html>

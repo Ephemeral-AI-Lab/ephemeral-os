@@ -8,15 +8,23 @@
 </head>
 <body>
   <header>
-    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
-    <h1>eos-workflow File Inventory</h1>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>eos-workflow File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS/agent-core &amp;&amp; cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
   </header>
   <a class="back-link" href="../index.html">agent-core</a>
 <section class="summary">
   <div><b>20</b><span>modules</span></div>
-  <div><b>136</b><span>items</span></div>
-  <div><b>129</b><span>fields</span></div>
-  <div><b>138</b><span>methods</span></div>
+  <div><b>137</b><span>items</span></div>
+  <div><b>131</b><span>fields</span></div>
+  <div><b>140</b><span>methods</span></div>
 </section>
 <section class="toolbar">
   <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
@@ -32,8 +40,8 @@
   </select>
 </section>
 <main class="crate-layout">
-  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><span class="folder">attempt</span><ul class="file-tree"><li><a class="file-link" href="eos-workflow.html"><span>launch.rs</span><small>8/0</small></a></li><li><a class="file-link" href="eos-workflow--src-attempt-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-workflow--src-attempt-orchestrator-rs.html"><span>orchestrator.rs</span><small>3/0</small></a></li><li><a class="file-link" href="eos-workflow--src-attempt-orchestrator-registry-rs.html"><span>orchestrator_registry.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-workflow--src-attempt-plan-dag-rs.html"><span>plan_dag.rs</span><small>1/19</small></a></li><li><a class="file-link" href="eos-workflow--src-attempt-run-stage-rs.html"><span>run_stage.rs</span><small>1/8</small></a></li></ul></li><li><span class="folder">context</span><ul class="file-tree"><li><a class="file-link" href="eos-workflow--src-context-composer-rs.html"><span>composer.rs</span><small>2/12</small></a></li><li><a class="file-link" href="eos-workflow--src-context-engine-rs.html"><span>engine.rs</span><small>2/3</small></a></li><li><a class="file-link" href="eos-workflow--src-context-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-workflow--src-context-scope-rs.html"><span>scope.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-workflow--src-context-section-rs.html"><span>section.rs</span><small>3/0</small></a></li><li><a class="file-link" href="eos-workflow--src-context-xml-rs.html"><span>xml.rs</span><small>0/4</small></a></li></ul></li><li><a class="file-link" href="eos-workflow--src-error-rs.html"><span>error.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-workflow--src-ids-rs.html"><span>ids.rs</span><small>1/3</small></a></li><li><span class="folder">iteration</span><ul class="file-tree"><li><a class="file-link" href="eos-workflow--src-iteration-mod-rs.html"><span>mod.rs</span><small>3/1</small></a></li></ul></li><li><a class="file-link" href="eos-workflow--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-workflow--src-lifecycle-rs.html"><span>lifecycle.rs</span><small>1/3</small></a></li><li><a class="file-link active" href="eos-workflow--src-ports-rs.html"><span>ports.rs</span><small>4/4</small></a></li><li><a class="file-link" href="eos-workflow--src-starter-rs.html"><span>starter.rs</span><small>2/3</small></a></li><li><a class="file-link" href="eos-workflow--src-util-rs.html"><span>util.rs</span><small>0/1</small></a></li></ul></li></ul></nav>
-  <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="ports crates/eos-workflow/src/ports.rs AttemptSubmissionAdapter impl std :: fmt :: Debug for AttemptSubmissionAdapter impl AttemptSubmissionAdapter impl eos_tools :: ports :: Sealed for AttemptSubmissionAdapter impl AttemptSubmissionPort for AttemptSubmissionAdapter submission_ack WorkflowControlAdapter impl std :: fmt :: Debug for WorkflowControlAdapter impl WorkflowControlAdapter impl eos_tools :: ports :: Sealed for WorkflowControlAdapter impl WorkflowControlPort for WorkflowControlAdapter impl WorkflowControlAdapter workflow_control_error WorkflowHandleRegistry WorkflowHandleMaps impl WorkflowHandleRegistry cancellation_outcomes workflow_control_uses_runtime_handles_and_cancels_child_state">
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><span class="folder">attempt</span><ul class="file-tree"><li><a class="file-link" href="eos-workflow.html"><span>launch.rs</span><small>8/0</small></a></li><li><a class="file-link" href="eos-workflow--src-attempt-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-workflow--src-attempt-orchestrator-rs.html"><span>orchestrator.rs</span><small>3/0</small></a></li><li><a class="file-link" href="eos-workflow--src-attempt-orchestrator-registry-rs.html"><span>orchestrator_registry.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-workflow--src-attempt-plan-dag-rs.html"><span>plan_dag.rs</span><small>1/19</small></a></li><li><a class="file-link" href="eos-workflow--src-attempt-run-stage-rs.html"><span>run_stage.rs</span><small>1/8</small></a></li></ul></li><li><span class="folder">context</span><ul class="file-tree"><li><a class="file-link" href="eos-workflow--src-context-composer-rs.html"><span>composer.rs</span><small>2/12</small></a></li><li><a class="file-link" href="eos-workflow--src-context-engine-rs.html"><span>engine.rs</span><small>2/3</small></a></li><li><a class="file-link" href="eos-workflow--src-context-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-workflow--src-context-scope-rs.html"><span>scope.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-workflow--src-context-section-rs.html"><span>section.rs</span><small>3/0</small></a></li><li><a class="file-link" href="eos-workflow--src-context-xml-rs.html"><span>xml.rs</span><small>0/4</small></a></li></ul></li><li><a class="file-link" href="eos-workflow--src-error-rs.html"><span>error.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-workflow--src-ids-rs.html"><span>ids.rs</span><small>1/3</small></a></li><li><span class="folder">iteration</span><ul class="file-tree"><li><a class="file-link" href="eos-workflow--src-iteration-mod-rs.html"><span>mod.rs</span><small>3/1</small></a></li></ul></li><li><a class="file-link" href="eos-workflow--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-workflow--src-lifecycle-rs.html"><span>lifecycle.rs</span><small>1/3</small></a></li><li><a class="file-link active" href="eos-workflow--src-ports-rs.html"><span>ports.rs</span><small>5/3</small></a></li><li><a class="file-link" href="eos-workflow--src-starter-rs.html"><span>starter.rs</span><small>2/3</small></a></li><li><a class="file-link" href="eos-workflow--src-util-rs.html"><span>util.rs</span><small>0/1</small></a></li></ul></li></ul></nav>
+  <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="ports crates/eos-workflow/src/ports.rs AttemptSubmissionAdapter impl std :: fmt :: Debug for AttemptSubmissionAdapter impl AttemptSubmissionAdapter impl eos_tools :: ports :: Sealed for AttemptSubmissionAdapter impl AttemptSubmissionPort for AttemptSubmissionAdapter submission_ack WorkflowControlAdapter impl std :: fmt :: Debug for WorkflowControlAdapter impl WorkflowControlAdapter impl eos_tools :: ports :: Sealed for WorkflowControlAdapter impl WorkflowControlPort for WorkflowControlAdapter impl WorkflowControlAdapter workflow_control_error WorkflowHandleRegistry WorkflowHandleMaps impl WorkflowHandleRegistry TestCancelPort impl CancelPort for TestCancelPort workflow_control_uses_runtime_handles_and_cancels_child_state">
   <div class="module-head">
     <div>
       <h2>src/ports.rs</h2>
@@ -41,95 +49,1094 @@
     </div>
     <div class="module-stats">
       <span>file owns</span>
-      <span>4 types</span>
-      <span>10 impls</span>
-      <span>4 fns</span>
-      <span>16 methods</span>
+      <span>5 types</span>
+      <span>11 impls</span>
+      <span>3 fns</span>
+      <span>18 methods</span>
     </div>
   </div>
-  <div class="items"><div class="group-label">File-Owned Types</div><article class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct AttemptSubmissionAdapter pub pub struct AttemptSubmissionAdapter crates/eos-workflow/src/ports.rs registry Arc &lt; AttemptOrchestratorRegistry &gt; ">
+  <div class="items"><div class="group-label">File-Owned Types</div><article id="item-struct-AttemptSubmissionAdapter-20" class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct AttemptSubmissionAdapter pub pub struct AttemptSubmissionAdapter crates/eos-workflow/src/ports.rs registry Arc &lt; AttemptOrchestratorRegistry &gt; ">
   <div class="item-head">
     <span class="kind">struct</span>
     <h3>AttemptSubmissionAdapter</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub struct AttemptSubmissionAdapter</code>
-  <div class="tags"></div>
-  <h4>Fields</h4><table><tbody><tr><td>private</td><td>registry</td><td><code>Arc &lt; AttemptOrchestratorRegistry &gt;</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr><td>constructor</td><td>new</td><td><code>pub fn new (registry : Arc &lt; AttemptOrchestratorRegistry &gt;) -&gt; Self</code></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl std :: fmt :: Debug for AttemptSubmissionAdapter</code></summary><table><tbody><tr><td>method</td><td>fmt</td><td><code>fn fmt (&amp; self , f : &amp; mut std :: fmt :: Formatter &lt; '_ &gt;) -&gt; std :: fmt :: Result</code></td></tr></tbody></table></details><details><summary><code>impl eos_tools :: ports :: Sealed for AttemptSubmissionAdapter</code></summary><table><tbody></tbody></table></details><details><summary><code>impl AttemptSubmissionPort for AttemptSubmissionAdapter</code></summary><table><tbody><tr><td>method</td><td>apply_plan</td><td><code>async fn apply_plan (&amp; self , plan : PlannerPlan) -&gt; Result &lt; SubmissionAck , ToolError &gt;</code></td></tr><tr><td>method</td><td>submit_generator</td><td><code>async fn submit_generator (&amp; self , submission : GeneratorSubmission ,) -&gt; Result &lt; SubmissionAck , ToolError &gt;</code></td></tr><tr><td>method</td><td>apply_reducer</td><td><code>async fn apply_reducer (&amp; self , submission : ReducerSubmission ,) -&gt; Result &lt; SubmissionAck , ToolError &gt;</code></td></tr></tbody></table></details></div>
-  <p class="source">crates/eos-workflow/src/ports.rs:22</p>
-</article><article class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct WorkflowControlAdapter pub pub struct WorkflowControlAdapter crates/eos-workflow/src/ports.rs starter WorkflowStarter workflow_store Arc &lt; dyn eos_state :: WorkflowStore &gt; iteration_store Arc &lt; dyn eos_state :: IterationStore &gt; attempt_store Arc &lt; dyn eos_state :: AttemptStore &gt; task_store Arc &lt; dyn TaskStore &gt; handles Arc &lt; WorkflowHandleRegistry &gt; ">
+  <code class="signature">pub struct <a class="symbol-link" href="eos-workflow--src-ports-rs.html#item-struct-AttemptSubmissionAdapter-20">AttemptSubmissionAdapter</a></code>
+  <p class="docstring">Recording adapter from the `eos-tools` planner/generator/reducer terminal<br>ports to the active per-attempt orchestrators (Path A-recording).<br>The submit tool writes the agent's real submission straight to the<br>orchestrator's non-advancing `record_*` variants and returns the<br>orchestrator's real ack; advancing the DAG stays the exclusive job of the<br>single `advance_run_stage` loop (D4: exactly one writer). This is the wired<br>implementor of [`AttemptSubmissionPort`], constructed once at the composition<br>root over the shared attempt registry.</p>
+  <div class="tags"><span>derive: Clone</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>registry</td><td><code>Arc &lt; <a class="symbol-link" href="eos-workflow--src-attempt-orchestrator-registry-rs.html#item-struct-AttemptOrchestratorRegistry-12">AttemptOrchestratorRegistry</a> &gt;</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-42"><td>constructor</td><td>new</td><td><code>pub fn <a class="symbol-link" href="eos-workflow.html#method-new-264">new</a> (registry : Arc &lt; <a class="symbol-link" href="eos-workflow--src-attempt-orchestrator-registry-rs.html#item-struct-AttemptOrchestratorRegistry-12">AttemptOrchestratorRegistry</a> &gt;) -&gt; Self</code><p class="docstring">Create a submission adapter over the active attempt registry.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Create a submission adapter over the active attempt registry.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow.html#method-new-264">new</a>(registry: <span class="rs-type">Arc</span>&lt;<a class="symbol-link rs-type" href="eos-workflow--src-attempt-orchestrator-registry-rs.html#item-struct-AttemptOrchestratorRegistry-12">AttemptOrchestratorRegistry</a>&gt;) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">Self</span> { registry }
+    }
+</code></pre>
+</details></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl std :: fmt :: Debug for <a class="symbol-link" href="eos-workflow--src-ports-rs.html#item-struct-AttemptSubmissionAdapter-20">AttemptSubmissionAdapter</a></code></summary><table><tbody><tr id="method-fmt-35"><td>method</td><td>fmt</td><td><code>fn <a class="symbol-link" href="eos-workflow.html#method-fmt-251">fmt</a> (&amp; self , f : &amp; mut std :: fmt :: Formatter &lt; &#x27;_ &gt;) -&gt; std :: fmt :: <a class="symbol-link" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a></code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow.html#method-fmt-251">fmt</a>(&amp;<span class="rs-self">self</span>, f: &amp;<span class="rs-kw">mut</span> std::fmt::<span class="rs-type">Formatter</span>&lt;&#x27;_&gt;) -&gt; std::fmt::<a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a> {
+        f.debug_struct(&quot;<a class="symbol-link rs-type" href="eos-workflow--src-ports-rs.html#item-struct-AttemptSubmissionAdapter-20">AttemptSubmissionAdapter</a>&quot;)
+            .finish_non_exhaustive()
+    }
+</code></pre>
+</details></td></tr></tbody></table></details><details><summary><code>impl eos_tools :: ports :: Sealed for <a class="symbol-link" href="eos-workflow--src-ports-rs.html#item-struct-AttemptSubmissionAdapter-20">AttemptSubmissionAdapter</a></code></summary><table><tbody></tbody></table></details><details><summary><code>impl AttemptSubmissionPort for <a class="symbol-link" href="eos-workflow--src-ports-rs.html#item-struct-AttemptSubmissionAdapter-20">AttemptSubmissionAdapter</a></code></summary><table><tbody><tr id="method-apply-plan-53"><td>method</td><td>apply_plan</td><td><code>async fn <a class="symbol-link" href="eos-workflow--src-ports-rs.html#method-apply-plan-53">apply_plan</a> (&amp; self , plan : PlannerPlan) -&gt; <a class="symbol-link" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a> &lt; SubmissionAck , ToolError &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-ports-rs.html#method-apply-plan-53">apply_plan</a>(&amp;<span class="rs-self">self</span>, plan: <span class="rs-type">PlannerPlan</span>) -&gt; <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a>&lt;<span class="rs-type">SubmissionAck</span>, <span class="rs-type">ToolError</span>&gt; {
+        <span class="rs-kw">let</span> <span class="rs-type">Some</span>(orchestrator) = <span class="rs-self">self</span>.registry.<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-registry-rs.html#method-get-52">get</a>(&amp;plan.attempt_id) <span class="rs-kw">else</span> {
+            <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<span class="rs-type">SubmissionAck</span>::<span class="rs-type">Rejected</span>(format!(
+                &quot;attempt {:?} is not active&quot;,
+                plan.attempt_id.<a class="symbol-link rs-fn" href="eos-workflow--src-context-section-rs.html#method-as-str-17">as_str</a>()
+            )));
+        };
+        <a class="symbol-link rs-fn" href="eos-workflow--src-ports-rs.html#item-fn-submission-ack-90">submission_ack</a>(orchestrator.<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-rs.html#method-record-plan-205">record_plan</a>(plan).<span class="rs-kw">await</span>)
+    }
+</code></pre>
+</details></td></tr><tr id="method-submit-generator-63"><td>method</td><td>submit_generator</td><td><code>async fn <a class="symbol-link" href="eos-workflow--src-ports-rs.html#method-submit-generator-63">submit_generator</a> (&amp; self , submission : GeneratorSubmission ,) -&gt; <a class="symbol-link" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a> &lt; SubmissionAck , ToolError &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-ports-rs.html#method-submit-generator-63">submit_generator</a>(
+        &amp;<span class="rs-self">self</span>,
+        submission: <span class="rs-type">GeneratorSubmission</span>,
+    ) -&gt; <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a>&lt;<span class="rs-type">SubmissionAck</span>, <span class="rs-type">ToolError</span>&gt; {
+        <span class="rs-kw">let</span> <span class="rs-type">Some</span>(orchestrator) = <span class="rs-self">self</span>.registry.<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-registry-rs.html#method-get-52">get</a>(&amp;submission.attempt_id) <span class="rs-kw">else</span> {
+            <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<span class="rs-type">SubmissionAck</span>::<span class="rs-type">Rejected</span>(format!(
+                &quot;attempt {:?} is not active&quot;,
+                submission.attempt_id.<a class="symbol-link rs-fn" href="eos-workflow--src-context-section-rs.html#method-as-str-17">as_str</a>()
+            )));
+        };
+        <a class="symbol-link rs-fn" href="eos-workflow--src-ports-rs.html#item-fn-submission-ack-90">submission_ack</a>(orchestrator.<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-rs.html#method-record-generator-submission-389">record_generator_submission</a>(submission).<span class="rs-kw">await</span>)
+    }
+</code></pre>
+</details></td></tr><tr id="method-apply-reducer-76"><td>method</td><td>apply_reducer</td><td><code>async fn <a class="symbol-link" href="eos-workflow--src-ports-rs.html#method-apply-reducer-76">apply_reducer</a> (&amp; self , submission : ReducerSubmission ,) -&gt; <a class="symbol-link" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a> &lt; SubmissionAck , ToolError &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-ports-rs.html#method-apply-reducer-76">apply_reducer</a>(
+        &amp;<span class="rs-self">self</span>,
+        submission: <span class="rs-type">ReducerSubmission</span>,
+    ) -&gt; <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a>&lt;<span class="rs-type">SubmissionAck</span>, <span class="rs-type">ToolError</span>&gt; {
+        <span class="rs-kw">let</span> <span class="rs-type">Some</span>(orchestrator) = <span class="rs-self">self</span>.registry.<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-registry-rs.html#method-get-52">get</a>(&amp;submission.attempt_id) <span class="rs-kw">else</span> {
+            <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<span class="rs-type">SubmissionAck</span>::<span class="rs-type">Rejected</span>(format!(
+                &quot;attempt {:?} is not active&quot;,
+                submission.attempt_id.<a class="symbol-link rs-fn" href="eos-workflow--src-context-section-rs.html#method-as-str-17">as_str</a>()
+            )));
+        };
+        <a class="symbol-link rs-fn" href="eos-workflow--src-ports-rs.html#item-fn-submission-ack-90">submission_ack</a>(orchestrator.<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-rs.html#method-record-reducer-submission-416">record_reducer_submission</a>(submission).<span class="rs-kw">await</span>)
+    }
+</code></pre>
+</details></td></tr></tbody></table></details></div>
+
+  <p class="source">crates/eos-workflow/src/ports.rs:20</p>
+</article><article id="item-struct-WorkflowControlAdapter-100" class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct WorkflowControlAdapter pub pub struct WorkflowControlAdapter crates/eos-workflow/src/ports.rs starter WorkflowStarter workflow_store Arc &lt; dyn eos_state :: WorkflowStore &gt; iteration_store Arc &lt; dyn eos_state :: IterationStore &gt; attempt_store Arc &lt; dyn eos_state :: AttemptStore &gt; task_store Arc &lt; dyn TaskStore &gt; handles Arc &lt; WorkflowHandleRegistry &gt; cancel_port Arc &lt; dyn CancelPort &gt; ">
   <div class="item-head">
     <span class="kind">struct</span>
     <h3>WorkflowControlAdapter</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub struct WorkflowControlAdapter</code>
-  <div class="tags"></div>
-  <h4>Fields</h4><table><tbody><tr><td>private</td><td>starter</td><td><code>WorkflowStarter</code></td></tr><tr><td>private</td><td>workflow_store</td><td><code>Arc &lt; dyn eos_state :: WorkflowStore &gt;</code></td></tr><tr><td>private</td><td>iteration_store</td><td><code>Arc &lt; dyn eos_state :: IterationStore &gt;</code></td></tr><tr><td>private</td><td>attempt_store</td><td><code>Arc &lt; dyn eos_state :: AttemptStore &gt;</code></td></tr><tr><td>private</td><td>task_store</td><td><code>Arc &lt; dyn TaskStore &gt;</code></td></tr><tr><td>private</td><td>handles</td><td><code>Arc &lt; WorkflowHandleRegistry &gt;</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr><td>constructor</td><td>new</td><td><code>pub fn new (starter : WorkflowStarter , workflow_store : Arc &lt; dyn eos_state :: WorkflowStore &gt; , iteration_store : Arc &lt; dyn eos_state :: IterationStore &gt; , attempt_store : Arc &lt; dyn eos_state :: AttemptStore &gt; , task_store : Arc &lt; dyn TaskStore &gt; ,) -&gt; Self</code></td></tr><tr><td>method</td><td>cancel_workflow_state</td><td><code>async fn cancel_workflow_state (&amp; self , workflow : &amp; eos_state :: Workflow , reason : &amp; str ,) -&gt; Result &lt; () , ToolError &gt;</code></td></tr><tr><td>method</td><td>cancel_active_task</td><td><code>async fn cancel_active_task (&amp; self , task : &amp; Task , outcome_text : &amp; str) -&gt; Result &lt; () , ToolError &gt;</code></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl std :: fmt :: Debug for WorkflowControlAdapter</code></summary><table><tbody><tr><td>method</td><td>fmt</td><td><code>fn fmt (&amp; self , f : &amp; mut std :: fmt :: Formatter &lt; '_ &gt;) -&gt; std :: fmt :: Result</code></td></tr></tbody></table></details><details><summary><code>impl eos_tools :: ports :: Sealed for WorkflowControlAdapter</code></summary><table><tbody></tbody></table></details><details><summary><code>impl WorkflowControlPort for WorkflowControlAdapter</code></summary><table><tbody><tr><td>method</td><td>start</td><td><code>async fn start (&amp; self , parent_task_id : &amp; eos_state :: TaskId , _agent_run_id : &amp; AgentRunId , workflow_goal : &amp; str ,) -&gt; Result &lt; eos_tools :: StartedWorkflowHandle , ToolError &gt;</code></td></tr><tr><td>method</td><td>status</td><td><code>async fn status (&amp; self , workflow_id : &amp; WorkflowId , workflow_task_id : Option &lt; &amp; WorkflowSessionId &gt; ,) -&gt; Result &lt; String , ToolError &gt;</code></td></tr><tr><td>method</td><td>cancel</td><td><code>async fn cancel (&amp; self , workflow_task_id : &amp; WorkflowSessionId , reason : &amp; str ,) -&gt; Result &lt; String , ToolError &gt;</code></td></tr><tr><td>method</td><td>find_outstanding</td><td><code>async fn find_outstanding (&amp; self , parent_task_id : &amp; eos_state :: TaskId , _agent_run_id : &amp; AgentRunId ,) -&gt; Result &lt; Vec &lt; OutstandingWorkflow &gt; , ToolError &gt;</code></td></tr><tr><td>method</td><td>workflow_depth</td><td><code>async fn workflow_depth (&amp; self , workflow_id : &amp; WorkflowId) -&gt; Result &lt; u32 , ToolError &gt;</code></td></tr></tbody></table></details></div>
-  <p class="source">crates/eos-workflow/src/ports.rs:102</p>
-</article><article class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct WorkflowHandleRegistry private struct WorkflowHandleRegistry crates/eos-workflow/src/ports.rs next_handle AtomicU64 inner Mutex &lt; WorkflowHandleMaps &gt; ">
+  <code class="signature">pub struct <a class="symbol-link" href="eos-workflow--src-ports-rs.html#item-struct-WorkflowControlAdapter-100">WorkflowControlAdapter</a></code>
+  <p class="docstring">Adapter from `eos-tools` workflow-control ports to delegated workflow state.</p>
+  <div class="tags"><span>derive: Clone</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>starter</td><td><code><a class="symbol-link" href="eos-workflow--src-starter-rs.html#item-struct-WorkflowStarter-24">WorkflowStarter</a></code></td></tr><tr><td>private</td><td>workflow_store</td><td><code>Arc &lt; dyn eos_state :: WorkflowStore &gt;</code></td></tr><tr><td>private</td><td>iteration_store</td><td><code>Arc &lt; dyn eos_state :: IterationStore &gt;</code></td></tr><tr><td>private</td><td>attempt_store</td><td><code>Arc &lt; dyn eos_state :: AttemptStore &gt;</code></td></tr><tr><td>private</td><td>task_store</td><td><code>Arc &lt; dyn TaskStore &gt;</code></td></tr><tr><td>private</td><td>handles</td><td><code>Arc &lt; <a class="symbol-link" href="eos-workflow--src-ports-rs.html#item-struct-WorkflowHandleRegistry-366">WorkflowHandleRegistry</a> &gt;</code></td></tr><tr><td>private</td><td>cancel_port</td><td><code>Arc &lt; dyn CancelPort &gt;</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-122"><td>constructor</td><td>new</td><td><code>pub fn <a class="symbol-link" href="eos-workflow.html#method-new-264">new</a> (starter : <a class="symbol-link" href="eos-workflow--src-starter-rs.html#item-struct-WorkflowStarter-24">WorkflowStarter</a> , workflow_store : Arc &lt; dyn eos_state :: WorkflowStore &gt; , iteration_store : Arc &lt; dyn eos_state :: IterationStore &gt; , attempt_store : Arc &lt; dyn eos_state :: AttemptStore &gt; , task_store : Arc &lt; dyn TaskStore &gt; , cancel_port : Arc &lt; dyn CancelPort &gt; ,) -&gt; Self</code><p class="docstring">Create a workflow-control adapter.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Create a workflow-control adapter.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow.html#method-new-264">new</a>(
+        starter: <a class="symbol-link rs-type" href="eos-workflow--src-starter-rs.html#item-struct-WorkflowStarter-24">WorkflowStarter</a>,
+        workflow_store: <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> eos_state::<span class="rs-type">WorkflowStore</span>&gt;,
+        iteration_store: <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> eos_state::<span class="rs-type">IterationStore</span>&gt;,
+        attempt_store: <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> eos_state::<span class="rs-type">AttemptStore</span>&gt;,
+        task_store: <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <span class="rs-type">TaskStore</span>&gt;,
+        cancel_port: <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <span class="rs-type">CancelPort</span>&gt;,
+    ) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">Self</span> {
+            starter,
+            workflow_store,
+            iteration_store,
+            attempt_store,
+            task_store,
+            handles: <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-264">new</a>(<a class="symbol-link rs-type" href="eos-workflow--src-ports-rs.html#item-struct-WorkflowHandleRegistry-366">WorkflowHandleRegistry</a>::default()),
+            cancel_port,
+        }
+    }
+</code></pre>
+</details></td></tr><tr id="method-cancel-workflow-state-264"><td>method</td><td>cancel_workflow_state</td><td><code>async fn <a class="symbol-link" href="eos-workflow--src-ports-rs.html#method-cancel-workflow-state-264">cancel_workflow_state</a> (&amp; self , workflow : &amp; eos_state :: Workflow , reason : &amp; str ,) -&gt; <a class="symbol-link" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a> &lt; () , ToolError &gt;</code><p class="docstring">Decompose workflow cancellation through `cancel_iteration` -&gt; `cancel_attempt`<br>-&gt; `cancel_task` (spec §12.4). Walks only *open* iterations / *non-closed*<br>attempts (the idempotency guards), so a re-entrant cancel (a child workflow<br>cancelled while tearing down a parent) terminates.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Decompose workflow cancellation through `cancel_iteration` -&gt; `cancel_attempt`</span>
+    <span class="rs-comment">/// -&gt; `cancel_task` (spec §12.4). Walks only *open* iterations / *non-closed*</span>
+    <span class="rs-comment">/// attempts (the idempotency guards), so a re-entrant cancel (a child workflow</span>
+    <span class="rs-comment">/// cancelled while tearing down a parent) terminates.</span>
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-ports-rs.html#method-cancel-workflow-state-264">cancel_workflow_state</a>(
+        &amp;<span class="rs-self">self</span>,
+        workflow: &amp;eos_state::<span class="rs-type">Workflow</span>,
+        reason: &amp;str,
+    ) -&gt; <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a>&lt;(), <span class="rs-type">ToolError</span>&gt; {
+        <span class="rs-kw">let</span> now = eos_state::<span class="rs-type">UtcDateTime</span>::now();
+        <span class="rs-comment">// Iteration/workflow `outcomes` columns are read back strictly as</span>
+        <span class="rs-comment">// `Vec&lt;ExecutionTaskOutcome&gt;` by `ContextEngine`, so the cancellation</span>
+        <span class="rs-comment">// summary is the empty typed projection; the reason rides on each</span>
+        <span class="rs-comment">// cancelled task row and the `cancel` return string.</span>
+        <span class="rs-kw">const</span> <span class="rs-type">EMPTY_OUTCOMES</span>: &amp;str = &quot;[]&quot;;
+
+        <span class="rs-kw">for</span> iteration <span class="rs-kw">in</span> <span class="rs-self">self</span>.iteration_store.list_for_workflow(&amp;workflow.id).<span class="rs-kw">await</span>? {
+            <span class="rs-kw">if</span> !iteration.is_open() {
+                <span class="rs-kw">continue</span>;
+            }
+            <span class="rs-kw">for</span> attempt <span class="rs-kw">in</span> <span class="rs-self">self</span>.attempt_store.list_for_iteration(&amp;iteration.id).<span class="rs-kw">await</span>? {
+                <span class="rs-kw">if</span> attempt.is_closed() {
+                    <span class="rs-kw">continue</span>;
+                }
+                <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workflow--src-ports-rs.html#method-cancel-attempt-310">cancel_attempt</a>(&amp;attempt, reason, now).<span class="rs-kw">await</span>?;
+            }
+            <span class="rs-self">self</span>.iteration_store
+                .set_status(
+                    &amp;iteration.id,
+                    <span class="rs-type">IterationStatus</span>::<span class="rs-type">Cancelled</span>,
+                    <span class="rs-type">Some</span>(now),
+                    <span class="rs-type">Some</span>(<span class="rs-type">EMPTY_OUTCOMES</span>),
+                )
+                .<span class="rs-kw">await</span>?;
+        }
+        <span class="rs-self">self</span>.workflow_store
+            .set_status(
+                &amp;workflow.id,
+                <span class="rs-type">WorkflowStatus</span>::<span class="rs-type">Cancelled</span>,
+                <span class="rs-type">Some</span>(now),
+                <span class="rs-type">Some</span>(<span class="rs-type">EMPTY_OUTCOMES</span>),
+            )
+            .<span class="rs-kw">await</span>?;
+        <span class="rs-type">Ok</span>(())
+    }
+</code></pre>
+</details></td></tr><tr id="method-cancel-attempt-310"><td>method</td><td>cancel_attempt</td><td><code>async fn <a class="symbol-link" href="eos-workflow--src-ports-rs.html#method-cancel-attempt-310">cancel_attempt</a> (&amp; self , attempt : &amp; eos_state :: Attempt , reason : &amp; str , now : eos_state :: UtcDateTime ,) -&gt; <a class="symbol-link" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a> &lt; () , ToolError &gt;</code><p class="docstring">Cancel one attempt (spec §12.4): latch every planner/generator/reducer task<br>row to `Cancelled` *before* any teardown (closing the scheduler gap), then<br>recurse `cancel_task` per task to tear down any live agent run, then close<br>the attempt as `Cancelled`.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Cancel one attempt (spec §12.4): latch every planner/generator/reducer task</span>
+    <span class="rs-comment">/// row to `Cancelled` *before* any teardown (closing the scheduler gap), then</span>
+    <span class="rs-comment">/// recurse `cancel_task` per task to tear down any live agent run, then close</span>
+    <span class="rs-comment">/// the attempt as `Cancelled`.</span>
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-ports-rs.html#method-cancel-attempt-310">cancel_attempt</a>(
+        &amp;<span class="rs-self">self</span>,
+        attempt: &amp;eos_state::<span class="rs-type">Attempt</span>,
+        reason: &amp;str,
+        now: eos_state::<span class="rs-type">UtcDateTime</span>,
+    ) -&gt; <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a>&lt;(), <span class="rs-type">ToolError</span>&gt; {
+        <span class="rs-comment">// Stop the planner orchestrator from materializing NEW (un-latched) task</span>
+        <span class="rs-comment">// rows. This is *not* redundant with `cancel_task(planner)`: the latch only</span>
+        <span class="rs-comment">// covers rows that exist at latch time, so the planner must be prevented</span>
+        <span class="rs-comment">// from creating fresh launchable rows after the latch.</span>
+        <span class="rs-self">self</span>.starter
+            .<a class="symbol-link rs-fn" href="eos-workflow--src-starter-rs.html#method-orchestrator-registry-43">orchestrator_registry</a>()
+            .<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-registry-rs.html#method-abort-planner-74">abort_planner</a>(&amp;attempt.id);
+        <span class="rs-kw">let</span> tasks: <span class="rs-type">Vec</span>&lt;eos_state::<span class="rs-type">TaskId</span>&gt; = attempt
+            .<a class="symbol-link rs-fn" href="eos-workflow--src-ids-rs.html#item-fn-planner-task-id-12">planner_task_id</a>()
+            .into_iter()
+            .chain(attempt.generator_task_ids().iter())
+            .chain(attempt.reducer_task_ids().iter())
+            .cloned()
+            .collect();
+        <span class="rs-comment">// Latch BEFORE teardown so the scheduler sees terminal rows and cannot</span>
+        <span class="rs-comment">// launch a sibling into the cancellation window.</span>
+        <span class="rs-self">self</span>.task_store
+            .latch_attempt_tasks_cancelled(&amp;attempt.id, &amp;tasks)
+            .<span class="rs-kw">await</span>?;
+        <span class="rs-comment">// Tear down each task's live agent run. The status CAS inside `cancel_task`</span>
+        <span class="rs-comment">// no-ops (already latched `Cancelled`), but the live-run teardown still runs.</span>
+        <span class="rs-kw">for</span> task_id <span class="rs-kw">in</span> &amp;tasks {
+            <span class="rs-self">self</span>.cancel_port.<a class="symbol-link rs-fn" href="eos-workflow--src-ports-rs.html#method-cancel-task-425">cancel_task</a>(task_id, reason).<span class="rs-kw">await</span>?;
+        }
+        <span class="rs-self">self</span>.attempt_store
+            .close(
+                &amp;attempt.id,
+                <span class="rs-type">AttemptClosure</span>::<span class="rs-type">Cancelled</span> {
+                    reason: reason.to_owned(),
+                    outcomes: <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-264">new</a>(),
+                    closed_at: now,
+                },
+            )
+            .<span class="rs-kw">await</span>?;
+        <span class="rs-type">Ok</span>(())
+    }
+</code></pre>
+</details></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl std :: fmt :: Debug for <a class="symbol-link" href="eos-workflow--src-ports-rs.html#item-struct-WorkflowControlAdapter-100">WorkflowControlAdapter</a></code></summary><table><tbody><tr id="method-fmt-115"><td>method</td><td>fmt</td><td><code>fn <a class="symbol-link" href="eos-workflow.html#method-fmt-251">fmt</a> (&amp; self , f : &amp; mut std :: fmt :: Formatter &lt; &#x27;_ &gt;) -&gt; std :: fmt :: <a class="symbol-link" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a></code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow.html#method-fmt-251">fmt</a>(&amp;<span class="rs-self">self</span>, f: &amp;<span class="rs-kw">mut</span> std::fmt::<span class="rs-type">Formatter</span>&lt;&#x27;_&gt;) -&gt; std::fmt::<a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a> {
+        f.debug_struct(&quot;<a class="symbol-link rs-type" href="eos-workflow--src-ports-rs.html#item-struct-WorkflowControlAdapter-100">WorkflowControlAdapter</a>&quot;)
+            .finish_non_exhaustive()
+    }
+</code></pre>
+</details></td></tr></tbody></table></details><details><summary><code>impl eos_tools :: ports :: Sealed for <a class="symbol-link" href="eos-workflow--src-ports-rs.html#item-struct-WorkflowControlAdapter-100">WorkflowControlAdapter</a></code></summary><table><tbody></tbody></table></details><details><summary><code>impl WorkflowControlPort for <a class="symbol-link" href="eos-workflow--src-ports-rs.html#item-struct-WorkflowControlAdapter-100">WorkflowControlAdapter</a></code></summary><table><tbody><tr id="method-start-148"><td>method</td><td>start</td><td><code>async fn <a class="symbol-link" href="eos-workflow--src-attempt-orchestrator-rs.html#method-start-69">start</a> (&amp; self , parent_task_id : &amp; eos_state :: TaskId , _agent_run_id : &amp; AgentRunId , workflow_goal : &amp; str ,) -&gt; <a class="symbol-link" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a> &lt; eos_tools :: StartedWorkflowHandle , ToolError &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-rs.html#method-start-69">start</a>(
+        &amp;<span class="rs-self">self</span>,
+        parent_task_id: &amp;eos_state::<span class="rs-type">TaskId</span>,
+        _agent_run_id: &amp;<span class="rs-type">AgentRunId</span>,
+        workflow_goal: &amp;str,
+    ) -&gt; <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a>&lt;eos_tools::<span class="rs-type">StartedWorkflowHandle</span>, <span class="rs-type">ToolError</span>&gt; {
+        <span class="rs-kw">let</span> started = <span class="rs-self">self</span>
+            .starter
+            .<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-rs.html#method-start-69">start</a>(workflow_goal, parent_task_id)
+            .<span class="rs-kw">await</span>
+            .map_err(workflow_control_error)?;
+        <span class="rs-kw">let</span> workflow_task_id = <span class="rs-self">self</span>.handles.<a class="symbol-link rs-fn" href="eos-workflow--src-ports-rs.html#method-handle-for-workflow-379">handle_for_workflow</a>(&amp;started.workflow_id)?;
+        <span class="rs-type">Ok</span>(eos_tools::<span class="rs-type">StartedWorkflowHandle</span> {
+            workflow_task_id,
+            workflow_id: started.workflow_id,
+        })
+    }
+</code></pre>
+</details></td></tr><tr id="method-status-166"><td>method</td><td>status</td><td><code>async fn <a class="symbol-link" href="eos-workflow--src-ports-rs.html#method-status-166">status</a> (&amp; self , workflow_id : &amp; WorkflowId , workflow_task_id : Option &lt; &amp; WorkflowSessionId &gt; ,) -&gt; <a class="symbol-link" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a> &lt; String , ToolError &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-ports-rs.html#method-status-166">status</a>(
+        &amp;<span class="rs-self">self</span>,
+        workflow_id: &amp;<span class="rs-type">WorkflowId</span>,
+        workflow_task_id: <span class="rs-type">Option</span>&lt;&amp;<span class="rs-type">WorkflowSessionId</span>&gt;,
+    ) -&gt; <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a>&lt;<span class="rs-type">String</span>, <span class="rs-type">ToolError</span>&gt; {
+        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(handle) = workflow_task_id {
+            <span class="rs-kw">let</span> <span class="rs-type">Some</span>(handle_workflow_id) = <span class="rs-self">self</span>.handles.<a class="symbol-link rs-fn" href="eos-workflow--src-ports-rs.html#method-workflow-id-for-handle-398">workflow_id_for_handle</a>(handle) <span class="rs-kw">else</span> {
+                <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(format!(&quot;<span class="rs-type">Workflow</span> handle {handle} was not found.&quot;));
+            };
+            <span class="rs-kw">if</span> &amp;handle_workflow_id != workflow_id {
+                <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(format!(
+                    &quot;<span class="rs-type">Workflow</span> handle {handle} does not refer to workflow {workflow_id}.&quot;
+                ));
+            }
+        }
+        <span class="rs-kw">let</span> <span class="rs-type">Some</span>(workflow) = <span class="rs-self">self</span>.workflow_store.<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-registry-rs.html#method-get-52">get</a>(workflow_id).<span class="rs-kw">await</span>? <span class="rs-kw">else</span> {
+            <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(format!(&quot;<span class="rs-type">Workflow</span> {workflow_id} was not found.&quot;));
+        };
+        <span class="rs-kw">let</span> handle = <span class="rs-self">self</span>.handles.<a class="symbol-link rs-fn" href="eos-workflow--src-ports-rs.html#method-handle-for-workflow-379">handle_for_workflow</a>(&amp;workflow.id)?;
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> text = format!(
+            &quot;<span class="rs-type">Workflow</span> {} ({}) is {:?}. <span class="rs-type">Goal</span>: {}&quot;,
+            workflow.id, handle, workflow.status, workflow.workflow_goal
+        );
+        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(outcomes) = &amp;workflow.outcomes {
+            text.push_str(&quot;\nOutcomes:\n&quot;);
+            text.push_str(outcomes);
+        }
+        <span class="rs-type">Ok</span>(text)
+    }
+</code></pre>
+</details></td></tr><tr id="method-cancel-196"><td>method</td><td>cancel</td><td><code>async fn <a class="symbol-link" href="eos-workflow--src-ports-rs.html#method-cancel-196">cancel</a> (&amp; self , workflow_task_id : &amp; WorkflowSessionId , reason : &amp; str ,) -&gt; <a class="symbol-link" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a> &lt; String , ToolError &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-ports-rs.html#method-cancel-196">cancel</a>(
+        &amp;<span class="rs-self">self</span>,
+        workflow_task_id: &amp;<span class="rs-type">WorkflowSessionId</span>,
+        reason: &amp;str,
+    ) -&gt; <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a>&lt;<span class="rs-type">String</span>, <span class="rs-type">ToolError</span>&gt; {
+        <span class="rs-kw">let</span> <span class="rs-type">Some</span>(workflow_id) = <span class="rs-self">self</span>.handles.<a class="symbol-link rs-fn" href="eos-workflow--src-ports-rs.html#method-workflow-id-for-handle-398">workflow_id_for_handle</a>(workflow_task_id) <span class="rs-kw">else</span> {
+            <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(format!(&quot;<span class="rs-type">Workflow</span> handle {workflow_task_id} was not found.&quot;));
+        };
+        <span class="rs-kw">let</span> <span class="rs-type">Some</span>(workflow) = <span class="rs-self">self</span>.workflow_store.<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-registry-rs.html#method-get-52">get</a>(&amp;workflow_id).<span class="rs-kw">await</span>? <span class="rs-kw">else</span> {
+            <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(format!(&quot;<span class="rs-type">Workflow</span> handle {workflow_task_id} was not found.&quot;));
+        };
+        <span class="rs-kw">if</span> workflow.status != <span class="rs-type">WorkflowStatus</span>::<span class="rs-type">Open</span> {
+            <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(format!(
+                &quot;<span class="rs-type">Workflow</span> {workflow_id} is already {:?}.&quot;,
+                workflow.status
+            ));
+        }
+        <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workflow--src-ports-rs.html#method-cancel-workflow-state-264">cancel_workflow_state</a>(&amp;workflow, reason).<span class="rs-kw">await</span>?;
+        <span class="rs-type">Ok</span>(format!(&quot;<span class="rs-type">Workflow</span> {workflow_id} cancelled: {reason}&quot;))
+    }
+</code></pre>
+</details></td></tr><tr id="method-find-outstanding-217"><td>method</td><td>find_outstanding</td><td><code>async fn <a class="symbol-link" href="eos-workflow--src-ports-rs.html#method-find-outstanding-217">find_outstanding</a> (&amp; self , parent_task_id : &amp; eos_state :: TaskId , _agent_run_id : &amp; AgentRunId ,) -&gt; <a class="symbol-link" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a> &lt; Vec &lt; OutstandingWorkflow &gt; , ToolError &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-ports-rs.html#method-find-outstanding-217">find_outstanding</a>(
+        &amp;<span class="rs-self">self</span>,
+        parent_task_id: &amp;eos_state::<span class="rs-type">TaskId</span>,
+        _agent_run_id: &amp;<span class="rs-type">AgentRunId</span>,
+    ) -&gt; <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a>&lt;<span class="rs-type">Vec</span>&lt;<span class="rs-type">OutstandingWorkflow</span>&gt;, <span class="rs-type">ToolError</span>&gt; {
+        <span class="rs-self">self</span>.workflow_store
+            .list_for_parent_task(parent_task_id)
+            .<span class="rs-kw">await</span>?
+            .into_iter()
+            .filter(eos_state::<span class="rs-type">Workflow</span>::is_open)
+            .map(|workflow| {
+                <span class="rs-type">Ok</span>(<span class="rs-type">OutstandingWorkflow</span> {
+                    workflow_task_id: <span class="rs-self">self</span>.handles.<a class="symbol-link rs-fn" href="eos-workflow--src-ports-rs.html#method-handle-for-workflow-379">handle_for_workflow</a>(&amp;workflow.id)?,
+                    workflow_id: workflow.id,
+                    workflow_goal: workflow.workflow_goal,
+                })
+            })
+            .collect()
+    }
+</code></pre>
+</details></td></tr><tr id="method-workflow-depth-237"><td>method</td><td>workflow_depth</td><td><code>async fn <a class="symbol-link" href="eos-workflow--src-ports-rs.html#method-workflow-depth-237">workflow_depth</a> (&amp; self , workflow_id : &amp; WorkflowId) -&gt; <a class="symbol-link" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a> &lt; u32 , ToolError &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-ports-rs.html#method-workflow-depth-237">workflow_depth</a>(&amp;<span class="rs-self">self</span>, workflow_id: &amp;<span class="rs-type">WorkflowId</span>) -&gt; <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a>&lt;u32, <span class="rs-type">ToolError</span>&gt; {
+        <span class="rs-comment">// Walk delegation ancestry via each workflow's parent task's owning</span>
+        <span class="rs-comment">// workflow (`task.workflow_id`), counting hops; 1 = top-level. The `seen`</span>
+        <span class="rs-comment">// guard stops a malformed cycle from looping forever (Rust parity).</span>
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> depth: u32 = 1;
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> current = workflow_id.clone();
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> seen = std::collections::<span class="rs-type">HashSet</span>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-264">new</a>();
+        <span class="rs-kw">while</span> seen.insert(current.clone()) {
+            <span class="rs-kw">let</span> <span class="rs-type">Some</span>(workflow) = <span class="rs-self">self</span>.workflow_store.<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-registry-rs.html#method-get-52">get</a>(&amp;current).<span class="rs-kw">await</span>? <span class="rs-kw">else</span> {
+                <span class="rs-kw">break</span>;
+            };
+            <span class="rs-kw">let</span> <span class="rs-type">Some</span>(parent) = <span class="rs-self">self</span>.task_store.<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-registry-rs.html#method-get-52">get</a>(&amp;workflow.parent_task_id).<span class="rs-kw">await</span>? <span class="rs-kw">else</span> {
+                <span class="rs-kw">break</span>;
+            };
+            <span class="rs-kw">match</span> parent.workflow_id {
+                <span class="rs-type">Some</span>(parent_workflow_id) =&gt; {
+                    depth += 1;
+                    current = parent_workflow_id;
+                }
+                <span class="rs-type">None</span> =&gt; <span class="rs-kw">break</span>,
+            }
+        }
+        <span class="rs-type">Ok</span>(depth)
+    }
+</code></pre>
+</details></td></tr></tbody></table></details></div>
+
+  <p class="source">crates/eos-workflow/src/ports.rs:100</p>
+</article><article id="item-struct-WorkflowHandleRegistry-366" class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct WorkflowHandleRegistry private struct WorkflowHandleRegistry crates/eos-workflow/src/ports.rs next_handle AtomicU64 inner Mutex &lt; WorkflowHandleMaps &gt; ">
   <div class="item-head">
     <span class="kind">struct</span>
     <h3>WorkflowHandleRegistry</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">struct WorkflowHandleRegistry</code>
-  <div class="tags"></div>
-  <h4>Fields</h4><table><tbody><tr><td>private</td><td>next_handle</td><td><code>AtomicU64</code></td></tr><tr><td>private</td><td>inner</td><td><code>Mutex &lt; WorkflowHandleMaps &gt;</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr><td>method</td><td>handle_for_workflow</td><td><code>fn handle_for_workflow (&amp; self , workflow_id : &amp; WorkflowId ,) -&gt; Result &lt; WorkflowSessionId , ToolError &gt;</code></td></tr><tr><td>method</td><td>workflow_id_for_handle</td><td><code>fn workflow_id_for_handle (&amp; self , handle : &amp; WorkflowSessionId) -&gt; Option &lt; WorkflowId &gt;</code></td></tr></tbody></table>
-  <p class="source">crates/eos-workflow/src/ports.rs:363</p>
-</article><article class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct WorkflowHandleMaps private struct WorkflowHandleMaps crates/eos-workflow/src/ports.rs workflow_by_handle HashMap &lt; WorkflowSessionId , WorkflowId &gt; handle_by_workflow HashMap &lt; WorkflowId , WorkflowSessionId &gt; ">
+  <code class="signature">struct <a class="symbol-link" href="eos-workflow--src-ports-rs.html#item-struct-WorkflowHandleRegistry-366">WorkflowHandleRegistry</a></code>
+  <div class="tags"><span>derive: Debug</span><span>derive: Default</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>next_handle</td><td><code>AtomicU64</code></td></tr><tr><td>private</td><td>inner</td><td><code>Mutex &lt; <a class="symbol-link" href="eos-workflow--src-ports-rs.html#item-struct-WorkflowHandleMaps-372">WorkflowHandleMaps</a> &gt;</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-handle-for-workflow-379"><td>method</td><td>handle_for_workflow</td><td><code>fn <a class="symbol-link" href="eos-workflow--src-ports-rs.html#method-handle-for-workflow-379">handle_for_workflow</a> (&amp; self , workflow_id : &amp; WorkflowId ,) -&gt; <a class="symbol-link" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a> &lt; WorkflowSessionId , ToolError &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-ports-rs.html#method-handle-for-workflow-379">handle_for_workflow</a>(
+        &amp;<span class="rs-self">self</span>,
+        workflow_id: &amp;<span class="rs-type">WorkflowId</span>,
+    ) -&gt; <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a>&lt;<span class="rs-type">WorkflowSessionId</span>, <span class="rs-type">ToolError</span>&gt; {
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> guard = <span class="rs-self">self</span>.inner.lock();
+        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(handle) = guard.handle_by_workflow.<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-registry-rs.html#method-get-52">get</a>(workflow_id) {
+            <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(handle.clone());
+        }
+        <span class="rs-kw">let</span> id = <span class="rs-self">self</span>.next_handle.fetch_add(1, <span class="rs-type">Ordering</span>::<span class="rs-type">Relaxed</span>) + 1;
+        <span class="rs-kw">let</span> handle: <span class="rs-type">WorkflowSessionId</span> = format!(&quot;wf_{id}&quot;).parse()?;
+        guard
+            .workflow_by_handle
+            .insert(handle.clone(), workflow_id.clone());
+        guard
+            .handle_by_workflow
+            .insert(workflow_id.clone(), handle.clone());
+        <span class="rs-type">Ok</span>(handle)
+    }
+</code></pre>
+</details></td></tr><tr id="method-workflow-id-for-handle-398"><td>method</td><td>workflow_id_for_handle</td><td><code>fn <a class="symbol-link" href="eos-workflow--src-ports-rs.html#method-workflow-id-for-handle-398">workflow_id_for_handle</a> (&amp; self , handle : &amp; WorkflowSessionId) -&gt; Option &lt; WorkflowId &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-ports-rs.html#method-workflow-id-for-handle-398">workflow_id_for_handle</a>(&amp;<span class="rs-self">self</span>, handle: &amp;<span class="rs-type">WorkflowSessionId</span>) -&gt; <span class="rs-type">Option</span>&lt;<span class="rs-type">WorkflowId</span>&gt; {
+        <span class="rs-self">self</span>.inner.lock().workflow_by_handle.<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-registry-rs.html#method-get-52">get</a>(handle).cloned()
+    }
+</code></pre>
+</details></td></tr></tbody></table>
+
+  <p class="source">crates/eos-workflow/src/ports.rs:366</p>
+</article><article id="item-struct-WorkflowHandleMaps-372" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct WorkflowHandleMaps private struct WorkflowHandleMaps crates/eos-workflow/src/ports.rs workflow_by_handle HashMap &lt; WorkflowSessionId , WorkflowId &gt; handle_by_workflow HashMap &lt; WorkflowId , WorkflowSessionId &gt; ">
   <div class="item-head">
     <span class="kind">struct</span>
     <h3>WorkflowHandleMaps</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">struct WorkflowHandleMaps</code>
-  <div class="tags"></div>
+  <code class="signature">struct <a class="symbol-link" href="eos-workflow--src-ports-rs.html#item-struct-WorkflowHandleMaps-372">WorkflowHandleMaps</a></code>
+  <div class="tags"><span>derive: Debug</span><span>derive: Default</span></div>
   <h4>Fields</h4><table><tbody><tr><td>private</td><td>workflow_by_handle</td><td><code>HashMap &lt; WorkflowSessionId , WorkflowId &gt;</code></td></tr><tr><td>private</td><td>handle_by_workflow</td><td><code>HashMap &lt; WorkflowId , WorkflowSessionId &gt;</code></td></tr></tbody></table>
-  <p class="source">crates/eos-workflow/src/ports.rs:369</p>
-</article><div class="group-label">Standalone Functions</div><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn submission_ack private fn submission_ack (result : crate :: Result &lt; () &gt;) -&gt; Result &lt; SubmissionAck , ToolError &gt; crates/eos-workflow/src/ports.rs  ">
+
+  <p class="source">crates/eos-workflow/src/ports.rs:372</p>
+</article><article id="item-struct-TestCancelPort-417" class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct TestCancelPort private struct TestCancelPort crates/eos-workflow/src/ports.rs task_store Arc &lt; dyn TaskStore &gt; ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>TestCancelPort</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">struct <a class="symbol-link" href="eos-workflow--src-ports-rs.html#item-struct-TestCancelPort-417">TestCancelPort</a></code>
+  <p class="docstring">A `CancelPort` fake mirroring `EngineCancelPort::cancel_task`'s persisted<br>flip; these store-level tests have no live-run registry.</p>
+  <div class="tags"><span>port/service</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>task_store</td><td><code>Arc &lt; dyn TaskStore &gt;</code></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl CancelPort for <a class="symbol-link" href="eos-workflow--src-ports-rs.html#item-struct-TestCancelPort-417">TestCancelPort</a></code></summary><table><tbody><tr id="method-cancel-task-425"><td>method</td><td>cancel_task</td><td><code>async fn <a class="symbol-link" href="eos-workflow--src-ports-rs.html#method-cancel-task-425">cancel_task</a> (&amp; self , task_id : &amp; eos_state :: TaskId , reason : &amp; str ,) -&gt; <a class="symbol-link" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a> &lt; () , ToolError &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>        <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-ports-rs.html#method-cancel-task-425">cancel_task</a>(
+            &amp;<span class="rs-self">self</span>,
+            task_id: &amp;eos_state::<span class="rs-type">TaskId</span>,
+            reason: &amp;str,
+        ) -&gt; <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a>&lt;(), <span class="rs-type">ToolError</span>&gt; {
+            <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(task) = <span class="rs-self">self</span>.task_store.<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-registry-rs.html#method-get-52">get</a>(task_id).<span class="rs-kw">await</span>? {
+                <span class="rs-kw">if</span> matches!(task.status, <span class="rs-type">TaskStatus</span>::<span class="rs-type">Pending</span> | <span class="rs-type">TaskStatus</span>::<span class="rs-type">Running</span>) {
+                    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> terminal = <span class="rs-type">JsonObject</span>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-264">new</a>();
+                    terminal.insert(&quot;fail_reason&quot;.to_owned(), &quot;cancelled&quot;.into());
+                    terminal.insert(&quot;reason&quot;.to_owned(), reason.into());
+                    <span class="rs-self">self</span>.task_store
+                        .set_task_status_if_current(
+                            task_id,
+                            task.status,
+                            <span class="rs-type">TaskStatus</span>::<span class="rs-type">Cancelled</span>,
+                            <span class="rs-type">None</span>,
+                            <span class="rs-type">Some</span>(&amp;terminal),
+                        )
+                        .<span class="rs-kw">await</span>?;
+                }
+            }
+            <span class="rs-type">Ok</span>(())
+        }
+</code></pre>
+</details></td></tr><tr id="method-cancel-agent-run-449"><td>method</td><td>cancel_agent_run</td><td><code>async fn <a class="symbol-link" href="eos-workflow--src-ports-rs.html#method-cancel-agent-run-449">cancel_agent_run</a> (&amp; self , _agent_run_id : &amp; AgentRunId , _reason : &amp; str ,) -&gt; <a class="symbol-link" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a> &lt; () , ToolError &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>        <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-ports-rs.html#method-cancel-agent-run-449">cancel_agent_run</a>(
+            &amp;<span class="rs-self">self</span>,
+            _agent_run_id: &amp;<span class="rs-type">AgentRunId</span>,
+            _reason: &amp;str,
+        ) -&gt; <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a>&lt;(), <span class="rs-type">ToolError</span>&gt; {
+            <span class="rs-type">Ok</span>(())
+        }
+</code></pre>
+</details></td></tr></tbody></table></details></div>
+
+  <p class="source">crates/eos-workflow/src/ports.rs:417</p>
+</article><div class="group-label">Standalone Functions</div><article id="item-fn-submission-ack-90" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn submission_ack private fn submission_ack (result : crate :: Result &lt; () &gt;) -&gt; Result &lt; SubmissionAck , ToolError &gt; crates/eos-workflow/src/ports.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>submission_ack</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn submission_ack (result : crate :: Result &lt; () &gt;) -&gt; Result &lt; SubmissionAck , ToolError &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-workflow--src-ports-rs.html#item-fn-submission-ack-90">submission_ack</a> (result : crate :: <a class="symbol-link" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a> &lt; () &gt;) -&gt; <a class="symbol-link" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a> &lt; SubmissionAck , ToolError &gt;</code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-ports-rs.html#item-fn-submission-ack-90">submission_ack</a>(result: <span class="rs-kw">crate</span>::<a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a>&lt;()&gt;) -&gt; <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a>&lt;<span class="rs-type">SubmissionAck</span>, <span class="rs-type">ToolError</span>&gt; {
+    <span class="rs-kw">match</span> result {
+        <span class="rs-type">Ok</span>(()) =&gt; <span class="rs-type">Ok</span>(<span class="rs-type">SubmissionAck</span>::<span class="rs-type">Accepted</span>),
+        <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<span class="rs-type">Store</span>(err)) =&gt; <span class="rs-type">Err</span>(<span class="rs-type">ToolError</span>::<span class="rs-type">Store</span>(err)),
+        <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<span class="rs-type">Tool</span>(err)) =&gt; <span class="rs-type">Err</span>(err),
+        <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<span class="rs-type">Join</span>(err)) =&gt; <span class="rs-type">Err</span>(<span class="rs-type">ToolError</span>::<span class="rs-type">Internal</span>(err)),
+        <span class="rs-type">Err</span>(err) =&gt; <span class="rs-type">Ok</span>(<span class="rs-type">SubmissionAck</span>::<span class="rs-type">Rejected</span>(err.to_string())),
+    }
+}
+</code></pre>
+</details>
 
-  <p class="source">crates/eos-workflow/src/ports.rs:92</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn workflow_control_error private fn workflow_control_error (err : WorkflowError) -&gt; ToolError crates/eos-workflow/src/ports.rs  ">
+  <p class="source">crates/eos-workflow/src/ports.rs:90</p>
+</article><article id="item-fn-workflow-control-error-358" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn workflow_control_error private fn workflow_control_error (err : WorkflowError) -&gt; ToolError crates/eos-workflow/src/ports.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>workflow_control_error</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn workflow_control_error (err : WorkflowError) -&gt; ToolError</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-workflow--src-ports-rs.html#item-fn-workflow-control-error-358">workflow_control_error</a> (err : <a class="symbol-link" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>) -&gt; ToolError</code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-ports-rs.html#item-fn-workflow-control-error-358">workflow_control_error</a>(err: <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>) -&gt; <span class="rs-type">ToolError</span> {
+    <span class="rs-kw">match</span> err {
+        <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<span class="rs-type">Store</span>(err) =&gt; <span class="rs-type">ToolError</span>::<span class="rs-type">Store</span>(err),
+        <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<span class="rs-type">Tool</span>(err) =&gt; err,
+        other =&gt; <span class="rs-type">ToolError</span>::<span class="rs-type">Internal</span>(other.to_string()),
+    }
+}
+</code></pre>
+</details>
 
-  <p class="source">crates/eos-workflow/src/ports.rs:355</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn cancellation_outcomes private fn cancellation_outcomes (task : &amp; Task , outcome_text : &amp; str) -&gt; Vec &lt; eos_state :: ExecutionTaskOutcome &gt; crates/eos-workflow/src/ports.rs  ">
-  <div class="item-head">
-    <span class="kind">fn</span>
-    <h3>cancellation_outcomes</h3>
-    <span class="visibility">private</span>
-  </div>
-  <code class="signature">fn cancellation_outcomes (task : &amp; Task , outcome_text : &amp; str) -&gt; Vec &lt; eos_state :: ExecutionTaskOutcome &gt;</code>
-  <div class="tags"></div>
-
-  <p class="source">crates/eos-workflow/src/ports.rs:400</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn workflow_control_uses_runtime_handles_and_cancels_child_state private async fn workflow_control_uses_runtime_handles_and_cancels_child_state () crates/eos-workflow/src/ports.rs  ">
+  <p class="source">crates/eos-workflow/src/ports.rs:358</p>
+</article><article id="item-fn-workflow-control-uses-runtime-handles-and-cancels-child-state-462" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn workflow_control_uses_runtime_handles_and_cancels_child_state private async fn workflow_control_uses_runtime_handles_and_cancels_child_state () crates/eos-workflow/src/ports.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>workflow_control_uses_runtime_handles_and_cancels_child_state</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">async fn workflow_control_uses_runtime_handles_and_cancels_child_state ()</code>
-  <div class="tags"><span>async</span></div>
+  <code class="signature">async fn <a class="symbol-link" href="eos-workflow--src-ports-rs.html#item-fn-workflow-control-uses-runtime-handles-and-cancels-child-state-462">workflow_control_uses_runtime_handles_and_cancels_child_state</a> ()</code>
+  <div class="tags"><span>async</span><span>tokio::test</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[tokio::test]
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-ports-rs.html#item-fn-workflow-control-uses-runtime-handles-and-cancels-child-state-462">workflow_control_uses_runtime_handles_and_cancels_child_state</a>() {
+        <span class="rs-kw">let</span> stores = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-264">new</a>(<span class="rs-type">MemoryStores</span>::default());
+        <span class="rs-kw">let</span> runner = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-264">new</a>(<span class="rs-type">QueueRunner</span>::default());
+        <span class="rs-kw">let</span> deps = stores.<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-rs.html#method-deps-637">deps</a>(runner);
+        <span class="rs-kw">let</span> parent = root_task(&quot;parent&quot;, <span class="rs-type">TaskStatus</span>::<span class="rs-type">Running</span>);
+        stores.seed_task(parent.clone());
+        <span class="rs-kw">let</span> cancel_port: <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <span class="rs-type">CancelPort</span>&gt; = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-264">new</a>(<a class="symbol-link rs-type" href="eos-workflow--src-ports-rs.html#item-struct-TestCancelPort-417">TestCancelPort</a> {
+            task_store: stores.clone(),
+        });
+        <span class="rs-kw">let</span> adapter = <a class="symbol-link rs-type" href="eos-workflow--src-ports-rs.html#item-struct-WorkflowControlAdapter-100">WorkflowControlAdapter</a>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-264">new</a>(
+            <a class="symbol-link rs-type" href="eos-workflow--src-starter-rs.html#item-struct-WorkflowStarter-24">WorkflowStarter</a>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-264">new</a>(deps),
+            stores.clone(),
+            stores.clone(),
+            stores.clone(),
+            stores.clone(),
+            cancel_port,
+        );
 
-  <p class="source">crates/eos-workflow/src/ports.rs:432</p>
+        <span class="rs-kw">let</span> agent_run_id: <span class="rs-type">AgentRunId</span> = &quot;agent-run-1&quot;.parse().expect(&quot;agent run id&quot;);
+        <span class="rs-kw">let</span> started = adapter
+            .<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-rs.html#method-start-69">start</a>(&amp;parent.id, &amp;agent_run_id, &quot;delegated goal&quot;)
+            .<span class="rs-kw">await</span>
+            .unwrap();
+        assert_eq!(started.workflow_task_id.<a class="symbol-link rs-fn" href="eos-workflow--src-context-section-rs.html#method-as-str-17">as_str</a>(), &quot;wf_1&quot;);
+        <span class="rs-kw">let</span> derived_handle: eos_types::<span class="rs-type">WorkflowSessionId</span> =
+            format!(&quot;wf_{}&quot;, started.workflow_id.<a class="symbol-link rs-fn" href="eos-workflow--src-context-section-rs.html#method-as-str-17">as_str</a>())
+                .parse()
+                .unwrap();
+        assert!(adapter
+            .<a class="symbol-link rs-fn" href="eos-workflow--src-ports-rs.html#method-status-166">status</a>(&amp;started.workflow_id, <span class="rs-type">Some</span>(&amp;derived_handle))
+            .<span class="rs-kw">await</span>
+            .unwrap()
+            .contains(&quot;was not found&quot;));
+
+        adapter
+            .<a class="symbol-link rs-fn" href="eos-workflow--src-ports-rs.html#method-cancel-196">cancel</a>(&amp;started.workflow_task_id, &quot;stop now&quot;)
+            .<span class="rs-kw">await</span>
+            .unwrap();
+
+        <span class="rs-kw">let</span> workflow = stores.workflow(&amp;started.workflow_id).unwrap();
+        assert_eq!(workflow.status, <span class="rs-type">WorkflowStatus</span>::<span class="rs-type">Cancelled</span>);
+        <span class="rs-kw">let</span> iteration_id = workflow.iteration_ids.first().unwrap();
+        <span class="rs-kw">let</span> iteration = stores.iteration(iteration_id).unwrap();
+        assert_eq!(iteration.status, <span class="rs-type">IterationStatus</span>::<span class="rs-type">Cancelled</span>);
+        <span class="rs-kw">let</span> attempt_id = iteration.attempt_ids.first().unwrap();
+        <span class="rs-kw">let</span> attempt = stores.attempt(attempt_id).unwrap();
+        assert_eq!(attempt.<a class="symbol-link rs-fn" href="eos-workflow--src-ports-rs.html#method-status-166">status</a>(), <span class="rs-type">AttemptStatus</span>::<span class="rs-type">Cancelled</span>);
+        assert!(attempt.fail_reason().is_none());
+        <span class="rs-kw">let</span> planner_task = stores.<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-task-343">task</a>(attempt.<a class="symbol-link rs-fn" href="eos-workflow--src-ids-rs.html#item-fn-planner-task-id-12">planner_task_id</a>().unwrap()).unwrap();
+        assert_eq!(planner_task.status, <span class="rs-type">TaskStatus</span>::<span class="rs-type">Cancelled</span>);
+        assert_eq!(
+            planner_task
+                .terminal_tool_result
+                .unwrap()
+                .<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-registry-rs.html#method-get-52">get</a>(&quot;fail_reason&quot;),
+            <span class="rs-type">Some</span>(&amp;json!(&quot;cancelled&quot;))
+        );
+        <span class="rs-comment">// `cancel_workflow` must never mutate the parent task (anchor §3).</span>
+        assert_eq!(stores.<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-task-343">task</a>(&amp;parent.id).unwrap().status, <span class="rs-type">TaskStatus</span>::<span class="rs-type">Running</span>);
+    }
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-workflow/src/ports.rs:462</p>
 </article></div>
 </section></div>
 </main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/eos-workflow/src/ports.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-kw">use</span> std::collections::<span class="rs-type">HashMap</span>;
+<span class="rs-kw">use</span> std::sync::atomic::{<span class="rs-type">AtomicU64</span>, <span class="rs-type">Ordering</span>};
+<span class="rs-kw">use</span> std::sync::<span class="rs-type">Arc</span>;
+
+<span class="rs-kw">use</span> async_trait::async_trait;
+<span class="rs-kw">use</span> eos_state::{
+    <span class="rs-type">AttemptClosure</span>, <span class="rs-type">GeneratorSubmission</span>, <span class="rs-type">IterationStatus</span>, <span class="rs-type">ReducerSubmission</span>, <span class="rs-type">TaskStore</span>, <span class="rs-type">WorkflowId</span>,
+    <span class="rs-type">WorkflowStatus</span>,
+};
+<span class="rs-kw">use</span> eos_tools::{
+    <span class="rs-type">AttemptSubmissionPort</span>, <span class="rs-type">CancelPort</span>, <span class="rs-type">OutstandingWorkflow</span>, <span class="rs-type">PlannerPlan</span>, <span class="rs-type">SubmissionAck</span>, <span class="rs-type">ToolError</span>,
+    <span class="rs-type">WorkflowControlPort</span>,
+};
+<span class="rs-kw">use</span> eos_types::{<span class="rs-type">AgentRunId</span>, <span class="rs-type">WorkflowSessionId</span>};
+<span class="rs-kw">use</span> parking_lot::<span class="rs-type">Mutex</span>;
+
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::attempt::<a class="symbol-link rs-type" href="eos-workflow--src-attempt-orchestrator-registry-rs.html#item-struct-AttemptOrchestratorRegistry-12">AttemptOrchestratorRegistry</a>;
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::{<a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>, <a class="symbol-link rs-type" href="eos-workflow--src-starter-rs.html#item-struct-WorkflowStarter-24">WorkflowStarter</a>};
+
+<span class="rs-comment">/// Recording adapter from the `eos-tools` planner/generator/reducer terminal</span>
+<span class="rs-comment">/// ports to the active per-attempt orchestrators (Path A-recording).</span>
+<span class="rs-comment">///</span>
+<span class="rs-comment">/// The submit tool writes the agent's real submission straight to the</span>
+<span class="rs-comment">/// orchestrator's non-advancing `record_*` variants and returns the</span>
+<span class="rs-comment">/// orchestrator's real ack; advancing the DAG stays the exclusive job of the</span>
+<span class="rs-comment">/// single `advance_run_stage` loop (D4: exactly one writer). This is the wired</span>
+<span class="rs-comment">/// implementor of [`AttemptSubmissionPort`], constructed once at the composition</span>
+<span class="rs-comment">/// root over the shared attempt registry.</span>
+#[derive(<span class="rs-type">Clone</span>)]
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-workflow--src-ports-rs.html#item-struct-AttemptSubmissionAdapter-20">AttemptSubmissionAdapter</a> {
+    registry: <span class="rs-type">Arc</span>&lt;<a class="symbol-link rs-type" href="eos-workflow--src-attempt-orchestrator-registry-rs.html#item-struct-AttemptOrchestratorRegistry-12">AttemptOrchestratorRegistry</a>&gt;,
+}
+
+<span class="rs-kw">impl</span> std::fmt::<span class="rs-type">Debug</span> <span class="rs-kw">for</span> <a class="symbol-link rs-type" href="eos-workflow--src-ports-rs.html#item-struct-AttemptSubmissionAdapter-20">AttemptSubmissionAdapter</a> {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow.html#method-fmt-251">fmt</a>(&amp;<span class="rs-self">self</span>, f: &amp;<span class="rs-kw">mut</span> std::fmt::<span class="rs-type">Formatter</span>&lt;&#x27;_&gt;) -&gt; std::fmt::<a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a> {
+        f.debug_struct(&quot;<a class="symbol-link rs-type" href="eos-workflow--src-ports-rs.html#item-struct-AttemptSubmissionAdapter-20">AttemptSubmissionAdapter</a>&quot;)
+            .finish_non_exhaustive()
+    }
+}
+
+<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-workflow--src-ports-rs.html#item-struct-AttemptSubmissionAdapter-20">AttemptSubmissionAdapter</a> {
+    <span class="rs-comment">/// Create a submission adapter over the active attempt registry.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow.html#method-new-264">new</a>(registry: <span class="rs-type">Arc</span>&lt;<a class="symbol-link rs-type" href="eos-workflow--src-attempt-orchestrator-registry-rs.html#item-struct-AttemptOrchestratorRegistry-12">AttemptOrchestratorRegistry</a>&gt;) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">Self</span> { registry }
+    }
+}
+
+<span class="rs-kw">impl</span> eos_tools::ports::<span class="rs-type">Sealed</span> <span class="rs-kw">for</span> <a class="symbol-link rs-type" href="eos-workflow--src-ports-rs.html#item-struct-AttemptSubmissionAdapter-20">AttemptSubmissionAdapter</a> {}
+
+#[async_trait]
+<span class="rs-kw">impl</span> <span class="rs-type">AttemptSubmissionPort</span> <span class="rs-kw">for</span> <a class="symbol-link rs-type" href="eos-workflow--src-ports-rs.html#item-struct-AttemptSubmissionAdapter-20">AttemptSubmissionAdapter</a> {
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-ports-rs.html#method-apply-plan-53">apply_plan</a>(&amp;<span class="rs-self">self</span>, plan: <span class="rs-type">PlannerPlan</span>) -&gt; <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a>&lt;<span class="rs-type">SubmissionAck</span>, <span class="rs-type">ToolError</span>&gt; {
+        <span class="rs-kw">let</span> <span class="rs-type">Some</span>(orchestrator) = <span class="rs-self">self</span>.registry.<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-registry-rs.html#method-get-52">get</a>(&amp;plan.attempt_id) <span class="rs-kw">else</span> {
+            <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<span class="rs-type">SubmissionAck</span>::<span class="rs-type">Rejected</span>(format!(
+                &quot;attempt {:?} is not active&quot;,
+                plan.attempt_id.<a class="symbol-link rs-fn" href="eos-workflow--src-context-section-rs.html#method-as-str-17">as_str</a>()
+            )));
+        };
+        <a class="symbol-link rs-fn" href="eos-workflow--src-ports-rs.html#item-fn-submission-ack-90">submission_ack</a>(orchestrator.<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-rs.html#method-record-plan-205">record_plan</a>(plan).<span class="rs-kw">await</span>)
+    }
+
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-ports-rs.html#method-submit-generator-63">submit_generator</a>(
+        &amp;<span class="rs-self">self</span>,
+        submission: <span class="rs-type">GeneratorSubmission</span>,
+    ) -&gt; <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a>&lt;<span class="rs-type">SubmissionAck</span>, <span class="rs-type">ToolError</span>&gt; {
+        <span class="rs-kw">let</span> <span class="rs-type">Some</span>(orchestrator) = <span class="rs-self">self</span>.registry.<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-registry-rs.html#method-get-52">get</a>(&amp;submission.attempt_id) <span class="rs-kw">else</span> {
+            <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<span class="rs-type">SubmissionAck</span>::<span class="rs-type">Rejected</span>(format!(
+                &quot;attempt {:?} is not active&quot;,
+                submission.attempt_id.<a class="symbol-link rs-fn" href="eos-workflow--src-context-section-rs.html#method-as-str-17">as_str</a>()
+            )));
+        };
+        <a class="symbol-link rs-fn" href="eos-workflow--src-ports-rs.html#item-fn-submission-ack-90">submission_ack</a>(orchestrator.<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-rs.html#method-record-generator-submission-389">record_generator_submission</a>(submission).<span class="rs-kw">await</span>)
+    }
+
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-ports-rs.html#method-apply-reducer-76">apply_reducer</a>(
+        &amp;<span class="rs-self">self</span>,
+        submission: <span class="rs-type">ReducerSubmission</span>,
+    ) -&gt; <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a>&lt;<span class="rs-type">SubmissionAck</span>, <span class="rs-type">ToolError</span>&gt; {
+        <span class="rs-kw">let</span> <span class="rs-type">Some</span>(orchestrator) = <span class="rs-self">self</span>.registry.<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-registry-rs.html#method-get-52">get</a>(&amp;submission.attempt_id) <span class="rs-kw">else</span> {
+            <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<span class="rs-type">SubmissionAck</span>::<span class="rs-type">Rejected</span>(format!(
+                &quot;attempt {:?} is not active&quot;,
+                submission.attempt_id.<a class="symbol-link rs-fn" href="eos-workflow--src-context-section-rs.html#method-as-str-17">as_str</a>()
+            )));
+        };
+        <a class="symbol-link rs-fn" href="eos-workflow--src-ports-rs.html#item-fn-submission-ack-90">submission_ack</a>(orchestrator.<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-rs.html#method-record-reducer-submission-416">record_reducer_submission</a>(submission).<span class="rs-kw">await</span>)
+    }
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-ports-rs.html#item-fn-submission-ack-90">submission_ack</a>(result: <span class="rs-kw">crate</span>::<a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a>&lt;()&gt;) -&gt; <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a>&lt;<span class="rs-type">SubmissionAck</span>, <span class="rs-type">ToolError</span>&gt; {
+    <span class="rs-kw">match</span> result {
+        <span class="rs-type">Ok</span>(()) =&gt; <span class="rs-type">Ok</span>(<span class="rs-type">SubmissionAck</span>::<span class="rs-type">Accepted</span>),
+        <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<span class="rs-type">Store</span>(err)) =&gt; <span class="rs-type">Err</span>(<span class="rs-type">ToolError</span>::<span class="rs-type">Store</span>(err)),
+        <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<span class="rs-type">Tool</span>(err)) =&gt; <span class="rs-type">Err</span>(err),
+        <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<span class="rs-type">Join</span>(err)) =&gt; <span class="rs-type">Err</span>(<span class="rs-type">ToolError</span>::<span class="rs-type">Internal</span>(err)),
+        <span class="rs-type">Err</span>(err) =&gt; <span class="rs-type">Ok</span>(<span class="rs-type">SubmissionAck</span>::<span class="rs-type">Rejected</span>(err.to_string())),
+    }
+}
+
+<span class="rs-comment">/// Adapter from `eos-tools` workflow-control ports to delegated workflow state.</span>
+#[derive(<span class="rs-type">Clone</span>)]
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-workflow--src-ports-rs.html#item-struct-WorkflowControlAdapter-100">WorkflowControlAdapter</a> {
+    starter: <a class="symbol-link rs-type" href="eos-workflow--src-starter-rs.html#item-struct-WorkflowStarter-24">WorkflowStarter</a>,
+    workflow_store: <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> eos_state::<span class="rs-type">WorkflowStore</span>&gt;,
+    iteration_store: <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> eos_state::<span class="rs-type">IterationStore</span>&gt;,
+    attempt_store: <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> eos_state::<span class="rs-type">AttemptStore</span>&gt;,
+    task_store: <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <span class="rs-type">TaskStore</span>&gt;,
+    handles: <span class="rs-type">Arc</span>&lt;<a class="symbol-link rs-type" href="eos-workflow--src-ports-rs.html#item-struct-WorkflowHandleRegistry-366">WorkflowHandleRegistry</a>&gt;,
+    <span class="rs-comment">/// The recursive cancellation port (spec §12.4): workflow cancellation</span>
+    <span class="rs-comment">/// decomposes through `cancel_task` rather than flipping task rows directly.</span>
+    cancel_port: <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <span class="rs-type">CancelPort</span>&gt;,
+}
+
+<span class="rs-kw">impl</span> std::fmt::<span class="rs-type">Debug</span> <span class="rs-kw">for</span> <a class="symbol-link rs-type" href="eos-workflow--src-ports-rs.html#item-struct-WorkflowControlAdapter-100">WorkflowControlAdapter</a> {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow.html#method-fmt-251">fmt</a>(&amp;<span class="rs-self">self</span>, f: &amp;<span class="rs-kw">mut</span> std::fmt::<span class="rs-type">Formatter</span>&lt;&#x27;_&gt;) -&gt; std::fmt::<a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a> {
+        f.debug_struct(&quot;<a class="symbol-link rs-type" href="eos-workflow--src-ports-rs.html#item-struct-WorkflowControlAdapter-100">WorkflowControlAdapter</a>&quot;)
+            .finish_non_exhaustive()
+    }
+}
+
+<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-workflow--src-ports-rs.html#item-struct-WorkflowControlAdapter-100">WorkflowControlAdapter</a> {
+    <span class="rs-comment">/// Create a workflow-control adapter.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow.html#method-new-264">new</a>(
+        starter: <a class="symbol-link rs-type" href="eos-workflow--src-starter-rs.html#item-struct-WorkflowStarter-24">WorkflowStarter</a>,
+        workflow_store: <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> eos_state::<span class="rs-type">WorkflowStore</span>&gt;,
+        iteration_store: <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> eos_state::<span class="rs-type">IterationStore</span>&gt;,
+        attempt_store: <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> eos_state::<span class="rs-type">AttemptStore</span>&gt;,
+        task_store: <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <span class="rs-type">TaskStore</span>&gt;,
+        cancel_port: <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <span class="rs-type">CancelPort</span>&gt;,
+    ) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">Self</span> {
+            starter,
+            workflow_store,
+            iteration_store,
+            attempt_store,
+            task_store,
+            handles: <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-264">new</a>(<a class="symbol-link rs-type" href="eos-workflow--src-ports-rs.html#item-struct-WorkflowHandleRegistry-366">WorkflowHandleRegistry</a>::default()),
+            cancel_port,
+        }
+    }
+}
+
+<span class="rs-kw">impl</span> eos_tools::ports::<span class="rs-type">Sealed</span> <span class="rs-kw">for</span> <a class="symbol-link rs-type" href="eos-workflow--src-ports-rs.html#item-struct-WorkflowControlAdapter-100">WorkflowControlAdapter</a> {}
+
+#[async_trait]
+<span class="rs-kw">impl</span> <span class="rs-type">WorkflowControlPort</span> <span class="rs-kw">for</span> <a class="symbol-link rs-type" href="eos-workflow--src-ports-rs.html#item-struct-WorkflowControlAdapter-100">WorkflowControlAdapter</a> {
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-rs.html#method-start-69">start</a>(
+        &amp;<span class="rs-self">self</span>,
+        parent_task_id: &amp;eos_state::<span class="rs-type">TaskId</span>,
+        _agent_run_id: &amp;<span class="rs-type">AgentRunId</span>,
+        workflow_goal: &amp;str,
+    ) -&gt; <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a>&lt;eos_tools::<span class="rs-type">StartedWorkflowHandle</span>, <span class="rs-type">ToolError</span>&gt; {
+        <span class="rs-kw">let</span> started = <span class="rs-self">self</span>
+            .starter
+            .<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-rs.html#method-start-69">start</a>(workflow_goal, parent_task_id)
+            .<span class="rs-kw">await</span>
+            .map_err(workflow_control_error)?;
+        <span class="rs-kw">let</span> workflow_task_id = <span class="rs-self">self</span>.handles.<a class="symbol-link rs-fn" href="eos-workflow--src-ports-rs.html#method-handle-for-workflow-379">handle_for_workflow</a>(&amp;started.workflow_id)?;
+        <span class="rs-type">Ok</span>(eos_tools::<span class="rs-type">StartedWorkflowHandle</span> {
+            workflow_task_id,
+            workflow_id: started.workflow_id,
+        })
+    }
+
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-ports-rs.html#method-status-166">status</a>(
+        &amp;<span class="rs-self">self</span>,
+        workflow_id: &amp;<span class="rs-type">WorkflowId</span>,
+        workflow_task_id: <span class="rs-type">Option</span>&lt;&amp;<span class="rs-type">WorkflowSessionId</span>&gt;,
+    ) -&gt; <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a>&lt;<span class="rs-type">String</span>, <span class="rs-type">ToolError</span>&gt; {
+        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(handle) = workflow_task_id {
+            <span class="rs-kw">let</span> <span class="rs-type">Some</span>(handle_workflow_id) = <span class="rs-self">self</span>.handles.<a class="symbol-link rs-fn" href="eos-workflow--src-ports-rs.html#method-workflow-id-for-handle-398">workflow_id_for_handle</a>(handle) <span class="rs-kw">else</span> {
+                <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(format!(&quot;<span class="rs-type">Workflow</span> handle {handle} was not found.&quot;));
+            };
+            <span class="rs-kw">if</span> &amp;handle_workflow_id != workflow_id {
+                <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(format!(
+                    &quot;<span class="rs-type">Workflow</span> handle {handle} does not refer to workflow {workflow_id}.&quot;
+                ));
+            }
+        }
+        <span class="rs-kw">let</span> <span class="rs-type">Some</span>(workflow) = <span class="rs-self">self</span>.workflow_store.<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-registry-rs.html#method-get-52">get</a>(workflow_id).<span class="rs-kw">await</span>? <span class="rs-kw">else</span> {
+            <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(format!(&quot;<span class="rs-type">Workflow</span> {workflow_id} was not found.&quot;));
+        };
+        <span class="rs-kw">let</span> handle = <span class="rs-self">self</span>.handles.<a class="symbol-link rs-fn" href="eos-workflow--src-ports-rs.html#method-handle-for-workflow-379">handle_for_workflow</a>(&amp;workflow.id)?;
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> text = format!(
+            &quot;<span class="rs-type">Workflow</span> {} ({}) is {:?}. <span class="rs-type">Goal</span>: {}&quot;,
+            workflow.id, handle, workflow.status, workflow.workflow_goal
+        );
+        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(outcomes) = &amp;workflow.outcomes {
+            text.push_str(&quot;\nOutcomes:\n&quot;);
+            text.push_str(outcomes);
+        }
+        <span class="rs-type">Ok</span>(text)
+    }
+
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-ports-rs.html#method-cancel-196">cancel</a>(
+        &amp;<span class="rs-self">self</span>,
+        workflow_task_id: &amp;<span class="rs-type">WorkflowSessionId</span>,
+        reason: &amp;str,
+    ) -&gt; <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a>&lt;<span class="rs-type">String</span>, <span class="rs-type">ToolError</span>&gt; {
+        <span class="rs-kw">let</span> <span class="rs-type">Some</span>(workflow_id) = <span class="rs-self">self</span>.handles.<a class="symbol-link rs-fn" href="eos-workflow--src-ports-rs.html#method-workflow-id-for-handle-398">workflow_id_for_handle</a>(workflow_task_id) <span class="rs-kw">else</span> {
+            <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(format!(&quot;<span class="rs-type">Workflow</span> handle {workflow_task_id} was not found.&quot;));
+        };
+        <span class="rs-kw">let</span> <span class="rs-type">Some</span>(workflow) = <span class="rs-self">self</span>.workflow_store.<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-registry-rs.html#method-get-52">get</a>(&amp;workflow_id).<span class="rs-kw">await</span>? <span class="rs-kw">else</span> {
+            <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(format!(&quot;<span class="rs-type">Workflow</span> handle {workflow_task_id} was not found.&quot;));
+        };
+        <span class="rs-kw">if</span> workflow.status != <span class="rs-type">WorkflowStatus</span>::<span class="rs-type">Open</span> {
+            <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(format!(
+                &quot;<span class="rs-type">Workflow</span> {workflow_id} is already {:?}.&quot;,
+                workflow.status
+            ));
+        }
+        <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workflow--src-ports-rs.html#method-cancel-workflow-state-264">cancel_workflow_state</a>(&amp;workflow, reason).<span class="rs-kw">await</span>?;
+        <span class="rs-type">Ok</span>(format!(&quot;<span class="rs-type">Workflow</span> {workflow_id} cancelled: {reason}&quot;))
+    }
+
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-ports-rs.html#method-find-outstanding-217">find_outstanding</a>(
+        &amp;<span class="rs-self">self</span>,
+        parent_task_id: &amp;eos_state::<span class="rs-type">TaskId</span>,
+        _agent_run_id: &amp;<span class="rs-type">AgentRunId</span>,
+    ) -&gt; <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a>&lt;<span class="rs-type">Vec</span>&lt;<span class="rs-type">OutstandingWorkflow</span>&gt;, <span class="rs-type">ToolError</span>&gt; {
+        <span class="rs-self">self</span>.workflow_store
+            .list_for_parent_task(parent_task_id)
+            .<span class="rs-kw">await</span>?
+            .into_iter()
+            .filter(eos_state::<span class="rs-type">Workflow</span>::is_open)
+            .map(|workflow| {
+                <span class="rs-type">Ok</span>(<span class="rs-type">OutstandingWorkflow</span> {
+                    workflow_task_id: <span class="rs-self">self</span>.handles.<a class="symbol-link rs-fn" href="eos-workflow--src-ports-rs.html#method-handle-for-workflow-379">handle_for_workflow</a>(&amp;workflow.id)?,
+                    workflow_id: workflow.id,
+                    workflow_goal: workflow.workflow_goal,
+                })
+            })
+            .collect()
+    }
+
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-ports-rs.html#method-workflow-depth-237">workflow_depth</a>(&amp;<span class="rs-self">self</span>, workflow_id: &amp;<span class="rs-type">WorkflowId</span>) -&gt; <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a>&lt;u32, <span class="rs-type">ToolError</span>&gt; {
+        <span class="rs-comment">// Walk delegation ancestry via each workflow's parent task's owning</span>
+        <span class="rs-comment">// workflow (`task.workflow_id`), counting hops; 1 = top-level. The `seen`</span>
+        <span class="rs-comment">// guard stops a malformed cycle from looping forever (Rust parity).</span>
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> depth: u32 = 1;
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> current = workflow_id.clone();
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> seen = std::collections::<span class="rs-type">HashSet</span>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-264">new</a>();
+        <span class="rs-kw">while</span> seen.insert(current.clone()) {
+            <span class="rs-kw">let</span> <span class="rs-type">Some</span>(workflow) = <span class="rs-self">self</span>.workflow_store.<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-registry-rs.html#method-get-52">get</a>(&amp;current).<span class="rs-kw">await</span>? <span class="rs-kw">else</span> {
+                <span class="rs-kw">break</span>;
+            };
+            <span class="rs-kw">let</span> <span class="rs-type">Some</span>(parent) = <span class="rs-self">self</span>.task_store.<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-registry-rs.html#method-get-52">get</a>(&amp;workflow.parent_task_id).<span class="rs-kw">await</span>? <span class="rs-kw">else</span> {
+                <span class="rs-kw">break</span>;
+            };
+            <span class="rs-kw">match</span> parent.workflow_id {
+                <span class="rs-type">Some</span>(parent_workflow_id) =&gt; {
+                    depth += 1;
+                    current = parent_workflow_id;
+                }
+                <span class="rs-type">None</span> =&gt; <span class="rs-kw">break</span>,
+            }
+        }
+        <span class="rs-type">Ok</span>(depth)
+    }
+}
+
+<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-workflow--src-ports-rs.html#item-struct-WorkflowControlAdapter-100">WorkflowControlAdapter</a> {
+    <span class="rs-comment">/// Decompose workflow cancellation through `cancel_iteration` -&gt; `cancel_attempt`</span>
+    <span class="rs-comment">/// -&gt; `cancel_task` (spec §12.4). Walks only *open* iterations / *non-closed*</span>
+    <span class="rs-comment">/// attempts (the idempotency guards), so a re-entrant cancel (a child workflow</span>
+    <span class="rs-comment">/// cancelled while tearing down a parent) terminates.</span>
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-ports-rs.html#method-cancel-workflow-state-264">cancel_workflow_state</a>(
+        &amp;<span class="rs-self">self</span>,
+        workflow: &amp;eos_state::<span class="rs-type">Workflow</span>,
+        reason: &amp;str,
+    ) -&gt; <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a>&lt;(), <span class="rs-type">ToolError</span>&gt; {
+        <span class="rs-kw">let</span> now = eos_state::<span class="rs-type">UtcDateTime</span>::now();
+        <span class="rs-comment">// Iteration/workflow `outcomes` columns are read back strictly as</span>
+        <span class="rs-comment">// `Vec&lt;ExecutionTaskOutcome&gt;` by `ContextEngine`, so the cancellation</span>
+        <span class="rs-comment">// summary is the empty typed projection; the reason rides on each</span>
+        <span class="rs-comment">// cancelled task row and the `cancel` return string.</span>
+        <span class="rs-kw">const</span> <span class="rs-type">EMPTY_OUTCOMES</span>: &amp;str = &quot;[]&quot;;
+
+        <span class="rs-kw">for</span> iteration <span class="rs-kw">in</span> <span class="rs-self">self</span>.iteration_store.list_for_workflow(&amp;workflow.id).<span class="rs-kw">await</span>? {
+            <span class="rs-kw">if</span> !iteration.is_open() {
+                <span class="rs-kw">continue</span>;
+            }
+            <span class="rs-kw">for</span> attempt <span class="rs-kw">in</span> <span class="rs-self">self</span>.attempt_store.list_for_iteration(&amp;iteration.id).<span class="rs-kw">await</span>? {
+                <span class="rs-kw">if</span> attempt.is_closed() {
+                    <span class="rs-kw">continue</span>;
+                }
+                <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workflow--src-ports-rs.html#method-cancel-attempt-310">cancel_attempt</a>(&amp;attempt, reason, now).<span class="rs-kw">await</span>?;
+            }
+            <span class="rs-self">self</span>.iteration_store
+                .set_status(
+                    &amp;iteration.id,
+                    <span class="rs-type">IterationStatus</span>::<span class="rs-type">Cancelled</span>,
+                    <span class="rs-type">Some</span>(now),
+                    <span class="rs-type">Some</span>(<span class="rs-type">EMPTY_OUTCOMES</span>),
+                )
+                .<span class="rs-kw">await</span>?;
+        }
+        <span class="rs-self">self</span>.workflow_store
+            .set_status(
+                &amp;workflow.id,
+                <span class="rs-type">WorkflowStatus</span>::<span class="rs-type">Cancelled</span>,
+                <span class="rs-type">Some</span>(now),
+                <span class="rs-type">Some</span>(<span class="rs-type">EMPTY_OUTCOMES</span>),
+            )
+            .<span class="rs-kw">await</span>?;
+        <span class="rs-type">Ok</span>(())
+    }
+
+    <span class="rs-comment">/// Cancel one attempt (spec §12.4): latch every planner/generator/reducer task</span>
+    <span class="rs-comment">/// row to `Cancelled` *before* any teardown (closing the scheduler gap), then</span>
+    <span class="rs-comment">/// recurse `cancel_task` per task to tear down any live agent run, then close</span>
+    <span class="rs-comment">/// the attempt as `Cancelled`.</span>
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-ports-rs.html#method-cancel-attempt-310">cancel_attempt</a>(
+        &amp;<span class="rs-self">self</span>,
+        attempt: &amp;eos_state::<span class="rs-type">Attempt</span>,
+        reason: &amp;str,
+        now: eos_state::<span class="rs-type">UtcDateTime</span>,
+    ) -&gt; <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a>&lt;(), <span class="rs-type">ToolError</span>&gt; {
+        <span class="rs-comment">// Stop the planner orchestrator from materializing NEW (un-latched) task</span>
+        <span class="rs-comment">// rows. This is *not* redundant with `cancel_task(planner)`: the latch only</span>
+        <span class="rs-comment">// covers rows that exist at latch time, so the planner must be prevented</span>
+        <span class="rs-comment">// from creating fresh launchable rows after the latch.</span>
+        <span class="rs-self">self</span>.starter
+            .<a class="symbol-link rs-fn" href="eos-workflow--src-starter-rs.html#method-orchestrator-registry-43">orchestrator_registry</a>()
+            .<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-registry-rs.html#method-abort-planner-74">abort_planner</a>(&amp;attempt.id);
+        <span class="rs-kw">let</span> tasks: <span class="rs-type">Vec</span>&lt;eos_state::<span class="rs-type">TaskId</span>&gt; = attempt
+            .<a class="symbol-link rs-fn" href="eos-workflow--src-ids-rs.html#item-fn-planner-task-id-12">planner_task_id</a>()
+            .into_iter()
+            .chain(attempt.generator_task_ids().iter())
+            .chain(attempt.reducer_task_ids().iter())
+            .cloned()
+            .collect();
+        <span class="rs-comment">// Latch BEFORE teardown so the scheduler sees terminal rows and cannot</span>
+        <span class="rs-comment">// launch a sibling into the cancellation window.</span>
+        <span class="rs-self">self</span>.task_store
+            .latch_attempt_tasks_cancelled(&amp;attempt.id, &amp;tasks)
+            .<span class="rs-kw">await</span>?;
+        <span class="rs-comment">// Tear down each task's live agent run. The status CAS inside `cancel_task`</span>
+        <span class="rs-comment">// no-ops (already latched `Cancelled`), but the live-run teardown still runs.</span>
+        <span class="rs-kw">for</span> task_id <span class="rs-kw">in</span> &amp;tasks {
+            <span class="rs-self">self</span>.cancel_port.<a class="symbol-link rs-fn" href="eos-workflow--src-ports-rs.html#method-cancel-task-425">cancel_task</a>(task_id, reason).<span class="rs-kw">await</span>?;
+        }
+        <span class="rs-self">self</span>.attempt_store
+            .close(
+                &amp;attempt.id,
+                <span class="rs-type">AttemptClosure</span>::<span class="rs-type">Cancelled</span> {
+                    reason: reason.to_owned(),
+                    outcomes: <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-264">new</a>(),
+                    closed_at: now,
+                },
+            )
+            .<span class="rs-kw">await</span>?;
+        <span class="rs-type">Ok</span>(())
+    }
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-ports-rs.html#item-fn-workflow-control-error-358">workflow_control_error</a>(err: <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>) -&gt; <span class="rs-type">ToolError</span> {
+    <span class="rs-kw">match</span> err {
+        <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<span class="rs-type">Store</span>(err) =&gt; <span class="rs-type">ToolError</span>::<span class="rs-type">Store</span>(err),
+        <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<span class="rs-type">Tool</span>(err) =&gt; err,
+        other =&gt; <span class="rs-type">ToolError</span>::<span class="rs-type">Internal</span>(other.to_string()),
+    }
+}
+
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Default</span>)]
+<span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-workflow--src-ports-rs.html#item-struct-WorkflowHandleRegistry-366">WorkflowHandleRegistry</a> {
+    next_handle: <span class="rs-type">AtomicU64</span>,
+    inner: <span class="rs-type">Mutex</span>&lt;<a class="symbol-link rs-type" href="eos-workflow--src-ports-rs.html#item-struct-WorkflowHandleMaps-372">WorkflowHandleMaps</a>&gt;,
+}
+
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Default</span>)]
+<span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-workflow--src-ports-rs.html#item-struct-WorkflowHandleMaps-372">WorkflowHandleMaps</a> {
+    workflow_by_handle: <span class="rs-type">HashMap</span>&lt;<span class="rs-type">WorkflowSessionId</span>, <span class="rs-type">WorkflowId</span>&gt;,
+    handle_by_workflow: <span class="rs-type">HashMap</span>&lt;<span class="rs-type">WorkflowId</span>, <span class="rs-type">WorkflowSessionId</span>&gt;,
+}
+
+<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-workflow--src-ports-rs.html#item-struct-WorkflowHandleRegistry-366">WorkflowHandleRegistry</a> {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-ports-rs.html#method-handle-for-workflow-379">handle_for_workflow</a>(
+        &amp;<span class="rs-self">self</span>,
+        workflow_id: &amp;<span class="rs-type">WorkflowId</span>,
+    ) -&gt; <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a>&lt;<span class="rs-type">WorkflowSessionId</span>, <span class="rs-type">ToolError</span>&gt; {
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> guard = <span class="rs-self">self</span>.inner.lock();
+        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(handle) = guard.handle_by_workflow.<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-registry-rs.html#method-get-52">get</a>(workflow_id) {
+            <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(handle.clone());
+        }
+        <span class="rs-kw">let</span> id = <span class="rs-self">self</span>.next_handle.fetch_add(1, <span class="rs-type">Ordering</span>::<span class="rs-type">Relaxed</span>) + 1;
+        <span class="rs-kw">let</span> handle: <span class="rs-type">WorkflowSessionId</span> = format!(&quot;wf_{id}&quot;).parse()?;
+        guard
+            .workflow_by_handle
+            .insert(handle.clone(), workflow_id.clone());
+        guard
+            .handle_by_workflow
+            .insert(workflow_id.clone(), handle.clone());
+        <span class="rs-type">Ok</span>(handle)
+    }
+
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-ports-rs.html#method-workflow-id-for-handle-398">workflow_id_for_handle</a>(&amp;<span class="rs-self">self</span>, handle: &amp;<span class="rs-type">WorkflowSessionId</span>) -&gt; <span class="rs-type">Option</span>&lt;<span class="rs-type">WorkflowId</span>&gt; {
+        <span class="rs-self">self</span>.inner.lock().workflow_by_handle.<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-registry-rs.html#method-get-52">get</a>(handle).cloned()
+    }
+}
+
+#[cfg(test)]
+<span class="rs-kw">mod</span> tests {
+    #![allow(clippy::unwrap_used)]
+    <span class="rs-kw">use</span> std::sync::<span class="rs-type">Arc</span>;
+
+    <span class="rs-kw">use</span> async_trait::async_trait;
+    <span class="rs-kw">use</span> eos_state::{<span class="rs-type">AttemptStatus</span>, <span class="rs-type">IterationStatus</span>, <span class="rs-type">TaskStatus</span>, <span class="rs-type">WorkflowStatus</span>};
+    <span class="rs-kw">use</span> eos_tools::<span class="rs-type">WorkflowControlPort</span> <span class="rs-kw">as</span> _;
+    <span class="rs-kw">use</span> eos_types::<span class="rs-type">JsonObject</span>;
+    <span class="rs-kw">use</span> serde_json::json;
+
+    <span class="rs-kw">use</span> <span class="rs-kw">super</span>::*;
+    <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::support::{root_task, <span class="rs-type">MemoryStores</span>, <span class="rs-type">QueueRunner</span>};
+
+    <span class="rs-comment">/// A `CancelPort` fake mirroring `EngineCancelPort::cancel_task`'s persisted</span>
+    <span class="rs-comment">/// flip; these store-level tests have no live-run registry.</span>
+    <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-workflow--src-ports-rs.html#item-struct-TestCancelPort-417">TestCancelPort</a> {
+        task_store: <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <span class="rs-type">TaskStore</span>&gt;,
+    }
+
+    #[async_trait]
+    <span class="rs-kw">impl</span> <span class="rs-type">CancelPort</span> <span class="rs-kw">for</span> <a class="symbol-link rs-type" href="eos-workflow--src-ports-rs.html#item-struct-TestCancelPort-417">TestCancelPort</a> {
+        <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-ports-rs.html#method-cancel-task-425">cancel_task</a>(
+            &amp;<span class="rs-self">self</span>,
+            task_id: &amp;eos_state::<span class="rs-type">TaskId</span>,
+            reason: &amp;str,
+        ) -&gt; <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a>&lt;(), <span class="rs-type">ToolError</span>&gt; {
+            <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(task) = <span class="rs-self">self</span>.task_store.<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-registry-rs.html#method-get-52">get</a>(task_id).<span class="rs-kw">await</span>? {
+                <span class="rs-kw">if</span> matches!(task.status, <span class="rs-type">TaskStatus</span>::<span class="rs-type">Pending</span> | <span class="rs-type">TaskStatus</span>::<span class="rs-type">Running</span>) {
+                    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> terminal = <span class="rs-type">JsonObject</span>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-264">new</a>();
+                    terminal.insert(&quot;fail_reason&quot;.to_owned(), &quot;cancelled&quot;.into());
+                    terminal.insert(&quot;reason&quot;.to_owned(), reason.into());
+                    <span class="rs-self">self</span>.task_store
+                        .set_task_status_if_current(
+                            task_id,
+                            task.status,
+                            <span class="rs-type">TaskStatus</span>::<span class="rs-type">Cancelled</span>,
+                            <span class="rs-type">None</span>,
+                            <span class="rs-type">Some</span>(&amp;terminal),
+                        )
+                        .<span class="rs-kw">await</span>?;
+                }
+            }
+            <span class="rs-type">Ok</span>(())
+        }
+
+        <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-ports-rs.html#method-cancel-agent-run-449">cancel_agent_run</a>(
+            &amp;<span class="rs-self">self</span>,
+            _agent_run_id: &amp;<span class="rs-type">AgentRunId</span>,
+            _reason: &amp;str,
+        ) -&gt; <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a>&lt;(), <span class="rs-type">ToolError</span>&gt; {
+            <span class="rs-type">Ok</span>(())
+        }
+    }
+
+    <span class="rs-comment">// The workflow-control adapter mints `wf_&lt;n&gt;` handles (not workflow ids),</span>
+    <span class="rs-comment">// rejects a fabricated handle, and `cancel` decomposes through the delegated</span>
+    <span class="rs-comment">// tree (workflow + iteration + attempt CANCELLED, active tasks CANCELLED with a</span>
+    <span class="rs-comment">// `cancelled` marker, latched before close) without mutating the parent.</span>
+    #[tokio::test]
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-ports-rs.html#item-fn-workflow-control-uses-runtime-handles-and-cancels-child-state-462">workflow_control_uses_runtime_handles_and_cancels_child_state</a>() {
+        <span class="rs-kw">let</span> stores = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-264">new</a>(<span class="rs-type">MemoryStores</span>::default());
+        <span class="rs-kw">let</span> runner = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-264">new</a>(<span class="rs-type">QueueRunner</span>::default());
+        <span class="rs-kw">let</span> deps = stores.<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-rs.html#method-deps-637">deps</a>(runner);
+        <span class="rs-kw">let</span> parent = root_task(&quot;parent&quot;, <span class="rs-type">TaskStatus</span>::<span class="rs-type">Running</span>);
+        stores.seed_task(parent.clone());
+        <span class="rs-kw">let</span> cancel_port: <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <span class="rs-type">CancelPort</span>&gt; = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-264">new</a>(<a class="symbol-link rs-type" href="eos-workflow--src-ports-rs.html#item-struct-TestCancelPort-417">TestCancelPort</a> {
+            task_store: stores.clone(),
+        });
+        <span class="rs-kw">let</span> adapter = <a class="symbol-link rs-type" href="eos-workflow--src-ports-rs.html#item-struct-WorkflowControlAdapter-100">WorkflowControlAdapter</a>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-264">new</a>(
+            <a class="symbol-link rs-type" href="eos-workflow--src-starter-rs.html#item-struct-WorkflowStarter-24">WorkflowStarter</a>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-264">new</a>(deps),
+            stores.clone(),
+            stores.clone(),
+            stores.clone(),
+            stores.clone(),
+            cancel_port,
+        );
+
+        <span class="rs-kw">let</span> agent_run_id: <span class="rs-type">AgentRunId</span> = &quot;agent-run-1&quot;.parse().expect(&quot;agent run id&quot;);
+        <span class="rs-kw">let</span> started = adapter
+            .<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-rs.html#method-start-69">start</a>(&amp;parent.id, &amp;agent_run_id, &quot;delegated goal&quot;)
+            .<span class="rs-kw">await</span>
+            .unwrap();
+        assert_eq!(started.workflow_task_id.<a class="symbol-link rs-fn" href="eos-workflow--src-context-section-rs.html#method-as-str-17">as_str</a>(), &quot;wf_1&quot;);
+        <span class="rs-kw">let</span> derived_handle: eos_types::<span class="rs-type">WorkflowSessionId</span> =
+            format!(&quot;wf_{}&quot;, started.workflow_id.<a class="symbol-link rs-fn" href="eos-workflow--src-context-section-rs.html#method-as-str-17">as_str</a>())
+                .parse()
+                .unwrap();
+        assert!(adapter
+            .<a class="symbol-link rs-fn" href="eos-workflow--src-ports-rs.html#method-status-166">status</a>(&amp;started.workflow_id, <span class="rs-type">Some</span>(&amp;derived_handle))
+            .<span class="rs-kw">await</span>
+            .unwrap()
+            .contains(&quot;was not found&quot;));
+
+        adapter
+            .<a class="symbol-link rs-fn" href="eos-workflow--src-ports-rs.html#method-cancel-196">cancel</a>(&amp;started.workflow_task_id, &quot;stop now&quot;)
+            .<span class="rs-kw">await</span>
+            .unwrap();
+
+        <span class="rs-kw">let</span> workflow = stores.workflow(&amp;started.workflow_id).unwrap();
+        assert_eq!(workflow.status, <span class="rs-type">WorkflowStatus</span>::<span class="rs-type">Cancelled</span>);
+        <span class="rs-kw">let</span> iteration_id = workflow.iteration_ids.first().unwrap();
+        <span class="rs-kw">let</span> iteration = stores.iteration(iteration_id).unwrap();
+        assert_eq!(iteration.status, <span class="rs-type">IterationStatus</span>::<span class="rs-type">Cancelled</span>);
+        <span class="rs-kw">let</span> attempt_id = iteration.attempt_ids.first().unwrap();
+        <span class="rs-kw">let</span> attempt = stores.attempt(attempt_id).unwrap();
+        assert_eq!(attempt.<a class="symbol-link rs-fn" href="eos-workflow--src-ports-rs.html#method-status-166">status</a>(), <span class="rs-type">AttemptStatus</span>::<span class="rs-type">Cancelled</span>);
+        assert!(attempt.fail_reason().is_none());
+        <span class="rs-kw">let</span> planner_task = stores.<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-task-343">task</a>(attempt.<a class="symbol-link rs-fn" href="eos-workflow--src-ids-rs.html#item-fn-planner-task-id-12">planner_task_id</a>().unwrap()).unwrap();
+        assert_eq!(planner_task.status, <span class="rs-type">TaskStatus</span>::<span class="rs-type">Cancelled</span>);
+        assert_eq!(
+            planner_task
+                .terminal_tool_result
+                .unwrap()
+                .<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-registry-rs.html#method-get-52">get</a>(&quot;fail_reason&quot;),
+            <span class="rs-type">Some</span>(&amp;json!(&quot;cancelled&quot;))
+        );
+        <span class="rs-comment">// `cancel_workflow` must never mutate the parent task (anchor §3).</span>
+        assert_eq!(stores.<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-task-343">task</a>(&amp;parent.id).unwrap().status, <span class="rs-type">TaskStatus</span>::<span class="rs-type">Running</span>);
+    }
+}
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
   <script src="../assets/inventory.js"></script>
 </body>
 </html>

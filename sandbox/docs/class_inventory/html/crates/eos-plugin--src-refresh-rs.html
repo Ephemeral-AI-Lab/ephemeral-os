@@ -8,8 +8,16 @@
 </head>
 <body>
   <header>
-    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
-    <h1>eos-plugin File Inventory</h1>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>eos-plugin File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS/sandbox &amp;&amp; cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
   </header>
   <a class="back-link" href="../index.html">sandbox</a>
 <section class="summary">
@@ -47,49 +55,255 @@
       <span>2 methods</span>
     </div>
   </div>
-  <div class="items"><div class="group-label">File-Owned Types</div><article class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct RefreshAck pub pub struct RefreshAck crates/eos-plugin/src/refresh.rs manifest_key String accepted bool reason Option &lt; String &gt; ">
+  <div class="items"><div class="group-label">File-Owned Types</div><article id="item-struct-RefreshAck-61" class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct RefreshAck pub pub struct RefreshAck crates/eos-plugin/src/refresh.rs manifest_key String accepted bool reason Option &lt; String &gt; ">
   <div class="item-head">
     <span class="kind">struct</span>
     <h3>RefreshAck</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub struct RefreshAck</code>
-  <div class="tags"><span>serde</span></div>
-  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>manifest_key</td><td><code>String</code></td></tr><tr><td>pub</td><td>accepted</td><td><code>bool</code></td></tr><tr><td>pub</td><td>reason</td><td><code>Option &lt; String &gt;</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr><td>method</td><td>require_manifest</td><td><code>pub fn require_manifest (&amp; self , target_manifest_key : &amp; str) -&gt; Result &lt; () &gt;</code></td></tr></tbody></table>
+  <code class="signature">pub struct <a class="symbol-link" href="eos-plugin--src-refresh-rs.html#item-struct-RefreshAck-61">RefreshAck</a></code>
+  <p class="docstring">Harness acknowledgement for a refresh request.</p>
+  <div class="tags"><span>derive: Clone</span><span>derive: Debug</span><span>derive: Deserialize</span><span>derive: Eq</span><span>derive: PartialEq</span><span>derive: Serialize</span><span>serde</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>manifest_key</td><td><code>String</code></td></tr><tr><td>pub</td><td>accepted</td><td><code>bool</code></td></tr><tr><td>pub</td><td>reason</td><td><code>Option &lt; String &gt;</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-require-manifest-71"><td>method</td><td>require_manifest</td><td><code>pub fn <a class="symbol-link" href="eos-plugin--src-refresh-rs.html#method-require-manifest-71">require_manifest</a> (&amp; self , target_manifest_key : &amp; str) -&gt; <a class="symbol-link" href="eos-plugin.html#item-type-Result-49">Result</a> &lt; () &gt;</code><p class="docstring">Ensure the service acknowledged the target manifest.<br># Errors<br>Returns [`PluginError::ProjectionStale`] when the service rejected the<br>refresh or acknowledged a different manifest key.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Ensure the service acknowledged the target manifest.</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// # Errors</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// Returns [`PluginError::ProjectionStale`] when the service rejected the</span>
+    <span class="rs-comment">/// refresh or acknowledged a different manifest key.</span>
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-refresh-rs.html#method-require-manifest-71">require_manifest</a>(&amp;<span class="rs-self">self</span>, target_manifest_key: &amp;str) -&gt; <a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>&lt;()&gt; {
+        <span class="rs-kw">if</span> !<span class="rs-self">self</span>.accepted {
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-plugin.html#item-enum-PluginError-5">PluginError</a>::<span class="rs-type">ProjectionStale</span>(
+                <span class="rs-self">self</span>.reason
+                    .clone()
+                    .unwrap_or_else(|| &quot;refresh was rejected&quot;.to_owned()),
+            ));
+        }
+        <span class="rs-kw">if</span> <span class="rs-self">self</span>.manifest_key != target_manifest_key {
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-plugin.html#item-enum-PluginError-5">PluginError</a>::<span class="rs-type">ProjectionStale</span>(format!(
+                &quot;service acknowledged manifest {}, expected {}&quot;,
+                <span class="rs-self">self</span>.manifest_key, target_manifest_key
+            )));
+        }
+        <span class="rs-type">Ok</span>(())
+    }
+</code></pre>
+</details></td></tr></tbody></table>
+
   <p class="source">crates/eos-plugin/src/refresh.rs:61</p>
-</article><article class="type-card" data-kind="enum" data-kind-list="enum field impl method type-model" data-filter-text="enum RefreshRequest pub pub enum RefreshRequest crates/eos-plugin/src/refresh.rs  ">
+</article><article id="item-enum-RefreshRequest-11" class="type-card" data-kind="enum" data-kind-list="enum field impl method type-model" data-filter-text="enum RefreshRequest pub pub enum RefreshRequest crates/eos-plugin/src/refresh.rs  ">
   <div class="item-head">
     <span class="kind">enum</span>
     <h3>RefreshRequest</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub enum RefreshRequest</code>
-  <div class="tags"><span>dto</span><span>serde</span></div>
-  <h4>Variants</h4><table><tbody><tr><td>PrepareRefresh</td><td><code>target_manifest_key: String</code></td></tr><tr><td>Quiesce</td><td><code>request_id: String</code></td></tr><tr><td>SwapWorkspace</td><td><code>layer_paths: Vec &lt; String &gt;, workspace_root: String, manifest_key: String</code></td></tr><tr><td>NotifyRefresh</td><td><code>changed_paths: Vec &lt; String &gt;, full_resync: bool</code></td></tr><tr><td>Resume</td><td><code>request_id: String</code></td></tr><tr><td>Restart</td><td><code>reason: String</code></td></tr><tr><td>Health</td><td><code>manifest_key: String</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr><td>method</td><td>manifest_key</td><td><code>pub fn manifest_key (&amp; self) -&gt; Option &lt; &amp; str &gt;</code></td></tr></tbody></table>
+  <code class="signature">pub enum <a class="symbol-link" href="eos-plugin--src-refresh-rs.html#item-enum-RefreshRequest-11">RefreshRequest</a></code>
+  <p class="docstring">Request sent by the daemon to a plugin service harness during refresh.</p>
+  <div class="tags"><span>derive: Clone</span><span>derive: Debug</span><span>derive: Deserialize</span><span>derive: Eq</span><span>derive: PartialEq</span><span>derive: Serialize</span><span>dto</span><span>non_exhaustive</span><span>serde</span><span>serde: rename_all</span><span>serde: tag</span></div>
+  <h4>Variants</h4><table><tbody><tr><td>PrepareRefresh</td><td><code>target_manifest_key: String</code></td></tr><tr><td>Quiesce</td><td><code>request_id: String</code></td></tr><tr><td>SwapWorkspace</td><td><code>layer_paths: Vec &lt; String &gt;, workspace_root: String, manifest_key: String</code></td></tr><tr><td>NotifyRefresh</td><td><code>changed_paths: Vec &lt; String &gt;, full_resync: bool</code></td></tr><tr><td>Resume</td><td><code>request_id: String</code></td></tr><tr><td>Restart</td><td><code>reason: String</code></td></tr><tr><td>Health</td><td><code>manifest_key: String</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-manifest-key-43"><td>method</td><td>manifest_key</td><td><code>pub fn <a class="symbol-link" href="eos-plugin--src-refresh-rs.html#method-manifest-key-43">manifest_key</a> (&amp; self) -&gt; Option &lt; &amp; str &gt;</code><p class="docstring">The manifest key this message targets, when the message carries one.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// The manifest key this message targets, when the message carries one.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-refresh-rs.html#method-manifest-key-43">manifest_key</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Option</span>&lt;&amp;str&gt; {
+        <span class="rs-kw">match</span> <span class="rs-self">self</span> {
+            <span class="rs-self">Self</span>::<span class="rs-type">PrepareRefresh</span> {
+                target_manifest_key,
+            } =&gt; <span class="rs-type">Some</span>(target_manifest_key),
+            <span class="rs-self">Self</span>::<span class="rs-type">SwapWorkspace</span> { manifest_key, .. } | <span class="rs-self">Self</span>::<span class="rs-type">Health</span> { manifest_key } =&gt; {
+                <span class="rs-type">Some</span>(manifest_key)
+            }
+            <span class="rs-self">Self</span>::<span class="rs-type">Quiesce</span> { .. }
+            | <span class="rs-self">Self</span>::<span class="rs-type">NotifyRefresh</span> { .. }
+            | <span class="rs-self">Self</span>::<span class="rs-type">Resume</span> { .. }
+            | <span class="rs-self">Self</span>::<span class="rs-type">Restart</span> { .. } =&gt; <span class="rs-type">None</span>,
+        }
+    }
+</code></pre>
+</details></td></tr></tbody></table>
+
   <p class="source">crates/eos-plugin/src/refresh.rs:11</p>
-</article><div class="group-label">Standalone Functions</div><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn ack_rejects_wrong_manifest_key private fn ack_rejects_wrong_manifest_key () crates/eos-plugin/src/refresh.rs  ">
+</article><div class="group-label">Standalone Functions</div><article id="item-fn-ack-rejects-wrong-manifest-key-99" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn ack_rejects_wrong_manifest_key private fn ack_rejects_wrong_manifest_key () crates/eos-plugin/src/refresh.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>ack_rejects_wrong_manifest_key</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn ack_rejects_wrong_manifest_key ()</code>
-  <div class="tags"></div>
+  <code class="signature">fn <a class="symbol-link" href="eos-plugin--src-refresh-rs.html#item-fn-ack-rejects-wrong-manifest-key-99">ack_rejects_wrong_manifest_key</a> ()</code>
+  <div class="tags"><span>test</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-refresh-rs.html#item-fn-ack-rejects-wrong-manifest-key-99">ack_rejects_wrong_manifest_key</a>() {
+        <span class="rs-kw">let</span> ack = <a class="symbol-link rs-type" href="eos-plugin--src-refresh-rs.html#item-struct-RefreshAck-61">RefreshAck</a> {
+            manifest_key: &quot;old&quot;.to_owned(),
+            accepted: <span class="rs-kw">true</span>,
+            reason: <span class="rs-type">None</span>,
+        };
+        assert!(matches!(
+            ack.<a class="symbol-link rs-fn" href="eos-plugin--src-refresh-rs.html#method-require-manifest-71">require_manifest</a>(&quot;new&quot;),
+            <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-plugin.html#item-enum-PluginError-5">PluginError</a>::<span class="rs-type">ProjectionStale</span>(message)) <span class="rs-kw">if</span> message.contains(&quot;expected new&quot;)
+        ));
+    }
+</code></pre>
+</details>
 
   <p class="source">crates/eos-plugin/src/refresh.rs:99</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn swap_workspace_reports_target_manifest private fn swap_workspace_reports_target_manifest () crates/eos-plugin/src/refresh.rs  ">
+</article><article id="item-fn-swap-workspace-reports-target-manifest-112" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn swap_workspace_reports_target_manifest private fn swap_workspace_reports_target_manifest () crates/eos-plugin/src/refresh.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>swap_workspace_reports_target_manifest</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn swap_workspace_reports_target_manifest ()</code>
-  <div class="tags"></div>
+  <code class="signature">fn <a class="symbol-link" href="eos-plugin--src-refresh-rs.html#item-fn-swap-workspace-reports-target-manifest-112">swap_workspace_reports_target_manifest</a> ()</code>
+  <div class="tags"><span>test</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-refresh-rs.html#item-fn-swap-workspace-reports-target-manifest-112">swap_workspace_reports_target_manifest</a>() {
+        <span class="rs-kw">let</span> request = <a class="symbol-link rs-type" href="eos-plugin--src-refresh-rs.html#item-enum-RefreshRequest-11">RefreshRequest</a>::<span class="rs-type">SwapWorkspace</span> {
+            layer_paths: vec![&quot;/layers/a&quot;.to_owned()],
+            workspace_root: &quot;/eos/plugin/workspace&quot;.to_owned(),
+            manifest_key: &quot;root@2&quot;.to_owned(),
+        };
+        assert_eq!(request.<a class="symbol-link rs-fn" href="eos-plugin--src-refresh-rs.html#method-manifest-key-43">manifest_key</a>(), <span class="rs-type">Some</span>(&quot;root@2&quot;));
+    }
+</code></pre>
+</details>
 
   <p class="source">crates/eos-plugin/src/refresh.rs:112</p>
 </article></div>
 </section></div>
 </main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/eos-plugin/src/refresh.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-comment">//! Daemon-to-plugin-harness refresh protocol.</span>
+<span class="rs-comment">//!</span>
+<span class="rs-comment">//! The daemon is authoritative for `LayerStack` freshness. A read-only service</span>
+<span class="rs-comment">//! must either acknowledge the target manifest key or fail/restart; stale</span>
+<span class="rs-comment">//! service state must never answer silently.</span>
+
+<span class="rs-kw">use</span> serde::{<span class="rs-type">Deserialize</span>, <span class="rs-type">Serialize</span>};
+
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::error::{<a class="symbol-link rs-type" href="eos-plugin.html#item-enum-PluginError-5">PluginError</a>, <a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>};
+
+<span class="rs-comment">/// Request sent by the daemon to a plugin service harness during refresh.</span>
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Eq</span>, <span class="rs-type">Serialize</span>, <span class="rs-type">Deserialize</span>)]
+#[serde(tag = &quot;<span class="rs-kw">type</span>&quot;, rename_all = &quot;snake_case&quot;)]
+#[non_exhaustive]
+<span class="rs-kw">pub</span> <span class="rs-kw">enum</span> <a class="symbol-link rs-type" href="eos-plugin--src-refresh-rs.html#item-enum-RefreshRequest-11">RefreshRequest</a> {
+    <span class="rs-type">PrepareRefresh</span> {
+        target_manifest_key: <span class="rs-type">String</span>,
+    },
+    <span class="rs-type">Quiesce</span> {
+        request_id: <span class="rs-type">String</span>,
+    },
+    <span class="rs-type">SwapWorkspace</span> {
+        layer_paths: <span class="rs-type">Vec</span>&lt;<span class="rs-type">String</span>&gt;,
+        workspace_root: <span class="rs-type">String</span>,
+        manifest_key: <span class="rs-type">String</span>,
+    },
+    <span class="rs-type">NotifyRefresh</span> {
+        changed_paths: <span class="rs-type">Vec</span>&lt;<span class="rs-type">String</span>&gt;,
+        full_resync: bool,
+    },
+    <span class="rs-type">Resume</span> {
+        request_id: <span class="rs-type">String</span>,
+    },
+    <span class="rs-type">Restart</span> {
+        reason: <span class="rs-type">String</span>,
+    },
+    <span class="rs-type">Health</span> {
+        manifest_key: <span class="rs-type">String</span>,
+    },
+}
+
+<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-plugin--src-refresh-rs.html#item-enum-RefreshRequest-11">RefreshRequest</a> {
+    <span class="rs-comment">/// The manifest key this message targets, when the message carries one.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-refresh-rs.html#method-manifest-key-43">manifest_key</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Option</span>&lt;&amp;str&gt; {
+        <span class="rs-kw">match</span> <span class="rs-self">self</span> {
+            <span class="rs-self">Self</span>::<span class="rs-type">PrepareRefresh</span> {
+                target_manifest_key,
+            } =&gt; <span class="rs-type">Some</span>(target_manifest_key),
+            <span class="rs-self">Self</span>::<span class="rs-type">SwapWorkspace</span> { manifest_key, .. } | <span class="rs-self">Self</span>::<span class="rs-type">Health</span> { manifest_key } =&gt; {
+                <span class="rs-type">Some</span>(manifest_key)
+            }
+            <span class="rs-self">Self</span>::<span class="rs-type">Quiesce</span> { .. }
+            | <span class="rs-self">Self</span>::<span class="rs-type">NotifyRefresh</span> { .. }
+            | <span class="rs-self">Self</span>::<span class="rs-type">Resume</span> { .. }
+            | <span class="rs-self">Self</span>::<span class="rs-type">Restart</span> { .. } =&gt; <span class="rs-type">None</span>,
+        }
+    }
+}
+
+<span class="rs-comment">/// Harness acknowledgement for a refresh request.</span>
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Eq</span>, <span class="rs-type">Serialize</span>, <span class="rs-type">Deserialize</span>)]
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-plugin--src-refresh-rs.html#item-struct-RefreshAck-61">RefreshAck</a> {
+    <span class="rs-kw">pub</span> manifest_key: <span class="rs-type">String</span>,
+    <span class="rs-kw">pub</span> accepted: bool,
+    #[serde(default, skip_serializing_if = &quot;<span class="rs-type">Option</span>::is_none&quot;)]
+    <span class="rs-kw">pub</span> reason: <span class="rs-type">Option</span>&lt;<span class="rs-type">String</span>&gt;,
+}
+
+<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-plugin--src-refresh-rs.html#item-struct-RefreshAck-61">RefreshAck</a> {
+    <span class="rs-comment">/// Ensure the service acknowledged the target manifest.</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// # Errors</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// Returns [`PluginError::ProjectionStale`] when the service rejected the</span>
+    <span class="rs-comment">/// refresh or acknowledged a different manifest key.</span>
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-refresh-rs.html#method-require-manifest-71">require_manifest</a>(&amp;<span class="rs-self">self</span>, target_manifest_key: &amp;str) -&gt; <a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>&lt;()&gt; {
+        <span class="rs-kw">if</span> !<span class="rs-self">self</span>.accepted {
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-plugin.html#item-enum-PluginError-5">PluginError</a>::<span class="rs-type">ProjectionStale</span>(
+                <span class="rs-self">self</span>.reason
+                    .clone()
+                    .unwrap_or_else(|| &quot;refresh was rejected&quot;.to_owned()),
+            ));
+        }
+        <span class="rs-kw">if</span> <span class="rs-self">self</span>.manifest_key != target_manifest_key {
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-plugin.html#item-enum-PluginError-5">PluginError</a>::<span class="rs-type">ProjectionStale</span>(format!(
+                &quot;service acknowledged manifest {}, expected {}&quot;,
+                <span class="rs-self">self</span>.manifest_key, target_manifest_key
+            )));
+        }
+        <span class="rs-type">Ok</span>(())
+    }
+}
+
+#[cfg(test)]
+<span class="rs-kw">mod</span> tests {
+    <span class="rs-kw">use</span> <span class="rs-kw">super</span>::*;
+
+    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-refresh-rs.html#item-fn-ack-rejects-wrong-manifest-key-99">ack_rejects_wrong_manifest_key</a>() {
+        <span class="rs-kw">let</span> ack = <a class="symbol-link rs-type" href="eos-plugin--src-refresh-rs.html#item-struct-RefreshAck-61">RefreshAck</a> {
+            manifest_key: &quot;old&quot;.to_owned(),
+            accepted: <span class="rs-kw">true</span>,
+            reason: <span class="rs-type">None</span>,
+        };
+        assert!(matches!(
+            ack.<a class="symbol-link rs-fn" href="eos-plugin--src-refresh-rs.html#method-require-manifest-71">require_manifest</a>(&quot;new&quot;),
+            <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-plugin.html#item-enum-PluginError-5">PluginError</a>::<span class="rs-type">ProjectionStale</span>(message)) <span class="rs-kw">if</span> message.contains(&quot;expected new&quot;)
+        ));
+    }
+
+    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-refresh-rs.html#item-fn-swap-workspace-reports-target-manifest-112">swap_workspace_reports_target_manifest</a>() {
+        <span class="rs-kw">let</span> request = <a class="symbol-link rs-type" href="eos-plugin--src-refresh-rs.html#item-enum-RefreshRequest-11">RefreshRequest</a>::<span class="rs-type">SwapWorkspace</span> {
+            layer_paths: vec![&quot;/layers/a&quot;.to_owned()],
+            workspace_root: &quot;/eos/plugin/workspace&quot;.to_owned(),
+            manifest_key: &quot;root@2&quot;.to_owned(),
+        };
+        assert_eq!(request.<a class="symbol-link rs-fn" href="eos-plugin--src-refresh-rs.html#method-manifest-key-43">manifest_key</a>(), <span class="rs-type">Some</span>(&quot;root@2&quot;));
+    }
+}
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
   <script src="../assets/inventory.js"></script>
 </body>
 </html>

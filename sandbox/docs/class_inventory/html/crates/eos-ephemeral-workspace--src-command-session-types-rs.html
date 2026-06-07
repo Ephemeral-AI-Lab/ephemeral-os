@@ -8,8 +8,16 @@
 </head>
 <body>
   <header>
-    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
-    <h1>eos-ephemeral-workspace File Inventory</h1>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>eos-ephemeral-workspace File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS/sandbox &amp;&amp; cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
   </header>
   <a class="back-link" href="../index.html">sandbox</a>
 <section class="summary">
@@ -47,39 +55,140 @@
       <span>5 methods</span>
     </div>
   </div>
-  <div class="items"><div class="group-label">File-Owned Types</div><article class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct EphemeralCommandPrepareContext pub pub struct EphemeralCommandPrepareContext crates/eos-ephemeral-workspace/src/command_session/types.rs layer_stack_root PathBuf workspace_root PathBuf writable_root PathBuf session_dir PathBuf final_path PathBuf ">
+  <div class="items"><div class="group-label">File-Owned Types</div><article id="item-struct-EphemeralCommandPrepareContext-11" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct EphemeralCommandPrepareContext pub pub struct EphemeralCommandPrepareContext crates/eos-ephemeral-workspace/src/command_session/types.rs layer_stack_root PathBuf workspace_root PathBuf writable_root PathBuf session_dir PathBuf final_path PathBuf ">
   <div class="item-head">
     <span class="kind">struct</span>
     <h3>EphemeralCommandPrepareContext</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub struct EphemeralCommandPrepareContext</code>
-  <div class="tags"></div>
+  <code class="signature">pub struct <a class="symbol-link" href="eos-ephemeral-workspace--src-command-session-types-rs.html#item-struct-EphemeralCommandPrepareContext-11">EphemeralCommandPrepareContext</a></code>
+  <p class="docstring">Daemon-supplied facts needed to prepare a publishable command workspace.</p>
+  <div class="tags"><span>derive: Clone</span><span>derive: Debug</span><span>derive: Eq</span><span>derive: PartialEq</span></div>
   <h4>Fields</h4><table><tbody><tr><td>pub</td><td>layer_stack_root</td><td><code>PathBuf</code></td></tr><tr><td>pub</td><td>workspace_root</td><td><code>PathBuf</code></td></tr><tr><td>pub</td><td>writable_root</td><td><code>PathBuf</code></td></tr><tr><td>pub</td><td>session_dir</td><td><code>PathBuf</code></td></tr><tr><td>pub</td><td>final_path</td><td><code>PathBuf</code></td></tr></tbody></table>
+
   <p class="source">crates/eos-ephemeral-workspace/src/command_session/types.rs:11</p>
-</article><article class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct EphemeralCommandFinalizeContext pub pub struct EphemeralCommandFinalizeContext crates/eos-ephemeral-workspace/src/command_session/types.rs workspace EphemeralWorkspace base_timings WorkspaceTimings ">
+</article><article id="item-struct-EphemeralCommandFinalizeContext-21" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct EphemeralCommandFinalizeContext pub pub struct EphemeralCommandFinalizeContext crates/eos-ephemeral-workspace/src/command_session/types.rs workspace EphemeralWorkspace base_timings WorkspaceTimings ">
   <div class="item-head">
     <span class="kind">struct</span>
     <h3>EphemeralCommandFinalizeContext</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub struct EphemeralCommandFinalizeContext</code>
-  <div class="tags"></div>
-  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>workspace</td><td><code>EphemeralWorkspace</code></td></tr><tr><td>pub</td><td>base_timings</td><td><code>WorkspaceTimings</code></td></tr></tbody></table>
+  <code class="signature">pub struct <a class="symbol-link" href="eos-ephemeral-workspace--src-command-session-types-rs.html#item-struct-EphemeralCommandFinalizeContext-21">EphemeralCommandFinalizeContext</a></code>
+  <p class="docstring">Daemon-supplied facts needed to finalize a publishable command workspace.</p>
+  <div class="tags"><span>derive: Clone</span><span>derive: Debug</span><span>derive: PartialEq</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>workspace</td><td><code><a class="symbol-link" href="eos-ephemeral-workspace--src-types-rs.html#item-struct-EphemeralWorkspace-31">EphemeralWorkspace</a></code></td></tr><tr><td>pub</td><td>base_timings</td><td><code>WorkspaceTimings</code></td></tr></tbody></table>
+
   <p class="source">crates/eos-ephemeral-workspace/src/command_session/types.rs:21</p>
-</article><article class="type-card" data-kind="trait" data-kind-list="method trait type-model" data-filter-text="trait EphemeralCommandSessionPort pub pub trait EphemeralCommandSessionPort crates/eos-ephemeral-workspace/src/command_session/types.rs  prepare_context fn prepare_context (&amp; self , command_session_id : &amp; str ,) -&gt; Result &lt; EphemeralCommandPrepareContext , WorkspaceApiError &gt; acquire_snapshot fn acquire_snapshot (&amp; self , request_id : &amp; str ,) -&gt; Result &lt; EphemeralSnapshot , EphemeralWorkspaceError &gt; release_snapshot fn release_snapshot (&amp; self , lease_id : &amp; str) -&gt; Result &lt; () , EphemeralWorkspaceError &gt; base_timings fn base_timings (&amp; self) -&gt; Result &lt; WorkspaceTimings , WorkspaceApiError &gt; publish_upperdir_changes fn publish_upperdir_changes (&amp; self , root : &amp; WorkspaceRoot , snapshot : &amp; EphemeralSnapshot , changes : &amp; [LayerChange] , path_kinds : &amp; [PathChange] ,) -&gt; Result &lt; PublishOutcome , EphemeralWorkspaceError &gt;">
+</article><article id="item-trait-EphemeralCommandSessionPort-28" class="type-card" data-kind="trait" data-kind-list="method trait type-model" data-filter-text="trait EphemeralCommandSessionPort pub pub trait EphemeralCommandSessionPort crates/eos-ephemeral-workspace/src/command_session/types.rs  prepare_context fn prepare_context (&amp; self , command_session_id : &amp; str ,) -&gt; Result &lt; EphemeralCommandPrepareContext , WorkspaceApiError &gt; acquire_snapshot fn acquire_snapshot (&amp; self , request_id : &amp; str ,) -&gt; Result &lt; EphemeralSnapshot , EphemeralWorkspaceError &gt; release_snapshot fn release_snapshot (&amp; self , lease_id : &amp; str) -&gt; Result &lt; () , EphemeralWorkspaceError &gt; base_timings fn base_timings (&amp; self) -&gt; Result &lt; WorkspaceTimings , WorkspaceApiError &gt; publish_upperdir_changes fn publish_upperdir_changes (&amp; self , root : &amp; WorkspaceRoot , snapshot : &amp; EphemeralSnapshot , changes : &amp; [LayerChange] , path_kinds : &amp; [PathChange] ,) -&gt; Result &lt; PublishOutcome , EphemeralWorkspaceError &gt;">
   <div class="item-head">
     <span class="kind">trait</span>
     <h3>EphemeralCommandSessionPort</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub trait EphemeralCommandSessionPort</code>
+  <code class="signature">pub trait <a class="symbol-link" href="eos-ephemeral-workspace--src-command-session-types-rs.html#item-trait-EphemeralCommandSessionPort-28">EphemeralCommandSessionPort</a></code>
+  <p class="docstring">Daemon-supplied port for ephemeral command-session prepare/finalize policy.<br>The port keeps PTY/process/session registry ownership in `eos-daemon` while<br>allowing this crate to compile against the shared `CommandWorkspacePolicy`<br>contract.</p>
   <div class="tags"><span>port/service</span></div>
-  <h4>Methods</h4><table><tbody><tr><td>required</td><td>prepare_context</td><td><code>fn prepare_context (&amp; self , command_session_id : &amp; str ,) -&gt; Result &lt; EphemeralCommandPrepareContext , WorkspaceApiError &gt;</code></td></tr><tr><td>required</td><td>acquire_snapshot</td><td><code>fn acquire_snapshot (&amp; self , request_id : &amp; str ,) -&gt; Result &lt; EphemeralSnapshot , EphemeralWorkspaceError &gt;</code></td></tr><tr><td>required</td><td>release_snapshot</td><td><code>fn release_snapshot (&amp; self , lease_id : &amp; str) -&gt; Result &lt; () , EphemeralWorkspaceError &gt;</code></td></tr><tr><td>required</td><td>base_timings</td><td><code>fn base_timings (&amp; self) -&gt; Result &lt; WorkspaceTimings , WorkspaceApiError &gt;</code></td></tr><tr><td>required</td><td>publish_upperdir_changes</td><td><code>fn publish_upperdir_changes (&amp; self , root : &amp; WorkspaceRoot , snapshot : &amp; EphemeralSnapshot , changes : &amp; [LayerChange] , path_kinds : &amp; [PathChange] ,) -&gt; Result &lt; PublishOutcome , EphemeralWorkspaceError &gt;</code></td></tr></tbody></table>
+  <h4>Methods</h4><table><tbody><tr id="method-prepare-context-34"><td>required</td><td>prepare_context</td><td><code>fn <a class="symbol-link" href="eos-ephemeral-workspace--src-command-session-finalize-rs.html#method-prepare-context-270">prepare_context</a> (&amp; self , command_session_id : &amp; str ,) -&gt; Result &lt; <a class="symbol-link" href="eos-ephemeral-workspace--src-command-session-types-rs.html#item-struct-EphemeralCommandPrepareContext-11">EphemeralCommandPrepareContext</a> , WorkspaceApiError &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-ephemeral-workspace--src-command-session-finalize-rs.html#method-prepare-context-270">prepare_context</a>(
+        &amp;<span class="rs-self">self</span>,
+        command_session_id: &amp;str,
+    ) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-ephemeral-workspace--src-command-session-types-rs.html#item-struct-EphemeralCommandPrepareContext-11">EphemeralCommandPrepareContext</a>, <span class="rs-type">WorkspaceApiError</span>&gt;;
+</code></pre>
+</details></td></tr><tr id="method-acquire-snapshot-39"><td>required</td><td>acquire_snapshot</td><td><code>fn <a class="symbol-link" href="eos-ephemeral-workspace--src-command-session-finalize-rs.html#method-acquire-snapshot-278">acquire_snapshot</a> (&amp; self , request_id : &amp; str ,) -&gt; Result &lt; EphemeralSnapshot , <a class="symbol-link" href="eos-ephemeral-workspace--src-error-rs.html#item-enum-EphemeralWorkspaceError-5">EphemeralWorkspaceError</a> &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-ephemeral-workspace--src-command-session-finalize-rs.html#method-acquire-snapshot-278">acquire_snapshot</a>(
+        &amp;<span class="rs-self">self</span>,
+        request_id: &amp;str,
+    ) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">EphemeralSnapshot</span>, <a class="symbol-link rs-type" href="eos-ephemeral-workspace--src-error-rs.html#item-enum-EphemeralWorkspaceError-5">EphemeralWorkspaceError</a>&gt;;
+</code></pre>
+</details></td></tr><tr id="method-release-snapshot-44"><td>required</td><td>release_snapshot</td><td><code>fn <a class="symbol-link" href="eos-ephemeral-workspace--src-command-session-finalize-rs.html#method-release-snapshot-285">release_snapshot</a> (&amp; self , lease_id : &amp; str) -&gt; Result &lt; () , <a class="symbol-link" href="eos-ephemeral-workspace--src-error-rs.html#item-enum-EphemeralWorkspaceError-5">EphemeralWorkspaceError</a> &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-ephemeral-workspace--src-command-session-finalize-rs.html#method-release-snapshot-285">release_snapshot</a>(&amp;<span class="rs-self">self</span>, lease_id: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-ephemeral-workspace--src-error-rs.html#item-enum-EphemeralWorkspaceError-5">EphemeralWorkspaceError</a>&gt;;
+</code></pre>
+</details></td></tr><tr id="method-base-timings-46"><td>required</td><td>base_timings</td><td><code>fn <a class="symbol-link" href="eos-ephemeral-workspace--src-command-session-finalize-rs.html#method-base-timings-289">base_timings</a> (&amp; self) -&gt; Result &lt; WorkspaceTimings , WorkspaceApiError &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-ephemeral-workspace--src-command-session-finalize-rs.html#method-base-timings-289">base_timings</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">WorkspaceTimings</span>, <span class="rs-type">WorkspaceApiError</span>&gt;;
+</code></pre>
+</details></td></tr><tr id="method-publish-upperdir-changes-48"><td>required</td><td>publish_upperdir_changes</td><td><code>fn <a class="symbol-link" href="eos-ephemeral-workspace--src-command-session-finalize-rs.html#method-publish-upperdir-changes-103">publish_upperdir_changes</a> (&amp; self , root : &amp; <a class="symbol-link" href="eos-ephemeral-workspace--src-types-rs.html#item-struct-WorkspaceRoot-9">WorkspaceRoot</a> , snapshot : &amp; EphemeralSnapshot , changes : &amp; [LayerChange] , path_kinds : &amp; [<a class="symbol-link" href="eos-ephemeral-workspace--src-types-rs.html#item-struct-PathChange-42">PathChange</a>] ,) -&gt; Result &lt; <a class="symbol-link" href="eos-ephemeral-workspace--src-types-rs.html#item-struct-PublishOutcome-59">PublishOutcome</a> , <a class="symbol-link" href="eos-ephemeral-workspace--src-error-rs.html#item-enum-EphemeralWorkspaceError-5">EphemeralWorkspaceError</a> &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-ephemeral-workspace--src-command-session-finalize-rs.html#method-publish-upperdir-changes-103">publish_upperdir_changes</a>(
+        &amp;<span class="rs-self">self</span>,
+        root: &amp;<a class="symbol-link rs-type" href="eos-ephemeral-workspace--src-types-rs.html#item-struct-WorkspaceRoot-9">WorkspaceRoot</a>,
+        snapshot: &amp;<span class="rs-type">EphemeralSnapshot</span>,
+        changes: &amp;[<span class="rs-type">LayerChange</span>],
+        path_kinds: &amp;[<a class="symbol-link rs-type" href="eos-ephemeral-workspace--src-types-rs.html#item-struct-PathChange-42">PathChange</a>],
+    ) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-ephemeral-workspace--src-types-rs.html#item-struct-PublishOutcome-59">PublishOutcome</a>, <a class="symbol-link rs-type" href="eos-ephemeral-workspace--src-error-rs.html#item-enum-EphemeralWorkspaceError-5">EphemeralWorkspaceError</a>&gt;;
+</code></pre>
+</details></td></tr></tbody></table>
+
   <p class="source">crates/eos-ephemeral-workspace/src/command_session/types.rs:28</p>
 </article></div>
 </section></div>
 </main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/eos-ephemeral-workspace/src/command_session/types.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-kw">use</span> std::path::<span class="rs-type">PathBuf</span>;
+
+<span class="rs-kw">use</span> eos_protocol::<span class="rs-type">LayerChange</span>;
+<span class="rs-kw">use</span> eos_workspace_api::{<span class="rs-type">WorkspaceApiError</span>, <span class="rs-type">WorkspaceTimings</span>};
+
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::{
+    <span class="rs-type">EphemeralSnapshot</span>, <a class="symbol-link rs-type" href="eos-ephemeral-workspace--src-types-rs.html#item-struct-EphemeralWorkspace-31">EphemeralWorkspace</a>, <a class="symbol-link rs-type" href="eos-ephemeral-workspace--src-error-rs.html#item-enum-EphemeralWorkspaceError-5">EphemeralWorkspaceError</a>, <a class="symbol-link rs-type" href="eos-ephemeral-workspace--src-types-rs.html#item-struct-PathChange-42">PathChange</a>, <a class="symbol-link rs-type" href="eos-ephemeral-workspace--src-types-rs.html#item-struct-PublishOutcome-59">PublishOutcome</a>,
+    <a class="symbol-link rs-type" href="eos-ephemeral-workspace--src-types-rs.html#item-struct-WorkspaceRoot-9">WorkspaceRoot</a>,
+};
+
+<span class="rs-comment">/// Daemon-supplied facts needed to prepare a publishable command workspace.</span>
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Eq</span>)]
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-ephemeral-workspace--src-command-session-types-rs.html#item-struct-EphemeralCommandPrepareContext-11">EphemeralCommandPrepareContext</a> {
+    <span class="rs-kw">pub</span> layer_stack_root: <span class="rs-type">PathBuf</span>,
+    <span class="rs-kw">pub</span> workspace_root: <span class="rs-type">PathBuf</span>,
+    <span class="rs-kw">pub</span> writable_root: <span class="rs-type">PathBuf</span>,
+    <span class="rs-kw">pub</span> session_dir: <span class="rs-type">PathBuf</span>,
+    <span class="rs-kw">pub</span> final_path: <span class="rs-type">PathBuf</span>,
+}
+
+<span class="rs-comment">/// Daemon-supplied facts needed to finalize a publishable command workspace.</span>
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">PartialEq</span>)]
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-ephemeral-workspace--src-command-session-types-rs.html#item-struct-EphemeralCommandFinalizeContext-21">EphemeralCommandFinalizeContext</a> {
+    <span class="rs-kw">pub</span> workspace: <a class="symbol-link rs-type" href="eos-ephemeral-workspace--src-types-rs.html#item-struct-EphemeralWorkspace-31">EphemeralWorkspace</a>,
+    <span class="rs-kw">pub</span> base_timings: <span class="rs-type">WorkspaceTimings</span>,
+}
+
+<span class="rs-comment">/// Daemon-supplied port for ephemeral command-session prepare/finalize policy.</span>
+<span class="rs-comment">///</span>
+<span class="rs-comment">/// The port keeps PTY/process/session registry ownership in `eos-daemon` while</span>
+<span class="rs-comment">/// allowing this crate to compile against the shared `CommandWorkspacePolicy`</span>
+<span class="rs-comment">/// contract.</span>
+<span class="rs-kw">pub</span> <span class="rs-kw">trait</span> <a class="symbol-link rs-type" href="eos-ephemeral-workspace--src-command-session-types-rs.html#item-trait-EphemeralCommandSessionPort-28">EphemeralCommandSessionPort</a> {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-ephemeral-workspace--src-command-session-finalize-rs.html#method-prepare-context-270">prepare_context</a>(
+        &amp;<span class="rs-self">self</span>,
+        command_session_id: &amp;str,
+    ) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-ephemeral-workspace--src-command-session-types-rs.html#item-struct-EphemeralCommandPrepareContext-11">EphemeralCommandPrepareContext</a>, <span class="rs-type">WorkspaceApiError</span>&gt;;
+
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-ephemeral-workspace--src-command-session-finalize-rs.html#method-acquire-snapshot-278">acquire_snapshot</a>(
+        &amp;<span class="rs-self">self</span>,
+        request_id: &amp;str,
+    ) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">EphemeralSnapshot</span>, <a class="symbol-link rs-type" href="eos-ephemeral-workspace--src-error-rs.html#item-enum-EphemeralWorkspaceError-5">EphemeralWorkspaceError</a>&gt;;
+
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-ephemeral-workspace--src-command-session-finalize-rs.html#method-release-snapshot-285">release_snapshot</a>(&amp;<span class="rs-self">self</span>, lease_id: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-ephemeral-workspace--src-error-rs.html#item-enum-EphemeralWorkspaceError-5">EphemeralWorkspaceError</a>&gt;;
+
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-ephemeral-workspace--src-command-session-finalize-rs.html#method-base-timings-289">base_timings</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">WorkspaceTimings</span>, <span class="rs-type">WorkspaceApiError</span>&gt;;
+
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-ephemeral-workspace--src-command-session-finalize-rs.html#method-publish-upperdir-changes-103">publish_upperdir_changes</a>(
+        &amp;<span class="rs-self">self</span>,
+        root: &amp;<a class="symbol-link rs-type" href="eos-ephemeral-workspace--src-types-rs.html#item-struct-WorkspaceRoot-9">WorkspaceRoot</a>,
+        snapshot: &amp;<span class="rs-type">EphemeralSnapshot</span>,
+        changes: &amp;[<span class="rs-type">LayerChange</span>],
+        path_kinds: &amp;[<a class="symbol-link rs-type" href="eos-ephemeral-workspace--src-types-rs.html#item-struct-PathChange-42">PathChange</a>],
+    ) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-ephemeral-workspace--src-types-rs.html#item-struct-PublishOutcome-59">PublishOutcome</a>, <a class="symbol-link rs-type" href="eos-ephemeral-workspace--src-error-rs.html#item-enum-EphemeralWorkspaceError-5">EphemeralWorkspaceError</a>&gt;;
+}
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
   <script src="../assets/inventory.js"></script>
 </body>
 </html>

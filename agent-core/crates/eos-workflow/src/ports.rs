@@ -4,9 +4,8 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use eos_state::{
-    execution_outcome_for_submission, AttemptClosure, AttemptFailReason, ExecutionRole,
-    GeneratorSubmission, IterationStatus, ReducerSubmission, Task, TaskOutcomeStatus, TaskRole,
-    TaskStatus, TaskStore, WorkflowId, WorkflowStatus,
+    AttemptClosure, GeneratorSubmission, IterationStatus, ReducerSubmission, TaskStore, WorkflowId,
+    WorkflowStatus,
 };
 use eos_tools::{
     AttemptSubmissionPort, CancelPort, OutstandingWorkflow, PlannerPlan, SubmissionAck, ToolError,
@@ -16,7 +15,6 @@ use eos_types::{AgentRunId, WorkflowSessionId};
 use parking_lot::Mutex;
 
 use crate::attempt::AttemptOrchestratorRegistry;
-use crate::util::json_object;
 use crate::{WorkflowError, WorkflowStarter};
 
 /// Recording adapter from the `eos-tools` planner/generator/reducer terminal
@@ -263,24 +261,20 @@ impl WorkflowControlPort for WorkflowControlAdapter {
 }
 
 impl WorkflowControlAdapter {
+    /// Decompose workflow cancellation through `cancel_iteration` -> `cancel_attempt`
+    /// -> `cancel_task` (spec §12.4). Walks only *open* iterations / *non-closed*
+    /// attempts (the idempotency guards), so a re-entrant cancel (a child workflow
+    /// cancelled while tearing down a parent) terminates.
     async fn cancel_workflow_state(
         &self,
         workflow: &eos_state::Workflow,
         reason: &str,
     ) -> Result<(), ToolError> {
         let now = eos_state::UtcDateTime::now();
-        let outcome_text = if reason.trim().is_empty() {
-            "Delegated workflow was cancelled."
-        } else {
-            reason
-        };
-        // The per-task cancellation evidence (with `outcome_text`) is recorded on
-        // each task row by `cancel_active_task`; the reason is also returned to the
-        // caller by `cancel`. The iteration/workflow `outcomes` columns are read
-        // back strictly as `Vec<ExecutionTaskOutcome>` by `ContextEngine`
-        // (`parse_outcomes_record`), so the workflow-level summary is the empty
-        // typed projection rather than a hand-built record with an off-vocabulary
-        // role that the strict reader would reject.
+        // Iteration/workflow `outcomes` columns are read back strictly as
+        // `Vec<ExecutionTaskOutcome>` by `ContextEngine`, so the cancellation
+        // summary is the empty typed projection; the reason rides on each
+        // cancelled task row and the `cancel` return string.
         const EMPTY_OUTCOMES: &str = "[]";
 
         for iteration in self.iteration_store.list_for_workflow(&workflow.id).await? {
@@ -291,32 +285,7 @@ impl WorkflowControlAdapter {
                 if attempt.is_closed() {
                     continue;
                 }
-                // Abort the in-flight planner-driver task (and its RUN-stage
-                // JoinSet) before finalizing cancelled state, so it stops issuing
-                // provider calls promptly instead of running to natural completion.
-                self.starter
-                    .orchestrator_registry()
-                    .abort_planner(&attempt.id);
-                for task_id in attempt
-                    .planner_task_id()
-                    .into_iter()
-                    .chain(attempt.generator_task_ids().iter())
-                    .chain(attempt.reducer_task_ids().iter())
-                {
-                    if let Some(task) = self.task_store.get(task_id).await? {
-                        self.cancel_active_task(&task, outcome_text).await?;
-                    }
-                }
-                self.attempt_store
-                    .close(
-                        &attempt.id,
-                        AttemptClosure::Failed {
-                            reason: AttemptFailReason::TaskFailed,
-                            outcomes: Vec::new(),
-                            closed_at: now,
-                        },
-                    )
-                    .await?;
+                self.cancel_attempt(&attempt, reason, now).await?;
             }
             self.iteration_store
                 .set_status(
@@ -338,19 +307,48 @@ impl WorkflowControlAdapter {
         Ok(())
     }
 
-    async fn cancel_active_task(&self, task: &Task, outcome_text: &str) -> Result<(), ToolError> {
-        if !matches!(task.status, TaskStatus::Pending | TaskStatus::Running) {
-            return Ok(());
-        }
-        let terminal = json_object("fail_reason", "workflow_cancelled");
-        let outcomes = cancellation_outcomes(task, outcome_text);
+    /// Cancel one attempt (spec §12.4): latch every planner/generator/reducer task
+    /// row to `Cancelled` *before* any teardown (closing the scheduler gap), then
+    /// recurse `cancel_task` per task to tear down any live agent run, then close
+    /// the attempt as `Cancelled`.
+    async fn cancel_attempt(
+        &self,
+        attempt: &eos_state::Attempt,
+        reason: &str,
+        now: eos_state::UtcDateTime,
+    ) -> Result<(), ToolError> {
+        // Stop the planner orchestrator from materializing NEW (un-latched) task
+        // rows. This is *not* redundant with `cancel_task(planner)`: the latch only
+        // covers rows that exist at latch time, so the planner must be prevented
+        // from creating fresh launchable rows after the latch.
+        self.starter
+            .orchestrator_registry()
+            .abort_planner(&attempt.id);
+        let tasks: Vec<eos_state::TaskId> = attempt
+            .planner_task_id()
+            .into_iter()
+            .chain(attempt.generator_task_ids().iter())
+            .chain(attempt.reducer_task_ids().iter())
+            .cloned()
+            .collect();
+        // Latch BEFORE teardown so the scheduler sees terminal rows and cannot
+        // launch a sibling into the cancellation window.
         self.task_store
-            .set_task_status_if_current(
-                &task.id,
-                task.status,
-                TaskStatus::Failed,
-                Some(&outcomes),
-                Some(&terminal),
+            .latch_attempt_tasks_cancelled(&attempt.id, &tasks)
+            .await?;
+        // Tear down each task's live agent run. The status CAS inside `cancel_task`
+        // no-ops (already latched `Cancelled`), but the live-run teardown still runs.
+        for task_id in &tasks {
+            self.cancel_port.cancel_task(task_id, reason).await?;
+        }
+        self.attempt_store
+            .close(
+                &attempt.id,
+                AttemptClosure::Cancelled {
+                    reason: reason.to_owned(),
+                    outcomes: Vec::new(),
+                    closed_at: now,
+                },
             )
             .await?;
         Ok(())
@@ -402,38 +400,65 @@ impl WorkflowHandleRegistry {
     }
 }
 
-fn cancellation_outcomes(task: &Task, outcome_text: &str) -> Vec<eos_state::ExecutionTaskOutcome> {
-    let role = match task.role {
-        TaskRole::Generator => ExecutionRole::Generator,
-        TaskRole::Reducer => ExecutionRole::Reducer,
-        TaskRole::Root | TaskRole::Planner => return Vec::new(),
-    };
-    vec![execution_outcome_for_submission(
-        task.id.clone(),
-        role,
-        TaskOutcomeStatus::Failed,
-        outcome_text.to_owned(),
-    )]
-}
-
 #[cfg(test)]
 mod tests {
     #![allow(clippy::unwrap_used)]
     use std::sync::Arc;
 
-    use eos_state::{
-        AttemptFailReason, AttemptStatus, IterationStatus, TaskStatus, WorkflowStatus,
-    };
+    use async_trait::async_trait;
+    use eos_state::{AttemptStatus, IterationStatus, TaskStatus, WorkflowStatus};
     use eos_tools::WorkflowControlPort as _;
+    use eos_types::JsonObject;
     use serde_json::json;
 
     use super::*;
     use crate::support::{root_task, MemoryStores, QueueRunner};
 
+    /// A `CancelPort` fake mirroring `EngineCancelPort::cancel_task`'s persisted
+    /// flip; these store-level tests have no live-run registry.
+    struct TestCancelPort {
+        task_store: Arc<dyn TaskStore>,
+    }
+
+    #[async_trait]
+    impl CancelPort for TestCancelPort {
+        async fn cancel_task(
+            &self,
+            task_id: &eos_state::TaskId,
+            reason: &str,
+        ) -> Result<(), ToolError> {
+            if let Some(task) = self.task_store.get(task_id).await? {
+                if matches!(task.status, TaskStatus::Pending | TaskStatus::Running) {
+                    let mut terminal = JsonObject::new();
+                    terminal.insert("fail_reason".to_owned(), "cancelled".into());
+                    terminal.insert("reason".to_owned(), reason.into());
+                    self.task_store
+                        .set_task_status_if_current(
+                            task_id,
+                            task.status,
+                            TaskStatus::Cancelled,
+                            None,
+                            Some(&terminal),
+                        )
+                        .await?;
+                }
+            }
+            Ok(())
+        }
+
+        async fn cancel_agent_run(
+            &self,
+            _agent_run_id: &AgentRunId,
+            _reason: &str,
+        ) -> Result<(), ToolError> {
+            Ok(())
+        }
+    }
+
     // The workflow-control adapter mints `wf_<n>` handles (not workflow ids),
-    // rejects a fabricated handle, and `cancel` tears down the delegated tree
-    // (workflow + iteration CANCELLED, attempt FAILED, active tasks FAILED with
-    // a `workflow_cancelled` marker) without mutating the parent.
+    // rejects a fabricated handle, and `cancel` decomposes through the delegated
+    // tree (workflow + iteration + attempt CANCELLED, active tasks CANCELLED with a
+    // `cancelled` marker, latched before close) without mutating the parent.
     #[tokio::test]
     async fn workflow_control_uses_runtime_handles_and_cancels_child_state() {
         let stores = Arc::new(MemoryStores::default());
@@ -441,12 +466,16 @@ mod tests {
         let deps = stores.deps(runner);
         let parent = root_task("parent", TaskStatus::Running);
         stores.seed_task(parent.clone());
+        let cancel_port: Arc<dyn CancelPort> = Arc::new(TestCancelPort {
+            task_store: stores.clone(),
+        });
         let adapter = WorkflowControlAdapter::new(
             WorkflowStarter::new(deps),
             stores.clone(),
             stores.clone(),
             stores.clone(),
             stores.clone(),
+            cancel_port,
         );
 
         let agent_run_id: AgentRunId = "agent-run-1".parse().expect("agent run id");
@@ -477,17 +506,18 @@ mod tests {
         assert_eq!(iteration.status, IterationStatus::Cancelled);
         let attempt_id = iteration.attempt_ids.first().unwrap();
         let attempt = stores.attempt(attempt_id).unwrap();
-        assert_eq!(attempt.status(), AttemptStatus::Failed);
-        assert_eq!(attempt.fail_reason(), Some(AttemptFailReason::TaskFailed));
+        assert_eq!(attempt.status(), AttemptStatus::Cancelled);
+        assert!(attempt.fail_reason().is_none());
         let planner_task = stores.task(attempt.planner_task_id().unwrap()).unwrap();
-        assert_eq!(planner_task.status, TaskStatus::Failed);
+        assert_eq!(planner_task.status, TaskStatus::Cancelled);
         assert_eq!(
             planner_task
                 .terminal_tool_result
                 .unwrap()
                 .get("fail_reason"),
-            Some(&json!("workflow_cancelled"))
+            Some(&json!("cancelled"))
         );
+        // `cancel_workflow` must never mutate the parent task (anchor §3).
         assert_eq!(stores.task(&parent.id).unwrap().status, TaskStatus::Running);
     }
 }

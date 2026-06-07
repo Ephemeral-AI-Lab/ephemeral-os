@@ -8,8 +8,16 @@
 </head>
 <body>
   <header>
-    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
-    <h1>eos-audit File Inventory</h1>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>eos-audit File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS/agent-core &amp;&amp; cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
   </header>
   <a class="back-link" href="../index.html">agent-core</a>
 <section class="summary">
@@ -50,6 +58,45 @@
   <div class="items"></div>
 </section></div>
 </main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/eos-audit/src/lib.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-comment">//! `eos-audit` — the agent-core write-only audit side channel.</span>
+<span class="rs-comment">//!</span>
+<span class="rs-comment">//! This crate owns the structured event envelope ([`AuditEvent`] +</span>
+<span class="rs-comment">//! correlation [`AuditNode`]), the normalized collector row contract</span>
+<span class="rs-comment">//! ([`ObsEnvelope`]), the [`AuditSink`] seam, and the append-only `JSONL`</span>
+<span class="rs-comment">//! writers ([`JsonlSink`] and [`BufferedJsonlSink`] +</span>
+<span class="rs-comment">//! [`BufferedAuditShutdown`]).</span>
+<span class="rs-comment">//!</span>
+<span class="rs-comment">//! It depends only on `eos-types` among `EphemeralOS` crates. It does **not** own</span>
+<span class="rs-comment">//! lifecycle policy (when events fire is producer/engine policy), does not</span>
+<span class="rs-comment">//! import any downstream crate's stream types, and does no buffering/lane-routing</span>
+<span class="rs-comment">//! beyond the single bounded writer thread.</span>
+#![forbid(unsafe_code)]
+#![warn(missing_docs)]
+
+<span class="rs-kw">mod</span> error;
+<span class="rs-kw">mod</span> event;
+<span class="rs-kw">mod</span> jsonl;
+<span class="rs-kw">mod</span> node;
+<span class="rs-kw">mod</span> obs;
+<span class="rs-kw">mod</span> sink;
+
+<span class="rs-kw">pub</span> <span class="rs-kw">use</span> error::<a class="symbol-link rs-type" href="eos-audit.html#item-enum-AuditError-7">AuditError</a>;
+<span class="rs-kw">pub</span> <span class="rs-kw">use</span> event::{<a class="symbol-link rs-type" href="eos-audit--src-event-rs.html#item-struct-AuditEvent-37">AuditEvent</a>, <a class="symbol-link rs-type" href="eos-audit--src-event-rs.html#item-enum-AuditSource-18">AuditSource</a>, <span class="rs-type">SCHEMA_VERSION</span>};
+<span class="rs-kw">pub</span> <span class="rs-kw">use</span> jsonl::{<a class="symbol-link rs-type" href="eos-audit--src-jsonl-rs.html#item-struct-BufferedAuditShutdown-132">BufferedAuditShutdown</a>, <a class="symbol-link rs-type" href="eos-audit--src-jsonl-rs.html#item-struct-BufferedJsonlSink-67">BufferedJsonlSink</a>, <a class="symbol-link rs-type" href="eos-audit--src-jsonl-rs.html#item-struct-JsonlSink-35">JsonlSink</a>};
+<span class="rs-kw">pub</span> <span class="rs-kw">use</span> node::{<a class="symbol-link rs-type" href="eos-audit--src-node-rs.html#item-struct-AuditNode-14">AuditNode</a>, <a class="symbol-link rs-type" href="eos-audit--src-node-rs.html#item-struct-AuditNodeBuilder-63">AuditNodeBuilder</a>};
+<span class="rs-kw">pub</span> <span class="rs-kw">use</span> obs::{
+    canonical_event_type, from_jsonl_line, to_jsonl_line, <a class="symbol-link rs-type" href="eos-audit--src-obs-rs.html#item-type-JsonObject-22">JsonObject</a>, <a class="symbol-link rs-type" href="eos-audit--src-obs-rs.html#item-struct-ObsEnvelope-60">ObsEnvelope</a>, <a class="symbol-link rs-type" href="eos-audit--src-obs-rs.html#item-struct-ObsIds-36">ObsIds</a>,
+    <a class="symbol-link rs-type" href="eos-audit--src-obs-rs.html#item-enum-ObsSource-25">ObsSource</a>, <span class="rs-type">AGENT_RUN_COMPLETED</span>, <span class="rs-type">OS_RESOURCE_SAMPLED</span>, <span class="rs-type">SCHEMA</span>, <span class="rs-type">TOOL_CALL_COMPLETED</span>,
+};
+<span class="rs-kw">pub</span> <span class="rs-kw">use</span> sink::{<a class="symbol-link rs-type" href="eos-audit--src-sink-rs.html#item-trait-AuditSink-12">AuditSink</a>, <a class="symbol-link rs-type" href="eos-audit--src-sink-rs.html#item-struct-NoopAuditSink-33">NoopAuditSink</a>};
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
   <script src="../assets/inventory.js"></script>
 </body>
 </html>

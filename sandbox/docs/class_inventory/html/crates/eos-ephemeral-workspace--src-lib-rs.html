@@ -8,8 +8,16 @@
 </head>
 <body>
   <header>
-    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
-    <h1>eos-ephemeral-workspace File Inventory</h1>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>eos-ephemeral-workspace File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS/sandbox &amp;&amp; cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
   </header>
   <a class="back-link" href="../index.html">sandbox</a>
 <section class="summary">
@@ -50,6 +58,44 @@
   <div class="items"></div>
 </section></div>
 </main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/eos-ephemeral-workspace/src/lib.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-comment">//! Fresh per-operation workspace policy.</span>
+<span class="rs-comment">//!</span>
+<span class="rs-comment">//! This crate owns the publish-capable ephemeral workspace lifecycle pieces that</span>
+<span class="rs-comment">//! are unique to fresh overlay operations: allocate scratch, capture upperdir</span>
+<span class="rs-comment">//! changes, classify path/resource data, prepare runner requests for fresh</span>
+<span class="rs-comment">//! command workspaces, and call an injected publisher. Daemon RPC routing,</span>
+<span class="rs-comment">//! process supervision, command-session registry state, public JSON envelopes,</span>
+<span class="rs-comment">//! and generic OCC publisher ownership stay outside this crate.</span>
+
+<span class="rs-kw">pub</span> <span class="rs-kw">mod</span> capture;
+<span class="rs-kw">pub</span> <span class="rs-kw">mod</span> command_session;
+<span class="rs-kw">pub</span> <span class="rs-kw">mod</span> dirs;
+<span class="rs-kw">pub</span> <span class="rs-kw">mod</span> error;
+<span class="rs-kw">pub</span> <span class="rs-kw">mod</span> finalize;
+<span class="rs-kw">mod</span> ops;
+<span class="rs-kw">pub</span> <span class="rs-kw">mod</span> ports;
+<span class="rs-kw">pub</span> <span class="rs-kw">mod</span> timings;
+<span class="rs-kw">pub</span> <span class="rs-kw">mod</span> types;
+
+<span class="rs-kw">pub</span> <span class="rs-kw">use</span> capture::{capture_for_publish, <a class="symbol-link rs-type" href="eos-ephemeral-workspace.html#item-struct-CapturedUpperdir-9">CapturedUpperdir</a>};
+<span class="rs-kw">pub</span> <span class="rs-kw">use</span> dirs::{<a class="symbol-link rs-type" href="eos-ephemeral-workspace--src-dirs-rs.html#item-struct-EphemeralDirAllocator-6">EphemeralDirAllocator</a>, <a class="symbol-link rs-type" href="eos-ephemeral-workspace--src-dirs-rs.html#item-struct-RunDirCleanup-12">RunDirCleanup</a>};
+<span class="rs-kw">pub</span> <span class="rs-kw">use</span> error::<a class="symbol-link rs-type" href="eos-ephemeral-workspace--src-error-rs.html#item-enum-EphemeralWorkspaceError-5">EphemeralWorkspaceError</a>;
+<span class="rs-kw">pub</span> <span class="rs-kw">use</span> finalize::{finalize_publishable_workspace, <a class="symbol-link rs-type" href="eos-ephemeral-workspace--src-finalize-rs.html#item-struct-FinalizeOutcome-16">FinalizeOutcome</a>, <a class="symbol-link rs-type" href="eos-ephemeral-workspace--src-finalize-rs.html#item-struct-FinalizeRequest-9">FinalizeRequest</a>};
+<span class="rs-kw">pub</span> <span class="rs-kw">use</span> ops::<a class="symbol-link rs-type" href="eos-ephemeral-workspace--src-ops-rs.html#item-struct-EphemeralWorkspaceOps-9">EphemeralWorkspaceOps</a>;
+<span class="rs-kw">pub</span> <span class="rs-kw">use</span> ports::<a class="symbol-link rs-type" href="eos-ephemeral-workspace--src-ports-rs.html#item-trait-WorkspacePublisherPort-6">WorkspacePublisherPort</a>;
+<span class="rs-kw">pub</span> <span class="rs-kw">use</span> timings::{<a class="symbol-link rs-type" href="eos-ephemeral-workspace--src-timings-rs.html#item-struct-EphemeralTimings-16">EphemeralTimings</a>, <a class="symbol-link rs-type" href="eos-ephemeral-workspace--src-timings-rs.html#item-struct-TreeResourceStats-7">TreeResourceStats</a>};
+<span class="rs-kw">pub</span> <span class="rs-kw">use</span> types::{
+    <span class="rs-type">CallerId</span>, <a class="symbol-link rs-type" href="eos-ephemeral-workspace--src-types-rs.html#item-struct-EphemeralRunDirs-19">EphemeralRunDirs</a>, <span class="rs-type">EphemeralSnapshot</span>, <a class="symbol-link rs-type" href="eos-ephemeral-workspace--src-types-rs.html#item-struct-EphemeralWorkspace-31">EphemeralWorkspace</a>, <span class="rs-type">InvocationId</span>, <a class="symbol-link rs-type" href="eos-ephemeral-workspace--src-types-rs.html#item-struct-PathChange-42">PathChange</a>,
+    <a class="symbol-link rs-type" href="eos-ephemeral-workspace--src-types-rs.html#item-enum-PathChangeKind-49">PathChangeKind</a>, <a class="symbol-link rs-type" href="eos-ephemeral-workspace--src-types-rs.html#item-struct-PublishOutcome-59">PublishOutcome</a>, <a class="symbol-link rs-type" href="eos-ephemeral-workspace--src-types-rs.html#item-enum-PublishStatus-70">PublishStatus</a>, <a class="symbol-link rs-type" href="eos-ephemeral-workspace--src-types-rs.html#item-struct-WorkspaceRoot-9">WorkspaceRoot</a>,
+};
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
   <script src="../assets/inventory.js"></script>
 </body>
 </html>

@@ -8,8 +8,16 @@
 </head>
 <body>
   <header>
-    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
-    <h1>eos-isolated-workspace File Inventory</h1>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>eos-isolated-workspace File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS/sandbox &amp;&amp; cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
   </header>
   <a class="back-link" href="../index.html">sandbox</a>
 <section class="summary">
@@ -47,29 +55,185 @@
       <span>3 methods</span>
     </div>
   </div>
-  <div class="items"><div class="group-label">File-Owned Types</div><article class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct JsonlAuditSink pub pub struct JsonlAuditSink crates/eos-isolated-workspace/src/audit.rs path PathBuf ">
+  <div class="items"><div class="group-label">File-Owned Types</div><article id="item-struct-JsonlAuditSink-30" class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct JsonlAuditSink pub pub struct JsonlAuditSink crates/eos-isolated-workspace/src/audit.rs path PathBuf ">
   <div class="item-head">
     <span class="kind">struct</span>
     <h3>JsonlAuditSink</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub struct JsonlAuditSink</code>
-  <div class="tags"></div>
-  <h4>Fields</h4><table><tbody><tr><td>private</td><td>path</td><td><code>PathBuf</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr><td>constructor</td><td>new</td><td><code>pub fn new (path : impl AsRef &lt; Path &gt;) -&gt; Self</code></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl AuditSink for JsonlAuditSink</code></summary><table><tbody><tr><td>method</td><td>emit</td><td><code>fn emit (&amp; self , event_type : &amp; str , payload : Value) -&gt; Result &lt; () , IsolatedError &gt;</code></td></tr></tbody></table></details></div>
+  <code class="signature">pub struct <a class="symbol-link" href="eos-isolated-workspace.html#item-struct-JsonlAuditSink-30">JsonlAuditSink</a></code>
+  <p class="docstring">Append-only JSONL audit sink. Audit-only; no OCC linkage.</p>
+  <div class="tags"><span>derive: Clone</span><span>derive: Debug</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>path</td><td><code>PathBuf</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-37"><td>constructor</td><td>new</td><td><code>pub fn <a class="symbol-link" href="eos-isolated-workspace.html#method-new-37">new</a> (path : impl AsRef &lt; Path &gt;) -&gt; Self</code><p class="docstring">Build a sink writing to `path`.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Build a sink writing to `path`.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-isolated-workspace.html#method-new-37">new</a>(path: <span class="rs-kw">impl</span> <span class="rs-type">AsRef</span>&lt;<span class="rs-type">Path</span>&gt;) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">Self</span> {
+            path: path.as_ref().to_path_buf(),
+        }
+    }
+</code></pre>
+</details></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl <a class="symbol-link" href="eos-isolated-workspace.html#item-trait-AuditSink-16">AuditSink</a> for <a class="symbol-link" href="eos-isolated-workspace.html#item-struct-JsonlAuditSink-30">JsonlAuditSink</a></code></summary><table><tbody><tr id="method-emit-47"><td>method</td><td>emit</td><td><code>fn <a class="symbol-link" href="eos-isolated-workspace.html#method-emit-21">emit</a> (&amp; self , event_type : &amp; str , payload : Value) -&gt; Result &lt; () , <a class="symbol-link" href="eos-isolated-workspace--src-error-rs.html#item-enum-IsolatedError-8">IsolatedError</a> &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-isolated-workspace.html#method-emit-21">emit</a>(&amp;<span class="rs-self">self</span>, event_type: &amp;str, payload: <span class="rs-type">Value</span>) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-isolated-workspace--src-error-rs.html#item-enum-IsolatedError-8">IsolatedError</a>&gt; {
+        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(parent) = <span class="rs-self">self</span>
+            .path
+            .parent()
+            .filter(|parent| !parent.as_os_str().is_empty())
+        {
+            std::fs::create_dir_all(parent).map_err(|source| <a class="symbol-link rs-type" href="eos-isolated-workspace--src-error-rs.html#item-enum-IsolatedError-8">IsolatedError</a>::<span class="rs-type">AuditWrite</span> {
+                path: <span class="rs-self">self</span>.path.clone(),
+                source,
+            })?;
+        }
+        <span class="rs-kw">let</span> ts = <span class="rs-type">SystemTime</span>::now()
+            .duration_since(<span class="rs-type">UNIX_EPOCH</span>)
+            .map_or(0.0, |duration| duration.as_secs_f64());
+        <span class="rs-kw">let</span> line = serde_json::json!({
+            &quot;ts&quot;: ts,
+            &quot;<span class="rs-kw">type</span>&quot;: event_type,
+            &quot;payload&quot;: payload,
+        });
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> file = std::fs::<span class="rs-type">OpenOptions</span>::<a class="symbol-link rs-fn" href="eos-isolated-workspace.html#method-new-37">new</a>()
+            .create(<span class="rs-kw">true</span>)
+            .append(<span class="rs-kw">true</span>)
+            .open(&amp;<span class="rs-self">self</span>.path)
+            .map_err(|source| <a class="symbol-link rs-type" href="eos-isolated-workspace--src-error-rs.html#item-enum-IsolatedError-8">IsolatedError</a>::<span class="rs-type">AuditWrite</span> {
+                path: <span class="rs-self">self</span>.path.clone(),
+                source,
+            })?;
+        serde_json::to_writer(&amp;<span class="rs-kw">mut</span> file, &amp;line).map_err(|source| <a class="symbol-link rs-type" href="eos-isolated-workspace--src-error-rs.html#item-enum-IsolatedError-8">IsolatedError</a>::<span class="rs-type">AuditWrite</span> {
+            path: <span class="rs-self">self</span>.path.clone(),
+            source: std::io::<span class="rs-type">Error</span>::other(source),
+        })?;
+        file.write_all(b&quot;\n&quot;)
+            .map_err(|source| <a class="symbol-link rs-type" href="eos-isolated-workspace--src-error-rs.html#item-enum-IsolatedError-8">IsolatedError</a>::<span class="rs-type">AuditWrite</span> {
+                path: <span class="rs-self">self</span>.path.clone(),
+                source,
+            })
+    }
+</code></pre>
+</details></td></tr></tbody></table></details></div>
+
   <p class="source">crates/eos-isolated-workspace/src/audit.rs:30</p>
-</article><article class="type-card" data-kind="trait" data-kind-list="method trait type-model" data-filter-text="trait AuditSink pub pub trait AuditSink crates/eos-isolated-workspace/src/audit.rs  emit fn emit (&amp; self , event_type : &amp; str , payload : Value) -&gt; Result &lt; () , IsolatedError &gt;">
+</article><article id="item-trait-AuditSink-16" class="type-card" data-kind="trait" data-kind-list="method trait type-model" data-filter-text="trait AuditSink pub pub trait AuditSink crates/eos-isolated-workspace/src/audit.rs  emit fn emit (&amp; self , event_type : &amp; str , payload : Value) -&gt; Result &lt; () , IsolatedError &gt;">
   <div class="item-head">
     <span class="kind">trait</span>
     <h3>AuditSink</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub trait AuditSink</code>
+  <code class="signature">pub trait <a class="symbol-link" href="eos-isolated-workspace.html#item-trait-AuditSink-16">AuditSink</a></code>
+  <p class="docstring">Sink for isolated-workspace audit events.<br>The only production implementation is the JSONL sink; the trait exists so<br>tests can substitute a recording double without touching the filesystem.</p>
   <div class="tags"></div>
-  <h4>Methods</h4><table><tbody><tr><td>required</td><td>emit</td><td><code>fn emit (&amp; self , event_type : &amp; str , payload : Value) -&gt; Result &lt; () , IsolatedError &gt;</code></td></tr></tbody></table>
+  <h4>Methods</h4><table><tbody><tr id="method-emit-21"><td>required</td><td>emit</td><td><code>fn <a class="symbol-link" href="eos-isolated-workspace.html#method-emit-21">emit</a> (&amp; self , event_type : &amp; str , payload : Value) -&gt; Result &lt; () , <a class="symbol-link" href="eos-isolated-workspace--src-error-rs.html#item-enum-IsolatedError-8">IsolatedError</a> &gt;</code><p class="docstring">Record one lifecycle event with its structured payload.<br># Errors<br>Returns [`IsolatedError::AuditWrite`] when the sink cannot persist the<br>event.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Record one lifecycle event with its structured payload.</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// # Errors</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// Returns [`IsolatedError::AuditWrite`] when the sink cannot persist the</span>
+    <span class="rs-comment">/// event.</span>
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-isolated-workspace.html#method-emit-21">emit</a>(&amp;<span class="rs-self">self</span>, event_type: &amp;str, payload: <span class="rs-type">Value</span>) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-isolated-workspace--src-error-rs.html#item-enum-IsolatedError-8">IsolatedError</a>&gt;;
+</code></pre>
+</details></td></tr></tbody></table>
+
   <p class="source">crates/eos-isolated-workspace/src/audit.rs:16</p>
 </article></div>
 </section></div>
 </main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/eos-isolated-workspace/src/audit.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-comment">//! Append-only JSONL audit sink for isolated-workspace lifecycle events.</span>
+<span class="rs-comment">//!</span>
+<span class="rs-comment">//! AUDIT ONLY. This sink records enter/exit/teardown events for forensic and</span>
+<span class="rs-comment">//! test consumption; it NEVER feeds an OCC publish path (the no-publish</span>
+<span class="rs-comment">//! invariant — see the crate root). Each `emit` writes one line shaped</span>
+<span class="rs-comment">//! `{"ts": &lt;float&gt;, "type": &lt;event_type&gt;, "payload": &lt;payload&gt;}`.</span>
+
+<span class="rs-kw">use</span> std::io::<span class="rs-type">Write</span>;
+<span class="rs-kw">use</span> std::path::{<span class="rs-type">Path</span>, <span class="rs-type">PathBuf</span>};
+<span class="rs-kw">use</span> std::time::{<span class="rs-type">SystemTime</span>, <span class="rs-type">UNIX_EPOCH</span>};
+
+<span class="rs-kw">use</span> serde_json::<span class="rs-type">Value</span>;
+
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::error::<a class="symbol-link rs-type" href="eos-isolated-workspace--src-error-rs.html#item-enum-IsolatedError-8">IsolatedError</a>;
+
+<span class="rs-comment">/// Sink for isolated-workspace audit events.</span>
+<span class="rs-comment">///</span>
+<span class="rs-comment">/// The only production implementation is the JSONL sink; the trait exists so</span>
+<span class="rs-comment">/// tests can substitute a recording double without touching the filesystem.</span>
+<span class="rs-kw">pub</span> <span class="rs-kw">trait</span> <a class="symbol-link rs-type" href="eos-isolated-workspace.html#item-trait-AuditSink-16">AuditSink</a> {
+    <span class="rs-comment">/// Record one lifecycle event with its structured payload.</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// # Errors</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// Returns [`IsolatedError::AuditWrite`] when the sink cannot persist the</span>
+    <span class="rs-comment">/// event.</span>
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-isolated-workspace.html#method-emit-21">emit</a>(&amp;<span class="rs-self">self</span>, event_type: &amp;str, payload: <span class="rs-type">Value</span>) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-isolated-workspace--src-error-rs.html#item-enum-IsolatedError-8">IsolatedError</a>&gt;;
+}
+
+<span class="rs-comment">/// Append-only JSONL audit sink. Audit-only; no OCC linkage.</span>
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>)]
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-isolated-workspace.html#item-struct-JsonlAuditSink-30">JsonlAuditSink</a> {
+    path: <span class="rs-type">PathBuf</span>,
+}
+
+<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-isolated-workspace.html#item-struct-JsonlAuditSink-30">JsonlAuditSink</a> {
+    <span class="rs-comment">/// Build a sink writing to `path`.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-isolated-workspace.html#method-new-37">new</a>(path: <span class="rs-kw">impl</span> <span class="rs-type">AsRef</span>&lt;<span class="rs-type">Path</span>&gt;) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">Self</span> {
+            path: path.as_ref().to_path_buf(),
+        }
+    }
+}
+
+<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-isolated-workspace.html#item-trait-AuditSink-16">AuditSink</a> <span class="rs-kw">for</span> <a class="symbol-link rs-type" href="eos-isolated-workspace.html#item-struct-JsonlAuditSink-30">JsonlAuditSink</a> {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-isolated-workspace.html#method-emit-21">emit</a>(&amp;<span class="rs-self">self</span>, event_type: &amp;str, payload: <span class="rs-type">Value</span>) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-isolated-workspace--src-error-rs.html#item-enum-IsolatedError-8">IsolatedError</a>&gt; {
+        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(parent) = <span class="rs-self">self</span>
+            .path
+            .parent()
+            .filter(|parent| !parent.as_os_str().is_empty())
+        {
+            std::fs::create_dir_all(parent).map_err(|source| <a class="symbol-link rs-type" href="eos-isolated-workspace--src-error-rs.html#item-enum-IsolatedError-8">IsolatedError</a>::<span class="rs-type">AuditWrite</span> {
+                path: <span class="rs-self">self</span>.path.clone(),
+                source,
+            })?;
+        }
+        <span class="rs-kw">let</span> ts = <span class="rs-type">SystemTime</span>::now()
+            .duration_since(<span class="rs-type">UNIX_EPOCH</span>)
+            .map_or(0.0, |duration| duration.as_secs_f64());
+        <span class="rs-kw">let</span> line = serde_json::json!({
+            &quot;ts&quot;: ts,
+            &quot;<span class="rs-kw">type</span>&quot;: event_type,
+            &quot;payload&quot;: payload,
+        });
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> file = std::fs::<span class="rs-type">OpenOptions</span>::<a class="symbol-link rs-fn" href="eos-isolated-workspace.html#method-new-37">new</a>()
+            .create(<span class="rs-kw">true</span>)
+            .append(<span class="rs-kw">true</span>)
+            .open(&amp;<span class="rs-self">self</span>.path)
+            .map_err(|source| <a class="symbol-link rs-type" href="eos-isolated-workspace--src-error-rs.html#item-enum-IsolatedError-8">IsolatedError</a>::<span class="rs-type">AuditWrite</span> {
+                path: <span class="rs-self">self</span>.path.clone(),
+                source,
+            })?;
+        serde_json::to_writer(&amp;<span class="rs-kw">mut</span> file, &amp;line).map_err(|source| <a class="symbol-link rs-type" href="eos-isolated-workspace--src-error-rs.html#item-enum-IsolatedError-8">IsolatedError</a>::<span class="rs-type">AuditWrite</span> {
+            path: <span class="rs-self">self</span>.path.clone(),
+            source: std::io::<span class="rs-type">Error</span>::other(source),
+        })?;
+        file.write_all(b&quot;\n&quot;)
+            .map_err(|source| <a class="symbol-link rs-type" href="eos-isolated-workspace--src-error-rs.html#item-enum-IsolatedError-8">IsolatedError</a>::<span class="rs-type">AuditWrite</span> {
+                path: <span class="rs-self">self</span>.path.clone(),
+                source,
+            })
+    }
+}
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
   <script src="../assets/inventory.js"></script>
 </body>
 </html>

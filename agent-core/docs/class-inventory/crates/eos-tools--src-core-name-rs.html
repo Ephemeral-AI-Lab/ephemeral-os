@@ -8,8 +8,16 @@
 </head>
 <body>
   <header>
-    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
-    <h1>eos-tools File Inventory</h1>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>eos-tools File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS/agent-core &amp;&amp; cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
   </header>
   <a class="back-link" href="../index.html">agent-core</a>
 <section class="summary">
@@ -47,79 +55,552 @@
       <span>11 methods</span>
     </div>
   </div>
-  <div class="items"><div class="group-label">File-Owned Types</div><article class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct ToolKey pub pub struct ToolKey crates/eos-tools/src/core/name.rs 0 String ">
+  <div class="items"><div class="group-label">File-Owned Types</div><article id="item-struct-ToolKey-139" class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct ToolKey pub pub struct ToolKey crates/eos-tools/src/core/name.rs 0 String ">
   <div class="item-head">
     <span class="kind">struct</span>
     <h3>ToolKey</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub struct ToolKey</code>
-  <div class="tags"><span>serde</span></div>
-  <h4>Fields</h4><table><tbody><tr><td>private</td><td>0</td><td><code>String</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr><td>constructor</td><td>from_wire</td><td><code>pub fn from_wire (value : &amp; str) -&gt; Option &lt; Self &gt;</code></td></tr><tr><td>method</td><td>as_str</td><td><code>pub fn as_str (&amp; self) -&gt; &amp; str</code></td></tr><tr><td>method</td><td>as_builtin</td><td><code>pub fn as_builtin (&amp; self) -&gt; Option &lt; ToolName &gt;</code></td></tr><tr><td>associated-fn</td><td>dynamic</td><td><code>pub fn dynamic (value : impl Into &lt; String &gt;) -&gt; Self</code></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl From &lt; ToolName &gt; for ToolKey</code></summary><table><tbody><tr><td>constructor</td><td>from</td><td><code>fn from (name : ToolName) -&gt; Self</code></td></tr></tbody></table></details><details><summary><code>impl From &lt; &amp; ToolKey &gt; for ToolKey</code></summary><table><tbody><tr><td>constructor</td><td>from</td><td><code>fn from (name : &amp; ToolKey) -&gt; Self</code></td></tr></tbody></table></details><details><summary><code>impl fmt :: Display for ToolKey</code></summary><table><tbody><tr><td>method</td><td>fmt</td><td><code>fn fmt (&amp; self , f : &amp; mut fmt :: Formatter &lt; '_ &gt;) -&gt; fmt :: Result</code></td></tr></tbody></table></details></div>
+  <code class="signature">pub struct <a class="symbol-link" href="eos-tools--src-core-name-rs.html#item-struct-ToolKey-139">ToolKey</a></code>
+  <p class="docstring">The registry key for a public model-facing tool.<br>Built-in tools still use [`ToolName`]. Plugin tools are validated dynamic<br>names such as `lsp.hover`, carried as a typed key so the registry can accept<br>plugin-provided tools without extending the built-in enum.</p>
+  <div class="tags"><span>derive: Clone</span><span>derive: Debug</span><span>derive: Deserialize</span><span>derive: Eq</span><span>derive: Hash</span><span>derive: JsonSchema</span><span>derive: Ord</span><span>derive: PartialEq</span><span>derive: PartialOrd</span><span>derive: Serialize</span><span>schemars: transparent</span><span>serde</span><span>serde: transparent</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>0</td><td><code>String</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-from-wire-152"><td>constructor</td><td>from_wire</td><td><code>pub fn <a class="symbol-link" href="eos-tools--src-core-intent-rs.html#method-from-wire-52">from_wire</a> (value : &amp; str) -&gt; Option &lt; Self &gt;</code><p class="docstring">Parse a wire tool name into a registry key.<br>Built-ins are always accepted. Dynamic plugin names must be a dotted<br>`&lt;plugin&gt;.&lt;op&gt;` name with non-empty identifier segments; this is enough<br>for agent-profile validation to reach the registry lookup while rejecting<br>arbitrary strings that are neither built-ins nor plugin tools.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Parse a wire tool name into a registry key.</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// Built-ins are always accepted. Dynamic plugin names must be a dotted</span>
+    <span class="rs-comment">/// `&lt;plugin&gt;.&lt;op&gt;` name with non-empty identifier segments; this is enough</span>
+    <span class="rs-comment">/// for agent-profile validation to reach the registry lookup while rejecting</span>
+    <span class="rs-comment">/// arbitrary strings that are neither built-ins nor plugin tools.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-core-intent-rs.html#method-from-wire-52">from_wire</a>(value: &amp;str) -&gt; <span class="rs-type">Option</span>&lt;<span class="rs-self">Self</span>&gt; {
+        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(name) = <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-fn" href="eos-tools--src-core-intent-rs.html#method-from-wire-52">from_wire</a>(value) {
+            <span class="rs-kw">return</span> <span class="rs-type">Some</span>(<span class="rs-self">Self</span>::<a class="symbol-link rs-fn" href="eos-tools--src-core-intent-rs.html#method-from-63">from</a>(name));
+        }
+        <span class="rs-kw">if</span> <a class="symbol-link rs-fn" href="eos-tools--src-core-name-rs.html#item-fn-is-valid-dynamic-tool-name-207">is_valid_dynamic_tool_name</a>(value) {
+            <span class="rs-type">Some</span>(<span class="rs-self">Self</span>(value.to_owned()))
+        } <span class="rs-kw">else</span> {
+            <span class="rs-type">None</span>
+        }
+    }
+</code></pre>
+</details></td></tr><tr id="method-as-str-176"><td>method</td><td>as_str</td><td><code>pub fn <a class="symbol-link" href="eos-tools--src-core-intent-rs.html#method-as-str-42">as_str</a> (&amp; self) -&gt; &amp; str</code><p class="docstring">The model/provider wire string.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// The model/provider wire string.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-core-intent-rs.html#method-as-str-42">as_str</a>(&amp;<span class="rs-self">self</span>) -&gt; &amp;str {
+        &amp;<span class="rs-self">self</span>.0
+    }
+</code></pre>
+</details></td></tr><tr id="method-as-builtin-182"><td>method</td><td>as_builtin</td><td><code>pub fn <a class="symbol-link" href="eos-tools--src-core-name-rs.html#method-as-builtin-182">as_builtin</a> (&amp; self) -&gt; Option &lt; <a class="symbol-link" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a> &gt;</code><p class="docstring">The built-in tool name, when this key names one.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// The built-in tool name, when this key names one.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-core-name-rs.html#method-as-builtin-182">as_builtin</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>&gt; {
+        <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-fn" href="eos-tools--src-core-intent-rs.html#method-from-wire-52">from_wire</a>(&amp;<span class="rs-self">self</span>.0)
+    }
+</code></pre>
+</details></td></tr><tr id="method-dynamic-170"><td>associated-fn</td><td>dynamic</td><td><code>pub fn <a class="symbol-link" href="eos-tools--src-core-name-rs.html#method-dynamic-170">dynamic</a> (value : impl Into &lt; String &gt;) -&gt; Self</code><p class="docstring">Build a dynamic tool key from a catalog-validated name.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Build a dynamic tool key from a catalog-validated name.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-core-name-rs.html#method-dynamic-170">dynamic</a>(value: <span class="rs-kw">impl</span> <span class="rs-type">Into</span>&lt;<span class="rs-type">String</span>&gt;) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">Self</span>(value.into())
+    }
+</code></pre>
+</details></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl From &lt; <a class="symbol-link" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a> &gt; for <a class="symbol-link" href="eos-tools--src-core-name-rs.html#item-struct-ToolKey-139">ToolKey</a></code></summary><table><tbody><tr id="method-from-190"><td>constructor</td><td>from</td><td><code>fn <a class="symbol-link" href="eos-tools--src-core-intent-rs.html#method-from-63">from</a> (name : <a class="symbol-link" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>) -&gt; Self</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-core-intent-rs.html#method-from-63">from</a>(name: <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">Self</span>(name.<a class="symbol-link rs-fn" href="eos-tools--src-core-intent-rs.html#method-as-str-42">as_str</a>().to_owned())
+    }
+</code></pre>
+</details></td></tr></tbody></table></details><details><summary><code>impl From &lt; &amp; <a class="symbol-link" href="eos-tools--src-core-name-rs.html#item-struct-ToolKey-139">ToolKey</a> &gt; for <a class="symbol-link" href="eos-tools--src-core-name-rs.html#item-struct-ToolKey-139">ToolKey</a></code></summary><table><tbody><tr id="method-from-196"><td>constructor</td><td>from</td><td><code>fn <a class="symbol-link" href="eos-tools--src-core-intent-rs.html#method-from-63">from</a> (name : &amp; <a class="symbol-link" href="eos-tools--src-core-name-rs.html#item-struct-ToolKey-139">ToolKey</a>) -&gt; Self</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-core-intent-rs.html#method-from-63">from</a>(name: &amp;<a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-struct-ToolKey-139">ToolKey</a>) -&gt; <span class="rs-self">Self</span> {
+        name.clone()
+    }
+</code></pre>
+</details></td></tr></tbody></table></details><details><summary><code>impl fmt :: Display for <a class="symbol-link" href="eos-tools--src-core-name-rs.html#item-struct-ToolKey-139">ToolKey</a></code></summary><table><tbody><tr id="method-fmt-202"><td>method</td><td>fmt</td><td><code>fn <a class="symbol-link" href="eos-tools--src-core-metadata-rs.html#method-fmt-51">fmt</a> (&amp; self , f : &amp; mut fmt :: Formatter &lt; &#x27;_ &gt;) -&gt; fmt :: Result</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-core-metadata-rs.html#method-fmt-51">fmt</a>(&amp;<span class="rs-self">self</span>, f: &amp;<span class="rs-kw">mut</span> fmt::<span class="rs-type">Formatter</span>&lt;&#x27;_&gt;) -&gt; fmt::<span class="rs-type">Result</span> {
+        f.write_str(<span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-tools--src-core-intent-rs.html#method-as-str-42">as_str</a>())
+    }
+</code></pre>
+</details></td></tr></tbody></table></details></div>
+
   <p class="source">crates/eos-tools/src/core/name.rs:139</p>
-</article><article class="type-card" data-kind="enum" data-kind-list="enum field impl method type-model" data-filter-text="enum ToolName pub pub enum ToolName crates/eos-tools/src/core/name.rs  ">
+</article><article id="item-enum-ToolName-17" class="type-card" data-kind="enum" data-kind-list="enum field impl method type-model" data-filter-text="enum ToolName pub pub enum ToolName crates/eos-tools/src/core/name.rs  ">
   <div class="item-head">
     <span class="kind">enum</span>
     <h3>ToolName</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub enum ToolName</code>
-  <div class="tags"><span>serde</span></div>
-  <h4>Variants</h4><table><tbody><tr><td>ReadFile</td><td><code></code></td></tr><tr><td>WriteFile</td><td><code></code></td></tr><tr><td>EditFile</td><td><code></code></td></tr><tr><td>MultiEdit</td><td><code></code></td></tr><tr><td>ExecCommand</td><td><code></code></td></tr><tr><td>WriteStdin</td><td><code></code></td></tr><tr><td>ReadCommandProgress</td><td><code></code></td></tr><tr><td>EnterIsolatedWorkspace</td><td><code></code></td></tr><tr><td>ExitIsolatedWorkspace</td><td><code></code></td></tr><tr><td>RunSubagent</td><td><code></code></td></tr><tr><td>CheckSubagentProgress</td><td><code></code></td></tr><tr><td>CancelSubagent</td><td><code></code></td></tr><tr><td>AskAdvisor</td><td><code></code></td></tr><tr><td>DelegateWorkflow</td><td><code></code></td></tr><tr><td>CheckWorkflowStatus</td><td><code></code></td></tr><tr><td>CancelWorkflow</td><td><code></code></td></tr><tr><td>LoadSkillReference</td><td><code></code></td></tr><tr><td>SubmitRootOutcome</td><td><code></code></td></tr><tr><td>SubmitGeneratorOutcome</td><td><code></code></td></tr><tr><td>SubmitReducerOutcome</td><td><code></code></td></tr><tr><td>SubmitPlannerOutcome</td><td><code></code></td></tr><tr><td>SubmitAdvisorFeedback</td><td><code></code></td></tr><tr><td>SubmitExplorationResult</td><td><code></code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr><td>constructor</td><td>from_wire</td><td><code>pub fn from_wire (value : &amp; str) -&gt; Option &lt; Self &gt;</code></td></tr><tr><td>method</td><td>as_str</td><td><code>pub const fn as_str (self) -&gt; &amp; 'static str</code></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl fmt :: Display for ToolName</code></summary><table><tbody><tr><td>method</td><td>fmt</td><td><code>fn fmt (&amp; self , f : &amp; mut fmt :: Formatter &lt; '_ &gt;) -&gt; fmt :: Result</code></td></tr></tbody></table></details><details><summary><code>impl FromStr for ToolName</code></summary><table><tbody><tr><td>constructor</td><td>from_str</td><td><code>fn from_str (s : &amp; str) -&gt; Result &lt; Self , Self :: Err &gt;</code></td></tr></tbody></table></details></div>
+  <code class="signature">pub enum <a class="symbol-link" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a></code>
+  <p class="docstring">The typed name of a public tool (`type-no-stringly`). `#[non_exhaustive]`:<br>new tools are added here, never as raw strings.</p>
+  <div class="tags"><span>derive: Clone</span><span>derive: Copy</span><span>derive: Debug</span><span>derive: Deserialize</span><span>derive: Eq</span><span>derive: Hash</span><span>derive: JsonSchema</span><span>derive: Ord</span><span>derive: PartialEq</span><span>derive: PartialOrd</span><span>derive: Serialize</span><span>non_exhaustive</span><span>serde</span><span>serde: rename_all</span></div>
+  <h4>Variants</h4><table><tbody><tr><td>ReadFile</td><td><code></code></td></tr><tr><td>WriteFile</td><td><code></code></td></tr><tr><td>EditFile</td><td><code></code></td></tr><tr><td>MultiEdit</td><td><code></code></td></tr><tr><td>ExecCommand</td><td><code></code></td></tr><tr><td>WriteStdin</td><td><code></code></td></tr><tr><td>ReadCommandProgress</td><td><code></code></td></tr><tr><td>EnterIsolatedWorkspace</td><td><code></code></td></tr><tr><td>ExitIsolatedWorkspace</td><td><code></code></td></tr><tr><td>RunSubagent</td><td><code></code></td></tr><tr><td>CheckSubagentProgress</td><td><code></code></td></tr><tr><td>CancelSubagent</td><td><code></code></td></tr><tr><td>AskAdvisor</td><td><code></code></td></tr><tr><td>DelegateWorkflow</td><td><code></code></td></tr><tr><td>CheckWorkflowStatus</td><td><code></code></td></tr><tr><td>CancelWorkflow</td><td><code></code></td></tr><tr><td>LoadSkillReference</td><td><code></code></td></tr><tr><td>SubmitRootOutcome</td><td><code></code></td></tr><tr><td>SubmitGeneratorOutcome</td><td><code></code></td></tr><tr><td>SubmitReducerOutcome</td><td><code></code></td></tr><tr><td>SubmitPlannerOutcome</td><td><code></code></td></tr><tr><td>SubmitAdvisorFeedback</td><td><code></code></td></tr><tr><td>SubmitExplorationResult</td><td><code></code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-from-wire-132"><td>constructor</td><td>from_wire</td><td><code>pub fn <a class="symbol-link" href="eos-tools--src-core-intent-rs.html#method-from-wire-52">from_wire</a> (value : &amp; str) -&gt; Option &lt; Self &gt;</code><p class="docstring">Parse a wire string into a [`ToolName`], or `None` when unknown.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Parse a wire string into a [`ToolName`], or `None` when unknown.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-core-intent-rs.html#method-from-wire-52">from_wire</a>(value: &amp;str) -&gt; <span class="rs-type">Option</span>&lt;<span class="rs-self">Self</span>&gt; {
+        <span class="rs-self">Self</span>::<span class="rs-type">ALL</span>.into_iter().find(|name| name.<a class="symbol-link rs-fn" href="eos-tools--src-core-intent-rs.html#method-as-str-42">as_str</a>() == value)
+    }
+</code></pre>
+</details></td></tr><tr id="method-as-str-102"><td>method</td><td>as_str</td><td><code>pub const fn <a class="symbol-link" href="eos-tools--src-core-intent-rs.html#method-as-str-42">as_str</a> (self) -&gt; &amp; &#x27;static str</code><p class="docstring">The wire string the model calls this tool by.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// The wire string the model calls this tool by.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-core-intent-rs.html#method-as-str-42">as_str</a>(<span class="rs-self">self</span>) -&gt; &amp;&#x27;<span class="rs-kw">static</span> str {
+        <span class="rs-kw">match</span> <span class="rs-self">self</span> {
+            <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-read-file-rs.html#item-struct-ReadFile-36">ReadFile</a> =&gt; &quot;read_file&quot;,
+            <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-write-file-rs.html#item-struct-WriteFile-27">WriteFile</a> =&gt; &quot;write_file&quot;,
+            <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-edit-file-rs.html#item-struct-EditFile-30">EditFile</a> =&gt; &quot;edit_file&quot;,
+            <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-multi-edit-rs.html#item-struct-MultiEdit-34">MultiEdit</a> =&gt; &quot;multi_edit&quot;,
+            <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-exec-command-rs.html#item-struct-ExecCommand-30">ExecCommand</a> =&gt; &quot;exec_command&quot;,
+            <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-write-stdin-rs.html#item-struct-WriteStdin-29">WriteStdin</a> =&gt; &quot;write_stdin&quot;,
+            <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-read-command-progress-rs.html#item-struct-ReadCommandProgress-34">ReadCommandProgress</a> =&gt; &quot;read_command_progress&quot;,
+            <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-isolated-workspace-enter-isolated-workspace-rs.html#item-struct-EnterIsolatedWorkspace-30">EnterIsolatedWorkspace</a> =&gt; &quot;enter_isolated_workspace&quot;,
+            <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-isolated-workspace-exit-isolated-workspace-rs.html#item-struct-ExitIsolatedWorkspace-35">ExitIsolatedWorkspace</a> =&gt; &quot;exit_isolated_workspace&quot;,
+            <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-subagent-run-subagent-rs.html#item-struct-RunSubagent-30">RunSubagent</a> =&gt; &quot;run_subagent&quot;,
+            <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-subagent-check-subagent-progress-rs.html#item-struct-CheckSubagentProgress-32">CheckSubagentProgress</a> =&gt; &quot;check_subagent_progress&quot;,
+            <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-subagent-cancel-subagent-rs.html#item-struct-CancelSubagent-30">CancelSubagent</a> =&gt; &quot;cancel_subagent&quot;,
+            <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-ask-helper-ask-advisor-rs.html#item-struct-AskAdvisor-36">AskAdvisor</a> =&gt; &quot;ask_advisor&quot;,
+            <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-workflow-delegate-workflow-rs.html#item-struct-DelegateWorkflow-27">DelegateWorkflow</a> =&gt; &quot;delegate_workflow&quot;,
+            <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-workflow-check-workflow-status-rs.html#item-struct-CheckWorkflowStatus-30">CheckWorkflowStatus</a> =&gt; &quot;check_workflow_status&quot;,
+            <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-workflow-cancel-workflow-rs.html#item-struct-CancelWorkflow-30">CancelWorkflow</a> =&gt; &quot;cancel_workflow&quot;,
+            <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-skills-load-skill-reference-rs.html#item-struct-LoadSkillReference-38">LoadSkillReference</a> =&gt; &quot;load_skill_reference&quot;,
+            <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-submission-root-submit-root-outcome-rs.html#item-struct-SubmitRootOutcome-31">SubmitRootOutcome</a> =&gt; &quot;submit_root_outcome&quot;,
+            <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-submission-generator-submit-generator-outcome-rs.html#item-struct-SubmitGeneratorOutcome-24">SubmitGeneratorOutcome</a> =&gt; &quot;submit_generator_outcome&quot;,
+            <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-submission-reducer-submit-reducer-outcome-rs.html#item-struct-SubmitReducerOutcome-24">SubmitReducerOutcome</a> =&gt; &quot;submit_reducer_outcome&quot;,
+            <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-submission-planner-submit-planner-outcome-rs.html#item-struct-SubmitPlannerOutcome-50">SubmitPlannerOutcome</a> =&gt; &quot;submit_planner_outcome&quot;,
+            <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-submission-advisor-submit-advisor-feedback-rs.html#item-struct-SubmitAdvisorFeedback-46">SubmitAdvisorFeedback</a> =&gt; &quot;submit_advisor_feedback&quot;,
+            <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-submission-explorer-submit-exploration-result-rs.html#item-struct-SubmitExplorationResult-32">SubmitExplorationResult</a> =&gt; &quot;submit_exploration_result&quot;,
+        }
+    }
+</code></pre>
+</details></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl fmt :: Display for <a class="symbol-link" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a></code></summary><table><tbody><tr id="method-fmt-224"><td>method</td><td>fmt</td><td><code>fn <a class="symbol-link" href="eos-tools--src-core-metadata-rs.html#method-fmt-51">fmt</a> (&amp; self , f : &amp; mut fmt :: Formatter &lt; &#x27;_ &gt;) -&gt; fmt :: Result</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-core-metadata-rs.html#method-fmt-51">fmt</a>(&amp;<span class="rs-self">self</span>, f: &amp;<span class="rs-kw">mut</span> fmt::<span class="rs-type">Formatter</span>&lt;&#x27;_&gt;) -&gt; fmt::<span class="rs-type">Result</span> {
+        f.write_str(<span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-tools--src-core-intent-rs.html#method-as-str-42">as_str</a>())
+    }
+</code></pre>
+</details></td></tr></tbody></table></details><details><summary><code>impl FromStr for <a class="symbol-link" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a></code></summary><table><tbody><tr id="method-from-str-232"><td>constructor</td><td>from_str</td><td><code>fn <a class="symbol-link" href="eos-tools--src-core-name-rs.html#method-from-str-232">from_str</a> (s : &amp; str) -&gt; Result &lt; Self , Self :: Err &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-core-name-rs.html#method-from-str-232">from_str</a>(s: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-self">Self</span>, <span class="rs-self">Self</span>::<span class="rs-type">Err</span>&gt; {
+        <span class="rs-self">Self</span>::<a class="symbol-link rs-fn" href="eos-tools--src-core-intent-rs.html#method-from-wire-52">from_wire</a>(s).ok_or(())
+    }
+</code></pre>
+</details></td></tr></tbody></table></details></div>
+
   <p class="source">crates/eos-tools/src/core/name.rs:17</p>
-</article><div class="group-label">Standalone Functions</div><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn is_valid_dynamic_tool_name private fn is_valid_dynamic_tool_name (value : &amp; str) -&gt; bool crates/eos-tools/src/core/name.rs  ">
+</article><div class="group-label">Standalone Functions</div><article id="item-fn-is-valid-dynamic-tool-name-207" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn is_valid_dynamic_tool_name private fn is_valid_dynamic_tool_name (value : &amp; str) -&gt; bool crates/eos-tools/src/core/name.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>is_valid_dynamic_tool_name</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn is_valid_dynamic_tool_name (value : &amp; str) -&gt; bool</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-tools--src-core-name-rs.html#item-fn-is-valid-dynamic-tool-name-207">is_valid_dynamic_tool_name</a> (value : &amp; str) -&gt; bool</code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-core-name-rs.html#item-fn-is-valid-dynamic-tool-name-207">is_valid_dynamic_tool_name</a>(value: &amp;str) -&gt; bool {
+    <span class="rs-kw">let</span> <span class="rs-type">Some</span>((plugin, op)) = value.split_once(&#x27;.&#x27;) <span class="rs-kw">else</span> {
+        <span class="rs-kw">return</span> <span class="rs-kw">false</span>;
+    };
+    <a class="symbol-link rs-fn" href="eos-tools--src-core-name-rs.html#item-fn-is-valid-tool-segment-214">is_valid_tool_segment</a>(plugin) &amp;&amp; op.split(&#x27;.&#x27;).all(is_valid_tool_segment)
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-tools/src/core/name.rs:207</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn is_valid_tool_segment private fn is_valid_tool_segment (value : &amp; str) -&gt; bool crates/eos-tools/src/core/name.rs  ">
+</article><article id="item-fn-is-valid-tool-segment-214" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn is_valid_tool_segment private fn is_valid_tool_segment (value : &amp; str) -&gt; bool crates/eos-tools/src/core/name.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>is_valid_tool_segment</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn is_valid_tool_segment (value : &amp; str) -&gt; bool</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-tools--src-core-name-rs.html#item-fn-is-valid-tool-segment-214">is_valid_tool_segment</a> (value : &amp; str) -&gt; bool</code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-core-name-rs.html#item-fn-is-valid-tool-segment-214">is_valid_tool_segment</a>(value: &amp;str) -&gt; bool {
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> chars = value.chars();
+    <span class="rs-kw">match</span> chars.next() {
+        <span class="rs-type">Some</span>(c) <span class="rs-kw">if</span> c.is_ascii_alphabetic() || c == &#x27;_&#x27; =&gt; {}
+        _ =&gt; <span class="rs-kw">return</span> <span class="rs-kw">false</span>,
+    }
+    chars.all(|c| c.is_ascii_alphanumeric() || c == &#x27;_&#x27;)
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-tools/src/core/name.rs:214</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn all_is_complete_and_unique private fn all_is_complete_and_unique () crates/eos-tools/src/core/name.rs  ">
+</article><article id="item-fn-all-is-complete-and-unique-242" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn all_is_complete_and_unique private fn all_is_complete_and_unique () crates/eos-tools/src/core/name.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>all_is_complete_and_unique</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn all_is_complete_and_unique ()</code>
-  <div class="tags"></div>
+  <code class="signature">fn <a class="symbol-link" href="eos-tools--src-core-name-rs.html#item-fn-all-is-complete-and-unique-242">all_is_complete_and_unique</a> ()</code>
+  <div class="tags"><span>test</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-core-name-rs.html#item-fn-all-is-complete-and-unique-242">all_is_complete_and_unique</a>() {
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> seen = std::collections::<span class="rs-type">BTreeSet</span>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>();
+        <span class="rs-kw">for</span> name <span class="rs-kw">in</span> <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<span class="rs-type">ALL</span> {
+            assert!(seen.insert(name.<a class="symbol-link rs-fn" href="eos-tools--src-core-intent-rs.html#method-as-str-42">as_str</a>()), &quot;duplicate {}&quot;, name.<a class="symbol-link rs-fn" href="eos-tools--src-core-intent-rs.html#method-as-str-42">as_str</a>());
+        }
+        assert_eq!(seen.<a class="symbol-link rs-fn" href="eos-tools--src-registry-tool-registry-rs.html#method-len-90">len</a>(), <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<span class="rs-type">ALL</span>.<a class="symbol-link rs-fn" href="eos-tools--src-registry-tool-registry-rs.html#method-len-90">len</a>());
+    }
+</code></pre>
+</details>
 
   <p class="source">crates/eos-tools/src/core/name.rs:242</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn as_str_matches_serde_rename private fn as_str_matches_serde_rename () crates/eos-tools/src/core/name.rs  ">
+</article><article id="item-fn-as-str-matches-serde-rename-252" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn as_str_matches_serde_rename private fn as_str_matches_serde_rename () crates/eos-tools/src/core/name.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>as_str_matches_serde_rename</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn as_str_matches_serde_rename ()</code>
-  <div class="tags"></div>
+  <code class="signature">fn <a class="symbol-link" href="eos-tools--src-core-name-rs.html#item-fn-as-str-matches-serde-rename-252">as_str_matches_serde_rename</a> ()</code>
+  <div class="tags"><span>test</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-core-name-rs.html#item-fn-as-str-matches-serde-rename-252">as_str_matches_serde_rename</a>() {
+        <span class="rs-kw">for</span> name <span class="rs-kw">in</span> <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<span class="rs-type">ALL</span> {
+            <span class="rs-kw">let</span> serde_value = serde_json::to_value(name).expect(&quot;serialize&quot;);
+            assert_eq!(serde_value, serde_json::json!(name.<a class="symbol-link rs-fn" href="eos-tools--src-core-intent-rs.html#method-as-str-42">as_str</a>()));
+            <span class="rs-comment">// round-trip through from_wire and serde.</span>
+            assert_eq!(<a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-fn" href="eos-tools--src-core-intent-rs.html#method-from-wire-52">from_wire</a>(name.<a class="symbol-link rs-fn" href="eos-tools--src-core-intent-rs.html#method-as-str-42">as_str</a>()), <span class="rs-type">Some</span>(name));
+            <span class="rs-kw">let</span> back: <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a> =
+                serde_json::from_value(serde_json::json!(name.<a class="symbol-link rs-fn" href="eos-tools--src-core-intent-rs.html#method-as-str-42">as_str</a>())).expect(&quot;parse&quot;);
+            assert_eq!(back, name);
+        }
+        assert_eq!(<a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-fn" href="eos-tools--src-core-intent-rs.html#method-from-wire-52">from_wire</a>(&quot;not_a_tool&quot;), <span class="rs-type">None</span>);
+    }
+</code></pre>
+</details>
 
   <p class="source">crates/eos-tools/src/core/name.rs:252</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn tool_key_accepts_builtin_and_plugin_names private fn tool_key_accepts_builtin_and_plugin_names () crates/eos-tools/src/core/name.rs  ">
+</article><article id="item-fn-tool-key-accepts-builtin-and-plugin-names-266" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn tool_key_accepts_builtin_and_plugin_names private fn tool_key_accepts_builtin_and_plugin_names () crates/eos-tools/src/core/name.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>tool_key_accepts_builtin_and_plugin_names</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn tool_key_accepts_builtin_and_plugin_names ()</code>
-  <div class="tags"></div>
+  <code class="signature">fn <a class="symbol-link" href="eos-tools--src-core-name-rs.html#item-fn-tool-key-accepts-builtin-and-plugin-names-266">tool_key_accepts_builtin_and_plugin_names</a> ()</code>
+  <div class="tags"><span>test</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-core-name-rs.html#item-fn-tool-key-accepts-builtin-and-plugin-names-266">tool_key_accepts_builtin_and_plugin_names</a>() {
+        assert_eq!(
+            <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-struct-ToolKey-139">ToolKey</a>::<a class="symbol-link rs-fn" href="eos-tools--src-core-intent-rs.html#method-from-wire-52">from_wire</a>(&quot;read_file&quot;).and_then(|key| key.<a class="symbol-link rs-fn" href="eos-tools--src-core-name-rs.html#method-as-builtin-182">as_builtin</a>()),
+            <span class="rs-type">Some</span>(<a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-read-file-rs.html#item-struct-ReadFile-36">ReadFile</a>)
+        );
+        <span class="rs-kw">let</span> plugin = <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-struct-ToolKey-139">ToolKey</a>::<a class="symbol-link rs-fn" href="eos-tools--src-core-intent-rs.html#method-from-wire-52">from_wire</a>(&quot;lsp.hover&quot;).expect(&quot;plugin key&quot;);
+        assert_eq!(plugin.<a class="symbol-link rs-fn" href="eos-tools--src-core-intent-rs.html#method-as-str-42">as_str</a>(), &quot;lsp.hover&quot;);
+        assert_eq!(plugin.<a class="symbol-link rs-fn" href="eos-tools--src-core-name-rs.html#method-as-builtin-182">as_builtin</a>(), <span class="rs-type">None</span>);
+        assert!(<a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-struct-ToolKey-139">ToolKey</a>::<a class="symbol-link rs-fn" href="eos-tools--src-core-intent-rs.html#method-from-wire-52">from_wire</a>(&quot;not_a_builtin&quot;).is_none());
+        assert!(<a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-struct-ToolKey-139">ToolKey</a>::<a class="symbol-link rs-fn" href="eos-tools--src-core-intent-rs.html#method-from-wire-52">from_wire</a>(&quot;lsp.&quot;).is_none());
+        assert!(<a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-struct-ToolKey-139">ToolKey</a>::<a class="symbol-link rs-fn" href="eos-tools--src-core-intent-rs.html#method-from-wire-52">from_wire</a>(&quot;.hover&quot;).is_none());
+    }
+</code></pre>
+</details>
 
   <p class="source">crates/eos-tools/src/core/name.rs:266</p>
 </article></div>
 </section></div>
 </main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/eos-tools/src/core/name.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-comment">//! [`ToolName`] / [`ToolKey`] — typed names for model-facing tools.</span>
+<span class="rs-comment">//!</span>
+<span class="rs-comment">//! Ports `_names.py` **plus** the five names that module omits (`write_stdin`,</span>
+<span class="rs-comment">//! `read_command_progress`, `enter_isolated_workspace`, `exit_isolated_workspace`,</span>
+<span class="rs-comment">//! `load_skill_reference`) and the two subagent control tools (`check_subagent_progress`,</span>
+<span class="rs-comment">//! `cancel_subagent`) — GC-tools-04. The authoritative set is the union of the</span>
+<span class="rs-comment">//! six registration sites, not `_names.py`. Each variant maps to its wire string</span>
+<span class="rs-comment">//! (the exact `snake_case` of the variant), so `serde` `rename_all` and the</span>
+<span class="rs-comment">//! hand-written [`ToolName::as_str`] agree (asserted by a test).</span>
+
+<span class="rs-kw">use</span> std::fmt;
+<span class="rs-kw">use</span> std::str::<span class="rs-type">FromStr</span>;
+
+<span class="rs-kw">use</span> schemars::<span class="rs-type">JsonSchema</span>;
+<span class="rs-kw">use</span> serde::{<span class="rs-type">Deserialize</span>, <span class="rs-type">Serialize</span>};
+
+<span class="rs-comment">/// The typed name of a public tool (`type-no-stringly`). `#[non_exhaustive]`:</span>
+<span class="rs-comment">/// new tools are added here, never as raw strings.</span>
+#[derive(
+    <span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">Copy</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Eq</span>, <span class="rs-type">Hash</span>, <span class="rs-type">PartialOrd</span>, <span class="rs-type">Ord</span>, <span class="rs-type">Serialize</span>, <span class="rs-type">Deserialize</span>, <span class="rs-type">JsonSchema</span>,
+)]
+#[serde(rename_all = &quot;snake_case&quot;)]
+#[non_exhaustive]
+<span class="rs-kw">pub</span> <span class="rs-kw">enum</span> <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a> {
+    <span class="rs-comment">/// `read_file` (sandbox).</span>
+    <a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-read-file-rs.html#item-struct-ReadFile-36">ReadFile</a>,
+    <span class="rs-comment">/// `write_file` (sandbox).</span>
+    <a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-write-file-rs.html#item-struct-WriteFile-27">WriteFile</a>,
+    <span class="rs-comment">/// `edit_file` (sandbox).</span>
+    <a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-edit-file-rs.html#item-struct-EditFile-30">EditFile</a>,
+    <span class="rs-comment">/// `multi_edit` (sandbox).</span>
+    <a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-multi-edit-rs.html#item-struct-MultiEdit-34">MultiEdit</a>,
+    <span class="rs-comment">/// `exec_command` (sandbox command session).</span>
+    <a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-exec-command-rs.html#item-struct-ExecCommand-30">ExecCommand</a>,
+    <span class="rs-comment">/// `write_stdin` (sandbox command session; omitted from `_names.py`).</span>
+    <a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-write-stdin-rs.html#item-struct-WriteStdin-29">WriteStdin</a>,
+    <span class="rs-comment">/// `read_command_progress` (sandbox command session).</span>
+    <a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-read-command-progress-rs.html#item-struct-ReadCommandProgress-34">ReadCommandProgress</a>,
+    <span class="rs-comment">/// `enter_isolated_workspace` (omitted from `_names.py`).</span>
+    <a class="symbol-link rs-type" href="eos-tools--src-tools-isolated-workspace-enter-isolated-workspace-rs.html#item-struct-EnterIsolatedWorkspace-30">EnterIsolatedWorkspace</a>,
+    <span class="rs-comment">/// `exit_isolated_workspace` (omitted from `_names.py`).</span>
+    <a class="symbol-link rs-type" href="eos-tools--src-tools-isolated-workspace-exit-isolated-workspace-rs.html#item-struct-ExitIsolatedWorkspace-35">ExitIsolatedWorkspace</a>,
+    <span class="rs-comment">/// `run_subagent` (subagent).</span>
+    <a class="symbol-link rs-type" href="eos-tools--src-tools-subagent-run-subagent-rs.html#item-struct-RunSubagent-30">RunSubagent</a>,
+    <span class="rs-comment">/// `check_subagent_progress` (subagent control).</span>
+    <a class="symbol-link rs-type" href="eos-tools--src-tools-subagent-check-subagent-progress-rs.html#item-struct-CheckSubagentProgress-32">CheckSubagentProgress</a>,
+    <span class="rs-comment">/// `cancel_subagent` (subagent control).</span>
+    <a class="symbol-link rs-type" href="eos-tools--src-tools-subagent-cancel-subagent-rs.html#item-struct-CancelSubagent-30">CancelSubagent</a>,
+    <span class="rs-comment">/// `ask_advisor` (ask helper).</span>
+    <a class="symbol-link rs-type" href="eos-tools--src-tools-ask-helper-ask-advisor-rs.html#item-struct-AskAdvisor-36">AskAdvisor</a>,
+    <span class="rs-comment">/// `delegate_workflow` (workflow).</span>
+    <a class="symbol-link rs-type" href="eos-tools--src-tools-workflow-delegate-workflow-rs.html#item-struct-DelegateWorkflow-27">DelegateWorkflow</a>,
+    <span class="rs-comment">/// `check_workflow_status` (workflow).</span>
+    <a class="symbol-link rs-type" href="eos-tools--src-tools-workflow-check-workflow-status-rs.html#item-struct-CheckWorkflowStatus-30">CheckWorkflowStatus</a>,
+    <span class="rs-comment">/// `cancel_workflow` (workflow).</span>
+    <a class="symbol-link rs-type" href="eos-tools--src-tools-workflow-cancel-workflow-rs.html#item-struct-CancelWorkflow-30">CancelWorkflow</a>,
+    <span class="rs-comment">/// `load_skill_reference` (skills; omitted from `_names.py`).</span>
+    <a class="symbol-link rs-type" href="eos-tools--src-tools-skills-load-skill-reference-rs.html#item-struct-LoadSkillReference-38">LoadSkillReference</a>,
+    <span class="rs-comment">/// `submit_root_outcome` (submission, terminal).</span>
+    <a class="symbol-link rs-type" href="eos-tools--src-tools-submission-root-submit-root-outcome-rs.html#item-struct-SubmitRootOutcome-31">SubmitRootOutcome</a>,
+    <span class="rs-comment">/// `submit_generator_outcome` (submission, terminal).</span>
+    <a class="symbol-link rs-type" href="eos-tools--src-tools-submission-generator-submit-generator-outcome-rs.html#item-struct-SubmitGeneratorOutcome-24">SubmitGeneratorOutcome</a>,
+    <span class="rs-comment">/// `submit_reducer_outcome` (submission, terminal).</span>
+    <a class="symbol-link rs-type" href="eos-tools--src-tools-submission-reducer-submit-reducer-outcome-rs.html#item-struct-SubmitReducerOutcome-24">SubmitReducerOutcome</a>,
+    <span class="rs-comment">/// `submit_planner_outcome` (submission, terminal).</span>
+    <a class="symbol-link rs-type" href="eos-tools--src-tools-submission-planner-submit-planner-outcome-rs.html#item-struct-SubmitPlannerOutcome-50">SubmitPlannerOutcome</a>,
+    <span class="rs-comment">/// `submit_advisor_feedback` (submission, terminal).</span>
+    <a class="symbol-link rs-type" href="eos-tools--src-tools-submission-advisor-submit-advisor-feedback-rs.html#item-struct-SubmitAdvisorFeedback-46">SubmitAdvisorFeedback</a>,
+    <span class="rs-comment">/// `submit_exploration_result` (submission, terminal).</span>
+    <a class="symbol-link rs-type" href="eos-tools--src-tools-submission-explorer-submit-exploration-result-rs.html#item-struct-SubmitExplorationResult-32">SubmitExplorationResult</a>,
+}
+
+<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a> {
+    <span class="rs-comment">/// Every tool name, in a stable order. Used by registry-totality tests and</span>
+    <span class="rs-comment">/// as the canonical iteration order for default-set construction.</span>
+    <span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-type">ALL</span>: [<a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>; 23] = [
+        <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-read-file-rs.html#item-struct-ReadFile-36">ReadFile</a>,
+        <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-write-file-rs.html#item-struct-WriteFile-27">WriteFile</a>,
+        <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-edit-file-rs.html#item-struct-EditFile-30">EditFile</a>,
+        <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-multi-edit-rs.html#item-struct-MultiEdit-34">MultiEdit</a>,
+        <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-exec-command-rs.html#item-struct-ExecCommand-30">ExecCommand</a>,
+        <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-write-stdin-rs.html#item-struct-WriteStdin-29">WriteStdin</a>,
+        <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-read-command-progress-rs.html#item-struct-ReadCommandProgress-34">ReadCommandProgress</a>,
+        <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-isolated-workspace-enter-isolated-workspace-rs.html#item-struct-EnterIsolatedWorkspace-30">EnterIsolatedWorkspace</a>,
+        <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-isolated-workspace-exit-isolated-workspace-rs.html#item-struct-ExitIsolatedWorkspace-35">ExitIsolatedWorkspace</a>,
+        <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-subagent-run-subagent-rs.html#item-struct-RunSubagent-30">RunSubagent</a>,
+        <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-subagent-check-subagent-progress-rs.html#item-struct-CheckSubagentProgress-32">CheckSubagentProgress</a>,
+        <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-subagent-cancel-subagent-rs.html#item-struct-CancelSubagent-30">CancelSubagent</a>,
+        <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-ask-helper-ask-advisor-rs.html#item-struct-AskAdvisor-36">AskAdvisor</a>,
+        <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-workflow-delegate-workflow-rs.html#item-struct-DelegateWorkflow-27">DelegateWorkflow</a>,
+        <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-workflow-check-workflow-status-rs.html#item-struct-CheckWorkflowStatus-30">CheckWorkflowStatus</a>,
+        <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-workflow-cancel-workflow-rs.html#item-struct-CancelWorkflow-30">CancelWorkflow</a>,
+        <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-skills-load-skill-reference-rs.html#item-struct-LoadSkillReference-38">LoadSkillReference</a>,
+        <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-submission-root-submit-root-outcome-rs.html#item-struct-SubmitRootOutcome-31">SubmitRootOutcome</a>,
+        <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-submission-generator-submit-generator-outcome-rs.html#item-struct-SubmitGeneratorOutcome-24">SubmitGeneratorOutcome</a>,
+        <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-submission-reducer-submit-reducer-outcome-rs.html#item-struct-SubmitReducerOutcome-24">SubmitReducerOutcome</a>,
+        <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-submission-planner-submit-planner-outcome-rs.html#item-struct-SubmitPlannerOutcome-50">SubmitPlannerOutcome</a>,
+        <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-submission-advisor-submit-advisor-feedback-rs.html#item-struct-SubmitAdvisorFeedback-46">SubmitAdvisorFeedback</a>,
+        <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-submission-explorer-submit-exploration-result-rs.html#item-struct-SubmitExplorationResult-32">SubmitExplorationResult</a>,
+    ];
+
+    <span class="rs-comment">/// The wire string the model calls this tool by.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-core-intent-rs.html#method-as-str-42">as_str</a>(<span class="rs-self">self</span>) -&gt; &amp;&#x27;<span class="rs-kw">static</span> str {
+        <span class="rs-kw">match</span> <span class="rs-self">self</span> {
+            <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-read-file-rs.html#item-struct-ReadFile-36">ReadFile</a> =&gt; &quot;read_file&quot;,
+            <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-write-file-rs.html#item-struct-WriteFile-27">WriteFile</a> =&gt; &quot;write_file&quot;,
+            <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-edit-file-rs.html#item-struct-EditFile-30">EditFile</a> =&gt; &quot;edit_file&quot;,
+            <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-multi-edit-rs.html#item-struct-MultiEdit-34">MultiEdit</a> =&gt; &quot;multi_edit&quot;,
+            <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-exec-command-rs.html#item-struct-ExecCommand-30">ExecCommand</a> =&gt; &quot;exec_command&quot;,
+            <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-write-stdin-rs.html#item-struct-WriteStdin-29">WriteStdin</a> =&gt; &quot;write_stdin&quot;,
+            <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-read-command-progress-rs.html#item-struct-ReadCommandProgress-34">ReadCommandProgress</a> =&gt; &quot;read_command_progress&quot;,
+            <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-isolated-workspace-enter-isolated-workspace-rs.html#item-struct-EnterIsolatedWorkspace-30">EnterIsolatedWorkspace</a> =&gt; &quot;enter_isolated_workspace&quot;,
+            <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-isolated-workspace-exit-isolated-workspace-rs.html#item-struct-ExitIsolatedWorkspace-35">ExitIsolatedWorkspace</a> =&gt; &quot;exit_isolated_workspace&quot;,
+            <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-subagent-run-subagent-rs.html#item-struct-RunSubagent-30">RunSubagent</a> =&gt; &quot;run_subagent&quot;,
+            <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-subagent-check-subagent-progress-rs.html#item-struct-CheckSubagentProgress-32">CheckSubagentProgress</a> =&gt; &quot;check_subagent_progress&quot;,
+            <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-subagent-cancel-subagent-rs.html#item-struct-CancelSubagent-30">CancelSubagent</a> =&gt; &quot;cancel_subagent&quot;,
+            <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-ask-helper-ask-advisor-rs.html#item-struct-AskAdvisor-36">AskAdvisor</a> =&gt; &quot;ask_advisor&quot;,
+            <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-workflow-delegate-workflow-rs.html#item-struct-DelegateWorkflow-27">DelegateWorkflow</a> =&gt; &quot;delegate_workflow&quot;,
+            <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-workflow-check-workflow-status-rs.html#item-struct-CheckWorkflowStatus-30">CheckWorkflowStatus</a> =&gt; &quot;check_workflow_status&quot;,
+            <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-workflow-cancel-workflow-rs.html#item-struct-CancelWorkflow-30">CancelWorkflow</a> =&gt; &quot;cancel_workflow&quot;,
+            <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-skills-load-skill-reference-rs.html#item-struct-LoadSkillReference-38">LoadSkillReference</a> =&gt; &quot;load_skill_reference&quot;,
+            <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-submission-root-submit-root-outcome-rs.html#item-struct-SubmitRootOutcome-31">SubmitRootOutcome</a> =&gt; &quot;submit_root_outcome&quot;,
+            <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-submission-generator-submit-generator-outcome-rs.html#item-struct-SubmitGeneratorOutcome-24">SubmitGeneratorOutcome</a> =&gt; &quot;submit_generator_outcome&quot;,
+            <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-submission-reducer-submit-reducer-outcome-rs.html#item-struct-SubmitReducerOutcome-24">SubmitReducerOutcome</a> =&gt; &quot;submit_reducer_outcome&quot;,
+            <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-submission-planner-submit-planner-outcome-rs.html#item-struct-SubmitPlannerOutcome-50">SubmitPlannerOutcome</a> =&gt; &quot;submit_planner_outcome&quot;,
+            <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-submission-advisor-submit-advisor-feedback-rs.html#item-struct-SubmitAdvisorFeedback-46">SubmitAdvisorFeedback</a> =&gt; &quot;submit_advisor_feedback&quot;,
+            <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-submission-explorer-submit-exploration-result-rs.html#item-struct-SubmitExplorationResult-32">SubmitExplorationResult</a> =&gt; &quot;submit_exploration_result&quot;,
+        }
+    }
+
+    <span class="rs-comment">/// Parse a wire string into a [`ToolName`], or `None` when unknown.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-core-intent-rs.html#method-from-wire-52">from_wire</a>(value: &amp;str) -&gt; <span class="rs-type">Option</span>&lt;<span class="rs-self">Self</span>&gt; {
+        <span class="rs-self">Self</span>::<span class="rs-type">ALL</span>.into_iter().find(|name| name.<a class="symbol-link rs-fn" href="eos-tools--src-core-intent-rs.html#method-as-str-42">as_str</a>() == value)
+    }
+}
+
+<span class="rs-comment">/// The registry key for a public model-facing tool.</span>
+<span class="rs-comment">///</span>
+<span class="rs-comment">/// Built-in tools still use [`ToolName`]. Plugin tools are validated dynamic</span>
+<span class="rs-comment">/// names such as `lsp.hover`, carried as a typed key so the registry can accept</span>
+<span class="rs-comment">/// plugin-provided tools without extending the built-in enum.</span>
+#[derive(
+    <span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Eq</span>, <span class="rs-type">Hash</span>, <span class="rs-type">PartialOrd</span>, <span class="rs-type">Ord</span>, <span class="rs-type">Serialize</span>, <span class="rs-type">Deserialize</span>, <span class="rs-type">JsonSchema</span>,
+)]
+#[serde(transparent)]
+#[schemars(transparent)]
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-struct-ToolKey-139">ToolKey</a>(<span class="rs-type">String</span>);
+
+<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-struct-ToolKey-139">ToolKey</a> {
+    <span class="rs-comment">/// Parse a wire tool name into a registry key.</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// Built-ins are always accepted. Dynamic plugin names must be a dotted</span>
+    <span class="rs-comment">/// `&lt;plugin&gt;.&lt;op&gt;` name with non-empty identifier segments; this is enough</span>
+    <span class="rs-comment">/// for agent-profile validation to reach the registry lookup while rejecting</span>
+    <span class="rs-comment">/// arbitrary strings that are neither built-ins nor plugin tools.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-core-intent-rs.html#method-from-wire-52">from_wire</a>(value: &amp;str) -&gt; <span class="rs-type">Option</span>&lt;<span class="rs-self">Self</span>&gt; {
+        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(name) = <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-fn" href="eos-tools--src-core-intent-rs.html#method-from-wire-52">from_wire</a>(value) {
+            <span class="rs-kw">return</span> <span class="rs-type">Some</span>(<span class="rs-self">Self</span>::<a class="symbol-link rs-fn" href="eos-tools--src-core-intent-rs.html#method-from-63">from</a>(name));
+        }
+        <span class="rs-kw">if</span> <a class="symbol-link rs-fn" href="eos-tools--src-core-name-rs.html#item-fn-is-valid-dynamic-tool-name-207">is_valid_dynamic_tool_name</a>(value) {
+            <span class="rs-type">Some</span>(<span class="rs-self">Self</span>(value.to_owned()))
+        } <span class="rs-kw">else</span> {
+            <span class="rs-type">None</span>
+        }
+    }
+
+    <span class="rs-comment">/// Build a dynamic tool key from a catalog-validated name.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-core-name-rs.html#method-dynamic-170">dynamic</a>(value: <span class="rs-kw">impl</span> <span class="rs-type">Into</span>&lt;<span class="rs-type">String</span>&gt;) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">Self</span>(value.into())
+    }
+
+    <span class="rs-comment">/// The model/provider wire string.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-core-intent-rs.html#method-as-str-42">as_str</a>(&amp;<span class="rs-self">self</span>) -&gt; &amp;str {
+        &amp;<span class="rs-self">self</span>.0
+    }
+
+    <span class="rs-comment">/// The built-in tool name, when this key names one.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-core-name-rs.html#method-as-builtin-182">as_builtin</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>&gt; {
+        <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-fn" href="eos-tools--src-core-intent-rs.html#method-from-wire-52">from_wire</a>(&amp;<span class="rs-self">self</span>.0)
+    }
+}
+
+<span class="rs-kw">impl</span> <span class="rs-type">From</span>&lt;<a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>&gt; <span class="rs-kw">for</span> <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-struct-ToolKey-139">ToolKey</a> {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-core-intent-rs.html#method-from-63">from</a>(name: <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">Self</span>(name.<a class="symbol-link rs-fn" href="eos-tools--src-core-intent-rs.html#method-as-str-42">as_str</a>().to_owned())
+    }
+}
+
+<span class="rs-kw">impl</span> <span class="rs-type">From</span>&lt;&amp;<a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-struct-ToolKey-139">ToolKey</a>&gt; <span class="rs-kw">for</span> <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-struct-ToolKey-139">ToolKey</a> {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-core-intent-rs.html#method-from-63">from</a>(name: &amp;<a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-struct-ToolKey-139">ToolKey</a>) -&gt; <span class="rs-self">Self</span> {
+        name.clone()
+    }
+}
+
+<span class="rs-kw">impl</span> fmt::<span class="rs-type">Display</span> <span class="rs-kw">for</span> <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-struct-ToolKey-139">ToolKey</a> {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-core-metadata-rs.html#method-fmt-51">fmt</a>(&amp;<span class="rs-self">self</span>, f: &amp;<span class="rs-kw">mut</span> fmt::<span class="rs-type">Formatter</span>&lt;&#x27;_&gt;) -&gt; fmt::<span class="rs-type">Result</span> {
+        f.write_str(<span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-tools--src-core-intent-rs.html#method-as-str-42">as_str</a>())
+    }
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-core-name-rs.html#item-fn-is-valid-dynamic-tool-name-207">is_valid_dynamic_tool_name</a>(value: &amp;str) -&gt; bool {
+    <span class="rs-kw">let</span> <span class="rs-type">Some</span>((plugin, op)) = value.split_once(&#x27;.&#x27;) <span class="rs-kw">else</span> {
+        <span class="rs-kw">return</span> <span class="rs-kw">false</span>;
+    };
+    <a class="symbol-link rs-fn" href="eos-tools--src-core-name-rs.html#item-fn-is-valid-tool-segment-214">is_valid_tool_segment</a>(plugin) &amp;&amp; op.split(&#x27;.&#x27;).all(is_valid_tool_segment)
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-core-name-rs.html#item-fn-is-valid-tool-segment-214">is_valid_tool_segment</a>(value: &amp;str) -&gt; bool {
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> chars = value.chars();
+    <span class="rs-kw">match</span> chars.next() {
+        <span class="rs-type">Some</span>(c) <span class="rs-kw">if</span> c.is_ascii_alphabetic() || c == &#x27;_&#x27; =&gt; {}
+        _ =&gt; <span class="rs-kw">return</span> <span class="rs-kw">false</span>,
+    }
+    chars.all(|c| c.is_ascii_alphanumeric() || c == &#x27;_&#x27;)
+}
+
+<span class="rs-kw">impl</span> fmt::<span class="rs-type">Display</span> <span class="rs-kw">for</span> <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a> {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-core-metadata-rs.html#method-fmt-51">fmt</a>(&amp;<span class="rs-self">self</span>, f: &amp;<span class="rs-kw">mut</span> fmt::<span class="rs-type">Formatter</span>&lt;&#x27;_&gt;) -&gt; fmt::<span class="rs-type">Result</span> {
+        f.write_str(<span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-tools--src-core-intent-rs.html#method-as-str-42">as_str</a>())
+    }
+}
+
+<span class="rs-kw">impl</span> <span class="rs-type">FromStr</span> <span class="rs-kw">for</span> <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a> {
+    <span class="rs-kw">type</span> <span class="rs-type">Err</span> = ();
+
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-core-name-rs.html#method-from-str-232">from_str</a>(s: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-self">Self</span>, <span class="rs-self">Self</span>::<span class="rs-type">Err</span>&gt; {
+        <span class="rs-self">Self</span>::<a class="symbol-link rs-fn" href="eos-tools--src-core-intent-rs.html#method-from-wire-52">from_wire</a>(s).ok_or(())
+    }
+}
+
+#[cfg(test)]
+<span class="rs-kw">mod</span> tests {
+    <span class="rs-kw">use</span> <span class="rs-kw">super</span>::*;
+
+    <span class="rs-comment">// ALL lists every variant exactly once (no duplicates, no omissions).</span>
+    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-core-name-rs.html#item-fn-all-is-complete-and-unique-242">all_is_complete_and_unique</a>() {
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> seen = std::collections::<span class="rs-type">BTreeSet</span>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>();
+        <span class="rs-kw">for</span> name <span class="rs-kw">in</span> <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<span class="rs-type">ALL</span> {
+            assert!(seen.insert(name.<a class="symbol-link rs-fn" href="eos-tools--src-core-intent-rs.html#method-as-str-42">as_str</a>()), &quot;duplicate {}&quot;, name.<a class="symbol-link rs-fn" href="eos-tools--src-core-intent-rs.html#method-as-str-42">as_str</a>());
+        }
+        assert_eq!(seen.<a class="symbol-link rs-fn" href="eos-tools--src-registry-tool-registry-rs.html#method-len-90">len</a>(), <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<span class="rs-type">ALL</span>.<a class="symbol-link rs-fn" href="eos-tools--src-registry-tool-registry-rs.html#method-len-90">len</a>());
+    }
+
+    <span class="rs-comment">// The hand-written wire table agrees with the serde `rename_all` projection.</span>
+    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-core-name-rs.html#item-fn-as-str-matches-serde-rename-252">as_str_matches_serde_rename</a>() {
+        <span class="rs-kw">for</span> name <span class="rs-kw">in</span> <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<span class="rs-type">ALL</span> {
+            <span class="rs-kw">let</span> serde_value = serde_json::to_value(name).expect(&quot;serialize&quot;);
+            assert_eq!(serde_value, serde_json::json!(name.<a class="symbol-link rs-fn" href="eos-tools--src-core-intent-rs.html#method-as-str-42">as_str</a>()));
+            <span class="rs-comment">// round-trip through from_wire and serde.</span>
+            assert_eq!(<a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-fn" href="eos-tools--src-core-intent-rs.html#method-from-wire-52">from_wire</a>(name.<a class="symbol-link rs-fn" href="eos-tools--src-core-intent-rs.html#method-as-str-42">as_str</a>()), <span class="rs-type">Some</span>(name));
+            <span class="rs-kw">let</span> back: <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a> =
+                serde_json::from_value(serde_json::json!(name.<a class="symbol-link rs-fn" href="eos-tools--src-core-intent-rs.html#method-as-str-42">as_str</a>())).expect(&quot;parse&quot;);
+            assert_eq!(back, name);
+        }
+        assert_eq!(<a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-fn" href="eos-tools--src-core-intent-rs.html#method-from-wire-52">from_wire</a>(&quot;not_a_tool&quot;), <span class="rs-type">None</span>);
+    }
+
+    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-core-name-rs.html#item-fn-tool-key-accepts-builtin-and-plugin-names-266">tool_key_accepts_builtin_and_plugin_names</a>() {
+        assert_eq!(
+            <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-struct-ToolKey-139">ToolKey</a>::<a class="symbol-link rs-fn" href="eos-tools--src-core-intent-rs.html#method-from-wire-52">from_wire</a>(&quot;read_file&quot;).and_then(|key| key.<a class="symbol-link rs-fn" href="eos-tools--src-core-name-rs.html#method-as-builtin-182">as_builtin</a>()),
+            <span class="rs-type">Some</span>(<a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-read-file-rs.html#item-struct-ReadFile-36">ReadFile</a>)
+        );
+        <span class="rs-kw">let</span> plugin = <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-struct-ToolKey-139">ToolKey</a>::<a class="symbol-link rs-fn" href="eos-tools--src-core-intent-rs.html#method-from-wire-52">from_wire</a>(&quot;lsp.hover&quot;).expect(&quot;plugin key&quot;);
+        assert_eq!(plugin.<a class="symbol-link rs-fn" href="eos-tools--src-core-intent-rs.html#method-as-str-42">as_str</a>(), &quot;lsp.hover&quot;);
+        assert_eq!(plugin.<a class="symbol-link rs-fn" href="eos-tools--src-core-name-rs.html#method-as-builtin-182">as_builtin</a>(), <span class="rs-type">None</span>);
+        assert!(<a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-struct-ToolKey-139">ToolKey</a>::<a class="symbol-link rs-fn" href="eos-tools--src-core-intent-rs.html#method-from-wire-52">from_wire</a>(&quot;not_a_builtin&quot;).is_none());
+        assert!(<a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-struct-ToolKey-139">ToolKey</a>::<a class="symbol-link rs-fn" href="eos-tools--src-core-intent-rs.html#method-from-wire-52">from_wire</a>(&quot;lsp.&quot;).is_none());
+        assert!(<a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-struct-ToolKey-139">ToolKey</a>::<a class="symbol-link rs-fn" href="eos-tools--src-core-intent-rs.html#method-from-wire-52">from_wire</a>(&quot;.hover&quot;).is_none());
+    }
+}
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
   <script src="../assets/inventory.js"></script>
 </body>
 </html>

@@ -8,8 +8,16 @@
 </head>
 <body>
   <header>
-    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
-    <h1>eos-testkit File Inventory</h1>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>eos-testkit File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS/agent-core &amp;&amp; cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
   </header>
   <a class="back-link" href="../index.html">agent-core</a>
 <section class="summary">
@@ -47,19 +55,78 @@
       <span>0 methods</span>
     </div>
   </div>
-  <div class="items"><div class="group-label">Standalone Functions</div><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn metadata pub pub fn metadata () -&gt; ExecutionMetadata crates/eos-testkit/src/meta.rs  ">
+  <div class="items"><div class="group-label">Standalone Functions</div><article id="item-fn-metadata-11" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn metadata pub pub fn metadata () -&gt; ExecutionMetadata crates/eos-testkit/src/meta.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>metadata</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub fn metadata () -&gt; ExecutionMetadata</code>
-  <div class="tags"></div>
+  <code class="signature">pub fn <a class="symbol-link" href="eos-testkit--src-meta-rs.html#item-fn-metadata-11">metadata</a> () -&gt; ExecutionMetadata</code>
+  <p class="docstring">A minimal [`ExecutionMetadata`] fact set for engine/tool tests.</p>
+  <div class="tags"><span>must_use</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-comment">/// A minimal [`ExecutionMetadata`] fact set for engine/tool tests.</span>
+#[must_use]
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-testkit--src-meta-rs.html#item-fn-metadata-11">metadata</a>() -&gt; <span class="rs-type">ExecutionMetadata</span> {
+    <span class="rs-type">ExecutionMetadata</span> {
+        agent_name: &quot;tester&quot;.to_owned(),
+        agent_run_id: <span class="rs-type">None</span>,
+        request_id: <span class="rs-type">None</span>,
+        task_id: <span class="rs-type">None</span>,
+        attempt_id: <span class="rs-type">None</span>,
+        workflow_id: <span class="rs-type">None</span>,
+        tool_use_id: <span class="rs-type">None</span>,
+        sandbox_invocation_id: <span class="rs-type">None</span>,
+        sandbox_id: <span class="rs-type">None</span>,
+        is_isolated_workspace_mode: <span class="rs-kw">false</span>,
+        workspace_root: <span class="rs-type">String</span>::<a class="symbol-link rs-fn" href="eos-testkit--src-llm-rs.html#method-new-30">new</a>(),
+        conversation: <span class="rs-type">Arc</span>::from(<span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-testkit--src-llm-rs.html#method-new-30">new</a>()),
+    }
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-testkit/src/meta.rs:11</p>
 </article></div>
 </section></div>
 </main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/eos-testkit/src/meta.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-comment">//! The tool [`ExecutionMetadata`] fixture.</span>
+<span class="rs-comment">//!</span>
+<span class="rs-comment">//! Relocated from `eos-engine/src/support/test_support.rs` (`TESTING_SPEC` §7).</span>
+<span class="rs-comment">//! It stays in `eos-testkit` so engine in-crate tests can consume metadata</span>
+<span class="rs-comment">//! without crossing back into `eos-engine` types.</span>
+
+<span class="rs-kw">use</span> std::sync::<span class="rs-type">Arc</span>;
+
+<span class="rs-kw">use</span> eos_tools::<span class="rs-type">ExecutionMetadata</span>;
+
+<span class="rs-comment">/// A minimal [`ExecutionMetadata`] fact set for engine/tool tests.</span>
+#[must_use]
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-testkit--src-meta-rs.html#item-fn-metadata-11">metadata</a>() -&gt; <span class="rs-type">ExecutionMetadata</span> {
+    <span class="rs-type">ExecutionMetadata</span> {
+        agent_name: &quot;tester&quot;.to_owned(),
+        agent_run_id: <span class="rs-type">None</span>,
+        request_id: <span class="rs-type">None</span>,
+        task_id: <span class="rs-type">None</span>,
+        attempt_id: <span class="rs-type">None</span>,
+        workflow_id: <span class="rs-type">None</span>,
+        tool_use_id: <span class="rs-type">None</span>,
+        sandbox_invocation_id: <span class="rs-type">None</span>,
+        sandbox_id: <span class="rs-type">None</span>,
+        is_isolated_workspace_mode: <span class="rs-kw">false</span>,
+        workspace_root: <span class="rs-type">String</span>::<a class="symbol-link rs-fn" href="eos-testkit--src-llm-rs.html#method-new-30">new</a>(),
+        conversation: <span class="rs-type">Arc</span>::from(<span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-testkit--src-llm-rs.html#method-new-30">new</a>()),
+    }
+}
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
   <script src="../assets/inventory.js"></script>
 </body>
 </html>

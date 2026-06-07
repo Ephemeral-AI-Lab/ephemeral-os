@@ -8,8 +8,16 @@
 </head>
 <body>
   <header>
-    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
-    <h1>eos-daemon File Inventory</h1>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>eos-daemon File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS/sandbox &amp;&amp; cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
   </header>
   <a class="back-link" href="../index.html">sandbox</a>
 <section class="summary">
@@ -47,119 +55,810 @@
       <span>14 methods</span>
     </div>
   </div>
-  <div class="items"><div class="group-label">File-Owned Types</div><article class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct InFlightInvocation pub pub struct InFlightInvocation crates/eos-daemon/src/runtime/invocation_registry.rs invocation_id String abort AbortHandle caller_id String op String last_seen f64 background bool process_group_id Option &lt; i32 &gt; ttl_reaped bool ">
+  <div class="items"><div class="group-label">File-Owned Types</div><article id="item-struct-InFlightInvocation-26" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct InFlightInvocation pub pub struct InFlightInvocation crates/eos-daemon/src/runtime/invocation_registry.rs invocation_id String abort AbortHandle caller_id String op String last_seen f64 background bool process_group_id Option &lt; i32 &gt; ttl_reaped bool ">
   <div class="item-head">
     <span class="kind">struct</span>
     <h3>InFlightInvocation</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub struct InFlightInvocation</code>
-  <div class="tags"></div>
+  <code class="signature">pub struct <a class="symbol-link" href="eos-daemon--src-runtime-invocation-registry-rs.html#item-struct-InFlightInvocation-26">InFlightInvocation</a></code>
+  <p class="docstring">One tracked daemon-side invocation.</p>
+  <div class="tags"><span>derive: Debug</span></div>
   <h4>Fields</h4><table><tbody><tr><td>pub</td><td>invocation_id</td><td><code>String</code></td></tr><tr><td>pub</td><td>abort</td><td><code>AbortHandle</code></td></tr><tr><td>pub</td><td>caller_id</td><td><code>String</code></td></tr><tr><td>pub</td><td>op</td><td><code>String</code></td></tr><tr><td>pub</td><td>last_seen</td><td><code>f64</code></td></tr><tr><td>pub</td><td>background</td><td><code>bool</code></td></tr><tr><td>pub</td><td>process_group_id</td><td><code>Option &lt; i32 &gt;</code></td></tr><tr><td>pub</td><td>ttl_reaped</td><td><code>bool</code></td></tr></tbody></table>
+
   <p class="source">crates/eos-daemon/src/runtime/invocation_registry.rs:26</p>
-</article><article class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct InFlightRegistry pub pub struct InFlightRegistry crates/eos-daemon/src/runtime/invocation_registry.rs inner Mutex &lt; RegistryState &gt; ttl_s f64 reaper_interval_s f64 ">
+</article><article id="item-struct-InFlightRegistry-49" class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct InFlightRegistry pub pub struct InFlightRegistry crates/eos-daemon/src/runtime/invocation_registry.rs inner Mutex &lt; RegistryState &gt; ttl_s f64 reaper_interval_s f64 ">
   <div class="item-head">
     <span class="kind">struct</span>
     <h3>InFlightRegistry</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub struct InFlightRegistry</code>
-  <div class="tags"></div>
-  <h4>Fields</h4><table><tbody><tr><td>private</td><td>inner</td><td><code>Mutex &lt; RegistryState &gt;</code></td></tr><tr><td>private</td><td>ttl_s</td><td><code>f64</code></td></tr><tr><td>private</td><td>reaper_interval_s</td><td><code>f64</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr><td>constructor</td><td>new</td><td><code>pub fn new (ttl_s : f64 , reaper_interval_s : f64) -&gt; Self</code></td></tr><tr><td>method</td><td>cancel</td><td><code>pub fn cancel (&amp; self , invocation_id : &amp; str) -&gt; bool</code></td></tr><tr><td>method</td><td>reaper_interval_s</td><td><code>pub const fn reaper_interval_s (&amp; self) -&gt; f64</code></td></tr><tr><td>method</td><td>lock_state</td><td><code>fn lock_state (&amp; self) -&gt; MutexGuard &lt; '_ , RegistryState &gt;</code></td></tr><tr><td>method</td><td>register</td><td><code>pub fn register (&amp; self , invocation_id : &amp; str , abort : AbortHandle , caller_id : &amp; str , op : &amp; str , background : bool ,)</code></td></tr><tr><td>method</td><td>register_process_group</td><td><code>pub fn register_process_group (&amp; self , invocation_id : &amp; str , pgid : i32)</code></td></tr><tr><td>method</td><td>clear_process_group</td><td><code>pub fn clear_process_group (&amp; self , invocation_id : &amp; str)</code></td></tr><tr><td>method</td><td>deregister</td><td><code>pub fn deregister (&amp; self , invocation_id : &amp; str)</code></td></tr><tr><td>method</td><td>contains</td><td><code>pub fn contains (&amp; self , invocation_id : &amp; str) -&gt; bool</code></td></tr><tr><td>method</td><td>wait_for_cleanup</td><td><code>pub fn wait_for_cleanup (&amp; self , invocation_id : &amp; str , timeout : Duration) -&gt; bool</code></td></tr><tr><td>method</td><td>heartbeat</td><td><code>pub fn heartbeat (&amp; self , invocation_ids : &amp; [String]) -&gt; usize</code></td></tr><tr><td>method</td><td>count_by_caller</td><td><code>pub fn count_by_caller (&amp; self , caller_id : &amp; str) -&gt; usize</code></td></tr><tr><td>method</td><td>ttl_sweep</td><td><code>pub fn ttl_sweep (&amp; self)</code></td></tr><tr><td>method</td><td>metrics</td><td><code>pub fn metrics (&amp; self) -&gt; (usize , u64)</code></td></tr></tbody></table>
+  <code class="signature">pub struct <a class="symbol-link" href="eos-daemon--src-runtime-invocation-registry-rs.html#item-struct-InFlightRegistry-49">InFlightRegistry</a></code>
+  <p class="docstring">Tracks daemon-side tasks by invocation id for cancellation + TTL cleanup.</p>
+  <div class="tags"><span>derive: Debug</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>inner</td><td><code>Mutex &lt; <a class="symbol-link" href="eos-daemon--src-runtime-invocation-registry-rs.html#item-struct-RegistryState-57">RegistryState</a> &gt;</code></td></tr><tr><td>private</td><td>ttl_s</td><td><code>f64</code></td></tr><tr><td>private</td><td>reaper_interval_s</td><td><code>f64</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-64"><td>constructor</td><td>new</td><td><code>pub fn <a class="symbol-link" href="eos-daemon.html#method-new-89">new</a> (ttl_s : f64 , reaper_interval_s : f64) -&gt; Self</code><p class="docstring">Build a registry with explicit timing values.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Build a registry with explicit timing values.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon.html#method-new-89">new</a>(ttl_s: f64, reaper_interval_s: f64) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">Self</span> {
+            inner: <span class="rs-type">Mutex</span>::<a class="symbol-link rs-fn" href="eos-daemon.html#method-new-89">new</a>(<a class="symbol-link rs-type" href="eos-daemon--src-runtime-invocation-registry-rs.html#item-struct-RegistryState-57">RegistryState</a>::<a class="symbol-link rs-fn" href="eos-daemon.html#method-default-210">default</a>()),
+            ttl_s: <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#item-fn-positive-f64-221">positive_f64</a>(ttl_s, <span class="rs-type">DEFAULT_TTL_S</span>),
+            reaper_interval_s: <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#item-fn-positive-f64-221">positive_f64</a>(reaper_interval_s, <span class="rs-type">DEFAULT_REAPER_INTERVAL_S</span>),
+        }
+    }
+</code></pre>
+</details></td></tr><tr id="method-cancel-138"><td>method</td><td>cancel</td><td><code>pub fn <a class="symbol-link" href="eos-daemon--src-runtime-invocation-registry-rs.html#method-cancel-138">cancel</a> (&amp; self , invocation_id : &amp; str) -&gt; bool</code><p class="docstring">Cancel the task for `invocation_id`; returns whether an entry existed.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Cancel the task for `invocation_id`; returns whether an entry existed.</span>
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#method-cancel-138">cancel</a>(&amp;<span class="rs-self">self</span>, invocation_id: &amp;str) -&gt; bool {
+        <span class="rs-kw">let</span> <span class="rs-type">Some</span>((abort, process_group_id)) = ({
+            <span class="rs-kw">let</span> state = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-daemon.html#method-lock-state-116">lock_state</a>();
+            state.by_invocation.<a class="symbol-link rs-fn" href="eos-daemon--src-services-occ-service-cache-rs.html#method-get-87">get</a>(invocation_id).map(|entry| {
+                (
+                    entry.abort.clone(),
+                    entry.process_group_id.filter(|pgid| *pgid &gt; 0),
+                )
+            })
+        }) <span class="rs-kw">else</span> {
+            <span class="rs-kw">return</span> <span class="rs-kw">false</span>;
+        };
+        <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#item-fn-terminate-process-group-234">terminate_process_group</a>(process_group_id);
+        abort.abort();
+        <span class="rs-kw">true</span>
+    }
+</code></pre>
+</details></td></tr><tr id="method-reaper-interval-s-74"><td>method</td><td>reaper_interval_s</td><td><code>pub const fn <a class="symbol-link" href="eos-daemon--src-runtime-invocation-registry-rs.html#method-reaper-interval-s-74">reaper_interval_s</a> (&amp; self) -&gt; f64</code><p class="docstring">Reaper sweep interval (seconds) the daemon's reaper loop sleeps between.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Reaper sweep interval (seconds) the daemon's reaper loop sleeps between.</span>
+    <span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#method-reaper-interval-s-74">reaper_interval_s</a>(&amp;<span class="rs-self">self</span>) -&gt; f64 {
+        <span class="rs-self">self</span>.reaper_interval_s
+    }
+</code></pre>
+</details></td></tr><tr id="method-lock-state-82"><td>method</td><td>lock_state</td><td><code>fn <a class="symbol-link" href="eos-daemon.html#method-lock-state-116">lock_state</a> (&amp; self) -&gt; MutexGuard &lt; &#x27;_ , <a class="symbol-link" href="eos-daemon--src-runtime-invocation-registry-rs.html#item-struct-RegistryState-57">RegistryState</a> &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon.html#method-lock-state-116">lock_state</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">MutexGuard</span>&lt;&#x27;_, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-invocation-registry-rs.html#item-struct-RegistryState-57">RegistryState</a>&gt; {
+        <span class="rs-self">self</span>.inner.<a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-ppc-router-pending-rs.html#method-lock-142">lock</a>().unwrap_or_else(<span class="rs-type">PoisonError</span>::into_inner)
+    }
+</code></pre>
+</details></td></tr><tr id="method-register-86"><td>method</td><td>register</td><td><code>pub fn <a class="symbol-link" href="eos-daemon--src-dispatch-dispatcher-rs.html#method-register-140">register</a> (&amp; self , invocation_id : &amp; str , abort : AbortHandle , caller_id : &amp; str , op : &amp; str , background : bool ,)</code><p class="docstring">Register a task under `invocation_id`. Empty ids are ignored.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Register a task under `invocation_id`. Empty ids are ignored.</span>
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-dispatch-dispatcher-rs.html#method-register-140">register</a>(
+        &amp;<span class="rs-self">self</span>,
+        invocation_id: &amp;str,
+        abort: <span class="rs-type">AbortHandle</span>,
+        caller_id: &amp;str,
+        op: &amp;str,
+        background: bool,
+    ) {
+        <span class="rs-kw">if</span> invocation_id.is_empty() {
+            <span class="rs-kw">return</span>;
+        }
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> state = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-daemon.html#method-lock-state-116">lock_state</a>();
+        state.by_invocation.insert(
+            invocation_id.to_owned(),
+            <a class="symbol-link rs-type" href="eos-daemon--src-runtime-invocation-registry-rs.html#item-struct-InFlightInvocation-26">InFlightInvocation</a> {
+                invocation_id: invocation_id.to_owned(),
+                abort,
+                caller_id: caller_id.to_owned(),
+                op: op.to_owned(),
+                last_seen: <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#item-fn-monotonic-seconds-229">monotonic_seconds</a>(),
+                background,
+                process_group_id: <span class="rs-type">None</span>,
+                ttl_reaped: <span class="rs-kw">false</span>,
+            },
+        );
+    }
+</code></pre>
+</details></td></tr><tr id="method-register-process-group-114"><td>method</td><td>register_process_group</td><td><code>pub fn <a class="symbol-link" href="eos-daemon--src-runtime-invocation-registry-rs.html#method-register-process-group-114">register_process_group</a> (&amp; self , invocation_id : &amp; str , pgid : i32)</code><p class="docstring">Attach a process group id to a registered invocation.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Attach a process group id to a registered invocation.</span>
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#method-register-process-group-114">register_process_group</a>(&amp;<span class="rs-self">self</span>, invocation_id: &amp;str, pgid: i32) {
+        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(entry) = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-daemon.html#method-lock-state-116">lock_state</a>().by_invocation.get_mut(invocation_id) {
+            entry.process_group_id = <span class="rs-type">Some</span>(pgid);
+        }
+    }
+</code></pre>
+</details></td></tr><tr id="method-clear-process-group-121"><td>method</td><td>clear_process_group</td><td><code>pub fn <a class="symbol-link" href="eos-daemon--src-runtime-invocation-registry-rs.html#method-clear-process-group-121">clear_process_group</a> (&amp; self , invocation_id : &amp; str)</code><p class="docstring">Clear any process group id attached to a registered invocation.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Clear any process group id attached to a registered invocation.</span>
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#method-clear-process-group-121">clear_process_group</a>(&amp;<span class="rs-self">self</span>, invocation_id: &amp;str) {
+        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(entry) = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-daemon.html#method-lock-state-116">lock_state</a>().by_invocation.get_mut(invocation_id) {
+            entry.process_group_id = <span class="rs-type">None</span>;
+        }
+    }
+</code></pre>
+</details></td></tr><tr id="method-deregister-128"><td>method</td><td>deregister</td><td><code>pub fn <a class="symbol-link" href="eos-daemon--src-runtime-invocation-registry-rs.html#method-deregister-128">deregister</a> (&amp; self , invocation_id : &amp; str)</code><p class="docstring">Remove the entry for `invocation_id` (the dispatch `finally` path).</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Remove the entry for `invocation_id` (the dispatch `finally` path).</span>
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#method-deregister-128">deregister</a>(&amp;<span class="rs-self">self</span>, invocation_id: &amp;str) {
+        <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-daemon.html#method-lock-state-116">lock_state</a>().by_invocation.remove(invocation_id);
+    }
+</code></pre>
+</details></td></tr><tr id="method-contains-133"><td>method</td><td>contains</td><td><code>pub fn <a class="symbol-link" href="eos-daemon--src-runtime-invocation-registry-rs.html#method-contains-133">contains</a> (&amp; self , invocation_id : &amp; str) -&gt; bool</code><p class="docstring">Return whether `invocation_id` is still tracked.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Return whether `invocation_id` is still tracked.</span>
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#method-contains-133">contains</a>(&amp;<span class="rs-self">self</span>, invocation_id: &amp;str) -&gt; bool {
+        <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-daemon.html#method-lock-state-116">lock_state</a>().by_invocation.contains_key(invocation_id)
+    }
+</code></pre>
+</details></td></tr><tr id="method-wait-for-cleanup-156"><td>method</td><td>wait_for_cleanup</td><td><code>pub fn <a class="symbol-link" href="eos-daemon--src-runtime-invocation-registry-rs.html#method-wait-for-cleanup-156">wait_for_cleanup</a> (&amp; self , invocation_id : &amp; str , timeout : Duration) -&gt; bool</code><p class="docstring">Wait briefly for the dispatch finally path to deregister `invocation_id`.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Wait briefly for the dispatch finally path to deregister `invocation_id`.</span>
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#method-wait-for-cleanup-156">wait_for_cleanup</a>(&amp;<span class="rs-self">self</span>, invocation_id: &amp;str, timeout: <span class="rs-type">Duration</span>) -&gt; bool {
+        <span class="rs-kw">let</span> deadline = <span class="rs-type">Instant</span>::now() + timeout;
+        <span class="rs-kw">while</span> <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#method-contains-133">contains</a>(invocation_id) {
+            <span class="rs-kw">if</span> <span class="rs-type">Instant</span>::now() &gt;= deadline {
+                <span class="rs-kw">return</span> <span class="rs-kw">false</span>;
+            }
+            thread::sleep(<span class="rs-type">Duration</span>::from_millis(5));
+        }
+        <span class="rs-kw">true</span>
+    }
+</code></pre>
+</details></td></tr><tr id="method-heartbeat-168"><td>method</td><td>heartbeat</td><td><code>pub fn <a class="symbol-link" href="eos-daemon--src-runtime-invocation-registry-rs.html#method-heartbeat-168">heartbeat</a> (&amp; self , invocation_ids : &amp; [String]) -&gt; usize</code><p class="docstring">Touch `last_seen` for every known id; returns how many were touched.<br>Backs `api.v1.heartbeat`.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Touch `last_seen` for every known id; returns how many were touched.</span>
+    <span class="rs-comment">/// Backs `api.v1.heartbeat`.</span>
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#method-heartbeat-168">heartbeat</a>(&amp;<span class="rs-self">self</span>, invocation_ids: &amp;[<span class="rs-type">String</span>]) -&gt; usize {
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> state = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-daemon.html#method-lock-state-116">lock_state</a>();
+        <span class="rs-kw">let</span> now = <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#item-fn-monotonic-seconds-229">monotonic_seconds</a>();
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> touched = 0;
+        <span class="rs-kw">for</span> invocation_id <span class="rs-kw">in</span> invocation_ids {
+            <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(entry) = state.by_invocation.get_mut(invocation_id) {
+                entry.last_seen = now;
+                touched += 1;
+            }
+        }
+        touched
+    }
+</code></pre>
+</details></td></tr><tr id="method-count-by-caller-183"><td>method</td><td>count_by_caller</td><td><code>pub fn <a class="symbol-link" href="eos-daemon--src-runtime-invocation-registry-rs.html#method-count-by-caller-183">count_by_caller</a> (&amp; self , caller_id : &amp; str) -&gt; usize</code><p class="docstring">Count live background invocations for `caller_id`. Backs<br>`api.v1.inflight_count`.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Count live background invocations for `caller_id`. Backs</span>
+    <span class="rs-comment">/// `api.v1.inflight_count`.</span>
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#method-count-by-caller-183">count_by_caller</a>(&amp;<span class="rs-self">self</span>, caller_id: &amp;str) -&gt; usize {
+        <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-daemon.html#method-lock-state-116">lock_state</a>()
+            .by_invocation
+            .values()
+            .filter(|entry| {
+                entry.background
+                    &amp;&amp; entry.caller_id == caller_id
+                    &amp;&amp; !entry.ttl_reaped
+                    &amp;&amp; !entry.abort.is_finished()
+            })
+            .count()
+    }
+</code></pre>
+</details></td></tr><tr id="method-ttl-sweep-198"><td>method</td><td>ttl_sweep</td><td><code>pub fn <a class="symbol-link" href="eos-daemon--src-runtime-invocation-registry-rs.html#method-ttl-sweep-198">ttl_sweep</a> (&amp; self)</code><p class="docstring">Cancel every background entry idle past the TTL.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Cancel every background entry idle past the TTL.</span>
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#method-ttl-sweep-198">ttl_sweep</a>(&amp;<span class="rs-self">self</span>) {
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> state = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-daemon.html#method-lock-state-116">lock_state</a>();
+        <span class="rs-kw">let</span> now = <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#item-fn-monotonic-seconds-229">monotonic_seconds</a>();
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> reaped = 0;
+        <span class="rs-kw">for</span> entry <span class="rs-kw">in</span> state.by_invocation.values_mut() {
+            <span class="rs-kw">if</span> entry.background &amp;&amp; !entry.ttl_reaped &amp;&amp; now - entry.last_seen &gt; <span class="rs-self">self</span>.ttl_s {
+                <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#item-fn-terminate-process-group-234">terminate_process_group</a>(entry.process_group_id.filter(|pgid| *pgid &gt; 0));
+                entry.abort.abort();
+                entry.ttl_reaped = <span class="rs-kw">true</span>;
+                reaped += 1;
+            }
+        }
+        state.ttl_reaped_total += reaped;
+    }
+</code></pre>
+</details></td></tr><tr id="method-metrics-214"><td>method</td><td>metrics</td><td><code>pub fn <a class="symbol-link" href="eos-daemon--src-runtime-invocation-registry-rs.html#method-metrics-214">metrics</a> (&amp; self) -&gt; (usize , u64)</code><p class="docstring">`(active_invocations, ttl_reaped_total)` for diagnostics.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// `(active_invocations, ttl_reaped_total)` for diagnostics.</span>
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#method-metrics-214">metrics</a>(&amp;<span class="rs-self">self</span>) -&gt; (usize, u64) {
+        <span class="rs-kw">let</span> state = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-daemon.html#method-lock-state-116">lock_state</a>();
+        (state.by_invocation.len(), state.ttl_reaped_total)
+    }
+</code></pre>
+</details></td></tr></tbody></table>
+
   <p class="source">crates/eos-daemon/src/runtime/invocation_registry.rs:49</p>
-</article><article class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct RegistryState private struct RegistryState crates/eos-daemon/src/runtime/invocation_registry.rs by_invocation HashMap &lt; String , InFlightInvocation &gt; ttl_reaped_total u64 ">
+</article><article id="item-struct-RegistryState-57" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct RegistryState private struct RegistryState crates/eos-daemon/src/runtime/invocation_registry.rs by_invocation HashMap &lt; String , InFlightInvocation &gt; ttl_reaped_total u64 ">
   <div class="item-head">
     <span class="kind">struct</span>
     <h3>RegistryState</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">struct RegistryState</code>
-  <div class="tags"></div>
-  <h4>Fields</h4><table><tbody><tr><td>private</td><td>by_invocation</td><td><code>HashMap &lt; String , InFlightInvocation &gt;</code></td></tr><tr><td>private</td><td>ttl_reaped_total</td><td><code>u64</code></td></tr></tbody></table>
+  <code class="signature">struct <a class="symbol-link" href="eos-daemon--src-runtime-invocation-registry-rs.html#item-struct-RegistryState-57">RegistryState</a></code>
+  <div class="tags"><span>derive: Debug</span><span>derive: Default</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>by_invocation</td><td><code>HashMap &lt; String , <a class="symbol-link" href="eos-daemon--src-runtime-invocation-registry-rs.html#item-struct-InFlightInvocation-26">InFlightInvocation</a> &gt;</code></td></tr><tr><td>private</td><td>ttl_reaped_total</td><td><code>u64</code></td></tr></tbody></table>
+
   <p class="source">crates/eos-daemon/src/runtime/invocation_registry.rs:57</p>
-</article><div class="group-label">Aliases</div><article class="item-card" data-kind="type" data-kind-list="type" data-filter-text="type TestResult private type TestResult = Result &lt; () , Box &lt; dyn std :: error :: Error + Send + Sync &gt; &gt; crates/eos-daemon/src/runtime/invocation_registry.rs  ">
+</article><div class="group-label">Aliases</div><article id="item-type-TestResult-262" class="item-card" data-kind="type" data-kind-list="type" data-filter-text="type TestResult private type TestResult = Result &lt; () , Box &lt; dyn std :: error :: Error + Send + Sync &gt; &gt; crates/eos-daemon/src/runtime/invocation_registry.rs  ">
   <div class="item-head">
     <span class="kind">type</span>
     <h3>TestResult</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">type TestResult = Result &lt; () , Box &lt; dyn std :: error :: Error + Send + Sync &gt; &gt;</code>
+  <code class="signature">type <a class="symbol-link" href="eos-daemon--src-runtime-invocation-registry-rs.html#item-type-TestResult-262">TestResult</a> = <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a> &lt; () , Box &lt; dyn std :: error :: Error + Send + Sync &gt; &gt;</code>
   <div class="tags"></div>
 
   <p class="source">crates/eos-daemon/src/runtime/invocation_registry.rs:262</p>
-</article><div class="group-label">Standalone Functions</div><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn positive_f64 private fn positive_f64 (value : f64 , default : f64) -&gt; f64 crates/eos-daemon/src/runtime/invocation_registry.rs  ">
+</article><div class="group-label">Standalone Functions</div><article id="item-fn-positive-f64-221" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn positive_f64 private fn positive_f64 (value : f64 , default : f64) -&gt; f64 crates/eos-daemon/src/runtime/invocation_registry.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>positive_f64</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn positive_f64 (value : f64 , default : f64) -&gt; f64</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-daemon--src-runtime-invocation-registry-rs.html#item-fn-positive-f64-221">positive_f64</a> (value : f64 , default : f64) -&gt; f64</code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#item-fn-positive-f64-221">positive_f64</a>(value: f64, default: f64) -&gt; f64 {
+    <span class="rs-kw">if</span> value.is_finite() &amp;&amp; value &gt; 0.0 {
+        value
+    } <span class="rs-kw">else</span> {
+        default
+    }
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-daemon/src/runtime/invocation_registry.rs:221</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn monotonic_seconds private fn monotonic_seconds () -&gt; f64 crates/eos-daemon/src/runtime/invocation_registry.rs  ">
+</article><article id="item-fn-monotonic-seconds-229" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn monotonic_seconds private fn monotonic_seconds () -&gt; f64 crates/eos-daemon/src/runtime/invocation_registry.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>monotonic_seconds</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn monotonic_seconds () -&gt; f64</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-daemon--src-runtime-invocation-registry-rs.html#item-fn-monotonic-seconds-229">monotonic_seconds</a> () -&gt; f64</code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#item-fn-monotonic-seconds-229">monotonic_seconds</a>() -&gt; f64 {
+    <span class="rs-kw">static</span> <span class="rs-type">START</span>: <span class="rs-type">OnceLock</span>&lt;<span class="rs-type">Instant</span>&gt; = <span class="rs-type">OnceLock</span>::<a class="symbol-link rs-fn" href="eos-daemon.html#method-new-89">new</a>();
+    <span class="rs-type">START</span>.get_or_init(<span class="rs-type">Instant</span>::now).elapsed().as_secs_f64()
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-daemon/src/runtime/invocation_registry.rs:229</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn terminate_process_group private fn terminate_process_group (process_group_id : Option &lt; i32 &gt;) crates/eos-daemon/src/runtime/invocation_registry.rs  ">
+</article><article id="item-fn-terminate-process-group-234" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn terminate_process_group private fn terminate_process_group (process_group_id : Option &lt; i32 &gt;) crates/eos-daemon/src/runtime/invocation_registry.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>terminate_process_group</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn terminate_process_group (process_group_id : Option &lt; i32 &gt;)</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-daemon--src-runtime-invocation-registry-rs.html#item-fn-terminate-process-group-234">terminate_process_group</a> (process_group_id : Option &lt; i32 &gt;)</code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#item-fn-terminate-process-group-234">terminate_process_group</a>(process_group_id: <span class="rs-type">Option</span>&lt;i32&gt;) {
+    <span class="rs-kw">let</span> <span class="rs-type">Some</span>(pgid) = process_group_id <span class="rs-kw">else</span> {
+        <span class="rs-kw">return</span>;
+    };
+    #[cfg(target_os = &quot;linux&quot;)]
+    {
+        <span class="rs-kw">let</span> pid = <span class="rs-type">Pid</span>::from_raw(pgid);
+        <span class="rs-kw">if</span> killpg(pid, <span class="rs-type">Signal</span>::<span class="rs-type">SIGTERM</span>).is_ok() {
+            std::thread::sleep(std::time::<span class="rs-type">Duration</span>::from_millis(50));
+        }
+        <span class="rs-kw">let</span> _ = killpg(pid, <span class="rs-type">Signal</span>::<span class="rs-type">SIGKILL</span>);
+    }
+    #[cfg(not(target_os = &quot;linux&quot;))]
+    {
+        <span class="rs-kw">let</span> _ = pgid;
+    }
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-daemon/src/runtime/invocation_registry.rs:234</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn cancel_heartbeat_and_count_track_background_task private async fn cancel_heartbeat_and_count_track_background_task () -&gt; TestResult crates/eos-daemon/src/runtime/invocation_registry.rs  ">
+</article><article id="item-fn-cancel-heartbeat-and-count-track-background-task-264" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn cancel_heartbeat_and_count_track_background_task private async fn cancel_heartbeat_and_count_track_background_task () -&gt; TestResult crates/eos-daemon/src/runtime/invocation_registry.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>cancel_heartbeat_and_count_track_background_task</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">async fn cancel_heartbeat_and_count_track_background_task () -&gt; TestResult</code>
-  <div class="tags"><span>async</span></div>
+  <code class="signature">async fn <a class="symbol-link" href="eos-daemon--src-runtime-invocation-registry-rs.html#item-fn-cancel-heartbeat-and-count-track-background-task-264">cancel_heartbeat_and_count_track_background_task</a> () -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-invocation-registry-rs.html#item-type-TestResult-262">TestResult</a></code>
+  <div class="tags"><span>async</span><span>tokio::test</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[tokio::test]
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#item-fn-cancel-heartbeat-and-count-track-background-task-264">cancel_heartbeat_and_count_track_background_task</a>() -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-invocation-registry-rs.html#item-type-TestResult-262">TestResult</a> {
+        <span class="rs-kw">let</span> registry = <a class="symbol-link rs-type" href="eos-daemon--src-runtime-invocation-registry-rs.html#item-struct-InFlightRegistry-49">InFlightRegistry</a>::<a class="symbol-link rs-fn" href="eos-daemon.html#method-new-89">new</a>(300.0, 30.0);
+        <span class="rs-kw">let</span> task = tokio::<a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-process-rs.html#method-spawn-176">spawn</a>(future::pending::&lt;()&gt;());
+        registry.<a class="symbol-link rs-fn" href="eos-daemon--src-dispatch-dispatcher-rs.html#method-register-140">register</a>(
+            &quot;bg-1&quot;,
+            task.abort_handle(),
+            &quot;caller-a&quot;,
+            &quot;api.v1.exec_command&quot;,
+            <span class="rs-kw">true</span>,
+        );
+
+        assert_eq!(registry.<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#method-count-by-caller-183">count_by_caller</a>(&quot;caller-a&quot;), 1);
+        assert_eq!(
+            registry.<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#method-heartbeat-168">heartbeat</a>(&amp;[&quot;bg-1&quot;.to_owned(), &quot;missing&quot;.to_owned()]),
+            1
+        );
+        assert!(registry.<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#method-cancel-138">cancel</a>(&quot;bg-1&quot;));
+        <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#item-fn-assert-task-cancelled-347">assert_task_cancelled</a>(task).<span class="rs-kw">await</span>?;
+        assert_eq!(registry.<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#method-count-by-caller-183">count_by_caller</a>(&quot;caller-a&quot;), 0);
+
+        registry.<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#method-deregister-128">deregister</a>(&quot;bg-1&quot;);
+        assert_eq!(registry.<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#method-metrics-214">metrics</a>(), (0, 0));
+        <span class="rs-type">Ok</span>(())
+    }
+</code></pre>
+</details>
 
   <p class="source">crates/eos-daemon/src/runtime/invocation_registry.rs:264</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn control_paths_recover_poisoned_registry_lock private async fn control_paths_recover_poisoned_registry_lock () -&gt; TestResult crates/eos-daemon/src/runtime/invocation_registry.rs  ">
+</article><article id="item-fn-control-paths-recover-poisoned-registry-lock-290" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn control_paths_recover_poisoned_registry_lock private async fn control_paths_recover_poisoned_registry_lock () -&gt; TestResult crates/eos-daemon/src/runtime/invocation_registry.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>control_paths_recover_poisoned_registry_lock</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">async fn control_paths_recover_poisoned_registry_lock () -&gt; TestResult</code>
-  <div class="tags"><span>async</span></div>
+  <code class="signature">async fn <a class="symbol-link" href="eos-daemon--src-runtime-invocation-registry-rs.html#item-fn-control-paths-recover-poisoned-registry-lock-290">control_paths_recover_poisoned_registry_lock</a> () -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-invocation-registry-rs.html#item-type-TestResult-262">TestResult</a></code>
+  <div class="tags"><span>async</span><span>tokio::test</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[tokio::test]
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#item-fn-control-paths-recover-poisoned-registry-lock-290">control_paths_recover_poisoned_registry_lock</a>() -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-invocation-registry-rs.html#item-type-TestResult-262">TestResult</a> {
+        <span class="rs-kw">let</span> registry = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-daemon.html#method-new-89">new</a>(<a class="symbol-link rs-type" href="eos-daemon--src-runtime-invocation-registry-rs.html#item-struct-InFlightRegistry-49">InFlightRegistry</a>::<a class="symbol-link rs-fn" href="eos-daemon.html#method-new-89">new</a>(300.0, 30.0));
+        <span class="rs-kw">let</span> poisoned = registry.clone();
+        <span class="rs-kw">let</span> poison_result = thread::<a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-process-rs.html#method-spawn-176">spawn</a>(<span class="rs-kw">move</span> || {
+            <span class="rs-kw">let</span> _guard = <span class="rs-kw">match</span> poisoned.inner.<a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-ppc-router-pending-rs.html#method-lock-142">lock</a>() {
+                <span class="rs-type">Ok</span>(guard) =&gt; guard,
+                <span class="rs-type">Err</span>(error) =&gt; error.into_inner(),
+            };
+            std::panic::resume_unwind(<span class="rs-type">Box</span>::<a class="symbol-link rs-fn" href="eos-daemon.html#method-new-89">new</a>(&quot;poison <span class="rs-kw">in</span>-flight registry&quot;));
+        })
+        .join();
+        <span class="rs-kw">if</span> poison_result.is_ok() {
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(&quot;poison helper thread completed without unwinding&quot;.into());
+        }
+
+        <span class="rs-kw">let</span> task = tokio::<a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-process-rs.html#method-spawn-176">spawn</a>(future::pending::&lt;()&gt;());
+        registry.<a class="symbol-link rs-fn" href="eos-daemon--src-dispatch-dispatcher-rs.html#method-register-140">register</a>(
+            &quot;bg-poisoned&quot;,
+            task.abort_handle(),
+            &quot;caller-a&quot;,
+            &quot;api.v1.exec_command&quot;,
+            <span class="rs-kw">true</span>,
+        );
+
+        assert_eq!(registry.<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#method-count-by-caller-183">count_by_caller</a>(&quot;caller-a&quot;), 1);
+        assert_eq!(registry.<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#method-heartbeat-168">heartbeat</a>(&amp;[&quot;bg-poisoned&quot;.to_owned()]), 1);
+        registry.<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#method-ttl-sweep-198">ttl_sweep</a>();
+        assert!(registry.<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#method-cancel-138">cancel</a>(&quot;bg-poisoned&quot;));
+        <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#item-fn-assert-task-cancelled-347">assert_task_cancelled</a>(task).<span class="rs-kw">await</span>?;
+        registry.<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#method-deregister-128">deregister</a>(&quot;bg-poisoned&quot;);
+        assert_eq!(registry.<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#method-metrics-214">metrics</a>(), (0, 0));
+        <span class="rs-type">Ok</span>(())
+    }
+</code></pre>
+</details>
 
   <p class="source">crates/eos-daemon/src/runtime/invocation_registry.rs:290</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn ttl_sweep_reaps_active_background_task private async fn ttl_sweep_reaps_active_background_task () -&gt; TestResult crates/eos-daemon/src/runtime/invocation_registry.rs  ">
+</article><article id="item-fn-ttl-sweep-reaps-active-background-task-325" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn ttl_sweep_reaps_active_background_task private async fn ttl_sweep_reaps_active_background_task () -&gt; TestResult crates/eos-daemon/src/runtime/invocation_registry.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>ttl_sweep_reaps_active_background_task</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">async fn ttl_sweep_reaps_active_background_task () -&gt; TestResult</code>
-  <div class="tags"><span>async</span></div>
+  <code class="signature">async fn <a class="symbol-link" href="eos-daemon--src-runtime-invocation-registry-rs.html#item-fn-ttl-sweep-reaps-active-background-task-325">ttl_sweep_reaps_active_background_task</a> () -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-invocation-registry-rs.html#item-type-TestResult-262">TestResult</a></code>
+  <div class="tags"><span>async</span><span>tokio::test</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[tokio::test]
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#item-fn-ttl-sweep-reaps-active-background-task-325">ttl_sweep_reaps_active_background_task</a>() -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-invocation-registry-rs.html#item-type-TestResult-262">TestResult</a> {
+        <span class="rs-kw">let</span> registry = <a class="symbol-link rs-type" href="eos-daemon--src-runtime-invocation-registry-rs.html#item-struct-InFlightRegistry-49">InFlightRegistry</a>::<a class="symbol-link rs-fn" href="eos-daemon.html#method-new-89">new</a>(0.001, 30.0);
+        <span class="rs-kw">let</span> task = tokio::<a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-process-rs.html#method-spawn-176">spawn</a>(future::pending::&lt;()&gt;());
+        registry.<a class="symbol-link rs-fn" href="eos-daemon--src-dispatch-dispatcher-rs.html#method-register-140">register</a>(
+            &quot;bg-ttl&quot;,
+            task.abort_handle(),
+            &quot;caller-a&quot;,
+            &quot;api.v1.exec_command&quot;,
+            <span class="rs-kw">true</span>,
+        );
+
+        thread::sleep(<span class="rs-type">Duration</span>::from_millis(3));
+        registry.<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#method-ttl-sweep-198">ttl_sweep</a>();
+        assert_eq!(registry.<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#method-metrics-214">metrics</a>(), (1, 1));
+        assert_eq!(registry.<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#method-count-by-caller-183">count_by_caller</a>(&quot;caller-a&quot;), 0);
+
+        <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#item-fn-assert-task-cancelled-347">assert_task_cancelled</a>(task).<span class="rs-kw">await</span>?;
+        assert_eq!(registry.<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#method-count-by-caller-183">count_by_caller</a>(&quot;caller-a&quot;), 0);
+        <span class="rs-type">Ok</span>(())
+    }
+</code></pre>
+</details>
 
   <p class="source">crates/eos-daemon/src/runtime/invocation_registry.rs:325</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn assert_task_cancelled private async fn assert_task_cancelled (task : JoinHandle &lt; () &gt;) -&gt; TestResult crates/eos-daemon/src/runtime/invocation_registry.rs  ">
+</article><article id="item-fn-assert-task-cancelled-347" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn assert_task_cancelled private async fn assert_task_cancelled (task : JoinHandle &lt; () &gt;) -&gt; TestResult crates/eos-daemon/src/runtime/invocation_registry.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>assert_task_cancelled</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">async fn assert_task_cancelled (task : JoinHandle &lt; () &gt;) -&gt; TestResult</code>
+  <code class="signature">async fn <a class="symbol-link" href="eos-daemon--src-runtime-invocation-registry-rs.html#item-fn-assert-task-cancelled-347">assert_task_cancelled</a> (task : JoinHandle &lt; () &gt;) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-invocation-registry-rs.html#item-type-TestResult-262">TestResult</a></code>
   <div class="tags"><span>async</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#item-fn-assert-task-cancelled-347">assert_task_cancelled</a>(task: <span class="rs-type">JoinHandle</span>&lt;()&gt;) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-invocation-registry-rs.html#item-type-TestResult-262">TestResult</a> {
+        <span class="rs-kw">match</span> task.<span class="rs-kw">await</span> {
+            <span class="rs-type">Ok</span>(()) =&gt; <span class="rs-type">Err</span>(&quot;expected task cancellation, but task completed&quot;.into()),
+            <span class="rs-type">Err</span>(error) <span class="rs-kw">if</span> error.is_cancelled() =&gt; <span class="rs-type">Ok</span>(()),
+            <span class="rs-type">Err</span>(error) =&gt; <span class="rs-type">Err</span>(format!(&quot;expected task cancellation, got {error}&quot;).into()),
+        }
+    }
+</code></pre>
+</details>
 
   <p class="source">crates/eos-daemon/src/runtime/invocation_registry.rs:347</p>
 </article></div>
 </section></div>
 </main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/eos-daemon/src/runtime/invocation_registry.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-comment">//! In-flight invocation registry + TTL reaper.</span>
+<span class="rs-comment">//!</span>
+<span class="rs-comment">//! This is the INVOCATION-keyed registry: id -&gt; task handle, heartbeat -&gt;</span>
+<span class="rs-comment">//! `last_seen`, cancel-by-id, and the TTL reaper loop. It is DISTINCT from the</span>
+<span class="rs-comment">//! per-caller isolated-workspace lifecycle state and active command-session records — do not</span>
+<span class="rs-comment">//! fuse those with this invocation-keyed background-control registry.</span>
+<span class="rs-comment">//!</span>
+<span class="rs-kw">use</span> std::collections::<span class="rs-type">HashMap</span>;
+<span class="rs-kw">use</span> std::sync::{<span class="rs-type">Mutex</span>, <span class="rs-type">MutexGuard</span>, <span class="rs-type">OnceLock</span>, <span class="rs-type">PoisonError</span>};
+<span class="rs-kw">use</span> std::thread;
+<span class="rs-kw">use</span> std::time::<span class="rs-type">Duration</span>;
+<span class="rs-kw">use</span> std::time::<span class="rs-type">Instant</span>;
+
+#[cfg(target_os = &quot;linux&quot;)]
+<span class="rs-kw">use</span> nix::sys::signal::{killpg, <span class="rs-type">Signal</span>};
+#[cfg(target_os = &quot;linux&quot;)]
+<span class="rs-kw">use</span> nix::unistd::<span class="rs-type">Pid</span>;
+<span class="rs-kw">use</span> tokio::task::<span class="rs-type">AbortHandle</span>;
+
+<span class="rs-comment">/// Default TTL before an idle background invocation is reaped (seconds).</span>
+<span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-type">DEFAULT_TTL_S</span>: f64 = 300.0;
+
+<span class="rs-comment">/// Default reaper sweep interval (seconds).</span>
+<span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-type">DEFAULT_REAPER_INTERVAL_S</span>: f64 = 30.0;
+
+<span class="rs-comment">/// One tracked daemon-side invocation.</span>
+#[derive(<span class="rs-type">Debug</span>)]
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-daemon--src-runtime-invocation-registry-rs.html#item-struct-InFlightInvocation-26">InFlightInvocation</a> {
+    <span class="rs-comment">/// The invocation id (registry key).</span>
+    <span class="rs-kw">pub</span> invocation_id: <span class="rs-type">String</span>,
+    <span class="rs-comment">/// Abort handle to the running task (cancel target).</span>
+    <span class="rs-kw">pub</span> abort: <span class="rs-type">AbortHandle</span>,
+    <span class="rs-comment">/// Caller that owns this invocation (for per-caller counts).</span>
+    <span class="rs-kw">pub</span> caller_id: <span class="rs-type">String</span>,
+    <span class="rs-comment">/// The op name (for diagnostics).</span>
+    <span class="rs-kw">pub</span> op: <span class="rs-type">String</span>,
+    <span class="rs-comment">/// Monotonic seconds of the last heartbeat / registration.</span>
+    <span class="rs-kw">pub</span> last_seen: f64,
+    <span class="rs-comment">/// Whether this is a background invocation (only background entries reap).</span>
+    <span class="rs-kw">pub</span> background: bool,
+    <span class="rs-comment">/// Process group for the namespace runner child, when the invocation owns</span>
+    <span class="rs-comment">/// one. Cancelling the tokio task alone cannot interrupt a blocking</span>
+    <span class="rs-comment">/// `wait_with_output`, so cancellation also terminates this group.</span>
+    <span class="rs-kw">pub</span> process_group_id: <span class="rs-type">Option</span>&lt;i32&gt;,
+    <span class="rs-comment">/// Set once the reaper has cancelled this entry (idempotent guard).</span>
+    <span class="rs-kw">pub</span> ttl_reaped: bool,
+}
+
+<span class="rs-comment">/// Tracks daemon-side tasks by invocation id for cancellation + TTL cleanup.</span>
+#[derive(<span class="rs-type">Debug</span>)]
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-daemon--src-runtime-invocation-registry-rs.html#item-struct-InFlightRegistry-49">InFlightRegistry</a> {
+    inner: <span class="rs-type">Mutex</span>&lt;<a class="symbol-link rs-type" href="eos-daemon--src-runtime-invocation-registry-rs.html#item-struct-RegistryState-57">RegistryState</a>&gt;,
+    ttl_s: f64,
+    reaper_interval_s: f64,
+}
+
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Default</span>)]
+<span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-daemon--src-runtime-invocation-registry-rs.html#item-struct-RegistryState-57">RegistryState</a> {
+    by_invocation: <span class="rs-type">HashMap</span>&lt;<span class="rs-type">String</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-invocation-registry-rs.html#item-struct-InFlightInvocation-26">InFlightInvocation</a>&gt;,
+    ttl_reaped_total: u64,
+}
+
+<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-daemon--src-runtime-invocation-registry-rs.html#item-struct-InFlightRegistry-49">InFlightRegistry</a> {
+    <span class="rs-comment">/// Build a registry with explicit timing values.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon.html#method-new-89">new</a>(ttl_s: f64, reaper_interval_s: f64) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">Self</span> {
+            inner: <span class="rs-type">Mutex</span>::<a class="symbol-link rs-fn" href="eos-daemon.html#method-new-89">new</a>(<a class="symbol-link rs-type" href="eos-daemon--src-runtime-invocation-registry-rs.html#item-struct-RegistryState-57">RegistryState</a>::<a class="symbol-link rs-fn" href="eos-daemon.html#method-default-210">default</a>()),
+            ttl_s: <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#item-fn-positive-f64-221">positive_f64</a>(ttl_s, <span class="rs-type">DEFAULT_TTL_S</span>),
+            reaper_interval_s: <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#item-fn-positive-f64-221">positive_f64</a>(reaper_interval_s, <span class="rs-type">DEFAULT_REAPER_INTERVAL_S</span>),
+        }
+    }
+
+    <span class="rs-comment">/// Reaper sweep interval (seconds) the daemon's reaper loop sleeps between.</span>
+    <span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#method-reaper-interval-s-74">reaper_interval_s</a>(&amp;<span class="rs-self">self</span>) -&gt; f64 {
+        <span class="rs-self">self</span>.reaper_interval_s
+    }
+
+    <span class="rs-comment">// The registry is best-effort daemon control state. If another task panics</span>
+    <span class="rs-comment">// while holding the mutex, keep cancellation/heartbeat cleanup available</span>
+    <span class="rs-comment">// instead of panicking future control operations.</span>
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon.html#method-lock-state-116">lock_state</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">MutexGuard</span>&lt;&#x27;_, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-invocation-registry-rs.html#item-struct-RegistryState-57">RegistryState</a>&gt; {
+        <span class="rs-self">self</span>.inner.<a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-ppc-router-pending-rs.html#method-lock-142">lock</a>().unwrap_or_else(<span class="rs-type">PoisonError</span>::into_inner)
+    }
+
+    <span class="rs-comment">/// Register a task under `invocation_id`. Empty ids are ignored.</span>
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-dispatch-dispatcher-rs.html#method-register-140">register</a>(
+        &amp;<span class="rs-self">self</span>,
+        invocation_id: &amp;str,
+        abort: <span class="rs-type">AbortHandle</span>,
+        caller_id: &amp;str,
+        op: &amp;str,
+        background: bool,
+    ) {
+        <span class="rs-kw">if</span> invocation_id.is_empty() {
+            <span class="rs-kw">return</span>;
+        }
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> state = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-daemon.html#method-lock-state-116">lock_state</a>();
+        state.by_invocation.insert(
+            invocation_id.to_owned(),
+            <a class="symbol-link rs-type" href="eos-daemon--src-runtime-invocation-registry-rs.html#item-struct-InFlightInvocation-26">InFlightInvocation</a> {
+                invocation_id: invocation_id.to_owned(),
+                abort,
+                caller_id: caller_id.to_owned(),
+                op: op.to_owned(),
+                last_seen: <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#item-fn-monotonic-seconds-229">monotonic_seconds</a>(),
+                background,
+                process_group_id: <span class="rs-type">None</span>,
+                ttl_reaped: <span class="rs-kw">false</span>,
+            },
+        );
+    }
+
+    <span class="rs-comment">/// Attach a process group id to a registered invocation.</span>
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#method-register-process-group-114">register_process_group</a>(&amp;<span class="rs-self">self</span>, invocation_id: &amp;str, pgid: i32) {
+        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(entry) = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-daemon.html#method-lock-state-116">lock_state</a>().by_invocation.get_mut(invocation_id) {
+            entry.process_group_id = <span class="rs-type">Some</span>(pgid);
+        }
+    }
+
+    <span class="rs-comment">/// Clear any process group id attached to a registered invocation.</span>
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#method-clear-process-group-121">clear_process_group</a>(&amp;<span class="rs-self">self</span>, invocation_id: &amp;str) {
+        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(entry) = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-daemon.html#method-lock-state-116">lock_state</a>().by_invocation.get_mut(invocation_id) {
+            entry.process_group_id = <span class="rs-type">None</span>;
+        }
+    }
+
+    <span class="rs-comment">/// Remove the entry for `invocation_id` (the dispatch `finally` path).</span>
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#method-deregister-128">deregister</a>(&amp;<span class="rs-self">self</span>, invocation_id: &amp;str) {
+        <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-daemon.html#method-lock-state-116">lock_state</a>().by_invocation.remove(invocation_id);
+    }
+
+    <span class="rs-comment">/// Return whether `invocation_id` is still tracked.</span>
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#method-contains-133">contains</a>(&amp;<span class="rs-self">self</span>, invocation_id: &amp;str) -&gt; bool {
+        <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-daemon.html#method-lock-state-116">lock_state</a>().by_invocation.contains_key(invocation_id)
+    }
+
+    <span class="rs-comment">/// Cancel the task for `invocation_id`; returns whether an entry existed.</span>
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#method-cancel-138">cancel</a>(&amp;<span class="rs-self">self</span>, invocation_id: &amp;str) -&gt; bool {
+        <span class="rs-kw">let</span> <span class="rs-type">Some</span>((abort, process_group_id)) = ({
+            <span class="rs-kw">let</span> state = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-daemon.html#method-lock-state-116">lock_state</a>();
+            state.by_invocation.<a class="symbol-link rs-fn" href="eos-daemon--src-services-occ-service-cache-rs.html#method-get-87">get</a>(invocation_id).map(|entry| {
+                (
+                    entry.abort.clone(),
+                    entry.process_group_id.filter(|pgid| *pgid &gt; 0),
+                )
+            })
+        }) <span class="rs-kw">else</span> {
+            <span class="rs-kw">return</span> <span class="rs-kw">false</span>;
+        };
+        <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#item-fn-terminate-process-group-234">terminate_process_group</a>(process_group_id);
+        abort.abort();
+        <span class="rs-kw">true</span>
+    }
+
+    <span class="rs-comment">/// Wait briefly for the dispatch finally path to deregister `invocation_id`.</span>
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#method-wait-for-cleanup-156">wait_for_cleanup</a>(&amp;<span class="rs-self">self</span>, invocation_id: &amp;str, timeout: <span class="rs-type">Duration</span>) -&gt; bool {
+        <span class="rs-kw">let</span> deadline = <span class="rs-type">Instant</span>::now() + timeout;
+        <span class="rs-kw">while</span> <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#method-contains-133">contains</a>(invocation_id) {
+            <span class="rs-kw">if</span> <span class="rs-type">Instant</span>::now() &gt;= deadline {
+                <span class="rs-kw">return</span> <span class="rs-kw">false</span>;
+            }
+            thread::sleep(<span class="rs-type">Duration</span>::from_millis(5));
+        }
+        <span class="rs-kw">true</span>
+    }
+
+    <span class="rs-comment">/// Touch `last_seen` for every known id; returns how many were touched.</span>
+    <span class="rs-comment">/// Backs `api.v1.heartbeat`.</span>
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#method-heartbeat-168">heartbeat</a>(&amp;<span class="rs-self">self</span>, invocation_ids: &amp;[<span class="rs-type">String</span>]) -&gt; usize {
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> state = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-daemon.html#method-lock-state-116">lock_state</a>();
+        <span class="rs-kw">let</span> now = <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#item-fn-monotonic-seconds-229">monotonic_seconds</a>();
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> touched = 0;
+        <span class="rs-kw">for</span> invocation_id <span class="rs-kw">in</span> invocation_ids {
+            <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(entry) = state.by_invocation.get_mut(invocation_id) {
+                entry.last_seen = now;
+                touched += 1;
+            }
+        }
+        touched
+    }
+
+    <span class="rs-comment">/// Count live background invocations for `caller_id`. Backs</span>
+    <span class="rs-comment">/// `api.v1.inflight_count`.</span>
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#method-count-by-caller-183">count_by_caller</a>(&amp;<span class="rs-self">self</span>, caller_id: &amp;str) -&gt; usize {
+        <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-daemon.html#method-lock-state-116">lock_state</a>()
+            .by_invocation
+            .values()
+            .filter(|entry| {
+                entry.background
+                    &amp;&amp; entry.caller_id == caller_id
+                    &amp;&amp; !entry.ttl_reaped
+                    &amp;&amp; !entry.abort.is_finished()
+            })
+            .count()
+    }
+
+    <span class="rs-comment">/// Cancel every background entry idle past the TTL.</span>
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#method-ttl-sweep-198">ttl_sweep</a>(&amp;<span class="rs-self">self</span>) {
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> state = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-daemon.html#method-lock-state-116">lock_state</a>();
+        <span class="rs-kw">let</span> now = <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#item-fn-monotonic-seconds-229">monotonic_seconds</a>();
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> reaped = 0;
+        <span class="rs-kw">for</span> entry <span class="rs-kw">in</span> state.by_invocation.values_mut() {
+            <span class="rs-kw">if</span> entry.background &amp;&amp; !entry.ttl_reaped &amp;&amp; now - entry.last_seen &gt; <span class="rs-self">self</span>.ttl_s {
+                <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#item-fn-terminate-process-group-234">terminate_process_group</a>(entry.process_group_id.filter(|pgid| *pgid &gt; 0));
+                entry.abort.abort();
+                entry.ttl_reaped = <span class="rs-kw">true</span>;
+                reaped += 1;
+            }
+        }
+        state.ttl_reaped_total += reaped;
+    }
+
+    <span class="rs-comment">/// `(active_invocations, ttl_reaped_total)` for diagnostics.</span>
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#method-metrics-214">metrics</a>(&amp;<span class="rs-self">self</span>) -&gt; (usize, u64) {
+        <span class="rs-kw">let</span> state = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-daemon.html#method-lock-state-116">lock_state</a>();
+        (state.by_invocation.len(), state.ttl_reaped_total)
+    }
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#item-fn-positive-f64-221">positive_f64</a>(value: f64, default: f64) -&gt; f64 {
+    <span class="rs-kw">if</span> value.is_finite() &amp;&amp; value &gt; 0.0 {
+        value
+    } <span class="rs-kw">else</span> {
+        default
+    }
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#item-fn-monotonic-seconds-229">monotonic_seconds</a>() -&gt; f64 {
+    <span class="rs-kw">static</span> <span class="rs-type">START</span>: <span class="rs-type">OnceLock</span>&lt;<span class="rs-type">Instant</span>&gt; = <span class="rs-type">OnceLock</span>::<a class="symbol-link rs-fn" href="eos-daemon.html#method-new-89">new</a>();
+    <span class="rs-type">START</span>.get_or_init(<span class="rs-type">Instant</span>::now).elapsed().as_secs_f64()
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#item-fn-terminate-process-group-234">terminate_process_group</a>(process_group_id: <span class="rs-type">Option</span>&lt;i32&gt;) {
+    <span class="rs-kw">let</span> <span class="rs-type">Some</span>(pgid) = process_group_id <span class="rs-kw">else</span> {
+        <span class="rs-kw">return</span>;
+    };
+    #[cfg(target_os = &quot;linux&quot;)]
+    {
+        <span class="rs-kw">let</span> pid = <span class="rs-type">Pid</span>::from_raw(pgid);
+        <span class="rs-kw">if</span> killpg(pid, <span class="rs-type">Signal</span>::<span class="rs-type">SIGTERM</span>).is_ok() {
+            std::thread::sleep(std::time::<span class="rs-type">Duration</span>::from_millis(50));
+        }
+        <span class="rs-kw">let</span> _ = killpg(pid, <span class="rs-type">Signal</span>::<span class="rs-type">SIGKILL</span>);
+    }
+    #[cfg(not(target_os = &quot;linux&quot;))]
+    {
+        <span class="rs-kw">let</span> _ = pgid;
+    }
+}
+
+#[cfg(test)]
+<span class="rs-kw">mod</span> tests {
+    <span class="rs-kw">use</span> std::future;
+    <span class="rs-kw">use</span> std::sync::<span class="rs-type">Arc</span>;
+    <span class="rs-kw">use</span> std::thread;
+    <span class="rs-kw">use</span> std::time::<span class="rs-type">Duration</span>;
+
+    <span class="rs-kw">use</span> <span class="rs-kw">super</span>::<a class="symbol-link rs-type" href="eos-daemon--src-runtime-invocation-registry-rs.html#item-struct-InFlightRegistry-49">InFlightRegistry</a>;
+    <span class="rs-kw">use</span> tokio::task::<span class="rs-type">JoinHandle</span>;
+
+    <span class="rs-kw">type</span> <a class="symbol-link rs-type" href="eos-daemon--src-runtime-invocation-registry-rs.html#item-type-TestResult-262">TestResult</a> = <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a>&lt;(), <span class="rs-type">Box</span>&lt;<span class="rs-kw">dyn</span> std::error::<span class="rs-type">Error</span> + <span class="rs-type">Send</span> + <span class="rs-type">Sync</span>&gt;&gt;;
+
+    #[tokio::test]
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#item-fn-cancel-heartbeat-and-count-track-background-task-264">cancel_heartbeat_and_count_track_background_task</a>() -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-invocation-registry-rs.html#item-type-TestResult-262">TestResult</a> {
+        <span class="rs-kw">let</span> registry = <a class="symbol-link rs-type" href="eos-daemon--src-runtime-invocation-registry-rs.html#item-struct-InFlightRegistry-49">InFlightRegistry</a>::<a class="symbol-link rs-fn" href="eos-daemon.html#method-new-89">new</a>(300.0, 30.0);
+        <span class="rs-kw">let</span> task = tokio::<a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-process-rs.html#method-spawn-176">spawn</a>(future::pending::&lt;()&gt;());
+        registry.<a class="symbol-link rs-fn" href="eos-daemon--src-dispatch-dispatcher-rs.html#method-register-140">register</a>(
+            &quot;bg-1&quot;,
+            task.abort_handle(),
+            &quot;caller-a&quot;,
+            &quot;api.v1.exec_command&quot;,
+            <span class="rs-kw">true</span>,
+        );
+
+        assert_eq!(registry.<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#method-count-by-caller-183">count_by_caller</a>(&quot;caller-a&quot;), 1);
+        assert_eq!(
+            registry.<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#method-heartbeat-168">heartbeat</a>(&amp;[&quot;bg-1&quot;.to_owned(), &quot;missing&quot;.to_owned()]),
+            1
+        );
+        assert!(registry.<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#method-cancel-138">cancel</a>(&quot;bg-1&quot;));
+        <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#item-fn-assert-task-cancelled-347">assert_task_cancelled</a>(task).<span class="rs-kw">await</span>?;
+        assert_eq!(registry.<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#method-count-by-caller-183">count_by_caller</a>(&quot;caller-a&quot;), 0);
+
+        registry.<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#method-deregister-128">deregister</a>(&quot;bg-1&quot;);
+        assert_eq!(registry.<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#method-metrics-214">metrics</a>(), (0, 0));
+        <span class="rs-type">Ok</span>(())
+    }
+
+    #[tokio::test]
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#item-fn-control-paths-recover-poisoned-registry-lock-290">control_paths_recover_poisoned_registry_lock</a>() -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-invocation-registry-rs.html#item-type-TestResult-262">TestResult</a> {
+        <span class="rs-kw">let</span> registry = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-daemon.html#method-new-89">new</a>(<a class="symbol-link rs-type" href="eos-daemon--src-runtime-invocation-registry-rs.html#item-struct-InFlightRegistry-49">InFlightRegistry</a>::<a class="symbol-link rs-fn" href="eos-daemon.html#method-new-89">new</a>(300.0, 30.0));
+        <span class="rs-kw">let</span> poisoned = registry.clone();
+        <span class="rs-kw">let</span> poison_result = thread::<a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-process-rs.html#method-spawn-176">spawn</a>(<span class="rs-kw">move</span> || {
+            <span class="rs-kw">let</span> _guard = <span class="rs-kw">match</span> poisoned.inner.<a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-ppc-router-pending-rs.html#method-lock-142">lock</a>() {
+                <span class="rs-type">Ok</span>(guard) =&gt; guard,
+                <span class="rs-type">Err</span>(error) =&gt; error.into_inner(),
+            };
+            std::panic::resume_unwind(<span class="rs-type">Box</span>::<a class="symbol-link rs-fn" href="eos-daemon.html#method-new-89">new</a>(&quot;poison <span class="rs-kw">in</span>-flight registry&quot;));
+        })
+        .join();
+        <span class="rs-kw">if</span> poison_result.is_ok() {
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(&quot;poison helper thread completed without unwinding&quot;.into());
+        }
+
+        <span class="rs-kw">let</span> task = tokio::<a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-process-rs.html#method-spawn-176">spawn</a>(future::pending::&lt;()&gt;());
+        registry.<a class="symbol-link rs-fn" href="eos-daemon--src-dispatch-dispatcher-rs.html#method-register-140">register</a>(
+            &quot;bg-poisoned&quot;,
+            task.abort_handle(),
+            &quot;caller-a&quot;,
+            &quot;api.v1.exec_command&quot;,
+            <span class="rs-kw">true</span>,
+        );
+
+        assert_eq!(registry.<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#method-count-by-caller-183">count_by_caller</a>(&quot;caller-a&quot;), 1);
+        assert_eq!(registry.<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#method-heartbeat-168">heartbeat</a>(&amp;[&quot;bg-poisoned&quot;.to_owned()]), 1);
+        registry.<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#method-ttl-sweep-198">ttl_sweep</a>();
+        assert!(registry.<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#method-cancel-138">cancel</a>(&quot;bg-poisoned&quot;));
+        <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#item-fn-assert-task-cancelled-347">assert_task_cancelled</a>(task).<span class="rs-kw">await</span>?;
+        registry.<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#method-deregister-128">deregister</a>(&quot;bg-poisoned&quot;);
+        assert_eq!(registry.<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#method-metrics-214">metrics</a>(), (0, 0));
+        <span class="rs-type">Ok</span>(())
+    }
+
+    #[tokio::test]
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#item-fn-ttl-sweep-reaps-active-background-task-325">ttl_sweep_reaps_active_background_task</a>() -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-invocation-registry-rs.html#item-type-TestResult-262">TestResult</a> {
+        <span class="rs-kw">let</span> registry = <a class="symbol-link rs-type" href="eos-daemon--src-runtime-invocation-registry-rs.html#item-struct-InFlightRegistry-49">InFlightRegistry</a>::<a class="symbol-link rs-fn" href="eos-daemon.html#method-new-89">new</a>(0.001, 30.0);
+        <span class="rs-kw">let</span> task = tokio::<a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-process-rs.html#method-spawn-176">spawn</a>(future::pending::&lt;()&gt;());
+        registry.<a class="symbol-link rs-fn" href="eos-daemon--src-dispatch-dispatcher-rs.html#method-register-140">register</a>(
+            &quot;bg-ttl&quot;,
+            task.abort_handle(),
+            &quot;caller-a&quot;,
+            &quot;api.v1.exec_command&quot;,
+            <span class="rs-kw">true</span>,
+        );
+
+        thread::sleep(<span class="rs-type">Duration</span>::from_millis(3));
+        registry.<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#method-ttl-sweep-198">ttl_sweep</a>();
+        assert_eq!(registry.<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#method-metrics-214">metrics</a>(), (1, 1));
+        assert_eq!(registry.<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#method-count-by-caller-183">count_by_caller</a>(&quot;caller-a&quot;), 0);
+
+        <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#item-fn-assert-task-cancelled-347">assert_task_cancelled</a>(task).<span class="rs-kw">await</span>?;
+        assert_eq!(registry.<a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#method-count-by-caller-183">count_by_caller</a>(&quot;caller-a&quot;), 0);
+        <span class="rs-type">Ok</span>(())
+    }
+
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-invocation-registry-rs.html#item-fn-assert-task-cancelled-347">assert_task_cancelled</a>(task: <span class="rs-type">JoinHandle</span>&lt;()&gt;) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-invocation-registry-rs.html#item-type-TestResult-262">TestResult</a> {
+        <span class="rs-kw">match</span> task.<span class="rs-kw">await</span> {
+            <span class="rs-type">Ok</span>(()) =&gt; <span class="rs-type">Err</span>(&quot;expected task cancellation, but task completed&quot;.into()),
+            <span class="rs-type">Err</span>(error) <span class="rs-kw">if</span> error.is_cancelled() =&gt; <span class="rs-type">Ok</span>(()),
+            <span class="rs-type">Err</span>(error) =&gt; <span class="rs-type">Err</span>(format!(&quot;expected task cancellation, got {error}&quot;).into()),
+        }
+    }
+}
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
   <script src="../assets/inventory.js"></script>
 </body>
 </html>

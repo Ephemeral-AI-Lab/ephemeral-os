@@ -11,7 +11,6 @@ use std::sync::{Arc, Mutex};
 use eos_state::AgentRunStore;
 use eos_types::{AgentRunId, JsonObject, TaskId};
 use tokio::sync::Notify;
-use tokio::task::JoinHandle;
 
 use super::foreground::ForegroundExecutor;
 use crate::background::BackgroundSupervisorHandle;
@@ -171,21 +170,12 @@ impl AgentRunFinalization {
     }
 }
 
-/// RAII owner of one agent run's command-completion heartbeat task. Dropping it
-/// aborts the task. The supervisor never holds this guard, so there is no
-/// reference cycle (the Phase-4 lane-owned heartbeat narrows this to a `Weak`
-/// over the lane records).
-struct HeartbeatGuard {
-    join: JoinHandle<()>,
-}
-
-impl Drop for HeartbeatGuard {
-    fn drop(&mut self) {
-        self.join.abort();
-    }
-}
-
 /// The live object for one agent run (spec §6.3).
+///
+/// The run's command-completion heartbeat is owned by the
+/// `CommandSessionLane` inside `background`, so dropping this control (the last
+/// handle clone) drops the lane and aborts the heartbeat (RAII) — no separate
+/// guard is held here.
 pub struct AgentRunControl {
     agent_run_id: AgentRunId,
     cancellation: AgentRunCancellation,
@@ -193,7 +183,6 @@ pub struct AgentRunControl {
     notifications: NotificationService,
     background: BackgroundSupervisorHandle,
     finalization: AgentRunFinalization,
-    _heartbeat: HeartbeatGuard,
 }
 
 impl std::fmt::Debug for AgentRunControl {
@@ -215,7 +204,6 @@ impl AgentRunControl {
             foreground,
             notifications,
             background,
-            heartbeat,
         } = parts;
         Self {
             cancellation: AgentRunCancellation::new(),
@@ -228,7 +216,6 @@ impl AgentRunControl {
                 agent_run_store,
             ),
             agent_run_id,
-            _heartbeat: HeartbeatGuard { join: heartbeat },
         }
     }
 
@@ -284,5 +271,4 @@ pub(super) struct AgentRunControlParts {
     pub(super) foreground: Arc<ForegroundExecutor>,
     pub(super) notifications: NotificationService,
     pub(super) background: BackgroundSupervisorHandle,
-    pub(super) heartbeat: JoinHandle<()>,
 }

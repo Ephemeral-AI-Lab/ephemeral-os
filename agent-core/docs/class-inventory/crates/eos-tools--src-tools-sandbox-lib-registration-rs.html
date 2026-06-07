@@ -8,8 +8,16 @@
 </head>
 <body>
   <header>
-    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
-    <h1>eos-tools File Inventory</h1>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>eos-tools File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS/agent-core &amp;&amp; cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
   </header>
   <a class="back-link" href="../index.html">agent-core</a>
 <section class="summary">
@@ -47,19 +55,263 @@
       <span>0 methods</span>
     </div>
   </div>
-  <div class="items"><div class="group-label">Standalone Functions</div><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn register pub(super) pub(super) fn register (registry : &amp; mut ToolRegistry , config : &amp; ToolConfigSet , sandbox_service : super :: super :: super :: SandboxToolService , command_service : super :: super :: super :: CommandToolService ,) crates/eos-tools/src/tools/sandbox/lib/registration.rs  ">
+  <div class="items"><div class="group-label">Standalone Functions</div><article id="item-fn-register-23" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn register pub(super) pub(super) fn register (registry : &amp; mut ToolRegistry , config : &amp; ToolConfigSet , sandbox_service : super :: super :: super :: SandboxToolService , command_service : super :: super :: super :: CommandToolService ,) crates/eos-tools/src/tools/sandbox/lib/registration.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>register</h3>
     <span class="visibility">pub(super)</span>
   </div>
-  <code class="signature">pub(super) fn register (registry : &amp; mut ToolRegistry , config : &amp; ToolConfigSet , sandbox_service : super :: super :: super :: SandboxToolService , command_service : super :: super :: super :: CommandToolService ,)</code>
+  <code class="signature">pub(super) fn <a class="symbol-link" href="eos-tools--src-ports-mod-rs.html#method-register-322">register</a> (registry : &amp; mut <a class="symbol-link" href="eos-tools--src-registry-tool-registry-rs.html#item-struct-ToolRegistry-18">ToolRegistry</a> , config : &amp; <a class="symbol-link" href="eos-tools--src-registry-config-rs.html#item-struct-ToolConfigSet-45">ToolConfigSet</a> , sandbox_service : super :: super :: super :: <a class="symbol-link" href="eos-tools--src-tools-services-rs.html#item-struct-SandboxToolService-65">SandboxToolService</a> , command_service : super :: super :: super :: <a class="symbol-link" href="eos-tools--src-tools-services-rs.html#item-struct-CommandToolService-91">CommandToolService</a> ,)</code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-ports-mod-rs.html#method-register-322">register</a>(
+    registry: &amp;<span class="rs-kw">mut</span> <a class="symbol-link rs-type" href="eos-tools--src-registry-tool-registry-rs.html#item-struct-ToolRegistry-18">ToolRegistry</a>,
+    config: &amp;<a class="symbol-link rs-type" href="eos-tools--src-registry-config-rs.html#item-struct-ToolConfigSet-45">ToolConfigSet</a>,
+    sandbox_service: <span class="rs-kw">super</span>::<span class="rs-kw">super</span>::<span class="rs-kw">super</span>::<a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-SandboxToolService-65">SandboxToolService</a>,
+    command_service: <span class="rs-kw">super</span>::<span class="rs-kw">super</span>::<span class="rs-kw">super</span>::<a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-CommandToolService-91">CommandToolService</a>,
+) {
+    <span class="rs-kw">let</span> read_file = config.<a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#method-get-89">get</a>(<a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-read-file-rs.html#item-struct-ReadFile-36">ReadFile</a>);
+    <a class="symbol-link rs-fn" href="eos-tools--src-tools-mod-rs.html#item-fn-register-tool-48">register_tool</a>(
+        registry,
+        <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-read-file-rs.html#item-struct-ReadFile-36">ReadFile</a>,
+        read_file,
+        <a class="symbol-link rs-fn" href="eos-tools--src-registry-spec-rs.html#item-fn-json-spec-32">json_spec</a>(
+            <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-read-file-rs.html#item-struct-ReadFile-36">ReadFile</a>,
+            &amp;read_file.description,
+            schema_for!(<a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-read-file-rs.html#item-struct-ReadFileInput-25">ReadFileInput</a>),
+            schema_for!(<a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-lib-outputs-rs.html#item-struct-ReadFileOutput-8">ReadFileOutput</a>),
+        ),
+        <a class="symbol-link rs-type" href="eos-tools--src-core-result-rs.html#item-enum-OutputShape-68">OutputShape</a>::json::&lt;<a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-lib-outputs-rs.html#item-struct-ReadFileOutput-8">ReadFileOutput</a>&gt;(&quot;<a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-lib-outputs-rs.html#item-struct-ReadFileOutput-8">ReadFileOutput</a>&quot;),
+        <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(<a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-read-file-rs.html#item-struct-ReadFile-36">ReadFile</a>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(sandbox_service.clone())),
+    );
+    <span class="rs-kw">let</span> write_file = config.<a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#method-get-89">get</a>(<a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-write-file-rs.html#item-struct-WriteFile-27">WriteFile</a>);
+    <a class="symbol-link rs-fn" href="eos-tools--src-tools-mod-rs.html#item-fn-register-tool-48">register_tool</a>(
+        registry,
+        <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-write-file-rs.html#item-struct-WriteFile-27">WriteFile</a>,
+        write_file,
+        <a class="symbol-link rs-fn" href="eos-tools--src-registry-spec-rs.html#item-fn-json-spec-32">json_spec</a>(
+            <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-write-file-rs.html#item-struct-WriteFile-27">WriteFile</a>,
+            &amp;write_file.description,
+            schema_for!(<a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-write-file-rs.html#item-struct-WriteFileInput-21">WriteFileInput</a>),
+            schema_for!(<a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-lib-outputs-rs.html#item-struct-MutationOutput-18">MutationOutput</a>),
+        ),
+        <a class="symbol-link rs-type" href="eos-tools--src-core-result-rs.html#item-enum-OutputShape-68">OutputShape</a>::json::&lt;<a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-lib-outputs-rs.html#item-struct-MutationOutput-18">MutationOutput</a>&gt;(&quot;<span class="rs-type">WriteFileOutput</span>&quot;),
+        <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(<a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-write-file-rs.html#item-struct-WriteFile-27">WriteFile</a>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(sandbox_service.clone())),
+    );
+    <span class="rs-kw">let</span> edit_file = config.<a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#method-get-89">get</a>(<a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-edit-file-rs.html#item-struct-EditFile-30">EditFile</a>);
+    <a class="symbol-link rs-fn" href="eos-tools--src-tools-mod-rs.html#item-fn-register-tool-48">register_tool</a>(
+        registry,
+        <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-edit-file-rs.html#item-struct-EditFile-30">EditFile</a>,
+        edit_file,
+        <a class="symbol-link rs-fn" href="eos-tools--src-registry-spec-rs.html#item-fn-json-spec-32">json_spec</a>(
+            <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-edit-file-rs.html#item-struct-EditFile-30">EditFile</a>,
+            &amp;edit_file.description,
+            schema_for!(<a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-edit-file-rs.html#item-struct-EditFileInput-17">EditFileInput</a>),
+            schema_for!(<a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-lib-outputs-rs.html#item-struct-MutationOutput-18">MutationOutput</a>),
+        ),
+        <a class="symbol-link rs-type" href="eos-tools--src-core-result-rs.html#item-enum-OutputShape-68">OutputShape</a>::json::&lt;<a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-lib-outputs-rs.html#item-struct-MutationOutput-18">MutationOutput</a>&gt;(&quot;<span class="rs-type">EditFileOutput</span>&quot;),
+        <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(<a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-edit-file-rs.html#item-struct-EditFile-30">EditFile</a>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(sandbox_service.clone())),
+    );
+    <span class="rs-kw">let</span> multi_edit = config.<a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#method-get-89">get</a>(<a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-multi-edit-rs.html#item-struct-MultiEdit-34">MultiEdit</a>);
+    <a class="symbol-link rs-fn" href="eos-tools--src-tools-mod-rs.html#item-fn-register-tool-48">register_tool</a>(
+        registry,
+        <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-multi-edit-rs.html#item-struct-MultiEdit-34">MultiEdit</a>,
+        multi_edit,
+        <a class="symbol-link rs-fn" href="eos-tools--src-registry-spec-rs.html#item-fn-json-spec-32">json_spec</a>(
+            <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-multi-edit-rs.html#item-struct-MultiEdit-34">MultiEdit</a>,
+            &amp;multi_edit.description,
+            schema_for!(<a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-multi-edit-rs.html#item-struct-MultiEditInput-26">MultiEditInput</a>),
+            schema_for!(<a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-lib-outputs-rs.html#item-struct-MutationOutput-18">MutationOutput</a>),
+        ),
+        <a class="symbol-link rs-type" href="eos-tools--src-core-result-rs.html#item-enum-OutputShape-68">OutputShape</a>::json::&lt;<a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-lib-outputs-rs.html#item-struct-MutationOutput-18">MutationOutput</a>&gt;(&quot;<span class="rs-type">MultiEditOutput</span>&quot;),
+        <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(<a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-multi-edit-rs.html#item-struct-MultiEdit-34">MultiEdit</a>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(sandbox_service)),
+    );
+    <span class="rs-kw">let</span> exec_command = config.<a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#method-get-89">get</a>(<a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-exec-command-rs.html#item-struct-ExecCommand-30">ExecCommand</a>);
+    <a class="symbol-link rs-fn" href="eos-tools--src-tools-mod-rs.html#item-fn-register-tool-48">register_tool</a>(
+        registry,
+        <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-exec-command-rs.html#item-struct-ExecCommand-30">ExecCommand</a>,
+        exec_command,
+        <a class="symbol-link rs-fn" href="eos-tools--src-registry-spec-rs.html#item-fn-json-spec-32">json_spec</a>(
+            <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-exec-command-rs.html#item-struct-ExecCommand-30">ExecCommand</a>,
+            &amp;exec_command.description,
+            schema_for!(<a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-exec-command-rs.html#item-struct-ExecCommandInput-19">ExecCommandInput</a>),
+            schema_for!(<a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-lib-outputs-rs.html#item-struct-CommandToolOutput-33">CommandToolOutput</a>),
+        ),
+        <a class="symbol-link rs-type" href="eos-tools--src-core-result-rs.html#item-enum-OutputShape-68">OutputShape</a>::json::&lt;<a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-lib-outputs-rs.html#item-struct-CommandToolOutput-33">CommandToolOutput</a>&gt;(&quot;<a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-lib-outputs-rs.html#item-struct-CommandToolOutput-33">CommandToolOutput</a>&quot;),
+        <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(<a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-exec-command-rs.html#item-struct-ExecCommand-30">ExecCommand</a>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(command_service.clone())),
+    );
+    <span class="rs-kw">let</span> write_stdin = config.<a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#method-get-89">get</a>(<a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-write-stdin-rs.html#item-struct-WriteStdin-29">WriteStdin</a>);
+    <a class="symbol-link rs-fn" href="eos-tools--src-tools-mod-rs.html#item-fn-register-tool-48">register_tool</a>(
+        registry,
+        <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-write-stdin-rs.html#item-struct-WriteStdin-29">WriteStdin</a>,
+        write_stdin,
+        <a class="symbol-link rs-fn" href="eos-tools--src-registry-spec-rs.html#item-fn-json-spec-32">json_spec</a>(
+            <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-write-stdin-rs.html#item-struct-WriteStdin-29">WriteStdin</a>,
+            &amp;write_stdin.description,
+            schema_for!(<a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-write-stdin-rs.html#item-struct-WriteStdinInput-20">WriteStdinInput</a>),
+            schema_for!(<a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-lib-outputs-rs.html#item-struct-CommandToolOutput-33">CommandToolOutput</a>),
+        ),
+        <a class="symbol-link rs-type" href="eos-tools--src-core-result-rs.html#item-enum-OutputShape-68">OutputShape</a>::json::&lt;<a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-lib-outputs-rs.html#item-struct-CommandToolOutput-33">CommandToolOutput</a>&gt;(&quot;<a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-lib-outputs-rs.html#item-struct-CommandToolOutput-33">CommandToolOutput</a>&quot;),
+        <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(<a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-write-stdin-rs.html#item-struct-WriteStdin-29">WriteStdin</a>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(command_service.clone())),
+    );
+    <span class="rs-kw">let</span> read_command_progress = config.<a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#method-get-89">get</a>(<a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-read-command-progress-rs.html#item-struct-ReadCommandProgress-34">ReadCommandProgress</a>);
+    <a class="symbol-link rs-fn" href="eos-tools--src-tools-mod-rs.html#item-fn-register-tool-48">register_tool</a>(
+        registry,
+        <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-read-command-progress-rs.html#item-struct-ReadCommandProgress-34">ReadCommandProgress</a>,
+        read_command_progress,
+        <a class="symbol-link rs-fn" href="eos-tools--src-registry-spec-rs.html#item-fn-json-spec-32">json_spec</a>(
+            <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-read-command-progress-rs.html#item-struct-ReadCommandProgress-34">ReadCommandProgress</a>,
+            &amp;read_command_progress.description,
+            schema_for!(<a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-read-command-progress-rs.html#item-struct-ReadCommandProgressInput-26">ReadCommandProgressInput</a>),
+            schema_for!(<a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-lib-outputs-rs.html#item-struct-CommandToolOutput-33">CommandToolOutput</a>),
+        ),
+        <a class="symbol-link rs-type" href="eos-tools--src-core-result-rs.html#item-enum-OutputShape-68">OutputShape</a>::json::&lt;<a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-lib-outputs-rs.html#item-struct-CommandToolOutput-33">CommandToolOutput</a>&gt;(&quot;<a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-lib-outputs-rs.html#item-struct-CommandToolOutput-33">CommandToolOutput</a>&quot;),
+        <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(<a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-read-command-progress-rs.html#item-struct-ReadCommandProgress-34">ReadCommandProgress</a>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(command_service)),
+    );
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-tools/src/tools/sandbox/lib/registration.rs:23</p>
 </article></div>
 </section></div>
 </main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/eos-tools/src/tools/sandbox/lib/registration.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-kw">use</span> std::sync::<span class="rs-type">Arc</span>;
+
+<span class="rs-kw">use</span> schemars::schema_for;
+
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::core::name::<a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>;
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::core::result::<a class="symbol-link rs-type" href="eos-tools--src-core-result-rs.html#item-enum-OutputShape-68">OutputShape</a>;
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::registry::config::<a class="symbol-link rs-type" href="eos-tools--src-registry-config-rs.html#item-struct-ToolConfigSet-45">ToolConfigSet</a>;
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::registry::spec::json_spec;
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::registry::<a class="symbol-link rs-type" href="eos-tools--src-registry-tool-registry-rs.html#item-struct-ToolRegistry-18">ToolRegistry</a>;
+
+<span class="rs-kw">use</span> <span class="rs-kw">super</span>::<span class="rs-kw">super</span>::<span class="rs-kw">super</span>::register_tool;
+<span class="rs-kw">use</span> <span class="rs-kw">super</span>::<span class="rs-kw">super</span>::{
+    edit_file::{<a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-edit-file-rs.html#item-struct-EditFile-30">EditFile</a>, <a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-edit-file-rs.html#item-struct-EditFileInput-17">EditFileInput</a>},
+    exec_command::{<a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-exec-command-rs.html#item-struct-ExecCommand-30">ExecCommand</a>, <a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-exec-command-rs.html#item-struct-ExecCommandInput-19">ExecCommandInput</a>},
+    multi_edit::{<a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-multi-edit-rs.html#item-struct-MultiEdit-34">MultiEdit</a>, <a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-multi-edit-rs.html#item-struct-MultiEditInput-26">MultiEditInput</a>},
+    read_command_progress::{<a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-read-command-progress-rs.html#item-struct-ReadCommandProgress-34">ReadCommandProgress</a>, <a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-read-command-progress-rs.html#item-struct-ReadCommandProgressInput-26">ReadCommandProgressInput</a>},
+    read_file::{<a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-read-file-rs.html#item-struct-ReadFile-36">ReadFile</a>, <a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-read-file-rs.html#item-struct-ReadFileInput-25">ReadFileInput</a>},
+    write_file::{<a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-write-file-rs.html#item-struct-WriteFile-27">WriteFile</a>, <a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-write-file-rs.html#item-struct-WriteFileInput-21">WriteFileInput</a>},
+    write_stdin::{<a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-write-stdin-rs.html#item-struct-WriteStdin-29">WriteStdin</a>, <a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-write-stdin-rs.html#item-struct-WriteStdinInput-20">WriteStdinInput</a>},
+};
+<span class="rs-kw">use</span> <span class="rs-kw">super</span>::outputs::{<a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-lib-outputs-rs.html#item-struct-CommandToolOutput-33">CommandToolOutput</a>, <a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-lib-outputs-rs.html#item-struct-MutationOutput-18">MutationOutput</a>, <a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-lib-outputs-rs.html#item-struct-ReadFileOutput-8">ReadFileOutput</a>};
+
+<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-ports-mod-rs.html#method-register-322">register</a>(
+    registry: &amp;<span class="rs-kw">mut</span> <a class="symbol-link rs-type" href="eos-tools--src-registry-tool-registry-rs.html#item-struct-ToolRegistry-18">ToolRegistry</a>,
+    config: &amp;<a class="symbol-link rs-type" href="eos-tools--src-registry-config-rs.html#item-struct-ToolConfigSet-45">ToolConfigSet</a>,
+    sandbox_service: <span class="rs-kw">super</span>::<span class="rs-kw">super</span>::<span class="rs-kw">super</span>::<a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-SandboxToolService-65">SandboxToolService</a>,
+    command_service: <span class="rs-kw">super</span>::<span class="rs-kw">super</span>::<span class="rs-kw">super</span>::<a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-CommandToolService-91">CommandToolService</a>,
+) {
+    <span class="rs-kw">let</span> read_file = config.<a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#method-get-89">get</a>(<a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-read-file-rs.html#item-struct-ReadFile-36">ReadFile</a>);
+    <a class="symbol-link rs-fn" href="eos-tools--src-tools-mod-rs.html#item-fn-register-tool-48">register_tool</a>(
+        registry,
+        <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-read-file-rs.html#item-struct-ReadFile-36">ReadFile</a>,
+        read_file,
+        <a class="symbol-link rs-fn" href="eos-tools--src-registry-spec-rs.html#item-fn-json-spec-32">json_spec</a>(
+            <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-read-file-rs.html#item-struct-ReadFile-36">ReadFile</a>,
+            &amp;read_file.description,
+            schema_for!(<a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-read-file-rs.html#item-struct-ReadFileInput-25">ReadFileInput</a>),
+            schema_for!(<a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-lib-outputs-rs.html#item-struct-ReadFileOutput-8">ReadFileOutput</a>),
+        ),
+        <a class="symbol-link rs-type" href="eos-tools--src-core-result-rs.html#item-enum-OutputShape-68">OutputShape</a>::json::&lt;<a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-lib-outputs-rs.html#item-struct-ReadFileOutput-8">ReadFileOutput</a>&gt;(&quot;<a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-lib-outputs-rs.html#item-struct-ReadFileOutput-8">ReadFileOutput</a>&quot;),
+        <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(<a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-read-file-rs.html#item-struct-ReadFile-36">ReadFile</a>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(sandbox_service.clone())),
+    );
+    <span class="rs-kw">let</span> write_file = config.<a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#method-get-89">get</a>(<a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-write-file-rs.html#item-struct-WriteFile-27">WriteFile</a>);
+    <a class="symbol-link rs-fn" href="eos-tools--src-tools-mod-rs.html#item-fn-register-tool-48">register_tool</a>(
+        registry,
+        <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-write-file-rs.html#item-struct-WriteFile-27">WriteFile</a>,
+        write_file,
+        <a class="symbol-link rs-fn" href="eos-tools--src-registry-spec-rs.html#item-fn-json-spec-32">json_spec</a>(
+            <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-write-file-rs.html#item-struct-WriteFile-27">WriteFile</a>,
+            &amp;write_file.description,
+            schema_for!(<a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-write-file-rs.html#item-struct-WriteFileInput-21">WriteFileInput</a>),
+            schema_for!(<a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-lib-outputs-rs.html#item-struct-MutationOutput-18">MutationOutput</a>),
+        ),
+        <a class="symbol-link rs-type" href="eos-tools--src-core-result-rs.html#item-enum-OutputShape-68">OutputShape</a>::json::&lt;<a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-lib-outputs-rs.html#item-struct-MutationOutput-18">MutationOutput</a>&gt;(&quot;<span class="rs-type">WriteFileOutput</span>&quot;),
+        <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(<a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-write-file-rs.html#item-struct-WriteFile-27">WriteFile</a>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(sandbox_service.clone())),
+    );
+    <span class="rs-kw">let</span> edit_file = config.<a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#method-get-89">get</a>(<a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-edit-file-rs.html#item-struct-EditFile-30">EditFile</a>);
+    <a class="symbol-link rs-fn" href="eos-tools--src-tools-mod-rs.html#item-fn-register-tool-48">register_tool</a>(
+        registry,
+        <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-edit-file-rs.html#item-struct-EditFile-30">EditFile</a>,
+        edit_file,
+        <a class="symbol-link rs-fn" href="eos-tools--src-registry-spec-rs.html#item-fn-json-spec-32">json_spec</a>(
+            <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-edit-file-rs.html#item-struct-EditFile-30">EditFile</a>,
+            &amp;edit_file.description,
+            schema_for!(<a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-edit-file-rs.html#item-struct-EditFileInput-17">EditFileInput</a>),
+            schema_for!(<a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-lib-outputs-rs.html#item-struct-MutationOutput-18">MutationOutput</a>),
+        ),
+        <a class="symbol-link rs-type" href="eos-tools--src-core-result-rs.html#item-enum-OutputShape-68">OutputShape</a>::json::&lt;<a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-lib-outputs-rs.html#item-struct-MutationOutput-18">MutationOutput</a>&gt;(&quot;<span class="rs-type">EditFileOutput</span>&quot;),
+        <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(<a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-edit-file-rs.html#item-struct-EditFile-30">EditFile</a>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(sandbox_service.clone())),
+    );
+    <span class="rs-kw">let</span> multi_edit = config.<a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#method-get-89">get</a>(<a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-multi-edit-rs.html#item-struct-MultiEdit-34">MultiEdit</a>);
+    <a class="symbol-link rs-fn" href="eos-tools--src-tools-mod-rs.html#item-fn-register-tool-48">register_tool</a>(
+        registry,
+        <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-multi-edit-rs.html#item-struct-MultiEdit-34">MultiEdit</a>,
+        multi_edit,
+        <a class="symbol-link rs-fn" href="eos-tools--src-registry-spec-rs.html#item-fn-json-spec-32">json_spec</a>(
+            <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-multi-edit-rs.html#item-struct-MultiEdit-34">MultiEdit</a>,
+            &amp;multi_edit.description,
+            schema_for!(<a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-multi-edit-rs.html#item-struct-MultiEditInput-26">MultiEditInput</a>),
+            schema_for!(<a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-lib-outputs-rs.html#item-struct-MutationOutput-18">MutationOutput</a>),
+        ),
+        <a class="symbol-link rs-type" href="eos-tools--src-core-result-rs.html#item-enum-OutputShape-68">OutputShape</a>::json::&lt;<a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-lib-outputs-rs.html#item-struct-MutationOutput-18">MutationOutput</a>&gt;(&quot;<span class="rs-type">MultiEditOutput</span>&quot;),
+        <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(<a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-multi-edit-rs.html#item-struct-MultiEdit-34">MultiEdit</a>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(sandbox_service)),
+    );
+    <span class="rs-kw">let</span> exec_command = config.<a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#method-get-89">get</a>(<a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-exec-command-rs.html#item-struct-ExecCommand-30">ExecCommand</a>);
+    <a class="symbol-link rs-fn" href="eos-tools--src-tools-mod-rs.html#item-fn-register-tool-48">register_tool</a>(
+        registry,
+        <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-exec-command-rs.html#item-struct-ExecCommand-30">ExecCommand</a>,
+        exec_command,
+        <a class="symbol-link rs-fn" href="eos-tools--src-registry-spec-rs.html#item-fn-json-spec-32">json_spec</a>(
+            <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-exec-command-rs.html#item-struct-ExecCommand-30">ExecCommand</a>,
+            &amp;exec_command.description,
+            schema_for!(<a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-exec-command-rs.html#item-struct-ExecCommandInput-19">ExecCommandInput</a>),
+            schema_for!(<a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-lib-outputs-rs.html#item-struct-CommandToolOutput-33">CommandToolOutput</a>),
+        ),
+        <a class="symbol-link rs-type" href="eos-tools--src-core-result-rs.html#item-enum-OutputShape-68">OutputShape</a>::json::&lt;<a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-lib-outputs-rs.html#item-struct-CommandToolOutput-33">CommandToolOutput</a>&gt;(&quot;<a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-lib-outputs-rs.html#item-struct-CommandToolOutput-33">CommandToolOutput</a>&quot;),
+        <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(<a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-exec-command-rs.html#item-struct-ExecCommand-30">ExecCommand</a>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(command_service.clone())),
+    );
+    <span class="rs-kw">let</span> write_stdin = config.<a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#method-get-89">get</a>(<a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-write-stdin-rs.html#item-struct-WriteStdin-29">WriteStdin</a>);
+    <a class="symbol-link rs-fn" href="eos-tools--src-tools-mod-rs.html#item-fn-register-tool-48">register_tool</a>(
+        registry,
+        <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-write-stdin-rs.html#item-struct-WriteStdin-29">WriteStdin</a>,
+        write_stdin,
+        <a class="symbol-link rs-fn" href="eos-tools--src-registry-spec-rs.html#item-fn-json-spec-32">json_spec</a>(
+            <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-write-stdin-rs.html#item-struct-WriteStdin-29">WriteStdin</a>,
+            &amp;write_stdin.description,
+            schema_for!(<a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-write-stdin-rs.html#item-struct-WriteStdinInput-20">WriteStdinInput</a>),
+            schema_for!(<a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-lib-outputs-rs.html#item-struct-CommandToolOutput-33">CommandToolOutput</a>),
+        ),
+        <a class="symbol-link rs-type" href="eos-tools--src-core-result-rs.html#item-enum-OutputShape-68">OutputShape</a>::json::&lt;<a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-lib-outputs-rs.html#item-struct-CommandToolOutput-33">CommandToolOutput</a>&gt;(&quot;<a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-lib-outputs-rs.html#item-struct-CommandToolOutput-33">CommandToolOutput</a>&quot;),
+        <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(<a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-write-stdin-rs.html#item-struct-WriteStdin-29">WriteStdin</a>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(command_service.clone())),
+    );
+    <span class="rs-kw">let</span> read_command_progress = config.<a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#method-get-89">get</a>(<a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-read-command-progress-rs.html#item-struct-ReadCommandProgress-34">ReadCommandProgress</a>);
+    <a class="symbol-link rs-fn" href="eos-tools--src-tools-mod-rs.html#item-fn-register-tool-48">register_tool</a>(
+        registry,
+        <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-read-command-progress-rs.html#item-struct-ReadCommandProgress-34">ReadCommandProgress</a>,
+        read_command_progress,
+        <a class="symbol-link rs-fn" href="eos-tools--src-registry-spec-rs.html#item-fn-json-spec-32">json_spec</a>(
+            <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-read-command-progress-rs.html#item-struct-ReadCommandProgress-34">ReadCommandProgress</a>,
+            &amp;read_command_progress.description,
+            schema_for!(<a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-read-command-progress-rs.html#item-struct-ReadCommandProgressInput-26">ReadCommandProgressInput</a>),
+            schema_for!(<a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-lib-outputs-rs.html#item-struct-CommandToolOutput-33">CommandToolOutput</a>),
+        ),
+        <a class="symbol-link rs-type" href="eos-tools--src-core-result-rs.html#item-enum-OutputShape-68">OutputShape</a>::json::&lt;<a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-lib-outputs-rs.html#item-struct-CommandToolOutput-33">CommandToolOutput</a>&gt;(&quot;<a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-lib-outputs-rs.html#item-struct-CommandToolOutput-33">CommandToolOutput</a>&quot;),
+        <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(<a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-read-command-progress-rs.html#item-struct-ReadCommandProgress-34">ReadCommandProgress</a>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(command_service)),
+    );
+}
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
   <script src="../assets/inventory.js"></script>
 </body>
 </html>

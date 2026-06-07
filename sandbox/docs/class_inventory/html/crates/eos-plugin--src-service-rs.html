@@ -8,8 +8,16 @@
 </head>
 <body>
   <header>
-    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
-    <h1>eos-plugin File Inventory</h1>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>eos-plugin File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS/sandbox &amp;&amp; cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
   </header>
   <a class="back-link" href="../index.html">sandbox</a>
 <section class="summary">
@@ -47,139 +55,596 @@
       <span>3 methods</span>
     </div>
   </div>
-  <div class="items"><div class="group-label">File-Owned Types</div><article class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct PluginServiceKey pub pub struct PluginServiceKey crates/eos-plugin/src/service.rs layer_stack_root String workspace_root String plugin_id String plugin_digest String service_id String service_profile_digest String service_mode ServiceMode refresh_strategy RefreshStrategy ">
+  <div class="items"><div class="group-label">File-Owned Types</div><article id="item-struct-PluginServiceKey-39" class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct PluginServiceKey pub pub struct PluginServiceKey crates/eos-plugin/src/service.rs layer_stack_root String workspace_root String plugin_id String plugin_digest String service_id String service_profile_digest String service_mode ServiceMode refresh_strategy RefreshStrategy ">
   <div class="item-head">
     <span class="kind">struct</span>
     <h3>PluginServiceKey</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub struct PluginServiceKey</code>
-  <div class="tags"><span>serde</span></div>
-  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>layer_stack_root</td><td><code>String</code></td></tr><tr><td>pub</td><td>workspace_root</td><td><code>String</code></td></tr><tr><td>pub</td><td>plugin_id</td><td><code>String</code></td></tr><tr><td>pub</td><td>plugin_digest</td><td><code>String</code></td></tr><tr><td>pub</td><td>service_id</td><td><code>String</code></td></tr><tr><td>pub</td><td>service_profile_digest</td><td><code>String</code></td></tr><tr><td>pub</td><td>service_mode</td><td><code>ServiceMode</code></td></tr><tr><td>pub</td><td>refresh_strategy</td><td><code>RefreshStrategy</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr><td>constructor</td><td>new</td><td><code>pub fn new (parts : PluginServiceKeyParts) -&gt; Result &lt; Self &gt;</code></td></tr><tr><td>method</td><td>validate</td><td><code>pub fn validate (&amp; self) -&gt; Result &lt; () &gt;</code></td></tr><tr><td>method</td><td>service_instance_id</td><td><code>pub fn service_instance_id (&amp; self) -&gt; String</code></td></tr></tbody></table>
+  <code class="signature">pub struct <a class="symbol-link" href="eos-plugin--src-service-rs.html#item-struct-PluginServiceKey-39">PluginServiceKey</a></code>
+  <p class="docstring">Stable key for sharing a daemon-managed plugin service.<br>Reuse is intentionally stricter than the old per-root cache: service id,<br>service profile digest, mode, and refresh strategy are part of the key so<br>two payloads cannot accidentally share a process just because they use the<br>same `LayerStack` root.<br>`#[non_exhaustive]` makes [`PluginServiceKey::new`] the only way to mint one<br>from another crate, so the validated `Parts` -&gt; `new` path cannot be bypassed<br>by a struct literal; fields stay public for read-only access.</p>
+  <div class="tags"><span>derive: Clone</span><span>derive: Debug</span><span>derive: Deserialize</span><span>derive: Eq</span><span>derive: Hash</span><span>derive: Ord</span><span>derive: PartialEq</span><span>derive: PartialOrd</span><span>derive: Serialize</span><span>non_exhaustive</span><span>serde</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>layer_stack_root</td><td><code>String</code></td></tr><tr><td>pub</td><td>workspace_root</td><td><code>String</code></td></tr><tr><td>pub</td><td>plugin_id</td><td><code>String</code></td></tr><tr><td>pub</td><td>plugin_digest</td><td><code>String</code></td></tr><tr><td>pub</td><td>service_id</td><td><code>String</code></td></tr><tr><td>pub</td><td>service_profile_digest</td><td><code>String</code></td></tr><tr><td>pub</td><td>service_mode</td><td><code><a class="symbol-link" href="eos-plugin--src-service-rs.html#item-enum-ServiceMode-12">ServiceMode</a></code></td></tr><tr><td>pub</td><td>refresh_strategy</td><td><code><a class="symbol-link" href="eos-plugin--src-service-rs.html#item-enum-RefreshStrategy-24">RefreshStrategy</a></code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-77"><td>constructor</td><td>new</td><td><code>pub fn <a class="symbol-link" href="eos-plugin--src-service-rs.html#method-new-77">new</a> (parts : <a class="symbol-link" href="eos-plugin--src-service-rs.html#item-struct-PluginServiceKeyParts-62">PluginServiceKeyParts</a>) -&gt; <a class="symbol-link" href="eos-plugin.html#item-type-Result-49">Result</a> &lt; Self &gt;</code><p class="docstring">Construct a validated service key.<br># Errors<br>Returns [`PluginError::Manifest`] when the supplied key parts are<br>malformed or incompatible.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Construct a validated service key.</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// # Errors</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// Returns [`PluginError::Manifest`] when the supplied key parts are</span>
+    <span class="rs-comment">/// malformed or incompatible.</span>
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-service-rs.html#method-new-77">new</a>(parts: <a class="symbol-link rs-type" href="eos-plugin--src-service-rs.html#item-struct-PluginServiceKeyParts-62">PluginServiceKeyParts</a>) -&gt; <a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>&lt;<span class="rs-self">Self</span>&gt; {
+        <span class="rs-kw">let</span> key = <span class="rs-self">Self</span> {
+            layer_stack_root: parts.layer_stack_root,
+            workspace_root: parts.workspace_root,
+            plugin_id: parts.plugin_id,
+            plugin_digest: parts.plugin_digest,
+            service_id: parts.service_id,
+            service_profile_digest: parts.service_profile_digest,
+            service_mode: parts.service_mode,
+            refresh_strategy: parts.refresh_strategy,
+        };
+        key.<a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#method-validate-37">validate</a>()?;
+        <span class="rs-type">Ok</span>(key)
+    }
+</code></pre>
+</details></td></tr><tr id="method-validate-98"><td>method</td><td>validate</td><td><code>pub fn <a class="symbol-link" href="eos-plugin--src-manifest-rs.html#method-validate-37">validate</a> (&amp; self) -&gt; <a class="symbol-link" href="eos-plugin.html#item-type-Result-49">Result</a> &lt; () &gt;</code><p class="docstring">Validate this key without normalizing it.<br># Errors<br>Returns [`PluginError::Manifest`] when paths are not absolute, identifiers<br>are malformed, digests are empty, or the service mode/refresh strategy<br>pair is invalid.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Validate this key without normalizing it.</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// # Errors</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// Returns [`PluginError::Manifest`] when paths are not absolute, identifiers</span>
+    <span class="rs-comment">/// are malformed, digests are empty, or the service mode/refresh strategy</span>
+    <span class="rs-comment">/// pair is invalid.</span>
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#method-validate-37">validate</a>(&amp;<span class="rs-self">self</span>) -&gt; <a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>&lt;()&gt; {
+        <a class="symbol-link rs-fn" href="eos-plugin--src-service-rs.html#item-fn-require-absolute-183">require_absolute</a>(&quot;layer_stack_root&quot;, &amp;<span class="rs-self">self</span>.layer_stack_root)?;
+        <a class="symbol-link rs-fn" href="eos-plugin--src-service-rs.html#item-fn-require-absolute-183">require_absolute</a>(&quot;workspace_root&quot;, &amp;<span class="rs-self">self</span>.workspace_root)?;
+        <a class="symbol-link rs-fn" href="eos-plugin--src-service-rs.html#item-fn-validate-plugin-id-162">validate_plugin_id</a>(&quot;plugin_id&quot;, &amp;<span class="rs-self">self</span>.plugin_id)?;
+        <a class="symbol-link rs-fn" href="eos-plugin--src-service-rs.html#item-fn-require-non-empty-176">require_non_empty</a>(&quot;plugin_digest&quot;, &amp;<span class="rs-self">self</span>.plugin_digest)?;
+        <a class="symbol-link rs-fn" href="eos-plugin--src-service-rs.html#item-fn-validate-identifier-139">validate_identifier</a>(&quot;service_id&quot;, &amp;<span class="rs-self">self</span>.service_id)?;
+        <a class="symbol-link rs-fn" href="eos-plugin--src-service-rs.html#item-fn-require-non-empty-176">require_non_empty</a>(&quot;service_profile_digest&quot;, &amp;<span class="rs-self">self</span>.service_profile_digest)?;
+        <span class="rs-kw">if</span> <span class="rs-self">self</span>.service_mode == <a class="symbol-link rs-type" href="eos-plugin--src-service-rs.html#item-enum-ServiceMode-12">ServiceMode</a>::<span class="rs-type">OneshotOverlay</span>
+            &amp;&amp; <span class="rs-self">self</span>.refresh_strategy != <a class="symbol-link rs-type" href="eos-plugin--src-service-rs.html#item-enum-RefreshStrategy-24">RefreshStrategy</a>::<span class="rs-type">RestartService</span>
+        {
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-plugin.html#item-enum-PluginError-5">PluginError</a>::<span class="rs-type">Manifest</span>(
+                &quot;oneshot_overlay service keys must <span class="rs-kw">use</span> restart_service <span class="rs-kw">as</span> the inert refresh strategy&quot;
+                    .to_owned(),
+            ));
+        }
+        <span class="rs-type">Ok</span>(())
+    }
+</code></pre>
+</details></td></tr><tr id="method-service-instance-id-123"><td>method</td><td>service_instance_id</td><td><code>pub fn <a class="symbol-link" href="eos-plugin--src-service-rs.html#method-service-instance-id-123">service_instance_id</a> (&amp; self) -&gt; String</code><p class="docstring">Deterministic, content-addressed reuse key for a service instance.<br>Despite the `_id` suffix this is NOT a per-spawn unique handle: it is a<br>stable digest of the identity dimensions that define instance sharing<br>(layer-stack root, plugin, service, profile digest), so two payloads with<br>the same dimensions intentionally resolve to — and reuse — one instance.<br>Used as the manifest key in status and refresh health checks.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Deterministic, content-addressed reuse key for a service instance.</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// Despite the `_id` suffix this is NOT a per-spawn unique handle: it is a</span>
+    <span class="rs-comment">/// stable digest of the identity dimensions that define instance sharing</span>
+    <span class="rs-comment">/// (layer-stack root, plugin, service, profile digest), so two payloads with</span>
+    <span class="rs-comment">/// the same dimensions intentionally resolve to — and reuse — one instance.</span>
+    <span class="rs-comment">/// Used as the manifest key in status and refresh health checks.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-service-rs.html#method-service-instance-id-123">service_instance_id</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">String</span> {
+        format!(
+            &quot;{}:{}:{}:{}&quot;,
+            <span class="rs-self">self</span>.layer_stack_root, <span class="rs-self">self</span>.plugin_id, <span class="rs-self">self</span>.service_id, <span class="rs-self">self</span>.service_profile_digest
+        )
+    }
+</code></pre>
+</details></td></tr></tbody></table>
+
   <p class="source">crates/eos-plugin/src/service.rs:39</p>
-</article><article class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct PluginServiceKeyParts pub pub struct PluginServiceKeyParts crates/eos-plugin/src/service.rs layer_stack_root String workspace_root String plugin_id String plugin_digest String service_id String service_profile_digest String service_mode ServiceMode refresh_strategy RefreshStrategy ">
+</article><article id="item-struct-PluginServiceKeyParts-62" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct PluginServiceKeyParts pub pub struct PluginServiceKeyParts crates/eos-plugin/src/service.rs layer_stack_root String workspace_root String plugin_id String plugin_digest String service_id String service_profile_digest String service_mode ServiceMode refresh_strategy RefreshStrategy ">
   <div class="item-head">
     <span class="kind">struct</span>
     <h3>PluginServiceKeyParts</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub struct PluginServiceKeyParts</code>
-  <div class="tags"><span>serde</span></div>
-  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>layer_stack_root</td><td><code>String</code></td></tr><tr><td>pub</td><td>workspace_root</td><td><code>String</code></td></tr><tr><td>pub</td><td>plugin_id</td><td><code>String</code></td></tr><tr><td>pub</td><td>plugin_digest</td><td><code>String</code></td></tr><tr><td>pub</td><td>service_id</td><td><code>String</code></td></tr><tr><td>pub</td><td>service_profile_digest</td><td><code>String</code></td></tr><tr><td>pub</td><td>service_mode</td><td><code>ServiceMode</code></td></tr><tr><td>pub</td><td>refresh_strategy</td><td><code>RefreshStrategy</code></td></tr></tbody></table>
+  <code class="signature">pub struct <a class="symbol-link" href="eos-plugin--src-service-rs.html#item-struct-PluginServiceKeyParts-62">PluginServiceKeyParts</a></code>
+  <p class="docstring">Field bag used to construct [`PluginServiceKey`] without a long positional<br>argument list.</p>
+  <div class="tags"><span>derive: Clone</span><span>derive: Debug</span><span>derive: Deserialize</span><span>derive: Eq</span><span>derive: PartialEq</span><span>derive: Serialize</span><span>serde</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>layer_stack_root</td><td><code>String</code></td></tr><tr><td>pub</td><td>workspace_root</td><td><code>String</code></td></tr><tr><td>pub</td><td>plugin_id</td><td><code>String</code></td></tr><tr><td>pub</td><td>plugin_digest</td><td><code>String</code></td></tr><tr><td>pub</td><td>service_id</td><td><code>String</code></td></tr><tr><td>pub</td><td>service_profile_digest</td><td><code>String</code></td></tr><tr><td>pub</td><td>service_mode</td><td><code><a class="symbol-link" href="eos-plugin--src-service-rs.html#item-enum-ServiceMode-12">ServiceMode</a></code></td></tr><tr><td>pub</td><td>refresh_strategy</td><td><code><a class="symbol-link" href="eos-plugin--src-service-rs.html#item-enum-RefreshStrategy-24">RefreshStrategy</a></code></td></tr></tbody></table>
+
   <p class="source">crates/eos-plugin/src/service.rs:62</p>
-</article><article class="type-card" data-kind="enum" data-kind-list="enum field type-model" data-filter-text="enum ServiceMode pub pub enum ServiceMode crates/eos-plugin/src/service.rs  ">
+</article><article id="item-enum-ServiceMode-12" class="type-card" data-kind="enum" data-kind-list="enum field type-model" data-filter-text="enum ServiceMode pub pub enum ServiceMode crates/eos-plugin/src/service.rs  ">
   <div class="item-head">
     <span class="kind">enum</span>
     <h3>ServiceMode</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub enum ServiceMode</code>
-  <div class="tags"><span>serde</span></div>
+  <code class="signature">pub enum <a class="symbol-link" href="eos-plugin--src-service-rs.html#item-enum-ServiceMode-12">ServiceMode</a></code>
+  <p class="docstring">The daemon-managed service mode for long-lived read-only services.</p>
+  <div class="tags"><span>derive: Clone</span><span>derive: Copy</span><span>derive: Debug</span><span>derive: Deserialize</span><span>derive: Eq</span><span>derive: Hash</span><span>derive: Ord</span><span>derive: PartialEq</span><span>derive: PartialOrd</span><span>derive: Serialize</span><span>non_exhaustive</span><span>serde</span><span>serde: rename_all</span></div>
   <h4>Variants</h4><table><tbody><tr><td>WorkspaceSnapshotRefresh</td><td><code></code></td></tr><tr><td>OneshotOverlay</td><td><code></code></td></tr></tbody></table>
+
   <p class="source">crates/eos-plugin/src/service.rs:12</p>
-</article><article class="type-card" data-kind="enum" data-kind-list="enum field type-model" data-filter-text="enum RefreshStrategy pub pub enum RefreshStrategy crates/eos-plugin/src/service.rs  ">
+</article><article id="item-enum-RefreshStrategy-24" class="type-card" data-kind="enum" data-kind-list="enum field type-model" data-filter-text="enum RefreshStrategy pub pub enum RefreshStrategy crates/eos-plugin/src/service.rs  ">
   <div class="item-head">
     <span class="kind">enum</span>
     <h3>RefreshStrategy</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub enum RefreshStrategy</code>
-  <div class="tags"><span>serde</span></div>
+  <code class="signature">pub enum <a class="symbol-link" href="eos-plugin--src-service-rs.html#item-enum-RefreshStrategy-24">RefreshStrategy</a></code>
+  <p class="docstring">Mechanism used when a `workspace_snapshot_refresh` service is stale.</p>
+  <div class="tags"><span>derive: Clone</span><span>derive: Copy</span><span>derive: Debug</span><span>derive: Deserialize</span><span>derive: Eq</span><span>derive: Hash</span><span>derive: Ord</span><span>derive: PartialEq</span><span>derive: PartialOrd</span><span>derive: Serialize</span><span>non_exhaustive</span><span>serde</span><span>serde: rename_all</span></div>
   <h4>Variants</h4><table><tbody><tr><td>RemountWorkspaceAndNotify</td><td><code></code></td></tr><tr><td>RemountWorkspace</td><td><code></code></td></tr><tr><td>RestartService</td><td><code></code></td></tr></tbody></table>
+
   <p class="source">crates/eos-plugin/src/service.rs:24</p>
-</article><div class="group-label">Aliases</div><article class="item-card" data-kind="type" data-kind-list="type" data-filter-text="type TestResult private type TestResult = std :: result :: Result &lt; () , PluginError &gt; crates/eos-plugin/src/service.rs  ">
+</article><div class="group-label">Aliases</div><article id="item-type-TestResult-196" class="item-card" data-kind="type" data-kind-list="type" data-filter-text="type TestResult private type TestResult = std :: result :: Result &lt; () , PluginError &gt; crates/eos-plugin/src/service.rs  ">
   <div class="item-head">
     <span class="kind">type</span>
     <h3>TestResult</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">type TestResult = std :: result :: Result &lt; () , PluginError &gt;</code>
+  <code class="signature">type <a class="symbol-link" href="eos-plugin--src-manifest-rs.html#item-type-TestResult-298">TestResult</a> = std :: result :: <a class="symbol-link" href="eos-plugin.html#item-type-Result-49">Result</a> &lt; () , <a class="symbol-link" href="eos-plugin.html#item-enum-PluginError-5">PluginError</a> &gt;</code>
   <div class="tags"></div>
 
   <p class="source">crates/eos-plugin/src/service.rs:196</p>
-</article><div class="group-label">Standalone Functions</div><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn validate_identifier pub(crate) pub(crate) fn validate_identifier (field : &amp; str , value : &amp; str) -&gt; Result &lt; () &gt; crates/eos-plugin/src/service.rs  ">
+</article><div class="group-label">Standalone Functions</div><article id="item-fn-validate-identifier-139" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn validate_identifier pub(crate) pub(crate) fn validate_identifier (field : &amp; str , value : &amp; str) -&gt; Result &lt; () &gt; crates/eos-plugin/src/service.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>validate_identifier</h3>
     <span class="visibility">pub(crate)</span>
   </div>
-  <code class="signature">pub(crate) fn validate_identifier (field : &amp; str , value : &amp; str) -&gt; Result &lt; () &gt;</code>
+  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-plugin--src-service-rs.html#item-fn-validate-identifier-139">validate_identifier</a> (field : &amp; str , value : &amp; str) -&gt; <a class="symbol-link" href="eos-plugin.html#item-type-Result-49">Result</a> &lt; () &gt;</code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-service-rs.html#item-fn-validate-identifier-139">validate_identifier</a>(field: &amp;str, value: &amp;str) -&gt; <a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>&lt;()&gt; {
+    <span class="rs-kw">let</span> value = value.trim();
+    <span class="rs-kw">if</span> value.is_empty() {
+        <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-plugin.html#item-enum-PluginError-5">PluginError</a>::<span class="rs-type">Manifest</span>(format!(&quot;{field} is required&quot;)));
+    }
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> chars = value.chars();
+    <span class="rs-kw">match</span> chars.next() {
+        <span class="rs-type">Some</span>(c) <span class="rs-kw">if</span> c == &#x27;_&#x27; || c.is_ascii_alphabetic() =&gt; {}
+        _ =&gt; {
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-plugin.html#item-enum-PluginError-5">PluginError</a>::<span class="rs-type">Manifest</span>(format!(
+                &quot;{field} must start with an <span class="rs-type">ASCII</span> letter or underscore&quot;
+            )));
+        }
+    }
+    <span class="rs-kw">if</span> chars.all(|c| c == &#x27;_&#x27; || c == &#x27;-&#x27; || c == &#x27;.&#x27; || c.is_ascii_alphanumeric()) {
+        <span class="rs-type">Ok</span>(())
+    } <span class="rs-kw">else</span> {
+        <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-plugin.html#item-enum-PluginError-5">PluginError</a>::<span class="rs-type">Manifest</span>(format!(
+            &quot;{field} contains unsupported characters&quot;
+        )))
+    }
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-plugin/src/service.rs:139</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn validate_plugin_id pub(crate) pub(crate) fn validate_plugin_id (field : &amp; str , value : &amp; str) -&gt; Result &lt; () &gt; crates/eos-plugin/src/service.rs  ">
+</article><article id="item-fn-validate-plugin-id-162" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn validate_plugin_id pub(crate) pub(crate) fn validate_plugin_id (field : &amp; str , value : &amp; str) -&gt; Result &lt; () &gt; crates/eos-plugin/src/service.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>validate_plugin_id</h3>
     <span class="visibility">pub(crate)</span>
   </div>
-  <code class="signature">pub(crate) fn validate_plugin_id (field : &amp; str , value : &amp; str) -&gt; Result &lt; () &gt;</code>
+  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-plugin--src-service-rs.html#item-fn-validate-plugin-id-162">validate_plugin_id</a> (field : &amp; str , value : &amp; str) -&gt; <a class="symbol-link" href="eos-plugin.html#item-type-Result-49">Result</a> &lt; () &gt;</code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-service-rs.html#item-fn-validate-plugin-id-162">validate_plugin_id</a>(field: &amp;str, value: &amp;str) -&gt; <a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>&lt;()&gt; {
+    <span class="rs-kw">let</span> value = value.trim();
+    <span class="rs-kw">if</span> value.is_empty() {
+        <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-plugin.html#item-enum-PluginError-5">PluginError</a>::<span class="rs-type">Manifest</span>(format!(&quot;{field} is required&quot;)));
+    }
+    <span class="rs-kw">if</span> <a class="symbol-link rs-fn" href="eos-plugin--src-registry-rs.html#item-fn-is-valid-plugin-name-12">is_valid_plugin_name</a>(value) {
+        <span class="rs-type">Ok</span>(())
+    } <span class="rs-kw">else</span> {
+        <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-plugin.html#item-enum-PluginError-5">PluginError</a>::<span class="rs-type">Manifest</span>(format!(
+            &quot;{field} must <span class="rs-kw">match</span> ^[<span class="rs-type">A</span>-<span class="rs-type">Za</span>-z_][<span class="rs-type">A</span>-<span class="rs-type">Za</span>-z0-9_]*$&quot;
+        )))
+    }
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-plugin/src/service.rs:162</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn require_non_empty pub(crate) pub(crate) fn require_non_empty (field : &amp; str , value : &amp; str) -&gt; Result &lt; () &gt; crates/eos-plugin/src/service.rs  ">
+</article><article id="item-fn-require-non-empty-176" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn require_non_empty pub(crate) pub(crate) fn require_non_empty (field : &amp; str , value : &amp; str) -&gt; Result &lt; () &gt; crates/eos-plugin/src/service.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>require_non_empty</h3>
     <span class="visibility">pub(crate)</span>
   </div>
-  <code class="signature">pub(crate) fn require_non_empty (field : &amp; str , value : &amp; str) -&gt; Result &lt; () &gt;</code>
+  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-plugin--src-service-rs.html#item-fn-require-non-empty-176">require_non_empty</a> (field : &amp; str , value : &amp; str) -&gt; <a class="symbol-link" href="eos-plugin.html#item-type-Result-49">Result</a> &lt; () &gt;</code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-service-rs.html#item-fn-require-non-empty-176">require_non_empty</a>(field: &amp;str, value: &amp;str) -&gt; <a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>&lt;()&gt; {
+    <span class="rs-kw">if</span> value.trim().is_empty() {
+        <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-plugin.html#item-enum-PluginError-5">PluginError</a>::<span class="rs-type">Manifest</span>(format!(&quot;{field} is required&quot;)));
+    }
+    <span class="rs-type">Ok</span>(())
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-plugin/src/service.rs:176</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn require_absolute private fn require_absolute (field : &amp; str , value : &amp; str) -&gt; Result &lt; () &gt; crates/eos-plugin/src/service.rs  ">
+</article><article id="item-fn-require-absolute-183" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn require_absolute private fn require_absolute (field : &amp; str , value : &amp; str) -&gt; Result &lt; () &gt; crates/eos-plugin/src/service.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>require_absolute</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn require_absolute (field : &amp; str , value : &amp; str) -&gt; Result &lt; () &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-plugin--src-service-rs.html#item-fn-require-absolute-183">require_absolute</a> (field : &amp; str , value : &amp; str) -&gt; <a class="symbol-link" href="eos-plugin.html#item-type-Result-49">Result</a> &lt; () &gt;</code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-service-rs.html#item-fn-require-absolute-183">require_absolute</a>(field: &amp;str, value: &amp;str) -&gt; <a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>&lt;()&gt; {
+    <a class="symbol-link rs-fn" href="eos-plugin--src-service-rs.html#item-fn-require-non-empty-176">require_non_empty</a>(field, value)?;
+    <span class="rs-kw">if</span> value.starts_with(&#x27;/&#x27;) {
+        <span class="rs-type">Ok</span>(())
+    } <span class="rs-kw">else</span> {
+        <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-plugin.html#item-enum-PluginError-5">PluginError</a>::<span class="rs-type">Manifest</span>(format!(&quot;{field} must be absolute&quot;)))
+    }
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-plugin/src/service.rs:183</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn service_key_includes_profile_and_refresh_strategy private fn service_key_includes_profile_and_refresh_strategy () -&gt; TestResult crates/eos-plugin/src/service.rs  ">
+</article><article id="item-fn-service-key-includes-profile-and-refresh-strategy-198" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn service_key_includes_profile_and_refresh_strategy private fn service_key_includes_profile_and_refresh_strategy () -&gt; TestResult crates/eos-plugin/src/service.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>service_key_includes_profile_and_refresh_strategy</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn service_key_includes_profile_and_refresh_strategy () -&gt; TestResult</code>
-  <div class="tags"></div>
+  <code class="signature">fn <a class="symbol-link" href="eos-plugin--src-service-rs.html#item-fn-service-key-includes-profile-and-refresh-strategy-198">service_key_includes_profile_and_refresh_strategy</a> () -&gt; <a class="symbol-link" href="eos-plugin--src-manifest-rs.html#item-type-TestResult-298">TestResult</a></code>
+  <div class="tags"><span>test</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-service-rs.html#item-fn-service-key-includes-profile-and-refresh-strategy-198">service_key_includes_profile_and_refresh_strategy</a>() -&gt; <a class="symbol-link rs-type" href="eos-plugin--src-manifest-rs.html#item-type-TestResult-298">TestResult</a> {
+        <span class="rs-kw">let</span> base = <a class="symbol-link rs-type" href="eos-plugin--src-service-rs.html#item-struct-PluginServiceKey-39">PluginServiceKey</a>::<a class="symbol-link rs-fn" href="eos-plugin--src-service-rs.html#method-new-77">new</a>(<a class="symbol-link rs-fn" href="eos-plugin--src-service-rs.html#item-fn-parts-235">parts</a>(&quot;profile-a&quot;))?;
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> changed = base.clone();
+        changed.service_profile_digest = &quot;profile-b&quot;.to_owned();
+        assert_ne!(base, changed);
+
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> changed_strategy = base.clone();
+        changed_strategy.refresh_strategy = <a class="symbol-link rs-type" href="eos-plugin--src-service-rs.html#item-enum-RefreshStrategy-24">RefreshStrategy</a>::<span class="rs-type">RestartService</span>;
+        assert_ne!(base, changed_strategy);
+        <span class="rs-type">Ok</span>(())
+    }
+</code></pre>
+</details>
 
   <p class="source">crates/eos-plugin/src/service.rs:198</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn service_key_rejects_relative_workspace_paths private fn service_key_rejects_relative_workspace_paths () crates/eos-plugin/src/service.rs  ">
+</article><article id="item-fn-service-key-rejects-relative-workspace-paths-211" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn service_key_rejects_relative_workspace_paths private fn service_key_rejects_relative_workspace_paths () crates/eos-plugin/src/service.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>service_key_rejects_relative_workspace_paths</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn service_key_rejects_relative_workspace_paths ()</code>
-  <div class="tags"></div>
+  <code class="signature">fn <a class="symbol-link" href="eos-plugin--src-service-rs.html#item-fn-service-key-rejects-relative-workspace-paths-211">service_key_rejects_relative_workspace_paths</a> ()</code>
+  <div class="tags"><span>test</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-service-rs.html#item-fn-service-key-rejects-relative-workspace-paths-211">service_key_rejects_relative_workspace_paths</a>() {
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> parts = <a class="symbol-link rs-fn" href="eos-plugin--src-service-rs.html#item-fn-parts-235">parts</a>(&quot;profile-a&quot;);
+        parts.layer_stack_root = &quot;relative&quot;.to_owned();
+        assert!(matches!(
+            <a class="symbol-link rs-type" href="eos-plugin--src-service-rs.html#item-struct-PluginServiceKey-39">PluginServiceKey</a>::<a class="symbol-link rs-fn" href="eos-plugin--src-service-rs.html#method-new-77">new</a>(parts),
+            <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-plugin.html#item-enum-PluginError-5">PluginError</a>::<span class="rs-type">Manifest</span>(message)) <span class="rs-kw">if</span> message.contains(&quot;absolute&quot;)
+        ));
+    }
+</code></pre>
+</details>
 
   <p class="source">crates/eos-plugin/src/service.rs:211</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn plugin_id_uses_rust_name_rule private fn plugin_id_uses_rust_name_rule () crates/eos-plugin/src/service.rs  ">
+</article><article id="item-fn-plugin-id-uses-rust-name-rule-221" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn plugin_id_uses_rust_name_rule private fn plugin_id_uses_rust_name_rule () crates/eos-plugin/src/service.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>plugin_id_uses_rust_name_rule</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn plugin_id_uses_rust_name_rule ()</code>
-  <div class="tags"></div>
+  <code class="signature">fn <a class="symbol-link" href="eos-plugin--src-service-rs.html#item-fn-plugin-id-uses-rust-name-rule-221">plugin_id_uses_rust_name_rule</a> ()</code>
+  <div class="tags"><span>test</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-service-rs.html#item-fn-plugin-id-uses-rust-name-rule-221">plugin_id_uses_rust_name_rule</a>() {
+        assert!(<a class="symbol-link rs-fn" href="eos-plugin--src-service-rs.html#item-fn-validate-plugin-id-162">validate_plugin_id</a>(&quot;plugin_id&quot;, &quot;_ok&quot;).is_ok());
+        assert!(<a class="symbol-link rs-fn" href="eos-plugin--src-service-rs.html#item-fn-validate-plugin-id-162">validate_plugin_id</a>(&quot;plugin_id&quot;, &quot;<span class="rs-type">Generic</span>&quot;).is_ok());
+        assert!(matches!(
+            <a class="symbol-link rs-fn" href="eos-plugin--src-service-rs.html#item-fn-validate-plugin-id-162">validate_plugin_id</a>(&quot;plugin_id&quot;, &quot;my-plugin&quot;),
+            <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-plugin.html#item-enum-PluginError-5">PluginError</a>::<span class="rs-type">Manifest</span>(message)) <span class="rs-kw">if</span> message.contains(&quot;must <span class="rs-kw">match</span>&quot;)
+        ));
+        assert!(matches!(
+            <a class="symbol-link rs-fn" href="eos-plugin--src-service-rs.html#item-fn-validate-plugin-id-162">validate_plugin_id</a>(&quot;plugin_id&quot;, &quot;my.plugin&quot;),
+            <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-plugin.html#item-enum-PluginError-5">PluginError</a>::<span class="rs-type">Manifest</span>(message)) <span class="rs-kw">if</span> message.contains(&quot;must <span class="rs-kw">match</span>&quot;)
+        ));
+    }
+</code></pre>
+</details>
 
   <p class="source">crates/eos-plugin/src/service.rs:221</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn parts private fn parts (profile : &amp; str) -&gt; PluginServiceKeyParts crates/eos-plugin/src/service.rs  ">
+</article><article id="item-fn-parts-235" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn parts private fn parts (profile : &amp; str) -&gt; PluginServiceKeyParts crates/eos-plugin/src/service.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>parts</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn parts (profile : &amp; str) -&gt; PluginServiceKeyParts</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-plugin--src-service-rs.html#item-fn-parts-235">parts</a> (profile : &amp; str) -&gt; <a class="symbol-link" href="eos-plugin--src-service-rs.html#item-struct-PluginServiceKeyParts-62">PluginServiceKeyParts</a></code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-service-rs.html#item-fn-parts-235">parts</a>(profile: &amp;str) -&gt; <a class="symbol-link rs-type" href="eos-plugin--src-service-rs.html#item-struct-PluginServiceKeyParts-62">PluginServiceKeyParts</a> {
+        <a class="symbol-link rs-type" href="eos-plugin--src-service-rs.html#item-struct-PluginServiceKeyParts-62">PluginServiceKeyParts</a> {
+            layer_stack_root: &quot;/eos/plugin/layer-stack&quot;.to_owned(),
+            workspace_root: &quot;/eos/plugin/workspace&quot;.to_owned(),
+            plugin_id: &quot;generic&quot;.to_owned(),
+            plugin_digest: &quot;digest-a&quot;.to_owned(),
+            service_id: &quot;worker&quot;.to_owned(),
+            service_profile_digest: profile.to_owned(),
+            service_mode: <a class="symbol-link rs-type" href="eos-plugin--src-service-rs.html#item-enum-ServiceMode-12">ServiceMode</a>::<span class="rs-type">WorkspaceSnapshotRefresh</span>,
+            refresh_strategy: <a class="symbol-link rs-type" href="eos-plugin--src-service-rs.html#item-enum-RefreshStrategy-24">RefreshStrategy</a>::<span class="rs-type">RemountWorkspaceAndNotify</span>,
+        }
+    }
+</code></pre>
+</details>
 
   <p class="source">crates/eos-plugin/src/service.rs:235</p>
 </article></div>
 </section></div>
 </main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/eos-plugin/src/service.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-comment">//! Plugin service identity and refresh-policy contracts.</span>
+<span class="rs-comment">//!</span>
+<span class="rs-comment">//! These types are pure data. The daemon owns process lifecycle, namespace</span>
+<span class="rs-comment">//! remounts, PPC I/O, and snapshot leases; `eos-plugin` owns only the validated</span>
+<span class="rs-comment">//! key/strategy shapes shared by manifests, status, and tests.</span>
+
+<span class="rs-kw">use</span> serde::{<span class="rs-type">Deserialize</span>, <span class="rs-type">Serialize</span>};
+
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::error::{<a class="symbol-link rs-type" href="eos-plugin.html#item-enum-PluginError-5">PluginError</a>, <a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>};
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::registry::is_valid_plugin_name;
+
+<span class="rs-comment">/// The daemon-managed service mode for long-lived read-only services.</span>
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">Copy</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Eq</span>, <span class="rs-type">PartialOrd</span>, <span class="rs-type">Ord</span>, <span class="rs-type">Hash</span>, <span class="rs-type">Serialize</span>, <span class="rs-type">Deserialize</span>)]
+#[serde(rename_all = &quot;snake_case&quot;)]
+#[non_exhaustive]
+<span class="rs-kw">pub</span> <span class="rs-kw">enum</span> <a class="symbol-link rs-type" href="eos-plugin--src-service-rs.html#item-enum-ServiceMode-12">ServiceMode</a> {
+    <span class="rs-comment">/// Read-only service refreshed against the latest `LayerStack` snapshot before</span>
+    <span class="rs-comment">/// each request.</span>
+    <span class="rs-type">WorkspaceSnapshotRefresh</span>,
+    <span class="rs-comment">/// Stateless/write worker invoked through a fresh per-operation overlay.</span>
+    <span class="rs-type">OneshotOverlay</span>,
+}
+
+<span class="rs-comment">/// Mechanism used when a `workspace_snapshot_refresh` service is stale.</span>
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">Copy</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Eq</span>, <span class="rs-type">PartialOrd</span>, <span class="rs-type">Ord</span>, <span class="rs-type">Hash</span>, <span class="rs-type">Serialize</span>, <span class="rs-type">Deserialize</span>)]
+#[serde(rename_all = &quot;snake_case&quot;)]
+#[non_exhaustive]
+<span class="rs-kw">pub</span> <span class="rs-kw">enum</span> <a class="symbol-link rs-type" href="eos-plugin--src-service-rs.html#item-enum-RefreshStrategy-24">RefreshStrategy</a> {
+    <span class="rs-comment">/// Remount the service workspace and send a daemon-level change</span>
+    <span class="rs-comment">/// notification to the harness.</span>
+    <span class="rs-type">RemountWorkspaceAndNotify</span>,
+    <span class="rs-comment">/// Remount the service workspace; the service must reread on demand or</span>
+    <span class="rs-comment">/// invalidate its own caches.</span>
+    <span class="rs-type">RemountWorkspace</span>,
+    <span class="rs-comment">/// Restart the service process on the new snapshot.</span>
+    <span class="rs-type">RestartService</span>,
+}
+
+<span class="rs-comment">/// Stable key for sharing a daemon-managed plugin service.</span>
+<span class="rs-comment">///</span>
+<span class="rs-comment">/// Reuse is intentionally stricter than the old per-root cache: service id,</span>
+<span class="rs-comment">/// service profile digest, mode, and refresh strategy are part of the key so</span>
+<span class="rs-comment">/// two payloads cannot accidentally share a process just because they use the</span>
+<span class="rs-comment">/// same `LayerStack` root.</span>
+<span class="rs-comment">///</span>
+<span class="rs-comment">/// `#[non_exhaustive]` makes [`PluginServiceKey::new`] the only way to mint one</span>
+<span class="rs-comment">/// from another crate, so the validated `Parts` -&gt; `new` path cannot be bypassed</span>
+<span class="rs-comment">/// by a struct literal; fields stay public for read-only access.</span>
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Eq</span>, <span class="rs-type">PartialOrd</span>, <span class="rs-type">Ord</span>, <span class="rs-type">Hash</span>, <span class="rs-type">Serialize</span>, <span class="rs-type">Deserialize</span>)]
+#[non_exhaustive]
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-plugin--src-service-rs.html#item-struct-PluginServiceKey-39">PluginServiceKey</a> {
+    <span class="rs-kw">pub</span> layer_stack_root: <span class="rs-type">String</span>,
+    <span class="rs-kw">pub</span> workspace_root: <span class="rs-type">String</span>,
+    <span class="rs-kw">pub</span> plugin_id: <span class="rs-type">String</span>,
+    <span class="rs-kw">pub</span> plugin_digest: <span class="rs-type">String</span>,
+    <span class="rs-kw">pub</span> service_id: <span class="rs-type">String</span>,
+    <span class="rs-kw">pub</span> service_profile_digest: <span class="rs-type">String</span>,
+    <span class="rs-kw">pub</span> service_mode: <a class="symbol-link rs-type" href="eos-plugin--src-service-rs.html#item-enum-ServiceMode-12">ServiceMode</a>,
+    <span class="rs-kw">pub</span> refresh_strategy: <a class="symbol-link rs-type" href="eos-plugin--src-service-rs.html#item-enum-RefreshStrategy-24">RefreshStrategy</a>,
+}
+
+<span class="rs-comment">/// Field bag used to construct [`PluginServiceKey`] without a long positional</span>
+<span class="rs-comment">/// argument list.</span>
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Eq</span>, <span class="rs-type">Serialize</span>, <span class="rs-type">Deserialize</span>)]
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-plugin--src-service-rs.html#item-struct-PluginServiceKeyParts-62">PluginServiceKeyParts</a> {
+    <span class="rs-kw">pub</span> layer_stack_root: <span class="rs-type">String</span>,
+    <span class="rs-kw">pub</span> workspace_root: <span class="rs-type">String</span>,
+    <span class="rs-kw">pub</span> plugin_id: <span class="rs-type">String</span>,
+    <span class="rs-kw">pub</span> plugin_digest: <span class="rs-type">String</span>,
+    <span class="rs-kw">pub</span> service_id: <span class="rs-type">String</span>,
+    <span class="rs-kw">pub</span> service_profile_digest: <span class="rs-type">String</span>,
+    <span class="rs-kw">pub</span> service_mode: <a class="symbol-link rs-type" href="eos-plugin--src-service-rs.html#item-enum-ServiceMode-12">ServiceMode</a>,
+    <span class="rs-kw">pub</span> refresh_strategy: <a class="symbol-link rs-type" href="eos-plugin--src-service-rs.html#item-enum-RefreshStrategy-24">RefreshStrategy</a>,
+}
+
+<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-plugin--src-service-rs.html#item-struct-PluginServiceKey-39">PluginServiceKey</a> {
+    <span class="rs-comment">/// Construct a validated service key.</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// # Errors</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// Returns [`PluginError::Manifest`] when the supplied key parts are</span>
+    <span class="rs-comment">/// malformed or incompatible.</span>
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-service-rs.html#method-new-77">new</a>(parts: <a class="symbol-link rs-type" href="eos-plugin--src-service-rs.html#item-struct-PluginServiceKeyParts-62">PluginServiceKeyParts</a>) -&gt; <a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>&lt;<span class="rs-self">Self</span>&gt; {
+        <span class="rs-kw">let</span> key = <span class="rs-self">Self</span> {
+            layer_stack_root: parts.layer_stack_root,
+            workspace_root: parts.workspace_root,
+            plugin_id: parts.plugin_id,
+            plugin_digest: parts.plugin_digest,
+            service_id: parts.service_id,
+            service_profile_digest: parts.service_profile_digest,
+            service_mode: parts.service_mode,
+            refresh_strategy: parts.refresh_strategy,
+        };
+        key.<a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#method-validate-37">validate</a>()?;
+        <span class="rs-type">Ok</span>(key)
+    }
+
+    <span class="rs-comment">/// Validate this key without normalizing it.</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// # Errors</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// Returns [`PluginError::Manifest`] when paths are not absolute, identifiers</span>
+    <span class="rs-comment">/// are malformed, digests are empty, or the service mode/refresh strategy</span>
+    <span class="rs-comment">/// pair is invalid.</span>
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-manifest-rs.html#method-validate-37">validate</a>(&amp;<span class="rs-self">self</span>) -&gt; <a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>&lt;()&gt; {
+        <a class="symbol-link rs-fn" href="eos-plugin--src-service-rs.html#item-fn-require-absolute-183">require_absolute</a>(&quot;layer_stack_root&quot;, &amp;<span class="rs-self">self</span>.layer_stack_root)?;
+        <a class="symbol-link rs-fn" href="eos-plugin--src-service-rs.html#item-fn-require-absolute-183">require_absolute</a>(&quot;workspace_root&quot;, &amp;<span class="rs-self">self</span>.workspace_root)?;
+        <a class="symbol-link rs-fn" href="eos-plugin--src-service-rs.html#item-fn-validate-plugin-id-162">validate_plugin_id</a>(&quot;plugin_id&quot;, &amp;<span class="rs-self">self</span>.plugin_id)?;
+        <a class="symbol-link rs-fn" href="eos-plugin--src-service-rs.html#item-fn-require-non-empty-176">require_non_empty</a>(&quot;plugin_digest&quot;, &amp;<span class="rs-self">self</span>.plugin_digest)?;
+        <a class="symbol-link rs-fn" href="eos-plugin--src-service-rs.html#item-fn-validate-identifier-139">validate_identifier</a>(&quot;service_id&quot;, &amp;<span class="rs-self">self</span>.service_id)?;
+        <a class="symbol-link rs-fn" href="eos-plugin--src-service-rs.html#item-fn-require-non-empty-176">require_non_empty</a>(&quot;service_profile_digest&quot;, &amp;<span class="rs-self">self</span>.service_profile_digest)?;
+        <span class="rs-kw">if</span> <span class="rs-self">self</span>.service_mode == <a class="symbol-link rs-type" href="eos-plugin--src-service-rs.html#item-enum-ServiceMode-12">ServiceMode</a>::<span class="rs-type">OneshotOverlay</span>
+            &amp;&amp; <span class="rs-self">self</span>.refresh_strategy != <a class="symbol-link rs-type" href="eos-plugin--src-service-rs.html#item-enum-RefreshStrategy-24">RefreshStrategy</a>::<span class="rs-type">RestartService</span>
+        {
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-plugin.html#item-enum-PluginError-5">PluginError</a>::<span class="rs-type">Manifest</span>(
+                &quot;oneshot_overlay service keys must <span class="rs-kw">use</span> restart_service <span class="rs-kw">as</span> the inert refresh strategy&quot;
+                    .to_owned(),
+            ));
+        }
+        <span class="rs-type">Ok</span>(())
+    }
+
+    <span class="rs-comment">/// Deterministic, content-addressed reuse key for a service instance.</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// Despite the `_id` suffix this is NOT a per-spawn unique handle: it is a</span>
+    <span class="rs-comment">/// stable digest of the identity dimensions that define instance sharing</span>
+    <span class="rs-comment">/// (layer-stack root, plugin, service, profile digest), so two payloads with</span>
+    <span class="rs-comment">/// the same dimensions intentionally resolve to — and reuse — one instance.</span>
+    <span class="rs-comment">/// Used as the manifest key in status and refresh health checks.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-service-rs.html#method-service-instance-id-123">service_instance_id</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">String</span> {
+        format!(
+            &quot;{}:{}:{}:{}&quot;,
+            <span class="rs-self">self</span>.layer_stack_root, <span class="rs-self">self</span>.plugin_id, <span class="rs-self">self</span>.service_id, <span class="rs-self">self</span>.service_profile_digest
+        )
+    }
+}
+
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-service-rs.html#item-fn-validate-identifier-139">validate_identifier</a>(field: &amp;str, value: &amp;str) -&gt; <a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>&lt;()&gt; {
+    <span class="rs-kw">let</span> value = value.trim();
+    <span class="rs-kw">if</span> value.is_empty() {
+        <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-plugin.html#item-enum-PluginError-5">PluginError</a>::<span class="rs-type">Manifest</span>(format!(&quot;{field} is required&quot;)));
+    }
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> chars = value.chars();
+    <span class="rs-kw">match</span> chars.next() {
+        <span class="rs-type">Some</span>(c) <span class="rs-kw">if</span> c == &#x27;_&#x27; || c.is_ascii_alphabetic() =&gt; {}
+        _ =&gt; {
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-plugin.html#item-enum-PluginError-5">PluginError</a>::<span class="rs-type">Manifest</span>(format!(
+                &quot;{field} must start with an <span class="rs-type">ASCII</span> letter or underscore&quot;
+            )));
+        }
+    }
+    <span class="rs-kw">if</span> chars.all(|c| c == &#x27;_&#x27; || c == &#x27;-&#x27; || c == &#x27;.&#x27; || c.is_ascii_alphanumeric()) {
+        <span class="rs-type">Ok</span>(())
+    } <span class="rs-kw">else</span> {
+        <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-plugin.html#item-enum-PluginError-5">PluginError</a>::<span class="rs-type">Manifest</span>(format!(
+            &quot;{field} contains unsupported characters&quot;
+        )))
+    }
+}
+
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-service-rs.html#item-fn-validate-plugin-id-162">validate_plugin_id</a>(field: &amp;str, value: &amp;str) -&gt; <a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>&lt;()&gt; {
+    <span class="rs-kw">let</span> value = value.trim();
+    <span class="rs-kw">if</span> value.is_empty() {
+        <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-plugin.html#item-enum-PluginError-5">PluginError</a>::<span class="rs-type">Manifest</span>(format!(&quot;{field} is required&quot;)));
+    }
+    <span class="rs-kw">if</span> <a class="symbol-link rs-fn" href="eos-plugin--src-registry-rs.html#item-fn-is-valid-plugin-name-12">is_valid_plugin_name</a>(value) {
+        <span class="rs-type">Ok</span>(())
+    } <span class="rs-kw">else</span> {
+        <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-plugin.html#item-enum-PluginError-5">PluginError</a>::<span class="rs-type">Manifest</span>(format!(
+            &quot;{field} must <span class="rs-kw">match</span> ^[<span class="rs-type">A</span>-<span class="rs-type">Za</span>-z_][<span class="rs-type">A</span>-<span class="rs-type">Za</span>-z0-9_]*$&quot;
+        )))
+    }
+}
+
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-service-rs.html#item-fn-require-non-empty-176">require_non_empty</a>(field: &amp;str, value: &amp;str) -&gt; <a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>&lt;()&gt; {
+    <span class="rs-kw">if</span> value.trim().is_empty() {
+        <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-plugin.html#item-enum-PluginError-5">PluginError</a>::<span class="rs-type">Manifest</span>(format!(&quot;{field} is required&quot;)));
+    }
+    <span class="rs-type">Ok</span>(())
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-service-rs.html#item-fn-require-absolute-183">require_absolute</a>(field: &amp;str, value: &amp;str) -&gt; <a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>&lt;()&gt; {
+    <a class="symbol-link rs-fn" href="eos-plugin--src-service-rs.html#item-fn-require-non-empty-176">require_non_empty</a>(field, value)?;
+    <span class="rs-kw">if</span> value.starts_with(&#x27;/&#x27;) {
+        <span class="rs-type">Ok</span>(())
+    } <span class="rs-kw">else</span> {
+        <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-plugin.html#item-enum-PluginError-5">PluginError</a>::<span class="rs-type">Manifest</span>(format!(&quot;{field} must be absolute&quot;)))
+    }
+}
+
+#[cfg(test)]
+<span class="rs-kw">mod</span> tests {
+    <span class="rs-kw">use</span> <span class="rs-kw">super</span>::*;
+
+    <span class="rs-kw">type</span> <a class="symbol-link rs-type" href="eos-plugin--src-manifest-rs.html#item-type-TestResult-298">TestResult</a> = std::result::<a class="symbol-link rs-type" href="eos-plugin.html#item-type-Result-49">Result</a>&lt;(), <a class="symbol-link rs-type" href="eos-plugin.html#item-enum-PluginError-5">PluginError</a>&gt;;
+
+    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-service-rs.html#item-fn-service-key-includes-profile-and-refresh-strategy-198">service_key_includes_profile_and_refresh_strategy</a>() -&gt; <a class="symbol-link rs-type" href="eos-plugin--src-manifest-rs.html#item-type-TestResult-298">TestResult</a> {
+        <span class="rs-kw">let</span> base = <a class="symbol-link rs-type" href="eos-plugin--src-service-rs.html#item-struct-PluginServiceKey-39">PluginServiceKey</a>::<a class="symbol-link rs-fn" href="eos-plugin--src-service-rs.html#method-new-77">new</a>(<a class="symbol-link rs-fn" href="eos-plugin--src-service-rs.html#item-fn-parts-235">parts</a>(&quot;profile-a&quot;))?;
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> changed = base.clone();
+        changed.service_profile_digest = &quot;profile-b&quot;.to_owned();
+        assert_ne!(base, changed);
+
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> changed_strategy = base.clone();
+        changed_strategy.refresh_strategy = <a class="symbol-link rs-type" href="eos-plugin--src-service-rs.html#item-enum-RefreshStrategy-24">RefreshStrategy</a>::<span class="rs-type">RestartService</span>;
+        assert_ne!(base, changed_strategy);
+        <span class="rs-type">Ok</span>(())
+    }
+
+    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-service-rs.html#item-fn-service-key-rejects-relative-workspace-paths-211">service_key_rejects_relative_workspace_paths</a>() {
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> parts = <a class="symbol-link rs-fn" href="eos-plugin--src-service-rs.html#item-fn-parts-235">parts</a>(&quot;profile-a&quot;);
+        parts.layer_stack_root = &quot;relative&quot;.to_owned();
+        assert!(matches!(
+            <a class="symbol-link rs-type" href="eos-plugin--src-service-rs.html#item-struct-PluginServiceKey-39">PluginServiceKey</a>::<a class="symbol-link rs-fn" href="eos-plugin--src-service-rs.html#method-new-77">new</a>(parts),
+            <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-plugin.html#item-enum-PluginError-5">PluginError</a>::<span class="rs-type">Manifest</span>(message)) <span class="rs-kw">if</span> message.contains(&quot;absolute&quot;)
+        ));
+    }
+
+    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-service-rs.html#item-fn-plugin-id-uses-rust-name-rule-221">plugin_id_uses_rust_name_rule</a>() {
+        assert!(<a class="symbol-link rs-fn" href="eos-plugin--src-service-rs.html#item-fn-validate-plugin-id-162">validate_plugin_id</a>(&quot;plugin_id&quot;, &quot;_ok&quot;).is_ok());
+        assert!(<a class="symbol-link rs-fn" href="eos-plugin--src-service-rs.html#item-fn-validate-plugin-id-162">validate_plugin_id</a>(&quot;plugin_id&quot;, &quot;<span class="rs-type">Generic</span>&quot;).is_ok());
+        assert!(matches!(
+            <a class="symbol-link rs-fn" href="eos-plugin--src-service-rs.html#item-fn-validate-plugin-id-162">validate_plugin_id</a>(&quot;plugin_id&quot;, &quot;my-plugin&quot;),
+            <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-plugin.html#item-enum-PluginError-5">PluginError</a>::<span class="rs-type">Manifest</span>(message)) <span class="rs-kw">if</span> message.contains(&quot;must <span class="rs-kw">match</span>&quot;)
+        ));
+        assert!(matches!(
+            <a class="symbol-link rs-fn" href="eos-plugin--src-service-rs.html#item-fn-validate-plugin-id-162">validate_plugin_id</a>(&quot;plugin_id&quot;, &quot;my.plugin&quot;),
+            <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-plugin.html#item-enum-PluginError-5">PluginError</a>::<span class="rs-type">Manifest</span>(message)) <span class="rs-kw">if</span> message.contains(&quot;must <span class="rs-kw">match</span>&quot;)
+        ));
+    }
+
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-plugin--src-service-rs.html#item-fn-parts-235">parts</a>(profile: &amp;str) -&gt; <a class="symbol-link rs-type" href="eos-plugin--src-service-rs.html#item-struct-PluginServiceKeyParts-62">PluginServiceKeyParts</a> {
+        <a class="symbol-link rs-type" href="eos-plugin--src-service-rs.html#item-struct-PluginServiceKeyParts-62">PluginServiceKeyParts</a> {
+            layer_stack_root: &quot;/eos/plugin/layer-stack&quot;.to_owned(),
+            workspace_root: &quot;/eos/plugin/workspace&quot;.to_owned(),
+            plugin_id: &quot;generic&quot;.to_owned(),
+            plugin_digest: &quot;digest-a&quot;.to_owned(),
+            service_id: &quot;worker&quot;.to_owned(),
+            service_profile_digest: profile.to_owned(),
+            service_mode: <a class="symbol-link rs-type" href="eos-plugin--src-service-rs.html#item-enum-ServiceMode-12">ServiceMode</a>::<span class="rs-type">WorkspaceSnapshotRefresh</span>,
+            refresh_strategy: <a class="symbol-link rs-type" href="eos-plugin--src-service-rs.html#item-enum-RefreshStrategy-24">RefreshStrategy</a>::<span class="rs-type">RemountWorkspaceAndNotify</span>,
+        }
+    }
+}
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
   <script src="../assets/inventory.js"></script>
 </body>
 </html>

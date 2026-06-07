@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>eos-backend-audit · src/lib.rs</title>
+  <link rel="stylesheet" href="../assets/inventory.css">
+</head>
+<body>
+  <header>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>eos-backend-audit File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS/backend-server &amp;&amp; cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
+  </header>
+  <a class="back-link" href="../index.html">backend-server</a>
+<section class="summary">
+  <div><b>6</b><span>modules</span></div>
+  <div><b>61</b><span>items</span></div>
+  <div><b>64</b><span>fields</span></div>
+  <div><b>22</b><span>methods</span></div>
+</section>
+<section class="toolbar">
+  <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
+  <select id="kind-filter">
+    <option value="">All items</option>
+    <option value="type-model">Type model</option>
+    <option value="struct">Structs</option>
+    <option value="enum">Enums</option>
+    <option value="trait">Traits</option>
+    <option value="impl">Impls</option>
+    <option value="fn">Functions</option>
+    <option value="type">Aliases</option>
+  </select>
+</section>
+<main class="crate-layout">
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><a class="file-link" href="eos-backend-audit.html"><span>gates.rs</span><small>10/10</small></a></li><li><a class="file-link" href="eos-backend-audit--src-ingestor-rs.html"><span>ingestor.rs</span><small>3/7</small></a></li><li><a class="file-link active" href="eos-backend-audit--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-backend-audit--src-normalization-rs.html"><span>normalization.rs</span><small>3/9</small></a></li><li><a class="file-link" href="eos-backend-audit--src-sink-rs.html"><span>sink.rs</span><small>5/4</small></a></li><li><a class="file-link" href="eos-backend-audit--src-stats-rs.html"><span>stats.rs</span><small>1/0</small></a></li></ul></li></ul></nav>
+  <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="lib crates/eos-backend-audit/src/lib.rs ">
+  <div class="module-head">
+    <div>
+      <h2>src/lib.rs</h2>
+      <p class="path">module <code>lib</code></p>
+    </div>
+    <div class="module-stats">
+      <span>file owns</span>
+      <span>0 types</span>
+      <span>0 impls</span>
+      <span>0 fns</span>
+      <span>0 methods</span>
+    </div>
+  </div>
+  <div class="items"></div>
+</section></div>
+</main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/eos-backend-audit/src/lib.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-comment">//! Backend-owned observability collection, persistence, and stats.</span>
+<span class="rs-comment">//!</span>
+<span class="rs-comment">//! This crate owns the reader-side boundary for Rust audit/observability:</span>
+<span class="rs-comment">//!</span>
+<span class="rs-comment">//! - [`normalization`]/[`gates`]: normalize agent-core JSONL and sandbox audit</span>
+<span class="rs-comment">//!   pulls into [`eos_audit::ObsEnvelope`] rows and evaluate the Rust runner</span>
+<span class="rs-comment">//!   audit/observability gates. Producers keep their local mechanics (agent-core</span>
+<span class="rs-comment">//!   writes normalized JSONL; the daemon exposes a bounded native ring).</span>
+<span class="rs-comment">//! - [`PersistingSink`]: the backend [`AuditSink`](eos_audit::AuditSink) that</span>
+<span class="rs-comment">//!   async-drains agent-core audit events into `obs_event` without blocking the</span>
+<span class="rs-comment">//!   engine hot path (AC6).</span>
+<span class="rs-comment">//! - [`AuditIngestor`]: ingest a daemon `api.audit.pull` response into `obs_event`,</span>
+<span class="rs-comment">//!   join daemon-facing identities to model-facing ids through</span>
+<span class="rs-comment">//!   `sandbox_call_correlation`, and track the per-sandbox `audit_cursor` across</span>
+<span class="rs-comment">//!   daemon reboots (AC7, AC8).</span>
+<span class="rs-comment">//! - [`StatsReader`]: assemble the `/api/stats/*` summaries from `obs_event` and</span>
+<span class="rs-comment">//!   `audit_cursor`.</span>
+
+#![forbid(unsafe_code)]
+
+<span class="rs-kw">mod</span> gates;
+<span class="rs-kw">mod</span> ingestor;
+<span class="rs-kw">mod</span> normalization;
+<span class="rs-kw">mod</span> sink;
+<span class="rs-kw">mod</span> stats;
+
+<span class="rs-kw">pub</span> <span class="rs-kw">use</span> gates::{
+    evaluate_runner_gate_batches, evaluate_runner_gate_sources, evaluate_runner_gates,
+    <a class="symbol-link rs-type" href="eos-backend-audit.html#item-struct-ExpectedToolUse-66">ExpectedToolUse</a>, <a class="symbol-link rs-type" href="eos-backend-audit.html#item-struct-RunnerCorrectnessEvidence-28">RunnerCorrectnessEvidence</a>, <a class="symbol-link rs-type" href="eos-backend-audit.html#item-struct-RunnerGateBatchInput-138">RunnerGateBatchInput</a>, <a class="symbol-link rs-type" href="eos-backend-audit.html#item-struct-RunnerGateFailure-183">RunnerGateFailure</a>,
+    <a class="symbol-link rs-type" href="eos-backend-audit.html#item-enum-RunnerGateFailureKind-192">RunnerGateFailureKind</a>, <a class="symbol-link rs-type" href="eos-backend-audit.html#item-struct-RunnerGateInput-123">RunnerGateInput</a>, <a class="symbol-link rs-type" href="eos-backend-audit.html#item-struct-RunnerGateMetrics-168">RunnerGateMetrics</a>, <a class="symbol-link rs-type" href="eos-backend-audit.html#item-struct-RunnerGateReport-212">RunnerGateReport</a>,
+    <a class="symbol-link rs-type" href="eos-backend-audit.html#item-struct-RunnerGateSettings-105">RunnerGateSettings</a>, <a class="symbol-link rs-type" href="eos-backend-audit.html#item-struct-RunnerGateSourceInput-153">RunnerGateSourceInput</a>,
+};
+<span class="rs-kw">pub</span> <span class="rs-kw">use</span> ingestor::{<a class="symbol-link rs-type" href="eos-backend-audit--src-ingestor-rs.html#item-struct-AuditIngestor-75">AuditIngestor</a>, <a class="symbol-link rs-type" href="eos-backend-audit--src-ingestor-rs.html#item-enum-IngestError-46">IngestError</a>, <a class="symbol-link rs-type" href="eos-backend-audit--src-ingestor-rs.html#item-struct-IngestReport-62">IngestReport</a>, <span class="rs-type">UNMATCHED_MARKER</span>};
+<span class="rs-kw">pub</span> <span class="rs-kw">use</span> normalization::{
+    normalize_agent_core_jsonl_line, normalize_sandbox_event, normalize_sandbox_pull_response,
+    <a class="symbol-link rs-type" href="eos-backend-audit--src-normalization-rs.html#item-enum-ObsNormalizationError-48">ObsNormalizationError</a>, <a class="symbol-link rs-type" href="eos-backend-audit--src-normalization-rs.html#item-struct-SandboxAuditLoss-14">SandboxAuditLoss</a>, <a class="symbol-link rs-type" href="eos-backend-audit--src-normalization-rs.html#item-struct-SandboxPullBatch-5">SandboxPullBatch</a>,
+};
+<span class="rs-kw">pub</span> <span class="rs-kw">use</span> sink::{<a class="symbol-link rs-type" href="eos-backend-audit--src-sink-rs.html#item-struct-PersistingSink-68">PersistingSink</a>, <a class="symbol-link rs-type" href="eos-backend-audit--src-sink-rs.html#item-struct-PersistingSinkShutdown-203">PersistingSinkShutdown</a>, <a class="symbol-link rs-type" href="eos-backend-audit--src-sink-rs.html#item-struct-SinkLoss-55">SinkLoss</a>};
+<span class="rs-kw">pub</span> <span class="rs-kw">use</span> stats::<a class="symbol-link rs-type" href="eos-backend-audit--src-stats-rs.html#item-struct-StatsReader-20">StatsReader</a>;
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
+  <script src="../assets/inventory.js"></script>
+</body>
+</html>

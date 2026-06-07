@@ -137,6 +137,7 @@ async fn run_request(
 }
 
 mod background;
+mod cancel;
 mod delegation;
 mod provisioning;
 mod root_agent;

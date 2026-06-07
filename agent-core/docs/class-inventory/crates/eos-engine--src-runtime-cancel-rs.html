@@ -8,15 +8,23 @@
 </head>
 <body>
   <header>
-    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
-    <h1>eos-engine File Inventory</h1>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>eos-engine File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS/agent-core &amp;&amp; cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
   </header>
   <a class="back-link" href="../index.html">agent-core</a>
 <section class="summary">
-  <div><b>43</b><span>modules</span></div>
-  <div><b>319</b><span>items</span></div>
-  <div><b>259</b><span>fields</span></div>
-  <div><b>179</b><span>methods</span></div>
+  <div><b>47</b><span>modules</span></div>
+  <div><b>314</b><span>items</span></div>
+  <div><b>272</b><span>fields</span></div>
+  <div><b>187</b><span>methods</span></div>
 </section>
 <section class="toolbar">
   <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
@@ -32,7 +40,7 @@
   </select>
 </section>
 <main class="crate-layout">
-  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><span class="folder">agent</span><ul class="file-tree"><li><a class="file-link" href="eos-engine.html"><span>factory.rs</span><small>3/9</small></a></li><li><a class="file-link" href="eos-engine--src-agent-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li></ul></li><li><span class="folder">background</span><ul class="file-tree"><li><a class="file-link" href="eos-engine--src-background-command-session-rs.html"><span>command_session.rs</span><small>1/10</small></a></li><li><a class="file-link" href="eos-engine--src-background-factory-rs.html"><span>factory.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-engine--src-background-handle-rs.html"><span>handle.rs</span><small>5/4</small></a></li><li><a class="file-link" href="eos-engine--src-background-heartbeat-rs.html"><span>heartbeat.rs</span><small>1/5</small></a></li><li><a class="file-link" href="eos-engine--src-background-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-engine--src-background-parent-exit-rs.html"><span>parent_exit.rs</span><small>2/3</small></a></li><li><a class="file-link" href="eos-engine--src-background-subagent-rs.html"><span>subagent.rs</span><small>2/24</small></a></li><li><a class="file-link" href="eos-engine--src-background-supervisor-rs.html"><span>supervisor.rs</span><small>5/7</small></a></li></ul></li><li><a class="file-link" href="eos-engine--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><span class="folder">notifications</span><ul class="file-tree"><li><a class="file-link" href="eos-engine--src-notifications-mod-rs.html"><span>mod.rs</span><small>2/3</small></a></li><li><span class="folder">rules</span><ul class="file-tree"><li><a class="file-link" href="eos-engine--src-notifications-rules-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-engine--src-notifications-rules-terminal-reminder-rs.html"><span>terminal_reminder.rs</span><small>1/1</small></a></li><li><a class="file-link" href="eos-engine--src-notifications-rules-tool-budget-rs.html"><span>tool_budget.rs</span><small>1/0</small></a></li></ul></li></ul></li><li><span class="folder">prompt</span><ul class="file-tree"><li><a class="file-link" href="eos-engine--src-prompt-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-engine--src-prompt-runtime-prompt-rs.html"><span>runtime_prompt.rs</span><small>0/1</small></a></li></ul></li><li><span class="folder">query</span><ul class="file-tree"><li><a class="file-link" href="eos-engine--src-query-context-rs.html"><span>context.rs</span><small>3/0</small></a></li><li><a class="file-link" href="eos-engine--src-query-loop--rs.html"><span>loop_.rs</span><small>0/12</small></a></li><li><a class="file-link" href="eos-engine--src-query-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-engine--src-query-provider-messages-rs.html"><span>provider_messages.rs</span><small>0/18</small></a></li><li><a class="file-link" href="eos-engine--src-query-provider-source-rs.html"><span>provider_source.rs</span><small>2/4</small></a></li><li><a class="file-link" href="eos-engine--src-query-request-rs.html"><span>request.rs</span><small>1/3</small></a></li></ul></li><li><span class="folder">runtime</span><ul class="file-tree"><li><a class="file-link" href="eos-engine--src-runtime-advisor-rs.html"><span>advisor.rs</span><small>0/24</small></a></li><li><a class="file-link" href="eos-engine--src-runtime-agent-loop-rs.html"><span>agent_loop.rs</span><small>0/1</small></a></li><li><a class="file-link active" href="eos-engine--src-runtime-cancel-rs.html"><span>cancel.rs</span><small>1/1</small></a></li><li><a class="file-link" href="eos-engine--src-runtime-control-rs.html"><span>control.rs</span><small>7/0</small></a></li><li><a class="file-link" href="eos-engine--src-runtime-factory-rs.html"><span>factory.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-engine--src-runtime-foreground-rs.html"><span>foreground.rs</span><small>4/0</small></a></li><li><a class="file-link" href="eos-engine--src-runtime-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-engine--src-runtime-persistence-rs.html"><span>persistence.rs</span><small>0/2</small></a></li><li><a class="file-link" href="eos-engine--src-runtime-registry-rs.html"><span>registry.rs</span><small>3/0</small></a></li><li><a class="file-link" href="eos-engine--src-runtime-setup-rs.html"><span>setup.rs</span><small>2/2</small></a></li><li><a class="file-link" href="eos-engine--src-runtime-types-rs.html"><span>types.rs</span><small>3/0</small></a></li></ul></li><li><span class="folder">support</span><ul class="file-tree"><li><a class="file-link" href="eos-engine--src-support-error-rs.html"><span>error.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-engine--src-support-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li></ul></li><li><span class="folder">telemetry</span><ul class="file-tree"><li><a class="file-link" href="eos-engine--src-telemetry-agent-run-audit-rs.html"><span>agent_run_audit.rs</span><small>3/8</small></a></li><li><a class="file-link" href="eos-engine--src-telemetry-events-rs.html"><span>events.rs</span><small>2/2</small></a></li><li><a class="file-link" href="eos-engine--src-telemetry-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-engine--src-telemetry-prompt-report-rs.html"><span>prompt_report.rs</span><small>6/2</small></a></li><li><a class="file-link" href="eos-engine--src-telemetry-resource-sample-rs.html"><span>resource_sample.rs</span><small>1/15</small></a></li></ul></li><li><span class="folder">tool_call</span><ul class="file-tree"><li><a class="file-link" href="eos-engine--src-tool-call-dispatch-rs.html"><span>dispatch.rs</span><small>3/15</small></a></li><li><a class="file-link" href="eos-engine--src-tool-call-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li></ul></li></ul></li></ul></nav>
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><span class="folder">agent</span><ul class="file-tree"><li><a class="file-link" href="eos-engine.html"><span>factory.rs</span><small>3/9</small></a></li><li><a class="file-link" href="eos-engine--src-agent-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li></ul></li><li><span class="folder">background</span><ul class="file-tree"><li><a class="file-link" href="eos-engine--src-background-command-session-rs.html"><span>command_session.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-engine--src-background-factory-rs.html"><span>factory.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-engine--src-background-handle-rs.html"><span>handle.rs</span><small>6/5</small></a></li><li><span class="folder">lanes</span><ul class="file-tree"><li><a class="file-link" href="eos-engine--src-background-lanes-command-session-rs.html"><span>command_session.rs</span><small>4/3</small></a></li><li><a class="file-link" href="eos-engine--src-background-lanes-mod-rs.html"><span>mod.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-engine--src-background-lanes-subagent-rs.html"><span>subagent.rs</span><small>3/0</small></a></li><li><a class="file-link" href="eos-engine--src-background-lanes-workflow-rs.html"><span>workflow.rs</span><small>3/0</small></a></li></ul></li><li><a class="file-link" href="eos-engine--src-background-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-engine--src-background-notifications-rs.html"><span>notifications.rs</span><small>2/2</small></a></li><li><a class="file-link" href="eos-engine--src-background-parent-exit-rs.html"><span>parent_exit.rs</span><small>2/3</small></a></li><li><a class="file-link" href="eos-engine--src-background-subagent-rs.html"><span>subagent.rs</span><small>2/23</small></a></li><li><a class="file-link" href="eos-engine--src-background-supervisor-rs.html"><span>supervisor.rs</span><small>1/0</small></a></li></ul></li><li><a class="file-link" href="eos-engine--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><span class="folder">notifications</span><ul class="file-tree"><li><a class="file-link" href="eos-engine--src-notifications-mod-rs.html"><span>mod.rs</span><small>2/3</small></a></li><li><span class="folder">rules</span><ul class="file-tree"><li><a class="file-link" href="eos-engine--src-notifications-rules-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-engine--src-notifications-rules-terminal-reminder-rs.html"><span>terminal_reminder.rs</span><small>1/1</small></a></li><li><a class="file-link" href="eos-engine--src-notifications-rules-tool-budget-rs.html"><span>tool_budget.rs</span><small>1/0</small></a></li></ul></li></ul></li><li><span class="folder">prompt</span><ul class="file-tree"><li><a class="file-link" href="eos-engine--src-prompt-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-engine--src-prompt-runtime-prompt-rs.html"><span>runtime_prompt.rs</span><small>0/1</small></a></li></ul></li><li><span class="folder">query</span><ul class="file-tree"><li><a class="file-link" href="eos-engine--src-query-context-rs.html"><span>context.rs</span><small>3/0</small></a></li><li><a class="file-link" href="eos-engine--src-query-loop--rs.html"><span>loop_.rs</span><small>0/12</small></a></li><li><a class="file-link" href="eos-engine--src-query-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-engine--src-query-provider-messages-rs.html"><span>provider_messages.rs</span><small>0/18</small></a></li><li><a class="file-link" href="eos-engine--src-query-provider-source-rs.html"><span>provider_source.rs</span><small>2/4</small></a></li><li><a class="file-link" href="eos-engine--src-query-request-rs.html"><span>request.rs</span><small>1/3</small></a></li></ul></li><li><span class="folder">runtime</span><ul class="file-tree"><li><a class="file-link" href="eos-engine--src-runtime-advisor-rs.html"><span>advisor.rs</span><small>0/24</small></a></li><li><a class="file-link" href="eos-engine--src-runtime-agent-loop-rs.html"><span>agent_loop.rs</span><small>0/1</small></a></li><li><a class="file-link active" href="eos-engine--src-runtime-cancel-rs.html"><span>cancel.rs</span><small>1/1</small></a></li><li><a class="file-link" href="eos-engine--src-runtime-control-rs.html"><span>control.rs</span><small>6/0</small></a></li><li><a class="file-link" href="eos-engine--src-runtime-factory-rs.html"><span>factory.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-engine--src-runtime-foreground-rs.html"><span>foreground.rs</span><small>4/0</small></a></li><li><a class="file-link" href="eos-engine--src-runtime-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-engine--src-runtime-persistence-rs.html"><span>persistence.rs</span><small>0/2</small></a></li><li><a class="file-link" href="eos-engine--src-runtime-registry-rs.html"><span>registry.rs</span><small>3/0</small></a></li><li><a class="file-link" href="eos-engine--src-runtime-setup-rs.html"><span>setup.rs</span><small>2/2</small></a></li><li><a class="file-link" href="eos-engine--src-runtime-types-rs.html"><span>types.rs</span><small>3/0</small></a></li></ul></li><li><span class="folder">support</span><ul class="file-tree"><li><a class="file-link" href="eos-engine--src-support-error-rs.html"><span>error.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-engine--src-support-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li></ul></li><li><span class="folder">telemetry</span><ul class="file-tree"><li><a class="file-link" href="eos-engine--src-telemetry-agent-run-audit-rs.html"><span>agent_run_audit.rs</span><small>3/8</small></a></li><li><a class="file-link" href="eos-engine--src-telemetry-events-rs.html"><span>events.rs</span><small>2/2</small></a></li><li><a class="file-link" href="eos-engine--src-telemetry-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-engine--src-telemetry-prompt-report-rs.html"><span>prompt_report.rs</span><small>6/2</small></a></li><li><a class="file-link" href="eos-engine--src-telemetry-resource-sample-rs.html"><span>resource_sample.rs</span><small>1/15</small></a></li></ul></li><li><span class="folder">tool_call</span><ul class="file-tree"><li><a class="file-link" href="eos-engine--src-tool-call-dispatch-rs.html"><span>dispatch.rs</span><small>3/15</small></a></li><li><a class="file-link" href="eos-engine--src-tool-call-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li></ul></li></ul></li></ul></nav>
   <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="runtime::cancel crates/eos-engine/src/runtime/cancel.rs EngineCancelPort impl std :: fmt :: Debug for EngineCancelPort impl EngineCancelPort cancelled_terminal impl CancelPort for EngineCancelPort">
   <div class="module-head">
     <div>
@@ -47,29 +55,259 @@
       <span>4 methods</span>
     </div>
   </div>
-  <div class="items"><div class="group-label">File-Owned Types</div><article class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct EngineCancelPort pub pub struct EngineCancelPort crates/eos-engine/src/runtime/cancel.rs registry AgentRunRegistry task_store Arc &lt; dyn TaskStore &gt; workflow_control Arc &lt; OnceLock &lt; Arc &lt; dyn WorkflowControlPort &gt; &gt; &gt; ">
+  <div class="items"><div class="group-label">File-Owned Types</div><article id="item-struct-EngineCancelPort-29" class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct EngineCancelPort pub pub struct EngineCancelPort crates/eos-engine/src/runtime/cancel.rs registry AgentRunRegistry task_store Arc &lt; dyn TaskStore &gt; workflow_control Arc &lt; OnceLock &lt; Arc &lt; dyn WorkflowControlPort &gt; &gt; &gt; ">
   <div class="item-head">
     <span class="kind">struct</span>
     <h3>EngineCancelPort</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub struct EngineCancelPort</code>
-  <div class="tags"><span>port/service</span></div>
-  <h4>Fields</h4><table><tbody><tr><td>private</td><td>registry</td><td><code>AgentRunRegistry</code></td></tr><tr><td>private</td><td>task_store</td><td><code>Arc &lt; dyn TaskStore &gt;</code></td></tr><tr><td>private</td><td>workflow_control</td><td><code>Arc &lt; OnceLock &lt; Arc &lt; dyn WorkflowControlPort &gt; &gt; &gt;</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr><td>constructor</td><td>new</td><td><code>pub fn new (registry : AgentRunRegistry , task_store : Arc &lt; dyn TaskStore &gt; , workflow_control : Arc &lt; OnceLock &lt; Arc &lt; dyn WorkflowControlPort &gt; &gt; &gt; ,) -&gt; Self</code></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl std :: fmt :: Debug for EngineCancelPort</code></summary><table><tbody><tr><td>method</td><td>fmt</td><td><code>fn fmt (&amp; self , f : &amp; mut std :: fmt :: Formatter &lt; '_ &gt;) -&gt; std :: fmt :: Result</code></td></tr></tbody></table></details><details><summary><code>impl CancelPort for EngineCancelPort</code></summary><table><tbody><tr><td>method</td><td>cancel_task</td><td><code>async fn cancel_task (&amp; self , task_id : &amp; TaskId , reason : &amp; str) -&gt; Result &lt; () , ToolError &gt;</code></td></tr><tr><td>method</td><td>cancel_agent_run</td><td><code>async fn cancel_agent_run (&amp; self , agent_run_id : &amp; AgentRunId , reason : &amp; str ,) -&gt; Result &lt; () , ToolError &gt;</code></td></tr></tbody></table></details></div>
+  <code class="signature">pub struct <a class="symbol-link" href="eos-engine--src-runtime-cancel-rs.html#item-struct-EngineCancelPort-29">EngineCancelPort</a></code>
+  <p class="docstring">Request-scoped implementation of the recursive cancellation primitives.</p>
+  <div class="tags"><span>derive: Clone</span><span>port/service</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>registry</td><td><code><a class="symbol-link" href="eos-engine--src-runtime-registry-rs.html#item-struct-AgentRunRegistry-23">AgentRunRegistry</a></code></td></tr><tr><td>private</td><td>task_store</td><td><code>Arc &lt; dyn TaskStore &gt;</code></td></tr><tr><td>private</td><td>workflow_control</td><td><code>Arc &lt; OnceLock &lt; Arc &lt; dyn WorkflowControlPort &gt; &gt; &gt;</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-46"><td>constructor</td><td>new</td><td><code>pub fn <a class="symbol-link" href="eos-engine--src-background-factory-rs.html#method-new-39">new</a> (registry : <a class="symbol-link" href="eos-engine--src-runtime-registry-rs.html#item-struct-AgentRunRegistry-23">AgentRunRegistry</a> , task_store : Arc &lt; dyn TaskStore &gt; , workflow_control : Arc &lt; OnceLock &lt; Arc &lt; dyn WorkflowControlPort &gt; &gt; &gt; ,) -&gt; Self</code><p class="docstring">Wire the port with the live-run registry, the task store, and the<br>late-bound workflow-control cell.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Wire the port with the live-run registry, the task store, and the</span>
+    <span class="rs-comment">/// late-bound workflow-control cell.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-background-factory-rs.html#method-new-39">new</a>(
+        registry: <a class="symbol-link rs-type" href="eos-engine--src-runtime-registry-rs.html#item-struct-AgentRunRegistry-23">AgentRunRegistry</a>,
+        task_store: <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <span class="rs-type">TaskStore</span>&gt;,
+        workflow_control: <span class="rs-type">Arc</span>&lt;<span class="rs-type">OnceLock</span>&lt;<span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <span class="rs-type">WorkflowControlPort</span>&gt;&gt;&gt;,
+    ) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">Self</span> {
+            registry,
+            task_store,
+            workflow_control,
+        }
+    }
+</code></pre>
+</details></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl std :: fmt :: Debug for <a class="symbol-link" href="eos-engine--src-runtime-cancel-rs.html#item-struct-EngineCancelPort-29">EngineCancelPort</a></code></summary><table><tbody><tr id="method-fmt-40"><td>method</td><td>fmt</td><td><code>fn <a class="symbol-link" href="eos-engine.html#method-fmt-58">fmt</a> (&amp; self , f : &amp; mut std :: fmt :: Formatter &lt; &#x27;_ &gt;) -&gt; std :: fmt :: Result</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine.html#method-fmt-58">fmt</a>(&amp;<span class="rs-self">self</span>, f: &amp;<span class="rs-kw">mut</span> std::fmt::<span class="rs-type">Formatter</span>&lt;&#x27;_&gt;) -&gt; std::fmt::<span class="rs-type">Result</span> {
+        f.debug_struct(&quot;<a class="symbol-link rs-type" href="eos-engine--src-runtime-cancel-rs.html#item-struct-EngineCancelPort-29">EngineCancelPort</a>&quot;).finish_non_exhaustive()
+    }
+</code></pre>
+</details></td></tr></tbody></table></details><details><summary><code>impl CancelPort for <a class="symbol-link" href="eos-engine--src-runtime-cancel-rs.html#item-struct-EngineCancelPort-29">EngineCancelPort</a></code></summary><table><tbody><tr id="method-cancel-task-72"><td>method</td><td>cancel_task</td><td><code>async fn <a class="symbol-link" href="eos-engine--src-runtime-cancel-rs.html#method-cancel-task-72">cancel_task</a> (&amp; self , task_id : &amp; TaskId , reason : &amp; str) -&gt; Result &lt; () , ToolError &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-runtime-cancel-rs.html#method-cancel-task-72">cancel_task</a>(&amp;<span class="rs-self">self</span>, task_id: &amp;<span class="rs-type">TaskId</span>, reason: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;(), <span class="rs-type">ToolError</span>&gt; {
+        <span class="rs-comment">// Persisted-state cancellation: CAS the task row from its current</span>
+        <span class="rs-comment">// non-terminal status to Cancelled. Reading first then CASing on the</span>
+        <span class="rs-comment">// observed status keeps terminal tasks untouched and makes repeats no-op.</span>
+        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(task) = <span class="rs-self">self</span>.task_store.<a class="symbol-link rs-fn" href="eos-engine--src-background-handle-rs.html#method-get-293">get</a>(task_id).<span class="rs-kw">await</span>.map_err(<span class="rs-type">ToolError</span>::<span class="rs-type">Store</span>)? {
+            <span class="rs-kw">if</span> matches!(task.status, <span class="rs-type">TaskStatus</span>::<span class="rs-type">Pending</span> | <span class="rs-type">TaskStatus</span>::<span class="rs-type">Running</span>) {
+                <span class="rs-kw">let</span> terminal = <a class="symbol-link rs-fn" href="eos-engine--src-runtime-cancel-rs.html#item-fn-cancelled-terminal-62">cancelled_terminal</a>(reason);
+                <span class="rs-self">self</span>.task_store
+                    .set_task_status_if_current(
+                        task_id,
+                        task.status,
+                        <span class="rs-type">TaskStatus</span>::<span class="rs-type">Cancelled</span>,
+                        <span class="rs-type">None</span>,
+                        <span class="rs-type">Some</span>(&amp;terminal),
+                    )
+                    .<span class="rs-kw">await</span>
+                    .map_err(<span class="rs-type">ToolError</span>::<span class="rs-type">Store</span>)?;
+            }
+        }
+        <span class="rs-comment">// Tear down the live run owning this task, if one is registered.</span>
+        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(run_id) = <span class="rs-self">self</span>.registry.<a class="symbol-link rs-fn" href="eos-engine--src-runtime-registry-rs.html#method-agent-run-for-task-84">agent_run_for_task</a>(task_id) {
+            <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-engine--src-runtime-cancel-rs.html#method-cancel-agent-run-98">cancel_agent_run</a>(&amp;run_id, reason).<span class="rs-kw">await</span>?;
+        }
+        <span class="rs-type">Ok</span>(())
+    }
+</code></pre>
+</details></td></tr><tr id="method-cancel-agent-run-98"><td>method</td><td>cancel_agent_run</td><td><code>async fn <a class="symbol-link" href="eos-engine--src-runtime-cancel-rs.html#method-cancel-agent-run-98">cancel_agent_run</a> (&amp; self , agent_run_id : &amp; AgentRunId , reason : &amp; str ,) -&gt; Result &lt; () , ToolError &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-runtime-cancel-rs.html#method-cancel-agent-run-98">cancel_agent_run</a>(
+        &amp;<span class="rs-self">self</span>,
+        agent_run_id: &amp;<span class="rs-type">AgentRunId</span>,
+        reason: &amp;str,
+    ) -&gt; <span class="rs-type">Result</span>&lt;(), <span class="rs-type">ToolError</span>&gt; {
+        <span class="rs-comment">// Claim first (idempotency latch): a missing/already-claimed entry means</span>
+        <span class="rs-comment">// the run already finished or another cancel is handling it.</span>
+        <span class="rs-kw">let</span> <span class="rs-type">Some</span>(control) = <span class="rs-self">self</span>.registry.<a class="symbol-link rs-fn" href="eos-engine--src-runtime-registry-rs.html#method-begin-cancel-95">begin_cancel</a>(agent_run_id) <span class="rs-kw">else</span> {
+            <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(());
+        };
+        <span class="rs-comment">// Then flag cooperative cancellation, so the query loop stops at its next</span>
+        <span class="rs-comment">// turn boundary.</span>
+        control.<a class="symbol-link rs-fn" href="eos-engine--src-runtime-control-rs.html#method-cancellation-234">cancellation</a>().<a class="symbol-link rs-fn" href="eos-engine--src-runtime-control-rs.html#method-request-cancel-57">request_cancel</a>(reason);
+        <span class="rs-comment">// Tear down foreground effects (inline child runs / registered resources)</span>
+        <span class="rs-comment">// and background work (subagents, delegated workflows, command sessions).</span>
+        control.<a class="symbol-link rs-fn" href="eos-engine--src-runtime-control-rs.html#method-foreground-253">foreground</a>().<a class="symbol-link rs-fn" href="eos-engine--src-background-handle-rs.html#method-teardown-152">teardown</a>(<span class="rs-self">self</span>, reason).<span class="rs-kw">await</span>?;
+        <span class="rs-kw">let</span> workflow_control = <span class="rs-self">self</span>.workflow_control.<a class="symbol-link rs-fn" href="eos-engine--src-background-handle-rs.html#method-get-293">get</a>().cloned();
+        control.<a class="symbol-link rs-fn" href="eos-engine--src-runtime-control-rs.html#method-background-240">background</a>().<a class="symbol-link rs-fn" href="eos-engine--src-background-handle-rs.html#method-teardown-152">teardown</a>(workflow_control, reason).<span class="rs-kw">await</span>;
+        <span class="rs-comment">// Finish the durable agent_run row (cancelled payload); ephemeral runs</span>
+        <span class="rs-comment">// own no row. The message-record is finished by `run_agent`.</span>
+        control
+            .<a class="symbol-link rs-fn" href="eos-engine--src-runtime-control-rs.html#method-finalization-259">finalization</a>()
+            .<a class="symbol-link rs-fn" href="eos-engine--src-runtime-control-rs.html#method-finish-cancelled-157">finish_cancelled</a>(reason)
+            .<span class="rs-kw">await</span>
+            .map_err(|err| <span class="rs-type">ToolError</span>::<span class="rs-type">Internal</span>(err.to_string()))?;
+        <span class="rs-self">self</span>.registry.<a class="symbol-link rs-fn" href="eos-engine--src-runtime-registry-rs.html#method-finish-cancel-114">finish_cancel</a>(agent_run_id);
+        <span class="rs-type">Ok</span>(())
+    }
+</code></pre>
+</details></td></tr></tbody></table></details></div>
+
   <p class="source">crates/eos-engine/src/runtime/cancel.rs:29</p>
-</article><div class="group-label">Standalone Functions</div><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn cancelled_terminal private fn cancelled_terminal (reason : &amp; str) -&gt; JsonObject crates/eos-engine/src/runtime/cancel.rs  ">
+</article><div class="group-label">Standalone Functions</div><article id="item-fn-cancelled-terminal-62" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn cancelled_terminal private fn cancelled_terminal (reason : &amp; str) -&gt; JsonObject crates/eos-engine/src/runtime/cancel.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>cancelled_terminal</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn cancelled_terminal (reason : &amp; str) -&gt; JsonObject</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-engine--src-runtime-cancel-rs.html#item-fn-cancelled-terminal-62">cancelled_terminal</a> (reason : &amp; str) -&gt; JsonObject</code>
+  <p class="docstring">The cancelled task terminal payload (spec §14): `{ fail_reason, reason }`.</p>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-comment">/// The cancelled task terminal payload (spec §14): `{ fail_reason, reason }`.</span>
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-runtime-cancel-rs.html#item-fn-cancelled-terminal-62">cancelled_terminal</a>(reason: &amp;str) -&gt; <span class="rs-type">JsonObject</span> {
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> terminal = <span class="rs-type">JsonObject</span>::<a class="symbol-link rs-fn" href="eos-engine--src-background-factory-rs.html#method-new-39">new</a>();
+    terminal.<a class="symbol-link rs-fn" href="eos-engine--src-background-lanes-subagent-rs.html#method-insert-74">insert</a>(&quot;fail_reason&quot;.to_owned(), &quot;cancelled&quot;.into());
+    terminal.<a class="symbol-link rs-fn" href="eos-engine--src-background-lanes-subagent-rs.html#method-insert-74">insert</a>(&quot;reason&quot;.to_owned(), reason.into());
+    terminal
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-engine/src/runtime/cancel.rs:62</p>
 </article></div>
 </section></div>
 </main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/eos-engine/src/runtime/cancel.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-comment">//! [`EngineCancelPort`] — the engine-side implementation of the two recursive</span>
+<span class="rs-comment">//! agent-core cancellation primitives (spec §7.2, §12.2, §12.3).</span>
+<span class="rs-comment">//!</span>
+<span class="rs-comment">//! The trait lives in `eos-tools` to avoid an `eos-engine` &lt;-&gt; `eos-workflow`</span>
+<span class="rs-comment">//! crate cycle; this is the wired implementor. Both methods are awaited</span>
+<span class="rs-comment">//! end-to-end and idempotent:</span>
+<span class="rs-comment">//!</span>
+<span class="rs-comment">//! - `cancel_task` CASes the persisted task `{Pending,Running} -&gt; Cancelled`</span>
+<span class="rs-comment">//!   (repeat calls no-op via the CAS) and recurses into the live run, if any.</span>
+<span class="rs-comment">//! - `cancel_agent_run` claims the registry entry (`Running -&gt; Claimed`), then —</span>
+<span class="rs-comment">//!   only on the first claim — requests cooperative cancellation, tears down the</span>
+<span class="rs-comment">//!   run's foreground and background resources, finishes its durable row, and</span>
+<span class="rs-comment">//!   removes the entry. A second call sees the entry gone and returns `Ok(())`.</span>
+<span class="rs-comment">//!</span>
+<span class="rs-comment">//! Claim-before-flag ordering (claim, *then* `request_cancel`) guarantees that by</span>
+<span class="rs-comment">//! the time the query loop observes the cancel flag, the claim is taken, so the</span>
+<span class="rs-comment">//! run's own `run_agent` finalizer reliably loses the claim and skips its row +</span>
+<span class="rs-comment">//! teardown (the message-record is still finished by `run_agent`, cancel-aware).</span>
+
+<span class="rs-kw">use</span> std::sync::{<span class="rs-type">Arc</span>, <span class="rs-type">OnceLock</span>};
+
+<span class="rs-kw">use</span> async_trait::async_trait;
+<span class="rs-kw">use</span> eos_state::{<span class="rs-type">TaskStatus</span>, <span class="rs-type">TaskStore</span>};
+<span class="rs-kw">use</span> eos_tools::{<span class="rs-type">CancelPort</span>, <span class="rs-type">ToolError</span>, <span class="rs-type">WorkflowControlPort</span>};
+<span class="rs-kw">use</span> eos_types::{<span class="rs-type">AgentRunId</span>, <span class="rs-type">JsonObject</span>, <span class="rs-type">TaskId</span>};
+
+<span class="rs-kw">use</span> <span class="rs-kw">super</span>::registry::<a class="symbol-link rs-type" href="eos-engine--src-runtime-registry-rs.html#item-struct-AgentRunRegistry-23">AgentRunRegistry</a>;
+
+<span class="rs-comment">/// Request-scoped implementation of the recursive cancellation primitives.</span>
+#[derive(<span class="rs-type">Clone</span>)]
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-engine--src-runtime-cancel-rs.html#item-struct-EngineCancelPort-29">EngineCancelPort</a> {
+    registry: <a class="symbol-link rs-type" href="eos-engine--src-runtime-registry-rs.html#item-struct-AgentRunRegistry-23">AgentRunRegistry</a>,
+    task_store: <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <span class="rs-type">TaskStore</span>&gt;,
+    <span class="rs-comment">/// Late-bound workflow control (built downstream of the runner). Read at</span>
+    <span class="rs-comment">/// cancel time so a run's delegated workflows are cancelled during teardown.</span>
+    workflow_control: <span class="rs-type">Arc</span>&lt;<span class="rs-type">OnceLock</span>&lt;<span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <span class="rs-type">WorkflowControlPort</span>&gt;&gt;&gt;,
+}
+
+<span class="rs-kw">impl</span> std::fmt::<span class="rs-type">Debug</span> <span class="rs-kw">for</span> <a class="symbol-link rs-type" href="eos-engine--src-runtime-cancel-rs.html#item-struct-EngineCancelPort-29">EngineCancelPort</a> {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine.html#method-fmt-58">fmt</a>(&amp;<span class="rs-self">self</span>, f: &amp;<span class="rs-kw">mut</span> std::fmt::<span class="rs-type">Formatter</span>&lt;&#x27;_&gt;) -&gt; std::fmt::<span class="rs-type">Result</span> {
+        f.debug_struct(&quot;<a class="symbol-link rs-type" href="eos-engine--src-runtime-cancel-rs.html#item-struct-EngineCancelPort-29">EngineCancelPort</a>&quot;).finish_non_exhaustive()
+    }
+}
+
+<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-engine--src-runtime-cancel-rs.html#item-struct-EngineCancelPort-29">EngineCancelPort</a> {
+    <span class="rs-comment">/// Wire the port with the live-run registry, the task store, and the</span>
+    <span class="rs-comment">/// late-bound workflow-control cell.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-background-factory-rs.html#method-new-39">new</a>(
+        registry: <a class="symbol-link rs-type" href="eos-engine--src-runtime-registry-rs.html#item-struct-AgentRunRegistry-23">AgentRunRegistry</a>,
+        task_store: <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <span class="rs-type">TaskStore</span>&gt;,
+        workflow_control: <span class="rs-type">Arc</span>&lt;<span class="rs-type">OnceLock</span>&lt;<span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <span class="rs-type">WorkflowControlPort</span>&gt;&gt;&gt;,
+    ) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">Self</span> {
+            registry,
+            task_store,
+            workflow_control,
+        }
+    }
+}
+
+<span class="rs-comment">/// The cancelled task terminal payload (spec §14): `{ fail_reason, reason }`.</span>
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-runtime-cancel-rs.html#item-fn-cancelled-terminal-62">cancelled_terminal</a>(reason: &amp;str) -&gt; <span class="rs-type">JsonObject</span> {
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> terminal = <span class="rs-type">JsonObject</span>::<a class="symbol-link rs-fn" href="eos-engine--src-background-factory-rs.html#method-new-39">new</a>();
+    terminal.<a class="symbol-link rs-fn" href="eos-engine--src-background-lanes-subagent-rs.html#method-insert-74">insert</a>(&quot;fail_reason&quot;.to_owned(), &quot;cancelled&quot;.into());
+    terminal.<a class="symbol-link rs-fn" href="eos-engine--src-background-lanes-subagent-rs.html#method-insert-74">insert</a>(&quot;reason&quot;.to_owned(), reason.into());
+    terminal
+}
+
+#[async_trait]
+<span class="rs-kw">impl</span> <span class="rs-type">CancelPort</span> <span class="rs-kw">for</span> <a class="symbol-link rs-type" href="eos-engine--src-runtime-cancel-rs.html#item-struct-EngineCancelPort-29">EngineCancelPort</a> {
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-runtime-cancel-rs.html#method-cancel-task-72">cancel_task</a>(&amp;<span class="rs-self">self</span>, task_id: &amp;<span class="rs-type">TaskId</span>, reason: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;(), <span class="rs-type">ToolError</span>&gt; {
+        <span class="rs-comment">// Persisted-state cancellation: CAS the task row from its current</span>
+        <span class="rs-comment">// non-terminal status to Cancelled. Reading first then CASing on the</span>
+        <span class="rs-comment">// observed status keeps terminal tasks untouched and makes repeats no-op.</span>
+        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(task) = <span class="rs-self">self</span>.task_store.<a class="symbol-link rs-fn" href="eos-engine--src-background-handle-rs.html#method-get-293">get</a>(task_id).<span class="rs-kw">await</span>.map_err(<span class="rs-type">ToolError</span>::<span class="rs-type">Store</span>)? {
+            <span class="rs-kw">if</span> matches!(task.status, <span class="rs-type">TaskStatus</span>::<span class="rs-type">Pending</span> | <span class="rs-type">TaskStatus</span>::<span class="rs-type">Running</span>) {
+                <span class="rs-kw">let</span> terminal = <a class="symbol-link rs-fn" href="eos-engine--src-runtime-cancel-rs.html#item-fn-cancelled-terminal-62">cancelled_terminal</a>(reason);
+                <span class="rs-self">self</span>.task_store
+                    .set_task_status_if_current(
+                        task_id,
+                        task.status,
+                        <span class="rs-type">TaskStatus</span>::<span class="rs-type">Cancelled</span>,
+                        <span class="rs-type">None</span>,
+                        <span class="rs-type">Some</span>(&amp;terminal),
+                    )
+                    .<span class="rs-kw">await</span>
+                    .map_err(<span class="rs-type">ToolError</span>::<span class="rs-type">Store</span>)?;
+            }
+        }
+        <span class="rs-comment">// Tear down the live run owning this task, if one is registered.</span>
+        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(run_id) = <span class="rs-self">self</span>.registry.<a class="symbol-link rs-fn" href="eos-engine--src-runtime-registry-rs.html#method-agent-run-for-task-84">agent_run_for_task</a>(task_id) {
+            <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-engine--src-runtime-cancel-rs.html#method-cancel-agent-run-98">cancel_agent_run</a>(&amp;run_id, reason).<span class="rs-kw">await</span>?;
+        }
+        <span class="rs-type">Ok</span>(())
+    }
+
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-engine--src-runtime-cancel-rs.html#method-cancel-agent-run-98">cancel_agent_run</a>(
+        &amp;<span class="rs-self">self</span>,
+        agent_run_id: &amp;<span class="rs-type">AgentRunId</span>,
+        reason: &amp;str,
+    ) -&gt; <span class="rs-type">Result</span>&lt;(), <span class="rs-type">ToolError</span>&gt; {
+        <span class="rs-comment">// Claim first (idempotency latch): a missing/already-claimed entry means</span>
+        <span class="rs-comment">// the run already finished or another cancel is handling it.</span>
+        <span class="rs-kw">let</span> <span class="rs-type">Some</span>(control) = <span class="rs-self">self</span>.registry.<a class="symbol-link rs-fn" href="eos-engine--src-runtime-registry-rs.html#method-begin-cancel-95">begin_cancel</a>(agent_run_id) <span class="rs-kw">else</span> {
+            <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(());
+        };
+        <span class="rs-comment">// Then flag cooperative cancellation, so the query loop stops at its next</span>
+        <span class="rs-comment">// turn boundary.</span>
+        control.<a class="symbol-link rs-fn" href="eos-engine--src-runtime-control-rs.html#method-cancellation-234">cancellation</a>().<a class="symbol-link rs-fn" href="eos-engine--src-runtime-control-rs.html#method-request-cancel-57">request_cancel</a>(reason);
+        <span class="rs-comment">// Tear down foreground effects (inline child runs / registered resources)</span>
+        <span class="rs-comment">// and background work (subagents, delegated workflows, command sessions).</span>
+        control.<a class="symbol-link rs-fn" href="eos-engine--src-runtime-control-rs.html#method-foreground-253">foreground</a>().<a class="symbol-link rs-fn" href="eos-engine--src-background-handle-rs.html#method-teardown-152">teardown</a>(<span class="rs-self">self</span>, reason).<span class="rs-kw">await</span>?;
+        <span class="rs-kw">let</span> workflow_control = <span class="rs-self">self</span>.workflow_control.<a class="symbol-link rs-fn" href="eos-engine--src-background-handle-rs.html#method-get-293">get</a>().cloned();
+        control.<a class="symbol-link rs-fn" href="eos-engine--src-runtime-control-rs.html#method-background-240">background</a>().<a class="symbol-link rs-fn" href="eos-engine--src-background-handle-rs.html#method-teardown-152">teardown</a>(workflow_control, reason).<span class="rs-kw">await</span>;
+        <span class="rs-comment">// Finish the durable agent_run row (cancelled payload); ephemeral runs</span>
+        <span class="rs-comment">// own no row. The message-record is finished by `run_agent`.</span>
+        control
+            .<a class="symbol-link rs-fn" href="eos-engine--src-runtime-control-rs.html#method-finalization-259">finalization</a>()
+            .<a class="symbol-link rs-fn" href="eos-engine--src-runtime-control-rs.html#method-finish-cancelled-157">finish_cancelled</a>(reason)
+            .<span class="rs-kw">await</span>
+            .map_err(|err| <span class="rs-type">ToolError</span>::<span class="rs-type">Internal</span>(err.to_string()))?;
+        <span class="rs-self">self</span>.registry.<a class="symbol-link rs-fn" href="eos-engine--src-runtime-registry-rs.html#method-finish-cancel-114">finish_cancel</a>(agent_run_id);
+        <span class="rs-type">Ok</span>(())
+    }
+}
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
   <script src="../assets/inventory.js"></script>
 </body>
 </html>

@@ -8,8 +8,16 @@
 </head>
 <body>
   <header>
-    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
-    <h1>eos-layerstack File Inventory</h1>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>eos-layerstack File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS/sandbox &amp;&amp; cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
   </header>
   <a class="back-link" href="../index.html">sandbox</a>
 <section class="summary">
@@ -47,59 +55,214 @@
       <span>0 methods</span>
     </div>
   </div>
-  <div class="items"><div class="group-label">Standalone Functions</div><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn remove_path pub(crate) pub(crate) fn remove_path (path : &amp; Path) -&gt; Result &lt; () , LayerStackError &gt; crates/eos-layerstack/src/fsutil.rs  ">
+  <div class="items"><div class="group-label">Standalone Functions</div><article id="item-fn-remove-path-8" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn remove_path pub(crate) pub(crate) fn remove_path (path : &amp; Path) -&gt; Result &lt; () , LayerStackError &gt; crates/eos-layerstack/src/fsutil.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>remove_path</h3>
     <span class="visibility">pub(crate)</span>
   </div>
-  <code class="signature">pub(crate) fn remove_path (path : &amp; Path) -&gt; Result &lt; () , LayerStackError &gt;</code>
+  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-layerstack--src-fsutil-rs.html#item-fn-remove-path-8">remove_path</a> (path : &amp; Path) -&gt; Result &lt; () , <a class="symbol-link" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a> &gt;</code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-fsutil-rs.html#item-fn-remove-path-8">remove_path</a>(path: &amp;<span class="rs-type">Path</span>) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>&gt; {
+    <span class="rs-kw">match</span> std::fs::symlink_metadata(path) {
+        <span class="rs-type">Ok</span>(meta) <span class="rs-kw">if</span> meta.file_type().is_symlink() || meta.is_file() =&gt; {
+            std::fs::remove_file(path)?;
+        }
+        <span class="rs-type">Ok</span>(meta) <span class="rs-kw">if</span> meta.is_dir() =&gt; {
+            std::fs::remove_dir_all(path)?;
+        }
+        <span class="rs-type">Ok</span>(_) =&gt; {}
+        <span class="rs-type">Err</span>(err) <span class="rs-kw">if</span> err.<a class="symbol-link rs-fn" href="eos-layerstack--src-workspace-base-rs.html#method-kind-52">kind</a>() == <span class="rs-type">ErrorKind</span>::<span class="rs-type">NotFound</span> =&gt; {}
+        <span class="rs-type">Err</span>(err) =&gt; <span class="rs-kw">return</span> <span class="rs-type">Err</span>(err.into()),
+    }
+    <span class="rs-type">Ok</span>(())
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-layerstack/src/fsutil.rs:8</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn join_layer_path pub(crate) pub(crate) fn join_layer_path (root : &amp; Path , rel : &amp; str) -&gt; PathBuf crates/eos-layerstack/src/fsutil.rs  ">
+</article><article id="item-fn-join-layer-path-23" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn join_layer_path pub(crate) pub(crate) fn join_layer_path (root : &amp; Path , rel : &amp; str) -&gt; PathBuf crates/eos-layerstack/src/fsutil.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>join_layer_path</h3>
     <span class="visibility">pub(crate)</span>
   </div>
-  <code class="signature">pub(crate) fn join_layer_path (root : &amp; Path , rel : &amp; str) -&gt; PathBuf</code>
+  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-layerstack--src-fsutil-rs.html#item-fn-join-layer-path-23">join_layer_path</a> (root : &amp; Path , rel : &amp; str) -&gt; PathBuf</code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-fsutil-rs.html#item-fn-join-layer-path-23">join_layer_path</a>(root: &amp;<span class="rs-type">Path</span>, rel: &amp;str) -&gt; <span class="rs-type">PathBuf</span> {
+    rel.split(&#x27;/&#x27;).fold(root.to_path_buf(), |path, part| {
+        <span class="rs-kw">if</span> part.is_empty() {
+            path
+        } <span class="rs-kw">else</span> {
+            path.join(part)
+        }
+    })
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-layerstack/src/fsutil.rs:23</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn record_elapsed pub(crate) pub(crate) fn record_elapsed (timings : &amp; mut BTreeMap &lt; String , f64 &gt; , key : &amp; str , start : Instant) crates/eos-layerstack/src/fsutil.rs  ">
+</article><article id="item-fn-record-elapsed-33" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn record_elapsed pub(crate) pub(crate) fn record_elapsed (timings : &amp; mut BTreeMap &lt; String , f64 &gt; , key : &amp; str , start : Instant) crates/eos-layerstack/src/fsutil.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>record_elapsed</h3>
     <span class="visibility">pub(crate)</span>
   </div>
-  <code class="signature">pub(crate) fn record_elapsed (timings : &amp; mut BTreeMap &lt; String , f64 &gt; , key : &amp; str , start : Instant)</code>
+  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-layerstack--src-fsutil-rs.html#item-fn-record-elapsed-33">record_elapsed</a> (timings : &amp; mut BTreeMap &lt; String , f64 &gt; , key : &amp; str , start : Instant)</code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-fsutil-rs.html#item-fn-record-elapsed-33">record_elapsed</a>(timings: &amp;<span class="rs-kw">mut</span> <span class="rs-type">BTreeMap</span>&lt;<span class="rs-type">String</span>, f64&gt;, key: &amp;str, start: <span class="rs-type">Instant</span>) {
+    timings.insert(key.to_owned(), start.elapsed().as_secs_f64());
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-layerstack/src/fsutil.rs:33</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn check_layer_path pub(crate) pub(crate) fn check_layer_path (path : &amp; str) -&gt; Result &lt; () , LayerStackError &gt; crates/eos-layerstack/src/fsutil.rs  ">
+</article><article id="item-fn-check-layer-path-37" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn check_layer_path pub(crate) pub(crate) fn check_layer_path (path : &amp; str) -&gt; Result &lt; () , LayerStackError &gt; crates/eos-layerstack/src/fsutil.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>check_layer_path</h3>
     <span class="visibility">pub(crate)</span>
   </div>
-  <code class="signature">pub(crate) fn check_layer_path (path : &amp; str) -&gt; Result &lt; () , LayerStackError &gt;</code>
+  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-layerstack--src-fsutil-rs.html#item-fn-check-layer-path-37">check_layer_path</a> (path : &amp; str) -&gt; Result &lt; () , <a class="symbol-link" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a> &gt;</code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-fsutil-rs.html#item-fn-check-layer-path-37">check_layer_path</a>(path: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>&gt; {
+    <span class="rs-kw">if</span> path.is_empty() {
+        <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>::<span class="rs-type">Manifest</span>(
+            &quot;layer path must not be empty&quot;.to_owned(),
+        ));
+    }
+    <span class="rs-kw">if</span> path.contains(&#x27;\0&#x27;) {
+        <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>::<span class="rs-type">Manifest</span>(format!(
+            &quot;layer path must not contain <span class="rs-type">NUL</span> bytes: {path:?}&quot;
+        )));
+    }
+    <span class="rs-kw">let</span> path_ref = <span class="rs-type">Path</span>::<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-new-79">new</a>(path);
+    <span class="rs-kw">if</span> path_ref.is_absolute() {
+        <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>::<span class="rs-type">Manifest</span>(format!(
+            &quot;layer path must be relative: {path}&quot;
+        )));
+    }
+    <span class="rs-kw">if</span> path_ref.components().any(|part| part.as_os_str() == &quot;..&quot;) {
+        <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>::<span class="rs-type">Manifest</span>(format!(
+            &quot;layer path must not contain &#x27;..&#x27;: {path}&quot;
+        )));
+    }
+    <span class="rs-type">Ok</span>(())
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-layerstack/src/fsutil.rs:37</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn resolve_layer_path pub(crate) pub(crate) fn resolve_layer_path (storage_root : &amp; Path , path : &amp; str) -&gt; PathBuf crates/eos-layerstack/src/fsutil.rs  ">
+</article><article id="item-fn-resolve-layer-path-62" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn resolve_layer_path pub(crate) pub(crate) fn resolve_layer_path (storage_root : &amp; Path , path : &amp; str) -&gt; PathBuf crates/eos-layerstack/src/fsutil.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>resolve_layer_path</h3>
     <span class="visibility">pub(crate)</span>
   </div>
-  <code class="signature">pub(crate) fn resolve_layer_path (storage_root : &amp; Path , path : &amp; str) -&gt; PathBuf</code>
+  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-layerstack--src-fsutil-rs.html#item-fn-resolve-layer-path-62">resolve_layer_path</a> (storage_root : &amp; Path , path : &amp; str) -&gt; PathBuf</code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-fsutil-rs.html#item-fn-resolve-layer-path-62">resolve_layer_path</a>(storage_root: &amp;<span class="rs-type">Path</span>, path: &amp;str) -&gt; <span class="rs-type">PathBuf</span> {
+    <span class="rs-kw">let</span> path = <span class="rs-type">Path</span>::<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-new-79">new</a>(path);
+    <span class="rs-kw">if</span> path.is_absolute() {
+        path.to_path_buf()
+    } <span class="rs-kw">else</span> {
+        storage_root.join(path)
+    }
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-layerstack/src/fsutil.rs:62</p>
 </article></div>
 </section></div>
 </main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/eos-layerstack/src/fsutil.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-kw">use</span> std::collections::<span class="rs-type">BTreeMap</span>;
+<span class="rs-kw">use</span> std::io::<span class="rs-type">ErrorKind</span>;
+<span class="rs-kw">use</span> std::path::{<span class="rs-type">Path</span>, <span class="rs-type">PathBuf</span>};
+<span class="rs-kw">use</span> std::time::<span class="rs-type">Instant</span>;
+
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::error::<a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>;
+
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-fsutil-rs.html#item-fn-remove-path-8">remove_path</a>(path: &amp;<span class="rs-type">Path</span>) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>&gt; {
+    <span class="rs-kw">match</span> std::fs::symlink_metadata(path) {
+        <span class="rs-type">Ok</span>(meta) <span class="rs-kw">if</span> meta.file_type().is_symlink() || meta.is_file() =&gt; {
+            std::fs::remove_file(path)?;
+        }
+        <span class="rs-type">Ok</span>(meta) <span class="rs-kw">if</span> meta.is_dir() =&gt; {
+            std::fs::remove_dir_all(path)?;
+        }
+        <span class="rs-type">Ok</span>(_) =&gt; {}
+        <span class="rs-type">Err</span>(err) <span class="rs-kw">if</span> err.<a class="symbol-link rs-fn" href="eos-layerstack--src-workspace-base-rs.html#method-kind-52">kind</a>() == <span class="rs-type">ErrorKind</span>::<span class="rs-type">NotFound</span> =&gt; {}
+        <span class="rs-type">Err</span>(err) =&gt; <span class="rs-kw">return</span> <span class="rs-type">Err</span>(err.into()),
+    }
+    <span class="rs-type">Ok</span>(())
+}
+
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-fsutil-rs.html#item-fn-join-layer-path-23">join_layer_path</a>(root: &amp;<span class="rs-type">Path</span>, rel: &amp;str) -&gt; <span class="rs-type">PathBuf</span> {
+    rel.split(&#x27;/&#x27;).fold(root.to_path_buf(), |path, part| {
+        <span class="rs-kw">if</span> part.is_empty() {
+            path
+        } <span class="rs-kw">else</span> {
+            path.join(part)
+        }
+    })
+}
+
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-fsutil-rs.html#item-fn-record-elapsed-33">record_elapsed</a>(timings: &amp;<span class="rs-kw">mut</span> <span class="rs-type">BTreeMap</span>&lt;<span class="rs-type">String</span>, f64&gt;, key: &amp;str, start: <span class="rs-type">Instant</span>) {
+    timings.insert(key.to_owned(), start.elapsed().as_secs_f64());
+}
+
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-fsutil-rs.html#item-fn-check-layer-path-37">check_layer_path</a>(path: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>&gt; {
+    <span class="rs-kw">if</span> path.is_empty() {
+        <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>::<span class="rs-type">Manifest</span>(
+            &quot;layer path must not be empty&quot;.to_owned(),
+        ));
+    }
+    <span class="rs-kw">if</span> path.contains(&#x27;\0&#x27;) {
+        <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>::<span class="rs-type">Manifest</span>(format!(
+            &quot;layer path must not contain <span class="rs-type">NUL</span> bytes: {path:?}&quot;
+        )));
+    }
+    <span class="rs-kw">let</span> path_ref = <span class="rs-type">Path</span>::<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-new-79">new</a>(path);
+    <span class="rs-kw">if</span> path_ref.is_absolute() {
+        <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>::<span class="rs-type">Manifest</span>(format!(
+            &quot;layer path must be relative: {path}&quot;
+        )));
+    }
+    <span class="rs-kw">if</span> path_ref.components().any(|part| part.as_os_str() == &quot;..&quot;) {
+        <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>::<span class="rs-type">Manifest</span>(format!(
+            &quot;layer path must not contain &#x27;..&#x27;: {path}&quot;
+        )));
+    }
+    <span class="rs-type">Ok</span>(())
+}
+
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-fsutil-rs.html#item-fn-resolve-layer-path-62">resolve_layer_path</a>(storage_root: &amp;<span class="rs-type">Path</span>, path: &amp;str) -&gt; <span class="rs-type">PathBuf</span> {
+    <span class="rs-kw">let</span> path = <span class="rs-type">Path</span>::<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-new-79">new</a>(path);
+    <span class="rs-kw">if</span> path.is_absolute() {
+        path.to_path_buf()
+    } <span class="rs-kw">else</span> {
+        storage_root.join(path)
+    }
+}
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
   <script src="../assets/inventory.js"></script>
 </body>
 </html>

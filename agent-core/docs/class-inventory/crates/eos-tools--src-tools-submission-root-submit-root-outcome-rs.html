@@ -8,8 +8,16 @@
 </head>
 <body>
   <header>
-    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
-    <h1>eos-tools File Inventory</h1>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>eos-tools File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS/agent-core &amp;&amp; cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
   </header>
   <a class="back-link" href="../index.html">agent-core</a>
 <section class="summary">
@@ -47,99 +55,649 @@
       <span>2 methods</span>
     </div>
   </div>
-  <div class="items"><div class="group-label">File-Owned Types</div><article class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct SubmitRootOutcomeInput private struct SubmitRootOutcomeInput crates/eos-tools/src/tools/submission/root/submit_root_outcome.rs status SubmissionStatus outcome String ">
+  <div class="items"><div class="group-label">File-Owned Types</div><article id="item-struct-SubmitRootOutcomeInput-25" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct SubmitRootOutcomeInput private struct SubmitRootOutcomeInput crates/eos-tools/src/tools/submission/root/submit_root_outcome.rs status SubmissionStatus outcome String ">
   <div class="item-head">
     <span class="kind">struct</span>
     <h3>SubmitRootOutcomeInput</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">struct SubmitRootOutcomeInput</code>
-  <div class="tags"><span>serde</span></div>
-  <h4>Fields</h4><table><tbody><tr><td>private</td><td>status</td><td><code>SubmissionStatus</code></td></tr><tr><td>private</td><td>outcome</td><td><code>String</code></td></tr></tbody></table>
+  <code class="signature">struct <a class="symbol-link" href="eos-tools--src-tools-submission-root-submit-root-outcome-rs.html#item-struct-SubmitRootOutcomeInput-25">SubmitRootOutcomeInput</a></code>
+  <div class="tags"><span>derive: Debug</span><span>derive: Deserialize</span><span>derive: JsonSchema</span><span>derive: Serialize</span><span>serde</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>status</td><td><code><a class="symbol-link" href="eos-tools--src-tools-submission-lib-rs.html#item-enum-SubmissionStatus-10">SubmissionStatus</a></code></td></tr><tr><td>private</td><td>outcome</td><td><code>String</code></td></tr></tbody></table>
+
   <p class="source">crates/eos-tools/src/tools/submission/root/submit_root_outcome.rs:25</p>
-</article><article class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct SubmitRootOutcome private struct SubmitRootOutcome crates/eos-tools/src/tools/submission/root/submit_root_outcome.rs service Option &lt; RootSubmissionService &gt; ">
+</article><article id="item-struct-SubmitRootOutcome-31" class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct SubmitRootOutcome private struct SubmitRootOutcome crates/eos-tools/src/tools/submission/root/submit_root_outcome.rs service Option &lt; RootSubmissionService &gt; ">
   <div class="item-head">
     <span class="kind">struct</span>
     <h3>SubmitRootOutcome</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">struct SubmitRootOutcome</code>
+  <code class="signature">struct <a class="symbol-link" href="eos-tools--src-tools-submission-root-submit-root-outcome-rs.html#item-struct-SubmitRootOutcome-31">SubmitRootOutcome</a></code>
   <div class="tags"></div>
-  <h4>Fields</h4><table><tbody><tr><td>private</td><td>service</td><td><code>Option &lt; RootSubmissionService &gt;</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr><td>constructor</td><td>new</td><td><code>fn new (service : Option &lt; RootSubmissionService &gt;) -&gt; Self</code></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl ToolExecutor for SubmitRootOutcome</code></summary><table><tbody><tr><td>method</td><td>execute</td><td><code>async fn execute (&amp; self , input : &amp; JsonObject , ctx : &amp; ExecutionMetadata ,) -&gt; Result &lt; ToolResult , ToolError &gt;</code></td></tr></tbody></table></details></div>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>service</td><td><code>Option &lt; <a class="symbol-link" href="eos-tools--src-tools-services-rs.html#item-struct-RootSubmissionService-19">RootSubmissionService</a> &gt;</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-36"><td>constructor</td><td>new</td><td><code>fn <a class="symbol-link" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a> (service : Option &lt; <a class="symbol-link" href="eos-tools--src-tools-services-rs.html#item-struct-RootSubmissionService-19">RootSubmissionService</a> &gt;) -&gt; Self</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(service: <span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-RootSubmissionService-19">RootSubmissionService</a>&gt;) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">Self</span> { service }
+    }
+</code></pre>
+</details></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl <a class="symbol-link" href="eos-tools--src-runtime-executor-rs.html#item-trait-ToolExecutor-18">ToolExecutor</a> for <a class="symbol-link" href="eos-tools--src-tools-submission-root-submit-root-outcome-rs.html#item-struct-SubmitRootOutcome-31">SubmitRootOutcome</a></code></summary><table><tbody><tr id="method-execute-43"><td>method</td><td>execute</td><td><code>async fn <a class="symbol-link" href="eos-tools--src-runtime-execution-rs.html#method-execute-207">execute</a> (&amp; self , input : &amp; JsonObject , ctx : &amp; <a class="symbol-link" href="eos-tools--src-core-metadata-rs.html#item-struct-ExecutionMetadata-17">ExecutionMetadata</a> ,) -&gt; Result &lt; <a class="symbol-link" href="eos-tools--src-core-result-rs.html#item-struct-ToolResult-12">ToolResult</a> , <a class="symbol-link" href="eos-tools.html#item-enum-ToolError-16">ToolError</a> &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-runtime-execution-rs.html#method-execute-207">execute</a>(
+        &amp;<span class="rs-self">self</span>,
+        input: &amp;<span class="rs-type">JsonObject</span>,
+        ctx: &amp;<a class="symbol-link rs-type" href="eos-tools--src-core-metadata-rs.html#item-struct-ExecutionMetadata-17">ExecutionMetadata</a>,
+    ) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-tools--src-core-result-rs.html#item-struct-ToolResult-12">ToolResult</a>, <a class="symbol-link rs-type" href="eos-tools.html#item-enum-ToolError-16">ToolError</a>&gt; {
+        <span class="rs-kw">let</span> parsed: <a class="symbol-link rs-type" href="eos-tools--src-tools-submission-root-submit-root-outcome-rs.html#item-struct-SubmitRootOutcomeInput-25">SubmitRootOutcomeInput</a> = <span class="rs-kw">match</span> <a class="symbol-link rs-fn" href="eos-tools--src-runtime-execution-rs.html#item-fn-parse-input-165">parse_input</a>(<a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-submission-root-submit-root-outcome-rs.html#item-struct-SubmitRootOutcome-31">SubmitRootOutcome</a>, input) {
+            <span class="rs-type">Ok</span>(v) =&gt; v,
+            <span class="rs-type">Err</span>(err) =&gt; <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(err),
+        };
+        <span class="rs-kw">if</span> <a class="symbol-link rs-fn" href="eos-tools--src-tools-submission-lib-rs.html#item-fn-is-blank-40">is_blank</a>(&amp;parsed.outcome) {
+            <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-tools--src-core-result-rs.html#item-struct-ToolResult-12">ToolResult</a>::<a class="symbol-link rs-fn" href="eos-tools--src-core-result-rs.html#method-error-42">error</a>(&quot;outcome must be nonblank&quot;));
+        }
+
+        <span class="rs-kw">let</span> request_id = ctx.<a class="symbol-link rs-fn" href="eos-tools--src-core-metadata-rs.html#method-require-request-id-98">require_request_id</a>()?;
+        <span class="rs-kw">let</span> task_id = ctx.<a class="symbol-link rs-fn" href="eos-tools--src-core-metadata-rs.html#method-require-task-id-88">require_task_id</a>()?;
+        <span class="rs-kw">let</span> service = <span class="rs-self">self</span>
+            .service
+            .as_ref()
+            .ok_or(<a class="symbol-link rs-type" href="eos-tools.html#item-enum-ToolError-16">ToolError</a>::<span class="rs-type">MissingPort</span>(&quot;root_submission&quot;))?;
+
+        <span class="rs-kw">let</span> task = <span class="rs-kw">match</span> service.task_store.<a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#method-get-89">get</a>(task_id).<span class="rs-kw">await</span>? {
+            <span class="rs-type">Some</span>(task) =&gt; task,
+            <span class="rs-type">None</span> =&gt; {
+                <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-tools--src-core-result-rs.html#item-struct-ToolResult-12">ToolResult</a>::<a class="symbol-link rs-fn" href="eos-tools--src-core-result-rs.html#method-error-42">error</a>(format!(
+                    &quot;<span class="rs-type">Root</span> task &#x27;{}&#x27; was not found.&quot;,
+                    task_id.<a class="symbol-link rs-fn" href="eos-tools--src-core-intent-rs.html#method-as-str-42">as_str</a>()
+                )));
+            }
+        };
+        <span class="rs-kw">if</span> task.request_id != *request_id {
+            <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-tools--src-core-result-rs.html#item-struct-ToolResult-12">ToolResult</a>::<a class="symbol-link rs-fn" href="eos-tools--src-core-result-rs.html#method-error-42">error</a>(
+                &quot;<span class="rs-type">Root</span> task does not belong to this request.&quot;,
+            ));
+        }
+        <span class="rs-kw">if</span> task.workflow_id.is_some() {
+            <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-tools--src-core-result-rs.html#item-struct-ToolResult-12">ToolResult</a>::<a class="symbol-link rs-fn" href="eos-tools--src-core-result-rs.html#method-error-42">error</a>(
+                &quot;submit_root_outcome is only valid <span class="rs-kw">for</span> the root task.&quot;,
+            ));
+        }
+        <span class="rs-kw">if</span> task.role != <span class="rs-type">TaskRole</span>::<span class="rs-type">Root</span> {
+            <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-tools--src-core-result-rs.html#item-struct-ToolResult-12">ToolResult</a>::<a class="symbol-link rs-fn" href="eos-tools--src-core-result-rs.html#method-error-42">error</a>(format!(
+                &quot;<span class="rs-type">Task</span> &#x27;{}&#x27; is not a root task.&quot;,
+                task_id.<a class="symbol-link rs-fn" href="eos-tools--src-core-intent-rs.html#method-as-str-42">as_str</a>()
+            )));
+        }
+        <span class="rs-kw">if</span> task.status != <span class="rs-type">TaskStatus</span>::<span class="rs-type">Running</span> {
+            <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-tools--src-core-result-rs.html#item-struct-ToolResult-12">ToolResult</a>::<a class="symbol-link rs-fn" href="eos-tools--src-core-result-rs.html#method-error-42">error</a>(format!(
+                &quot;<span class="rs-type">Root</span> task &#x27;{}&#x27; is not running.&quot;,
+                task_id.<a class="symbol-link rs-fn" href="eos-tools--src-core-intent-rs.html#method-as-str-42">as_str</a>()
+            )));
+        }
+
+        <span class="rs-kw">let</span> task_status = <span class="rs-kw">match</span> parsed.status {
+            <a class="symbol-link rs-type" href="eos-tools--src-tools-submission-lib-rs.html#item-enum-SubmissionStatus-10">SubmissionStatus</a>::<span class="rs-type">Success</span> =&gt; <span class="rs-type">TaskStatus</span>::<span class="rs-type">Done</span>,
+            <a class="symbol-link rs-type" href="eos-tools--src-tools-submission-lib-rs.html#item-enum-SubmissionStatus-10">SubmissionStatus</a>::<span class="rs-type">Failed</span> =&gt; <span class="rs-type">TaskStatus</span>::<span class="rs-type">Failed</span>,
+        };
+        <span class="rs-kw">let</span> request_status = <span class="rs-kw">match</span> parsed.status {
+            <a class="symbol-link rs-type" href="eos-tools--src-tools-submission-lib-rs.html#item-enum-SubmissionStatus-10">SubmissionStatus</a>::<span class="rs-type">Success</span> =&gt; <span class="rs-type">RequestStatus</span>::<span class="rs-type">Done</span>,
+            <a class="symbol-link rs-type" href="eos-tools--src-tools-submission-lib-rs.html#item-enum-SubmissionStatus-10">SubmissionStatus</a>::<span class="rs-type">Failed</span> =&gt; <span class="rs-type">RequestStatus</span>::<span class="rs-type">Failed</span>,
+        };
+        <span class="rs-kw">let</span> terminal = <a class="symbol-link rs-fn" href="eos-tools--src-tools-submission-lib-rs.html#item-fn-meta-obj-44">meta_obj</a>(&amp;[
+            (&quot;status&quot;, json!(parsed.status.<a class="symbol-link rs-fn" href="eos-tools--src-core-intent-rs.html#method-as-str-42">as_str</a>())),
+            (&quot;outcome&quot;, json!(parsed.outcome)),
+        ]);
+        service
+            .task_store
+            .set_task_status_if_current(
+                task_id,
+                <span class="rs-type">TaskStatus</span>::<span class="rs-type">Running</span>,
+                task_status,
+                <span class="rs-type">None</span>,
+                <span class="rs-type">Some</span>(&amp;terminal),
+            )
+            .<span class="rs-kw">await</span>?
+            .ok_or_else(|| {
+                <a class="symbol-link rs-type" href="eos-tools.html#item-enum-ToolError-16">ToolError</a>::<span class="rs-type">Internal</span>(format!(
+                    &quot;root task &#x27;{}&#x27; was closed before terminal submission was recorded&quot;,
+                    task_id.<a class="symbol-link rs-fn" href="eos-tools--src-core-intent-rs.html#method-as-str-42">as_str</a>()
+                ))
+            })?;
+        service
+            .request_store
+            .finish_request(request_id, request_status)
+            .<span class="rs-kw">await</span>?;
+
+        <span class="rs-kw">let</span> kind = <span class="rs-kw">if</span> parsed.status == <a class="symbol-link rs-type" href="eos-tools--src-tools-submission-lib-rs.html#item-enum-SubmissionStatus-10">SubmissionStatus</a>::<span class="rs-type">Success</span> {
+            &quot;root_success&quot;
+        } <span class="rs-kw">else</span> {
+            &quot;root_failure&quot;
+        };
+        <span class="rs-type">Ok</span>(
+            <a class="symbol-link rs-type" href="eos-tools--src-core-result-rs.html#item-struct-ToolResult-12">ToolResult</a>::<a class="symbol-link rs-fn" href="eos-tools--src-core-result-rs.html#method-ok-31">ok</a>(format!(&quot;<span class="rs-type">Accepted</span> root {}.&quot;, parsed.status.<a class="symbol-link rs-fn" href="eos-tools--src-core-intent-rs.html#method-as-str-42">as_str</a>())).<a class="symbol-link rs-fn" href="eos-tools--src-core-result-rs.html#method-with-metadata-53">with_metadata</a>(
+                <a class="symbol-link rs-fn" href="eos-tools--src-tools-submission-lib-rs.html#item-fn-meta-obj-44">meta_obj</a>(&amp;[
+                    (&quot;submission_kind&quot;, json!(kind)),
+                    (&quot;request_id&quot;, json!(request_id.<a class="symbol-link rs-fn" href="eos-tools--src-core-intent-rs.html#method-as-str-42">as_str</a>())),
+                    (&quot;task_id&quot;, json!(task_id.<a class="symbol-link rs-fn" href="eos-tools--src-core-intent-rs.html#method-as-str-42">as_str</a>())),
+                ]),
+            ),
+        )
+    }
+</code></pre>
+</details></td></tr></tbody></table></details></div>
+
   <p class="source">crates/eos-tools/src/tools/submission/root/submit_root_outcome.rs:31</p>
-</article><div class="group-label">Standalone Functions</div><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn register pub(super) pub(super) fn register (registry : &amp; mut ToolRegistry , config : &amp; ToolConfigSet , root_submission : Option &lt; RootSubmissionService &gt; ,) crates/eos-tools/src/tools/submission/root/submit_root_outcome.rs  ">
+</article><div class="group-label">Standalone Functions</div><article id="item-fn-register-145" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn register pub(super) pub(super) fn register (registry : &amp; mut ToolRegistry , config : &amp; ToolConfigSet , root_submission : Option &lt; RootSubmissionService &gt; ,) crates/eos-tools/src/tools/submission/root/submit_root_outcome.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>register</h3>
     <span class="visibility">pub(super)</span>
   </div>
-  <code class="signature">pub(super) fn register (registry : &amp; mut ToolRegistry , config : &amp; ToolConfigSet , root_submission : Option &lt; RootSubmissionService &gt; ,)</code>
+  <code class="signature">pub(super) fn <a class="symbol-link" href="eos-tools--src-ports-mod-rs.html#method-register-322">register</a> (registry : &amp; mut <a class="symbol-link" href="eos-tools--src-registry-tool-registry-rs.html#item-struct-ToolRegistry-18">ToolRegistry</a> , config : &amp; <a class="symbol-link" href="eos-tools--src-registry-config-rs.html#item-struct-ToolConfigSet-45">ToolConfigSet</a> , root_submission : Option &lt; <a class="symbol-link" href="eos-tools--src-tools-services-rs.html#item-struct-RootSubmissionService-19">RootSubmissionService</a> &gt; ,)</code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-ports-mod-rs.html#method-register-322">register</a>(
+    registry: &amp;<span class="rs-kw">mut</span> <a class="symbol-link rs-type" href="eos-tools--src-registry-tool-registry-rs.html#item-struct-ToolRegistry-18">ToolRegistry</a>,
+    config: &amp;<a class="symbol-link rs-type" href="eos-tools--src-registry-config-rs.html#item-struct-ToolConfigSet-45">ToolConfigSet</a>,
+    root_submission: <span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-RootSubmissionService-19">RootSubmissionService</a>&gt;,
+) {
+    <span class="rs-kw">let</span> root = config.<a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#method-get-89">get</a>(<a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-submission-root-submit-root-outcome-rs.html#item-struct-SubmitRootOutcome-31">SubmitRootOutcome</a>);
+    <span class="rs-kw">super</span>::<span class="rs-kw">super</span>::<span class="rs-kw">super</span>::<a class="symbol-link rs-fn" href="eos-tools--src-tools-mod-rs.html#item-fn-register-tool-48">register_tool</a>(
+        registry,
+        <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-submission-root-submit-root-outcome-rs.html#item-struct-SubmitRootOutcome-31">SubmitRootOutcome</a>,
+        root,
+        <a class="symbol-link rs-fn" href="eos-tools--src-registry-spec-rs.html#item-fn-text-spec-26">text_spec</a>(
+            <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-submission-root-submit-root-outcome-rs.html#item-struct-SubmitRootOutcome-31">SubmitRootOutcome</a>,
+            &amp;root.description,
+            schema_for!(<a class="symbol-link rs-type" href="eos-tools--src-tools-submission-root-submit-root-outcome-rs.html#item-struct-SubmitRootOutcomeInput-25">SubmitRootOutcomeInput</a>),
+        ),
+        <a class="symbol-link rs-type" href="eos-tools--src-core-result-rs.html#item-enum-OutputShape-68">OutputShape</a>::<span class="rs-type">Text</span>,
+        <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(<a class="symbol-link rs-type" href="eos-tools--src-tools-submission-root-submit-root-outcome-rs.html#item-struct-SubmitRootOutcome-31">SubmitRootOutcome</a>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(root_submission)),
+    );
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-tools/src/tools/submission/root/submit_root_outcome.rs:145</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn obj private fn obj (pairs : &amp; [(&amp; str , serde_json :: Value)]) -&gt; JsonObject crates/eos-tools/src/tools/submission/root/submit_root_outcome.rs  ">
+</article><article id="item-fn-obj-177" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn obj private fn obj (pairs : &amp; [(&amp; str , serde_json :: Value)]) -&gt; JsonObject crates/eos-tools/src/tools/submission/root/submit_root_outcome.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>obj</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn obj (pairs : &amp; [(&amp; str , serde_json :: Value)]) -&gt; JsonObject</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-tools--src-tools-submission-root-submit-root-outcome-rs.html#item-fn-obj-177">obj</a> (pairs : &amp; [(&amp; str , serde_json :: Value)]) -&gt; JsonObject</code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-tools-submission-root-submit-root-outcome-rs.html#item-fn-obj-177">obj</a>(pairs: &amp;[(&amp;str, serde_json::<span class="rs-type">Value</span>)]) -&gt; <span class="rs-type">JsonObject</span> {
+        pairs
+            .iter()
+            .map(|(k, v)| ((*k).to_owned(), v.clone()))
+            .collect()
+    }
+</code></pre>
+</details>
 
   <p class="source">crates/eos-tools/src/tools/submission/root/submit_root_outcome.rs:177</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn root_task private fn root_task (request_id : &amp; RequestId) -&gt; Task crates/eos-tools/src/tools/submission/root/submit_root_outcome.rs  ">
+</article><article id="item-fn-root-task-184" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn root_task private fn root_task (request_id : &amp; RequestId) -&gt; Task crates/eos-tools/src/tools/submission/root/submit_root_outcome.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>root_task</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn root_task (request_id : &amp; RequestId) -&gt; Task</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-tools--src-tools-submission-root-submit-root-outcome-rs.html#item-fn-root-task-184">root_task</a> (request_id : &amp; RequestId) -&gt; Task</code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-tools-submission-root-submit-root-outcome-rs.html#item-fn-root-task-184">root_task</a>(request_id: &amp;<span class="rs-type">RequestId</span>) -&gt; <span class="rs-type">Task</span> {
+        <span class="rs-type">Task</span> {
+            id: &quot;root-1&quot;.parse().expect(&quot;id&quot;),
+            request_id: request_id.clone(),
+            role: <span class="rs-type">TaskRole</span>::<span class="rs-type">Root</span>,
+            instruction: &quot;do the request&quot;.to_owned(),
+            status: <span class="rs-type">TaskStatus</span>::<span class="rs-type">Running</span>,
+            workflow_id: <span class="rs-type">None</span>,
+            iteration_id: <span class="rs-type">None</span>,
+            attempt_id: <span class="rs-type">None</span>,
+            agent_name: <span class="rs-type">Some</span>(&quot;root&quot;.to_owned()),
+            needs: <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(),
+            outcomes: <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(),
+            terminal_tool_result: <span class="rs-type">None</span>,
+        }
+    }
+</code></pre>
+</details>
 
   <p class="source">crates/eos-tools/src/tools/submission/root/submit_root_outcome.rs:184</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn root_metadata private fn root_metadata (request_id : RequestId) -&gt; ExecutionMetadata crates/eos-tools/src/tools/submission/root/submit_root_outcome.rs  ">
+</article><article id="item-fn-root-metadata-201" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn root_metadata private fn root_metadata (request_id : RequestId) -&gt; ExecutionMetadata crates/eos-tools/src/tools/submission/root/submit_root_outcome.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>root_metadata</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn root_metadata (request_id : RequestId) -&gt; ExecutionMetadata</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-tools--src-tools-submission-root-submit-root-outcome-rs.html#item-fn-root-metadata-201">root_metadata</a> (request_id : RequestId) -&gt; <a class="symbol-link" href="eos-tools--src-core-metadata-rs.html#item-struct-ExecutionMetadata-17">ExecutionMetadata</a></code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-tools-submission-root-submit-root-outcome-rs.html#item-fn-root-metadata-201">root_metadata</a>(request_id: <span class="rs-type">RequestId</span>) -&gt; <a class="symbol-link rs-type" href="eos-tools--src-core-metadata-rs.html#item-struct-ExecutionMetadata-17">ExecutionMetadata</a> {
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> ctx = metadata();
+        ctx.request_id = <span class="rs-type">Some</span>(request_id);
+        ctx.task_id = <span class="rs-type">Some</span>(&quot;root-1&quot;.parse().expect(&quot;id&quot;));
+        ctx
+    }
+</code></pre>
+</details>
 
   <p class="source">crates/eos-tools/src/tools/submission/root/submit_root_outcome.rs:201</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn executor private fn executor (task_store : Arc &lt; FakeTaskStore &gt; , request_store : Arc &lt; FakeRequestStore &gt; ,) -&gt; SubmitRootOutcome crates/eos-tools/src/tools/submission/root/submit_root_outcome.rs  ">
+</article><article id="item-fn-executor-208" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn executor private fn executor (task_store : Arc &lt; FakeTaskStore &gt; , request_store : Arc &lt; FakeRequestStore &gt; ,) -&gt; SubmitRootOutcome crates/eos-tools/src/tools/submission/root/submit_root_outcome.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>executor</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn executor (task_store : Arc &lt; FakeTaskStore &gt; , request_store : Arc &lt; FakeRequestStore &gt; ,) -&gt; SubmitRootOutcome</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-tools--src-runtime-executor-rs.html#method-executor-112">executor</a> (task_store : Arc &lt; FakeTaskStore &gt; , request_store : Arc &lt; FakeRequestStore &gt; ,) -&gt; <a class="symbol-link" href="eos-tools--src-tools-submission-root-submit-root-outcome-rs.html#item-struct-SubmitRootOutcome-31">SubmitRootOutcome</a></code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-runtime-executor-rs.html#method-executor-112">executor</a>(
+        task_store: <span class="rs-type">Arc</span>&lt;<span class="rs-type">FakeTaskStore</span>&gt;,
+        request_store: <span class="rs-type">Arc</span>&lt;<span class="rs-type">FakeRequestStore</span>&gt;,
+    ) -&gt; <a class="symbol-link rs-type" href="eos-tools--src-tools-submission-root-submit-root-outcome-rs.html#item-struct-SubmitRootOutcome-31">SubmitRootOutcome</a> {
+        <a class="symbol-link rs-type" href="eos-tools--src-tools-submission-root-submit-root-outcome-rs.html#item-struct-SubmitRootOutcome-31">SubmitRootOutcome</a>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(<span class="rs-type">Some</span>(<a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-RootSubmissionService-19">RootSubmissionService</a>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(task_store, request_store)))
+    }
+</code></pre>
+</details>
 
   <p class="source">crates/eos-tools/src/tools/submission/root/submit_root_outcome.rs:208</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn main_role_terminals private async fn main_role_terminals () crates/eos-tools/src/tools/submission/root/submit_root_outcome.rs  ">
+</article><article id="item-fn-main-role-terminals-215" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn main_role_terminals private async fn main_role_terminals () crates/eos-tools/src/tools/submission/root/submit_root_outcome.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>main_role_terminals</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">async fn main_role_terminals ()</code>
-  <div class="tags"><span>async</span></div>
+  <code class="signature">async fn <a class="symbol-link" href="eos-tools--src-tools-submission-root-submit-root-outcome-rs.html#item-fn-main-role-terminals-215">main_role_terminals</a> ()</code>
+  <div class="tags"><span>async</span><span>tokio::test</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[tokio::test]
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-tools-submission-root-submit-root-outcome-rs.html#item-fn-main-role-terminals-215">main_role_terminals</a>() {
+        <span class="rs-kw">let</span> request_id: <span class="rs-type">RequestId</span> = <span class="rs-type">RequestId</span>::new_v4();
+        <span class="rs-kw">let</span> task_store = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(<span class="rs-type">FakeTaskStore</span>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>());
+        task_store.put(<a class="symbol-link rs-fn" href="eos-tools--src-tools-submission-root-submit-root-outcome-rs.html#item-fn-root-task-184">root_task</a>(&amp;request_id));
+        <span class="rs-kw">let</span> request_store = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(<span class="rs-type">FakeRequestStore</span>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>());
+        <span class="rs-kw">let</span> ctx = <a class="symbol-link rs-fn" href="eos-tools--src-tools-submission-root-submit-root-outcome-rs.html#item-fn-root-metadata-201">root_metadata</a>(request_id.clone());
+        <span class="rs-kw">let</span> executor = <a class="symbol-link rs-fn" href="eos-tools--src-runtime-executor-rs.html#method-executor-112">executor</a>(task_store.clone(), request_store.clone());
+
+        <span class="rs-kw">let</span> res = executor
+            .<a class="symbol-link rs-fn" href="eos-tools--src-runtime-execution-rs.html#method-execute-207">execute</a>(
+                &amp;<a class="symbol-link rs-fn" href="eos-tools--src-tools-submission-root-submit-root-outcome-rs.html#item-fn-obj-177">obj</a>(&amp;[(&quot;status&quot;, json!(&quot;success&quot;)), (&quot;outcome&quot;, json!(&quot;all done&quot;))]),
+                &amp;ctx,
+            )
+            .<span class="rs-kw">await</span>
+            .expect(&quot;ok&quot;);
+        assert!(!res.is_error, &quot;{}&quot;, res.output);
+        assert_eq!(res.metadata[&quot;submission_kind&quot;], json!(&quot;root_success&quot;));
+        assert_eq!(
+            request_store.finished(),
+            vec![(request_id.<a class="symbol-link rs-fn" href="eos-tools--src-core-intent-rs.html#method-as-str-42">as_str</a>().to_owned(), <span class="rs-type">RequestStatus</span>::<span class="rs-type">Done</span>)]
+        );
+
+        <span class="rs-kw">let</span> res = executor
+            .<a class="symbol-link rs-fn" href="eos-tools--src-runtime-execution-rs.html#method-execute-207">execute</a>(
+                &amp;<a class="symbol-link rs-fn" href="eos-tools--src-tools-submission-root-submit-root-outcome-rs.html#item-fn-obj-177">obj</a>(&amp;[(&quot;status&quot;, json!(&quot;success&quot;)), (&quot;outcome&quot;, json!(&quot;   &quot;))]),
+                &amp;ctx,
+            )
+            .<span class="rs-kw">await</span>
+            .expect(&quot;ok&quot;);
+        assert!(res.is_error);
+        assert!(res.output.contains(&quot;outcome must be nonblank&quot;));
+
+        <span class="rs-kw">let</span> other = <a class="symbol-link rs-fn" href="eos-tools--src-tools-submission-root-submit-root-outcome-rs.html#item-fn-root-metadata-201">root_metadata</a>(<span class="rs-type">RequestId</span>::new_v4());
+        <span class="rs-kw">let</span> res = executor
+            .<a class="symbol-link rs-fn" href="eos-tools--src-runtime-execution-rs.html#method-execute-207">execute</a>(
+                &amp;<a class="symbol-link rs-fn" href="eos-tools--src-tools-submission-root-submit-root-outcome-rs.html#item-fn-obj-177">obj</a>(&amp;[(&quot;status&quot;, json!(&quot;failed&quot;)), (&quot;outcome&quot;, json!(&quot;blocked&quot;))]),
+                &amp;other,
+            )
+            .<span class="rs-kw">await</span>
+            .expect(&quot;ok&quot;);
+        assert!(res.is_error);
+        assert!(
+            res.output.contains(&quot;does not belong to this request&quot;),
+            &quot;{}&quot;,
+            res.output
+        );
+    }
+</code></pre>
+</details>
 
   <p class="source">crates/eos-tools/src/tools/submission/root/submit_root_outcome.rs:215</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn root_rejects_non_root_task private async fn root_rejects_non_root_task () crates/eos-tools/src/tools/submission/root/submit_root_outcome.rs  ">
+</article><article id="item-fn-root-rejects-non-root-task-264" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn root_rejects_non_root_task private async fn root_rejects_non_root_task () crates/eos-tools/src/tools/submission/root/submit_root_outcome.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>root_rejects_non_root_task</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">async fn root_rejects_non_root_task ()</code>
-  <div class="tags"><span>async</span></div>
+  <code class="signature">async fn <a class="symbol-link" href="eos-tools--src-tools-submission-root-submit-root-outcome-rs.html#item-fn-root-rejects-non-root-task-264">root_rejects_non_root_task</a> ()</code>
+  <div class="tags"><span>async</span><span>tokio::test</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[tokio::test]
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-tools-submission-root-submit-root-outcome-rs.html#item-fn-root-rejects-non-root-task-264">root_rejects_non_root_task</a>() {
+        <span class="rs-kw">let</span> request_id = <span class="rs-type">RequestId</span>::new_v4();
+        <span class="rs-kw">let</span> task_store = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(<span class="rs-type">FakeTaskStore</span>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>());
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> task = <a class="symbol-link rs-fn" href="eos-tools--src-tools-submission-root-submit-root-outcome-rs.html#item-fn-root-task-184">root_task</a>(&amp;request_id);
+        task.role = <span class="rs-type">TaskRole</span>::<span class="rs-type">Generator</span>;
+        task_store.put(task);
+        <span class="rs-kw">let</span> request_store = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(<span class="rs-type">FakeRequestStore</span>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>());
+        <span class="rs-kw">let</span> ctx = <a class="symbol-link rs-fn" href="eos-tools--src-tools-submission-root-submit-root-outcome-rs.html#item-fn-root-metadata-201">root_metadata</a>(request_id);
+        <span class="rs-kw">let</span> res = <a class="symbol-link rs-fn" href="eos-tools--src-runtime-executor-rs.html#method-executor-112">executor</a>(task_store, request_store)
+            .<a class="symbol-link rs-fn" href="eos-tools--src-runtime-execution-rs.html#method-execute-207">execute</a>(
+                &amp;<a class="symbol-link rs-fn" href="eos-tools--src-tools-submission-root-submit-root-outcome-rs.html#item-fn-obj-177">obj</a>(&amp;[(&quot;status&quot;, json!(&quot;success&quot;)), (&quot;outcome&quot;, json!(&quot;x&quot;))]),
+                &amp;ctx,
+            )
+            .<span class="rs-kw">await</span>
+            .expect(&quot;ok&quot;);
+        assert!(res.is_error);
+        assert!(res.output.contains(&quot;is not a root task&quot;), &quot;{}&quot;, res.output);
+    }
+</code></pre>
+</details>
 
   <p class="source">crates/eos-tools/src/tools/submission/root/submit_root_outcome.rs:264</p>
 </article></div>
 </section></div>
 </main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/eos-tools/src/tools/submission/root/submit_root_outcome.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-comment">//! The `submit_root_outcome` terminal tool.</span>
+
+<span class="rs-kw">use</span> std::sync::<span class="rs-type">Arc</span>;
+
+<span class="rs-kw">use</span> async_trait::async_trait;
+<span class="rs-kw">use</span> eos_state::{<span class="rs-type">RequestStatus</span>, <span class="rs-type">TaskRole</span>, <span class="rs-type">TaskStatus</span>};
+<span class="rs-kw">use</span> eos_types::<span class="rs-type">JsonObject</span>;
+<span class="rs-kw">use</span> schemars::{schema_for, <span class="rs-type">JsonSchema</span>};
+<span class="rs-kw">use</span> serde::{<span class="rs-type">Deserialize</span>, <span class="rs-type">Serialize</span>};
+<span class="rs-kw">use</span> serde_json::json;
+
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::core::error::<a class="symbol-link rs-type" href="eos-tools.html#item-enum-ToolError-16">ToolError</a>;
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::core::metadata::<a class="symbol-link rs-type" href="eos-tools--src-core-metadata-rs.html#item-struct-ExecutionMetadata-17">ExecutionMetadata</a>;
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::core::name::<a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>;
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::core::result::{<a class="symbol-link rs-type" href="eos-tools--src-core-result-rs.html#item-enum-OutputShape-68">OutputShape</a>, <a class="symbol-link rs-type" href="eos-tools--src-core-result-rs.html#item-struct-ToolResult-12">ToolResult</a>};
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::registry::config::<a class="symbol-link rs-type" href="eos-tools--src-registry-config-rs.html#item-struct-ToolConfigSet-45">ToolConfigSet</a>;
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::registry::spec::text_spec;
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::registry::<a class="symbol-link rs-type" href="eos-tools--src-registry-tool-registry-rs.html#item-struct-ToolRegistry-18">ToolRegistry</a>;
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::runtime::execution::parse_input;
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::runtime::executor::<a class="symbol-link rs-type" href="eos-tools--src-runtime-executor-rs.html#item-trait-ToolExecutor-18">ToolExecutor</a>;
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::tools::<a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-RootSubmissionService-19">RootSubmissionService</a>;
+
+<span class="rs-kw">use</span> <span class="rs-kw">super</span>::<span class="rs-kw">super</span>::lib::{is_blank, meta_obj, <a class="symbol-link rs-type" href="eos-tools--src-tools-submission-lib-rs.html#item-enum-SubmissionStatus-10">SubmissionStatus</a>};
+
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Deserialize</span>, <span class="rs-type">Serialize</span>, <span class="rs-type">JsonSchema</span>)]
+<span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-tools--src-tools-submission-root-submit-root-outcome-rs.html#item-struct-SubmitRootOutcomeInput-25">SubmitRootOutcomeInput</a> {
+    status: <a class="symbol-link rs-type" href="eos-tools--src-tools-submission-lib-rs.html#item-enum-SubmissionStatus-10">SubmissionStatus</a>,
+    outcome: <span class="rs-type">String</span>,
+}
+
+<span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-tools--src-tools-submission-root-submit-root-outcome-rs.html#item-struct-SubmitRootOutcome-31">SubmitRootOutcome</a> {
+    service: <span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-RootSubmissionService-19">RootSubmissionService</a>&gt;,
+}
+
+<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-tools--src-tools-submission-root-submit-root-outcome-rs.html#item-struct-SubmitRootOutcome-31">SubmitRootOutcome</a> {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(service: <span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-RootSubmissionService-19">RootSubmissionService</a>&gt;) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">Self</span> { service }
+    }
+}
+
+#[async_trait]
+<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-tools--src-runtime-executor-rs.html#item-trait-ToolExecutor-18">ToolExecutor</a> <span class="rs-kw">for</span> <a class="symbol-link rs-type" href="eos-tools--src-tools-submission-root-submit-root-outcome-rs.html#item-struct-SubmitRootOutcome-31">SubmitRootOutcome</a> {
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-runtime-execution-rs.html#method-execute-207">execute</a>(
+        &amp;<span class="rs-self">self</span>,
+        input: &amp;<span class="rs-type">JsonObject</span>,
+        ctx: &amp;<a class="symbol-link rs-type" href="eos-tools--src-core-metadata-rs.html#item-struct-ExecutionMetadata-17">ExecutionMetadata</a>,
+    ) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-tools--src-core-result-rs.html#item-struct-ToolResult-12">ToolResult</a>, <a class="symbol-link rs-type" href="eos-tools.html#item-enum-ToolError-16">ToolError</a>&gt; {
+        <span class="rs-kw">let</span> parsed: <a class="symbol-link rs-type" href="eos-tools--src-tools-submission-root-submit-root-outcome-rs.html#item-struct-SubmitRootOutcomeInput-25">SubmitRootOutcomeInput</a> = <span class="rs-kw">match</span> <a class="symbol-link rs-fn" href="eos-tools--src-runtime-execution-rs.html#item-fn-parse-input-165">parse_input</a>(<a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-submission-root-submit-root-outcome-rs.html#item-struct-SubmitRootOutcome-31">SubmitRootOutcome</a>, input) {
+            <span class="rs-type">Ok</span>(v) =&gt; v,
+            <span class="rs-type">Err</span>(err) =&gt; <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(err),
+        };
+        <span class="rs-kw">if</span> <a class="symbol-link rs-fn" href="eos-tools--src-tools-submission-lib-rs.html#item-fn-is-blank-40">is_blank</a>(&amp;parsed.outcome) {
+            <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-tools--src-core-result-rs.html#item-struct-ToolResult-12">ToolResult</a>::<a class="symbol-link rs-fn" href="eos-tools--src-core-result-rs.html#method-error-42">error</a>(&quot;outcome must be nonblank&quot;));
+        }
+
+        <span class="rs-kw">let</span> request_id = ctx.<a class="symbol-link rs-fn" href="eos-tools--src-core-metadata-rs.html#method-require-request-id-98">require_request_id</a>()?;
+        <span class="rs-kw">let</span> task_id = ctx.<a class="symbol-link rs-fn" href="eos-tools--src-core-metadata-rs.html#method-require-task-id-88">require_task_id</a>()?;
+        <span class="rs-kw">let</span> service = <span class="rs-self">self</span>
+            .service
+            .as_ref()
+            .ok_or(<a class="symbol-link rs-type" href="eos-tools.html#item-enum-ToolError-16">ToolError</a>::<span class="rs-type">MissingPort</span>(&quot;root_submission&quot;))?;
+
+        <span class="rs-kw">let</span> task = <span class="rs-kw">match</span> service.task_store.<a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#method-get-89">get</a>(task_id).<span class="rs-kw">await</span>? {
+            <span class="rs-type">Some</span>(task) =&gt; task,
+            <span class="rs-type">None</span> =&gt; {
+                <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-tools--src-core-result-rs.html#item-struct-ToolResult-12">ToolResult</a>::<a class="symbol-link rs-fn" href="eos-tools--src-core-result-rs.html#method-error-42">error</a>(format!(
+                    &quot;<span class="rs-type">Root</span> task &#x27;{}&#x27; was not found.&quot;,
+                    task_id.<a class="symbol-link rs-fn" href="eos-tools--src-core-intent-rs.html#method-as-str-42">as_str</a>()
+                )));
+            }
+        };
+        <span class="rs-kw">if</span> task.request_id != *request_id {
+            <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-tools--src-core-result-rs.html#item-struct-ToolResult-12">ToolResult</a>::<a class="symbol-link rs-fn" href="eos-tools--src-core-result-rs.html#method-error-42">error</a>(
+                &quot;<span class="rs-type">Root</span> task does not belong to this request.&quot;,
+            ));
+        }
+        <span class="rs-kw">if</span> task.workflow_id.is_some() {
+            <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-tools--src-core-result-rs.html#item-struct-ToolResult-12">ToolResult</a>::<a class="symbol-link rs-fn" href="eos-tools--src-core-result-rs.html#method-error-42">error</a>(
+                &quot;submit_root_outcome is only valid <span class="rs-kw">for</span> the root task.&quot;,
+            ));
+        }
+        <span class="rs-kw">if</span> task.role != <span class="rs-type">TaskRole</span>::<span class="rs-type">Root</span> {
+            <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-tools--src-core-result-rs.html#item-struct-ToolResult-12">ToolResult</a>::<a class="symbol-link rs-fn" href="eos-tools--src-core-result-rs.html#method-error-42">error</a>(format!(
+                &quot;<span class="rs-type">Task</span> &#x27;{}&#x27; is not a root task.&quot;,
+                task_id.<a class="symbol-link rs-fn" href="eos-tools--src-core-intent-rs.html#method-as-str-42">as_str</a>()
+            )));
+        }
+        <span class="rs-kw">if</span> task.status != <span class="rs-type">TaskStatus</span>::<span class="rs-type">Running</span> {
+            <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-tools--src-core-result-rs.html#item-struct-ToolResult-12">ToolResult</a>::<a class="symbol-link rs-fn" href="eos-tools--src-core-result-rs.html#method-error-42">error</a>(format!(
+                &quot;<span class="rs-type">Root</span> task &#x27;{}&#x27; is not running.&quot;,
+                task_id.<a class="symbol-link rs-fn" href="eos-tools--src-core-intent-rs.html#method-as-str-42">as_str</a>()
+            )));
+        }
+
+        <span class="rs-kw">let</span> task_status = <span class="rs-kw">match</span> parsed.status {
+            <a class="symbol-link rs-type" href="eos-tools--src-tools-submission-lib-rs.html#item-enum-SubmissionStatus-10">SubmissionStatus</a>::<span class="rs-type">Success</span> =&gt; <span class="rs-type">TaskStatus</span>::<span class="rs-type">Done</span>,
+            <a class="symbol-link rs-type" href="eos-tools--src-tools-submission-lib-rs.html#item-enum-SubmissionStatus-10">SubmissionStatus</a>::<span class="rs-type">Failed</span> =&gt; <span class="rs-type">TaskStatus</span>::<span class="rs-type">Failed</span>,
+        };
+        <span class="rs-kw">let</span> request_status = <span class="rs-kw">match</span> parsed.status {
+            <a class="symbol-link rs-type" href="eos-tools--src-tools-submission-lib-rs.html#item-enum-SubmissionStatus-10">SubmissionStatus</a>::<span class="rs-type">Success</span> =&gt; <span class="rs-type">RequestStatus</span>::<span class="rs-type">Done</span>,
+            <a class="symbol-link rs-type" href="eos-tools--src-tools-submission-lib-rs.html#item-enum-SubmissionStatus-10">SubmissionStatus</a>::<span class="rs-type">Failed</span> =&gt; <span class="rs-type">RequestStatus</span>::<span class="rs-type">Failed</span>,
+        };
+        <span class="rs-kw">let</span> terminal = <a class="symbol-link rs-fn" href="eos-tools--src-tools-submission-lib-rs.html#item-fn-meta-obj-44">meta_obj</a>(&amp;[
+            (&quot;status&quot;, json!(parsed.status.<a class="symbol-link rs-fn" href="eos-tools--src-core-intent-rs.html#method-as-str-42">as_str</a>())),
+            (&quot;outcome&quot;, json!(parsed.outcome)),
+        ]);
+        service
+            .task_store
+            .set_task_status_if_current(
+                task_id,
+                <span class="rs-type">TaskStatus</span>::<span class="rs-type">Running</span>,
+                task_status,
+                <span class="rs-type">None</span>,
+                <span class="rs-type">Some</span>(&amp;terminal),
+            )
+            .<span class="rs-kw">await</span>?
+            .ok_or_else(|| {
+                <a class="symbol-link rs-type" href="eos-tools.html#item-enum-ToolError-16">ToolError</a>::<span class="rs-type">Internal</span>(format!(
+                    &quot;root task &#x27;{}&#x27; was closed before terminal submission was recorded&quot;,
+                    task_id.<a class="symbol-link rs-fn" href="eos-tools--src-core-intent-rs.html#method-as-str-42">as_str</a>()
+                ))
+            })?;
+        service
+            .request_store
+            .finish_request(request_id, request_status)
+            .<span class="rs-kw">await</span>?;
+
+        <span class="rs-kw">let</span> kind = <span class="rs-kw">if</span> parsed.status == <a class="symbol-link rs-type" href="eos-tools--src-tools-submission-lib-rs.html#item-enum-SubmissionStatus-10">SubmissionStatus</a>::<span class="rs-type">Success</span> {
+            &quot;root_success&quot;
+        } <span class="rs-kw">else</span> {
+            &quot;root_failure&quot;
+        };
+        <span class="rs-type">Ok</span>(
+            <a class="symbol-link rs-type" href="eos-tools--src-core-result-rs.html#item-struct-ToolResult-12">ToolResult</a>::<a class="symbol-link rs-fn" href="eos-tools--src-core-result-rs.html#method-ok-31">ok</a>(format!(&quot;<span class="rs-type">Accepted</span> root {}.&quot;, parsed.status.<a class="symbol-link rs-fn" href="eos-tools--src-core-intent-rs.html#method-as-str-42">as_str</a>())).<a class="symbol-link rs-fn" href="eos-tools--src-core-result-rs.html#method-with-metadata-53">with_metadata</a>(
+                <a class="symbol-link rs-fn" href="eos-tools--src-tools-submission-lib-rs.html#item-fn-meta-obj-44">meta_obj</a>(&amp;[
+                    (&quot;submission_kind&quot;, json!(kind)),
+                    (&quot;request_id&quot;, json!(request_id.<a class="symbol-link rs-fn" href="eos-tools--src-core-intent-rs.html#method-as-str-42">as_str</a>())),
+                    (&quot;task_id&quot;, json!(task_id.<a class="symbol-link rs-fn" href="eos-tools--src-core-intent-rs.html#method-as-str-42">as_str</a>())),
+                ]),
+            ),
+        )
+    }
+}
+
+<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-ports-mod-rs.html#method-register-322">register</a>(
+    registry: &amp;<span class="rs-kw">mut</span> <a class="symbol-link rs-type" href="eos-tools--src-registry-tool-registry-rs.html#item-struct-ToolRegistry-18">ToolRegistry</a>,
+    config: &amp;<a class="symbol-link rs-type" href="eos-tools--src-registry-config-rs.html#item-struct-ToolConfigSet-45">ToolConfigSet</a>,
+    root_submission: <span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-RootSubmissionService-19">RootSubmissionService</a>&gt;,
+) {
+    <span class="rs-kw">let</span> root = config.<a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#method-get-89">get</a>(<a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-submission-root-submit-root-outcome-rs.html#item-struct-SubmitRootOutcome-31">SubmitRootOutcome</a>);
+    <span class="rs-kw">super</span>::<span class="rs-kw">super</span>::<span class="rs-kw">super</span>::<a class="symbol-link rs-fn" href="eos-tools--src-tools-mod-rs.html#item-fn-register-tool-48">register_tool</a>(
+        registry,
+        <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-submission-root-submit-root-outcome-rs.html#item-struct-SubmitRootOutcome-31">SubmitRootOutcome</a>,
+        root,
+        <a class="symbol-link rs-fn" href="eos-tools--src-registry-spec-rs.html#item-fn-text-spec-26">text_spec</a>(
+            <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-submission-root-submit-root-outcome-rs.html#item-struct-SubmitRootOutcome-31">SubmitRootOutcome</a>,
+            &amp;root.description,
+            schema_for!(<a class="symbol-link rs-type" href="eos-tools--src-tools-submission-root-submit-root-outcome-rs.html#item-struct-SubmitRootOutcomeInput-25">SubmitRootOutcomeInput</a>),
+        ),
+        <a class="symbol-link rs-type" href="eos-tools--src-core-result-rs.html#item-enum-OutputShape-68">OutputShape</a>::<span class="rs-type">Text</span>,
+        <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(<a class="symbol-link rs-type" href="eos-tools--src-tools-submission-root-submit-root-outcome-rs.html#item-struct-SubmitRootOutcome-31">SubmitRootOutcome</a>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(root_submission)),
+    );
+}
+
+#[cfg(test)]
+<span class="rs-kw">mod</span> tests {
+    #![allow(clippy::unwrap_used)]
+
+    <span class="rs-kw">use</span> std::sync::<span class="rs-type">Arc</span>;
+
+    <span class="rs-kw">use</span> eos_state::{<span class="rs-type">RequestId</span>, <span class="rs-type">Task</span>};
+    <span class="rs-kw">use</span> serde_json::json;
+
+    <span class="rs-kw">use</span> <span class="rs-kw">super</span>::*;
+    <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::support::{metadata, <span class="rs-type">FakeRequestStore</span>, <span class="rs-type">FakeTaskStore</span>};
+
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-tools-submission-root-submit-root-outcome-rs.html#item-fn-obj-177">obj</a>(pairs: &amp;[(&amp;str, serde_json::<span class="rs-type">Value</span>)]) -&gt; <span class="rs-type">JsonObject</span> {
+        pairs
+            .iter()
+            .map(|(k, v)| ((*k).to_owned(), v.clone()))
+            .collect()
+    }
+
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-tools-submission-root-submit-root-outcome-rs.html#item-fn-root-task-184">root_task</a>(request_id: &amp;<span class="rs-type">RequestId</span>) -&gt; <span class="rs-type">Task</span> {
+        <span class="rs-type">Task</span> {
+            id: &quot;root-1&quot;.parse().expect(&quot;id&quot;),
+            request_id: request_id.clone(),
+            role: <span class="rs-type">TaskRole</span>::<span class="rs-type">Root</span>,
+            instruction: &quot;do the request&quot;.to_owned(),
+            status: <span class="rs-type">TaskStatus</span>::<span class="rs-type">Running</span>,
+            workflow_id: <span class="rs-type">None</span>,
+            iteration_id: <span class="rs-type">None</span>,
+            attempt_id: <span class="rs-type">None</span>,
+            agent_name: <span class="rs-type">Some</span>(&quot;root&quot;.to_owned()),
+            needs: <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(),
+            outcomes: <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(),
+            terminal_tool_result: <span class="rs-type">None</span>,
+        }
+    }
+
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-tools-submission-root-submit-root-outcome-rs.html#item-fn-root-metadata-201">root_metadata</a>(request_id: <span class="rs-type">RequestId</span>) -&gt; <a class="symbol-link rs-type" href="eos-tools--src-core-metadata-rs.html#item-struct-ExecutionMetadata-17">ExecutionMetadata</a> {
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> ctx = metadata();
+        ctx.request_id = <span class="rs-type">Some</span>(request_id);
+        ctx.task_id = <span class="rs-type">Some</span>(&quot;root-1&quot;.parse().expect(&quot;id&quot;));
+        ctx
+    }
+
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-runtime-executor-rs.html#method-executor-112">executor</a>(
+        task_store: <span class="rs-type">Arc</span>&lt;<span class="rs-type">FakeTaskStore</span>&gt;,
+        request_store: <span class="rs-type">Arc</span>&lt;<span class="rs-type">FakeRequestStore</span>&gt;,
+    ) -&gt; <a class="symbol-link rs-type" href="eos-tools--src-tools-submission-root-submit-root-outcome-rs.html#item-struct-SubmitRootOutcome-31">SubmitRootOutcome</a> {
+        <a class="symbol-link rs-type" href="eos-tools--src-tools-submission-root-submit-root-outcome-rs.html#item-struct-SubmitRootOutcome-31">SubmitRootOutcome</a>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(<span class="rs-type">Some</span>(<a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-RootSubmissionService-19">RootSubmissionService</a>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(task_store, request_store)))
+    }
+
+    #[tokio::test]
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-tools-submission-root-submit-root-outcome-rs.html#item-fn-main-role-terminals-215">main_role_terminals</a>() {
+        <span class="rs-kw">let</span> request_id: <span class="rs-type">RequestId</span> = <span class="rs-type">RequestId</span>::new_v4();
+        <span class="rs-kw">let</span> task_store = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(<span class="rs-type">FakeTaskStore</span>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>());
+        task_store.put(<a class="symbol-link rs-fn" href="eos-tools--src-tools-submission-root-submit-root-outcome-rs.html#item-fn-root-task-184">root_task</a>(&amp;request_id));
+        <span class="rs-kw">let</span> request_store = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(<span class="rs-type">FakeRequestStore</span>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>());
+        <span class="rs-kw">let</span> ctx = <a class="symbol-link rs-fn" href="eos-tools--src-tools-submission-root-submit-root-outcome-rs.html#item-fn-root-metadata-201">root_metadata</a>(request_id.clone());
+        <span class="rs-kw">let</span> executor = <a class="symbol-link rs-fn" href="eos-tools--src-runtime-executor-rs.html#method-executor-112">executor</a>(task_store.clone(), request_store.clone());
+
+        <span class="rs-kw">let</span> res = executor
+            .<a class="symbol-link rs-fn" href="eos-tools--src-runtime-execution-rs.html#method-execute-207">execute</a>(
+                &amp;<a class="symbol-link rs-fn" href="eos-tools--src-tools-submission-root-submit-root-outcome-rs.html#item-fn-obj-177">obj</a>(&amp;[(&quot;status&quot;, json!(&quot;success&quot;)), (&quot;outcome&quot;, json!(&quot;all done&quot;))]),
+                &amp;ctx,
+            )
+            .<span class="rs-kw">await</span>
+            .expect(&quot;ok&quot;);
+        assert!(!res.is_error, &quot;{}&quot;, res.output);
+        assert_eq!(res.metadata[&quot;submission_kind&quot;], json!(&quot;root_success&quot;));
+        assert_eq!(
+            request_store.finished(),
+            vec![(request_id.<a class="symbol-link rs-fn" href="eos-tools--src-core-intent-rs.html#method-as-str-42">as_str</a>().to_owned(), <span class="rs-type">RequestStatus</span>::<span class="rs-type">Done</span>)]
+        );
+
+        <span class="rs-kw">let</span> res = executor
+            .<a class="symbol-link rs-fn" href="eos-tools--src-runtime-execution-rs.html#method-execute-207">execute</a>(
+                &amp;<a class="symbol-link rs-fn" href="eos-tools--src-tools-submission-root-submit-root-outcome-rs.html#item-fn-obj-177">obj</a>(&amp;[(&quot;status&quot;, json!(&quot;success&quot;)), (&quot;outcome&quot;, json!(&quot;   &quot;))]),
+                &amp;ctx,
+            )
+            .<span class="rs-kw">await</span>
+            .expect(&quot;ok&quot;);
+        assert!(res.is_error);
+        assert!(res.output.contains(&quot;outcome must be nonblank&quot;));
+
+        <span class="rs-kw">let</span> other = <a class="symbol-link rs-fn" href="eos-tools--src-tools-submission-root-submit-root-outcome-rs.html#item-fn-root-metadata-201">root_metadata</a>(<span class="rs-type">RequestId</span>::new_v4());
+        <span class="rs-kw">let</span> res = executor
+            .<a class="symbol-link rs-fn" href="eos-tools--src-runtime-execution-rs.html#method-execute-207">execute</a>(
+                &amp;<a class="symbol-link rs-fn" href="eos-tools--src-tools-submission-root-submit-root-outcome-rs.html#item-fn-obj-177">obj</a>(&amp;[(&quot;status&quot;, json!(&quot;failed&quot;)), (&quot;outcome&quot;, json!(&quot;blocked&quot;))]),
+                &amp;other,
+            )
+            .<span class="rs-kw">await</span>
+            .expect(&quot;ok&quot;);
+        assert!(res.is_error);
+        assert!(
+            res.output.contains(&quot;does not belong to this request&quot;),
+            &quot;{}&quot;,
+            res.output
+        );
+    }
+
+    #[tokio::test]
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-tools-submission-root-submit-root-outcome-rs.html#item-fn-root-rejects-non-root-task-264">root_rejects_non_root_task</a>() {
+        <span class="rs-kw">let</span> request_id = <span class="rs-type">RequestId</span>::new_v4();
+        <span class="rs-kw">let</span> task_store = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(<span class="rs-type">FakeTaskStore</span>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>());
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> task = <a class="symbol-link rs-fn" href="eos-tools--src-tools-submission-root-submit-root-outcome-rs.html#item-fn-root-task-184">root_task</a>(&amp;request_id);
+        task.role = <span class="rs-type">TaskRole</span>::<span class="rs-type">Generator</span>;
+        task_store.put(task);
+        <span class="rs-kw">let</span> request_store = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(<span class="rs-type">FakeRequestStore</span>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>());
+        <span class="rs-kw">let</span> ctx = <a class="symbol-link rs-fn" href="eos-tools--src-tools-submission-root-submit-root-outcome-rs.html#item-fn-root-metadata-201">root_metadata</a>(request_id);
+        <span class="rs-kw">let</span> res = <a class="symbol-link rs-fn" href="eos-tools--src-runtime-executor-rs.html#method-executor-112">executor</a>(task_store, request_store)
+            .<a class="symbol-link rs-fn" href="eos-tools--src-runtime-execution-rs.html#method-execute-207">execute</a>(
+                &amp;<a class="symbol-link rs-fn" href="eos-tools--src-tools-submission-root-submit-root-outcome-rs.html#item-fn-obj-177">obj</a>(&amp;[(&quot;status&quot;, json!(&quot;success&quot;)), (&quot;outcome&quot;, json!(&quot;x&quot;))]),
+                &amp;ctx,
+            )
+            .<span class="rs-kw">await</span>
+            .expect(&quot;ok&quot;);
+        assert!(res.is_error);
+        assert!(res.output.contains(&quot;is not a root task&quot;), &quot;{}&quot;, res.output);
+    }
+}
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
   <script src="../assets/inventory.js"></script>
 </body>
 </html>

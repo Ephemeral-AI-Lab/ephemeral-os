@@ -8,8 +8,16 @@
 </head>
 <body>
   <header>
-    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
-    <h1>eos-layerstack File Inventory</h1>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>eos-layerstack File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS/sandbox &amp;&amp; cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
   </header>
   <a class="back-link" href="../index.html">sandbox</a>
 <section class="summary">
@@ -47,129 +55,537 @@
       <span>8 methods</span>
     </div>
   </div>
-  <div class="items"><div class="group-label">File-Owned Types</div><article class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct LayerStackLeaseRecord pub pub struct LayerStackLeaseRecord crates/eos-layerstack/src/lease.rs lease_id String manifest Manifest ">
+  <div class="items"><div class="group-label">File-Owned Types</div><article id="item-struct-LayerStackLeaseRecord-24" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct LayerStackLeaseRecord pub pub struct LayerStackLeaseRecord crates/eos-layerstack/src/lease.rs lease_id String manifest Manifest ">
   <div class="item-head">
     <span class="kind">struct</span>
     <h3>LayerStackLeaseRecord</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub struct LayerStackLeaseRecord</code>
-  <div class="tags"></div>
+  <code class="signature">pub struct <a class="symbol-link" href="eos-layerstack--src-lease-rs.html#item-struct-LayerStackLeaseRecord-24">LayerStackLeaseRecord</a></code>
+  <p class="docstring">One active snapshot lease: an id bound to the frozen manifest it pins.</p>
+  <div class="tags"><span>derive: Clone</span><span>derive: Debug</span><span>derive: Eq</span><span>derive: PartialEq</span></div>
   <h4>Fields</h4><table><tbody><tr><td>pub</td><td>lease_id</td><td><code>String</code></td></tr><tr><td>pub</td><td>manifest</td><td><code>Manifest</code></td></tr></tbody></table>
+
   <p class="source">crates/eos-layerstack/src/lease.rs:24</p>
-</article><article class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct LeaseRegistry pub pub struct LeaseRegistry crates/eos-layerstack/src/lease.rs leases HashMap &lt; String , LayerStackLeaseRecord &gt; refcounts BTreeMap &lt; LayerRefKey , usize &gt; ">
+</article><article id="item-struct-LeaseRegistry-31" class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct LeaseRegistry pub pub struct LeaseRegistry crates/eos-layerstack/src/lease.rs leases HashMap &lt; String , LayerStackLeaseRecord &gt; refcounts BTreeMap &lt; LayerRefKey , usize &gt; ">
   <div class="item-head">
     <span class="kind">struct</span>
     <h3>LeaseRegistry</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub struct LeaseRegistry</code>
-  <div class="tags"></div>
-  <h4>Fields</h4><table><tbody><tr><td>private</td><td>leases</td><td><code>HashMap &lt; String , LayerStackLeaseRecord &gt;</code></td></tr><tr><td>private</td><td>refcounts</td><td><code>BTreeMap &lt; LayerRefKey , usize &gt;</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr><td>constructor</td><td>new</td><td><code>pub fn new () -&gt; Self</code></td></tr><tr><td>method</td><td>acquire</td><td><code>pub fn acquire (&amp; mut self , manifest : Manifest , owner_request_id : &amp; str ,) -&gt; Result &lt; LayerStackLeaseRecord , LayerStackError &gt;</code></td></tr><tr><td>method</td><td>release</td><td><code>pub fn release (&amp; mut self , lease_id : &amp; str) -&gt; Option &lt; LayerStackLeaseRecord &gt;</code></td></tr><tr><td>method</td><td>leased_layers</td><td><code>pub fn leased_layers (&amp; self) -&gt; Vec &lt; LayerRef &gt;</code></td></tr><tr><td>method</td><td>lease_head_layers</td><td><code>pub fn lease_head_layers (&amp; self) -&gt; Vec &lt; LayerRef &gt;</code></td></tr><tr><td>method</td><td>active_count</td><td><code>pub fn active_count (&amp; self) -&gt; usize</code></td></tr></tbody></table>
+  <code class="signature">pub struct <a class="symbol-link" href="eos-layerstack--src-lease-rs.html#item-struct-LeaseRegistry-31">LeaseRegistry</a></code>
+  <p class="docstring">Tracks active snapshot leases and the layers they retain on disk.<br>Rust guards this with a `threading.RLock` and a `Counter[LayerRef]`<br>refcount; the Rust port keeps the same refcount semantics.</p>
+  <div class="tags"><span>derive: Debug</span><span>derive: Default</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>leases</td><td><code>HashMap &lt; String , <a class="symbol-link" href="eos-layerstack--src-lease-rs.html#item-struct-LayerStackLeaseRecord-24">LayerStackLeaseRecord</a> &gt;</code></td></tr><tr><td>private</td><td>refcounts</td><td><code>BTreeMap &lt; <a class="symbol-link" href="eos-layerstack--src-lease-rs.html#item-struct-LayerRefKey-156">LayerRefKey</a> , usize &gt;</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-79"><td>constructor</td><td>new</td><td><code>pub fn <a class="symbol-link" href="eos-layerstack--src-lease-rs.html#method-new-79">new</a> () -&gt; Self</code><p class="docstring">Create an empty registry.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Create an empty registry.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-new-79">new</a>() -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">Self</span>::default()
+    }
+</code></pre>
+</details></td></tr><tr id="method-acquire-85"><td>method</td><td>acquire</td><td><code>pub fn <a class="symbol-link" href="eos-layerstack--src-lease-rs.html#method-acquire-85">acquire</a> (&amp; mut self , manifest : Manifest , owner_request_id : &amp; str ,) -&gt; Result &lt; <a class="symbol-link" href="eos-layerstack--src-lease-rs.html#item-struct-LayerStackLeaseRecord-24">LayerStackLeaseRecord</a> , <a class="symbol-link" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a> &gt;</code><p class="docstring">Register a new lease over `manifest`, owned by `owner_request_id`,<br>incrementing the per-layer refcount. Rejects an empty owner id.<br># Errors<br>Returns [`LayerStackError::InvalidLeaseOwner`] when `owner_request_id` is<br>empty.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Register a new lease over `manifest`, owned by `owner_request_id`,</span>
+    <span class="rs-comment">/// incrementing the per-layer refcount. Rejects an empty owner id.</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// # Errors</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// Returns [`LayerStackError::InvalidLeaseOwner`] when `owner_request_id` is</span>
+    <span class="rs-comment">/// empty.</span>
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-acquire-85">acquire</a>(
+        &amp;<span class="rs-kw">mut</span> <span class="rs-self">self</span>,
+        manifest: <span class="rs-type">Manifest</span>,
+        owner_request_id: &amp;str,
+    ) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-layerstack--src-lease-rs.html#item-struct-LayerStackLeaseRecord-24">LayerStackLeaseRecord</a>, <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>&gt; {
+        <span class="rs-kw">if</span> owner_request_id.is_empty() {
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>::<span class="rs-type">InvalidLeaseOwner</span>(
+                &quot;owner_request_id must not be empty&quot;.to_owned(),
+            ));
+        }
+        <span class="rs-kw">let</span> lease = <a class="symbol-link rs-type" href="eos-layerstack--src-lease-rs.html#item-struct-LayerStackLeaseRecord-24">LayerStackLeaseRecord</a> {
+            lease_id: <a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#item-fn-new-lease-id-180">new_lease_id</a>(),
+            manifest,
+        };
+        <span class="rs-kw">for</span> layer <span class="rs-kw">in</span> &amp;lease.manifest.layers {
+            *<span class="rs-self">self</span>.refcounts.entry(<a class="symbol-link rs-type" href="eos-layerstack--src-lease-rs.html#item-struct-LayerRefKey-156">LayerRefKey</a>::<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-from-163">from</a>(layer)).or_insert(0) += 1;
+        }
+        <span class="rs-self">self</span>.leases.insert(lease.lease_id.clone(), lease.clone());
+        <span class="rs-type">Ok</span>(lease)
+    }
+</code></pre>
+</details></td></tr><tr id="method-release-113"><td>method</td><td>release</td><td><code>pub fn <a class="symbol-link" href="eos-layerstack--src-lease-rs.html#method-release-113">release</a> (&amp; mut self , lease_id : &amp; str) -&gt; Option &lt; <a class="symbol-link" href="eos-layerstack--src-lease-rs.html#item-struct-LayerStackLeaseRecord-24">LayerStackLeaseRecord</a> &gt;</code><p class="docstring">Release a lease by id, decrementing per-layer refcounts. Returns the<br>released record, or `None` if the id was unknown.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Release a lease by id, decrementing per-layer refcounts. Returns the</span>
+    <span class="rs-comment">/// released record, or `None` if the id was unknown.</span>
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-release-113">release</a>(&amp;<span class="rs-kw">mut</span> <span class="rs-self">self</span>, lease_id: &amp;str) -&gt; <span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-layerstack--src-lease-rs.html#item-struct-LayerStackLeaseRecord-24">LayerStackLeaseRecord</a>&gt; {
+        <span class="rs-kw">let</span> lease = <span class="rs-self">self</span>.leases.remove(lease_id)?;
+        <span class="rs-kw">for</span> layer <span class="rs-kw">in</span> &amp;lease.manifest.layers {
+            <span class="rs-kw">let</span> key = <a class="symbol-link rs-type" href="eos-layerstack--src-lease-rs.html#item-struct-LayerRefKey-156">LayerRefKey</a>::<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-from-163">from</a>(layer);
+            <span class="rs-kw">match</span> <span class="rs-self">self</span>.refcounts.get_mut(&amp;key) {
+                <span class="rs-type">Some</span>(count) <span class="rs-kw">if</span> *count &gt; 1 =&gt; *count -= 1,
+                <span class="rs-type">Some</span>(_) =&gt; {
+                    <span class="rs-self">self</span>.refcounts.remove(&amp;key);
+                }
+                <span class="rs-type">None</span> =&gt; {}
+            }
+        }
+        <span class="rs-type">Some</span>(lease)
+    }
+</code></pre>
+</details></td></tr><tr id="method-leased-layers-130"><td>method</td><td>leased_layers</td><td><code>pub fn <a class="symbol-link" href="eos-layerstack--src-lease-rs.html#method-leased-layers-130">leased_layers</a> (&amp; self) -&gt; Vec &lt; LayerRef &gt;</code><p class="docstring">FULL on-disk retention set (sorted): every layer pinned by an active<br>lease. This is the GC keep-set. DISTINCT from [`Self::lease_head_layers`].</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// FULL on-disk retention set (sorted): every layer pinned by an active</span>
+    <span class="rs-comment">/// lease. This is the GC keep-set. DISTINCT from [`Self::lease_head_layers`].</span>
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-leased-layers-130">leased_layers</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Vec</span>&lt;<span class="rs-type">LayerRef</span>&gt; {
+        <span class="rs-self">self</span>.refcounts.keys().map(<span class="rs-type">LayerRef</span>::from).collect()
+    }
+</code></pre>
+</details></td></tr><tr id="method-lease-head-layers-136"><td>method</td><td>lease_head_layers</td><td><code>pub fn <a class="symbol-link" href="eos-layerstack--src-lease-rs.html#method-lease-head-layers-136">lease_head_layers</a> (&amp; self) -&gt; Vec &lt; LayerRef &gt;</code><p class="docstring">SQUASH-KEEP barrier set (sorted): the newest layer of each active<br>lease's manifest. DISTINCT from (a subset of) [`Self::leased_layers`].</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// SQUASH-KEEP barrier set (sorted): the newest layer of each active</span>
+    <span class="rs-comment">/// lease's manifest. DISTINCT from (a subset of) [`Self::leased_layers`].</span>
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-lease-head-layers-136">lease_head_layers</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Vec</span>&lt;<span class="rs-type">LayerRef</span>&gt; {
+        <span class="rs-self">self</span>.leases
+            .values()
+            .filter_map(|lease| lease.manifest.layers.first())
+            .map(<a class="symbol-link rs-type" href="eos-layerstack--src-lease-rs.html#item-struct-LayerRefKey-156">LayerRefKey</a>::from)
+            .collect::&lt;<span class="rs-type">BTreeSet</span>&lt;_&gt;&gt;()
+            .iter()
+            .map(<span class="rs-type">LayerRef</span>::from)
+            .collect()
+    }
+</code></pre>
+</details></td></tr><tr id="method-active-count-149"><td>method</td><td>active_count</td><td><code>pub fn <a class="symbol-link" href="eos-layerstack--src-lease-rs.html#method-active-count-149">active_count</a> (&amp; self) -&gt; usize</code><p class="docstring">Number of active leases.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Number of active leases.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-active-count-149">active_count</a>(&amp;<span class="rs-self">self</span>) -&gt; usize {
+        <span class="rs-self">self</span>.leases.len()
+    }
+</code></pre>
+</details></td></tr></tbody></table>
+
   <p class="source">crates/eos-layerstack/src/lease.rs:31</p>
-</article><article class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct LayerRefKey private struct LayerRefKey crates/eos-layerstack/src/lease.rs layer_id String path String ">
+</article><article id="item-struct-LayerRefKey-156" class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct LayerRefKey private struct LayerRefKey crates/eos-layerstack/src/lease.rs layer_id String path String ">
   <div class="item-head">
     <span class="kind">struct</span>
     <h3>LayerRefKey</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">struct LayerRefKey</code>
-  <div class="tags"></div>
-  <h4>Fields</h4><table><tbody><tr><td>private</td><td>layer_id</td><td><code>String</code></td></tr><tr><td>private</td><td>path</td><td><code>String</code></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl From &lt; &amp; LayerRef &gt; for LayerRefKey</code></summary><table><tbody><tr><td>constructor</td><td>from</td><td><code>fn from (layer : &amp; LayerRef) -&gt; Self</code></td></tr></tbody></table></details></div>
+  <code class="signature">struct <a class="symbol-link" href="eos-layerstack--src-lease-rs.html#item-struct-LayerRefKey-156">LayerRefKey</a></code>
+  <div class="tags"><span>derive: Clone</span><span>derive: Debug</span><span>derive: Eq</span><span>derive: Ord</span><span>derive: PartialEq</span><span>derive: PartialOrd</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>layer_id</td><td><code>String</code></td></tr><tr><td>private</td><td>path</td><td><code>String</code></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl From &lt; &amp; LayerRef &gt; for <a class="symbol-link" href="eos-layerstack--src-lease-rs.html#item-struct-LayerRefKey-156">LayerRefKey</a></code></summary><table><tbody><tr id="method-from-163"><td>constructor</td><td>from</td><td><code>fn <a class="symbol-link" href="eos-layerstack--src-lease-rs.html#method-from-163">from</a> (layer : &amp; LayerRef) -&gt; Self</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-from-163">from</a>(layer: &amp;<span class="rs-type">LayerRef</span>) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">Self</span> {
+            layer_id: layer.layer_id.clone(),
+            path: layer.path.clone(),
+        }
+    }
+</code></pre>
+</details></td></tr></tbody></table></details></div>
+
   <p class="source">crates/eos-layerstack/src/lease.rs:156</p>
-</article><div class="group-label">Aliases</div><article class="item-card" data-kind="type" data-kind-list="type" data-filter-text="type SharedLeaseRegistry pub(crate) pub(crate) type SharedLeaseRegistry = Arc &lt; Mutex &lt; LeaseRegistry &gt; &gt; crates/eos-layerstack/src/lease.rs  ">
+</article><div class="group-label">Aliases</div><article id="item-type-SharedLeaseRegistry-41" class="item-card" data-kind="type" data-kind-list="type" data-filter-text="type SharedLeaseRegistry pub(crate) pub(crate) type SharedLeaseRegistry = Arc &lt; Mutex &lt; LeaseRegistry &gt; &gt; crates/eos-layerstack/src/lease.rs  ">
   <div class="item-head">
     <span class="kind">type</span>
     <h3>SharedLeaseRegistry</h3>
     <span class="visibility">pub(crate)</span>
   </div>
-  <code class="signature">pub(crate) type SharedLeaseRegistry = Arc &lt; Mutex &lt; LeaseRegistry &gt; &gt;</code>
+  <code class="signature">pub(crate) type <a class="symbol-link" href="eos-layerstack--src-lease-rs.html#item-type-SharedLeaseRegistry-41">SharedLeaseRegistry</a> = Arc &lt; Mutex &lt; <a class="symbol-link" href="eos-layerstack--src-lease-rs.html#item-struct-LeaseRegistry-31">LeaseRegistry</a> &gt; &gt;</code>
   <div class="tags"></div>
 
   <p class="source">crates/eos-layerstack/src/lease.rs:41</p>
-</article><article class="item-card" data-kind="type" data-kind-list="type" data-filter-text="type TestResult private type TestResult&lt; T = () &gt; = std :: result :: Result &lt; T , Box &lt; dyn std :: error :: Error + Send + Sync &gt; &gt; crates/eos-layerstack/src/lease.rs  ">
+</article><article id="item-type-TestResult-199" class="item-card" data-kind="type" data-kind-list="type" data-filter-text="type TestResult private type TestResult&lt; T = () &gt; = std :: result :: Result &lt; T , Box &lt; dyn std :: error :: Error + Send + Sync &gt; &gt; crates/eos-layerstack/src/lease.rs  ">
   <div class="item-head">
     <span class="kind">type</span>
     <h3>TestResult</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">type TestResult&lt; T = () &gt; = std :: result :: Result &lt; T , Box &lt; dyn std :: error :: Error + Send + Sync &gt; &gt;</code>
+  <code class="signature">type <a class="symbol-link" href="eos-layerstack--src-lease-rs.html#item-type-TestResult-199">TestResult</a>&lt; T = () &gt; = std :: result :: Result &lt; T , Box &lt; dyn std :: error :: Error + Send + Sync &gt; &gt;</code>
   <div class="tags"></div>
 
   <p class="source">crates/eos-layerstack/src/lease.rs:199</p>
-</article><div class="group-label">Standalone Functions</div><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn shared_registry_for_root pub(crate) pub(crate) fn shared_registry_for_root (storage_root : &amp; Path ,) -&gt; Result &lt; SharedLeaseRegistry , LayerStackError &gt; crates/eos-layerstack/src/lease.rs  ">
+</article><div class="group-label">Standalone Functions</div><article id="item-fn-shared-registry-for-root-43" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn shared_registry_for_root pub(crate) pub(crate) fn shared_registry_for_root (storage_root : &amp; Path ,) -&gt; Result &lt; SharedLeaseRegistry , LayerStackError &gt; crates/eos-layerstack/src/lease.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>shared_registry_for_root</h3>
     <span class="visibility">pub(crate)</span>
   </div>
-  <code class="signature">pub(crate) fn shared_registry_for_root (storage_root : &amp; Path ,) -&gt; Result &lt; SharedLeaseRegistry , LayerStackError &gt;</code>
+  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-layerstack--src-lease-rs.html#item-fn-shared-registry-for-root-43">shared_registry_for_root</a> (storage_root : &amp; Path ,) -&gt; Result &lt; <a class="symbol-link" href="eos-layerstack--src-lease-rs.html#item-type-SharedLeaseRegistry-41">SharedLeaseRegistry</a> , <a class="symbol-link" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a> &gt;</code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#item-fn-shared-registry-for-root-43">shared_registry_for_root</a>(
+    storage_root: &amp;<span class="rs-type">Path</span>,
+) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-layerstack--src-lease-rs.html#item-type-SharedLeaseRegistry-41">SharedLeaseRegistry</a>, <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>&gt; {
+    <span class="rs-comment">// Leases outlive individual `LayerStack` values: daemon call paths often</span>
+    <span class="rs-comment">// retain only `lease_id`, then reopen the root later for release/metrics.</span>
+    <span class="rs-kw">let</span> key = storage_root
+        .canonicalize()
+        .unwrap_or_else(|_| storage_root.to_path_buf())
+        .to_string_lossy()
+        .into_owned();
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> registries = <a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#item-fn-shared-registries-190">shared_registries</a>()
+        .<a class="symbol-link rs-fn" href="eos-layerstack--src-storage-lock-rs.html#method-lock-148">lock</a>()
+        .map_err(|_| <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>::<span class="rs-type">LockPoisoned</span>(&quot;lease registry map&quot;))?;
+    <span class="rs-type">Ok</span>(registries
+        .entry(key)
+        .or_insert_with(|| <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-new-79">new</a>(<span class="rs-type">Mutex</span>::<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-new-79">new</a>(<a class="symbol-link rs-type" href="eos-layerstack--src-lease-rs.html#item-struct-LeaseRegistry-31">LeaseRegistry</a>::<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-new-79">new</a>())))
+        .clone())
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-layerstack/src/lease.rs:43</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn lock_shared_registry pub(crate) pub(crate) fn lock_shared_registry (registry : &amp; SharedLeaseRegistry ,) -&gt; Result &lt; MutexGuard &lt; '_ , LeaseRegistry &gt; , LayerStackError &gt; crates/eos-layerstack/src/lease.rs  ">
+</article><article id="item-fn-lock-shared-registry-62" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn lock_shared_registry pub(crate) pub(crate) fn lock_shared_registry (registry : &amp; SharedLeaseRegistry ,) -&gt; Result &lt; MutexGuard &lt; '_ , LeaseRegistry &gt; , LayerStackError &gt; crates/eos-layerstack/src/lease.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>lock_shared_registry</h3>
     <span class="visibility">pub(crate)</span>
   </div>
-  <code class="signature">pub(crate) fn lock_shared_registry (registry : &amp; SharedLeaseRegistry ,) -&gt; Result &lt; MutexGuard &lt; '_ , LeaseRegistry &gt; , LayerStackError &gt;</code>
+  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-layerstack--src-lease-rs.html#item-fn-lock-shared-registry-62">lock_shared_registry</a> (registry : &amp; <a class="symbol-link" href="eos-layerstack--src-lease-rs.html#item-type-SharedLeaseRegistry-41">SharedLeaseRegistry</a> ,) -&gt; Result &lt; MutexGuard &lt; &#x27;_ , <a class="symbol-link" href="eos-layerstack--src-lease-rs.html#item-struct-LeaseRegistry-31">LeaseRegistry</a> &gt; , <a class="symbol-link" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a> &gt;</code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#item-fn-lock-shared-registry-62">lock_shared_registry</a>(
+    registry: &amp;<a class="symbol-link rs-type" href="eos-layerstack--src-lease-rs.html#item-type-SharedLeaseRegistry-41">SharedLeaseRegistry</a>,
+) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">MutexGuard</span>&lt;&#x27;_, <a class="symbol-link rs-type" href="eos-layerstack--src-lease-rs.html#item-struct-LeaseRegistry-31">LeaseRegistry</a>&gt;, <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>&gt; {
+    registry
+        .<a class="symbol-link rs-fn" href="eos-layerstack--src-storage-lock-rs.html#method-lock-148">lock</a>()
+        .map_err(|_| <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>::<span class="rs-type">LockPoisoned</span>(&quot;lease registry&quot;))
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-layerstack/src/lease.rs:62</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn lock_shared_registry_recover pub(crate) pub(crate) fn lock_shared_registry_recover (registry : &amp; SharedLeaseRegistry ,) -&gt; MutexGuard &lt; '_ , LeaseRegistry &gt; crates/eos-layerstack/src/lease.rs  ">
+</article><article id="item-fn-lock-shared-registry-recover-70" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn lock_shared_registry_recover pub(crate) pub(crate) fn lock_shared_registry_recover (registry : &amp; SharedLeaseRegistry ,) -&gt; MutexGuard &lt; '_ , LeaseRegistry &gt; crates/eos-layerstack/src/lease.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>lock_shared_registry_recover</h3>
     <span class="visibility">pub(crate)</span>
   </div>
-  <code class="signature">pub(crate) fn lock_shared_registry_recover (registry : &amp; SharedLeaseRegistry ,) -&gt; MutexGuard &lt; '_ , LeaseRegistry &gt;</code>
+  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-layerstack--src-lease-rs.html#item-fn-lock-shared-registry-recover-70">lock_shared_registry_recover</a> (registry : &amp; <a class="symbol-link" href="eos-layerstack--src-lease-rs.html#item-type-SharedLeaseRegistry-41">SharedLeaseRegistry</a> ,) -&gt; MutexGuard &lt; &#x27;_ , <a class="symbol-link" href="eos-layerstack--src-lease-rs.html#item-struct-LeaseRegistry-31">LeaseRegistry</a> &gt;</code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#item-fn-lock-shared-registry-recover-70">lock_shared_registry_recover</a>(
+    registry: &amp;<a class="symbol-link rs-type" href="eos-layerstack--src-lease-rs.html#item-type-SharedLeaseRegistry-41">SharedLeaseRegistry</a>,
+) -&gt; <span class="rs-type">MutexGuard</span>&lt;&#x27;_, <a class="symbol-link rs-type" href="eos-layerstack--src-lease-rs.html#item-struct-LeaseRegistry-31">LeaseRegistry</a>&gt; {
+    registry
+        .<a class="symbol-link rs-fn" href="eos-layerstack--src-storage-lock-rs.html#method-lock-148">lock</a>()
+        .unwrap_or_else(std::sync::<span class="rs-type">PoisonError</span>::into_inner)
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-layerstack/src/lease.rs:70</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn new_lease_id private fn new_lease_id () -&gt; String crates/eos-layerstack/src/lease.rs  ">
+</article><article id="item-fn-new-lease-id-180" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn new_lease_id private fn new_lease_id () -&gt; String crates/eos-layerstack/src/lease.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>new_lease_id</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn new_lease_id () -&gt; String</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-layerstack--src-lease-rs.html#item-fn-new-lease-id-180">new_lease_id</a> () -&gt; String</code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#item-fn-new-lease-id-180">new_lease_id</a>() -&gt; <span class="rs-type">String</span> {
+    <span class="rs-kw">static</span> <span class="rs-type">COUNTER</span>: <span class="rs-type">AtomicU64</span> = <span class="rs-type">AtomicU64</span>::<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-new-79">new</a>(0);
+    <span class="rs-kw">let</span> nanos = <span class="rs-type">SystemTime</span>::now()
+        .duration_since(<span class="rs-type">UNIX_EPOCH</span>)
+        .map(|duration| duration.as_nanos())
+        .unwrap_or_default();
+    <span class="rs-kw">let</span> counter = <span class="rs-type">COUNTER</span>.fetch_add(1, <span class="rs-type">Ordering</span>::<span class="rs-type">Relaxed</span>);
+    format!(&quot;{nanos:032x}{counter:016x}&quot;)
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-layerstack/src/lease.rs:180</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn shared_registries private fn shared_registries () -&gt; &amp; 'static Mutex &lt; HashMap &lt; String , SharedLeaseRegistry &gt; &gt; crates/eos-layerstack/src/lease.rs  ">
+</article><article id="item-fn-shared-registries-190" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn shared_registries private fn shared_registries () -&gt; &amp; 'static Mutex &lt; HashMap &lt; String , SharedLeaseRegistry &gt; &gt; crates/eos-layerstack/src/lease.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>shared_registries</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn shared_registries () -&gt; &amp; 'static Mutex &lt; HashMap &lt; String , SharedLeaseRegistry &gt; &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-layerstack--src-lease-rs.html#item-fn-shared-registries-190">shared_registries</a> () -&gt; &amp; &#x27;static Mutex &lt; HashMap &lt; String , <a class="symbol-link" href="eos-layerstack--src-lease-rs.html#item-type-SharedLeaseRegistry-41">SharedLeaseRegistry</a> &gt; &gt;</code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#item-fn-shared-registries-190">shared_registries</a>() -&gt; &amp;&#x27;<span class="rs-kw">static</span> <span class="rs-type">Mutex</span>&lt;<span class="rs-type">HashMap</span>&lt;<span class="rs-type">String</span>, <a class="symbol-link rs-type" href="eos-layerstack--src-lease-rs.html#item-type-SharedLeaseRegistry-41">SharedLeaseRegistry</a>&gt;&gt; {
+    <span class="rs-kw">static</span> <span class="rs-type">REGISTRIES</span>: <span class="rs-type">OnceLock</span>&lt;<span class="rs-type">Mutex</span>&lt;<span class="rs-type">HashMap</span>&lt;<span class="rs-type">String</span>, <a class="symbol-link rs-type" href="eos-layerstack--src-lease-rs.html#item-type-SharedLeaseRegistry-41">SharedLeaseRegistry</a>&gt;&gt;&gt; = <span class="rs-type">OnceLock</span>::<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-new-79">new</a>();
+    <span class="rs-type">REGISTRIES</span>.get_or_init(|| <span class="rs-type">Mutex</span>::<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-new-79">new</a>(<span class="rs-type">HashMap</span>::<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-new-79">new</a>()))
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-layerstack/src/lease.rs:190</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn acquire_rejects_empty_owner_without_panicking private fn acquire_rejects_empty_owner_without_panicking () -&gt; TestResult crates/eos-layerstack/src/lease.rs  ">
+</article><article id="item-fn-acquire-rejects-empty-owner-without-panicking-201" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn acquire_rejects_empty_owner_without_panicking private fn acquire_rejects_empty_owner_without_panicking () -&gt; TestResult crates/eos-layerstack/src/lease.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>acquire_rejects_empty_owner_without_panicking</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn acquire_rejects_empty_owner_without_panicking () -&gt; TestResult</code>
-  <div class="tags"></div>
+  <code class="signature">fn <a class="symbol-link" href="eos-layerstack--src-lease-rs.html#item-fn-acquire-rejects-empty-owner-without-panicking-201">acquire_rejects_empty_owner_without_panicking</a> () -&gt; <a class="symbol-link" href="eos-layerstack--src-lease-rs.html#item-type-TestResult-199">TestResult</a></code>
+  <div class="tags"><span>test</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#item-fn-acquire-rejects-empty-owner-without-panicking-201">acquire_rejects_empty_owner_without_panicking</a>() -&gt; <a class="symbol-link rs-type" href="eos-layerstack--src-lease-rs.html#item-type-TestResult-199">TestResult</a> {
+        <span class="rs-kw">let</span> manifest = <span class="rs-type">Manifest</span>::<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-new-79">new</a>(0, <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-new-79">new</a>(), 1)?;
+        <span class="rs-kw">let</span> <span class="rs-type">Err</span>(err) = <a class="symbol-link rs-type" href="eos-layerstack--src-lease-rs.html#item-struct-LeaseRegistry-31">LeaseRegistry</a>::<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-new-79">new</a>().<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-acquire-85">acquire</a>(manifest, &quot;&quot;) <span class="rs-kw">else</span> {
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(std::io::<span class="rs-type">Error</span>::other(&quot;empty owner id was accepted&quot;).into());
+        };
+        assert!(matches!(err, <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>::<span class="rs-type">InvalidLeaseOwner</span>(_)));
+        <span class="rs-type">Ok</span>(())
+    }
+</code></pre>
+</details>
 
   <p class="source">crates/eos-layerstack/src/lease.rs:201</p>
-</article><div class="group-label">Other Implementations</div><article class="item-card" data-kind="impl" data-kind-list="impl method" data-filter-text="impl impl From &lt; &amp; LayerRefKey &gt; for LayerRef private impl From &lt; &amp; LayerRefKey &gt; for LayerRef crates/eos-layerstack/src/lease.rs  from fn from (layer : &amp; LayerRefKey) -&gt; Self">
+</article><div class="group-label">Other Implementations</div><article id="item-impl-impl-From-----LayerRefKey---for-LayerRef-171" class="item-card" data-kind="impl" data-kind-list="impl method" data-filter-text="impl impl From &lt; &amp; LayerRefKey &gt; for LayerRef private impl From &lt; &amp; LayerRefKey &gt; for LayerRef crates/eos-layerstack/src/lease.rs  from fn from (layer : &amp; LayerRefKey) -&gt; Self">
   <div class="item-head">
     <span class="kind">impl</span>
     <h3>impl From &lt; &amp; LayerRefKey &gt; for LayerRef</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">impl From &lt; &amp; LayerRefKey &gt; for LayerRef</code>
+  <code class="signature">impl From &lt; &amp; <a class="symbol-link" href="eos-layerstack--src-lease-rs.html#item-struct-LayerRefKey-156">LayerRefKey</a> &gt; for LayerRef</code>
   <div class="tags"><span>impl</span><span>trait-impl</span></div>
-  <h4>Methods</h4><table><tbody><tr><td>constructor</td><td>from</td><td><code>fn from (layer : &amp; LayerRefKey) -&gt; Self</code></td></tr></tbody></table>
+  <h4>Methods</h4><table><tbody><tr id="method-from-172"><td>constructor</td><td>from</td><td><code>fn <a class="symbol-link" href="eos-layerstack--src-lease-rs.html#method-from-163">from</a> (layer : &amp; <a class="symbol-link" href="eos-layerstack--src-lease-rs.html#item-struct-LayerRefKey-156">LayerRefKey</a>) -&gt; Self</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-from-163">from</a>(layer: &amp;<a class="symbol-link rs-type" href="eos-layerstack--src-lease-rs.html#item-struct-LayerRefKey-156">LayerRefKey</a>) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">Self</span> {
+            layer_id: layer.layer_id.clone(),
+            path: layer.path.clone(),
+        }
+    }
+</code></pre>
+</details></td></tr></tbody></table>
+
   <p class="source">crates/eos-layerstack/src/lease.rs:171</p>
 </article></div>
 </section></div>
 </main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/eos-layerstack/src/lease.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-comment">//! Exact layer-ref lease registry for frozen layer-stack snapshots.</span>
+<span class="rs-comment">//!</span>
+<span class="rs-comment">//! Owns the DUAL-SET distinction that the GC and squash paths depend on:</span>
+<span class="rs-comment">//!</span>
+<span class="rs-comment">//! - [`LeaseRegistry::leased_layers`] — the FULL on-disk retention set: every</span>
+<span class="rs-comment">//!   layer referenced by at least one active lease's frozen manifest. GC must</span>
+<span class="rs-comment">//!   keep these directories on disk until the lease releases.</span>
+<span class="rs-comment">//! - [`LeaseRegistry::lease_head_layers`] — the SQUASH-KEEP barrier set: only</span>
+<span class="rs-comment">//!   the NEWEST layer of each active lease's manifest. Layers below a head are</span>
+<span class="rs-comment">//!   foldable; the lease still reads through its own frozen manifest via the</span>
+<span class="rs-comment">//!   retention set above. These two sets are DISTINCT and must not be conflated.</span>
+<span class="rs-comment">//!</span>
+
+<span class="rs-kw">use</span> std::collections::{<span class="rs-type">BTreeMap</span>, <span class="rs-type">BTreeSet</span>, <span class="rs-type">HashMap</span>};
+<span class="rs-kw">use</span> std::path::<span class="rs-type">Path</span>;
+<span class="rs-kw">use</span> std::sync::atomic::{<span class="rs-type">AtomicU64</span>, <span class="rs-type">Ordering</span>};
+<span class="rs-kw">use</span> std::sync::{<span class="rs-type">Arc</span>, <span class="rs-type">Mutex</span>, <span class="rs-type">MutexGuard</span>, <span class="rs-type">OnceLock</span>};
+<span class="rs-kw">use</span> std::time::{<span class="rs-type">SystemTime</span>, <span class="rs-type">UNIX_EPOCH</span>};
+
+<span class="rs-kw">use</span> eos_protocol::{<span class="rs-type">LayerRef</span>, <span class="rs-type">Manifest</span>};
+
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::error::<a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>;
+
+<span class="rs-comment">/// One active snapshot lease: an id bound to the frozen manifest it pins.</span>
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Eq</span>)]
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-layerstack--src-lease-rs.html#item-struct-LayerStackLeaseRecord-24">LayerStackLeaseRecord</a> {
+    <span class="rs-kw">pub</span> lease_id: <span class="rs-type">String</span>,
+    <span class="rs-kw">pub</span> manifest: <span class="rs-type">Manifest</span>,
+}
+
+<span class="rs-comment">/// Tracks active snapshot leases and the layers they retain on disk.</span>
+<span class="rs-comment">///</span>
+<span class="rs-comment">/// Rust guards this with a `threading.RLock` and a `Counter[LayerRef]`</span>
+<span class="rs-comment">/// refcount; the Rust port keeps the same refcount semantics.</span>
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Default</span>)]
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-layerstack--src-lease-rs.html#item-struct-LeaseRegistry-31">LeaseRegistry</a> {
+    leases: <span class="rs-type">HashMap</span>&lt;<span class="rs-type">String</span>, <a class="symbol-link rs-type" href="eos-layerstack--src-lease-rs.html#item-struct-LayerStackLeaseRecord-24">LayerStackLeaseRecord</a>&gt;,
+    refcounts: <span class="rs-type">BTreeMap</span>&lt;<a class="symbol-link rs-type" href="eos-layerstack--src-lease-rs.html#item-struct-LayerRefKey-156">LayerRefKey</a>, usize&gt;,
+}
+
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">type</span> <a class="symbol-link rs-type" href="eos-layerstack--src-lease-rs.html#item-type-SharedLeaseRegistry-41">SharedLeaseRegistry</a> = <span class="rs-type">Arc</span>&lt;<span class="rs-type">Mutex</span>&lt;<a class="symbol-link rs-type" href="eos-layerstack--src-lease-rs.html#item-struct-LeaseRegistry-31">LeaseRegistry</a>&gt;&gt;;
+
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#item-fn-shared-registry-for-root-43">shared_registry_for_root</a>(
+    storage_root: &amp;<span class="rs-type">Path</span>,
+) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-layerstack--src-lease-rs.html#item-type-SharedLeaseRegistry-41">SharedLeaseRegistry</a>, <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>&gt; {
+    <span class="rs-comment">// Leases outlive individual `LayerStack` values: daemon call paths often</span>
+    <span class="rs-comment">// retain only `lease_id`, then reopen the root later for release/metrics.</span>
+    <span class="rs-kw">let</span> key = storage_root
+        .canonicalize()
+        .unwrap_or_else(|_| storage_root.to_path_buf())
+        .to_string_lossy()
+        .into_owned();
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> registries = <a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#item-fn-shared-registries-190">shared_registries</a>()
+        .<a class="symbol-link rs-fn" href="eos-layerstack--src-storage-lock-rs.html#method-lock-148">lock</a>()
+        .map_err(|_| <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>::<span class="rs-type">LockPoisoned</span>(&quot;lease registry map&quot;))?;
+    <span class="rs-type">Ok</span>(registries
+        .entry(key)
+        .or_insert_with(|| <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-new-79">new</a>(<span class="rs-type">Mutex</span>::<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-new-79">new</a>(<a class="symbol-link rs-type" href="eos-layerstack--src-lease-rs.html#item-struct-LeaseRegistry-31">LeaseRegistry</a>::<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-new-79">new</a>())))
+        .clone())
+}
+
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#item-fn-lock-shared-registry-62">lock_shared_registry</a>(
+    registry: &amp;<a class="symbol-link rs-type" href="eos-layerstack--src-lease-rs.html#item-type-SharedLeaseRegistry-41">SharedLeaseRegistry</a>,
+) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">MutexGuard</span>&lt;&#x27;_, <a class="symbol-link rs-type" href="eos-layerstack--src-lease-rs.html#item-struct-LeaseRegistry-31">LeaseRegistry</a>&gt;, <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>&gt; {
+    registry
+        .<a class="symbol-link rs-fn" href="eos-layerstack--src-storage-lock-rs.html#method-lock-148">lock</a>()
+        .map_err(|_| <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>::<span class="rs-type">LockPoisoned</span>(&quot;lease registry&quot;))
+}
+
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#item-fn-lock-shared-registry-recover-70">lock_shared_registry_recover</a>(
+    registry: &amp;<a class="symbol-link rs-type" href="eos-layerstack--src-lease-rs.html#item-type-SharedLeaseRegistry-41">SharedLeaseRegistry</a>,
+) -&gt; <span class="rs-type">MutexGuard</span>&lt;&#x27;_, <a class="symbol-link rs-type" href="eos-layerstack--src-lease-rs.html#item-struct-LeaseRegistry-31">LeaseRegistry</a>&gt; {
+    registry
+        .<a class="symbol-link rs-fn" href="eos-layerstack--src-storage-lock-rs.html#method-lock-148">lock</a>()
+        .unwrap_or_else(std::sync::<span class="rs-type">PoisonError</span>::into_inner)
+}
+
+<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-layerstack--src-lease-rs.html#item-struct-LeaseRegistry-31">LeaseRegistry</a> {
+    <span class="rs-comment">/// Create an empty registry.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-new-79">new</a>() -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">Self</span>::default()
+    }
+
+    <span class="rs-comment">/// Register a new lease over `manifest`, owned by `owner_request_id`,</span>
+    <span class="rs-comment">/// incrementing the per-layer refcount. Rejects an empty owner id.</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// # Errors</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// Returns [`LayerStackError::InvalidLeaseOwner`] when `owner_request_id` is</span>
+    <span class="rs-comment">/// empty.</span>
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-acquire-85">acquire</a>(
+        &amp;<span class="rs-kw">mut</span> <span class="rs-self">self</span>,
+        manifest: <span class="rs-type">Manifest</span>,
+        owner_request_id: &amp;str,
+    ) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-layerstack--src-lease-rs.html#item-struct-LayerStackLeaseRecord-24">LayerStackLeaseRecord</a>, <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>&gt; {
+        <span class="rs-kw">if</span> owner_request_id.is_empty() {
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>::<span class="rs-type">InvalidLeaseOwner</span>(
+                &quot;owner_request_id must not be empty&quot;.to_owned(),
+            ));
+        }
+        <span class="rs-kw">let</span> lease = <a class="symbol-link rs-type" href="eos-layerstack--src-lease-rs.html#item-struct-LayerStackLeaseRecord-24">LayerStackLeaseRecord</a> {
+            lease_id: <a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#item-fn-new-lease-id-180">new_lease_id</a>(),
+            manifest,
+        };
+        <span class="rs-kw">for</span> layer <span class="rs-kw">in</span> &amp;lease.manifest.layers {
+            *<span class="rs-self">self</span>.refcounts.entry(<a class="symbol-link rs-type" href="eos-layerstack--src-lease-rs.html#item-struct-LayerRefKey-156">LayerRefKey</a>::<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-from-163">from</a>(layer)).or_insert(0) += 1;
+        }
+        <span class="rs-self">self</span>.leases.insert(lease.lease_id.clone(), lease.clone());
+        <span class="rs-type">Ok</span>(lease)
+    }
+
+    <span class="rs-comment">/// Release a lease by id, decrementing per-layer refcounts. Returns the</span>
+    <span class="rs-comment">/// released record, or `None` if the id was unknown.</span>
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-release-113">release</a>(&amp;<span class="rs-kw">mut</span> <span class="rs-self">self</span>, lease_id: &amp;str) -&gt; <span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-layerstack--src-lease-rs.html#item-struct-LayerStackLeaseRecord-24">LayerStackLeaseRecord</a>&gt; {
+        <span class="rs-kw">let</span> lease = <span class="rs-self">self</span>.leases.remove(lease_id)?;
+        <span class="rs-kw">for</span> layer <span class="rs-kw">in</span> &amp;lease.manifest.layers {
+            <span class="rs-kw">let</span> key = <a class="symbol-link rs-type" href="eos-layerstack--src-lease-rs.html#item-struct-LayerRefKey-156">LayerRefKey</a>::<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-from-163">from</a>(layer);
+            <span class="rs-kw">match</span> <span class="rs-self">self</span>.refcounts.get_mut(&amp;key) {
+                <span class="rs-type">Some</span>(count) <span class="rs-kw">if</span> *count &gt; 1 =&gt; *count -= 1,
+                <span class="rs-type">Some</span>(_) =&gt; {
+                    <span class="rs-self">self</span>.refcounts.remove(&amp;key);
+                }
+                <span class="rs-type">None</span> =&gt; {}
+            }
+        }
+        <span class="rs-type">Some</span>(lease)
+    }
+
+    <span class="rs-comment">/// FULL on-disk retention set (sorted): every layer pinned by an active</span>
+    <span class="rs-comment">/// lease. This is the GC keep-set. DISTINCT from [`Self::lease_head_layers`].</span>
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-leased-layers-130">leased_layers</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Vec</span>&lt;<span class="rs-type">LayerRef</span>&gt; {
+        <span class="rs-self">self</span>.refcounts.keys().map(<span class="rs-type">LayerRef</span>::from).collect()
+    }
+
+    <span class="rs-comment">/// SQUASH-KEEP barrier set (sorted): the newest layer of each active</span>
+    <span class="rs-comment">/// lease's manifest. DISTINCT from (a subset of) [`Self::leased_layers`].</span>
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-lease-head-layers-136">lease_head_layers</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Vec</span>&lt;<span class="rs-type">LayerRef</span>&gt; {
+        <span class="rs-self">self</span>.leases
+            .values()
+            .filter_map(|lease| lease.manifest.layers.first())
+            .map(<a class="symbol-link rs-type" href="eos-layerstack--src-lease-rs.html#item-struct-LayerRefKey-156">LayerRefKey</a>::from)
+            .collect::&lt;<span class="rs-type">BTreeSet</span>&lt;_&gt;&gt;()
+            .iter()
+            .map(<span class="rs-type">LayerRef</span>::from)
+            .collect()
+    }
+
+    <span class="rs-comment">/// Number of active leases.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-active-count-149">active_count</a>(&amp;<span class="rs-self">self</span>) -&gt; usize {
+        <span class="rs-self">self</span>.leases.len()
+    }
+}
+
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Eq</span>, <span class="rs-type">PartialOrd</span>, <span class="rs-type">Ord</span>)]
+<span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-layerstack--src-lease-rs.html#item-struct-LayerRefKey-156">LayerRefKey</a> {
+    layer_id: <span class="rs-type">String</span>,
+    path: <span class="rs-type">String</span>,
+}
+
+<span class="rs-kw">impl</span> <span class="rs-type">From</span>&lt;&amp;<span class="rs-type">LayerRef</span>&gt; <span class="rs-kw">for</span> <a class="symbol-link rs-type" href="eos-layerstack--src-lease-rs.html#item-struct-LayerRefKey-156">LayerRefKey</a> {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-from-163">from</a>(layer: &amp;<span class="rs-type">LayerRef</span>) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">Self</span> {
+            layer_id: layer.layer_id.clone(),
+            path: layer.path.clone(),
+        }
+    }
+}
+
+<span class="rs-kw">impl</span> <span class="rs-type">From</span>&lt;&amp;<a class="symbol-link rs-type" href="eos-layerstack--src-lease-rs.html#item-struct-LayerRefKey-156">LayerRefKey</a>&gt; <span class="rs-kw">for</span> <span class="rs-type">LayerRef</span> {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-from-163">from</a>(layer: &amp;<a class="symbol-link rs-type" href="eos-layerstack--src-lease-rs.html#item-struct-LayerRefKey-156">LayerRefKey</a>) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">Self</span> {
+            layer_id: layer.layer_id.clone(),
+            path: layer.path.clone(),
+        }
+    }
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#item-fn-new-lease-id-180">new_lease_id</a>() -&gt; <span class="rs-type">String</span> {
+    <span class="rs-kw">static</span> <span class="rs-type">COUNTER</span>: <span class="rs-type">AtomicU64</span> = <span class="rs-type">AtomicU64</span>::<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-new-79">new</a>(0);
+    <span class="rs-kw">let</span> nanos = <span class="rs-type">SystemTime</span>::now()
+        .duration_since(<span class="rs-type">UNIX_EPOCH</span>)
+        .map(|duration| duration.as_nanos())
+        .unwrap_or_default();
+    <span class="rs-kw">let</span> counter = <span class="rs-type">COUNTER</span>.fetch_add(1, <span class="rs-type">Ordering</span>::<span class="rs-type">Relaxed</span>);
+    format!(&quot;{nanos:032x}{counter:016x}&quot;)
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#item-fn-shared-registries-190">shared_registries</a>() -&gt; &amp;&#x27;<span class="rs-kw">static</span> <span class="rs-type">Mutex</span>&lt;<span class="rs-type">HashMap</span>&lt;<span class="rs-type">String</span>, <a class="symbol-link rs-type" href="eos-layerstack--src-lease-rs.html#item-type-SharedLeaseRegistry-41">SharedLeaseRegistry</a>&gt;&gt; {
+    <span class="rs-kw">static</span> <span class="rs-type">REGISTRIES</span>: <span class="rs-type">OnceLock</span>&lt;<span class="rs-type">Mutex</span>&lt;<span class="rs-type">HashMap</span>&lt;<span class="rs-type">String</span>, <a class="symbol-link rs-type" href="eos-layerstack--src-lease-rs.html#item-type-SharedLeaseRegistry-41">SharedLeaseRegistry</a>&gt;&gt;&gt; = <span class="rs-type">OnceLock</span>::<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-new-79">new</a>();
+    <span class="rs-type">REGISTRIES</span>.get_or_init(|| <span class="rs-type">Mutex</span>::<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-new-79">new</a>(<span class="rs-type">HashMap</span>::<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-new-79">new</a>()))
+}
+
+#[cfg(test)]
+<span class="rs-kw">mod</span> tests {
+    <span class="rs-kw">use</span> <span class="rs-kw">super</span>::*;
+
+    <span class="rs-kw">type</span> <a class="symbol-link rs-type" href="eos-layerstack--src-lease-rs.html#item-type-TestResult-199">TestResult</a>&lt;<span class="rs-type">T</span> = ()&gt; = std::result::<span class="rs-type">Result</span>&lt;<span class="rs-type">T</span>, <span class="rs-type">Box</span>&lt;<span class="rs-kw">dyn</span> std::error::<span class="rs-type">Error</span> + <span class="rs-type">Send</span> + <span class="rs-type">Sync</span>&gt;&gt;;
+
+    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#item-fn-acquire-rejects-empty-owner-without-panicking-201">acquire_rejects_empty_owner_without_panicking</a>() -&gt; <a class="symbol-link rs-type" href="eos-layerstack--src-lease-rs.html#item-type-TestResult-199">TestResult</a> {
+        <span class="rs-kw">let</span> manifest = <span class="rs-type">Manifest</span>::<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-new-79">new</a>(0, <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-new-79">new</a>(), 1)?;
+        <span class="rs-kw">let</span> <span class="rs-type">Err</span>(err) = <a class="symbol-link rs-type" href="eos-layerstack--src-lease-rs.html#item-struct-LeaseRegistry-31">LeaseRegistry</a>::<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-new-79">new</a>().<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-acquire-85">acquire</a>(manifest, &quot;&quot;) <span class="rs-kw">else</span> {
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(std::io::<span class="rs-type">Error</span>::other(&quot;empty owner id was accepted&quot;).into());
+        };
+        assert!(matches!(err, <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>::<span class="rs-type">InvalidLeaseOwner</span>(_)));
+        <span class="rs-type">Ok</span>(())
+    }
+}
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
   <script src="../assets/inventory.js"></script>
 </body>
 </html>

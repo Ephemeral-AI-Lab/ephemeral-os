@@ -8,8 +8,16 @@
 </head>
 <body>
   <header>
-    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
-    <h1>eos-occ File Inventory</h1>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>eos-occ File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS/sandbox &amp;&amp; cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
   </header>
   <a class="back-link" href="../index.html">sandbox</a>
 <section class="summary">
@@ -50,6 +58,41 @@
   <div class="items"></div>
 </section></div>
 </main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/eos-occ/src/lib.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-comment">//! Optimistic-concurrency commit: the single-writer publish queue per root.</span>
+<span class="rs-comment">//!</span>
+<span class="rs-comment">//! Invariant (MF-1): OCC owns the publish DECISION gate — N disjoint file-API</span>
+<span class="rs-comment">//! writes batch into ONE manifest CAS attempt; each normalized path routes to</span>
+<span class="rs-comment">//! exactly one of [`Route::Drop`] (`.git`), [`Route::Direct`] (gitignored),</span>
+<span class="rs-comment">//! [`Route::Gated`] (tracked, base-hash checked), or [`Route::Reject`]</span>
+<span class="rs-comment">//! (disallowed). A stale base surfaces [`OccStatus::AbortedVersion`] after the</span>
+<span class="rs-comment">//! bounded CAS retry. EXACTLY ONE `occ-commit-queue` writer per</span>
+<span class="rs-comment">//! `layer_stack_root` serializes all publishes: any second OCC entry point</span>
+<span class="rs-comment">//! (e.g. the PPC self-managed plugin callback) MUST route through this same</span>
+<span class="rs-comment">//! single writer + storage lease, never a second [`CommitQueue`] instance.</span>
+<span class="rs-comment">//!</span>
+<span class="rs-comment">//! Build-time edges: eos-isolated-workspace and eos-plugin do NOT link this</span>
+<span class="rs-comment">//! crate — that omission is the build-time no-publish guarantee, made possible</span>
+<span class="rs-comment">//! because the snapshot/lease HINGE lives in eos-layerstack, not here.</span>
+
+#![forbid(unsafe_code)]
+
+<span class="rs-kw">pub</span> <span class="rs-kw">mod</span> commit_queue;
+<span class="rs-kw">pub</span> <span class="rs-kw">mod</span> error;
+<span class="rs-kw">pub</span> <span class="rs-kw">mod</span> route;
+<span class="rs-kw">pub</span> <span class="rs-kw">mod</span> service;
+
+<span class="rs-kw">pub</span> <span class="rs-kw">use</span> commit_queue::{<a class="symbol-link rs-type" href="eos-occ.html#item-struct-CommitQueue-108">CommitQueue</a>, <a class="symbol-link rs-type" href="eos-occ.html#item-trait-CommitTransactionPort-67">CommitTransactionPort</a>, <a class="symbol-link rs-type" href="eos-occ.html#item-struct-PreparedChangeset-49">PreparedChangeset</a>, <a class="symbol-link rs-type" href="eos-occ.html#item-struct-PublishConflict-86">PublishConflict</a>};
+<span class="rs-kw">pub</span> <span class="rs-kw">use</span> error::<a class="symbol-link rs-type" href="eos-occ--src-error-rs.html#item-enum-OccError-9">OccError</a>;
+<span class="rs-kw">pub</span> <span class="rs-kw">use</span> route::{<a class="symbol-link rs-type" href="eos-occ--src-route-rs.html#item-struct-ChangesetResult-134">ChangesetResult</a>, <a class="symbol-link rs-type" href="eos-occ--src-route-rs.html#item-struct-FileResult-111">FileResult</a>, <a class="symbol-link rs-type" href="eos-occ--src-route-rs.html#item-enum-OccStatus-34">OccStatus</a>, <a class="symbol-link rs-type" href="eos-occ--src-route-rs.html#item-struct-PublishDecision-92">PublishDecision</a>, <a class="symbol-link rs-type" href="eos-occ--src-route-rs.html#item-enum-Route-14">Route</a>};
+<span class="rs-kw">pub</span> <span class="rs-kw">use</span> service::{<a class="symbol-link rs-type" href="eos-occ--src-service-rs.html#item-trait-OccRouteProvider-15">OccRouteProvider</a>, <a class="symbol-link rs-type" href="eos-occ--src-service-rs.html#item-struct-OccService-50">OccService</a>};
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
   <script src="../assets/inventory.js"></script>
 </body>
 </html>

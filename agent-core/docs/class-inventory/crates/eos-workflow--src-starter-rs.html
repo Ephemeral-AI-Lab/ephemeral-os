@@ -8,15 +8,23 @@
 </head>
 <body>
   <header>
-    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
-    <h1>eos-workflow File Inventory</h1>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>eos-workflow File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS/agent-core &amp;&amp; cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
   </header>
   <a class="back-link" href="../index.html">agent-core</a>
 <section class="summary">
   <div><b>20</b><span>modules</span></div>
-  <div><b>136</b><span>items</span></div>
-  <div><b>129</b><span>fields</span></div>
-  <div><b>138</b><span>methods</span></div>
+  <div><b>137</b><span>items</span></div>
+  <div><b>131</b><span>fields</span></div>
+  <div><b>140</b><span>methods</span></div>
 </section>
 <section class="toolbar">
   <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
@@ -32,7 +40,7 @@
   </select>
 </section>
 <main class="crate-layout">
-  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><span class="folder">attempt</span><ul class="file-tree"><li><a class="file-link" href="eos-workflow.html"><span>launch.rs</span><small>8/0</small></a></li><li><a class="file-link" href="eos-workflow--src-attempt-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-workflow--src-attempt-orchestrator-rs.html"><span>orchestrator.rs</span><small>3/0</small></a></li><li><a class="file-link" href="eos-workflow--src-attempt-orchestrator-registry-rs.html"><span>orchestrator_registry.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-workflow--src-attempt-plan-dag-rs.html"><span>plan_dag.rs</span><small>1/19</small></a></li><li><a class="file-link" href="eos-workflow--src-attempt-run-stage-rs.html"><span>run_stage.rs</span><small>1/8</small></a></li></ul></li><li><span class="folder">context</span><ul class="file-tree"><li><a class="file-link" href="eos-workflow--src-context-composer-rs.html"><span>composer.rs</span><small>2/12</small></a></li><li><a class="file-link" href="eos-workflow--src-context-engine-rs.html"><span>engine.rs</span><small>2/3</small></a></li><li><a class="file-link" href="eos-workflow--src-context-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-workflow--src-context-scope-rs.html"><span>scope.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-workflow--src-context-section-rs.html"><span>section.rs</span><small>3/0</small></a></li><li><a class="file-link" href="eos-workflow--src-context-xml-rs.html"><span>xml.rs</span><small>0/4</small></a></li></ul></li><li><a class="file-link" href="eos-workflow--src-error-rs.html"><span>error.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-workflow--src-ids-rs.html"><span>ids.rs</span><small>1/3</small></a></li><li><span class="folder">iteration</span><ul class="file-tree"><li><a class="file-link" href="eos-workflow--src-iteration-mod-rs.html"><span>mod.rs</span><small>3/1</small></a></li></ul></li><li><a class="file-link" href="eos-workflow--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-workflow--src-lifecycle-rs.html"><span>lifecycle.rs</span><small>1/3</small></a></li><li><a class="file-link" href="eos-workflow--src-ports-rs.html"><span>ports.rs</span><small>4/4</small></a></li><li><a class="file-link active" href="eos-workflow--src-starter-rs.html"><span>starter.rs</span><small>2/3</small></a></li><li><a class="file-link" href="eos-workflow--src-util-rs.html"><span>util.rs</span><small>0/1</small></a></li></ul></li></ul></nav>
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><span class="folder">attempt</span><ul class="file-tree"><li><a class="file-link" href="eos-workflow.html"><span>launch.rs</span><small>8/0</small></a></li><li><a class="file-link" href="eos-workflow--src-attempt-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-workflow--src-attempt-orchestrator-rs.html"><span>orchestrator.rs</span><small>3/0</small></a></li><li><a class="file-link" href="eos-workflow--src-attempt-orchestrator-registry-rs.html"><span>orchestrator_registry.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-workflow--src-attempt-plan-dag-rs.html"><span>plan_dag.rs</span><small>1/19</small></a></li><li><a class="file-link" href="eos-workflow--src-attempt-run-stage-rs.html"><span>run_stage.rs</span><small>1/8</small></a></li></ul></li><li><span class="folder">context</span><ul class="file-tree"><li><a class="file-link" href="eos-workflow--src-context-composer-rs.html"><span>composer.rs</span><small>2/12</small></a></li><li><a class="file-link" href="eos-workflow--src-context-engine-rs.html"><span>engine.rs</span><small>2/3</small></a></li><li><a class="file-link" href="eos-workflow--src-context-mod-rs.html"><span>mod.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-workflow--src-context-scope-rs.html"><span>scope.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-workflow--src-context-section-rs.html"><span>section.rs</span><small>3/0</small></a></li><li><a class="file-link" href="eos-workflow--src-context-xml-rs.html"><span>xml.rs</span><small>0/4</small></a></li></ul></li><li><a class="file-link" href="eos-workflow--src-error-rs.html"><span>error.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-workflow--src-ids-rs.html"><span>ids.rs</span><small>1/3</small></a></li><li><span class="folder">iteration</span><ul class="file-tree"><li><a class="file-link" href="eos-workflow--src-iteration-mod-rs.html"><span>mod.rs</span><small>3/1</small></a></li></ul></li><li><a class="file-link" href="eos-workflow--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-workflow--src-lifecycle-rs.html"><span>lifecycle.rs</span><small>1/3</small></a></li><li><a class="file-link" href="eos-workflow--src-ports-rs.html"><span>ports.rs</span><small>5/3</small></a></li><li><a class="file-link active" href="eos-workflow--src-starter-rs.html"><span>starter.rs</span><small>2/3</small></a></li><li><a class="file-link" href="eos-workflow--src-util-rs.html"><span>util.rs</span><small>0/1</small></a></li></ul></li></ul></nav>
   <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="starter crates/eos-workflow/src/starter.rs StartedWorkflow WorkflowStarter impl std :: fmt :: Debug for WorkflowStarter impl WorkflowStarter start_leaves_parent_running start_rejects_invalid_parent compensation_rolls_back">
   <div class="module-head">
     <div>
@@ -47,59 +55,665 @@
       <span>6 methods</span>
     </div>
   </div>
-  <div class="items"><div class="group-label">File-Owned Types</div><article class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct StartedWorkflow pub pub struct StartedWorkflow crates/eos-workflow/src/starter.rs parent_task_id TaskId parent_attempt_id Option &lt; AttemptId &gt; workflow_id eos_state :: WorkflowId iteration_id eos_state :: IterationId attempt_id AttemptId ">
+  <div class="items"><div class="group-label">File-Owned Types</div><article id="item-struct-StartedWorkflow-9" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct StartedWorkflow pub pub struct StartedWorkflow crates/eos-workflow/src/starter.rs parent_task_id TaskId parent_attempt_id Option &lt; AttemptId &gt; workflow_id eos_state :: WorkflowId iteration_id eos_state :: IterationId attempt_id AttemptId ">
   <div class="item-head">
     <span class="kind">struct</span>
     <h3>StartedWorkflow</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub struct StartedWorkflow</code>
-  <div class="tags"></div>
+  <code class="signature">pub struct <a class="symbol-link" href="eos-workflow--src-starter-rs.html#item-struct-StartedWorkflow-9">StartedWorkflow</a></code>
+  <p class="docstring">Workflow start result.</p>
+  <div class="tags"><span>derive: Clone</span><span>derive: Debug</span><span>derive: Eq</span><span>derive: PartialEq</span></div>
   <h4>Fields</h4><table><tbody><tr><td>pub</td><td>parent_task_id</td><td><code>TaskId</code></td></tr><tr><td>pub</td><td>parent_attempt_id</td><td><code>Option &lt; AttemptId &gt;</code></td></tr><tr><td>pub</td><td>workflow_id</td><td><code>eos_state :: WorkflowId</code></td></tr><tr><td>pub</td><td>iteration_id</td><td><code>eos_state :: IterationId</code></td></tr><tr><td>pub</td><td>attempt_id</td><td><code>AttemptId</code></td></tr></tbody></table>
+
   <p class="source">crates/eos-workflow/src/starter.rs:9</p>
-</article><article class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct WorkflowStarter pub pub struct WorkflowStarter crates/eos-workflow/src/starter.rs deps AttemptDeps ">
+</article><article id="item-struct-WorkflowStarter-24" class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct WorkflowStarter pub pub struct WorkflowStarter crates/eos-workflow/src/starter.rs deps AttemptDeps ">
   <div class="item-head">
     <span class="kind">struct</span>
     <h3>WorkflowStarter</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub struct WorkflowStarter</code>
-  <div class="tags"></div>
-  <h4>Fields</h4><table><tbody><tr><td>private</td><td>deps</td><td><code>AttemptDeps</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr><td>constructor</td><td>new</td><td><code>pub fn new (deps : AttemptDeps) -&gt; Self</code></td></tr><tr><td>method</td><td>start</td><td><code>pub async fn start (&amp; self , prompt : &amp; str , parent_task_id : &amp; TaskId) -&gt; Result &lt; StartedWorkflow &gt;</code></td></tr><tr><td>method</td><td>orchestrator_registry</td><td><code>pub(crate) fn orchestrator_registry (&amp; self) -&gt; &amp; Arc &lt; AttemptOrchestratorRegistry &gt;</code></td></tr><tr><td>method</td><td>assert_parent_running_and_no_open_child</td><td><code>async fn assert_parent_running_and_no_open_child (&amp; self , parent_task_id : &amp; TaskId ,) -&gt; Result &lt; eos_state :: Task &gt;</code></td></tr><tr><td>method</td><td>compensate_failed_start</td><td><code>async fn compensate_failed_start (&amp; self , workflow_id : &amp; eos_state :: WorkflowId , iteration_id : &amp; eos_state :: IterationId ,) -&gt; Result &lt; () &gt;</code></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl std :: fmt :: Debug for WorkflowStarter</code></summary><table><tbody><tr><td>method</td><td>fmt</td><td><code>fn fmt (&amp; self , f : &amp; mut std :: fmt :: Formatter &lt; '_ &gt;) -&gt; std :: fmt :: Result</code></td></tr></tbody></table></details></div>
+  <code class="signature">pub struct <a class="symbol-link" href="eos-workflow--src-starter-rs.html#item-struct-WorkflowStarter-24">WorkflowStarter</a></code>
+  <p class="docstring">Single safe entry point from a running task to a delegated workflow.</p>
+  <div class="tags"><span>derive: Clone</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>deps</td><td><code><a class="symbol-link" href="eos-workflow.html#item-struct-AttemptDeps-223">AttemptDeps</a></code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-37"><td>constructor</td><td>new</td><td><code>pub fn <a class="symbol-link" href="eos-workflow.html#method-new-264">new</a> (deps : <a class="symbol-link" href="eos-workflow.html#item-struct-AttemptDeps-223">AttemptDeps</a>) -&gt; Self</code><p class="docstring">Create a starter.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Create a starter.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow.html#method-new-264">new</a>(deps: <a class="symbol-link rs-type" href="eos-workflow.html#item-struct-AttemptDeps-223">AttemptDeps</a>) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">Self</span> { deps }
+    }
+</code></pre>
+</details></td></tr><tr id="method-start-50"><td>method</td><td>start</td><td><code>pub async fn <a class="symbol-link" href="eos-workflow--src-attempt-orchestrator-rs.html#method-start-69">start</a> (&amp; self , prompt : &amp; str , parent_task_id : &amp; TaskId) -&gt; <a class="symbol-link" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a> &lt; <a class="symbol-link" href="eos-workflow--src-starter-rs.html#item-struct-StartedWorkflow-9">StartedWorkflow</a> &gt;</code><p class="docstring">Start a delegated workflow from `parent_task_id`.<br># Errors<br>Returns [`WorkflowError`] when the parent is not a running task or row<br>creation/start fails.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Start a delegated workflow from `parent_task_id`.</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// # Errors</span>
+    <span class="rs-comment">/// Returns [`WorkflowError`] when the parent is not a running task or row</span>
+    <span class="rs-comment">/// creation/start fails.</span>
+    <span class="rs-kw">pub</span> <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-rs.html#method-start-69">start</a>(&amp;<span class="rs-self">self</span>, prompt: &amp;str, parent_task_id: &amp;<span class="rs-type">TaskId</span>) -&gt; <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a>&lt;<a class="symbol-link rs-type" href="eos-workflow--src-starter-rs.html#item-struct-StartedWorkflow-9">StartedWorkflow</a>&gt; {
+        <span class="rs-kw">let</span> prompt = prompt.trim();
+        <span class="rs-kw">if</span> prompt.is_empty() {
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<span class="rs-type">BlankPrompt</span>);
+        }
+        <span class="rs-kw">let</span> parent = <span class="rs-self">self</span>
+            .<a class="symbol-link rs-fn" href="eos-workflow--src-starter-rs.html#method-assert-parent-running-and-no-open-child-92">assert_parent_running_and_no_open_child</a>(parent_task_id)
+            .<span class="rs-kw">await</span>?;
+        <span class="rs-kw">let</span> request_id = parent.request_id.clone();
+        <span class="rs-kw">let</span> parent_attempt_id = parent.attempt_id.clone();
+        <span class="rs-kw">let</span> iteration_coordinators = <span class="rs-self">self</span>.deps.iteration_coordinators.clone().ok_or_else(|| {
+            <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<a class="symbol-link rs-fn" href="eos-workflow--src-error-rs.html#method-invariant-45">invariant</a>(&quot;workflow starter requires open iteration coordinators&quot;)
+        })?;
+        <span class="rs-kw">let</span> lifecycle = <a class="symbol-link rs-type" href="eos-workflow--src-lifecycle-rs.html#item-struct-WorkflowLifecycle-26">WorkflowLifecycle</a>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-264">new</a>(<span class="rs-self">self</span>.deps.clone(), iteration_coordinators);
+        <span class="rs-kw">let</span> workflow = lifecycle
+            .<a class="symbol-link rs-fn" href="eos-workflow--src-lifecycle-rs.html#method-create-workflow-56">create_workflow</a>(&amp;request_id, parent_task_id, prompt)
+            .<span class="rs-kw">await</span>?;
+        <span class="rs-kw">let</span> (iteration, coordinator) = lifecycle
+            .<a class="symbol-link rs-fn" href="eos-workflow--src-lifecycle-rs.html#method-create-iteration-with-coordinator-70">create_iteration_with_coordinator</a>(&amp;workflow.id)
+            .<span class="rs-kw">await</span>?;
+        <span class="rs-kw">let</span> attempt = <span class="rs-kw">match</span> coordinator.<a class="symbol-link rs-fn" href="eos-workflow--src-iteration-mod-rs.html#method-create-and-start-first-attempt-115">create_and_start_first_attempt</a>().<span class="rs-kw">await</span> {
+            <span class="rs-type">Ok</span>(attempt) =&gt; attempt,
+            <span class="rs-type">Err</span>(err) =&gt; {
+                <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workflow--src-starter-rs.html#method-compensate-failed-start-125">compensate_failed_start</a>(&amp;workflow.id, &amp;iteration.id)
+                    .<span class="rs-kw">await</span>?;
+                <span class="rs-kw">return</span> <span class="rs-type">Err</span>(err);
+            }
+        };
+        <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-workflow--src-starter-rs.html#item-struct-StartedWorkflow-9">StartedWorkflow</a> {
+            parent_task_id: parent_task_id.clone(),
+            parent_attempt_id,
+            workflow_id: workflow.id,
+            iteration_id: iteration.id,
+            attempt_id: attempt.id,
+        })
+    }
+</code></pre>
+</details></td></tr><tr id="method-orchestrator-registry-43"><td>method</td><td>orchestrator_registry</td><td><code>pub(crate) fn <a class="symbol-link" href="eos-workflow--src-starter-rs.html#method-orchestrator-registry-43">orchestrator_registry</a> (&amp; self) -&gt; &amp; Arc &lt; <a class="symbol-link" href="eos-workflow--src-attempt-orchestrator-registry-rs.html#item-struct-AttemptOrchestratorRegistry-12">AttemptOrchestratorRegistry</a> &gt;</code><p class="docstring">The shared attempt-orchestrator registry these deps were built over. Used<br>by the workflow-control adapter's cancel path to abort in-flight<br>planner-driver tasks.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// The shared attempt-orchestrator registry these deps were built over. Used</span>
+    <span class="rs-comment">/// by the workflow-control adapter's cancel path to abort in-flight</span>
+    <span class="rs-comment">/// planner-driver tasks.</span>
+    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-starter-rs.html#method-orchestrator-registry-43">orchestrator_registry</a>(&amp;<span class="rs-self">self</span>) -&gt; &amp;<span class="rs-type">Arc</span>&lt;<a class="symbol-link rs-type" href="eos-workflow--src-attempt-orchestrator-registry-rs.html#item-struct-AttemptOrchestratorRegistry-12">AttemptOrchestratorRegistry</a>&gt; {
+        &amp;<span class="rs-self">self</span>.deps.orchestrator_registry
+    }
+</code></pre>
+</details></td></tr><tr id="method-assert-parent-running-and-no-open-child-92"><td>method</td><td>assert_parent_running_and_no_open_child</td><td><code>async fn <a class="symbol-link" href="eos-workflow--src-starter-rs.html#method-assert-parent-running-and-no-open-child-92">assert_parent_running_and_no_open_child</a> (&amp; self , parent_task_id : &amp; TaskId ,) -&gt; <a class="symbol-link" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a> &lt; eos_state :: Task &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-starter-rs.html#method-assert-parent-running-and-no-open-child-92">assert_parent_running_and_no_open_child</a>(
+        &amp;<span class="rs-self">self</span>,
+        parent_task_id: &amp;<span class="rs-type">TaskId</span>,
+    ) -&gt; <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a>&lt;eos_state::<span class="rs-type">Task</span>&gt; {
+        <span class="rs-kw">let</span> task = <span class="rs-self">self</span>
+            .deps
+            .task_store
+            .<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-registry-rs.html#method-get-52">get</a>(parent_task_id)
+            .<span class="rs-kw">await</span>?
+            .ok_or_else(|| <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<a class="symbol-link rs-fn" href="eos-workflow--src-error-rs.html#method-not-found-49">not_found</a>(&quot;task&quot;, parent_task_id.<a class="symbol-link rs-fn" href="eos-workflow--src-context-section-rs.html#method-as-str-17">as_str</a>()))?;
+        <span class="rs-kw">if</span> task.status != <span class="rs-type">TaskStatus</span>::<span class="rs-type">Running</span> {
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<a class="symbol-link rs-fn" href="eos-workflow--src-error-rs.html#method-invariant-45">invariant</a>(format!(
+                &quot;task {:?} is not running; delegated workflow start requires a running parent task&quot;,
+                parent_task_id.<a class="symbol-link rs-fn" href="eos-workflow--src-context-section-rs.html#method-as-str-17">as_str</a>()
+            )));
+        }
+        <span class="rs-kw">let</span> open = <span class="rs-self">self</span>
+            .deps
+            .workflow_store
+            .list_for_parent_task(parent_task_id)
+            .<span class="rs-kw">await</span>?
+            .into_iter()
+            .find(eos_state::<span class="rs-type">Workflow</span>::is_open);
+        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(workflow) = open {
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<a class="symbol-link rs-fn" href="eos-workflow--src-error-rs.html#method-invariant-45">invariant</a>(format!(
+                &quot;task {:?} already has an open delegated workflow {:?}&quot;,
+                parent_task_id.<a class="symbol-link rs-fn" href="eos-workflow--src-context-section-rs.html#method-as-str-17">as_str</a>(),
+                workflow.id.<a class="symbol-link rs-fn" href="eos-workflow--src-context-section-rs.html#method-as-str-17">as_str</a>()
+            )));
+        }
+        <span class="rs-type">Ok</span>(task)
+    }
+</code></pre>
+</details></td></tr><tr id="method-compensate-failed-start-125"><td>method</td><td>compensate_failed_start</td><td><code>async fn <a class="symbol-link" href="eos-workflow--src-starter-rs.html#method-compensate-failed-start-125">compensate_failed_start</a> (&amp; self , workflow_id : &amp; eos_state :: WorkflowId , iteration_id : &amp; eos_state :: IterationId ,) -&gt; <a class="symbol-link" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a> &lt; () &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-starter-rs.html#method-compensate-failed-start-125">compensate_failed_start</a>(
+        &amp;<span class="rs-self">self</span>,
+        workflow_id: &amp;eos_state::<span class="rs-type">WorkflowId</span>,
+        iteration_id: &amp;eos_state::<span class="rs-type">IterationId</span>,
+    ) -&gt; <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a>&lt;()&gt; {
+        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(iteration) = <span class="rs-self">self</span>.deps.iteration_store.<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-registry-rs.html#method-get-52">get</a>(iteration_id).<span class="rs-kw">await</span>? {
+            <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(attempt_id) = iteration.latest_attempt_id() {
+                <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(attempt) = <span class="rs-self">self</span>.deps.attempt_store.<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-registry-rs.html#method-get-52">get</a>(attempt_id).<span class="rs-kw">await</span>? {
+                    <span class="rs-kw">if</span> !attempt.is_closed() {
+                        <span class="rs-self">self</span>.deps
+                            .attempt_store
+                            .close(
+                                attempt_id,
+                                <span class="rs-type">AttemptClosure</span>::<span class="rs-type">Failed</span> {
+                                    reason: <span class="rs-type">AttemptFailReason</span>::<span class="rs-type">StartupFailed</span>,
+                                    outcomes: <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-264">new</a>(),
+                                    closed_at: eos_state::<span class="rs-type">UtcDateTime</span>::now(),
+                                },
+                            )
+                            .<span class="rs-kw">await</span>?;
+                    }
+                }
+            }
+        }
+        <span class="rs-self">self</span>.deps
+            .iteration_store
+            .set_status(
+                iteration_id,
+                eos_state::<span class="rs-type">IterationStatus</span>::<span class="rs-type">Cancelled</span>,
+                <span class="rs-type">Some</span>(eos_state::<span class="rs-type">UtcDateTime</span>::now()),
+                <span class="rs-type">None</span>,
+            )
+            .<span class="rs-kw">await</span>?;
+        <span class="rs-self">self</span>.deps
+            .workflow_store
+            .set_status(
+                workflow_id,
+                <span class="rs-type">WorkflowStatus</span>::<span class="rs-type">Cancelled</span>,
+                <span class="rs-type">Some</span>(eos_state::<span class="rs-type">UtcDateTime</span>::now()),
+                <span class="rs-type">None</span>,
+            )
+            .<span class="rs-kw">await</span>?;
+        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(registry) = &amp;<span class="rs-self">self</span>.deps.iteration_coordinators {
+            registry.<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-registry-rs.html#method-deregister-83">deregister</a>(iteration_id);
+        }
+        <span class="rs-type">Ok</span>(())
+    }
+</code></pre>
+</details></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl std :: fmt :: Debug for <a class="symbol-link" href="eos-workflow--src-starter-rs.html#item-struct-WorkflowStarter-24">WorkflowStarter</a></code></summary><table><tbody><tr id="method-fmt-31"><td>method</td><td>fmt</td><td><code>fn <a class="symbol-link" href="eos-workflow.html#method-fmt-251">fmt</a> (&amp; self , f : &amp; mut std :: fmt :: Formatter &lt; &#x27;_ &gt;) -&gt; std :: fmt :: <a class="symbol-link" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a></code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow.html#method-fmt-251">fmt</a>(&amp;<span class="rs-self">self</span>, f: &amp;<span class="rs-kw">mut</span> std::fmt::<span class="rs-type">Formatter</span>&lt;&#x27;_&gt;) -&gt; std::fmt::<a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a> {
+        f.debug_struct(&quot;<a class="symbol-link rs-type" href="eos-workflow--src-starter-rs.html#item-struct-WorkflowStarter-24">WorkflowStarter</a>&quot;).finish_non_exhaustive()
+    }
+</code></pre>
+</details></td></tr></tbody></table></details></div>
+
   <p class="source">crates/eos-workflow/src/starter.rs:24</p>
-</article><div class="group-label">Standalone Functions</div><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn start_leaves_parent_running private async fn start_leaves_parent_running () crates/eos-workflow/src/starter.rs  ">
+</article><div class="group-label">Standalone Functions</div><article id="item-fn-start-leaves-parent-running-189" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn start_leaves_parent_running private async fn start_leaves_parent_running () crates/eos-workflow/src/starter.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>start_leaves_parent_running</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">async fn start_leaves_parent_running ()</code>
-  <div class="tags"><span>async</span></div>
+  <code class="signature">async fn <a class="symbol-link" href="eos-workflow--src-starter-rs.html#item-fn-start-leaves-parent-running-189">start_leaves_parent_running</a> ()</code>
+  <div class="tags"><span>async</span><span>tokio::test</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[tokio::test]
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-starter-rs.html#item-fn-start-leaves-parent-running-189">start_leaves_parent_running</a>() {
+        <span class="rs-kw">let</span> stores = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-264">new</a>(<span class="rs-type">MemoryStores</span>::default());
+        <span class="rs-kw">let</span> runner = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-264">new</a>(<span class="rs-type">QueueRunner</span>::default());
+        <span class="rs-kw">let</span> deps = stores.<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-rs.html#method-deps-637">deps</a>(runner);
+        <span class="rs-kw">let</span> parent = root_task(&quot;parent&quot;, <span class="rs-type">TaskStatus</span>::<span class="rs-type">Running</span>);
+        stores.seed_task(parent.clone());
+        <span class="rs-kw">let</span> before = stores.<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-task-343">task</a>(&amp;parent.id).unwrap();
+
+        <span class="rs-kw">let</span> started = <a class="symbol-link rs-type" href="eos-workflow--src-starter-rs.html#item-struct-WorkflowStarter-24">WorkflowStarter</a>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-264">new</a>(deps)
+            .<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-rs.html#method-start-69">start</a>(&quot; delegated goal &quot;, &amp;parent.id)
+            .<span class="rs-kw">await</span>
+            .unwrap();
+
+        <span class="rs-comment">// Parent row is untouched.</span>
+        assert_eq!(stores.<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-task-343">task</a>(&amp;parent.id).unwrap(), before);
+
+        <span class="rs-kw">let</span> workflow = stores.workflow(&amp;started.workflow_id).unwrap();
+        assert_eq!(workflow.parent_task_id, parent.id);
+        assert_eq!(workflow.workflow_goal, &quot;delegated goal&quot;);
+        <span class="rs-kw">let</span> iteration = stores.iteration(&amp;started.iteration_id).unwrap();
+        assert!(iteration.is_open());
+        assert_eq!(iteration.sequence_no, 1);
+        assert_eq!(iteration.iteration_goal, &quot;delegated goal&quot;);
+        <span class="rs-kw">let</span> attempt = stores.attempt(&amp;started.attempt_id).unwrap();
+        assert_eq!(attempt.stage(), <span class="rs-type">AttemptStage</span>::<span class="rs-type">Plan</span>);
+        assert_eq!(attempt.<a class="symbol-link rs-fn" href="eos-workflow--src-ports-rs.html#method-status-166">status</a>(), <span class="rs-type">AttemptStatus</span>::<span class="rs-type">Running</span>);
+        assert!(stores
+            .<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-task-343">task</a>(&amp;<span class="rs-kw">crate</span>::<a class="symbol-link rs-fn" href="eos-workflow--src-ids-rs.html#item-fn-planner-task-id-12">planner_task_id</a>(&amp;attempt.id).unwrap())
+            .is_some());
+    }
+</code></pre>
+</details>
 
   <p class="source">crates/eos-workflow/src/starter.rs:189</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn start_rejects_invalid_parent private async fn start_rejects_invalid_parent () crates/eos-workflow/src/starter.rs  ">
+</article><article id="item-fn-start-rejects-invalid-parent-225" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn start_rejects_invalid_parent private async fn start_rejects_invalid_parent () crates/eos-workflow/src/starter.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>start_rejects_invalid_parent</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">async fn start_rejects_invalid_parent ()</code>
-  <div class="tags"><span>async</span></div>
+  <code class="signature">async fn <a class="symbol-link" href="eos-workflow--src-starter-rs.html#item-fn-start-rejects-invalid-parent-225">start_rejects_invalid_parent</a> ()</code>
+  <div class="tags"><span>async</span><span>tokio::test</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[tokio::test]
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-starter-rs.html#item-fn-start-rejects-invalid-parent-225">start_rejects_invalid_parent</a>() {
+        <span class="rs-kw">let</span> stores = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-264">new</a>(<span class="rs-type">MemoryStores</span>::default());
+        <span class="rs-kw">let</span> runner = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-264">new</a>(<span class="rs-type">QueueRunner</span>::default());
+        <span class="rs-kw">let</span> deps = stores.<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-rs.html#method-deps-637">deps</a>(runner);
+        <span class="rs-kw">let</span> starter = <a class="symbol-link rs-type" href="eos-workflow--src-starter-rs.html#item-struct-WorkflowStarter-24">WorkflowStarter</a>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-264">new</a>(deps);
+
+        <span class="rs-comment">// Blank prompt.</span>
+        <span class="rs-kw">let</span> parent = root_task(&quot;parent&quot;, <span class="rs-type">TaskStatus</span>::<span class="rs-type">Running</span>);
+        stores.seed_task(parent.clone());
+        assert!(matches!(
+            starter.<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-rs.html#method-start-69">start</a>(&quot;   &quot;, &amp;parent.id).<span class="rs-kw">await</span>.unwrap_err(),
+            <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<span class="rs-type">BlankPrompt</span>
+        ));
+
+        <span class="rs-comment">// Missing parent task.</span>
+        <span class="rs-kw">let</span> err = starter
+            .<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-rs.html#method-start-69">start</a>(&quot;goal&quot;, &amp;&quot;ghost&quot;.parse().unwrap())
+            .<span class="rs-kw">await</span>
+            .unwrap_err();
+        assert!(
+            matches!(err, <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<span class="rs-type">NotFound</span> { entity: &quot;task&quot;, .. }),
+            &quot;{err:?}&quot;
+        );
+
+        <span class="rs-comment">// Non-running parent.</span>
+        <span class="rs-kw">let</span> done = root_task(&quot;done&quot;, <span class="rs-type">TaskStatus</span>::<span class="rs-type">Done</span>);
+        stores.seed_task(done.clone());
+        <span class="rs-kw">let</span> err = starter.<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-rs.html#method-start-69">start</a>(&quot;goal&quot;, &amp;done.id).<span class="rs-kw">await</span>.unwrap_err();
+        assert!(
+            matches!(err, <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<span class="rs-type">Invariant</span>(<span class="rs-kw">ref</span> m) <span class="rs-kw">if</span> m.contains(&quot;is not running&quot;)),
+            &quot;{err:?}&quot;
+        );
+
+        <span class="rs-comment">// Parent that already has an open delegated child workflow.</span>
+        starter.<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-rs.html#method-start-69">start</a>(&quot;first goal&quot;, &amp;parent.id).<span class="rs-kw">await</span>.unwrap();
+        <span class="rs-kw">let</span> err = starter.<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-rs.html#method-start-69">start</a>(&quot;second goal&quot;, &amp;parent.id).<span class="rs-kw">await</span>.unwrap_err();
+        assert!(
+            matches!(err, <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<span class="rs-type">Invariant</span>(<span class="rs-kw">ref</span> m) <span class="rs-kw">if</span> m.contains(&quot;open delegated workflow&quot;)),
+            &quot;{err:?}&quot;
+        );
+    }
+</code></pre>
+</details>
 
   <p class="source">crates/eos-workflow/src/starter.rs:225</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn compensation_rolls_back private async fn compensation_rolls_back () crates/eos-workflow/src/starter.rs  ">
+</article><article id="item-fn-compensation-rolls-back-271" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn compensation_rolls_back private async fn compensation_rolls_back () crates/eos-workflow/src/starter.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>compensation_rolls_back</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">async fn compensation_rolls_back ()</code>
-  <div class="tags"><span>async</span></div>
+  <code class="signature">async fn <a class="symbol-link" href="eos-workflow--src-starter-rs.html#item-fn-compensation-rolls-back-271">compensation_rolls_back</a> ()</code>
+  <div class="tags"><span>async</span><span>tokio::test</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[tokio::test]
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-starter-rs.html#item-fn-compensation-rolls-back-271">compensation_rolls_back</a>() {
+        <span class="rs-kw">let</span> stores = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-264">new</a>(<span class="rs-type">MemoryStores</span>::default());
+        <span class="rs-kw">let</span> runner = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-264">new</a>(<span class="rs-type">QueueRunner</span>::default());
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> deps = stores.<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-rs.html#method-deps-637">deps</a>(runner);
+        <span class="rs-comment">// No `planner` profile -&gt; the planner launch fails inside `start`.</span>
+        deps.agent_registry = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-264">new</a>(agent_registry_without_planner());
+        <span class="rs-kw">let</span> coordinators = deps.iteration_coordinators.clone().unwrap();
+        <span class="rs-kw">let</span> parent = root_task(&quot;parent&quot;, <span class="rs-type">TaskStatus</span>::<span class="rs-type">Running</span>);
+        stores.seed_task(parent.clone());
+
+        <span class="rs-kw">let</span> err = <a class="symbol-link rs-type" href="eos-workflow--src-starter-rs.html#item-struct-WorkflowStarter-24">WorkflowStarter</a>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-264">new</a>(deps)
+            .<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-rs.html#method-start-69">start</a>(&quot;delegated goal&quot;, &amp;parent.id)
+            .<span class="rs-kw">await</span>
+            .unwrap_err();
+        assert!(
+            matches!(err, <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<span class="rs-type">AgentDefinition</span>(_)),
+            &quot;expected agent-definition launch failure, got {err:?}&quot;
+        );
+
+        <span class="rs-kw">let</span> workflow = eos_state::<span class="rs-type">WorkflowStore</span>::list_for_parent_task(stores.as_ref(), &amp;parent.id)
+            .<span class="rs-kw">await</span>
+            .unwrap()
+            .pop()
+            .expect(&quot;compensation leaves the workflow row&quot;);
+        assert_eq!(workflow.status, <span class="rs-type">WorkflowStatus</span>::<span class="rs-type">Cancelled</span>);
+        <span class="rs-kw">let</span> iteration_id = workflow.iteration_ids.first().unwrap();
+        <span class="rs-kw">let</span> iteration = stores.iteration(iteration_id).unwrap();
+        assert_eq!(iteration.status, <span class="rs-type">IterationStatus</span>::<span class="rs-type">Cancelled</span>);
+        assert!(
+            coordinators.<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-registry-rs.html#method-get-52">get</a>(iteration_id).is_none(),
+            &quot;coordinator deregistered&quot;
+        );
+        <span class="rs-kw">let</span> attempt_id = iteration.attempt_ids.first().unwrap();
+        <span class="rs-kw">let</span> attempt = stores.attempt(attempt_id).unwrap();
+        assert_eq!(attempt.<a class="symbol-link rs-fn" href="eos-workflow--src-ports-rs.html#method-status-166">status</a>(), <span class="rs-type">AttemptStatus</span>::<span class="rs-type">Failed</span>);
+        assert_eq!(
+            attempt.fail_reason(),
+            <span class="rs-type">Some</span>(<span class="rs-type">AttemptFailReason</span>::<span class="rs-type">StartupFailed</span>)
+        );
+        <span class="rs-comment">// Parent untouched.</span>
+        assert_eq!(stores.<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-task-343">task</a>(&amp;parent.id).unwrap().status, <span class="rs-type">TaskStatus</span>::<span class="rs-type">Running</span>);
+    }
+</code></pre>
+</details>
 
   <p class="source">crates/eos-workflow/src/starter.rs:271</p>
 </article></div>
 </section></div>
 </main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/eos-workflow/src/starter.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-kw">use</span> std::sync::<span class="rs-type">Arc</span>;
+
+<span class="rs-kw">use</span> eos_state::{<span class="rs-type">AttemptClosure</span>, <span class="rs-type">AttemptFailReason</span>, <span class="rs-type">AttemptId</span>, <span class="rs-type">TaskId</span>, <span class="rs-type">TaskStatus</span>, <span class="rs-type">WorkflowStatus</span>};
+
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::attempt::{<a class="symbol-link rs-type" href="eos-workflow.html#item-struct-AttemptDeps-223">AttemptDeps</a>, <a class="symbol-link rs-type" href="eos-workflow--src-attempt-orchestrator-registry-rs.html#item-struct-AttemptOrchestratorRegistry-12">AttemptOrchestratorRegistry</a>};
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::lifecycle::<a class="symbol-link rs-type" href="eos-workflow--src-lifecycle-rs.html#item-struct-WorkflowLifecycle-26">WorkflowLifecycle</a>;
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::{<a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a>, <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>};
+
+<span class="rs-comment">/// Workflow start result.</span>
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Eq</span>)]
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-workflow--src-starter-rs.html#item-struct-StartedWorkflow-9">StartedWorkflow</a> {
+    <span class="rs-comment">/// Launching task.</span>
+    <span class="rs-kw">pub</span> parent_task_id: <span class="rs-type">TaskId</span>,
+    <span class="rs-comment">/// Parent attempt, if any.</span>
+    <span class="rs-kw">pub</span> parent_attempt_id: <span class="rs-type">Option</span>&lt;<span class="rs-type">AttemptId</span>&gt;,
+    <span class="rs-comment">/// Created workflow id.</span>
+    <span class="rs-kw">pub</span> workflow_id: eos_state::<span class="rs-type">WorkflowId</span>,
+    <span class="rs-comment">/// Created iteration id.</span>
+    <span class="rs-kw">pub</span> iteration_id: eos_state::<span class="rs-type">IterationId</span>,
+    <span class="rs-comment">/// Created first attempt id.</span>
+    <span class="rs-kw">pub</span> attempt_id: <span class="rs-type">AttemptId</span>,
+}
+
+<span class="rs-comment">/// Single safe entry point from a running task to a delegated workflow.</span>
+#[derive(<span class="rs-type">Clone</span>)]
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-workflow--src-starter-rs.html#item-struct-WorkflowStarter-24">WorkflowStarter</a> {
+    deps: <a class="symbol-link rs-type" href="eos-workflow.html#item-struct-AttemptDeps-223">AttemptDeps</a>,
+}
+
+<span class="rs-kw">impl</span> std::fmt::<span class="rs-type">Debug</span> <span class="rs-kw">for</span> <a class="symbol-link rs-type" href="eos-workflow--src-starter-rs.html#item-struct-WorkflowStarter-24">WorkflowStarter</a> {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow.html#method-fmt-251">fmt</a>(&amp;<span class="rs-self">self</span>, f: &amp;<span class="rs-kw">mut</span> std::fmt::<span class="rs-type">Formatter</span>&lt;&#x27;_&gt;) -&gt; std::fmt::<a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a> {
+        f.debug_struct(&quot;<a class="symbol-link rs-type" href="eos-workflow--src-starter-rs.html#item-struct-WorkflowStarter-24">WorkflowStarter</a>&quot;).finish_non_exhaustive()
+    }
+}
+
+<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-workflow--src-starter-rs.html#item-struct-WorkflowStarter-24">WorkflowStarter</a> {
+    <span class="rs-comment">/// Create a starter.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow.html#method-new-264">new</a>(deps: <a class="symbol-link rs-type" href="eos-workflow.html#item-struct-AttemptDeps-223">AttemptDeps</a>) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">Self</span> { deps }
+    }
+
+    <span class="rs-comment">/// The shared attempt-orchestrator registry these deps were built over. Used</span>
+    <span class="rs-comment">/// by the workflow-control adapter's cancel path to abort in-flight</span>
+    <span class="rs-comment">/// planner-driver tasks.</span>
+    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-starter-rs.html#method-orchestrator-registry-43">orchestrator_registry</a>(&amp;<span class="rs-self">self</span>) -&gt; &amp;<span class="rs-type">Arc</span>&lt;<a class="symbol-link rs-type" href="eos-workflow--src-attempt-orchestrator-registry-rs.html#item-struct-AttemptOrchestratorRegistry-12">AttemptOrchestratorRegistry</a>&gt; {
+        &amp;<span class="rs-self">self</span>.deps.orchestrator_registry
+    }
+
+    <span class="rs-comment">/// Start a delegated workflow from `parent_task_id`.</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// # Errors</span>
+    <span class="rs-comment">/// Returns [`WorkflowError`] when the parent is not a running task or row</span>
+    <span class="rs-comment">/// creation/start fails.</span>
+    <span class="rs-kw">pub</span> <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-rs.html#method-start-69">start</a>(&amp;<span class="rs-self">self</span>, prompt: &amp;str, parent_task_id: &amp;<span class="rs-type">TaskId</span>) -&gt; <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a>&lt;<a class="symbol-link rs-type" href="eos-workflow--src-starter-rs.html#item-struct-StartedWorkflow-9">StartedWorkflow</a>&gt; {
+        <span class="rs-kw">let</span> prompt = prompt.trim();
+        <span class="rs-kw">if</span> prompt.is_empty() {
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<span class="rs-type">BlankPrompt</span>);
+        }
+        <span class="rs-kw">let</span> parent = <span class="rs-self">self</span>
+            .<a class="symbol-link rs-fn" href="eos-workflow--src-starter-rs.html#method-assert-parent-running-and-no-open-child-92">assert_parent_running_and_no_open_child</a>(parent_task_id)
+            .<span class="rs-kw">await</span>?;
+        <span class="rs-kw">let</span> request_id = parent.request_id.clone();
+        <span class="rs-kw">let</span> parent_attempt_id = parent.attempt_id.clone();
+        <span class="rs-kw">let</span> iteration_coordinators = <span class="rs-self">self</span>.deps.iteration_coordinators.clone().ok_or_else(|| {
+            <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<a class="symbol-link rs-fn" href="eos-workflow--src-error-rs.html#method-invariant-45">invariant</a>(&quot;workflow starter requires open iteration coordinators&quot;)
+        })?;
+        <span class="rs-kw">let</span> lifecycle = <a class="symbol-link rs-type" href="eos-workflow--src-lifecycle-rs.html#item-struct-WorkflowLifecycle-26">WorkflowLifecycle</a>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-264">new</a>(<span class="rs-self">self</span>.deps.clone(), iteration_coordinators);
+        <span class="rs-kw">let</span> workflow = lifecycle
+            .<a class="symbol-link rs-fn" href="eos-workflow--src-lifecycle-rs.html#method-create-workflow-56">create_workflow</a>(&amp;request_id, parent_task_id, prompt)
+            .<span class="rs-kw">await</span>?;
+        <span class="rs-kw">let</span> (iteration, coordinator) = lifecycle
+            .<a class="symbol-link rs-fn" href="eos-workflow--src-lifecycle-rs.html#method-create-iteration-with-coordinator-70">create_iteration_with_coordinator</a>(&amp;workflow.id)
+            .<span class="rs-kw">await</span>?;
+        <span class="rs-kw">let</span> attempt = <span class="rs-kw">match</span> coordinator.<a class="symbol-link rs-fn" href="eos-workflow--src-iteration-mod-rs.html#method-create-and-start-first-attempt-115">create_and_start_first_attempt</a>().<span class="rs-kw">await</span> {
+            <span class="rs-type">Ok</span>(attempt) =&gt; attempt,
+            <span class="rs-type">Err</span>(err) =&gt; {
+                <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-workflow--src-starter-rs.html#method-compensate-failed-start-125">compensate_failed_start</a>(&amp;workflow.id, &amp;iteration.id)
+                    .<span class="rs-kw">await</span>?;
+                <span class="rs-kw">return</span> <span class="rs-type">Err</span>(err);
+            }
+        };
+        <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-workflow--src-starter-rs.html#item-struct-StartedWorkflow-9">StartedWorkflow</a> {
+            parent_task_id: parent_task_id.clone(),
+            parent_attempt_id,
+            workflow_id: workflow.id,
+            iteration_id: iteration.id,
+            attempt_id: attempt.id,
+        })
+    }
+
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-starter-rs.html#method-assert-parent-running-and-no-open-child-92">assert_parent_running_and_no_open_child</a>(
+        &amp;<span class="rs-self">self</span>,
+        parent_task_id: &amp;<span class="rs-type">TaskId</span>,
+    ) -&gt; <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a>&lt;eos_state::<span class="rs-type">Task</span>&gt; {
+        <span class="rs-kw">let</span> task = <span class="rs-self">self</span>
+            .deps
+            .task_store
+            .<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-registry-rs.html#method-get-52">get</a>(parent_task_id)
+            .<span class="rs-kw">await</span>?
+            .ok_or_else(|| <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<a class="symbol-link rs-fn" href="eos-workflow--src-error-rs.html#method-not-found-49">not_found</a>(&quot;task&quot;, parent_task_id.<a class="symbol-link rs-fn" href="eos-workflow--src-context-section-rs.html#method-as-str-17">as_str</a>()))?;
+        <span class="rs-kw">if</span> task.status != <span class="rs-type">TaskStatus</span>::<span class="rs-type">Running</span> {
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<a class="symbol-link rs-fn" href="eos-workflow--src-error-rs.html#method-invariant-45">invariant</a>(format!(
+                &quot;task {:?} is not running; delegated workflow start requires a running parent task&quot;,
+                parent_task_id.<a class="symbol-link rs-fn" href="eos-workflow--src-context-section-rs.html#method-as-str-17">as_str</a>()
+            )));
+        }
+        <span class="rs-kw">let</span> open = <span class="rs-self">self</span>
+            .deps
+            .workflow_store
+            .list_for_parent_task(parent_task_id)
+            .<span class="rs-kw">await</span>?
+            .into_iter()
+            .find(eos_state::<span class="rs-type">Workflow</span>::is_open);
+        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(workflow) = open {
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<a class="symbol-link rs-fn" href="eos-workflow--src-error-rs.html#method-invariant-45">invariant</a>(format!(
+                &quot;task {:?} already has an open delegated workflow {:?}&quot;,
+                parent_task_id.<a class="symbol-link rs-fn" href="eos-workflow--src-context-section-rs.html#method-as-str-17">as_str</a>(),
+                workflow.id.<a class="symbol-link rs-fn" href="eos-workflow--src-context-section-rs.html#method-as-str-17">as_str</a>()
+            )));
+        }
+        <span class="rs-type">Ok</span>(task)
+    }
+
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-starter-rs.html#method-compensate-failed-start-125">compensate_failed_start</a>(
+        &amp;<span class="rs-self">self</span>,
+        workflow_id: &amp;eos_state::<span class="rs-type">WorkflowId</span>,
+        iteration_id: &amp;eos_state::<span class="rs-type">IterationId</span>,
+    ) -&gt; <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a>&lt;()&gt; {
+        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(iteration) = <span class="rs-self">self</span>.deps.iteration_store.<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-registry-rs.html#method-get-52">get</a>(iteration_id).<span class="rs-kw">await</span>? {
+            <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(attempt_id) = iteration.latest_attempt_id() {
+                <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(attempt) = <span class="rs-self">self</span>.deps.attempt_store.<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-registry-rs.html#method-get-52">get</a>(attempt_id).<span class="rs-kw">await</span>? {
+                    <span class="rs-kw">if</span> !attempt.is_closed() {
+                        <span class="rs-self">self</span>.deps
+                            .attempt_store
+                            .close(
+                                attempt_id,
+                                <span class="rs-type">AttemptClosure</span>::<span class="rs-type">Failed</span> {
+                                    reason: <span class="rs-type">AttemptFailReason</span>::<span class="rs-type">StartupFailed</span>,
+                                    outcomes: <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-264">new</a>(),
+                                    closed_at: eos_state::<span class="rs-type">UtcDateTime</span>::now(),
+                                },
+                            )
+                            .<span class="rs-kw">await</span>?;
+                    }
+                }
+            }
+        }
+        <span class="rs-self">self</span>.deps
+            .iteration_store
+            .set_status(
+                iteration_id,
+                eos_state::<span class="rs-type">IterationStatus</span>::<span class="rs-type">Cancelled</span>,
+                <span class="rs-type">Some</span>(eos_state::<span class="rs-type">UtcDateTime</span>::now()),
+                <span class="rs-type">None</span>,
+            )
+            .<span class="rs-kw">await</span>?;
+        <span class="rs-self">self</span>.deps
+            .workflow_store
+            .set_status(
+                workflow_id,
+                <span class="rs-type">WorkflowStatus</span>::<span class="rs-type">Cancelled</span>,
+                <span class="rs-type">Some</span>(eos_state::<span class="rs-type">UtcDateTime</span>::now()),
+                <span class="rs-type">None</span>,
+            )
+            .<span class="rs-kw">await</span>?;
+        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(registry) = &amp;<span class="rs-self">self</span>.deps.iteration_coordinators {
+            registry.<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-registry-rs.html#method-deregister-83">deregister</a>(iteration_id);
+        }
+        <span class="rs-type">Ok</span>(())
+    }
+}
+
+#[cfg(test)]
+<span class="rs-kw">mod</span> tests {
+    #![allow(clippy::unwrap_used)]
+    <span class="rs-kw">use</span> std::sync::<span class="rs-type">Arc</span>;
+
+    <span class="rs-kw">use</span> eos_state::{
+        <span class="rs-type">AttemptFailReason</span>, <span class="rs-type">AttemptStage</span>, <span class="rs-type">AttemptStatus</span>, <span class="rs-type">IterationStatus</span>, <span class="rs-type">TaskStatus</span>, <span class="rs-type">WorkflowStatus</span>,
+    };
+
+    <span class="rs-kw">use</span> <span class="rs-kw">super</span>::*;
+    <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::support::{agent_registry_without_planner, root_task, <span class="rs-type">MemoryStores</span>, <span class="rs-type">QueueRunner</span>};
+
+    <span class="rs-comment">// AC-eos-workflow-01: starting from a running parent creates</span>
+    <span class="rs-comment">// workflow + iteration (seq 1, goal = prompt) + first attempt and leaves</span>
+    <span class="rs-comment">// the parent task byte-identical (GC-eos-workflow-02).</span>
+    #[tokio::test]
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-starter-rs.html#item-fn-start-leaves-parent-running-189">start_leaves_parent_running</a>() {
+        <span class="rs-kw">let</span> stores = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-264">new</a>(<span class="rs-type">MemoryStores</span>::default());
+        <span class="rs-kw">let</span> runner = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-264">new</a>(<span class="rs-type">QueueRunner</span>::default());
+        <span class="rs-kw">let</span> deps = stores.<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-rs.html#method-deps-637">deps</a>(runner);
+        <span class="rs-kw">let</span> parent = root_task(&quot;parent&quot;, <span class="rs-type">TaskStatus</span>::<span class="rs-type">Running</span>);
+        stores.seed_task(parent.clone());
+        <span class="rs-kw">let</span> before = stores.<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-task-343">task</a>(&amp;parent.id).unwrap();
+
+        <span class="rs-kw">let</span> started = <a class="symbol-link rs-type" href="eos-workflow--src-starter-rs.html#item-struct-WorkflowStarter-24">WorkflowStarter</a>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-264">new</a>(deps)
+            .<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-rs.html#method-start-69">start</a>(&quot; delegated goal &quot;, &amp;parent.id)
+            .<span class="rs-kw">await</span>
+            .unwrap();
+
+        <span class="rs-comment">// Parent row is untouched.</span>
+        assert_eq!(stores.<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-task-343">task</a>(&amp;parent.id).unwrap(), before);
+
+        <span class="rs-kw">let</span> workflow = stores.workflow(&amp;started.workflow_id).unwrap();
+        assert_eq!(workflow.parent_task_id, parent.id);
+        assert_eq!(workflow.workflow_goal, &quot;delegated goal&quot;);
+        <span class="rs-kw">let</span> iteration = stores.iteration(&amp;started.iteration_id).unwrap();
+        assert!(iteration.is_open());
+        assert_eq!(iteration.sequence_no, 1);
+        assert_eq!(iteration.iteration_goal, &quot;delegated goal&quot;);
+        <span class="rs-kw">let</span> attempt = stores.attempt(&amp;started.attempt_id).unwrap();
+        assert_eq!(attempt.stage(), <span class="rs-type">AttemptStage</span>::<span class="rs-type">Plan</span>);
+        assert_eq!(attempt.<a class="symbol-link rs-fn" href="eos-workflow--src-ports-rs.html#method-status-166">status</a>(), <span class="rs-type">AttemptStatus</span>::<span class="rs-type">Running</span>);
+        assert!(stores
+            .<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-task-343">task</a>(&amp;<span class="rs-kw">crate</span>::<a class="symbol-link rs-fn" href="eos-workflow--src-ids-rs.html#item-fn-planner-task-id-12">planner_task_id</a>(&amp;attempt.id).unwrap())
+            .is_some());
+    }
+
+    <span class="rs-comment">// AC-eos-workflow-02: start rejects a blank prompt, a missing/non-running</span>
+    <span class="rs-comment">// parent, and a parent with an open delegated child, each as a distinct</span>
+    <span class="rs-comment">// error. (A "missing request id" is unrepresentable: `Task.request_id` is a</span>
+    <span class="rs-comment">// non-optional `RequestId`, eliminating the Rust defensive branch.)</span>
+    #[tokio::test]
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-starter-rs.html#item-fn-start-rejects-invalid-parent-225">start_rejects_invalid_parent</a>() {
+        <span class="rs-kw">let</span> stores = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-264">new</a>(<span class="rs-type">MemoryStores</span>::default());
+        <span class="rs-kw">let</span> runner = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-264">new</a>(<span class="rs-type">QueueRunner</span>::default());
+        <span class="rs-kw">let</span> deps = stores.<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-rs.html#method-deps-637">deps</a>(runner);
+        <span class="rs-kw">let</span> starter = <a class="symbol-link rs-type" href="eos-workflow--src-starter-rs.html#item-struct-WorkflowStarter-24">WorkflowStarter</a>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-264">new</a>(deps);
+
+        <span class="rs-comment">// Blank prompt.</span>
+        <span class="rs-kw">let</span> parent = root_task(&quot;parent&quot;, <span class="rs-type">TaskStatus</span>::<span class="rs-type">Running</span>);
+        stores.seed_task(parent.clone());
+        assert!(matches!(
+            starter.<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-rs.html#method-start-69">start</a>(&quot;   &quot;, &amp;parent.id).<span class="rs-kw">await</span>.unwrap_err(),
+            <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<span class="rs-type">BlankPrompt</span>
+        ));
+
+        <span class="rs-comment">// Missing parent task.</span>
+        <span class="rs-kw">let</span> err = starter
+            .<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-rs.html#method-start-69">start</a>(&quot;goal&quot;, &amp;&quot;ghost&quot;.parse().unwrap())
+            .<span class="rs-kw">await</span>
+            .unwrap_err();
+        assert!(
+            matches!(err, <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<span class="rs-type">NotFound</span> { entity: &quot;task&quot;, .. }),
+            &quot;{err:?}&quot;
+        );
+
+        <span class="rs-comment">// Non-running parent.</span>
+        <span class="rs-kw">let</span> done = root_task(&quot;done&quot;, <span class="rs-type">TaskStatus</span>::<span class="rs-type">Done</span>);
+        stores.seed_task(done.clone());
+        <span class="rs-kw">let</span> err = starter.<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-rs.html#method-start-69">start</a>(&quot;goal&quot;, &amp;done.id).<span class="rs-kw">await</span>.unwrap_err();
+        assert!(
+            matches!(err, <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<span class="rs-type">Invariant</span>(<span class="rs-kw">ref</span> m) <span class="rs-kw">if</span> m.contains(&quot;is not running&quot;)),
+            &quot;{err:?}&quot;
+        );
+
+        <span class="rs-comment">// Parent that already has an open delegated child workflow.</span>
+        starter.<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-rs.html#method-start-69">start</a>(&quot;first goal&quot;, &amp;parent.id).<span class="rs-kw">await</span>.unwrap();
+        <span class="rs-kw">let</span> err = starter.<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-rs.html#method-start-69">start</a>(&quot;second goal&quot;, &amp;parent.id).<span class="rs-kw">await</span>.unwrap_err();
+        assert!(
+            matches!(err, <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<span class="rs-type">Invariant</span>(<span class="rs-kw">ref</span> m) <span class="rs-kw">if</span> m.contains(&quot;open delegated workflow&quot;)),
+            &quot;{err:?}&quot;
+        );
+    }
+
+    <span class="rs-comment">// AC-eos-workflow-03: a failure during first-attempt creation runs the</span>
+    <span class="rs-comment">// compensation saga (attempt FAILED STARTUP_FAILED, iteration + workflow</span>
+    <span class="rs-comment">// CANCELLED, coordinator deregistered) and never mutates the parent.</span>
+    #[tokio::test]
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-starter-rs.html#item-fn-compensation-rolls-back-271">compensation_rolls_back</a>() {
+        <span class="rs-kw">let</span> stores = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-264">new</a>(<span class="rs-type">MemoryStores</span>::default());
+        <span class="rs-kw">let</span> runner = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-264">new</a>(<span class="rs-type">QueueRunner</span>::default());
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> deps = stores.<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-rs.html#method-deps-637">deps</a>(runner);
+        <span class="rs-comment">// No `planner` profile -&gt; the planner launch fails inside `start`.</span>
+        deps.agent_registry = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-264">new</a>(agent_registry_without_planner());
+        <span class="rs-kw">let</span> coordinators = deps.iteration_coordinators.clone().unwrap();
+        <span class="rs-kw">let</span> parent = root_task(&quot;parent&quot;, <span class="rs-type">TaskStatus</span>::<span class="rs-type">Running</span>);
+        stores.seed_task(parent.clone());
+
+        <span class="rs-kw">let</span> err = <a class="symbol-link rs-type" href="eos-workflow--src-starter-rs.html#item-struct-WorkflowStarter-24">WorkflowStarter</a>::<a class="symbol-link rs-fn" href="eos-workflow.html#method-new-264">new</a>(deps)
+            .<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-rs.html#method-start-69">start</a>(&quot;delegated goal&quot;, &amp;parent.id)
+            .<span class="rs-kw">await</span>
+            .unwrap_err();
+        assert!(
+            matches!(err, <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-enum-WorkflowError-6">WorkflowError</a>::<span class="rs-type">AgentDefinition</span>(_)),
+            &quot;expected agent-definition launch failure, got {err:?}&quot;
+        );
+
+        <span class="rs-kw">let</span> workflow = eos_state::<span class="rs-type">WorkflowStore</span>::list_for_parent_task(stores.as_ref(), &amp;parent.id)
+            .<span class="rs-kw">await</span>
+            .unwrap()
+            .pop()
+            .expect(&quot;compensation leaves the workflow row&quot;);
+        assert_eq!(workflow.status, <span class="rs-type">WorkflowStatus</span>::<span class="rs-type">Cancelled</span>);
+        <span class="rs-kw">let</span> iteration_id = workflow.iteration_ids.first().unwrap();
+        <span class="rs-kw">let</span> iteration = stores.iteration(iteration_id).unwrap();
+        assert_eq!(iteration.status, <span class="rs-type">IterationStatus</span>::<span class="rs-type">Cancelled</span>);
+        assert!(
+            coordinators.<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-registry-rs.html#method-get-52">get</a>(iteration_id).is_none(),
+            &quot;coordinator deregistered&quot;
+        );
+        <span class="rs-kw">let</span> attempt_id = iteration.attempt_ids.first().unwrap();
+        <span class="rs-kw">let</span> attempt = stores.attempt(attempt_id).unwrap();
+        assert_eq!(attempt.<a class="symbol-link rs-fn" href="eos-workflow--src-ports-rs.html#method-status-166">status</a>(), <span class="rs-type">AttemptStatus</span>::<span class="rs-type">Failed</span>);
+        assert_eq!(
+            attempt.fail_reason(),
+            <span class="rs-type">Some</span>(<span class="rs-type">AttemptFailReason</span>::<span class="rs-type">StartupFailed</span>)
+        );
+        <span class="rs-comment">// Parent untouched.</span>
+        assert_eq!(stores.<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-plan-dag-rs.html#item-fn-task-343">task</a>(&amp;parent.id).unwrap().status, <span class="rs-type">TaskStatus</span>::<span class="rs-type">Running</span>);
+    }
+}
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
   <script src="../assets/inventory.js"></script>
 </body>
 </html>

@@ -8,8 +8,16 @@
 </head>
 <body>
   <header>
-    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
-    <h1>eos-daemon File Inventory</h1>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>eos-daemon File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS/sandbox &amp;&amp; cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
   </header>
   <a class="back-link" href="../index.html">sandbox</a>
 <section class="summary">
@@ -47,39 +55,231 @@
       <span>0 methods</span>
     </div>
   </div>
-  <div class="items"><div class="group-label">File-Owned Types</div><article class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct BuiltinOp pub(crate) pub(crate) struct BuiltinOp crates/eos-daemon/src/ops/registry.rs wire &amp; 'static str handler Handler ">
+  <div class="items"><div class="group-label">File-Owned Types</div><article id="item-struct-BuiltinOp-11" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct BuiltinOp pub(crate) pub(crate) struct BuiltinOp crates/eos-daemon/src/ops/registry.rs wire &amp; 'static str handler Handler ">
   <div class="item-head">
     <span class="kind">struct</span>
     <h3>BuiltinOp</h3>
     <span class="visibility">pub(crate)</span>
   </div>
-  <code class="signature">pub(crate) struct BuiltinOp</code>
-  <div class="tags"></div>
-  <h4>Fields</h4><table><tbody><tr><td>pub(crate)</td><td>wire</td><td><code>&amp; 'static str</code></td></tr><tr><td>pub(crate)</td><td>handler</td><td><code>Handler</code></td></tr></tbody></table>
+  <code class="signature">pub(crate) struct <a class="symbol-link" href="eos-daemon--src-ops-registry-rs.html#item-struct-BuiltinOp-11">BuiltinOp</a></code>
+  <div class="tags"><span>derive: Clone</span><span>derive: Copy</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub(crate)</td><td>wire</td><td><code>&amp; &#x27;static str</code></td></tr><tr><td>pub(crate)</td><td>handler</td><td><code><a class="symbol-link" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-type-Handler-50">Handler</a></code></td></tr></tbody></table>
+
   <p class="source">crates/eos-daemon/src/ops/registry.rs:11</p>
-</article><div class="group-label">Standalone Functions</div><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn builtin_registry_matches_protocol_ops private fn builtin_registry_matches_protocol_ops () crates/eos-daemon/src/ops/registry.rs  ">
+</article><div class="group-label">Standalone Functions</div><article id="item-fn-builtin-registry-matches-protocol-ops-152" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn builtin_registry_matches_protocol_ops private fn builtin_registry_matches_protocol_ops () crates/eos-daemon/src/ops/registry.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>builtin_registry_matches_protocol_ops</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn builtin_registry_matches_protocol_ops ()</code>
-  <div class="tags"></div>
+  <code class="signature">fn <a class="symbol-link" href="eos-daemon--src-ops-registry-rs.html#item-fn-builtin-registry-matches-protocol-ops-152">builtin_registry_matches_protocol_ops</a> ()</code>
+  <div class="tags"><span>test</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-ops-registry-rs.html#item-fn-builtin-registry-matches-protocol-ops-152">builtin_registry_matches_protocol_ops</a>() {
+        <span class="rs-kw">let</span> registered = <span class="rs-type">BUILTIN_OPS</span>.iter().map(|op| op.wire).collect::&lt;<span class="rs-type">Vec</span>&lt;_&gt;&gt;();
+        assert_eq!(registered, <span class="rs-type">BUILTIN_DAEMON_OPS</span>);
+    }
+</code></pre>
+</details>
 
   <p class="source">crates/eos-daemon/src/ops/registry.rs:152</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn builtin_registry_has_no_duplicate_wires private fn builtin_registry_has_no_duplicate_wires () crates/eos-daemon/src/ops/registry.rs  ">
+</article><article id="item-fn-builtin-registry-has-no-duplicate-wires-158" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn builtin_registry_has_no_duplicate_wires private fn builtin_registry_has_no_duplicate_wires () crates/eos-daemon/src/ops/registry.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>builtin_registry_has_no_duplicate_wires</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn builtin_registry_has_no_duplicate_wires ()</code>
-  <div class="tags"></div>
+  <code class="signature">fn <a class="symbol-link" href="eos-daemon--src-ops-registry-rs.html#item-fn-builtin-registry-has-no-duplicate-wires-158">builtin_registry_has_no_duplicate_wires</a> ()</code>
+  <div class="tags"><span>test</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-ops-registry-rs.html#item-fn-builtin-registry-has-no-duplicate-wires-158">builtin_registry_has_no_duplicate_wires</a>() {
+        <span class="rs-kw">let</span> registered = <span class="rs-type">BUILTIN_OPS</span>.iter().map(|op| op.wire).collect::&lt;<span class="rs-type">Vec</span>&lt;_&gt;&gt;();
+        <span class="rs-kw">let</span> unique = registered.iter().copied().collect::&lt;<span class="rs-type">BTreeSet</span>&lt;_&gt;&gt;();
+        assert_eq!(unique.len(), registered.len());
+    }
+</code></pre>
+</details>
 
   <p class="source">crates/eos-daemon/src/ops/registry.rs:158</p>
 </article></div>
 </section></div>
 </main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/eos-daemon/src/ops/registry.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-comment">//! Built-in daemon operation registry.</span>
+
+<span class="rs-kw">use</span> eos_protocol::ops <span class="rs-kw">as</span> protocol_ops;
+
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::dispatcher::<a class="symbol-link rs-type" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-type-Handler-50">Handler</a>;
+
+<span class="rs-kw">use</span> <span class="rs-kw">super</span>::{
+    audit, checkpoint, command_sessions, control, files, isolated_workspace, plugins, workspace_run,
+};
+
+#[derive(<span class="rs-type">Clone</span>, <span class="rs-type">Copy</span>)]
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-daemon--src-ops-registry-rs.html#item-struct-BuiltinOp-11">BuiltinOp</a> {
+    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) wire: &amp;&#x27;<span class="rs-kw">static</span> str,
+    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) handler: <a class="symbol-link rs-type" href="eos-daemon--src-dispatch-dispatcher-rs.html#item-type-Handler-50">Handler</a>,
+}
+
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">const</span> <span class="rs-type">BUILTIN_OPS</span>: &amp;[<a class="symbol-link rs-type" href="eos-daemon--src-ops-registry-rs.html#item-struct-BuiltinOp-11">BuiltinOp</a>] = &amp;[
+    <a class="symbol-link rs-type" href="eos-daemon--src-ops-registry-rs.html#item-struct-BuiltinOp-11">BuiltinOp</a> {
+        wire: protocol_ops::<span class="rs-type">API_RUNTIME_READY</span>,
+        handler: control::op_runtime_ready,
+    },
+    <a class="symbol-link rs-type" href="eos-daemon--src-ops-registry-rs.html#item-struct-BuiltinOp-11">BuiltinOp</a> {
+        wire: protocol_ops::<span class="rs-type">API_V1_HEARTBEAT</span>,
+        handler: control::op_heartbeat,
+    },
+    <a class="symbol-link rs-type" href="eos-daemon--src-ops-registry-rs.html#item-struct-BuiltinOp-11">BuiltinOp</a> {
+        wire: protocol_ops::<span class="rs-type">API_V1_CANCEL</span>,
+        handler: control::op_cancel,
+    },
+    <a class="symbol-link rs-type" href="eos-daemon--src-ops-registry-rs.html#item-struct-BuiltinOp-11">BuiltinOp</a> {
+        wire: protocol_ops::<span class="rs-type">API_V1_INFLIGHT_COUNT</span>,
+        handler: control::op_inflight_count,
+    },
+    <a class="symbol-link rs-type" href="eos-daemon--src-ops-registry-rs.html#item-struct-BuiltinOp-11">BuiltinOp</a> {
+        wire: protocol_ops::<span class="rs-type">API_LAYER_METRICS</span>,
+        handler: checkpoint::op_layer_metrics,
+    },
+    <a class="symbol-link rs-type" href="eos-daemon--src-ops-registry-rs.html#item-struct-BuiltinOp-11">BuiltinOp</a> {
+        wire: protocol_ops::<span class="rs-type">API_ENSURE_WORKSPACE_BASE</span>,
+        handler: checkpoint::op_ensure_workspace_base,
+    },
+    <a class="symbol-link rs-type" href="eos-daemon--src-ops-registry-rs.html#item-struct-BuiltinOp-11">BuiltinOp</a> {
+        wire: protocol_ops::<span class="rs-type">API_BUILD_WORKSPACE_BASE</span>,
+        handler: checkpoint::op_build_workspace_base,
+    },
+    <a class="symbol-link rs-type" href="eos-daemon--src-ops-registry-rs.html#item-struct-BuiltinOp-11">BuiltinOp</a> {
+        wire: protocol_ops::<span class="rs-type">API_COMMIT_TO_WORKSPACE</span>,
+        handler: checkpoint::op_commit_to_workspace,
+    },
+    <a class="symbol-link rs-type" href="eos-daemon--src-ops-registry-rs.html#item-struct-BuiltinOp-11">BuiltinOp</a> {
+        wire: protocol_ops::<span class="rs-type">API_COMMIT_TO_GIT</span>,
+        handler: checkpoint::op_commit_to_git,
+    },
+    <a class="symbol-link rs-type" href="eos-daemon--src-ops-registry-rs.html#item-struct-BuiltinOp-11">BuiltinOp</a> {
+        wire: protocol_ops::<span class="rs-type">API_WORKSPACE_BINDING</span>,
+        handler: checkpoint::op_workspace_binding,
+    },
+    <a class="symbol-link rs-type" href="eos-daemon--src-ops-registry-rs.html#item-struct-BuiltinOp-11">BuiltinOp</a> {
+        wire: protocol_ops::<span class="rs-type">API_AUDIT_PULL</span>,
+        handler: audit::op_audit_pull,
+    },
+    <a class="symbol-link rs-type" href="eos-daemon--src-ops-registry-rs.html#item-struct-BuiltinOp-11">BuiltinOp</a> {
+        wire: protocol_ops::<span class="rs-type">API_AUDIT_SNAPSHOT</span>,
+        handler: audit::op_audit_snapshot,
+    },
+    <a class="symbol-link rs-type" href="eos-daemon--src-ops-registry-rs.html#item-struct-BuiltinOp-11">BuiltinOp</a> {
+        wire: protocol_ops::<span class="rs-type">API_AUDIT_RESET_FLOOR</span>,
+        handler: audit::op_audit_reset_floor,
+    },
+    <a class="symbol-link rs-type" href="eos-daemon--src-ops-registry-rs.html#item-struct-BuiltinOp-11">BuiltinOp</a> {
+        wire: protocol_ops::<span class="rs-type">API_V1_READ_FILE</span>,
+        handler: files::op_read_file,
+    },
+    <a class="symbol-link rs-type" href="eos-daemon--src-ops-registry-rs.html#item-struct-BuiltinOp-11">BuiltinOp</a> {
+        wire: protocol_ops::<span class="rs-type">API_V1_WRITE_FILE</span>,
+        handler: files::op_write_file,
+    },
+    <a class="symbol-link rs-type" href="eos-daemon--src-ops-registry-rs.html#item-struct-BuiltinOp-11">BuiltinOp</a> {
+        wire: protocol_ops::<span class="rs-type">API_V1_EDIT_FILE</span>,
+        handler: files::op_edit_file,
+    },
+    <a class="symbol-link rs-type" href="eos-daemon--src-ops-registry-rs.html#item-struct-BuiltinOp-11">BuiltinOp</a> {
+        wire: protocol_ops::<span class="rs-type">API_PLUGIN_ENSURE</span>,
+        handler: plugins::op_ensure,
+    },
+    <a class="symbol-link rs-type" href="eos-daemon--src-ops-registry-rs.html#item-struct-BuiltinOp-11">BuiltinOp</a> {
+        wire: protocol_ops::<span class="rs-type">API_PLUGIN_STATUS</span>,
+        handler: plugins::op_status,
+    },
+    <a class="symbol-link rs-type" href="eos-daemon--src-ops-registry-rs.html#item-struct-BuiltinOp-11">BuiltinOp</a> {
+        wire: protocol_ops::<span class="rs-type">API_ISOLATED_WORKSPACE_ENTER</span>,
+        handler: isolated_workspace::op_enter,
+    },
+    <a class="symbol-link rs-type" href="eos-daemon--src-ops-registry-rs.html#item-struct-BuiltinOp-11">BuiltinOp</a> {
+        wire: protocol_ops::<span class="rs-type">API_ISOLATED_WORKSPACE_EXIT</span>,
+        handler: isolated_workspace::op_exit,
+    },
+    <a class="symbol-link rs-type" href="eos-daemon--src-ops-registry-rs.html#item-struct-BuiltinOp-11">BuiltinOp</a> {
+        wire: protocol_ops::<span class="rs-type">API_ISOLATED_WORKSPACE_STATUS</span>,
+        handler: isolated_workspace::op_status,
+    },
+    <a class="symbol-link rs-type" href="eos-daemon--src-ops-registry-rs.html#item-struct-BuiltinOp-11">BuiltinOp</a> {
+        wire: protocol_ops::<span class="rs-type">API_ISOLATED_WORKSPACE_LIST_OPEN</span>,
+        handler: isolated_workspace::op_list_open,
+    },
+    <a class="symbol-link rs-type" href="eos-daemon--src-ops-registry-rs.html#item-struct-BuiltinOp-11">BuiltinOp</a> {
+        wire: protocol_ops::<span class="rs-type">API_ISOLATED_WORKSPACE_TEST_RESET</span>,
+        handler: isolated_workspace::op_test_reset,
+    },
+    <a class="symbol-link rs-type" href="eos-daemon--src-ops-registry-rs.html#item-struct-BuiltinOp-11">BuiltinOp</a> {
+        wire: protocol_ops::<span class="rs-type">API_V1_EXEC_COMMAND</span>,
+        handler: command_sessions::op_exec_command,
+    },
+    <a class="symbol-link rs-type" href="eos-daemon--src-ops-registry-rs.html#item-struct-BuiltinOp-11">BuiltinOp</a> {
+        wire: protocol_ops::<span class="rs-type">API_V1_WRITE_STDIN</span>,
+        handler: command_sessions::op_command_write_stdin,
+    },
+    <a class="symbol-link rs-type" href="eos-daemon--src-ops-registry-rs.html#item-struct-BuiltinOp-11">BuiltinOp</a> {
+        wire: protocol_ops::<span class="rs-type">API_V1_COMMAND_READ_PROGRESS</span>,
+        handler: command_sessions::op_command_read_progress,
+    },
+    <a class="symbol-link rs-type" href="eos-daemon--src-ops-registry-rs.html#item-struct-BuiltinOp-11">BuiltinOp</a> {
+        wire: protocol_ops::<span class="rs-type">API_V1_COMMAND_CANCEL</span>,
+        handler: command_sessions::op_command_cancel,
+    },
+    <a class="symbol-link rs-type" href="eos-daemon--src-ops-registry-rs.html#item-struct-BuiltinOp-11">BuiltinOp</a> {
+        wire: protocol_ops::<span class="rs-type">API_V1_COMMAND_COLLECT_COMPLETED</span>,
+        handler: command_sessions::op_command_collect_completed,
+    },
+    <a class="symbol-link rs-type" href="eos-daemon--src-ops-registry-rs.html#item-struct-BuiltinOp-11">BuiltinOp</a> {
+        wire: protocol_ops::<span class="rs-type">API_V1_COMMAND_SESSION_COUNT</span>,
+        handler: command_sessions::op_command_session_count,
+    },
+    <a class="symbol-link rs-type" href="eos-daemon--src-ops-registry-rs.html#item-struct-BuiltinOp-11">BuiltinOp</a> {
+        wire: protocol_ops::<span class="rs-type">API_V1_CANCEL_WORKSPACE_RUNS_BY_CALLER</span>,
+        handler: workspace_run::op_cancel_workspace_runs_by_caller_id,
+    },
+    <a class="symbol-link rs-type" href="eos-daemon--src-ops-registry-rs.html#item-struct-BuiltinOp-11">BuiltinOp</a> {
+        wire: protocol_ops::<span class="rs-type">API_V1_CANCEL_WORKSPACE_RUNS</span>,
+        handler: workspace_run::op_cancel_workspace_runs,
+    },
+];
+
+#[cfg(test)]
+<span class="rs-kw">mod</span> tests {
+    <span class="rs-kw">use</span> std::collections::<span class="rs-type">BTreeSet</span>;
+
+    <span class="rs-kw">use</span> eos_protocol::ops::<span class="rs-type">BUILTIN_DAEMON_OPS</span>;
+
+    <span class="rs-kw">use</span> <span class="rs-kw">super</span>::*;
+
+    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-ops-registry-rs.html#item-fn-builtin-registry-matches-protocol-ops-152">builtin_registry_matches_protocol_ops</a>() {
+        <span class="rs-kw">let</span> registered = <span class="rs-type">BUILTIN_OPS</span>.iter().map(|op| op.wire).collect::&lt;<span class="rs-type">Vec</span>&lt;_&gt;&gt;();
+        assert_eq!(registered, <span class="rs-type">BUILTIN_DAEMON_OPS</span>);
+    }
+
+    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-ops-registry-rs.html#item-fn-builtin-registry-has-no-duplicate-wires-158">builtin_registry_has_no_duplicate_wires</a>() {
+        <span class="rs-kw">let</span> registered = <span class="rs-type">BUILTIN_OPS</span>.iter().map(|op| op.wire).collect::&lt;<span class="rs-type">Vec</span>&lt;_&gt;&gt;();
+        <span class="rs-kw">let</span> unique = registered.iter().copied().collect::&lt;<span class="rs-type">BTreeSet</span>&lt;_&gt;&gt;();
+        assert_eq!(unique.len(), registered.len());
+    }
+}
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
   <script src="../assets/inventory.js"></script>
 </body>
 </html>

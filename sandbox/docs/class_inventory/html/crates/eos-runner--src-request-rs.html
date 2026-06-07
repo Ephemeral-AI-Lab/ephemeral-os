@@ -8,8 +8,16 @@
 </head>
 <body>
   <header>
-    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
-    <h1>eos-runner File Inventory</h1>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>eos-runner File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS/sandbox &amp;&amp; cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
   </header>
   <a class="back-link" href="../index.html">sandbox</a>
 <section class="summary">
@@ -47,99 +55,395 @@
       <span>5 methods</span>
     </div>
   </div>
-  <div class="items"><div class="group-label">File-Owned Types</div><article class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct Fd pub pub struct Fd crates/eos-runner/src/request.rs 0 RawFd ">
+  <div class="items"><div class="group-label">File-Owned Types</div><article id="item-struct-Fd-29" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct Fd pub pub struct Fd crates/eos-runner/src/request.rs 0 RawFd ">
   <div class="item-head">
     <span class="kind">struct</span>
     <h3>Fd</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub struct Fd</code>
-  <div class="tags"><span>serde</span></div>
+  <code class="signature">pub struct <a class="symbol-link" href="eos-runner--src-request-rs.html#item-struct-Fd-29">Fd</a></code>
+  <p class="docstring">A raw file descriptor handle.<br>`#[repr(transparent)]` lets this cross the FFI boundary into the `setns(2)`<br>syscall unchanged.</p>
+  <div class="tags"><span>derive: Clone</span><span>derive: Copy</span><span>derive: Debug</span><span>derive: Deserialize</span><span>derive: Eq</span><span>derive: PartialEq</span><span>derive: Serialize</span><span>repr: transparent</span><span>serde</span></div>
   <h4>Fields</h4><table><tbody><tr><td>pub</td><td>0</td><td><code>RawFd</code></td></tr></tbody></table>
+
   <p class="source">crates/eos-runner/src/request.rs:29</p>
-</article><article class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct WorkspaceRoot pub pub struct WorkspaceRoot crates/eos-runner/src/request.rs 0 PathBuf ">
+</article><article id="item-struct-WorkspaceRoot-37" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct WorkspaceRoot pub pub struct WorkspaceRoot crates/eos-runner/src/request.rs 0 PathBuf ">
   <div class="item-head">
     <span class="kind">struct</span>
     <h3>WorkspaceRoot</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub struct WorkspaceRoot</code>
-  <div class="tags"><span>serde</span></div>
+  <code class="signature">pub struct <a class="symbol-link" href="eos-runner--src-request-rs.html#item-struct-WorkspaceRoot-37">WorkspaceRoot</a></code>
+  <p class="docstring">The validated workspace root the overlay is mounted at.</p>
+  <div class="tags"><span>derive: Clone</span><span>derive: Debug</span><span>derive: Deserialize</span><span>derive: Eq</span><span>derive: PartialEq</span><span>derive: Serialize</span><span>serde</span></div>
   <h4>Fields</h4><table><tbody><tr><td>pub</td><td>0</td><td><code>PathBuf</code></td></tr></tbody></table>
+
   <p class="source">crates/eos-runner/src/request.rs:37</p>
-</article><article class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct NsFds pub pub struct NsFds crates/eos-runner/src/request.rs user Option &lt; Fd &gt; mnt Option &lt; Fd &gt; pid Option &lt; Fd &gt; net Option &lt; Fd &gt; ">
+</article><article id="item-struct-NsFds-41" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct NsFds pub pub struct NsFds crates/eos-runner/src/request.rs user Option &lt; Fd &gt; mnt Option &lt; Fd &gt; pid Option &lt; Fd &gt; net Option &lt; Fd &gt; ">
   <div class="item-head">
     <span class="kind">struct</span>
     <h3>NsFds</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub struct NsFds</code>
-  <div class="tags"><span>serde</span></div>
-  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>user</td><td><code>Option &lt; Fd &gt;</code></td></tr><tr><td>pub</td><td>mnt</td><td><code>Option &lt; Fd &gt;</code></td></tr><tr><td>pub</td><td>pid</td><td><code>Option &lt; Fd &gt;</code></td></tr><tr><td>pub</td><td>net</td><td><code>Option &lt; Fd &gt;</code></td></tr></tbody></table>
+  <code class="signature">pub struct <a class="symbol-link" href="eos-runner--src-request-rs.html#item-struct-NsFds-41">NsFds</a></code>
+  <p class="docstring">The ns-holder's pre-opened namespace FDs.<br>Applied in this exact order:<br>`user` (privilege change), `mnt` (mount table), `pid` (descendants only,<br>before `fork`), `net`. A wrong order breaks the setns sequence.</p>
+  <div class="tags"><span>derive: Clone</span><span>derive: Copy</span><span>derive: Debug</span><span>derive: Deserialize</span><span>derive: Eq</span><span>derive: PartialEq</span><span>derive: Serialize</span><span>serde</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>user</td><td><code>Option &lt; <a class="symbol-link" href="eos-runner--src-request-rs.html#item-struct-Fd-29">Fd</a> &gt;</code></td></tr><tr><td>pub</td><td>mnt</td><td><code>Option &lt; <a class="symbol-link" href="eos-runner--src-request-rs.html#item-struct-Fd-29">Fd</a> &gt;</code></td></tr><tr><td>pub</td><td>pid</td><td><code>Option &lt; <a class="symbol-link" href="eos-runner--src-request-rs.html#item-struct-Fd-29">Fd</a> &gt;</code></td></tr><tr><td>pub</td><td>net</td><td><code>Option &lt; <a class="symbol-link" href="eos-runner--src-request-rs.html#item-struct-Fd-29">Fd</a> &gt;</code></td></tr></tbody></table>
+
   <p class="source">crates/eos-runner/src/request.rs:41</p>
-</article><article class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct ToolCall pub pub struct ToolCall crates/eos-runner/src/request.rs invocation_id String caller_id String verb RunnerVerb intent Intent args Value background bool ">
+</article><article id="item-struct-ToolCall-119" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct ToolCall pub pub struct ToolCall crates/eos-runner/src/request.rs invocation_id String caller_id String verb RunnerVerb intent Intent args Value background bool ">
   <div class="item-head">
     <span class="kind">struct</span>
     <h3>ToolCall</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub struct ToolCall</code>
-  <div class="tags"><span>serde</span></div>
-  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>invocation_id</td><td><code>String</code></td></tr><tr><td>pub</td><td>caller_id</td><td><code>String</code></td></tr><tr><td>pub</td><td>verb</td><td><code>RunnerVerb</code></td></tr><tr><td>pub</td><td>intent</td><td><code>Intent</code></td></tr><tr><td>pub</td><td>args</td><td><code>Value</code></td></tr><tr><td>pub</td><td>background</td><td><code>bool</code></td></tr></tbody></table>
+  <code class="signature">pub struct <a class="symbol-link" href="eos-runner--src-request-rs.html#item-struct-ToolCall-119">ToolCall</a></code>
+  <p class="docstring">One tool invocation, the runner's view of `ToolCallRequest`.<br>`args` is the opaque verb payload forwarded to the in-namespace primitive;<br>`intent` reuses the protocol enum so the runner does not redefine the verb<br>taxonomy.</p>
+  <div class="tags"><span>derive: Clone</span><span>derive: Debug</span><span>derive: Deserialize</span><span>derive: Eq</span><span>derive: PartialEq</span><span>derive: Serialize</span><span>serde</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>invocation_id</td><td><code>String</code></td></tr><tr><td>pub</td><td>caller_id</td><td><code>String</code></td></tr><tr><td>pub</td><td>verb</td><td><code><a class="symbol-link" href="eos-runner--src-request-rs.html#item-enum-RunnerVerb-58">RunnerVerb</a></code></td></tr><tr><td>pub</td><td>intent</td><td><code>Intent</code></td></tr><tr><td>pub</td><td>args</td><td><code>Value</code></td></tr><tr><td>pub</td><td>background</td><td><code>bool</code></td></tr></tbody></table>
+
   <p class="source">crates/eos-runner/src/request.rs:119</p>
-</article><article class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct RunRequest pub pub struct RunRequest crates/eos-runner/src/request.rs mode RunMode tool_call ToolCall workspace_root WorkspaceRoot layer_paths Vec &lt; PathBuf &gt; upperdir Option &lt; PathBuf &gt; workdir Option &lt; PathBuf &gt; ns_fds Option &lt; NsFds &gt; cgroup_path Option &lt; PathBuf &gt; timeout_seconds Option &lt; f64 &gt; ">
+</article><article id="item-struct-RunRequest-135" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct RunRequest pub pub struct RunRequest crates/eos-runner/src/request.rs mode RunMode tool_call ToolCall workspace_root WorkspaceRoot layer_paths Vec &lt; PathBuf &gt; upperdir Option &lt; PathBuf &gt; workdir Option &lt; PathBuf &gt; ns_fds Option &lt; NsFds &gt; cgroup_path Option &lt; PathBuf &gt; timeout_seconds Option &lt; f64 &gt; ">
   <div class="item-head">
     <span class="kind">struct</span>
     <h3>RunRequest</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub struct RunRequest</code>
-  <div class="tags"><span>dto</span><span>serde</span></div>
-  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>mode</td><td><code>RunMode</code></td></tr><tr><td>pub</td><td>tool_call</td><td><code>ToolCall</code></td></tr><tr><td>pub</td><td>workspace_root</td><td><code>WorkspaceRoot</code></td></tr><tr><td>pub</td><td>layer_paths</td><td><code>Vec &lt; PathBuf &gt;</code></td></tr><tr><td>pub</td><td>upperdir</td><td><code>Option &lt; PathBuf &gt;</code></td></tr><tr><td>pub</td><td>workdir</td><td><code>Option &lt; PathBuf &gt;</code></td></tr><tr><td>pub</td><td>ns_fds</td><td><code>Option &lt; NsFds &gt;</code></td></tr><tr><td>pub</td><td>cgroup_path</td><td><code>Option &lt; PathBuf &gt;</code></td></tr><tr><td>pub</td><td>timeout_seconds</td><td><code>Option &lt; f64 &gt;</code></td></tr></tbody></table>
+  <code class="signature">pub struct <a class="symbol-link" href="eos-runner--src-request-rs.html#item-struct-RunRequest-135">RunRequest</a></code>
+  <p class="docstring">A fully-resolved request to the runner: which mode, the tool call, the<br>overlay layout (fresh-ns), and the held namespace FDs (setns).</p>
+  <div class="tags"><span>derive: Clone</span><span>derive: Debug</span><span>derive: Deserialize</span><span>derive: PartialEq</span><span>derive: Serialize</span><span>dto</span><span>serde</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>mode</td><td><code><a class="symbol-link" href="eos-runner--src-request-rs.html#item-enum-RunMode-17">RunMode</a></code></td></tr><tr><td>pub</td><td>tool_call</td><td><code><a class="symbol-link" href="eos-runner--src-request-rs.html#item-struct-ToolCall-119">ToolCall</a></code></td></tr><tr><td>pub</td><td>workspace_root</td><td><code><a class="symbol-link" href="eos-runner--src-request-rs.html#item-struct-WorkspaceRoot-37">WorkspaceRoot</a></code></td></tr><tr><td>pub</td><td>layer_paths</td><td><code>Vec &lt; PathBuf &gt;</code></td></tr><tr><td>pub</td><td>upperdir</td><td><code>Option &lt; PathBuf &gt;</code></td></tr><tr><td>pub</td><td>workdir</td><td><code>Option &lt; PathBuf &gt;</code></td></tr><tr><td>pub</td><td>ns_fds</td><td><code>Option &lt; <a class="symbol-link" href="eos-runner--src-request-rs.html#item-struct-NsFds-41">NsFds</a> &gt;</code></td></tr><tr><td>pub</td><td>cgroup_path</td><td><code>Option &lt; PathBuf &gt;</code></td></tr><tr><td>pub</td><td>timeout_seconds</td><td><code>Option &lt; f64 &gt;</code></td></tr></tbody></table>
+
   <p class="source">crates/eos-runner/src/request.rs:135</p>
-</article><article class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct RunResult pub pub struct RunResult crates/eos-runner/src/request.rs tool_result Value exit_code i32 ">
+</article><article id="item-struct-RunResult-167" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct RunResult pub pub struct RunResult crates/eos-runner/src/request.rs tool_result Value exit_code i32 ">
   <div class="item-head">
     <span class="kind">struct</span>
     <h3>RunResult</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub struct RunResult</code>
-  <div class="tags"><span>serde</span></div>
+  <code class="signature">pub struct <a class="symbol-link" href="eos-runner--src-request-rs.html#item-struct-RunResult-167">RunResult</a></code>
+  <p class="docstring">The runner's result.<br>Contains the in-namespace tool result JSON plus the child's exit code. The<br>Rust helpers return the tool primitive's `asdict` dict verbatim<br>(defaulting `workspace`), which the runner forwards opaquely as [`Value`].</p>
+  <div class="tags"><span>derive: Clone</span><span>derive: Debug</span><span>derive: Deserialize</span><span>derive: Eq</span><span>derive: PartialEq</span><span>derive: Serialize</span><span>serde</span></div>
   <h4>Fields</h4><table><tbody><tr><td>pub</td><td>tool_result</td><td><code>Value</code></td></tr><tr><td>pub</td><td>exit_code</td><td><code>i32</code></td></tr></tbody></table>
+
   <p class="source">crates/eos-runner/src/request.rs:167</p>
-</article><article class="type-card" data-kind="enum" data-kind-list="enum field type-model" data-filter-text="enum RunMode pub pub enum RunMode crates/eos-runner/src/request.rs  ">
+</article><article id="item-enum-RunMode-17" class="type-card" data-kind="enum" data-kind-list="enum field type-model" data-filter-text="enum RunMode pub pub enum RunMode crates/eos-runner/src/request.rs  ">
   <div class="item-head">
     <span class="kind">enum</span>
     <h3>RunMode</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub enum RunMode</code>
-  <div class="tags"><span>serde</span></div>
+  <code class="signature">pub enum <a class="symbol-link" href="eos-runner--src-request-rs.html#item-enum-RunMode-17">RunMode</a></code>
+  <p class="docstring">Which namespace strategy the runner uses for this call.</p>
+  <div class="tags"><span>derive: Clone</span><span>derive: Copy</span><span>derive: Debug</span><span>derive: Deserialize</span><span>derive: Eq</span><span>derive: PartialEq</span><span>derive: Serialize</span><span>serde</span><span>serde: rename_all</span></div>
   <h4>Variants</h4><table><tbody><tr><td>FreshNs</td><td><code></code></td></tr><tr><td>SetNs</td><td><code></code></td></tr></tbody></table>
+
   <p class="source">crates/eos-runner/src/request.rs:17</p>
-</article><article class="type-card" data-kind="enum" data-kind-list="enum field impl method type-model" data-filter-text="enum RunnerVerb pub pub enum RunnerVerb crates/eos-runner/src/request.rs  ">
+</article><article id="item-enum-RunnerVerb-58" class="type-card" data-kind="enum" data-kind-list="enum field impl method type-model" data-filter-text="enum RunnerVerb pub pub enum RunnerVerb crates/eos-runner/src/request.rs  ">
   <div class="item-head">
     <span class="kind">enum</span>
     <h3>RunnerVerb</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub enum RunnerVerb</code>
-  <div class="tags"></div>
-  <h4>Variants</h4><table><tbody><tr><td>ExecCommand</td><td><code></code></td></tr><tr><td>PluginService</td><td><code></code></td></tr><tr><td>Unknown</td><td><code>0: String</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr><td>method</td><td>as_str</td><td><code>pub fn as_str (&amp; self) -&gt; &amp; str</code></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl From &lt; &amp; str &gt; for RunnerVerb</code></summary><table><tbody><tr><td>constructor</td><td>from</td><td><code>fn from (value : &amp; str) -&gt; Self</code></td></tr></tbody></table></details><details><summary><code>impl From &lt; String &gt; for RunnerVerb</code></summary><table><tbody><tr><td>constructor</td><td>from</td><td><code>fn from (value : String) -&gt; Self</code></td></tr></tbody></table></details><details><summary><code>impl Serialize for RunnerVerb</code></summary><table><tbody><tr><td>method</td><td>serialize</td><td><code>fn serialize &lt; S &gt; (&amp; self , serializer : S) -&gt; Result &lt; S :: Ok , S :: Error &gt; where S : Serializer ,</code></td></tr></tbody></table></details><details><summary><code>impl Deserialize &lt; 'de &gt; for RunnerVerb</code></summary><table><tbody><tr><td>associated-fn</td><td>deserialize</td><td><code>fn deserialize &lt; D &gt; (deserializer : D) -&gt; Result &lt; Self , D :: Error &gt; where D : Deserializer &lt; 'de &gt; ,</code></td></tr></tbody></table></details></div>
+  <code class="signature">pub enum <a class="symbol-link" href="eos-runner--src-request-rs.html#item-enum-RunnerVerb-58">RunnerVerb</a></code>
+  <p class="docstring">Runner-supported tool verbs.<br>Unknown verbs stay representable so the runner can preserve the current<br>`unsupported_runner_verb` result instead of failing JSON decoding before<br>dispatch.</p>
+  <div class="tags"><span>derive: Clone</span><span>derive: Debug</span><span>derive: Eq</span><span>derive: PartialEq</span></div>
+  <h4>Variants</h4><table><tbody><tr><td>ExecCommand</td><td><code></code></td></tr><tr><td>PluginService</td><td><code></code></td></tr><tr><td>Unknown</td><td><code>0: String</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-as-str-71"><td>method</td><td>as_str</td><td><code>pub fn <a class="symbol-link" href="eos-runner--src-request-rs.html#method-as-str-71">as_str</a> (&amp; self) -&gt; &amp; str</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runner--src-request-rs.html#method-as-str-71">as_str</a>(&amp;<span class="rs-self">self</span>) -&gt; &amp;str {
+        <span class="rs-kw">match</span> <span class="rs-self">self</span> {
+            <span class="rs-self">Self</span>::<span class="rs-type">ExecCommand</span> =&gt; &quot;exec_command&quot;,
+            <span class="rs-self">Self</span>::<span class="rs-type">PluginService</span> =&gt; &quot;plugin_service&quot;,
+            <span class="rs-self">Self</span>::<span class="rs-type">Unknown</span>(verb) =&gt; verb,
+        }
+    }
+</code></pre>
+</details></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl From &lt; &amp; str &gt; for <a class="symbol-link" href="eos-runner--src-request-rs.html#item-enum-RunnerVerb-58">RunnerVerb</a></code></summary><table><tbody><tr id="method-from-82"><td>constructor</td><td>from</td><td><code>fn <a class="symbol-link" href="eos-runner.html#method-from-45">from</a> (value : &amp; str) -&gt; Self</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runner.html#method-from-45">from</a>(value: &amp;str) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-kw">match</span> value {
+            &quot;exec_command&quot; =&gt; <span class="rs-self">Self</span>::<span class="rs-type">ExecCommand</span>,
+            &quot;plugin_service&quot; =&gt; <span class="rs-self">Self</span>::<span class="rs-type">PluginService</span>,
+            other =&gt; <span class="rs-self">Self</span>::<span class="rs-type">Unknown</span>(other.to_owned()),
+        }
+    }
+</code></pre>
+</details></td></tr></tbody></table></details><details><summary><code>impl From &lt; String &gt; for <a class="symbol-link" href="eos-runner--src-request-rs.html#item-enum-RunnerVerb-58">RunnerVerb</a></code></summary><table><tbody><tr id="method-from-92"><td>constructor</td><td>from</td><td><code>fn <a class="symbol-link" href="eos-runner.html#method-from-45">from</a> (value : String) -&gt; Self</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runner.html#method-from-45">from</a>(value: <span class="rs-type">String</span>) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-kw">match</span> value.<a class="symbol-link rs-fn" href="eos-runner--src-request-rs.html#method-as-str-71">as_str</a>() {
+            &quot;exec_command&quot; =&gt; <span class="rs-self">Self</span>::<span class="rs-type">ExecCommand</span>,
+            &quot;plugin_service&quot; =&gt; <span class="rs-self">Self</span>::<span class="rs-type">PluginService</span>,
+            _ =&gt; <span class="rs-self">Self</span>::<span class="rs-type">Unknown</span>(value),
+        }
+    }
+</code></pre>
+</details></td></tr></tbody></table></details><details><summary><code>impl Serialize for <a class="symbol-link" href="eos-runner--src-request-rs.html#item-enum-RunnerVerb-58">RunnerVerb</a></code></summary><table><tbody><tr id="method-serialize-102"><td>method</td><td>serialize</td><td><code>fn <a class="symbol-link" href="eos-runner--src-request-rs.html#method-serialize-102">serialize</a> &lt; S &gt; (&amp; self , serializer : S) -&gt; Result &lt; S :: Ok , S :: Error &gt; where S : Serializer ,</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> serialize&lt;<span class="rs-type">S</span>&gt;(&amp;<span class="rs-self">self</span>, serializer: <span class="rs-type">S</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">S</span>::<span class="rs-type">Ok</span>, <span class="rs-type">S</span>::<span class="rs-type">Error</span>&gt;
+    <span class="rs-kw">where</span>
+        <span class="rs-type">S</span>: <span class="rs-type">Serializer</span>,
+    {
+        serializer.serialize_str(<span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-runner--src-request-rs.html#method-as-str-71">as_str</a>())
+    }
+</code></pre>
+</details></td></tr></tbody></table></details><details><summary><code>impl Deserialize &lt; &#x27;de &gt; for <a class="symbol-link" href="eos-runner--src-request-rs.html#item-enum-RunnerVerb-58">RunnerVerb</a></code></summary><table><tbody><tr id="method-deserialize-111"><td>associated-fn</td><td>deserialize</td><td><code>fn <a class="symbol-link" href="eos-runner--src-request-rs.html#method-deserialize-111">deserialize</a> &lt; D &gt; (deserializer : D) -&gt; Result &lt; Self , D :: Error &gt; where D : Deserializer &lt; &#x27;de &gt; ,</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> deserialize&lt;<span class="rs-type">D</span>&gt;(deserializer: <span class="rs-type">D</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-self">Self</span>, <span class="rs-type">D</span>::<span class="rs-type">Error</span>&gt;
+    <span class="rs-kw">where</span>
+        <span class="rs-type">D</span>: <span class="rs-type">Deserializer</span>&lt;&#x27;de&gt;,
+    {
+        <span class="rs-type">String</span>::<a class="symbol-link rs-fn" href="eos-runner--src-request-rs.html#method-deserialize-111">deserialize</a>(deserializer).map(<span class="rs-self">Self</span>::from)
+    }
+</code></pre>
+</details></td></tr></tbody></table></details></div>
+
   <p class="source">crates/eos-runner/src/request.rs:58</p>
-</article><div class="group-label">Standalone Functions</div><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn runner_verb_preserves_wire_strings_and_unknowns private fn runner_verb_preserves_wire_strings_and_unknowns () crates/eos-runner/src/request.rs  ">
+</article><div class="group-label">Standalone Functions</div><article id="item-fn-runner-verb-preserves-wire-strings-and-unknowns-185" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn runner_verb_preserves_wire_strings_and_unknowns private fn runner_verb_preserves_wire_strings_and_unknowns () crates/eos-runner/src/request.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>runner_verb_preserves_wire_strings_and_unknowns</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn runner_verb_preserves_wire_strings_and_unknowns ()</code>
-  <div class="tags"></div>
+  <code class="signature">fn <a class="symbol-link" href="eos-runner--src-request-rs.html#item-fn-runner-verb-preserves-wire-strings-and-unknowns-185">runner_verb_preserves_wire_strings_and_unknowns</a> ()</code>
+  <div class="tags"><span>test</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runner--src-request-rs.html#item-fn-runner-verb-preserves-wire-strings-and-unknowns-185">runner_verb_preserves_wire_strings_and_unknowns</a>() {
+        assert_eq!(
+            serde_json::to_value(&amp;<a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-enum-RunnerVerb-58">RunnerVerb</a>::<span class="rs-type">ExecCommand</span>).expect(&quot;serialize&quot;),
+            serde_json::json!(&quot;exec_command&quot;)
+        );
+        assert_eq!(
+            serde_json::from_value::&lt;<a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-enum-RunnerVerb-58">RunnerVerb</a>&gt;(serde_json::json!(&quot;plugin_service&quot;))
+                .expect(&quot;deserialize&quot;),
+            <a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-enum-RunnerVerb-58">RunnerVerb</a>::<span class="rs-type">PluginService</span>
+        );
+        assert_eq!(
+            serde_json::from_value::&lt;<a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-enum-RunnerVerb-58">RunnerVerb</a>&gt;(serde_json::json!(&quot;future_verb&quot;))
+                .expect(&quot;deserialize&quot;),
+            <a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-enum-RunnerVerb-58">RunnerVerb</a>::<span class="rs-type">Unknown</span>(&quot;future_verb&quot;.to_owned())
+        );
+    }
+</code></pre>
+</details>
 
   <p class="source">crates/eos-runner/src/request.rs:185</p>
 </article></div>
 </section></div>
 </main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/eos-runner/src/request.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-comment">//! Owned request/result types for the namespace runner.</span>
+<span class="rs-comment">//!</span>
+<span class="rs-comment">//! These model the JSON payloads the Rust helpers exchange over stdin/stdout</span>
+<span class="rs-comment">//! and the namespace request/result files — the tool-call payload, the fresh-ns</span>
+<span class="rs-comment">//! request file, and the setns stdin payload. The verb-specific `args`</span>
+<span class="rs-comment">//! stay an opaque [`serde_json::Value`] here (the runner forwards them verbatim</span>
+<span class="rs-comment">//! to the in-namespace tool primitive); the typed per-verb args/results live in</span>
+<span class="rs-comment">//! `eos_protocol::models`.</span>
+
+<span class="rs-kw">use</span> std::os::unix::io::<span class="rs-type">RawFd</span>;
+<span class="rs-kw">use</span> std::path::<span class="rs-type">PathBuf</span>;
+
+<span class="rs-kw">use</span> eos_protocol::<span class="rs-type">Intent</span>;
+<span class="rs-kw">use</span> serde::{<span class="rs-type">Deserialize</span>, <span class="rs-type">Deserializer</span>, <span class="rs-type">Serialize</span>, <span class="rs-type">Serializer</span>};
+<span class="rs-kw">use</span> serde_json::<span class="rs-type">Value</span>;
+
+<span class="rs-comment">/// Which namespace strategy the runner uses for this call.</span>
+<span class="rs-comment">///</span>
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">Copy</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Eq</span>, <span class="rs-type">Serialize</span>, <span class="rs-type">Deserialize</span>)]
+#[serde(rename_all = &quot;snake_case&quot;)]
+<span class="rs-kw">pub</span> <span class="rs-kw">enum</span> <a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-enum-RunMode-17">RunMode</a> {
+    <span class="rs-comment">/// Create a brand-new private namespace stack via `unshare`, mount the</span>
+    <span class="rs-comment">/// overlay, then exec — one tool call per namespace.</span>
+    <span class="rs-type">FreshNs</span>,
+    <span class="rs-comment">/// `setns` into the ns-holder's already-open namespace FDs, then exec.</span>
+    <span class="rs-type">SetNs</span>,
+}
+
+<span class="rs-comment">/// A raw file descriptor handle.</span>
+<span class="rs-comment">///</span>
+<span class="rs-comment">/// `#[repr(transparent)]` lets this cross the FFI boundary into the `setns(2)`</span>
+<span class="rs-comment">/// syscall unchanged.</span>
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">Copy</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Eq</span>, <span class="rs-type">Serialize</span>, <span class="rs-type">Deserialize</span>)]
+#[repr(transparent)]
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-Fd-29">Fd</a>(<span class="rs-kw">pub</span> <span class="rs-type">RawFd</span>);
+
+<span class="rs-comment">/// The validated workspace root the overlay is mounted at.</span>
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Eq</span>, <span class="rs-type">Serialize</span>, <span class="rs-type">Deserialize</span>)]
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-WorkspaceRoot-37">WorkspaceRoot</a>(<span class="rs-kw">pub</span> <span class="rs-type">PathBuf</span>);
+
+<span class="rs-comment">/// The ns-holder's pre-opened namespace FDs.</span>
+<span class="rs-comment">///</span>
+<span class="rs-comment">/// Applied in this exact order:</span>
+<span class="rs-comment">/// `user` (privilege change), `mnt` (mount table), `pid` (descendants only,</span>
+<span class="rs-comment">/// before `fork`), `net`. A wrong order breaks the setns sequence.</span>
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">Copy</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Eq</span>, <span class="rs-type">Serialize</span>, <span class="rs-type">Deserialize</span>)]
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-NsFds-41">NsFds</a> {
+    <span class="rs-comment">/// User namespace FD (`CLONE_NEWUSER`) — applied first.</span>
+    <span class="rs-kw">pub</span> user: <span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-Fd-29">Fd</a>&gt;,
+    <span class="rs-comment">/// Mount namespace FD (`CLONE_NEWNS`).</span>
+    <span class="rs-kw">pub</span> mnt: <span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-Fd-29">Fd</a>&gt;,
+    <span class="rs-comment">/// PID namespace FD (`CLONE_NEWPID`) — affects descendants only; set before `fork`.</span>
+    <span class="rs-kw">pub</span> pid: <span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-Fd-29">Fd</a>&gt;,
+    <span class="rs-comment">/// Network namespace FD (`CLONE_NEWNET`).</span>
+    <span class="rs-kw">pub</span> net: <span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-Fd-29">Fd</a>&gt;,
+}
+
+<span class="rs-comment">/// Runner-supported tool verbs.</span>
+<span class="rs-comment">///</span>
+<span class="rs-comment">/// Unknown verbs stay representable so the runner can preserve the current</span>
+<span class="rs-comment">/// `unsupported_runner_verb` result instead of failing JSON decoding before</span>
+<span class="rs-comment">/// dispatch.</span>
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Eq</span>)]
+<span class="rs-kw">pub</span> <span class="rs-kw">enum</span> <a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-enum-RunnerVerb-58">RunnerVerb</a> {
+    <span class="rs-type">ExecCommand</span>,
+    <span class="rs-type">PluginService</span>,
+    <span class="rs-type">Unknown</span>(<span class="rs-type">String</span>),
+}
+
+<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-enum-RunnerVerb-58">RunnerVerb</a> {
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runner--src-request-rs.html#method-as-str-71">as_str</a>(&amp;<span class="rs-self">self</span>) -&gt; &amp;str {
+        <span class="rs-kw">match</span> <span class="rs-self">self</span> {
+            <span class="rs-self">Self</span>::<span class="rs-type">ExecCommand</span> =&gt; &quot;exec_command&quot;,
+            <span class="rs-self">Self</span>::<span class="rs-type">PluginService</span> =&gt; &quot;plugin_service&quot;,
+            <span class="rs-self">Self</span>::<span class="rs-type">Unknown</span>(verb) =&gt; verb,
+        }
+    }
+}
+
+<span class="rs-kw">impl</span> <span class="rs-type">From</span>&lt;&amp;str&gt; <span class="rs-kw">for</span> <a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-enum-RunnerVerb-58">RunnerVerb</a> {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runner.html#method-from-45">from</a>(value: &amp;str) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-kw">match</span> value {
+            &quot;exec_command&quot; =&gt; <span class="rs-self">Self</span>::<span class="rs-type">ExecCommand</span>,
+            &quot;plugin_service&quot; =&gt; <span class="rs-self">Self</span>::<span class="rs-type">PluginService</span>,
+            other =&gt; <span class="rs-self">Self</span>::<span class="rs-type">Unknown</span>(other.to_owned()),
+        }
+    }
+}
+
+<span class="rs-kw">impl</span> <span class="rs-type">From</span>&lt;<span class="rs-type">String</span>&gt; <span class="rs-kw">for</span> <a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-enum-RunnerVerb-58">RunnerVerb</a> {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runner.html#method-from-45">from</a>(value: <span class="rs-type">String</span>) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-kw">match</span> value.<a class="symbol-link rs-fn" href="eos-runner--src-request-rs.html#method-as-str-71">as_str</a>() {
+            &quot;exec_command&quot; =&gt; <span class="rs-self">Self</span>::<span class="rs-type">ExecCommand</span>,
+            &quot;plugin_service&quot; =&gt; <span class="rs-self">Self</span>::<span class="rs-type">PluginService</span>,
+            _ =&gt; <span class="rs-self">Self</span>::<span class="rs-type">Unknown</span>(value),
+        }
+    }
+}
+
+<span class="rs-kw">impl</span> <span class="rs-type">Serialize</span> <span class="rs-kw">for</span> <a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-enum-RunnerVerb-58">RunnerVerb</a> {
+    <span class="rs-kw">fn</span> serialize&lt;<span class="rs-type">S</span>&gt;(&amp;<span class="rs-self">self</span>, serializer: <span class="rs-type">S</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">S</span>::<span class="rs-type">Ok</span>, <span class="rs-type">S</span>::<span class="rs-type">Error</span>&gt;
+    <span class="rs-kw">where</span>
+        <span class="rs-type">S</span>: <span class="rs-type">Serializer</span>,
+    {
+        serializer.serialize_str(<span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-runner--src-request-rs.html#method-as-str-71">as_str</a>())
+    }
+}
+
+<span class="rs-kw">impl</span>&lt;&#x27;de&gt; <span class="rs-type">Deserialize</span>&lt;&#x27;de&gt; <span class="rs-kw">for</span> <a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-enum-RunnerVerb-58">RunnerVerb</a> {
+    <span class="rs-kw">fn</span> deserialize&lt;<span class="rs-type">D</span>&gt;(deserializer: <span class="rs-type">D</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-self">Self</span>, <span class="rs-type">D</span>::<span class="rs-type">Error</span>&gt;
+    <span class="rs-kw">where</span>
+        <span class="rs-type">D</span>: <span class="rs-type">Deserializer</span>&lt;&#x27;de&gt;,
+    {
+        <span class="rs-type">String</span>::<a class="symbol-link rs-fn" href="eos-runner--src-request-rs.html#method-deserialize-111">deserialize</a>(deserializer).map(<span class="rs-self">Self</span>::from)
+    }
+}
+
+<span class="rs-comment">/// One tool invocation, the runner's view of `ToolCallRequest`.</span>
+<span class="rs-comment">///</span>
+<span class="rs-comment">/// `args` is the opaque verb payload forwarded to the in-namespace primitive;</span>
+<span class="rs-comment">/// `intent` reuses the protocol enum so the runner does not redefine the verb</span>
+<span class="rs-comment">/// taxonomy.</span>
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Eq</span>, <span class="rs-type">Serialize</span>, <span class="rs-type">Deserialize</span>)]
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-ToolCall-119">ToolCall</a> {
+    <span class="rs-kw">pub</span> invocation_id: <span class="rs-type">String</span>,
+    <span class="rs-kw">pub</span> caller_id: <span class="rs-type">String</span>,
+    <span class="rs-kw">pub</span> verb: <a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-enum-RunnerVerb-58">RunnerVerb</a>,
+    <span class="rs-kw">pub</span> intent: <span class="rs-type">Intent</span>,
+    <span class="rs-kw">pub</span> args: <span class="rs-type">Value</span>,
+    #[serde(default)]
+    <span class="rs-kw">pub</span> background: bool,
+}
+
+<span class="rs-comment">/// A fully-resolved request to the runner: which mode, the tool call, the</span>
+<span class="rs-comment">/// overlay layout (fresh-ns), and the held namespace FDs (setns).</span>
+<span class="rs-comment">///</span>
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Serialize</span>, <span class="rs-type">Deserialize</span>)]
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-RunRequest-135">RunRequest</a> {
+    <span class="rs-comment">/// Fresh-ns vs setns.</span>
+    <span class="rs-kw">pub</span> mode: <a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-enum-RunMode-17">RunMode</a>,
+    <span class="rs-comment">/// The tool invocation to execute inside the namespace.</span>
+    <span class="rs-kw">pub</span> tool_call: <a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-ToolCall-119">ToolCall</a>,
+    <span class="rs-comment">/// Where the overlay is (or will be) mounted; the exec cwd.</span>
+    <span class="rs-kw">pub</span> workspace_root: <a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-WorkspaceRoot-37">WorkspaceRoot</a>,
+    <span class="rs-comment">/// Overlay lower layers (newest-first), present for [`RunMode::FreshNs`].</span>
+    #[serde(default)]
+    <span class="rs-kw">pub</span> layer_paths: <span class="rs-type">Vec</span>&lt;<span class="rs-type">PathBuf</span>&gt;,
+    <span class="rs-comment">/// Overlay upperdir (fresh-ns).</span>
+    #[serde(default)]
+    <span class="rs-kw">pub</span> upperdir: <span class="rs-type">Option</span>&lt;<span class="rs-type">PathBuf</span>&gt;,
+    <span class="rs-comment">/// Overlay workdir (fresh-ns).</span>
+    #[serde(default)]
+    <span class="rs-kw">pub</span> workdir: <span class="rs-type">Option</span>&lt;<span class="rs-type">PathBuf</span>&gt;,
+    <span class="rs-comment">/// Held namespace FDs to `setns` into, present for [`RunMode::SetNs`].</span>
+    #[serde(default)]
+    <span class="rs-kw">pub</span> ns_fds: <span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-NsFds-41">NsFds</a>&gt;,
+    <span class="rs-comment">/// Absolute iws cgroup path; the setns child joins it before `fork` so the</span>
+    <span class="rs-comment">/// child inherits cgroup membership.</span>
+    #[serde(default)]
+    <span class="rs-kw">pub</span> cgroup_path: <span class="rs-type">Option</span>&lt;<span class="rs-type">PathBuf</span>&gt;,
+    <span class="rs-comment">/// Hard timeout for the tool call (tool's own timeout + a fixed margin).</span>
+    #[serde(default)]
+    <span class="rs-kw">pub</span> timeout_seconds: <span class="rs-type">Option</span>&lt;f64&gt;,
+}
+
+<span class="rs-comment">/// The runner's result.</span>
+<span class="rs-comment">///</span>
+<span class="rs-comment">/// Contains the in-namespace tool result JSON plus the child's exit code. The</span>
+<span class="rs-comment">/// Rust helpers return the tool primitive's `asdict` dict verbatim</span>
+<span class="rs-comment">/// (defaulting `workspace`), which the runner forwards opaquely as [`Value`].</span>
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Eq</span>, <span class="rs-type">Serialize</span>, <span class="rs-type">Deserialize</span>)]
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-RunResult-167">RunResult</a> {
+    <span class="rs-comment">/// The tool primitive's result object (`SandboxResultBase`/`GuardedResultBase`</span>
+    <span class="rs-comment">/// `asdict`), forwarded unchanged.</span>
+    <span class="rs-kw">pub</span> tool_result: <span class="rs-type">Value</span>,
+    <span class="rs-comment">/// The child process exit code.</span>
+    <span class="rs-kw">pub</span> exit_code: i32,
+}
+
+#[cfg(test)]
+<span class="rs-kw">mod</span> tests {
+    <span class="rs-kw">use</span> <span class="rs-kw">super</span>::<a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-enum-RunnerVerb-58">RunnerVerb</a>;
+
+    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runner--src-request-rs.html#item-fn-runner-verb-preserves-wire-strings-and-unknowns-185">runner_verb_preserves_wire_strings_and_unknowns</a>() {
+        assert_eq!(
+            serde_json::to_value(&amp;<a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-enum-RunnerVerb-58">RunnerVerb</a>::<span class="rs-type">ExecCommand</span>).expect(&quot;serialize&quot;),
+            serde_json::json!(&quot;exec_command&quot;)
+        );
+        assert_eq!(
+            serde_json::from_value::&lt;<a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-enum-RunnerVerb-58">RunnerVerb</a>&gt;(serde_json::json!(&quot;plugin_service&quot;))
+                .expect(&quot;deserialize&quot;),
+            <a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-enum-RunnerVerb-58">RunnerVerb</a>::<span class="rs-type">PluginService</span>
+        );
+        assert_eq!(
+            serde_json::from_value::&lt;<a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-enum-RunnerVerb-58">RunnerVerb</a>&gt;(serde_json::json!(&quot;future_verb&quot;))
+                .expect(&quot;deserialize&quot;),
+            <a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-enum-RunnerVerb-58">RunnerVerb</a>::<span class="rs-type">Unknown</span>(&quot;future_verb&quot;.to_owned())
+        );
+    }
+}
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
   <script src="../assets/inventory.js"></script>
 </body>
 </html>

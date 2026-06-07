@@ -8,8 +8,16 @@
 </head>
 <body>
   <header>
-    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
-    <h1>eos-daemon File Inventory</h1>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>eos-daemon File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS/sandbox &amp;&amp; cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
   </header>
   <a class="back-link" href="../index.html">sandbox</a>
 <section class="summary">
@@ -47,29 +55,161 @@
       <span>1 methods</span>
     </div>
   </div>
-  <div class="items"><div class="group-label">File-Owned Types</div><article class="type-card" data-kind="enum" data-kind-list="enum field impl method type-model" data-filter-text="enum DaemonError pub pub enum DaemonError crates/eos-daemon/src/runtime/error.rs  ">
+  <div class="items"><div class="group-label">File-Owned Types</div><article id="item-enum-DaemonError-11" class="type-card" data-kind="enum" data-kind-list="enum field impl method type-model" data-filter-text="enum DaemonError pub pub enum DaemonError crates/eos-daemon/src/runtime/error.rs  ">
   <div class="item-head">
     <span class="kind">enum</span>
     <h3>DaemonError</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub enum DaemonError</code>
-  <div class="tags"><span>error</span></div>
-  <h4>Variants</h4><table><tbody><tr><td>Protocol</td><td><code>0: eos_protocol :: ProtocolError</code></td></tr><tr><td>Io</td><td><code>0: std :: io :: Error</code></td></tr><tr><td>UnknownOp</td><td><code>0: String</code></td></tr><tr><td>InvalidEnvelope</td><td><code>0: String</code></td></tr><tr><td>RequestTooLarge</td><td><code>limit: usize</code></td></tr><tr><td>Unauthorized</td><td><code></code></td></tr><tr><td>Forbidden</td><td><code>0: String</code></td></tr><tr><td>StateLockPoisoned</td><td><code>0: &amp; 'static str</code></td></tr><tr><td>LayerStack</td><td><code>0: eos_layerstack :: LayerStackError</code></td></tr><tr><td>Occ</td><td><code>0: eos_occ :: OccError</code></td></tr><tr><td>OverlayPipeline</td><td><code>0: String</code></td></tr><tr><td>Plugin</td><td><code>0: eos_plugin :: PluginError</code></td></tr><tr><td>Isolated</td><td><code>0: eos_isolated_workspace :: IsolatedError</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr><td>method</td><td>wire_kind</td><td><code>pub const fn wire_kind (&amp; self) -&gt; eos_protocol :: ErrorKind</code></td></tr></tbody></table>
+  <code class="signature">pub enum <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a></code>
+  <p class="docstring">Failures surfaced by the daemon server, dispatcher, audit ring, and the<br>injected port implementations.</p>
+  <div class="tags"><span>derive: Debug</span><span>derive: Error</span><span>error</span><span>non_exhaustive</span></div>
+  <h4>Variants</h4><table><tbody><tr><td>Protocol</td><td><code>0: eos_protocol :: ProtocolError</code></td></tr><tr><td>Io</td><td><code>0: std :: io :: Error</code></td></tr><tr><td>UnknownOp</td><td><code>0: String</code></td></tr><tr><td>InvalidEnvelope</td><td><code>0: String</code></td></tr><tr><td>RequestTooLarge</td><td><code>limit: usize</code></td></tr><tr><td>Unauthorized</td><td><code></code></td></tr><tr><td>Forbidden</td><td><code>0: String</code></td></tr><tr><td>StateLockPoisoned</td><td><code>0: &amp; &#x27;static str</code></td></tr><tr><td>LayerStack</td><td><code>0: eos_layerstack :: LayerStackError</code></td></tr><tr><td>Occ</td><td><code>0: eos_occ :: OccError</code></td></tr><tr><td>OverlayPipeline</td><td><code>0: String</code></td></tr><tr><td>Plugin</td><td><code>0: eos_plugin :: PluginError</code></td></tr><tr><td>Isolated</td><td><code>0: eos_isolated_workspace :: IsolatedError</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-wire-kind-73"><td>method</td><td>wire_kind</td><td><code>pub const fn <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#method-wire-kind-73">wire_kind</a> (&amp; self) -&gt; eos_protocol :: ErrorKind</code><p class="docstring">Map this error onto the wire error `kind`.<br>The dispatcher uses this to build the structured error envelope; an<br>otherwise-unclassified handler failure becomes<br>[`eos_protocol::ErrorKind::InternalError`] with a generated `error_id`.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Map this error onto the wire error `kind`.</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// The dispatcher uses this to build the structured error envelope; an</span>
+    <span class="rs-comment">/// otherwise-unclassified handler failure becomes</span>
+    <span class="rs-comment">/// [`eos_protocol::ErrorKind::InternalError`] with a generated `error_id`.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-error-rs.html#method-wire-kind-73">wire_kind</a>(&amp;<span class="rs-self">self</span>) -&gt; eos_protocol::<span class="rs-type">ErrorKind</span> {
+        <span class="rs-kw">use</span> eos_protocol::<span class="rs-type">ErrorKind</span>;
+        <span class="rs-kw">match</span> <span class="rs-self">self</span> {
+            <span class="rs-self">Self</span>::<span class="rs-type">Protocol</span>(_) =&gt; <span class="rs-type">ErrorKind</span>::<span class="rs-type">BadJson</span>,
+            <span class="rs-self">Self</span>::<span class="rs-type">UnknownOp</span>(_) =&gt; <span class="rs-type">ErrorKind</span>::<span class="rs-type">UnknownOp</span>,
+            <span class="rs-self">Self</span>::<span class="rs-type">InvalidEnvelope</span>(_) =&gt; <span class="rs-type">ErrorKind</span>::<span class="rs-type">InvalidEnvelope</span>,
+            <span class="rs-self">Self</span>::<span class="rs-type">RequestTooLarge</span> { .. } =&gt; <span class="rs-type">ErrorKind</span>::<span class="rs-type">RequestTooLarge</span>,
+            <span class="rs-self">Self</span>::<span class="rs-type">Unauthorized</span> =&gt; <span class="rs-type">ErrorKind</span>::<span class="rs-type">Unauthorized</span>,
+            <span class="rs-self">Self</span>::<span class="rs-type">Forbidden</span>(_) =&gt; <span class="rs-type">ErrorKind</span>::<span class="rs-type">Forbidden</span>,
+            <span class="rs-self">Self</span>::<span class="rs-type">Plugin</span>(eos_plugin::<span class="rs-type">PluginError</span>::<span class="rs-type">ForbiddenInIsolatedWorkspace</span>) =&gt; {
+                <span class="rs-type">ErrorKind</span>::<span class="rs-type">ForbiddenInIsolatedWorkspace</span>
+            }
+            _ =&gt; <span class="rs-type">ErrorKind</span>::<span class="rs-type">InternalError</span>,
+        }
+    }
+</code></pre>
+</details></td></tr></tbody></table>
+
   <p class="source">crates/eos-daemon/src/runtime/error.rs:11</p>
-</article><div class="group-label">Aliases</div><article class="item-card" data-kind="type" data-kind-list="type" data-filter-text="type Result pub pub type Result&lt; T &gt; = core :: result :: Result &lt; T , DaemonError &gt; crates/eos-daemon/src/runtime/error.rs  ">
+</article><div class="group-label">Aliases</div><article id="item-type-Result-96" class="item-card" data-kind="type" data-kind-list="type" data-filter-text="type Result pub pub type Result&lt; T &gt; = core :: result :: Result &lt; T , DaemonError &gt; crates/eos-daemon/src/runtime/error.rs  ">
   <div class="item-head">
     <span class="kind">type</span>
     <h3>Result</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub type Result&lt; T &gt; = core :: result :: Result &lt; T , DaemonError &gt;</code>
+  <code class="signature">pub type <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a>&lt; T &gt; = core :: result :: <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a> &lt; T , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
+  <p class="docstring">Convenience alias for fallible daemon operations.</p>
   <div class="tags"></div>
 
   <p class="source">crates/eos-daemon/src/runtime/error.rs:96</p>
 </article></div>
 </section></div>
 </main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/eos-daemon/src/runtime/error.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-comment">//! Daemon error algebra.</span>
+<span class="rs-comment">//!</span>
+<span class="rs-comment">//! `thiserror` enum per crate (no `Box&lt;dyn Error&gt;` in the public API). Source</span>
+<span class="rs-comment">//! conversions use `#[from]`; messages are lowercase with no trailing</span>
+<span class="rs-comment">//! punctuation. The lower-crate error types fold in via `#[from]` so a handler</span>
+<span class="rs-comment">//! can `?`-propagate them; the dispatcher maps a [`DaemonError`] onto the wire</span>
+<span class="rs-comment">//! [`eos_protocol::ErrorKind`] error envelope.</span>
+
+<span class="rs-kw">use</span> thiserror::<span class="rs-type">Error</span>;
+
+<span class="rs-comment">/// Failures surfaced by the daemon server, dispatcher, audit ring, and the</span>
+<span class="rs-comment">/// injected port implementations.</span>
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Error</span>)]
+#[non_exhaustive]
+<span class="rs-kw">pub</span> <span class="rs-kw">enum</span> <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> {
+    <span class="rs-comment">/// A framed wire message could not be encoded/decoded.</span>
+    #[error(transparent)]
+    <span class="rs-type">Protocol</span>(#[from] eos_protocol::<span class="rs-type">ProtocolError</span>),
+
+    <span class="rs-comment">/// A transport / listener I/O operation failed.</span>
+    #[error(&quot;daemon io error: {0}&quot;)]
+    <span class="rs-type">Io</span>(#[from] std::io::<span class="rs-type">Error</span>),
+
+    <span class="rs-comment">/// The op named in the request is not registered in the op table.</span>
+    #[error(&quot;unknown op: {0}&quot;)]
+    <span class="rs-type">UnknownOp</span>(<span class="rs-type">String</span>),
+
+    <span class="rs-comment">/// The envelope was structurally invalid (missing/empty op, non-object args).</span>
+    #[error(&quot;invalid envelope: {0}&quot;)]
+    <span class="rs-type">InvalidEnvelope</span>(<span class="rs-type">String</span>),
+
+    <span class="rs-comment">/// A request line exceeded [`eos_protocol::MAX_REQUEST_BYTES`].</span>
+    #[error(&quot;request exceeds {limit} byte limit&quot;)]
+    <span class="rs-type">RequestTooLarge</span> {
+        <span class="rs-comment">/// The configured per-request byte ceiling.</span>
+        limit: usize,
+    },
+
+    <span class="rs-comment">/// A TCP request's auth token did not match the configured token.</span>
+    #[error(&quot;daemon request authentication failed&quot;)]
+    <span class="rs-type">Unauthorized</span>,
+
+    <span class="rs-comment">/// A handler/gate policy refusal (e.g. floor-reset env gate not set).</span>
+    #[error(&quot;forbidden: {0}&quot;)]
+    <span class="rs-type">Forbidden</span>(<span class="rs-type">String</span>),
+
+    <span class="rs-comment">/// A process-local daemon state mutex was poisoned.</span>
+    #[error(&quot;daemon state lock poisoned: {0}&quot;)]
+    <span class="rs-type">StateLockPoisoned</span>(&amp;&#x27;<span class="rs-kw">static</span> str),
+
+    <span class="rs-comment">/// The layer-stack storage / publish layer failed.</span>
+    #[error(transparent)]
+    <span class="rs-type">LayerStack</span>(#[from] eos_layerstack::<span class="rs-type">LayerStackError</span>),
+
+    <span class="rs-comment">/// The OCC publish path failed.</span>
+    #[error(transparent)]
+    <span class="rs-type">Occ</span>(#[from] eos_occ::<span class="rs-type">OccError</span>),
+
+    <span class="rs-comment">/// The daemon-owned overlay pipeline / dispatch failed.</span>
+    #[error(&quot;overlay pipeline failure: {0}&quot;)]
+    <span class="rs-type">OverlayPipeline</span>(<span class="rs-type">String</span>),
+
+    <span class="rs-comment">/// The plugin (PPC) dispatch failed.</span>
+    #[error(transparent)]
+    <span class="rs-type">Plugin</span>(#[from] eos_plugin::<span class="rs-type">PluginError</span>),
+
+    <span class="rs-comment">/// The isolated-workspace lifecycle failed.</span>
+    #[error(transparent)]
+    <span class="rs-type">Isolated</span>(#[from] eos_isolated_workspace::<span class="rs-type">IsolatedError</span>),
+}
+
+<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> {
+    <span class="rs-comment">/// Map this error onto the wire error `kind`.</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// The dispatcher uses this to build the structured error envelope; an</span>
+    <span class="rs-comment">/// otherwise-unclassified handler failure becomes</span>
+    <span class="rs-comment">/// [`eos_protocol::ErrorKind::InternalError`] with a generated `error_id`.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-error-rs.html#method-wire-kind-73">wire_kind</a>(&amp;<span class="rs-self">self</span>) -&gt; eos_protocol::<span class="rs-type">ErrorKind</span> {
+        <span class="rs-kw">use</span> eos_protocol::<span class="rs-type">ErrorKind</span>;
+        <span class="rs-kw">match</span> <span class="rs-self">self</span> {
+            <span class="rs-self">Self</span>::<span class="rs-type">Protocol</span>(_) =&gt; <span class="rs-type">ErrorKind</span>::<span class="rs-type">BadJson</span>,
+            <span class="rs-self">Self</span>::<span class="rs-type">UnknownOp</span>(_) =&gt; <span class="rs-type">ErrorKind</span>::<span class="rs-type">UnknownOp</span>,
+            <span class="rs-self">Self</span>::<span class="rs-type">InvalidEnvelope</span>(_) =&gt; <span class="rs-type">ErrorKind</span>::<span class="rs-type">InvalidEnvelope</span>,
+            <span class="rs-self">Self</span>::<span class="rs-type">RequestTooLarge</span> { .. } =&gt; <span class="rs-type">ErrorKind</span>::<span class="rs-type">RequestTooLarge</span>,
+            <span class="rs-self">Self</span>::<span class="rs-type">Unauthorized</span> =&gt; <span class="rs-type">ErrorKind</span>::<span class="rs-type">Unauthorized</span>,
+            <span class="rs-self">Self</span>::<span class="rs-type">Forbidden</span>(_) =&gt; <span class="rs-type">ErrorKind</span>::<span class="rs-type">Forbidden</span>,
+            <span class="rs-self">Self</span>::<span class="rs-type">Plugin</span>(eos_plugin::<span class="rs-type">PluginError</span>::<span class="rs-type">ForbiddenInIsolatedWorkspace</span>) =&gt; {
+                <span class="rs-type">ErrorKind</span>::<span class="rs-type">ForbiddenInIsolatedWorkspace</span>
+            }
+            _ =&gt; <span class="rs-type">ErrorKind</span>::<span class="rs-type">InternalError</span>,
+        }
+    }
+}
+
+<span class="rs-comment">/// Convenience alias for fallible daemon operations.</span>
+<span class="rs-kw">pub</span> <span class="rs-kw">type</span> <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a>&lt;<span class="rs-type">T</span>&gt; = core::result::<a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a>&lt;<span class="rs-type">T</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt;;
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
   <script src="../assets/inventory.js"></script>
 </body>
 </html>

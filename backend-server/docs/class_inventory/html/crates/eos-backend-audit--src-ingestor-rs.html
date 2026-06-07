@@ -1,0 +1,685 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>eos-backend-audit · src/ingestor.rs</title>
+  <link rel="stylesheet" href="../assets/inventory.css">
+</head>
+<body>
+  <header>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>eos-backend-audit File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS/backend-server &amp;&amp; cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
+  </header>
+  <a class="back-link" href="../index.html">backend-server</a>
+<section class="summary">
+  <div><b>6</b><span>modules</span></div>
+  <div><b>61</b><span>items</span></div>
+  <div><b>64</b><span>fields</span></div>
+  <div><b>22</b><span>methods</span></div>
+</section>
+<section class="toolbar">
+  <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
+  <select id="kind-filter">
+    <option value="">All items</option>
+    <option value="type-model">Type model</option>
+    <option value="struct">Structs</option>
+    <option value="enum">Enums</option>
+    <option value="trait">Traits</option>
+    <option value="impl">Impls</option>
+    <option value="fn">Functions</option>
+    <option value="type">Aliases</option>
+  </select>
+</section>
+<main class="crate-layout">
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><a class="file-link" href="eos-backend-audit.html"><span>gates.rs</span><small>10/10</small></a></li><li><a class="file-link active" href="eos-backend-audit--src-ingestor-rs.html"><span>ingestor.rs</span><small>3/7</small></a></li><li><a class="file-link" href="eos-backend-audit--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-backend-audit--src-normalization-rs.html"><span>normalization.rs</span><small>3/9</small></a></li><li><a class="file-link" href="eos-backend-audit--src-sink-rs.html"><span>sink.rs</span><small>5/4</small></a></li><li><a class="file-link" href="eos-backend-audit--src-stats-rs.html"><span>stats.rs</span><small>1/0</small></a></li></ul></li></ul></nav>
+  <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="ingestor crates/eos-backend-audit/src/ingestor.rs IngestError IngestReport AuditIngestor impl AuditIngestor build_obs_event next_cursor boot_epoch_id invocation_id caller_id string_at max_opt">
+  <div class="module-head">
+    <div>
+      <h2>src/ingestor.rs</h2>
+      <p class="path">module <code>ingestor</code></p>
+    </div>
+    <div class="module-stats">
+      <span>file owns</span>
+      <span>3 types</span>
+      <span>1 impls</span>
+      <span>7 fns</span>
+      <span>2 methods</span>
+    </div>
+  </div>
+  <div class="items"><div class="group-label">File-Owned Types</div><article id="item-struct-IngestReport-62" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct IngestReport pub pub struct IngestReport crates/eos-backend-audit/src/ingestor.rs epoch_reset bool matched u64 unmatched u64 cursor AuditCursor ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>IngestReport</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub struct <a class="symbol-link" href="eos-backend-audit--src-ingestor-rs.html#item-struct-IngestReport-62">IngestReport</a></code>
+  <p class="docstring">Outcome of ingesting one pull response, for loss accounting and tests.</p>
+  <div class="tags"><span>derive: Clone</span><span>derive: Debug</span><span>derive: PartialEq</span><span>port/service</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>epoch_reset</td><td><code>bool</code></td></tr><tr><td>pub</td><td>matched</td><td><code>u64</code></td></tr><tr><td>pub</td><td>unmatched</td><td><code>u64</code></td></tr><tr><td>pub</td><td>cursor</td><td><code>AuditCursor</code></td></tr></tbody></table>
+
+  <p class="source">crates/eos-backend-audit/src/ingestor.rs:62</p>
+</article><article id="item-struct-AuditIngestor-75" class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct AuditIngestor pub pub struct AuditIngestor crates/eos-backend-audit/src/ingestor.rs obs_events ObsEventRepo correlations SandboxCallCorrelationRepo cursors AuditCursorRepo ">
+  <div class="item-head">
+    <span class="kind">struct</span>
+    <h3>AuditIngestor</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub struct <a class="symbol-link" href="eos-backend-audit--src-ingestor-rs.html#item-struct-AuditIngestor-75">AuditIngestor</a></code>
+  <p class="docstring">Ingests daemon audit pulls into `obs_event` + `audit_cursor`, joining the<br>correlation bridge. Holds cheap repository clones.</p>
+  <div class="tags"><span>derive: Clone</span><span>derive: Debug</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>obs_events</td><td><code>ObsEventRepo</code></td></tr><tr><td>private</td><td>correlations</td><td><code>SandboxCallCorrelationRepo</code></td></tr><tr><td>private</td><td>cursors</td><td><code>AuditCursorRepo</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-85"><td>constructor</td><td>new</td><td><code>pub fn <a class="symbol-link" href="eos-backend-audit.html#method-new-80">new</a> (obs_events : ObsEventRepo , correlations : SandboxCallCorrelationRepo , cursors : AuditCursorRepo ,) -&gt; Self</code><p class="docstring">Build an ingestor over the backend store's obs/correlation/cursor repos.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Build an ingestor over the backend store's obs/correlation/cursor repos.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-backend-audit.html#method-new-80">new</a>(
+        obs_events: <span class="rs-type">ObsEventRepo</span>,
+        correlations: <span class="rs-type">SandboxCallCorrelationRepo</span>,
+        cursors: <span class="rs-type">AuditCursorRepo</span>,
+    ) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">Self</span> {
+            obs_events,
+            correlations,
+            cursors,
+        }
+    }
+</code></pre>
+</details></td></tr><tr id="method-ingest-pull-99"><td>method</td><td>ingest_pull</td><td><code>pub async fn <a class="symbol-link" href="eos-backend-audit--src-ingestor-rs.html#method-ingest-pull-99">ingest_pull</a> (&amp; self , sandbox_id : &amp; SandboxId , response : &amp; Value ,) -&gt; Result &lt; <a class="symbol-link" href="eos-backend-audit--src-ingestor-rs.html#item-struct-IngestReport-62">IngestReport</a> , <a class="symbol-link" href="eos-backend-audit--src-ingestor-rs.html#item-enum-IngestError-46">IngestError</a> &gt;</code><p class="docstring">Ingest one `api.audit.pull` response for `sandbox_id`: persist every<br>normalized event as an `obs_event` (matched or unmatched), then advance the<br>`audit_cursor` epoch-safely.<br># Errors<br>[`IngestError`] when the response lacks boot identity, fails normalization,<br>or a store operation fails.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Ingest one `api.audit.pull` response for `sandbox_id`: persist every</span>
+    <span class="rs-comment">/// normalized event as an `obs_event` (matched or unmatched), then advance the</span>
+    <span class="rs-comment">/// `audit_cursor` epoch-safely.</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// # Errors</span>
+    <span class="rs-comment">/// [`IngestError`] when the response lacks boot identity, fails normalization,</span>
+    <span class="rs-comment">/// or a store operation fails.</span>
+    <span class="rs-kw">pub</span> <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-backend-audit--src-ingestor-rs.html#method-ingest-pull-99">ingest_pull</a>(
+        &amp;<span class="rs-self">self</span>,
+        sandbox_id: &amp;<span class="rs-type">SandboxId</span>,
+        response: &amp;<span class="rs-type">Value</span>,
+    ) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-backend-audit--src-ingestor-rs.html#item-struct-IngestReport-62">IngestReport</a>, <a class="symbol-link rs-type" href="eos-backend-audit--src-ingestor-rs.html#item-enum-IngestError-46">IngestError</a>&gt; {
+        <span class="rs-kw">let</span> boot_epoch_id = <a class="symbol-link rs-fn" href="eos-backend-audit--src-ingestor-rs.html#item-fn-boot-epoch-id-233">boot_epoch_id</a>(response).ok_or(<a class="symbol-link rs-type" href="eos-backend-audit--src-ingestor-rs.html#item-enum-IngestError-46">IngestError</a>::<span class="rs-type">MissingBootEpoch</span>)?;
+        <span class="rs-kw">let</span> batch = <a class="symbol-link rs-fn" href="eos-backend-audit--src-normalization-rs.html#item-fn-normalize-sandbox-pull-response-78">normalize_sandbox_pull_response</a>(response)?;
+        <span class="rs-kw">let</span> prior = <span class="rs-self">self</span>.cursors.get(sandbox_id).<span class="rs-kw">await</span>?;
+        <span class="rs-kw">let</span> epoch_reset = prior
+            .as_ref()
+            .is_some_and(|cursor| cursor.boot_epoch_id != boot_epoch_id);
+
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> matched = 0;
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> unmatched = 0;
+        <span class="rs-kw">for</span> row <span class="rs-kw">in</span> &amp;batch.rows {
+            <span class="rs-kw">let</span> invocation = <a class="symbol-link rs-fn" href="eos-backend-audit--src-ingestor-rs.html#item-fn-invocation-id-242">invocation_id</a>(row);
+            <span class="rs-kw">let</span> caller = <a class="symbol-link rs-fn" href="eos-backend-audit--src-ingestor-rs.html#item-fn-caller-id-250">caller_id</a>(&amp;row.payload);
+            <span class="rs-kw">let</span> bridge = <span class="rs-kw">match</span> (&amp;invocation, &amp;caller) {
+                (<span class="rs-type">Some</span>(invocation), <span class="rs-type">Some</span>(caller)) =&gt; {
+                    <span class="rs-self">self</span>.correlations.get(sandbox_id, caller, invocation).<span class="rs-kw">await</span>?
+                }
+                _ =&gt; <span class="rs-type">None</span>,
+            };
+            <span class="rs-kw">if</span> invocation.is_some() {
+                <span class="rs-kw">if</span> bridge.is_some() {
+                    matched += 1;
+                } <span class="rs-kw">else</span> {
+                    unmatched += 1;
+                }
+            }
+            <span class="rs-kw">let</span> obs = <a class="symbol-link rs-fn" href="eos-backend-audit--src-ingestor-rs.html#item-fn-build-obs-event-151">build_obs_event</a>(sandbox_id, row, invocation.as_ref(), bridge.as_ref());
+            <span class="rs-self">self</span>.obs_events.insert(&amp;obs).<span class="rs-kw">await</span>?;
+        }
+
+        <span class="rs-kw">let</span> cursor = <a class="symbol-link rs-fn" href="eos-backend-audit--src-ingestor-rs.html#item-fn-next-cursor-185">next_cursor</a>(sandbox_id, boot_epoch_id, epoch_reset, prior.as_ref(), &amp;batch);
+        <span class="rs-self">self</span>.cursors.upsert(&amp;cursor).<span class="rs-kw">await</span>?;
+        <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-backend-audit--src-ingestor-rs.html#item-struct-IngestReport-62">IngestReport</a> {
+            epoch_reset,
+            matched,
+            unmatched,
+            cursor,
+        })
+    }
+</code></pre>
+</details></td></tr></tbody></table>
+
+  <p class="source">crates/eos-backend-audit/src/ingestor.rs:75</p>
+</article><article id="item-enum-IngestError-46" class="type-card" data-kind="enum" data-kind-list="enum field type-model" data-filter-text="enum IngestError pub pub enum IngestError crates/eos-backend-audit/src/ingestor.rs  ">
+  <div class="item-head">
+    <span class="kind">enum</span>
+    <h3>IngestError</h3>
+    <span class="visibility">pub</span>
+  </div>
+  <code class="signature">pub enum <a class="symbol-link" href="eos-backend-audit--src-ingestor-rs.html#item-enum-IngestError-46">IngestError</a></code>
+  <p class="docstring">Errors raised while ingesting a daemon audit pull.</p>
+  <div class="tags"><span>derive: Debug</span><span>derive: thiserror::Error</span><span>error</span><span>non_exhaustive</span></div>
+  <h4>Variants</h4><table><tbody><tr><td>MissingBootEpoch</td><td><code></code></td></tr><tr><td>Normalize</td><td><code>0: <a class="symbol-link" href="eos-backend-audit--src-normalization-rs.html#item-enum-ObsNormalizationError-48">ObsNormalizationError</a></code></td></tr><tr><td>Store</td><td><code>0: StoreError</code></td></tr></tbody></table>
+
+  <p class="source">crates/eos-backend-audit/src/ingestor.rs:46</p>
+</article><div class="group-label">Standalone Functions</div><article id="item-fn-build-obs-event-151" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn build_obs_event private fn build_obs_event (sandbox_id : &amp; SandboxId , row : &amp; ObsEnvelope , invocation : Option &lt; &amp; InvocationId &gt; , bridge : Option &lt; &amp; SandboxCallCorrelation &gt; ,) -&gt; ObsEvent crates/eos-backend-audit/src/ingestor.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>build_obs_event</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="eos-backend-audit--src-ingestor-rs.html#item-fn-build-obs-event-151">build_obs_event</a> (sandbox_id : &amp; SandboxId , row : &amp; ObsEnvelope , invocation : Option &lt; &amp; InvocationId &gt; , bridge : Option &lt; &amp; SandboxCallCorrelation &gt; ,) -&gt; ObsEvent</code>
+  <p class="docstring">Build the persisted `obs_event` for one normalized daemon row.<br>Model-facing ids (`request_id`/`task_id`/`agent_run_id`/`tool_use_id`) come<br>**only** from a matched `bridge`; the daemon invocation id is stored solely as<br>`sandbox_invocation_id`. A row that has an invocation id but no bridge is stamped<br>with the [`UNMATCHED_MARKER`] and keeps null model ids (AC7).</p>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-comment">/// Build the persisted `obs_event` for one normalized daemon row.</span>
+<span class="rs-comment">///</span>
+<span class="rs-comment">/// Model-facing ids (`request_id`/`task_id`/`agent_run_id`/`tool_use_id`) come</span>
+<span class="rs-comment">/// **only** from a matched `bridge`; the daemon invocation id is stored solely as</span>
+<span class="rs-comment">/// `sandbox_invocation_id`. A row that has an invocation id but no bridge is stamped</span>
+<span class="rs-comment">/// with the [`UNMATCHED_MARKER`] and keeps null model ids (AC7).</span>
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-backend-audit--src-ingestor-rs.html#item-fn-build-obs-event-151">build_obs_event</a>(
+    sandbox_id: &amp;<span class="rs-type">SandboxId</span>,
+    row: &amp;<span class="rs-type">ObsEnvelope</span>,
+    invocation: <span class="rs-type">Option</span>&lt;&amp;<span class="rs-type">InvocationId</span>&gt;,
+    bridge: <span class="rs-type">Option</span>&lt;&amp;<span class="rs-type">SandboxCallCorrelation</span>&gt;,
+) -&gt; <span class="rs-type">ObsEvent</span> {
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> payload = row.payload.clone();
+    <span class="rs-comment">// A row with an invocation id but no bridge is unmatched: mark it and keep model</span>
+    <span class="rs-comment">// ids null. The model ids are lifted ONLY from the bridge (`Option&lt;&amp;_&gt;` is `Copy`),</span>
+    <span class="rs-comment">// so the daemon invocation never lands in `tool_use_id` (AC7).</span>
+    <span class="rs-kw">if</span> bridge.is_none() &amp;&amp; invocation.is_some() {
+        payload.insert(<span class="rs-type">UNMATCHED_MARKER</span>.to_owned(), <span class="rs-type">Value</span>::<span class="rs-type">Bool</span>(<span class="rs-kw">true</span>));
+    }
+    <span class="rs-type">ObsEvent</span> {
+        id: <span class="rs-type">None</span>,
+        request_id: bridge.map(|bridge| bridge.request_id.clone()),
+        task_id: bridge.map(|bridge| bridge.task_id.clone()),
+        agent_run_id: bridge.map(|bridge| bridge.agent_run_id.clone()),
+        tool_use_id: bridge.map(|bridge| bridge.tool_use_id.clone()),
+        sandbox_invocation_id: invocation.cloned(),
+        sandbox_id: <span class="rs-type">Some</span>(sandbox_id.clone()),
+        source: <span class="rs-type">ObsSource</span>::<span class="rs-type">Daemon</span>,
+        kind: row.event_type.clone(),
+        payload: <span class="rs-type">Value</span>::<span class="rs-type">Object</span>(payload),
+        created_at: <span class="rs-type">UtcDateTime</span>::now(),
+    }
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-backend-audit/src/ingestor.rs:151</p>
+</article><article id="item-fn-next-cursor-185" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn next_cursor private fn next_cursor (sandbox_id : &amp; SandboxId , boot_epoch_id : i64 , epoch_reset : bool , prior : Option &lt; &amp; AuditCursor &gt; , batch : &amp; crate :: SandboxPullBatch ,) -&gt; AuditCursor crates/eos-backend-audit/src/ingestor.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>next_cursor</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="eos-backend-audit--src-ingestor-rs.html#item-fn-next-cursor-185">next_cursor</a> (sandbox_id : &amp; SandboxId , boot_epoch_id : i64 , epoch_reset : bool , prior : Option &lt; &amp; AuditCursor &gt; , batch : &amp; crate :: <a class="symbol-link" href="eos-backend-audit--src-normalization-rs.html#item-struct-SandboxPullBatch-5">SandboxPullBatch</a> ,) -&gt; AuditCursor</code>
+  <p class="docstring">Compute the next `audit_cursor`, recording prior-epoch loss before trusting a<br>new sequence space.</p>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-comment">/// Compute the next `audit_cursor`, recording prior-epoch loss before trusting a</span>
+<span class="rs-comment">/// new sequence space.</span>
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-backend-audit--src-ingestor-rs.html#item-fn-next-cursor-185">next_cursor</a>(
+    sandbox_id: &amp;<span class="rs-type">SandboxId</span>,
+    boot_epoch_id: i64,
+    epoch_reset: bool,
+    prior: <span class="rs-type">Option</span>&lt;&amp;<span class="rs-type">AuditCursor</span>&gt;,
+    batch: &amp;<span class="rs-kw">crate</span>::<a class="symbol-link rs-type" href="eos-backend-audit--src-normalization-rs.html#item-struct-SandboxPullBatch-5">SandboxPullBatch</a>,
+) -&gt; <span class="rs-type">AuditCursor</span> {
+    <span class="rs-kw">let</span> prior_last = prior.map_or(0, |cursor| cursor.last_seq);
+    <span class="rs-kw">let</span> cursor_after = batch.loss.cursor_after_seq;
+    <span class="rs-kw">let</span> ring_lost = batch.loss.lost_before_seq;
+    <span class="rs-kw">let</span> ring_dropped = batch.loss.dropped_event_count.unwrap_or(0).max(0) <span class="rs-kw">as</span> u64;
+
+    <span class="rs-kw">let</span> (last_seq, lost_before_seq, dropped_count) = <span class="rs-kw">if</span> epoch_reset {
+        <span class="rs-comment">// Daemon rebooted: record loss up to the old high-water mark, then reset</span>
+        <span class="rs-comment">// `last_seq` into the new epoch's space (do not max with the old epoch).</span>
+        <span class="rs-comment">// `dropped_count` likewise tracks only the current epoch — the daemon's ring</span>
+        <span class="rs-comment">// counter restarts at reboot, so the prior epoch's count is intentionally</span>
+        <span class="rs-comment">// replaced (not summed or maxed); a single cursor row cannot hold a lifetime</span>
+        <span class="rs-comment">// total. The durable cross-epoch loss signal is `lost_before_seq` /</span>
+        <span class="rs-comment">// `audit_sandboxes_with_loss`, not this per-epoch count.</span>
+        <span class="rs-comment">//</span>
+        <span class="rs-comment">// Only record a real (&gt; 0) loss boundary: a degenerate reboot with</span>
+        <span class="rs-comment">// `prior_last == 0` and no ring-reported loss must stay null, matching</span>
+        <span class="rs-comment">// `SandboxAuditLoss::has_counted_loss` (`seq &gt; 0`) so the two loss</span>
+        <span class="rs-comment">// consumers agree on whether the row carries loss.</span>
+        <span class="rs-kw">let</span> lost = <a class="symbol-link rs-fn" href="eos-backend-audit--src-ingestor-rs.html#item-fn-max-opt-271">max_opt</a>(<span class="rs-type">Some</span>(prior_last), ring_lost).filter(|&amp;seq| seq &gt; 0);
+        (cursor_after.unwrap_or(0), lost, ring_dropped)
+    } <span class="rs-kw">else</span> {
+        <span class="rs-comment">// Same epoch: never regress `last_seq`; keep the furthest loss boundary and</span>
+        <span class="rs-comment">// the daemon's cumulative dropped count.</span>
+        <span class="rs-kw">let</span> last = cursor_after.map_or(prior_last, |after| after.max(prior_last));
+        <span class="rs-kw">let</span> lost = <a class="symbol-link rs-fn" href="eos-backend-audit--src-ingestor-rs.html#item-fn-max-opt-271">max_opt</a>(prior.and_then(|cursor| cursor.lost_before_seq), ring_lost);
+        <span class="rs-kw">let</span> dropped = prior.map_or(ring_dropped, |cursor| cursor.dropped_count.max(ring_dropped));
+        (last, lost, dropped)
+    };
+
+    <span class="rs-type">AuditCursor</span> {
+        sandbox_id: sandbox_id.clone(),
+        last_seq,
+        boot_epoch_id,
+        lost_before_seq,
+        dropped_count,
+        updated_at: <span class="rs-type">UtcDateTime</span>::now(),
+    }
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-backend-audit/src/ingestor.rs:185</p>
+</article><article id="item-fn-boot-epoch-id-233" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn boot_epoch_id private fn boot_epoch_id (response : &amp; Value) -&gt; Option &lt; i64 &gt; crates/eos-backend-audit/src/ingestor.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>boot_epoch_id</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="eos-backend-audit--src-ingestor-rs.html#item-fn-boot-epoch-id-233">boot_epoch_id</a> (response : &amp; Value) -&gt; Option &lt; i64 &gt;</code>
+  <p class="docstring">The daemon boot epoch from `snapshot.daemon.boot_epoch_id`.</p>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-comment">/// The daemon boot epoch from `snapshot.daemon.boot_epoch_id`.</span>
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-backend-audit--src-ingestor-rs.html#item-fn-boot-epoch-id-233">boot_epoch_id</a>(response: &amp;<span class="rs-type">Value</span>) -&gt; <span class="rs-type">Option</span>&lt;i64&gt; {
+    response
+        .get(&quot;snapshot&quot;)?
+        .get(&quot;daemon&quot;)?
+        .get(&quot;boot_epoch_id&quot;)?
+        .as_i64()
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-backend-audit/src/ingestor.rs:233</p>
+</article><article id="item-fn-invocation-id-242" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn invocation_id private fn invocation_id (row : &amp; ObsEnvelope) -&gt; Option &lt; InvocationId &gt; crates/eos-backend-audit/src/ingestor.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>invocation_id</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="eos-backend-audit--src-ingestor-rs.html#item-fn-invocation-id-242">invocation_id</a> (row : &amp; ObsEnvelope) -&gt; Option &lt; InvocationId &gt;</code>
+  <p class="docstring">The daemon invocation id of a normalized sandbox row, parsed as an<br>[`InvocationId`]. Normalization places it in the `tool_use_id` slot — that is<br>the daemon's identity, not a model tool-use id.</p>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-comment">/// The daemon invocation id of a normalized sandbox row, parsed as an</span>
+<span class="rs-comment">/// [`InvocationId`]. Normalization places it in the `tool_use_id` slot — that is</span>
+<span class="rs-comment">/// the daemon's identity, not a model tool-use id.</span>
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-backend-audit--src-ingestor-rs.html#item-fn-invocation-id-242">invocation_id</a>(row: &amp;<span class="rs-type">ObsEnvelope</span>) -&gt; <span class="rs-type">Option</span>&lt;<span class="rs-type">InvocationId</span>&gt; {
+    <span class="rs-kw">let</span> raw = row.ids.tool_use_id.as_deref()?;
+    <span class="rs-type">InvocationId</span>::try_from(raw.to_owned()).ok()
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-backend-audit/src/ingestor.rs:242</p>
+</article><article id="item-fn-caller-id-250" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn caller_id private fn caller_id (payload : &amp; Map &lt; String , Value &gt;) -&gt; Option &lt; CallerId &gt; crates/eos-backend-audit/src/ingestor.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>caller_id</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="eos-backend-audit--src-ingestor-rs.html#item-fn-caller-id-250">caller_id</a> (payload : &amp; Map &lt; String , Value &gt;) -&gt; Option &lt; CallerId &gt;</code>
+  <p class="docstring">The daemon `caller_id` from a normalized row payload (top level or a known<br>section), if present and non-empty.</p>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-comment">/// The daemon `caller_id` from a normalized row payload (top level or a known</span>
+<span class="rs-comment">/// section), if present and non-empty.</span>
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-backend-audit--src-ingestor-rs.html#item-fn-caller-id-250">caller_id</a>(payload: &amp;<span class="rs-type">Map</span>&lt;<span class="rs-type">String</span>, <span class="rs-type">Value</span>&gt;) -&gt; <span class="rs-type">Option</span>&lt;<span class="rs-type">CallerId</span>&gt; {
+    <span class="rs-kw">let</span> raw = <a class="symbol-link rs-fn" href="eos-backend-audit--src-ingestor-rs.html#item-fn-string-at-261">string_at</a>(payload, &amp;[&quot;caller_id&quot;]).or_else(|| {
+        <span class="rs-type">CALLER_ID_SECTIONS</span>
+            .iter()
+            .find_map(|section| <a class="symbol-link rs-fn" href="eos-backend-audit--src-ingestor-rs.html#item-fn-string-at-261">string_at</a>(payload, &amp;[section, &quot;caller_id&quot;]))
+    });
+    raw.filter(|value| !value.is_empty()).map(<span class="rs-type">CallerId</span>)
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-backend-audit/src/ingestor.rs:250</p>
+</article><article id="item-fn-string-at-261" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn string_at private fn string_at (map : &amp; Map &lt; String , Value &gt; , path : &amp; [&amp; str]) -&gt; Option &lt; String &gt; crates/eos-backend-audit/src/ingestor.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>string_at</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="eos-backend-audit--src-ingestor-rs.html#item-fn-string-at-261">string_at</a> (map : &amp; Map &lt; String , Value &gt; , path : &amp; [&amp; str]) -&gt; Option &lt; String &gt;</code>
+  <p class="docstring">Read a string at `path` within a JSON object map.</p>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-comment">/// Read a string at `path` within a JSON object map.</span>
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-backend-audit--src-ingestor-rs.html#item-fn-string-at-261">string_at</a>(map: &amp;<span class="rs-type">Map</span>&lt;<span class="rs-type">String</span>, <span class="rs-type">Value</span>&gt;, path: &amp;[&amp;str]) -&gt; <span class="rs-type">Option</span>&lt;<span class="rs-type">String</span>&gt; {
+    <span class="rs-kw">let</span> (first, rest) = path.split_first()?;
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> current = map.get(*first)?;
+    <span class="rs-kw">for</span> key <span class="rs-kw">in</span> rest {
+        current = current.get(*key)?;
+    }
+    current.as_str().map(str::to_owned)
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-backend-audit/src/ingestor.rs:261</p>
+</article><article id="item-fn-max-opt-271" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn max_opt private fn max_opt (left : Option &lt; i64 &gt; , right : Option &lt; i64 &gt;) -&gt; Option &lt; i64 &gt; crates/eos-backend-audit/src/ingestor.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>max_opt</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="eos-backend-audit--src-ingestor-rs.html#item-fn-max-opt-271">max_opt</a> (left : Option &lt; i64 &gt; , right : Option &lt; i64 &gt;) -&gt; Option &lt; i64 &gt;</code>
+  <p class="docstring">The larger of two optional sequence values (`None` is "unknown").</p>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-comment">/// The larger of two optional sequence values (`None` is "unknown").</span>
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-backend-audit--src-ingestor-rs.html#item-fn-max-opt-271">max_opt</a>(left: <span class="rs-type">Option</span>&lt;i64&gt;, right: <span class="rs-type">Option</span>&lt;i64&gt;) -&gt; <span class="rs-type">Option</span>&lt;i64&gt; {
+    <span class="rs-kw">match</span> (left, right) {
+        (<span class="rs-type">Some</span>(left), <span class="rs-type">Some</span>(right)) =&gt; <span class="rs-type">Some</span>(left.max(right)),
+        (value @ <span class="rs-type">Some</span>(_), <span class="rs-type">None</span>) | (<span class="rs-type">None</span>, value @ <span class="rs-type">Some</span>(_)) =&gt; value,
+        (<span class="rs-type">None</span>, <span class="rs-type">None</span>) =&gt; <span class="rs-type">None</span>,
+    }
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-backend-audit/src/ingestor.rs:271</p>
+</article></div>
+</section></div>
+</main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/eos-backend-audit/src/ingestor.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-comment">//! [`AuditIngestor`] — ingest a daemon `api.audit.pull` response into `obs_event`,</span>
+<span class="rs-comment">//! joining daemon-facing identities to model-facing ids through</span>
+<span class="rs-comment">//! `sandbox_call_correlation`, and tracking the per-sandbox `audit_cursor` across</span>
+<span class="rs-comment">//! daemon reboots (AC7, AC8).</span>
+<span class="rs-comment">//!</span>
+<span class="rs-comment">//! The crux of AC7: the daemon stamps its own **invocation id** into the audit</span>
+<span class="rs-comment">//! event's `tool_call.tool_use_id` slot (see the daemon transport server). So for a</span>
+<span class="rs-comment">//! daemon row this ingestor treats that value as the `sandbox_invocation_id`, never</span>
+<span class="rs-comment">//! as a model `tool_use_id`. The model-facing `tool_use_id` (and the owning</span>
+<span class="rs-comment">//! request/task/agent-run) come **only** from a matched correlation bridge; with no</span>
+<span class="rs-comment">//! bridge the row persists with null model ids and an `unmatched` marker.</span>
+<span class="rs-comment">//!</span>
+<span class="rs-comment">//! Boot epoch (AC8): the ingestor reads `boot_epoch_id` from the pull snapshot</span>
+<span class="rs-comment">//! before advancing `last_seq`. A changed epoch means the daemon rebooted into a</span>
+<span class="rs-comment">//! fresh sequence space, so the cursor records loss for the prior epoch and resets</span>
+<span class="rs-comment">//! `last_seq` rather than trusting a sequence comparison.</span>
+<span class="rs-comment">//!</span>
+<span class="rs-comment">//! This module owns the *ingest* of a pull response; the transport-driven poll</span>
+<span class="rs-comment">//! loop that fetches responses (`DaemonOp::AuditPull`) is wired at the backend</span>
+<span class="rs-comment">//! composition root (later phase), keeping the obs crate free of a transport edge.</span>
+
+<span class="rs-kw">use</span> serde_json::{<span class="rs-type">Map</span>, <span class="rs-type">Value</span>};
+
+<span class="rs-kw">use</span> eos_audit::<span class="rs-type">ObsEnvelope</span>;
+<span class="rs-kw">use</span> eos_backend_store::{<span class="rs-type">AuditCursorRepo</span>, <span class="rs-type">ObsEventRepo</span>, <span class="rs-type">SandboxCallCorrelationRepo</span>, <span class="rs-type">StoreError</span>};
+<span class="rs-kw">use</span> eos_backend_types::{<span class="rs-type">AuditCursor</span>, <span class="rs-type">ObsEvent</span>, <span class="rs-type">ObsSource</span>, <span class="rs-type">SandboxCallCorrelation</span>};
+<span class="rs-kw">use</span> eos_protocol::<span class="rs-type">CallerId</span>;
+<span class="rs-kw">use</span> eos_types::{<span class="rs-type">InvocationId</span>, <span class="rs-type">SandboxId</span>, <span class="rs-type">UtcDateTime</span>};
+
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::{normalize_sandbox_pull_response, <a class="symbol-link rs-type" href="eos-backend-audit--src-normalization-rs.html#item-enum-ObsNormalizationError-48">ObsNormalizationError</a>};
+
+<span class="rs-comment">/// Payload marker stamped on a daemon row that has an invocation id but no</span>
+<span class="rs-comment">/// correlation bridge. Visible in `/api/stats/events` without a re-join; the</span>
+<span class="rs-comment">/// column shape (`tool_use_id IS NULL AND sandbox_invocation_id IS NOT NULL`) is</span>
+<span class="rs-comment">/// the durable source of truth for stats.</span>
+<span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-type">UNMATCHED_MARKER</span>: &amp;str = &quot;unmatched&quot;;
+
+<span class="rs-comment">/// Payload sections (and the top level) that may carry a daemon `caller_id`.</span>
+<span class="rs-kw">const</span> <span class="rs-type">CALLER_ID_SECTIONS</span>: &amp;[&amp;str] = &amp;[
+    &quot;tool_call&quot;,
+    &quot;os_resource&quot;,
+    &quot;background_tool&quot;,
+    &quot;isolated_workspace&quot;,
+];
+
+<span class="rs-comment">/// Errors raised while ingesting a daemon audit pull.</span>
+#[derive(<span class="rs-type">Debug</span>, thiserror::<span class="rs-type">Error</span>)]
+#[non_exhaustive]
+<span class="rs-kw">pub</span> <span class="rs-kw">enum</span> <a class="symbol-link rs-type" href="eos-backend-audit--src-ingestor-rs.html#item-enum-IngestError-46">IngestError</a> {
+    <span class="rs-comment">/// The pull response had no `snapshot.daemon.boot_epoch_id`; without boot</span>
+    <span class="rs-comment">/// identity the cursor cannot safely advance `last_seq` (AC8).</span>
+    #[error(&quot;daemon audit pull is missing snapshot.daemon.boot_epoch_id&quot;)]
+    <span class="rs-type">MissingBootEpoch</span>,
+    <span class="rs-comment">/// The pull response could not be normalized.</span>
+    #[error(&quot;daemon audit pull could not be normalized&quot;)]
+    <span class="rs-type">Normalize</span>(#[from] <a class="symbol-link rs-type" href="eos-backend-audit--src-normalization-rs.html#item-enum-ObsNormalizationError-48">ObsNormalizationError</a>),
+    <span class="rs-comment">/// A backend store read/write failed.</span>
+    #[error(&quot;backend store error <span class="rs-kw">while</span> ingesting daemon audit&quot;)]
+    <span class="rs-type">Store</span>(#[from] <span class="rs-type">StoreError</span>),
+}
+
+<span class="rs-comment">/// Outcome of ingesting one pull response, for loss accounting and tests.</span>
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">PartialEq</span>)]
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-backend-audit--src-ingestor-rs.html#item-struct-IngestReport-62">IngestReport</a> {
+    <span class="rs-comment">/// Whether this pull observed a daemon reboot (epoch change).</span>
+    <span class="rs-kw">pub</span> epoch_reset: bool,
+    <span class="rs-comment">/// Daemon rows joined to a correlation bridge.</span>
+    <span class="rs-kw">pub</span> matched: u64,
+    <span class="rs-comment">/// Daemon rows with an invocation id but no bridge.</span>
+    <span class="rs-kw">pub</span> unmatched: u64,
+    <span class="rs-comment">/// The cursor persisted after this pull (carries `boot_epoch_id` and loss).</span>
+    <span class="rs-kw">pub</span> cursor: <span class="rs-type">AuditCursor</span>,
+}
+
+<span class="rs-comment">/// Ingests daemon audit pulls into `obs_event` + `audit_cursor`, joining the</span>
+<span class="rs-comment">/// correlation bridge. Holds cheap repository clones.</span>
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>)]
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-backend-audit--src-ingestor-rs.html#item-struct-AuditIngestor-75">AuditIngestor</a> {
+    obs_events: <span class="rs-type">ObsEventRepo</span>,
+    correlations: <span class="rs-type">SandboxCallCorrelationRepo</span>,
+    cursors: <span class="rs-type">AuditCursorRepo</span>,
+}
+
+<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-backend-audit--src-ingestor-rs.html#item-struct-AuditIngestor-75">AuditIngestor</a> {
+    <span class="rs-comment">/// Build an ingestor over the backend store's obs/correlation/cursor repos.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-backend-audit.html#method-new-80">new</a>(
+        obs_events: <span class="rs-type">ObsEventRepo</span>,
+        correlations: <span class="rs-type">SandboxCallCorrelationRepo</span>,
+        cursors: <span class="rs-type">AuditCursorRepo</span>,
+    ) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">Self</span> {
+            obs_events,
+            correlations,
+            cursors,
+        }
+    }
+
+    <span class="rs-comment">/// Ingest one `api.audit.pull` response for `sandbox_id`: persist every</span>
+    <span class="rs-comment">/// normalized event as an `obs_event` (matched or unmatched), then advance the</span>
+    <span class="rs-comment">/// `audit_cursor` epoch-safely.</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// # Errors</span>
+    <span class="rs-comment">/// [`IngestError`] when the response lacks boot identity, fails normalization,</span>
+    <span class="rs-comment">/// or a store operation fails.</span>
+    <span class="rs-kw">pub</span> <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-backend-audit--src-ingestor-rs.html#method-ingest-pull-99">ingest_pull</a>(
+        &amp;<span class="rs-self">self</span>,
+        sandbox_id: &amp;<span class="rs-type">SandboxId</span>,
+        response: &amp;<span class="rs-type">Value</span>,
+    ) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-backend-audit--src-ingestor-rs.html#item-struct-IngestReport-62">IngestReport</a>, <a class="symbol-link rs-type" href="eos-backend-audit--src-ingestor-rs.html#item-enum-IngestError-46">IngestError</a>&gt; {
+        <span class="rs-kw">let</span> boot_epoch_id = <a class="symbol-link rs-fn" href="eos-backend-audit--src-ingestor-rs.html#item-fn-boot-epoch-id-233">boot_epoch_id</a>(response).ok_or(<a class="symbol-link rs-type" href="eos-backend-audit--src-ingestor-rs.html#item-enum-IngestError-46">IngestError</a>::<span class="rs-type">MissingBootEpoch</span>)?;
+        <span class="rs-kw">let</span> batch = <a class="symbol-link rs-fn" href="eos-backend-audit--src-normalization-rs.html#item-fn-normalize-sandbox-pull-response-78">normalize_sandbox_pull_response</a>(response)?;
+        <span class="rs-kw">let</span> prior = <span class="rs-self">self</span>.cursors.get(sandbox_id).<span class="rs-kw">await</span>?;
+        <span class="rs-kw">let</span> epoch_reset = prior
+            .as_ref()
+            .is_some_and(|cursor| cursor.boot_epoch_id != boot_epoch_id);
+
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> matched = 0;
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> unmatched = 0;
+        <span class="rs-kw">for</span> row <span class="rs-kw">in</span> &amp;batch.rows {
+            <span class="rs-kw">let</span> invocation = <a class="symbol-link rs-fn" href="eos-backend-audit--src-ingestor-rs.html#item-fn-invocation-id-242">invocation_id</a>(row);
+            <span class="rs-kw">let</span> caller = <a class="symbol-link rs-fn" href="eos-backend-audit--src-ingestor-rs.html#item-fn-caller-id-250">caller_id</a>(&amp;row.payload);
+            <span class="rs-kw">let</span> bridge = <span class="rs-kw">match</span> (&amp;invocation, &amp;caller) {
+                (<span class="rs-type">Some</span>(invocation), <span class="rs-type">Some</span>(caller)) =&gt; {
+                    <span class="rs-self">self</span>.correlations.get(sandbox_id, caller, invocation).<span class="rs-kw">await</span>?
+                }
+                _ =&gt; <span class="rs-type">None</span>,
+            };
+            <span class="rs-kw">if</span> invocation.is_some() {
+                <span class="rs-kw">if</span> bridge.is_some() {
+                    matched += 1;
+                } <span class="rs-kw">else</span> {
+                    unmatched += 1;
+                }
+            }
+            <span class="rs-kw">let</span> obs = <a class="symbol-link rs-fn" href="eos-backend-audit--src-ingestor-rs.html#item-fn-build-obs-event-151">build_obs_event</a>(sandbox_id, row, invocation.as_ref(), bridge.as_ref());
+            <span class="rs-self">self</span>.obs_events.insert(&amp;obs).<span class="rs-kw">await</span>?;
+        }
+
+        <span class="rs-kw">let</span> cursor = <a class="symbol-link rs-fn" href="eos-backend-audit--src-ingestor-rs.html#item-fn-next-cursor-185">next_cursor</a>(sandbox_id, boot_epoch_id, epoch_reset, prior.as_ref(), &amp;batch);
+        <span class="rs-self">self</span>.cursors.upsert(&amp;cursor).<span class="rs-kw">await</span>?;
+        <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-backend-audit--src-ingestor-rs.html#item-struct-IngestReport-62">IngestReport</a> {
+            epoch_reset,
+            matched,
+            unmatched,
+            cursor,
+        })
+    }
+}
+
+<span class="rs-comment">/// Build the persisted `obs_event` for one normalized daemon row.</span>
+<span class="rs-comment">///</span>
+<span class="rs-comment">/// Model-facing ids (`request_id`/`task_id`/`agent_run_id`/`tool_use_id`) come</span>
+<span class="rs-comment">/// **only** from a matched `bridge`; the daemon invocation id is stored solely as</span>
+<span class="rs-comment">/// `sandbox_invocation_id`. A row that has an invocation id but no bridge is stamped</span>
+<span class="rs-comment">/// with the [`UNMATCHED_MARKER`] and keeps null model ids (AC7).</span>
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-backend-audit--src-ingestor-rs.html#item-fn-build-obs-event-151">build_obs_event</a>(
+    sandbox_id: &amp;<span class="rs-type">SandboxId</span>,
+    row: &amp;<span class="rs-type">ObsEnvelope</span>,
+    invocation: <span class="rs-type">Option</span>&lt;&amp;<span class="rs-type">InvocationId</span>&gt;,
+    bridge: <span class="rs-type">Option</span>&lt;&amp;<span class="rs-type">SandboxCallCorrelation</span>&gt;,
+) -&gt; <span class="rs-type">ObsEvent</span> {
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> payload = row.payload.clone();
+    <span class="rs-comment">// A row with an invocation id but no bridge is unmatched: mark it and keep model</span>
+    <span class="rs-comment">// ids null. The model ids are lifted ONLY from the bridge (`Option&lt;&amp;_&gt;` is `Copy`),</span>
+    <span class="rs-comment">// so the daemon invocation never lands in `tool_use_id` (AC7).</span>
+    <span class="rs-kw">if</span> bridge.is_none() &amp;&amp; invocation.is_some() {
+        payload.insert(<span class="rs-type">UNMATCHED_MARKER</span>.to_owned(), <span class="rs-type">Value</span>::<span class="rs-type">Bool</span>(<span class="rs-kw">true</span>));
+    }
+    <span class="rs-type">ObsEvent</span> {
+        id: <span class="rs-type">None</span>,
+        request_id: bridge.map(|bridge| bridge.request_id.clone()),
+        task_id: bridge.map(|bridge| bridge.task_id.clone()),
+        agent_run_id: bridge.map(|bridge| bridge.agent_run_id.clone()),
+        tool_use_id: bridge.map(|bridge| bridge.tool_use_id.clone()),
+        sandbox_invocation_id: invocation.cloned(),
+        sandbox_id: <span class="rs-type">Some</span>(sandbox_id.clone()),
+        source: <span class="rs-type">ObsSource</span>::<span class="rs-type">Daemon</span>,
+        kind: row.event_type.clone(),
+        payload: <span class="rs-type">Value</span>::<span class="rs-type">Object</span>(payload),
+        created_at: <span class="rs-type">UtcDateTime</span>::now(),
+    }
+}
+
+<span class="rs-comment">/// Compute the next `audit_cursor`, recording prior-epoch loss before trusting a</span>
+<span class="rs-comment">/// new sequence space.</span>
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-backend-audit--src-ingestor-rs.html#item-fn-next-cursor-185">next_cursor</a>(
+    sandbox_id: &amp;<span class="rs-type">SandboxId</span>,
+    boot_epoch_id: i64,
+    epoch_reset: bool,
+    prior: <span class="rs-type">Option</span>&lt;&amp;<span class="rs-type">AuditCursor</span>&gt;,
+    batch: &amp;<span class="rs-kw">crate</span>::<a class="symbol-link rs-type" href="eos-backend-audit--src-normalization-rs.html#item-struct-SandboxPullBatch-5">SandboxPullBatch</a>,
+) -&gt; <span class="rs-type">AuditCursor</span> {
+    <span class="rs-kw">let</span> prior_last = prior.map_or(0, |cursor| cursor.last_seq);
+    <span class="rs-kw">let</span> cursor_after = batch.loss.cursor_after_seq;
+    <span class="rs-kw">let</span> ring_lost = batch.loss.lost_before_seq;
+    <span class="rs-kw">let</span> ring_dropped = batch.loss.dropped_event_count.unwrap_or(0).max(0) <span class="rs-kw">as</span> u64;
+
+    <span class="rs-kw">let</span> (last_seq, lost_before_seq, dropped_count) = <span class="rs-kw">if</span> epoch_reset {
+        <span class="rs-comment">// Daemon rebooted: record loss up to the old high-water mark, then reset</span>
+        <span class="rs-comment">// `last_seq` into the new epoch's space (do not max with the old epoch).</span>
+        <span class="rs-comment">// `dropped_count` likewise tracks only the current epoch — the daemon's ring</span>
+        <span class="rs-comment">// counter restarts at reboot, so the prior epoch's count is intentionally</span>
+        <span class="rs-comment">// replaced (not summed or maxed); a single cursor row cannot hold a lifetime</span>
+        <span class="rs-comment">// total. The durable cross-epoch loss signal is `lost_before_seq` /</span>
+        <span class="rs-comment">// `audit_sandboxes_with_loss`, not this per-epoch count.</span>
+        <span class="rs-comment">//</span>
+        <span class="rs-comment">// Only record a real (&gt; 0) loss boundary: a degenerate reboot with</span>
+        <span class="rs-comment">// `prior_last == 0` and no ring-reported loss must stay null, matching</span>
+        <span class="rs-comment">// `SandboxAuditLoss::has_counted_loss` (`seq &gt; 0`) so the two loss</span>
+        <span class="rs-comment">// consumers agree on whether the row carries loss.</span>
+        <span class="rs-kw">let</span> lost = <a class="symbol-link rs-fn" href="eos-backend-audit--src-ingestor-rs.html#item-fn-max-opt-271">max_opt</a>(<span class="rs-type">Some</span>(prior_last), ring_lost).filter(|&amp;seq| seq &gt; 0);
+        (cursor_after.unwrap_or(0), lost, ring_dropped)
+    } <span class="rs-kw">else</span> {
+        <span class="rs-comment">// Same epoch: never regress `last_seq`; keep the furthest loss boundary and</span>
+        <span class="rs-comment">// the daemon's cumulative dropped count.</span>
+        <span class="rs-kw">let</span> last = cursor_after.map_or(prior_last, |after| after.max(prior_last));
+        <span class="rs-kw">let</span> lost = <a class="symbol-link rs-fn" href="eos-backend-audit--src-ingestor-rs.html#item-fn-max-opt-271">max_opt</a>(prior.and_then(|cursor| cursor.lost_before_seq), ring_lost);
+        <span class="rs-kw">let</span> dropped = prior.map_or(ring_dropped, |cursor| cursor.dropped_count.max(ring_dropped));
+        (last, lost, dropped)
+    };
+
+    <span class="rs-type">AuditCursor</span> {
+        sandbox_id: sandbox_id.clone(),
+        last_seq,
+        boot_epoch_id,
+        lost_before_seq,
+        dropped_count,
+        updated_at: <span class="rs-type">UtcDateTime</span>::now(),
+    }
+}
+
+<span class="rs-comment">/// The daemon boot epoch from `snapshot.daemon.boot_epoch_id`.</span>
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-backend-audit--src-ingestor-rs.html#item-fn-boot-epoch-id-233">boot_epoch_id</a>(response: &amp;<span class="rs-type">Value</span>) -&gt; <span class="rs-type">Option</span>&lt;i64&gt; {
+    response
+        .get(&quot;snapshot&quot;)?
+        .get(&quot;daemon&quot;)?
+        .get(&quot;boot_epoch_id&quot;)?
+        .as_i64()
+}
+
+<span class="rs-comment">/// The daemon invocation id of a normalized sandbox row, parsed as an</span>
+<span class="rs-comment">/// [`InvocationId`]. Normalization places it in the `tool_use_id` slot — that is</span>
+<span class="rs-comment">/// the daemon's identity, not a model tool-use id.</span>
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-backend-audit--src-ingestor-rs.html#item-fn-invocation-id-242">invocation_id</a>(row: &amp;<span class="rs-type">ObsEnvelope</span>) -&gt; <span class="rs-type">Option</span>&lt;<span class="rs-type">InvocationId</span>&gt; {
+    <span class="rs-kw">let</span> raw = row.ids.tool_use_id.as_deref()?;
+    <span class="rs-type">InvocationId</span>::try_from(raw.to_owned()).ok()
+}
+
+<span class="rs-comment">/// The daemon `caller_id` from a normalized row payload (top level or a known</span>
+<span class="rs-comment">/// section), if present and non-empty.</span>
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-backend-audit--src-ingestor-rs.html#item-fn-caller-id-250">caller_id</a>(payload: &amp;<span class="rs-type">Map</span>&lt;<span class="rs-type">String</span>, <span class="rs-type">Value</span>&gt;) -&gt; <span class="rs-type">Option</span>&lt;<span class="rs-type">CallerId</span>&gt; {
+    <span class="rs-kw">let</span> raw = <a class="symbol-link rs-fn" href="eos-backend-audit--src-ingestor-rs.html#item-fn-string-at-261">string_at</a>(payload, &amp;[&quot;caller_id&quot;]).or_else(|| {
+        <span class="rs-type">CALLER_ID_SECTIONS</span>
+            .iter()
+            .find_map(|section| <a class="symbol-link rs-fn" href="eos-backend-audit--src-ingestor-rs.html#item-fn-string-at-261">string_at</a>(payload, &amp;[section, &quot;caller_id&quot;]))
+    });
+    raw.filter(|value| !value.is_empty()).map(<span class="rs-type">CallerId</span>)
+}
+
+<span class="rs-comment">/// Read a string at `path` within a JSON object map.</span>
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-backend-audit--src-ingestor-rs.html#item-fn-string-at-261">string_at</a>(map: &amp;<span class="rs-type">Map</span>&lt;<span class="rs-type">String</span>, <span class="rs-type">Value</span>&gt;, path: &amp;[&amp;str]) -&gt; <span class="rs-type">Option</span>&lt;<span class="rs-type">String</span>&gt; {
+    <span class="rs-kw">let</span> (first, rest) = path.split_first()?;
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> current = map.get(*first)?;
+    <span class="rs-kw">for</span> key <span class="rs-kw">in</span> rest {
+        current = current.get(*key)?;
+    }
+    current.as_str().map(str::to_owned)
+}
+
+<span class="rs-comment">/// The larger of two optional sequence values (`None` is "unknown").</span>
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-backend-audit--src-ingestor-rs.html#item-fn-max-opt-271">max_opt</a>(left: <span class="rs-type">Option</span>&lt;i64&gt;, right: <span class="rs-type">Option</span>&lt;i64&gt;) -&gt; <span class="rs-type">Option</span>&lt;i64&gt; {
+    <span class="rs-kw">match</span> (left, right) {
+        (<span class="rs-type">Some</span>(left), <span class="rs-type">Some</span>(right)) =&gt; <span class="rs-type">Some</span>(left.max(right)),
+        (value @ <span class="rs-type">Some</span>(_), <span class="rs-type">None</span>) | (<span class="rs-type">None</span>, value @ <span class="rs-type">Some</span>(_)) =&gt; value,
+        (<span class="rs-type">None</span>, <span class="rs-type">None</span>) =&gt; <span class="rs-type">None</span>,
+    }
+}
+
+#[cfg(test)]
+#[path = &quot;../tests/ingestor/<span class="rs-kw">mod</span>.rs&quot;]
+<span class="rs-kw">mod</span> tests;
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
+  <script src="../assets/inventory.js"></script>
+</body>
+</html>

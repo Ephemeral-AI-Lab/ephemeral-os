@@ -8,8 +8,16 @@
 </head>
 <body>
   <header>
-    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
-    <h1>eos-runner File Inventory</h1>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>eos-runner File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS/sandbox &amp;&amp; cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
   </header>
   <a class="back-link" href="../index.html">sandbox</a>
 <section class="summary">
@@ -47,29 +55,144 @@
       <span>0 methods</span>
     </div>
   </div>
-  <div class="items"><div class="group-label">Standalone Functions</div><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn mask_model_shell_paths pub(crate) pub(crate) fn mask_model_shell_paths (hidden_paths : &amp; [PathBuf]) -&gt; Result &lt; () , RunnerError &gt; crates/eos-runner/src/mount_mask.rs  ">
+  <div class="items"><div class="group-label">Standalone Functions</div><article id="item-fn-mask-model-shell-paths-13" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn mask_model_shell_paths pub(crate) pub(crate) fn mask_model_shell_paths (hidden_paths : &amp; [PathBuf]) -&gt; Result &lt; () , RunnerError &gt; crates/eos-runner/src/mount_mask.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>mask_model_shell_paths</h3>
     <span class="visibility">pub(crate)</span>
   </div>
-  <code class="signature">pub(crate) fn mask_model_shell_paths (hidden_paths : &amp; [PathBuf]) -&gt; Result &lt; () , RunnerError &gt;</code>
+  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-runner--src-mount-mask-rs.html#item-fn-mask-model-shell-paths-13">mask_model_shell_paths</a> (hidden_paths : &amp; [PathBuf]) -&gt; Result &lt; () , <a class="symbol-link" href="eos-runner.html#item-enum-RunnerError-11">RunnerError</a> &gt;</code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runner--src-mount-mask-rs.html#item-fn-mask-model-shell-paths-13">mask_model_shell_paths</a>(hidden_paths: &amp;[<span class="rs-type">PathBuf</span>]) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-runner.html#item-enum-RunnerError-11">RunnerError</a>&gt; {
+    <span class="rs-kw">for</span> path <span class="rs-kw">in</span> hidden_paths {
+        <a class="symbol-link rs-fn" href="eos-runner--src-mount-mask-rs.html#item-fn-mask-with-empty-tmpfs-20">mask_with_empty_tmpfs</a>(path)?;
+    }
+    <span class="rs-type">Ok</span>(())
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-runner/src/mount_mask.rs:13</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn mask_with_empty_tmpfs private fn mask_with_empty_tmpfs (path : &amp; Path) -&gt; Result &lt; () , RunnerError &gt; crates/eos-runner/src/mount_mask.rs  ">
+</article><article id="item-fn-mask-with-empty-tmpfs-20" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn mask_with_empty_tmpfs private fn mask_with_empty_tmpfs (path : &amp; Path) -&gt; Result &lt; () , RunnerError &gt; crates/eos-runner/src/mount_mask.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>mask_with_empty_tmpfs</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn mask_with_empty_tmpfs (path : &amp; Path) -&gt; Result &lt; () , RunnerError &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-runner--src-mount-mask-rs.html#item-fn-mask-with-empty-tmpfs-20">mask_with_empty_tmpfs</a> (path : &amp; Path) -&gt; Result &lt; () , <a class="symbol-link" href="eos-runner.html#item-enum-RunnerError-11">RunnerError</a> &gt;</code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runner--src-mount-mask-rs.html#item-fn-mask-with-empty-tmpfs-20">mask_with_empty_tmpfs</a>(path: &amp;<span class="rs-type">Path</span>) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-runner.html#item-enum-RunnerError-11">RunnerError</a>&gt; {
+    <span class="rs-kw">if</span> !path.exists() {
+        <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(());
+    }
+    <span class="rs-kw">if</span> !path.is_dir() {
+        <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-runner.html#item-enum-RunnerError-11">RunnerError</a>::<span class="rs-type">InvalidRequest</span>(format!(
+            &quot;masked path is not a directory: {}&quot;,
+            path.display()
+        )));
+    }
+
+    <span class="rs-kw">let</span> source = <span class="rs-type">CString</span>::new(&quot;tmpfs&quot;).expect(&quot;<span class="rs-kw">static</span> string has no nul&quot;);
+    <span class="rs-kw">let</span> target = <span class="rs-type">CString</span>::new(path.as_os_str().as_bytes()).map_err(|err| {
+        <a class="symbol-link rs-type" href="eos-runner.html#item-enum-RunnerError-11">RunnerError</a>::<span class="rs-type">InvalidRequest</span>(format!(&quot;masked path contains an interior nul byte: {err}&quot;))
+    })?;
+    <span class="rs-kw">let</span> fstype = <span class="rs-type">CString</span>::new(&quot;tmpfs&quot;).expect(&quot;<span class="rs-kw">static</span> string has no nul&quot;);
+    <span class="rs-kw">let</span> data = <span class="rs-type">CString</span>::new(&quot;size=4k,mode=000&quot;).expect(&quot;<span class="rs-kw">static</span> string has no nul&quot;);
+    <span class="rs-kw">let</span> flags = libc::<span class="rs-type">MS_NOSUID</span> | libc::<span class="rs-type">MS_NODEV</span> | libc::<span class="rs-type">MS_NOEXEC</span> | libc::<span class="rs-type">MS_RDONLY</span>;
+
+    <span class="rs-comment">// SAFETY: `target`, `source`, `fstype`, and `data` are NUL-terminated strings</span>
+    <span class="rs-comment">// that live for the syscall. This function runs only after the runner is in</span>
+    <span class="rs-comment">// the dedicated mount namespace where it has CAP_SYS_ADMIN.</span>
+    <span class="rs-kw">let</span> rc = <span class="rs-kw">unsafe</span> {
+        libc::mount(
+            source.as_ptr(),
+            target.as_ptr(),
+            fstype.as_ptr(),
+            flags,
+            data.as_ptr().cast(),
+        )
+    };
+    <span class="rs-kw">if</span> rc == 0 {
+        <span class="rs-type">Ok</span>(())
+    } <span class="rs-kw">else</span> {
+        <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-runner.html#item-enum-RunnerError-11">RunnerError</a>::<span class="rs-type">Syscall</span>(std::io::<span class="rs-type">Error</span>::last_os_error()))
+    }
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-runner/src/mount_mask.rs:20</p>
 </article></div>
 </section></div>
 </main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/eos-runner/src/mount_mask.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-comment">//! Mount-namespace masking for model-facing shell commands.</span>
+<span class="rs-comment">//!</span>
+<span class="rs-comment">//! The workspace overlay is mounted only at `workspace_root`, but the shell still</span>
+<span class="rs-comment">//! runs in the surrounding container root. Mask daemon/kernel control paths after</span>
+<span class="rs-comment">//! overlay setup so model-facing commands cannot inspect the real runtime state.</span>
+
+<span class="rs-kw">use</span> std::ffi::<span class="rs-type">CString</span>;
+<span class="rs-kw">use</span> std::os::unix::ffi::<span class="rs-type">OsStrExt</span>;
+<span class="rs-kw">use</span> std::path::{<span class="rs-type">Path</span>, <span class="rs-type">PathBuf</span>};
+
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::<a class="symbol-link rs-type" href="eos-runner.html#item-enum-RunnerError-11">RunnerError</a>;
+
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runner--src-mount-mask-rs.html#item-fn-mask-model-shell-paths-13">mask_model_shell_paths</a>(hidden_paths: &amp;[<span class="rs-type">PathBuf</span>]) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-runner.html#item-enum-RunnerError-11">RunnerError</a>&gt; {
+    <span class="rs-kw">for</span> path <span class="rs-kw">in</span> hidden_paths {
+        <a class="symbol-link rs-fn" href="eos-runner--src-mount-mask-rs.html#item-fn-mask-with-empty-tmpfs-20">mask_with_empty_tmpfs</a>(path)?;
+    }
+    <span class="rs-type">Ok</span>(())
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runner--src-mount-mask-rs.html#item-fn-mask-with-empty-tmpfs-20">mask_with_empty_tmpfs</a>(path: &amp;<span class="rs-type">Path</span>) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-runner.html#item-enum-RunnerError-11">RunnerError</a>&gt; {
+    <span class="rs-kw">if</span> !path.exists() {
+        <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(());
+    }
+    <span class="rs-kw">if</span> !path.is_dir() {
+        <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-runner.html#item-enum-RunnerError-11">RunnerError</a>::<span class="rs-type">InvalidRequest</span>(format!(
+            &quot;masked path is not a directory: {}&quot;,
+            path.display()
+        )));
+    }
+
+    <span class="rs-kw">let</span> source = <span class="rs-type">CString</span>::new(&quot;tmpfs&quot;).expect(&quot;<span class="rs-kw">static</span> string has no nul&quot;);
+    <span class="rs-kw">let</span> target = <span class="rs-type">CString</span>::new(path.as_os_str().as_bytes()).map_err(|err| {
+        <a class="symbol-link rs-type" href="eos-runner.html#item-enum-RunnerError-11">RunnerError</a>::<span class="rs-type">InvalidRequest</span>(format!(&quot;masked path contains an interior nul byte: {err}&quot;))
+    })?;
+    <span class="rs-kw">let</span> fstype = <span class="rs-type">CString</span>::new(&quot;tmpfs&quot;).expect(&quot;<span class="rs-kw">static</span> string has no nul&quot;);
+    <span class="rs-kw">let</span> data = <span class="rs-type">CString</span>::new(&quot;size=4k,mode=000&quot;).expect(&quot;<span class="rs-kw">static</span> string has no nul&quot;);
+    <span class="rs-kw">let</span> flags = libc::<span class="rs-type">MS_NOSUID</span> | libc::<span class="rs-type">MS_NODEV</span> | libc::<span class="rs-type">MS_NOEXEC</span> | libc::<span class="rs-type">MS_RDONLY</span>;
+
+    <span class="rs-comment">// SAFETY: `target`, `source`, `fstype`, and `data` are NUL-terminated strings</span>
+    <span class="rs-comment">// that live for the syscall. This function runs only after the runner is in</span>
+    <span class="rs-comment">// the dedicated mount namespace where it has CAP_SYS_ADMIN.</span>
+    <span class="rs-kw">let</span> rc = <span class="rs-kw">unsafe</span> {
+        libc::mount(
+            source.as_ptr(),
+            target.as_ptr(),
+            fstype.as_ptr(),
+            flags,
+            data.as_ptr().cast(),
+        )
+    };
+    <span class="rs-kw">if</span> rc == 0 {
+        <span class="rs-type">Ok</span>(())
+    } <span class="rs-kw">else</span> {
+        <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-runner.html#item-enum-RunnerError-11">RunnerError</a>::<span class="rs-type">Syscall</span>(std::io::<span class="rs-type">Error</span>::last_os_error()))
+    }
+}
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
   <script src="../assets/inventory.js"></script>
 </body>
 </html>

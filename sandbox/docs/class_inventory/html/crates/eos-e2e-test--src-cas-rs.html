@@ -8,8 +8,16 @@
 </head>
 <body>
   <header>
-    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
-    <h1>eos-e2e-test File Inventory</h1>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>eos-e2e-test File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS/sandbox &amp;&amp; cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
   </header>
   <a class="back-link" href="../index.html">sandbox</a>
 <section class="summary">
@@ -47,19 +55,50 @@
       <span>0 methods</span>
     </div>
   </div>
-  <div class="items"><div class="group-label">Standalone Functions</div><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn looks_like_sha256 pub pub fn looks_like_sha256 (value : &amp; str) -&gt; bool crates/eos-e2e-test/src/cas.rs  ">
+  <div class="items"><div class="group-label">Standalone Functions</div><article id="item-fn-looks-like-sha256-3" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn looks_like_sha256 pub pub fn looks_like_sha256 (value : &amp; str) -&gt; bool crates/eos-e2e-test/src/cas.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>looks_like_sha256</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub fn looks_like_sha256 (value : &amp; str) -&gt; bool</code>
-  <div class="tags"></div>
+  <code class="signature">pub fn <a class="symbol-link" href="eos-e2e-test--src-cas-rs.html#item-fn-looks-like-sha256-3">looks_like_sha256</a> (value : &amp; str) -&gt; bool</code>
+  <p class="docstring">A daemon-reported hash looks like a 64-char lowercase hex SHA-256.</p>
+  <div class="tags"><span>must_use</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-comment">/// A daemon-reported hash looks like a 64-char lowercase hex SHA-256.</span>
+#[must_use]
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-e2e-test--src-cas-rs.html#item-fn-looks-like-sha256-3">looks_like_sha256</a>(value: &amp;str) -&gt; bool {
+    value.len() == 64
+        &amp;&amp; value
+            .bytes()
+            .<a class="symbol-link rs-fn" href="eos-e2e-test.html#method-all-120">all</a>(|b| b.is_ascii_hexdigit() &amp;&amp; !b.is_ascii_uppercase())
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-e2e-test/src/cas.rs:3</p>
 </article></div>
 </section></div>
 </main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/eos-e2e-test/src/cas.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-comment">//! Test helper for recognizing daemon-reported CAS hashes by shape.</span>
+
+<span class="rs-comment">/// A daemon-reported hash looks like a 64-char lowercase hex SHA-256.</span>
+#[must_use]
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-e2e-test--src-cas-rs.html#item-fn-looks-like-sha256-3">looks_like_sha256</a>(value: &amp;str) -&gt; bool {
+    value.len() == 64
+        &amp;&amp; value
+            .bytes()
+            .<a class="symbol-link rs-fn" href="eos-e2e-test.html#method-all-120">all</a>(|b| b.is_ascii_hexdigit() &amp;&amp; !b.is_ascii_uppercase())
+}
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
   <script src="../assets/inventory.js"></script>
 </body>
 </html>

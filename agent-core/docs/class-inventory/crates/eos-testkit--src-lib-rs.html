@@ -8,8 +8,16 @@
 </head>
 <body>
   <header>
-    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
-    <h1>eos-testkit File Inventory</h1>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>eos-testkit File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS/agent-core &amp;&amp; cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
   </header>
   <a class="back-link" href="../index.html">agent-core</a>
 <section class="summary">
@@ -50,6 +58,49 @@
   <div class="items"></div>
 </section></div>
 </main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/eos-testkit/src/lib.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-comment">//! Shared agent-core test doubles (the `EventSource` / Layer-A layer).</span>
+<span class="rs-comment">//!</span>
+<span class="rs-comment">//! The single home for the doubles per-crate mock tests substitute at the LLM</span>
+<span class="rs-comment">//! and daemon-RPC edges: the scripted [`EventSource`](eos_engine::EventSource)</span>
+<span class="rs-comment">//! ([`ScriptedSource`] — the only definition in the workspace, `TESTING_SPEC` AC3),</span>
+<span class="rs-comment">//! the fake [`SandboxTransport`](eos_sandbox_port::SandboxTransport)</span>
+<span class="rs-comment">//! ([`FakeTransport`]), agent-definition builders, the `run_until` stream</span>
+<span class="rs-comment">//! stepper, and the [`ExecutionMetadata`](eos_tools::ExecutionMetadata) fixture</span>
+<span class="rs-comment">//! ([`metadata`]). Consumed as a `[dev-dependencies]` crate, so its `src/` *is*</span>
+<span class="rs-comment">//! test infrastructure and no production crate carries test-support code in its</span>
+<span class="rs-comment">//! own `src/` (`TESTING_SPEC` I2).</span>
+<span class="rs-comment">//!</span>
+<span class="rs-comment">//! Scope note (`TESTING_SPEC` §14.2 / §15): this crate deliberately does **not**</span>
+<span class="rs-comment">//! hold `build_test_state`/`FakeProvisioner` (single-consumer `eos-runtime`</span>
+<span class="rs-comment">//! types) or the Layer-B workflow runner/store doubles (single-consumer</span>
+<span class="rs-comment">//! `eos-workflow` types). A dev-dependency double is only consumable by crate</span>
+<span class="rs-comment">//! `X`'s in-crate tests when none of its types are owned by `X` (the dev-dep</span>
+<span class="rs-comment">//! two-instance rule), so those stay local to their owning crate's `tests/`.</span>
+<span class="rs-comment">//! Everything here is built from types at or below `eos-engine`.</span>
+#![allow(clippy::unwrap_used, clippy::expect_used)]
+
+<span class="rs-kw">mod</span> agents;
+<span class="rs-kw">mod</span> engine;
+<span class="rs-kw">mod</span> llm;
+<span class="rs-kw">mod</span> meta;
+<span class="rs-kw">mod</span> sandbox;
+
+<span class="rs-kw">pub</span> <span class="rs-kw">use</span> agents::{agent_def, test_tools_root};
+<span class="rs-kw">pub</span> <span class="rs-kw">use</span> engine::run_until;
+<span class="rs-kw">pub</span> <span class="rs-kw">use</span> llm::{
+    factory_by_agent, factory_from, factory_root_blocks_after, text_turn, tool_use_turn,
+    <a class="symbol-link rs-type" href="eos-testkit--src-llm-rs.html#item-struct-ScriptedSource-19">ScriptedSource</a>,
+};
+<span class="rs-kw">pub</span> <span class="rs-kw">use</span> meta::metadata;
+<span class="rs-kw">pub</span> <span class="rs-kw">use</span> sandbox::<a class="symbol-link rs-type" href="eos-testkit--src-sandbox-rs.html#item-struct-FakeTransport-10">FakeTransport</a>;
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
   <script src="../assets/inventory.js"></script>
 </body>
 </html>

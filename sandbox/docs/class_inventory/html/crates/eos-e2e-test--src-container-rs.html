@@ -8,8 +8,16 @@
 </head>
 <body>
   <header>
-    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
-    <h1>eos-e2e-test File Inventory</h1>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>eos-e2e-test File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS/sandbox &amp;&amp; cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
   </header>
   <a class="back-link" href="../index.html">sandbox</a>
 <section class="summary">
@@ -47,279 +55,2138 @@
       <span>12 methods</span>
     </div>
   </div>
-  <div class="items"><div class="group-label">File-Owned Types</div><article class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct DaemonContainer pub pub struct DaemonContainer crates/eos-e2e-test/src/container.rs name String client ProtocolClient daemon_log_path String token String keep bool ">
+  <div class="items"><div class="group-label">File-Owned Types</div><article id="item-struct-DaemonContainer-33" class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct DaemonContainer pub pub struct DaemonContainer crates/eos-e2e-test/src/container.rs name String client ProtocolClient daemon_log_path String token String keep bool ">
   <div class="item-head">
     <span class="kind">struct</span>
     <h3>DaemonContainer</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub struct DaemonContainer</code>
-  <div class="tags"></div>
-  <h4>Fields</h4><table><tbody><tr><td>private</td><td>name</td><td><code>String</code></td></tr><tr><td>private</td><td>client</td><td><code>ProtocolClient</code></td></tr><tr><td>private</td><td>daemon_log_path</td><td><code>String</code></td></tr><tr><td>private</td><td>token</td><td><code>String</code></td></tr><tr><td>private</td><td>keep</td><td><code>bool</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr><td>associated-fn</td><td>start</td><td><code>pub fn start (config : &amp; Config , config_yaml : &amp; str) -&gt; Result &lt; Self &gt;</code></td></tr><tr><td>method</td><td>bringup</td><td><code>fn bringup (&amp; self , config : &amp; Config , token : &amp; str , config_yaml : &amp; str) -&gt; Result &lt; ProtocolClient &gt;</code></td></tr><tr><td>method</td><td>resolve_addr</td><td><code>fn resolve_addr (&amp; self , container_port : u16) -&gt; Result &lt; SocketAddr &gt;</code></td></tr><tr><td>method</td><td>await_ready</td><td><code>fn await_ready (&amp; self , client : &amp; ProtocolClient , budget : Duration) -&gt; Result &lt; () &gt;</code></td></tr><tr><td>method</td><td>client</td><td><code>pub fn client (&amp; self) -&gt; &amp; ProtocolClient</code></td></tr><tr><td>method</td><td>name</td><td><code>pub fn name (&amp; self) -&gt; &amp; str</code></td></tr><tr><td>method</td><td>exec</td><td><code>pub fn exec (&amp; self , argv : &amp; [&amp; str]) -&gt; Result &lt; String &gt;</code></td></tr><tr><td>method</td><td>restart_daemon</td><td><code>pub fn restart_daemon (&amp; self , config : &amp; Config) -&gt; Result &lt; () &gt;</code></td></tr><tr><td>method</td><td>daemon_log</td><td><code>fn daemon_log (&amp; self) -&gt; Option &lt; String &gt;</code></td></tr><tr><td>associated-fn</td><td>adopt_healthy</td><td><code>pub fn adopt_healthy (config : &amp; Config , config_yaml : &amp; str) -&gt; Vec &lt; Self &gt;</code></td></tr><tr><td>associated-fn</td><td>adopt_one</td><td><code>fn adopt_one (id : &amp; str , config : &amp; Config) -&gt; Result &lt; Self &gt;</code></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl Drop for DaemonContainer</code></summary><table><tbody><tr><td>method</td><td>drop</td><td><code>fn drop (&amp; mut self)</code></td></tr></tbody></table></details></div>
+  <code class="signature">pub struct <a class="symbol-link" href="eos-e2e-test--src-container-rs.html#item-struct-DaemonContainer-33">DaemonContainer</a></code>
+  <p class="docstring">A live daemon container.</p>
+  <div class="tags"><span>derive: Debug</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>name</td><td><code>String</code></td></tr><tr><td>private</td><td>client</td><td><code><a class="symbol-link" href="eos-e2e-test--src-client-rs.html#item-struct-ProtocolClient-17">ProtocolClient</a></code></td></tr><tr><td>private</td><td>daemon_log_path</td><td><code>String</code></td></tr><tr><td>private</td><td>token</td><td><code>String</code></td></tr><tr><td>private</td><td>keep</td><td><code>bool</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-start-44"><td>associated-fn</td><td>start</td><td><code>pub fn <a class="symbol-link" href="eos-e2e-test--src-container-rs.html#method-start-44">start</a> (config : &amp; Config , config_yaml : &amp; str) -&gt; Result &lt; Self &gt;</code><p class="docstring">Create a container, upload `eosd`, spawn the daemon (TCP + auth), and<br>block until it answers a heartbeat.<br># Errors<br>Returns an error if any docker step fails or the daemon never becomes ready.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Create a container, upload `eosd`, spawn the daemon (TCP + auth), and</span>
+    <span class="rs-comment">/// block until it answers a heartbeat.</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// # Errors</span>
+    <span class="rs-comment">/// Returns an error if any docker step fails or the daemon never becomes ready.</span>
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#method-start-44">start</a>(config: &amp;<span class="rs-type">Config</span>, config_yaml: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-self">Self</span>&gt; {
+        <span class="rs-kw">let</span> name = format!(&quot;eos-e2e-{}&quot;, <a class="symbol-link rs-fn" href="eos-e2e-test--src-lib-rs.html#item-fn-unique-suffix-31">unique_suffix</a>());
+        <span class="rs-kw">let</span> token = format!(&quot;tok-{}&quot;, <a class="symbol-link rs-fn" href="eos-e2e-test--src-lib-rs.html#item-fn-unique-suffix-31">unique_suffix</a>());
+        <span class="rs-kw">let</span> config_digest = <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-runtime-digest-482">runtime_digest</a>(config, config_yaml)?;
+        <span class="rs-kw">let</span> keep = config.keep_container &amp;&amp; config.mode != <span class="rs-type">NodeMode</span>::<span class="rs-type">PerTest</span>;
+
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> run = vec![
+            &quot;run&quot;.to_owned(),
+            &quot;-d&quot;.to_owned(),
+            &quot;--name&quot;.to_owned(),
+            name.clone(),
+            &quot;--label&quot;.to_owned(),
+            format!(&quot;{<span class="rs-type">POOL_LABEL</span>}={}&quot;, config.image),
+            &quot;--label&quot;.to_owned(),
+            format!(&quot;{<span class="rs-type">AUTH_LABEL</span>}={token}&quot;),
+            &quot;--label&quot;.to_owned(),
+            format!(&quot;{<span class="rs-type">CONFIG_DIGEST_LABEL</span>}={config_digest}&quot;),
+        ];
+        <span class="rs-kw">if</span> !keep {
+            run.push(&quot;--rm&quot;.to_owned());
+        }
+        <span class="rs-comment">// The isolated-workspace tier creates a per-workspace cgroup under</span>
+        <span class="rs-comment">// /sys/fs/cgroup, which Docker mounts read-only under plain --cap-add</span>
+        <span class="rs-comment">// (EROFS, e.g. on Docker Desktop). --privileged makes cgroup2 writable so</span>
+        <span class="rs-comment">// the real ns-holder/veth/cgroup path runs. The harness is test-only and</span>
+        <span class="rs-comment">// already requires SYS_ADMIN/NET_ADMIN + unconfined seccomp/apparmor, so</span>
+        <span class="rs-comment">// this is an acceptable superset; the explicit caps below remain for</span>
+        <span class="rs-comment">// documentation and hosts where privileged is unavailable.</span>
+        run.push(&quot;--privileged&quot;.to_owned());
+        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(platform) = &amp;config.platform {
+            run.push(&quot;--platform&quot;.to_owned());
+            run.push(platform.clone());
+        }
+        <span class="rs-kw">for</span> cap <span class="rs-kw">in</span> &amp;config.cap_add {
+            run.push(&quot;--cap-add&quot;.to_owned());
+            run.push(cap.clone());
+        }
+        <span class="rs-kw">for</span> opt <span class="rs-kw">in</span> &amp;config.security_opt {
+            run.push(&quot;--security-opt&quot;.to_owned());
+            run.push(opt.clone());
+        }
+        <span class="rs-kw">for</span> tmpfs <span class="rs-kw">in</span> &amp;config.tmpfs {
+            run.push(&quot;--tmpfs&quot;.to_owned());
+            run.push(tmpfs.clone());
+        }
+        run.push(&quot;--init&quot;.to_owned());
+        run.push(&quot;-p&quot;.to_owned());
+        run.push(format!(&quot;127.0.0.1::{}&quot;, config.tcp_port));
+        run.push(config.image.clone());
+        <span class="rs-comment">// Keep the container alive but self-terminating: `timeout` bounds the</span>
+        <span class="rs-comment">// lifetime so a leaked (`--rm`) container is reclaimed automatically.</span>
+        <span class="rs-kw">if</span> keep {
+            run.extend([&quot;sleep&quot;.to_owned(), &quot;infinity&quot;.to_owned()]);
+        } <span class="rs-kw">else</span> {
+            run.extend([
+                &quot;timeout&quot;.to_owned(),
+                config.non_kept_container_ttl.as_secs().to_string(),
+                &quot;sleep&quot;.to_owned(),
+                &quot;infinity&quot;.to_owned(),
+            ]);
+        }
+
+        <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-docker-415">docker</a>(&amp;run).with_context(|| format!(&quot;docker run <span class="rs-kw">for</span> {name}&quot;))?;
+
+        <span class="rs-comment">// From here, any failure must still tear the container down.</span>
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> container = <span class="rs-self">Self</span> {
+            name: name.clone(),
+            <span class="rs-comment">// Placeholder client; replaced once the port is resolved.</span>
+            client: <a class="symbol-link rs-type" href="eos-e2e-test--src-client-rs.html#item-struct-ProtocolClient-17">ProtocolClient</a>::<a class="symbol-link rs-fn" href="eos-e2e-test--src-client-rs.html#method-new-26">new</a>(
+                &quot;127.0.0.1:1&quot;.parse().expect(&quot;valid placeholder addr&quot;),
+                <span class="rs-type">Some</span>(token.clone()),
+                config.request_timeout,
+            ),
+            daemon_log_path: config
+                .remote_daemon_dir
+                .join(&quot;runtime.log&quot;)
+                .to_string_lossy()
+                .into_owned(),
+            token: token.clone(),
+            keep,
+        };
+        <span class="rs-kw">match</span> container.<a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#method-bringup-207">bringup</a>(config, &amp;token, config_yaml) {
+            <span class="rs-type">Ok</span>(client) =&gt; {
+                container.client = client;
+                <span class="rs-type">Ok</span>(container)
+            }
+            <span class="rs-type">Err</span>(err) =&gt; {
+                <span class="rs-kw">let</span> log = container.<a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#method-daemon-log-392">daemon_log</a>().unwrap_or_default();
+                <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#method-drop-407">drop</a>(container);
+                <span class="rs-type">Err</span>(err.context(format!(&quot;daemon bringup failed; log tail:\n{log}&quot;)))
+            }
+        }
+    }
+</code></pre>
+</details></td></tr><tr id="method-bringup-207"><td>method</td><td>bringup</td><td><code>fn <a class="symbol-link" href="eos-e2e-test--src-container-rs.html#method-bringup-207">bringup</a> (&amp; self , config : &amp; Config , token : &amp; str , config_yaml : &amp; str) -&gt; Result &lt; <a class="symbol-link" href="eos-e2e-test--src-client-rs.html#item-struct-ProtocolClient-17">ProtocolClient</a> &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#method-bringup-207">bringup</a>(&amp;<span class="rs-self">self</span>, config: &amp;<span class="rs-type">Config</span>, token: &amp;str, config_yaml: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-e2e-test--src-client-rs.html#item-struct-ProtocolClient-17">ProtocolClient</a>&gt; {
+        <span class="rs-kw">let</span> daemon_dir = <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-path-str-476">path_str</a>(&amp;config.remote_daemon_dir)?;
+        <span class="rs-kw">let</span> root_dir = <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-path-str-476">path_str</a>(&amp;config.root_dir)?;
+        <span class="rs-kw">let</span> remote_eosd_path = <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-path-str-476">path_str</a>(&amp;config.remote_eosd_path)?;
+        <span class="rs-kw">let</span> config_path = <span class="rs-type">ConfigPath</span>::prd()
+            .context(&quot;resolve compiled daemon config path&quot;)?
+            .as_path()
+            .to_path_buf();
+        <span class="rs-kw">let</span> config_dir = config_path
+            .parent()
+            .context(&quot;compiled daemon config path has no parent&quot;)?;
+        <span class="rs-kw">let</span> config_dir = <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-path-str-476">path_str</a>(config_dir)?;
+        <span class="rs-kw">let</span> config_name = config_path
+            .file_name()
+            .and_then(|name| name.to_str())
+            .context(&quot;compiled daemon config path has no <span class="rs-type">UTF</span>-8 file name&quot;)?;
+
+        <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#method-exec-337">exec</a>(&amp;[&quot;mkdir&quot;, &quot;-p&quot;, &amp;daemon_dir, &amp;root_dir, &amp;config_dir])
+            .context(&quot;mkdir daemon dirs&quot;)?;
+        <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#method-exec-337">exec</a>(&amp;[
+            &quot;sh&quot;,
+            &quot;-lc&quot;,
+            &quot;mount -o remount,rw /sys/fs/cgroup 2&gt;/dev/null || <span class="rs-kw">true</span>; test -w /sys/fs/cgroup&quot;,
+        ])
+        .context(&quot;make cgroup v2 writable <span class="rs-kw">for</span> isolated-workspace tests&quot;)?;
+        <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-put-archive-file-452">put_archive_file</a>(
+            &amp;<span class="rs-self">self</span>.name,
+            &amp;daemon_dir,
+            &quot;eosd&quot;,
+            &amp;config.eosd_path,
+            config.request_timeout,
+        )
+        .with_context(|| {
+            format!(
+                &quot;<span class="rs-type">Docker</span> put_archive eosd ({}) into {daemon_dir}&quot;,
+                config.eosd_path.display()
+            )
+        })?;
+        <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-put-archive-bytes-464">put_archive_bytes</a>(
+            &amp;<span class="rs-self">self</span>.name,
+            &amp;config_dir,
+            config_name,
+            config_yaml.as_bytes(),
+            0o644,
+            config.request_timeout,
+        )
+        .with_context(|| format!(&quot;<span class="rs-type">Docker</span> put_archive merged config into {config_dir}&quot;))?;
+
+        <span class="rs-comment">// Spawn the daemon detached: `--spawn` re-execs a foreground child with</span>
+        <span class="rs-comment">// stdout/stderr redirected to `--log-file`, so bringup diagnostics land in</span>
+        <span class="rs-comment">// runtime.log (a plain foreground daemon parses but ignores `--log-file`).</span>
+        <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#method-exec-337">exec</a>(&amp;[
+            &quot;-d&quot;,
+            &amp;remote_eosd_path,
+            &quot;daemon&quot;,
+            &quot;--spawn&quot;,
+            &quot;--socket&quot;,
+            &amp;format!(&quot;{daemon_dir}/runtime.sock&quot;),
+            &quot;--pid-file&quot;,
+            &amp;format!(&quot;{daemon_dir}/runtime.pid&quot;),
+            &quot;--log-file&quot;,
+            &amp;format!(&quot;{daemon_dir}/runtime.log&quot;),
+            &quot;--tcp-host&quot;,
+            &quot;0.0.0.0&quot;,
+            &quot;--tcp-port&quot;,
+            &amp;config.tcp_port.to_string(),
+            &quot;--auth-token&quot;,
+            token,
+        ])
+        .context(&quot;spawn eosd daemon&quot;)?;
+
+        <span class="rs-kw">let</span> addr = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#method-resolve-addr-284">resolve_addr</a>(config.tcp_port)?;
+        <span class="rs-kw">let</span> client = <a class="symbol-link rs-type" href="eos-e2e-test--src-client-rs.html#item-struct-ProtocolClient-17">ProtocolClient</a>::<a class="symbol-link rs-fn" href="eos-e2e-test--src-client-rs.html#method-new-26">new</a>(addr, <span class="rs-type">Some</span>(token.to_owned()), config.request_timeout);
+        <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#method-await-ready-308">await_ready</a>(&amp;client, config.ready_timeout)?;
+        <span class="rs-type">Ok</span>(client)
+    }
+</code></pre>
+</details></td></tr><tr id="method-resolve-addr-284"><td>method</td><td>resolve_addr</td><td><code>fn <a class="symbol-link" href="eos-e2e-test--src-container-rs.html#method-resolve-addr-284">resolve_addr</a> (&amp; self , container_port : u16) -&gt; Result &lt; SocketAddr &gt;</code><p class="docstring">Map the published TCP port to a host `SocketAddr` (retrying briefly while<br>docker wires up the port binding).</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Map the published TCP port to a host `SocketAddr` (retrying briefly while</span>
+    <span class="rs-comment">/// docker wires up the port binding).</span>
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#method-resolve-addr-284">resolve_addr</a>(&amp;<span class="rs-self">self</span>, container_port: u16) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">SocketAddr</span>&gt; {
+        <span class="rs-kw">let</span> deadline = <span class="rs-type">Instant</span>::now() + <span class="rs-type">Duration</span>::from_secs(15);
+        loop {
+            <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Ok</span>(out) = <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-docker-415">docker</a>(&amp;[
+                &quot;port&quot;.to_owned(),
+                <span class="rs-self">self</span>.name.clone(),
+                format!(&quot;{container_port}/tcp&quot;),
+            ]) {
+                <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(addr) = <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-parse-published-addr-705">parse_published_addr</a>(&amp;out) {
+                    <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(addr);
+                }
+            }
+            <span class="rs-kw">if</span> <span class="rs-type">Instant</span>::now() &gt;= deadline {
+                bail!(
+                    &quot;could not resolve published port {container_port} <span class="rs-kw">for</span> {}&quot;,
+                    <span class="rs-self">self</span>.name
+                );
+            }
+            thread::sleep(<span class="rs-type">Duration</span>::from_millis(200));
+        }
+    }
+</code></pre>
+</details></td></tr><tr id="method-await-ready-308"><td>method</td><td>await_ready</td><td><code>fn <a class="symbol-link" href="eos-e2e-test--src-container-rs.html#method-await-ready-308">await_ready</a> (&amp; self , client : &amp; <a class="symbol-link" href="eos-e2e-test--src-client-rs.html#item-struct-ProtocolClient-17">ProtocolClient</a> , budget : Duration) -&gt; Result &lt; () &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#method-await-ready-308">await_ready</a>(&amp;<span class="rs-self">self</span>, client: &amp;<a class="symbol-link rs-type" href="eos-e2e-test--src-client-rs.html#item-struct-ProtocolClient-17">ProtocolClient</a>, budget: <span class="rs-type">Duration</span>) -&gt; <span class="rs-type">Result</span>&lt;()&gt; {
+        <span class="rs-kw">let</span> deadline = <span class="rs-type">Instant</span>::now() + budget;
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> delay = <span class="rs-type">Duration</span>::from_millis(150);
+        loop {
+            <span class="rs-kw">let</span> observed = <span class="rs-kw">match</span> client.<a class="symbol-link rs-fn" href="eos-e2e-test--src-client-rs.html#method-request-46">request</a>(ops::<span class="rs-type">API_V1_HEARTBEAT</span>, &quot;ready-probe&quot;, &amp;json!({})) {
+                <span class="rs-type">Ok</span>(resp) <span class="rs-kw">if</span> <a class="symbol-link rs-fn" href="eos-e2e-test--src-client-rs.html#item-fn-is-success-125">is_success</a>(&amp;resp) =&gt; <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(()),
+                <span class="rs-type">Ok</span>(resp) =&gt; format!(&quot;non-success heartbeat: {resp}&quot;),
+                <span class="rs-type">Err</span>(err) =&gt; err.to_string(),
+            };
+            <span class="rs-kw">if</span> <span class="rs-type">Instant</span>::now() &gt;= deadline {
+                bail!(&quot;daemon not ready within {budget:?}: {observed}&quot;);
+            }
+            thread::sleep(delay);
+            delay = (delay * 2).min(<span class="rs-type">Duration</span>::from_secs(2));
+        }
+    }
+</code></pre>
+</details></td></tr><tr id="method-client-325"><td>method</td><td>client</td><td><code>pub fn <a class="symbol-link" href="eos-e2e-test--src-container-rs.html#method-client-325">client</a> (&amp; self) -&gt; &amp; <a class="symbol-link" href="eos-e2e-test--src-client-rs.html#item-struct-ProtocolClient-17">ProtocolClient</a></code><p class="docstring">The wire client for this container.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// The wire client for this container.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#method-client-325">client</a>(&amp;<span class="rs-self">self</span>) -&gt; &amp;<a class="symbol-link rs-type" href="eos-e2e-test--src-client-rs.html#item-struct-ProtocolClient-17">ProtocolClient</a> {
+        &amp;<span class="rs-self">self</span>.client
+    }
+</code></pre>
+</details></td></tr><tr id="method-name-331"><td>method</td><td>name</td><td><code>pub fn <a class="symbol-link" href="eos-e2e-test--src-container-rs.html#method-name-331">name</a> (&amp; self) -&gt; &amp; str</code><p class="docstring">The container name.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// The container name.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#method-name-331">name</a>(&amp;<span class="rs-self">self</span>) -&gt; &amp;str {
+        &amp;<span class="rs-self">self</span>.name
+    }
+</code></pre>
+</details></td></tr><tr id="method-exec-337"><td>method</td><td>exec</td><td><code>pub fn <a class="symbol-link" href="eos-e2e-test--src-container-rs.html#method-exec-337">exec</a> (&amp; self , argv : &amp; [&amp; str]) -&gt; Result &lt; String &gt;</code><p class="docstring">Run a `docker exec &lt;name&gt; ...` against this container (lifecycle/provision<br>only — never used as a verification oracle).<br># Errors<br>Returns an error if the exec exits non-zero.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Run a `docker exec &lt;name&gt; ...` against this container (lifecycle/provision</span>
+    <span class="rs-comment">/// only — never used as a verification oracle).</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// # Errors</span>
+    <span class="rs-comment">/// Returns an error if the exec exits non-zero.</span>
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#method-exec-337">exec</a>(&amp;<span class="rs-self">self</span>, argv: &amp;[&amp;str]) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">String</span>&gt; {
+        <span class="rs-comment">// `exec` argv may start with docker flags like `-d`; the container name</span>
+        <span class="rs-comment">// goes after them and before the command. Everything after the command</span>
+        <span class="rs-comment">// token is passed through verbatim.</span>
+        <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-docker-415">docker</a>(&amp;<a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-docker-exec-args-420">docker_exec_args</a>(&amp;<span class="rs-self">self</span>.name, argv))
+    }
+</code></pre>
+</details></td></tr><tr id="method-restart-daemon-349"><td>method</td><td>restart_daemon</td><td><code>pub fn <a class="symbol-link" href="eos-e2e-test--src-container-rs.html#method-restart-daemon-349">restart_daemon</a> (&amp; self , config : &amp; Config) -&gt; Result &lt; () &gt;</code><p class="docstring">Restart the in-container `eosd`: hard-kill (SIGKILL) the running daemon so<br>graceful-shutdown cleanup does NOT run, clear the stale socket/pid, then<br>re-spawn it with the same socket, pid, log, TCP port, and auth token, and<br>block until it answers heartbeat. The published container port is owned by<br>Docker, so the existing wire client stays valid across the restart. This<br>exercises daemon startup-recovery paths (e.g. isolated-handle orphan<br>reconciliation); the spawn mirrors [`Self::bringup`].<br># Errors<br>Returns an error if the respawn exec fails or the daemon never becomes<br>ready within the configured budget.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Restart the in-container `eosd`: hard-kill (SIGKILL) the running daemon so</span>
+    <span class="rs-comment">/// graceful-shutdown cleanup does NOT run, clear the stale socket/pid, then</span>
+    <span class="rs-comment">/// re-spawn it with the same socket, pid, log, TCP port, and auth token, and</span>
+    <span class="rs-comment">/// block until it answers heartbeat. The published container port is owned by</span>
+    <span class="rs-comment">/// Docker, so the existing wire client stays valid across the restart. This</span>
+    <span class="rs-comment">/// exercises daemon startup-recovery paths (e.g. isolated-handle orphan</span>
+    <span class="rs-comment">/// reconciliation); the spawn mirrors [`Self::bringup`].</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// # Errors</span>
+    <span class="rs-comment">/// Returns an error if the respawn exec fails or the daemon never becomes</span>
+    <span class="rs-comment">/// ready within the configured budget.</span>
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#method-restart-daemon-349">restart_daemon</a>(&amp;<span class="rs-self">self</span>, config: &amp;<span class="rs-type">Config</span>) -&gt; <span class="rs-type">Result</span>&lt;()&gt; {
+        <span class="rs-kw">let</span> daemon_dir = <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-path-str-476">path_str</a>(&amp;config.remote_daemon_dir)?;
+        <span class="rs-kw">let</span> remote_eosd_path = <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-path-str-476">path_str</a>(&amp;config.remote_eosd_path)?;
+        <span class="rs-kw">let</span> teardown = format!(
+            &quot;kill -9 \&quot;$(cat {daemon_dir}/runtime.pid 2&gt;/dev/null)\&quot; 2&gt;/dev/null; \
+             pkill -9 -f &#x27;eosd daemon&#x27; 2&gt;/dev/null; sleep 1; \
+             rm -f {daemon_dir}/runtime.sock {daemon_dir}/runtime.pid&quot;
+        );
+        <span class="rs-kw">let</span> _ = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#method-exec-337">exec</a>(&amp;[&quot;sh&quot;, &quot;-lc&quot;, &amp;teardown]);
+        <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#method-exec-337">exec</a>(&amp;[
+            &quot;-d&quot;,
+            &amp;remote_eosd_path,
+            &quot;daemon&quot;,
+            &quot;--spawn&quot;,
+            &quot;--socket&quot;,
+            &amp;format!(&quot;{daemon_dir}/runtime.sock&quot;),
+            &quot;--pid-file&quot;,
+            &amp;format!(&quot;{daemon_dir}/runtime.pid&quot;),
+            &quot;--log-file&quot;,
+            &amp;format!(&quot;{daemon_dir}/runtime.log&quot;),
+            &quot;--tcp-host&quot;,
+            &quot;0.0.0.0&quot;,
+            &quot;--tcp-port&quot;,
+            &amp;config.tcp_port.to_string(),
+            &quot;--auth-token&quot;,
+            &amp;<span class="rs-self">self</span>.token,
+        ])
+        .context(&quot;respawn eosd daemon&quot;)?;
+        <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#method-await-ready-308">await_ready</a>(&amp;<span class="rs-self">self</span>.client, config.ready_timeout)
+            .context(&quot;daemon not ready after restart&quot;)
+    }
+</code></pre>
+</details></td></tr><tr id="method-daemon-log-392"><td>method</td><td>daemon_log</td><td><code>fn <a class="symbol-link" href="eos-e2e-test--src-container-rs.html#method-daemon-log-392">daemon_log</a> (&amp; self) -&gt; Option &lt; String &gt;</code><p class="docstring">Best-effort tail of the daemon log for diagnostics (not an oracle).</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Best-effort tail of the daemon log for diagnostics (not an oracle).</span>
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#method-daemon-log-392">daemon_log</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Option</span>&lt;<span class="rs-type">String</span>&gt; {
+        <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-docker-415">docker</a>(&amp;[
+            &quot;exec&quot;.to_owned(),
+            <span class="rs-self">self</span>.name.clone(),
+            &quot;tail&quot;.to_owned(),
+            &quot;-n&quot;.to_owned(),
+            &quot;40&quot;.to_owned(),
+            <span class="rs-self">self</span>.daemon_log_path.clone(),
+        ])
+        .ok()
+    }
+</code></pre>
+</details></td></tr><tr id="method-adopt-healthy-143"><td>associated-fn</td><td>adopt_healthy</td><td><code>pub fn <a class="symbol-link" href="eos-e2e-test--src-container-rs.html#method-adopt-healthy-143">adopt_healthy</a> (config : &amp; Config , config_yaml : &amp; str) -&gt; Vec &lt; Self &gt;</code><p class="docstring">Adopt already-running warm e2e containers for this image.<br>Containers are accepted only when their auth label is present, their<br>config digest matches, their published daemon port resolves, and the<br>daemon answers heartbeat.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Adopt already-running warm e2e containers for this image.</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// Containers are accepted only when their auth label is present, their</span>
+    <span class="rs-comment">/// config digest matches, their published daemon port resolves, and the</span>
+    <span class="rs-comment">/// daemon answers heartbeat.</span>
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#method-adopt-healthy-143">adopt_healthy</a>(config: &amp;<span class="rs-type">Config</span>, config_yaml: &amp;str) -&gt; <span class="rs-type">Vec</span>&lt;<span class="rs-self">Self</span>&gt; {
+        <span class="rs-kw">let</span> <span class="rs-type">Ok</span>(digest) = <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-runtime-digest-482">runtime_digest</a>(config, config_yaml) <span class="rs-kw">else</span> {
+            <span class="rs-kw">return</span> <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-e2e-test--src-client-rs.html#method-new-26">new</a>();
+        };
+        <span class="rs-kw">let</span> out = <span class="rs-type">Command</span>::<a class="symbol-link rs-fn" href="eos-e2e-test--src-client-rs.html#method-new-26">new</a>(&quot;docker&quot;)
+            .args([
+                &quot;ps&quot;,
+                &quot;-q&quot;,
+                &quot;--filter&quot;,
+                &amp;format!(&quot;label={<span class="rs-type">POOL_LABEL</span>}={}&quot;, config.image),
+                &quot;--filter&quot;,
+                &amp;format!(&quot;label={<span class="rs-type">CONFIG_DIGEST_LABEL</span>}={digest}&quot;),
+            ])
+            .output();
+        <span class="rs-kw">let</span> <span class="rs-type">Ok</span>(out) = out <span class="rs-kw">else</span> {
+            <span class="rs-kw">return</span> <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-e2e-test--src-client-rs.html#method-new-26">new</a>();
+        };
+        <span class="rs-kw">if</span> !out.status.success() {
+            <span class="rs-kw">return</span> <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-e2e-test--src-client-rs.html#method-new-26">new</a>();
+        }
+        std::str::from_utf8(&amp;out.stdout)
+            .unwrap_or(&quot;&quot;)
+            .split_whitespace()
+            .filter_map(|id| <span class="rs-self">Self</span>::<a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#method-adopt-one-175">adopt_one</a>(id, config).ok())
+            .<a class="symbol-link rs-fn" href="eos-e2e-test.html#method-collect-75">collect</a>()
+    }
+</code></pre>
+</details></td></tr><tr id="method-adopt-one-175"><td>associated-fn</td><td>adopt_one</td><td><code>fn <a class="symbol-link" href="eos-e2e-test--src-container-rs.html#method-adopt-one-175">adopt_one</a> (id : &amp; str , config : &amp; Config) -&gt; Result &lt; Self &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#method-adopt-one-175">adopt_one</a>(id: &amp;str, config: &amp;<span class="rs-type">Config</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-self">Self</span>&gt; {
+        <span class="rs-kw">let</span> token = <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-docker-415">docker</a>(&amp;[
+            &quot;inspect&quot;.to_owned(),
+            &quot;-f&quot;.to_owned(),
+            format!(&quot;{{{{ index .<span class="rs-type">Config</span>.<span class="rs-type">Labels</span> \&quot;{<span class="rs-type">AUTH_LABEL</span>}\&quot; }}}}&quot;),
+            id.to_owned(),
+        ])?;
+        <span class="rs-kw">if</span> token.is_empty() || token == &quot;&lt;no value&gt;&quot; {
+            bail!(&quot;missing {<span class="rs-type">AUTH_LABEL</span>} label on {id}&quot;);
+        }
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> container = <span class="rs-self">Self</span> {
+            name: id.to_owned(),
+            client: <a class="symbol-link rs-type" href="eos-e2e-test--src-client-rs.html#item-struct-ProtocolClient-17">ProtocolClient</a>::<a class="symbol-link rs-fn" href="eos-e2e-test--src-client-rs.html#method-new-26">new</a>(
+                &quot;127.0.0.1:1&quot;.parse().expect(&quot;valid placeholder addr&quot;),
+                <span class="rs-type">Some</span>(token.clone()),
+                config.request_timeout,
+            ),
+            daemon_log_path: config
+                .remote_daemon_dir
+                .join(&quot;runtime.log&quot;)
+                .to_string_lossy()
+                .into_owned(),
+            token: token.clone(),
+            keep: <span class="rs-kw">true</span>,
+        };
+        <span class="rs-kw">let</span> addr = container.<a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#method-resolve-addr-284">resolve_addr</a>(config.tcp_port)?;
+        <span class="rs-kw">let</span> client = <a class="symbol-link rs-type" href="eos-e2e-test--src-client-rs.html#item-struct-ProtocolClient-17">ProtocolClient</a>::<a class="symbol-link rs-fn" href="eos-e2e-test--src-client-rs.html#method-new-26">new</a>(addr, <span class="rs-type">Some</span>(token), config.request_timeout);
+        container.<a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#method-await-ready-308">await_ready</a>(&amp;client, config.ready_timeout)?;
+        container.client = client;
+        <span class="rs-type">Ok</span>(container)
+    }
+</code></pre>
+</details></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl Drop for <a class="symbol-link" href="eos-e2e-test--src-container-rs.html#item-struct-DaemonContainer-33">DaemonContainer</a></code></summary><table><tbody><tr id="method-drop-407"><td>method</td><td>drop</td><td><code>fn <a class="symbol-link" href="eos-e2e-test--src-container-rs.html#method-drop-407">drop</a> (&amp; mut self)</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#method-drop-407">drop</a>(&amp;<span class="rs-kw">mut</span> <span class="rs-self">self</span>) {
+        <span class="rs-kw">if</span> <span class="rs-self">self</span>.keep {
+            <span class="rs-kw">return</span>;
+        }
+        <span class="rs-kw">let</span> _ = <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-docker-415">docker</a>(&amp;[&quot;rm&quot;.to_owned(), &quot;-f&quot;.to_owned(), <span class="rs-self">self</span>.name.clone()]);
+    }
+</code></pre>
+</details></td></tr></tbody></table></details></div>
+
   <p class="source">crates/eos-e2e-test/src/container.rs:33</p>
-</article><div class="group-label">Standalone Functions</div><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn docker_available pub pub fn docker_available () -&gt; bool crates/eos-e2e-test/src/container.rs  ">
+</article><div class="group-label">Standalone Functions</div><article id="item-fn-docker-available-720" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn docker_available pub pub fn docker_available () -&gt; bool crates/eos-e2e-test/src/container.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>docker_available</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub fn docker_available () -&gt; bool</code>
-  <div class="tags"></div>
+  <code class="signature">pub fn <a class="symbol-link" href="eos-e2e-test--src-container-rs.html#item-fn-docker-available-720">docker_available</a> () -&gt; bool</code>
+  <p class="docstring">Whether a usable `docker` CLI is present (for the env guard).</p>
+  <div class="tags"><span>must_use</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-comment">/// Whether a usable `docker` CLI is present (for the env guard).</span>
+#[must_use]
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-docker-available-720">docker_available</a>() -&gt; bool {
+    <span class="rs-type">Command</span>::<a class="symbol-link rs-fn" href="eos-e2e-test--src-client-rs.html#method-new-26">new</a>(&quot;docker&quot;)
+        .args([&quot;version&quot;, &quot;--format&quot;, &quot;{{.<span class="rs-type">Server</span>.<span class="rs-type">Version</span>}}&quot;])
+        .output()
+        .map(|out| out.status.success())
+        .unwrap_or(<span class="rs-kw">false</span>)
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-e2e-test/src/container.rs:720</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn reap_e2e_containers pub pub fn reap_e2e_containers () -&gt; Result &lt; usize &gt; crates/eos-e2e-test/src/container.rs  ">
+</article><article id="item-fn-reap-e2e-containers-730" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn reap_e2e_containers pub pub fn reap_e2e_containers () -&gt; Result &lt; usize &gt; crates/eos-e2e-test/src/container.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>reap_e2e_containers</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub fn reap_e2e_containers () -&gt; Result &lt; usize &gt;</code>
+  <code class="signature">pub fn <a class="symbol-link" href="eos-e2e-test--src-container-rs.html#item-fn-reap-e2e-containers-730">reap_e2e_containers</a> () -&gt; Result &lt; usize &gt;</code>
+  <p class="docstring">Remove all `eos-e2e-*` containers left by prior harness runs.<br># Errors<br>Returns an error if Docker is reachable but listing or removing containers<br>fails.</p>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-comment">/// Remove all `eos-e2e-*` containers left by prior harness runs.</span>
+<span class="rs-comment">///</span>
+<span class="rs-comment">/// # Errors</span>
+<span class="rs-comment">/// Returns an error if Docker is reachable but listing or removing containers</span>
+<span class="rs-comment">/// fails.</span>
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-reap-e2e-containers-730">reap_e2e_containers</a>() -&gt; <span class="rs-type">Result</span>&lt;usize&gt; {
+    <span class="rs-kw">let</span> out = <span class="rs-type">Command</span>::<a class="symbol-link rs-fn" href="eos-e2e-test--src-client-rs.html#method-new-26">new</a>(&quot;docker&quot;)
+        .args([&quot;ps&quot;, &quot;-aq&quot;, &quot;--filter&quot;, &amp;format!(&quot;label={<span class="rs-type">POOL_LABEL</span>}&quot;)])
+        .output()
+        .context(&quot;list eos-e2e containers&quot;)?;
+    <span class="rs-kw">if</span> !out.status.success() {
+        bail!(
+            &quot;docker ps <span class="rs-kw">for</span> eos-e2e containers failed ({}): {}&quot;,
+            out.status,
+            <span class="rs-type">String</span>::from_utf8_lossy(&amp;out.stderr).trim()
+        );
+    }
+    <span class="rs-kw">let</span> ids: <span class="rs-type">Vec</span>&lt;&amp;str&gt; = std::str::from_utf8(&amp;out.stdout)
+        .unwrap_or(&quot;&quot;)
+        .split_whitespace()
+        .<a class="symbol-link rs-fn" href="eos-e2e-test.html#method-collect-75">collect</a>();
+    <span class="rs-kw">if</span> ids.is_empty() {
+        <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(0);
+    }
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> argv = vec![&quot;rm&quot;, &quot;-f&quot;];
+    argv.extend(ids.iter().copied());
+    <span class="rs-kw">let</span> output = <span class="rs-type">Command</span>::<a class="symbol-link rs-fn" href="eos-e2e-test--src-client-rs.html#method-new-26">new</a>(&quot;docker&quot;)
+        .args(&amp;argv)
+        .output()
+        .context(&quot;remove eos-e2e containers&quot;)?;
+    <span class="rs-kw">if</span> !output.status.success() {
+        bail!(
+            &quot;docker {} failed ({}): {}&quot;,
+            argv.join(&quot; &quot;),
+            output.status,
+            <span class="rs-type">String</span>::from_utf8_lossy(&amp;output.stderr).trim()
+        );
+    }
+    <span class="rs-type">Ok</span>(ids.len())
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-e2e-test/src/container.rs:730</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn docker private fn docker (args : &amp; [String]) -&gt; Result &lt; String &gt; crates/eos-e2e-test/src/container.rs  ">
+</article><article id="item-fn-docker-415" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn docker private fn docker (args : &amp; [String]) -&gt; Result &lt; String &gt; crates/eos-e2e-test/src/container.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>docker</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn docker (args : &amp; [String]) -&gt; Result &lt; String &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-e2e-test--src-container-rs.html#item-fn-docker-415">docker</a> (args : &amp; [String]) -&gt; Result &lt; String &gt;</code>
+  <p class="docstring">Run `docker &lt;args...&gt;`, returning trimmed stdout. Errors include stderr.</p>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-comment">/// Run `docker &lt;args...&gt;`, returning trimmed stdout. Errors include stderr.</span>
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-docker-415">docker</a>(args: &amp;[<span class="rs-type">String</span>]) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">String</span>&gt; {
+    <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-docker-str-436">docker_str</a>(&amp;args.iter().map(<span class="rs-type">String</span>::as_str).collect::&lt;<span class="rs-type">Vec</span>&lt;_&gt;&gt;())
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-e2e-test/src/container.rs:415</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn docker_exec_args private fn docker_exec_args (container : &amp; str , argv : &amp; [&amp; str]) -&gt; Vec &lt; String &gt; crates/eos-e2e-test/src/container.rs  ">
+</article><article id="item-fn-docker-exec-args-420" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn docker_exec_args private fn docker_exec_args (container : &amp; str , argv : &amp; [&amp; str]) -&gt; Vec &lt; String &gt; crates/eos-e2e-test/src/container.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>docker_exec_args</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn docker_exec_args (container : &amp; str , argv : &amp; [&amp; str]) -&gt; Vec &lt; String &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-e2e-test--src-container-rs.html#item-fn-docker-exec-args-420">docker_exec_args</a> (container : &amp; str , argv : &amp; [&amp; str]) -&gt; Vec &lt; String &gt;</code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-docker-exec-args-420">docker_exec_args</a>(container: &amp;str, argv: &amp;[&amp;str]) -&gt; <span class="rs-type">Vec</span>&lt;<span class="rs-type">String</span>&gt; {
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> rebuilt: <span class="rs-type">Vec</span>&lt;<span class="rs-type">String</span>&gt; = vec![&quot;exec&quot;.to_owned()];
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> rest = argv.iter();
+    <span class="rs-kw">for</span> token <span class="rs-kw">in</span> rest.by_ref() {
+        <span class="rs-kw">if</span> token.starts_with(&#x27;-&#x27;) {
+            rebuilt.push((*token).to_owned());
+        } <span class="rs-kw">else</span> {
+            rebuilt.extend([&quot;-w&quot;.to_owned(), &quot;/&quot;.to_owned(), container.to_owned()]);
+            rebuilt.push((*token).to_owned());
+            <span class="rs-kw">break</span>;
+        }
+    }
+    rebuilt.extend(rest.map(|s| (*s).to_owned()));
+    rebuilt
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-e2e-test/src/container.rs:420</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn docker_str private fn docker_str (args : &amp; [&amp; str]) -&gt; Result &lt; String &gt; crates/eos-e2e-test/src/container.rs  ">
+</article><article id="item-fn-docker-str-436" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn docker_str private fn docker_str (args : &amp; [&amp; str]) -&gt; Result &lt; String &gt; crates/eos-e2e-test/src/container.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>docker_str</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn docker_str (args : &amp; [&amp; str]) -&gt; Result &lt; String &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-e2e-test--src-container-rs.html#item-fn-docker-str-436">docker_str</a> (args : &amp; [&amp; str]) -&gt; Result &lt; String &gt;</code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-docker-str-436">docker_str</a>(args: &amp;[&amp;str]) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">String</span>&gt; {
+    <span class="rs-kw">let</span> output = <span class="rs-type">Command</span>::<a class="symbol-link rs-fn" href="eos-e2e-test--src-client-rs.html#method-new-26">new</a>(&quot;docker&quot;)
+        .args(args)
+        .output()
+        .with_context(|| format!(&quot;spawn docker {}&quot;, args.join(&quot; &quot;)))?;
+    <span class="rs-kw">if</span> !output.status.success() {
+        bail!(
+            &quot;docker {} failed ({}): {}&quot;,
+            args.join(&quot; &quot;),
+            output.status,
+            <span class="rs-type">String</span>::from_utf8_lossy(&amp;output.stderr).trim()
+        );
+    }
+    <span class="rs-type">Ok</span>(<span class="rs-type">String</span>::from_utf8_lossy(&amp;output.stdout).trim().to_owned())
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-e2e-test/src/container.rs:436</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn put_archive_file private fn put_archive_file (container : &amp; str , dest_dir : &amp; str , remote_name : &amp; str , source : &amp; Path , timeout : Duration ,) -&gt; Result &lt; () &gt; crates/eos-e2e-test/src/container.rs  ">
+</article><article id="item-fn-put-archive-file-452" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn put_archive_file private fn put_archive_file (container : &amp; str , dest_dir : &amp; str , remote_name : &amp; str , source : &amp; Path , timeout : Duration ,) -&gt; Result &lt; () &gt; crates/eos-e2e-test/src/container.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>put_archive_file</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn put_archive_file (container : &amp; str , dest_dir : &amp; str , remote_name : &amp; str , source : &amp; Path , timeout : Duration ,) -&gt; Result &lt; () &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-e2e-test--src-container-rs.html#item-fn-put-archive-file-452">put_archive_file</a> (container : &amp; str , dest_dir : &amp; str , remote_name : &amp; str , source : &amp; Path , timeout : Duration ,) -&gt; Result &lt; () &gt;</code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-put-archive-file-452">put_archive_file</a>(
+    container: &amp;str,
+    dest_dir: &amp;str,
+    remote_name: &amp;str,
+    source: &amp;<span class="rs-type">Path</span>,
+    timeout: <span class="rs-type">Duration</span>,
+) -&gt; <span class="rs-type">Result</span>&lt;()&gt; {
+    <span class="rs-kw">let</span> payload = fs::read(source).with_context(|| format!(&quot;read eosd {}&quot;, source.display()))?;
+    <span class="rs-kw">let</span> tar_stream = <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-tar-single-file-642">tar_single_file</a>(remote_name, &amp;payload, 0o755)?;
+    <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-docker-put-archive-507">docker_put_archive</a>(container, dest_dir, &amp;tar_stream, timeout)
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-e2e-test/src/container.rs:452</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn put_archive_bytes private fn put_archive_bytes (container : &amp; str , dest_dir : &amp; str , remote_name : &amp; str , payload : &amp; [u8] , mode : u32 , timeout : Duration ,) -&gt; Result &lt; () &gt; crates/eos-e2e-test/src/container.rs  ">
+</article><article id="item-fn-put-archive-bytes-464" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn put_archive_bytes private fn put_archive_bytes (container : &amp; str , dest_dir : &amp; str , remote_name : &amp; str , payload : &amp; [u8] , mode : u32 , timeout : Duration ,) -&gt; Result &lt; () &gt; crates/eos-e2e-test/src/container.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>put_archive_bytes</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn put_archive_bytes (container : &amp; str , dest_dir : &amp; str , remote_name : &amp; str , payload : &amp; [u8] , mode : u32 , timeout : Duration ,) -&gt; Result &lt; () &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-e2e-test--src-container-rs.html#item-fn-put-archive-bytes-464">put_archive_bytes</a> (container : &amp; str , dest_dir : &amp; str , remote_name : &amp; str , payload : &amp; [u8] , mode : u32 , timeout : Duration ,) -&gt; Result &lt; () &gt;</code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-put-archive-bytes-464">put_archive_bytes</a>(
+    container: &amp;str,
+    dest_dir: &amp;str,
+    remote_name: &amp;str,
+    payload: &amp;[u8],
+    mode: u32,
+    timeout: <span class="rs-type">Duration</span>,
+) -&gt; <span class="rs-type">Result</span>&lt;()&gt; {
+    <span class="rs-kw">let</span> tar_stream = <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-tar-single-file-642">tar_single_file</a>(remote_name, payload, mode)?;
+    <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-docker-put-archive-507">docker_put_archive</a>(container, dest_dir, &amp;tar_stream, timeout)
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-e2e-test/src/container.rs:464</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn path_str private fn path_str (path : &amp; Path) -&gt; Result &lt; String &gt; crates/eos-e2e-test/src/container.rs  ">
+</article><article id="item-fn-path-str-476" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn path_str private fn path_str (path : &amp; Path) -&gt; Result &lt; String &gt; crates/eos-e2e-test/src/container.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>path_str</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn path_str (path : &amp; Path) -&gt; Result &lt; String &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-e2e-test--src-container-rs.html#item-fn-path-str-476">path_str</a> (path : &amp; Path) -&gt; Result &lt; String &gt;</code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-path-str-476">path_str</a>(path: &amp;<span class="rs-type">Path</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">String</span>&gt; {
+    path.to_str()
+        .map(str::to_owned)
+        .with_context(|| format!(&quot;container path is not <span class="rs-type">UTF</span>-8: {}&quot;, path.display()))
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-e2e-test/src/container.rs:476</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn runtime_digest private fn runtime_digest (config : &amp; Config , config_yaml : &amp; str) -&gt; Result &lt; String &gt; crates/eos-e2e-test/src/container.rs  ">
+</article><article id="item-fn-runtime-digest-482" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn runtime_digest private fn runtime_digest (config : &amp; Config , config_yaml : &amp; str) -&gt; Result &lt; String &gt; crates/eos-e2e-test/src/container.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>runtime_digest</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn runtime_digest (config : &amp; Config , config_yaml : &amp; str) -&gt; Result &lt; String &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-e2e-test--src-container-rs.html#item-fn-runtime-digest-482">runtime_digest</a> (config : &amp; Config , config_yaml : &amp; str) -&gt; Result &lt; String &gt;</code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-runtime-digest-482">runtime_digest</a>(config: &amp;<span class="rs-type">Config</span>, config_yaml: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">String</span>&gt; {
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> hasher = <span class="rs-type">Sha256</span>::<a class="symbol-link rs-fn" href="eos-e2e-test--src-client-rs.html#method-new-26">new</a>();
+    hasher.update(config_yaml.as_bytes());
+    hasher.update(b&quot;\0eosd\0&quot;);
+    <span class="rs-kw">let</span> eosd = fs::read(&amp;config.eosd_path).with_context(|| {
+        format!(
+            &quot;read eosd binary <span class="rs-kw">for</span> digest: {}&quot;,
+            config.eosd_path.display()
+        )
+    })?;
+    hasher.update(eosd);
+    <span class="rs-type">Ok</span>(<a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-hex-lower-496">hex_lower</a>(&amp;hasher.finalize()))
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-e2e-test/src/container.rs:482</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn hex_lower private fn hex_lower (bytes : &amp; [u8]) -&gt; String crates/eos-e2e-test/src/container.rs  ">
+</article><article id="item-fn-hex-lower-496" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn hex_lower private fn hex_lower (bytes : &amp; [u8]) -&gt; String crates/eos-e2e-test/src/container.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>hex_lower</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn hex_lower (bytes : &amp; [u8]) -&gt; String</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-e2e-test--src-container-rs.html#item-fn-hex-lower-496">hex_lower</a> (bytes : &amp; [u8]) -&gt; String</code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-hex-lower-496">hex_lower</a>(bytes: &amp;[u8]) -&gt; <span class="rs-type">String</span> {
+    <span class="rs-kw">const</span> <span class="rs-type">LOWER_HEX</span>: &amp;[u8; 16] = b&quot;0123456789abcdef&quot;;
+
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> out = <span class="rs-type">String</span>::with_capacity(bytes.len() * 2);
+    <span class="rs-kw">for</span> &amp;byte <span class="rs-kw">in</span> bytes {
+        out.push(char::from(<span class="rs-type">LOWER_HEX</span>[usize::from(byte &gt;&gt; 4)]));
+        out.push(char::from(<span class="rs-type">LOWER_HEX</span>[usize::from(byte &amp; 0x0f)]));
+    }
+    out
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-e2e-test/src/container.rs:496</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn docker_put_archive private fn docker_put_archive (container : &amp; str , dest_dir : &amp; str , tar_stream : &amp; [u8] , timeout : Duration ,) -&gt; Result &lt; () &gt; crates/eos-e2e-test/src/container.rs  ">
+</article><article id="item-fn-docker-put-archive-507" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn docker_put_archive private fn docker_put_archive (container : &amp; str , dest_dir : &amp; str , tar_stream : &amp; [u8] , timeout : Duration ,) -&gt; Result &lt; () &gt; crates/eos-e2e-test/src/container.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>docker_put_archive</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn docker_put_archive (container : &amp; str , dest_dir : &amp; str , tar_stream : &amp; [u8] , timeout : Duration ,) -&gt; Result &lt; () &gt;</code>
-  <div class="tags"></div>
+  <code class="signature">fn <a class="symbol-link" href="eos-e2e-test--src-container-rs.html#item-fn-docker-put-archive-507">docker_put_archive</a> (container : &amp; str , dest_dir : &amp; str , tar_stream : &amp; [u8] , timeout : Duration ,) -&gt; Result &lt; () &gt;</code>
+  <div class="tags"><span>cfg: unix</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>#[cfg(unix)]
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-docker-put-archive-507">docker_put_archive</a>(
+    container: &amp;str,
+    dest_dir: &amp;str,
+    tar_stream: &amp;[u8],
+    timeout: <span class="rs-type">Duration</span>,
+) -&gt; <span class="rs-type">Result</span>&lt;()&gt; {
+    <span class="rs-kw">use</span> std::os::unix::net::<span class="rs-type">UnixStream</span>;
+
+    <span class="rs-kw">let</span> socket = <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-docker-socket-path-573">docker_socket_path</a>()?;
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> stream = <span class="rs-type">UnixStream</span>::connect(&amp;socket)
+        .with_context(|| format!(&quot;connect <span class="rs-type">Docker</span> socket {}&quot;, socket.display()))?;
+    stream
+        .set_read_timeout(<span class="rs-type">Some</span>(timeout))
+        .context(&quot;set <span class="rs-type">Docker</span> socket read timeout&quot;)?;
+    stream
+        .set_write_timeout(<span class="rs-type">Some</span>(timeout))
+        .context(&quot;set <span class="rs-type">Docker</span> socket write timeout&quot;)?;
+
+    <span class="rs-kw">let</span> api_version = <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-docker-api-version-609">docker_api_version</a>();
+    <span class="rs-kw">let</span> request_path = format!(
+        &quot;/v{}/containers/{}/archive?path={}&quot;,
+        api_version.trim_start_matches(&#x27;v&#x27;),
+        <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-percent-encode-630">percent_encode</a>(container),
+        <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-percent-encode-630">percent_encode</a>(dest_dir)
+    );
+    <span class="rs-kw">let</span> request = format!(
+        &quot;<span class="rs-type">PUT</span> {request_path} <span class="rs-type">HTTP</span>/1.1\r\n\
+         <span class="rs-type">Host</span>: docker\r\n\
+         <span class="rs-type">User</span>-<span class="rs-type">Agent</span>: eos-e2e-test\r\n\
+         <span class="rs-type">Content</span>-<span class="rs-type">Type</span>: application/x-tar\r\n\
+         <span class="rs-type">Content</span>-<span class="rs-type">Length</span>: {}\r\n\
+         <span class="rs-type">Connection</span>: close\r\n\
+         \r\n&quot;,
+        tar_stream.len()
+    );
+    stream
+        .write_all(request.as_bytes())
+        .context(&quot;write <span class="rs-type">Docker</span> put_archive request headers&quot;)?;
+    stream
+        .write_all(tar_stream)
+        .context(&quot;write <span class="rs-type">Docker</span> put_archive tar stream&quot;)?;
+    stream.flush().context(&quot;flush <span class="rs-type">Docker</span> put_archive request&quot;)?;
+
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> response = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-e2e-test--src-client-rs.html#method-new-26">new</a>();
+    stream
+        .read_to_end(&amp;<span class="rs-kw">mut</span> response)
+        .context(&quot;read <span class="rs-type">Docker</span> put_archive response&quot;)?;
+    <span class="rs-kw">let</span> response_text = <span class="rs-type">String</span>::from_utf8_lossy(&amp;response);
+    <span class="rs-kw">let</span> status = <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-docker-http-status-616">docker_http_status</a>(&amp;response_text)?;
+    <span class="rs-kw">if</span> !(200..300).contains(&amp;status) {
+        bail!(&quot;<span class="rs-type">Docker</span> put_archive failed with <span class="rs-type">HTTP</span> {status}: {response_text}&quot;);
+    }
+    <span class="rs-type">Ok</span>(())
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-e2e-test/src/container.rs:507</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn docker_put_archive private fn docker_put_archive (_container : &amp; str , _dest_dir : &amp; str , _tar_stream : &amp; [u8] , _timeout : Duration ,) -&gt; Result &lt; () &gt; crates/eos-e2e-test/src/container.rs  ">
+</article><article id="item-fn-docker-put-archive-563" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn docker_put_archive private fn docker_put_archive (_container : &amp; str , _dest_dir : &amp; str , _tar_stream : &amp; [u8] , _timeout : Duration ,) -&gt; Result &lt; () &gt; crates/eos-e2e-test/src/container.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>docker_put_archive</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn docker_put_archive (_container : &amp; str , _dest_dir : &amp; str , _tar_stream : &amp; [u8] , _timeout : Duration ,) -&gt; Result &lt; () &gt;</code>
-  <div class="tags"></div>
+  <code class="signature">fn <a class="symbol-link" href="eos-e2e-test--src-container-rs.html#item-fn-docker-put-archive-507">docker_put_archive</a> (_container : &amp; str , _dest_dir : &amp; str , _tar_stream : &amp; [u8] , _timeout : Duration ,) -&gt; Result &lt; () &gt;</code>
+  <div class="tags"><span>cfg: not</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>#[cfg(not(unix))]
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-docker-put-archive-507">docker_put_archive</a>(
+    _container: &amp;str,
+    _dest_dir: &amp;str,
+    _tar_stream: &amp;[u8],
+    _timeout: <span class="rs-type">Duration</span>,
+) -&gt; <span class="rs-type">Result</span>&lt;()&gt; {
+    bail!(&quot;<span class="rs-type">Docker</span> put_archive over a <span class="rs-type">Unix</span> socket is only supported on <span class="rs-type">Unix</span> hosts&quot;)
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-e2e-test/src/container.rs:563</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn docker_socket_path private fn docker_socket_path () -&gt; Result &lt; PathBuf &gt; crates/eos-e2e-test/src/container.rs  ">
+</article><article id="item-fn-docker-socket-path-573" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn docker_socket_path private fn docker_socket_path () -&gt; Result &lt; PathBuf &gt; crates/eos-e2e-test/src/container.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>docker_socket_path</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn docker_socket_path () -&gt; Result &lt; PathBuf &gt;</code>
-  <div class="tags"></div>
+  <code class="signature">fn <a class="symbol-link" href="eos-e2e-test--src-container-rs.html#item-fn-docker-socket-path-573">docker_socket_path</a> () -&gt; Result &lt; PathBuf &gt;</code>
+  <div class="tags"><span>cfg: unix</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>#[cfg(unix)]
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-docker-socket-path-573">docker_socket_path</a>() -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">PathBuf</span>&gt; {
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> candidates = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-e2e-test--src-client-rs.html#method-new-26">new</a>();
+    <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Ok</span>(host) = std::env::var(&quot;<span class="rs-type">DOCKER_HOST</span>&quot;) {
+        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(path) = <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-docker-unix-socket-from-host-602">docker_unix_socket_from_host</a>(&amp;host) {
+            candidates.push(path);
+        }
+    }
+    <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Ok</span>(host) = <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-docker-str-436">docker_str</a>(&amp;[
+        &quot;context&quot;,
+        &quot;inspect&quot;,
+        &quot;--format&quot;,
+        &quot;{{.<span class="rs-type">Endpoints</span>.docker.<span class="rs-type">Host</span>}}&quot;,
+    ]) {
+        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(path) = <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-docker-unix-socket-from-host-602">docker_unix_socket_from_host</a>(&amp;host) {
+            candidates.push(path);
+        }
+    }
+    <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(home) = std::env::var_os(&quot;<span class="rs-type">HOME</span>&quot;) {
+        candidates.push(<span class="rs-type">PathBuf</span>::from(home).join(&quot;.docker/run/docker.sock&quot;));
+    }
+    candidates.push(<span class="rs-type">PathBuf</span>::from(&quot;/var/run/docker.sock&quot;));
+
+    candidates
+        .into_iter()
+        .find(|path| path.exists())
+        .ok_or_else(|| anyhow::anyhow!(&quot;could not locate <span class="rs-type">Docker</span> <span class="rs-type">Unix</span> socket <span class="rs-kw">for</span> put_archive&quot;))
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-e2e-test/src/container.rs:573</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn docker_unix_socket_from_host private fn docker_unix_socket_from_host (host : &amp; str) -&gt; Option &lt; PathBuf &gt; crates/eos-e2e-test/src/container.rs  ">
+</article><article id="item-fn-docker-unix-socket-from-host-602" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn docker_unix_socket_from_host private fn docker_unix_socket_from_host (host : &amp; str) -&gt; Option &lt; PathBuf &gt; crates/eos-e2e-test/src/container.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>docker_unix_socket_from_host</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn docker_unix_socket_from_host (host : &amp; str) -&gt; Option &lt; PathBuf &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-e2e-test--src-container-rs.html#item-fn-docker-unix-socket-from-host-602">docker_unix_socket_from_host</a> (host : &amp; str) -&gt; Option &lt; PathBuf &gt;</code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-docker-unix-socket-from-host-602">docker_unix_socket_from_host</a>(host: &amp;str) -&gt; <span class="rs-type">Option</span>&lt;<span class="rs-type">PathBuf</span>&gt; {
+    host.trim()
+        .strip_prefix(&quot;unix:<span class="rs-comment">//")</span>
+        .filter(|path| !path.is_empty())
+        .map(<span class="rs-type">PathBuf</span>::from)
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-e2e-test/src/container.rs:602</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn docker_api_version private fn docker_api_version () -&gt; String crates/eos-e2e-test/src/container.rs  ">
+</article><article id="item-fn-docker-api-version-609" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn docker_api_version private fn docker_api_version () -&gt; String crates/eos-e2e-test/src/container.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>docker_api_version</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn docker_api_version () -&gt; String</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-e2e-test--src-container-rs.html#item-fn-docker-api-version-609">docker_api_version</a> () -&gt; String</code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-docker-api-version-609">docker_api_version</a>() -&gt; <span class="rs-type">String</span> {
+    <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-docker-str-436">docker_str</a>(&amp;[&quot;version&quot;, &quot;--format&quot;, &quot;{{.<span class="rs-type">Server</span>.<span class="rs-type">APIVersion</span>}}&quot;])
+        .ok()
+        .filter(|version| !version.is_empty())
+        .unwrap_or_else(|| &quot;1.41&quot;.to_owned())
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-e2e-test/src/container.rs:609</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn docker_http_status private fn docker_http_status (response : &amp; str) -&gt; Result &lt; u16 &gt; crates/eos-e2e-test/src/container.rs  ">
+</article><article id="item-fn-docker-http-status-616" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn docker_http_status private fn docker_http_status (response : &amp; str) -&gt; Result &lt; u16 &gt; crates/eos-e2e-test/src/container.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>docker_http_status</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn docker_http_status (response : &amp; str) -&gt; Result &lt; u16 &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-e2e-test--src-container-rs.html#item-fn-docker-http-status-616">docker_http_status</a> (response : &amp; str) -&gt; Result &lt; u16 &gt;</code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-docker-http-status-616">docker_http_status</a>(response: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;u16&gt; {
+    <span class="rs-kw">let</span> status_line = response
+        .lines()
+        .next()
+        .context(&quot;<span class="rs-type">Docker</span> put_archive response missing status line&quot;)?;
+    <span class="rs-kw">let</span> status = status_line
+        .split_whitespace()
+        .nth(1)
+        .context(&quot;<span class="rs-type">Docker</span> put_archive response missing status code&quot;)?;
+    status
+        .parse::&lt;u16&gt;()
+        .with_context(|| format!(&quot;parse <span class="rs-type">Docker</span> <span class="rs-type">HTTP</span> status from {status_line:?}&quot;))
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-e2e-test/src/container.rs:616</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn percent_encode private fn percent_encode (value : &amp; str) -&gt; String crates/eos-e2e-test/src/container.rs  ">
+</article><article id="item-fn-percent-encode-630" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn percent_encode private fn percent_encode (value : &amp; str) -&gt; String crates/eos-e2e-test/src/container.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>percent_encode</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn percent_encode (value : &amp; str) -&gt; String</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-e2e-test--src-container-rs.html#item-fn-percent-encode-630">percent_encode</a> (value : &amp; str) -&gt; String</code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-percent-encode-630">percent_encode</a>(value: &amp;str) -&gt; <span class="rs-type">String</span> {
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> encoded = <span class="rs-type">String</span>::with_capacity(value.len());
+    <span class="rs-kw">for</span> byte <span class="rs-kw">in</span> value.bytes() {
+        <span class="rs-kw">if</span> byte.is_ascii_alphanumeric() || matches!(byte, b&#x27;-&#x27; | b&#x27;_&#x27; | b&#x27;.&#x27; | b&#x27;~&#x27;) {
+            encoded.push(char::from(byte));
+        } <span class="rs-kw">else</span> {
+            <span class="rs-kw">let</span> _ = write!(&amp;<span class="rs-kw">mut</span> encoded, &quot;%{byte:02<span class="rs-type">X</span>}&quot;);
+        }
+    }
+    encoded
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-e2e-test/src/container.rs:630</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn tar_single_file private fn tar_single_file (name : &amp; str , payload : &amp; [u8] , mode : u32) -&gt; Result &lt; Vec &lt; u8 &gt; &gt; crates/eos-e2e-test/src/container.rs  ">
+</article><article id="item-fn-tar-single-file-642" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn tar_single_file private fn tar_single_file (name : &amp; str , payload : &amp; [u8] , mode : u32) -&gt; Result &lt; Vec &lt; u8 &gt; &gt; crates/eos-e2e-test/src/container.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>tar_single_file</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn tar_single_file (name : &amp; str , payload : &amp; [u8] , mode : u32) -&gt; Result &lt; Vec &lt; u8 &gt; &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-e2e-test--src-container-rs.html#item-fn-tar-single-file-642">tar_single_file</a> (name : &amp; str , payload : &amp; [u8] , mode : u32) -&gt; Result &lt; Vec &lt; u8 &gt; &gt;</code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-tar-single-file-642">tar_single_file</a>(name: &amp;str, payload: &amp;[u8], mode: u32) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;u8&gt;&gt; {
+    <span class="rs-kw">if</span> name.is_empty() || name.starts_with(&#x27;/&#x27;) || name.split(&#x27;/&#x27;).<a class="symbol-link rs-fn" href="eos-e2e-test.html#method-any-97">any</a>(|part| part == &quot;..&quot;) {
+        bail!(&quot;invalid tar entry name {name:?}&quot;);
+    }
+    <span class="rs-kw">let</span> name_bytes = name.as_bytes();
+    <span class="rs-kw">if</span> name_bytes.len() &gt; 100 {
+        bail!(&quot;tar entry name too long: {name}&quot;);
+    }
+
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> header = [0_u8; 512];
+    header[..name_bytes.len()].copy_from_slice(name_bytes);
+    <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-write-octal-674">write_octal</a>(&amp;<span class="rs-kw">mut</span> header[100..108], u64::from(mode))?;
+    <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-write-octal-674">write_octal</a>(&amp;<span class="rs-kw">mut</span> header[108..116], 0)?;
+    <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-write-octal-674">write_octal</a>(&amp;<span class="rs-kw">mut</span> header[116..124], 0)?;
+    <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-write-octal-674">write_octal</a>(&amp;<span class="rs-kw">mut</span> header[124..136], payload.len() <span class="rs-kw">as</span> u64)?;
+    <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-write-octal-674">write_octal</a>(&amp;<span class="rs-kw">mut</span> header[136..148], 0)?;
+    header[148..156].fill(b&#x27; &#x27;);
+    header[156] = b&#x27;0&#x27;;
+    header[257..263].copy_from_slice(b&quot;ustar\0&quot;);
+    header[263..265].copy_from_slice(b&quot;00&quot;);
+    <span class="rs-kw">let</span> checksum = header.iter().map(|byte| u32::from(*byte)).sum::&lt;u32&gt;();
+    <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-write-checksum-691">write_checksum</a>(&amp;<span class="rs-kw">mut</span> header[148..156], checksum)?;
+
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> archive = <span class="rs-type">Vec</span>::with_capacity(512 + payload.len() + 1536);
+    archive.extend_from_slice(&amp;header);
+    archive.extend_from_slice(payload);
+    <span class="rs-kw">let</span> padding = (512 - (payload.len() % 512)) % 512;
+    archive.resize(archive.len() + padding, 0);
+    archive.resize(archive.len() + 1024, 0);
+    <span class="rs-type">Ok</span>(archive)
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-e2e-test/src/container.rs:642</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn write_octal private fn write_octal (field : &amp; mut [u8] , value : u64) -&gt; Result &lt; () &gt; crates/eos-e2e-test/src/container.rs  ">
+</article><article id="item-fn-write-octal-674" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn write_octal private fn write_octal (field : &amp; mut [u8] , value : u64) -&gt; Result &lt; () &gt; crates/eos-e2e-test/src/container.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>write_octal</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn write_octal (field : &amp; mut [u8] , value : u64) -&gt; Result &lt; () &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-e2e-test--src-container-rs.html#item-fn-write-octal-674">write_octal</a> (field : &amp; mut [u8] , value : u64) -&gt; Result &lt; () &gt;</code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-write-octal-674">write_octal</a>(field: &amp;<span class="rs-kw">mut</span> [u8], value: u64) -&gt; <span class="rs-type">Result</span>&lt;()&gt; {
+    <span class="rs-kw">let</span> digits = field
+        .len()
+        .checked_sub(1)
+        .context(&quot;tar octal field too short&quot;)?;
+    <span class="rs-kw">let</span> encoded = format!(&quot;{value:0width$o}&quot;, width = digits);
+    <span class="rs-kw">if</span> encoded.len() &gt; digits {
+        bail!(
+            &quot;tar octal value {value} does not fit <span class="rs-kw">in</span> {} bytes&quot;,
+            field.len()
+        );
+    }
+    field[..digits].copy_from_slice(encoded.as_bytes());
+    field[digits] = 0;
+    <span class="rs-type">Ok</span>(())
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-e2e-test/src/container.rs:674</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn write_checksum private fn write_checksum (field : &amp; mut [u8] , value : u32) -&gt; Result &lt; () &gt; crates/eos-e2e-test/src/container.rs  ">
+</article><article id="item-fn-write-checksum-691" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn write_checksum private fn write_checksum (field : &amp; mut [u8] , value : u32) -&gt; Result &lt; () &gt; crates/eos-e2e-test/src/container.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>write_checksum</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn write_checksum (field : &amp; mut [u8] , value : u32) -&gt; Result &lt; () &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-e2e-test--src-container-rs.html#item-fn-write-checksum-691">write_checksum</a> (field : &amp; mut [u8] , value : u32) -&gt; Result &lt; () &gt;</code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-write-checksum-691">write_checksum</a>(field: &amp;<span class="rs-kw">mut</span> [u8], value: u32) -&gt; <span class="rs-type">Result</span>&lt;()&gt; {
+    <span class="rs-kw">if</span> field.len() != 8 {
+        bail!(&quot;tar checksum field must be 8 bytes&quot;);
+    }
+    <span class="rs-kw">let</span> encoded = format!(&quot;{value:06o}&quot;);
+    <span class="rs-kw">if</span> encoded.len() &gt; 6 {
+        bail!(&quot;tar checksum {value} does not fit&quot;);
+    }
+    field[..6].copy_from_slice(encoded.as_bytes());
+    field[6] = 0;
+    field[7] = b&#x27; &#x27;;
+    <span class="rs-type">Ok</span>(())
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-e2e-test/src/container.rs:691</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn parse_published_addr private fn parse_published_addr (output : &amp; str) -&gt; Option &lt; SocketAddr &gt; crates/eos-e2e-test/src/container.rs  ">
+</article><article id="item-fn-parse-published-addr-705" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn parse_published_addr private fn parse_published_addr (output : &amp; str) -&gt; Option &lt; SocketAddr &gt; crates/eos-e2e-test/src/container.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>parse_published_addr</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn parse_published_addr (output : &amp; str) -&gt; Option &lt; SocketAddr &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-e2e-test--src-container-rs.html#item-fn-parse-published-addr-705">parse_published_addr</a> (output : &amp; str) -&gt; Option &lt; SocketAddr &gt;</code>
+  <p class="docstring">Parse `docker port` output (`0.0.0.0:54321` / `127.0.0.1:54321`, possibly<br>multiple lines) into a loopback `SocketAddr`.</p>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-comment">/// Parse `docker port` output (`0.0.0.0:54321` / `127.0.0.1:54321`, possibly</span>
+<span class="rs-comment">/// multiple lines) into a loopback `SocketAddr`.</span>
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-parse-published-addr-705">parse_published_addr</a>(output: &amp;str) -&gt; <span class="rs-type">Option</span>&lt;<span class="rs-type">SocketAddr</span>&gt; {
+    <span class="rs-kw">for</span> line <span class="rs-kw">in</span> output.lines() {
+        <span class="rs-kw">let</span> mapping = line.trim();
+        <span class="rs-kw">let</span> port = mapping.rsplit(&#x27;:&#x27;).next()?.trim();
+        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Ok</span>(port) = port.parse::&lt;u16&gt;() {
+            <span class="rs-kw">if</span> port != 0 {
+                <span class="rs-kw">return</span> <span class="rs-type">Some</span>(<span class="rs-type">SocketAddr</span>::from(([127, 0, 0, 1], port)));
+            }
+        }
+    }
+    <span class="rs-type">None</span>
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-e2e-test/src/container.rs:705</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn tar_single_file_builds_executable_ustar_stream private fn tar_single_file_builds_executable_ustar_stream () crates/eos-e2e-test/src/container.rs  ">
+</article><article id="item-fn-tar-single-file-builds-executable-ustar-stream-786" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn tar_single_file_builds_executable_ustar_stream private fn tar_single_file_builds_executable_ustar_stream () crates/eos-e2e-test/src/container.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>tar_single_file_builds_executable_ustar_stream</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn tar_single_file_builds_executable_ustar_stream ()</code>
-  <div class="tags"></div>
+  <code class="signature">fn <a class="symbol-link" href="eos-e2e-test--src-container-rs.html#item-fn-tar-single-file-builds-executable-ustar-stream-786">tar_single_file_builds_executable_ustar_stream</a> ()</code>
+  <div class="tags"><span>test</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-tar-single-file-builds-executable-ustar-stream-786">tar_single_file_builds_executable_ustar_stream</a>() {
+        <span class="rs-kw">let</span> tar = <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-tar-single-file-642">tar_single_file</a>(&quot;eosd&quot;, b&quot;payload&quot;, 0o755).expect(&quot;tar stream&quot;);
+        assert_eq!(&amp;tar[0..4], b&quot;eosd&quot;);
+        assert_eq!(&amp;tar[100..108], b&quot;0000755\0&quot;);
+        assert_eq!(&amp;tar[124..136], b&quot;00000000007\0&quot;);
+        assert_eq!(tar[156], b&#x27;0&#x27;);
+        assert_eq!(&amp;tar[257..263], b&quot;ustar\0&quot;);
+        assert_eq!(tar.len() % 512, 0);
+    }
+</code></pre>
+</details>
 
   <p class="source">crates/eos-e2e-test/src/container.rs:786</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn docker_helpers_parse_http_and_unix_host private fn docker_helpers_parse_http_and_unix_host () crates/eos-e2e-test/src/container.rs  ">
+</article><article id="item-fn-docker-helpers-parse-http-and-unix-host-797" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn docker_helpers_parse_http_and_unix_host private fn docker_helpers_parse_http_and_unix_host () crates/eos-e2e-test/src/container.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>docker_helpers_parse_http_and_unix_host</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn docker_helpers_parse_http_and_unix_host ()</code>
-  <div class="tags"></div>
+  <code class="signature">fn <a class="symbol-link" href="eos-e2e-test--src-container-rs.html#item-fn-docker-helpers-parse-http-and-unix-host-797">docker_helpers_parse_http_and_unix_host</a> ()</code>
+  <div class="tags"><span>test</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-docker-helpers-parse-http-and-unix-host-797">docker_helpers_parse_http_and_unix_host</a>() {
+        assert_eq!(
+            <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-docker-http-status-616">docker_http_status</a>(&quot;<span class="rs-type">HTTP</span>/1.1 200 <span class="rs-type">OK</span>\r\n\r\n&quot;).expect(&quot;status&quot;),
+            200
+        );
+        assert_eq!(
+            <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-percent-encode-630">percent_encode</a>(&quot;/eos/runtime/daemon&quot;),
+            &quot;%2<span class="rs-type">Feos</span>%2<span class="rs-type">Fruntime</span>%2<span class="rs-type">Fdaemon</span>&quot;
+        );
+        assert_eq!(
+            <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-docker-unix-socket-from-host-602">docker_unix_socket_from_host</a>(&quot;unix:<span class="rs-comment">///var/run/docker.sock").expect("socket"),</span>
+            <span class="rs-type">PathBuf</span>::from(&quot;/var/run/docker.sock&quot;)
+        );
+    }
+</code></pre>
+</details>
 
   <p class="source">crates/eos-e2e-test/src/container.rs:797</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn docker_exec_args_runs_from_root_after_leading_flags private fn docker_exec_args_runs_from_root_after_leading_flags () crates/eos-e2e-test/src/container.rs  ">
+</article><article id="item-fn-docker-exec-args-runs-from-root-after-leading-flags-813" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn docker_exec_args_runs_from_root_after_leading_flags private fn docker_exec_args_runs_from_root_after_leading_flags () crates/eos-e2e-test/src/container.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>docker_exec_args_runs_from_root_after_leading_flags</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn docker_exec_args_runs_from_root_after_leading_flags ()</code>
-  <div class="tags"></div>
+  <code class="signature">fn <a class="symbol-link" href="eos-e2e-test--src-container-rs.html#item-fn-docker-exec-args-runs-from-root-after-leading-flags-813">docker_exec_args_runs_from_root_after_leading_flags</a> ()</code>
+  <div class="tags"><span>test</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-docker-exec-args-runs-from-root-after-leading-flags-813">docker_exec_args_runs_from_root_after_leading_flags</a>() {
+        assert_eq!(
+            <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-docker-exec-args-420">docker_exec_args</a>(&quot;box&quot;, &amp;[&quot;mkdir&quot;, &quot;-p&quot;, &quot;/testbed&quot;]),
+            vec![&quot;exec&quot;, &quot;-w&quot;, &quot;/&quot;, &quot;box&quot;, &quot;mkdir&quot;, &quot;-p&quot;, &quot;/testbed&quot;]
+        );
+        assert_eq!(
+            <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-docker-exec-args-420">docker_exec_args</a>(&quot;box&quot;, &amp;[&quot;-d&quot;, &quot;/eos/runtime/daemon/eosd&quot;, &quot;daemon&quot;]),
+            vec![
+                &quot;exec&quot;,
+                &quot;-d&quot;,
+                &quot;-w&quot;,
+                &quot;/&quot;,
+                &quot;box&quot;,
+                &quot;/eos/runtime/daemon/eosd&quot;,
+                &quot;daemon&quot;
+            ]
+        );
+    }
+</code></pre>
+</details>
 
   <p class="source">crates/eos-e2e-test/src/container.rs:813</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn digest_test_config private fn digest_test_config (eosd_path : PathBuf) -&gt; Config crates/eos-e2e-test/src/container.rs  ">
+</article><article id="item-fn-digest-test-config-833" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn digest_test_config private fn digest_test_config (eosd_path : PathBuf) -&gt; Config crates/eos-e2e-test/src/container.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>digest_test_config</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn digest_test_config (eosd_path : PathBuf) -&gt; Config</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-e2e-test--src-container-rs.html#item-fn-digest-test-config-833">digest_test_config</a> (eosd_path : PathBuf) -&gt; Config</code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-digest-test-config-833">digest_test_config</a>(eosd_path: <span class="rs-type">PathBuf</span>) -&gt; <span class="rs-type">Config</span> {
+        <span class="rs-type">Config</span> {
+            image: &quot;image&quot;.to_owned(),
+            platform: <span class="rs-type">None</span>,
+            eosd_path,
+            remote_daemon_dir: <span class="rs-type">PathBuf</span>::from(&quot;/eos/runtime/daemon&quot;),
+            remote_eosd_path: <span class="rs-type">PathBuf</span>::from(&quot;/eos/runtime/daemon/eosd&quot;),
+            root_dir: <span class="rs-type">PathBuf</span>::from(&quot;/eos/state/e2e&quot;),
+            cap_add: <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-e2e-test--src-client-rs.html#method-new-26">new</a>(),
+            security_opt: <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-e2e-test--src-client-rs.html#method-new-26">new</a>(),
+            tmpfs: <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-e2e-test--src-client-rs.html#method-new-26">new</a>(),
+            tcp_port: 37_657,
+            sandboxes: 1,
+            mode: <span class="rs-type">NodeMode</span>::<span class="rs-type">Pool</span>,
+            recycle_after: 50,
+            ready_timeout: <span class="rs-type">Duration</span>::from_secs(1),
+            request_timeout: <span class="rs-type">Duration</span>::from_secs(1),
+            base_build_timeout: <span class="rs-type">Duration</span>::from_secs(1),
+            workspace_root: &quot;/testbed&quot;.to_owned(),
+            keep_container: <span class="rs-kw">true</span>,
+            non_kept_container_ttl: <span class="rs-type">Duration</span>::from_secs(60),
+            audit_pull_limit: 100,
+            workload: <span class="rs-type">WorkloadConfig</span> {
+                concurrency_levels: vec![1, 3, 6, 12],
+                write_iterations: 1,
+                sample_count: 1,
+                perf_artifact_dir: <span class="rs-type">PathBuf</span>::from(&quot;target/e2e-perf&quot;),
+                timeout: <span class="rs-type">Duration</span>::from_secs(1),
+            },
+        }
+    }
+</code></pre>
+</details>
 
   <p class="source">crates/eos-e2e-test/src/container.rs:833</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn runtime_digest_tracks_config_and_eosd_bytes private fn runtime_digest_tracks_config_and_eosd_bytes () -&gt; Result &lt; () &gt; crates/eos-e2e-test/src/container.rs  ">
+</article><article id="item-fn-runtime-digest-tracks-config-and-eosd-bytes-865" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn runtime_digest_tracks_config_and_eosd_bytes private fn runtime_digest_tracks_config_and_eosd_bytes () -&gt; Result &lt; () &gt; crates/eos-e2e-test/src/container.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>runtime_digest_tracks_config_and_eosd_bytes</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn runtime_digest_tracks_config_and_eosd_bytes () -&gt; Result &lt; () &gt;</code>
-  <div class="tags"></div>
+  <code class="signature">fn <a class="symbol-link" href="eos-e2e-test--src-container-rs.html#item-fn-runtime-digest-tracks-config-and-eosd-bytes-865">runtime_digest_tracks_config_and_eosd_bytes</a> () -&gt; Result &lt; () &gt;</code>
+  <div class="tags"><span>test</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-runtime-digest-tracks-config-and-eosd-bytes-865">runtime_digest_tracks_config_and_eosd_bytes</a>() -&gt; <span class="rs-type">Result</span>&lt;()&gt; {
+        <span class="rs-kw">let</span> root =
+            std::env::temp_dir().join(format!(&quot;eos-e2e-runtime-digest-{}&quot;, std::process::id()));
+        <span class="rs-kw">let</span> _ = fs::remove_dir_all(&amp;root);
+        fs::create_dir_all(&amp;root)?;
+        <span class="rs-kw">let</span> eosd_path = root.join(&quot;eosd&quot;);
+        fs::write(&amp;eosd_path, b&quot;daemon-v1&quot;)?;
+        <span class="rs-kw">let</span> config = <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-digest-test-config-833">digest_test_config</a>(eosd_path);
+        <span class="rs-kw">let</span> baseline = <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-runtime-digest-482">runtime_digest</a>(
+            &amp;config,
+            &quot;daemon:\n  layer_stack:\n    auto_squash_max_depth: 100\n&quot;,
+        )?;
+        <span class="rs-kw">let</span> override_digest = <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-runtime-digest-482">runtime_digest</a>(
+            &amp;config,
+            &quot;daemon:\n  layer_stack:\n    auto_squash_max_depth: 8\n&quot;,
+        )?;
+
+        assert_eq!(
+            baseline,
+            <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-runtime-digest-482">runtime_digest</a>(
+                &amp;config,
+                &quot;daemon:\n  layer_stack:\n    auto_squash_max_depth: 100\n&quot;,
+            )?
+        );
+        assert_eq!(baseline.len(), 64);
+        assert_ne!(baseline, override_digest);
+        fs::write(&amp;config.eosd_path, b&quot;daemon-v2&quot;)?;
+        <span class="rs-kw">let</span> rebuilt_digest = <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-runtime-digest-482">runtime_digest</a>(
+            &amp;config,
+            &quot;daemon:\n  layer_stack:\n    auto_squash_max_depth: 100\n&quot;,
+        )?;
+        assert_ne!(baseline, rebuilt_digest);
+
+        <span class="rs-kw">let</span> _ = fs::remove_dir_all(root);
+        <span class="rs-type">Ok</span>(())
+    }
+</code></pre>
+</details>
 
   <p class="source">crates/eos-e2e-test/src/container.rs:865</p>
 </article></div>
 </section></div>
 </main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/eos-e2e-test/src/container.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-comment">//! `DaemonContainer` — one Docker container running one `eosd`, driven entirely</span>
+<span class="rs-comment">//! through the Docker CLI plus the Engine archive API for binary upload.</span>
+<span class="rs-comment">//!</span>
+<span class="rs-comment">//! Container lifecycle (create / upload / spawn / teardown) is *infrastructure*,</span>
+<span class="rs-comment">//! not a sandbox operation, so it is allowed to use `docker` directly. The</span>
+<span class="rs-comment">//! operations *under test* still go exclusively through [`ProtocolClient`] over</span>
+<span class="rs-comment">//! the wire (D1/D4). Container-filesystem peeking is never used as a verification</span>
+<span class="rs-comment">//! oracle.</span>
+
+<span class="rs-kw">use</span> std::fmt::<span class="rs-type">Write</span> <span class="rs-kw">as</span> <span class="rs-type">FmtWrite</span>;
+<span class="rs-kw">use</span> std::fs;
+<span class="rs-kw">use</span> std::io::{<span class="rs-type">Read</span>, <span class="rs-type">Write</span> <span class="rs-kw">as</span> <span class="rs-type">IoWrite</span>};
+<span class="rs-kw">use</span> std::net::<span class="rs-type">SocketAddr</span>;
+<span class="rs-kw">use</span> std::path::{<span class="rs-type">Path</span>, <span class="rs-type">PathBuf</span>};
+<span class="rs-kw">use</span> std::process::<span class="rs-type">Command</span>;
+<span class="rs-kw">use</span> std::thread;
+<span class="rs-kw">use</span> std::time::{<span class="rs-type">Duration</span>, <span class="rs-type">Instant</span>};
+
+<span class="rs-kw">use</span> anyhow::{bail, <span class="rs-type">Context</span>, <span class="rs-type">Result</span>};
+<span class="rs-kw">use</span> eos_config::<span class="rs-type">ConfigPath</span>;
+<span class="rs-kw">use</span> eos_protocol::ops;
+<span class="rs-kw">use</span> serde_json::json;
+<span class="rs-kw">use</span> sha2::{<span class="rs-type">Digest</span>, <span class="rs-type">Sha256</span>};
+
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::client::{is_success, <a class="symbol-link rs-type" href="eos-e2e-test--src-client-rs.html#item-struct-ProtocolClient-17">ProtocolClient</a>};
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::config::{<span class="rs-type">Config</span>, <span class="rs-type">NodeMode</span>};
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::unique_suffix;
+
+<span class="rs-kw">const</span> <span class="rs-type">POOL_LABEL</span>: &amp;str = &quot;eos.e2e.pool&quot;;
+<span class="rs-kw">const</span> <span class="rs-type">AUTH_LABEL</span>: &amp;str = &quot;eos.e2e.auth&quot;;
+<span class="rs-kw">const</span> <span class="rs-type">CONFIG_DIGEST_LABEL</span>: &amp;str = &quot;eos.e2e.config_sha256&quot;;
+
+<span class="rs-comment">/// A live daemon container.</span>
+#[derive(<span class="rs-type">Debug</span>)]
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-e2e-test--src-container-rs.html#item-struct-DaemonContainer-33">DaemonContainer</a> {
+    name: <span class="rs-type">String</span>,
+    client: <a class="symbol-link rs-type" href="eos-e2e-test--src-client-rs.html#item-struct-ProtocolClient-17">ProtocolClient</a>,
+    daemon_log_path: <span class="rs-type">String</span>,
+    token: <span class="rs-type">String</span>,
+    keep: bool,
+}
+
+<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-e2e-test--src-container-rs.html#item-struct-DaemonContainer-33">DaemonContainer</a> {
+    <span class="rs-comment">/// Create a container, upload `eosd`, spawn the daemon (TCP + auth), and</span>
+    <span class="rs-comment">/// block until it answers a heartbeat.</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// # Errors</span>
+    <span class="rs-comment">/// Returns an error if any docker step fails or the daemon never becomes ready.</span>
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#method-start-44">start</a>(config: &amp;<span class="rs-type">Config</span>, config_yaml: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-self">Self</span>&gt; {
+        <span class="rs-kw">let</span> name = format!(&quot;eos-e2e-{}&quot;, <a class="symbol-link rs-fn" href="eos-e2e-test--src-lib-rs.html#item-fn-unique-suffix-31">unique_suffix</a>());
+        <span class="rs-kw">let</span> token = format!(&quot;tok-{}&quot;, <a class="symbol-link rs-fn" href="eos-e2e-test--src-lib-rs.html#item-fn-unique-suffix-31">unique_suffix</a>());
+        <span class="rs-kw">let</span> config_digest = <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-runtime-digest-482">runtime_digest</a>(config, config_yaml)?;
+        <span class="rs-kw">let</span> keep = config.keep_container &amp;&amp; config.mode != <span class="rs-type">NodeMode</span>::<span class="rs-type">PerTest</span>;
+
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> run = vec![
+            &quot;run&quot;.to_owned(),
+            &quot;-d&quot;.to_owned(),
+            &quot;--name&quot;.to_owned(),
+            name.clone(),
+            &quot;--label&quot;.to_owned(),
+            format!(&quot;{<span class="rs-type">POOL_LABEL</span>}={}&quot;, config.image),
+            &quot;--label&quot;.to_owned(),
+            format!(&quot;{<span class="rs-type">AUTH_LABEL</span>}={token}&quot;),
+            &quot;--label&quot;.to_owned(),
+            format!(&quot;{<span class="rs-type">CONFIG_DIGEST_LABEL</span>}={config_digest}&quot;),
+        ];
+        <span class="rs-kw">if</span> !keep {
+            run.push(&quot;--rm&quot;.to_owned());
+        }
+        <span class="rs-comment">// The isolated-workspace tier creates a per-workspace cgroup under</span>
+        <span class="rs-comment">// /sys/fs/cgroup, which Docker mounts read-only under plain --cap-add</span>
+        <span class="rs-comment">// (EROFS, e.g. on Docker Desktop). --privileged makes cgroup2 writable so</span>
+        <span class="rs-comment">// the real ns-holder/veth/cgroup path runs. The harness is test-only and</span>
+        <span class="rs-comment">// already requires SYS_ADMIN/NET_ADMIN + unconfined seccomp/apparmor, so</span>
+        <span class="rs-comment">// this is an acceptable superset; the explicit caps below remain for</span>
+        <span class="rs-comment">// documentation and hosts where privileged is unavailable.</span>
+        run.push(&quot;--privileged&quot;.to_owned());
+        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(platform) = &amp;config.platform {
+            run.push(&quot;--platform&quot;.to_owned());
+            run.push(platform.clone());
+        }
+        <span class="rs-kw">for</span> cap <span class="rs-kw">in</span> &amp;config.cap_add {
+            run.push(&quot;--cap-add&quot;.to_owned());
+            run.push(cap.clone());
+        }
+        <span class="rs-kw">for</span> opt <span class="rs-kw">in</span> &amp;config.security_opt {
+            run.push(&quot;--security-opt&quot;.to_owned());
+            run.push(opt.clone());
+        }
+        <span class="rs-kw">for</span> tmpfs <span class="rs-kw">in</span> &amp;config.tmpfs {
+            run.push(&quot;--tmpfs&quot;.to_owned());
+            run.push(tmpfs.clone());
+        }
+        run.push(&quot;--init&quot;.to_owned());
+        run.push(&quot;-p&quot;.to_owned());
+        run.push(format!(&quot;127.0.0.1::{}&quot;, config.tcp_port));
+        run.push(config.image.clone());
+        <span class="rs-comment">// Keep the container alive but self-terminating: `timeout` bounds the</span>
+        <span class="rs-comment">// lifetime so a leaked (`--rm`) container is reclaimed automatically.</span>
+        <span class="rs-kw">if</span> keep {
+            run.extend([&quot;sleep&quot;.to_owned(), &quot;infinity&quot;.to_owned()]);
+        } <span class="rs-kw">else</span> {
+            run.extend([
+                &quot;timeout&quot;.to_owned(),
+                config.non_kept_container_ttl.as_secs().to_string(),
+                &quot;sleep&quot;.to_owned(),
+                &quot;infinity&quot;.to_owned(),
+            ]);
+        }
+
+        <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-docker-415">docker</a>(&amp;run).with_context(|| format!(&quot;docker run <span class="rs-kw">for</span> {name}&quot;))?;
+
+        <span class="rs-comment">// From here, any failure must still tear the container down.</span>
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> container = <span class="rs-self">Self</span> {
+            name: name.clone(),
+            <span class="rs-comment">// Placeholder client; replaced once the port is resolved.</span>
+            client: <a class="symbol-link rs-type" href="eos-e2e-test--src-client-rs.html#item-struct-ProtocolClient-17">ProtocolClient</a>::<a class="symbol-link rs-fn" href="eos-e2e-test--src-client-rs.html#method-new-26">new</a>(
+                &quot;127.0.0.1:1&quot;.parse().expect(&quot;valid placeholder addr&quot;),
+                <span class="rs-type">Some</span>(token.clone()),
+                config.request_timeout,
+            ),
+            daemon_log_path: config
+                .remote_daemon_dir
+                .join(&quot;runtime.log&quot;)
+                .to_string_lossy()
+                .into_owned(),
+            token: token.clone(),
+            keep,
+        };
+        <span class="rs-kw">match</span> container.<a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#method-bringup-207">bringup</a>(config, &amp;token, config_yaml) {
+            <span class="rs-type">Ok</span>(client) =&gt; {
+                container.client = client;
+                <span class="rs-type">Ok</span>(container)
+            }
+            <span class="rs-type">Err</span>(err) =&gt; {
+                <span class="rs-kw">let</span> log = container.<a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#method-daemon-log-392">daemon_log</a>().unwrap_or_default();
+                <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#method-drop-407">drop</a>(container);
+                <span class="rs-type">Err</span>(err.context(format!(&quot;daemon bringup failed; log tail:\n{log}&quot;)))
+            }
+        }
+    }
+
+    <span class="rs-comment">/// Adopt already-running warm e2e containers for this image.</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// Containers are accepted only when their auth label is present, their</span>
+    <span class="rs-comment">/// config digest matches, their published daemon port resolves, and the</span>
+    <span class="rs-comment">/// daemon answers heartbeat.</span>
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#method-adopt-healthy-143">adopt_healthy</a>(config: &amp;<span class="rs-type">Config</span>, config_yaml: &amp;str) -&gt; <span class="rs-type">Vec</span>&lt;<span class="rs-self">Self</span>&gt; {
+        <span class="rs-kw">let</span> <span class="rs-type">Ok</span>(digest) = <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-runtime-digest-482">runtime_digest</a>(config, config_yaml) <span class="rs-kw">else</span> {
+            <span class="rs-kw">return</span> <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-e2e-test--src-client-rs.html#method-new-26">new</a>();
+        };
+        <span class="rs-kw">let</span> out = <span class="rs-type">Command</span>::<a class="symbol-link rs-fn" href="eos-e2e-test--src-client-rs.html#method-new-26">new</a>(&quot;docker&quot;)
+            .args([
+                &quot;ps&quot;,
+                &quot;-q&quot;,
+                &quot;--filter&quot;,
+                &amp;format!(&quot;label={<span class="rs-type">POOL_LABEL</span>}={}&quot;, config.image),
+                &quot;--filter&quot;,
+                &amp;format!(&quot;label={<span class="rs-type">CONFIG_DIGEST_LABEL</span>}={digest}&quot;),
+            ])
+            .output();
+        <span class="rs-kw">let</span> <span class="rs-type">Ok</span>(out) = out <span class="rs-kw">else</span> {
+            <span class="rs-kw">return</span> <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-e2e-test--src-client-rs.html#method-new-26">new</a>();
+        };
+        <span class="rs-kw">if</span> !out.status.success() {
+            <span class="rs-kw">return</span> <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-e2e-test--src-client-rs.html#method-new-26">new</a>();
+        }
+        std::str::from_utf8(&amp;out.stdout)
+            .unwrap_or(&quot;&quot;)
+            .split_whitespace()
+            .filter_map(|id| <span class="rs-self">Self</span>::<a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#method-adopt-one-175">adopt_one</a>(id, config).ok())
+            .<a class="symbol-link rs-fn" href="eos-e2e-test.html#method-collect-75">collect</a>()
+    }
+
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#method-adopt-one-175">adopt_one</a>(id: &amp;str, config: &amp;<span class="rs-type">Config</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-self">Self</span>&gt; {
+        <span class="rs-kw">let</span> token = <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-docker-415">docker</a>(&amp;[
+            &quot;inspect&quot;.to_owned(),
+            &quot;-f&quot;.to_owned(),
+            format!(&quot;{{{{ index .<span class="rs-type">Config</span>.<span class="rs-type">Labels</span> \&quot;{<span class="rs-type">AUTH_LABEL</span>}\&quot; }}}}&quot;),
+            id.to_owned(),
+        ])?;
+        <span class="rs-kw">if</span> token.is_empty() || token == &quot;&lt;no value&gt;&quot; {
+            bail!(&quot;missing {<span class="rs-type">AUTH_LABEL</span>} label on {id}&quot;);
+        }
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> container = <span class="rs-self">Self</span> {
+            name: id.to_owned(),
+            client: <a class="symbol-link rs-type" href="eos-e2e-test--src-client-rs.html#item-struct-ProtocolClient-17">ProtocolClient</a>::<a class="symbol-link rs-fn" href="eos-e2e-test--src-client-rs.html#method-new-26">new</a>(
+                &quot;127.0.0.1:1&quot;.parse().expect(&quot;valid placeholder addr&quot;),
+                <span class="rs-type">Some</span>(token.clone()),
+                config.request_timeout,
+            ),
+            daemon_log_path: config
+                .remote_daemon_dir
+                .join(&quot;runtime.log&quot;)
+                .to_string_lossy()
+                .into_owned(),
+            token: token.clone(),
+            keep: <span class="rs-kw">true</span>,
+        };
+        <span class="rs-kw">let</span> addr = container.<a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#method-resolve-addr-284">resolve_addr</a>(config.tcp_port)?;
+        <span class="rs-kw">let</span> client = <a class="symbol-link rs-type" href="eos-e2e-test--src-client-rs.html#item-struct-ProtocolClient-17">ProtocolClient</a>::<a class="symbol-link rs-fn" href="eos-e2e-test--src-client-rs.html#method-new-26">new</a>(addr, <span class="rs-type">Some</span>(token), config.request_timeout);
+        container.<a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#method-await-ready-308">await_ready</a>(&amp;client, config.ready_timeout)?;
+        container.client = client;
+        <span class="rs-type">Ok</span>(container)
+    }
+
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#method-bringup-207">bringup</a>(&amp;<span class="rs-self">self</span>, config: &amp;<span class="rs-type">Config</span>, token: &amp;str, config_yaml: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-e2e-test--src-client-rs.html#item-struct-ProtocolClient-17">ProtocolClient</a>&gt; {
+        <span class="rs-kw">let</span> daemon_dir = <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-path-str-476">path_str</a>(&amp;config.remote_daemon_dir)?;
+        <span class="rs-kw">let</span> root_dir = <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-path-str-476">path_str</a>(&amp;config.root_dir)?;
+        <span class="rs-kw">let</span> remote_eosd_path = <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-path-str-476">path_str</a>(&amp;config.remote_eosd_path)?;
+        <span class="rs-kw">let</span> config_path = <span class="rs-type">ConfigPath</span>::prd()
+            .context(&quot;resolve compiled daemon config path&quot;)?
+            .as_path()
+            .to_path_buf();
+        <span class="rs-kw">let</span> config_dir = config_path
+            .parent()
+            .context(&quot;compiled daemon config path has no parent&quot;)?;
+        <span class="rs-kw">let</span> config_dir = <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-path-str-476">path_str</a>(config_dir)?;
+        <span class="rs-kw">let</span> config_name = config_path
+            .file_name()
+            .and_then(|name| name.to_str())
+            .context(&quot;compiled daemon config path has no <span class="rs-type">UTF</span>-8 file name&quot;)?;
+
+        <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#method-exec-337">exec</a>(&amp;[&quot;mkdir&quot;, &quot;-p&quot;, &amp;daemon_dir, &amp;root_dir, &amp;config_dir])
+            .context(&quot;mkdir daemon dirs&quot;)?;
+        <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#method-exec-337">exec</a>(&amp;[
+            &quot;sh&quot;,
+            &quot;-lc&quot;,
+            &quot;mount -o remount,rw /sys/fs/cgroup 2&gt;/dev/null || <span class="rs-kw">true</span>; test -w /sys/fs/cgroup&quot;,
+        ])
+        .context(&quot;make cgroup v2 writable <span class="rs-kw">for</span> isolated-workspace tests&quot;)?;
+        <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-put-archive-file-452">put_archive_file</a>(
+            &amp;<span class="rs-self">self</span>.name,
+            &amp;daemon_dir,
+            &quot;eosd&quot;,
+            &amp;config.eosd_path,
+            config.request_timeout,
+        )
+        .with_context(|| {
+            format!(
+                &quot;<span class="rs-type">Docker</span> put_archive eosd ({}) into {daemon_dir}&quot;,
+                config.eosd_path.display()
+            )
+        })?;
+        <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-put-archive-bytes-464">put_archive_bytes</a>(
+            &amp;<span class="rs-self">self</span>.name,
+            &amp;config_dir,
+            config_name,
+            config_yaml.as_bytes(),
+            0o644,
+            config.request_timeout,
+        )
+        .with_context(|| format!(&quot;<span class="rs-type">Docker</span> put_archive merged config into {config_dir}&quot;))?;
+
+        <span class="rs-comment">// Spawn the daemon detached: `--spawn` re-execs a foreground child with</span>
+        <span class="rs-comment">// stdout/stderr redirected to `--log-file`, so bringup diagnostics land in</span>
+        <span class="rs-comment">// runtime.log (a plain foreground daemon parses but ignores `--log-file`).</span>
+        <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#method-exec-337">exec</a>(&amp;[
+            &quot;-d&quot;,
+            &amp;remote_eosd_path,
+            &quot;daemon&quot;,
+            &quot;--spawn&quot;,
+            &quot;--socket&quot;,
+            &amp;format!(&quot;{daemon_dir}/runtime.sock&quot;),
+            &quot;--pid-file&quot;,
+            &amp;format!(&quot;{daemon_dir}/runtime.pid&quot;),
+            &quot;--log-file&quot;,
+            &amp;format!(&quot;{daemon_dir}/runtime.log&quot;),
+            &quot;--tcp-host&quot;,
+            &quot;0.0.0.0&quot;,
+            &quot;--tcp-port&quot;,
+            &amp;config.tcp_port.to_string(),
+            &quot;--auth-token&quot;,
+            token,
+        ])
+        .context(&quot;spawn eosd daemon&quot;)?;
+
+        <span class="rs-kw">let</span> addr = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#method-resolve-addr-284">resolve_addr</a>(config.tcp_port)?;
+        <span class="rs-kw">let</span> client = <a class="symbol-link rs-type" href="eos-e2e-test--src-client-rs.html#item-struct-ProtocolClient-17">ProtocolClient</a>::<a class="symbol-link rs-fn" href="eos-e2e-test--src-client-rs.html#method-new-26">new</a>(addr, <span class="rs-type">Some</span>(token.to_owned()), config.request_timeout);
+        <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#method-await-ready-308">await_ready</a>(&amp;client, config.ready_timeout)?;
+        <span class="rs-type">Ok</span>(client)
+    }
+
+    <span class="rs-comment">/// Map the published TCP port to a host `SocketAddr` (retrying briefly while</span>
+    <span class="rs-comment">/// docker wires up the port binding).</span>
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#method-resolve-addr-284">resolve_addr</a>(&amp;<span class="rs-self">self</span>, container_port: u16) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">SocketAddr</span>&gt; {
+        <span class="rs-kw">let</span> deadline = <span class="rs-type">Instant</span>::now() + <span class="rs-type">Duration</span>::from_secs(15);
+        loop {
+            <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Ok</span>(out) = <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-docker-415">docker</a>(&amp;[
+                &quot;port&quot;.to_owned(),
+                <span class="rs-self">self</span>.name.clone(),
+                format!(&quot;{container_port}/tcp&quot;),
+            ]) {
+                <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(addr) = <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-parse-published-addr-705">parse_published_addr</a>(&amp;out) {
+                    <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(addr);
+                }
+            }
+            <span class="rs-kw">if</span> <span class="rs-type">Instant</span>::now() &gt;= deadline {
+                bail!(
+                    &quot;could not resolve published port {container_port} <span class="rs-kw">for</span> {}&quot;,
+                    <span class="rs-self">self</span>.name
+                );
+            }
+            thread::sleep(<span class="rs-type">Duration</span>::from_millis(200));
+        }
+    }
+
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#method-await-ready-308">await_ready</a>(&amp;<span class="rs-self">self</span>, client: &amp;<a class="symbol-link rs-type" href="eos-e2e-test--src-client-rs.html#item-struct-ProtocolClient-17">ProtocolClient</a>, budget: <span class="rs-type">Duration</span>) -&gt; <span class="rs-type">Result</span>&lt;()&gt; {
+        <span class="rs-kw">let</span> deadline = <span class="rs-type">Instant</span>::now() + budget;
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> delay = <span class="rs-type">Duration</span>::from_millis(150);
+        loop {
+            <span class="rs-kw">let</span> observed = <span class="rs-kw">match</span> client.<a class="symbol-link rs-fn" href="eos-e2e-test--src-client-rs.html#method-request-46">request</a>(ops::<span class="rs-type">API_V1_HEARTBEAT</span>, &quot;ready-probe&quot;, &amp;json!({})) {
+                <span class="rs-type">Ok</span>(resp) <span class="rs-kw">if</span> <a class="symbol-link rs-fn" href="eos-e2e-test--src-client-rs.html#item-fn-is-success-125">is_success</a>(&amp;resp) =&gt; <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(()),
+                <span class="rs-type">Ok</span>(resp) =&gt; format!(&quot;non-success heartbeat: {resp}&quot;),
+                <span class="rs-type">Err</span>(err) =&gt; err.to_string(),
+            };
+            <span class="rs-kw">if</span> <span class="rs-type">Instant</span>::now() &gt;= deadline {
+                bail!(&quot;daemon not ready within {budget:?}: {observed}&quot;);
+            }
+            thread::sleep(delay);
+            delay = (delay * 2).min(<span class="rs-type">Duration</span>::from_secs(2));
+        }
+    }
+
+    <span class="rs-comment">/// The wire client for this container.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#method-client-325">client</a>(&amp;<span class="rs-self">self</span>) -&gt; &amp;<a class="symbol-link rs-type" href="eos-e2e-test--src-client-rs.html#item-struct-ProtocolClient-17">ProtocolClient</a> {
+        &amp;<span class="rs-self">self</span>.client
+    }
+
+    <span class="rs-comment">/// The container name.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#method-name-331">name</a>(&amp;<span class="rs-self">self</span>) -&gt; &amp;str {
+        &amp;<span class="rs-self">self</span>.name
+    }
+
+    <span class="rs-comment">/// Run a `docker exec &lt;name&gt; ...` against this container (lifecycle/provision</span>
+    <span class="rs-comment">/// only — never used as a verification oracle).</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// # Errors</span>
+    <span class="rs-comment">/// Returns an error if the exec exits non-zero.</span>
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#method-exec-337">exec</a>(&amp;<span class="rs-self">self</span>, argv: &amp;[&amp;str]) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">String</span>&gt; {
+        <span class="rs-comment">// `exec` argv may start with docker flags like `-d`; the container name</span>
+        <span class="rs-comment">// goes after them and before the command. Everything after the command</span>
+        <span class="rs-comment">// token is passed through verbatim.</span>
+        <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-docker-415">docker</a>(&amp;<a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-docker-exec-args-420">docker_exec_args</a>(&amp;<span class="rs-self">self</span>.name, argv))
+    }
+
+    <span class="rs-comment">/// Restart the in-container `eosd`: hard-kill (SIGKILL) the running daemon so</span>
+    <span class="rs-comment">/// graceful-shutdown cleanup does NOT run, clear the stale socket/pid, then</span>
+    <span class="rs-comment">/// re-spawn it with the same socket, pid, log, TCP port, and auth token, and</span>
+    <span class="rs-comment">/// block until it answers heartbeat. The published container port is owned by</span>
+    <span class="rs-comment">/// Docker, so the existing wire client stays valid across the restart. This</span>
+    <span class="rs-comment">/// exercises daemon startup-recovery paths (e.g. isolated-handle orphan</span>
+    <span class="rs-comment">/// reconciliation); the spawn mirrors [`Self::bringup`].</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// # Errors</span>
+    <span class="rs-comment">/// Returns an error if the respawn exec fails or the daemon never becomes</span>
+    <span class="rs-comment">/// ready within the configured budget.</span>
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#method-restart-daemon-349">restart_daemon</a>(&amp;<span class="rs-self">self</span>, config: &amp;<span class="rs-type">Config</span>) -&gt; <span class="rs-type">Result</span>&lt;()&gt; {
+        <span class="rs-kw">let</span> daemon_dir = <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-path-str-476">path_str</a>(&amp;config.remote_daemon_dir)?;
+        <span class="rs-kw">let</span> remote_eosd_path = <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-path-str-476">path_str</a>(&amp;config.remote_eosd_path)?;
+        <span class="rs-kw">let</span> teardown = format!(
+            &quot;kill -9 \&quot;$(cat {daemon_dir}/runtime.pid 2&gt;/dev/null)\&quot; 2&gt;/dev/null; \
+             pkill -9 -f &#x27;eosd daemon&#x27; 2&gt;/dev/null; sleep 1; \
+             rm -f {daemon_dir}/runtime.sock {daemon_dir}/runtime.pid&quot;
+        );
+        <span class="rs-kw">let</span> _ = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#method-exec-337">exec</a>(&amp;[&quot;sh&quot;, &quot;-lc&quot;, &amp;teardown]);
+        <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#method-exec-337">exec</a>(&amp;[
+            &quot;-d&quot;,
+            &amp;remote_eosd_path,
+            &quot;daemon&quot;,
+            &quot;--spawn&quot;,
+            &quot;--socket&quot;,
+            &amp;format!(&quot;{daemon_dir}/runtime.sock&quot;),
+            &quot;--pid-file&quot;,
+            &amp;format!(&quot;{daemon_dir}/runtime.pid&quot;),
+            &quot;--log-file&quot;,
+            &amp;format!(&quot;{daemon_dir}/runtime.log&quot;),
+            &quot;--tcp-host&quot;,
+            &quot;0.0.0.0&quot;,
+            &quot;--tcp-port&quot;,
+            &amp;config.tcp_port.to_string(),
+            &quot;--auth-token&quot;,
+            &amp;<span class="rs-self">self</span>.token,
+        ])
+        .context(&quot;respawn eosd daemon&quot;)?;
+        <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#method-await-ready-308">await_ready</a>(&amp;<span class="rs-self">self</span>.client, config.ready_timeout)
+            .context(&quot;daemon not ready after restart&quot;)
+    }
+
+    <span class="rs-comment">/// Best-effort tail of the daemon log for diagnostics (not an oracle).</span>
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#method-daemon-log-392">daemon_log</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Option</span>&lt;<span class="rs-type">String</span>&gt; {
+        <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-docker-415">docker</a>(&amp;[
+            &quot;exec&quot;.to_owned(),
+            <span class="rs-self">self</span>.name.clone(),
+            &quot;tail&quot;.to_owned(),
+            &quot;-n&quot;.to_owned(),
+            &quot;40&quot;.to_owned(),
+            <span class="rs-self">self</span>.daemon_log_path.clone(),
+        ])
+        .ok()
+    }
+}
+
+<span class="rs-kw">impl</span> <span class="rs-type">Drop</span> <span class="rs-kw">for</span> <a class="symbol-link rs-type" href="eos-e2e-test--src-container-rs.html#item-struct-DaemonContainer-33">DaemonContainer</a> {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#method-drop-407">drop</a>(&amp;<span class="rs-kw">mut</span> <span class="rs-self">self</span>) {
+        <span class="rs-kw">if</span> <span class="rs-self">self</span>.keep {
+            <span class="rs-kw">return</span>;
+        }
+        <span class="rs-kw">let</span> _ = <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-docker-415">docker</a>(&amp;[&quot;rm&quot;.to_owned(), &quot;-f&quot;.to_owned(), <span class="rs-self">self</span>.name.clone()]);
+    }
+}
+
+<span class="rs-comment">/// Run `docker &lt;args...&gt;`, returning trimmed stdout. Errors include stderr.</span>
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-docker-415">docker</a>(args: &amp;[<span class="rs-type">String</span>]) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">String</span>&gt; {
+    <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-docker-str-436">docker_str</a>(&amp;args.iter().map(<span class="rs-type">String</span>::as_str).collect::&lt;<span class="rs-type">Vec</span>&lt;_&gt;&gt;())
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-docker-exec-args-420">docker_exec_args</a>(container: &amp;str, argv: &amp;[&amp;str]) -&gt; <span class="rs-type">Vec</span>&lt;<span class="rs-type">String</span>&gt; {
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> rebuilt: <span class="rs-type">Vec</span>&lt;<span class="rs-type">String</span>&gt; = vec![&quot;exec&quot;.to_owned()];
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> rest = argv.iter();
+    <span class="rs-kw">for</span> token <span class="rs-kw">in</span> rest.by_ref() {
+        <span class="rs-kw">if</span> token.starts_with(&#x27;-&#x27;) {
+            rebuilt.push((*token).to_owned());
+        } <span class="rs-kw">else</span> {
+            rebuilt.extend([&quot;-w&quot;.to_owned(), &quot;/&quot;.to_owned(), container.to_owned()]);
+            rebuilt.push((*token).to_owned());
+            <span class="rs-kw">break</span>;
+        }
+    }
+    rebuilt.extend(rest.map(|s| (*s).to_owned()));
+    rebuilt
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-docker-str-436">docker_str</a>(args: &amp;[&amp;str]) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">String</span>&gt; {
+    <span class="rs-kw">let</span> output = <span class="rs-type">Command</span>::<a class="symbol-link rs-fn" href="eos-e2e-test--src-client-rs.html#method-new-26">new</a>(&quot;docker&quot;)
+        .args(args)
+        .output()
+        .with_context(|| format!(&quot;spawn docker {}&quot;, args.join(&quot; &quot;)))?;
+    <span class="rs-kw">if</span> !output.status.success() {
+        bail!(
+            &quot;docker {} failed ({}): {}&quot;,
+            args.join(&quot; &quot;),
+            output.status,
+            <span class="rs-type">String</span>::from_utf8_lossy(&amp;output.stderr).trim()
+        );
+    }
+    <span class="rs-type">Ok</span>(<span class="rs-type">String</span>::from_utf8_lossy(&amp;output.stdout).trim().to_owned())
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-put-archive-file-452">put_archive_file</a>(
+    container: &amp;str,
+    dest_dir: &amp;str,
+    remote_name: &amp;str,
+    source: &amp;<span class="rs-type">Path</span>,
+    timeout: <span class="rs-type">Duration</span>,
+) -&gt; <span class="rs-type">Result</span>&lt;()&gt; {
+    <span class="rs-kw">let</span> payload = fs::read(source).with_context(|| format!(&quot;read eosd {}&quot;, source.display()))?;
+    <span class="rs-kw">let</span> tar_stream = <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-tar-single-file-642">tar_single_file</a>(remote_name, &amp;payload, 0o755)?;
+    <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-docker-put-archive-507">docker_put_archive</a>(container, dest_dir, &amp;tar_stream, timeout)
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-put-archive-bytes-464">put_archive_bytes</a>(
+    container: &amp;str,
+    dest_dir: &amp;str,
+    remote_name: &amp;str,
+    payload: &amp;[u8],
+    mode: u32,
+    timeout: <span class="rs-type">Duration</span>,
+) -&gt; <span class="rs-type">Result</span>&lt;()&gt; {
+    <span class="rs-kw">let</span> tar_stream = <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-tar-single-file-642">tar_single_file</a>(remote_name, payload, mode)?;
+    <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-docker-put-archive-507">docker_put_archive</a>(container, dest_dir, &amp;tar_stream, timeout)
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-path-str-476">path_str</a>(path: &amp;<span class="rs-type">Path</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">String</span>&gt; {
+    path.to_str()
+        .map(str::to_owned)
+        .with_context(|| format!(&quot;container path is not <span class="rs-type">UTF</span>-8: {}&quot;, path.display()))
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-runtime-digest-482">runtime_digest</a>(config: &amp;<span class="rs-type">Config</span>, config_yaml: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">String</span>&gt; {
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> hasher = <span class="rs-type">Sha256</span>::<a class="symbol-link rs-fn" href="eos-e2e-test--src-client-rs.html#method-new-26">new</a>();
+    hasher.update(config_yaml.as_bytes());
+    hasher.update(b&quot;\0eosd\0&quot;);
+    <span class="rs-kw">let</span> eosd = fs::read(&amp;config.eosd_path).with_context(|| {
+        format!(
+            &quot;read eosd binary <span class="rs-kw">for</span> digest: {}&quot;,
+            config.eosd_path.display()
+        )
+    })?;
+    hasher.update(eosd);
+    <span class="rs-type">Ok</span>(<a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-hex-lower-496">hex_lower</a>(&amp;hasher.finalize()))
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-hex-lower-496">hex_lower</a>(bytes: &amp;[u8]) -&gt; <span class="rs-type">String</span> {
+    <span class="rs-kw">const</span> <span class="rs-type">LOWER_HEX</span>: &amp;[u8; 16] = b&quot;0123456789abcdef&quot;;
+
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> out = <span class="rs-type">String</span>::with_capacity(bytes.len() * 2);
+    <span class="rs-kw">for</span> &amp;byte <span class="rs-kw">in</span> bytes {
+        out.push(char::from(<span class="rs-type">LOWER_HEX</span>[usize::from(byte &gt;&gt; 4)]));
+        out.push(char::from(<span class="rs-type">LOWER_HEX</span>[usize::from(byte &amp; 0x0f)]));
+    }
+    out
+}
+
+#[cfg(unix)]
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-docker-put-archive-507">docker_put_archive</a>(
+    container: &amp;str,
+    dest_dir: &amp;str,
+    tar_stream: &amp;[u8],
+    timeout: <span class="rs-type">Duration</span>,
+) -&gt; <span class="rs-type">Result</span>&lt;()&gt; {
+    <span class="rs-kw">use</span> std::os::unix::net::<span class="rs-type">UnixStream</span>;
+
+    <span class="rs-kw">let</span> socket = <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-docker-socket-path-573">docker_socket_path</a>()?;
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> stream = <span class="rs-type">UnixStream</span>::connect(&amp;socket)
+        .with_context(|| format!(&quot;connect <span class="rs-type">Docker</span> socket {}&quot;, socket.display()))?;
+    stream
+        .set_read_timeout(<span class="rs-type">Some</span>(timeout))
+        .context(&quot;set <span class="rs-type">Docker</span> socket read timeout&quot;)?;
+    stream
+        .set_write_timeout(<span class="rs-type">Some</span>(timeout))
+        .context(&quot;set <span class="rs-type">Docker</span> socket write timeout&quot;)?;
+
+    <span class="rs-kw">let</span> api_version = <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-docker-api-version-609">docker_api_version</a>();
+    <span class="rs-kw">let</span> request_path = format!(
+        &quot;/v{}/containers/{}/archive?path={}&quot;,
+        api_version.trim_start_matches(&#x27;v&#x27;),
+        <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-percent-encode-630">percent_encode</a>(container),
+        <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-percent-encode-630">percent_encode</a>(dest_dir)
+    );
+    <span class="rs-kw">let</span> request = format!(
+        &quot;<span class="rs-type">PUT</span> {request_path} <span class="rs-type">HTTP</span>/1.1\r\n\
+         <span class="rs-type">Host</span>: docker\r\n\
+         <span class="rs-type">User</span>-<span class="rs-type">Agent</span>: eos-e2e-test\r\n\
+         <span class="rs-type">Content</span>-<span class="rs-type">Type</span>: application/x-tar\r\n\
+         <span class="rs-type">Content</span>-<span class="rs-type">Length</span>: {}\r\n\
+         <span class="rs-type">Connection</span>: close\r\n\
+         \r\n&quot;,
+        tar_stream.len()
+    );
+    stream
+        .write_all(request.as_bytes())
+        .context(&quot;write <span class="rs-type">Docker</span> put_archive request headers&quot;)?;
+    stream
+        .write_all(tar_stream)
+        .context(&quot;write <span class="rs-type">Docker</span> put_archive tar stream&quot;)?;
+    stream.flush().context(&quot;flush <span class="rs-type">Docker</span> put_archive request&quot;)?;
+
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> response = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-e2e-test--src-client-rs.html#method-new-26">new</a>();
+    stream
+        .read_to_end(&amp;<span class="rs-kw">mut</span> response)
+        .context(&quot;read <span class="rs-type">Docker</span> put_archive response&quot;)?;
+    <span class="rs-kw">let</span> response_text = <span class="rs-type">String</span>::from_utf8_lossy(&amp;response);
+    <span class="rs-kw">let</span> status = <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-docker-http-status-616">docker_http_status</a>(&amp;response_text)?;
+    <span class="rs-kw">if</span> !(200..300).contains(&amp;status) {
+        bail!(&quot;<span class="rs-type">Docker</span> put_archive failed with <span class="rs-type">HTTP</span> {status}: {response_text}&quot;);
+    }
+    <span class="rs-type">Ok</span>(())
+}
+
+#[cfg(not(unix))]
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-docker-put-archive-507">docker_put_archive</a>(
+    _container: &amp;str,
+    _dest_dir: &amp;str,
+    _tar_stream: &amp;[u8],
+    _timeout: <span class="rs-type">Duration</span>,
+) -&gt; <span class="rs-type">Result</span>&lt;()&gt; {
+    bail!(&quot;<span class="rs-type">Docker</span> put_archive over a <span class="rs-type">Unix</span> socket is only supported on <span class="rs-type">Unix</span> hosts&quot;)
+}
+
+#[cfg(unix)]
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-docker-socket-path-573">docker_socket_path</a>() -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">PathBuf</span>&gt; {
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> candidates = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-e2e-test--src-client-rs.html#method-new-26">new</a>();
+    <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Ok</span>(host) = std::env::var(&quot;<span class="rs-type">DOCKER_HOST</span>&quot;) {
+        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(path) = <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-docker-unix-socket-from-host-602">docker_unix_socket_from_host</a>(&amp;host) {
+            candidates.push(path);
+        }
+    }
+    <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Ok</span>(host) = <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-docker-str-436">docker_str</a>(&amp;[
+        &quot;context&quot;,
+        &quot;inspect&quot;,
+        &quot;--format&quot;,
+        &quot;{{.<span class="rs-type">Endpoints</span>.docker.<span class="rs-type">Host</span>}}&quot;,
+    ]) {
+        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(path) = <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-docker-unix-socket-from-host-602">docker_unix_socket_from_host</a>(&amp;host) {
+            candidates.push(path);
+        }
+    }
+    <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(home) = std::env::var_os(&quot;<span class="rs-type">HOME</span>&quot;) {
+        candidates.push(<span class="rs-type">PathBuf</span>::from(home).join(&quot;.docker/run/docker.sock&quot;));
+    }
+    candidates.push(<span class="rs-type">PathBuf</span>::from(&quot;/var/run/docker.sock&quot;));
+
+    candidates
+        .into_iter()
+        .find(|path| path.exists())
+        .ok_or_else(|| anyhow::anyhow!(&quot;could not locate <span class="rs-type">Docker</span> <span class="rs-type">Unix</span> socket <span class="rs-kw">for</span> put_archive&quot;))
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-docker-unix-socket-from-host-602">docker_unix_socket_from_host</a>(host: &amp;str) -&gt; <span class="rs-type">Option</span>&lt;<span class="rs-type">PathBuf</span>&gt; {
+    host.trim()
+        .strip_prefix(&quot;unix:<span class="rs-comment">//")</span>
+        .filter(|path| !path.is_empty())
+        .map(<span class="rs-type">PathBuf</span>::from)
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-docker-api-version-609">docker_api_version</a>() -&gt; <span class="rs-type">String</span> {
+    <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-docker-str-436">docker_str</a>(&amp;[&quot;version&quot;, &quot;--format&quot;, &quot;{{.<span class="rs-type">Server</span>.<span class="rs-type">APIVersion</span>}}&quot;])
+        .ok()
+        .filter(|version| !version.is_empty())
+        .unwrap_or_else(|| &quot;1.41&quot;.to_owned())
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-docker-http-status-616">docker_http_status</a>(response: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;u16&gt; {
+    <span class="rs-kw">let</span> status_line = response
+        .lines()
+        .next()
+        .context(&quot;<span class="rs-type">Docker</span> put_archive response missing status line&quot;)?;
+    <span class="rs-kw">let</span> status = status_line
+        .split_whitespace()
+        .nth(1)
+        .context(&quot;<span class="rs-type">Docker</span> put_archive response missing status code&quot;)?;
+    status
+        .parse::&lt;u16&gt;()
+        .with_context(|| format!(&quot;parse <span class="rs-type">Docker</span> <span class="rs-type">HTTP</span> status from {status_line:?}&quot;))
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-percent-encode-630">percent_encode</a>(value: &amp;str) -&gt; <span class="rs-type">String</span> {
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> encoded = <span class="rs-type">String</span>::with_capacity(value.len());
+    <span class="rs-kw">for</span> byte <span class="rs-kw">in</span> value.bytes() {
+        <span class="rs-kw">if</span> byte.is_ascii_alphanumeric() || matches!(byte, b&#x27;-&#x27; | b&#x27;_&#x27; | b&#x27;.&#x27; | b&#x27;~&#x27;) {
+            encoded.push(char::from(byte));
+        } <span class="rs-kw">else</span> {
+            <span class="rs-kw">let</span> _ = write!(&amp;<span class="rs-kw">mut</span> encoded, &quot;%{byte:02<span class="rs-type">X</span>}&quot;);
+        }
+    }
+    encoded
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-tar-single-file-642">tar_single_file</a>(name: &amp;str, payload: &amp;[u8], mode: u32) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;u8&gt;&gt; {
+    <span class="rs-kw">if</span> name.is_empty() || name.starts_with(&#x27;/&#x27;) || name.split(&#x27;/&#x27;).<a class="symbol-link rs-fn" href="eos-e2e-test.html#method-any-97">any</a>(|part| part == &quot;..&quot;) {
+        bail!(&quot;invalid tar entry name {name:?}&quot;);
+    }
+    <span class="rs-kw">let</span> name_bytes = name.as_bytes();
+    <span class="rs-kw">if</span> name_bytes.len() &gt; 100 {
+        bail!(&quot;tar entry name too long: {name}&quot;);
+    }
+
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> header = [0_u8; 512];
+    header[..name_bytes.len()].copy_from_slice(name_bytes);
+    <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-write-octal-674">write_octal</a>(&amp;<span class="rs-kw">mut</span> header[100..108], u64::from(mode))?;
+    <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-write-octal-674">write_octal</a>(&amp;<span class="rs-kw">mut</span> header[108..116], 0)?;
+    <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-write-octal-674">write_octal</a>(&amp;<span class="rs-kw">mut</span> header[116..124], 0)?;
+    <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-write-octal-674">write_octal</a>(&amp;<span class="rs-kw">mut</span> header[124..136], payload.len() <span class="rs-kw">as</span> u64)?;
+    <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-write-octal-674">write_octal</a>(&amp;<span class="rs-kw">mut</span> header[136..148], 0)?;
+    header[148..156].fill(b&#x27; &#x27;);
+    header[156] = b&#x27;0&#x27;;
+    header[257..263].copy_from_slice(b&quot;ustar\0&quot;);
+    header[263..265].copy_from_slice(b&quot;00&quot;);
+    <span class="rs-kw">let</span> checksum = header.iter().map(|byte| u32::from(*byte)).sum::&lt;u32&gt;();
+    <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-write-checksum-691">write_checksum</a>(&amp;<span class="rs-kw">mut</span> header[148..156], checksum)?;
+
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> archive = <span class="rs-type">Vec</span>::with_capacity(512 + payload.len() + 1536);
+    archive.extend_from_slice(&amp;header);
+    archive.extend_from_slice(payload);
+    <span class="rs-kw">let</span> padding = (512 - (payload.len() % 512)) % 512;
+    archive.resize(archive.len() + padding, 0);
+    archive.resize(archive.len() + 1024, 0);
+    <span class="rs-type">Ok</span>(archive)
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-write-octal-674">write_octal</a>(field: &amp;<span class="rs-kw">mut</span> [u8], value: u64) -&gt; <span class="rs-type">Result</span>&lt;()&gt; {
+    <span class="rs-kw">let</span> digits = field
+        .len()
+        .checked_sub(1)
+        .context(&quot;tar octal field too short&quot;)?;
+    <span class="rs-kw">let</span> encoded = format!(&quot;{value:0width$o}&quot;, width = digits);
+    <span class="rs-kw">if</span> encoded.len() &gt; digits {
+        bail!(
+            &quot;tar octal value {value} does not fit <span class="rs-kw">in</span> {} bytes&quot;,
+            field.len()
+        );
+    }
+    field[..digits].copy_from_slice(encoded.as_bytes());
+    field[digits] = 0;
+    <span class="rs-type">Ok</span>(())
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-write-checksum-691">write_checksum</a>(field: &amp;<span class="rs-kw">mut</span> [u8], value: u32) -&gt; <span class="rs-type">Result</span>&lt;()&gt; {
+    <span class="rs-kw">if</span> field.len() != 8 {
+        bail!(&quot;tar checksum field must be 8 bytes&quot;);
+    }
+    <span class="rs-kw">let</span> encoded = format!(&quot;{value:06o}&quot;);
+    <span class="rs-kw">if</span> encoded.len() &gt; 6 {
+        bail!(&quot;tar checksum {value} does not fit&quot;);
+    }
+    field[..6].copy_from_slice(encoded.as_bytes());
+    field[6] = 0;
+    field[7] = b&#x27; &#x27;;
+    <span class="rs-type">Ok</span>(())
+}
+
+<span class="rs-comment">/// Parse `docker port` output (`0.0.0.0:54321` / `127.0.0.1:54321`, possibly</span>
+<span class="rs-comment">/// multiple lines) into a loopback `SocketAddr`.</span>
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-parse-published-addr-705">parse_published_addr</a>(output: &amp;str) -&gt; <span class="rs-type">Option</span>&lt;<span class="rs-type">SocketAddr</span>&gt; {
+    <span class="rs-kw">for</span> line <span class="rs-kw">in</span> output.lines() {
+        <span class="rs-kw">let</span> mapping = line.trim();
+        <span class="rs-kw">let</span> port = mapping.rsplit(&#x27;:&#x27;).next()?.trim();
+        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Ok</span>(port) = port.parse::&lt;u16&gt;() {
+            <span class="rs-kw">if</span> port != 0 {
+                <span class="rs-kw">return</span> <span class="rs-type">Some</span>(<span class="rs-type">SocketAddr</span>::from(([127, 0, 0, 1], port)));
+            }
+        }
+    }
+    <span class="rs-type">None</span>
+}
+
+<span class="rs-comment">/// Whether a usable `docker` CLI is present (for the env guard).</span>
+#[must_use]
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-docker-available-720">docker_available</a>() -&gt; bool {
+    <span class="rs-type">Command</span>::<a class="symbol-link rs-fn" href="eos-e2e-test--src-client-rs.html#method-new-26">new</a>(&quot;docker&quot;)
+        .args([&quot;version&quot;, &quot;--format&quot;, &quot;{{.<span class="rs-type">Server</span>.<span class="rs-type">Version</span>}}&quot;])
+        .output()
+        .map(|out| out.status.success())
+        .unwrap_or(<span class="rs-kw">false</span>)
+}
+
+<span class="rs-comment">/// Remove all `eos-e2e-*` containers left by prior harness runs.</span>
+<span class="rs-comment">///</span>
+<span class="rs-comment">/// # Errors</span>
+<span class="rs-comment">/// Returns an error if Docker is reachable but listing or removing containers</span>
+<span class="rs-comment">/// fails.</span>
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-reap-e2e-containers-730">reap_e2e_containers</a>() -&gt; <span class="rs-type">Result</span>&lt;usize&gt; {
+    <span class="rs-kw">let</span> out = <span class="rs-type">Command</span>::<a class="symbol-link rs-fn" href="eos-e2e-test--src-client-rs.html#method-new-26">new</a>(&quot;docker&quot;)
+        .args([&quot;ps&quot;, &quot;-aq&quot;, &quot;--filter&quot;, &amp;format!(&quot;label={<span class="rs-type">POOL_LABEL</span>}&quot;)])
+        .output()
+        .context(&quot;list eos-e2e containers&quot;)?;
+    <span class="rs-kw">if</span> !out.status.success() {
+        bail!(
+            &quot;docker ps <span class="rs-kw">for</span> eos-e2e containers failed ({}): {}&quot;,
+            out.status,
+            <span class="rs-type">String</span>::from_utf8_lossy(&amp;out.stderr).trim()
+        );
+    }
+    <span class="rs-kw">let</span> ids: <span class="rs-type">Vec</span>&lt;&amp;str&gt; = std::str::from_utf8(&amp;out.stdout)
+        .unwrap_or(&quot;&quot;)
+        .split_whitespace()
+        .<a class="symbol-link rs-fn" href="eos-e2e-test.html#method-collect-75">collect</a>();
+    <span class="rs-kw">if</span> ids.is_empty() {
+        <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(0);
+    }
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> argv = vec![&quot;rm&quot;, &quot;-f&quot;];
+    argv.extend(ids.iter().copied());
+    <span class="rs-kw">let</span> output = <span class="rs-type">Command</span>::<a class="symbol-link rs-fn" href="eos-e2e-test--src-client-rs.html#method-new-26">new</a>(&quot;docker&quot;)
+        .args(&amp;argv)
+        .output()
+        .context(&quot;remove eos-e2e containers&quot;)?;
+    <span class="rs-kw">if</span> !output.status.success() {
+        bail!(
+            &quot;docker {} failed ({}): {}&quot;,
+            argv.join(&quot; &quot;),
+            output.status,
+            <span class="rs-type">String</span>::from_utf8_lossy(&amp;output.stderr).trim()
+        );
+    }
+    <span class="rs-type">Ok</span>(ids.len())
+}
+
+#[cfg(test)]
+<span class="rs-kw">mod</span> tests {
+    <span class="rs-kw">use</span> std::fs;
+    <span class="rs-kw">use</span> std::path::<span class="rs-type">PathBuf</span>;
+    <span class="rs-kw">use</span> std::time::<span class="rs-type">Duration</span>;
+
+    <span class="rs-kw">use</span> anyhow::<span class="rs-type">Result</span>;
+
+    <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::config::{<span class="rs-type">Config</span>, <span class="rs-type">NodeMode</span>, <span class="rs-type">WorkloadConfig</span>};
+
+    <span class="rs-kw">use</span> <span class="rs-kw">super</span>::{
+        docker_exec_args, docker_http_status, docker_unix_socket_from_host, percent_encode,
+        runtime_digest, tar_single_file,
+    };
+
+    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-tar-single-file-builds-executable-ustar-stream-786">tar_single_file_builds_executable_ustar_stream</a>() {
+        <span class="rs-kw">let</span> tar = <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-tar-single-file-642">tar_single_file</a>(&quot;eosd&quot;, b&quot;payload&quot;, 0o755).expect(&quot;tar stream&quot;);
+        assert_eq!(&amp;tar[0..4], b&quot;eosd&quot;);
+        assert_eq!(&amp;tar[100..108], b&quot;0000755\0&quot;);
+        assert_eq!(&amp;tar[124..136], b&quot;00000000007\0&quot;);
+        assert_eq!(tar[156], b&#x27;0&#x27;);
+        assert_eq!(&amp;tar[257..263], b&quot;ustar\0&quot;);
+        assert_eq!(tar.len() % 512, 0);
+    }
+
+    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-docker-helpers-parse-http-and-unix-host-797">docker_helpers_parse_http_and_unix_host</a>() {
+        assert_eq!(
+            <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-docker-http-status-616">docker_http_status</a>(&quot;<span class="rs-type">HTTP</span>/1.1 200 <span class="rs-type">OK</span>\r\n\r\n&quot;).expect(&quot;status&quot;),
+            200
+        );
+        assert_eq!(
+            <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-percent-encode-630">percent_encode</a>(&quot;/eos/runtime/daemon&quot;),
+            &quot;%2<span class="rs-type">Feos</span>%2<span class="rs-type">Fruntime</span>%2<span class="rs-type">Fdaemon</span>&quot;
+        );
+        assert_eq!(
+            <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-docker-unix-socket-from-host-602">docker_unix_socket_from_host</a>(&quot;unix:<span class="rs-comment">///var/run/docker.sock").expect("socket"),</span>
+            <span class="rs-type">PathBuf</span>::from(&quot;/var/run/docker.sock&quot;)
+        );
+    }
+
+    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-docker-exec-args-runs-from-root-after-leading-flags-813">docker_exec_args_runs_from_root_after_leading_flags</a>() {
+        assert_eq!(
+            <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-docker-exec-args-420">docker_exec_args</a>(&quot;box&quot;, &amp;[&quot;mkdir&quot;, &quot;-p&quot;, &quot;/testbed&quot;]),
+            vec![&quot;exec&quot;, &quot;-w&quot;, &quot;/&quot;, &quot;box&quot;, &quot;mkdir&quot;, &quot;-p&quot;, &quot;/testbed&quot;]
+        );
+        assert_eq!(
+            <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-docker-exec-args-420">docker_exec_args</a>(&quot;box&quot;, &amp;[&quot;-d&quot;, &quot;/eos/runtime/daemon/eosd&quot;, &quot;daemon&quot;]),
+            vec![
+                &quot;exec&quot;,
+                &quot;-d&quot;,
+                &quot;-w&quot;,
+                &quot;/&quot;,
+                &quot;box&quot;,
+                &quot;/eos/runtime/daemon/eosd&quot;,
+                &quot;daemon&quot;
+            ]
+        );
+    }
+
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-digest-test-config-833">digest_test_config</a>(eosd_path: <span class="rs-type">PathBuf</span>) -&gt; <span class="rs-type">Config</span> {
+        <span class="rs-type">Config</span> {
+            image: &quot;image&quot;.to_owned(),
+            platform: <span class="rs-type">None</span>,
+            eosd_path,
+            remote_daemon_dir: <span class="rs-type">PathBuf</span>::from(&quot;/eos/runtime/daemon&quot;),
+            remote_eosd_path: <span class="rs-type">PathBuf</span>::from(&quot;/eos/runtime/daemon/eosd&quot;),
+            root_dir: <span class="rs-type">PathBuf</span>::from(&quot;/eos/state/e2e&quot;),
+            cap_add: <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-e2e-test--src-client-rs.html#method-new-26">new</a>(),
+            security_opt: <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-e2e-test--src-client-rs.html#method-new-26">new</a>(),
+            tmpfs: <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-e2e-test--src-client-rs.html#method-new-26">new</a>(),
+            tcp_port: 37_657,
+            sandboxes: 1,
+            mode: <span class="rs-type">NodeMode</span>::<span class="rs-type">Pool</span>,
+            recycle_after: 50,
+            ready_timeout: <span class="rs-type">Duration</span>::from_secs(1),
+            request_timeout: <span class="rs-type">Duration</span>::from_secs(1),
+            base_build_timeout: <span class="rs-type">Duration</span>::from_secs(1),
+            workspace_root: &quot;/testbed&quot;.to_owned(),
+            keep_container: <span class="rs-kw">true</span>,
+            non_kept_container_ttl: <span class="rs-type">Duration</span>::from_secs(60),
+            audit_pull_limit: 100,
+            workload: <span class="rs-type">WorkloadConfig</span> {
+                concurrency_levels: vec![1, 3, 6, 12],
+                write_iterations: 1,
+                sample_count: 1,
+                perf_artifact_dir: <span class="rs-type">PathBuf</span>::from(&quot;target/e2e-perf&quot;),
+                timeout: <span class="rs-type">Duration</span>::from_secs(1),
+            },
+        }
+    }
+
+    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-runtime-digest-tracks-config-and-eosd-bytes-865">runtime_digest_tracks_config_and_eosd_bytes</a>() -&gt; <span class="rs-type">Result</span>&lt;()&gt; {
+        <span class="rs-kw">let</span> root =
+            std::env::temp_dir().join(format!(&quot;eos-e2e-runtime-digest-{}&quot;, std::process::id()));
+        <span class="rs-kw">let</span> _ = fs::remove_dir_all(&amp;root);
+        fs::create_dir_all(&amp;root)?;
+        <span class="rs-kw">let</span> eosd_path = root.join(&quot;eosd&quot;);
+        fs::write(&amp;eosd_path, b&quot;daemon-v1&quot;)?;
+        <span class="rs-kw">let</span> config = <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-digest-test-config-833">digest_test_config</a>(eosd_path);
+        <span class="rs-kw">let</span> baseline = <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-runtime-digest-482">runtime_digest</a>(
+            &amp;config,
+            &quot;daemon:\n  layer_stack:\n    auto_squash_max_depth: 100\n&quot;,
+        )?;
+        <span class="rs-kw">let</span> override_digest = <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-runtime-digest-482">runtime_digest</a>(
+            &amp;config,
+            &quot;daemon:\n  layer_stack:\n    auto_squash_max_depth: 8\n&quot;,
+        )?;
+
+        assert_eq!(
+            baseline,
+            <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-runtime-digest-482">runtime_digest</a>(
+                &amp;config,
+                &quot;daemon:\n  layer_stack:\n    auto_squash_max_depth: 100\n&quot;,
+            )?
+        );
+        assert_eq!(baseline.len(), 64);
+        assert_ne!(baseline, override_digest);
+        fs::write(&amp;config.eosd_path, b&quot;daemon-v2&quot;)?;
+        <span class="rs-kw">let</span> rebuilt_digest = <a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-runtime-digest-482">runtime_digest</a>(
+            &amp;config,
+            &quot;daemon:\n  layer_stack:\n    auto_squash_max_depth: 100\n&quot;,
+        )?;
+        assert_ne!(baseline, rebuilt_digest);
+
+        <span class="rs-kw">let</span> _ = fs::remove_dir_all(root);
+        <span class="rs-type">Ok</span>(())
+    }
+}
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
   <script src="../assets/inventory.js"></script>
 </body>
 </html>

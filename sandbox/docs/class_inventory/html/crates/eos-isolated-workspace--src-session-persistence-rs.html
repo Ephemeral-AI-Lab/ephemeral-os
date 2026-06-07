@@ -8,8 +8,16 @@
 </head>
 <body>
   <header>
-    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
-    <h1>eos-isolated-workspace File Inventory</h1>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>eos-isolated-workspace File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS/sandbox &amp;&amp; cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
   </header>
   <a class="back-link" href="../index.html">sandbox</a>
 <section class="summary">
@@ -47,19 +55,213 @@
       <span>4 methods</span>
     </div>
   </div>
-  <div class="items"><div class="group-label">Other Implementations</div><article class="item-card" data-kind="impl" data-kind-list="impl method" data-filter-text="impl impl IsolatedSession &lt; S , R , A &gt; private impl IsolatedSession &lt; S , R , A &gt; crates/eos-isolated-workspace/src/session/persistence.rs  session_scratch_root pub(super) fn session_scratch_root (&amp; self) -&gt; PathBuf persisted_handles_path fn persisted_handles_path (&amp; self) -&gt; PathBuf persist_handles pub(super) fn persist_handles (&amp; self) -&gt; Result &lt; () , IsolatedError &gt; read_persisted_handle_rows pub(super) fn read_persisted_handle_rows (&amp; self) -&gt; Vec &lt; Value &gt;">
+  <div class="items"><div class="group-label">Other Implementations</div><article id="item-impl-impl-IsolatedSession---S---R---A---10" class="item-card" data-kind="impl" data-kind-list="impl method" data-filter-text="impl impl IsolatedSession &lt; S , R , A &gt; private impl IsolatedSession &lt; S , R , A &gt; crates/eos-isolated-workspace/src/session/persistence.rs  session_scratch_root pub(super) fn session_scratch_root (&amp; self) -&gt; PathBuf persisted_handles_path fn persisted_handles_path (&amp; self) -&gt; PathBuf persist_handles pub(super) fn persist_handles (&amp; self) -&gt; Result &lt; () , IsolatedError &gt; read_persisted_handle_rows pub(super) fn read_persisted_handle_rows (&amp; self) -&gt; Vec &lt; Value &gt;">
   <div class="item-head">
     <span class="kind">impl</span>
     <h3>impl IsolatedSession &lt; S , R , A &gt;</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">impl IsolatedSession &lt; S , R , A &gt;</code>
+  <code class="signature">impl <a class="symbol-link" href="eos-isolated-workspace--src-session-rs.html#item-struct-IsolatedSession-40">IsolatedSession</a> &lt; S , R , A &gt;</code>
   <div class="tags"><span>impl</span></div>
-  <h4>Methods</h4><table><tbody><tr><td>method</td><td>session_scratch_root</td><td><code>pub(super) fn session_scratch_root (&amp; self) -&gt; PathBuf</code></td></tr><tr><td>method</td><td>persisted_handles_path</td><td><code>fn persisted_handles_path (&amp; self) -&gt; PathBuf</code></td></tr><tr><td>method</td><td>persist_handles</td><td><code>pub(super) fn persist_handles (&amp; self) -&gt; Result &lt; () , IsolatedError &gt;</code></td></tr><tr><td>method</td><td>read_persisted_handle_rows</td><td><code>pub(super) fn read_persisted_handle_rows (&amp; self) -&gt; Vec &lt; Value &gt;</code></td></tr></tbody></table>
+  <h4>Methods</h4><table><tbody><tr id="method-session-scratch-root-16"><td>method</td><td>session_scratch_root</td><td><code>pub(super) fn <a class="symbol-link" href="eos-isolated-workspace--src-session-persistence-rs.html#method-session-scratch-root-16">session_scratch_root</a> (&amp; self) -&gt; PathBuf</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-isolated-workspace--src-session-persistence-rs.html#method-session-scratch-root-16">session_scratch_root</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">PathBuf</span> {
+        <span class="rs-self">self</span>.scratch_root.clone()
+    }
+</code></pre>
+</details></td></tr><tr id="method-persisted-handles-path-20"><td>method</td><td>persisted_handles_path</td><td><code>fn <a class="symbol-link" href="eos-isolated-workspace--src-session-persistence-rs.html#method-persisted-handles-path-20">persisted_handles_path</a> (&amp; self) -&gt; PathBuf</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-isolated-workspace--src-session-persistence-rs.html#method-persisted-handles-path-20">persisted_handles_path</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">PathBuf</span> {
+        <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-isolated-workspace--src-session-persistence-rs.html#method-session-scratch-root-16">session_scratch_root</a>().join(&quot;manager.json&quot;)
+    }
+</code></pre>
+</details></td></tr><tr id="method-persist-handles-24"><td>method</td><td>persist_handles</td><td><code>pub(super) fn <a class="symbol-link" href="eos-isolated-workspace--src-session-persistence-rs.html#method-persist-handles-24">persist_handles</a> (&amp; self) -&gt; Result &lt; () , <a class="symbol-link" href="eos-isolated-workspace--src-error-rs.html#item-enum-IsolatedError-8">IsolatedError</a> &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-isolated-workspace--src-session-persistence-rs.html#method-persist-handles-24">persist_handles</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-isolated-workspace--src-error-rs.html#item-enum-IsolatedError-8">IsolatedError</a>&gt; {
+        <span class="rs-kw">let</span> root = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-isolated-workspace--src-session-persistence-rs.html#method-session-scratch-root-16">session_scratch_root</a>();
+        std::fs::create_dir_all(&amp;root).map_err(|err| <a class="symbol-link rs-type" href="eos-isolated-workspace--src-error-rs.html#item-enum-IsolatedError-8">IsolatedError</a>::<span class="rs-type">SetupFailed</span> {
+            step: format!(&quot;manager_root: {err}&quot;),
+        })?;
+        <span class="rs-kw">let</span> handles: <span class="rs-type">Vec</span>&lt;<span class="rs-type">Value</span>&gt; = <span class="rs-self">self</span>
+            .handles
+            .values()
+            .map(|handle| {
+                json!({
+                    &quot;workspace_handle_id&quot;: handle.workspace_handle_id.0,
+                    &quot;caller_id&quot;: handle.caller_id.0,
+                    &quot;lease_id&quot;: handle.lease_id,
+                    &quot;manifest_version&quot;: handle.manifest_version,
+                    &quot;manifest_root_hash&quot;: handle.manifest_root_hash,
+                    &quot;workspace_root&quot;: handle.workspace_root,
+                    &quot;scratch_dir&quot;: handle.scratch_dir.to_string_lossy(),
+                    &quot;upperdir&quot;: handle.upperdir.to_string_lossy(),
+                    &quot;workdir&quot;: handle.workdir.to_string_lossy(),
+                    &quot;layer_paths&quot;: handle.layer_paths,
+                    &quot;holder_pid&quot;: handle.holder_pid,
+                    &quot;veth_host_name&quot;: handle.veth.as_ref().map(|veth| veth.host_name.as_str()),
+                    &quot;veth_ns_name&quot;: handle.veth.as_ref().map(|veth| veth.ns_name.as_str()),
+                    &quot;ns_ip&quot;: handle.veth.as_ref().map(|veth| veth.ns_ip.to_string()),
+                    &quot;cgroup_path&quot;: handle
+                        .cgroup_path
+                        .as_ref()
+                        .map(|path| path.to_string_lossy().into_owned()),
+                    &quot;created_at&quot;: handle.created_at,
+                    &quot;last_activity&quot;: handle.last_activity,
+                })
+            })
+            .collect();
+        <span class="rs-kw">let</span> payload = json!({
+            &quot;schema_version&quot;: <span class="rs-type">PERSISTED_HANDLES_SCHEMA_VERSION</span>,
+            &quot;handles&quot;: handles,
+        });
+        <span class="rs-kw">let</span> path = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-isolated-workspace--src-session-persistence-rs.html#method-persisted-handles-path-20">persisted_handles_path</a>();
+        <span class="rs-kw">let</span> tmp = path.with_extension(&quot;json.tmp&quot;);
+        std::fs::write(
+            &amp;tmp,
+            serde_json::to_vec_pretty(&amp;payload).map_err(|err| <a class="symbol-link rs-type" href="eos-isolated-workspace--src-error-rs.html#item-enum-IsolatedError-8">IsolatedError</a>::<span class="rs-type">SetupFailed</span> {
+                step: format!(&quot;manager_serialize: {err}&quot;),
+            })?,
+        )
+        .map_err(|err| <a class="symbol-link rs-type" href="eos-isolated-workspace--src-error-rs.html#item-enum-IsolatedError-8">IsolatedError</a>::<span class="rs-type">SetupFailed</span> {
+            step: format!(&quot;manager_write: {err}&quot;),
+        })?;
+        std::fs::rename(tmp, path).map_err(|err| <a class="symbol-link rs-type" href="eos-isolated-workspace--src-error-rs.html#item-enum-IsolatedError-8">IsolatedError</a>::<span class="rs-type">SetupFailed</span> {
+            step: format!(&quot;manager_rename: {err}&quot;),
+        })?;
+        <span class="rs-type">Ok</span>(())
+    }
+</code></pre>
+</details></td></tr><tr id="method-read-persisted-handle-rows-78"><td>method</td><td>read_persisted_handle_rows</td><td><code>pub(super) fn <a class="symbol-link" href="eos-isolated-workspace--src-session-persistence-rs.html#method-read-persisted-handle-rows-78">read_persisted_handle_rows</a> (&amp; self) -&gt; Vec &lt; Value &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-isolated-workspace--src-session-persistence-rs.html#method-read-persisted-handle-rows-78">read_persisted_handle_rows</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Vec</span>&lt;<span class="rs-type">Value</span>&gt; {
+        <span class="rs-kw">let</span> <span class="rs-type">Ok</span>(raw) = std::fs::read(<span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-isolated-workspace--src-session-persistence-rs.html#method-persisted-handles-path-20">persisted_handles_path</a>()) <span class="rs-kw">else</span> {
+            <span class="rs-kw">return</span> <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-isolated-workspace.html#method-new-37">new</a>();
+        };
+        <span class="rs-kw">let</span> <span class="rs-type">Ok</span>(payload) = serde_json::from_slice::&lt;<span class="rs-type">Value</span>&gt;(&amp;raw) <span class="rs-kw">else</span> {
+            <span class="rs-kw">return</span> <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-isolated-workspace.html#method-new-37">new</a>();
+        };
+        <span class="rs-kw">if</span> payload.get(&quot;schema_version&quot;).and_then(<span class="rs-type">Value</span>::as_u64)
+            != <span class="rs-type">Some</span>(u64::from(<span class="rs-type">PERSISTED_HANDLES_SCHEMA_VERSION</span>))
+        {
+            <span class="rs-kw">return</span> <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-isolated-workspace.html#method-new-37">new</a>();
+        }
+        payload
+            .get(&quot;handles&quot;)
+            .and_then(<span class="rs-type">Value</span>::as_array)
+            .cloned()
+            .unwrap_or_default()
+    }
+</code></pre>
+</details></td></tr></tbody></table>
+
   <p class="source">crates/eos-isolated-workspace/src/session/persistence.rs:10</p>
 </article></div>
 </section></div>
 </main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/eos-isolated-workspace/src/session/persistence.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-kw">use</span> std::path::<span class="rs-type">PathBuf</span>;
+
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::audit::<a class="symbol-link rs-type" href="eos-isolated-workspace.html#item-trait-AuditSink-16">AuditSink</a>;
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::caps::<span class="rs-type">PERSISTED_HANDLES_SCHEMA_VERSION</span>;
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::error::<a class="symbol-link rs-type" href="eos-isolated-workspace--src-error-rs.html#item-enum-IsolatedError-8">IsolatedError</a>;
+<span class="rs-kw">use</span> serde_json::{json, <span class="rs-type">Value</span>};
+
+<span class="rs-kw">use</span> <span class="rs-kw">super</span>::{<a class="symbol-link rs-type" href="eos-isolated-workspace--src-session-rs.html#item-struct-IsolatedSession-40">IsolatedSession</a>, <a class="symbol-link rs-type" href="eos-isolated-workspace--src-session-ports-rs.html#item-trait-LayerStackSnapshotPort-8">LayerStackSnapshotPort</a>, <a class="symbol-link rs-type" href="eos-isolated-workspace--src-session-ports-rs.html#item-trait-NamespaceRuntimePort-44">NamespaceRuntimePort</a>};
+
+<span class="rs-kw">impl</span>&lt;<span class="rs-type">S</span>, <span class="rs-type">R</span>, <span class="rs-type">A</span>&gt; <a class="symbol-link rs-type" href="eos-isolated-workspace--src-session-rs.html#item-struct-IsolatedSession-40">IsolatedSession</a>&lt;<span class="rs-type">S</span>, <span class="rs-type">R</span>, <span class="rs-type">A</span>&gt;
+<span class="rs-kw">where</span>
+    <span class="rs-type">S</span>: <a class="symbol-link rs-type" href="eos-isolated-workspace--src-session-ports-rs.html#item-trait-LayerStackSnapshotPort-8">LayerStackSnapshotPort</a>,
+    <span class="rs-type">R</span>: <a class="symbol-link rs-type" href="eos-isolated-workspace--src-session-ports-rs.html#item-trait-NamespaceRuntimePort-44">NamespaceRuntimePort</a>,
+    <span class="rs-type">A</span>: <a class="symbol-link rs-type" href="eos-isolated-workspace.html#item-trait-AuditSink-16">AuditSink</a>,
+{
+    <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-isolated-workspace--src-session-persistence-rs.html#method-session-scratch-root-16">session_scratch_root</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">PathBuf</span> {
+        <span class="rs-self">self</span>.scratch_root.clone()
+    }
+
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-isolated-workspace--src-session-persistence-rs.html#method-persisted-handles-path-20">persisted_handles_path</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">PathBuf</span> {
+        <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-isolated-workspace--src-session-persistence-rs.html#method-session-scratch-root-16">session_scratch_root</a>().join(&quot;manager.json&quot;)
+    }
+
+    <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-isolated-workspace--src-session-persistence-rs.html#method-persist-handles-24">persist_handles</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-isolated-workspace--src-error-rs.html#item-enum-IsolatedError-8">IsolatedError</a>&gt; {
+        <span class="rs-kw">let</span> root = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-isolated-workspace--src-session-persistence-rs.html#method-session-scratch-root-16">session_scratch_root</a>();
+        std::fs::create_dir_all(&amp;root).map_err(|err| <a class="symbol-link rs-type" href="eos-isolated-workspace--src-error-rs.html#item-enum-IsolatedError-8">IsolatedError</a>::<span class="rs-type">SetupFailed</span> {
+            step: format!(&quot;manager_root: {err}&quot;),
+        })?;
+        <span class="rs-kw">let</span> handles: <span class="rs-type">Vec</span>&lt;<span class="rs-type">Value</span>&gt; = <span class="rs-self">self</span>
+            .handles
+            .values()
+            .map(|handle| {
+                json!({
+                    &quot;workspace_handle_id&quot;: handle.workspace_handle_id.0,
+                    &quot;caller_id&quot;: handle.caller_id.0,
+                    &quot;lease_id&quot;: handle.lease_id,
+                    &quot;manifest_version&quot;: handle.manifest_version,
+                    &quot;manifest_root_hash&quot;: handle.manifest_root_hash,
+                    &quot;workspace_root&quot;: handle.workspace_root,
+                    &quot;scratch_dir&quot;: handle.scratch_dir.to_string_lossy(),
+                    &quot;upperdir&quot;: handle.upperdir.to_string_lossy(),
+                    &quot;workdir&quot;: handle.workdir.to_string_lossy(),
+                    &quot;layer_paths&quot;: handle.layer_paths,
+                    &quot;holder_pid&quot;: handle.holder_pid,
+                    &quot;veth_host_name&quot;: handle.veth.as_ref().map(|veth| veth.host_name.as_str()),
+                    &quot;veth_ns_name&quot;: handle.veth.as_ref().map(|veth| veth.ns_name.as_str()),
+                    &quot;ns_ip&quot;: handle.veth.as_ref().map(|veth| veth.ns_ip.to_string()),
+                    &quot;cgroup_path&quot;: handle
+                        .cgroup_path
+                        .as_ref()
+                        .map(|path| path.to_string_lossy().into_owned()),
+                    &quot;created_at&quot;: handle.created_at,
+                    &quot;last_activity&quot;: handle.last_activity,
+                })
+            })
+            .collect();
+        <span class="rs-kw">let</span> payload = json!({
+            &quot;schema_version&quot;: <span class="rs-type">PERSISTED_HANDLES_SCHEMA_VERSION</span>,
+            &quot;handles&quot;: handles,
+        });
+        <span class="rs-kw">let</span> path = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-isolated-workspace--src-session-persistence-rs.html#method-persisted-handles-path-20">persisted_handles_path</a>();
+        <span class="rs-kw">let</span> tmp = path.with_extension(&quot;json.tmp&quot;);
+        std::fs::write(
+            &amp;tmp,
+            serde_json::to_vec_pretty(&amp;payload).map_err(|err| <a class="symbol-link rs-type" href="eos-isolated-workspace--src-error-rs.html#item-enum-IsolatedError-8">IsolatedError</a>::<span class="rs-type">SetupFailed</span> {
+                step: format!(&quot;manager_serialize: {err}&quot;),
+            })?,
+        )
+        .map_err(|err| <a class="symbol-link rs-type" href="eos-isolated-workspace--src-error-rs.html#item-enum-IsolatedError-8">IsolatedError</a>::<span class="rs-type">SetupFailed</span> {
+            step: format!(&quot;manager_write: {err}&quot;),
+        })?;
+        std::fs::rename(tmp, path).map_err(|err| <a class="symbol-link rs-type" href="eos-isolated-workspace--src-error-rs.html#item-enum-IsolatedError-8">IsolatedError</a>::<span class="rs-type">SetupFailed</span> {
+            step: format!(&quot;manager_rename: {err}&quot;),
+        })?;
+        <span class="rs-type">Ok</span>(())
+    }
+
+    <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-isolated-workspace--src-session-persistence-rs.html#method-read-persisted-handle-rows-78">read_persisted_handle_rows</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Vec</span>&lt;<span class="rs-type">Value</span>&gt; {
+        <span class="rs-kw">let</span> <span class="rs-type">Ok</span>(raw) = std::fs::read(<span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-isolated-workspace--src-session-persistence-rs.html#method-persisted-handles-path-20">persisted_handles_path</a>()) <span class="rs-kw">else</span> {
+            <span class="rs-kw">return</span> <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-isolated-workspace.html#method-new-37">new</a>();
+        };
+        <span class="rs-kw">let</span> <span class="rs-type">Ok</span>(payload) = serde_json::from_slice::&lt;<span class="rs-type">Value</span>&gt;(&amp;raw) <span class="rs-kw">else</span> {
+            <span class="rs-kw">return</span> <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-isolated-workspace.html#method-new-37">new</a>();
+        };
+        <span class="rs-kw">if</span> payload.get(&quot;schema_version&quot;).and_then(<span class="rs-type">Value</span>::as_u64)
+            != <span class="rs-type">Some</span>(u64::from(<span class="rs-type">PERSISTED_HANDLES_SCHEMA_VERSION</span>))
+        {
+            <span class="rs-kw">return</span> <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-isolated-workspace.html#method-new-37">new</a>();
+        }
+        payload
+            .get(&quot;handles&quot;)
+            .and_then(<span class="rs-type">Value</span>::as_array)
+            .cloned()
+            .unwrap_or_default()
+    }
+}
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
   <script src="../assets/inventory.js"></script>
 </body>
 </html>

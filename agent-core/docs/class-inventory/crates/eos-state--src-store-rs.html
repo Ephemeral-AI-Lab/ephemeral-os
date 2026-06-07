@@ -8,8 +8,16 @@
 </head>
 <body>
   <header>
-    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
-    <h1>eos-state File Inventory</h1>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>eos-state File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS/agent-core &amp;&amp; cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
   </header>
   <a class="back-link" href="../index.html">agent-core</a>
 <section class="summary">
@@ -47,129 +55,919 @@
       <span>36 methods</span>
     </div>
   </div>
-  <div class="items"><div class="group-label">File-Owned Types</div><article class="type-card" data-kind="trait" data-kind-list="trait type-model" data-filter-text="trait Sealed pub pub trait Sealed crates/eos-state/src/store.rs  ">
+  <div class="items"><div class="group-label">File-Owned Types</div><article id="item-trait-Sealed-34" class="type-card" data-kind="trait" data-kind-list="trait type-model" data-filter-text="trait Sealed pub pub trait Sealed crates/eos-state/src/store.rs  ">
   <div class="item-head">
     <span class="kind">trait</span>
     <h3>Sealed</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub trait Sealed</code>
+  <code class="signature">pub trait <a class="symbol-link" href="eos-state--src-store-rs.html#item-trait-Sealed-34">Sealed</a></code>
+  <p class="docstring">Sealing marker for the `Store` traits.<br>Implemented by the `eos-db` sqlx repositories and in-crate test fakes only.<br>It is `#[doc(hidden)]` rather than fully private because the implementing<br>repositories live in a separate downstream crate (a strictly-private marker<br>would be unreachable to them); external crates outside this workspace should<br>not implement the `Store` traits (`api-sealed-trait`).</p>
   <div class="tags"></div>
 
   <p class="source">crates/eos-state/src/store.rs:34</p>
-</article><article class="type-card" data-kind="trait" data-kind-list="method trait type-model" data-filter-text="trait WorkflowStore pub pub trait WorkflowStore crates/eos-state/src/store.rs  insert async fn insert (&amp; self , request_id : &amp; RequestId , parent_task_id : &amp; TaskId , workflow_goal : &amp; str ,) -&gt; Result &lt; Workflow , CoreError &gt; get async fn get (&amp; self , id : &amp; WorkflowId) -&gt; Result &lt; Option &lt; Workflow &gt; , CoreError &gt; append_iteration_id async fn append_iteration_id (&amp; self , id : &amp; WorkflowId , iteration_id : &amp; IterationId ,) -&gt; Result &lt; Workflow , CoreError &gt; set_status async fn set_status (&amp; self , id : &amp; WorkflowId , status : WorkflowStatus , closed_at : Option &lt; UtcDateTime &gt; , outcomes : Option &lt; &amp; str &gt; ,) -&gt; Result &lt; Workflow , CoreError &gt; list_for_parent_task async fn list_for_parent_task (&amp; self , parent_task_id : &amp; TaskId ,) -&gt; Result &lt; Vec &lt; Workflow &gt; , CoreError &gt;">
+</article><article id="item-trait-WorkflowStore-44" class="type-card" data-kind="trait" data-kind-list="method trait type-model" data-filter-text="trait WorkflowStore pub pub trait WorkflowStore crates/eos-state/src/store.rs  insert async fn insert (&amp; self , request_id : &amp; RequestId , parent_task_id : &amp; TaskId , workflow_goal : &amp; str ,) -&gt; Result &lt; Workflow , CoreError &gt; get async fn get (&amp; self , id : &amp; WorkflowId) -&gt; Result &lt; Option &lt; Workflow &gt; , CoreError &gt; append_iteration_id async fn append_iteration_id (&amp; self , id : &amp; WorkflowId , iteration_id : &amp; IterationId ,) -&gt; Result &lt; Workflow , CoreError &gt; set_status async fn set_status (&amp; self , id : &amp; WorkflowId , status : WorkflowStatus , closed_at : Option &lt; UtcDateTime &gt; , outcomes : Option &lt; &amp; str &gt; ,) -&gt; Result &lt; Workflow , CoreError &gt; list_for_parent_task async fn list_for_parent_task (&amp; self , parent_task_id : &amp; TaskId ,) -&gt; Result &lt; Vec &lt; Workflow &gt; , CoreError &gt;">
   <div class="item-head">
     <span class="kind">trait</span>
     <h3>WorkflowStore</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub trait WorkflowStore</code>
-  <div class="tags"></div>
-  <h4>Methods</h4><table><tbody><tr><td>required</td><td>insert</td><td><code>async fn insert (&amp; self , request_id : &amp; RequestId , parent_task_id : &amp; TaskId , workflow_goal : &amp; str ,) -&gt; Result &lt; Workflow , CoreError &gt;</code></td></tr><tr><td>required</td><td>get</td><td><code>async fn get (&amp; self , id : &amp; WorkflowId) -&gt; Result &lt; Option &lt; Workflow &gt; , CoreError &gt;</code></td></tr><tr><td>required</td><td>append_iteration_id</td><td><code>async fn append_iteration_id (&amp; self , id : &amp; WorkflowId , iteration_id : &amp; IterationId ,) -&gt; Result &lt; Workflow , CoreError &gt;</code></td></tr><tr><td>required</td><td>set_status</td><td><code>async fn set_status (&amp; self , id : &amp; WorkflowId , status : WorkflowStatus , closed_at : Option &lt; UtcDateTime &gt; , outcomes : Option &lt; &amp; str &gt; ,) -&gt; Result &lt; Workflow , CoreError &gt;</code></td></tr><tr><td>required</td><td>list_for_parent_task</td><td><code>async fn list_for_parent_task (&amp; self , parent_task_id : &amp; TaskId ,) -&gt; Result &lt; Vec &lt; Workflow &gt; , CoreError &gt;</code></td></tr></tbody></table>
+  <code class="signature">pub trait <a class="symbol-link" href="eos-state--src-store-rs.html#item-trait-WorkflowStore-44">WorkflowStore</a></code>
+  <p class="docstring">Persistence surface for [`Workflow`] (Rust `WorkflowStoreProtocol`).</p>
+  <div class="tags"><span>async_trait</span></div>
+  <h4>Methods</h4><table><tbody><tr id="method-insert-47"><td>required</td><td>insert</td><td><code>async fn <a class="symbol-link" href="eos-state--src-store-rs.html#method-insert-47">insert</a> (&amp; self , request_id : &amp; RequestId , parent_task_id : &amp; TaskId , workflow_goal : &amp; str ,) -&gt; Result &lt; <a class="symbol-link" href="eos-state--src-workflow-rs.html#item-struct-Workflow-52">Workflow</a> , CoreError &gt;</code><p class="docstring">Insert a fresh open workflow and return it.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Insert a fresh open workflow and return it.</span>
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-store-rs.html#method-insert-47">insert</a>(
+        &amp;<span class="rs-self">self</span>,
+        request_id: &amp;<span class="rs-type">RequestId</span>,
+        parent_task_id: &amp;<span class="rs-type">TaskId</span>,
+        workflow_goal: &amp;str,
+    ) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-state--src-workflow-rs.html#item-struct-Workflow-52">Workflow</a>, <span class="rs-type">CoreError</span>&gt;;
+</code></pre>
+</details></td></tr><tr id="method-get-55"><td>required</td><td>get</td><td><code>async fn <a class="symbol-link" href="eos-state--src-plan-rs.html#method-get-201">get</a> (&amp; self , id : &amp; WorkflowId) -&gt; Result &lt; Option &lt; <a class="symbol-link" href="eos-state--src-workflow-rs.html#item-struct-Workflow-52">Workflow</a> &gt; , CoreError &gt;</code><p class="docstring">Load a workflow by id.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Load a workflow by id.</span>
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-plan-rs.html#method-get-201">get</a>(&amp;<span class="rs-self">self</span>, id: &amp;<span class="rs-type">WorkflowId</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-state--src-workflow-rs.html#item-struct-Workflow-52">Workflow</a>&gt;, <span class="rs-type">CoreError</span>&gt;;
+</code></pre>
+</details></td></tr><tr id="method-append-iteration-id-58"><td>required</td><td>append_iteration_id</td><td><code>async fn <a class="symbol-link" href="eos-state--src-store-rs.html#method-append-iteration-id-58">append_iteration_id</a> (&amp; self , id : &amp; WorkflowId , iteration_id : &amp; IterationId ,) -&gt; Result &lt; <a class="symbol-link" href="eos-state--src-workflow-rs.html#item-struct-Workflow-52">Workflow</a> , CoreError &gt;</code><p class="docstring">Append a child iteration id and return the updated workflow.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Append a child iteration id and return the updated workflow.</span>
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-store-rs.html#method-append-iteration-id-58">append_iteration_id</a>(
+        &amp;<span class="rs-self">self</span>,
+        id: &amp;<span class="rs-type">WorkflowId</span>,
+        iteration_id: &amp;<span class="rs-type">IterationId</span>,
+    ) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-state--src-workflow-rs.html#item-struct-Workflow-52">Workflow</a>, <span class="rs-type">CoreError</span>&gt;;
+</code></pre>
+</details></td></tr><tr id="method-set-status-65"><td>required</td><td>set_status</td><td><code>async fn <a class="symbol-link" href="eos-state--src-store-rs.html#method-set-status-65">set_status</a> (&amp; self , id : &amp; WorkflowId , status : <a class="symbol-link" href="eos-state--src-workflow-rs.html#item-enum-WorkflowStatus-11">WorkflowStatus</a> , closed_at : Option &lt; UtcDateTime &gt; , outcomes : Option &lt; &amp; str &gt; ,) -&gt; Result &lt; <a class="symbol-link" href="eos-state--src-workflow-rs.html#item-struct-Workflow-52">Workflow</a> , CoreError &gt;</code><p class="docstring">Set status (and optionally `closed_at`/`outcomes`). `None` outcomes leaves<br>the persisted projection unchanged.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Set status (and optionally `closed_at`/`outcomes`). `None` outcomes leaves</span>
+    <span class="rs-comment">/// the persisted projection unchanged.</span>
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-store-rs.html#method-set-status-65">set_status</a>(
+        &amp;<span class="rs-self">self</span>,
+        id: &amp;<span class="rs-type">WorkflowId</span>,
+        status: <a class="symbol-link rs-type" href="eos-state--src-workflow-rs.html#item-enum-WorkflowStatus-11">WorkflowStatus</a>,
+        closed_at: <span class="rs-type">Option</span>&lt;<span class="rs-type">UtcDateTime</span>&gt;,
+        outcomes: <span class="rs-type">Option</span>&lt;&amp;str&gt;,
+    ) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-state--src-workflow-rs.html#item-struct-Workflow-52">Workflow</a>, <span class="rs-type">CoreError</span>&gt;;
+</code></pre>
+</details></td></tr><tr id="method-list-for-parent-task-75"><td>required</td><td>list_for_parent_task</td><td><code>async fn <a class="symbol-link" href="eos-state--src-store-rs.html#method-list-for-parent-task-75">list_for_parent_task</a> (&amp; self , parent_task_id : &amp; TaskId ,) -&gt; Result &lt; Vec &lt; <a class="symbol-link" href="eos-state--src-workflow-rs.html#item-struct-Workflow-52">Workflow</a> &gt; , CoreError &gt;</code><p class="docstring">All workflows launched by one parent task, ordered by `created_at`.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// All workflows launched by one parent task, ordered by `created_at`.</span>
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-store-rs.html#method-list-for-parent-task-75">list_for_parent_task</a>(
+        &amp;<span class="rs-self">self</span>,
+        parent_task_id: &amp;<span class="rs-type">TaskId</span>,
+    ) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;<a class="symbol-link rs-type" href="eos-state--src-workflow-rs.html#item-struct-Workflow-52">Workflow</a>&gt;, <span class="rs-type">CoreError</span>&gt;;
+</code></pre>
+</details></td></tr></tbody></table>
+
   <p class="source">crates/eos-state/src/store.rs:44</p>
-</article><article class="type-card" data-kind="trait" data-kind-list="method trait type-model" data-filter-text="trait TaskStore pub pub trait TaskStore crates/eos-state/src/store.rs  insert_task async fn insert_task (&amp; self , task : &amp; Task) -&gt; Result &lt; () , CoreError &gt; get async fn get (&amp; self , id : &amp; TaskId) -&gt; Result &lt; Option &lt; Task &gt; , CoreError &gt; set_task_status_if_current async fn set_task_status_if_current (&amp; self , id : &amp; TaskId , expected : TaskStatus , status : TaskStatus , outcomes : Option &lt; &amp; [ExecutionTaskOutcome] &gt; , terminal_tool_result : Option &lt; &amp; JsonObject &gt; ,) -&gt; Result &lt; Option &lt; Task &gt; , CoreError &gt; latch_attempt_tasks_cancelled async fn latch_attempt_tasks_cancelled (&amp; self , attempt_id : &amp; AttemptId , ids : &amp; [TaskId] ,) -&gt; Result &lt; () , CoreError &gt; list_for_request async fn list_for_request (&amp; self , request_id : &amp; RequestId) -&gt; Result &lt; Vec &lt; Task &gt; , CoreError &gt;">
+</article><article id="item-trait-TaskStore-82" class="type-card" data-kind="trait" data-kind-list="method trait type-model" data-filter-text="trait TaskStore pub pub trait TaskStore crates/eos-state/src/store.rs  insert_task async fn insert_task (&amp; self , task : &amp; Task) -&gt; Result &lt; () , CoreError &gt; get async fn get (&amp; self , id : &amp; TaskId) -&gt; Result &lt; Option &lt; Task &gt; , CoreError &gt; set_task_status_if_current async fn set_task_status_if_current (&amp; self , id : &amp; TaskId , expected : TaskStatus , status : TaskStatus , outcomes : Option &lt; &amp; [ExecutionTaskOutcome] &gt; , terminal_tool_result : Option &lt; &amp; JsonObject &gt; ,) -&gt; Result &lt; Option &lt; Task &gt; , CoreError &gt; latch_attempt_tasks_cancelled async fn latch_attempt_tasks_cancelled (&amp; self , attempt_id : &amp; AttemptId , ids : &amp; [TaskId] ,) -&gt; Result &lt; () , CoreError &gt; list_for_request async fn list_for_request (&amp; self , request_id : &amp; RequestId) -&gt; Result &lt; Vec &lt; Task &gt; , CoreError &gt;">
   <div class="item-head">
     <span class="kind">trait</span>
     <h3>TaskStore</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub trait TaskStore</code>
-  <div class="tags"></div>
-  <h4>Methods</h4><table><tbody><tr><td>required</td><td>insert_task</td><td><code>async fn insert_task (&amp; self , task : &amp; Task) -&gt; Result &lt; () , CoreError &gt;</code></td></tr><tr><td>required</td><td>get</td><td><code>async fn get (&amp; self , id : &amp; TaskId) -&gt; Result &lt; Option &lt; Task &gt; , CoreError &gt;</code></td></tr><tr><td>required</td><td>set_task_status_if_current</td><td><code>async fn set_task_status_if_current (&amp; self , id : &amp; TaskId , expected : TaskStatus , status : TaskStatus , outcomes : Option &lt; &amp; [ExecutionTaskOutcome] &gt; , terminal_tool_result : Option &lt; &amp; JsonObject &gt; ,) -&gt; Result &lt; Option &lt; Task &gt; , CoreError &gt;</code></td></tr><tr><td>required</td><td>latch_attempt_tasks_cancelled</td><td><code>async fn latch_attempt_tasks_cancelled (&amp; self , attempt_id : &amp; AttemptId , ids : &amp; [TaskId] ,) -&gt; Result &lt; () , CoreError &gt;</code></td></tr><tr><td>required</td><td>list_for_request</td><td><code>async fn list_for_request (&amp; self , request_id : &amp; RequestId) -&gt; Result &lt; Vec &lt; Task &gt; , CoreError &gt;</code></td></tr></tbody></table>
+  <code class="signature">pub trait <a class="symbol-link" href="eos-state--src-store-rs.html#item-trait-TaskStore-82">TaskStore</a></code>
+  <p class="docstring">Persistence surface for request/task (Rust `TaskStoreProtocol`, task half).</p>
+  <div class="tags"><span>async_trait</span></div>
+  <h4>Methods</h4><table><tbody><tr id="method-insert-task-85"><td>required</td><td>insert_task</td><td><code>async fn <a class="symbol-link" href="eos-state--src-store-rs.html#method-insert-task-85">insert_task</a> (&amp; self , task : &amp; <a class="symbol-link" href="eos-state--src-task-rs.html#item-struct-Task-66">Task</a>) -&gt; Result &lt; () , CoreError &gt;</code><p class="docstring">Insert a fresh task row.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Insert a fresh task row.</span>
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-store-rs.html#method-insert-task-85">insert_task</a>(&amp;<span class="rs-self">self</span>, task: &amp;<a class="symbol-link rs-type" href="eos-state--src-task-rs.html#item-struct-Task-66">Task</a>) -&gt; <span class="rs-type">Result</span>&lt;(), <span class="rs-type">CoreError</span>&gt;;
+</code></pre>
+</details></td></tr><tr id="method-get-88"><td>required</td><td>get</td><td><code>async fn <a class="symbol-link" href="eos-state--src-plan-rs.html#method-get-201">get</a> (&amp; self , id : &amp; TaskId) -&gt; Result &lt; Option &lt; <a class="symbol-link" href="eos-state--src-task-rs.html#item-struct-Task-66">Task</a> &gt; , CoreError &gt;</code><p class="docstring">Load a task by id.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Load a task by id.</span>
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-plan-rs.html#method-get-201">get</a>(&amp;<span class="rs-self">self</span>, id: &amp;<span class="rs-type">TaskId</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-state--src-task-rs.html#item-struct-Task-66">Task</a>&gt;, <span class="rs-type">CoreError</span>&gt;;
+</code></pre>
+</details></td></tr><tr id="method-set-task-status-if-current-91"><td>required</td><td>set_task_status_if_current</td><td><code>async fn <a class="symbol-link" href="eos-state--src-store-rs.html#method-set-task-status-if-current-91">set_task_status_if_current</a> (&amp; self , id : &amp; TaskId , expected : <a class="symbol-link" href="eos-state--src-task-rs.html#item-enum-TaskStatus-14">TaskStatus</a> , status : <a class="symbol-link" href="eos-state--src-task-rs.html#item-enum-TaskStatus-14">TaskStatus</a> , outcomes : Option &lt; &amp; [<a class="symbol-link" href="eos-state--src-outcomes-rs.html#item-struct-ExecutionTaskOutcome-67">ExecutionTaskOutcome</a>] &gt; , terminal_tool_result : Option &lt; &amp; JsonObject &gt; ,) -&gt; Result &lt; Option &lt; <a class="symbol-link" href="eos-state--src-task-rs.html#item-struct-Task-66">Task</a> &gt; , CoreError &gt;</code><p class="docstring">Optimistic-concurrency status flip (Rust `set_task_status_if_current`).<br>`Ok(None)` ⇒ the current status did not match `expected`.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Optimistic-concurrency status flip (Rust `set_task_status_if_current`).</span>
+    <span class="rs-comment">/// `Ok(None)` ⇒ the current status did not match `expected`.</span>
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-store-rs.html#method-set-task-status-if-current-91">set_task_status_if_current</a>(
+        &amp;<span class="rs-self">self</span>,
+        id: &amp;<span class="rs-type">TaskId</span>,
+        expected: <a class="symbol-link rs-type" href="eos-state--src-task-rs.html#item-enum-TaskStatus-14">TaskStatus</a>,
+        status: <a class="symbol-link rs-type" href="eos-state--src-task-rs.html#item-enum-TaskStatus-14">TaskStatus</a>,
+        outcomes: <span class="rs-type">Option</span>&lt;&amp;[<a class="symbol-link rs-type" href="eos-state--src-outcomes-rs.html#item-struct-ExecutionTaskOutcome-67">ExecutionTaskOutcome</a>]&gt;,
+        terminal_tool_result: <span class="rs-type">Option</span>&lt;&amp;<span class="rs-type">JsonObject</span>&gt;,
+    ) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-state--src-task-rs.html#item-struct-Task-66">Task</a>&gt;, <span class="rs-type">CoreError</span>&gt;;
+</code></pre>
+</details></td></tr><tr id="method-latch-attempt-tasks-cancelled-102"><td>required</td><td>latch_attempt_tasks_cancelled</td><td><code>async fn <a class="symbol-link" href="eos-state--src-store-rs.html#method-latch-attempt-tasks-cancelled-102">latch_attempt_tasks_cancelled</a> (&amp; self , attempt_id : &amp; AttemptId , ids : &amp; [TaskId] ,) -&gt; Result &lt; () , CoreError &gt;</code><p class="docstring">Bulk-latch attempt task rows to [`TaskStatus::Cancelled`] before runtime<br>teardown, stamping the cancelled terminal payload. Only rows owned by<br>`attempt_id` that are still `Pending`/`Running` flip; terminal rows are<br>left untouched, so the call is idempotent. This closes the scheduler gap<br>(`cancel_attempt`, spec §12.4) so no generator/reducer launches into the<br>cancellation window.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Bulk-latch attempt task rows to [`TaskStatus::Cancelled`] before runtime</span>
+    <span class="rs-comment">/// teardown, stamping the cancelled terminal payload. Only rows owned by</span>
+    <span class="rs-comment">/// `attempt_id` that are still `Pending`/`Running` flip; terminal rows are</span>
+    <span class="rs-comment">/// left untouched, so the call is idempotent. This closes the scheduler gap</span>
+    <span class="rs-comment">/// (`cancel_attempt`, spec §12.4) so no generator/reducer launches into the</span>
+    <span class="rs-comment">/// cancellation window.</span>
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-store-rs.html#method-latch-attempt-tasks-cancelled-102">latch_attempt_tasks_cancelled</a>(
+        &amp;<span class="rs-self">self</span>,
+        attempt_id: &amp;<span class="rs-type">AttemptId</span>,
+        ids: &amp;[<span class="rs-type">TaskId</span>],
+    ) -&gt; <span class="rs-type">Result</span>&lt;(), <span class="rs-type">CoreError</span>&gt;;
+</code></pre>
+</details></td></tr><tr id="method-list-for-request-114"><td>required</td><td>list_for_request</td><td><code>async fn <a class="symbol-link" href="eos-state--src-store-rs.html#method-list-for-request-114">list_for_request</a> (&amp; self , request_id : &amp; RequestId) -&gt; Result &lt; Vec &lt; <a class="symbol-link" href="eos-state--src-task-rs.html#item-struct-Task-66">Task</a> &gt; , CoreError &gt;</code><p class="docstring">All tasks owned by one request, ordered by creation — the request task<br>tree (`needs` edges live on each [`Task`]). Read-side API for the backend<br>composition root (spec §State Reader).</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// All tasks owned by one request, ordered by creation — the request task</span>
+    <span class="rs-comment">/// tree (`needs` edges live on each [`Task`]). Read-side API for the backend</span>
+    <span class="rs-comment">/// composition root (spec §State Reader).</span>
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-store-rs.html#method-list-for-request-114">list_for_request</a>(&amp;<span class="rs-self">self</span>, request_id: &amp;<span class="rs-type">RequestId</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;<a class="symbol-link rs-type" href="eos-state--src-task-rs.html#item-struct-Task-66">Task</a>&gt;, <span class="rs-type">CoreError</span>&gt;;
+</code></pre>
+</details></td></tr></tbody></table>
+
   <p class="source">crates/eos-state/src/store.rs:82</p>
-</article><article class="type-card" data-kind="trait" data-kind-list="method trait type-model" data-filter-text="trait IterationStore pub pub trait IterationStore crates/eos-state/src/store.rs  insert async fn insert (&amp; self , workflow_id : &amp; WorkflowId , sequence_no : i64 , creation_reason : IterationCreationReason , iteration_goal : &amp; str , attempt_budget : AttemptBudget ,) -&gt; Result &lt; Iteration , CoreError &gt; get async fn get (&amp; self , id : &amp; IterationId) -&gt; Result &lt; Option &lt; Iteration &gt; , CoreError &gt; append_attempt_id async fn append_attempt_id (&amp; self , id : &amp; IterationId , attempt_id : &amp; AttemptId ,) -&gt; Result &lt; Iteration , CoreError &gt; set_status async fn set_status (&amp; self , id : &amp; IterationId , status : IterationStatus , closed_at : Option &lt; UtcDateTime &gt; , outcomes : Option &lt; &amp; str &gt; ,) -&gt; Result &lt; Iteration , CoreError &gt; set_deferred_goal_for_next_iteration async fn set_deferred_goal_for_next_iteration (&amp; self , id : &amp; IterationId , deferred_goal_for_next_iteration : Option &lt; &amp; DeferredGoal &gt; ,) -&gt; Result &lt; Iteration , CoreError &gt; close_succeeded async fn close_succeeded (&amp; self , id : &amp; IterationId , outcomes : &amp; str , closed_at : Option &lt; UtcDateTime &gt; ,) -&gt; Result &lt; Iteration , CoreError &gt; list_for_workflow async fn list_for_workflow (&amp; self , workflow_id : &amp; WorkflowId ,) -&gt; Result &lt; Vec &lt; Iteration &gt; , CoreError &gt;">
+</article><article id="item-trait-IterationStore-120" class="type-card" data-kind="trait" data-kind-list="method trait type-model" data-filter-text="trait IterationStore pub pub trait IterationStore crates/eos-state/src/store.rs  insert async fn insert (&amp; self , workflow_id : &amp; WorkflowId , sequence_no : i64 , creation_reason : IterationCreationReason , iteration_goal : &amp; str , attempt_budget : AttemptBudget ,) -&gt; Result &lt; Iteration , CoreError &gt; get async fn get (&amp; self , id : &amp; IterationId) -&gt; Result &lt; Option &lt; Iteration &gt; , CoreError &gt; append_attempt_id async fn append_attempt_id (&amp; self , id : &amp; IterationId , attempt_id : &amp; AttemptId ,) -&gt; Result &lt; Iteration , CoreError &gt; set_status async fn set_status (&amp; self , id : &amp; IterationId , status : IterationStatus , closed_at : Option &lt; UtcDateTime &gt; , outcomes : Option &lt; &amp; str &gt; ,) -&gt; Result &lt; Iteration , CoreError &gt; set_deferred_goal_for_next_iteration async fn set_deferred_goal_for_next_iteration (&amp; self , id : &amp; IterationId , deferred_goal_for_next_iteration : Option &lt; &amp; DeferredGoal &gt; ,) -&gt; Result &lt; Iteration , CoreError &gt; close_succeeded async fn close_succeeded (&amp; self , id : &amp; IterationId , outcomes : &amp; str , closed_at : Option &lt; UtcDateTime &gt; ,) -&gt; Result &lt; Iteration , CoreError &gt; list_for_workflow async fn list_for_workflow (&amp; self , workflow_id : &amp; WorkflowId ,) -&gt; Result &lt; Vec &lt; Iteration &gt; , CoreError &gt;">
   <div class="item-head">
     <span class="kind">trait</span>
     <h3>IterationStore</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub trait IterationStore</code>
-  <div class="tags"></div>
-  <h4>Methods</h4><table><tbody><tr><td>required</td><td>insert</td><td><code>async fn insert (&amp; self , workflow_id : &amp; WorkflowId , sequence_no : i64 , creation_reason : IterationCreationReason , iteration_goal : &amp; str , attempt_budget : AttemptBudget ,) -&gt; Result &lt; Iteration , CoreError &gt;</code></td></tr><tr><td>required</td><td>get</td><td><code>async fn get (&amp; self , id : &amp; IterationId) -&gt; Result &lt; Option &lt; Iteration &gt; , CoreError &gt;</code></td></tr><tr><td>required</td><td>append_attempt_id</td><td><code>async fn append_attempt_id (&amp; self , id : &amp; IterationId , attempt_id : &amp; AttemptId ,) -&gt; Result &lt; Iteration , CoreError &gt;</code></td></tr><tr><td>required</td><td>set_status</td><td><code>async fn set_status (&amp; self , id : &amp; IterationId , status : IterationStatus , closed_at : Option &lt; UtcDateTime &gt; , outcomes : Option &lt; &amp; str &gt; ,) -&gt; Result &lt; Iteration , CoreError &gt;</code></td></tr><tr><td>required</td><td>set_deferred_goal_for_next_iteration</td><td><code>async fn set_deferred_goal_for_next_iteration (&amp; self , id : &amp; IterationId , deferred_goal_for_next_iteration : Option &lt; &amp; DeferredGoal &gt; ,) -&gt; Result &lt; Iteration , CoreError &gt;</code></td></tr><tr><td>required</td><td>close_succeeded</td><td><code>async fn close_succeeded (&amp; self , id : &amp; IterationId , outcomes : &amp; str , closed_at : Option &lt; UtcDateTime &gt; ,) -&gt; Result &lt; Iteration , CoreError &gt;</code></td></tr><tr><td>required</td><td>list_for_workflow</td><td><code>async fn list_for_workflow (&amp; self , workflow_id : &amp; WorkflowId ,) -&gt; Result &lt; Vec &lt; Iteration &gt; , CoreError &gt;</code></td></tr></tbody></table>
+  <code class="signature">pub trait <a class="symbol-link" href="eos-state--src-store-rs.html#item-trait-IterationStore-120">IterationStore</a></code>
+  <p class="docstring">Persistence surface for [`Iteration`] (Rust `IterationStoreProtocol`).</p>
+  <div class="tags"><span>async_trait</span></div>
+  <h4>Methods</h4><table><tbody><tr id="method-insert-123"><td>required</td><td>insert</td><td><code>async fn <a class="symbol-link" href="eos-state--src-store-rs.html#method-insert-47">insert</a> (&amp; self , workflow_id : &amp; WorkflowId , sequence_no : i64 , creation_reason : <a class="symbol-link" href="eos-state--src-iteration-rs.html#item-enum-IterationCreationReason-26">IterationCreationReason</a> , iteration_goal : &amp; str , attempt_budget : <a class="symbol-link" href="eos-state--src-plan-rs.html#item-struct-AttemptBudget-168">AttemptBudget</a> ,) -&gt; Result &lt; <a class="symbol-link" href="eos-state--src-iteration-rs.html#item-struct-Iteration-56">Iteration</a> , CoreError &gt;</code><p class="docstring">Insert a fresh open iteration and return it.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Insert a fresh open iteration and return it.</span>
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-store-rs.html#method-insert-47">insert</a>(
+        &amp;<span class="rs-self">self</span>,
+        workflow_id: &amp;<span class="rs-type">WorkflowId</span>,
+        sequence_no: i64,
+        creation_reason: <a class="symbol-link rs-type" href="eos-state--src-iteration-rs.html#item-enum-IterationCreationReason-26">IterationCreationReason</a>,
+        iteration_goal: &amp;str,
+        attempt_budget: <a class="symbol-link rs-type" href="eos-state--src-plan-rs.html#item-struct-AttemptBudget-168">AttemptBudget</a>,
+    ) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-state--src-iteration-rs.html#item-struct-Iteration-56">Iteration</a>, <span class="rs-type">CoreError</span>&gt;;
+</code></pre>
+</details></td></tr><tr id="method-get-133"><td>required</td><td>get</td><td><code>async fn <a class="symbol-link" href="eos-state--src-plan-rs.html#method-get-201">get</a> (&amp; self , id : &amp; IterationId) -&gt; Result &lt; Option &lt; <a class="symbol-link" href="eos-state--src-iteration-rs.html#item-struct-Iteration-56">Iteration</a> &gt; , CoreError &gt;</code><p class="docstring">Load an iteration by id.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Load an iteration by id.</span>
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-plan-rs.html#method-get-201">get</a>(&amp;<span class="rs-self">self</span>, id: &amp;<span class="rs-type">IterationId</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-state--src-iteration-rs.html#item-struct-Iteration-56">Iteration</a>&gt;, <span class="rs-type">CoreError</span>&gt;;
+</code></pre>
+</details></td></tr><tr id="method-append-attempt-id-136"><td>required</td><td>append_attempt_id</td><td><code>async fn <a class="symbol-link" href="eos-state--src-store-rs.html#method-append-attempt-id-136">append_attempt_id</a> (&amp; self , id : &amp; IterationId , attempt_id : &amp; AttemptId ,) -&gt; Result &lt; <a class="symbol-link" href="eos-state--src-iteration-rs.html#item-struct-Iteration-56">Iteration</a> , CoreError &gt;</code><p class="docstring">Append a child attempt id and return the updated iteration.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Append a child attempt id and return the updated iteration.</span>
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-store-rs.html#method-append-attempt-id-136">append_attempt_id</a>(
+        &amp;<span class="rs-self">self</span>,
+        id: &amp;<span class="rs-type">IterationId</span>,
+        attempt_id: &amp;<span class="rs-type">AttemptId</span>,
+    ) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-state--src-iteration-rs.html#item-struct-Iteration-56">Iteration</a>, <span class="rs-type">CoreError</span>&gt;;
+</code></pre>
+</details></td></tr><tr id="method-set-status-143"><td>required</td><td>set_status</td><td><code>async fn <a class="symbol-link" href="eos-state--src-store-rs.html#method-set-status-65">set_status</a> (&amp; self , id : &amp; IterationId , status : <a class="symbol-link" href="eos-state--src-iteration-rs.html#item-enum-IterationStatus-12">IterationStatus</a> , closed_at : Option &lt; UtcDateTime &gt; , outcomes : Option &lt; &amp; str &gt; ,) -&gt; Result &lt; <a class="symbol-link" href="eos-state--src-iteration-rs.html#item-struct-Iteration-56">Iteration</a> , CoreError &gt;</code><p class="docstring">Set status (and optionally `closed_at`/`outcomes`). `None` outcomes leaves<br>the persisted projection unchanged.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Set status (and optionally `closed_at`/`outcomes`). `None` outcomes leaves</span>
+    <span class="rs-comment">/// the persisted projection unchanged.</span>
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-store-rs.html#method-set-status-65">set_status</a>(
+        &amp;<span class="rs-self">self</span>,
+        id: &amp;<span class="rs-type">IterationId</span>,
+        status: <a class="symbol-link rs-type" href="eos-state--src-iteration-rs.html#item-enum-IterationStatus-12">IterationStatus</a>,
+        closed_at: <span class="rs-type">Option</span>&lt;<span class="rs-type">UtcDateTime</span>&gt;,
+        outcomes: <span class="rs-type">Option</span>&lt;&amp;str&gt;,
+    ) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-state--src-iteration-rs.html#item-struct-Iteration-56">Iteration</a>, <span class="rs-type">CoreError</span>&gt;;
+</code></pre>
+</details></td></tr><tr id="method-set-deferred-goal-for-next-iteration-153"><td>required</td><td>set_deferred_goal_for_next_iteration</td><td><code>async fn <a class="symbol-link" href="eos-state--src-store-rs.html#method-set-deferred-goal-for-next-iteration-153">set_deferred_goal_for_next_iteration</a> (&amp; self , id : &amp; IterationId , deferred_goal_for_next_iteration : Option &lt; &amp; <a class="symbol-link" href="eos-state--src-plan-rs.html#item-struct-DeferredGoal-65">DeferredGoal</a> &gt; ,) -&gt; Result &lt; <a class="symbol-link" href="eos-state--src-iteration-rs.html#item-struct-Iteration-56">Iteration</a> , CoreError &gt;</code><p class="docstring">Set the deferred-goal-for-next-iteration column.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Set the deferred-goal-for-next-iteration column.</span>
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-store-rs.html#method-set-deferred-goal-for-next-iteration-153">set_deferred_goal_for_next_iteration</a>(
+        &amp;<span class="rs-self">self</span>,
+        id: &amp;<span class="rs-type">IterationId</span>,
+        deferred_goal_for_next_iteration: <span class="rs-type">Option</span>&lt;&amp;<a class="symbol-link rs-type" href="eos-state--src-plan-rs.html#item-struct-DeferredGoal-65">DeferredGoal</a>&gt;,
+    ) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-state--src-iteration-rs.html#item-struct-Iteration-56">Iteration</a>, <span class="rs-type">CoreError</span>&gt;;
+</code></pre>
+</details></td></tr><tr id="method-close-succeeded-160"><td>required</td><td>close_succeeded</td><td><code>async fn <a class="symbol-link" href="eos-state--src-store-rs.html#method-close-succeeded-160">close_succeeded</a> (&amp; self , id : &amp; IterationId , outcomes : &amp; str , closed_at : Option &lt; UtcDateTime &gt; ,) -&gt; Result &lt; <a class="symbol-link" href="eos-state--src-iteration-rs.html#item-struct-Iteration-56">Iteration</a> , CoreError &gt;</code><p class="docstring">Atomically transition to `succeeded` and write the canonical outcomes.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Atomically transition to `succeeded` and write the canonical outcomes.</span>
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-store-rs.html#method-close-succeeded-160">close_succeeded</a>(
+        &amp;<span class="rs-self">self</span>,
+        id: &amp;<span class="rs-type">IterationId</span>,
+        outcomes: &amp;str,
+        closed_at: <span class="rs-type">Option</span>&lt;<span class="rs-type">UtcDateTime</span>&gt;,
+    ) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-state--src-iteration-rs.html#item-struct-Iteration-56">Iteration</a>, <span class="rs-type">CoreError</span>&gt;;
+</code></pre>
+</details></td></tr><tr id="method-list-for-workflow-168"><td>required</td><td>list_for_workflow</td><td><code>async fn <a class="symbol-link" href="eos-state--src-store-rs.html#method-list-for-workflow-168">list_for_workflow</a> (&amp; self , workflow_id : &amp; WorkflowId ,) -&gt; Result &lt; Vec &lt; <a class="symbol-link" href="eos-state--src-iteration-rs.html#item-struct-Iteration-56">Iteration</a> &gt; , CoreError &gt;</code><p class="docstring">All iterations of a workflow, ordered by `sequence_no`.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// All iterations of a workflow, ordered by `sequence_no`.</span>
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-store-rs.html#method-list-for-workflow-168">list_for_workflow</a>(
+        &amp;<span class="rs-self">self</span>,
+        workflow_id: &amp;<span class="rs-type">WorkflowId</span>,
+    ) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;<a class="symbol-link rs-type" href="eos-state--src-iteration-rs.html#item-struct-Iteration-56">Iteration</a>&gt;, <span class="rs-type">CoreError</span>&gt;;
+</code></pre>
+</details></td></tr></tbody></table>
+
   <p class="source">crates/eos-state/src/store.rs:120</p>
-</article><article class="type-card" data-kind="trait" data-kind-list="method trait type-model" data-filter-text="trait AttemptStore pub pub trait AttemptStore crates/eos-state/src/store.rs  insert async fn insert (&amp; self , iteration_id : &amp; IterationId , workflow_id : &amp; WorkflowId , attempt_sequence_no : i64 ,) -&gt; Result &lt; Attempt , CoreError &gt; get async fn get (&amp; self , id : &amp; AttemptId) -&gt; Result &lt; Option &lt; Attempt &gt; , CoreError &gt; record_planner_task async fn record_planner_task (&amp; self , id : &amp; AttemptId , planner_task_id : &amp; TaskId ,) -&gt; Result &lt; Attempt , CoreError &gt; record_plan async fn record_plan (&amp; self , id : &amp; AttemptId , plan : &amp; MaterializedPlan ,) -&gt; Result &lt; Attempt , CoreError &gt; close async fn close (&amp; self , id : &amp; AttemptId , closure : AttemptClosure) -&gt; Result &lt; Attempt , CoreError &gt; list_for_iteration async fn list_for_iteration (&amp; self , iteration_id : &amp; IterationId ,) -&gt; Result &lt; Vec &lt; Attempt &gt; , CoreError &gt;">
+</article><article id="item-trait-AttemptStore-175" class="type-card" data-kind="trait" data-kind-list="method trait type-model" data-filter-text="trait AttemptStore pub pub trait AttemptStore crates/eos-state/src/store.rs  insert async fn insert (&amp; self , iteration_id : &amp; IterationId , workflow_id : &amp; WorkflowId , attempt_sequence_no : i64 ,) -&gt; Result &lt; Attempt , CoreError &gt; get async fn get (&amp; self , id : &amp; AttemptId) -&gt; Result &lt; Option &lt; Attempt &gt; , CoreError &gt; record_planner_task async fn record_planner_task (&amp; self , id : &amp; AttemptId , planner_task_id : &amp; TaskId ,) -&gt; Result &lt; Attempt , CoreError &gt; record_plan async fn record_plan (&amp; self , id : &amp; AttemptId , plan : &amp; MaterializedPlan ,) -&gt; Result &lt; Attempt , CoreError &gt; close async fn close (&amp; self , id : &amp; AttemptId , closure : AttemptClosure) -&gt; Result &lt; Attempt , CoreError &gt; list_for_iteration async fn list_for_iteration (&amp; self , iteration_id : &amp; IterationId ,) -&gt; Result &lt; Vec &lt; Attempt &gt; , CoreError &gt;">
   <div class="item-head">
     <span class="kind">trait</span>
     <h3>AttemptStore</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub trait AttemptStore</code>
-  <div class="tags"></div>
-  <h4>Methods</h4><table><tbody><tr><td>required</td><td>close</td><td><code>async fn close (&amp; self , id : &amp; AttemptId , closure : AttemptClosure) -&gt; Result &lt; Attempt , CoreError &gt;</code></td></tr><tr><td>required</td><td>insert</td><td><code>async fn insert (&amp; self , iteration_id : &amp; IterationId , workflow_id : &amp; WorkflowId , attempt_sequence_no : i64 ,) -&gt; Result &lt; Attempt , CoreError &gt;</code></td></tr><tr><td>required</td><td>get</td><td><code>async fn get (&amp; self , id : &amp; AttemptId) -&gt; Result &lt; Option &lt; Attempt &gt; , CoreError &gt;</code></td></tr><tr><td>required</td><td>record_planner_task</td><td><code>async fn record_planner_task (&amp; self , id : &amp; AttemptId , planner_task_id : &amp; TaskId ,) -&gt; Result &lt; Attempt , CoreError &gt;</code></td></tr><tr><td>required</td><td>record_plan</td><td><code>async fn record_plan (&amp; self , id : &amp; AttemptId , plan : &amp; MaterializedPlan ,) -&gt; Result &lt; Attempt , CoreError &gt;</code></td></tr><tr><td>required</td><td>list_for_iteration</td><td><code>async fn list_for_iteration (&amp; self , iteration_id : &amp; IterationId ,) -&gt; Result &lt; Vec &lt; Attempt &gt; , CoreError &gt;</code></td></tr></tbody></table>
+  <code class="signature">pub trait <a class="symbol-link" href="eos-state--src-store-rs.html#item-trait-AttemptStore-175">AttemptStore</a></code>
+  <p class="docstring">Persistence surface for [`Attempt`] (Rust `AttemptStoreProtocol`).</p>
+  <div class="tags"><span>async_trait</span></div>
+  <h4>Methods</h4><table><tbody><tr id="method-close-203"><td>required</td><td>close</td><td><code>async fn <a class="symbol-link" href="eos-state--src-store-rs.html#method-close-203">close</a> (&amp; self , id : &amp; AttemptId , closure : <a class="symbol-link" href="eos-state--src-attempt-rs.html#item-enum-AttemptClosure-65">AttemptClosure</a>) -&gt; Result &lt; <a class="symbol-link" href="eos-state--src-attempt-rs.html#item-struct-Attempt-222">Attempt</a> , CoreError &gt;</code><p class="docstring">Close the attempt with a typed terminal closure.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Close the attempt with a typed terminal closure.</span>
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-store-rs.html#method-close-203">close</a>(&amp;<span class="rs-self">self</span>, id: &amp;<span class="rs-type">AttemptId</span>, closure: <a class="symbol-link rs-type" href="eos-state--src-attempt-rs.html#item-enum-AttemptClosure-65">AttemptClosure</a>) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-state--src-attempt-rs.html#item-struct-Attempt-222">Attempt</a>, <span class="rs-type">CoreError</span>&gt;;
+</code></pre>
+</details></td></tr><tr id="method-insert-178"><td>required</td><td>insert</td><td><code>async fn <a class="symbol-link" href="eos-state--src-store-rs.html#method-insert-47">insert</a> (&amp; self , iteration_id : &amp; IterationId , workflow_id : &amp; WorkflowId , attempt_sequence_no : i64 ,) -&gt; Result &lt; <a class="symbol-link" href="eos-state--src-attempt-rs.html#item-struct-Attempt-222">Attempt</a> , CoreError &gt;</code><p class="docstring">Insert a fresh attempt (`stage=plan`, `status=running`) and return it.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Insert a fresh attempt (`stage=plan`, `status=running`) and return it.</span>
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-store-rs.html#method-insert-47">insert</a>(
+        &amp;<span class="rs-self">self</span>,
+        iteration_id: &amp;<span class="rs-type">IterationId</span>,
+        workflow_id: &amp;<span class="rs-type">WorkflowId</span>,
+        attempt_sequence_no: i64,
+    ) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-state--src-attempt-rs.html#item-struct-Attempt-222">Attempt</a>, <span class="rs-type">CoreError</span>&gt;;
+</code></pre>
+</details></td></tr><tr id="method-get-186"><td>required</td><td>get</td><td><code>async fn <a class="symbol-link" href="eos-state--src-plan-rs.html#method-get-201">get</a> (&amp; self , id : &amp; AttemptId) -&gt; Result &lt; Option &lt; <a class="symbol-link" href="eos-state--src-attempt-rs.html#item-struct-Attempt-222">Attempt</a> &gt; , CoreError &gt;</code><p class="docstring">Load an attempt by id.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Load an attempt by id.</span>
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-plan-rs.html#method-get-201">get</a>(&amp;<span class="rs-self">self</span>, id: &amp;<span class="rs-type">AttemptId</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-state--src-attempt-rs.html#item-struct-Attempt-222">Attempt</a>&gt;, <span class="rs-type">CoreError</span>&gt;;
+</code></pre>
+</details></td></tr><tr id="method-record-planner-task-189"><td>required</td><td>record_planner_task</td><td><code>async fn <a class="symbol-link" href="eos-state--src-store-rs.html#method-record-planner-task-189">record_planner_task</a> (&amp; self , id : &amp; AttemptId , planner_task_id : &amp; TaskId ,) -&gt; Result &lt; <a class="symbol-link" href="eos-state--src-attempt-rs.html#item-struct-Attempt-222">Attempt</a> , CoreError &gt;</code><p class="docstring">Record the planner task assigned to this attempt.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Record the planner task assigned to this attempt.</span>
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-store-rs.html#method-record-planner-task-189">record_planner_task</a>(
+        &amp;<span class="rs-self">self</span>,
+        id: &amp;<span class="rs-type">AttemptId</span>,
+        planner_task_id: &amp;<span class="rs-type">TaskId</span>,
+    ) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-state--src-attempt-rs.html#item-struct-Attempt-222">Attempt</a>, <span class="rs-type">CoreError</span>&gt;;
+</code></pre>
+</details></td></tr><tr id="method-record-plan-196"><td>required</td><td>record_plan</td><td><code>async fn <a class="symbol-link" href="eos-state--src-store-rs.html#method-record-plan-196">record_plan</a> (&amp; self , id : &amp; AttemptId , plan : &amp; <a class="symbol-link" href="eos-state--src-plan-rs.html#item-struct-MaterializedPlan-236">MaterializedPlan</a> ,) -&gt; Result &lt; <a class="symbol-link" href="eos-state--src-attempt-rs.html#item-struct-Attempt-222">Attempt</a> , CoreError &gt;</code><p class="docstring">Record a materialized planner DAG and transition the attempt to RUN.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Record a materialized planner DAG and transition the attempt to RUN.</span>
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-store-rs.html#method-record-plan-196">record_plan</a>(
+        &amp;<span class="rs-self">self</span>,
+        id: &amp;<span class="rs-type">AttemptId</span>,
+        plan: &amp;<a class="symbol-link rs-type" href="eos-state--src-plan-rs.html#item-struct-MaterializedPlan-236">MaterializedPlan</a>,
+    ) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-state--src-attempt-rs.html#item-struct-Attempt-222">Attempt</a>, <span class="rs-type">CoreError</span>&gt;;
+</code></pre>
+</details></td></tr><tr id="method-list-for-iteration-206"><td>required</td><td>list_for_iteration</td><td><code>async fn <a class="symbol-link" href="eos-state--src-store-rs.html#method-list-for-iteration-206">list_for_iteration</a> (&amp; self , iteration_id : &amp; IterationId ,) -&gt; Result &lt; Vec &lt; <a class="symbol-link" href="eos-state--src-attempt-rs.html#item-struct-Attempt-222">Attempt</a> &gt; , CoreError &gt;</code><p class="docstring">All attempts of an iteration, ordered by `attempt_sequence_no`.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// All attempts of an iteration, ordered by `attempt_sequence_no`.</span>
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-store-rs.html#method-list-for-iteration-206">list_for_iteration</a>(
+        &amp;<span class="rs-self">self</span>,
+        iteration_id: &amp;<span class="rs-type">IterationId</span>,
+    ) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;<a class="symbol-link rs-type" href="eos-state--src-attempt-rs.html#item-struct-Attempt-222">Attempt</a>&gt;, <span class="rs-type">CoreError</span>&gt;;
+</code></pre>
+</details></td></tr></tbody></table>
+
   <p class="source">crates/eos-state/src/store.rs:175</p>
-</article><article class="type-card" data-kind="trait" data-kind-list="method trait type-model" data-filter-text="trait RequestStore pub pub trait RequestStore crates/eos-state/src/store.rs  create_request async fn create_request (&amp; self , request_id : &amp; RequestId , cwd : &amp; str , sandbox_id : Option &lt; &amp; SandboxId &gt; , request_prompt : &amp; str ,) -&gt; Result &lt; () , CoreError &gt; get async fn get (&amp; self , id : &amp; RequestId) -&gt; Result &lt; Option &lt; Request &gt; , CoreError &gt; set_root_task_id async fn set_root_task_id (&amp; self , id : &amp; RequestId , root_task_id : &amp; TaskId ,) -&gt; Result &lt; Request , CoreError &gt; finish_request async fn finish_request (&amp; self , id : &amp; RequestId , status : RequestStatus ,) -&gt; Result &lt; Option &lt; Request &gt; , CoreError &gt; list async fn list (&amp; self , filter : RequestListFilter , page : Page ,) -&gt; Result &lt; PageResult &lt; Request &gt; , CoreError &gt;">
+</article><article id="item-trait-RequestStore-213" class="type-card" data-kind="trait" data-kind-list="method trait type-model" data-filter-text="trait RequestStore pub pub trait RequestStore crates/eos-state/src/store.rs  create_request async fn create_request (&amp; self , request_id : &amp; RequestId , cwd : &amp; str , sandbox_id : Option &lt; &amp; SandboxId &gt; , request_prompt : &amp; str ,) -&gt; Result &lt; () , CoreError &gt; get async fn get (&amp; self , id : &amp; RequestId) -&gt; Result &lt; Option &lt; Request &gt; , CoreError &gt; set_root_task_id async fn set_root_task_id (&amp; self , id : &amp; RequestId , root_task_id : &amp; TaskId ,) -&gt; Result &lt; Request , CoreError &gt; finish_request async fn finish_request (&amp; self , id : &amp; RequestId , status : RequestStatus ,) -&gt; Result &lt; Option &lt; Request &gt; , CoreError &gt; list async fn list (&amp; self , filter : RequestListFilter , page : Page ,) -&gt; Result &lt; PageResult &lt; Request &gt; , CoreError &gt;">
   <div class="item-head">
     <span class="kind">trait</span>
     <h3>RequestStore</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub trait RequestStore</code>
-  <div class="tags"><span>dto</span></div>
-  <h4>Methods</h4><table><tbody><tr><td>required</td><td>create_request</td><td><code>async fn create_request (&amp; self , request_id : &amp; RequestId , cwd : &amp; str , sandbox_id : Option &lt; &amp; SandboxId &gt; , request_prompt : &amp; str ,) -&gt; Result &lt; () , CoreError &gt;</code></td></tr><tr><td>required</td><td>get</td><td><code>async fn get (&amp; self , id : &amp; RequestId) -&gt; Result &lt; Option &lt; Request &gt; , CoreError &gt;</code></td></tr><tr><td>required</td><td>set_root_task_id</td><td><code>async fn set_root_task_id (&amp; self , id : &amp; RequestId , root_task_id : &amp; TaskId ,) -&gt; Result &lt; Request , CoreError &gt;</code></td></tr><tr><td>required</td><td>finish_request</td><td><code>async fn finish_request (&amp; self , id : &amp; RequestId , status : RequestStatus ,) -&gt; Result &lt; Option &lt; Request &gt; , CoreError &gt;</code></td></tr><tr><td>required</td><td>list</td><td><code>async fn list (&amp; self , filter : RequestListFilter , page : Page ,) -&gt; Result &lt; PageResult &lt; Request &gt; , CoreError &gt;</code></td></tr></tbody></table>
+  <code class="signature">pub trait <a class="symbol-link" href="eos-state--src-store-rs.html#item-trait-RequestStore-213">RequestStore</a></code>
+  <p class="docstring">Persistence surface for requests (Rust `TaskStoreProtocol`, request half,<br>split out per ISP).</p>
+  <div class="tags"><span>async_trait</span><span>dto</span></div>
+  <h4>Methods</h4><table><tbody><tr id="method-create-request-217"><td>required</td><td>create_request</td><td><code>async fn <a class="symbol-link" href="eos-state--src-store-rs.html#method-create-request-217">create_request</a> (&amp; self , request_id : &amp; RequestId , cwd : &amp; str , sandbox_id : Option &lt; &amp; SandboxId &gt; , request_prompt : &amp; str ,) -&gt; Result &lt; () , CoreError &gt;</code><p class="docstring">Create a new request row (status defaults to `running`).</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Create a new request row (status defaults to `running`).</span>
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-store-rs.html#method-create-request-217">create_request</a>(
+        &amp;<span class="rs-self">self</span>,
+        request_id: &amp;<span class="rs-type">RequestId</span>,
+        cwd: &amp;str,
+        sandbox_id: <span class="rs-type">Option</span>&lt;&amp;<span class="rs-type">SandboxId</span>&gt;,
+        request_prompt: &amp;str,
+    ) -&gt; <span class="rs-type">Result</span>&lt;(), <span class="rs-type">CoreError</span>&gt;;
+</code></pre>
+</details></td></tr><tr id="method-get-226"><td>required</td><td>get</td><td><code>async fn <a class="symbol-link" href="eos-state--src-plan-rs.html#method-get-201">get</a> (&amp; self , id : &amp; RequestId) -&gt; Result &lt; Option &lt; <a class="symbol-link" href="eos-state--src-request-rs.html#item-struct-Request-30">Request</a> &gt; , CoreError &gt;</code><p class="docstring">Load a request by id.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Load a request by id.</span>
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-plan-rs.html#method-get-201">get</a>(&amp;<span class="rs-self">self</span>, id: &amp;<span class="rs-type">RequestId</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-state--src-request-rs.html#item-struct-Request-30">Request</a>&gt;, <span class="rs-type">CoreError</span>&gt;;
+</code></pre>
+</details></td></tr><tr id="method-set-root-task-id-229"><td>required</td><td>set_root_task_id</td><td><code>async fn <a class="symbol-link" href="eos-state--src-store-rs.html#method-set-root-task-id-229">set_root_task_id</a> (&amp; self , id : &amp; RequestId , root_task_id : &amp; TaskId ,) -&gt; Result &lt; <a class="symbol-link" href="eos-state--src-request-rs.html#item-struct-Request-30">Request</a> , CoreError &gt;</code><p class="docstring">Set the root task id and return the updated request.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Set the root task id and return the updated request.</span>
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-store-rs.html#method-set-root-task-id-229">set_root_task_id</a>(
+        &amp;<span class="rs-self">self</span>,
+        id: &amp;<span class="rs-type">RequestId</span>,
+        root_task_id: &amp;<span class="rs-type">TaskId</span>,
+    ) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-state--src-request-rs.html#item-struct-Request-30">Request</a>, <span class="rs-type">CoreError</span>&gt;;
+</code></pre>
+</details></td></tr><tr id="method-finish-request-236"><td>required</td><td>finish_request</td><td><code>async fn <a class="symbol-link" href="eos-state--src-store-rs.html#method-finish-request-236">finish_request</a> (&amp; self , id : &amp; RequestId , status : <a class="symbol-link" href="eos-state--src-request-rs.html#item-enum-RequestStatus-8">RequestStatus</a> ,) -&gt; Result &lt; Option &lt; <a class="symbol-link" href="eos-state--src-request-rs.html#item-struct-Request-30">Request</a> &gt; , CoreError &gt;</code><p class="docstring">Finish the request with `status`, stamping `finished_at` server-side.<br>Idempotent on an already-terminal request (returns it unchanged).<br>`Ok(None)` ⇒ the request does not exist.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Finish the request with `status`, stamping `finished_at` server-side.</span>
+    <span class="rs-comment">/// Idempotent on an already-terminal request (returns it unchanged).</span>
+    <span class="rs-comment">/// `Ok(None)` ⇒ the request does not exist.</span>
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-store-rs.html#method-finish-request-236">finish_request</a>(
+        &amp;<span class="rs-self">self</span>,
+        id: &amp;<span class="rs-type">RequestId</span>,
+        status: <a class="symbol-link rs-type" href="eos-state--src-request-rs.html#item-enum-RequestStatus-8">RequestStatus</a>,
+    ) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-state--src-request-rs.html#item-struct-Request-30">Request</a>&gt;, <span class="rs-type">CoreError</span>&gt;;
+</code></pre>
+</details></td></tr><tr id="method-list-245"><td>required</td><td>list</td><td><code>async fn <a class="symbol-link" href="eos-state--src-store-rs.html#method-list-245">list</a> (&amp; self , filter : <a class="symbol-link" href="eos-state--src-pagination-rs.html#item-struct-RequestListFilter-43">RequestListFilter</a> , page : <a class="symbol-link" href="eos-state--src-pagination-rs.html#item-struct-Page-14">Page</a> ,) -&gt; Result &lt; <a class="symbol-link" href="eos-state--src-pagination-rs.html#item-struct-PageResult-33">PageResult</a> &lt; <a class="symbol-link" href="eos-state--src-request-rs.html#item-struct-Request-30">Request</a> &gt; , CoreError &gt;</code><p class="docstring">List requests matching `filter`, newest first, within the `page` window.<br>`total` counts every match ignoring the window. Read-side API for the<br>backend composition root (spec §State Reader); not used by agent-core's<br>own request lifecycle.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// List requests matching `filter`, newest first, within the `page` window.</span>
+    <span class="rs-comment">/// `total` counts every match ignoring the window. Read-side API for the</span>
+    <span class="rs-comment">/// backend composition root (spec §State Reader); not used by agent-core's</span>
+    <span class="rs-comment">/// own request lifecycle.</span>
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-store-rs.html#method-list-245">list</a>(
+        &amp;<span class="rs-self">self</span>,
+        filter: <a class="symbol-link rs-type" href="eos-state--src-pagination-rs.html#item-struct-RequestListFilter-43">RequestListFilter</a>,
+        page: <a class="symbol-link rs-type" href="eos-state--src-pagination-rs.html#item-struct-Page-14">Page</a>,
+    ) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-state--src-pagination-rs.html#item-struct-PageResult-33">PageResult</a>&lt;<a class="symbol-link rs-type" href="eos-state--src-request-rs.html#item-struct-Request-30">Request</a>&gt;, <span class="rs-type">CoreError</span>&gt;;
+</code></pre>
+</details></td></tr></tbody></table>
+
   <p class="source">crates/eos-state/src/store.rs:213</p>
-</article><article class="type-card" data-kind="trait" data-kind-list="method trait type-model" data-filter-text="trait AgentRunStore pub pub trait AgentRunStore crates/eos-state/src/store.rs  create_run async fn create_run (&amp; self , agent_run_id : &amp; AgentRunId , task_id : &amp; TaskId , agent_name : &amp; str , initial_messages : Option &lt; &amp; [JsonObject] &gt; ,) -&gt; Result &lt; AgentRun , CoreError &gt; finish_run async fn finish_run (&amp; self , agent_run_id : &amp; AgentRunId , message_history : Option &lt; &amp; [JsonObject] &gt; , terminal_tool_result : Option &lt; &amp; JsonObject &gt; , token_count : i64 , error : Option &lt; &amp; str &gt; ,) -&gt; Result &lt; Option &lt; AgentRun &gt; , CoreError &gt; get async fn get (&amp; self , agent_run_id : &amp; AgentRunId) -&gt; Result &lt; Option &lt; AgentRun &gt; , CoreError &gt; get_for_task async fn get_for_task (&amp; self , task_id : &amp; TaskId) -&gt; Result &lt; Option &lt; AgentRun &gt; , CoreError &gt;">
+</article><article id="item-trait-AgentRunStore-256" class="type-card" data-kind="trait" data-kind-list="method trait type-model" data-filter-text="trait AgentRunStore pub pub trait AgentRunStore crates/eos-state/src/store.rs  create_run async fn create_run (&amp; self , agent_run_id : &amp; AgentRunId , task_id : &amp; TaskId , agent_name : &amp; str , initial_messages : Option &lt; &amp; [JsonObject] &gt; ,) -&gt; Result &lt; AgentRun , CoreError &gt; finish_run async fn finish_run (&amp; self , agent_run_id : &amp; AgentRunId , message_history : Option &lt; &amp; [JsonObject] &gt; , terminal_tool_result : Option &lt; &amp; JsonObject &gt; , token_count : i64 , error : Option &lt; &amp; str &gt; ,) -&gt; Result &lt; Option &lt; AgentRun &gt; , CoreError &gt; get async fn get (&amp; self , agent_run_id : &amp; AgentRunId) -&gt; Result &lt; Option &lt; AgentRun &gt; , CoreError &gt; get_for_task async fn get_for_task (&amp; self , task_id : &amp; TaskId) -&gt; Result &lt; Option &lt; AgentRun &gt; , CoreError &gt;">
   <div class="item-head">
     <span class="kind">trait</span>
     <h3>AgentRunStore</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub trait AgentRunStore</code>
-  <div class="tags"></div>
-  <h4>Methods</h4><table><tbody><tr><td>required</td><td>create_run</td><td><code>async fn create_run (&amp; self , agent_run_id : &amp; AgentRunId , task_id : &amp; TaskId , agent_name : &amp; str , initial_messages : Option &lt; &amp; [JsonObject] &gt; ,) -&gt; Result &lt; AgentRun , CoreError &gt;</code></td></tr><tr><td>required</td><td>finish_run</td><td><code>async fn finish_run (&amp; self , agent_run_id : &amp; AgentRunId , message_history : Option &lt; &amp; [JsonObject] &gt; , terminal_tool_result : Option &lt; &amp; JsonObject &gt; , token_count : i64 , error : Option &lt; &amp; str &gt; ,) -&gt; Result &lt; Option &lt; AgentRun &gt; , CoreError &gt;</code></td></tr><tr><td>required</td><td>get</td><td><code>async fn get (&amp; self , agent_run_id : &amp; AgentRunId) -&gt; Result &lt; Option &lt; AgentRun &gt; , CoreError &gt;</code></td></tr><tr><td>required</td><td>get_for_task</td><td><code>async fn get_for_task (&amp; self , task_id : &amp; TaskId) -&gt; Result &lt; Option &lt; AgentRun &gt; , CoreError &gt;</code></td></tr></tbody></table>
+  <code class="signature">pub trait <a class="symbol-link" href="eos-state--src-store-rs.html#item-trait-AgentRunStore-256">AgentRunStore</a></code>
+  <p class="docstring">Persistence surface for [`AgentRun`] (Rust `AgentRunStore`).</p>
+  <div class="tags"><span>async_trait</span></div>
+  <h4>Methods</h4><table><tbody><tr id="method-create-run-259"><td>required</td><td>create_run</td><td><code>async fn <a class="symbol-link" href="eos-state--src-store-rs.html#method-create-run-259">create_run</a> (&amp; self , agent_run_id : &amp; AgentRunId , task_id : &amp; TaskId , agent_name : &amp; str , initial_messages : Option &lt; &amp; [JsonObject] &gt; ,) -&gt; Result &lt; <a class="symbol-link" href="eos-state.html#item-struct-AgentRun-8">AgentRun</a> , CoreError &gt;</code><p class="docstring">Create a run row with only the create-time fields set.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Create a run row with only the create-time fields set.</span>
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-store-rs.html#method-create-run-259">create_run</a>(
+        &amp;<span class="rs-self">self</span>,
+        agent_run_id: &amp;<span class="rs-type">AgentRunId</span>,
+        task_id: &amp;<span class="rs-type">TaskId</span>,
+        agent_name: &amp;str,
+        initial_messages: <span class="rs-type">Option</span>&lt;&amp;[<span class="rs-type">JsonObject</span>]&gt;,
+    ) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-state.html#item-struct-AgentRun-8">AgentRun</a>, <span class="rs-type">CoreError</span>&gt;;
+</code></pre>
+</details></td></tr><tr id="method-finish-run-268"><td>required</td><td>finish_run</td><td><code>async fn <a class="symbol-link" href="eos-state--src-store-rs.html#method-finish-run-268">finish_run</a> (&amp; self , agent_run_id : &amp; AgentRunId , message_history : Option &lt; &amp; [JsonObject] &gt; , terminal_tool_result : Option &lt; &amp; JsonObject &gt; , token_count : i64 , error : Option &lt; &amp; str &gt; ,) -&gt; Result &lt; Option &lt; <a class="symbol-link" href="eos-state.html#item-struct-AgentRun-8">AgentRun</a> &gt; , CoreError &gt;</code><p class="docstring">Write the finish-time fields. `Ok(None)` ⇒ the run does not exist.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Write the finish-time fields. `Ok(None)` ⇒ the run does not exist.</span>
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-store-rs.html#method-finish-run-268">finish_run</a>(
+        &amp;<span class="rs-self">self</span>,
+        agent_run_id: &amp;<span class="rs-type">AgentRunId</span>,
+        message_history: <span class="rs-type">Option</span>&lt;&amp;[<span class="rs-type">JsonObject</span>]&gt;,
+        terminal_tool_result: <span class="rs-type">Option</span>&lt;&amp;<span class="rs-type">JsonObject</span>&gt;,
+        token_count: i64,
+        error: <span class="rs-type">Option</span>&lt;&amp;str&gt;,
+    ) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-state.html#item-struct-AgentRun-8">AgentRun</a>&gt;, <span class="rs-type">CoreError</span>&gt;;
+</code></pre>
+</details></td></tr><tr id="method-get-278"><td>required</td><td>get</td><td><code>async fn <a class="symbol-link" href="eos-state--src-plan-rs.html#method-get-201">get</a> (&amp; self , agent_run_id : &amp; AgentRunId) -&gt; Result &lt; Option &lt; <a class="symbol-link" href="eos-state.html#item-struct-AgentRun-8">AgentRun</a> &gt; , CoreError &gt;</code><p class="docstring">Load a run by id.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Load a run by id.</span>
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-plan-rs.html#method-get-201">get</a>(&amp;<span class="rs-self">self</span>, agent_run_id: &amp;<span class="rs-type">AgentRunId</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-state.html#item-struct-AgentRun-8">AgentRun</a>&gt;, <span class="rs-type">CoreError</span>&gt;;
+</code></pre>
+</details></td></tr><tr id="method-get-for-task-281"><td>required</td><td>get_for_task</td><td><code>async fn <a class="symbol-link" href="eos-state--src-store-rs.html#method-get-for-task-281">get_for_task</a> (&amp; self , task_id : &amp; TaskId) -&gt; Result &lt; Option &lt; <a class="symbol-link" href="eos-state.html#item-struct-AgentRun-8">AgentRun</a> &gt; , CoreError &gt;</code><p class="docstring">The latest agent run for one task, if any. `AgentRun.task_id` is 1:1 in<br>practice; the newest row wins if a task was ever re-run. Read-side API for<br>the backend composition root (spec §State Reader).</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// The latest agent run for one task, if any. `AgentRun.task_id` is 1:1 in</span>
+    <span class="rs-comment">/// practice; the newest row wins if a task was ever re-run. Read-side API for</span>
+    <span class="rs-comment">/// the backend composition root (spec §State Reader).</span>
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-store-rs.html#method-get-for-task-281">get_for_task</a>(&amp;<span class="rs-self">self</span>, task_id: &amp;<span class="rs-type">TaskId</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-state.html#item-struct-AgentRun-8">AgentRun</a>&gt;, <span class="rs-type">CoreError</span>&gt;;
+</code></pre>
+</details></td></tr></tbody></table>
+
   <p class="source">crates/eos-state/src/store.rs:256</p>
-</article><article class="type-card" data-kind="trait" data-kind-list="method trait type-model" data-filter-text="trait ModelStore pub pub trait ModelStore crates/eos-state/src/store.rs  register async fn register (&amp; self , model_key : &amp; str , label : &amp; str , class_path : &amp; str , kwargs : &amp; JsonObject , activate : bool ,) -&gt; Result &lt; ModelRegistration , CoreError &gt; delete async fn delete (&amp; self , model_key : &amp; str) -&gt; Result &lt; bool , CoreError &gt; get async fn get (&amp; self , model_key : &amp; str) -&gt; Result &lt; Option &lt; ModelRegistration &gt; , CoreError &gt; active async fn active (&amp; self) -&gt; Result &lt; Option &lt; ModelRegistration &gt; , CoreError &gt;">
+</article><article id="item-trait-ModelStore-287" class="type-card" data-kind="trait" data-kind-list="method trait type-model" data-filter-text="trait ModelStore pub pub trait ModelStore crates/eos-state/src/store.rs  register async fn register (&amp; self , model_key : &amp; str , label : &amp; str , class_path : &amp; str , kwargs : &amp; JsonObject , activate : bool ,) -&gt; Result &lt; ModelRegistration , CoreError &gt; delete async fn delete (&amp; self , model_key : &amp; str) -&gt; Result &lt; bool , CoreError &gt; get async fn get (&amp; self , model_key : &amp; str) -&gt; Result &lt; Option &lt; ModelRegistration &gt; , CoreError &gt; active async fn active (&amp; self) -&gt; Result &lt; Option &lt; ModelRegistration &gt; , CoreError &gt;">
   <div class="item-head">
     <span class="kind">trait</span>
     <h3>ModelStore</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub trait ModelStore</code>
-  <div class="tags"></div>
-  <h4>Methods</h4><table><tbody><tr><td>required</td><td>register</td><td><code>async fn register (&amp; self , model_key : &amp; str , label : &amp; str , class_path : &amp; str , kwargs : &amp; JsonObject , activate : bool ,) -&gt; Result &lt; ModelRegistration , CoreError &gt;</code></td></tr><tr><td>required</td><td>delete</td><td><code>async fn delete (&amp; self , model_key : &amp; str) -&gt; Result &lt; bool , CoreError &gt;</code></td></tr><tr><td>required</td><td>get</td><td><code>async fn get (&amp; self , model_key : &amp; str) -&gt; Result &lt; Option &lt; ModelRegistration &gt; , CoreError &gt;</code></td></tr><tr><td>required</td><td>active</td><td><code>async fn active (&amp; self) -&gt; Result &lt; Option &lt; ModelRegistration &gt; , CoreError &gt;</code></td></tr></tbody></table>
+  <code class="signature">pub trait <a class="symbol-link" href="eos-state--src-store-rs.html#item-trait-ModelStore-287">ModelStore</a></code>
+  <p class="docstring">Persistence surface for [`ModelRegistration`] (Rust `ModelStore`).</p>
+  <div class="tags"><span>async_trait</span></div>
+  <h4>Methods</h4><table><tbody><tr id="method-register-290"><td>required</td><td>register</td><td><code>async fn <a class="symbol-link" href="eos-state--src-store-rs.html#method-register-290">register</a> (&amp; self , model_key : &amp; str , label : &amp; str , class_path : &amp; str , kwargs : &amp; JsonObject , activate : bool ,) -&gt; Result &lt; <a class="symbol-link" href="eos-state--src-model-rs.html#item-struct-ModelRegistration-12">ModelRegistration</a> , CoreError &gt;</code><p class="docstring">Create or update a registration. `kwargs` is serialized to `kwargs_json`<br>by `eos-db`; `activate` deactivates all others first.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Create or update a registration. `kwargs` is serialized to `kwargs_json`</span>
+    <span class="rs-comment">/// by `eos-db`; `activate` deactivates all others first.</span>
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-store-rs.html#method-register-290">register</a>(
+        &amp;<span class="rs-self">self</span>,
+        model_key: &amp;str,
+        label: &amp;str,
+        class_path: &amp;str,
+        kwargs: &amp;<span class="rs-type">JsonObject</span>,
+        activate: bool,
+    ) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-state--src-model-rs.html#item-struct-ModelRegistration-12">ModelRegistration</a>, <span class="rs-type">CoreError</span>&gt;;
+</code></pre>
+</details></td></tr><tr id="method-delete-301"><td>required</td><td>delete</td><td><code>async fn <a class="symbol-link" href="eos-state--src-store-rs.html#method-delete-301">delete</a> (&amp; self , model_key : &amp; str) -&gt; Result &lt; bool , CoreError &gt;</code><p class="docstring">Delete by key; `Ok(false)` ⇒ no such key.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Delete by key; `Ok(false)` ⇒ no such key.</span>
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-store-rs.html#method-delete-301">delete</a>(&amp;<span class="rs-self">self</span>, model_key: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;bool, <span class="rs-type">CoreError</span>&gt;;
+</code></pre>
+</details></td></tr><tr id="method-get-304"><td>required</td><td>get</td><td><code>async fn <a class="symbol-link" href="eos-state--src-plan-rs.html#method-get-201">get</a> (&amp; self , model_key : &amp; str) -&gt; Result &lt; Option &lt; <a class="symbol-link" href="eos-state--src-model-rs.html#item-struct-ModelRegistration-12">ModelRegistration</a> &gt; , CoreError &gt;</code><p class="docstring">Load a registration by key.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Load a registration by key.</span>
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-plan-rs.html#method-get-201">get</a>(&amp;<span class="rs-self">self</span>, model_key: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-state--src-model-rs.html#item-struct-ModelRegistration-12">ModelRegistration</a>&gt;, <span class="rs-type">CoreError</span>&gt;;
+</code></pre>
+</details></td></tr><tr id="method-active-307"><td>required</td><td>active</td><td><code>async fn <a class="symbol-link" href="eos-state--src-store-rs.html#method-active-307">active</a> (&amp; self) -&gt; Result &lt; Option &lt; <a class="symbol-link" href="eos-state--src-model-rs.html#item-struct-ModelRegistration-12">ModelRegistration</a> &gt; , CoreError &gt;</code><p class="docstring">The single active registration, if any.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// The single active registration, if any.</span>
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-store-rs.html#method-active-307">active</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-state--src-model-rs.html#item-struct-ModelRegistration-12">ModelRegistration</a>&gt;, <span class="rs-type">CoreError</span>&gt;;
+</code></pre>
+</details></td></tr></tbody></table>
+
   <p class="source">crates/eos-state/src/store.rs:287</p>
-</article><div class="group-label">Aliases</div><article class="item-card" data-kind="type" data-kind-list="type" data-filter-text="type StoreError pub pub type StoreError = CoreError crates/eos-state/src/store.rs  ">
+</article><div class="group-label">Aliases</div><article id="item-type-StoreError-31" class="item-card" data-kind="type" data-kind-list="type" data-filter-text="type StoreError pub pub type StoreError = CoreError crates/eos-state/src/store.rs  ">
   <div class="item-head">
     <span class="kind">type</span>
     <h3>StoreError</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub type StoreError = CoreError</code>
+  <code class="signature">pub type <a class="symbol-link" href="eos-state--src-store-rs.html#item-type-StoreError-31">StoreError</a> = CoreError</code>
+  <p class="docstring">Alias for the error every `Store` method returns (anchor §5/§8).</p>
   <div class="tags"></div>
 
   <p class="source">crates/eos-state/src/store.rs:31</p>
-</article><div class="group-label">Standalone Functions</div><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn sample_task private fn sample_task () -&gt; Task crates/eos-state/src/store.rs  ">
+</article><div class="group-label">Standalone Functions</div><article id="item-fn-sample-task-318" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn sample_task private fn sample_task () -&gt; Task crates/eos-state/src/store.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>sample_task</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn sample_task () -&gt; Task</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-state--src-store-rs.html#item-fn-sample-task-318">sample_task</a> () -&gt; <a class="symbol-link" href="eos-state--src-task-rs.html#item-struct-Task-66">Task</a></code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-store-rs.html#item-fn-sample-task-318">sample_task</a>() -&gt; <a class="symbol-link rs-type" href="eos-state--src-task-rs.html#item-struct-Task-66">Task</a> {
+        <a class="symbol-link rs-type" href="eos-state--src-task-rs.html#item-struct-Task-66">Task</a> {
+            id: &quot;t1&quot;.parse().expect(&quot;id&quot;),
+            request_id: <span class="rs-type">RequestId</span>::new_v4(),
+            role: <a class="symbol-link rs-type" href="eos-state--src-task-rs.html#item-enum-TaskRole-42">TaskRole</a>::<span class="rs-type">Generator</span>,
+            instruction: &quot;do the thing&quot;.to_owned(),
+            status: <a class="symbol-link rs-type" href="eos-state--src-task-rs.html#item-enum-TaskStatus-14">TaskStatus</a>::<span class="rs-type">Pending</span>,
+            workflow_id: <span class="rs-type">None</span>,
+            iteration_id: <span class="rs-type">None</span>,
+            attempt_id: <span class="rs-type">None</span>,
+            agent_name: <span class="rs-type">Some</span>(&quot;coder&quot;.to_owned()),
+            needs: <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-state--src-plan-rs.html#method-new-18">new</a>(),
+            outcomes: <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-state--src-plan-rs.html#method-new-18">new</a>(),
+            terminal_tool_result: <span class="rs-type">None</span>,
+        }
+    }
+</code></pre>
+</details>
 
   <p class="source">crates/eos-state/src/store.rs:318</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn task_store_is_typed private async fn task_store_is_typed () crates/eos-state/src/store.rs  ">
+</article><article id="item-fn-task-store-is-typed-337" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn task_store_is_typed private async fn task_store_is_typed () crates/eos-state/src/store.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>task_store_is_typed</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">async fn task_store_is_typed ()</code>
-  <div class="tags"><span>async</span></div>
+  <code class="signature">async fn <a class="symbol-link" href="eos-state--src-store-rs.html#item-fn-task-store-is-typed-337">task_store_is_typed</a> ()</code>
+  <div class="tags"><span>async</span><span>tokio::test</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[tokio::test]
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-store-rs.html#item-fn-task-store-is-typed-337">task_store_is_typed</a>() {
+        <span class="rs-kw">let</span> store: &amp;<span class="rs-kw">dyn</span> <a class="symbol-link rs-type" href="eos-state--src-store-rs.html#item-trait-TaskStore-82">TaskStore</a> = &amp;<span class="rs-type">FakeTaskStore</span>::<a class="symbol-link rs-fn" href="eos-state--src-plan-rs.html#method-new-18">new</a>();
+        <span class="rs-kw">let</span> task = <a class="symbol-link rs-fn" href="eos-state--src-store-rs.html#item-fn-sample-task-318">sample_task</a>();
+        store.<a class="symbol-link rs-fn" href="eos-state--src-store-rs.html#method-insert-task-85">insert_task</a>(&amp;task).<span class="rs-kw">await</span>.expect(&quot;insert&quot;);
+        <span class="rs-kw">let</span> got = store.<a class="symbol-link rs-fn" href="eos-state--src-plan-rs.html#method-get-201">get</a>(&amp;task.id).<span class="rs-kw">await</span>.expect(&quot;get&quot;).expect(&quot;present&quot;);
+        assert_eq!(got, task);
+    }
+</code></pre>
+</details>
 
   <p class="source">crates/eos-state/src/store.rs:337</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn optimistic_status_flip private async fn optimistic_status_flip () crates/eos-state/src/store.rs  ">
+</article><article id="item-fn-optimistic-status-flip-348" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn optimistic_status_flip private async fn optimistic_status_flip () crates/eos-state/src/store.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>optimistic_status_flip</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">async fn optimistic_status_flip ()</code>
-  <div class="tags"><span>async</span></div>
+  <code class="signature">async fn <a class="symbol-link" href="eos-state--src-store-rs.html#item-fn-optimistic-status-flip-348">optimistic_status_flip</a> ()</code>
+  <div class="tags"><span>async</span><span>tokio::test</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[tokio::test]
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-store-rs.html#item-fn-optimistic-status-flip-348">optimistic_status_flip</a>() {
+        <span class="rs-kw">let</span> store = <span class="rs-type">FakeTaskStore</span>::<a class="symbol-link rs-fn" href="eos-state--src-plan-rs.html#method-new-18">new</a>();
+        <span class="rs-kw">let</span> task = <a class="symbol-link rs-fn" href="eos-state--src-store-rs.html#item-fn-sample-task-318">sample_task</a>(); <span class="rs-comment">// status = Pending</span>
+        store.<a class="symbol-link rs-fn" href="eos-state--src-store-rs.html#method-insert-task-85">insert_task</a>(&amp;task).<span class="rs-kw">await</span>.expect(&quot;insert&quot;);
+
+        <span class="rs-comment">// Mismatched expectation is a no-op.</span>
+        <span class="rs-kw">let</span> miss = store
+            .<a class="symbol-link rs-fn" href="eos-state--src-store-rs.html#method-set-task-status-if-current-91">set_task_status_if_current</a>(&amp;task.id, <a class="symbol-link rs-type" href="eos-state--src-task-rs.html#item-enum-TaskStatus-14">TaskStatus</a>::<span class="rs-type">Running</span>, <a class="symbol-link rs-type" href="eos-state--src-task-rs.html#item-enum-TaskStatus-14">TaskStatus</a>::<span class="rs-type">Done</span>, <span class="rs-type">None</span>, <span class="rs-type">None</span>)
+            .<span class="rs-kw">await</span>
+            .expect(&quot;cas&quot;);
+        assert!(miss.is_none());
+        assert_eq!(
+            store
+                .<a class="symbol-link rs-fn" href="eos-state--src-plan-rs.html#method-get-201">get</a>(&amp;task.id)
+                .<span class="rs-kw">await</span>
+                .expect(&quot;get&quot;)
+                .expect(&quot;present&quot;)
+                .status,
+            <a class="symbol-link rs-type" href="eos-state--src-task-rs.html#item-enum-TaskStatus-14">TaskStatus</a>::<span class="rs-type">Pending</span>
+        );
+
+        <span class="rs-comment">// Matching expectation flips and returns the updated task.</span>
+        <span class="rs-kw">let</span> hit = store
+            .<a class="symbol-link rs-fn" href="eos-state--src-store-rs.html#method-set-task-status-if-current-91">set_task_status_if_current</a>(
+                &amp;task.id,
+                <a class="symbol-link rs-type" href="eos-state--src-task-rs.html#item-enum-TaskStatus-14">TaskStatus</a>::<span class="rs-type">Pending</span>,
+                <a class="symbol-link rs-type" href="eos-state--src-task-rs.html#item-enum-TaskStatus-14">TaskStatus</a>::<span class="rs-type">Running</span>,
+                <span class="rs-type">None</span>,
+                <span class="rs-type">None</span>,
+            )
+            .<span class="rs-kw">await</span>
+            .expect(&quot;cas&quot;)
+            .expect(&quot;flipped&quot;);
+        assert_eq!(hit.status, <a class="symbol-link rs-type" href="eos-state--src-task-rs.html#item-enum-TaskStatus-14">TaskStatus</a>::<span class="rs-type">Running</span>);
+    }
+</code></pre>
+</details>
 
   <p class="source">crates/eos-state/src/store.rs:348</p>
 </article></div>
 </section></div>
 </main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/eos-state/src/store.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-comment">//! The seven per-entity async `Store` traits (ISP — no god-store).</span>
+<span class="rs-comment">//!</span>
+<span class="rs-comment">//! Ports `workflow/_core/persistence.py` (`*StoreProtocol`s) plus the promoted</span>
+<span class="rs-comment">//! `AgentRunStore`/`ModelStore`. Each trait lists only the methods agent-core</span>
+<span class="rs-comment">//! calls. Concrete sqlx implementations live in `eos-db`; in-crate `#[cfg(test)]`</span>
+<span class="rs-comment">//! fakes prove substitutability.</span>
+<span class="rs-comment">//!</span>
+<span class="rs-comment">//! Object safety: every trait is used behind `Arc&lt;dyn Trait&gt;` in the</span>
+<span class="rs-comment">//! `eos-runtime` composition root, so they carry `#[async_trait]` (native</span>
+<span class="rs-comment">//! async-fn-in-trait is not yet `dyn`-safe; anchor §6). `StoreError` is an alias</span>
+<span class="rs-comment">//! for `eos-types::CoreError` (spec §8 — no crate-local error enum).</span>
+
+<span class="rs-kw">use</span> async_trait::async_trait;
+
+<span class="rs-kw">use</span> eos_types::{
+    <span class="rs-type">AgentRunId</span>, <span class="rs-type">AttemptId</span>, <span class="rs-type">CoreError</span>, <span class="rs-type">IterationId</span>, <span class="rs-type">JsonObject</span>, <span class="rs-type">RequestId</span>, <span class="rs-type">SandboxId</span>, <span class="rs-type">TaskId</span>,
+    <span class="rs-type">UtcDateTime</span>, <span class="rs-type">WorkflowId</span>,
+};
+
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::agent_run::<a class="symbol-link rs-type" href="eos-state.html#item-struct-AgentRun-8">AgentRun</a>;
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::attempt::{<a class="symbol-link rs-type" href="eos-state--src-attempt-rs.html#item-struct-Attempt-222">Attempt</a>, <a class="symbol-link rs-type" href="eos-state--src-attempt-rs.html#item-enum-AttemptClosure-65">AttemptClosure</a>};
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::iteration::{<a class="symbol-link rs-type" href="eos-state--src-iteration-rs.html#item-struct-Iteration-56">Iteration</a>, <a class="symbol-link rs-type" href="eos-state--src-iteration-rs.html#item-enum-IterationCreationReason-26">IterationCreationReason</a>, <a class="symbol-link rs-type" href="eos-state--src-iteration-rs.html#item-enum-IterationStatus-12">IterationStatus</a>};
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::model::<a class="symbol-link rs-type" href="eos-state--src-model-rs.html#item-struct-ModelRegistration-12">ModelRegistration</a>;
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::outcomes::<a class="symbol-link rs-type" href="eos-state--src-outcomes-rs.html#item-struct-ExecutionTaskOutcome-67">ExecutionTaskOutcome</a>;
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::pagination::{<a class="symbol-link rs-type" href="eos-state--src-pagination-rs.html#item-struct-Page-14">Page</a>, <a class="symbol-link rs-type" href="eos-state--src-pagination-rs.html#item-struct-PageResult-33">PageResult</a>, <a class="symbol-link rs-type" href="eos-state--src-pagination-rs.html#item-struct-RequestListFilter-43">RequestListFilter</a>};
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::plan::{<a class="symbol-link rs-type" href="eos-state--src-plan-rs.html#item-struct-AttemptBudget-168">AttemptBudget</a>, <a class="symbol-link rs-type" href="eos-state--src-plan-rs.html#item-struct-DeferredGoal-65">DeferredGoal</a>, <a class="symbol-link rs-type" href="eos-state--src-plan-rs.html#item-struct-MaterializedPlan-236">MaterializedPlan</a>};
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::request::{<a class="symbol-link rs-type" href="eos-state--src-request-rs.html#item-struct-Request-30">Request</a>, <a class="symbol-link rs-type" href="eos-state--src-request-rs.html#item-enum-RequestStatus-8">RequestStatus</a>};
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::task::{<a class="symbol-link rs-type" href="eos-state--src-task-rs.html#item-struct-Task-66">Task</a>, <a class="symbol-link rs-type" href="eos-state--src-task-rs.html#item-enum-TaskStatus-14">TaskStatus</a>};
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::workflow::{<a class="symbol-link rs-type" href="eos-state--src-workflow-rs.html#item-struct-Workflow-52">Workflow</a>, <a class="symbol-link rs-type" href="eos-state--src-workflow-rs.html#item-enum-WorkflowStatus-11">WorkflowStatus</a>};
+
+<span class="rs-comment">/// Alias for the error every `Store` method returns (anchor §5/§8).</span>
+<span class="rs-kw">pub</span> <span class="rs-kw">type</span> <a class="symbol-link rs-type" href="eos-state--src-store-rs.html#item-type-StoreError-31">StoreError</a> = <span class="rs-type">CoreError</span>;
+
+<span class="rs-comment">/// Sealing marker for the `Store` traits.</span>
+<span class="rs-comment">///</span>
+<span class="rs-comment">/// Implemented by the `eos-db` sqlx repositories and in-crate test fakes only.</span>
+<span class="rs-comment">/// It is `#[doc(hidden)]` rather than fully private because the implementing</span>
+<span class="rs-comment">/// repositories live in a separate downstream crate (a strictly-private marker</span>
+<span class="rs-comment">/// would be unreachable to them); external crates outside this workspace should</span>
+<span class="rs-comment">/// not implement the `Store` traits (`api-sealed-trait`).</span>
+#[doc(hidden)]
+<span class="rs-kw">pub</span> <span class="rs-kw">trait</span> <a class="symbol-link rs-type" href="eos-state--src-store-rs.html#item-trait-Sealed-34">Sealed</a> {}
+
+<span class="rs-comment">/// Persistence surface for [`Workflow`] (Rust `WorkflowStoreProtocol`).</span>
+#[async_trait]
+<span class="rs-kw">pub</span> <span class="rs-kw">trait</span> <a class="symbol-link rs-type" href="eos-state--src-store-rs.html#item-trait-WorkflowStore-44">WorkflowStore</a>: <a class="symbol-link rs-type" href="eos-state--src-store-rs.html#item-trait-Sealed-34">Sealed</a> + <span class="rs-type">Send</span> + <span class="rs-type">Sync</span> {
+    <span class="rs-comment">/// Insert a fresh open workflow and return it.</span>
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-store-rs.html#method-insert-47">insert</a>(
+        &amp;<span class="rs-self">self</span>,
+        request_id: &amp;<span class="rs-type">RequestId</span>,
+        parent_task_id: &amp;<span class="rs-type">TaskId</span>,
+        workflow_goal: &amp;str,
+    ) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-state--src-workflow-rs.html#item-struct-Workflow-52">Workflow</a>, <span class="rs-type">CoreError</span>&gt;;
+
+    <span class="rs-comment">/// Load a workflow by id.</span>
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-plan-rs.html#method-get-201">get</a>(&amp;<span class="rs-self">self</span>, id: &amp;<span class="rs-type">WorkflowId</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-state--src-workflow-rs.html#item-struct-Workflow-52">Workflow</a>&gt;, <span class="rs-type">CoreError</span>&gt;;
+
+    <span class="rs-comment">/// Append a child iteration id and return the updated workflow.</span>
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-store-rs.html#method-append-iteration-id-58">append_iteration_id</a>(
+        &amp;<span class="rs-self">self</span>,
+        id: &amp;<span class="rs-type">WorkflowId</span>,
+        iteration_id: &amp;<span class="rs-type">IterationId</span>,
+    ) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-state--src-workflow-rs.html#item-struct-Workflow-52">Workflow</a>, <span class="rs-type">CoreError</span>&gt;;
+
+    <span class="rs-comment">/// Set status (and optionally `closed_at`/`outcomes`). `None` outcomes leaves</span>
+    <span class="rs-comment">/// the persisted projection unchanged.</span>
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-store-rs.html#method-set-status-65">set_status</a>(
+        &amp;<span class="rs-self">self</span>,
+        id: &amp;<span class="rs-type">WorkflowId</span>,
+        status: <a class="symbol-link rs-type" href="eos-state--src-workflow-rs.html#item-enum-WorkflowStatus-11">WorkflowStatus</a>,
+        closed_at: <span class="rs-type">Option</span>&lt;<span class="rs-type">UtcDateTime</span>&gt;,
+        outcomes: <span class="rs-type">Option</span>&lt;&amp;str&gt;,
+    ) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-state--src-workflow-rs.html#item-struct-Workflow-52">Workflow</a>, <span class="rs-type">CoreError</span>&gt;;
+
+    <span class="rs-comment">/// All workflows launched by one parent task, ordered by `created_at`.</span>
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-store-rs.html#method-list-for-parent-task-75">list_for_parent_task</a>(
+        &amp;<span class="rs-self">self</span>,
+        parent_task_id: &amp;<span class="rs-type">TaskId</span>,
+    ) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;<a class="symbol-link rs-type" href="eos-state--src-workflow-rs.html#item-struct-Workflow-52">Workflow</a>&gt;, <span class="rs-type">CoreError</span>&gt;;
+}
+
+<span class="rs-comment">/// Persistence surface for request/task (Rust `TaskStoreProtocol`, task half).</span>
+#[async_trait]
+<span class="rs-kw">pub</span> <span class="rs-kw">trait</span> <a class="symbol-link rs-type" href="eos-state--src-store-rs.html#item-trait-TaskStore-82">TaskStore</a>: <a class="symbol-link rs-type" href="eos-state--src-store-rs.html#item-trait-Sealed-34">Sealed</a> + <span class="rs-type">Send</span> + <span class="rs-type">Sync</span> {
+    <span class="rs-comment">/// Insert a fresh task row.</span>
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-store-rs.html#method-insert-task-85">insert_task</a>(&amp;<span class="rs-self">self</span>, task: &amp;<a class="symbol-link rs-type" href="eos-state--src-task-rs.html#item-struct-Task-66">Task</a>) -&gt; <span class="rs-type">Result</span>&lt;(), <span class="rs-type">CoreError</span>&gt;;
+
+    <span class="rs-comment">/// Load a task by id.</span>
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-plan-rs.html#method-get-201">get</a>(&amp;<span class="rs-self">self</span>, id: &amp;<span class="rs-type">TaskId</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-state--src-task-rs.html#item-struct-Task-66">Task</a>&gt;, <span class="rs-type">CoreError</span>&gt;;
+
+    <span class="rs-comment">/// Optimistic-concurrency status flip (Rust `set_task_status_if_current`).</span>
+    <span class="rs-comment">/// `Ok(None)` ⇒ the current status did not match `expected`.</span>
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-store-rs.html#method-set-task-status-if-current-91">set_task_status_if_current</a>(
+        &amp;<span class="rs-self">self</span>,
+        id: &amp;<span class="rs-type">TaskId</span>,
+        expected: <a class="symbol-link rs-type" href="eos-state--src-task-rs.html#item-enum-TaskStatus-14">TaskStatus</a>,
+        status: <a class="symbol-link rs-type" href="eos-state--src-task-rs.html#item-enum-TaskStatus-14">TaskStatus</a>,
+        outcomes: <span class="rs-type">Option</span>&lt;&amp;[<a class="symbol-link rs-type" href="eos-state--src-outcomes-rs.html#item-struct-ExecutionTaskOutcome-67">ExecutionTaskOutcome</a>]&gt;,
+        terminal_tool_result: <span class="rs-type">Option</span>&lt;&amp;<span class="rs-type">JsonObject</span>&gt;,
+    ) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-state--src-task-rs.html#item-struct-Task-66">Task</a>&gt;, <span class="rs-type">CoreError</span>&gt;;
+
+    <span class="rs-comment">/// Bulk-latch attempt task rows to [`TaskStatus::Cancelled`] before runtime</span>
+    <span class="rs-comment">/// teardown, stamping the cancelled terminal payload. Only rows owned by</span>
+    <span class="rs-comment">/// `attempt_id` that are still `Pending`/`Running` flip; terminal rows are</span>
+    <span class="rs-comment">/// left untouched, so the call is idempotent. This closes the scheduler gap</span>
+    <span class="rs-comment">/// (`cancel_attempt`, spec §12.4) so no generator/reducer launches into the</span>
+    <span class="rs-comment">/// cancellation window.</span>
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-store-rs.html#method-latch-attempt-tasks-cancelled-102">latch_attempt_tasks_cancelled</a>(
+        &amp;<span class="rs-self">self</span>,
+        attempt_id: &amp;<span class="rs-type">AttemptId</span>,
+        ids: &amp;[<span class="rs-type">TaskId</span>],
+    ) -&gt; <span class="rs-type">Result</span>&lt;(), <span class="rs-type">CoreError</span>&gt;;
+
+    <span class="rs-comment">/// All tasks owned by one request, ordered by creation — the request task</span>
+    <span class="rs-comment">/// tree (`needs` edges live on each [`Task`]). Read-side API for the backend</span>
+    <span class="rs-comment">/// composition root (spec §State Reader).</span>
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-store-rs.html#method-list-for-request-114">list_for_request</a>(&amp;<span class="rs-self">self</span>, request_id: &amp;<span class="rs-type">RequestId</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;<a class="symbol-link rs-type" href="eos-state--src-task-rs.html#item-struct-Task-66">Task</a>&gt;, <span class="rs-type">CoreError</span>&gt;;
+}
+
+<span class="rs-comment">/// Persistence surface for [`Iteration`] (Rust `IterationStoreProtocol`).</span>
+#[async_trait]
+<span class="rs-kw">pub</span> <span class="rs-kw">trait</span> <a class="symbol-link rs-type" href="eos-state--src-store-rs.html#item-trait-IterationStore-120">IterationStore</a>: <a class="symbol-link rs-type" href="eos-state--src-store-rs.html#item-trait-Sealed-34">Sealed</a> + <span class="rs-type">Send</span> + <span class="rs-type">Sync</span> {
+    <span class="rs-comment">/// Insert a fresh open iteration and return it.</span>
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-store-rs.html#method-insert-47">insert</a>(
+        &amp;<span class="rs-self">self</span>,
+        workflow_id: &amp;<span class="rs-type">WorkflowId</span>,
+        sequence_no: i64,
+        creation_reason: <a class="symbol-link rs-type" href="eos-state--src-iteration-rs.html#item-enum-IterationCreationReason-26">IterationCreationReason</a>,
+        iteration_goal: &amp;str,
+        attempt_budget: <a class="symbol-link rs-type" href="eos-state--src-plan-rs.html#item-struct-AttemptBudget-168">AttemptBudget</a>,
+    ) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-state--src-iteration-rs.html#item-struct-Iteration-56">Iteration</a>, <span class="rs-type">CoreError</span>&gt;;
+
+    <span class="rs-comment">/// Load an iteration by id.</span>
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-plan-rs.html#method-get-201">get</a>(&amp;<span class="rs-self">self</span>, id: &amp;<span class="rs-type">IterationId</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-state--src-iteration-rs.html#item-struct-Iteration-56">Iteration</a>&gt;, <span class="rs-type">CoreError</span>&gt;;
+
+    <span class="rs-comment">/// Append a child attempt id and return the updated iteration.</span>
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-store-rs.html#method-append-attempt-id-136">append_attempt_id</a>(
+        &amp;<span class="rs-self">self</span>,
+        id: &amp;<span class="rs-type">IterationId</span>,
+        attempt_id: &amp;<span class="rs-type">AttemptId</span>,
+    ) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-state--src-iteration-rs.html#item-struct-Iteration-56">Iteration</a>, <span class="rs-type">CoreError</span>&gt;;
+
+    <span class="rs-comment">/// Set status (and optionally `closed_at`/`outcomes`). `None` outcomes leaves</span>
+    <span class="rs-comment">/// the persisted projection unchanged.</span>
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-store-rs.html#method-set-status-65">set_status</a>(
+        &amp;<span class="rs-self">self</span>,
+        id: &amp;<span class="rs-type">IterationId</span>,
+        status: <a class="symbol-link rs-type" href="eos-state--src-iteration-rs.html#item-enum-IterationStatus-12">IterationStatus</a>,
+        closed_at: <span class="rs-type">Option</span>&lt;<span class="rs-type">UtcDateTime</span>&gt;,
+        outcomes: <span class="rs-type">Option</span>&lt;&amp;str&gt;,
+    ) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-state--src-iteration-rs.html#item-struct-Iteration-56">Iteration</a>, <span class="rs-type">CoreError</span>&gt;;
+
+    <span class="rs-comment">/// Set the deferred-goal-for-next-iteration column.</span>
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-store-rs.html#method-set-deferred-goal-for-next-iteration-153">set_deferred_goal_for_next_iteration</a>(
+        &amp;<span class="rs-self">self</span>,
+        id: &amp;<span class="rs-type">IterationId</span>,
+        deferred_goal_for_next_iteration: <span class="rs-type">Option</span>&lt;&amp;<a class="symbol-link rs-type" href="eos-state--src-plan-rs.html#item-struct-DeferredGoal-65">DeferredGoal</a>&gt;,
+    ) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-state--src-iteration-rs.html#item-struct-Iteration-56">Iteration</a>, <span class="rs-type">CoreError</span>&gt;;
+
+    <span class="rs-comment">/// Atomically transition to `succeeded` and write the canonical outcomes.</span>
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-store-rs.html#method-close-succeeded-160">close_succeeded</a>(
+        &amp;<span class="rs-self">self</span>,
+        id: &amp;<span class="rs-type">IterationId</span>,
+        outcomes: &amp;str,
+        closed_at: <span class="rs-type">Option</span>&lt;<span class="rs-type">UtcDateTime</span>&gt;,
+    ) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-state--src-iteration-rs.html#item-struct-Iteration-56">Iteration</a>, <span class="rs-type">CoreError</span>&gt;;
+
+    <span class="rs-comment">/// All iterations of a workflow, ordered by `sequence_no`.</span>
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-store-rs.html#method-list-for-workflow-168">list_for_workflow</a>(
+        &amp;<span class="rs-self">self</span>,
+        workflow_id: &amp;<span class="rs-type">WorkflowId</span>,
+    ) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;<a class="symbol-link rs-type" href="eos-state--src-iteration-rs.html#item-struct-Iteration-56">Iteration</a>&gt;, <span class="rs-type">CoreError</span>&gt;;
+}
+
+<span class="rs-comment">/// Persistence surface for [`Attempt`] (Rust `AttemptStoreProtocol`).</span>
+#[async_trait]
+<span class="rs-kw">pub</span> <span class="rs-kw">trait</span> <a class="symbol-link rs-type" href="eos-state--src-store-rs.html#item-trait-AttemptStore-175">AttemptStore</a>: <a class="symbol-link rs-type" href="eos-state--src-store-rs.html#item-trait-Sealed-34">Sealed</a> + <span class="rs-type">Send</span> + <span class="rs-type">Sync</span> {
+    <span class="rs-comment">/// Insert a fresh attempt (`stage=plan`, `status=running`) and return it.</span>
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-store-rs.html#method-insert-47">insert</a>(
+        &amp;<span class="rs-self">self</span>,
+        iteration_id: &amp;<span class="rs-type">IterationId</span>,
+        workflow_id: &amp;<span class="rs-type">WorkflowId</span>,
+        attempt_sequence_no: i64,
+    ) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-state--src-attempt-rs.html#item-struct-Attempt-222">Attempt</a>, <span class="rs-type">CoreError</span>&gt;;
+
+    <span class="rs-comment">/// Load an attempt by id.</span>
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-plan-rs.html#method-get-201">get</a>(&amp;<span class="rs-self">self</span>, id: &amp;<span class="rs-type">AttemptId</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-state--src-attempt-rs.html#item-struct-Attempt-222">Attempt</a>&gt;, <span class="rs-type">CoreError</span>&gt;;
+
+    <span class="rs-comment">/// Record the planner task assigned to this attempt.</span>
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-store-rs.html#method-record-planner-task-189">record_planner_task</a>(
+        &amp;<span class="rs-self">self</span>,
+        id: &amp;<span class="rs-type">AttemptId</span>,
+        planner_task_id: &amp;<span class="rs-type">TaskId</span>,
+    ) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-state--src-attempt-rs.html#item-struct-Attempt-222">Attempt</a>, <span class="rs-type">CoreError</span>&gt;;
+
+    <span class="rs-comment">/// Record a materialized planner DAG and transition the attempt to RUN.</span>
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-store-rs.html#method-record-plan-196">record_plan</a>(
+        &amp;<span class="rs-self">self</span>,
+        id: &amp;<span class="rs-type">AttemptId</span>,
+        plan: &amp;<a class="symbol-link rs-type" href="eos-state--src-plan-rs.html#item-struct-MaterializedPlan-236">MaterializedPlan</a>,
+    ) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-state--src-attempt-rs.html#item-struct-Attempt-222">Attempt</a>, <span class="rs-type">CoreError</span>&gt;;
+
+    <span class="rs-comment">/// Close the attempt with a typed terminal closure.</span>
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-store-rs.html#method-close-203">close</a>(&amp;<span class="rs-self">self</span>, id: &amp;<span class="rs-type">AttemptId</span>, closure: <a class="symbol-link rs-type" href="eos-state--src-attempt-rs.html#item-enum-AttemptClosure-65">AttemptClosure</a>) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-state--src-attempt-rs.html#item-struct-Attempt-222">Attempt</a>, <span class="rs-type">CoreError</span>&gt;;
+
+    <span class="rs-comment">/// All attempts of an iteration, ordered by `attempt_sequence_no`.</span>
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-store-rs.html#method-list-for-iteration-206">list_for_iteration</a>(
+        &amp;<span class="rs-self">self</span>,
+        iteration_id: &amp;<span class="rs-type">IterationId</span>,
+    ) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;<a class="symbol-link rs-type" href="eos-state--src-attempt-rs.html#item-struct-Attempt-222">Attempt</a>&gt;, <span class="rs-type">CoreError</span>&gt;;
+}
+
+<span class="rs-comment">/// Persistence surface for requests (Rust `TaskStoreProtocol`, request half,</span>
+<span class="rs-comment">/// split out per ISP).</span>
+#[async_trait]
+<span class="rs-kw">pub</span> <span class="rs-kw">trait</span> <a class="symbol-link rs-type" href="eos-state--src-store-rs.html#item-trait-RequestStore-213">RequestStore</a>: <a class="symbol-link rs-type" href="eos-state--src-store-rs.html#item-trait-Sealed-34">Sealed</a> + <span class="rs-type">Send</span> + <span class="rs-type">Sync</span> {
+    <span class="rs-comment">/// Create a new request row (status defaults to `running`).</span>
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-store-rs.html#method-create-request-217">create_request</a>(
+        &amp;<span class="rs-self">self</span>,
+        request_id: &amp;<span class="rs-type">RequestId</span>,
+        cwd: &amp;str,
+        sandbox_id: <span class="rs-type">Option</span>&lt;&amp;<span class="rs-type">SandboxId</span>&gt;,
+        request_prompt: &amp;str,
+    ) -&gt; <span class="rs-type">Result</span>&lt;(), <span class="rs-type">CoreError</span>&gt;;
+
+    <span class="rs-comment">/// Load a request by id.</span>
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-plan-rs.html#method-get-201">get</a>(&amp;<span class="rs-self">self</span>, id: &amp;<span class="rs-type">RequestId</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-state--src-request-rs.html#item-struct-Request-30">Request</a>&gt;, <span class="rs-type">CoreError</span>&gt;;
+
+    <span class="rs-comment">/// Set the root task id and return the updated request.</span>
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-store-rs.html#method-set-root-task-id-229">set_root_task_id</a>(
+        &amp;<span class="rs-self">self</span>,
+        id: &amp;<span class="rs-type">RequestId</span>,
+        root_task_id: &amp;<span class="rs-type">TaskId</span>,
+    ) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-state--src-request-rs.html#item-struct-Request-30">Request</a>, <span class="rs-type">CoreError</span>&gt;;
+
+    <span class="rs-comment">/// Finish the request with `status`, stamping `finished_at` server-side.</span>
+    <span class="rs-comment">/// Idempotent on an already-terminal request (returns it unchanged).</span>
+    <span class="rs-comment">/// `Ok(None)` ⇒ the request does not exist.</span>
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-store-rs.html#method-finish-request-236">finish_request</a>(
+        &amp;<span class="rs-self">self</span>,
+        id: &amp;<span class="rs-type">RequestId</span>,
+        status: <a class="symbol-link rs-type" href="eos-state--src-request-rs.html#item-enum-RequestStatus-8">RequestStatus</a>,
+    ) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-state--src-request-rs.html#item-struct-Request-30">Request</a>&gt;, <span class="rs-type">CoreError</span>&gt;;
+
+    <span class="rs-comment">/// List requests matching `filter`, newest first, within the `page` window.</span>
+    <span class="rs-comment">/// `total` counts every match ignoring the window. Read-side API for the</span>
+    <span class="rs-comment">/// backend composition root (spec §State Reader); not used by agent-core's</span>
+    <span class="rs-comment">/// own request lifecycle.</span>
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-store-rs.html#method-list-245">list</a>(
+        &amp;<span class="rs-self">self</span>,
+        filter: <a class="symbol-link rs-type" href="eos-state--src-pagination-rs.html#item-struct-RequestListFilter-43">RequestListFilter</a>,
+        page: <a class="symbol-link rs-type" href="eos-state--src-pagination-rs.html#item-struct-Page-14">Page</a>,
+    ) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-state--src-pagination-rs.html#item-struct-PageResult-33">PageResult</a>&lt;<a class="symbol-link rs-type" href="eos-state--src-request-rs.html#item-struct-Request-30">Request</a>&gt;, <span class="rs-type">CoreError</span>&gt;;
+}
+
+<span class="rs-comment">/// Persistence surface for [`AgentRun`] (Rust `AgentRunStore`).</span>
+#[async_trait]
+<span class="rs-kw">pub</span> <span class="rs-kw">trait</span> <a class="symbol-link rs-type" href="eos-state--src-store-rs.html#item-trait-AgentRunStore-256">AgentRunStore</a>: <a class="symbol-link rs-type" href="eos-state--src-store-rs.html#item-trait-Sealed-34">Sealed</a> + <span class="rs-type">Send</span> + <span class="rs-type">Sync</span> {
+    <span class="rs-comment">/// Create a run row with only the create-time fields set.</span>
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-store-rs.html#method-create-run-259">create_run</a>(
+        &amp;<span class="rs-self">self</span>,
+        agent_run_id: &amp;<span class="rs-type">AgentRunId</span>,
+        task_id: &amp;<span class="rs-type">TaskId</span>,
+        agent_name: &amp;str,
+        initial_messages: <span class="rs-type">Option</span>&lt;&amp;[<span class="rs-type">JsonObject</span>]&gt;,
+    ) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-state.html#item-struct-AgentRun-8">AgentRun</a>, <span class="rs-type">CoreError</span>&gt;;
+
+    <span class="rs-comment">/// Write the finish-time fields. `Ok(None)` ⇒ the run does not exist.</span>
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-store-rs.html#method-finish-run-268">finish_run</a>(
+        &amp;<span class="rs-self">self</span>,
+        agent_run_id: &amp;<span class="rs-type">AgentRunId</span>,
+        message_history: <span class="rs-type">Option</span>&lt;&amp;[<span class="rs-type">JsonObject</span>]&gt;,
+        terminal_tool_result: <span class="rs-type">Option</span>&lt;&amp;<span class="rs-type">JsonObject</span>&gt;,
+        token_count: i64,
+        error: <span class="rs-type">Option</span>&lt;&amp;str&gt;,
+    ) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-state.html#item-struct-AgentRun-8">AgentRun</a>&gt;, <span class="rs-type">CoreError</span>&gt;;
+
+    <span class="rs-comment">/// Load a run by id.</span>
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-plan-rs.html#method-get-201">get</a>(&amp;<span class="rs-self">self</span>, agent_run_id: &amp;<span class="rs-type">AgentRunId</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-state.html#item-struct-AgentRun-8">AgentRun</a>&gt;, <span class="rs-type">CoreError</span>&gt;;
+
+    <span class="rs-comment">/// The latest agent run for one task, if any. `AgentRun.task_id` is 1:1 in</span>
+    <span class="rs-comment">/// practice; the newest row wins if a task was ever re-run. Read-side API for</span>
+    <span class="rs-comment">/// the backend composition root (spec §State Reader).</span>
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-store-rs.html#method-get-for-task-281">get_for_task</a>(&amp;<span class="rs-self">self</span>, task_id: &amp;<span class="rs-type">TaskId</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-state.html#item-struct-AgentRun-8">AgentRun</a>&gt;, <span class="rs-type">CoreError</span>&gt;;
+}
+
+<span class="rs-comment">/// Persistence surface for [`ModelRegistration`] (Rust `ModelStore`).</span>
+#[async_trait]
+<span class="rs-kw">pub</span> <span class="rs-kw">trait</span> <a class="symbol-link rs-type" href="eos-state--src-store-rs.html#item-trait-ModelStore-287">ModelStore</a>: <a class="symbol-link rs-type" href="eos-state--src-store-rs.html#item-trait-Sealed-34">Sealed</a> + <span class="rs-type">Send</span> + <span class="rs-type">Sync</span> {
+    <span class="rs-comment">/// Create or update a registration. `kwargs` is serialized to `kwargs_json`</span>
+    <span class="rs-comment">/// by `eos-db`; `activate` deactivates all others first.</span>
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-store-rs.html#method-register-290">register</a>(
+        &amp;<span class="rs-self">self</span>,
+        model_key: &amp;str,
+        label: &amp;str,
+        class_path: &amp;str,
+        kwargs: &amp;<span class="rs-type">JsonObject</span>,
+        activate: bool,
+    ) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-state--src-model-rs.html#item-struct-ModelRegistration-12">ModelRegistration</a>, <span class="rs-type">CoreError</span>&gt;;
+
+    <span class="rs-comment">/// Delete by key; `Ok(false)` ⇒ no such key.</span>
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-store-rs.html#method-delete-301">delete</a>(&amp;<span class="rs-self">self</span>, model_key: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;bool, <span class="rs-type">CoreError</span>&gt;;
+
+    <span class="rs-comment">/// Load a registration by key.</span>
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-plan-rs.html#method-get-201">get</a>(&amp;<span class="rs-self">self</span>, model_key: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-state--src-model-rs.html#item-struct-ModelRegistration-12">ModelRegistration</a>&gt;, <span class="rs-type">CoreError</span>&gt;;
+
+    <span class="rs-comment">/// The single active registration, if any.</span>
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-store-rs.html#method-active-307">active</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-state--src-model-rs.html#item-struct-ModelRegistration-12">ModelRegistration</a>&gt;, <span class="rs-type">CoreError</span>&gt;;
+}
+
+#[cfg(test)]
+<span class="rs-kw">mod</span> tests {
+    <span class="rs-kw">use</span> <span class="rs-kw">super</span>::*;
+    <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::support::<span class="rs-type">FakeTaskStore</span>;
+    <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::task::{<a class="symbol-link rs-type" href="eos-state--src-task-rs.html#item-struct-Task-66">Task</a>, <a class="symbol-link rs-type" href="eos-state--src-task-rs.html#item-enum-TaskRole-42">TaskRole</a>, <a class="symbol-link rs-type" href="eos-state--src-task-rs.html#item-enum-TaskStatus-14">TaskStatus</a>};
+    <span class="rs-kw">use</span> eos_types::<span class="rs-type">RequestId</span>;
+
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-store-rs.html#item-fn-sample-task-318">sample_task</a>() -&gt; <a class="symbol-link rs-type" href="eos-state--src-task-rs.html#item-struct-Task-66">Task</a> {
+        <a class="symbol-link rs-type" href="eos-state--src-task-rs.html#item-struct-Task-66">Task</a> {
+            id: &quot;t1&quot;.parse().expect(&quot;id&quot;),
+            request_id: <span class="rs-type">RequestId</span>::new_v4(),
+            role: <a class="symbol-link rs-type" href="eos-state--src-task-rs.html#item-enum-TaskRole-42">TaskRole</a>::<span class="rs-type">Generator</span>,
+            instruction: &quot;do the thing&quot;.to_owned(),
+            status: <a class="symbol-link rs-type" href="eos-state--src-task-rs.html#item-enum-TaskStatus-14">TaskStatus</a>::<span class="rs-type">Pending</span>,
+            workflow_id: <span class="rs-type">None</span>,
+            iteration_id: <span class="rs-type">None</span>,
+            attempt_id: <span class="rs-type">None</span>,
+            agent_name: <span class="rs-type">Some</span>(&quot;coder&quot;.to_owned()),
+            needs: <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-state--src-plan-rs.html#method-new-18">new</a>(),
+            outcomes: <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-state--src-plan-rs.html#method-new-18">new</a>(),
+            terminal_tool_result: <span class="rs-type">None</span>,
+        }
+    }
+
+    <span class="rs-comment">// AC-eos-state-06: TaskStore is fully typed — a trait-object round-trips a</span>
+    <span class="rs-comment">// Task losslessly (no dict/Value row type anywhere in the surface).</span>
+    #[tokio::test]
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-store-rs.html#item-fn-task-store-is-typed-337">task_store_is_typed</a>() {
+        <span class="rs-kw">let</span> store: &amp;<span class="rs-kw">dyn</span> <a class="symbol-link rs-type" href="eos-state--src-store-rs.html#item-trait-TaskStore-82">TaskStore</a> = &amp;<span class="rs-type">FakeTaskStore</span>::<a class="symbol-link rs-fn" href="eos-state--src-plan-rs.html#method-new-18">new</a>();
+        <span class="rs-kw">let</span> task = <a class="symbol-link rs-fn" href="eos-state--src-store-rs.html#item-fn-sample-task-318">sample_task</a>();
+        store.<a class="symbol-link rs-fn" href="eos-state--src-store-rs.html#method-insert-task-85">insert_task</a>(&amp;task).<span class="rs-kw">await</span>.expect(&quot;insert&quot;);
+        <span class="rs-kw">let</span> got = store.<a class="symbol-link rs-fn" href="eos-state--src-plan-rs.html#method-get-201">get</a>(&amp;task.id).<span class="rs-kw">await</span>.expect(&quot;get&quot;).expect(&quot;present&quot;);
+        assert_eq!(got, task);
+    }
+
+    <span class="rs-comment">// AC-eos-state-08: set_task_status_if_current returns Ok(None) on mismatch</span>
+    <span class="rs-comment">// and Ok(Some(_)) on a successful flip.</span>
+    #[tokio::test]
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-store-rs.html#item-fn-optimistic-status-flip-348">optimistic_status_flip</a>() {
+        <span class="rs-kw">let</span> store = <span class="rs-type">FakeTaskStore</span>::<a class="symbol-link rs-fn" href="eos-state--src-plan-rs.html#method-new-18">new</a>();
+        <span class="rs-kw">let</span> task = <a class="symbol-link rs-fn" href="eos-state--src-store-rs.html#item-fn-sample-task-318">sample_task</a>(); <span class="rs-comment">// status = Pending</span>
+        store.<a class="symbol-link rs-fn" href="eos-state--src-store-rs.html#method-insert-task-85">insert_task</a>(&amp;task).<span class="rs-kw">await</span>.expect(&quot;insert&quot;);
+
+        <span class="rs-comment">// Mismatched expectation is a no-op.</span>
+        <span class="rs-kw">let</span> miss = store
+            .<a class="symbol-link rs-fn" href="eos-state--src-store-rs.html#method-set-task-status-if-current-91">set_task_status_if_current</a>(&amp;task.id, <a class="symbol-link rs-type" href="eos-state--src-task-rs.html#item-enum-TaskStatus-14">TaskStatus</a>::<span class="rs-type">Running</span>, <a class="symbol-link rs-type" href="eos-state--src-task-rs.html#item-enum-TaskStatus-14">TaskStatus</a>::<span class="rs-type">Done</span>, <span class="rs-type">None</span>, <span class="rs-type">None</span>)
+            .<span class="rs-kw">await</span>
+            .expect(&quot;cas&quot;);
+        assert!(miss.is_none());
+        assert_eq!(
+            store
+                .<a class="symbol-link rs-fn" href="eos-state--src-plan-rs.html#method-get-201">get</a>(&amp;task.id)
+                .<span class="rs-kw">await</span>
+                .expect(&quot;get&quot;)
+                .expect(&quot;present&quot;)
+                .status,
+            <a class="symbol-link rs-type" href="eos-state--src-task-rs.html#item-enum-TaskStatus-14">TaskStatus</a>::<span class="rs-type">Pending</span>
+        );
+
+        <span class="rs-comment">// Matching expectation flips and returns the updated task.</span>
+        <span class="rs-kw">let</span> hit = store
+            .<a class="symbol-link rs-fn" href="eos-state--src-store-rs.html#method-set-task-status-if-current-91">set_task_status_if_current</a>(
+                &amp;task.id,
+                <a class="symbol-link rs-type" href="eos-state--src-task-rs.html#item-enum-TaskStatus-14">TaskStatus</a>::<span class="rs-type">Pending</span>,
+                <a class="symbol-link rs-type" href="eos-state--src-task-rs.html#item-enum-TaskStatus-14">TaskStatus</a>::<span class="rs-type">Running</span>,
+                <span class="rs-type">None</span>,
+                <span class="rs-type">None</span>,
+            )
+            .<span class="rs-kw">await</span>
+            .expect(&quot;cas&quot;)
+            .expect(&quot;flipped&quot;);
+        assert_eq!(hit.status, <a class="symbol-link rs-type" href="eos-state--src-task-rs.html#item-enum-TaskStatus-14">TaskStatus</a>::<span class="rs-type">Running</span>);
+    }
+}
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
   <script src="../assets/inventory.js"></script>
 </body>
 </html>

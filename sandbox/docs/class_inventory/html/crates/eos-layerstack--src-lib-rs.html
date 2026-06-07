@@ -8,8 +8,16 @@
 </head>
 <body>
   <header>
-    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
-    <h1>eos-layerstack File Inventory</h1>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>eos-layerstack File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS/sandbox &amp;&amp; cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
   </header>
   <a class="back-link" href="../index.html">sandbox</a>
 <section class="summary">
@@ -50,6 +58,92 @@
   <div class="items"></div>
 </section></div>
 </main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/eos-layerstack/src/lib.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-comment">//! Layer-stack storage: durable truth for the sandbox.</span>
+<span class="rs-comment">//!</span>
+<span class="rs-comment">//! # Invariant owned by this crate</span>
+<span class="rs-comment">//!</span>
+<span class="rs-comment">//! The manifest CAS is the **SINGLE linearization point**: ONE mutable</span>
+<span class="rs-comment">//! `manifest.json` over immutable, content-addressed layer directories, swapped</span>
+<span class="rs-comment">//! by an ATOMIC pointer write. There is no other place state becomes durable.</span>
+<span class="rs-comment">//!</span>
+<span class="rs-comment">//! - A **snapshot is O(1)**: it returns a [`Lease`] + the manifest's EXISTING</span>
+<span class="rs-comment">//!   `layer_paths`, NEVER a rendered tree. Rendering is the caller's</span>
+<span class="rs-comment">//!   overlay/projection concern.</span>
+<span class="rs-comment">//! - [`LeaseRegistry::leased_layers`] (the FULL on-disk retention set) and</span>
+<span class="rs-comment">//!   [`LeaseRegistry::lease_head_layers`] (the squash-keep barrier set) are</span>
+<span class="rs-comment">//!   **DISTINCT** sets — see [`lease`].</span>
+<span class="rs-comment">//! - **Squash is NON-DESTRUCTIVE** until the retaining lease releases: a layer</span>
+<span class="rs-comment">//!   below a lease head folds into a checkpoint, but the underlying directory</span>
+<span class="rs-comment">//!   stays on disk for that lease's frozen reads until release GCs it.</span>
+<span class="rs-comment">//!</span>
+<span class="rs-comment">//! # The no-publish guarantee is enforced by the dependency graph</span>
+<span class="rs-comment">//!</span>
+<span class="rs-comment">//! `eos-isolated-workspace` captures writes for audit but can NEVER publish — guaranteed</span>
+<span class="rs-comment">//! structurally because it does not depend on `eos-occ` (a build-time edge, not</span>
+<span class="rs-comment">//! a convention). The snapshot/lease read surface ([`LayerStack`] +</span>
+<span class="rs-comment">//! [`MergedView`] + [`Lease`]) is owned here; the publish-side transaction is</span>
+<span class="rs-comment">//! daemon-owned. Lower crates that need a narrow read port define and inject it</span>
+<span class="rs-comment">//! at their own boundary rather than importing this crate.</span>
+<span class="rs-comment">//!</span>
+<span class="rs-comment">//! # Build-time / threading guarantee</span>
+<span class="rs-comment">//!</span>
+<span class="rs-comment">//! Single-threaded core plus a per-root reentrant write lease (the dual-layer</span>
+<span class="rs-comment">//! `flock` cross-process lease + in-process reentrant mutex). No tokio. The</span>
+<span class="rs-comment">//! reentrant-RLock → non-reentrant-Mutex DEADLOCK TRAP is documented in</span>
+<span class="rs-comment">//! [`storage_lock`] — do NOT 1:1-port it.</span>
+#![forbid(unsafe_code)]
+
+<span class="rs-kw">pub</span> <span class="rs-kw">mod</span> error;
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">mod</span> fsutil;
+<span class="rs-kw">pub</span> <span class="rs-kw">mod</span> lease;
+<span class="rs-kw">pub</span> <span class="rs-kw">mod</span> squash;
+<span class="rs-kw">pub</span> <span class="rs-kw">mod</span> stack;
+<span class="rs-kw">pub</span> <span class="rs-kw">mod</span> storage_lock;
+<span class="rs-kw">pub</span> <span class="rs-kw">mod</span> workspace_base;
+<span class="rs-kw">pub</span> <span class="rs-kw">mod</span> workspace_binding;
+
+<span class="rs-comment">// CAS types are owned by eos-protocol; re-export so downstream crates use ONE</span>
+<span class="rs-comment">// set of hashes/types and never redefine them.</span>
+<span class="rs-kw">pub</span> <span class="rs-kw">use</span> eos_protocol::{
+    aggregate_layer_changes, layer_digest, manifest_root_hash, <span class="rs-type">LayerChange</span>, <span class="rs-type">LayerPath</span>, <span class="rs-type">LayerRef</span>,
+    <span class="rs-type">Manifest</span>,
+};
+
+<span class="rs-kw">pub</span> <span class="rs-kw">use</span> error::<a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>;
+<span class="rs-kw">pub</span> <span class="rs-kw">use</span> lease::{<a class="symbol-link rs-type" href="eos-layerstack--src-lease-rs.html#item-struct-LayerStackLeaseRecord-24">LayerStackLeaseRecord</a>, <a class="symbol-link rs-type" href="eos-layerstack--src-lease-rs.html#item-struct-LeaseRegistry-31">LeaseRegistry</a>};
+<span class="rs-kw">pub</span> <span class="rs-kw">use</span> squash::{
+    manifest_prefix_before_plan, <a class="symbol-link rs-type" href="eos-layerstack--src-squash-rs.html#item-struct-CheckpointSegment-28">CheckpointSegment</a>, <a class="symbol-link rs-type" href="eos-layerstack--src-squash-rs.html#item-struct-LayerCheckpointSquasher-123">LayerCheckpointSquasher</a>, <a class="symbol-link rs-type" href="eos-layerstack--src-squash-rs.html#item-struct-SquashPlan-61">SquashPlan</a>,
+    <a class="symbol-link rs-type" href="eos-layerstack--src-squash-rs.html#item-enum-SquashPlanEntry-52">SquashPlanEntry</a>,
+};
+<span class="rs-kw">pub</span> <span class="rs-kw">use</span> stack::{<a class="symbol-link rs-type" href="eos-layerstack--src-stack-rs.html#item-struct-LayerStack-188">LayerStack</a>, <a class="symbol-link rs-type" href="eos-layerstack--src-stack-rs.html#item-struct-Lease-43">Lease</a>, <a class="symbol-link rs-type" href="eos-layerstack--src-stack-rs.html#item-struct-MergedView-59">MergedView</a>};
+<span class="rs-kw">pub</span> <span class="rs-kw">use</span> storage_lock::{<a class="symbol-link rs-type" href="eos-layerstack--src-storage-lock-rs.html#item-struct-StorageWriterLockLease-44">StorageWriterLockLease</a>, <span class="rs-type">STORAGE_WRITER_LOCK_FILE</span>};
+<span class="rs-kw">pub</span> <span class="rs-kw">use</span> workspace_base::{build_workspace_base, ensure_workspace_base, <span class="rs-type">WORKSPACE_BASE_LAYER_ID</span>};
+<span class="rs-kw">pub</span> <span class="rs-kw">use</span> workspace_binding::{
+    read_workspace_binding, require_workspace_binding, <a class="symbol-link rs-type" href="eos-layerstack--src-workspace-binding-rs.html#item-struct-WorkspaceBinding-14">WorkspaceBinding</a>, <span class="rs-type">WORKSPACE_BINDING_FILE</span>,
+};
+
+<span class="rs-comment">/// Auto-squash depth target — distinct from the kernel overlayfs layer ceiling.</span>
+<span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-type">AUTO_SQUASH_MAX_DEPTH</span>: usize = 100;
+
+<span class="rs-comment">/// Storage layout subdirectory for immutable layer directories.</span>
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">const</span> <span class="rs-type">LAYERS_DIR</span>: &amp;str = &quot;layers&quot;;
+
+<span class="rs-comment">/// Storage layout subdirectory for in-flight commit/checkpoint staging dirs.</span>
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">const</span> <span class="rs-type">STAGING_DIR</span>: &amp;str = &quot;staging&quot;;
+
+<span class="rs-comment">/// Active-manifest pointer filename under a storage root.</span>
+<span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-type">ACTIVE_MANIFEST_FILE</span>: &amp;str = &quot;manifest.json&quot;;
+
+<span class="rs-comment">/// Sidecar directory for per-layer digests used by head-layer idempotency.</span>
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">const</span> <span class="rs-type">LAYER_METADATA_DIR</span>: &amp;str = &quot;.layer-metadata&quot;;
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
   <script src="../assets/inventory.js"></script>
 </body>
 </html>

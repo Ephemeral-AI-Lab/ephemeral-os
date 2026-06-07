@@ -8,15 +8,23 @@
 </head>
 <body>
   <header>
-    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
-    <h1>eos-runtime File Inventory</h1>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>eos-runtime File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS/agent-core &amp;&amp; cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
   </header>
   <a class="back-link" href="../index.html">agent-core</a>
 <section class="summary">
-  <div><b>17</b><span>modules</span></div>
-  <div><b>75</b><span>items</span></div>
-  <div><b>71</b><span>fields</span></div>
-  <div><b>45</b><span>methods</span></div>
+  <div><b>19</b><span>modules</span></div>
+  <div><b>82</b><span>items</span></div>
+  <div><b>77</b><span>fields</span></div>
+  <div><b>51</b><span>methods</span></div>
 </section>
 <section class="toolbar">
   <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
@@ -32,7 +40,7 @@
   </select>
 </section>
 <main class="crate-layout">
-  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><a class="file-link" href="eos-runtime.html"><span>agent_runner.rs</span><small>1/1</small></a></li><li><a class="file-link" href="eos-runtime--src-entry-rs.html"><span>entry.rs</span><small>1/4</small></a></li><li><a class="file-link active" href="eos-runtime--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-runtime--src-main-rs.html"><span>main.rs</span><small>0/3</small></a></li><li><a class="file-link" href="eos-runtime--src-observability-rs.html"><span>observability.rs</span><small>1/2</small></a></li><li><a class="file-link" href="eos-runtime--src-plugin-tools-rs.html"><span>plugin_tools.rs</span><small>3/10</small></a></li><li><a class="file-link" href="eos-runtime--src-request-input-rs.html"><span>request_input.rs</span><small>1/0</small></a></li><li><span class="folder">runtime_services</span><ul class="file-tree"><li><a class="file-link" href="eos-runtime--src-runtime-services-agent-core-registry-rs.html"><span>agent_core_registry.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-runtime--src-runtime-services-audit-rs.html"><span>audit.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-runtime--src-runtime-services-builder-rs.html"><span>builder.rs</span><small>4/14</small></a></li><li><a class="file-link" href="eos-runtime--src-runtime-services-db-store-rs.html"><span>db_store.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-runtime--src-runtime-services-engine-rs.html"><span>engine.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-runtime--src-runtime-services-message-records-rs.html"><span>message_records.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-runtime--src-runtime-services-mod-rs.html"><span>mod.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-runtime--src-runtime-services-sandbox-rs.html"><span>sandbox.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-runtime--src-runtime-services-state-reader-rs.html"><span>state_reader.rs</span><small>1/0</small></a></li></ul></li><li><a class="file-link" href="eos-runtime--src-tool-context-rs.html"><span>tool_context.rs</span><small>1/1</small></a></li></ul></li></ul></nav>
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><a class="file-link" href="eos-runtime.html"><span>agent_runner.rs</span><small>1/1</small></a></li><li><a class="file-link" href="eos-runtime--src-cancel-rs.html"><span>cancel.rs</span><small>1/1</small></a></li><li><a class="file-link" href="eos-runtime--src-entry-rs.html"><span>entry.rs</span><small>1/4</small></a></li><li><a class="file-link active" href="eos-runtime--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-runtime--src-main-rs.html"><span>main.rs</span><small>0/3</small></a></li><li><a class="file-link" href="eos-runtime--src-observability-rs.html"><span>observability.rs</span><small>1/2</small></a></li><li><a class="file-link" href="eos-runtime--src-plugin-tools-rs.html"><span>plugin_tools.rs</span><small>3/10</small></a></li><li><a class="file-link" href="eos-runtime--src-request-input-rs.html"><span>request_input.rs</span><small>1/0</small></a></li><li><span class="folder">runtime_services</span><ul class="file-tree"><li><a class="file-link" href="eos-runtime--src-runtime-services-agent-core-registry-rs.html"><span>agent_core_registry.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-runtime--src-runtime-services-audit-rs.html"><span>audit.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-runtime--src-runtime-services-builder-rs.html"><span>builder.rs</span><small>4/14</small></a></li><li><a class="file-link" href="eos-runtime--src-runtime-services-cancel-registry-rs.html"><span>cancel_registry.rs</span><small>2/0</small></a></li><li><a class="file-link" href="eos-runtime--src-runtime-services-db-store-rs.html"><span>db_store.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-runtime--src-runtime-services-engine-rs.html"><span>engine.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-runtime--src-runtime-services-message-records-rs.html"><span>message_records.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-runtime--src-runtime-services-mod-rs.html"><span>mod.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-runtime--src-runtime-services-sandbox-rs.html"><span>sandbox.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-runtime--src-runtime-services-state-reader-rs.html"><span>state_reader.rs</span><small>1/0</small></a></li></ul></li><li><a class="file-link" href="eos-runtime--src-tool-context-rs.html"><span>tool_context.rs</span><small>1/1</small></a></li></ul></li></ul></nav>
   <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="lib crates/eos-runtime/src/lib.rs ">
   <div class="module-head">
     <div>
@@ -50,6 +58,61 @@
   <div class="items"></div>
 </section></div>
 </main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/eos-runtime/src/lib.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-comment">//! `eos-runtime` — the composition root of agent-core.</span>
+<span class="rs-comment">//!</span>
+<span class="rs-comment">//! This crate owns the typed dependency graph ([`RuntimeServices`]) that constructs</span>
+<span class="rs-comment">//! every concrete store (from `eos-db`) and every concrete seam implementation</span>
+<span class="rs-comment">//! ([`LlmClient`](eos_llm_client::LlmClient), provider registry, audit sink,</span>
+<span class="rs-comment">//! clock, registries), then injects those concretes into the trait seams the</span>
+<span class="rs-comment">//! engine and workflow crates depend on (DIP). For a top-level request it mints</span>
+<span class="rs-comment">//! the root [`Task`](eos_state::Task) — its id derived from the caller-injected</span>
+<span class="rs-comment">//! `request_id` — and runs the root agent **inline to completion** through</span>
+<span class="rs-comment">//! `eos-engine`, returning the root's outcome ([`run_request`] →</span>
+<span class="rs-comment">//! [`RequestOutcome`]); there is no root workflow, no spawn, and no request</span>
+<span class="rs-comment">//! handle. It provisions one sandbox binding per request and wires the</span>
+<span class="rs-comment">//! per-request delegated-workflow runtime</span>
+<span class="rs-comment">//! ([`AttemptDeps`](eos_workflow::AttemptDeps) + the `AgentRunner` adapter + the</span>
+<span class="rs-comment">//! downstream-state ports).</span>
+<span class="rs-comment">//!</span>
+<span class="rs-comment">//! What this crate must **not** do: define any domain/store/seam trait (those</span>
+<span class="rs-comment">//! are owned upstream), implement query-loop / tool-dispatch / workflow</span>
+<span class="rs-comment">//! scheduling logic, introduce a global agent orchestrator, or mutate the parent</span>
+<span class="rs-comment">//! Task at workflow close. It is the only crate that may use `anyhow` and the</span>
+<span class="rs-comment">//! only crate that constructs/owns the async runtime.</span>
+#![forbid(unsafe_code)]
+#![warn(missing_docs)]
+
+<span class="rs-kw">mod</span> agent_runner;
+<span class="rs-kw">mod</span> cancel;
+<span class="rs-kw">mod</span> entry;
+<span class="rs-kw">pub</span> <span class="rs-kw">mod</span> observability;
+<span class="rs-kw">mod</span> plugin_tools;
+<span class="rs-kw">mod</span> request_input;
+<span class="rs-kw">mod</span> runtime_services;
+<span class="rs-kw">mod</span> tool_context;
+
+#[cfg(test)]
+#[path = &quot;../tests/unit/<span class="rs-kw">mod</span>.rs&quot;]
+<span class="rs-kw">mod</span> tests;
+
+<span class="rs-kw">pub</span> <span class="rs-kw">use</span> cancel::{cancel_agent_core_user_request, <a class="symbol-link rs-type" href="eos-runtime--src-cancel-rs.html#item-struct-CancelReport-16">CancelReport</a>};
+<span class="rs-kw">pub</span> <span class="rs-kw">use</span> entry::{run_request, <a class="symbol-link rs-type" href="eos-runtime--src-entry-rs.html#item-struct-RequestOutcome-38">RequestOutcome</a>};
+<span class="rs-kw">pub</span> <span class="rs-kw">use</span> request_input::<a class="symbol-link rs-type" href="eos-runtime--src-request-input-rs.html#item-struct-RequestRunInput-6">RequestRunInput</a>;
+<span class="rs-kw">pub</span> <span class="rs-kw">use</span> runtime_services::{
+    <span class="rs-type">EventCallback</span>, <span class="rs-type">EventSourceFactory</span>, <a class="symbol-link rs-type" href="eos-runtime--src-runtime-services-mod-rs.html#item-struct-RuntimeServices-36">RuntimeServices</a>, <a class="symbol-link rs-type" href="eos-runtime--src-runtime-services-builder-rs.html#item-struct-RuntimeServicesBuilder-95">RuntimeServicesBuilder</a>, <a class="symbol-link rs-type" href="eos-runtime--src-runtime-services-state-reader-rs.html#item-struct-StateReader-14">StateReader</a>,
+};
+
+<span class="rs-comment">// Re-export the sandbox binding value object owned by the sandbox port; this</span>
+<span class="rs-comment">// crate references it in its public run input/outcome surface.</span>
+<span class="rs-kw">pub</span> <span class="rs-kw">use</span> eos_sandbox_port::<span class="rs-type">RequestSandboxBinding</span>;
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
   <script src="../assets/inventory.js"></script>
 </body>
 </html>

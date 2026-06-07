@@ -8,8 +8,16 @@
 </head>
 <body>
   <header>
-    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
-    <h1>eos-llm-client File Inventory</h1>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>eos-llm-client File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS/agent-core &amp;&amp; cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
   </header>
   <a class="back-link" href="../index.html">agent-core</a>
 <section class="summary">
@@ -47,109 +55,577 @@
       <span>4 methods</span>
     </div>
   </div>
-  <div class="items"><div class="group-label">File-Owned Types</div><article class="type-card" data-kind="enum" data-kind-list="enum field impl method type-model" data-filter-text="enum Auth pub pub enum Auth crates/eos-llm-client/src/auth.rs  ">
+  <div class="items"><div class="group-label">File-Owned Types</div><article id="item-enum-Auth-38" class="type-card" data-kind="enum" data-kind-list="enum field impl method type-model" data-filter-text="enum Auth pub pub enum Auth crates/eos-llm-client/src/auth.rs  ">
   <div class="item-head">
     <span class="kind">enum</span>
     <h3>Auth</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub enum Auth</code>
-  <div class="tags"></div>
-  <h4>Variants</h4><table><tbody><tr><td>ApiKey</td><td><code>0: SecretString</code></td></tr><tr><td>Bearer</td><td><code>0: SecretString</code></td></tr><tr><td>CodexAccess</td><td><code>token: SecretString, account_id: String, is_fedramp_account: bool</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr><td>method</td><td>apply</td><td><code>pub(crate) fn apply (&amp; self , headers : &amp; mut HeaderMap) -&gt; Result &lt; () , ProviderError &gt;</code></td></tr><tr><td>associated-fn</td><td>api_key</td><td><code>pub fn api_key (key : impl Into &lt; String &gt;) -&gt; Self</code></td></tr><tr><td>associated-fn</td><td>bearer</td><td><code>pub fn bearer (key : impl Into &lt; String &gt;) -&gt; Self</code></td></tr><tr><td>associated-fn</td><td>codex_access_token_from_jwt</td><td><code>pub fn codex_access_token_from_jwt (token : impl Into &lt; String &gt;) -&gt; Result &lt; Self , ProviderError &gt;</code></td></tr></tbody></table>
+  <code class="signature">pub enum <a class="symbol-link" href="eos-llm-client.html#item-enum-Auth-38">Auth</a></code>
+  <p class="docstring">How to authenticate a provider request.<br>`PartialEq` is intentionally not derived: [`SecretString`] does not implement<br>it (constant-time-comparison hygiene), and equality on credentials is not a<br>meaningful operation. `Debug` is the `SecretString`-redacted form.</p>
+  <div class="tags"><span>derive: Debug</span><span>non_exhaustive</span></div>
+  <h4>Variants</h4><table><tbody><tr><td>ApiKey</td><td><code>0: SecretString</code></td></tr><tr><td>Bearer</td><td><code>0: SecretString</code></td></tr><tr><td>CodexAccess</td><td><code>token: SecretString, account_id: String, is_fedramp_account: bool</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-apply-105"><td>method</td><td>apply</td><td><code>pub(crate) fn <a class="symbol-link" href="eos-llm-client.html#method-apply-105">apply</a> (&amp; self , headers : &amp; mut HeaderMap) -&gt; Result &lt; () , <a class="symbol-link" href="eos-llm-client--src-error-rs.html#item-struct-ProviderError-29">ProviderError</a> &gt;</code><p class="docstring">Apply the matching authentication header to `headers`.<br>Returns [`ProviderError::request`] if the credential is not a valid<br>header value (e.g. contains control characters). Crate-internal: the<br>provider clients call this; the public surface is the `Auth` constructors<br>passed into `AnthropicApiClient::new`/`OpenAiApiClient::new`.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Apply the matching authentication header to `headers`.</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// Returns [`ProviderError::request`] if the credential is not a valid</span>
+    <span class="rs-comment">/// header value (e.g. contains control characters). Crate-internal: the</span>
+    <span class="rs-comment">/// provider clients call this; the public surface is the `Auth` constructors</span>
+    <span class="rs-comment">/// passed into `AnthropicApiClient::new`/`OpenAiApiClient::new`.</span>
+    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-llm-client.html#method-apply-105">apply</a>(&amp;<span class="rs-self">self</span>, headers: &amp;<span class="rs-kw">mut</span> <span class="rs-type">HeaderMap</span>) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-llm-client--src-error-rs.html#item-struct-ProviderError-29">ProviderError</a>&gt; {
+        <span class="rs-kw">match</span> <span class="rs-self">self</span> {
+            <span class="rs-self">Self</span>::<span class="rs-type">ApiKey</span>(secret) =&gt; {
+                <span class="rs-kw">let</span> <span class="rs-kw">mut</span> value = <span class="rs-type">HeaderValue</span>::from_str(secret.expose_secret())
+                    .map_err(|_| <a class="symbol-link rs-type" href="eos-llm-client--src-error-rs.html#item-struct-ProviderError-29">ProviderError</a>::<a class="symbol-link rs-fn" href="eos-llm-client--src-error-rs.html#method-request-96">request</a>(&quot;api key is not a valid header value&quot;))?;
+                value.set_sensitive(<span class="rs-kw">true</span>);
+                headers.insert(<span class="rs-type">X_API_KEY</span>, value);
+            }
+            <span class="rs-self">Self</span>::<span class="rs-type">Bearer</span>(secret) =&gt; {
+                <span class="rs-kw">let</span> <span class="rs-kw">mut</span> value =
+                    <span class="rs-type">HeaderValue</span>::from_str(&amp;format!(&quot;<span class="rs-type">Bearer</span> {}&quot;, secret.expose_secret())).map_err(
+                        |_| <a class="symbol-link rs-type" href="eos-llm-client--src-error-rs.html#item-struct-ProviderError-29">ProviderError</a>::<a class="symbol-link rs-fn" href="eos-llm-client--src-error-rs.html#method-request-96">request</a>(&quot;bearer token is not a valid header value&quot;),
+                    )?;
+                value.set_sensitive(<span class="rs-kw">true</span>);
+                headers.insert(<span class="rs-type">AUTHORIZATION</span>, value);
+            }
+            <span class="rs-self">Self</span>::<span class="rs-type">CodexAccess</span> {
+                token,
+                account_id,
+                is_fedramp_account,
+            } =&gt; {
+                <span class="rs-kw">let</span> <span class="rs-kw">mut</span> value = <span class="rs-type">HeaderValue</span>::from_str(&amp;format!(&quot;<span class="rs-type">Bearer</span> {}&quot;, token.expose_secret()))
+                    .map_err(|_| {
+                        <a class="symbol-link rs-type" href="eos-llm-client--src-error-rs.html#item-struct-ProviderError-29">ProviderError</a>::<a class="symbol-link rs-fn" href="eos-llm-client--src-error-rs.html#method-request-96">request</a>(&quot;codex access token is not a valid header value&quot;)
+                    })?;
+                value.set_sensitive(<span class="rs-kw">true</span>);
+                headers.insert(<span class="rs-type">AUTHORIZATION</span>, value);
+
+                <span class="rs-kw">let</span> value = <span class="rs-type">HeaderValue</span>::from_str(account_id).map_err(|_| {
+                    <a class="symbol-link rs-type" href="eos-llm-client--src-error-rs.html#item-struct-ProviderError-29">ProviderError</a>::<a class="symbol-link rs-fn" href="eos-llm-client--src-error-rs.html#method-request-96">request</a>(&quot;codex account id is not a valid header value&quot;)
+                })?;
+                headers.insert(<span class="rs-type">CHATGPT_ACCOUNT_ID</span>, value);
+
+                <span class="rs-kw">if</span> *is_fedramp_account {
+                    headers.insert(<span class="rs-type">X_OPENAI_FEDRAMP</span>, <span class="rs-type">HeaderValue</span>::from_static(&quot;<span class="rs-kw">true</span>&quot;));
+                }
+            }
+        }
+        <span class="rs-type">Ok</span>(())
+    }
+</code></pre>
+</details></td></tr><tr id="method-api-key-62"><td>associated-fn</td><td>api_key</td><td><code>pub fn <a class="symbol-link" href="eos-llm-client.html#method-api-key-62">api_key</a> (key : impl Into &lt; String &gt;) -&gt; Self</code><p class="docstring">Construct an `x-api-key` credential.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Construct an `x-api-key` credential.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-llm-client.html#method-api-key-62">api_key</a>(key: <span class="rs-kw">impl</span> <span class="rs-type">Into</span>&lt;<span class="rs-type">String</span>&gt;) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">Self</span>::<span class="rs-type">ApiKey</span>(<span class="rs-type">SecretString</span>::<a class="symbol-link rs-fn" href="eos-llm-client--src-client-rs.html#method-new-56">new</a>(key.into()))
+    }
+</code></pre>
+</details></td></tr><tr id="method-bearer-68"><td>associated-fn</td><td>bearer</td><td><code>pub fn <a class="symbol-link" href="eos-llm-client.html#method-bearer-68">bearer</a> (key : impl Into &lt; String &gt;) -&gt; Self</code><p class="docstring">Construct a `Bearer` credential.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Construct a `Bearer` credential.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-llm-client.html#method-bearer-68">bearer</a>(key: <span class="rs-kw">impl</span> <span class="rs-type">Into</span>&lt;<span class="rs-type">String</span>&gt;) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">Self</span>::<span class="rs-type">Bearer</span>(<span class="rs-type">SecretString</span>::<a class="symbol-link rs-fn" href="eos-llm-client--src-client-rs.html#method-new-56">new</a>(key.into()))
+    }
+</code></pre>
+</details></td></tr><tr id="method-codex-access-token-from-jwt-74"><td>associated-fn</td><td>codex_access_token_from_jwt</td><td><code>pub fn <a class="symbol-link" href="eos-llm-client.html#method-codex-access-token-from-jwt-74">codex_access_token_from_jwt</a> (token : impl Into &lt; String &gt;) -&gt; Result &lt; Self , <a class="symbol-link" href="eos-llm-client--src-error-rs.html#item-struct-ProviderError-29">ProviderError</a> &gt;</code><p class="docstring">Construct Codex access-token credentials from the token JWT claims.<br>The token must carry the `ChatGPT` workspace/account id in the<br>`https://api.openai.com/auth` claim. This function reads only the token<br>value supplied by the caller; it does not load or parse any credential<br>cache file.<br># Errors<br>Returns [`ProviderError::request`] when the token is not JWT-shaped, the<br>payload cannot be decoded, or the required account id claim is absent.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Construct Codex access-token credentials from the token JWT claims.</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// The token must carry the `ChatGPT` workspace/account id in the</span>
+    <span class="rs-comment">/// `https://api.openai.com/auth` claim. This function reads only the token</span>
+    <span class="rs-comment">/// value supplied by the caller; it does not load or parse any credential</span>
+    <span class="rs-comment">/// cache file.</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// # Errors</span>
+    <span class="rs-comment">/// Returns [`ProviderError::request`] when the token is not JWT-shaped, the</span>
+    <span class="rs-comment">/// payload cannot be decoded, or the required account id claim is absent.</span>
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-llm-client.html#method-codex-access-token-from-jwt-74">codex_access_token_from_jwt</a>(token: <span class="rs-kw">impl</span> <span class="rs-type">Into</span>&lt;<span class="rs-type">String</span>&gt;) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-self">Self</span>, <a class="symbol-link rs-type" href="eos-llm-client--src-error-rs.html#item-struct-ProviderError-29">ProviderError</a>&gt; {
+        <span class="rs-kw">let</span> token = token.into();
+        <span class="rs-kw">let</span> claims = <a class="symbol-link rs-fn" href="eos-llm-client.html#item-fn-decode-codex-access-claims-153">decode_codex_access_claims</a>(&amp;token)?;
+        <span class="rs-kw">let</span> auth = claims.auth.ok_or_else(|| {
+            <a class="symbol-link rs-type" href="eos-llm-client--src-error-rs.html#item-struct-ProviderError-29">ProviderError</a>::<a class="symbol-link rs-fn" href="eos-llm-client--src-error-rs.html#method-request-96">request</a>(format!(
+                &quot;codex access token missing {<span class="rs-type">OPENAI_AUTH_CLAIM</span>} claim&quot;
+            ))
+        })?;
+        <span class="rs-kw">let</span> account_id = auth
+            .chatgpt_account_id
+            .filter(|value| !value.trim().is_empty())
+            .ok_or_else(|| {
+                <a class="symbol-link rs-type" href="eos-llm-client--src-error-rs.html#item-struct-ProviderError-29">ProviderError</a>::<a class="symbol-link rs-fn" href="eos-llm-client--src-error-rs.html#method-request-96">request</a>(&quot;codex access token missing chatgpt_account_id claim&quot;)
+            })?;
+        <span class="rs-type">Ok</span>(<span class="rs-self">Self</span>::<span class="rs-type">CodexAccess</span> {
+            token: <span class="rs-type">SecretString</span>::<a class="symbol-link rs-fn" href="eos-llm-client--src-client-rs.html#method-new-56">new</a>(token),
+            account_id,
+            is_fedramp_account: auth.chatgpt_account_is_fedramp,
+        })
+    }
+</code></pre>
+</details></td></tr></tbody></table>
+
   <p class="source">crates/eos-llm-client/src/auth.rs:38</p>
-</article><article class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct CodexAccessClaims private struct CodexAccessClaims crates/eos-llm-client/src/auth.rs auth Option &lt; CodexAuthClaims &gt; ">
+</article><article id="item-struct-CodexAccessClaims-25" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct CodexAccessClaims private struct CodexAccessClaims crates/eos-llm-client/src/auth.rs auth Option &lt; CodexAuthClaims &gt; ">
   <div class="item-head">
     <span class="kind">struct</span>
     <h3>CodexAccessClaims</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">struct CodexAccessClaims</code>
-  <div class="tags"><span>serde</span></div>
-  <h4>Fields</h4><table><tbody><tr><td>private</td><td>auth</td><td><code>Option &lt; CodexAuthClaims &gt;</code></td></tr></tbody></table>
+  <code class="signature">struct <a class="symbol-link" href="eos-llm-client.html#item-struct-CodexAccessClaims-25">CodexAccessClaims</a></code>
+  <div class="tags"><span>derive: Debug</span><span>derive: Deserialize</span><span>serde</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>auth</td><td><code>Option &lt; <a class="symbol-link" href="eos-llm-client.html#item-struct-CodexAuthClaims-31">CodexAuthClaims</a> &gt;</code></td></tr></tbody></table>
+
   <p class="source">crates/eos-llm-client/src/auth.rs:25</p>
-</article><article class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct CodexAuthClaims private struct CodexAuthClaims crates/eos-llm-client/src/auth.rs chatgpt_account_id Option &lt; String &gt; chatgpt_account_is_fedramp bool ">
+</article><article id="item-struct-CodexAuthClaims-31" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct CodexAuthClaims private struct CodexAuthClaims crates/eos-llm-client/src/auth.rs chatgpt_account_id Option &lt; String &gt; chatgpt_account_is_fedramp bool ">
   <div class="item-head">
     <span class="kind">struct</span>
     <h3>CodexAuthClaims</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">struct CodexAuthClaims</code>
-  <div class="tags"><span>serde</span></div>
+  <code class="signature">struct <a class="symbol-link" href="eos-llm-client.html#item-struct-CodexAuthClaims-31">CodexAuthClaims</a></code>
+  <div class="tags"><span>derive: Debug</span><span>derive: Deserialize</span><span>serde</span></div>
   <h4>Fields</h4><table><tbody><tr><td>private</td><td>chatgpt_account_id</td><td><code>Option &lt; String &gt;</code></td></tr><tr><td>private</td><td>chatgpt_account_is_fedramp</td><td><code>bool</code></td></tr></tbody></table>
+
   <p class="source">crates/eos-llm-client/src/auth.rs:31</p>
-</article><div class="group-label">Standalone Functions</div><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn decode_codex_access_claims private fn decode_codex_access_claims (token : &amp; str) -&gt; Result &lt; CodexAccessClaims , ProviderError &gt; crates/eos-llm-client/src/auth.rs  ">
+</article><div class="group-label">Standalone Functions</div><article id="item-fn-decode-codex-access-claims-153" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn decode_codex_access_claims private fn decode_codex_access_claims (token : &amp; str) -&gt; Result &lt; CodexAccessClaims , ProviderError &gt; crates/eos-llm-client/src/auth.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>decode_codex_access_claims</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn decode_codex_access_claims (token : &amp; str) -&gt; Result &lt; CodexAccessClaims , ProviderError &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-llm-client.html#item-fn-decode-codex-access-claims-153">decode_codex_access_claims</a> (token : &amp; str) -&gt; Result &lt; <a class="symbol-link" href="eos-llm-client.html#item-struct-CodexAccessClaims-25">CodexAccessClaims</a> , <a class="symbol-link" href="eos-llm-client--src-error-rs.html#item-struct-ProviderError-29">ProviderError</a> &gt;</code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-llm-client.html#item-fn-decode-codex-access-claims-153">decode_codex_access_claims</a>(token: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-llm-client.html#item-struct-CodexAccessClaims-25">CodexAccessClaims</a>, <a class="symbol-link rs-type" href="eos-llm-client--src-error-rs.html#item-struct-ProviderError-29">ProviderError</a>&gt; {
+    <span class="rs-kw">let</span> payload = token
+        .split(&#x27;.&#x27;)
+        .nth(1)
+        .filter(|part| !part.is_empty())
+        .ok_or_else(|| <a class="symbol-link rs-type" href="eos-llm-client--src-error-rs.html#item-struct-ProviderError-29">ProviderError</a>::<a class="symbol-link rs-fn" href="eos-llm-client--src-error-rs.html#method-request-96">request</a>(&quot;codex access token is not a jwt&quot;))?;
+    <span class="rs-kw">let</span> decoded = <span class="rs-type">URL_SAFE_NO_PAD</span>
+        .<a class="symbol-link rs-fn" href="eos-llm-client--src-error-rs.html#method-decode-85">decode</a>(payload)
+        .map_err(|_| <a class="symbol-link rs-type" href="eos-llm-client--src-error-rs.html#item-struct-ProviderError-29">ProviderError</a>::<a class="symbol-link rs-fn" href="eos-llm-client--src-error-rs.html#method-request-96">request</a>(&quot;codex access token payload is not base64url&quot;))?;
+    serde_json::from_slice(&amp;decoded)
+        .map_err(|_| <a class="symbol-link rs-type" href="eos-llm-client--src-error-rs.html#item-struct-ProviderError-29">ProviderError</a>::<a class="symbol-link rs-fn" href="eos-llm-client--src-error-rs.html#method-request-96">request</a>(&quot;codex access token payload is not json&quot;))
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-llm-client/src/auth.rs:153</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn auth_kind_sets_expected_header private fn auth_kind_sets_expected_header () crates/eos-llm-client/src/auth.rs  ">
+</article><article id="item-fn-auth-kind-sets-expected-header-172" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn auth_kind_sets_expected_header private fn auth_kind_sets_expected_header () crates/eos-llm-client/src/auth.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>auth_kind_sets_expected_header</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn auth_kind_sets_expected_header ()</code>
-  <div class="tags"></div>
+  <code class="signature">fn <a class="symbol-link" href="eos-llm-client.html#item-fn-auth-kind-sets-expected-header-172">auth_kind_sets_expected_header</a> ()</code>
+  <div class="tags"><span>test</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-llm-client.html#item-fn-auth-kind-sets-expected-header-172">auth_kind_sets_expected_header</a>() {
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> h = <span class="rs-type">HeaderMap</span>::<a class="symbol-link rs-fn" href="eos-llm-client--src-client-rs.html#method-new-56">new</a>();
+        <a class="symbol-link rs-type" href="eos-llm-client.html#item-enum-Auth-38">Auth</a>::<a class="symbol-link rs-fn" href="eos-llm-client.html#method-api-key-62">api_key</a>(&quot;sk-anthropic&quot;).<a class="symbol-link rs-fn" href="eos-llm-client.html#method-apply-105">apply</a>(&amp;<span class="rs-kw">mut</span> h).unwrap();
+        assert_eq!(h.get(&quot;x-api-key&quot;).unwrap(), &quot;sk-anthropic&quot;);
+        assert!(h.get(<span class="rs-type">AUTHORIZATION</span>).is_none());
+
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> h = <span class="rs-type">HeaderMap</span>::<a class="symbol-link rs-fn" href="eos-llm-client--src-client-rs.html#method-new-56">new</a>();
+        <a class="symbol-link rs-type" href="eos-llm-client.html#item-enum-Auth-38">Auth</a>::<a class="symbol-link rs-fn" href="eos-llm-client.html#method-bearer-68">bearer</a>(&quot;sk-openai&quot;).<a class="symbol-link rs-fn" href="eos-llm-client.html#method-apply-105">apply</a>(&amp;<span class="rs-kw">mut</span> h).unwrap();
+        assert_eq!(h.get(<span class="rs-type">AUTHORIZATION</span>).unwrap(), &quot;<span class="rs-type">Bearer</span> sk-openai&quot;);
+        assert!(h.get(&quot;x-api-key&quot;).is_none());
+
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> h = <span class="rs-type">HeaderMap</span>::<a class="symbol-link rs-fn" href="eos-llm-client--src-client-rs.html#method-new-56">new</a>();
+        <span class="rs-kw">let</span> token = <a class="symbol-link rs-fn" href="eos-llm-client.html#item-fn-jwt-with-auth-claim-213">jwt_with_auth_claim</a>(<span class="rs-type">Some</span>(&quot;account-123&quot;), <span class="rs-kw">true</span>);
+        <span class="rs-kw">let</span> expected_auth = format!(&quot;<span class="rs-type">Bearer</span> {token}&quot;);
+        <a class="symbol-link rs-type" href="eos-llm-client.html#item-enum-Auth-38">Auth</a>::<a class="symbol-link rs-fn" href="eos-llm-client.html#method-codex-access-token-from-jwt-74">codex_access_token_from_jwt</a>(token)
+            .unwrap()
+            .<a class="symbol-link rs-fn" href="eos-llm-client.html#method-apply-105">apply</a>(&amp;<span class="rs-kw">mut</span> h)
+            .unwrap();
+        assert_eq!(
+            h.get(<span class="rs-type">AUTHORIZATION</span>).unwrap().to_str().unwrap(),
+            expected_auth
+        );
+        assert_eq!(h.get(&quot;chatgpt-account-id&quot;).unwrap(), &quot;account-123&quot;);
+        assert_eq!(h.get(&quot;x-openai-fedramp&quot;).unwrap(), &quot;<span class="rs-kw">true</span>&quot;);
+    }
+</code></pre>
+</details>
 
   <p class="source">crates/eos-llm-client/src/auth.rs:172</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn debug_redacts_secret private fn debug_redacts_secret () crates/eos-llm-client/src/auth.rs  ">
+</article><article id="item-fn-debug-redacts-secret-200" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn debug_redacts_secret private fn debug_redacts_secret () crates/eos-llm-client/src/auth.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>debug_redacts_secret</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn debug_redacts_secret ()</code>
-  <div class="tags"></div>
+  <code class="signature">fn <a class="symbol-link" href="eos-llm-client.html#item-fn-debug-redacts-secret-200">debug_redacts_secret</a> ()</code>
+  <div class="tags"><span>test</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-llm-client.html#item-fn-debug-redacts-secret-200">debug_redacts_secret</a>() {
+        <span class="rs-kw">let</span> rendered = format!(&quot;{:?}&quot;, <a class="symbol-link rs-type" href="eos-llm-client.html#item-enum-Auth-38">Auth</a>::<a class="symbol-link rs-fn" href="eos-llm-client.html#method-api-key-62">api_key</a>(&quot;sk-supersecret&quot;));
+        assert!(!rendered.contains(&quot;sk-supersecret&quot;), &quot;debug leaked secret&quot;);
+    }
+</code></pre>
+</details>
 
   <p class="source">crates/eos-llm-client/src/auth.rs:200</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn header_values_are_marked_sensitive private fn header_values_are_marked_sensitive () crates/eos-llm-client/src/auth.rs  ">
+</article><article id="item-fn-header-values-are-marked-sensitive-206" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn header_values_are_marked_sensitive private fn header_values_are_marked_sensitive () crates/eos-llm-client/src/auth.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>header_values_are_marked_sensitive</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn header_values_are_marked_sensitive ()</code>
-  <div class="tags"></div>
+  <code class="signature">fn <a class="symbol-link" href="eos-llm-client.html#item-fn-header-values-are-marked-sensitive-206">header_values_are_marked_sensitive</a> ()</code>
+  <div class="tags"><span>test</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-llm-client.html#item-fn-header-values-are-marked-sensitive-206">header_values_are_marked_sensitive</a>() {
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> h = <span class="rs-type">HeaderMap</span>::<a class="symbol-link rs-fn" href="eos-llm-client--src-client-rs.html#method-new-56">new</a>();
+        <a class="symbol-link rs-type" href="eos-llm-client.html#item-enum-Auth-38">Auth</a>::<a class="symbol-link rs-fn" href="eos-llm-client.html#method-bearer-68">bearer</a>(&quot;sk-openai&quot;).<a class="symbol-link rs-fn" href="eos-llm-client.html#method-apply-105">apply</a>(&amp;<span class="rs-kw">mut</span> h).unwrap();
+        assert!(h.get(<span class="rs-type">AUTHORIZATION</span>).unwrap().is_sensitive());
+    }
+</code></pre>
+</details>
 
   <p class="source">crates/eos-llm-client/src/auth.rs:206</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn jwt_with_auth_claim private fn jwt_with_auth_claim (account_id : Option &lt; &amp; str &gt; , fedramp : bool) -&gt; String crates/eos-llm-client/src/auth.rs  ">
+</article><article id="item-fn-jwt-with-auth-claim-213" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn jwt_with_auth_claim private fn jwt_with_auth_claim (account_id : Option &lt; &amp; str &gt; , fedramp : bool) -&gt; String crates/eos-llm-client/src/auth.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>jwt_with_auth_claim</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn jwt_with_auth_claim (account_id : Option &lt; &amp; str &gt; , fedramp : bool) -&gt; String</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-llm-client.html#item-fn-jwt-with-auth-claim-213">jwt_with_auth_claim</a> (account_id : Option &lt; &amp; str &gt; , fedramp : bool) -&gt; String</code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-llm-client.html#item-fn-jwt-with-auth-claim-213">jwt_with_auth_claim</a>(account_id: <span class="rs-type">Option</span>&lt;&amp;str&gt;, fedramp: bool) -&gt; <span class="rs-type">String</span> {
+        <span class="rs-kw">let</span> auth = <span class="rs-kw">match</span> account_id {
+            <span class="rs-type">Some</span>(account_id) =&gt; serde_json::json!({
+                &quot;chatgpt_account_id&quot;: account_id,
+                &quot;chatgpt_account_is_fedramp&quot;: fedramp,
+            }),
+            <span class="rs-type">None</span> =&gt; serde_json::json!({}),
+        };
+        <span class="rs-kw">let</span> payload = serde_json::json!({ <span class="rs-type">OPENAI_AUTH_CLAIM</span>: auth });
+        format!(
+            &quot;header.{}.signature&quot;,
+            <span class="rs-type">URL_SAFE_NO_PAD</span>.encode(payload.to_string())
+        )
+    }
+</code></pre>
+</details>
 
   <p class="source">crates/eos-llm-client/src/auth.rs:213</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn codex_access_token_from_jwt_reads_account_claim private fn codex_access_token_from_jwt_reads_account_claim () crates/eos-llm-client/src/auth.rs  ">
+</article><article id="item-fn-codex-access-token-from-jwt-reads-account-claim-228" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn codex_access_token_from_jwt_reads_account_claim private fn codex_access_token_from_jwt_reads_account_claim () crates/eos-llm-client/src/auth.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>codex_access_token_from_jwt_reads_account_claim</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn codex_access_token_from_jwt_reads_account_claim ()</code>
-  <div class="tags"></div>
+  <code class="signature">fn <a class="symbol-link" href="eos-llm-client.html#item-fn-codex-access-token-from-jwt-reads-account-claim-228">codex_access_token_from_jwt_reads_account_claim</a> ()</code>
+  <div class="tags"><span>test</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-llm-client.html#item-fn-codex-access-token-from-jwt-reads-account-claim-228">codex_access_token_from_jwt_reads_account_claim</a>() {
+        <span class="rs-kw">let</span> token = <a class="symbol-link rs-fn" href="eos-llm-client.html#item-fn-jwt-with-auth-claim-213">jwt_with_auth_claim</a>(<span class="rs-type">Some</span>(&quot;account-123&quot;), <span class="rs-kw">true</span>);
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> h = <span class="rs-type">HeaderMap</span>::<a class="symbol-link rs-fn" href="eos-llm-client--src-client-rs.html#method-new-56">new</a>();
+
+        <a class="symbol-link rs-type" href="eos-llm-client.html#item-enum-Auth-38">Auth</a>::<a class="symbol-link rs-fn" href="eos-llm-client.html#method-codex-access-token-from-jwt-74">codex_access_token_from_jwt</a>(token)
+            .expect(&quot;auth&quot;)
+            .<a class="symbol-link rs-fn" href="eos-llm-client.html#method-apply-105">apply</a>(&amp;<span class="rs-kw">mut</span> h)
+            .expect(&quot;headers&quot;);
+
+        assert_eq!(h.get(&quot;chatgpt-account-id&quot;).unwrap(), &quot;account-123&quot;);
+        assert_eq!(h.get(&quot;x-openai-fedramp&quot;).unwrap(), &quot;<span class="rs-kw">true</span>&quot;);
+    }
+</code></pre>
+</details>
 
   <p class="source">crates/eos-llm-client/src/auth.rs:228</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn codex_access_token_from_jwt_rejects_missing_account_claim private fn codex_access_token_from_jwt_rejects_missing_account_claim () crates/eos-llm-client/src/auth.rs  ">
+</article><article id="item-fn-codex-access-token-from-jwt-rejects-missing-account-claim-242" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn codex_access_token_from_jwt_rejects_missing_account_claim private fn codex_access_token_from_jwt_rejects_missing_account_claim () crates/eos-llm-client/src/auth.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>codex_access_token_from_jwt_rejects_missing_account_claim</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn codex_access_token_from_jwt_rejects_missing_account_claim ()</code>
-  <div class="tags"></div>
+  <code class="signature">fn <a class="symbol-link" href="eos-llm-client.html#item-fn-codex-access-token-from-jwt-rejects-missing-account-claim-242">codex_access_token_from_jwt_rejects_missing_account_claim</a> ()</code>
+  <div class="tags"><span>test</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-llm-client.html#item-fn-codex-access-token-from-jwt-rejects-missing-account-claim-242">codex_access_token_from_jwt_rejects_missing_account_claim</a>() {
+        <span class="rs-kw">let</span> err = <a class="symbol-link rs-type" href="eos-llm-client.html#item-enum-Auth-38">Auth</a>::<a class="symbol-link rs-fn" href="eos-llm-client.html#method-codex-access-token-from-jwt-74">codex_access_token_from_jwt</a>(<a class="symbol-link rs-fn" href="eos-llm-client.html#item-fn-jwt-with-auth-claim-213">jwt_with_auth_claim</a>(<span class="rs-type">None</span>, <span class="rs-kw">false</span>))
+            .expect_err(&quot;missing account id should fail&quot;);
+        assert!(err.message.contains(&quot;chatgpt_account_id&quot;));
+    }
+</code></pre>
+</details>
 
   <p class="source">crates/eos-llm-client/src/auth.rs:242</p>
 </article></div>
 </section></div>
 </main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/eos-llm-client/src/auth.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-comment">//! Explicit provider authentication.</span>
+<span class="rs-comment">//!</span>
+<span class="rs-comment">//! The caller picks the scheme explicitly. This crate never inspects `base_url`</span>
+<span class="rs-comment">//! to choose auth and never reads platform credential stores or cache files.</span>
+<span class="rs-comment">//!</span>
+<span class="rs-comment">//! Credentials are held in [`secrecy::SecretString`] so they are redacted in</span>
+<span class="rs-comment">//! `Debug`/logs and never printed (plan reliability rule).</span>
+
+<span class="rs-kw">use</span> base64::{engine::general_purpose::<span class="rs-type">URL_SAFE_NO_PAD</span>, <span class="rs-type">Engine</span> <span class="rs-kw">as</span> _};
+<span class="rs-kw">use</span> reqwest::header::{<span class="rs-type">HeaderMap</span>, <span class="rs-type">HeaderName</span>, <span class="rs-type">HeaderValue</span>, <span class="rs-type">AUTHORIZATION</span>};
+<span class="rs-kw">use</span> secrecy::{<span class="rs-type">ExposeSecret</span>, <span class="rs-type">SecretString</span>};
+<span class="rs-kw">use</span> serde::<span class="rs-type">Deserialize</span>;
+
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::error::<a class="symbol-link rs-type" href="eos-llm-client--src-error-rs.html#item-struct-ProviderError-29">ProviderError</a>;
+
+<span class="rs-comment">/// The `x-api-key` header name (Anthropic).</span>
+<span class="rs-kw">const</span> <span class="rs-type">X_API_KEY</span>: <span class="rs-type">HeaderName</span> = <span class="rs-type">HeaderName</span>::from_static(&quot;x-api-key&quot;);
+<span class="rs-comment">/// The `ChatGPT` workspace/account header used by the Codex backend.</span>
+<span class="rs-kw">const</span> <span class="rs-type">CHATGPT_ACCOUNT_ID</span>: <span class="rs-type">HeaderName</span> = <span class="rs-type">HeaderName</span>::from_static(&quot;chatgpt-account-id&quot;);
+<span class="rs-comment">/// `FedRAMP` routing header used by first-party Codex auth for `FedRAMP` accounts.</span>
+<span class="rs-kw">const</span> <span class="rs-type">X_OPENAI_FEDRAMP</span>: <span class="rs-type">HeaderName</span> = <span class="rs-type">HeaderName</span>::from_static(&quot;x-openai-fedramp&quot;);
+<span class="rs-comment">/// The namespaced claim where `ChatGPT` account metadata is stored.</span>
+<span class="rs-kw">const</span> <span class="rs-type">OPENAI_AUTH_CLAIM</span>: &amp;str = &quot;https:<span class="rs-comment">//api.openai.com/auth";</span>
+
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Deserialize</span>)]
+<span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-llm-client.html#item-struct-CodexAccessClaims-25">CodexAccessClaims</a> {
+    #[serde(rename = &quot;https:<span class="rs-comment">//api.openai.com/auth")]</span>
+    auth: <span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-llm-client.html#item-struct-CodexAuthClaims-31">CodexAuthClaims</a>&gt;,
+}
+
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Deserialize</span>)]
+<span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-llm-client.html#item-struct-CodexAuthClaims-31">CodexAuthClaims</a> {
+    chatgpt_account_id: <span class="rs-type">Option</span>&lt;<span class="rs-type">String</span>&gt;,
+    #[serde(default)]
+    chatgpt_account_is_fedramp: bool,
+}
+
+<span class="rs-comment">/// How to authenticate a provider request.</span>
+<span class="rs-comment">///</span>
+<span class="rs-comment">/// `PartialEq` is intentionally not derived: [`SecretString`] does not implement</span>
+<span class="rs-comment">/// it (constant-time-comparison hygiene), and equality on credentials is not a</span>
+<span class="rs-comment">/// meaningful operation. `Debug` is the `SecretString`-redacted form.</span>
+#[derive(<span class="rs-type">Debug</span>)]
+#[non_exhaustive]
+<span class="rs-kw">pub</span> <span class="rs-kw">enum</span> <a class="symbol-link rs-type" href="eos-llm-client.html#item-enum-Auth-38">Auth</a> {
+    <span class="rs-comment">/// Anthropic-style `x-api-key: &lt;key&gt;`.</span>
+    <span class="rs-type">ApiKey</span>(<span class="rs-type">SecretString</span>),
+    <span class="rs-comment">/// `Authorization: Bearer &lt;key&gt;`.</span>
+    <span class="rs-type">Bearer</span>(<span class="rs-type">SecretString</span>),
+    <span class="rs-comment">/// ChatGPT-managed Codex access-token auth.</span>
+    <span class="rs-type">CodexAccess</span> {
+        <span class="rs-comment">/// The access token sent as `Authorization: Bearer`.</span>
+        token: <span class="rs-type">SecretString</span>,
+        <span class="rs-comment">/// The `ChatGPT` workspace/account id sent as `ChatGPT-Account-ID`.</span>
+        account_id: <span class="rs-type">String</span>,
+        <span class="rs-comment">/// Whether the selected account must route through the `FedRAMP` edge.</span>
+        is_fedramp_account: bool,
+    },
+}
+
+<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-llm-client.html#item-enum-Auth-38">Auth</a> {
+    <span class="rs-comment">/// Construct an `x-api-key` credential.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-llm-client.html#method-api-key-62">api_key</a>(key: <span class="rs-kw">impl</span> <span class="rs-type">Into</span>&lt;<span class="rs-type">String</span>&gt;) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">Self</span>::<span class="rs-type">ApiKey</span>(<span class="rs-type">SecretString</span>::<a class="symbol-link rs-fn" href="eos-llm-client--src-client-rs.html#method-new-56">new</a>(key.into()))
+    }
+
+    <span class="rs-comment">/// Construct a `Bearer` credential.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-llm-client.html#method-bearer-68">bearer</a>(key: <span class="rs-kw">impl</span> <span class="rs-type">Into</span>&lt;<span class="rs-type">String</span>&gt;) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">Self</span>::<span class="rs-type">Bearer</span>(<span class="rs-type">SecretString</span>::<a class="symbol-link rs-fn" href="eos-llm-client--src-client-rs.html#method-new-56">new</a>(key.into()))
+    }
+
+    <span class="rs-comment">/// Construct Codex access-token credentials from the token JWT claims.</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// The token must carry the `ChatGPT` workspace/account id in the</span>
+    <span class="rs-comment">/// `https://api.openai.com/auth` claim. This function reads only the token</span>
+    <span class="rs-comment">/// value supplied by the caller; it does not load or parse any credential</span>
+    <span class="rs-comment">/// cache file.</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// # Errors</span>
+    <span class="rs-comment">/// Returns [`ProviderError::request`] when the token is not JWT-shaped, the</span>
+    <span class="rs-comment">/// payload cannot be decoded, or the required account id claim is absent.</span>
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-llm-client.html#method-codex-access-token-from-jwt-74">codex_access_token_from_jwt</a>(token: <span class="rs-kw">impl</span> <span class="rs-type">Into</span>&lt;<span class="rs-type">String</span>&gt;) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-self">Self</span>, <a class="symbol-link rs-type" href="eos-llm-client--src-error-rs.html#item-struct-ProviderError-29">ProviderError</a>&gt; {
+        <span class="rs-kw">let</span> token = token.into();
+        <span class="rs-kw">let</span> claims = <a class="symbol-link rs-fn" href="eos-llm-client.html#item-fn-decode-codex-access-claims-153">decode_codex_access_claims</a>(&amp;token)?;
+        <span class="rs-kw">let</span> auth = claims.auth.ok_or_else(|| {
+            <a class="symbol-link rs-type" href="eos-llm-client--src-error-rs.html#item-struct-ProviderError-29">ProviderError</a>::<a class="symbol-link rs-fn" href="eos-llm-client--src-error-rs.html#method-request-96">request</a>(format!(
+                &quot;codex access token missing {<span class="rs-type">OPENAI_AUTH_CLAIM</span>} claim&quot;
+            ))
+        })?;
+        <span class="rs-kw">let</span> account_id = auth
+            .chatgpt_account_id
+            .filter(|value| !value.trim().is_empty())
+            .ok_or_else(|| {
+                <a class="symbol-link rs-type" href="eos-llm-client--src-error-rs.html#item-struct-ProviderError-29">ProviderError</a>::<a class="symbol-link rs-fn" href="eos-llm-client--src-error-rs.html#method-request-96">request</a>(&quot;codex access token missing chatgpt_account_id claim&quot;)
+            })?;
+        <span class="rs-type">Ok</span>(<span class="rs-self">Self</span>::<span class="rs-type">CodexAccess</span> {
+            token: <span class="rs-type">SecretString</span>::<a class="symbol-link rs-fn" href="eos-llm-client--src-client-rs.html#method-new-56">new</a>(token),
+            account_id,
+            is_fedramp_account: auth.chatgpt_account_is_fedramp,
+        })
+    }
+
+    <span class="rs-comment">/// Apply the matching authentication header to `headers`.</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// Returns [`ProviderError::request`] if the credential is not a valid</span>
+    <span class="rs-comment">/// header value (e.g. contains control characters). Crate-internal: the</span>
+    <span class="rs-comment">/// provider clients call this; the public surface is the `Auth` constructors</span>
+    <span class="rs-comment">/// passed into `AnthropicApiClient::new`/`OpenAiApiClient::new`.</span>
+    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-llm-client.html#method-apply-105">apply</a>(&amp;<span class="rs-self">self</span>, headers: &amp;<span class="rs-kw">mut</span> <span class="rs-type">HeaderMap</span>) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-llm-client--src-error-rs.html#item-struct-ProviderError-29">ProviderError</a>&gt; {
+        <span class="rs-kw">match</span> <span class="rs-self">self</span> {
+            <span class="rs-self">Self</span>::<span class="rs-type">ApiKey</span>(secret) =&gt; {
+                <span class="rs-kw">let</span> <span class="rs-kw">mut</span> value = <span class="rs-type">HeaderValue</span>::from_str(secret.expose_secret())
+                    .map_err(|_| <a class="symbol-link rs-type" href="eos-llm-client--src-error-rs.html#item-struct-ProviderError-29">ProviderError</a>::<a class="symbol-link rs-fn" href="eos-llm-client--src-error-rs.html#method-request-96">request</a>(&quot;api key is not a valid header value&quot;))?;
+                value.set_sensitive(<span class="rs-kw">true</span>);
+                headers.insert(<span class="rs-type">X_API_KEY</span>, value);
+            }
+            <span class="rs-self">Self</span>::<span class="rs-type">Bearer</span>(secret) =&gt; {
+                <span class="rs-kw">let</span> <span class="rs-kw">mut</span> value =
+                    <span class="rs-type">HeaderValue</span>::from_str(&amp;format!(&quot;<span class="rs-type">Bearer</span> {}&quot;, secret.expose_secret())).map_err(
+                        |_| <a class="symbol-link rs-type" href="eos-llm-client--src-error-rs.html#item-struct-ProviderError-29">ProviderError</a>::<a class="symbol-link rs-fn" href="eos-llm-client--src-error-rs.html#method-request-96">request</a>(&quot;bearer token is not a valid header value&quot;),
+                    )?;
+                value.set_sensitive(<span class="rs-kw">true</span>);
+                headers.insert(<span class="rs-type">AUTHORIZATION</span>, value);
+            }
+            <span class="rs-self">Self</span>::<span class="rs-type">CodexAccess</span> {
+                token,
+                account_id,
+                is_fedramp_account,
+            } =&gt; {
+                <span class="rs-kw">let</span> <span class="rs-kw">mut</span> value = <span class="rs-type">HeaderValue</span>::from_str(&amp;format!(&quot;<span class="rs-type">Bearer</span> {}&quot;, token.expose_secret()))
+                    .map_err(|_| {
+                        <a class="symbol-link rs-type" href="eos-llm-client--src-error-rs.html#item-struct-ProviderError-29">ProviderError</a>::<a class="symbol-link rs-fn" href="eos-llm-client--src-error-rs.html#method-request-96">request</a>(&quot;codex access token is not a valid header value&quot;)
+                    })?;
+                value.set_sensitive(<span class="rs-kw">true</span>);
+                headers.insert(<span class="rs-type">AUTHORIZATION</span>, value);
+
+                <span class="rs-kw">let</span> value = <span class="rs-type">HeaderValue</span>::from_str(account_id).map_err(|_| {
+                    <a class="symbol-link rs-type" href="eos-llm-client--src-error-rs.html#item-struct-ProviderError-29">ProviderError</a>::<a class="symbol-link rs-fn" href="eos-llm-client--src-error-rs.html#method-request-96">request</a>(&quot;codex account id is not a valid header value&quot;)
+                })?;
+                headers.insert(<span class="rs-type">CHATGPT_ACCOUNT_ID</span>, value);
+
+                <span class="rs-kw">if</span> *is_fedramp_account {
+                    headers.insert(<span class="rs-type">X_OPENAI_FEDRAMP</span>, <span class="rs-type">HeaderValue</span>::from_static(&quot;<span class="rs-kw">true</span>&quot;));
+                }
+            }
+        }
+        <span class="rs-type">Ok</span>(())
+    }
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-llm-client.html#item-fn-decode-codex-access-claims-153">decode_codex_access_claims</a>(token: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-llm-client.html#item-struct-CodexAccessClaims-25">CodexAccessClaims</a>, <a class="symbol-link rs-type" href="eos-llm-client--src-error-rs.html#item-struct-ProviderError-29">ProviderError</a>&gt; {
+    <span class="rs-kw">let</span> payload = token
+        .split(&#x27;.&#x27;)
+        .nth(1)
+        .filter(|part| !part.is_empty())
+        .ok_or_else(|| <a class="symbol-link rs-type" href="eos-llm-client--src-error-rs.html#item-struct-ProviderError-29">ProviderError</a>::<a class="symbol-link rs-fn" href="eos-llm-client--src-error-rs.html#method-request-96">request</a>(&quot;codex access token is not a jwt&quot;))?;
+    <span class="rs-kw">let</span> decoded = <span class="rs-type">URL_SAFE_NO_PAD</span>
+        .<a class="symbol-link rs-fn" href="eos-llm-client--src-error-rs.html#method-decode-85">decode</a>(payload)
+        .map_err(|_| <a class="symbol-link rs-type" href="eos-llm-client--src-error-rs.html#item-struct-ProviderError-29">ProviderError</a>::<a class="symbol-link rs-fn" href="eos-llm-client--src-error-rs.html#method-request-96">request</a>(&quot;codex access token payload is not base64url&quot;))?;
+    serde_json::from_slice(&amp;decoded)
+        .map_err(|_| <a class="symbol-link rs-type" href="eos-llm-client--src-error-rs.html#item-struct-ProviderError-29">ProviderError</a>::<a class="symbol-link rs-fn" href="eos-llm-client--src-error-rs.html#method-request-96">request</a>(&quot;codex access token payload is not json&quot;))
+}
+
+#[cfg(test)]
+<span class="rs-kw">mod</span> tests {
+    #![allow(clippy::unwrap_used)]
+    <span class="rs-kw">use</span> <span class="rs-kw">super</span>::*;
+
+    <span class="rs-comment">// AC-llm-client-08: ApiKey sets x-api-key; Bearer sets Authorization: Bearer.</span>
+    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-llm-client.html#item-fn-auth-kind-sets-expected-header-172">auth_kind_sets_expected_header</a>() {
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> h = <span class="rs-type">HeaderMap</span>::<a class="symbol-link rs-fn" href="eos-llm-client--src-client-rs.html#method-new-56">new</a>();
+        <a class="symbol-link rs-type" href="eos-llm-client.html#item-enum-Auth-38">Auth</a>::<a class="symbol-link rs-fn" href="eos-llm-client.html#method-api-key-62">api_key</a>(&quot;sk-anthropic&quot;).<a class="symbol-link rs-fn" href="eos-llm-client.html#method-apply-105">apply</a>(&amp;<span class="rs-kw">mut</span> h).unwrap();
+        assert_eq!(h.get(&quot;x-api-key&quot;).unwrap(), &quot;sk-anthropic&quot;);
+        assert!(h.get(<span class="rs-type">AUTHORIZATION</span>).is_none());
+
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> h = <span class="rs-type">HeaderMap</span>::<a class="symbol-link rs-fn" href="eos-llm-client--src-client-rs.html#method-new-56">new</a>();
+        <a class="symbol-link rs-type" href="eos-llm-client.html#item-enum-Auth-38">Auth</a>::<a class="symbol-link rs-fn" href="eos-llm-client.html#method-bearer-68">bearer</a>(&quot;sk-openai&quot;).<a class="symbol-link rs-fn" href="eos-llm-client.html#method-apply-105">apply</a>(&amp;<span class="rs-kw">mut</span> h).unwrap();
+        assert_eq!(h.get(<span class="rs-type">AUTHORIZATION</span>).unwrap(), &quot;<span class="rs-type">Bearer</span> sk-openai&quot;);
+        assert!(h.get(&quot;x-api-key&quot;).is_none());
+
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> h = <span class="rs-type">HeaderMap</span>::<a class="symbol-link rs-fn" href="eos-llm-client--src-client-rs.html#method-new-56">new</a>();
+        <span class="rs-kw">let</span> token = <a class="symbol-link rs-fn" href="eos-llm-client.html#item-fn-jwt-with-auth-claim-213">jwt_with_auth_claim</a>(<span class="rs-type">Some</span>(&quot;account-123&quot;), <span class="rs-kw">true</span>);
+        <span class="rs-kw">let</span> expected_auth = format!(&quot;<span class="rs-type">Bearer</span> {token}&quot;);
+        <a class="symbol-link rs-type" href="eos-llm-client.html#item-enum-Auth-38">Auth</a>::<a class="symbol-link rs-fn" href="eos-llm-client.html#method-codex-access-token-from-jwt-74">codex_access_token_from_jwt</a>(token)
+            .unwrap()
+            .<a class="symbol-link rs-fn" href="eos-llm-client.html#method-apply-105">apply</a>(&amp;<span class="rs-kw">mut</span> h)
+            .unwrap();
+        assert_eq!(
+            h.get(<span class="rs-type">AUTHORIZATION</span>).unwrap().to_str().unwrap(),
+            expected_auth
+        );
+        assert_eq!(h.get(&quot;chatgpt-account-id&quot;).unwrap(), &quot;account-123&quot;);
+        assert_eq!(h.get(&quot;x-openai-fedramp&quot;).unwrap(), &quot;<span class="rs-kw">true</span>&quot;);
+    }
+
+    <span class="rs-comment">// GC-llm-client-04: secret is redacted in Debug, never the raw key.</span>
+    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-llm-client.html#item-fn-debug-redacts-secret-200">debug_redacts_secret</a>() {
+        <span class="rs-kw">let</span> rendered = format!(&quot;{:?}&quot;, <a class="symbol-link rs-type" href="eos-llm-client.html#item-enum-Auth-38">Auth</a>::<a class="symbol-link rs-fn" href="eos-llm-client.html#method-api-key-62">api_key</a>(&quot;sk-supersecret&quot;));
+        assert!(!rendered.contains(&quot;sk-supersecret&quot;), &quot;debug leaked secret&quot;);
+    }
+
+    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-llm-client.html#item-fn-header-values-are-marked-sensitive-206">header_values_are_marked_sensitive</a>() {
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> h = <span class="rs-type">HeaderMap</span>::<a class="symbol-link rs-fn" href="eos-llm-client--src-client-rs.html#method-new-56">new</a>();
+        <a class="symbol-link rs-type" href="eos-llm-client.html#item-enum-Auth-38">Auth</a>::<a class="symbol-link rs-fn" href="eos-llm-client.html#method-bearer-68">bearer</a>(&quot;sk-openai&quot;).<a class="symbol-link rs-fn" href="eos-llm-client.html#method-apply-105">apply</a>(&amp;<span class="rs-kw">mut</span> h).unwrap();
+        assert!(h.get(<span class="rs-type">AUTHORIZATION</span>).unwrap().is_sensitive());
+    }
+
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-llm-client.html#item-fn-jwt-with-auth-claim-213">jwt_with_auth_claim</a>(account_id: <span class="rs-type">Option</span>&lt;&amp;str&gt;, fedramp: bool) -&gt; <span class="rs-type">String</span> {
+        <span class="rs-kw">let</span> auth = <span class="rs-kw">match</span> account_id {
+            <span class="rs-type">Some</span>(account_id) =&gt; serde_json::json!({
+                &quot;chatgpt_account_id&quot;: account_id,
+                &quot;chatgpt_account_is_fedramp&quot;: fedramp,
+            }),
+            <span class="rs-type">None</span> =&gt; serde_json::json!({}),
+        };
+        <span class="rs-kw">let</span> payload = serde_json::json!({ <span class="rs-type">OPENAI_AUTH_CLAIM</span>: auth });
+        format!(
+            &quot;header.{}.signature&quot;,
+            <span class="rs-type">URL_SAFE_NO_PAD</span>.encode(payload.to_string())
+        )
+    }
+
+    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-llm-client.html#item-fn-codex-access-token-from-jwt-reads-account-claim-228">codex_access_token_from_jwt_reads_account_claim</a>() {
+        <span class="rs-kw">let</span> token = <a class="symbol-link rs-fn" href="eos-llm-client.html#item-fn-jwt-with-auth-claim-213">jwt_with_auth_claim</a>(<span class="rs-type">Some</span>(&quot;account-123&quot;), <span class="rs-kw">true</span>);
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> h = <span class="rs-type">HeaderMap</span>::<a class="symbol-link rs-fn" href="eos-llm-client--src-client-rs.html#method-new-56">new</a>();
+
+        <a class="symbol-link rs-type" href="eos-llm-client.html#item-enum-Auth-38">Auth</a>::<a class="symbol-link rs-fn" href="eos-llm-client.html#method-codex-access-token-from-jwt-74">codex_access_token_from_jwt</a>(token)
+            .expect(&quot;auth&quot;)
+            .<a class="symbol-link rs-fn" href="eos-llm-client.html#method-apply-105">apply</a>(&amp;<span class="rs-kw">mut</span> h)
+            .expect(&quot;headers&quot;);
+
+        assert_eq!(h.get(&quot;chatgpt-account-id&quot;).unwrap(), &quot;account-123&quot;);
+        assert_eq!(h.get(&quot;x-openai-fedramp&quot;).unwrap(), &quot;<span class="rs-kw">true</span>&quot;);
+    }
+
+    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-llm-client.html#item-fn-codex-access-token-from-jwt-rejects-missing-account-claim-242">codex_access_token_from_jwt_rejects_missing_account_claim</a>() {
+        <span class="rs-kw">let</span> err = <a class="symbol-link rs-type" href="eos-llm-client.html#item-enum-Auth-38">Auth</a>::<a class="symbol-link rs-fn" href="eos-llm-client.html#method-codex-access-token-from-jwt-74">codex_access_token_from_jwt</a>(<a class="symbol-link rs-fn" href="eos-llm-client.html#item-fn-jwt-with-auth-claim-213">jwt_with_auth_claim</a>(<span class="rs-type">None</span>, <span class="rs-kw">false</span>))
+            .expect_err(&quot;missing account id should fail&quot;);
+        assert!(err.message.contains(&quot;chatgpt_account_id&quot;));
+    }
+}
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
   <script src="../assets/inventory.js"></script>
 </body>
 </html>

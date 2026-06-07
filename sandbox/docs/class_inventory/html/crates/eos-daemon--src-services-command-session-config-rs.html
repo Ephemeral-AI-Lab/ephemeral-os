@@ -8,8 +8,16 @@
 </head>
 <body>
   <header>
-    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
-    <h1>eos-daemon File Inventory</h1>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>eos-daemon File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS/sandbox &amp;&amp; cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
   </header>
   <a class="back-link" href="../index.html">sandbox</a>
 <section class="summary">
@@ -47,69 +55,189 @@
       <span>0 methods</span>
     </div>
   </div>
-  <div class="items"><div class="group-label">Standalone Functions</div><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn configure_command_sessions pub(crate) pub(crate) fn configure_command_sessions (config : &amp; CommandSessionConfig) crates/eos-daemon/src/services/command_session/config.rs  ">
+  <div class="items"><div class="group-label">Standalone Functions</div><article id="item-fn-configure-command-sessions-8" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn configure_command_sessions pub(crate) pub(crate) fn configure_command_sessions (config : &amp; CommandSessionConfig) crates/eos-daemon/src/services/command_session/config.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>configure_command_sessions</h3>
     <span class="visibility">pub(crate)</span>
   </div>
-  <code class="signature">pub(crate) fn configure_command_sessions (config : &amp; CommandSessionConfig)</code>
+  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-daemon--src-services-command-session-config-rs.html#item-fn-configure-command-sessions-8">configure_command_sessions</a> (config : &amp; CommandSessionConfig)</code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-command-session-config-rs.html#item-fn-configure-command-sessions-8">configure_command_sessions</a>(config: &amp;<span class="rs-type">CommandSessionConfig</span>) {
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> guard = <a class="symbol-link rs-fn" href="eos-daemon--src-services-command-session-config-rs.html#item-fn-command-session-config-cell-34">command_session_config_cell</a>()
+        .<a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-ppc-router-frame-io-rs.html#method-write-34">write</a>()
+        .unwrap_or_else(std::sync::<span class="rs-type">PoisonError</span>::into_inner);
+    *guard = config.clone();
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-daemon/src/services/command_session/config.rs:8</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn command_session_config pub(super) pub(super) fn command_session_config () -&gt; CommandSessionConfig crates/eos-daemon/src/services/command_session/config.rs  ">
+</article><article id="item-fn-command-session-config-15" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn command_session_config pub(super) pub(super) fn command_session_config () -&gt; CommandSessionConfig crates/eos-daemon/src/services/command_session/config.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>command_session_config</h3>
     <span class="visibility">pub(super)</span>
   </div>
-  <code class="signature">pub(super) fn command_session_config () -&gt; CommandSessionConfig</code>
-  <div class="tags"></div>
+  <code class="signature">pub(super) fn <a class="symbol-link" href="eos-daemon--src-services-command-session-config-rs.html#item-fn-command-session-config-15">command_session_config</a> () -&gt; CommandSessionConfig</code>
+  <div class="tags"><span>cfg: any</span><span>cfg_attr: allow</span><span>cfg_attr: not</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>#[cfg(any(target_os = &quot;linux&quot;, test))]
+#[cfg_attr(not(target_os = &quot;linux&quot;), allow(dead_code))]
+<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-command-session-config-rs.html#item-fn-command-session-config-15">command_session_config</a>() -&gt; <span class="rs-type">CommandSessionConfig</span> {
+    <a class="symbol-link rs-fn" href="eos-daemon--src-services-command-session-config-rs.html#item-fn-command-session-config-cell-34">command_session_config_cell</a>()
+        .read()
+        .unwrap_or_else(std::sync::<span class="rs-type">PoisonError</span>::into_inner)
+        .clone()
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-daemon/src/services/command_session/config.rs:15</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn runtime_command_session_config pub(super) pub(super) fn runtime_command_session_config () -&gt; RuntimeCommandSessionConfig crates/eos-daemon/src/services/command_session/config.rs  ">
+</article><article id="item-fn-runtime-command-session-config-24" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn runtime_command_session_config pub(super) pub(super) fn runtime_command_session_config () -&gt; RuntimeCommandSessionConfig crates/eos-daemon/src/services/command_session/config.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>runtime_command_session_config</h3>
     <span class="visibility">pub(super)</span>
   </div>
-  <code class="signature">pub(super) fn runtime_command_session_config () -&gt; RuntimeCommandSessionConfig</code>
-  <div class="tags"></div>
+  <code class="signature">pub(super) fn <a class="symbol-link" href="eos-daemon--src-services-command-session-config-rs.html#item-fn-runtime-command-session-config-24">runtime_command_session_config</a> () -&gt; RuntimeCommandSessionConfig</code>
+  <div class="tags"><span>cfg: target_os</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>#[cfg(target_os = &quot;linux&quot;)]
+<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-command-session-config-rs.html#item-fn-runtime-command-session-config-24">runtime_command_session_config</a>() -&gt; <span class="rs-type">RuntimeCommandSessionConfig</span> {
+    <a class="symbol-link rs-fn" href="eos-daemon--src-services-command-session-config-rs.html#item-fn-command-session-config-15">command_session_config</a>()
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-daemon/src/services/command_session/config.rs:24</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn command_session_scratch_root pub(super) pub(super) fn command_session_scratch_root () -&gt; std :: path :: PathBuf crates/eos-daemon/src/services/command_session/config.rs  ">
+</article><article id="item-fn-command-session-scratch-root-29" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn command_session_scratch_root pub(super) pub(super) fn command_session_scratch_root () -&gt; std :: path :: PathBuf crates/eos-daemon/src/services/command_session/config.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>command_session_scratch_root</h3>
     <span class="visibility">pub(super)</span>
   </div>
-  <code class="signature">pub(super) fn command_session_scratch_root () -&gt; std :: path :: PathBuf</code>
-  <div class="tags"></div>
+  <code class="signature">pub(super) fn <a class="symbol-link" href="eos-daemon--src-services-command-session-config-rs.html#item-fn-command-session-scratch-root-29">command_session_scratch_root</a> () -&gt; std :: path :: PathBuf</code>
+  <div class="tags"><span>cfg: target_os</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>#[cfg(target_os = &quot;linux&quot;)]
+<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-command-session-config-rs.html#item-fn-command-session-scratch-root-29">command_session_scratch_root</a>() -&gt; std::path::<span class="rs-type">PathBuf</span> {
+    <a class="symbol-link rs-fn" href="eos-daemon--src-services-command-session-config-rs.html#item-fn-command-session-config-15">command_session_config</a>().scratch_root
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-daemon/src/services/command_session/config.rs:29</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn command_session_config_cell private fn command_session_config_cell () -&gt; &amp; 'static RwLock &lt; CommandSessionConfig &gt; crates/eos-daemon/src/services/command_session/config.rs  ">
+</article><article id="item-fn-command-session-config-cell-34" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn command_session_config_cell private fn command_session_config_cell () -&gt; &amp; 'static RwLock &lt; CommandSessionConfig &gt; crates/eos-daemon/src/services/command_session/config.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>command_session_config_cell</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn command_session_config_cell () -&gt; &amp; 'static RwLock &lt; CommandSessionConfig &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-daemon--src-services-command-session-config-rs.html#item-fn-command-session-config-cell-34">command_session_config_cell</a> () -&gt; &amp; &#x27;static RwLock &lt; CommandSessionConfig &gt;</code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-command-session-config-rs.html#item-fn-command-session-config-cell-34">command_session_config_cell</a>() -&gt; &amp;&#x27;<span class="rs-kw">static</span> <span class="rs-type">RwLock</span>&lt;<span class="rs-type">CommandSessionConfig</span>&gt; {
+    <span class="rs-kw">static</span> <span class="rs-type">CONFIG</span>: <span class="rs-type">OnceLock</span>&lt;<span class="rs-type">RwLock</span>&lt;<span class="rs-type">CommandSessionConfig</span>&gt;&gt; = <span class="rs-type">OnceLock</span>::<a class="symbol-link rs-fn" href="eos-daemon.html#method-new-89">new</a>();
+    <span class="rs-type">CONFIG</span>.get_or_init(|| <span class="rs-type">RwLock</span>::<a class="symbol-link rs-fn" href="eos-daemon.html#method-new-89">new</a>(<a class="symbol-link rs-fn" href="eos-daemon--src-services-command-session-config-rs.html#item-fn-default-command-session-config-39">default_command_session_config</a>()))
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-daemon/src/services/command_session/config.rs:34</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn default_command_session_config private fn default_command_session_config () -&gt; CommandSessionConfig crates/eos-daemon/src/services/command_session/config.rs  ">
+</article><article id="item-fn-default-command-session-config-39" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn default_command_session_config private fn default_command_session_config () -&gt; CommandSessionConfig crates/eos-daemon/src/services/command_session/config.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>default_command_session_config</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn default_command_session_config () -&gt; CommandSessionConfig</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-daemon--src-services-command-session-config-rs.html#item-fn-default-command-session-config-39">default_command_session_config</a> () -&gt; CommandSessionConfig</code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-command-session-config-rs.html#item-fn-default-command-session-config-39">default_command_session_config</a>() -&gt; <span class="rs-type">CommandSessionConfig</span> {
+    <span class="rs-type">CommandSessionConfig</span> {
+        scratch_root: std::path::<span class="rs-type">PathBuf</span>::from(&quot;/eos/scratch/command-sessions&quot;),
+        default_yield_time_ms: 1000,
+        default_timeout_s: 600,
+        quiet_ms: 50,
+        cancel_wait_ms: 500,
+        output_drain_grace_ms: 500,
+        max_session_s: 6 * 60 * 60,
+        transcript_timestamp_timezone: &quot;<span class="rs-type">UTC</span>&quot;.to_owned(),
+    }
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-daemon/src/services/command_session/config.rs:39</p>
 </article></div>
 </section></div>
 </main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/eos-daemon/src/services/command_session/config.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-kw">use</span> std::sync::{<span class="rs-type">OnceLock</span>, <span class="rs-type">RwLock</span>};
+
+#[cfg(target_os = &quot;linux&quot;)]
+<span class="rs-kw">use</span> eos_command_session::<span class="rs-type">CommandSessionConfig</span> <span class="rs-kw">as</span> <span class="rs-type">RuntimeCommandSessionConfig</span>;
+
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::config::<span class="rs-type">CommandSessionConfig</span>;
+
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-command-session-config-rs.html#item-fn-configure-command-sessions-8">configure_command_sessions</a>(config: &amp;<span class="rs-type">CommandSessionConfig</span>) {
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> guard = <a class="symbol-link rs-fn" href="eos-daemon--src-services-command-session-config-rs.html#item-fn-command-session-config-cell-34">command_session_config_cell</a>()
+        .<a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-ppc-router-frame-io-rs.html#method-write-34">write</a>()
+        .unwrap_or_else(std::sync::<span class="rs-type">PoisonError</span>::into_inner);
+    *guard = config.clone();
+}
+
+#[cfg(any(target_os = &quot;linux&quot;, test))]
+#[cfg_attr(not(target_os = &quot;linux&quot;), allow(dead_code))]
+<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-command-session-config-rs.html#item-fn-command-session-config-15">command_session_config</a>() -&gt; <span class="rs-type">CommandSessionConfig</span> {
+    <a class="symbol-link rs-fn" href="eos-daemon--src-services-command-session-config-rs.html#item-fn-command-session-config-cell-34">command_session_config_cell</a>()
+        .read()
+        .unwrap_or_else(std::sync::<span class="rs-type">PoisonError</span>::into_inner)
+        .clone()
+}
+
+#[cfg(target_os = &quot;linux&quot;)]
+<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-command-session-config-rs.html#item-fn-runtime-command-session-config-24">runtime_command_session_config</a>() -&gt; <span class="rs-type">RuntimeCommandSessionConfig</span> {
+    <a class="symbol-link rs-fn" href="eos-daemon--src-services-command-session-config-rs.html#item-fn-command-session-config-15">command_session_config</a>()
+}
+
+#[cfg(target_os = &quot;linux&quot;)]
+<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-command-session-config-rs.html#item-fn-command-session-scratch-root-29">command_session_scratch_root</a>() -&gt; std::path::<span class="rs-type">PathBuf</span> {
+    <a class="symbol-link rs-fn" href="eos-daemon--src-services-command-session-config-rs.html#item-fn-command-session-config-15">command_session_config</a>().scratch_root
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-command-session-config-rs.html#item-fn-command-session-config-cell-34">command_session_config_cell</a>() -&gt; &amp;&#x27;<span class="rs-kw">static</span> <span class="rs-type">RwLock</span>&lt;<span class="rs-type">CommandSessionConfig</span>&gt; {
+    <span class="rs-kw">static</span> <span class="rs-type">CONFIG</span>: <span class="rs-type">OnceLock</span>&lt;<span class="rs-type">RwLock</span>&lt;<span class="rs-type">CommandSessionConfig</span>&gt;&gt; = <span class="rs-type">OnceLock</span>::<a class="symbol-link rs-fn" href="eos-daemon.html#method-new-89">new</a>();
+    <span class="rs-type">CONFIG</span>.get_or_init(|| <span class="rs-type">RwLock</span>::<a class="symbol-link rs-fn" href="eos-daemon.html#method-new-89">new</a>(<a class="symbol-link rs-fn" href="eos-daemon--src-services-command-session-config-rs.html#item-fn-default-command-session-config-39">default_command_session_config</a>()))
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-command-session-config-rs.html#item-fn-default-command-session-config-39">default_command_session_config</a>() -&gt; <span class="rs-type">CommandSessionConfig</span> {
+    <span class="rs-type">CommandSessionConfig</span> {
+        scratch_root: std::path::<span class="rs-type">PathBuf</span>::from(&quot;/eos/scratch/command-sessions&quot;),
+        default_yield_time_ms: 1000,
+        default_timeout_s: 600,
+        quiet_ms: 50,
+        cancel_wait_ms: 500,
+        output_drain_grace_ms: 500,
+        max_session_s: 6 * 60 * 60,
+        transcript_timestamp_timezone: &quot;<span class="rs-type">UTC</span>&quot;.to_owned(),
+    }
+}
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
   <script src="../assets/inventory.js"></script>
 </body>
 </html>

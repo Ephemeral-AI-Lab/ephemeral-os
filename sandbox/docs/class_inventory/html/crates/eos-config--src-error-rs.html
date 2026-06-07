@@ -8,8 +8,16 @@
 </head>
 <body>
   <header>
-    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
-    <h1>eos-config File Inventory</h1>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>eos-config File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS/sandbox &amp;&amp; cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
   </header>
   <a class="back-link" href="../index.html">sandbox</a>
 <section class="summary">
@@ -47,19 +55,90 @@
       <span>0 methods</span>
     </div>
   </div>
-  <div class="items"><div class="group-label">File-Owned Types</div><article class="type-card" data-kind="enum" data-kind-list="enum field type-model" data-filter-text="enum ConfigError pub pub enum ConfigError crates/eos-config/src/error.rs  ">
+  <div class="items"><div class="group-label">File-Owned Types</div><article id="item-enum-ConfigError-7" class="type-card" data-kind="enum" data-kind-list="enum field type-model" data-filter-text="enum ConfigError pub pub enum ConfigError crates/eos-config/src/error.rs  ">
   <div class="item-head">
     <span class="kind">enum</span>
     <h3>ConfigError</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub enum ConfigError</code>
-  <div class="tags"><span>config</span><span>error</span></div>
-  <h4>Variants</h4><table><tbody><tr><td>WorkspaceRoot</td><td><code>manifest_dir: PathBuf</code></td></tr><tr><td>Read</td><td><code>path: PathBuf, source: std :: io :: Error</code></td></tr><tr><td>Parse</td><td><code>path: PathBuf, source: serde_yaml :: Error</code></td></tr><tr><td>Serialize</td><td><code>source: serde_yaml :: Error</code></td></tr><tr><td>InvalidOverridePath</td><td><code>path: PathBuf, reason: String</code></td></tr><tr><td>MissingSection</td><td><code>section: String</code></td></tr><tr><td>InvalidDocumentRoot</td><td><code></code></td></tr><tr><td>Merge</td><td><code>0: MergeConflict</code></td></tr><tr><td>DeserializeSection</td><td><code>section: String, source: serde_path_to_error :: Error &lt; serde_yaml :: Error &gt;</code></td></tr></tbody></table>
+  <code class="signature">pub enum <a class="symbol-link" href="eos-config--src-error-rs.html#item-enum-ConfigError-7">ConfigError</a></code>
+  <p class="docstring">Errors produced by sandbox config loading and section deserialization.</p>
+  <div class="tags"><span>config</span><span>derive: Debug</span><span>derive: Error</span><span>error</span><span>non_exhaustive</span></div>
+  <h4>Variants</h4><table><tbody><tr><td>WorkspaceRoot</td><td><code>manifest_dir: PathBuf</code></td></tr><tr><td>Read</td><td><code>path: PathBuf, source: std :: io :: Error</code></td></tr><tr><td>Parse</td><td><code>path: PathBuf, source: serde_yaml :: Error</code></td></tr><tr><td>Serialize</td><td><code>source: serde_yaml :: Error</code></td></tr><tr><td>InvalidOverridePath</td><td><code>path: PathBuf, reason: String</code></td></tr><tr><td>MissingSection</td><td><code>section: String</code></td></tr><tr><td>InvalidDocumentRoot</td><td><code></code></td></tr><tr><td>Merge</td><td><code>0: <a class="symbol-link" href="eos-config--src-merge-rs.html#item-enum-MergeConflict-4">MergeConflict</a></code></td></tr><tr><td>DeserializeSection</td><td><code>section: String, source: serde_path_to_error :: Error &lt; serde_yaml :: Error &gt;</code></td></tr></tbody></table>
+
   <p class="source">crates/eos-config/src/error.rs:7</p>
 </article></div>
 </section></div>
 </main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/eos-config/src/error.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-kw">use</span> std::path::<span class="rs-type">PathBuf</span>;
+
+<span class="rs-kw">use</span> thiserror::<span class="rs-type">Error</span>;
+
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::merge::<a class="symbol-link rs-type" href="eos-config--src-merge-rs.html#item-enum-MergeConflict-4">MergeConflict</a>;
+
+<span class="rs-comment">/// Errors produced by sandbox config loading and section deserialization.</span>
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Error</span>)]
+#[non_exhaustive]
+<span class="rs-kw">pub</span> <span class="rs-kw">enum</span> <a class="symbol-link rs-type" href="eos-config--src-error-rs.html#item-enum-ConfigError-7">ConfigError</a> {
+    <span class="rs-comment">/// The sandbox workspace root could not be resolved from the crate layout.</span>
+    #[error(&quot;failed to resolve sandbox workspace root from {manifest_dir}&quot;)]
+    <span class="rs-type">WorkspaceRoot</span> { manifest_dir: <span class="rs-type">PathBuf</span> },
+
+    <span class="rs-comment">/// A production or test config file could not be read.</span>
+    #[error(&quot;failed to read config file {path}: {source}&quot;)]
+    <span class="rs-type">Read</span> {
+        path: <span class="rs-type">PathBuf</span>,
+        #[source]
+        source: std::io::<span class="rs-type">Error</span>,
+    },
+
+    <span class="rs-comment">/// A config file contained invalid YAML.</span>
+    #[error(&quot;failed to parse <span class="rs-type">YAML</span> config file {path}: {source}&quot;)]
+    <span class="rs-type">Parse</span> {
+        path: <span class="rs-type">PathBuf</span>,
+        #[source]
+        source: serde_yaml::<span class="rs-type">Error</span>,
+    },
+
+    <span class="rs-comment">/// A merged config document could not be serialized back to YAML.</span>
+    #[error(&quot;failed to serialize <span class="rs-type">YAML</span> config document: {source}&quot;)]
+    <span class="rs-type">Serialize</span> {
+        #[source]
+        source: serde_yaml::<span class="rs-type">Error</span>,
+    },
+
+    <span class="rs-comment">/// A test override path violated the sandbox config path policy.</span>
+    #[error(&quot;invalid test override path {path}: {reason}&quot;)]
+    <span class="rs-type">InvalidOverridePath</span> { path: <span class="rs-type">PathBuf</span>, reason: <span class="rs-type">String</span> },
+
+    <span class="rs-comment">/// A top-level config section was requested but not present.</span>
+    #[error(&quot;missing config section {section}&quot;)]
+    <span class="rs-type">MissingSection</span> { section: <span class="rs-type">String</span> },
+
+    <span class="rs-comment">/// The YAML document root must be an object.</span>
+    #[error(&quot;config document root must be a <span class="rs-type">YAML</span> mapping&quot;)]
+    <span class="rs-type">InvalidDocumentRoot</span>,
+
+    <span class="rs-comment">/// Deep merge failed.</span>
+    #[error(transparent)]
+    <span class="rs-type">Merge</span>(#[from] <a class="symbol-link rs-type" href="eos-config--src-merge-rs.html#item-enum-MergeConflict-4">MergeConflict</a>),
+
+    <span class="rs-comment">/// A top-level section failed typed deserialization.</span>
+    #[error(&quot;failed to deserialize config section {section}: {source}&quot;)]
+    <span class="rs-type">DeserializeSection</span> {
+        section: <span class="rs-type">String</span>,
+        #[source]
+        source: serde_path_to_error::<span class="rs-type">Error</span>&lt;serde_yaml::<span class="rs-type">Error</span>&gt;,
+    },
+}
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
   <script src="../assets/inventory.js"></script>
 </body>
 </html>

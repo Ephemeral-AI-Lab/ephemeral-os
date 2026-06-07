@@ -64,7 +64,6 @@ pub(super) fn prepare_agent_run_context(
         .as_ref()
         .map(|factory| factory(&agent));
     let caller_scope = caller_scope_for(handles, &agent);
-    let agent_run_ids = tool_metadata.agent_run_id.iter().cloned().collect();
     let mut registry = build_default_registry_with_services(
         &handles.tool_config,
         &caller_scope,
@@ -81,7 +80,7 @@ pub(super) fn prepare_agent_run_context(
     }
 
     let background_finalizer =
-        BackgroundRunFinalizer::new(background_supervisor, workflow_control, agent_run_ids);
+        BackgroundRunFinalizer::new(background_supervisor, workflow_control);
     let ctx = build_query_context(BuildQueryContextInput {
         agent,
         model,

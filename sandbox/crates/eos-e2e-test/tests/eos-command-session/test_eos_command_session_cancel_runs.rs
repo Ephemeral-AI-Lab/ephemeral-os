@@ -2,13 +2,16 @@
 //! ops tear down command sessions (cancel → discard, never publish), keyed by
 //! `caller_id == agent_run_id`.
 
-use anyhow::Result;
-use eos_e2e_test::NodeLease;
+use std::time::{Duration, Instant};
+
+use anyhow::{bail, Result};
+use eos_e2e_test::{unique_suffix, NodeLease};
 use eos_protocol::ops;
 use serde_json::json;
 
 use crate::support::{
-    array, as_i64, as_str, live_pool_or_skip, wait_for_active_leases, wait_for_session_count,
+    array, as_bool, as_i64, as_str, live_pool_or_skip, stdout, wait_for_active_leases,
+    wait_for_session_count,
 };
 
 /// Start a `sleep 60` session for `caller_id` (or the lease default when `None`).
@@ -33,6 +36,25 @@ fn count_for(lease: &NodeLease<'_>, caller_id: &str) -> Result<i64> {
         json!({"caller_id": caller_id}),
     )?;
     as_i64(&count, "count")
+}
+
+/// Poll a session's transcript until `marker` appears, confirming the command's
+/// write reached the overlay before we cancel it.
+fn wait_for_progress(lease: &NodeLease<'_>, session_id: &str, marker: &str) -> Result<()> {
+    let deadline = Instant::now() + Duration::from_secs(10);
+    loop {
+        let progress = lease.call_ok(
+            ops::API_V1_COMMAND_READ_PROGRESS,
+            json!({"command_session_id": session_id, "last_n_lines": 10}),
+        )?;
+        if stdout(&progress).contains(marker) {
+            return Ok(());
+        }
+        if Instant::now() >= deadline {
+            bail!("session {session_id} never produced {marker:?}: {progress}");
+        }
+        std::thread::sleep(Duration::from_millis(50));
+    }
 }
 
 #[test]
@@ -114,5 +136,63 @@ fn cancel_workspace_runs_sweeps_every_caller() -> Result<()> {
 
     assert_eq!(count_for(&lease, "")?, 0, "no command session survives the sweep");
     wait_for_active_leases(&lease, 0)?;
+    Ok(())
+}
+
+#[test]
+fn cancel_workspace_runs_by_caller_id_discards_overlay_writes() -> Result<()> {
+    // The load-bearing migration invariant: a cancelled command DISCARDS its
+    // overlay and never OCC-merges into the shared LayerStack.
+    let Some(pool) = live_pool_or_skip()? else {
+        return Ok(());
+    };
+    let lease = pool.acquire()?;
+    let owner = lease.caller_id().to_owned();
+
+    // Baseline the shared-LayerStack manifest version.
+    let before = lease.call_ok(ops::API_LAYER_METRICS, json!({}))?;
+    let v0 = as_i64(&before, "manifest_version")?;
+
+    // A command that writes a workspace file, then blocks. The write lands in the
+    // ephemeral overlay's upperdir but is not yet published.
+    let marker = format!("cancel-marker-{}.txt", unique_suffix().replace('-', "_"));
+    let started = lease.call_ok(
+        ops::API_V1_EXEC_COMMAND,
+        json!({
+            "cmd": format!("sh -c 'printf overlay-data > {marker}; echo wrote; sleep 60'"),
+            "yield_time_ms": 1000,
+            "timeout_seconds": 120,
+        }),
+    )?;
+    assert_eq!(as_str(&started, "status")?, "running", "{started}");
+    let session_id = as_str(&started, "command_session_id")?.to_owned();
+    wait_for_progress(&lease, &session_id, "wrote")?;
+
+    // Cancel the caller's run mid-write via the per-caller op.
+    let cancelled = lease.call_ok(
+        ops::API_V1_CANCEL_WORKSPACE_RUNS_BY_CALLER,
+        json!({"caller_id": owner}),
+    )?;
+    assert_eq!(
+        as_i64(&cancelled, "cancelled_command_sessions")?,
+        1,
+        "{cancelled}"
+    );
+    wait_for_session_count(&lease, 0)?;
+    wait_for_active_leases(&lease, 0)?;
+
+    // The shared LayerStack manifest is unchanged — the cancelled write never merged.
+    let after = lease.call_ok(ops::API_LAYER_METRICS, json!({}))?;
+    assert_eq!(
+        as_i64(&after, "manifest_version")?,
+        v0,
+        "a cancelled command must not OCC-merge its overlay writes: {after}"
+    );
+    // And the write is absent from the published workspace.
+    let read = lease.call_ok(ops::API_V1_READ_FILE, json!({"path": marker}))?;
+    assert!(
+        !as_bool(&read, "exists")?,
+        "cancelled overlay write must not be published to the shared workspace: {read}"
+    );
     Ok(())
 }

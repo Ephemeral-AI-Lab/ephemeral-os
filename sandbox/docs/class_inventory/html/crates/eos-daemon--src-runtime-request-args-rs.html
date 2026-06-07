@@ -8,8 +8,16 @@
 </head>
 <body>
   <header>
-    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
-    <h1>eos-daemon File Inventory</h1>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>eos-daemon File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS/sandbox &amp;&amp; cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
   </header>
   <a class="back-link" href="../index.html">sandbox</a>
 <section class="summary">
@@ -47,49 +55,151 @@
       <span>0 methods</span>
     </div>
   </div>
-  <div class="items"><div class="group-label">Standalone Functions</div><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn require_string pub(crate) pub(crate) fn require_string (args : &amp; Value , key : &amp; str) -&gt; Result &lt; String , DaemonError &gt; crates/eos-daemon/src/runtime/request_args.rs  ">
+  <div class="items"><div class="group-label">Standalone Functions</div><article id="item-fn-require-string-8" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn require_string pub(crate) pub(crate) fn require_string (args : &amp; Value , key : &amp; str) -&gt; Result &lt; String , DaemonError &gt; crates/eos-daemon/src/runtime/request_args.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>require_string</h3>
     <span class="visibility">pub(crate)</span>
   </div>
-  <code class="signature">pub(crate) fn require_string (args : &amp; Value , key : &amp; str) -&gt; Result &lt; String , DaemonError &gt;</code>
+  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-daemon--src-runtime-request-args-rs.html#item-fn-require-string-8">require_string</a> (args : &amp; Value , key : &amp; str) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a> &lt; String , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-request-args-rs.html#item-fn-require-string-8">require_string</a>(args: &amp;<span class="rs-type">Value</span>, key: &amp;str) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a>&lt;<span class="rs-type">String</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+    <span class="rs-kw">let</span> value = args
+        .<a class="symbol-link rs-fn" href="eos-daemon--src-services-occ-service-cache-rs.html#method-get-87">get</a>(key)
+        .and_then(<span class="rs-type">Value</span>::as_str)
+        .unwrap_or_default()
+        .trim()
+        .to_owned();
+    <span class="rs-kw">if</span> value.is_empty() {
+        <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>::<span class="rs-type">InvalidEnvelope</span>(format!(&quot;{key} is required&quot;)));
+    }
+    <span class="rs-type">Ok</span>(value)
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-daemon/src/runtime/request_args.rs:8</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn require_raw_string pub(crate) pub(crate) fn require_raw_string (args : &amp; Value , key : &amp; str) -&gt; Result &lt; String , DaemonError &gt; crates/eos-daemon/src/runtime/request_args.rs  ">
+</article><article id="item-fn-require-raw-string-21" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn require_raw_string pub(crate) pub(crate) fn require_raw_string (args : &amp; Value , key : &amp; str) -&gt; Result &lt; String , DaemonError &gt; crates/eos-daemon/src/runtime/request_args.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>require_raw_string</h3>
     <span class="visibility">pub(crate)</span>
   </div>
-  <code class="signature">pub(crate) fn require_raw_string (args : &amp; Value , key : &amp; str) -&gt; Result &lt; String , DaemonError &gt;</code>
+  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-daemon--src-runtime-request-args-rs.html#item-fn-require-raw-string-21">require_raw_string</a> (args : &amp; Value , key : &amp; str) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a> &lt; String , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-request-args-rs.html#item-fn-require-raw-string-21">require_raw_string</a>(args: &amp;<span class="rs-type">Value</span>, key: &amp;str) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a>&lt;<span class="rs-type">String</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+    <span class="rs-kw">let</span> <span class="rs-type">Some</span>(value) = args.<a class="symbol-link rs-fn" href="eos-daemon--src-services-occ-service-cache-rs.html#method-get-87">get</a>(key) <span class="rs-kw">else</span> {
+        <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>::<span class="rs-type">InvalidEnvelope</span>(format!(&quot;{key} is required&quot;)));
+    };
+    <span class="rs-kw">let</span> <span class="rs-type">Some</span>(value) = value.as_str() <span class="rs-kw">else</span> {
+        <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>::<span class="rs-type">InvalidEnvelope</span>(format!(
+            &quot;{key} must be a string&quot;
+        )));
+    };
+    <span class="rs-type">Ok</span>(value.to_owned())
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-daemon/src/runtime/request_args.rs:21</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn binding_to_value pub(crate) pub(crate) fn binding_to_value (binding : &amp; WorkspaceBinding) -&gt; Result &lt; Value , DaemonError &gt; crates/eos-daemon/src/runtime/request_args.rs  ">
+</article><article id="item-fn-binding-to-value-33" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn binding_to_value pub(crate) pub(crate) fn binding_to_value (binding : &amp; WorkspaceBinding) -&gt; Result &lt; Value , DaemonError &gt; crates/eos-daemon/src/runtime/request_args.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>binding_to_value</h3>
     <span class="visibility">pub(crate)</span>
   </div>
-  <code class="signature">pub(crate) fn binding_to_value (binding : &amp; WorkspaceBinding) -&gt; Result &lt; Value , DaemonError &gt;</code>
+  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-daemon--src-runtime-request-args-rs.html#item-fn-binding-to-value-33">binding_to_value</a> (binding : &amp; WorkspaceBinding) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a> &lt; Value , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-request-args-rs.html#item-fn-binding-to-value-33">binding_to_value</a>(binding: &amp;<span class="rs-type">WorkspaceBinding</span>) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+    serde_json::to_value(binding).map_err(|err| <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>::<span class="rs-type">InvalidEnvelope</span>(err.to_string()))
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-daemon/src/runtime/request_args.rs:33</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn timings_to_value_map pub(crate) pub(crate) fn timings_to_value_map (timings : &amp; std :: collections :: BTreeMap &lt; String , f64 &gt; ,) -&gt; serde_json :: Map &lt; String , Value &gt; crates/eos-daemon/src/runtime/request_args.rs  ">
+</article><article id="item-fn-timings-to-value-map-37" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn timings_to_value_map pub(crate) pub(crate) fn timings_to_value_map (timings : &amp; std :: collections :: BTreeMap &lt; String , f64 &gt; ,) -&gt; serde_json :: Map &lt; String , Value &gt; crates/eos-daemon/src/runtime/request_args.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>timings_to_value_map</h3>
     <span class="visibility">pub(crate)</span>
   </div>
-  <code class="signature">pub(crate) fn timings_to_value_map (timings : &amp; std :: collections :: BTreeMap &lt; String , f64 &gt; ,) -&gt; serde_json :: Map &lt; String , Value &gt;</code>
+  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-daemon--src-runtime-request-args-rs.html#item-fn-timings-to-value-map-37">timings_to_value_map</a> (timings : &amp; std :: collections :: BTreeMap &lt; String , f64 &gt; ,) -&gt; serde_json :: Map &lt; String , Value &gt;</code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-request-args-rs.html#item-fn-timings-to-value-map-37">timings_to_value_map</a>(
+    timings: &amp;std::collections::<span class="rs-type">BTreeMap</span>&lt;<span class="rs-type">String</span>, f64&gt;,
+) -&gt; serde_json::<span class="rs-type">Map</span>&lt;<span class="rs-type">String</span>, <span class="rs-type">Value</span>&gt; {
+    timings
+        .iter()
+        .map(|(key, value)| (key.clone(), json!(value)))
+        .collect()
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-daemon/src/runtime/request_args.rs:37</p>
 </article></div>
 </section></div>
 </main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/eos-daemon/src/runtime/request_args.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-comment">//! Shared request argument and JSON conversion helpers.</span>
+
+<span class="rs-kw">use</span> eos_layerstack::<span class="rs-type">WorkspaceBinding</span>;
+<span class="rs-kw">use</span> serde_json::{json, <span class="rs-type">Value</span>};
+
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::error::<a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>;
+
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-request-args-rs.html#item-fn-require-string-8">require_string</a>(args: &amp;<span class="rs-type">Value</span>, key: &amp;str) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a>&lt;<span class="rs-type">String</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+    <span class="rs-kw">let</span> value = args
+        .<a class="symbol-link rs-fn" href="eos-daemon--src-services-occ-service-cache-rs.html#method-get-87">get</a>(key)
+        .and_then(<span class="rs-type">Value</span>::as_str)
+        .unwrap_or_default()
+        .trim()
+        .to_owned();
+    <span class="rs-kw">if</span> value.is_empty() {
+        <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>::<span class="rs-type">InvalidEnvelope</span>(format!(&quot;{key} is required&quot;)));
+    }
+    <span class="rs-type">Ok</span>(value)
+}
+
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-request-args-rs.html#item-fn-require-raw-string-21">require_raw_string</a>(args: &amp;<span class="rs-type">Value</span>, key: &amp;str) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a>&lt;<span class="rs-type">String</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+    <span class="rs-kw">let</span> <span class="rs-type">Some</span>(value) = args.<a class="symbol-link rs-fn" href="eos-daemon--src-services-occ-service-cache-rs.html#method-get-87">get</a>(key) <span class="rs-kw">else</span> {
+        <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>::<span class="rs-type">InvalidEnvelope</span>(format!(&quot;{key} is required&quot;)));
+    };
+    <span class="rs-kw">let</span> <span class="rs-type">Some</span>(value) = value.as_str() <span class="rs-kw">else</span> {
+        <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>::<span class="rs-type">InvalidEnvelope</span>(format!(
+            &quot;{key} must be a string&quot;
+        )));
+    };
+    <span class="rs-type">Ok</span>(value.to_owned())
+}
+
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-request-args-rs.html#item-fn-binding-to-value-33">binding_to_value</a>(binding: &amp;<span class="rs-type">WorkspaceBinding</span>) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a>&lt;<span class="rs-type">Value</span>, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+    serde_json::to_value(binding).map_err(|err| <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>::<span class="rs-type">InvalidEnvelope</span>(err.to_string()))
+}
+
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-runtime-request-args-rs.html#item-fn-timings-to-value-map-37">timings_to_value_map</a>(
+    timings: &amp;std::collections::<span class="rs-type">BTreeMap</span>&lt;<span class="rs-type">String</span>, f64&gt;,
+) -&gt; serde_json::<span class="rs-type">Map</span>&lt;<span class="rs-type">String</span>, <span class="rs-type">Value</span>&gt; {
+    timings
+        .iter()
+        .map(|(key, value)| (key.clone(), json!(value)))
+        .collect()
+}
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
   <script src="../assets/inventory.js"></script>
 </body>
 </html>

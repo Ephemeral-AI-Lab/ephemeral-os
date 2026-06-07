@@ -14,8 +14,10 @@ pub mod tool_call;
 
 pub use agent::{build_query_context, BuildQueryContextInput};
 pub use background::{
-    spawn_command_completion_heartbeat, BackgroundSupervisorFactory, BackgroundSupervisorHandle,
-    BackgroundTaskStatus, BackgroundTaskSupervisor, CommandSessionRecord,
+    BackgroundCompletion, BackgroundNotificationEmitter, BackgroundSupervisorFactory,
+    BackgroundSupervisorHandle, BackgroundTaskStatus, BackgroundTaskSupervisor,
+    CommandSessionHandle, CommandSessionRecord, SubagentHandle, SubagentRecord, WorkflowBackgroundRecord,
+    WorkflowHandle,
 };
 pub use notifications::{make_default_notification_rules, NotificationRule, NotificationService};
 pub use query::{

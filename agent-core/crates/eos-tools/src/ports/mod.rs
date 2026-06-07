@@ -214,22 +214,23 @@ pub enum SpawnedSubagent {
     Rejected(String),
 }
 
-/// Per-agent-run, per-kind in-flight background-task count (Running records only),
-/// scoped to one `agent_run_id`, serialized to JSON for the terminal-cleanup audit
-/// assertion.
+/// Per-kind in-flight background-task count (Running records only) for one agent
+/// run, serialized to JSON for the terminal-cleanup audit assertion. The owning
+/// run is the supervisor handle's `owner_agent_run_id`, so there is no
+/// `agent_run_id` field or filter (spec §8.5).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
-pub struct BackgroundInflightReport {
-    /// `subagent + workflow + command_session`.
+pub struct RunningBackgroundTasks {
+    /// `subagents + workflows + command_sessions`.
     pub total: usize,
     /// In-flight subagent runs for this agent run.
-    pub subagent: usize,
+    pub subagents: usize,
     /// Outstanding delegated workflows for this agent run. The supervisor owns the
     /// background handle bookkeeping; [`WorkflowControlPort`] remains the source
     /// of truth for persisted workflow lifecycle.
-    pub workflow: usize,
+    pub workflows: usize,
     /// In-flight, supervisor-tracked command sessions for this agent run
     /// (diagnostic; the authoritative live-session gate is the daemon RPC).
-    pub command_session: usize,
+    pub command_sessions: usize,
 }
 
 /// The engine background supervisor surface used by subagent tools, workflow
@@ -267,23 +268,21 @@ pub trait BackgroundSupervisorPort: Sealed + Send + Sync {
     ) -> Result<ToolResult, ToolError>;
 
     /// This agent run's in-flight background report (Running-only), without mutating
-    /// state — the reject-mode read for `enter_isolated_workspace`.
-    async fn inflight_report(&self, agent_run_id: Option<&AgentRunId>) -> BackgroundInflightReport;
+    /// state — the reject-mode read for `enter_isolated_workspace`. The handle
+    /// scopes the count to its `owner_agent_run_id` (no filter argument, spec §10).
+    async fn running_background_tasks(&self) -> RunningBackgroundTasks;
 
-    /// Cancel this agent run's in-flight subagent runs only (settle `Cancelled` +
-    /// abort) and return the post-cancel report. The terminal / exit prehook
-    /// uses this lane-specific cleanup so a live or phantom subagent never
-    /// wedges the terminal, while delegated workflows remain gated by persisted
-    /// workflow state.
-    async fn cancel_subagents_for_agent_run(
-        &self,
-        agent_run_id: &AgentRunId,
-    ) -> BackgroundInflightReport;
+    /// Settle this agent run's in-flight subagent runs (`Cancelled` + abort) and
+    /// return the post-cancel report. The terminal / exit prehook uses this
+    /// lane-specific cleanup so a live or phantom subagent never wedges the
+    /// terminal, while delegated workflows remain gated by persisted workflow
+    /// state.
+    async fn cancel_subagents(&self) -> RunningBackgroundTasks;
 
     /// Track a workflow that was just delegated by this agent run. The workflow
     /// control port owns persisted workflow state; the background supervisor owns
     /// the handle for in-flight accounting and parent-exit cancellation.
-    async fn register_workflow(&self, agent_run_id: &AgentRunId, workflow: &StartedWorkflowHandle);
+    async fn register_workflow(&self, workflow: &StartedWorkflowHandle);
 
     /// Mark a tracked workflow handle cancelled in the supervisor ledger.
     async fn cancel_workflow_record(
@@ -292,16 +291,16 @@ pub trait BackgroundSupervisorPort: Sealed + Send + Sync {
         reason: &str,
     ) -> bool;
 
-    /// Cancel all background work known to this supervisor for the parent agent run.
-    /// Workflow cancellation is delegated through the optional authoritative
-    /// workflow-control port; missing workflow control still settles the in-memory
-    /// record so the parent exit cannot leave a phantom running handle.
-    async fn cancel_for_parent_exit(
+    /// Tear down all background work owned by this agent run (spec §8.2): settle +
+    /// abort subagents, cancel delegated workflows through the optional
+    /// authoritative workflow-control port (a missing port still settles the
+    /// in-memory record), and cancel all command sessions in one per-caller daemon
+    /// RPC. The common parent-exit / cancellation finalizer.
+    async fn teardown(
         &self,
-        agent_run_id: Option<&AgentRunId>,
         workflow_control: Option<Arc<dyn WorkflowControlPort>>,
         reason: &str,
-    ) -> BackgroundInflightReport;
+    ) -> RunningBackgroundTasks;
 }
 
 // ---------------------------------------------------------------------------
@@ -321,12 +320,12 @@ pub trait BackgroundSupervisorPort: Sealed + Send + Sync {
 #[async_trait]
 pub trait CommandSessionSupervisorPort: Sealed + Send + Sync {
     /// Register a freshly-started background command session as running. The
-    /// `command_session_id` is the daemon-minted `cmd_<n>` correlation key.
+    /// `command_session_id` is the daemon-minted `cmd_<n>` correlation key; the
+    /// owning run is the handle's `owner_agent_run_id` (no `agent_run_id` arg).
     async fn register(
         &self,
         command_session_id: &CommandSessionId,
         sandbox_id: &SandboxId,
-        agent_run_id: &AgentRunId,
         command: &str,
     );
 

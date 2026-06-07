@@ -8,8 +8,16 @@
 </head>
 <body>
   <header>
-    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
-    <h1>eos-runner File Inventory</h1>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>eos-runner File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS/sandbox &amp;&amp; cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
   </header>
   <a class="back-link" href="../index.html">sandbox</a>
 <section class="summary">
@@ -47,109 +55,727 @@
       <span>2 methods</span>
     </div>
   </div>
-  <div class="items"><div class="group-label">File-Owned Types</div><article class="type-card" data-kind="trait" data-kind-list="method trait type-model" data-filter-text="trait SyscallResult private trait SyscallResult&lt; T &gt; crates/eos-runner/src/fresh_ns.rs  map_syscall fn map_syscall (self) -&gt; Result &lt; T , RunnerError &gt;">
+  <div class="items"><div class="group-label">File-Owned Types</div><article id="item-trait-SyscallResult-308" class="type-card" data-kind="trait" data-kind-list="method trait type-model" data-filter-text="trait SyscallResult private trait SyscallResult&lt; T &gt; crates/eos-runner/src/fresh_ns.rs  map_syscall fn map_syscall (self) -&gt; Result &lt; T , RunnerError &gt;">
   <div class="item-head">
     <span class="kind">trait</span>
     <h3>SyscallResult</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">trait SyscallResult&lt; T &gt;</code>
-  <div class="tags"></div>
-  <h4>Methods</h4><table><tbody><tr><td>required</td><td>map_syscall</td><td><code>fn map_syscall (self) -&gt; Result &lt; T , RunnerError &gt;</code></td></tr></tbody></table>
+  <code class="signature">trait <a class="symbol-link" href="eos-runner--src-fresh-ns-rs.html#item-trait-SyscallResult-308">SyscallResult</a>&lt; T &gt;</code>
+  <div class="tags"><span>cfg: target_os</span></div>
+  <h4>Methods</h4><table><tbody><tr id="method-map-syscall-310"><td>required</td><td>map_syscall</td><td><code>fn <a class="symbol-link" href="eos-runner--src-fresh-ns-rs.html#method-map-syscall-310">map_syscall</a> (self) -&gt; Result &lt; T , <a class="symbol-link" href="eos-runner.html#item-enum-RunnerError-11">RunnerError</a> &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runner--src-fresh-ns-rs.html#method-map-syscall-310">map_syscall</a>(<span class="rs-self">self</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">T</span>, <a class="symbol-link rs-type" href="eos-runner.html#item-enum-RunnerError-11">RunnerError</a>&gt;;
+</code></pre>
+</details></td></tr></tbody></table>
+
   <p class="source">crates/eos-runner/src/fresh_ns.rs:308</p>
-</article><div class="group-label">Standalone Functions</div><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn run_fresh_ns pub pub fn run_fresh_ns (request : &amp; RunRequest , config : &amp; crate :: config :: RunnerConfig ,) -&gt; Result &lt; RunResult , RunnerError &gt; crates/eos-runner/src/fresh_ns.rs  ">
+</article><div class="group-label">Standalone Functions</div><article id="item-fn-run-fresh-ns-54" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn run_fresh_ns pub pub fn run_fresh_ns (request : &amp; RunRequest , config : &amp; crate :: config :: RunnerConfig ,) -&gt; Result &lt; RunResult , RunnerError &gt; crates/eos-runner/src/fresh_ns.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>run_fresh_ns</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub fn run_fresh_ns (request : &amp; RunRequest , config : &amp; crate :: config :: RunnerConfig ,) -&gt; Result &lt; RunResult , RunnerError &gt;</code>
-  <div class="tags"></div>
+  <code class="signature">pub fn <a class="symbol-link" href="eos-runner--src-fresh-ns-rs.html#item-fn-run-fresh-ns-54">run_fresh_ns</a> (request : &amp; <a class="symbol-link" href="eos-runner--src-request-rs.html#item-struct-RunRequest-135">RunRequest</a> , config : &amp; crate :: config :: RunnerConfig ,) -&gt; Result &lt; <a class="symbol-link" href="eos-runner--src-request-rs.html#item-struct-RunResult-167">RunResult</a> , <a class="symbol-link" href="eos-runner.html#item-enum-RunnerError-11">RunnerError</a> &gt;</code>
+  <p class="docstring">Run one tool call in a freshly-unshared namespace.<br># Invariant<br>Will call `setsid(2)` and `unshare(2)`, then spawn a child in the new<br>namespace. The namespace syscalls require the process to be single-threaded<br>(the crate-level invariant) and the caller to own the namespace it creates.<br># Errors<br>Returns [`RunnerError`] when namespace setup, overlay mounting, request<br>validation, or child execution fails.</p>
+  <div class="tags"><span>cfg: target_os</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-comment">/// Run one tool call in a freshly-unshared namespace.</span>
+<span class="rs-comment">///</span>
+<span class="rs-comment">/// # Invariant</span>
+<span class="rs-comment">///</span>
+<span class="rs-comment">/// Will call `setsid(2)` and `unshare(2)`, then spawn a child in the new</span>
+<span class="rs-comment">/// namespace. The namespace syscalls require the process to be single-threaded</span>
+<span class="rs-comment">/// (the crate-level invariant) and the caller to own the namespace it creates.</span>
+<span class="rs-comment">///</span>
+<span class="rs-comment">/// # Errors</span>
+<span class="rs-comment">///</span>
+<span class="rs-comment">/// Returns [`RunnerError`] when namespace setup, overlay mounting, request</span>
+<span class="rs-comment">/// validation, or child execution fails.</span>
+#[cfg(target_os = &quot;linux&quot;)]
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runner--src-fresh-ns-rs.html#item-fn-run-fresh-ns-54">run_fresh_ns</a>(
+    request: &amp;<a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-RunRequest-135">RunRequest</a>,
+    config: &amp;<span class="rs-kw">crate</span>::config::<span class="rs-type">RunnerConfig</span>,
+) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-RunResult-167">RunResult</a>, <a class="symbol-link rs-type" href="eos-runner.html#item-enum-RunnerError-11">RunnerError</a>&gt; {
+    <span class="rs-comment">//   sequence: unshare(CLONE_NEWUSER|CLONE_NEWNS) on this single-threaded child,</span>
+    <span class="rs-comment">//   write /proc/self/{uid_map,setgroups,gid_map}, mount overlay at</span>
+    <span class="rs-comment">//   workspace_root, setsid + spawn the tool, then build the result JSON and</span>
+    <span class="rs-comment">//   reap the process group on timeout.</span>
+    <a class="symbol-link rs-fn" href="eos-runner--src-fresh-ns-rs.html#item-fn-enter-fresh-namespace-115">enter_fresh_namespace</a>()?;
+    <span class="rs-kw">let</span> upperdir = request
+        .upperdir
+        .as_ref()
+        .ok_or_else(|| <a class="symbol-link rs-type" href="eos-runner.html#item-enum-RunnerError-11">RunnerError</a>::<span class="rs-type">InvalidRequest</span>(&quot;fresh-ns requires upperdir&quot;.to_owned()))?;
+    <span class="rs-kw">let</span> workdir = request
+        .workdir
+        .as_ref()
+        .ok_or_else(|| <a class="symbol-link rs-type" href="eos-runner.html#item-enum-RunnerError-11">RunnerError</a>::<span class="rs-type">InvalidRequest</span>(&quot;fresh-ns requires workdir&quot;.to_owned()))?;
+    <span class="rs-kw">let</span> mount_start = <span class="rs-type">Instant</span>::now();
+    <span class="rs-kw">let</span> handle = <span class="rs-type">OverlayHandle</span> {
+        layer_paths: request.layer_paths.clone(),
+        upperdir: upperdir.clone(),
+        workdir: workdir.clone(),
+    };
+    <span class="rs-kw">let</span> _mount_guard = eos_overlay::mount_overlay(&amp;request.workspace_root.0, &amp;handle)?;
+    <span class="rs-kw">let</span> mount_s = mount_start.elapsed().as_secs_f64();
+
+    <a class="symbol-link rs-fn" href="eos-runner--src-fresh-ns-rs.html#item-fn-execute-tool-151">execute_tool</a>(
+        request,
+        mount_s,
+        <span class="rs-type">Instant</span>::now(),
+        <span class="rs-type">Some</span>(&amp;config.mount_mask.hidden_paths),
+    )
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-runner/src/fresh_ns.rs:54</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn run_fresh_ns pub pub fn run_fresh_ns (_request : &amp; RunRequest , _config : &amp; crate :: config :: RunnerConfig ,) -&gt; Result &lt; RunResult , RunnerError &gt; crates/eos-runner/src/fresh_ns.rs  ">
+</article><article id="item-fn-run-fresh-ns-101" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn run_fresh_ns pub pub fn run_fresh_ns (_request : &amp; RunRequest , _config : &amp; crate :: config :: RunnerConfig ,) -&gt; Result &lt; RunResult , RunnerError &gt; crates/eos-runner/src/fresh_ns.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>run_fresh_ns</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub fn run_fresh_ns (_request : &amp; RunRequest , _config : &amp; crate :: config :: RunnerConfig ,) -&gt; Result &lt; RunResult , RunnerError &gt;</code>
-  <div class="tags"></div>
+  <code class="signature">pub fn <a class="symbol-link" href="eos-runner--src-fresh-ns-rs.html#item-fn-run-fresh-ns-54">run_fresh_ns</a> (_request : &amp; <a class="symbol-link" href="eos-runner--src-request-rs.html#item-struct-RunRequest-135">RunRequest</a> , _config : &amp; crate :: config :: RunnerConfig ,) -&gt; Result &lt; <a class="symbol-link" href="eos-runner--src-request-rs.html#item-struct-RunResult-167">RunResult</a> , <a class="symbol-link" href="eos-runner.html#item-enum-RunnerError-11">RunnerError</a> &gt;</code>
+  <p class="docstring">Return the non-Linux unsupported error for fresh-namespace execution.<br># Errors<br>Always returns [`RunnerError::Unsupported`] outside Linux because the<br>namespace syscalls do not exist.</p>
+  <div class="tags"><span>cfg: not</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>#[cfg(not(target_os = &quot;linux&quot;))]
+<span class="rs-comment">/// Return the non-Linux unsupported error for fresh-namespace execution.</span>
+<span class="rs-comment">///</span>
+<span class="rs-comment">/// # Errors</span>
+<span class="rs-comment">///</span>
+<span class="rs-comment">/// Always returns [`RunnerError::Unsupported`] outside Linux because the</span>
+<span class="rs-comment">/// namespace syscalls do not exist.</span>
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runner--src-fresh-ns-rs.html#item-fn-run-fresh-ns-54">run_fresh_ns</a>(
+    _request: &amp;<a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-RunRequest-135">RunRequest</a>,
+    _config: &amp;<span class="rs-kw">crate</span>::config::<span class="rs-type">RunnerConfig</span>,
+) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-RunResult-167">RunResult</a>, <a class="symbol-link rs-type" href="eos-runner.html#item-enum-RunnerError-11">RunnerError</a>&gt; {
+    <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-runner.html#item-enum-RunnerError-11">RunnerError</a>::<span class="rs-type">Unsupported</span>)
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-runner/src/fresh_ns.rs:101</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn execute_tool pub(crate) pub(crate) fn execute_tool (request : &amp; RunRequest , mount_s : f64 , run_start : Instant , hidden_paths : Option &lt; &amp; [PathBuf] &gt; ,) -&gt; Result &lt; RunResult , RunnerError &gt; crates/eos-runner/src/fresh_ns.rs  ">
+</article><article id="item-fn-execute-tool-151" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn execute_tool pub(crate) pub(crate) fn execute_tool (request : &amp; RunRequest , mount_s : f64 , run_start : Instant , hidden_paths : Option &lt; &amp; [PathBuf] &gt; ,) -&gt; Result &lt; RunResult , RunnerError &gt; crates/eos-runner/src/fresh_ns.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>execute_tool</h3>
     <span class="visibility">pub(crate)</span>
   </div>
-  <code class="signature">pub(crate) fn execute_tool (request : &amp; RunRequest , mount_s : f64 , run_start : Instant , hidden_paths : Option &lt; &amp; [PathBuf] &gt; ,) -&gt; Result &lt; RunResult , RunnerError &gt;</code>
-  <div class="tags"></div>
+  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-runner--src-fresh-ns-rs.html#item-fn-execute-tool-151">execute_tool</a> (request : &amp; <a class="symbol-link" href="eos-runner--src-request-rs.html#item-struct-RunRequest-135">RunRequest</a> , mount_s : f64 , run_start : Instant , hidden_paths : Option &lt; &amp; [PathBuf] &gt; ,) -&gt; Result &lt; <a class="symbol-link" href="eos-runner--src-request-rs.html#item-struct-RunResult-167">RunResult</a> , <a class="symbol-link" href="eos-runner.html#item-enum-RunnerError-11">RunnerError</a> &gt;</code>
+  <div class="tags"><span>cfg: target_os</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>#[cfg(target_os = &quot;linux&quot;)]
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runner--src-fresh-ns-rs.html#item-fn-execute-tool-151">execute_tool</a>(
+    request: &amp;<a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-RunRequest-135">RunRequest</a>,
+    mount_s: f64,
+    run_start: <span class="rs-type">Instant</span>,
+    hidden_paths: <span class="rs-type">Option</span>&lt;&amp;[<span class="rs-type">PathBuf</span>]&gt;,
+) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-RunResult-167">RunResult</a>, <a class="symbol-link rs-type" href="eos-runner.html#item-enum-RunnerError-11">RunnerError</a>&gt; {
+    <span class="rs-kw">match</span> &amp;request.tool_call.verb {
+        <a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-enum-RunnerVerb-58">RunnerVerb</a>::<span class="rs-type">ExecCommand</span> =&gt; <a class="symbol-link rs-fn" href="eos-runner--src-fresh-ns-rs.html#item-fn-execute-shell-222">execute_shell</a>(request, mount_s, run_start, hidden_paths),
+        <a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-enum-RunnerVerb-58">RunnerVerb</a>::<span class="rs-type">PluginService</span> =&gt; <a class="symbol-link rs-fn" href="eos-runner--src-fresh-ns-rs.html#item-fn-execute-plugin-service-169">execute_plugin_service</a>(request, mount_s, run_start),
+        <a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-enum-RunnerVerb-58">RunnerVerb</a>::<span class="rs-type">Unknown</span>(verb) =&gt; <span class="rs-type">Ok</span>(<a class="symbol-link rs-fn" href="eos-runner--src-fresh-ns-rs.html#item-fn-error-result-291">error_result</a>(
+            2,
+            &quot;unsupported_runner_verb&quot;,
+            &amp;format!(&quot;fresh namespace runner does not support verb {}&quot;, verb),
+        )),
+    }
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-runner/src/fresh_ns.rs:151</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn enter_fresh_namespace private fn enter_fresh_namespace () -&gt; Result &lt; () , RunnerError &gt; crates/eos-runner/src/fresh_ns.rs  ">
+</article><article id="item-fn-enter-fresh-namespace-115" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn enter_fresh_namespace private fn enter_fresh_namespace () -&gt; Result &lt; () , RunnerError &gt; crates/eos-runner/src/fresh_ns.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>enter_fresh_namespace</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn enter_fresh_namespace () -&gt; Result &lt; () , RunnerError &gt;</code>
-  <div class="tags"></div>
+  <code class="signature">fn <a class="symbol-link" href="eos-runner--src-fresh-ns-rs.html#item-fn-enter-fresh-namespace-115">enter_fresh_namespace</a> () -&gt; Result &lt; () , <a class="symbol-link" href="eos-runner.html#item-enum-RunnerError-11">RunnerError</a> &gt;</code>
+  <div class="tags"><span>cfg: target_os</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>#[cfg(target_os = &quot;linux&quot;)]
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runner--src-fresh-ns-rs.html#item-fn-enter-fresh-namespace-115">enter_fresh_namespace</a>() -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-runner.html#item-enum-RunnerError-11">RunnerError</a>&gt; {
+    <span class="rs-kw">struct</span> <span class="rs-type">ParentIds</span> {
+        user: u32,
+        group: u32,
+    }
+
+    <span class="rs-kw">let</span> parent_ids = <span class="rs-type">ParentIds</span> {
+        user: rustix::process::getuid().as_raw(),
+        group: rustix::process::getgid().as_raw(),
+    };
+
+    <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Err</span>(err) = setsid() {
+        <span class="rs-comment">// Docker exec may launch the runner as a process-group leader. In that</span>
+        <span class="rs-comment">// case setsid(2) returns EPERM, but the spawned tool below still gets</span>
+        <span class="rs-comment">// its own process group for timeout/cancel cleanup.</span>
+        <span class="rs-kw">if</span> err != <span class="rs-type">Errno</span>::<span class="rs-type">PERM</span> {
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-runner.html#item-enum-RunnerError-11">RunnerError</a>::<span class="rs-type">Syscall</span>(std::io::<span class="rs-type">Error</span>::<a class="symbol-link rs-fn" href="eos-runner.html#method-from-45">from</a>(err)));
+        }
+    }
+    unshare(<span class="rs-type">UnshareFlags</span>::<span class="rs-type">NEWUSER</span> | <span class="rs-type">UnshareFlags</span>::<span class="rs-type">NEWNS</span>).<a class="symbol-link rs-fn" href="eos-runner--src-fresh-ns-rs.html#method-map-syscall-310">map_syscall</a>()?;
+    <a class="symbol-link rs-fn" href="eos-runner--src-fresh-ns-rs.html#item-fn-write-if-exists-282">write_if_exists</a>(&quot;/proc/<span class="rs-self">self</span>/setgroups&quot;, &quot;deny\n&quot;)?;
+    fs::write(&quot;/proc/<span class="rs-self">self</span>/uid_map&quot;, format!(&quot;0 {} 1\n&quot;, parent_ids.user))
+        .map_err(<a class="symbol-link rs-type" href="eos-runner.html#item-enum-RunnerError-11">RunnerError</a>::<span class="rs-type">Syscall</span>)?;
+    fs::write(&quot;/proc/<span class="rs-self">self</span>/gid_map&quot;, format!(&quot;0 {} 1\n&quot;, parent_ids.group))
+        .map_err(<a class="symbol-link rs-type" href="eos-runner.html#item-enum-RunnerError-11">RunnerError</a>::<span class="rs-type">Syscall</span>)?;
+    set_thread_gid(rustix::process::<span class="rs-type">Gid</span>::<span class="rs-type">ROOT</span>).<a class="symbol-link rs-fn" href="eos-runner--src-fresh-ns-rs.html#method-map-syscall-310">map_syscall</a>()?;
+    set_thread_uid(rustix::process::<span class="rs-type">Uid</span>::<span class="rs-type">ROOT</span>).<a class="symbol-link rs-fn" href="eos-runner--src-fresh-ns-rs.html#method-map-syscall-310">map_syscall</a>()?;
+    mount_change(
+        &quot;/&quot;,
+        <span class="rs-type">MountPropagationFlags</span>::<span class="rs-type">PRIVATE</span> | <span class="rs-type">MountPropagationFlags</span>::<span class="rs-type">REC</span>,
+    )
+    .<a class="symbol-link rs-fn" href="eos-runner--src-fresh-ns-rs.html#method-map-syscall-310">map_syscall</a>()?;
+    <span class="rs-type">Ok</span>(())
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-runner/src/fresh_ns.rs:115</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn execute_plugin_service private fn execute_plugin_service (request : &amp; RunRequest , mount_s : f64 , run_start : Instant ,) -&gt; Result &lt; RunResult , RunnerError &gt; crates/eos-runner/src/fresh_ns.rs  ">
+</article><article id="item-fn-execute-plugin-service-169" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn execute_plugin_service private fn execute_plugin_service (request : &amp; RunRequest , mount_s : f64 , run_start : Instant ,) -&gt; Result &lt; RunResult , RunnerError &gt; crates/eos-runner/src/fresh_ns.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>execute_plugin_service</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn execute_plugin_service (request : &amp; RunRequest , mount_s : f64 , run_start : Instant ,) -&gt; Result &lt; RunResult , RunnerError &gt;</code>
-  <div class="tags"></div>
+  <code class="signature">fn <a class="symbol-link" href="eos-runner--src-fresh-ns-rs.html#item-fn-execute-plugin-service-169">execute_plugin_service</a> (request : &amp; <a class="symbol-link" href="eos-runner--src-request-rs.html#item-struct-RunRequest-135">RunRequest</a> , mount_s : f64 , run_start : Instant ,) -&gt; Result &lt; <a class="symbol-link" href="eos-runner--src-request-rs.html#item-struct-RunResult-167">RunResult</a> , <a class="symbol-link" href="eos-runner.html#item-enum-RunnerError-11">RunnerError</a> &gt;</code>
+  <div class="tags"><span>cfg: target_os</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>#[cfg(target_os = &quot;linux&quot;)]
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runner--src-fresh-ns-rs.html#item-fn-execute-plugin-service-169">execute_plugin_service</a>(
+    request: &amp;<a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-RunRequest-135">RunRequest</a>,
+    mount_s: f64,
+    run_start: <span class="rs-type">Instant</span>,
+) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-RunResult-167">RunResult</a>, <a class="symbol-link rs-type" href="eos-runner.html#item-enum-RunnerError-11">RunnerError</a>&gt; {
+    <span class="rs-kw">let</span> argv = <a class="symbol-link rs-fn" href="eos-runner--src-fresh-ns-command-rs.html#item-fn-plugin-service-argv-17">plugin_service_argv</a>(request)?;
+    <span class="rs-kw">let</span> cwd = <a class="symbol-link rs-fn" href="eos-runner--src-fresh-ns-command-rs.html#item-fn-shell-cwd-82">shell_cwd</a>(request)?;
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> command = <span class="rs-type">Command</span>::new(&amp;argv[0]);
+    command
+        .args(&amp;argv[1..])
+        .current_dir(cwd)
+        .envs(<a class="symbol-link rs-fn" href="eos-runner--src-fresh-ns-command-rs.html#item-fn-command-environment-110">command_environment</a>(&amp;request.tool_call.args))
+        .stdin(<span class="rs-type">Stdio</span>::null())
+        .stdout(<span class="rs-type">Stdio</span>::null())
+        .stderr(<span class="rs-type">Stdio</span>::null())
+        .process_group(0);
+
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> child = command.spawn().map_err(<a class="symbol-link rs-type" href="eos-runner.html#item-enum-RunnerError-11">RunnerError</a>::<span class="rs-type">Child</span>)?;
+    <span class="rs-kw">let</span> child_pid = <span class="rs-type">Pid</span>::from_child(&amp;child);
+    <span class="rs-kw">let</span> (exit_code, timed_out) = <span class="rs-kw">match</span> <a class="symbol-link rs-fn" href="eos-runner--src-fresh-ns-child-rs.html#item-fn-wait-for-child-27">wait_for_child</a>(
+        &amp;<span class="rs-kw">mut</span> child,
+        request.timeout_seconds,
+        <a class="symbol-link rs-type" href="eos-runner--src-fresh-ns-child-rs.html#item-enum-TimeoutKill-21">TimeoutKill</a>::<span class="rs-type">ProcessGroup</span>,
+    ) {
+        <span class="rs-type">Ok</span>(exit_code) =&gt; (exit_code, <span class="rs-kw">false</span>),
+        <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-runner.html#item-enum-RunnerError-11">RunnerError</a>::<span class="rs-type">TimedOut</span>) =&gt; (124, <span class="rs-kw">true</span>),
+        <span class="rs-type">Err</span>(err) =&gt; <span class="rs-kw">return</span> <span class="rs-type">Err</span>(err),
+    };
+    <span class="rs-kw">if</span> timed_out || !matches!(request.mode, <span class="rs-kw">crate</span>::request::<a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-enum-RunMode-17">RunMode</a>::<span class="rs-type">SetNs</span>) {
+        <span class="rs-kw">let</span> _ = kill_process_group(child_pid, <span class="rs-type">Signal</span>::<span class="rs-type">Kill</span>);
+    }
+    <span class="rs-kw">let</span> status = <span class="rs-kw">if</span> timed_out {
+        &quot;timed_out&quot;
+    } <span class="rs-kw">else</span> <span class="rs-kw">if</span> exit_code == 0 {
+        &quot;ok&quot;
+    } <span class="rs-kw">else</span> {
+        &quot;error&quot;
+    };
+    <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-RunResult-167">RunResult</a> {
+        exit_code,
+        tool_result: serde_json::json!({
+            &quot;success&quot;: exit_code == 0,
+            &quot;workspace&quot;: &quot;ephemeral&quot;,
+            &quot;timings&quot;: {
+                &quot;workspace.mount_s&quot;: mount_s,
+                &quot;workspace.tool_s&quot;: run_start.elapsed().as_secs_f64(),
+            },
+            &quot;status&quot;: status,
+        }),
+    })
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-runner/src/fresh_ns.rs:169</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn execute_shell private fn execute_shell (request : &amp; RunRequest , mount_s : f64 , run_start : Instant , hidden_paths : Option &lt; &amp; [PathBuf] &gt; ,) -&gt; Result &lt; RunResult , RunnerError &gt; crates/eos-runner/src/fresh_ns.rs  ">
+</article><article id="item-fn-execute-shell-222" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn execute_shell private fn execute_shell (request : &amp; RunRequest , mount_s : f64 , run_start : Instant , hidden_paths : Option &lt; &amp; [PathBuf] &gt; ,) -&gt; Result &lt; RunResult , RunnerError &gt; crates/eos-runner/src/fresh_ns.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>execute_shell</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn execute_shell (request : &amp; RunRequest , mount_s : f64 , run_start : Instant , hidden_paths : Option &lt; &amp; [PathBuf] &gt; ,) -&gt; Result &lt; RunResult , RunnerError &gt;</code>
-  <div class="tags"></div>
+  <code class="signature">fn <a class="symbol-link" href="eos-runner--src-fresh-ns-rs.html#item-fn-execute-shell-222">execute_shell</a> (request : &amp; <a class="symbol-link" href="eos-runner--src-request-rs.html#item-struct-RunRequest-135">RunRequest</a> , mount_s : f64 , run_start : Instant , hidden_paths : Option &lt; &amp; [PathBuf] &gt; ,) -&gt; Result &lt; <a class="symbol-link" href="eos-runner--src-request-rs.html#item-struct-RunResult-167">RunResult</a> , <a class="symbol-link" href="eos-runner.html#item-enum-RunnerError-11">RunnerError</a> &gt;</code>
+  <div class="tags"><span>cfg: target_os</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>#[cfg(target_os = &quot;linux&quot;)]
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runner--src-fresh-ns-rs.html#item-fn-execute-shell-222">execute_shell</a>(
+    request: &amp;<a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-RunRequest-135">RunRequest</a>,
+    mount_s: f64,
+    run_start: <span class="rs-type">Instant</span>,
+    hidden_paths: <span class="rs-type">Option</span>&lt;&amp;[<span class="rs-type">PathBuf</span>]&gt;,
+) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-RunResult-167">RunResult</a>, <a class="symbol-link rs-type" href="eos-runner.html#item-enum-RunnerError-11">RunnerError</a>&gt; {
+    <span class="rs-kw">let</span> argv = <a class="symbol-link rs-fn" href="eos-runner--src-fresh-ns-command-rs.html#item-fn-shell-argv-54">shell_argv</a>(request)?;
+    <span class="rs-kw">let</span> cwd = <a class="symbol-link rs-fn" href="eos-runner--src-fresh-ns-command-rs.html#item-fn-shell-cwd-82">shell_cwd</a>(request)?;
+    <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(hidden_paths) = hidden_paths {
+        <span class="rs-kw">crate</span>::mount_mask::<a class="symbol-link rs-fn" href="eos-runner--src-mount-mask-rs.html#item-fn-mask-model-shell-paths-13">mask_model_shell_paths</a>(hidden_paths)?;
+    }
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> command = <span class="rs-type">Command</span>::new(&amp;argv[0]);
+    command
+        .args(&amp;argv[1..])
+        .current_dir(cwd)
+        .env_clear()
+        .envs(<a class="symbol-link rs-fn" href="eos-runner--src-fresh-ns-command-rs.html#item-fn-command-environment-110">command_environment</a>(&amp;request.tool_call.args))
+        .stdin(<span class="rs-type">Stdio</span>::inherit())
+        .stdout(<span class="rs-type">Stdio</span>::inherit())
+        .stderr(<span class="rs-type">Stdio</span>::inherit());
+
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> child = command.spawn().map_err(<a class="symbol-link rs-type" href="eos-runner.html#item-enum-RunnerError-11">RunnerError</a>::<span class="rs-type">Child</span>)?;
+    <span class="rs-kw">let</span> (exit_code, timed_out) =
+        <span class="rs-kw">match</span> <a class="symbol-link rs-fn" href="eos-runner--src-fresh-ns-child-rs.html#item-fn-wait-for-command-execution-scope-57">wait_for_command_execution_scope</a>(&amp;<span class="rs-kw">mut</span> child, request.timeout_seconds) {
+            <span class="rs-type">Ok</span>(exit_code) =&gt; (exit_code, <span class="rs-kw">false</span>),
+            <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-runner.html#item-enum-RunnerError-11">RunnerError</a>::<span class="rs-type">TimedOut</span>) =&gt; (124, <span class="rs-kw">true</span>),
+            <span class="rs-type">Err</span>(err) =&gt; <span class="rs-kw">return</span> <span class="rs-type">Err</span>(err),
+        };
+    <span class="rs-kw">let</span> status = <span class="rs-kw">if</span> timed_out {
+        &quot;timed_out&quot;
+    } <span class="rs-kw">else</span> <span class="rs-kw">if</span> exit_code == 0 {
+        &quot;ok&quot;
+    } <span class="rs-kw">else</span> {
+        &quot;error&quot;
+    };
+    <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-RunResult-167">RunResult</a> {
+        exit_code,
+        tool_result: serde_json::json!({
+            &quot;success&quot;: exit_code == 0,
+            &quot;workspace&quot;: &quot;ephemeral&quot;,
+            &quot;timings&quot;: {
+                &quot;workspace.mount_s&quot;: mount_s,
+                &quot;workspace.tool_s&quot;: run_start.elapsed().as_secs_f64(),
+            },
+            &quot;conflict&quot;: null,
+            &quot;conflict_reason&quot;: null,
+            &quot;changed_paths&quot;: [],
+            &quot;error&quot;: null,
+            &quot;changed_path_kinds&quot;: {},
+            &quot;mutation_source&quot;: &quot;&quot;,
+            &quot;status&quot;: status,
+            &quot;exit_code&quot;: exit_code,
+            &quot;stdout&quot;: &quot;&quot;,
+            &quot;stderr&quot;: &quot;&quot;,
+            &quot;warnings&quot;: [],
+        }),
+    })
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-runner/src/fresh_ns.rs:222</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn write_if_exists private fn write_if_exists (path : impl AsRef &lt; Path &gt; , value : impl AsRef &lt; OsStr &gt;) -&gt; Result &lt; () , RunnerError &gt; crates/eos-runner/src/fresh_ns.rs  ">
+</article><article id="item-fn-write-if-exists-282" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn write_if_exists private fn write_if_exists (path : impl AsRef &lt; Path &gt; , value : impl AsRef &lt; OsStr &gt;) -&gt; Result &lt; () , RunnerError &gt; crates/eos-runner/src/fresh_ns.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>write_if_exists</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn write_if_exists (path : impl AsRef &lt; Path &gt; , value : impl AsRef &lt; OsStr &gt;) -&gt; Result &lt; () , RunnerError &gt;</code>
-  <div class="tags"></div>
+  <code class="signature">fn <a class="symbol-link" href="eos-runner--src-fresh-ns-rs.html#item-fn-write-if-exists-282">write_if_exists</a> (path : impl AsRef &lt; Path &gt; , value : impl AsRef &lt; OsStr &gt;) -&gt; Result &lt; () , <a class="symbol-link" href="eos-runner.html#item-enum-RunnerError-11">RunnerError</a> &gt;</code>
+  <div class="tags"><span>cfg: target_os</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>#[cfg(target_os = &quot;linux&quot;)]
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runner--src-fresh-ns-rs.html#item-fn-write-if-exists-282">write_if_exists</a>(path: <span class="rs-kw">impl</span> <span class="rs-type">AsRef</span>&lt;<span class="rs-type">Path</span>&gt;, value: <span class="rs-kw">impl</span> <span class="rs-type">AsRef</span>&lt;<span class="rs-type">OsStr</span>&gt;) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-runner.html#item-enum-RunnerError-11">RunnerError</a>&gt; {
+    <span class="rs-kw">match</span> fs::write(path.as_ref(), value.as_ref().as_encoded_bytes()) {
+        <span class="rs-type">Ok</span>(()) =&gt; <span class="rs-type">Ok</span>(()),
+        <span class="rs-type">Err</span>(err) <span class="rs-kw">if</span> err.kind() == std::io::<span class="rs-type">ErrorKind</span>::<span class="rs-type">NotFound</span> =&gt; <span class="rs-type">Ok</span>(()),
+        <span class="rs-type">Err</span>(err) =&gt; <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-runner.html#item-enum-RunnerError-11">RunnerError</a>::<span class="rs-type">Syscall</span>(err)),
+    }
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-runner/src/fresh_ns.rs:282</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn error_result private fn error_result (exit_code : i32 , kind : &amp; str , message : &amp; str) -&gt; RunResult crates/eos-runner/src/fresh_ns.rs  ">
+</article><article id="item-fn-error-result-291" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn error_result private fn error_result (exit_code : i32 , kind : &amp; str , message : &amp; str) -&gt; RunResult crates/eos-runner/src/fresh_ns.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>error_result</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn error_result (exit_code : i32 , kind : &amp; str , message : &amp; str) -&gt; RunResult</code>
-  <div class="tags"></div>
+  <code class="signature">fn <a class="symbol-link" href="eos-runner--src-fresh-ns-rs.html#item-fn-error-result-291">error_result</a> (exit_code : i32 , kind : &amp; str , message : &amp; str) -&gt; <a class="symbol-link" href="eos-runner--src-request-rs.html#item-struct-RunResult-167">RunResult</a></code>
+  <div class="tags"><span>cfg: target_os</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>#[cfg(target_os = &quot;linux&quot;)]
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runner--src-fresh-ns-rs.html#item-fn-error-result-291">error_result</a>(exit_code: i32, kind: &amp;str, message: &amp;str) -&gt; <a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-RunResult-167">RunResult</a> {
+    <a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-RunResult-167">RunResult</a> {
+        exit_code,
+        tool_result: serde_json::json!({
+            &quot;success&quot;: <span class="rs-kw">false</span>,
+            &quot;workspace&quot;: &quot;ephemeral&quot;,
+            &quot;status&quot;: &quot;error&quot;,
+            &quot;error&quot;: {
+                &quot;kind&quot;: kind,
+                &quot;message&quot;: message,
+            },
+            &quot;timings&quot;: {},
+        }),
+    }
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-runner/src/fresh_ns.rs:291</p>
-</article><div class="group-label">Other Implementations</div><article class="item-card" data-kind="impl" data-kind-list="impl method" data-filter-text="impl impl SyscallResult &lt; T &gt; for rustix :: io :: Result &lt; T &gt; private impl SyscallResult &lt; T &gt; for rustix :: io :: Result &lt; T &gt; crates/eos-runner/src/fresh_ns.rs  map_syscall fn map_syscall (self) -&gt; Result &lt; T , RunnerError &gt;">
+</article><div class="group-label">Other Implementations</div><article id="item-impl-impl-SyscallResult---T---for-rustix----io----Result---T---313" class="item-card" data-kind="impl" data-kind-list="impl method" data-filter-text="impl impl SyscallResult &lt; T &gt; for rustix :: io :: Result &lt; T &gt; private impl SyscallResult &lt; T &gt; for rustix :: io :: Result &lt; T &gt; crates/eos-runner/src/fresh_ns.rs  map_syscall fn map_syscall (self) -&gt; Result &lt; T , RunnerError &gt;">
   <div class="item-head">
     <span class="kind">impl</span>
     <h3>impl SyscallResult &lt; T &gt; for rustix :: io :: Result &lt; T &gt;</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">impl SyscallResult &lt; T &gt; for rustix :: io :: Result &lt; T &gt;</code>
-  <div class="tags"><span>impl</span><span>trait-impl</span></div>
-  <h4>Methods</h4><table><tbody><tr><td>method</td><td>map_syscall</td><td><code>fn map_syscall (self) -&gt; Result &lt; T , RunnerError &gt;</code></td></tr></tbody></table>
+  <code class="signature">impl <a class="symbol-link" href="eos-runner--src-fresh-ns-rs.html#item-trait-SyscallResult-308">SyscallResult</a> &lt; T &gt; for rustix :: io :: Result &lt; T &gt;</code>
+  <div class="tags"><span>cfg: target_os</span><span>impl</span><span>trait-impl</span></div>
+  <h4>Methods</h4><table><tbody><tr id="method-map-syscall-315"><td>method</td><td>map_syscall</td><td><code>fn <a class="symbol-link" href="eos-runner--src-fresh-ns-rs.html#method-map-syscall-310">map_syscall</a> (self) -&gt; Result &lt; T , <a class="symbol-link" href="eos-runner.html#item-enum-RunnerError-11">RunnerError</a> &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runner--src-fresh-ns-rs.html#method-map-syscall-310">map_syscall</a>(<span class="rs-self">self</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">T</span>, <a class="symbol-link rs-type" href="eos-runner.html#item-enum-RunnerError-11">RunnerError</a>&gt; {
+        <span class="rs-self">self</span>.map_err(|err| <a class="symbol-link rs-type" href="eos-runner.html#item-enum-RunnerError-11">RunnerError</a>::<span class="rs-type">Syscall</span>(std::io::<span class="rs-type">Error</span>::<a class="symbol-link rs-fn" href="eos-runner.html#method-from-45">from</a>(err)))
+    }
+</code></pre>
+</details></td></tr></tbody></table>
+
   <p class="source">crates/eos-runner/src/fresh_ns.rs:313</p>
 </article></div>
 </section></div>
 </main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/eos-runner/src/fresh_ns.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-comment">//! Fresh-namespace mode: `unshare` → `uid_map` → mount overlay → spawn tool.</span>
+<span class="rs-comment">//!</span>
+<span class="rs-comment">//! This is the daemon's standard per-tool-call path. The Rust target spawns</span>
+<span class="rs-comment">//! `unshare -Urm rust -m sandbox.overlay.namespace_entrypoint &lt;payload&gt;` with</span>
+<span class="rs-comment">//! `start_new_session=True`; the Rust port does the `unshare(CLONE_NEWUSER|</span>
+<span class="rs-comment">//! CLONE_NEWNS)` itself in this single-threaded child, writes the uid/gid maps,</span>
+<span class="rs-comment">//! mounts the overlay, then spawns the tool in its own process group so timeout</span>
+<span class="rs-comment">//! cleanup can kill the whole tree.</span>
+<span class="rs-comment">//!</span>
+<span class="rs-comment">//! The syscall boundary is kept behind safe `rustix` wrappers here. If this</span>
+<span class="rs-comment">//! later needs a raw libc gap, the block must carry a focused `// SAFETY:` note</span>
+<span class="rs-comment">//! and the crate's `#![deny(unsafe_op_in_unsafe_fn)]` forces that discipline.</span>
+
+#[cfg(target_os = &quot;linux&quot;)]
+<span class="rs-kw">use</span> std::ffi::<span class="rs-type">OsStr</span>;
+#[cfg(target_os = &quot;linux&quot;)]
+<span class="rs-kw">use</span> std::fs;
+#[cfg(target_os = &quot;linux&quot;)]
+<span class="rs-kw">use</span> std::os::unix::process::<span class="rs-type">CommandExt</span>;
+#[cfg(target_os = &quot;linux&quot;)]
+<span class="rs-kw">use</span> std::path::{<span class="rs-type">Path</span>, <span class="rs-type">PathBuf</span>};
+#[cfg(target_os = &quot;linux&quot;)]
+<span class="rs-kw">use</span> std::process::{<span class="rs-type">Command</span>, <span class="rs-type">Stdio</span>};
+#[cfg(target_os = &quot;linux&quot;)]
+<span class="rs-kw">use</span> std::time::<span class="rs-type">Instant</span>;
+
+#[cfg(target_os = &quot;linux&quot;)]
+<span class="rs-kw">use</span> rustix::io::<span class="rs-type">Errno</span>;
+#[cfg(target_os = &quot;linux&quot;)]
+<span class="rs-kw">use</span> rustix::mount::{mount_change, <span class="rs-type">MountPropagationFlags</span>};
+#[cfg(target_os = &quot;linux&quot;)]
+<span class="rs-kw">use</span> rustix::process::{kill_process_group, setsid, <span class="rs-type">Pid</span>, <span class="rs-type">Signal</span>};
+#[cfg(target_os = &quot;linux&quot;)]
+<span class="rs-kw">use</span> rustix::thread::{set_thread_gid, set_thread_uid, unshare, <span class="rs-type">UnshareFlags</span>};
+
+#[cfg(target_os = &quot;linux&quot;)]
+<span class="rs-kw">use</span> eos_overlay::<span class="rs-type">OverlayHandle</span>;
+
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::error::<a class="symbol-link rs-type" href="eos-runner.html#item-enum-RunnerError-11">RunnerError</a>;
+#[cfg(target_os = &quot;linux&quot;)]
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::request::<a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-enum-RunnerVerb-58">RunnerVerb</a>;
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::request::{<a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-RunRequest-135">RunRequest</a>, <a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-RunResult-167">RunResult</a>};
+
+#[cfg(target_os = &quot;linux&quot;)]
+<span class="rs-kw">mod</span> child;
+#[cfg(target_os = &quot;linux&quot;)]
+<span class="rs-kw">mod</span> command;
+
+#[cfg(target_os = &quot;linux&quot;)]
+<span class="rs-kw">use</span> child::*;
+#[cfg(target_os = &quot;linux&quot;)]
+<span class="rs-kw">use</span> command::*;
+
+<span class="rs-comment">/// Run one tool call in a freshly-unshared namespace.</span>
+<span class="rs-comment">///</span>
+<span class="rs-comment">/// # Invariant</span>
+<span class="rs-comment">///</span>
+<span class="rs-comment">/// Will call `setsid(2)` and `unshare(2)`, then spawn a child in the new</span>
+<span class="rs-comment">/// namespace. The namespace syscalls require the process to be single-threaded</span>
+<span class="rs-comment">/// (the crate-level invariant) and the caller to own the namespace it creates.</span>
+<span class="rs-comment">///</span>
+<span class="rs-comment">/// # Errors</span>
+<span class="rs-comment">///</span>
+<span class="rs-comment">/// Returns [`RunnerError`] when namespace setup, overlay mounting, request</span>
+<span class="rs-comment">/// validation, or child execution fails.</span>
+#[cfg(target_os = &quot;linux&quot;)]
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runner--src-fresh-ns-rs.html#item-fn-run-fresh-ns-54">run_fresh_ns</a>(
+    request: &amp;<a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-RunRequest-135">RunRequest</a>,
+    config: &amp;<span class="rs-kw">crate</span>::config::<span class="rs-type">RunnerConfig</span>,
+) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-RunResult-167">RunResult</a>, <a class="symbol-link rs-type" href="eos-runner.html#item-enum-RunnerError-11">RunnerError</a>&gt; {
+    <span class="rs-comment">//   sequence: unshare(CLONE_NEWUSER|CLONE_NEWNS) on this single-threaded child,</span>
+    <span class="rs-comment">//   write /proc/self/{uid_map,setgroups,gid_map}, mount overlay at</span>
+    <span class="rs-comment">//   workspace_root, setsid + spawn the tool, then build the result JSON and</span>
+    <span class="rs-comment">//   reap the process group on timeout.</span>
+    <a class="symbol-link rs-fn" href="eos-runner--src-fresh-ns-rs.html#item-fn-enter-fresh-namespace-115">enter_fresh_namespace</a>()?;
+    <span class="rs-kw">let</span> upperdir = request
+        .upperdir
+        .as_ref()
+        .ok_or_else(|| <a class="symbol-link rs-type" href="eos-runner.html#item-enum-RunnerError-11">RunnerError</a>::<span class="rs-type">InvalidRequest</span>(&quot;fresh-ns requires upperdir&quot;.to_owned()))?;
+    <span class="rs-kw">let</span> workdir = request
+        .workdir
+        .as_ref()
+        .ok_or_else(|| <a class="symbol-link rs-type" href="eos-runner.html#item-enum-RunnerError-11">RunnerError</a>::<span class="rs-type">InvalidRequest</span>(&quot;fresh-ns requires workdir&quot;.to_owned()))?;
+    <span class="rs-kw">let</span> mount_start = <span class="rs-type">Instant</span>::now();
+    <span class="rs-kw">let</span> handle = <span class="rs-type">OverlayHandle</span> {
+        layer_paths: request.layer_paths.clone(),
+        upperdir: upperdir.clone(),
+        workdir: workdir.clone(),
+    };
+    <span class="rs-kw">let</span> _mount_guard = eos_overlay::mount_overlay(&amp;request.workspace_root.0, &amp;handle)?;
+    <span class="rs-kw">let</span> mount_s = mount_start.elapsed().as_secs_f64();
+
+    <a class="symbol-link rs-fn" href="eos-runner--src-fresh-ns-rs.html#item-fn-execute-tool-151">execute_tool</a>(
+        request,
+        mount_s,
+        <span class="rs-type">Instant</span>::now(),
+        <span class="rs-type">Some</span>(&amp;config.mount_mask.hidden_paths),
+    )
+}
+
+#[cfg(not(target_os = &quot;linux&quot;))]
+<span class="rs-comment">/// Return the non-Linux unsupported error for fresh-namespace execution.</span>
+<span class="rs-comment">///</span>
+<span class="rs-comment">/// # Errors</span>
+<span class="rs-comment">///</span>
+<span class="rs-comment">/// Always returns [`RunnerError::Unsupported`] outside Linux because the</span>
+<span class="rs-comment">/// namespace syscalls do not exist.</span>
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runner--src-fresh-ns-rs.html#item-fn-run-fresh-ns-54">run_fresh_ns</a>(
+    _request: &amp;<a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-RunRequest-135">RunRequest</a>,
+    _config: &amp;<span class="rs-kw">crate</span>::config::<span class="rs-type">RunnerConfig</span>,
+) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-RunResult-167">RunResult</a>, <a class="symbol-link rs-type" href="eos-runner.html#item-enum-RunnerError-11">RunnerError</a>&gt; {
+    <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-runner.html#item-enum-RunnerError-11">RunnerError</a>::<span class="rs-type">Unsupported</span>)
+}
+
+#[cfg(target_os = &quot;linux&quot;)]
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runner--src-fresh-ns-rs.html#item-fn-enter-fresh-namespace-115">enter_fresh_namespace</a>() -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-runner.html#item-enum-RunnerError-11">RunnerError</a>&gt; {
+    <span class="rs-kw">struct</span> <span class="rs-type">ParentIds</span> {
+        user: u32,
+        group: u32,
+    }
+
+    <span class="rs-kw">let</span> parent_ids = <span class="rs-type">ParentIds</span> {
+        user: rustix::process::getuid().as_raw(),
+        group: rustix::process::getgid().as_raw(),
+    };
+
+    <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Err</span>(err) = setsid() {
+        <span class="rs-comment">// Docker exec may launch the runner as a process-group leader. In that</span>
+        <span class="rs-comment">// case setsid(2) returns EPERM, but the spawned tool below still gets</span>
+        <span class="rs-comment">// its own process group for timeout/cancel cleanup.</span>
+        <span class="rs-kw">if</span> err != <span class="rs-type">Errno</span>::<span class="rs-type">PERM</span> {
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-runner.html#item-enum-RunnerError-11">RunnerError</a>::<span class="rs-type">Syscall</span>(std::io::<span class="rs-type">Error</span>::<a class="symbol-link rs-fn" href="eos-runner.html#method-from-45">from</a>(err)));
+        }
+    }
+    unshare(<span class="rs-type">UnshareFlags</span>::<span class="rs-type">NEWUSER</span> | <span class="rs-type">UnshareFlags</span>::<span class="rs-type">NEWNS</span>).<a class="symbol-link rs-fn" href="eos-runner--src-fresh-ns-rs.html#method-map-syscall-310">map_syscall</a>()?;
+    <a class="symbol-link rs-fn" href="eos-runner--src-fresh-ns-rs.html#item-fn-write-if-exists-282">write_if_exists</a>(&quot;/proc/<span class="rs-self">self</span>/setgroups&quot;, &quot;deny\n&quot;)?;
+    fs::write(&quot;/proc/<span class="rs-self">self</span>/uid_map&quot;, format!(&quot;0 {} 1\n&quot;, parent_ids.user))
+        .map_err(<a class="symbol-link rs-type" href="eos-runner.html#item-enum-RunnerError-11">RunnerError</a>::<span class="rs-type">Syscall</span>)?;
+    fs::write(&quot;/proc/<span class="rs-self">self</span>/gid_map&quot;, format!(&quot;0 {} 1\n&quot;, parent_ids.group))
+        .map_err(<a class="symbol-link rs-type" href="eos-runner.html#item-enum-RunnerError-11">RunnerError</a>::<span class="rs-type">Syscall</span>)?;
+    set_thread_gid(rustix::process::<span class="rs-type">Gid</span>::<span class="rs-type">ROOT</span>).<a class="symbol-link rs-fn" href="eos-runner--src-fresh-ns-rs.html#method-map-syscall-310">map_syscall</a>()?;
+    set_thread_uid(rustix::process::<span class="rs-type">Uid</span>::<span class="rs-type">ROOT</span>).<a class="symbol-link rs-fn" href="eos-runner--src-fresh-ns-rs.html#method-map-syscall-310">map_syscall</a>()?;
+    mount_change(
+        &quot;/&quot;,
+        <span class="rs-type">MountPropagationFlags</span>::<span class="rs-type">PRIVATE</span> | <span class="rs-type">MountPropagationFlags</span>::<span class="rs-type">REC</span>,
+    )
+    .<a class="symbol-link rs-fn" href="eos-runner--src-fresh-ns-rs.html#method-map-syscall-310">map_syscall</a>()?;
+    <span class="rs-type">Ok</span>(())
+}
+
+#[cfg(target_os = &quot;linux&quot;)]
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runner--src-fresh-ns-rs.html#item-fn-execute-tool-151">execute_tool</a>(
+    request: &amp;<a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-RunRequest-135">RunRequest</a>,
+    mount_s: f64,
+    run_start: <span class="rs-type">Instant</span>,
+    hidden_paths: <span class="rs-type">Option</span>&lt;&amp;[<span class="rs-type">PathBuf</span>]&gt;,
+) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-RunResult-167">RunResult</a>, <a class="symbol-link rs-type" href="eos-runner.html#item-enum-RunnerError-11">RunnerError</a>&gt; {
+    <span class="rs-kw">match</span> &amp;request.tool_call.verb {
+        <a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-enum-RunnerVerb-58">RunnerVerb</a>::<span class="rs-type">ExecCommand</span> =&gt; <a class="symbol-link rs-fn" href="eos-runner--src-fresh-ns-rs.html#item-fn-execute-shell-222">execute_shell</a>(request, mount_s, run_start, hidden_paths),
+        <a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-enum-RunnerVerb-58">RunnerVerb</a>::<span class="rs-type">PluginService</span> =&gt; <a class="symbol-link rs-fn" href="eos-runner--src-fresh-ns-rs.html#item-fn-execute-plugin-service-169">execute_plugin_service</a>(request, mount_s, run_start),
+        <a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-enum-RunnerVerb-58">RunnerVerb</a>::<span class="rs-type">Unknown</span>(verb) =&gt; <span class="rs-type">Ok</span>(<a class="symbol-link rs-fn" href="eos-runner--src-fresh-ns-rs.html#item-fn-error-result-291">error_result</a>(
+            2,
+            &quot;unsupported_runner_verb&quot;,
+            &amp;format!(&quot;fresh namespace runner does not support verb {}&quot;, verb),
+        )),
+    }
+}
+
+#[cfg(target_os = &quot;linux&quot;)]
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runner--src-fresh-ns-rs.html#item-fn-execute-plugin-service-169">execute_plugin_service</a>(
+    request: &amp;<a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-RunRequest-135">RunRequest</a>,
+    mount_s: f64,
+    run_start: <span class="rs-type">Instant</span>,
+) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-RunResult-167">RunResult</a>, <a class="symbol-link rs-type" href="eos-runner.html#item-enum-RunnerError-11">RunnerError</a>&gt; {
+    <span class="rs-kw">let</span> argv = <a class="symbol-link rs-fn" href="eos-runner--src-fresh-ns-command-rs.html#item-fn-plugin-service-argv-17">plugin_service_argv</a>(request)?;
+    <span class="rs-kw">let</span> cwd = <a class="symbol-link rs-fn" href="eos-runner--src-fresh-ns-command-rs.html#item-fn-shell-cwd-82">shell_cwd</a>(request)?;
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> command = <span class="rs-type">Command</span>::new(&amp;argv[0]);
+    command
+        .args(&amp;argv[1..])
+        .current_dir(cwd)
+        .envs(<a class="symbol-link rs-fn" href="eos-runner--src-fresh-ns-command-rs.html#item-fn-command-environment-110">command_environment</a>(&amp;request.tool_call.args))
+        .stdin(<span class="rs-type">Stdio</span>::null())
+        .stdout(<span class="rs-type">Stdio</span>::null())
+        .stderr(<span class="rs-type">Stdio</span>::null())
+        .process_group(0);
+
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> child = command.spawn().map_err(<a class="symbol-link rs-type" href="eos-runner.html#item-enum-RunnerError-11">RunnerError</a>::<span class="rs-type">Child</span>)?;
+    <span class="rs-kw">let</span> child_pid = <span class="rs-type">Pid</span>::from_child(&amp;child);
+    <span class="rs-kw">let</span> (exit_code, timed_out) = <span class="rs-kw">match</span> <a class="symbol-link rs-fn" href="eos-runner--src-fresh-ns-child-rs.html#item-fn-wait-for-child-27">wait_for_child</a>(
+        &amp;<span class="rs-kw">mut</span> child,
+        request.timeout_seconds,
+        <a class="symbol-link rs-type" href="eos-runner--src-fresh-ns-child-rs.html#item-enum-TimeoutKill-21">TimeoutKill</a>::<span class="rs-type">ProcessGroup</span>,
+    ) {
+        <span class="rs-type">Ok</span>(exit_code) =&gt; (exit_code, <span class="rs-kw">false</span>),
+        <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-runner.html#item-enum-RunnerError-11">RunnerError</a>::<span class="rs-type">TimedOut</span>) =&gt; (124, <span class="rs-kw">true</span>),
+        <span class="rs-type">Err</span>(err) =&gt; <span class="rs-kw">return</span> <span class="rs-type">Err</span>(err),
+    };
+    <span class="rs-kw">if</span> timed_out || !matches!(request.mode, <span class="rs-kw">crate</span>::request::<a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-enum-RunMode-17">RunMode</a>::<span class="rs-type">SetNs</span>) {
+        <span class="rs-kw">let</span> _ = kill_process_group(child_pid, <span class="rs-type">Signal</span>::<span class="rs-type">Kill</span>);
+    }
+    <span class="rs-kw">let</span> status = <span class="rs-kw">if</span> timed_out {
+        &quot;timed_out&quot;
+    } <span class="rs-kw">else</span> <span class="rs-kw">if</span> exit_code == 0 {
+        &quot;ok&quot;
+    } <span class="rs-kw">else</span> {
+        &quot;error&quot;
+    };
+    <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-RunResult-167">RunResult</a> {
+        exit_code,
+        tool_result: serde_json::json!({
+            &quot;success&quot;: exit_code == 0,
+            &quot;workspace&quot;: &quot;ephemeral&quot;,
+            &quot;timings&quot;: {
+                &quot;workspace.mount_s&quot;: mount_s,
+                &quot;workspace.tool_s&quot;: run_start.elapsed().as_secs_f64(),
+            },
+            &quot;status&quot;: status,
+        }),
+    })
+}
+
+#[cfg(target_os = &quot;linux&quot;)]
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runner--src-fresh-ns-rs.html#item-fn-execute-shell-222">execute_shell</a>(
+    request: &amp;<a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-RunRequest-135">RunRequest</a>,
+    mount_s: f64,
+    run_start: <span class="rs-type">Instant</span>,
+    hidden_paths: <span class="rs-type">Option</span>&lt;&amp;[<span class="rs-type">PathBuf</span>]&gt;,
+) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-RunResult-167">RunResult</a>, <a class="symbol-link rs-type" href="eos-runner.html#item-enum-RunnerError-11">RunnerError</a>&gt; {
+    <span class="rs-kw">let</span> argv = <a class="symbol-link rs-fn" href="eos-runner--src-fresh-ns-command-rs.html#item-fn-shell-argv-54">shell_argv</a>(request)?;
+    <span class="rs-kw">let</span> cwd = <a class="symbol-link rs-fn" href="eos-runner--src-fresh-ns-command-rs.html#item-fn-shell-cwd-82">shell_cwd</a>(request)?;
+    <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(hidden_paths) = hidden_paths {
+        <span class="rs-kw">crate</span>::mount_mask::<a class="symbol-link rs-fn" href="eos-runner--src-mount-mask-rs.html#item-fn-mask-model-shell-paths-13">mask_model_shell_paths</a>(hidden_paths)?;
+    }
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> command = <span class="rs-type">Command</span>::new(&amp;argv[0]);
+    command
+        .args(&amp;argv[1..])
+        .current_dir(cwd)
+        .env_clear()
+        .envs(<a class="symbol-link rs-fn" href="eos-runner--src-fresh-ns-command-rs.html#item-fn-command-environment-110">command_environment</a>(&amp;request.tool_call.args))
+        .stdin(<span class="rs-type">Stdio</span>::inherit())
+        .stdout(<span class="rs-type">Stdio</span>::inherit())
+        .stderr(<span class="rs-type">Stdio</span>::inherit());
+
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> child = command.spawn().map_err(<a class="symbol-link rs-type" href="eos-runner.html#item-enum-RunnerError-11">RunnerError</a>::<span class="rs-type">Child</span>)?;
+    <span class="rs-kw">let</span> (exit_code, timed_out) =
+        <span class="rs-kw">match</span> <a class="symbol-link rs-fn" href="eos-runner--src-fresh-ns-child-rs.html#item-fn-wait-for-command-execution-scope-57">wait_for_command_execution_scope</a>(&amp;<span class="rs-kw">mut</span> child, request.timeout_seconds) {
+            <span class="rs-type">Ok</span>(exit_code) =&gt; (exit_code, <span class="rs-kw">false</span>),
+            <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-runner.html#item-enum-RunnerError-11">RunnerError</a>::<span class="rs-type">TimedOut</span>) =&gt; (124, <span class="rs-kw">true</span>),
+            <span class="rs-type">Err</span>(err) =&gt; <span class="rs-kw">return</span> <span class="rs-type">Err</span>(err),
+        };
+    <span class="rs-kw">let</span> status = <span class="rs-kw">if</span> timed_out {
+        &quot;timed_out&quot;
+    } <span class="rs-kw">else</span> <span class="rs-kw">if</span> exit_code == 0 {
+        &quot;ok&quot;
+    } <span class="rs-kw">else</span> {
+        &quot;error&quot;
+    };
+    <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-RunResult-167">RunResult</a> {
+        exit_code,
+        tool_result: serde_json::json!({
+            &quot;success&quot;: exit_code == 0,
+            &quot;workspace&quot;: &quot;ephemeral&quot;,
+            &quot;timings&quot;: {
+                &quot;workspace.mount_s&quot;: mount_s,
+                &quot;workspace.tool_s&quot;: run_start.elapsed().as_secs_f64(),
+            },
+            &quot;conflict&quot;: null,
+            &quot;conflict_reason&quot;: null,
+            &quot;changed_paths&quot;: [],
+            &quot;error&quot;: null,
+            &quot;changed_path_kinds&quot;: {},
+            &quot;mutation_source&quot;: &quot;&quot;,
+            &quot;status&quot;: status,
+            &quot;exit_code&quot;: exit_code,
+            &quot;stdout&quot;: &quot;&quot;,
+            &quot;stderr&quot;: &quot;&quot;,
+            &quot;warnings&quot;: [],
+        }),
+    })
+}
+
+#[cfg(target_os = &quot;linux&quot;)]
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runner--src-fresh-ns-rs.html#item-fn-write-if-exists-282">write_if_exists</a>(path: <span class="rs-kw">impl</span> <span class="rs-type">AsRef</span>&lt;<span class="rs-type">Path</span>&gt;, value: <span class="rs-kw">impl</span> <span class="rs-type">AsRef</span>&lt;<span class="rs-type">OsStr</span>&gt;) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-runner.html#item-enum-RunnerError-11">RunnerError</a>&gt; {
+    <span class="rs-kw">match</span> fs::write(path.as_ref(), value.as_ref().as_encoded_bytes()) {
+        <span class="rs-type">Ok</span>(()) =&gt; <span class="rs-type">Ok</span>(()),
+        <span class="rs-type">Err</span>(err) <span class="rs-kw">if</span> err.kind() == std::io::<span class="rs-type">ErrorKind</span>::<span class="rs-type">NotFound</span> =&gt; <span class="rs-type">Ok</span>(()),
+        <span class="rs-type">Err</span>(err) =&gt; <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-runner.html#item-enum-RunnerError-11">RunnerError</a>::<span class="rs-type">Syscall</span>(err)),
+    }
+}
+
+#[cfg(target_os = &quot;linux&quot;)]
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runner--src-fresh-ns-rs.html#item-fn-error-result-291">error_result</a>(exit_code: i32, kind: &amp;str, message: &amp;str) -&gt; <a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-RunResult-167">RunResult</a> {
+    <a class="symbol-link rs-type" href="eos-runner--src-request-rs.html#item-struct-RunResult-167">RunResult</a> {
+        exit_code,
+        tool_result: serde_json::json!({
+            &quot;success&quot;: <span class="rs-kw">false</span>,
+            &quot;workspace&quot;: &quot;ephemeral&quot;,
+            &quot;status&quot;: &quot;error&quot;,
+            &quot;error&quot;: {
+                &quot;kind&quot;: kind,
+                &quot;message&quot;: message,
+            },
+            &quot;timings&quot;: {},
+        }),
+    }
+}
+
+#[cfg(target_os = &quot;linux&quot;)]
+<span class="rs-kw">trait</span> <a class="symbol-link rs-type" href="eos-runner--src-fresh-ns-rs.html#item-trait-SyscallResult-308">SyscallResult</a>&lt;<span class="rs-type">T</span>&gt; {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runner--src-fresh-ns-rs.html#method-map-syscall-310">map_syscall</a>(<span class="rs-self">self</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">T</span>, <a class="symbol-link rs-type" href="eos-runner.html#item-enum-RunnerError-11">RunnerError</a>&gt;;
+}
+
+#[cfg(target_os = &quot;linux&quot;)]
+<span class="rs-kw">impl</span>&lt;<span class="rs-type">T</span>&gt; <a class="symbol-link rs-type" href="eos-runner--src-fresh-ns-rs.html#item-trait-SyscallResult-308">SyscallResult</a>&lt;<span class="rs-type">T</span>&gt; <span class="rs-kw">for</span> rustix::io::<span class="rs-type">Result</span>&lt;<span class="rs-type">T</span>&gt; {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runner--src-fresh-ns-rs.html#method-map-syscall-310">map_syscall</a>(<span class="rs-self">self</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">T</span>, <a class="symbol-link rs-type" href="eos-runner.html#item-enum-RunnerError-11">RunnerError</a>&gt; {
+        <span class="rs-self">self</span>.map_err(|err| <a class="symbol-link rs-type" href="eos-runner.html#item-enum-RunnerError-11">RunnerError</a>::<span class="rs-type">Syscall</span>(std::io::<span class="rs-type">Error</span>::<a class="symbol-link rs-fn" href="eos-runner.html#method-from-45">from</a>(err)))
+    }
+}
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
   <script src="../assets/inventory.js"></script>
 </body>
 </html>

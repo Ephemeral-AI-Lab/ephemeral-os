@@ -375,6 +375,7 @@ impl RuntimeServicesBuilder {
             message_records: MessageRecordService {
                 message_records: self.message_records_root.map(AgentMessageRecords::new),
             },
+            cancel_registry: super::RequestCancelRegistry::new(),
         })
     }
 }

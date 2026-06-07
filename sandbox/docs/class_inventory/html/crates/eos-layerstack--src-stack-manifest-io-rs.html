@@ -8,8 +8,16 @@
 </head>
 <body>
   <header>
-    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
-    <h1>eos-layerstack File Inventory</h1>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>eos-layerstack File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS/sandbox &amp;&amp; cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
   </header>
   <a class="back-link" href="../index.html">sandbox</a>
 <section class="summary">
@@ -47,39 +55,215 @@
       <span>0 methods</span>
     </div>
   </div>
-  <div class="items"><div class="group-label">Standalone Functions</div><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn read_manifest pub(crate) pub(crate) fn read_manifest (path : impl AsRef &lt; Path &gt;) -&gt; Result &lt; Manifest , LayerStackError &gt; crates/eos-layerstack/src/stack/manifest_io.rs  ">
+  <div class="items"><div class="group-label">Standalone Functions</div><article id="item-fn-read-manifest-9" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn read_manifest pub(crate) pub(crate) fn read_manifest (path : impl AsRef &lt; Path &gt;) -&gt; Result &lt; Manifest , LayerStackError &gt; crates/eos-layerstack/src/stack/manifest_io.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>read_manifest</h3>
     <span class="visibility">pub(crate)</span>
   </div>
-  <code class="signature">pub(crate) fn read_manifest (path : impl AsRef &lt; Path &gt;) -&gt; Result &lt; Manifest , LayerStackError &gt;</code>
+  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-layerstack--src-stack-manifest-io-rs.html#item-fn-read-manifest-9">read_manifest</a> (path : impl AsRef &lt; Path &gt;) -&gt; Result &lt; Manifest , <a class="symbol-link" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a> &gt;</code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-manifest-io-rs.html#item-fn-read-manifest-9">read_manifest</a>(path: <span class="rs-kw">impl</span> <span class="rs-type">AsRef</span>&lt;<span class="rs-type">Path</span>&gt;) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Manifest</span>, <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>&gt; {
+    <span class="rs-kw">let</span> path = path.as_ref();
+    <span class="rs-kw">if</span> !path.exists() {
+        <span class="rs-kw">return</span> <span class="rs-type">Manifest</span>::<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-new-79">new</a>(0, vec![], <span class="rs-type">MANIFEST_SCHEMA_VERSION</span>).map_err(<a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>::from);
+    }
+    <span class="rs-kw">let</span> payload = std::fs::read_to_string(path)?;
+    <span class="rs-kw">let</span> value: <span class="rs-type">Value</span> =
+        serde_json::from_str(&amp;payload).map_err(|err| <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>::<span class="rs-type">Manifest</span>(err.to_string()))?;
+    <span class="rs-kw">let</span> obj = value.as_object().ok_or_else(|| {
+        <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>::<span class="rs-type">Manifest</span>(&quot;manifest payload must be an object&quot;.to_owned())
+    })?;
+    <span class="rs-kw">let</span> version = obj.get(&quot;version&quot;).and_then(<span class="rs-type">Value</span>::as_i64).ok_or_else(|| {
+        <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>::<span class="rs-type">Manifest</span>(&quot;manifest payload missing required field: version&quot;.to_owned())
+    })?;
+    <span class="rs-kw">let</span> schema_version = obj
+        .get(&quot;schema_version&quot;)
+        .and_then(<span class="rs-type">Value</span>::as_i64)
+        .unwrap_or(<span class="rs-type">MANIFEST_SCHEMA_VERSION</span>);
+    <span class="rs-kw">if</span> schema_version &gt; <span class="rs-type">MANIFEST_SCHEMA_VERSION</span> {
+        <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>::<span class="rs-type">Manifest</span>(format!(
+            &quot;manifest schema_version is newer than this runtime supports: {schema_version}&quot;
+        )));
+    }
+    <span class="rs-kw">let</span> raw_layers = obj.get(&quot;layers&quot;).and_then(<span class="rs-type">Value</span>::as_array).ok_or_else(|| {
+        <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>::<span class="rs-type">Manifest</span>(&quot;manifest payload missing required field: layers&quot;.to_owned())
+    })?;
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> layers = <span class="rs-type">Vec</span>::with_capacity(raw_layers.len());
+    <span class="rs-kw">for</span> item <span class="rs-kw">in</span> raw_layers {
+        <span class="rs-kw">let</span> item = item.as_object().ok_or_else(|| {
+            <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>::<span class="rs-type">Manifest</span>(&quot;manifest layer entries must be objects&quot;.to_owned())
+        })?;
+        <span class="rs-kw">let</span> layer = <span class="rs-type">LayerRef</span> {
+            layer_id: item
+                .get(&quot;layer_id&quot;)
+                .and_then(<span class="rs-type">Value</span>::as_str)
+                .unwrap_or_default()
+                .to_owned(),
+            path: item
+                .get(&quot;path&quot;)
+                .and_then(<span class="rs-type">Value</span>::as_str)
+                .unwrap_or_default()
+                .to_owned(),
+        };
+        <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-manifest-io-rs.html#item-fn-validate-layer-ref-76">validate_layer_ref</a>(&amp;layer)?;
+        layers.push(layer);
+    }
+    <span class="rs-type">Manifest</span>::<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-new-79">new</a>(version, layers, schema_version).map_err(<a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>::from)
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-layerstack/src/stack/manifest_io.rs:9</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn write_manifest pub(crate) pub(crate) fn write_manifest (path : impl AsRef &lt; Path &gt; , manifest : &amp; Manifest ,) -&gt; Result &lt; () , LayerStackError &gt; crates/eos-layerstack/src/stack/manifest_io.rs  ">
+</article><article id="item-fn-write-manifest-58" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn write_manifest pub(crate) pub(crate) fn write_manifest (path : impl AsRef &lt; Path &gt; , manifest : &amp; Manifest ,) -&gt; Result &lt; () , LayerStackError &gt; crates/eos-layerstack/src/stack/manifest_io.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>write_manifest</h3>
     <span class="visibility">pub(crate)</span>
   </div>
-  <code class="signature">pub(crate) fn write_manifest (path : impl AsRef &lt; Path &gt; , manifest : &amp; Manifest ,) -&gt; Result &lt; () , LayerStackError &gt;</code>
+  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-layerstack--src-stack-manifest-io-rs.html#item-fn-write-manifest-58">write_manifest</a> (path : impl AsRef &lt; Path &gt; , manifest : &amp; Manifest ,) -&gt; Result &lt; () , <a class="symbol-link" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a> &gt;</code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-manifest-io-rs.html#item-fn-write-manifest-58">write_manifest</a>(
+    path: <span class="rs-kw">impl</span> <span class="rs-type">AsRef</span>&lt;<span class="rs-type">Path</span>&gt;,
+    manifest: &amp;<span class="rs-type">Manifest</span>,
+) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>&gt; {
+    <span class="rs-kw">let</span> value = json!({
+        &quot;schema_version&quot;: manifest.schema_version,
+        &quot;version&quot;: manifest.version,
+        &quot;layers&quot;: manifest
+            .layers
+            .iter()
+            .map(|layer| json!({&quot;layer_id&quot;: &amp;layer.layer_id, &quot;path&quot;: &amp;layer.path}))
+            .collect::&lt;<span class="rs-type">Vec</span>&lt;_&gt;&gt;(),
+    });
+    <span class="rs-kw">let</span> encoded = serde_json::to_vec_pretty(&amp;value)
+        .map_err(|err| <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>::<span class="rs-type">Manifest</span>(err.to_string()))?;
+    <span class="rs-kw">super</span>::<a class="symbol-link rs-fn" href="eos-layerstack--src-stack-fs-rs.html#item-fn-write-atomic-75">write_atomic</a>(path, &amp;encoded)
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-layerstack/src/stack/manifest_io.rs:58</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn validate_layer_ref pub(crate) pub(crate) fn validate_layer_ref (layer : &amp; LayerRef) -&gt; Result &lt; () , LayerStackError &gt; crates/eos-layerstack/src/stack/manifest_io.rs  ">
+</article><article id="item-fn-validate-layer-ref-76" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn validate_layer_ref pub(crate) pub(crate) fn validate_layer_ref (layer : &amp; LayerRef) -&gt; Result &lt; () , LayerStackError &gt; crates/eos-layerstack/src/stack/manifest_io.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>validate_layer_ref</h3>
     <span class="visibility">pub(crate)</span>
   </div>
-  <code class="signature">pub(crate) fn validate_layer_ref (layer : &amp; LayerRef) -&gt; Result &lt; () , LayerStackError &gt;</code>
+  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-layerstack--src-stack-manifest-io-rs.html#item-fn-validate-layer-ref-76">validate_layer_ref</a> (layer : &amp; LayerRef) -&gt; Result &lt; () , <a class="symbol-link" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a> &gt;</code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-manifest-io-rs.html#item-fn-validate-layer-ref-76">validate_layer_ref</a>(layer: &amp;<span class="rs-type">LayerRef</span>) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>&gt; {
+    <span class="rs-kw">if</span> layer.layer_id.is_empty() {
+        <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>::<span class="rs-type">Manifest</span>(
+            &quot;layer_id must not be empty&quot;.to_owned(),
+        ));
+    }
+    <a class="symbol-link rs-fn" href="eos-layerstack--src-fsutil-rs.html#item-fn-check-layer-path-37">check_layer_path</a>(&amp;layer.path)
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-layerstack/src/stack/manifest_io.rs:76</p>
 </article></div>
 </section></div>
 </main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/eos-layerstack/src/stack/manifest_io.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-kw">use</span> std::path::<span class="rs-type">Path</span>;
+
+<span class="rs-kw">use</span> eos_protocol::{<span class="rs-type">LayerRef</span>, <span class="rs-type">Manifest</span>, <span class="rs-type">MANIFEST_SCHEMA_VERSION</span>};
+<span class="rs-kw">use</span> serde_json::{json, <span class="rs-type">Value</span>};
+
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::error::<a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>;
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::fsutil::check_layer_path;
+
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-manifest-io-rs.html#item-fn-read-manifest-9">read_manifest</a>(path: <span class="rs-kw">impl</span> <span class="rs-type">AsRef</span>&lt;<span class="rs-type">Path</span>&gt;) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Manifest</span>, <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>&gt; {
+    <span class="rs-kw">let</span> path = path.as_ref();
+    <span class="rs-kw">if</span> !path.exists() {
+        <span class="rs-kw">return</span> <span class="rs-type">Manifest</span>::<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-new-79">new</a>(0, vec![], <span class="rs-type">MANIFEST_SCHEMA_VERSION</span>).map_err(<a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>::from);
+    }
+    <span class="rs-kw">let</span> payload = std::fs::read_to_string(path)?;
+    <span class="rs-kw">let</span> value: <span class="rs-type">Value</span> =
+        serde_json::from_str(&amp;payload).map_err(|err| <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>::<span class="rs-type">Manifest</span>(err.to_string()))?;
+    <span class="rs-kw">let</span> obj = value.as_object().ok_or_else(|| {
+        <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>::<span class="rs-type">Manifest</span>(&quot;manifest payload must be an object&quot;.to_owned())
+    })?;
+    <span class="rs-kw">let</span> version = obj.get(&quot;version&quot;).and_then(<span class="rs-type">Value</span>::as_i64).ok_or_else(|| {
+        <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>::<span class="rs-type">Manifest</span>(&quot;manifest payload missing required field: version&quot;.to_owned())
+    })?;
+    <span class="rs-kw">let</span> schema_version = obj
+        .get(&quot;schema_version&quot;)
+        .and_then(<span class="rs-type">Value</span>::as_i64)
+        .unwrap_or(<span class="rs-type">MANIFEST_SCHEMA_VERSION</span>);
+    <span class="rs-kw">if</span> schema_version &gt; <span class="rs-type">MANIFEST_SCHEMA_VERSION</span> {
+        <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>::<span class="rs-type">Manifest</span>(format!(
+            &quot;manifest schema_version is newer than this runtime supports: {schema_version}&quot;
+        )));
+    }
+    <span class="rs-kw">let</span> raw_layers = obj.get(&quot;layers&quot;).and_then(<span class="rs-type">Value</span>::as_array).ok_or_else(|| {
+        <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>::<span class="rs-type">Manifest</span>(&quot;manifest payload missing required field: layers&quot;.to_owned())
+    })?;
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> layers = <span class="rs-type">Vec</span>::with_capacity(raw_layers.len());
+    <span class="rs-kw">for</span> item <span class="rs-kw">in</span> raw_layers {
+        <span class="rs-kw">let</span> item = item.as_object().ok_or_else(|| {
+            <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>::<span class="rs-type">Manifest</span>(&quot;manifest layer entries must be objects&quot;.to_owned())
+        })?;
+        <span class="rs-kw">let</span> layer = <span class="rs-type">LayerRef</span> {
+            layer_id: item
+                .get(&quot;layer_id&quot;)
+                .and_then(<span class="rs-type">Value</span>::as_str)
+                .unwrap_or_default()
+                .to_owned(),
+            path: item
+                .get(&quot;path&quot;)
+                .and_then(<span class="rs-type">Value</span>::as_str)
+                .unwrap_or_default()
+                .to_owned(),
+        };
+        <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-manifest-io-rs.html#item-fn-validate-layer-ref-76">validate_layer_ref</a>(&amp;layer)?;
+        layers.push(layer);
+    }
+    <span class="rs-type">Manifest</span>::<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-new-79">new</a>(version, layers, schema_version).map_err(<a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>::from)
+}
+
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-manifest-io-rs.html#item-fn-write-manifest-58">write_manifest</a>(
+    path: <span class="rs-kw">impl</span> <span class="rs-type">AsRef</span>&lt;<span class="rs-type">Path</span>&gt;,
+    manifest: &amp;<span class="rs-type">Manifest</span>,
+) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>&gt; {
+    <span class="rs-kw">let</span> value = json!({
+        &quot;schema_version&quot;: manifest.schema_version,
+        &quot;version&quot;: manifest.version,
+        &quot;layers&quot;: manifest
+            .layers
+            .iter()
+            .map(|layer| json!({&quot;layer_id&quot;: &amp;layer.layer_id, &quot;path&quot;: &amp;layer.path}))
+            .collect::&lt;<span class="rs-type">Vec</span>&lt;_&gt;&gt;(),
+    });
+    <span class="rs-kw">let</span> encoded = serde_json::to_vec_pretty(&amp;value)
+        .map_err(|err| <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>::<span class="rs-type">Manifest</span>(err.to_string()))?;
+    <span class="rs-kw">super</span>::<a class="symbol-link rs-fn" href="eos-layerstack--src-stack-fs-rs.html#item-fn-write-atomic-75">write_atomic</a>(path, &amp;encoded)
+}
+
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-stack-manifest-io-rs.html#item-fn-validate-layer-ref-76">validate_layer_ref</a>(layer: &amp;<span class="rs-type">LayerRef</span>) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>&gt; {
+    <span class="rs-kw">if</span> layer.layer_id.is_empty() {
+        <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>::<span class="rs-type">Manifest</span>(
+            &quot;layer_id must not be empty&quot;.to_owned(),
+        ));
+    }
+    <a class="symbol-link rs-fn" href="eos-layerstack--src-fsutil-rs.html#item-fn-check-layer-path-37">check_layer_path</a>(&amp;layer.path)
+}
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
   <script src="../assets/inventory.js"></script>
 </body>
 </html>

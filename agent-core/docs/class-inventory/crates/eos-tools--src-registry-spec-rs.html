@@ -8,8 +8,16 @@
 </head>
 <body>
   <header>
-    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
-    <h1>eos-tools File Inventory</h1>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>eos-tools File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS/agent-core &amp;&amp; cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
   </header>
   <a class="back-link" href="../index.html">agent-core</a>
 <section class="summary">
@@ -47,59 +55,220 @@
       <span>0 methods</span>
     </div>
   </div>
-  <div class="items"><div class="group-label">Standalone Functions</div><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn schema_to_object pub(crate) pub(crate) fn schema_to_object (schema : RootSchema) -&gt; JsonObject crates/eos-tools/src/registry/spec.rs  ">
+  <div class="items"><div class="group-label">Standalone Functions</div><article id="item-fn-schema-to-object-16" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn schema_to_object pub(crate) pub(crate) fn schema_to_object (schema : RootSchema) -&gt; JsonObject crates/eos-tools/src/registry/spec.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>schema_to_object</h3>
     <span class="visibility">pub(crate)</span>
   </div>
-  <code class="signature">pub(crate) fn schema_to_object (schema : RootSchema) -&gt; JsonObject</code>
-  <div class="tags"></div>
+  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-tools--src-registry-spec-rs.html#item-fn-schema-to-object-16">schema_to_object</a> (schema : RootSchema) -&gt; JsonObject</code>
+  <p class="docstring">Convert a `schemars` schema into the `ToolSpec` `input_schema`/`output_schema`<br>object shape.</p>
+  <div class="tags"><span>must_use</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-comment">/// Convert a `schemars` schema into the `ToolSpec` `input_schema`/`output_schema`</span>
+<span class="rs-comment">/// object shape.</span>
+#[must_use]
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-registry-spec-rs.html#item-fn-schema-to-object-16">schema_to_object</a>(schema: <span class="rs-type">RootSchema</span>) -&gt; <span class="rs-type">JsonObject</span> {
+    <span class="rs-kw">match</span> serde_json::to_value(schema) {
+        <span class="rs-type">Ok</span>(<span class="rs-type">Value</span>::<span class="rs-type">Object</span>(map)) =&gt; map,
+        _ =&gt; <span class="rs-type">JsonObject</span>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(),
+    }
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-tools/src/registry/spec.rs:16</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn text_spec pub(crate) pub(crate) fn text_spec (name : ToolName , description : &amp; str , input : RootSchema) -&gt; ToolSpec crates/eos-tools/src/registry/spec.rs  ">
+</article><article id="item-fn-text-spec-26" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn text_spec pub(crate) pub(crate) fn text_spec (name : ToolName , description : &amp; str , input : RootSchema) -&gt; ToolSpec crates/eos-tools/src/registry/spec.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>text_spec</h3>
     <span class="visibility">pub(crate)</span>
   </div>
-  <code class="signature">pub(crate) fn text_spec (name : ToolName , description : &amp; str , input : RootSchema) -&gt; ToolSpec</code>
-  <div class="tags"></div>
+  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-tools--src-registry-spec-rs.html#item-fn-text-spec-26">text_spec</a> (name : <a class="symbol-link" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a> , description : &amp; str , input : RootSchema) -&gt; ToolSpec</code>
+  <p class="docstring">A spec for a plain-text-output tool (`TextToolOutput`): input schema only.</p>
+  <div class="tags"><span>must_use</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-comment">/// A spec for a plain-text-output tool (`TextToolOutput`): input schema only.</span>
+#[must_use]
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-registry-spec-rs.html#item-fn-text-spec-26">text_spec</a>(name: <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>, description: &amp;str, input: <span class="rs-type">RootSchema</span>) -&gt; <span class="rs-type">ToolSpec</span> {
+    <span class="rs-type">ToolSpec</span>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(name.<a class="symbol-link rs-fn" href="eos-tools--src-core-intent-rs.html#method-as-str-42">as_str</a>(), description, <a class="symbol-link rs-fn" href="eos-tools--src-registry-spec-rs.html#item-fn-schema-to-object-16">schema_to_object</a>(input), <span class="rs-type">None</span>)
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-tools/src/registry/spec.rs:26</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn json_spec pub(crate) pub(crate) fn json_spec (name : ToolName , description : &amp; str , input : RootSchema , output : RootSchema ,) -&gt; ToolSpec crates/eos-tools/src/registry/spec.rs  ">
+</article><article id="item-fn-json-spec-32" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn json_spec pub(crate) pub(crate) fn json_spec (name : ToolName , description : &amp; str , input : RootSchema , output : RootSchema ,) -&gt; ToolSpec crates/eos-tools/src/registry/spec.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>json_spec</h3>
     <span class="visibility">pub(crate)</span>
   </div>
-  <code class="signature">pub(crate) fn json_spec (name : ToolName , description : &amp; str , input : RootSchema , output : RootSchema ,) -&gt; ToolSpec</code>
-  <div class="tags"></div>
+  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-tools--src-registry-spec-rs.html#item-fn-json-spec-32">json_spec</a> (name : <a class="symbol-link" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a> , description : &amp; str , input : RootSchema , output : RootSchema ,) -&gt; ToolSpec</code>
+  <p class="docstring">A spec for a structured-output tool: input + output schema.</p>
+  <div class="tags"><span>must_use</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-comment">/// A spec for a structured-output tool: input + output schema.</span>
+#[must_use]
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-registry-spec-rs.html#item-fn-json-spec-32">json_spec</a>(
+    name: <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>,
+    description: &amp;str,
+    input: <span class="rs-type">RootSchema</span>,
+    output: <span class="rs-type">RootSchema</span>,
+) -&gt; <span class="rs-type">ToolSpec</span> {
+    <span class="rs-type">ToolSpec</span>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(
+        name.<a class="symbol-link rs-fn" href="eos-tools--src-core-intent-rs.html#method-as-str-42">as_str</a>(),
+        description,
+        <a class="symbol-link rs-fn" href="eos-tools--src-registry-spec-rs.html#item-fn-schema-to-object-16">schema_to_object</a>(input),
+        <span class="rs-type">Some</span>(<a class="symbol-link rs-fn" href="eos-tools--src-registry-spec-rs.html#item-fn-schema-to-object-16">schema_to_object</a>(output)),
+    )
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-tools/src/registry/spec.rs:32</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn text_spec_with_agent_enum pub(crate) pub(crate) fn text_spec_with_agent_enum (name : ToolName , description : &amp; str , input : RootSchema , allowed : &amp; [String] ,) -&gt; ToolSpec crates/eos-tools/src/registry/spec.rs  ">
+</article><article id="item-fn-text-spec-with-agent-enum-48" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn text_spec_with_agent_enum pub(crate) pub(crate) fn text_spec_with_agent_enum (name : ToolName , description : &amp; str , input : RootSchema , allowed : &amp; [String] ,) -&gt; ToolSpec crates/eos-tools/src/registry/spec.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>text_spec_with_agent_enum</h3>
     <span class="visibility">pub(crate)</span>
   </div>
-  <code class="signature">pub(crate) fn text_spec_with_agent_enum (name : ToolName , description : &amp; str , input : RootSchema , allowed : &amp; [String] ,) -&gt; ToolSpec</code>
-  <div class="tags"></div>
+  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-tools--src-registry-spec-rs.html#item-fn-text-spec-with-agent-enum-48">text_spec_with_agent_enum</a> (name : <a class="symbol-link" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a> , description : &amp; str , input : RootSchema , allowed : &amp; [String] ,) -&gt; ToolSpec</code>
+  <p class="docstring">Build a text-output spec whose already-built input-schema object has its<br>`agent_name` property `enum`-restricted to `allowed` — the per-caller<br>`RestrictedRunSubagentTool` patch (§6.6). The enum is injected into both the<br>top-level `properties.agent_name` and (when present) the `$defs`-free inline<br>schema so the emitted spec reflects the caller-scoped choices.</p>
+  <div class="tags"><span>must_use</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-comment">/// Build a text-output spec whose already-built input-schema object has its</span>
+<span class="rs-comment">/// `agent_name` property `enum`-restricted to `allowed` — the per-caller</span>
+<span class="rs-comment">/// `RestrictedRunSubagentTool` patch (§6.6). The enum is injected into both the</span>
+<span class="rs-comment">/// top-level `properties.agent_name` and (when present) the `$defs`-free inline</span>
+<span class="rs-comment">/// schema so the emitted spec reflects the caller-scoped choices.</span>
+#[must_use]
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-registry-spec-rs.html#item-fn-text-spec-with-agent-enum-48">text_spec_with_agent_enum</a>(
+    name: <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>,
+    description: &amp;str,
+    input: <span class="rs-type">RootSchema</span>,
+    allowed: &amp;[<span class="rs-type">String</span>],
+) -&gt; <span class="rs-type">ToolSpec</span> {
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> object = <a class="symbol-link rs-fn" href="eos-tools--src-registry-spec-rs.html#item-fn-schema-to-object-16">schema_to_object</a>(input);
+    <a class="symbol-link rs-fn" href="eos-tools--src-registry-spec-rs.html#item-fn-patch-agent-enum-65">patch_agent_enum</a>(&amp;<span class="rs-kw">mut</span> object, allowed);
+    <span class="rs-type">ToolSpec</span>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(name.<a class="symbol-link rs-fn" href="eos-tools--src-core-intent-rs.html#method-as-str-42">as_str</a>(), description, object, <span class="rs-type">None</span>)
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-tools/src/registry/spec.rs:48</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn patch_agent_enum private fn patch_agent_enum (schema : &amp; mut JsonObject , allowed : &amp; [String]) crates/eos-tools/src/registry/spec.rs  ">
+</article><article id="item-fn-patch-agent-enum-65" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn patch_agent_enum private fn patch_agent_enum (schema : &amp; mut JsonObject , allowed : &amp; [String]) crates/eos-tools/src/registry/spec.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>patch_agent_enum</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn patch_agent_enum (schema : &amp; mut JsonObject , allowed : &amp; [String])</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-tools--src-registry-spec-rs.html#item-fn-patch-agent-enum-65">patch_agent_enum</a> (schema : &amp; mut JsonObject , allowed : &amp; [String])</code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-registry-spec-rs.html#item-fn-patch-agent-enum-65">patch_agent_enum</a>(schema: &amp;<span class="rs-kw">mut</span> <span class="rs-type">JsonObject</span>, allowed: &amp;[<span class="rs-type">String</span>]) {
+    <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(<span class="rs-type">Value</span>::<span class="rs-type">Object</span>(props)) = schema.get_mut(&quot;properties&quot;) {
+        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(<span class="rs-type">Value</span>::<span class="rs-type">Object</span>(agent)) = props.get_mut(&quot;agent_name&quot;) {
+            agent.insert(
+                &quot;<span class="rs-kw">enum</span>&quot;.to_owned(),
+                <span class="rs-type">Value</span>::<span class="rs-type">Array</span>(allowed.iter().map(|a| <span class="rs-type">Value</span>::<span class="rs-type">String</span>(a.clone())).collect()),
+            );
+        }
+    }
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-tools/src/registry/spec.rs:65</p>
 </article></div>
 </section></div>
 </main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/eos-tools/src/registry/spec.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-comment">//! Spec-building helpers (anchor §10).</span>
+<span class="rs-comment">//!</span>
+<span class="rs-comment">//! Each model-facing tool's registration site builds **one** [`ToolSpec`] from</span>
+<span class="rs-comment">//! its externalized description (loaded from `.eos-agents/tools/*.md` via</span>
+<span class="rs-comment">//! [`ToolConfigSet`](crate::registry::config::ToolConfigSet)) plus `schemars`-derived</span>
+<span class="rs-comment">//! input/output schemas (no docstring fallback, GC-tools-02/09). These helpers</span>
+<span class="rs-comment">//! convert a `schemars` schema into the `JsonObject` shape `ToolSpec` carries.</span>
+
+<span class="rs-kw">use</span> eos_llm_client::<span class="rs-type">ToolSpec</span>;
+<span class="rs-kw">use</span> eos_types::<span class="rs-type">JsonObject</span>;
+<span class="rs-kw">use</span> schemars::schema::<span class="rs-type">RootSchema</span>;
+<span class="rs-kw">use</span> serde_json::<span class="rs-type">Value</span>;
+
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::core::name::<a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>;
+
+<span class="rs-comment">/// Convert a `schemars` schema into the `ToolSpec` `input_schema`/`output_schema`</span>
+<span class="rs-comment">/// object shape.</span>
+#[must_use]
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-registry-spec-rs.html#item-fn-schema-to-object-16">schema_to_object</a>(schema: <span class="rs-type">RootSchema</span>) -&gt; <span class="rs-type">JsonObject</span> {
+    <span class="rs-kw">match</span> serde_json::to_value(schema) {
+        <span class="rs-type">Ok</span>(<span class="rs-type">Value</span>::<span class="rs-type">Object</span>(map)) =&gt; map,
+        _ =&gt; <span class="rs-type">JsonObject</span>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(),
+    }
+}
+
+<span class="rs-comment">/// A spec for a plain-text-output tool (`TextToolOutput`): input schema only.</span>
+#[must_use]
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-registry-spec-rs.html#item-fn-text-spec-26">text_spec</a>(name: <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>, description: &amp;str, input: <span class="rs-type">RootSchema</span>) -&gt; <span class="rs-type">ToolSpec</span> {
+    <span class="rs-type">ToolSpec</span>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(name.<a class="symbol-link rs-fn" href="eos-tools--src-core-intent-rs.html#method-as-str-42">as_str</a>(), description, <a class="symbol-link rs-fn" href="eos-tools--src-registry-spec-rs.html#item-fn-schema-to-object-16">schema_to_object</a>(input), <span class="rs-type">None</span>)
+}
+
+<span class="rs-comment">/// A spec for a structured-output tool: input + output schema.</span>
+#[must_use]
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-registry-spec-rs.html#item-fn-json-spec-32">json_spec</a>(
+    name: <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>,
+    description: &amp;str,
+    input: <span class="rs-type">RootSchema</span>,
+    output: <span class="rs-type">RootSchema</span>,
+) -&gt; <span class="rs-type">ToolSpec</span> {
+    <span class="rs-type">ToolSpec</span>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(
+        name.<a class="symbol-link rs-fn" href="eos-tools--src-core-intent-rs.html#method-as-str-42">as_str</a>(),
+        description,
+        <a class="symbol-link rs-fn" href="eos-tools--src-registry-spec-rs.html#item-fn-schema-to-object-16">schema_to_object</a>(input),
+        <span class="rs-type">Some</span>(<a class="symbol-link rs-fn" href="eos-tools--src-registry-spec-rs.html#item-fn-schema-to-object-16">schema_to_object</a>(output)),
+    )
+}
+
+<span class="rs-comment">/// Build a text-output spec whose already-built input-schema object has its</span>
+<span class="rs-comment">/// `agent_name` property `enum`-restricted to `allowed` — the per-caller</span>
+<span class="rs-comment">/// `RestrictedRunSubagentTool` patch (§6.6). The enum is injected into both the</span>
+<span class="rs-comment">/// top-level `properties.agent_name` and (when present) the `$defs`-free inline</span>
+<span class="rs-comment">/// schema so the emitted spec reflects the caller-scoped choices.</span>
+#[must_use]
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-registry-spec-rs.html#item-fn-text-spec-with-agent-enum-48">text_spec_with_agent_enum</a>(
+    name: <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>,
+    description: &amp;str,
+    input: <span class="rs-type">RootSchema</span>,
+    allowed: &amp;[<span class="rs-type">String</span>],
+) -&gt; <span class="rs-type">ToolSpec</span> {
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> object = <a class="symbol-link rs-fn" href="eos-tools--src-registry-spec-rs.html#item-fn-schema-to-object-16">schema_to_object</a>(input);
+    <a class="symbol-link rs-fn" href="eos-tools--src-registry-spec-rs.html#item-fn-patch-agent-enum-65">patch_agent_enum</a>(&amp;<span class="rs-kw">mut</span> object, allowed);
+    <span class="rs-type">ToolSpec</span>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(name.<a class="symbol-link rs-fn" href="eos-tools--src-core-intent-rs.html#method-as-str-42">as_str</a>(), description, object, <span class="rs-type">None</span>)
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-registry-spec-rs.html#item-fn-patch-agent-enum-65">patch_agent_enum</a>(schema: &amp;<span class="rs-kw">mut</span> <span class="rs-type">JsonObject</span>, allowed: &amp;[<span class="rs-type">String</span>]) {
+    <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(<span class="rs-type">Value</span>::<span class="rs-type">Object</span>(props)) = schema.get_mut(&quot;properties&quot;) {
+        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(<span class="rs-type">Value</span>::<span class="rs-type">Object</span>(agent)) = props.get_mut(&quot;agent_name&quot;) {
+            agent.insert(
+                &quot;<span class="rs-kw">enum</span>&quot;.to_owned(),
+                <span class="rs-type">Value</span>::<span class="rs-type">Array</span>(allowed.iter().map(|a| <span class="rs-type">Value</span>::<span class="rs-type">String</span>(a.clone())).collect()),
+            );
+        }
+    }
+}
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
   <script src="../assets/inventory.js"></script>
 </body>
 </html>

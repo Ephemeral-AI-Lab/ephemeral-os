@@ -8,14 +8,22 @@
 </head>
 <body>
   <header>
-    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
-    <h1>agent-core Rust Inventory</h1>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>agent-core Rust Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS/agent-core &amp;&amp; cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
   </header>
   <section class="summary">
   <div><b>16</b><span>crates</span></div>
-  <div><b>265</b><span>modules</span></div>
-  <div><b>1773</b><span>items</span></div>
-  <div><b>915</b><span>methods</span></div>
+  <div><b>271</b><span>modules</span></div>
+  <div><b>1777</b><span>items</span></div>
+  <div><b>931</b><span>methods</span></div>
 </section>
 <section class="toolbar">
   <input id="filter" type="search" placeholder="Filter crates" autofocus>
@@ -43,7 +51,7 @@
 </a><a class="crate-card" href="crates/eos-engine.html">
   <strong>eos-engine</strong>
   <span>crates/eos-engine</span>
-  <small>67 types · 176 fns · 179 methods · 43 modules</small>
+  <small>74 types · 159 fns · 187 methods · 47 modules</small>
 </a><a class="crate-card" href="crates/eos-llm-client.html">
   <strong>eos-llm-client</strong>
   <span>crates/eos-llm-client</span>
@@ -55,11 +63,11 @@
 </a><a class="crate-card" href="crates/eos-runtime.html">
   <strong>eos-runtime</strong>
   <span>crates/eos-runtime</span>
-  <small>20 types · 35 fns · 45 methods · 17 modules</small>
+  <small>23 types · 36 fns · 51 methods · 19 modules</small>
 </a><a class="crate-card" href="crates/eos-sandbox-port.html">
   <strong>eos-sandbox-port</strong>
   <span>crates/eos-sandbox-port</span>
-  <small>51 types · 86 fns · 35 methods · 22 modules</small>
+  <small>51 types · 87 fns · 35 methods · 22 modules</small>
 </a><a class="crate-card" href="crates/eos-skills.html">
   <strong>eos-skills</strong>
   <span>crates/eos-skills</span>
@@ -83,8 +91,9 @@
 </a><a class="crate-card" href="crates/eos-workflow.html">
   <strong>eos-workflow</strong>
   <span>crates/eos-workflow</span>
-  <small>34 types · 61 fns · 138 methods · 20 modules</small>
+  <small>35 types · 60 fns · 140 methods · 20 modules</small>
 </a></section>
+  <script src="assets/inventory-data.js"></script>
   <script src="assets/inventory.js"></script>
 </body>
 </html>

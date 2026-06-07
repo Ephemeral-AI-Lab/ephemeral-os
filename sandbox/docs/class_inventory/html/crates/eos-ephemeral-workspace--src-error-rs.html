@@ -8,8 +8,16 @@
 </head>
 <body>
   <header>
-    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
-    <h1>eos-ephemeral-workspace File Inventory</h1>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>eos-ephemeral-workspace File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS/sandbox &amp;&amp; cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
   </header>
   <a class="back-link" href="../index.html">sandbox</a>
 <section class="summary">
@@ -47,19 +55,75 @@
       <span>0 methods</span>
     </div>
   </div>
-  <div class="items"><div class="group-label">File-Owned Types</div><article class="type-card" data-kind="enum" data-kind-list="enum field type-model" data-filter-text="enum EphemeralWorkspaceError pub pub enum EphemeralWorkspaceError crates/eos-ephemeral-workspace/src/error.rs  ">
+  <div class="items"><div class="group-label">File-Owned Types</div><article id="item-enum-EphemeralWorkspaceError-5" class="type-card" data-kind="enum" data-kind-list="enum field type-model" data-filter-text="enum EphemeralWorkspaceError pub pub enum EphemeralWorkspaceError crates/eos-ephemeral-workspace/src/error.rs  ">
   <div class="item-head">
     <span class="kind">enum</span>
     <h3>EphemeralWorkspaceError</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub enum EphemeralWorkspaceError</code>
-  <div class="tags"><span>error</span></div>
+  <code class="signature">pub enum <a class="symbol-link" href="eos-ephemeral-workspace--src-error-rs.html#item-enum-EphemeralWorkspaceError-5">EphemeralWorkspaceError</a></code>
+  <p class="docstring">Errors raised by fresh per-operation workspace policy.</p>
+  <div class="tags"><span>derive: Debug</span><span>derive: Error</span><span>error</span></div>
   <h4>Variants</h4><table><tbody><tr><td>InvalidArgument</td><td><code>0: String</code></td></tr><tr><td>SnapshotAcquire</td><td><code>reason: String</code></td></tr><tr><td>LeaseRelease</td><td><code>lease_id: String, reason: String</code></td></tr><tr><td>DirAllocation</td><td><code>path: PathBuf, reason: String</code></td></tr><tr><td>RunnerFailed</td><td><code>reason: String</code></td></tr><tr><td>CaptureFailed</td><td><code>reason: String</code></td></tr><tr><td>PublishFailed</td><td><code>reason: String</code></td></tr><tr><td>CleanupFailed</td><td><code>path: PathBuf, reason: String</code></td></tr><tr><td>Io</td><td><code>context: String, source: std :: io :: Error</code></td></tr><tr><td>Serde</td><td><code>context: String, source: serde_json :: Error</code></td></tr></tbody></table>
+
   <p class="source">crates/eos-ephemeral-workspace/src/error.rs:5</p>
 </article></div>
 </section></div>
 </main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/eos-ephemeral-workspace/src/error.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-kw">use</span> std::path::<span class="rs-type">PathBuf</span>;
+
+<span class="rs-kw">use</span> thiserror::<span class="rs-type">Error</span>;
+
+<span class="rs-comment">/// Errors raised by fresh per-operation workspace policy.</span>
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Error</span>)]
+<span class="rs-kw">pub</span> <span class="rs-kw">enum</span> <a class="symbol-link rs-type" href="eos-ephemeral-workspace--src-error-rs.html#item-enum-EphemeralWorkspaceError-5">EphemeralWorkspaceError</a> {
+    <span class="rs-comment">/// A caller supplied an invalid workspace, invocation, or operation value.</span>
+    #[error(&quot;invalid argument: {0}&quot;)]
+    <span class="rs-type">InvalidArgument</span>(<span class="rs-type">String</span>),
+    <span class="rs-comment">/// Snapshot acquisition failed before a run could start.</span>
+    #[error(&quot;snapshot acquire failed: {reason}&quot;)]
+    <span class="rs-type">SnapshotAcquire</span> { reason: <span class="rs-type">String</span> },
+    <span class="rs-comment">/// Lease release failed during cleanup.</span>
+    #[error(&quot;lease release failed <span class="rs-kw">for</span> {lease_id}: {reason}&quot;)]
+    <span class="rs-type">LeaseRelease</span> { lease_id: <span class="rs-type">String</span>, reason: <span class="rs-type">String</span> },
+    <span class="rs-comment">/// Fresh writable directory allocation failed.</span>
+    #[error(&quot;dir allocation failed at {}: {reason}&quot;, path.display())]
+    <span class="rs-type">DirAllocation</span> { path: <span class="rs-type">PathBuf</span>, reason: <span class="rs-type">String</span> },
+    <span class="rs-comment">/// The namespace runner failed before returning a runner result.</span>
+    #[error(&quot;runner failed: {reason}&quot;)]
+    <span class="rs-type">RunnerFailed</span> { reason: <span class="rs-type">String</span> },
+    <span class="rs-comment">/// Upperdir capture failed.</span>
+    #[error(&quot;capture failed: {reason}&quot;)]
+    <span class="rs-type">CaptureFailed</span> { reason: <span class="rs-type">String</span> },
+    <span class="rs-comment">/// Publishing captured changes failed.</span>
+    #[error(&quot;publish failed: {reason}&quot;)]
+    <span class="rs-type">PublishFailed</span> { reason: <span class="rs-type">String</span> },
+    <span class="rs-comment">/// Best-effort cleanup failed.</span>
+    #[error(&quot;cleanup failed at {}: {reason}&quot;, path.display())]
+    <span class="rs-type">CleanupFailed</span> { path: <span class="rs-type">PathBuf</span>, reason: <span class="rs-type">String</span> },
+    <span class="rs-comment">/// I/O failed at a local filesystem edge.</span>
+    #[error(&quot;{context}: {source}&quot;)]
+    <span class="rs-type">Io</span> {
+        context: <span class="rs-type">String</span>,
+        #[source]
+        source: std::io::<span class="rs-type">Error</span>,
+    },
+    <span class="rs-comment">/// JSON parsing or serialization failed.</span>
+    #[error(&quot;{context}: {source}&quot;)]
+    <span class="rs-type">Serde</span> {
+        context: <span class="rs-type">String</span>,
+        #[source]
+        source: serde_json::<span class="rs-type">Error</span>,
+    },
+}
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
   <script src="../assets/inventory.js"></script>
 </body>
 </html>

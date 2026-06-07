@@ -8,8 +8,16 @@
 </head>
 <body>
   <header>
-    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
-    <h1>eos-overlay File Inventory</h1>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>eos-overlay File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS/sandbox &amp;&amp; cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
   </header>
   <a class="back-link" href="../index.html">sandbox</a>
 <section class="summary">
@@ -50,6 +58,52 @@
   <div class="items"></div>
 </section></div>
 </main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/eos-overlay/src/lib.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-comment">//! Overlay kernel-mount path and upper-dir capture.</span>
+<span class="rs-comment">//!</span>
+<span class="rs-comment">//! # Invariant</span>
+<span class="rs-comment">//!</span>
+<span class="rs-comment">//! **Capture + publish is ONE atomic unit per op.** The write set for an</span>
+<span class="rs-comment">//! operation is captured by walking ONLY the overlay `upperdir` (never the</span>
+<span class="rs-comment">//! lower layers); other agents never observe a partial write set. The overlay</span>
+<span class="rs-comment">//! mount itself is built with the RAW new-mount API</span>
+<span class="rs-comment">//! (`fsopen`/`fsconfig`/`fsmount`/`move_mount`) — NOT the `mount(8)` binary.</span>
+<span class="rs-comment">//!</span>
+<span class="rs-comment">//! This is a one-way leaf below occ: overlay has NO `eos-occ` dependency, so the</span>
+<span class="rs-comment">//! `occ → overlay` edge is acyclic. The `OverlayPathChange -&gt;</span>
+<span class="rs-comment">//! eos_protocol::LayerChange` conversion lives here precisely because occ</span>
+<span class="rs-comment">//! consumes it one-way.</span>
+<span class="rs-comment">//!</span>
+<span class="rs-comment">//! # Build-time guarantee / platform</span>
+<span class="rs-comment">//!</span>
+<span class="rs-comment">//! Syscall crate — `unsafe` is permitted for the raw mount API; every block</span>
+<span class="rs-comment">//! carries a `// SAFETY:` note and `unsafe_op_in_unsafe_fn` is denied. The</span>
+<span class="rs-comment">//! syscall surface is Linux-only: every mount/unmount body is gated behind</span>
+<span class="rs-comment">//! `#[cfg(target_os = "linux")]`, with a `#[cfg(not(target_os = "linux"))]` arm</span>
+<span class="rs-comment">//! returning [`OverlayError::Unsupported`] so `cargo check` is green on the</span>
+<span class="rs-comment">//! macOS dev host.</span>
+<span class="rs-comment">//!</span>
+#![deny(unsafe_op_in_unsafe_fn)]
+
+<span class="rs-kw">pub</span> <span class="rs-kw">mod</span> error;
+<span class="rs-kw">pub</span> <span class="rs-kw">mod</span> kernel_mount;
+<span class="rs-kw">pub</span> <span class="rs-kw">mod</span> path_change;
+<span class="rs-kw">pub</span> <span class="rs-kw">mod</span> writable_dirs;
+
+<span class="rs-kw">pub</span> <span class="rs-kw">use</span> error::{<a class="symbol-link rs-type" href="eos-overlay.html#item-enum-OverlayError-8">OverlayError</a>, <a class="symbol-link rs-type" href="eos-overlay.html#item-type-Result-50">Result</a>};
+<span class="rs-kw">pub</span> <span class="rs-kw">use</span> kernel_mount::{mount_overlay, unmount_overlay, <a class="symbol-link rs-type" href="eos-overlay--src-kernel-mount-rs.html#item-struct-OverlayHandle-36">OverlayHandle</a>, <a class="symbol-link rs-type" href="eos-overlay--src-kernel-mount-rs.html#item-struct-OverlayMount-51">OverlayMount</a>};
+<span class="rs-kw">pub</span> <span class="rs-kw">use</span> path_change::{capture_upperdir, <a class="symbol-link rs-type" href="eos-overlay--src-path-change-rs.html#item-struct-OverlayPathChange-34">OverlayPathChange</a>, <a class="symbol-link rs-type" href="eos-overlay--src-path-change-rs.html#item-enum-OverlayPathChangeKind-21">OverlayPathChangeKind</a>};
+<span class="rs-kw">pub</span> <span class="rs-kw">use</span> writable_dirs::{
+    allocate_overlay_writable_dirs, overlay_writable_root, <a class="symbol-link rs-type" href="eos-overlay--src-writable-dirs-rs.html#item-struct-OverlayWritableDirs-16">OverlayWritableDirs</a>,
+    <span class="rs-type">OVERLAY_WRITABLE_ROOT</span>,
+};
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
   <script src="../assets/inventory.js"></script>
 </body>
 </html>

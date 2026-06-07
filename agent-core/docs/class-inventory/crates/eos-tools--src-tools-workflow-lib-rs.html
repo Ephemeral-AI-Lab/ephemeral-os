@@ -8,8 +8,16 @@
 </head>
 <body>
   <header>
-    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
-    <h1>eos-tools File Inventory</h1>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>eos-tools File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS/agent-core &amp;&amp; cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
   </header>
   <a class="back-link" href="../index.html">agent-core</a>
 <section class="summary">
@@ -47,19 +55,52 @@
       <span>0 methods</span>
     </div>
   </div>
-  <div class="items"><div class="group-label">Standalone Functions</div><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn empty_workflow_id_error pub(super) pub(super) fn empty_workflow_id_error (tool : ToolName , field : &amp; str) -&gt; ToolResult crates/eos-tools/src/tools/workflow/lib.rs  ">
+  <div class="items"><div class="group-label">Standalone Functions</div><article id="item-fn-empty-workflow-id-error-8" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn empty_workflow_id_error pub(super) pub(super) fn empty_workflow_id_error (tool : ToolName , field : &amp; str) -&gt; ToolResult crates/eos-tools/src/tools/workflow/lib.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>empty_workflow_id_error</h3>
     <span class="visibility">pub(super)</span>
   </div>
-  <code class="signature">pub(super) fn empty_workflow_id_error (tool : ToolName , field : &amp; str) -&gt; ToolResult</code>
+  <code class="signature">pub(super) fn <a class="symbol-link" href="eos-tools--src-tools-workflow-lib-rs.html#item-fn-empty-workflow-id-error-8">empty_workflow_id_error</a> (tool : <a class="symbol-link" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a> , field : &amp; str) -&gt; <a class="symbol-link" href="eos-tools--src-core-result-rs.html#item-struct-ToolResult-12">ToolResult</a></code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-tools-workflow-lib-rs.html#item-fn-empty-workflow-id-error-8">empty_workflow_id_error</a>(tool: <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>, field: &amp;str) -&gt; <a class="symbol-link rs-type" href="eos-tools--src-core-result-rs.html#item-struct-ToolResult-12">ToolResult</a> {
+    <a class="symbol-link rs-type" href="eos-tools--src-core-result-rs.html#item-struct-ToolResult-12">ToolResult</a>::<a class="symbol-link rs-fn" href="eos-tools--src-core-result-rs.html#method-error-42">error</a>(format!(
+        &quot;<span class="rs-type">Invalid</span> input <span class="rs-kw">for</span> {}: {field} must be non-empty. \
+         <span class="rs-type">Please</span> retry the tool call with valid arguments.&quot;,
+        tool.<a class="symbol-link rs-fn" href="eos-tools--src-core-intent-rs.html#method-as-str-42">as_str</a>()
+    ))
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-tools/src/tools/workflow/lib.rs:8</p>
 </article></div>
 </section></div>
 </main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/eos-tools/src/tools/workflow/lib.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-kw">use</span> <span class="rs-kw">crate</span>::core::name::<a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>;
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::core::result::<a class="symbol-link rs-type" href="eos-tools--src-core-result-rs.html#item-struct-ToolResult-12">ToolResult</a>;
+
+#[cfg(test)]
+#[path = &quot;../../../tests/tools/workflow/<span class="rs-kw">mod</span>.rs&quot;]
+<span class="rs-kw">mod</span> tests;
+
+<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-tools-workflow-lib-rs.html#item-fn-empty-workflow-id-error-8">empty_workflow_id_error</a>(tool: <a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>, field: &amp;str) -&gt; <a class="symbol-link rs-type" href="eos-tools--src-core-result-rs.html#item-struct-ToolResult-12">ToolResult</a> {
+    <a class="symbol-link rs-type" href="eos-tools--src-core-result-rs.html#item-struct-ToolResult-12">ToolResult</a>::<a class="symbol-link rs-fn" href="eos-tools--src-core-result-rs.html#method-error-42">error</a>(format!(
+        &quot;<span class="rs-type">Invalid</span> input <span class="rs-kw">for</span> {}: {field} must be non-empty. \
+         <span class="rs-type">Please</span> retry the tool call with valid arguments.&quot;,
+        tool.<a class="symbol-link rs-fn" href="eos-tools--src-core-intent-rs.html#method-as-str-42">as_str</a>()
+    ))
+}
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
   <script src="../assets/inventory.js"></script>
 </body>
 </html>

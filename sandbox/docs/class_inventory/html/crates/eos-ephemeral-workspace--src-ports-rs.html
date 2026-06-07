@@ -8,8 +8,16 @@
 </head>
 <body>
   <header>
-    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
-    <h1>eos-ephemeral-workspace File Inventory</h1>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>eos-ephemeral-workspace File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS/sandbox &amp;&amp; cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
   </header>
   <a class="back-link" href="../index.html">sandbox</a>
 <section class="summary">
@@ -47,19 +55,54 @@
       <span>1 methods</span>
     </div>
   </div>
-  <div class="items"><div class="group-label">File-Owned Types</div><article class="type-card" data-kind="trait" data-kind-list="method trait type-model" data-filter-text="trait WorkspacePublisherPort pub pub trait WorkspacePublisherPort crates/eos-ephemeral-workspace/src/ports.rs  publish_upperdir_changes fn publish_upperdir_changes (&amp; self , root : &amp; WorkspaceRoot , snapshot : &amp; EphemeralSnapshot , changes : &amp; [LayerChange] , path_kinds : &amp; [PathChange] ,) -&gt; Result &lt; PublishOutcome , EphemeralWorkspaceError &gt;">
+  <div class="items"><div class="group-label">File-Owned Types</div><article id="item-trait-WorkspacePublisherPort-6" class="type-card" data-kind="trait" data-kind-list="method trait type-model" data-filter-text="trait WorkspacePublisherPort pub pub trait WorkspacePublisherPort crates/eos-ephemeral-workspace/src/ports.rs  publish_upperdir_changes fn publish_upperdir_changes (&amp; self , root : &amp; WorkspaceRoot , snapshot : &amp; EphemeralSnapshot , changes : &amp; [LayerChange] , path_kinds : &amp; [PathChange] ,) -&gt; Result &lt; PublishOutcome , EphemeralWorkspaceError &gt;">
   <div class="item-head">
     <span class="kind">trait</span>
     <h3>WorkspacePublisherPort</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub trait WorkspacePublisherPort</code>
+  <code class="signature">pub trait <a class="symbol-link" href="eos-ephemeral-workspace--src-ports-rs.html#item-trait-WorkspacePublisherPort-6">WorkspacePublisherPort</a></code>
+  <p class="docstring">Publisher port supplied by the daemon's neutral OCC publisher adapter.</p>
   <div class="tags"><span>port/service</span></div>
-  <h4>Methods</h4><table><tbody><tr><td>required</td><td>publish_upperdir_changes</td><td><code>fn publish_upperdir_changes (&amp; self , root : &amp; WorkspaceRoot , snapshot : &amp; EphemeralSnapshot , changes : &amp; [LayerChange] , path_kinds : &amp; [PathChange] ,) -&gt; Result &lt; PublishOutcome , EphemeralWorkspaceError &gt;</code></td></tr></tbody></table>
+  <h4>Methods</h4><table><tbody><tr id="method-publish-upperdir-changes-8"><td>required</td><td>publish_upperdir_changes</td><td><code>fn <a class="symbol-link" href="eos-ephemeral-workspace--src-command-session-finalize-rs.html#method-publish-upperdir-changes-103">publish_upperdir_changes</a> (&amp; self , root : &amp; <a class="symbol-link" href="eos-ephemeral-workspace--src-types-rs.html#item-struct-WorkspaceRoot-9">WorkspaceRoot</a> , snapshot : &amp; EphemeralSnapshot , changes : &amp; [LayerChange] , path_kinds : &amp; [<a class="symbol-link" href="eos-ephemeral-workspace--src-types-rs.html#item-struct-PathChange-42">PathChange</a>] ,) -&gt; Result &lt; <a class="symbol-link" href="eos-ephemeral-workspace--src-types-rs.html#item-struct-PublishOutcome-59">PublishOutcome</a> , <a class="symbol-link" href="eos-ephemeral-workspace--src-error-rs.html#item-enum-EphemeralWorkspaceError-5">EphemeralWorkspaceError</a> &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-ephemeral-workspace--src-command-session-finalize-rs.html#method-publish-upperdir-changes-103">publish_upperdir_changes</a>(
+        &amp;<span class="rs-self">self</span>,
+        root: &amp;<a class="symbol-link rs-type" href="eos-ephemeral-workspace--src-types-rs.html#item-struct-WorkspaceRoot-9">WorkspaceRoot</a>,
+        snapshot: &amp;<span class="rs-type">EphemeralSnapshot</span>,
+        changes: &amp;[<span class="rs-type">LayerChange</span>],
+        path_kinds: &amp;[<a class="symbol-link rs-type" href="eos-ephemeral-workspace--src-types-rs.html#item-struct-PathChange-42">PathChange</a>],
+    ) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-ephemeral-workspace--src-types-rs.html#item-struct-PublishOutcome-59">PublishOutcome</a>, <a class="symbol-link rs-type" href="eos-ephemeral-workspace--src-error-rs.html#item-enum-EphemeralWorkspaceError-5">EphemeralWorkspaceError</a>&gt;;
+</code></pre>
+</details></td></tr></tbody></table>
+
   <p class="source">crates/eos-ephemeral-workspace/src/ports.rs:6</p>
 </article></div>
 </section></div>
 </main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/eos-ephemeral-workspace/src/ports.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-kw">use</span> eos_protocol::<span class="rs-type">LayerChange</span>;
+
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::error::<a class="symbol-link rs-type" href="eos-ephemeral-workspace--src-error-rs.html#item-enum-EphemeralWorkspaceError-5">EphemeralWorkspaceError</a>;
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::types::{<span class="rs-type">EphemeralSnapshot</span>, <a class="symbol-link rs-type" href="eos-ephemeral-workspace--src-types-rs.html#item-struct-PathChange-42">PathChange</a>, <a class="symbol-link rs-type" href="eos-ephemeral-workspace--src-types-rs.html#item-struct-PublishOutcome-59">PublishOutcome</a>, <a class="symbol-link rs-type" href="eos-ephemeral-workspace--src-types-rs.html#item-struct-WorkspaceRoot-9">WorkspaceRoot</a>};
+
+<span class="rs-comment">/// Publisher port supplied by the daemon's neutral OCC publisher adapter.</span>
+<span class="rs-kw">pub</span> <span class="rs-kw">trait</span> <a class="symbol-link rs-type" href="eos-ephemeral-workspace--src-ports-rs.html#item-trait-WorkspacePublisherPort-6">WorkspacePublisherPort</a> {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-ephemeral-workspace--src-command-session-finalize-rs.html#method-publish-upperdir-changes-103">publish_upperdir_changes</a>(
+        &amp;<span class="rs-self">self</span>,
+        root: &amp;<a class="symbol-link rs-type" href="eos-ephemeral-workspace--src-types-rs.html#item-struct-WorkspaceRoot-9">WorkspaceRoot</a>,
+        snapshot: &amp;<span class="rs-type">EphemeralSnapshot</span>,
+        changes: &amp;[<span class="rs-type">LayerChange</span>],
+        path_kinds: &amp;[<a class="symbol-link rs-type" href="eos-ephemeral-workspace--src-types-rs.html#item-struct-PathChange-42">PathChange</a>],
+    ) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-ephemeral-workspace--src-types-rs.html#item-struct-PublishOutcome-59">PublishOutcome</a>, <a class="symbol-link rs-type" href="eos-ephemeral-workspace--src-error-rs.html#item-enum-EphemeralWorkspaceError-5">EphemeralWorkspaceError</a>&gt;;
+}
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
   <script src="../assets/inventory.js"></script>
 </body>
 </html>

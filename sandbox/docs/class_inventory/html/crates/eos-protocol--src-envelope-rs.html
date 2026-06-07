@@ -8,8 +8,16 @@
 </head>
 <body>
   <header>
-    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
-    <h1>eos-protocol File Inventory</h1>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>eos-protocol File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS/sandbox &amp;&amp; cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
   </header>
   <a class="back-link" href="../index.html">sandbox</a>
 <section class="summary">
@@ -47,149 +55,510 @@
       <span>0 methods</span>
     </div>
   </div>
-  <div class="items"><div class="group-label">File-Owned Types</div><article class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct Request pub pub struct Request crates/eos-protocol/src/envelope.rs op String invocation_id String args Value ">
+  <div class="items"><div class="group-label">File-Owned Types</div><article id="item-struct-Request-29" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct Request pub pub struct Request crates/eos-protocol/src/envelope.rs op String invocation_id String args Value ">
   <div class="item-head">
     <span class="kind">struct</span>
     <h3>Request</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub struct Request</code>
-  <div class="tags"><span>dto</span><span>serde</span></div>
+  <code class="signature">pub struct <a class="symbol-link" href="eos-protocol--src-envelope-rs.html#item-struct-Request-29">Request</a></code>
+  <p class="docstring">Request envelope (host -&gt; daemon): `{op, invocation_id, args}`.<br>Field order on the wire is exactly this; top-level keys are not sorted by the<br>daemon.</p>
+  <div class="tags"><span>derive: Clone</span><span>derive: Debug</span><span>derive: Deserialize</span><span>derive: Eq</span><span>derive: PartialEq</span><span>derive: Serialize</span><span>dto</span><span>serde</span></div>
   <h4>Fields</h4><table><tbody><tr><td>pub</td><td>op</td><td><code>String</code></td></tr><tr><td>pub</td><td>invocation_id</td><td><code>String</code></td></tr><tr><td>pub</td><td>args</td><td><code>Value</code></td></tr></tbody></table>
+
   <p class="source">crates/eos-protocol/src/envelope.rs:29</p>
-</article><article class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct ErrorEnvelope pub pub struct ErrorEnvelope crates/eos-protocol/src/envelope.rs success bool warnings Vec &lt; Value &gt; timings serde_json :: Map &lt; String , Value &gt; error ErrorBody ">
+</article><article id="item-struct-ErrorEnvelope-40" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct ErrorEnvelope pub pub struct ErrorEnvelope crates/eos-protocol/src/envelope.rs success bool warnings Vec &lt; Value &gt; timings serde_json :: Map &lt; String , Value &gt; error ErrorBody ">
   <div class="item-head">
     <span class="kind">struct</span>
     <h3>ErrorEnvelope</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub struct ErrorEnvelope</code>
-  <div class="tags"><span>serde</span></div>
-  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>success</td><td><code>bool</code></td></tr><tr><td>pub</td><td>warnings</td><td><code>Vec &lt; Value &gt;</code></td></tr><tr><td>pub</td><td>timings</td><td><code>serde_json :: Map &lt; String , Value &gt;</code></td></tr><tr><td>pub</td><td>error</td><td><code>ErrorBody</code></td></tr></tbody></table>
+  <code class="signature">pub struct <a class="symbol-link" href="eos-protocol--src-envelope-rs.html#item-struct-ErrorEnvelope-40">ErrorEnvelope</a></code>
+  <p class="docstring">Daemon error envelope (`success:false`). `warnings`/`timings` are always<br>`[]`/`{}` at the builder.</p>
+  <div class="tags"><span>derive: Clone</span><span>derive: Debug</span><span>derive: Deserialize</span><span>derive: Eq</span><span>derive: PartialEq</span><span>derive: Serialize</span><span>serde</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>success</td><td><code>bool</code></td></tr><tr><td>pub</td><td>warnings</td><td><code>Vec &lt; Value &gt;</code></td></tr><tr><td>pub</td><td>timings</td><td><code>serde_json :: Map &lt; String , Value &gt;</code></td></tr><tr><td>pub</td><td>error</td><td><code><a class="symbol-link" href="eos-protocol--src-envelope-rs.html#item-struct-ErrorBody-52">ErrorBody</a></code></td></tr></tbody></table>
+
   <p class="source">crates/eos-protocol/src/envelope.rs:40</p>
-</article><article class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct ErrorBody pub pub struct ErrorBody crates/eos-protocol/src/envelope.rs kind ErrorKind message String details Value ">
+</article><article id="item-struct-ErrorBody-52" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct ErrorBody pub pub struct ErrorBody crates/eos-protocol/src/envelope.rs kind ErrorKind message String details Value ">
   <div class="item-head">
     <span class="kind">struct</span>
     <h3>ErrorBody</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub struct ErrorBody</code>
-  <div class="tags"><span>error</span><span>serde</span></div>
-  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>kind</td><td><code>ErrorKind</code></td></tr><tr><td>pub</td><td>message</td><td><code>String</code></td></tr><tr><td>pub</td><td>details</td><td><code>Value</code></td></tr></tbody></table>
+  <code class="signature">pub struct <a class="symbol-link" href="eos-protocol--src-envelope-rs.html#item-struct-ErrorBody-52">ErrorBody</a></code>
+  <p class="docstring">The `error` body of an [`ErrorEnvelope`].</p>
+  <div class="tags"><span>derive: Clone</span><span>derive: Debug</span><span>derive: Deserialize</span><span>derive: Eq</span><span>derive: PartialEq</span><span>derive: Serialize</span><span>error</span><span>serde</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>kind</td><td><code><a class="symbol-link" href="eos-protocol--src-envelope-rs.html#item-enum-ErrorKind-61">ErrorKind</a></code></td></tr><tr><td>pub</td><td>message</td><td><code>String</code></td></tr><tr><td>pub</td><td>details</td><td><code>Value</code></td></tr></tbody></table>
+
   <p class="source">crates/eos-protocol/src/envelope.rs:52</p>
-</article><article class="type-card" data-kind="enum" data-kind-list="enum field type-model" data-filter-text="enum ProtocolError pub pub enum ProtocolError crates/eos-protocol/src/envelope.rs  ">
+</article><article id="item-enum-ProtocolError-16" class="type-card" data-kind="enum" data-kind-list="enum field type-model" data-filter-text="enum ProtocolError pub pub enum ProtocolError crates/eos-protocol/src/envelope.rs  ">
   <div class="item-head">
     <span class="kind">enum</span>
     <h3>ProtocolError</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub enum ProtocolError</code>
-  <div class="tags"><span>error</span></div>
+  <code class="signature">pub enum <a class="symbol-link" href="eos-protocol--src-envelope-rs.html#item-enum-ProtocolError-16">ProtocolError</a></code>
+  <p class="docstring">Encode/decode failures for the framed wire protocol. Distinct from the wire<br>[`ErrorKind`] (which is daemon policy, not a transport parse failure).</p>
+  <div class="tags"><span>derive: Debug</span><span>derive: Error</span><span>error</span><span>non_exhaustive</span></div>
   <h4>Variants</h4><table><tbody><tr><td>BadJson</td><td><code>0: serde_json :: Error</code></td></tr><tr><td>NotAnObject</td><td><code></code></td></tr></tbody></table>
+
   <p class="source">crates/eos-protocol/src/envelope.rs:16</p>
-</article><article class="type-card" data-kind="enum" data-kind-list="enum field type-model" data-filter-text="enum ErrorKind pub pub enum ErrorKind crates/eos-protocol/src/envelope.rs  ">
+</article><article id="item-enum-ErrorKind-61" class="type-card" data-kind="enum" data-kind-list="enum field type-model" data-filter-text="enum ErrorKind pub pub enum ErrorKind crates/eos-protocol/src/envelope.rs  ">
   <div class="item-head">
     <span class="kind">enum</span>
     <h3>ErrorKind</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub enum ErrorKind</code>
-  <div class="tags"><span>serde</span></div>
+  <code class="signature">pub enum <a class="symbol-link" href="eos-protocol--src-envelope-rs.html#item-enum-ErrorKind-61">ErrorKind</a></code>
+  <p class="docstring">Verified daemon error `kind` values. Serialized `snake_case` on the wire.</p>
+  <div class="tags"><span>derive: Clone</span><span>derive: Debug</span><span>derive: Deserialize</span><span>derive: Eq</span><span>derive: PartialEq</span><span>derive: Serialize</span><span>non_exhaustive</span><span>serde</span><span>serde: rename_all</span></div>
   <h4>Variants</h4><table><tbody><tr><td>InvalidEnvelope</td><td><code></code></td></tr><tr><td>BadJson</td><td><code></code></td></tr><tr><td>RequestTooLarge</td><td><code></code></td></tr><tr><td>Unauthorized</td><td><code></code></td></tr><tr><td>UnknownOp</td><td><code></code></td></tr><tr><td>InternalError</td><td><code></code></td></tr><tr><td>Forbidden</td><td><code></code></td></tr><tr><td>ForbiddenInIsolatedWorkspace</td><td><code></code></td></tr><tr><td>LifecycleInProgress</td><td><code></code></td></tr></tbody></table>
+
   <p class="source">crates/eos-protocol/src/envelope.rs:61</p>
-</article><article class="type-card" data-kind="enum" data-kind-list="enum field type-model" data-filter-text="enum Envelope pub pub enum Envelope crates/eos-protocol/src/envelope.rs  ">
+</article><article id="item-enum-Envelope-86" class="type-card" data-kind="enum" data-kind-list="enum field type-model" data-filter-text="enum Envelope pub pub enum Envelope crates/eos-protocol/src/envelope.rs  ">
   <div class="item-head">
     <span class="kind">enum</span>
     <h3>Envelope</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub enum Envelope</code>
-  <div class="tags"><span>serde</span></div>
-  <h4>Variants</h4><table><tbody><tr><td>Request</td><td><code>0: Request</code></td></tr><tr><td>Error</td><td><code>0: ErrorEnvelope</code></td></tr><tr><td>Response</td><td><code>0: Value</code></td></tr></tbody></table>
+  <code class="signature">pub enum <a class="symbol-link" href="eos-protocol--src-envelope-rs.html#item-enum-Envelope-86">Envelope</a></code>
+  <p class="docstring">A framed wire message: a request, an error envelope, or any response<br>`Value`. Untagged: a request has `op`; an error has `success:false` + `error`;<br>any other object is a response.</p>
+  <div class="tags"><span>derive: Clone</span><span>derive: Debug</span><span>derive: Deserialize</span><span>derive: Eq</span><span>derive: PartialEq</span><span>derive: Serialize</span><span>serde</span><span>serde: untagged</span></div>
+  <h4>Variants</h4><table><tbody><tr><td>Request</td><td><code>0: <a class="symbol-link" href="eos-protocol--src-envelope-rs.html#item-struct-Request-29">Request</a></code></td></tr><tr><td>Error</td><td><code>0: <a class="symbol-link" href="eos-protocol--src-envelope-rs.html#item-struct-ErrorEnvelope-40">ErrorEnvelope</a></code></td></tr><tr><td>Response</td><td><code>0: Value</code></td></tr></tbody></table>
+
   <p class="source">crates/eos-protocol/src/envelope.rs:86</p>
-</article><div class="group-label">Aliases</div><article class="item-card" data-kind="type" data-kind-list="type" data-filter-text="type TestResult private type TestResult&lt; T = () &gt; = Result &lt; T , Box &lt; dyn std :: error :: Error + Send + Sync &gt; &gt; crates/eos-protocol/src/envelope.rs  ">
+</article><div class="group-label">Aliases</div><article id="item-type-TestResult-156" class="item-card" data-kind="type" data-kind-list="type" data-filter-text="type TestResult private type TestResult&lt; T = () &gt; = Result &lt; T , Box &lt; dyn std :: error :: Error + Send + Sync &gt; &gt; crates/eos-protocol/src/envelope.rs  ">
   <div class="item-head">
     <span class="kind">type</span>
     <h3>TestResult</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">type TestResult&lt; T = () &gt; = Result &lt; T , Box &lt; dyn std :: error :: Error + Send + Sync &gt; &gt;</code>
+  <code class="signature">type <a class="symbol-link" href="eos-protocol.html#item-type-TestResult-272">TestResult</a>&lt; T = () &gt; = Result &lt; T , Box &lt; dyn std :: error :: Error + Send + Sync &gt; &gt;</code>
   <div class="tags"></div>
 
   <p class="source">crates/eos-protocol/src/envelope.rs:156</p>
-</article><div class="group-label">Standalone Functions</div><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn encode pub pub fn encode (envelope : &amp; Envelope) -&gt; Result &lt; Vec &lt; u8 &gt; , ProtocolError &gt; crates/eos-protocol/src/envelope.rs  ">
+</article><div class="group-label">Standalone Functions</div><article id="item-fn-encode-100" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn encode pub pub fn encode (envelope : &amp; Envelope) -&gt; Result &lt; Vec &lt; u8 &gt; , ProtocolError &gt; crates/eos-protocol/src/envelope.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>encode</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub fn encode (envelope : &amp; Envelope) -&gt; Result &lt; Vec &lt; u8 &gt; , ProtocolError &gt;</code>
+  <code class="signature">pub fn <a class="symbol-link" href="eos-protocol--src-envelope-rs.html#item-fn-encode-100">encode</a> (envelope : &amp; <a class="symbol-link" href="eos-protocol--src-envelope-rs.html#item-enum-Envelope-86">Envelope</a>) -&gt; Result &lt; Vec &lt; u8 &gt; , <a class="symbol-link" href="eos-protocol--src-envelope-rs.html#item-enum-ProtocolError-16">ProtocolError</a> &gt;</code>
+  <p class="docstring">Serialize an envelope as compact JSON plus a single trailing `\n`.<br>`serde_json` compact formatting matches the daemon for these ASCII payloads;<br>`args` key order is preserved (the `preserve_order` feature is required).<br># Errors<br>Returns [`ProtocolError::BadJson`] when serde cannot serialize the envelope.</p>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-comment">/// Serialize an envelope as compact JSON plus a single trailing `\n`.</span>
+<span class="rs-comment">///</span>
+<span class="rs-comment">/// `serde_json` compact formatting matches the daemon for these ASCII payloads;</span>
+<span class="rs-comment">/// `args` key order is preserved (the `preserve_order` feature is required).</span>
+<span class="rs-comment">///</span>
+<span class="rs-comment">/// # Errors</span>
+<span class="rs-comment">///</span>
+<span class="rs-comment">/// Returns [`ProtocolError::BadJson`] when serde cannot serialize the envelope.</span>
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-protocol--src-envelope-rs.html#item-fn-encode-100">encode</a>(envelope: &amp;<a class="symbol-link rs-type" href="eos-protocol--src-envelope-rs.html#item-enum-Envelope-86">Envelope</a>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;u8&gt;, <a class="symbol-link rs-type" href="eos-protocol--src-envelope-rs.html#item-enum-ProtocolError-16">ProtocolError</a>&gt; {
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> bytes = serde_json::to_vec(envelope)?;
+    bytes.push(b&#x27;\n&#x27;);
+    <span class="rs-type">Ok</span>(bytes)
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-protocol/src/envelope.rs:100</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn decode pub pub fn decode (bytes : &amp; [u8]) -&gt; Result &lt; Envelope , ProtocolError &gt; crates/eos-protocol/src/envelope.rs  ">
+</article><article id="item-fn-decode-114" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn decode pub pub fn decode (bytes : &amp; [u8]) -&gt; Result &lt; Envelope , ProtocolError &gt; crates/eos-protocol/src/envelope.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>decode</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub fn decode (bytes : &amp; [u8]) -&gt; Result &lt; Envelope , ProtocolError &gt;</code>
+  <code class="signature">pub fn <a class="symbol-link" href="eos-protocol--src-envelope-rs.html#item-fn-decode-114">decode</a> (bytes : &amp; [u8]) -&gt; Result &lt; <a class="symbol-link" href="eos-protocol--src-envelope-rs.html#item-enum-Envelope-86">Envelope</a> , <a class="symbol-link" href="eos-protocol--src-envelope-rs.html#item-enum-ProtocolError-16">ProtocolError</a> &gt;</code>
+  <p class="docstring">Decode one framed message. A trailing `\n` (and surrounding whitespace) is<br>tolerated; the body must be a single JSON object.<br># Errors<br>Returns [`ProtocolError::BadJson`] for invalid JSON and<br>[`ProtocolError::NotAnObject`] when the decoded value is not a JSON object.</p>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-comment">/// Decode one framed message. A trailing `\n` (and surrounding whitespace) is</span>
+<span class="rs-comment">/// tolerated; the body must be a single JSON object.</span>
+<span class="rs-comment">///</span>
+<span class="rs-comment">/// # Errors</span>
+<span class="rs-comment">///</span>
+<span class="rs-comment">/// Returns [`ProtocolError::BadJson`] for invalid JSON and</span>
+<span class="rs-comment">/// [`ProtocolError::NotAnObject`] when the decoded value is not a JSON object.</span>
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-protocol--src-envelope-rs.html#item-fn-decode-114">decode</a>(bytes: &amp;[u8]) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-protocol--src-envelope-rs.html#item-enum-Envelope-86">Envelope</a>, <a class="symbol-link rs-type" href="eos-protocol--src-envelope-rs.html#item-enum-ProtocolError-16">ProtocolError</a>&gt; {
+    <a class="symbol-link rs-fn" href="eos-protocol--src-envelope-rs.html#item-fn-decode-value-125">decode_value</a>(serde_json::from_slice(bytes)?)
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-protocol/src/envelope.rs:114</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn decode_value pub pub fn decode_value (value : Value) -&gt; Result &lt; Envelope , ProtocolError &gt; crates/eos-protocol/src/envelope.rs  ">
+</article><article id="item-fn-decode-value-125" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn decode_value pub pub fn decode_value (value : Value) -&gt; Result &lt; Envelope , ProtocolError &gt; crates/eos-protocol/src/envelope.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>decode_value</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub fn decode_value (value : Value) -&gt; Result &lt; Envelope , ProtocolError &gt;</code>
+  <code class="signature">pub fn <a class="symbol-link" href="eos-protocol--src-envelope-rs.html#item-fn-decode-value-125">decode_value</a> (value : Value) -&gt; Result &lt; <a class="symbol-link" href="eos-protocol--src-envelope-rs.html#item-enum-Envelope-86">Envelope</a> , <a class="symbol-link" href="eos-protocol--src-envelope-rs.html#item-enum-ProtocolError-16">ProtocolError</a> &gt;</code>
+  <p class="docstring">Disambiguate an already-parsed JSON value into an [`Envelope`].<br>Lets a caller that already holds a [`Value`] (e.g. after stripping a<br>transport auth field) avoid re-serializing and re-parsing the payload.<br># Errors<br>Returns [`ProtocolError::NotAnObject`] when `value` is not a JSON object, or<br>[`ProtocolError::BadJson`] when a request/error envelope fails to deserialize.</p>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-comment">/// Disambiguate an already-parsed JSON value into an [`Envelope`].</span>
+<span class="rs-comment">///</span>
+<span class="rs-comment">/// Lets a caller that already holds a [`Value`] (e.g. after stripping a</span>
+<span class="rs-comment">/// transport auth field) avoid re-serializing and re-parsing the payload.</span>
+<span class="rs-comment">///</span>
+<span class="rs-comment">/// # Errors</span>
+<span class="rs-comment">///</span>
+<span class="rs-comment">/// Returns [`ProtocolError::NotAnObject`] when `value` is not a JSON object, or</span>
+<span class="rs-comment">/// [`ProtocolError::BadJson`] when a request/error envelope fails to deserialize.</span>
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-protocol--src-envelope-rs.html#item-fn-decode-value-125">decode_value</a>(value: <span class="rs-type">Value</span>) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-protocol--src-envelope-rs.html#item-enum-Envelope-86">Envelope</a>, <a class="symbol-link rs-type" href="eos-protocol--src-envelope-rs.html#item-enum-ProtocolError-16">ProtocolError</a>&gt; {
+    <span class="rs-comment">// Disambiguate so a request never deserializes as a bare `Response(Value)`.</span>
+    <span class="rs-kw">let</span> <span class="rs-type">Some</span>(obj) = value.as_object() <span class="rs-kw">else</span> {
+        <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-protocol--src-envelope-rs.html#item-enum-ProtocolError-16">ProtocolError</a>::<span class="rs-type">NotAnObject</span>);
+    };
+    <span class="rs-kw">if</span> obj.contains_key(&quot;op&quot;) {
+        <span class="rs-kw">let</span> req: <a class="symbol-link rs-type" href="eos-protocol--src-envelope-rs.html#item-struct-Request-29">Request</a> = serde_json::from_value(value)?;
+        <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-protocol--src-envelope-rs.html#item-enum-Envelope-86">Envelope</a>::<a class="symbol-link rs-type" href="eos-protocol--src-envelope-rs.html#item-struct-Request-29">Request</a>(req));
+    }
+    <span class="rs-kw">if</span> obj.get(&quot;success&quot;) == <span class="rs-type">Some</span>(&amp;<span class="rs-type">Value</span>::<span class="rs-type">Bool</span>(<span class="rs-kw">false</span>)) &amp;&amp; obj.contains_key(&quot;error&quot;) {
+        <span class="rs-kw">let</span> err: <a class="symbol-link rs-type" href="eos-protocol--src-envelope-rs.html#item-struct-ErrorEnvelope-40">ErrorEnvelope</a> = serde_json::from_value(value)?;
+        <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-protocol--src-envelope-rs.html#item-enum-Envelope-86">Envelope</a>::<span class="rs-type">Error</span>(err));
+    }
+    <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-protocol--src-envelope-rs.html#item-enum-Envelope-86">Envelope</a>::<span class="rs-type">Response</span>(value))
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-protocol/src/envelope.rs:125</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn error_kind_snake_case_wire private fn error_kind_snake_case_wire () -&gt; TestResult crates/eos-protocol/src/envelope.rs  ">
+</article><article id="item-fn-error-kind-snake-case-wire-158" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn error_kind_snake_case_wire private fn error_kind_snake_case_wire () -&gt; TestResult crates/eos-protocol/src/envelope.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>error_kind_snake_case_wire</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn error_kind_snake_case_wire () -&gt; TestResult</code>
-  <div class="tags"></div>
+  <code class="signature">fn <a class="symbol-link" href="eos-protocol--src-envelope-rs.html#item-fn-error-kind-snake-case-wire-158">error_kind_snake_case_wire</a> () -&gt; <a class="symbol-link" href="eos-protocol.html#item-type-TestResult-272">TestResult</a></code>
+  <div class="tags"><span>test</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-protocol--src-envelope-rs.html#item-fn-error-kind-snake-case-wire-158">error_kind_snake_case_wire</a>() -&gt; <a class="symbol-link rs-type" href="eos-protocol.html#item-type-TestResult-272">TestResult</a> {
+        <span class="rs-kw">let</span> v = serde_json::to_value(<a class="symbol-link rs-type" href="eos-protocol--src-envelope-rs.html#item-enum-ErrorKind-61">ErrorKind</a>::<span class="rs-type">ForbiddenInIsolatedWorkspace</span>)?;
+        assert_eq!(
+            v,
+            <span class="rs-type">Value</span>::<span class="rs-type">String</span>(&quot;forbidden_in_isolated_workspace&quot;.to_owned())
+        );
+        assert_eq!(
+            serde_json::to_value(<a class="symbol-link rs-type" href="eos-protocol--src-envelope-rs.html#item-enum-ErrorKind-61">ErrorKind</a>::<span class="rs-type">UnknownOp</span>)?,
+            <span class="rs-type">Value</span>::<span class="rs-type">String</span>(&quot;unknown_op&quot;.to_owned())
+        );
+        <span class="rs-type">Ok</span>(())
+    }
+</code></pre>
+</details>
 
   <p class="source">crates/eos-protocol/src/envelope.rs:158</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn encode_appends_single_newline private fn encode_appends_single_newline () -&gt; TestResult crates/eos-protocol/src/envelope.rs  ">
+</article><article id="item-fn-encode-appends-single-newline-172" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn encode_appends_single_newline private fn encode_appends_single_newline () -&gt; TestResult crates/eos-protocol/src/envelope.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>encode_appends_single_newline</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn encode_appends_single_newline () -&gt; TestResult</code>
-  <div class="tags"></div>
+  <code class="signature">fn <a class="symbol-link" href="eos-protocol--src-envelope-rs.html#item-fn-encode-appends-single-newline-172">encode_appends_single_newline</a> () -&gt; <a class="symbol-link" href="eos-protocol.html#item-type-TestResult-272">TestResult</a></code>
+  <div class="tags"><span>test</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-protocol--src-envelope-rs.html#item-fn-encode-appends-single-newline-172">encode_appends_single_newline</a>() -&gt; <a class="symbol-link rs-type" href="eos-protocol.html#item-type-TestResult-272">TestResult</a> {
+        <span class="rs-kw">let</span> env = <a class="symbol-link rs-type" href="eos-protocol--src-envelope-rs.html#item-enum-Envelope-86">Envelope</a>::<span class="rs-type">Response</span>(serde_json::json!({&quot;success&quot;: <span class="rs-kw">true</span>, &quot;touched&quot;: 0}));
+        <span class="rs-kw">let</span> bytes = <a class="symbol-link rs-fn" href="eos-protocol--src-envelope-rs.html#item-fn-encode-100">encode</a>(&amp;env)?;
+        assert_eq!(bytes.last(), <span class="rs-type">Some</span>(&amp;b&#x27;\n&#x27;));
+        assert_ne!(bytes[bytes.len() - 2], b&#x27;\n&#x27;);
+        <span class="rs-type">Ok</span>(())
+    }
+</code></pre>
+</details>
 
   <p class="source">crates/eos-protocol/src/envelope.rs:172</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn request_args_order_preserved_roundtrip private fn request_args_order_preserved_roundtrip () -&gt; TestResult crates/eos-protocol/src/envelope.rs  ">
+</article><article id="item-fn-request-args-order-preserved-roundtrip-181" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn request_args_order_preserved_roundtrip private fn request_args_order_preserved_roundtrip () -&gt; TestResult crates/eos-protocol/src/envelope.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>request_args_order_preserved_roundtrip</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn request_args_order_preserved_roundtrip () -&gt; TestResult</code>
-  <div class="tags"></div>
+  <code class="signature">fn <a class="symbol-link" href="eos-protocol--src-envelope-rs.html#item-fn-request-args-order-preserved-roundtrip-181">request_args_order_preserved_roundtrip</a> () -&gt; <a class="symbol-link" href="eos-protocol.html#item-type-TestResult-272">TestResult</a></code>
+  <div class="tags"><span>test</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-protocol--src-envelope-rs.html#item-fn-request-args-order-preserved-roundtrip-181">request_args_order_preserved_roundtrip</a>() -&gt; <a class="symbol-link rs-type" href="eos-protocol.html#item-type-TestResult-272">TestResult</a> {
+        <span class="rs-kw">let</span> raw = b&quot;{\&quot;op\&quot;:\&quot;x\&quot;,\&quot;invocation_id\&quot;:\&quot;i\&quot;,\&quot;args\&quot;:{\&quot;z\&quot;:1,\&quot;a\&quot;:2,\&quot;_eos_daemon_protocol_version\&quot;:1}}\n&quot;;
+        <span class="rs-kw">let</span> env = <a class="symbol-link rs-fn" href="eos-protocol--src-envelope-rs.html#item-fn-decode-114">decode</a>(raw)?;
+        assert!(matches!(env, <a class="symbol-link rs-type" href="eos-protocol--src-envelope-rs.html#item-enum-Envelope-86">Envelope</a>::<a class="symbol-link rs-type" href="eos-protocol--src-envelope-rs.html#item-struct-Request-29">Request</a>(_)));
+        assert_eq!(<a class="symbol-link rs-fn" href="eos-protocol--src-envelope-rs.html#item-fn-encode-100">encode</a>(&amp;env)?, raw);
+        <span class="rs-type">Ok</span>(())
+    }
+</code></pre>
+</details>
 
   <p class="source">crates/eos-protocol/src/envelope.rs:181</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn arb_json private fn arb_json () -&gt; impl Strategy &lt; Value = Value &gt; crates/eos-protocol/src/envelope.rs  ">
+</article><article id="item-fn-arb-json-191" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn arb_json private fn arb_json () -&gt; impl Strategy &lt; Value = Value &gt; crates/eos-protocol/src/envelope.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>arb_json</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn arb_json () -&gt; impl Strategy &lt; Value = Value &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-protocol--src-envelope-rs.html#item-fn-arb-json-191">arb_json</a> () -&gt; impl Strategy &lt; Value = Value &gt;</code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-protocol--src-envelope-rs.html#item-fn-arb-json-191">arb_json</a>() -&gt; <span class="rs-kw">impl</span> <span class="rs-type">Strategy</span>&lt;<span class="rs-type">Value</span> = <span class="rs-type">Value</span>&gt; {
+        <span class="rs-kw">let</span> leaf = prop_oneof![
+            <span class="rs-type">Just</span>(<span class="rs-type">Value</span>::<span class="rs-type">Null</span>),
+            any::&lt;bool&gt;().prop_map(<span class="rs-type">Value</span>::<span class="rs-type">Bool</span>),
+            any::&lt;i64&gt;().prop_map(|n| <span class="rs-type">Value</span>::<span class="rs-type">Number</span>(n.into())),
+            &quot;.*&quot;.prop_map(<span class="rs-type">Value</span>::<span class="rs-type">String</span>),
+        ];
+        leaf.prop_recursive(4, 32, 6, |inner| {
+            prop_oneof![
+                prop::collection::vec(inner.clone(), 0..6).prop_map(<span class="rs-type">Value</span>::<span class="rs-type">Array</span>),
+                prop::collection::vec((&quot;[a-z]{1,6}&quot;, inner), 0..6)
+                    .prop_map(|kvs| { <span class="rs-type">Value</span>::<span class="rs-type">Object</span>(kvs.into_iter().collect()) }),
+            ]
+        })
+    }
+</code></pre>
+</details>
 
   <p class="source">crates/eos-protocol/src/envelope.rs:191</p>
 </article></div>
 </section></div>
 </main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/eos-protocol/src/envelope.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-comment">//! Newline-delimited JSON wire envelopes.</span>
+<span class="rs-comment">//!</span>
+<span class="rs-comment">//! Invariant: one compact JSON object per message + a single trailing `\n`</span>
+<span class="rs-comment">//! (`json.dumps(obj, separators=(",",":")) + "\n"`). [`encode`]/[`decode`] are</span>
+<span class="rs-comment">//! byte-stable for requests and error envelopes; responses are heterogeneous</span>
+<span class="rs-comment">//! `Value`s compared at the canonical bar (see [`crate::canonical`]).</span>
+<span class="rs-comment">//!</span>
+<span class="rs-comment">//! The protocol-version field `_eos_daemon_protocol_version` lives INSIDE `args`</span>
+<span class="rs-comment">//! and the daemon NEVER reads it (an inert versioning hook). We reproduce its</span>
+<span class="rs-comment">//! presence but do not validate it.</span>
+
+<span class="rs-kw">use</span> serde::{<span class="rs-type">Deserialize</span>, <span class="rs-type">Serialize</span>};
+<span class="rs-kw">use</span> serde_json::<span class="rs-type">Value</span>;
+<span class="rs-kw">use</span> thiserror::<span class="rs-type">Error</span>;
+
+<span class="rs-comment">/// Encode/decode failures for the framed wire protocol. Distinct from the wire</span>
+<span class="rs-comment">/// [`ErrorKind`] (which is daemon policy, not a transport parse failure).</span>
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Error</span>)]
+#[non_exhaustive]
+<span class="rs-kw">pub</span> <span class="rs-kw">enum</span> <a class="symbol-link rs-type" href="eos-protocol--src-envelope-rs.html#item-enum-ProtocolError-16">ProtocolError</a> {
+    <span class="rs-comment">/// The request line was not valid UTF-8 JSON.</span>
+    #[error(&quot;bad json: {0}&quot;)]
+    <span class="rs-type">BadJson</span>(#[from] serde_json::<span class="rs-type">Error</span>),
+    <span class="rs-comment">/// The decoded value was not a JSON object.</span>
+    #[error(&quot;envelope must be a json object&quot;)]
+    <span class="rs-type">NotAnObject</span>,
+}
+
+<span class="rs-comment">/// Request envelope (host -&gt; daemon): `{op, invocation_id, args}`.</span>
+<span class="rs-comment">///</span>
+<span class="rs-comment">/// Field order on the wire is exactly this; top-level keys are not sorted by the</span>
+<span class="rs-comment">/// daemon.</span>
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Eq</span>, <span class="rs-type">Serialize</span>, <span class="rs-type">Deserialize</span>)]
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-protocol--src-envelope-rs.html#item-struct-Request-29">Request</a> {
+    <span class="rs-kw">pub</span> op: <span class="rs-type">String</span>,
+    <span class="rs-kw">pub</span> invocation_id: <span class="rs-type">String</span>,
+    <span class="rs-kw">pub</span> args: <span class="rs-type">Value</span>,
+}
+
+<span class="rs-comment">/// Daemon error envelope (`success:false`). `warnings`/`timings` are always</span>
+<span class="rs-comment">/// `[]`/`{}` at the builder.</span>
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Eq</span>, <span class="rs-type">Serialize</span>, <span class="rs-type">Deserialize</span>)]
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-protocol--src-envelope-rs.html#item-struct-ErrorEnvelope-40">ErrorEnvelope</a> {
+    <span class="rs-kw">pub</span> success: bool,
+    #[serde(default)]
+    <span class="rs-kw">pub</span> warnings: <span class="rs-type">Vec</span>&lt;<span class="rs-type">Value</span>&gt;,
+    #[serde(default)]
+    <span class="rs-kw">pub</span> timings: serde_json::<span class="rs-type">Map</span>&lt;<span class="rs-type">String</span>, <span class="rs-type">Value</span>&gt;,
+    <span class="rs-kw">pub</span> error: <a class="symbol-link rs-type" href="eos-protocol--src-envelope-rs.html#item-struct-ErrorBody-52">ErrorBody</a>,
+}
+
+<span class="rs-comment">/// The `error` body of an [`ErrorEnvelope`].</span>
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Eq</span>, <span class="rs-type">Serialize</span>, <span class="rs-type">Deserialize</span>)]
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-protocol--src-envelope-rs.html#item-struct-ErrorBody-52">ErrorBody</a> {
+    <span class="rs-kw">pub</span> kind: <a class="symbol-link rs-type" href="eos-protocol--src-envelope-rs.html#item-enum-ErrorKind-61">ErrorKind</a>,
+    <span class="rs-kw">pub</span> message: <span class="rs-type">String</span>,
+    #[serde(default)]
+    <span class="rs-kw">pub</span> details: <span class="rs-type">Value</span>,
+}
+
+<span class="rs-comment">/// Verified daemon error `kind` values. Serialized `snake_case` on the wire.</span>
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Eq</span>, <span class="rs-type">Serialize</span>, <span class="rs-type">Deserialize</span>)]
+#[serde(rename_all = &quot;snake_case&quot;)]
+#[non_exhaustive]
+<span class="rs-kw">pub</span> <span class="rs-kw">enum</span> <a class="symbol-link rs-type" href="eos-protocol--src-envelope-rs.html#item-enum-ErrorKind-61">ErrorKind</a> {
+    <span class="rs-comment">/// `op` missing/non-string/empty, or `args` present but not a dict.</span>
+    <span class="rs-type">InvalidEnvelope</span>,
+    <span class="rs-comment">/// Request line was not valid UTF-8 JSON.</span>
+    <span class="rs-type">BadJson</span>,
+    <span class="rs-comment">/// Request line exceeded `MAX_REQUEST_BYTES`.</span>
+    <span class="rs-type">RequestTooLarge</span>,
+    <span class="rs-comment">/// TCP only: configured auth token did not match.</span>
+    <span class="rs-type">Unauthorized</span>,
+    <span class="rs-comment">/// `op` not registered in the daemon op table.</span>
+    <span class="rs-type">UnknownOp</span>,
+    <span class="rs-comment">/// A handler raised; `details.error_id` carries a uuid4 hex.</span>
+    <span class="rs-type">InternalError</span>,
+    <span class="rs-comment">/// Handler/gate policy refusal.</span>
+    <span class="rs-type">Forbidden</span>,
+    <span class="rs-comment">/// Refused because an isolated workspace is active for this agent.</span>
+    <span class="rs-type">ForbiddenInIsolatedWorkspace</span>,
+    <span class="rs-comment">/// Refused because a lifecycle operation is in progress.</span>
+    <span class="rs-type">LifecycleInProgress</span>,
+}
+
+<span class="rs-comment">/// A framed wire message: a request, an error envelope, or any response</span>
+<span class="rs-comment">/// `Value`. Untagged: a request has `op`; an error has `success:false` + `error`;</span>
+<span class="rs-comment">/// any other object is a response.</span>
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Eq</span>, <span class="rs-type">Serialize</span>, <span class="rs-type">Deserialize</span>)]
+#[serde(untagged)]
+<span class="rs-kw">pub</span> <span class="rs-kw">enum</span> <a class="symbol-link rs-type" href="eos-protocol--src-envelope-rs.html#item-enum-Envelope-86">Envelope</a> {
+    <span class="rs-comment">/// Host -&gt; daemon request.</span>
+    <a class="symbol-link rs-type" href="eos-protocol--src-envelope-rs.html#item-struct-Request-29">Request</a>(<a class="symbol-link rs-type" href="eos-protocol--src-envelope-rs.html#item-struct-Request-29">Request</a>),
+    <span class="rs-comment">/// Daemon -&gt; host error envelope.</span>
+    <span class="rs-type">Error</span>(<a class="symbol-link rs-type" href="eos-protocol--src-envelope-rs.html#item-struct-ErrorEnvelope-40">ErrorEnvelope</a>),
+    <span class="rs-comment">/// Daemon -&gt; host response (heterogeneous; compared canonically).</span>
+    <span class="rs-type">Response</span>(<span class="rs-type">Value</span>),
+}
+
+<span class="rs-comment">/// Serialize an envelope as compact JSON plus a single trailing `\n`.</span>
+<span class="rs-comment">///</span>
+<span class="rs-comment">/// `serde_json` compact formatting matches the daemon for these ASCII payloads;</span>
+<span class="rs-comment">/// `args` key order is preserved (the `preserve_order` feature is required).</span>
+<span class="rs-comment">///</span>
+<span class="rs-comment">/// # Errors</span>
+<span class="rs-comment">///</span>
+<span class="rs-comment">/// Returns [`ProtocolError::BadJson`] when serde cannot serialize the envelope.</span>
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-protocol--src-envelope-rs.html#item-fn-encode-100">encode</a>(envelope: &amp;<a class="symbol-link rs-type" href="eos-protocol--src-envelope-rs.html#item-enum-Envelope-86">Envelope</a>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Vec</span>&lt;u8&gt;, <a class="symbol-link rs-type" href="eos-protocol--src-envelope-rs.html#item-enum-ProtocolError-16">ProtocolError</a>&gt; {
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> bytes = serde_json::to_vec(envelope)?;
+    bytes.push(b&#x27;\n&#x27;);
+    <span class="rs-type">Ok</span>(bytes)
+}
+
+<span class="rs-comment">/// Decode one framed message. A trailing `\n` (and surrounding whitespace) is</span>
+<span class="rs-comment">/// tolerated; the body must be a single JSON object.</span>
+<span class="rs-comment">///</span>
+<span class="rs-comment">/// # Errors</span>
+<span class="rs-comment">///</span>
+<span class="rs-comment">/// Returns [`ProtocolError::BadJson`] for invalid JSON and</span>
+<span class="rs-comment">/// [`ProtocolError::NotAnObject`] when the decoded value is not a JSON object.</span>
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-protocol--src-envelope-rs.html#item-fn-decode-114">decode</a>(bytes: &amp;[u8]) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-protocol--src-envelope-rs.html#item-enum-Envelope-86">Envelope</a>, <a class="symbol-link rs-type" href="eos-protocol--src-envelope-rs.html#item-enum-ProtocolError-16">ProtocolError</a>&gt; {
+    <a class="symbol-link rs-fn" href="eos-protocol--src-envelope-rs.html#item-fn-decode-value-125">decode_value</a>(serde_json::from_slice(bytes)?)
+}
+
+<span class="rs-comment">/// Disambiguate an already-parsed JSON value into an [`Envelope`].</span>
+<span class="rs-comment">///</span>
+<span class="rs-comment">/// Lets a caller that already holds a [`Value`] (e.g. after stripping a</span>
+<span class="rs-comment">/// transport auth field) avoid re-serializing and re-parsing the payload.</span>
+<span class="rs-comment">///</span>
+<span class="rs-comment">/// # Errors</span>
+<span class="rs-comment">///</span>
+<span class="rs-comment">/// Returns [`ProtocolError::NotAnObject`] when `value` is not a JSON object, or</span>
+<span class="rs-comment">/// [`ProtocolError::BadJson`] when a request/error envelope fails to deserialize.</span>
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-protocol--src-envelope-rs.html#item-fn-decode-value-125">decode_value</a>(value: <span class="rs-type">Value</span>) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-protocol--src-envelope-rs.html#item-enum-Envelope-86">Envelope</a>, <a class="symbol-link rs-type" href="eos-protocol--src-envelope-rs.html#item-enum-ProtocolError-16">ProtocolError</a>&gt; {
+    <span class="rs-comment">// Disambiguate so a request never deserializes as a bare `Response(Value)`.</span>
+    <span class="rs-kw">let</span> <span class="rs-type">Some</span>(obj) = value.as_object() <span class="rs-kw">else</span> {
+        <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-protocol--src-envelope-rs.html#item-enum-ProtocolError-16">ProtocolError</a>::<span class="rs-type">NotAnObject</span>);
+    };
+    <span class="rs-kw">if</span> obj.contains_key(&quot;op&quot;) {
+        <span class="rs-kw">let</span> req: <a class="symbol-link rs-type" href="eos-protocol--src-envelope-rs.html#item-struct-Request-29">Request</a> = serde_json::from_value(value)?;
+        <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-protocol--src-envelope-rs.html#item-enum-Envelope-86">Envelope</a>::<a class="symbol-link rs-type" href="eos-protocol--src-envelope-rs.html#item-struct-Request-29">Request</a>(req));
+    }
+    <span class="rs-kw">if</span> obj.get(&quot;success&quot;) == <span class="rs-type">Some</span>(&amp;<span class="rs-type">Value</span>::<span class="rs-type">Bool</span>(<span class="rs-kw">false</span>)) &amp;&amp; obj.contains_key(&quot;error&quot;) {
+        <span class="rs-kw">let</span> err: <a class="symbol-link rs-type" href="eos-protocol--src-envelope-rs.html#item-struct-ErrorEnvelope-40">ErrorEnvelope</a> = serde_json::from_value(value)?;
+        <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-protocol--src-envelope-rs.html#item-enum-Envelope-86">Envelope</a>::<span class="rs-type">Error</span>(err));
+    }
+    <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-protocol--src-envelope-rs.html#item-enum-Envelope-86">Envelope</a>::<span class="rs-type">Response</span>(value))
+}
+
+#[cfg(test)]
+<span class="rs-kw">mod</span> tests {
+    <span class="rs-kw">use</span> <span class="rs-kw">super</span>::*;
+    <span class="rs-kw">use</span> proptest::prelude::*;
+    <span class="rs-kw">use</span> proptest::test_runner::<span class="rs-type">TestCaseError</span>;
+
+    <span class="rs-kw">type</span> <a class="symbol-link rs-type" href="eos-protocol.html#item-type-TestResult-272">TestResult</a>&lt;<span class="rs-type">T</span> = ()&gt; = <span class="rs-type">Result</span>&lt;<span class="rs-type">T</span>, <span class="rs-type">Box</span>&lt;<span class="rs-kw">dyn</span> std::error::<span class="rs-type">Error</span> + <span class="rs-type">Send</span> + <span class="rs-type">Sync</span>&gt;&gt;;
+
+    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-protocol--src-envelope-rs.html#item-fn-error-kind-snake-case-wire-158">error_kind_snake_case_wire</a>() -&gt; <a class="symbol-link rs-type" href="eos-protocol.html#item-type-TestResult-272">TestResult</a> {
+        <span class="rs-kw">let</span> v = serde_json::to_value(<a class="symbol-link rs-type" href="eos-protocol--src-envelope-rs.html#item-enum-ErrorKind-61">ErrorKind</a>::<span class="rs-type">ForbiddenInIsolatedWorkspace</span>)?;
+        assert_eq!(
+            v,
+            <span class="rs-type">Value</span>::<span class="rs-type">String</span>(&quot;forbidden_in_isolated_workspace&quot;.to_owned())
+        );
+        assert_eq!(
+            serde_json::to_value(<a class="symbol-link rs-type" href="eos-protocol--src-envelope-rs.html#item-enum-ErrorKind-61">ErrorKind</a>::<span class="rs-type">UnknownOp</span>)?,
+            <span class="rs-type">Value</span>::<span class="rs-type">String</span>(&quot;unknown_op&quot;.to_owned())
+        );
+        <span class="rs-type">Ok</span>(())
+    }
+
+    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-protocol--src-envelope-rs.html#item-fn-encode-appends-single-newline-172">encode_appends_single_newline</a>() -&gt; <a class="symbol-link rs-type" href="eos-protocol.html#item-type-TestResult-272">TestResult</a> {
+        <span class="rs-kw">let</span> env = <a class="symbol-link rs-type" href="eos-protocol--src-envelope-rs.html#item-enum-Envelope-86">Envelope</a>::<span class="rs-type">Response</span>(serde_json::json!({&quot;success&quot;: <span class="rs-kw">true</span>, &quot;touched&quot;: 0}));
+        <span class="rs-kw">let</span> bytes = <a class="symbol-link rs-fn" href="eos-protocol--src-envelope-rs.html#item-fn-encode-100">encode</a>(&amp;env)?;
+        assert_eq!(bytes.last(), <span class="rs-type">Some</span>(&amp;b&#x27;\n&#x27;));
+        assert_ne!(bytes[bytes.len() - 2], b&#x27;\n&#x27;);
+        <span class="rs-type">Ok</span>(())
+    }
+
+    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-protocol--src-envelope-rs.html#item-fn-request-args-order-preserved-roundtrip-181">request_args_order_preserved_roundtrip</a>() -&gt; <a class="symbol-link rs-type" href="eos-protocol.html#item-type-TestResult-272">TestResult</a> {
+        <span class="rs-kw">let</span> raw = b&quot;{\&quot;op\&quot;:\&quot;x\&quot;,\&quot;invocation_id\&quot;:\&quot;i\&quot;,\&quot;args\&quot;:{\&quot;z\&quot;:1,\&quot;a\&quot;:2,\&quot;_eos_daemon_protocol_version\&quot;:1}}\n&quot;;
+        <span class="rs-kw">let</span> env = <a class="symbol-link rs-fn" href="eos-protocol--src-envelope-rs.html#item-fn-decode-114">decode</a>(raw)?;
+        assert!(matches!(env, <a class="symbol-link rs-type" href="eos-protocol--src-envelope-rs.html#item-enum-Envelope-86">Envelope</a>::<a class="symbol-link rs-type" href="eos-protocol--src-envelope-rs.html#item-struct-Request-29">Request</a>(_)));
+        assert_eq!(<a class="symbol-link rs-fn" href="eos-protocol--src-envelope-rs.html#item-fn-encode-100">encode</a>(&amp;env)?, raw);
+        <span class="rs-type">Ok</span>(())
+    }
+
+    <span class="rs-comment">// Build arbitrary JSON values with only finite numbers (NaN/Inf are not JSON).</span>
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-protocol--src-envelope-rs.html#item-fn-arb-json-191">arb_json</a>() -&gt; <span class="rs-kw">impl</span> <span class="rs-type">Strategy</span>&lt;<span class="rs-type">Value</span> = <span class="rs-type">Value</span>&gt; {
+        <span class="rs-kw">let</span> leaf = prop_oneof![
+            <span class="rs-type">Just</span>(<span class="rs-type">Value</span>::<span class="rs-type">Null</span>),
+            any::&lt;bool&gt;().prop_map(<span class="rs-type">Value</span>::<span class="rs-type">Bool</span>),
+            any::&lt;i64&gt;().prop_map(|n| <span class="rs-type">Value</span>::<span class="rs-type">Number</span>(n.into())),
+            &quot;.*&quot;.prop_map(<span class="rs-type">Value</span>::<span class="rs-type">String</span>),
+        ];
+        leaf.prop_recursive(4, 32, 6, |inner| {
+            prop_oneof![
+                prop::collection::vec(inner.clone(), 0..6).prop_map(<span class="rs-type">Value</span>::<span class="rs-type">Array</span>),
+                prop::collection::vec((&quot;[a-z]{1,6}&quot;, inner), 0..6)
+                    .prop_map(|kvs| { <span class="rs-type">Value</span>::<span class="rs-type">Object</span>(kvs.into_iter().collect()) }),
+            ]
+        })
+    }
+
+    proptest! {
+        #[test]
+        <span class="rs-kw">fn</span> decode_encode_roundtrips_requests(op <span class="rs-kw">in</span> &quot;[a-z.]{1,12}&quot;, id <span class="rs-kw">in</span> &quot;[a-z0-9]{0,16}&quot;, args <span class="rs-kw">in</span> <a class="symbol-link rs-fn" href="eos-protocol--src-envelope-rs.html#item-fn-arb-json-191">arb_json</a>()) {
+            <span class="rs-kw">let</span> args = <span class="rs-kw">if</span> args.is_object() { args } <span class="rs-kw">else</span> { serde_json::json!({&quot;v&quot;: args}) };
+            <span class="rs-kw">let</span> env = <a class="symbol-link rs-type" href="eos-protocol--src-envelope-rs.html#item-enum-Envelope-86">Envelope</a>::<a class="symbol-link rs-type" href="eos-protocol--src-envelope-rs.html#item-struct-Request-29">Request</a>(<a class="symbol-link rs-type" href="eos-protocol--src-envelope-rs.html#item-struct-Request-29">Request</a> { op, invocation_id: id, args });
+            <span class="rs-kw">let</span> bytes = <a class="symbol-link rs-fn" href="eos-protocol--src-envelope-rs.html#item-fn-encode-100">encode</a>(&amp;env)
+                .map_err(|error| <span class="rs-type">TestCaseError</span>::fail(error.to_string()))?;
+            <span class="rs-kw">let</span> back = <a class="symbol-link rs-fn" href="eos-protocol--src-envelope-rs.html#item-fn-decode-114">decode</a>(&amp;bytes)
+                .map_err(|error| <span class="rs-type">TestCaseError</span>::fail(error.to_string()))?;
+            prop_assert_eq!(env, back);
+        }
+    }
+}
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
   <script src="../assets/inventory.js"></script>
 </body>
 </html>

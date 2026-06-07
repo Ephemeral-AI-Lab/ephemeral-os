@@ -8,8 +8,16 @@
 </head>
 <body>
   <header>
-    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
-    <h1>eos-db File Inventory</h1>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>eos-db File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS/agent-core &amp;&amp; cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
   </header>
   <a class="back-link" href="../index.html">agent-core</a>
 <section class="summary">
@@ -50,6 +58,27 @@
   <div class="items"></div>
 </section></div>
 </main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/eos-db/src/repositories/mod.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-comment">//! The five sqlx `Store` repositories.</span>
+
+<span class="rs-kw">mod</span> agent_run;
+<span class="rs-kw">mod</span> attempt;
+<span class="rs-kw">mod</span> iteration;
+<span class="rs-kw">mod</span> request_task;
+<span class="rs-kw">mod</span> workflow;
+
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">use</span> agent_run::<a class="symbol-link rs-type" href="eos-db--src-repositories-agent-run-rs.html#item-struct-SqlAgentRunStore-16">SqlAgentRunStore</a>;
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">use</span> attempt::<a class="symbol-link rs-type" href="eos-db--src-repositories-attempt-rs.html#item-struct-SqlAttemptStore-16">SqlAttemptStore</a>;
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">use</span> iteration::<a class="symbol-link rs-type" href="eos-db--src-repositories-iteration-rs.html#item-struct-SqlIterationStore-15">SqlIterationStore</a>;
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">use</span> request_task::<a class="symbol-link rs-type" href="eos-db--src-repositories-request-task-rs.html#item-struct-SqlRequestTaskStore-23">SqlRequestTaskStore</a>;
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">use</span> workflow::<a class="symbol-link rs-type" href="eos-db--src-repositories-workflow-rs.html#item-struct-SqlWorkflowStore-15">SqlWorkflowStore</a>;
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
   <script src="../assets/inventory.js"></script>
 </body>
 </html>

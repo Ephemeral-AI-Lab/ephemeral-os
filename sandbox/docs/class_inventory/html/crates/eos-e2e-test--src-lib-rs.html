@@ -8,8 +8,16 @@
 </head>
 <body>
   <header>
-    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
-    <h1>eos-e2e-test File Inventory</h1>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>eos-e2e-test File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS/sandbox &amp;&amp; cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
   </header>
   <a class="back-link" href="../index.html">sandbox</a>
 <section class="summary">
@@ -47,89 +55,311 @@
       <span>0 methods</span>
     </div>
   </div>
-  <div class="items"><div class="group-label">File-Owned Types</div><article class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct LivePool private struct LivePool crates/eos-e2e-test/src/lib.rs config_path PathBuf pool Arc &lt; NodePool &gt; ">
+  <div class="items"><div class="group-label">File-Owned Types</div><article id="item-struct-LivePool-75" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct LivePool private struct LivePool crates/eos-e2e-test/src/lib.rs config_path PathBuf pool Arc &lt; NodePool &gt; ">
   <div class="item-head">
     <span class="kind">struct</span>
     <h3>LivePool</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">struct LivePool</code>
-  <div class="tags"></div>
-  <h4>Fields</h4><table><tbody><tr><td>private</td><td>config_path</td><td><code>PathBuf</code></td></tr><tr><td>private</td><td>pool</td><td><code>Arc &lt; NodePool &gt;</code></td></tr></tbody></table>
+  <code class="signature">struct <a class="symbol-link" href="eos-e2e-test--src-lib-rs.html#item-struct-LivePool-75">LivePool</a></code>
+  <div class="tags"><span>cfg: feature</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>config_path</td><td><code>PathBuf</code></td></tr><tr><td>private</td><td>pool</td><td><code>Arc &lt; <a class="symbol-link" href="eos-e2e-test--src-pool-rs.html#item-struct-NodePool-32">NodePool</a> &gt;</code></td></tr></tbody></table>
+
   <p class="source">crates/eos-e2e-test/src/lib.rs:75</p>
-</article><div class="group-label">Standalone Functions</div><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn unique_suffix pub pub fn unique_suffix () -&gt; String crates/eos-e2e-test/src/lib.rs  ">
+</article><div class="group-label">Standalone Functions</div><article id="item-fn-unique-suffix-31" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn unique_suffix pub pub fn unique_suffix () -&gt; String crates/eos-e2e-test/src/lib.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>unique_suffix</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub fn unique_suffix () -&gt; String</code>
-  <div class="tags"></div>
+  <code class="signature">pub fn <a class="symbol-link" href="eos-e2e-test--src-lib-rs.html#item-fn-unique-suffix-31">unique_suffix</a> () -&gt; String</code>
+  <p class="docstring">A short process-local suffix for container, agent, and invocation ids.</p>
+  <div class="tags"><span>must_use</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-comment">/// A short process-local suffix for container, agent, and invocation ids.</span>
+#[must_use]
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-e2e-test--src-lib-rs.html#item-fn-unique-suffix-31">unique_suffix</a>() -&gt; <span class="rs-type">String</span> {
+    <span class="rs-kw">let</span> nanos = <span class="rs-type">SystemTime</span>::now()
+        .duration_since(<span class="rs-type">UNIX_EPOCH</span>)
+        .map_or(0, |duration| duration.as_nanos());
+    <span class="rs-kw">let</span> seq = <span class="rs-type">INVOCATION_COUNTER</span>.fetch_add(1, <span class="rs-type">Ordering</span>::<span class="rs-type">Relaxed</span>);
+    format!(&quot;{}-{nanos:x}-{seq:x}&quot;, std::process::id())
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-e2e-test/src/lib.rs:31</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn next_invocation_id pub pub fn next_invocation_id () -&gt; String crates/eos-e2e-test/src/lib.rs  ">
+</article><article id="item-fn-next-invocation-id-41" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn next_invocation_id pub pub fn next_invocation_id () -&gt; String crates/eos-e2e-test/src/lib.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>next_invocation_id</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub fn next_invocation_id () -&gt; String</code>
-  <div class="tags"></div>
+  <code class="signature">pub fn <a class="symbol-link" href="eos-e2e-test--src-lib-rs.html#item-fn-next-invocation-id-41">next_invocation_id</a> () -&gt; String</code>
+  <p class="docstring">A fresh invocation id suitable for daemon calls.</p>
+  <div class="tags"><span>must_use</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-comment">/// A fresh invocation id suitable for daemon calls.</span>
+#[must_use]
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-e2e-test--src-lib-rs.html#item-fn-next-invocation-id-41">next_invocation_id</a>() -&gt; <span class="rs-type">String</span> {
+    format!(&quot;eos-e2e-{}&quot;, <a class="symbol-link rs-fn" href="eos-e2e-test--src-lib-rs.html#item-fn-unique-suffix-31">unique_suffix</a>())
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-e2e-test/src/lib.rs:41</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn live_pool_with_config pub pub fn live_pool_with_config (config_path : impl AsRef &lt; Path &gt;) -&gt; Result &lt; Option &lt; Arc &lt; NodePool &gt; &gt; &gt; crates/eos-e2e-test/src/lib.rs  ">
+</article><article id="item-fn-live-pool-with-config-47" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn live_pool_with_config pub pub fn live_pool_with_config (config_path : impl AsRef &lt; Path &gt;) -&gt; Result &lt; Option &lt; Arc &lt; NodePool &gt; &gt; &gt; crates/eos-e2e-test/src/lib.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>live_pool_with_config</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub fn live_pool_with_config (config_path : impl AsRef &lt; Path &gt;) -&gt; Result &lt; Option &lt; Arc &lt; NodePool &gt; &gt; &gt;</code>
-  <div class="tags"></div>
+  <code class="signature">pub fn <a class="symbol-link" href="eos-e2e-test--src-lib-rs.html#item-fn-live-pool-with-config-47">live_pool_with_config</a> (config_path : impl AsRef &lt; Path &gt;) -&gt; Result &lt; Option &lt; Arc &lt; <a class="symbol-link" href="eos-e2e-test--src-pool-rs.html#item-struct-NodePool-32">NodePool</a> &gt; &gt; &gt;</code>
+  <p class="docstring">Return a live pool backed by one test-local config override.<br># Errors<br>Returns an error when live execution is requested but the environment cannot<br>start Docker containers, locate the configured `eosd` binary, or load the<br>hardcoded test override.</p>
+  <div class="tags"><span>cfg: feature</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-comment">/// Return a live pool backed by one test-local config override.</span>
+<span class="rs-comment">///</span>
+<span class="rs-comment">/// # Errors</span>
+<span class="rs-comment">/// Returns an error when live execution is requested but the environment cannot</span>
+<span class="rs-comment">/// start Docker containers, locate the configured `eosd` binary, or load the</span>
+<span class="rs-comment">/// hardcoded test override.</span>
+#[cfg(feature = &quot;e2e&quot;)]
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-e2e-test--src-lib-rs.html#item-fn-live-pool-with-config-47">live_pool_with_config</a>(config_path: <span class="rs-kw">impl</span> <span class="rs-type">AsRef</span>&lt;<span class="rs-type">Path</span>&gt;) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Option</span>&lt;<span class="rs-type">Arc</span>&lt;<a class="symbol-link rs-type" href="eos-e2e-test--src-pool-rs.html#item-struct-NodePool-32">NodePool</a>&gt;&gt;&gt; {
+    <span class="rs-kw">use</span> std::sync::<span class="rs-type">OnceLock</span>;
+
+    <span class="rs-kw">static</span> <span class="rs-type">POOL</span>: <span class="rs-type">OnceLock</span>&lt;<span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-e2e-test--src-lib-rs.html#item-struct-LivePool-75">LivePool</a>, <span class="rs-type">String</span>&gt;&gt; = <span class="rs-type">OnceLock</span>::<a class="symbol-link rs-fn" href="eos-e2e-test--src-client-rs.html#method-new-26">new</a>();
+    <span class="rs-kw">let</span> config_path = config_path.as_ref();
+    <span class="rs-kw">match</span> <span class="rs-type">POOL</span>.get_or_init(|| <a class="symbol-link rs-fn" href="eos-e2e-test--src-lib-rs.html#item-fn-load-live-pool-81">load_live_pool</a>(config_path)) {
+        <span class="rs-type">Ok</span>(pool) <span class="rs-kw">if</span> pool.config_path == config_path =&gt; <span class="rs-type">Ok</span>(<span class="rs-type">Some</span>(<span class="rs-type">Arc</span>::clone(&amp;pool.pool))),
+        <span class="rs-type">Ok</span>(pool) =&gt; anyhow::bail!(
+            &quot;eos-e2e-test can merge at most one *.test.yml per test binary; already using {}, requested {}&quot;,
+            pool.config_path.display(),
+            config_path.display()
+        ),
+        <span class="rs-type">Err</span>(err) =&gt; anyhow::bail!(&quot;{err}&quot;),
+    }
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-e2e-test/src/lib.rs:47</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn live_pool_with_config pub pub fn live_pool_with_config (_config_path : impl AsRef &lt; Path &gt;) -&gt; Result &lt; Option &lt; Arc &lt; NodePool &gt; &gt; &gt; crates/eos-e2e-test/src/lib.rs  ">
+</article><article id="item-fn-live-pool-with-config-70" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn live_pool_with_config pub pub fn live_pool_with_config (_config_path : impl AsRef &lt; Path &gt;) -&gt; Result &lt; Option &lt; Arc &lt; NodePool &gt; &gt; &gt; crates/eos-e2e-test/src/lib.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>live_pool_with_config</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub fn live_pool_with_config (_config_path : impl AsRef &lt; Path &gt;) -&gt; Result &lt; Option &lt; Arc &lt; NodePool &gt; &gt; &gt;</code>
-  <div class="tags"></div>
+  <code class="signature">pub fn <a class="symbol-link" href="eos-e2e-test--src-lib-rs.html#item-fn-live-pool-with-config-47">live_pool_with_config</a> (_config_path : impl AsRef &lt; Path &gt;) -&gt; Result &lt; Option &lt; Arc &lt; <a class="symbol-link" href="eos-e2e-test--src-pool-rs.html#item-struct-NodePool-32">NodePool</a> &gt; &gt; &gt;</code>
+  <div class="tags"><span>cfg: not</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>#[cfg(not(feature = &quot;e2e&quot;))]
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-e2e-test--src-lib-rs.html#item-fn-live-pool-with-config-47">live_pool_with_config</a>(_config_path: <span class="rs-kw">impl</span> <span class="rs-type">AsRef</span>&lt;<span class="rs-type">Path</span>&gt;) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Option</span>&lt;<span class="rs-type">Arc</span>&lt;<a class="symbol-link rs-type" href="eos-e2e-test--src-pool-rs.html#item-struct-NodePool-32">NodePool</a>&gt;&gt;&gt; {
+    <span class="rs-type">Ok</span>(<span class="rs-type">None</span>)
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-e2e-test/src/lib.rs:70</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn load_live_pool private fn load_live_pool (config_path : &amp; Path) -&gt; Result &lt; LivePool , String &gt; crates/eos-e2e-test/src/lib.rs  ">
+</article><article id="item-fn-load-live-pool-81" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn load_live_pool private fn load_live_pool (config_path : &amp; Path) -&gt; Result &lt; LivePool , String &gt; crates/eos-e2e-test/src/lib.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>load_live_pool</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn load_live_pool (config_path : &amp; Path) -&gt; Result &lt; LivePool , String &gt;</code>
-  <div class="tags"></div>
+  <code class="signature">fn <a class="symbol-link" href="eos-e2e-test--src-lib-rs.html#item-fn-load-live-pool-81">load_live_pool</a> (config_path : &amp; Path) -&gt; Result &lt; <a class="symbol-link" href="eos-e2e-test--src-lib-rs.html#item-struct-LivePool-75">LivePool</a> , String &gt;</code>
+  <div class="tags"><span>cfg: feature</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>#[cfg(feature = &quot;e2e&quot;)]
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-e2e-test--src-lib-rs.html#item-fn-load-live-pool-81">load_live_pool</a>(config_path: &amp;<span class="rs-type">Path</span>) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-e2e-test--src-lib-rs.html#item-struct-LivePool-75">LivePool</a>, <span class="rs-type">String</span>&gt; {
+    <a class="symbol-link rs-fn" href="eos-e2e-test--src-lib-rs.html#item-fn-try-load-live-pool-91">try_load_live_pool</a>(config_path)
+        .map(|pool| <a class="symbol-link rs-type" href="eos-e2e-test--src-lib-rs.html#item-struct-LivePool-75">LivePool</a> {
+            config_path: config_path.to_path_buf(),
+            pool: <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-e2e-test--src-client-rs.html#method-new-26">new</a>(pool),
+        })
+        .map_err(|err| format!(&quot;{err:#}&quot;))
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-e2e-test/src/lib.rs:81</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn try_load_live_pool private fn try_load_live_pool (config_path : &amp; Path) -&gt; Result &lt; NodePool &gt; crates/eos-e2e-test/src/lib.rs  ">
+</article><article id="item-fn-try-load-live-pool-91" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn try_load_live_pool private fn try_load_live_pool (config_path : &amp; Path) -&gt; Result &lt; NodePool &gt; crates/eos-e2e-test/src/lib.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>try_load_live_pool</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn try_load_live_pool (config_path : &amp; Path) -&gt; Result &lt; NodePool &gt;</code>
-  <div class="tags"></div>
+  <code class="signature">fn <a class="symbol-link" href="eos-e2e-test--src-lib-rs.html#item-fn-try-load-live-pool-91">try_load_live_pool</a> (config_path : &amp; Path) -&gt; Result &lt; <a class="symbol-link" href="eos-e2e-test--src-pool-rs.html#item-struct-NodePool-32">NodePool</a> &gt;</code>
+  <div class="tags"><span>cfg: feature</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>#[cfg(feature = &quot;e2e&quot;)]
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-e2e-test--src-lib-rs.html#item-fn-try-load-live-pool-91">try_load_live_pool</a>(config_path: &amp;<span class="rs-type">Path</span>) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-e2e-test--src-pool-rs.html#item-struct-NodePool-32">NodePool</a>&gt; {
+    <span class="rs-kw">let</span> (config, doc) = config::<span class="rs-type">Config</span>::load_test_override(config_path)?;
+    <a class="symbol-link rs-fn" href="eos-e2e-test--src-lib-rs.html#item-fn-pool-from-config-and-doc-97">pool_from_config_and_doc</a>(config, &amp;doc)
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-e2e-test/src/lib.rs:91</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn pool_from_config_and_doc private fn pool_from_config_and_doc (config : config :: Config , doc : &amp; eos_config :: ConfigDocument ,) -&gt; Result &lt; NodePool &gt; crates/eos-e2e-test/src/lib.rs  ">
+</article><article id="item-fn-pool-from-config-and-doc-97" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn pool_from_config_and_doc private fn pool_from_config_and_doc (config : config :: Config , doc : &amp; eos_config :: ConfigDocument ,) -&gt; Result &lt; NodePool &gt; crates/eos-e2e-test/src/lib.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>pool_from_config_and_doc</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn pool_from_config_and_doc (config : config :: Config , doc : &amp; eos_config :: ConfigDocument ,) -&gt; Result &lt; NodePool &gt;</code>
-  <div class="tags"></div>
+  <code class="signature">fn <a class="symbol-link" href="eos-e2e-test--src-lib-rs.html#item-fn-pool-from-config-and-doc-97">pool_from_config_and_doc</a> (config : config :: Config , doc : &amp; eos_config :: ConfigDocument ,) -&gt; Result &lt; <a class="symbol-link" href="eos-e2e-test--src-pool-rs.html#item-struct-NodePool-32">NodePool</a> &gt;</code>
+  <div class="tags"><span>cfg: feature</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>#[cfg(feature = &quot;e2e&quot;)]
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-e2e-test--src-lib-rs.html#item-fn-pool-from-config-and-doc-97">pool_from_config_and_doc</a>(
+    config: config::<span class="rs-type">Config</span>,
+    doc: &amp;eos_config::<span class="rs-type">ConfigDocument</span>,
+) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-e2e-test--src-pool-rs.html#item-struct-NodePool-32">NodePool</a>&gt; {
+    <span class="rs-kw">if</span> !container::<a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-docker-available-720">docker_available</a>() {
+        anyhow::bail!(&quot;docker is required <span class="rs-kw">for</span> eos-e2e-test --features e2e&quot;);
+    }
+    <span class="rs-kw">if</span> !config.eosd_path.is_file() {
+        anyhow::bail!(
+            &quot;missing configured eosd binary at {}; build/package it before running live <span class="rs-type">E2E</span>&quot;,
+            config.eosd_path.display()
+        );
+    }
+    <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-e2e-test--src-pool-rs.html#item-struct-NodePool-32">NodePool</a>::<a class="symbol-link rs-fn" href="eos-e2e-test--src-client-rs.html#method-new-26">new</a>(config, doc.to_yaml_string()?))
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-e2e-test/src/lib.rs:97</p>
 </article></div>
 </section></div>
 </main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/eos-e2e-test/src/lib.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-comment">//! Protocol-only live sandbox E2E harness.</span>
+<span class="rs-comment">//!</span>
+<span class="rs-comment">//! This crate owns test infrastructure only. Docker lifecycle is allowed for</span>
+<span class="rs-comment">//! container bring-up; every sandbox operation under test must go through</span>
+<span class="rs-comment">//! `eos-protocol` over the live daemon wire.</span>
+
+<span class="rs-kw">use</span> std::path::<span class="rs-type">Path</span>;
+#[cfg(feature = &quot;e2e&quot;)]
+<span class="rs-kw">use</span> std::path::<span class="rs-type">PathBuf</span>;
+<span class="rs-kw">use</span> std::sync::atomic::{<span class="rs-type">AtomicU64</span>, <span class="rs-type">Ordering</span>};
+<span class="rs-kw">use</span> std::sync::<span class="rs-type">Arc</span>;
+<span class="rs-kw">use</span> std::time::{<span class="rs-type">SystemTime</span>, <span class="rs-type">UNIX_EPOCH</span>};
+
+<span class="rs-kw">use</span> anyhow::<span class="rs-type">Result</span>;
+
+<span class="rs-kw">pub</span> <span class="rs-kw">mod</span> audit;
+<span class="rs-kw">pub</span> <span class="rs-kw">mod</span> cas;
+<span class="rs-kw">pub</span> <span class="rs-kw">mod</span> client;
+<span class="rs-kw">pub</span> <span class="rs-kw">mod</span> container;
+<span class="rs-kw">pub</span> <span class="rs-kw">mod</span> pool;
+
+<span class="rs-kw">pub</span> <span class="rs-kw">mod</span> config {
+    <span class="rs-kw">pub</span> <span class="rs-kw">use</span> eos_config::configs::e2e_test::*;
+}
+
+<span class="rs-kw">pub</span> <span class="rs-kw">use</span> config::<span class="rs-type">WorkloadConfig</span>;
+<span class="rs-kw">pub</span> <span class="rs-kw">use</span> pool::{<a class="symbol-link rs-type" href="eos-e2e-test--src-pool-rs.html#item-struct-NodeLease-150">NodeLease</a>, <a class="symbol-link rs-type" href="eos-e2e-test--src-pool-rs.html#item-struct-NodePool-32">NodePool</a>};
+
+<span class="rs-kw">static</span> <span class="rs-type">INVOCATION_COUNTER</span>: <span class="rs-type">AtomicU64</span> = <span class="rs-type">AtomicU64</span>::<a class="symbol-link rs-fn" href="eos-e2e-test--src-client-rs.html#method-new-26">new</a>(1);
+
+<span class="rs-comment">/// A short process-local suffix for container, agent, and invocation ids.</span>
+#[must_use]
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-e2e-test--src-lib-rs.html#item-fn-unique-suffix-31">unique_suffix</a>() -&gt; <span class="rs-type">String</span> {
+    <span class="rs-kw">let</span> nanos = <span class="rs-type">SystemTime</span>::now()
+        .duration_since(<span class="rs-type">UNIX_EPOCH</span>)
+        .map_or(0, |duration| duration.as_nanos());
+    <span class="rs-kw">let</span> seq = <span class="rs-type">INVOCATION_COUNTER</span>.fetch_add(1, <span class="rs-type">Ordering</span>::<span class="rs-type">Relaxed</span>);
+    format!(&quot;{}-{nanos:x}-{seq:x}&quot;, std::process::id())
+}
+
+<span class="rs-comment">/// A fresh invocation id suitable for daemon calls.</span>
+#[must_use]
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-e2e-test--src-lib-rs.html#item-fn-next-invocation-id-41">next_invocation_id</a>() -&gt; <span class="rs-type">String</span> {
+    format!(&quot;eos-e2e-{}&quot;, <a class="symbol-link rs-fn" href="eos-e2e-test--src-lib-rs.html#item-fn-unique-suffix-31">unique_suffix</a>())
+}
+
+<span class="rs-comment">/// Return a live pool backed by one test-local config override.</span>
+<span class="rs-comment">///</span>
+<span class="rs-comment">/// # Errors</span>
+<span class="rs-comment">/// Returns an error when live execution is requested but the environment cannot</span>
+<span class="rs-comment">/// start Docker containers, locate the configured `eosd` binary, or load the</span>
+<span class="rs-comment">/// hardcoded test override.</span>
+#[cfg(feature = &quot;e2e&quot;)]
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-e2e-test--src-lib-rs.html#item-fn-live-pool-with-config-47">live_pool_with_config</a>(config_path: <span class="rs-kw">impl</span> <span class="rs-type">AsRef</span>&lt;<span class="rs-type">Path</span>&gt;) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Option</span>&lt;<span class="rs-type">Arc</span>&lt;<a class="symbol-link rs-type" href="eos-e2e-test--src-pool-rs.html#item-struct-NodePool-32">NodePool</a>&gt;&gt;&gt; {
+    <span class="rs-kw">use</span> std::sync::<span class="rs-type">OnceLock</span>;
+
+    <span class="rs-kw">static</span> <span class="rs-type">POOL</span>: <span class="rs-type">OnceLock</span>&lt;<span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-e2e-test--src-lib-rs.html#item-struct-LivePool-75">LivePool</a>, <span class="rs-type">String</span>&gt;&gt; = <span class="rs-type">OnceLock</span>::<a class="symbol-link rs-fn" href="eos-e2e-test--src-client-rs.html#method-new-26">new</a>();
+    <span class="rs-kw">let</span> config_path = config_path.as_ref();
+    <span class="rs-kw">match</span> <span class="rs-type">POOL</span>.get_or_init(|| <a class="symbol-link rs-fn" href="eos-e2e-test--src-lib-rs.html#item-fn-load-live-pool-81">load_live_pool</a>(config_path)) {
+        <span class="rs-type">Ok</span>(pool) <span class="rs-kw">if</span> pool.config_path == config_path =&gt; <span class="rs-type">Ok</span>(<span class="rs-type">Some</span>(<span class="rs-type">Arc</span>::clone(&amp;pool.pool))),
+        <span class="rs-type">Ok</span>(pool) =&gt; anyhow::bail!(
+            &quot;eos-e2e-test can merge at most one *.test.yml per test binary; already using {}, requested {}&quot;,
+            pool.config_path.display(),
+            config_path.display()
+        ),
+        <span class="rs-type">Err</span>(err) =&gt; anyhow::bail!(&quot;{err}&quot;),
+    }
+}
+
+#[cfg(not(feature = &quot;e2e&quot;))]
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-e2e-test--src-lib-rs.html#item-fn-live-pool-with-config-47">live_pool_with_config</a>(_config_path: <span class="rs-kw">impl</span> <span class="rs-type">AsRef</span>&lt;<span class="rs-type">Path</span>&gt;) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Option</span>&lt;<span class="rs-type">Arc</span>&lt;<a class="symbol-link rs-type" href="eos-e2e-test--src-pool-rs.html#item-struct-NodePool-32">NodePool</a>&gt;&gt;&gt; {
+    <span class="rs-type">Ok</span>(<span class="rs-type">None</span>)
+}
+
+#[cfg(feature = &quot;e2e&quot;)]
+<span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-e2e-test--src-lib-rs.html#item-struct-LivePool-75">LivePool</a> {
+    config_path: <span class="rs-type">PathBuf</span>,
+    pool: <span class="rs-type">Arc</span>&lt;<a class="symbol-link rs-type" href="eos-e2e-test--src-pool-rs.html#item-struct-NodePool-32">NodePool</a>&gt;,
+}
+
+#[cfg(feature = &quot;e2e&quot;)]
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-e2e-test--src-lib-rs.html#item-fn-load-live-pool-81">load_live_pool</a>(config_path: &amp;<span class="rs-type">Path</span>) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-e2e-test--src-lib-rs.html#item-struct-LivePool-75">LivePool</a>, <span class="rs-type">String</span>&gt; {
+    <a class="symbol-link rs-fn" href="eos-e2e-test--src-lib-rs.html#item-fn-try-load-live-pool-91">try_load_live_pool</a>(config_path)
+        .map(|pool| <a class="symbol-link rs-type" href="eos-e2e-test--src-lib-rs.html#item-struct-LivePool-75">LivePool</a> {
+            config_path: config_path.to_path_buf(),
+            pool: <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-e2e-test--src-client-rs.html#method-new-26">new</a>(pool),
+        })
+        .map_err(|err| format!(&quot;{err:#}&quot;))
+}
+
+#[cfg(feature = &quot;e2e&quot;)]
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-e2e-test--src-lib-rs.html#item-fn-try-load-live-pool-91">try_load_live_pool</a>(config_path: &amp;<span class="rs-type">Path</span>) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-e2e-test--src-pool-rs.html#item-struct-NodePool-32">NodePool</a>&gt; {
+    <span class="rs-kw">let</span> (config, doc) = config::<span class="rs-type">Config</span>::load_test_override(config_path)?;
+    <a class="symbol-link rs-fn" href="eos-e2e-test--src-lib-rs.html#item-fn-pool-from-config-and-doc-97">pool_from_config_and_doc</a>(config, &amp;doc)
+}
+
+#[cfg(feature = &quot;e2e&quot;)]
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-e2e-test--src-lib-rs.html#item-fn-pool-from-config-and-doc-97">pool_from_config_and_doc</a>(
+    config: config::<span class="rs-type">Config</span>,
+    doc: &amp;eos_config::<span class="rs-type">ConfigDocument</span>,
+) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-e2e-test--src-pool-rs.html#item-struct-NodePool-32">NodePool</a>&gt; {
+    <span class="rs-kw">if</span> !container::<a class="symbol-link rs-fn" href="eos-e2e-test--src-container-rs.html#item-fn-docker-available-720">docker_available</a>() {
+        anyhow::bail!(&quot;docker is required <span class="rs-kw">for</span> eos-e2e-test --features e2e&quot;);
+    }
+    <span class="rs-kw">if</span> !config.eosd_path.is_file() {
+        anyhow::bail!(
+            &quot;missing configured eosd binary at {}; build/package it before running live <span class="rs-type">E2E</span>&quot;,
+            config.eosd_path.display()
+        );
+    }
+    <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-e2e-test--src-pool-rs.html#item-struct-NodePool-32">NodePool</a>::<a class="symbol-link rs-fn" href="eos-e2e-test--src-client-rs.html#method-new-26">new</a>(config, doc.to_yaml_string()?))
+}
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
   <script src="../assets/inventory.js"></script>
 </body>
 </html>

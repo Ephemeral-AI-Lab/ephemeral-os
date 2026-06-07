@@ -8,8 +8,16 @@
 </head>
 <body>
   <header>
-    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
-    <h1>eos-tools File Inventory</h1>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>eos-tools File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS/agent-core &amp;&amp; cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
   </header>
   <a class="back-link" href="../index.html">agent-core</a>
 <section class="summary">
@@ -47,19 +55,74 @@
       <span>0 methods</span>
     </div>
   </div>
-  <div class="items"><div class="group-label">File-Owned Types</div><article class="type-card" data-kind="enum" data-kind-list="enum field type-model" data-filter-text="enum ToolError pub pub enum ToolError crates/eos-tools/src/core/error.rs  ">
+  <div class="items"><div class="group-label">File-Owned Types</div><article id="item-enum-ToolError-16" class="type-card" data-kind="enum" data-kind-list="enum field type-model" data-filter-text="enum ToolError pub pub enum ToolError crates/eos-tools/src/core/error.rs  ">
   <div class="item-head">
     <span class="kind">enum</span>
     <h3>ToolError</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub enum ToolError</code>
-  <div class="tags"><span>error</span></div>
-  <h4>Variants</h4><table><tbody><tr><td>UnknownTool</td><td><code>0: String</code></td></tr><tr><td>MissingContext</td><td><code>0: &amp; 'static str</code></td></tr><tr><td>MissingPort</td><td><code>0: &amp; 'static str</code></td></tr><tr><td>Store</td><td><code>0: CoreError</code></td></tr><tr><td>Sandbox</td><td><code>0: SandboxPortError</code></td></tr><tr><td>Internal</td><td><code>0: String</code></td></tr></tbody></table>
+  <code class="signature">pub enum <a class="symbol-link" href="eos-tools.html#item-enum-ToolError-16">ToolError</a></code>
+  <p class="docstring">A framework fault during tool execution. Tool-domain failures are in-band<br>[`ToolResult`](crate::ToolResult)s, not variants here.</p>
+  <div class="tags"><span>derive: Debug</span><span>derive: thiserror::Error</span><span>error</span><span>non_exhaustive</span></div>
+  <h4>Variants</h4><table><tbody><tr><td>UnknownTool</td><td><code>0: String</code></td></tr><tr><td>MissingContext</td><td><code>0: &amp; &#x27;static str</code></td></tr><tr><td>MissingPort</td><td><code>0: &amp; &#x27;static str</code></td></tr><tr><td>Store</td><td><code>0: CoreError</code></td></tr><tr><td>Sandbox</td><td><code>0: SandboxPortError</code></td></tr><tr><td>Internal</td><td><code>0: String</code></td></tr></tbody></table>
+
   <p class="source">crates/eos-tools/src/core/error.rs:16</p>
 </article></div>
 </section></div>
 </main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/eos-tools/src/core/error.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-comment">//! [`ToolError`] — the single framework-fault error enum (`err-thiserror-lib`).</span>
+<span class="rs-comment">//!</span>
+<span class="rs-comment">//! **Err vs in-band (§8.2, a deliberate divergence from Rust).** `ToolError`</span>
+<span class="rs-comment">//! (`Result::Err`) is reserved for **framework faults**: an unknown tool, a</span>
+<span class="rs-comment">//! required port not wired, a missing required execution-context id, an upstream</span>
+<span class="rs-comment">//! store/sandbox transport failure, or an internal invariant break. Tool-domain</span>
+<span class="rs-comment">//! failures — bad arguments, a hook `Deny`, or a tool that "said no" — are</span>
+<span class="rs-comment">//! **in-band** [`ToolResult`](crate::ToolResult) values with `is_error = true`,</span>
+<span class="rs-comment">//! returned as `Ok`. The engine renders in-band errors back to the model and</span>
+<span class="rs-comment">//! surfaces `Err` to triage. Rust returned the internal-validation branch</span>
+<span class="rs-comment">//! in-band; the Rust ACs (AC-tools-02..04) encode this new boundary.</span>
+
+<span class="rs-kw">use</span> eos_sandbox_port::<span class="rs-type">SandboxPortError</span>;
+<span class="rs-kw">use</span> eos_types::<span class="rs-type">CoreError</span>;
+
+<span class="rs-comment">/// A framework fault during tool execution. Tool-domain failures are in-band</span>
+<span class="rs-comment">/// [`ToolResult`](crate::ToolResult)s, not variants here.</span>
+#[derive(<span class="rs-type">Debug</span>, thiserror::<span class="rs-type">Error</span>)]
+#[non_exhaustive]
+<span class="rs-kw">pub</span> <span class="rs-kw">enum</span> <a class="symbol-link rs-type" href="eos-tools.html#item-enum-ToolError-16">ToolError</a> {
+    <span class="rs-comment">/// The dispatched tool name is not registered.</span>
+    #[<a class="symbol-link rs-fn" href="eos-tools--src-core-result-rs.html#method-error-42">error</a>(&quot;unknown tool: {0}&quot;)]
+    <span class="rs-type">UnknownTool</span>(<span class="rs-type">String</span>),
+
+    <span class="rs-comment">/// A required execution-context value (e.g. `task_id`, `sandbox_id`) was</span>
+    <span class="rs-comment">/// absent where the tool requires it.</span>
+    #[<a class="symbol-link rs-fn" href="eos-tools--src-core-result-rs.html#method-error-42">error</a>(&quot;missing required execution context: {0}&quot;)]
+    <span class="rs-type">MissingContext</span>(&amp;&#x27;<span class="rs-kw">static</span> str),
+
+    <span class="rs-comment">/// A required downstream-state port was not wired at the composition root.</span>
+    #[<a class="symbol-link rs-fn" href="eos-tools--src-core-result-rs.html#method-error-42">error</a>(&quot;required port not wired: {0}&quot;)]
+    <span class="rs-type">MissingPort</span>(&amp;&#x27;<span class="rs-kw">static</span> str),
+
+    <span class="rs-comment">/// An upstream `Store` operation failed.</span>
+    #[<a class="symbol-link rs-fn" href="eos-tools--src-core-result-rs.html#method-error-42">error</a>(&quot;store error: {0}&quot;)]
+    <span class="rs-type">Store</span>(#[from] <span class="rs-type">CoreError</span>),
+
+    <span class="rs-comment">/// A sandbox transport / daemon RPC failed at the framework level.</span>
+    #[<a class="symbol-link rs-fn" href="eos-tools--src-core-result-rs.html#method-error-42">error</a>(&quot;sandbox error: {0}&quot;)]
+    <span class="rs-type">Sandbox</span>(#[from] <span class="rs-type">SandboxPortError</span>),
+
+    <span class="rs-comment">/// An internal invariant broke (should not happen in correct wiring).</span>
+    #[<a class="symbol-link rs-fn" href="eos-tools--src-core-result-rs.html#method-error-42">error</a>(&quot;internal tool error: {0}&quot;)]
+    <span class="rs-type">Internal</span>(<span class="rs-type">String</span>),
+}
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
   <script src="../assets/inventory.js"></script>
 </body>
 </html>

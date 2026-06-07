@@ -8,15 +8,23 @@
 </head>
 <body>
   <header>
-    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
-    <h1>eos-runtime File Inventory</h1>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>eos-runtime File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS/agent-core &amp;&amp; cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
   </header>
   <a class="back-link" href="../index.html">agent-core</a>
 <section class="summary">
-  <div><b>17</b><span>modules</span></div>
-  <div><b>75</b><span>items</span></div>
-  <div><b>71</b><span>fields</span></div>
-  <div><b>45</b><span>methods</span></div>
+  <div><b>19</b><span>modules</span></div>
+  <div><b>82</b><span>items</span></div>
+  <div><b>77</b><span>fields</span></div>
+  <div><b>51</b><span>methods</span></div>
 </section>
 <section class="toolbar">
   <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
@@ -32,7 +40,7 @@
   </select>
 </section>
 <main class="crate-layout">
-  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><a class="file-link" href="eos-runtime.html"><span>agent_runner.rs</span><small>1/1</small></a></li><li><a class="file-link" href="eos-runtime--src-entry-rs.html"><span>entry.rs</span><small>1/4</small></a></li><li><a class="file-link" href="eos-runtime--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-runtime--src-main-rs.html"><span>main.rs</span><small>0/3</small></a></li><li><a class="file-link active" href="eos-runtime--src-observability-rs.html"><span>observability.rs</span><small>1/2</small></a></li><li><a class="file-link" href="eos-runtime--src-plugin-tools-rs.html"><span>plugin_tools.rs</span><small>3/10</small></a></li><li><a class="file-link" href="eos-runtime--src-request-input-rs.html"><span>request_input.rs</span><small>1/0</small></a></li><li><span class="folder">runtime_services</span><ul class="file-tree"><li><a class="file-link" href="eos-runtime--src-runtime-services-agent-core-registry-rs.html"><span>agent_core_registry.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-runtime--src-runtime-services-audit-rs.html"><span>audit.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-runtime--src-runtime-services-builder-rs.html"><span>builder.rs</span><small>4/14</small></a></li><li><a class="file-link" href="eos-runtime--src-runtime-services-db-store-rs.html"><span>db_store.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-runtime--src-runtime-services-engine-rs.html"><span>engine.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-runtime--src-runtime-services-message-records-rs.html"><span>message_records.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-runtime--src-runtime-services-mod-rs.html"><span>mod.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-runtime--src-runtime-services-sandbox-rs.html"><span>sandbox.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-runtime--src-runtime-services-state-reader-rs.html"><span>state_reader.rs</span><small>1/0</small></a></li></ul></li><li><a class="file-link" href="eos-runtime--src-tool-context-rs.html"><span>tool_context.rs</span><small>1/1</small></a></li></ul></li></ul></nav>
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><a class="file-link" href="eos-runtime.html"><span>agent_runner.rs</span><small>1/1</small></a></li><li><a class="file-link" href="eos-runtime--src-cancel-rs.html"><span>cancel.rs</span><small>1/1</small></a></li><li><a class="file-link" href="eos-runtime--src-entry-rs.html"><span>entry.rs</span><small>1/4</small></a></li><li><a class="file-link" href="eos-runtime--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-runtime--src-main-rs.html"><span>main.rs</span><small>0/3</small></a></li><li><a class="file-link active" href="eos-runtime--src-observability-rs.html"><span>observability.rs</span><small>1/2</small></a></li><li><a class="file-link" href="eos-runtime--src-plugin-tools-rs.html"><span>plugin_tools.rs</span><small>3/10</small></a></li><li><a class="file-link" href="eos-runtime--src-request-input-rs.html"><span>request_input.rs</span><small>1/0</small></a></li><li><span class="folder">runtime_services</span><ul class="file-tree"><li><a class="file-link" href="eos-runtime--src-runtime-services-agent-core-registry-rs.html"><span>agent_core_registry.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-runtime--src-runtime-services-audit-rs.html"><span>audit.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-runtime--src-runtime-services-builder-rs.html"><span>builder.rs</span><small>4/14</small></a></li><li><a class="file-link" href="eos-runtime--src-runtime-services-cancel-registry-rs.html"><span>cancel_registry.rs</span><small>2/0</small></a></li><li><a class="file-link" href="eos-runtime--src-runtime-services-db-store-rs.html"><span>db_store.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-runtime--src-runtime-services-engine-rs.html"><span>engine.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-runtime--src-runtime-services-message-records-rs.html"><span>message_records.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-runtime--src-runtime-services-mod-rs.html"><span>mod.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-runtime--src-runtime-services-sandbox-rs.html"><span>sandbox.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-runtime--src-runtime-services-state-reader-rs.html"><span>state_reader.rs</span><small>1/0</small></a></li></ul></li><li><a class="file-link" href="eos-runtime--src-tool-context-rs.html"><span>tool_context.rs</span><small>1/1</small></a></li></ul></li></ul></nav>
   <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="observability crates/eos-runtime/src/observability.rs LogFormat init_tracing log_format_default_is_text">
   <div class="module-head">
     <div>
@@ -47,39 +55,135 @@
       <span>0 methods</span>
     </div>
   </div>
-  <div class="items"><div class="group-label">File-Owned Types</div><article class="type-card" data-kind="enum" data-kind-list="enum field type-model" data-filter-text="enum LogFormat pub pub enum LogFormat crates/eos-runtime/src/observability.rs  ">
+  <div class="items"><div class="group-label">File-Owned Types</div><article id="item-enum-LogFormat-10" class="type-card" data-kind="enum" data-kind-list="enum field type-model" data-filter-text="enum LogFormat pub pub enum LogFormat crates/eos-runtime/src/observability.rs  ">
   <div class="item-head">
     <span class="kind">enum</span>
     <h3>LogFormat</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub enum LogFormat</code>
-  <div class="tags"></div>
+  <code class="signature">pub enum <a class="symbol-link" href="eos-runtime--src-observability-rs.html#item-enum-LogFormat-10">LogFormat</a></code>
+  <p class="docstring">Output format for the text/JSON subscriber.</p>
+  <div class="tags"><span>derive: Clone</span><span>derive: Copy</span><span>derive: Debug</span><span>derive: Default</span><span>derive: Eq</span><span>derive: PartialEq</span></div>
   <h4>Variants</h4><table><tbody><tr><td>Text</td><td><code></code></td></tr><tr><td>Json</td><td><code></code></td></tr></tbody></table>
+
   <p class="source">crates/eos-runtime/src/observability.rs:10</p>
-</article><div class="group-label">Standalone Functions</div><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn init_tracing pub pub fn init_tracing (format : LogFormat) -&gt; Result &lt; () , Box &lt; dyn std :: error :: Error + Send + Sync &gt; &gt; crates/eos-runtime/src/observability.rs  ">
+</article><div class="group-label">Standalone Functions</div><article id="item-fn-init-tracing-20" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn init_tracing pub pub fn init_tracing (format : LogFormat) -&gt; Result &lt; () , Box &lt; dyn std :: error :: Error + Send + Sync &gt; &gt; crates/eos-runtime/src/observability.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>init_tracing</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub fn init_tracing (format : LogFormat) -&gt; Result &lt; () , Box &lt; dyn std :: error :: Error + Send + Sync &gt; &gt;</code>
+  <code class="signature">pub fn <a class="symbol-link" href="eos-runtime--src-observability-rs.html#item-fn-init-tracing-20">init_tracing</a> (format : <a class="symbol-link" href="eos-runtime--src-observability-rs.html#item-enum-LogFormat-10">LogFormat</a>) -&gt; Result &lt; () , Box &lt; dyn std :: error :: Error + Send + Sync &gt; &gt;</code>
+  <p class="docstring">Initialize the process-global tracing subscriber.<br>Reads `RUST_LOG` (falling back to `info`). Idempotent only in the sense that a<br>second call returns an error from the global default already being set; the<br>binary calls it exactly once. The `tokio-console` feature adds the<br>`console_subscriber` layer.<br># Errors<br>Returns an error if a global subscriber was already installed.</p>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-comment">/// Initialize the process-global tracing subscriber.</span>
+<span class="rs-comment">///</span>
+<span class="rs-comment">/// Reads `RUST_LOG` (falling back to `info`). Idempotent only in the sense that a</span>
+<span class="rs-comment">/// second call returns an error from the global default already being set; the</span>
+<span class="rs-comment">/// binary calls it exactly once. The `tokio-console` feature adds the</span>
+<span class="rs-comment">/// `console_subscriber` layer.</span>
+<span class="rs-comment">///</span>
+<span class="rs-comment">/// # Errors</span>
+<span class="rs-comment">/// Returns an error if a global subscriber was already installed.</span>
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runtime--src-observability-rs.html#item-fn-init-tracing-20">init_tracing</a>(format: <a class="symbol-link rs-type" href="eos-runtime--src-observability-rs.html#item-enum-LogFormat-10">LogFormat</a>) -&gt; <span class="rs-type">Result</span>&lt;(), <span class="rs-type">Box</span>&lt;<span class="rs-kw">dyn</span> std::error::<span class="rs-type">Error</span> + <span class="rs-type">Send</span> + <span class="rs-type">Sync</span>&gt;&gt; {
+    <span class="rs-kw">let</span> filter = <span class="rs-type">EnvFilter</span>::try_from_default_env().unwrap_or_else(|_| <span class="rs-type">EnvFilter</span>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-61">new</a>(&quot;info&quot;));
+    <span class="rs-kw">let</span> registry = tracing_subscriber::registry().with(filter);
+
+    #[cfg(feature = &quot;tokio-console&quot;)]
+    <span class="rs-kw">let</span> registry = registry.with(console_subscriber::spawn());
+
+    <span class="rs-kw">match</span> format {
+        <a class="symbol-link rs-type" href="eos-runtime--src-observability-rs.html#item-enum-LogFormat-10">LogFormat</a>::<span class="rs-type">Text</span> =&gt; registry.with(fmt::layer()).try_init()?,
+        <a class="symbol-link rs-type" href="eos-runtime--src-observability-rs.html#item-enum-LogFormat-10">LogFormat</a>::<span class="rs-type">Json</span> =&gt; registry.with(fmt::layer().json()).try_init()?,
+    }
+    <span class="rs-type">Ok</span>(())
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-runtime/src/observability.rs:20</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn log_format_default_is_text private fn log_format_default_is_text () crates/eos-runtime/src/observability.rs  ">
+</article><article id="item-fn-log-format-default-is-text-47" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn log_format_default_is_text private fn log_format_default_is_text () crates/eos-runtime/src/observability.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>log_format_default_is_text</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn log_format_default_is_text ()</code>
-  <div class="tags"></div>
+  <code class="signature">fn <a class="symbol-link" href="eos-runtime--src-observability-rs.html#item-fn-log-format-default-is-text-47">log_format_default_is_text</a> ()</code>
+  <div class="tags"><span>test</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runtime--src-observability-rs.html#item-fn-log-format-default-is-text-47">log_format_default_is_text</a>() {
+        assert_eq!(<a class="symbol-link rs-type" href="eos-runtime--src-observability-rs.html#item-enum-LogFormat-10">LogFormat</a>::default(), <a class="symbol-link rs-type" href="eos-runtime--src-observability-rs.html#item-enum-LogFormat-10">LogFormat</a>::<span class="rs-type">Text</span>);
+    }
+</code></pre>
+</details>
 
   <p class="source">crates/eos-runtime/src/observability.rs:47</p>
 </article></div>
 </section></div>
 </main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/eos-runtime/src/observability.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-comment">//! `tracing-subscriber` setup for the binary / sync-wrapper boundary.</span>
+<span class="rs-comment">//!</span>
+<span class="rs-comment">//! Library callers must not initialize a global subscriber; only the binary</span>
+<span class="rs-comment">//! (`main.rs`) or an explicit test wrapper calls [`init_tracing`]. The optional</span>
+<span class="rs-comment">//! `tokio-console` feature layers `console-subscriber` for stuck-task debugging.</span>
+
+<span class="rs-kw">use</span> tracing_subscriber::prelude::*;
+<span class="rs-kw">use</span> tracing_subscriber::{fmt, <span class="rs-type">EnvFilter</span>};
+
+<span class="rs-comment">/// Output format for the text/JSON subscriber.</span>
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">Copy</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Eq</span>, <span class="rs-type">Default</span>)]
+<span class="rs-kw">pub</span> <span class="rs-kw">enum</span> <a class="symbol-link rs-type" href="eos-runtime--src-observability-rs.html#item-enum-LogFormat-10">LogFormat</a> {
+    <span class="rs-comment">/// Human-readable text (default).</span>
+    #[default]
+    <span class="rs-type">Text</span>,
+    <span class="rs-comment">/// Newline-delimited JSON.</span>
+    <span class="rs-type">Json</span>,
+}
+
+<span class="rs-comment">/// Initialize the process-global tracing subscriber.</span>
+<span class="rs-comment">///</span>
+<span class="rs-comment">/// Reads `RUST_LOG` (falling back to `info`). Idempotent only in the sense that a</span>
+<span class="rs-comment">/// second call returns an error from the global default already being set; the</span>
+<span class="rs-comment">/// binary calls it exactly once. The `tokio-console` feature adds the</span>
+<span class="rs-comment">/// `console_subscriber` layer.</span>
+<span class="rs-comment">///</span>
+<span class="rs-comment">/// # Errors</span>
+<span class="rs-comment">/// Returns an error if a global subscriber was already installed.</span>
+<span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runtime--src-observability-rs.html#item-fn-init-tracing-20">init_tracing</a>(format: <a class="symbol-link rs-type" href="eos-runtime--src-observability-rs.html#item-enum-LogFormat-10">LogFormat</a>) -&gt; <span class="rs-type">Result</span>&lt;(), <span class="rs-type">Box</span>&lt;<span class="rs-kw">dyn</span> std::error::<span class="rs-type">Error</span> + <span class="rs-type">Send</span> + <span class="rs-type">Sync</span>&gt;&gt; {
+    <span class="rs-kw">let</span> filter = <span class="rs-type">EnvFilter</span>::try_from_default_env().unwrap_or_else(|_| <span class="rs-type">EnvFilter</span>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-61">new</a>(&quot;info&quot;));
+    <span class="rs-kw">let</span> registry = tracing_subscriber::registry().with(filter);
+
+    #[cfg(feature = &quot;tokio-console&quot;)]
+    <span class="rs-kw">let</span> registry = registry.with(console_subscriber::spawn());
+
+    <span class="rs-kw">match</span> format {
+        <a class="symbol-link rs-type" href="eos-runtime--src-observability-rs.html#item-enum-LogFormat-10">LogFormat</a>::<span class="rs-type">Text</span> =&gt; registry.with(fmt::layer()).try_init()?,
+        <a class="symbol-link rs-type" href="eos-runtime--src-observability-rs.html#item-enum-LogFormat-10">LogFormat</a>::<span class="rs-type">Json</span> =&gt; registry.with(fmt::layer().json()).try_init()?,
+    }
+    <span class="rs-type">Ok</span>(())
+}
+
+#[cfg(test)]
+<span class="rs-kw">mod</span> tests {
+    <span class="rs-kw">use</span> <span class="rs-kw">super</span>::*;
+
+    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runtime--src-observability-rs.html#item-fn-log-format-default-is-text-47">log_format_default_is_text</a>() {
+        assert_eq!(<a class="symbol-link rs-type" href="eos-runtime--src-observability-rs.html#item-enum-LogFormat-10">LogFormat</a>::default(), <a class="symbol-link rs-type" href="eos-runtime--src-observability-rs.html#item-enum-LogFormat-10">LogFormat</a>::<span class="rs-type">Text</span>);
+    }
+}
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
   <script src="../assets/inventory.js"></script>
 </body>
 </html>

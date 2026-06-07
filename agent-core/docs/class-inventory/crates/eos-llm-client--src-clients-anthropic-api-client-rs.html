@@ -8,8 +8,16 @@
 </head>
 <body>
   <header>
-    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
-    <h1>eos-llm-client File Inventory</h1>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>eos-llm-client File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS/agent-core &amp;&amp; cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
   </header>
   <a class="back-link" href="../index.html">agent-core</a>
 <section class="summary">
@@ -47,199 +55,1684 @@
       <span>5 methods</span>
     </div>
   </div>
-  <div class="items"><div class="group-label">File-Owned Types</div><article class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct AnthropicApiClient pub pub struct AnthropicApiClient crates/eos-llm-client/src/clients/anthropic_api_client.rs http reqwest :: Client endpoint reqwest :: Url auth Arc &lt; Auth &gt; retry Arc &lt; RetryConfig &gt; extra_headers HeaderMap prepend_claude_code_system_prompt bool ">
+  <div class="items"><div class="group-label">File-Owned Types</div><article id="item-struct-AnthropicApiClient-41" class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct AnthropicApiClient pub pub struct AnthropicApiClient crates/eos-llm-client/src/clients/anthropic_api_client.rs http reqwest :: Client endpoint reqwest :: Url auth Arc &lt; Auth &gt; retry Arc &lt; RetryConfig &gt; extra_headers HeaderMap prepend_claude_code_system_prompt bool ">
   <div class="item-head">
     <span class="kind">struct</span>
     <h3>AnthropicApiClient</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub struct AnthropicApiClient</code>
-  <div class="tags"><span>port/service</span></div>
-  <h4>Fields</h4><table><tbody><tr><td>private</td><td>http</td><td><code>reqwest :: Client</code></td></tr><tr><td>private</td><td>endpoint</td><td><code>reqwest :: Url</code></td></tr><tr><td>private</td><td>auth</td><td><code>Arc &lt; Auth &gt;</code></td></tr><tr><td>private</td><td>retry</td><td><code>Arc &lt; RetryConfig &gt;</code></td></tr><tr><td>private</td><td>extra_headers</td><td><code>HeaderMap</code></td></tr><tr><td>private</td><td>prepend_claude_code_system_prompt</td><td><code>bool</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr><td>constructor</td><td>new</td><td><code>pub fn new (base_url : &amp; str , auth : Auth , retry : Arc &lt; RetryConfig &gt;) -&gt; Result &lt; Self , ProviderError &gt;</code></td></tr><tr><td>method</td><td>build_headers</td><td><code>fn build_headers (&amp; self) -&gt; Result &lt; HeaderMap , ProviderError &gt;</code></td></tr><tr><td>associated-fn</td><td>new_claude_coding_plan</td><td><code>pub(crate) fn new_claude_coding_plan (base_url : &amp; str , auth : Auth , retry : Arc &lt; RetryConfig &gt; , beta_header : HeaderValue ,) -&gt; Result &lt; Self , ProviderError &gt;</code></td></tr><tr><td>associated-fn</td><td>new_with_options</td><td><code>fn new_with_options (base_url : &amp; str , auth : Auth , retry : Arc &lt; RetryConfig &gt; , extra_headers : HeaderMap , prepend_claude_code_system_prompt : bool ,) -&gt; Result &lt; Self , ProviderError &gt;</code></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl LlmClient for AnthropicApiClient</code></summary><table><tbody><tr><td>method</td><td>stream_message</td><td><code>async fn stream_message (&amp; self , request : LlmRequest) -&gt; Result &lt; LlmStream , ProviderError &gt;</code></td></tr></tbody></table></details></div>
+  <code class="signature">pub struct <a class="symbol-link" href="eos-llm-client--src-clients-anthropic-api-client-rs.html#item-struct-AnthropicApiClient-41">AnthropicApiClient</a></code>
+  <p class="docstring">The Anthropic-native streaming client.</p>
+  <div class="tags"><span>derive: Debug</span><span>port/service</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>http</td><td><code>reqwest :: Client</code></td></tr><tr><td>private</td><td>endpoint</td><td><code>reqwest :: Url</code></td></tr><tr><td>private</td><td>auth</td><td><code>Arc &lt; <a class="symbol-link" href="eos-llm-client.html#item-enum-Auth-38">Auth</a> &gt;</code></td></tr><tr><td>private</td><td>retry</td><td><code>Arc &lt; RetryConfig &gt;</code></td></tr><tr><td>private</td><td>extra_headers</td><td><code>HeaderMap</code></td></tr><tr><td>private</td><td>prepend_claude_code_system_prompt</td><td><code>bool</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-53"><td>constructor</td><td>new</td><td><code>pub fn <a class="symbol-link" href="eos-llm-client--src-client-rs.html#method-new-56">new</a> (base_url : &amp; str , auth : <a class="symbol-link" href="eos-llm-client.html#item-enum-Auth-38">Auth</a> , retry : Arc &lt; RetryConfig &gt;) -&gt; Result &lt; Self , <a class="symbol-link" href="eos-llm-client--src-error-rs.html#item-struct-ProviderError-29">ProviderError</a> &gt;</code><p class="docstring">Construct a client for `base_url` (e.g. `https://api.anthropic.com`).<br>Returns the outer `Err` only on a malformed base url<br>(`api-parse-dont-validate`).</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Construct a client for `base_url` (e.g. `https://api.anthropic.com`).</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// Returns the outer `Err` only on a malformed base url</span>
+    <span class="rs-comment">/// (`api-parse-dont-validate`).</span>
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-llm-client--src-client-rs.html#method-new-56">new</a>(base_url: &amp;str, auth: <a class="symbol-link rs-type" href="eos-llm-client.html#item-enum-Auth-38">Auth</a>, retry: <span class="rs-type">Arc</span>&lt;<span class="rs-type">RetryConfig</span>&gt;) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-self">Self</span>, <a class="symbol-link rs-type" href="eos-llm-client--src-error-rs.html#item-struct-ProviderError-29">ProviderError</a>&gt; {
+        <span class="rs-self">Self</span>::<a class="symbol-link rs-fn" href="eos-llm-client--src-clients-anthropic-api-client-rs.html#method-new-with-options-82">new_with_options</a>(base_url, auth, retry, <span class="rs-type">HeaderMap</span>::<a class="symbol-link rs-fn" href="eos-llm-client--src-client-rs.html#method-new-56">new</a>(), <span class="rs-kw">false</span>)
+    }
+</code></pre>
+</details></td></tr><tr id="method-build-headers-99"><td>method</td><td>build_headers</td><td><code>fn <a class="symbol-link" href="eos-llm-client--src-clients-anthropic-api-client-rs.html#method-build-headers-99">build_headers</a> (&amp; self) -&gt; Result &lt; HeaderMap , <a class="symbol-link" href="eos-llm-client--src-error-rs.html#item-struct-ProviderError-29">ProviderError</a> &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-llm-client--src-clients-anthropic-api-client-rs.html#method-build-headers-99">build_headers</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">HeaderMap</span>, <a class="symbol-link rs-type" href="eos-llm-client--src-error-rs.html#item-struct-ProviderError-29">ProviderError</a>&gt; {
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> headers = <span class="rs-type">HeaderMap</span>::<a class="symbol-link rs-fn" href="eos-llm-client--src-client-rs.html#method-new-56">new</a>();
+        headers.insert(<span class="rs-type">CONTENT_TYPE</span>, <span class="rs-type">HeaderValue</span>::from_static(&quot;application/json&quot;));
+        headers.insert(<span class="rs-type">ACCEPT</span>, <span class="rs-type">HeaderValue</span>::from_static(&quot;text/event-stream&quot;));
+        headers.insert(
+            <span class="rs-type">HeaderName</span>::from_static(&quot;anthropic-version&quot;),
+            <span class="rs-type">HeaderValue</span>::from_static(<span class="rs-type">ANTHROPIC_VERSION</span>),
+        );
+        <span class="rs-kw">for</span> (name, value) <span class="rs-kw">in</span> &amp;<span class="rs-self">self</span>.extra_headers {
+            headers.insert(name, value.clone());
+        }
+        <span class="rs-self">self</span>.auth.<a class="symbol-link rs-fn" href="eos-llm-client.html#method-apply-105">apply</a>(&amp;<span class="rs-kw">mut</span> headers)?;
+        <span class="rs-type">Ok</span>(headers)
+    }
+</code></pre>
+</details></td></tr><tr id="method-new-claude-coding-plan-61"><td>associated-fn</td><td>new_claude_coding_plan</td><td><code>pub(crate) fn <a class="symbol-link" href="eos-llm-client--src-clients-anthropic-api-client-rs.html#method-new-claude-coding-plan-61">new_claude_coding_plan</a> (base_url : &amp; str , auth : <a class="symbol-link" href="eos-llm-client.html#item-enum-Auth-38">Auth</a> , retry : Arc &lt; RetryConfig &gt; , beta_header : HeaderValue ,) -&gt; Result &lt; Self , <a class="symbol-link" href="eos-llm-client--src-error-rs.html#item-struct-ProviderError-29">ProviderError</a> &gt;</code><p class="docstring">Construct a client for Claude coding-plan OAuth access tokens.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Construct a client for Claude coding-plan OAuth access tokens.</span>
+    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-llm-client--src-clients-anthropic-api-client-rs.html#method-new-claude-coding-plan-61">new_claude_coding_plan</a>(
+        base_url: &amp;str,
+        auth: <a class="symbol-link rs-type" href="eos-llm-client.html#item-enum-Auth-38">Auth</a>,
+        retry: <span class="rs-type">Arc</span>&lt;<span class="rs-type">RetryConfig</span>&gt;,
+        beta_header: <span class="rs-type">HeaderValue</span>,
+    ) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-self">Self</span>, <a class="symbol-link rs-type" href="eos-llm-client--src-error-rs.html#item-struct-ProviderError-29">ProviderError</a>&gt; {
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> extra_headers = <span class="rs-type">HeaderMap</span>::<a class="symbol-link rs-fn" href="eos-llm-client--src-client-rs.html#method-new-56">new</a>();
+        extra_headers.insert(<span class="rs-type">HeaderName</span>::from_static(&quot;anthropic-beta&quot;), beta_header);
+        extra_headers.insert(
+            <span class="rs-type">HeaderName</span>::from_static(&quot;anthropic-dangerous-direct-browser-access&quot;),
+            <span class="rs-type">HeaderValue</span>::from_static(&quot;<span class="rs-kw">true</span>&quot;),
+        );
+        extra_headers.insert(<span class="rs-type">USER_AGENT</span>, <span class="rs-type">HeaderValue</span>::from_static(&quot;claude-cli/2.1.75&quot;));
+        extra_headers.insert(
+            <span class="rs-type">HeaderName</span>::from_static(&quot;x-app&quot;),
+            <span class="rs-type">HeaderValue</span>::from_static(&quot;cli&quot;),
+        );
+        <span class="rs-self">Self</span>::<a class="symbol-link rs-fn" href="eos-llm-client--src-clients-anthropic-api-client-rs.html#method-new-with-options-82">new_with_options</a>(base_url, auth, retry, extra_headers, <span class="rs-kw">true</span>)
+    }
+</code></pre>
+</details></td></tr><tr id="method-new-with-options-82"><td>associated-fn</td><td>new_with_options</td><td><code>fn <a class="symbol-link" href="eos-llm-client--src-clients-anthropic-api-client-rs.html#method-new-with-options-82">new_with_options</a> (base_url : &amp; str , auth : <a class="symbol-link" href="eos-llm-client.html#item-enum-Auth-38">Auth</a> , retry : Arc &lt; RetryConfig &gt; , extra_headers : HeaderMap , prepend_claude_code_system_prompt : bool ,) -&gt; Result &lt; Self , <a class="symbol-link" href="eos-llm-client--src-error-rs.html#item-struct-ProviderError-29">ProviderError</a> &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-llm-client--src-clients-anthropic-api-client-rs.html#method-new-with-options-82">new_with_options</a>(
+        base_url: &amp;str,
+        auth: <a class="symbol-link rs-type" href="eos-llm-client.html#item-enum-Auth-38">Auth</a>,
+        retry: <span class="rs-type">Arc</span>&lt;<span class="rs-type">RetryConfig</span>&gt;,
+        extra_headers: <span class="rs-type">HeaderMap</span>,
+        prepend_claude_code_system_prompt: bool,
+    ) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-self">Self</span>, <a class="symbol-link rs-type" href="eos-llm-client--src-error-rs.html#item-struct-ProviderError-29">ProviderError</a>&gt; {
+        <span class="rs-type">Ok</span>(<span class="rs-self">Self</span> {
+            http: reqwest::<span class="rs-type">Client</span>::<a class="symbol-link rs-fn" href="eos-llm-client--src-client-rs.html#method-new-56">new</a>(),
+            endpoint: <a class="symbol-link rs-fn" href="eos-llm-client--src-client-rs.html#item-fn-build-endpoint-147">build_endpoint</a>(base_url, <span class="rs-type">MESSAGES_PATH</span>)?,
+            auth: <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-llm-client--src-client-rs.html#method-new-56">new</a>(auth),
+            retry,
+            extra_headers,
+            prepend_claude_code_system_prompt,
+        })
+    }
+</code></pre>
+</details></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl <a class="symbol-link" href="eos-llm-client--src-client-rs.html#item-trait-LlmClient-28">LlmClient</a> for <a class="symbol-link" href="eos-llm-client--src-clients-anthropic-api-client-rs.html#item-struct-AnthropicApiClient-41">AnthropicApiClient</a></code></summary><table><tbody><tr id="method-stream-message-117"><td>method</td><td>stream_message</td><td><code>async fn <a class="symbol-link" href="eos-llm-client--src-client-rs.html#method-stream-message-36">stream_message</a> (&amp; self , request : <a class="symbol-link" href="eos-llm-client--src-types-rs.html#item-struct-LlmRequest-113">LlmRequest</a>) -&gt; Result &lt; <a class="symbol-link" href="eos-llm-client--src-client-rs.html#item-type-LlmStream-22">LlmStream</a> , <a class="symbol-link" href="eos-llm-client--src-error-rs.html#item-struct-ProviderError-29">ProviderError</a> &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-llm-client--src-client-rs.html#method-stream-message-36">stream_message</a>(&amp;<span class="rs-self">self</span>, request: <a class="symbol-link rs-type" href="eos-llm-client--src-types-rs.html#item-struct-LlmRequest-113">LlmRequest</a>) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-llm-client--src-client-rs.html#item-type-LlmStream-22">LlmStream</a>, <a class="symbol-link rs-type" href="eos-llm-client--src-error-rs.html#item-struct-ProviderError-29">ProviderError</a>&gt; {
+        <span class="rs-comment">// Synchronous build — the only outer-`Err` path (§5).</span>
+        <span class="rs-kw">let</span> body_value = <span class="rs-kw">if</span> <span class="rs-self">self</span>.prepend_claude_code_system_prompt {
+            <a class="symbol-link rs-fn" href="eos-llm-client--src-clients-anthropic-api-client-rs.html#item-fn-encode-anthropic-body-with-options-323">encode_anthropic_body_with_options</a>(&amp;request, <span class="rs-kw">true</span>)
+        } <span class="rs-kw">else</span> {
+            <a class="symbol-link rs-fn" href="eos-llm-client--src-clients-anthropic-api-client-rs.html#item-fn-encode-anthropic-body-318">encode_anthropic_body</a>(&amp;request)
+        };
+        <span class="rs-kw">let</span> body = serde_json::to_vec(&amp;body_value).map_err(|e| {
+            <a class="symbol-link rs-type" href="eos-llm-client--src-error-rs.html#item-struct-ProviderError-29">ProviderError</a>::<a class="symbol-link rs-fn" href="eos-llm-client--src-error-rs.html#method-request-96">request</a>(format!(&quot;request body serialization failed: {e}&quot;))
+        })?;
+        <span class="rs-kw">let</span> body = <span class="rs-type">Bytes</span>::from(body);
+        <span class="rs-kw">let</span> headers = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-llm-client--src-clients-anthropic-api-client-rs.html#method-build-headers-99">build_headers</a>()?;
+        <span class="rs-kw">let</span> http = <span class="rs-self">self</span>.http.clone();
+        <span class="rs-kw">let</span> url = <span class="rs-self">self</span>.endpoint.clone();
+
+        <span class="rs-comment">// Each attempt replays the owned bytes; connect/status/decode errors</span>
+        <span class="rs-comment">// surface as stream items, not the outer `Err`. The shared transport</span>
+        <span class="rs-comment">// plumbing lives in `client::open_stream`; only the decode differs.</span>
+        <span class="rs-kw">let</span> factory = <span class="rs-kw">move</span> || {
+            <span class="rs-kw">let</span> http = http.clone();
+            <span class="rs-kw">let</span> url = url.clone();
+            <span class="rs-kw">let</span> headers = headers.clone();
+            <span class="rs-kw">let</span> body = body.clone();
+            <span class="rs-type">Box</span>::pin(<a class="symbol-link rs-fn" href="eos-llm-client--src-client-rs.html#item-fn-open-stream-177">open_stream</a>(http, url, headers, body, |frames, rid| {
+                <a class="symbol-link rs-fn" href="eos-llm-client--src-clients-anthropic-api-client-rs.html#item-fn-decode-anthropic-168">decode_anthropic</a>(frames, rid)
+            })) <span class="rs-kw">as</span> <span class="rs-type">BoxFuture</span>&lt;&#x27;<span class="rs-kw">static</span>, <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-llm-client--src-client-rs.html#item-type-LlmStream-22">LlmStream</a>, <a class="symbol-link rs-type" href="eos-llm-client--src-error-rs.html#item-struct-ProviderError-29">ProviderError</a>&gt;&gt;
+        };
+        <span class="rs-type">Ok</span>(<a class="symbol-link rs-fn" href="eos-llm-client--src-retry-rs.html#item-fn-retry-stream-21">retry_stream</a>((*<span class="rs-self">self</span>.retry).clone(), factory))
+    }
+</code></pre>
+</details></td></tr></tbody></table></details></div>
+
   <p class="source">crates/eos-llm-client/src/clients/anthropic_api_client.rs:41</p>
-</article><article class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct BlockAccum private struct BlockAccum crates/eos-llm-client/src/clients/anthropic_api_client.rs block_type String id String name String text String input_json String ">
+</article><article id="item-struct-BlockAccum-148" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct BlockAccum private struct BlockAccum crates/eos-llm-client/src/clients/anthropic_api_client.rs block_type String id String name String text String input_json String ">
   <div class="item-head">
     <span class="kind">struct</span>
     <h3>BlockAccum</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">struct BlockAccum</code>
-  <div class="tags"></div>
+  <code class="signature">struct <a class="symbol-link" href="eos-llm-client--src-clients-anthropic-api-client-rs.html#item-struct-BlockAccum-148">BlockAccum</a></code>
+  <p class="docstring">In-flight reassembly state for one content block.</p>
+  <div class="tags"><span>derive: Debug</span></div>
   <h4>Fields</h4><table><tbody><tr><td>private</td><td>block_type</td><td><code>String</code></td></tr><tr><td>private</td><td>id</td><td><code>String</code></td></tr><tr><td>private</td><td>name</td><td><code>String</code></td></tr><tr><td>private</td><td>text</td><td><code>String</code></td></tr><tr><td>private</td><td>input_json</td><td><code>String</code></td></tr></tbody></table>
+
   <p class="source">crates/eos-llm-client/src/clients/anthropic_api_client.rs:148</p>
-</article><article class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct AnthropicState private struct AnthropicState crates/eos-llm-client/src/clients/anthropic_api_client.rs blocks HashMap &lt; usize , BlockAccum &gt; content Vec &lt; ContentBlock &gt; input_tokens u32 output_tokens u32 stop_reason Option &lt; String &gt; ">
+</article><article id="item-struct-AnthropicState-158" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct AnthropicState private struct AnthropicState crates/eos-llm-client/src/clients/anthropic_api_client.rs blocks HashMap &lt; usize , BlockAccum &gt; content Vec &lt; ContentBlock &gt; input_tokens u32 output_tokens u32 stop_reason Option &lt; String &gt; ">
   <div class="item-head">
     <span class="kind">struct</span>
     <h3>AnthropicState</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">struct AnthropicState</code>
-  <div class="tags"></div>
-  <h4>Fields</h4><table><tbody><tr><td>private</td><td>blocks</td><td><code>HashMap &lt; usize , BlockAccum &gt;</code></td></tr><tr><td>private</td><td>content</td><td><code>Vec &lt; ContentBlock &gt;</code></td></tr><tr><td>private</td><td>input_tokens</td><td><code>u32</code></td></tr><tr><td>private</td><td>output_tokens</td><td><code>u32</code></td></tr><tr><td>private</td><td>stop_reason</td><td><code>Option &lt; String &gt;</code></td></tr></tbody></table>
+  <code class="signature">struct <a class="symbol-link" href="eos-llm-client--src-clients-anthropic-api-client-rs.html#item-struct-AnthropicState-158">AnthropicState</a></code>
+  <p class="docstring">Decoder state across the whole message stream.</p>
+  <div class="tags"><span>derive: Debug</span><span>derive: Default</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>blocks</td><td><code>HashMap &lt; usize , <a class="symbol-link" href="eos-llm-client--src-clients-anthropic-api-client-rs.html#item-struct-BlockAccum-148">BlockAccum</a> &gt;</code></td></tr><tr><td>private</td><td>content</td><td><code>Vec &lt; <a class="symbol-link" href="eos-llm-client--src-message-rs.html#item-enum-ContentBlock-34">ContentBlock</a> &gt;</code></td></tr><tr><td>private</td><td>input_tokens</td><td><code>u32</code></td></tr><tr><td>private</td><td>output_tokens</td><td><code>u32</code></td></tr><tr><td>private</td><td>stop_reason</td><td><code>Option &lt; String &gt;</code></td></tr></tbody></table>
+
   <p class="source">crates/eos-llm-client/src/clients/anthropic_api_client.rs:158</p>
-</article><div class="group-label">Standalone Functions</div><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn encode_anthropic_body pub(crate) pub(crate) fn encode_anthropic_body (request : &amp; LlmRequest) -&gt; Value crates/eos-llm-client/src/clients/anthropic_api_client.rs  ">
+</article><div class="group-label">Standalone Functions</div><article id="item-fn-encode-anthropic-body-318" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn encode_anthropic_body pub(crate) pub(crate) fn encode_anthropic_body (request : &amp; LlmRequest) -&gt; Value crates/eos-llm-client/src/clients/anthropic_api_client.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>encode_anthropic_body</h3>
     <span class="visibility">pub(crate)</span>
   </div>
-  <code class="signature">pub(crate) fn encode_anthropic_body (request : &amp; LlmRequest) -&gt; Value</code>
+  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-llm-client--src-clients-anthropic-api-client-rs.html#item-fn-encode-anthropic-body-318">encode_anthropic_body</a> (request : &amp; <a class="symbol-link" href="eos-llm-client--src-types-rs.html#item-struct-LlmRequest-113">LlmRequest</a>) -&gt; Value</code>
+  <p class="docstring">Encode an [`LlmRequest`] into an Anthropic `/v1/messages` request body.</p>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-comment">/// Encode an [`LlmRequest`] into an Anthropic `/v1/messages` request body.</span>
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-llm-client--src-clients-anthropic-api-client-rs.html#item-fn-encode-anthropic-body-318">encode_anthropic_body</a>(request: &amp;<a class="symbol-link rs-type" href="eos-llm-client--src-types-rs.html#item-struct-LlmRequest-113">LlmRequest</a>) -&gt; <span class="rs-type">Value</span> {
+    <a class="symbol-link rs-fn" href="eos-llm-client--src-clients-anthropic-api-client-rs.html#item-fn-encode-anthropic-body-with-options-323">encode_anthropic_body_with_options</a>(request, <span class="rs-kw">false</span>)
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-llm-client/src/clients/anthropic_api_client.rs:318</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn decode_anthropic_for_test pub(crate) pub(crate) async fn decode_anthropic_for_test (frames : impl Stream &lt; Item = Result &lt; String , ProviderError &gt; &gt; + Send ,) -&gt; Vec &lt; LlmStreamEvent &gt; crates/eos-llm-client/src/clients/anthropic_api_client.rs  ">
+</article><article id="item-fn-decode-anthropic-for-test-419" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn decode_anthropic_for_test pub(crate) pub(crate) async fn decode_anthropic_for_test (frames : impl Stream &lt; Item = Result &lt; String , ProviderError &gt; &gt; + Send ,) -&gt; Vec &lt; LlmStreamEvent &gt; crates/eos-llm-client/src/clients/anthropic_api_client.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>decode_anthropic_for_test</h3>
     <span class="visibility">pub(crate)</span>
   </div>
-  <code class="signature">pub(crate) async fn decode_anthropic_for_test (frames : impl Stream &lt; Item = Result &lt; String , ProviderError &gt; &gt; + Send ,) -&gt; Vec &lt; LlmStreamEvent &gt;</code>
-  <div class="tags"><span>async</span></div>
+  <code class="signature">pub(crate) async fn <a class="symbol-link" href="eos-llm-client--src-clients-anthropic-api-client-rs.html#item-fn-decode-anthropic-for-test-419">decode_anthropic_for_test</a> (frames : impl Stream &lt; Item = Result &lt; String , <a class="symbol-link" href="eos-llm-client--src-error-rs.html#item-struct-ProviderError-29">ProviderError</a> &gt; &gt; + Send ,) -&gt; Vec &lt; <a class="symbol-link" href="eos-llm-client--src-events-rs.html#item-enum-LlmStreamEvent-15">LlmStreamEvent</a> &gt;</code>
+  <p class="docstring">Decode an Anthropic SSE frame stream to events for cross-provider<br>substitutability tests (AC-llm-client-10, exercised from<br>`openai_api_client.rs`).</p>
+  <div class="tags"><span>allow: clippy::unwrap_used</span><span>async</span><span>cfg: test</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-comment">/// Decode an Anthropic SSE frame stream to events for cross-provider</span>
+<span class="rs-comment">/// substitutability tests (AC-llm-client-10, exercised from</span>
+<span class="rs-comment">/// `openai_api_client.rs`).</span>
+#[cfg(test)]
+#[allow(clippy::unwrap_used)]
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-llm-client--src-clients-anthropic-api-client-rs.html#item-fn-decode-anthropic-for-test-419">decode_anthropic_for_test</a>(
+    frames: <span class="rs-kw">impl</span> <span class="rs-type">Stream</span>&lt;<span class="rs-type">Item</span> = <span class="rs-type">Result</span>&lt;<span class="rs-type">String</span>, <a class="symbol-link rs-type" href="eos-llm-client--src-error-rs.html#item-struct-ProviderError-29">ProviderError</a>&gt;&gt; + <span class="rs-type">Send</span>,
+) -&gt; <span class="rs-type">Vec</span>&lt;<a class="symbol-link rs-type" href="eos-llm-client--src-events-rs.html#item-enum-LlmStreamEvent-15">LlmStreamEvent</a>&gt; {
+    <a class="symbol-link rs-fn" href="eos-llm-client--src-clients-anthropic-api-client-rs.html#item-fn-decode-anthropic-168">decode_anthropic</a>(frames, <span class="rs-type">None</span>)
+        .collect::&lt;<span class="rs-type">Vec</span>&lt;_&gt;&gt;()
+        .<span class="rs-kw">await</span>
+        .into_iter()
+        .map(<span class="rs-type">Result</span>::unwrap)
+        .collect()
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-llm-client/src/clients/anthropic_api_client.rs:419</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn decode_anthropic private fn decode_anthropic &lt; S &gt; (frames : S , request_id : Option &lt; String &gt; ,) -&gt; impl Stream &lt; Item = Result &lt; LlmStreamEvent , ProviderError &gt; &gt; + Send where S : Stream &lt; Item = Result &lt; String , ProviderError &gt; &gt; + Send , crates/eos-llm-client/src/clients/anthropic_api_client.rs  ">
+</article><article id="item-fn-decode-anthropic-168" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn decode_anthropic private fn decode_anthropic &lt; S &gt; (frames : S , request_id : Option &lt; String &gt; ,) -&gt; impl Stream &lt; Item = Result &lt; LlmStreamEvent , ProviderError &gt; &gt; + Send where S : Stream &lt; Item = Result &lt; String , ProviderError &gt; &gt; + Send , crates/eos-llm-client/src/clients/anthropic_api_client.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>decode_anthropic</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn decode_anthropic &lt; S &gt; (frames : S , request_id : Option &lt; String &gt; ,) -&gt; impl Stream &lt; Item = Result &lt; LlmStreamEvent , ProviderError &gt; &gt; + Send where S : Stream &lt; Item = Result &lt; String , ProviderError &gt; &gt; + Send ,</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-llm-client--src-clients-anthropic-api-client-rs.html#item-fn-decode-anthropic-168">decode_anthropic</a> &lt; S &gt; (frames : S , request_id : Option &lt; String &gt; ,) -&gt; impl Stream &lt; Item = Result &lt; <a class="symbol-link" href="eos-llm-client--src-events-rs.html#item-enum-LlmStreamEvent-15">LlmStreamEvent</a> , <a class="symbol-link" href="eos-llm-client--src-error-rs.html#item-struct-ProviderError-29">ProviderError</a> &gt; &gt; + Send where S : Stream &lt; Item = Result &lt; String , <a class="symbol-link" href="eos-llm-client--src-error-rs.html#item-struct-ProviderError-29">ProviderError</a> &gt; &gt; + Send ,</code>
+  <p class="docstring">Decode an Anthropic Messages SSE frame stream into normalized events.<br>Pure: independent of `reqwest`, so fixtures replay through it. `input_tokens`<br>comes from `message_start`, `output_tokens` from `message_delta` (the SDK's<br>`get_final_message` merge). Malformed frame JSON logs (content-free) and ends<br>the stream with a `Decode` error stamped with `request_id` (§8.7, §8.8).</p>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-comment">/// Decode an Anthropic Messages SSE frame stream into normalized events.</span>
+<span class="rs-comment">///</span>
+<span class="rs-comment">/// Pure: independent of `reqwest`, so fixtures replay through it. `input_tokens`</span>
+<span class="rs-comment">/// comes from `message_start`, `output_tokens` from `message_delta` (the SDK's</span>
+<span class="rs-comment">/// `get_final_message` merge). Malformed frame JSON logs (content-free) and ends</span>
+<span class="rs-comment">/// the stream with a `Decode` error stamped with `request_id` (§8.7, §8.8).</span>
+<span class="rs-kw">fn</span> decode_anthropic&lt;<span class="rs-type">S</span>&gt;(
+    frames: <span class="rs-type">S</span>,
+    request_id: <span class="rs-type">Option</span>&lt;<span class="rs-type">String</span>&gt;,
+) -&gt; <span class="rs-kw">impl</span> <span class="rs-type">Stream</span>&lt;<span class="rs-type">Item</span> = <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-llm-client--src-events-rs.html#item-enum-LlmStreamEvent-15">LlmStreamEvent</a>, <a class="symbol-link rs-type" href="eos-llm-client--src-error-rs.html#item-struct-ProviderError-29">ProviderError</a>&gt;&gt; + <span class="rs-type">Send</span>
+<span class="rs-kw">where</span>
+    <span class="rs-type">S</span>: <span class="rs-type">Stream</span>&lt;<span class="rs-type">Item</span> = <span class="rs-type">Result</span>&lt;<span class="rs-type">String</span>, <a class="symbol-link rs-type" href="eos-llm-client--src-error-rs.html#item-struct-ProviderError-29">ProviderError</a>&gt;&gt; + <span class="rs-type">Send</span>,
+{
+    async_stream::stream! {
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> state = <a class="symbol-link rs-type" href="eos-llm-client--src-clients-anthropic-api-client-rs.html#item-struct-AnthropicState-158">AnthropicState</a>::default();
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> frame_index: usize = 0;
+        futures::pin_mut!(frames);
+        <span class="rs-kw">while</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(frame) = frames.next().<span class="rs-kw">await</span> {
+            frame_index += 1;
+            <span class="rs-kw">let</span> frame = <span class="rs-kw">match</span> frame {
+                <span class="rs-type">Ok</span>(frame) =&gt; frame,
+                <span class="rs-type">Err</span>(err) =&gt; {
+                    yield <span class="rs-type">Err</span>(err);
+                    <span class="rs-kw">return</span>;
+                }
+            };
+            <span class="rs-kw">let</span> value = <span class="rs-kw">match</span> <a class="symbol-link rs-fn" href="eos-llm-client--src-sse-rs.html#item-fn-parse-sse-value-106">parse_sse_value</a>(&amp;frame, &amp;request_id, &quot;anthropic&quot;, frame_index) {
+                <span class="rs-type">Ok</span>(<span class="rs-type">Some</span>(value)) =&gt; value,
+                <span class="rs-type">Ok</span>(<span class="rs-type">None</span>) =&gt; <span class="rs-kw">continue</span>,
+                <span class="rs-type">Err</span>(err) =&gt; {
+                    yield <span class="rs-type">Err</span>(err);
+                    <span class="rs-kw">return</span>;
+                }
+            };
+
+            <span class="rs-kw">match</span> value.get(&quot;<span class="rs-kw">type</span>&quot;).and_then(<span class="rs-type">Value</span>::as_str) {
+                <span class="rs-type">Some</span>(&quot;message_start&quot;) =&gt; {
+                    state.input_tokens = <a class="symbol-link rs-fn" href="eos-llm-client--src-sse-rs.html#item-fn-json-u32-187">json_u32</a>(&amp;value, &amp;[&quot;message&quot;, &quot;usage&quot;, &quot;input_tokens&quot;]);
+                }
+                <span class="rs-type">Some</span>(&quot;content_block_start&quot;) =&gt; {
+                    <span class="rs-kw">let</span> index = <a class="symbol-link rs-fn" href="eos-llm-client--src-sse-rs.html#item-fn-json-usize-196">json_usize</a>(&amp;value, &amp;[&quot;index&quot;]);
+                    <span class="rs-kw">let</span> block = &amp;value[&quot;content_block&quot;];
+                    state.blocks.insert(
+                        index,
+                        <a class="symbol-link rs-type" href="eos-llm-client--src-clients-anthropic-api-client-rs.html#item-struct-BlockAccum-148">BlockAccum</a> {
+                            block_type: <a class="symbol-link rs-fn" href="eos-llm-client--src-sse-rs.html#item-fn-json-str-182">json_str</a>(block, &amp;[&quot;<span class="rs-kw">type</span>&quot;]),
+                            id: <a class="symbol-link rs-fn" href="eos-llm-client--src-sse-rs.html#item-fn-json-str-182">json_str</a>(block, &amp;[&quot;id&quot;]),
+                            name: <a class="symbol-link rs-fn" href="eos-llm-client--src-sse-rs.html#item-fn-json-str-182">json_str</a>(block, &amp;[&quot;name&quot;]),
+                            text: <span class="rs-type">String</span>::<a class="symbol-link rs-fn" href="eos-llm-client--src-client-rs.html#method-new-56">new</a>(),
+                            input_json: <span class="rs-type">String</span>::<a class="symbol-link rs-fn" href="eos-llm-client--src-client-rs.html#method-new-56">new</a>(),
+                        },
+                    );
+                }
+                <span class="rs-type">Some</span>(&quot;content_block_delta&quot;) =&gt; {
+                    <span class="rs-kw">let</span> index = <a class="symbol-link rs-fn" href="eos-llm-client--src-sse-rs.html#item-fn-json-usize-196">json_usize</a>(&amp;value, &amp;[&quot;index&quot;]);
+                    <span class="rs-kw">let</span> delta = &amp;value[&quot;delta&quot;];
+                    <span class="rs-kw">match</span> delta.get(&quot;<span class="rs-kw">type</span>&quot;).and_then(<span class="rs-type">Value</span>::as_str) {
+                        <span class="rs-type">Some</span>(&quot;text_delta&quot;) =&gt; {
+                            <span class="rs-kw">let</span> text = <a class="symbol-link rs-fn" href="eos-llm-client--src-sse-rs.html#item-fn-json-str-182">json_str</a>(delta, &amp;[&quot;text&quot;]);
+                            <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(block) = state.blocks.get_mut(&amp;index) {
+                                block.text.push_str(&amp;text);
+                            }
+                            yield <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-llm-client--src-events-rs.html#item-enum-LlmStreamEvent-15">LlmStreamEvent</a>::<span class="rs-type">AssistantTextDelta</span> { text });
+                        }
+                        <span class="rs-type">Some</span>(&quot;thinking_delta&quot;) =&gt; {
+                            <span class="rs-kw">let</span> text = <a class="symbol-link rs-fn" href="eos-llm-client--src-sse-rs.html#item-fn-json-str-182">json_str</a>(delta, &amp;[&quot;thinking&quot;]);
+                            <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(block) = state.blocks.get_mut(&amp;index) {
+                                block.text.push_str(&amp;text);
+                            }
+                            yield <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-llm-client--src-events-rs.html#item-enum-LlmStreamEvent-15">LlmStreamEvent</a>::<span class="rs-type">ReasoningDelta</span> { text });
+                        }
+                        <span class="rs-type">Some</span>(&quot;input_json_delta&quot;) =&gt; {
+                            <span class="rs-kw">let</span> partial = <a class="symbol-link rs-fn" href="eos-llm-client--src-sse-rs.html#item-fn-json-str-182">json_str</a>(delta, &amp;[&quot;partial_json&quot;]);
+                            <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(block) = state.blocks.get_mut(&amp;index) {
+                                block.input_json.push_str(&amp;partial);
+                            }
+                        }
+                        _ =&gt; {}
+                    }
+                }
+                <span class="rs-type">Some</span>(&quot;content_block_stop&quot;) =&gt; {
+                    <span class="rs-kw">let</span> index = <a class="symbol-link rs-fn" href="eos-llm-client--src-sse-rs.html#item-fn-json-usize-196">json_usize</a>(&amp;value, &amp;[&quot;index&quot;]);
+                    <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(block) = state.blocks.remove(&amp;index) {
+                        <span class="rs-kw">match</span> block.block_type.as_str() {
+                            &quot;tool_use&quot; =&gt; {
+                                <span class="rs-kw">let</span> input = <a class="symbol-link rs-fn" href="eos-llm-client--src-sse-rs.html#item-fn-parse-tool-args-201">parse_tool_args</a>(&amp;block.input_json);
+                                <span class="rs-comment">// An empty/missing tool-use id is a malformed</span>
+                                <span class="rs-comment">// stream here, not a tolerated default. Rust</span>
+                                <span class="rs-comment">// passed the empty id through / synthesized a</span>
+                                <span class="rs-comment">// `toolu_&lt;uuid&gt;`, but the `ToolUseId` newtype</span>
+                                <span class="rs-comment">// rejects empty and the spec states default-id</span>
+                                <span class="rs-comment">// minting "lives in eos-types/engine, not here"</span>
+                                <span class="rs-comment">// (§6) — so this fails fast rather than minting</span>
+                                <span class="rs-comment">// or propagating an empty id. Anthropic always</span>
+                                <span class="rs-comment">// sends a `toolu_` id, so this never triggers.</span>
+                                <span class="rs-kw">let</span> tool_use_id = <span class="rs-kw">match</span> <span class="rs-type">ToolUseId</span>::try_from(block.id.as_str()) {
+                                    <span class="rs-type">Ok</span>(id) =&gt; id,
+                                    <span class="rs-type">Err</span>(_) =&gt; {
+                                        yield <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-llm-client--src-error-rs.html#item-struct-ProviderError-29">ProviderError</a>::<a class="symbol-link rs-fn" href="eos-llm-client--src-error-rs.html#method-decode-85">decode</a>(
+                                            request_id.clone(),
+                                            &quot;tool_use block missing id&quot;,
+                                        ));
+                                        <span class="rs-kw">return</span>;
+                                    }
+                                };
+                                state.content.<a class="symbol-link rs-fn" href="eos-llm-client--src-sse-rs.html#method-push-36">push</a>(<a class="symbol-link rs-type" href="eos-llm-client--src-message-rs.html#item-enum-ContentBlock-34">ContentBlock</a>::<span class="rs-type">ToolUse</span> {
+                                    tool_use_id: tool_use_id.clone(),
+                                    name: block.name.clone(),
+                                    input: input.clone(),
+                                });
+                                yield <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-llm-client--src-events-rs.html#item-enum-LlmStreamEvent-15">LlmStreamEvent</a>::<span class="rs-type">ToolUseDelta</span> {
+                                    tool_use_id,
+                                    name: block.name,
+                                    input,
+                                });
+                            }
+                            &quot;text&quot; =&gt; state.content.<a class="symbol-link rs-fn" href="eos-llm-client--src-sse-rs.html#method-push-36">push</a>(<a class="symbol-link rs-type" href="eos-llm-client--src-message-rs.html#item-enum-ContentBlock-34">ContentBlock</a>::<span class="rs-type">Text</span> { text: block.text }),
+                            &quot;thinking&quot; =&gt; {
+                                state.content.<a class="symbol-link rs-fn" href="eos-llm-client--src-sse-rs.html#method-push-36">push</a>(<a class="symbol-link rs-type" href="eos-llm-client--src-message-rs.html#item-enum-ContentBlock-34">ContentBlock</a>::<span class="rs-type">Reasoning</span> { text: block.text });
+                            }
+                            _ =&gt; {}
+                        }
+                    }
+                }
+                <span class="rs-type">Some</span>(&quot;message_delta&quot;) =&gt; {
+                    <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(reason) = value[&quot;delta&quot;].get(&quot;stop_reason&quot;).and_then(<span class="rs-type">Value</span>::as_str) {
+                        state.stop_reason = <span class="rs-type">Some</span>(reason.to_owned());
+                    }
+                    state.output_tokens = <a class="symbol-link rs-fn" href="eos-llm-client--src-sse-rs.html#item-fn-json-u32-187">json_u32</a>(&amp;value, &amp;[&quot;usage&quot;, &quot;output_tokens&quot;]);
+                }
+                <span class="rs-type">Some</span>(&quot;message_stop&quot;) =&gt; {
+                    yield <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-llm-client--src-events-rs.html#item-enum-LlmStreamEvent-15">LlmStreamEvent</a>::<span class="rs-type">AssistantMessageComplete</span> {
+                        message: <a class="symbol-link rs-type" href="eos-llm-client--src-message-rs.html#item-struct-Message-88">Message</a> {
+                            role: <a class="symbol-link rs-type" href="eos-llm-client--src-message-rs.html#item-enum-MessageRole-10">MessageRole</a>::<span class="rs-type">Assistant</span>,
+                            content: std::mem::take(&amp;<span class="rs-kw">mut</span> state.content),
+                        },
+                        usage: <a class="symbol-link rs-type" href="eos-llm-client--src-types-rs.html#item-struct-UsageSnapshot-12">UsageSnapshot</a> {
+                            input_tokens: state.input_tokens,
+                            output_tokens: state.output_tokens,
+                        },
+                        stop_reason: state.stop_reason.as_deref().map(<a class="symbol-link rs-type" href="eos-llm-client--src-events-rs.html#item-enum-StopReason-53">StopReason</a>::parse),
+                    });
+                    <span class="rs-kw">return</span>;
+                }
+                _ =&gt; {}
+            }
+        }
+    }
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-llm-client/src/clients/anthropic_api_client.rs:168</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn encode_anthropic_body_with_options private fn encode_anthropic_body_with_options (request : &amp; LlmRequest , prepend_claude_code_system_prompt : bool ,) -&gt; Value crates/eos-llm-client/src/clients/anthropic_api_client.rs  ">
+</article><article id="item-fn-encode-anthropic-body-with-options-323" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn encode_anthropic_body_with_options private fn encode_anthropic_body_with_options (request : &amp; LlmRequest , prepend_claude_code_system_prompt : bool ,) -&gt; Value crates/eos-llm-client/src/clients/anthropic_api_client.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>encode_anthropic_body_with_options</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn encode_anthropic_body_with_options (request : &amp; LlmRequest , prepend_claude_code_system_prompt : bool ,) -&gt; Value</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-llm-client--src-clients-anthropic-api-client-rs.html#item-fn-encode-anthropic-body-with-options-323">encode_anthropic_body_with_options</a> (request : &amp; <a class="symbol-link" href="eos-llm-client--src-types-rs.html#item-struct-LlmRequest-113">LlmRequest</a> , prepend_claude_code_system_prompt : bool ,) -&gt; Value</code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-llm-client--src-clients-anthropic-api-client-rs.html#item-fn-encode-anthropic-body-with-options-323">encode_anthropic_body_with_options</a>(
+    request: &amp;<a class="symbol-link rs-type" href="eos-llm-client--src-types-rs.html#item-struct-LlmRequest-113">LlmRequest</a>,
+    prepend_claude_code_system_prompt: bool,
+) -&gt; <span class="rs-type">Value</span> {
+    <span class="rs-kw">let</span> messages: <span class="rs-type">Vec</span>&lt;<span class="rs-type">Value</span>&gt; = request
+        .messages
+        .iter()
+        .map(|message| {
+            <span class="rs-kw">let</span> content: <span class="rs-type">Vec</span>&lt;<span class="rs-type">Value</span>&gt; = message
+                .content
+                .iter()
+                .filter(|block| !matches!(block, <a class="symbol-link rs-type" href="eos-llm-client--src-message-rs.html#item-enum-ContentBlock-34">ContentBlock</a>::<span class="rs-type">Reasoning</span> { .. }))
+                .map(serialize_anthropic_block)
+                .collect();
+            json!({ &quot;role&quot;: message.role.<a class="symbol-link rs-fn" href="eos-llm-client--src-message-rs.html#method-as-wire-25">as_wire</a>(), &quot;content&quot;: content })
+        })
+        .collect();
+
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> body = json!({
+        &quot;model&quot;: request.model,
+        &quot;messages&quot;: messages,
+        &quot;max_tokens&quot;: request.max_tokens,
+        &quot;stream&quot;: <span class="rs-kw">true</span>,
+    });
+    <span class="rs-kw">if</span> prepend_claude_code_system_prompt {
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> system = vec![json!({
+            &quot;<span class="rs-kw">type</span>&quot;: &quot;text&quot;,
+            &quot;text&quot;: <span class="rs-type">CLAUDE_CODE_SYSTEM_PROMPT</span>,
+        })];
+        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(prompt) = &amp;request.system_prompt {
+            system.<a class="symbol-link rs-fn" href="eos-llm-client--src-sse-rs.html#method-push-36">push</a>(json!({
+                &quot;<span class="rs-kw">type</span>&quot;: &quot;text&quot;,
+                &quot;text&quot;: prompt,
+            }));
+        }
+        body[&quot;system&quot;] = <span class="rs-type">Value</span>::<span class="rs-type">Array</span>(system);
+    } <span class="rs-kw">else</span> <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(system) = &amp;request.system_prompt {
+        body[&quot;system&quot;] = json!(system);
+    }
+    <span class="rs-kw">if</span> !request.tools.is_empty() {
+        body[&quot;tools&quot;] = <span class="rs-type">Value</span>::<span class="rs-type">Array</span>(request.tools.iter().map(serialize_anthropic_tool).collect());
+    }
+    <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(choice) = &amp;request.tool_choice {
+        body[&quot;tool_choice&quot;] = <a class="symbol-link rs-fn" href="eos-llm-client--src-clients-anthropic-api-client-rs.html#item-fn-encode-anthropic-tool-choice-411">encode_anthropic_tool_choice</a>(choice);
+    }
+    body
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-llm-client/src/clients/anthropic_api_client.rs:323</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn serialize_anthropic_block private fn serialize_anthropic_block (block : &amp; ContentBlock) -&gt; Value crates/eos-llm-client/src/clients/anthropic_api_client.rs  ">
+</article><article id="item-fn-serialize-anthropic-block-371" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn serialize_anthropic_block private fn serialize_anthropic_block (block : &amp; ContentBlock) -&gt; Value crates/eos-llm-client/src/clients/anthropic_api_client.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>serialize_anthropic_block</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn serialize_anthropic_block (block : &amp; ContentBlock) -&gt; Value</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-llm-client--src-clients-anthropic-api-client-rs.html#item-fn-serialize-anthropic-block-371">serialize_anthropic_block</a> (block : &amp; <a class="symbol-link" href="eos-llm-client--src-message-rs.html#item-enum-ContentBlock-34">ContentBlock</a>) -&gt; Value</code>
+  <p class="docstring">Project one neutral block to the Anthropic wire shape. `Reasoning` is<br>filtered before this is called; `tool_result` omits `metadata`/`is_terminal`<br>(§8.6).</p>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-comment">/// Project one neutral block to the Anthropic wire shape. `Reasoning` is</span>
+<span class="rs-comment">/// filtered before this is called; `tool_result` omits `metadata`/`is_terminal`</span>
+<span class="rs-comment">/// (§8.6).</span>
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-llm-client--src-clients-anthropic-api-client-rs.html#item-fn-serialize-anthropic-block-371">serialize_anthropic_block</a>(block: &amp;<a class="symbol-link rs-type" href="eos-llm-client--src-message-rs.html#item-enum-ContentBlock-34">ContentBlock</a>) -&gt; <span class="rs-type">Value</span> {
+    <span class="rs-kw">match</span> block {
+        <a class="symbol-link rs-type" href="eos-llm-client--src-message-rs.html#item-enum-ContentBlock-34">ContentBlock</a>::<span class="rs-type">Text</span> { text } =&gt; json!({ &quot;<span class="rs-kw">type</span>&quot;: &quot;text&quot;, &quot;text&quot;: text }),
+        <a class="symbol-link rs-type" href="eos-llm-client--src-message-rs.html#item-enum-ContentBlock-34">ContentBlock</a>::<span class="rs-type">ToolUse</span> {
+            tool_use_id,
+            name,
+            input,
+        } =&gt; json!({ &quot;<span class="rs-kw">type</span>&quot;: &quot;tool_use&quot;, &quot;id&quot;: tool_use_id, &quot;name&quot;: name, &quot;input&quot;: input }),
+        <a class="symbol-link rs-type" href="eos-llm-client--src-message-rs.html#item-enum-ContentBlock-34">ContentBlock</a>::<span class="rs-type">ToolResult</span> {
+            tool_use_id,
+            content,
+            is_error,
+            ..
+        } =&gt; json!({
+            &quot;<span class="rs-kw">type</span>&quot;: &quot;tool_result&quot;,
+            &quot;tool_use_id&quot;: tool_use_id,
+            &quot;content&quot;: content,
+            &quot;is_error&quot;: is_error,
+        }),
+        <a class="symbol-link rs-type" href="eos-llm-client--src-message-rs.html#item-enum-ContentBlock-34">ContentBlock</a>::<span class="rs-type">SystemNotification</span> { text } =&gt; json!({
+            &quot;<span class="rs-kw">type</span>&quot;: &quot;text&quot;,
+            &quot;text&quot;: format!(&quot;&lt;system-reminder&gt;\n{text}\n&lt;/system-reminder&gt;&quot;),
+        }),
+        <span class="rs-comment">// Filtered out before this call; encoded defensively for totality.</span>
+        <a class="symbol-link rs-type" href="eos-llm-client--src-message-rs.html#item-enum-ContentBlock-34">ContentBlock</a>::<span class="rs-type">Reasoning</span> { text } =&gt; json!({ &quot;<span class="rs-kw">type</span>&quot;: &quot;thinking&quot;, &quot;text&quot;: text }),
+    }
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-llm-client/src/clients/anthropic_api_client.rs:371</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn serialize_anthropic_tool private fn serialize_anthropic_tool (spec : &amp; ToolSpec) -&gt; Value crates/eos-llm-client/src/clients/anthropic_api_client.rs  ">
+</article><article id="item-fn-serialize-anthropic-tool-402" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn serialize_anthropic_tool private fn serialize_anthropic_tool (spec : &amp; ToolSpec) -&gt; Value crates/eos-llm-client/src/clients/anthropic_api_client.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>serialize_anthropic_tool</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn serialize_anthropic_tool (spec : &amp; ToolSpec) -&gt; Value</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-llm-client--src-clients-anthropic-api-client-rs.html#item-fn-serialize-anthropic-tool-402">serialize_anthropic_tool</a> (spec : &amp; <a class="symbol-link" href="eos-llm-client--src-types-rs.html#item-struct-ToolSpec-30">ToolSpec</a>) -&gt; Value</code>
+  <p class="docstring">Project a tool spec to an Anthropic tool entry, dropping `output_schema`.</p>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-comment">/// Project a tool spec to an Anthropic tool entry, dropping `output_schema`.</span>
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-llm-client--src-clients-anthropic-api-client-rs.html#item-fn-serialize-anthropic-tool-402">serialize_anthropic_tool</a>(spec: &amp;<a class="symbol-link rs-type" href="eos-llm-client--src-types-rs.html#item-struct-ToolSpec-30">ToolSpec</a>) -&gt; <span class="rs-type">Value</span> {
+    json!({
+        &quot;name&quot;: spec.name,
+        &quot;description&quot;: spec.description,
+        &quot;input_schema&quot;: spec.input_schema,
+    })
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-llm-client/src/clients/anthropic_api_client.rs:402</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn encode_anthropic_tool_choice private fn encode_anthropic_tool_choice (choice : &amp; ToolChoice) -&gt; Value crates/eos-llm-client/src/clients/anthropic_api_client.rs  ">
+</article><article id="item-fn-encode-anthropic-tool-choice-411" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn encode_anthropic_tool_choice private fn encode_anthropic_tool_choice (choice : &amp; ToolChoice) -&gt; Value crates/eos-llm-client/src/clients/anthropic_api_client.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>encode_anthropic_tool_choice</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn encode_anthropic_tool_choice (choice : &amp; ToolChoice) -&gt; Value</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-llm-client--src-clients-anthropic-api-client-rs.html#item-fn-encode-anthropic-tool-choice-411">encode_anthropic_tool_choice</a> (choice : &amp; <a class="symbol-link" href="eos-llm-client--src-types-rs.html#item-enum-ToolChoice-68">ToolChoice</a>) -&gt; Value</code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-llm-client--src-clients-anthropic-api-client-rs.html#item-fn-encode-anthropic-tool-choice-411">encode_anthropic_tool_choice</a>(choice: &amp;<a class="symbol-link rs-type" href="eos-llm-client--src-types-rs.html#item-enum-ToolChoice-68">ToolChoice</a>) -&gt; <span class="rs-type">Value</span> {
+    <span class="rs-kw">match</span> choice {
+        <a class="symbol-link rs-type" href="eos-llm-client--src-types-rs.html#item-enum-ToolChoice-68">ToolChoice</a>::<span class="rs-type">Auto</span> =&gt; json!({ &quot;<span class="rs-kw">type</span>&quot;: &quot;auto&quot; }),
+        <a class="symbol-link rs-type" href="eos-llm-client--src-types-rs.html#item-enum-ToolChoice-68">ToolChoice</a>::<span class="rs-type">Any</span> =&gt; json!({ &quot;<span class="rs-kw">type</span>&quot;: &quot;any&quot; }),
+        <a class="symbol-link rs-type" href="eos-llm-client--src-types-rs.html#item-enum-ToolChoice-68">ToolChoice</a>::<span class="rs-type">Tool</span> { name } =&gt; json!({ &quot;<span class="rs-kw">type</span>&quot;: &quot;tool&quot;, &quot;name&quot;: name }),
+    }
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-llm-client/src/clients/anthropic_api_client.rs:411</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn decode_fixture private async fn decode_fixture (raw : &amp; str) -&gt; Vec &lt; Result &lt; LlmStreamEvent , ProviderError &gt; &gt; crates/eos-llm-client/src/clients/anthropic_api_client.rs  ">
+</article><article id="item-fn-decode-fixture-444" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn decode_fixture private async fn decode_fixture (raw : &amp; str) -&gt; Vec &lt; Result &lt; LlmStreamEvent , ProviderError &gt; &gt; crates/eos-llm-client/src/clients/anthropic_api_client.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>decode_fixture</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">async fn decode_fixture (raw : &amp; str) -&gt; Vec &lt; Result &lt; LlmStreamEvent , ProviderError &gt; &gt;</code>
+  <code class="signature">async fn <a class="symbol-link" href="eos-llm-client--src-clients-anthropic-api-client-rs.html#item-fn-decode-fixture-444">decode_fixture</a> (raw : &amp; str) -&gt; Vec &lt; Result &lt; <a class="symbol-link" href="eos-llm-client--src-events-rs.html#item-enum-LlmStreamEvent-15">LlmStreamEvent</a> , <a class="symbol-link" href="eos-llm-client--src-error-rs.html#item-struct-ProviderError-29">ProviderError</a> &gt; &gt;</code>
   <div class="tags"><span>async</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-llm-client--src-clients-anthropic-api-client-rs.html#item-fn-decode-fixture-444">decode_fixture</a>(raw: &amp;str) -&gt; <span class="rs-type">Vec</span>&lt;<span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-llm-client--src-events-rs.html#item-enum-LlmStreamEvent-15">LlmStreamEvent</a>, <a class="symbol-link rs-type" href="eos-llm-client--src-error-rs.html#item-struct-ProviderError-29">ProviderError</a>&gt;&gt; {
+        <span class="rs-kw">let</span> bytes = <span class="rs-type">Bytes</span>::from(raw.to_owned());
+        <span class="rs-kw">let</span> byte_stream = futures::stream::iter(vec![<span class="rs-type">Ok</span>::&lt;<span class="rs-type">Bytes</span>, <a class="symbol-link rs-type" href="eos-llm-client--src-error-rs.html#item-struct-ProviderError-29">ProviderError</a>&gt;(bytes)]);
+        <a class="symbol-link rs-fn" href="eos-llm-client--src-clients-anthropic-api-client-rs.html#item-fn-decode-anthropic-168">decode_anthropic</a>(<a class="symbol-link rs-fn" href="eos-llm-client--src-sse-rs.html#item-fn-frame-stream-139">frame_stream</a>(byte_stream), <span class="rs-type">Some</span>(&quot;req-test&quot;.to_owned()))
+            .collect()
+            .<span class="rs-kw">await</span>
+    }
+</code></pre>
+</details>
 
   <p class="source">crates/eos-llm-client/src/clients/anthropic_api_client.rs:444</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn in_stream_error_frame_is_swallowed_at_decoder_level private async fn in_stream_error_frame_is_swallowed_at_decoder_level () crates/eos-llm-client/src/clients/anthropic_api_client.rs  ">
+</article><article id="item-fn-in-stream-error-frame-is-swallowed-at-decoder-level-461" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn in_stream_error_frame_is_swallowed_at_decoder_level private async fn in_stream_error_frame_is_swallowed_at_decoder_level () crates/eos-llm-client/src/clients/anthropic_api_client.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>in_stream_error_frame_is_swallowed_at_decoder_level</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">async fn in_stream_error_frame_is_swallowed_at_decoder_level ()</code>
-  <div class="tags"><span>async</span></div>
+  <code class="signature">async fn <a class="symbol-link" href="eos-llm-client--src-clients-anthropic-api-client-rs.html#item-fn-in-stream-error-frame-is-swallowed-at-decoder-level-461">in_stream_error_frame_is_swallowed_at_decoder_level</a> ()</code>
+  <div class="tags"><span>async</span><span>tokio::test</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[tokio::test]
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-llm-client--src-clients-anthropic-api-client-rs.html#item-fn-in-stream-error-frame-is-swallowed-at-decoder-level-461">in_stream_error_frame_is_swallowed_at_decoder_level</a>() {
+        <span class="rs-kw">let</span> sse = concat!(
+            &quot;event: content_block_start\n&quot;,
+            &quot;data: {\&quot;<span class="rs-kw">type</span>\&quot;:\&quot;content_block_start\&quot;,\&quot;index\&quot;:0,\&quot;content_block\&quot;:{\&quot;<span class="rs-kw">type</span>\&quot;:\&quot;text\&quot;,\&quot;text\&quot;:\&quot;\&quot;}}\n&quot;,
+            &quot;\n&quot;,
+            &quot;event: content_block_delta\n&quot;,
+            &quot;data: {\&quot;<span class="rs-kw">type</span>\&quot;:\&quot;content_block_delta\&quot;,\&quot;index\&quot;:0,\&quot;delta\&quot;:{\&quot;<span class="rs-kw">type</span>\&quot;:\&quot;text_delta\&quot;,\&quot;text\&quot;:\&quot;hi\&quot;}}\n&quot;,
+            &quot;\n&quot;,
+            &quot;event: error\n&quot;,
+            &quot;data: {\&quot;<span class="rs-kw">type</span>\&quot;:\&quot;error\&quot;,\&quot;error\&quot;:{\&quot;<span class="rs-kw">type</span>\&quot;:\&quot;overloaded_error\&quot;,\&quot;message\&quot;:\&quot;overloaded\&quot;}}\n&quot;,
+        );
+        <span class="rs-kw">let</span> results = <a class="symbol-link rs-fn" href="eos-llm-client--src-clients-anthropic-api-client-rs.html#item-fn-decode-fixture-444">decode_fixture</a>(sse).<span class="rs-kw">await</span>;
+        <span class="rs-comment">// The text delta before the error still decodes.</span>
+        assert!(results.iter().any(|event| matches!(
+            event,
+            <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-llm-client--src-events-rs.html#item-enum-LlmStreamEvent-15">LlmStreamEvent</a>::<span class="rs-type">AssistantTextDelta</span> { text }) <span class="rs-kw">if</span> text == &quot;hi&quot;
+        )));
+        <span class="rs-comment">// At the decoder boundary the error frame yields neither an `Err` nor a</span>
+        <span class="rs-comment">// terminal completion (the loop later maps the missing completion to a</span>
+        <span class="rs-comment">// generic stream-ended error).</span>
+        assert!(
+            results.iter().all(<span class="rs-type">Result</span>::is_ok),
+            &quot;the decoder does not surface the provider error frame <span class="rs-kw">as</span> an <span class="rs-type">Err</span>&quot;
+        );
+        assert!(
+            !results
+                .iter()
+                .any(|event| matches!(event, <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-llm-client--src-events-rs.html#item-enum-LlmStreamEvent-15">LlmStreamEvent</a>::<span class="rs-type">AssistantMessageComplete</span> { .. }))),
+            &quot;no completion is emitted <span class="rs-kw">for</span> an error-terminated stream&quot;
+        );
+    }
+</code></pre>
+</details>
 
   <p class="source">crates/eos-llm-client/src/clients/anthropic_api_client.rs:461</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn decodes_anthropic_sse_fixture private async fn decodes_anthropic_sse_fixture () crates/eos-llm-client/src/clients/anthropic_api_client.rs  ">
+</article><article id="item-fn-decodes-anthropic-sse-fixture-497" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn decodes_anthropic_sse_fixture private async fn decodes_anthropic_sse_fixture () crates/eos-llm-client/src/clients/anthropic_api_client.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>decodes_anthropic_sse_fixture</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">async fn decodes_anthropic_sse_fixture ()</code>
-  <div class="tags"><span>async</span></div>
+  <code class="signature">async fn <a class="symbol-link" href="eos-llm-client--src-clients-anthropic-api-client-rs.html#item-fn-decodes-anthropic-sse-fixture-497">decodes_anthropic_sse_fixture</a> ()</code>
+  <div class="tags"><span>async</span><span>tokio::test</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[tokio::test]
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-llm-client--src-clients-anthropic-api-client-rs.html#item-fn-decodes-anthropic-sse-fixture-497">decodes_anthropic_sse_fixture</a>() {
+        <span class="rs-kw">let</span> events: <span class="rs-type">Vec</span>&lt;<a class="symbol-link rs-type" href="eos-llm-client--src-events-rs.html#item-enum-LlmStreamEvent-15">LlmStreamEvent</a>&gt; =
+            <a class="symbol-link rs-fn" href="eos-llm-client--src-clients-anthropic-api-client-rs.html#item-fn-decode-fixture-444">decode_fixture</a>(include_str!(&quot;../../tests/fixtures/anthropic/full.sse&quot;))
+                .<span class="rs-kw">await</span>
+                .into_iter()
+                .map(<span class="rs-type">Result</span>::unwrap)
+                .collect();
+
+        assert_eq!(events.len(), 5);
+        assert_eq!(
+            events[0],
+            <a class="symbol-link rs-type" href="eos-llm-client--src-events-rs.html#item-enum-LlmStreamEvent-15">LlmStreamEvent</a>::<span class="rs-type">ReasoningDelta</span> {
+                text: &quot;<span class="rs-type">Let</span> me think&quot;.into()
+            }
+        );
+        assert_eq!(
+            events[1],
+            <a class="symbol-link rs-type" href="eos-llm-client--src-events-rs.html#item-enum-LlmStreamEvent-15">LlmStreamEvent</a>::<span class="rs-type">AssistantTextDelta</span> {
+                text: &quot;<span class="rs-type">Hello</span>&quot;.into()
+            }
+        );
+        assert_eq!(
+            events[2],
+            <a class="symbol-link rs-type" href="eos-llm-client--src-events-rs.html#item-enum-LlmStreamEvent-15">LlmStreamEvent</a>::<span class="rs-type">AssistantTextDelta</span> {
+                text: &quot; world&quot;.into()
+            }
+        );
+
+        <span class="rs-kw">match</span> &amp;events[3] {
+            <a class="symbol-link rs-type" href="eos-llm-client--src-events-rs.html#item-enum-LlmStreamEvent-15">LlmStreamEvent</a>::<span class="rs-type">ToolUseDelta</span> {
+                tool_use_id,
+                name,
+                input,
+            } =&gt; {
+                assert_eq!(tool_use_id.as_str(), &quot;toolu_01&quot;);
+                assert_eq!(name, &quot;read_file&quot;);
+                assert_eq!(input.get(&quot;path&quot;).and_then(<span class="rs-type">Value</span>::as_str), <span class="rs-type">Some</span>(&quot;foo.txt&quot;));
+            }
+            other =&gt; panic!(&quot;expected tool_use delta, got {other:?}&quot;),
+        }
+
+        <span class="rs-kw">match</span> &amp;events[4] {
+            <a class="symbol-link rs-type" href="eos-llm-client--src-events-rs.html#item-enum-LlmStreamEvent-15">LlmStreamEvent</a>::<span class="rs-type">AssistantMessageComplete</span> {
+                message,
+                usage,
+                stop_reason,
+            } =&gt; {
+                assert_eq!(usage.input_tokens, 10);
+                assert_eq!(usage.output_tokens, 15);
+                assert_eq!(*stop_reason, <span class="rs-type">Some</span>(<a class="symbol-link rs-type" href="eos-llm-client--src-events-rs.html#item-enum-StopReason-53">StopReason</a>::<span class="rs-type">ToolUse</span>));
+                assert_eq!(message.content.len(), 3);
+                assert_eq!(message.<a class="symbol-link rs-fn" href="eos-llm-client--src-message-rs.html#method-assistant-text-110">assistant_text</a>(), &quot;<span class="rs-type">Hello</span> world&quot;);
+                assert_eq!(message.<a class="symbol-link rs-fn" href="eos-llm-client--src-message-rs.html#method-reasoning-text-122">reasoning_text</a>(), &quot;<span class="rs-type">Let</span> me think&quot;);
+                assert_eq!(message.<a class="symbol-link rs-fn" href="eos-llm-client--src-message-rs.html#method-tool-uses-134">tool_uses</a>().count(), 1);
+            }
+            other =&gt; panic!(&quot;expected complete, got {other:?}&quot;),
+        }
+    }
+</code></pre>
+</details>
 
   <p class="source">crates/eos-llm-client/src/clients/anthropic_api_client.rs:497</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn reasoning_compat_decode_maps_thinking_delta private async fn reasoning_compat_decode_maps_thinking_delta () crates/eos-llm-client/src/clients/anthropic_api_client.rs  ">
+</article><article id="item-fn-reasoning-compat-decode-maps-thinking-delta-560" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn reasoning_compat_decode_maps_thinking_delta private async fn reasoning_compat_decode_maps_thinking_delta () crates/eos-llm-client/src/clients/anthropic_api_client.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>reasoning_compat_decode_maps_thinking_delta</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">async fn reasoning_compat_decode_maps_thinking_delta ()</code>
-  <div class="tags"><span>async</span></div>
+  <code class="signature">async fn <a class="symbol-link" href="eos-llm-client--src-clients-anthropic-api-client-rs.html#item-fn-reasoning-compat-decode-maps-thinking-delta-560">reasoning_compat_decode_maps_thinking_delta</a> ()</code>
+  <div class="tags"><span>async</span><span>tokio::test</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[tokio::test]
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-llm-client--src-clients-anthropic-api-client-rs.html#item-fn-reasoning-compat-decode-maps-thinking-delta-560">reasoning_compat_decode_maps_thinking_delta</a>() {
+        <span class="rs-kw">let</span> sse = concat!(
+            &quot;event: content_block_start\n&quot;,
+            &quot;data: {\&quot;<span class="rs-kw">type</span>\&quot;:\&quot;content_block_start\&quot;,\&quot;index\&quot;:0,\&quot;content_block\&quot;:{\&quot;<span class="rs-kw">type</span>\&quot;:\&quot;thinking\&quot;,\&quot;thinking\&quot;:\&quot;\&quot;}}\n&quot;,
+            &quot;\n&quot;,
+            &quot;event: content_block_delta\n&quot;,
+            &quot;data: {\&quot;<span class="rs-kw">type</span>\&quot;:\&quot;content_block_delta\&quot;,\&quot;index\&quot;:0,\&quot;delta\&quot;:{\&quot;<span class="rs-kw">type</span>\&quot;:\&quot;thinking_delta\&quot;,\&quot;thinking\&quot;:\&quot;reasoning step\&quot;}}\n&quot;,
+        );
+        <span class="rs-kw">let</span> events: <span class="rs-type">Vec</span>&lt;<a class="symbol-link rs-type" href="eos-llm-client--src-events-rs.html#item-enum-LlmStreamEvent-15">LlmStreamEvent</a>&gt; = <a class="symbol-link rs-fn" href="eos-llm-client--src-clients-anthropic-api-client-rs.html#item-fn-decode-fixture-444">decode_fixture</a>(sse)
+            .<span class="rs-kw">await</span>
+            .into_iter()
+            .map(<span class="rs-type">Result</span>::unwrap)
+            .collect();
+        assert_eq!(
+            events,
+            vec![<a class="symbol-link rs-type" href="eos-llm-client--src-events-rs.html#item-enum-LlmStreamEvent-15">LlmStreamEvent</a>::<span class="rs-type">ReasoningDelta</span> {
+                text: &quot;reasoning step&quot;.into()
+            }]
+        );
+    }
+</code></pre>
+</details>
 
   <p class="source">crates/eos-llm-client/src/clients/anthropic_api_client.rs:560</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn encode_projects_tools_per_provider private fn encode_projects_tools_per_provider () crates/eos-llm-client/src/clients/anthropic_api_client.rs  ">
+</article><article id="item-fn-encode-projects-tools-per-provider-584" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn encode_projects_tools_per_provider private fn encode_projects_tools_per_provider () crates/eos-llm-client/src/clients/anthropic_api_client.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>encode_projects_tools_per_provider</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn encode_projects_tools_per_provider ()</code>
-  <div class="tags"></div>
+  <code class="signature">fn <a class="symbol-link" href="eos-llm-client--src-clients-anthropic-api-client-rs.html#item-fn-encode-projects-tools-per-provider-584">encode_projects_tools_per_provider</a> ()</code>
+  <div class="tags"><span>test</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-llm-client--src-clients-anthropic-api-client-rs.html#item-fn-encode-projects-tools-per-provider-584">encode_projects_tools_per_provider</a>() {
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> input_schema = <span class="rs-type">JsonObject</span>::<a class="symbol-link rs-fn" href="eos-llm-client--src-client-rs.html#method-new-56">new</a>();
+        input_schema.insert(&quot;<span class="rs-kw">type</span>&quot;.into(), json!(&quot;object&quot;));
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> output_schema = <span class="rs-type">JsonObject</span>::<a class="symbol-link rs-fn" href="eos-llm-client--src-client-rs.html#method-new-56">new</a>();
+        output_schema.insert(&quot;<span class="rs-kw">type</span>&quot;.into(), json!(&quot;string&quot;));
+        <span class="rs-kw">let</span> spec = <a class="symbol-link rs-type" href="eos-llm-client--src-types-rs.html#item-struct-ToolSpec-30">ToolSpec</a>::<a class="symbol-link rs-fn" href="eos-llm-client--src-client-rs.html#method-new-56">new</a>(
+            &quot;read_file&quot;,
+            &quot;<span class="rs-type">Read</span> a file&quot;,
+            input_schema,
+            <span class="rs-type">Some</span>(output_schema),
+        );
+
+        <span class="rs-kw">let</span> message = <a class="symbol-link rs-type" href="eos-llm-client--src-message-rs.html#item-struct-Message-88">Message</a> {
+            role: <a class="symbol-link rs-type" href="eos-llm-client--src-message-rs.html#item-enum-MessageRole-10">MessageRole</a>::<span class="rs-type">Assistant</span>,
+            content: vec![
+                <a class="symbol-link rs-type" href="eos-llm-client--src-message-rs.html#item-enum-ContentBlock-34">ContentBlock</a>::<span class="rs-type">Reasoning</span> {
+                    text: &quot;private&quot;.into(),
+                },
+                <a class="symbol-link rs-type" href="eos-llm-client--src-message-rs.html#item-enum-ContentBlock-34">ContentBlock</a>::<span class="rs-type">Text</span> { text: &quot;hi&quot;.into() },
+            ],
+        };
+        <span class="rs-kw">let</span> request = <a class="symbol-link rs-type" href="eos-llm-client--src-types-rs.html#item-struct-LlmRequest-113">LlmRequest</a>::<a class="symbol-link rs-fn" href="eos-llm-client--src-types-rs.html#method-builder-140">builder</a>(&quot;claude&quot;)
+            .<a class="symbol-link rs-fn" href="eos-llm-client--src-types-rs.html#method-message-174">message</a>(message)
+            .<a class="symbol-link rs-fn" href="eos-llm-client--src-types-rs.html#method-tools-192">tools</a>(vec![spec])
+            .<a class="symbol-link rs-fn" href="eos-llm-client--src-types-rs.html#method-system-prompt-180">system_prompt</a>(&quot;sys&quot;)
+            .<a class="symbol-link rs-fn" href="eos-llm-client--src-types-rs.html#method-build-210">build</a>();
+        <span class="rs-kw">let</span> body = <a class="symbol-link rs-fn" href="eos-llm-client--src-clients-anthropic-api-client-rs.html#item-fn-encode-anthropic-body-318">encode_anthropic_body</a>(&amp;request);
+
+        <span class="rs-kw">let</span> tool = &amp;body[&quot;tools&quot;][0];
+        assert_eq!(tool[&quot;name&quot;], json!(&quot;read_file&quot;));
+        assert!(tool.get(&quot;input_schema&quot;).is_some());
+        assert!(
+            tool.get(&quot;output_schema&quot;).is_none(),
+            &quot;anthropic drops output_schema&quot;
+        );
+
+        <span class="rs-kw">let</span> content = body[&quot;messages&quot;][0][&quot;content&quot;].as_array().unwrap();
+        assert_eq!(
+            content.len(),
+            1,
+            &quot;reasoning block dropped from wire messages&quot;
+        );
+        assert_eq!(content[0][&quot;<span class="rs-kw">type</span>&quot;], json!(&quot;text&quot;));
+        assert_eq!(content[0][&quot;text&quot;], json!(&quot;hi&quot;));
+
+        assert_eq!(body[&quot;stream&quot;], json!(<span class="rs-kw">true</span>));
+        assert_eq!(body[&quot;system&quot;], json!(&quot;sys&quot;));
+    }
+</code></pre>
+</details>
 
   <p class="source">crates/eos-llm-client/src/clients/anthropic_api_client.rs:584</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn tool_result_wire_omits_metadata_and_is_terminal private fn tool_result_wire_omits_metadata_and_is_terminal () crates/eos-llm-client/src/clients/anthropic_api_client.rs  ">
+</article><article id="item-fn-tool-result-wire-omits-metadata-and-is-terminal-634" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn tool_result_wire_omits_metadata_and_is_terminal private fn tool_result_wire_omits_metadata_and_is_terminal () crates/eos-llm-client/src/clients/anthropic_api_client.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>tool_result_wire_omits_metadata_and_is_terminal</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn tool_result_wire_omits_metadata_and_is_terminal ()</code>
-  <div class="tags"></div>
+  <code class="signature">fn <a class="symbol-link" href="eos-llm-client--src-clients-anthropic-api-client-rs.html#item-fn-tool-result-wire-omits-metadata-and-is-terminal-634">tool_result_wire_omits_metadata_and_is_terminal</a> ()</code>
+  <div class="tags"><span>test</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-llm-client--src-clients-anthropic-api-client-rs.html#item-fn-tool-result-wire-omits-metadata-and-is-terminal-634">tool_result_wire_omits_metadata_and_is_terminal</a>() {
+        <span class="rs-kw">let</span> tuid: <span class="rs-type">ToolUseId</span> = &quot;toolu_9&quot;.<a class="symbol-link rs-fn" href="eos-llm-client--src-events-rs.html#method-parse-70">parse</a>().unwrap();
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> metadata = <span class="rs-type">JsonObject</span>::<a class="symbol-link rs-fn" href="eos-llm-client--src-client-rs.html#method-new-56">new</a>();
+        metadata.insert(&quot;secret&quot;.into(), json!(&quot;nope&quot;));
+        <span class="rs-kw">let</span> message = <a class="symbol-link rs-type" href="eos-llm-client--src-message-rs.html#item-struct-Message-88">Message</a> {
+            role: <a class="symbol-link rs-type" href="eos-llm-client--src-message-rs.html#item-enum-MessageRole-10">MessageRole</a>::<span class="rs-type">User</span>,
+            content: vec![<a class="symbol-link rs-type" href="eos-llm-client--src-message-rs.html#item-enum-ContentBlock-34">ContentBlock</a>::<span class="rs-type">ToolResult</span> {
+                tool_use_id: tuid,
+                content: &quot;ok&quot;.into(),
+                is_error: <span class="rs-kw">false</span>,
+                metadata,
+                is_terminal: <span class="rs-kw">true</span>,
+            }],
+        };
+        <span class="rs-kw">let</span> body = <a class="symbol-link rs-fn" href="eos-llm-client--src-clients-anthropic-api-client-rs.html#item-fn-encode-anthropic-body-318">encode_anthropic_body</a>(&amp;<a class="symbol-link rs-type" href="eos-llm-client--src-types-rs.html#item-struct-LlmRequest-113">LlmRequest</a>::<a class="symbol-link rs-fn" href="eos-llm-client--src-types-rs.html#method-builder-140">builder</a>(&quot;m&quot;).<a class="symbol-link rs-fn" href="eos-llm-client--src-types-rs.html#method-message-174">message</a>(message).<a class="symbol-link rs-fn" href="eos-llm-client--src-types-rs.html#method-build-210">build</a>());
+        <span class="rs-kw">let</span> block = &amp;body[&quot;messages&quot;][0][&quot;content&quot;][0];
+        assert_eq!(block[&quot;<span class="rs-kw">type</span>&quot;], json!(&quot;tool_result&quot;));
+        assert!(
+            block.get(&quot;metadata&quot;).is_none(),
+            &quot;metadata omitted from wire&quot;
+        );
+        assert!(
+            block.get(&quot;is_terminal&quot;).is_none(),
+            &quot;is_terminal omitted from wire&quot;
+        );
+        assert_eq!(block[&quot;content&quot;], json!(&quot;ok&quot;));
+    }
+</code></pre>
+</details>
 
   <p class="source">crates/eos-llm-client/src/clients/anthropic_api_client.rs:634</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn system_notification_wraps_in_reminder_tag private fn system_notification_wraps_in_reminder_tag () crates/eos-llm-client/src/clients/anthropic_api_client.rs  ">
+</article><article id="item-fn-system-notification-wraps-in-reminder-tag-663" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn system_notification_wraps_in_reminder_tag private fn system_notification_wraps_in_reminder_tag () crates/eos-llm-client/src/clients/anthropic_api_client.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>system_notification_wraps_in_reminder_tag</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn system_notification_wraps_in_reminder_tag ()</code>
-  <div class="tags"></div>
+  <code class="signature">fn <a class="symbol-link" href="eos-llm-client--src-clients-anthropic-api-client-rs.html#item-fn-system-notification-wraps-in-reminder-tag-663">system_notification_wraps_in_reminder_tag</a> ()</code>
+  <div class="tags"><span>test</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-llm-client--src-clients-anthropic-api-client-rs.html#item-fn-system-notification-wraps-in-reminder-tag-663">system_notification_wraps_in_reminder_tag</a>() {
+        <span class="rs-kw">let</span> message = <a class="symbol-link rs-type" href="eos-llm-client--src-message-rs.html#item-struct-Message-88">Message</a> {
+            role: <a class="symbol-link rs-type" href="eos-llm-client--src-message-rs.html#item-enum-MessageRole-10">MessageRole</a>::<span class="rs-type">User</span>,
+            content: vec![<a class="symbol-link rs-type" href="eos-llm-client--src-message-rs.html#item-enum-ContentBlock-34">ContentBlock</a>::<span class="rs-type">SystemNotification</span> {
+                text: &quot;stay on task&quot;.into(),
+            }],
+        };
+        <span class="rs-kw">let</span> body = <a class="symbol-link rs-fn" href="eos-llm-client--src-clients-anthropic-api-client-rs.html#item-fn-encode-anthropic-body-318">encode_anthropic_body</a>(&amp;<a class="symbol-link rs-type" href="eos-llm-client--src-types-rs.html#item-struct-LlmRequest-113">LlmRequest</a>::<a class="symbol-link rs-fn" href="eos-llm-client--src-types-rs.html#method-builder-140">builder</a>(&quot;m&quot;).<a class="symbol-link rs-fn" href="eos-llm-client--src-types-rs.html#method-message-174">message</a>(message).<a class="symbol-link rs-fn" href="eos-llm-client--src-types-rs.html#method-build-210">build</a>());
+        <span class="rs-kw">let</span> block = &amp;body[&quot;messages&quot;][0][&quot;content&quot;][0];
+        assert_eq!(block[&quot;<span class="rs-kw">type</span>&quot;], json!(&quot;text&quot;));
+        assert_eq!(
+            block[&quot;text&quot;],
+            json!(&quot;&lt;system-reminder&gt;\nstay on task\n&lt;/system-reminder&gt;&quot;)
+        );
+    }
+</code></pre>
+</details>
 
   <p class="source">crates/eos-llm-client/src/clients/anthropic_api_client.rs:663</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn claude_coding_plan_uses_oauth_transport_shape private fn claude_coding_plan_uses_oauth_transport_shape () crates/eos-llm-client/src/clients/anthropic_api_client.rs  ">
+</article><article id="item-fn-claude-coding-plan-uses-oauth-transport-shape-680" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn claude_coding_plan_uses_oauth_transport_shape private fn claude_coding_plan_uses_oauth_transport_shape () crates/eos-llm-client/src/clients/anthropic_api_client.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>claude_coding_plan_uses_oauth_transport_shape</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn claude_coding_plan_uses_oauth_transport_shape ()</code>
-  <div class="tags"></div>
+  <code class="signature">fn <a class="symbol-link" href="eos-llm-client--src-clients-anthropic-api-client-rs.html#item-fn-claude-coding-plan-uses-oauth-transport-shape-680">claude_coding_plan_uses_oauth_transport_shape</a> ()</code>
+  <div class="tags"><span>test</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-llm-client--src-clients-anthropic-api-client-rs.html#item-fn-claude-coding-plan-uses-oauth-transport-shape-680">claude_coding_plan_uses_oauth_transport_shape</a>() {
+        <span class="rs-kw">let</span> client = <a class="symbol-link rs-type" href="eos-llm-client--src-clients-anthropic-api-client-rs.html#item-struct-AnthropicApiClient-41">AnthropicApiClient</a>::<a class="symbol-link rs-fn" href="eos-llm-client--src-clients-anthropic-api-client-rs.html#method-new-claude-coding-plan-61">new_claude_coding_plan</a>(
+            &quot;https:<span class="rs-comment">//api.anthropic.com",</span>
+            <a class="symbol-link rs-type" href="eos-llm-client.html#item-enum-Auth-38">Auth</a>::<a class="symbol-link rs-fn" href="eos-llm-client.html#method-bearer-68">bearer</a>(&quot;oauth-token&quot;),
+            <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-llm-client--src-client-rs.html#method-new-56">new</a>(<span class="rs-type">RetryConfig</span>::default()),
+            <span class="rs-type">HeaderValue</span>::from_static(&quot;claude-code-20250219,oauth-2025-04-20&quot;),
+        )
+        .unwrap();
+
+        assert_eq!(
+            client.endpoint.as_str(),
+            &quot;https:<span class="rs-comment">//api.anthropic.com/v1/messages"</span>
+        );
+        <span class="rs-kw">let</span> headers = client.<a class="symbol-link rs-fn" href="eos-llm-client--src-clients-anthropic-api-client-rs.html#method-build-headers-99">build_headers</a>().unwrap();
+        assert_eq!(
+            headers.get(&quot;anthropic-beta&quot;).unwrap(),
+            &quot;claude-code-20250219,oauth-2025-04-20&quot;
+        );
+        assert_eq!(headers.get(&quot;x-app&quot;).unwrap(), &quot;cli&quot;);
+        assert_eq!(headers.get(&quot;user-agent&quot;).unwrap(), &quot;claude-cli/2.1.75&quot;);
+        assert_eq!(
+            headers
+                .get(&quot;anthropic-dangerous-direct-browser-access&quot;)
+                .unwrap(),
+            &quot;<span class="rs-kw">true</span>&quot;
+        );
+        assert_eq!(
+            headers.get(&quot;authorization&quot;).unwrap().to_str().unwrap(),
+            &quot;<span class="rs-type">Bearer</span> oauth-token&quot;
+        );
+        assert!(headers.get(&quot;x-api-key&quot;).is_none());
+
+        <span class="rs-kw">let</span> body = <a class="symbol-link rs-fn" href="eos-llm-client--src-clients-anthropic-api-client-rs.html#item-fn-encode-anthropic-body-with-options-323">encode_anthropic_body_with_options</a>(
+            &amp;<a class="symbol-link rs-type" href="eos-llm-client--src-types-rs.html#item-struct-LlmRequest-113">LlmRequest</a>::<a class="symbol-link rs-fn" href="eos-llm-client--src-types-rs.html#method-builder-140">builder</a>(&quot;claude&quot;)
+                .<a class="symbol-link rs-fn" href="eos-llm-client--src-types-rs.html#method-system-prompt-180">system_prompt</a>(&quot;repo prompt&quot;)
+                .<a class="symbol-link rs-fn" href="eos-llm-client--src-types-rs.html#method-message-174">message</a>(<a class="symbol-link rs-type" href="eos-llm-client--src-message-rs.html#item-struct-Message-88">Message</a>::<a class="symbol-link rs-fn" href="eos-llm-client--src-message-rs.html#method-from-user-text-101">from_user_text</a>(&quot;hi&quot;))
+                .<a class="symbol-link rs-fn" href="eos-llm-client--src-types-rs.html#method-build-210">build</a>(),
+            <span class="rs-kw">true</span>,
+        );
+        assert_eq!(
+            body[&quot;system&quot;],
+            json!([
+                {
+                    &quot;<span class="rs-kw">type</span>&quot;: &quot;text&quot;,
+                    &quot;text&quot;: &quot;<span class="rs-type">You</span> are <span class="rs-type">Claude</span> <span class="rs-type">Code</span>, <span class="rs-type">Anthropic</span>&#x27;s official <span class="rs-type">CLI</span> <span class="rs-kw">for</span> <span class="rs-type">Claude</span>.&quot;
+                },
+                {
+                    &quot;<span class="rs-kw">type</span>&quot;: &quot;text&quot;,
+                    &quot;text&quot;: &quot;repo prompt&quot;
+                }
+            ])
+        );
+    }
+</code></pre>
+</details>
 
   <p class="source">crates/eos-llm-client/src/clients/anthropic_api_client.rs:680</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn parse_error_log_omits_secrets private async fn parse_error_log_omits_secrets () crates/eos-llm-client/src/clients/anthropic_api_client.rs  ">
+</article><article id="item-fn-parse-error-log-omits-secrets-737" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn parse_error_log_omits_secrets private async fn parse_error_log_omits_secrets () crates/eos-llm-client/src/clients/anthropic_api_client.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>parse_error_log_omits_secrets</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">async fn parse_error_log_omits_secrets ()</code>
-  <div class="tags"><span>async</span></div>
+  <code class="signature">async fn <a class="symbol-link" href="eos-llm-client--src-clients-anthropic-api-client-rs.html#item-fn-parse-error-log-omits-secrets-737">parse_error_log_omits_secrets</a> ()</code>
+  <div class="tags"><span>async</span><span>tokio::test</span><span>traced_test</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[tokio::test]
+    #[traced_test]
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-llm-client--src-clients-anthropic-api-client-rs.html#item-fn-parse-error-log-omits-secrets-737">parse_error_log_omits_secrets</a>() {
+        <span class="rs-kw">let</span> results =
+            <a class="symbol-link rs-fn" href="eos-llm-client--src-clients-anthropic-api-client-rs.html#item-fn-decode-fixture-444">decode_fixture</a>(include_str!(&quot;../../tests/fixtures/anthropic/malformed.sse&quot;)).<span class="rs-kw">await</span>;
+        <span class="rs-comment">// The stream ends with exactly one Decode error item that preserves the</span>
+        <span class="rs-comment">// captured request-id (§8.8).</span>
+        <span class="rs-kw">let</span> last = results.last().expect(&quot;at least one item&quot;);
+        <span class="rs-kw">match</span> last {
+            <span class="rs-type">Err</span>(e) =&gt; {
+                assert_eq!(e.kind, <span class="rs-kw">crate</span>::error::<a class="symbol-link rs-type" href="eos-llm-client--src-error-rs.html#item-enum-ProviderErrorKind-6">ProviderErrorKind</a>::<span class="rs-type">Decode</span>);
+                assert_eq!(e.request_id.as_deref(), <span class="rs-type">Some</span>(&quot;req-test&quot;));
+            }
+            <span class="rs-type">Ok</span>(event) =&gt; panic!(&quot;expected a decode error, got {event:?}&quot;),
+        }
+
+        assert!(logs_contain(&quot;anthropic sse frame failed to parse&quot;));
+        assert!(!logs_contain(&quot;<span class="rs-type">SUPERSECRET</span>&quot;), &quot;log leaked frame content&quot;);
+    }
+</code></pre>
+</details>
 
   <p class="source">crates/eos-llm-client/src/clients/anthropic_api_client.rs:737</p>
 </article></div>
 </section></div>
 </main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/eos-llm-client/src/clients/anthropic_api_client.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-comment">//! The Anthropic Messages client: encode an [`LlmRequest`] to `/v1/messages`</span>
+<span class="rs-comment">//! (`stream: true`), decode the SSE response into normalized</span>
+<span class="rs-comment">//! [`LlmStreamEvent`]s, and wrap attempts in the retry gate.</span>
+<span class="rs-comment">//!</span>
+<span class="rs-comment">//! Source: `providers/clients/anthropic_native.py` — the official SDK is</span>
+<span class="rs-comment">//! replaced by direct `reqwest` + the `sse.rs` splitter. All provider projection</span>
+<span class="rs-comment">//! lives here (GC-llm-client-02): Anthropic encode drops `Reasoning` blocks and</span>
+<span class="rs-comment">//! `ToolSpec.output_schema`, and omits `metadata`/`is_terminal` from</span>
+<span class="rs-comment">//! `tool_result` wire bodies. Tool-use blocks are emitted mid-stream at</span>
+<span class="rs-comment">//! `content_block_stop` (the Rust advantage). Decode is a pure</span>
+<span class="rs-comment">//! frame-stream → event-stream function, independent of `reqwest`, so fixtures</span>
+<span class="rs-comment">//! replay through it with no HTTP.</span>
+
+<span class="rs-kw">use</span> std::collections::<span class="rs-type">HashMap</span>;
+<span class="rs-kw">use</span> std::sync::<span class="rs-type">Arc</span>;
+
+<span class="rs-kw">use</span> bytes::<span class="rs-type">Bytes</span>;
+<span class="rs-kw">use</span> eos_config::<span class="rs-type">RetryConfig</span>;
+<span class="rs-kw">use</span> eos_types::<span class="rs-type">ToolUseId</span>;
+<span class="rs-kw">use</span> futures::future::<span class="rs-type">BoxFuture</span>;
+<span class="rs-kw">use</span> futures::{<span class="rs-type">Stream</span>, <span class="rs-type">StreamExt</span>};
+<span class="rs-kw">use</span> reqwest::header::{<span class="rs-type">HeaderMap</span>, <span class="rs-type">HeaderName</span>, <span class="rs-type">HeaderValue</span>, <span class="rs-type">ACCEPT</span>, <span class="rs-type">CONTENT_TYPE</span>, <span class="rs-type">USER_AGENT</span>};
+<span class="rs-kw">use</span> serde_json::{json, <span class="rs-type">Value</span>};
+
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::auth::<a class="symbol-link rs-type" href="eos-llm-client.html#item-enum-Auth-38">Auth</a>;
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::client::{build_endpoint, open_stream, <a class="symbol-link rs-type" href="eos-llm-client--src-client-rs.html#item-trait-LlmClient-28">LlmClient</a>, <a class="symbol-link rs-type" href="eos-llm-client--src-client-rs.html#item-type-LlmStream-22">LlmStream</a>};
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::error::<a class="symbol-link rs-type" href="eos-llm-client--src-error-rs.html#item-struct-ProviderError-29">ProviderError</a>;
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::events::{<a class="symbol-link rs-type" href="eos-llm-client--src-events-rs.html#item-enum-LlmStreamEvent-15">LlmStreamEvent</a>, <a class="symbol-link rs-type" href="eos-llm-client--src-events-rs.html#item-enum-StopReason-53">StopReason</a>};
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::message::{<a class="symbol-link rs-type" href="eos-llm-client--src-message-rs.html#item-enum-ContentBlock-34">ContentBlock</a>, <a class="symbol-link rs-type" href="eos-llm-client--src-message-rs.html#item-struct-Message-88">Message</a>, <a class="symbol-link rs-type" href="eos-llm-client--src-message-rs.html#item-enum-MessageRole-10">MessageRole</a>};
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::retry::retry_stream;
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::sse::{json_str, json_u32, json_usize, parse_sse_value, parse_tool_args};
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::types::{<a class="symbol-link rs-type" href="eos-llm-client--src-types-rs.html#item-struct-LlmRequest-113">LlmRequest</a>, <a class="symbol-link rs-type" href="eos-llm-client--src-types-rs.html#item-enum-ToolChoice-68">ToolChoice</a>, <a class="symbol-link rs-type" href="eos-llm-client--src-types-rs.html#item-struct-ToolSpec-30">ToolSpec</a>, <a class="symbol-link rs-type" href="eos-llm-client--src-types-rs.html#item-struct-UsageSnapshot-12">UsageSnapshot</a>};
+
+<span class="rs-comment">/// The mandatory Anthropic API version header value.</span>
+<span class="rs-kw">const</span> <span class="rs-type">ANTHROPIC_VERSION</span>: &amp;str = &quot;2023-06-01&quot;;
+<span class="rs-comment">/// The Messages streaming endpoint path.</span>
+<span class="rs-kw">const</span> <span class="rs-type">MESSAGES_PATH</span>: &amp;str = &quot;/v1/messages&quot;;
+<span class="rs-comment">/// The Claude Code system identity prepended for OAuth-backed transport.</span>
+<span class="rs-kw">const</span> <span class="rs-type">CLAUDE_CODE_SYSTEM_PROMPT</span>: &amp;str = &quot;<span class="rs-type">You</span> are <span class="rs-type">Claude</span> <span class="rs-type">Code</span>, <span class="rs-type">Anthropic</span>&#x27;s official <span class="rs-type">CLI</span> <span class="rs-kw">for</span> <span class="rs-type">Claude</span>.&quot;;
+
+<span class="rs-comment">/// The Anthropic-native streaming client.</span>
+#[derive(<span class="rs-type">Debug</span>)]
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-llm-client--src-clients-anthropic-api-client-rs.html#item-struct-AnthropicApiClient-41">AnthropicApiClient</a> {
+    http: reqwest::<span class="rs-type">Client</span>,
+    endpoint: reqwest::<span class="rs-type">Url</span>,
+    auth: <span class="rs-type">Arc</span>&lt;<a class="symbol-link rs-type" href="eos-llm-client.html#item-enum-Auth-38">Auth</a>&gt;,
+    retry: <span class="rs-type">Arc</span>&lt;<span class="rs-type">RetryConfig</span>&gt;,
+    extra_headers: <span class="rs-type">HeaderMap</span>,
+    prepend_claude_code_system_prompt: bool,
+}
+
+<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-llm-client--src-clients-anthropic-api-client-rs.html#item-struct-AnthropicApiClient-41">AnthropicApiClient</a> {
+    <span class="rs-comment">/// Construct a client for `base_url` (e.g. `https://api.anthropic.com`).</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// Returns the outer `Err` only on a malformed base url</span>
+    <span class="rs-comment">/// (`api-parse-dont-validate`).</span>
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-llm-client--src-client-rs.html#method-new-56">new</a>(base_url: &amp;str, auth: <a class="symbol-link rs-type" href="eos-llm-client.html#item-enum-Auth-38">Auth</a>, retry: <span class="rs-type">Arc</span>&lt;<span class="rs-type">RetryConfig</span>&gt;) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-self">Self</span>, <a class="symbol-link rs-type" href="eos-llm-client--src-error-rs.html#item-struct-ProviderError-29">ProviderError</a>&gt; {
+        <span class="rs-self">Self</span>::<a class="symbol-link rs-fn" href="eos-llm-client--src-clients-anthropic-api-client-rs.html#method-new-with-options-82">new_with_options</a>(base_url, auth, retry, <span class="rs-type">HeaderMap</span>::<a class="symbol-link rs-fn" href="eos-llm-client--src-client-rs.html#method-new-56">new</a>(), <span class="rs-kw">false</span>)
+    }
+
+    <span class="rs-comment">/// Construct a client for Claude coding-plan OAuth access tokens.</span>
+    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-llm-client--src-clients-anthropic-api-client-rs.html#method-new-claude-coding-plan-61">new_claude_coding_plan</a>(
+        base_url: &amp;str,
+        auth: <a class="symbol-link rs-type" href="eos-llm-client.html#item-enum-Auth-38">Auth</a>,
+        retry: <span class="rs-type">Arc</span>&lt;<span class="rs-type">RetryConfig</span>&gt;,
+        beta_header: <span class="rs-type">HeaderValue</span>,
+    ) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-self">Self</span>, <a class="symbol-link rs-type" href="eos-llm-client--src-error-rs.html#item-struct-ProviderError-29">ProviderError</a>&gt; {
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> extra_headers = <span class="rs-type">HeaderMap</span>::<a class="symbol-link rs-fn" href="eos-llm-client--src-client-rs.html#method-new-56">new</a>();
+        extra_headers.insert(<span class="rs-type">HeaderName</span>::from_static(&quot;anthropic-beta&quot;), beta_header);
+        extra_headers.insert(
+            <span class="rs-type">HeaderName</span>::from_static(&quot;anthropic-dangerous-direct-browser-access&quot;),
+            <span class="rs-type">HeaderValue</span>::from_static(&quot;<span class="rs-kw">true</span>&quot;),
+        );
+        extra_headers.insert(<span class="rs-type">USER_AGENT</span>, <span class="rs-type">HeaderValue</span>::from_static(&quot;claude-cli/2.1.75&quot;));
+        extra_headers.insert(
+            <span class="rs-type">HeaderName</span>::from_static(&quot;x-app&quot;),
+            <span class="rs-type">HeaderValue</span>::from_static(&quot;cli&quot;),
+        );
+        <span class="rs-self">Self</span>::<a class="symbol-link rs-fn" href="eos-llm-client--src-clients-anthropic-api-client-rs.html#method-new-with-options-82">new_with_options</a>(base_url, auth, retry, extra_headers, <span class="rs-kw">true</span>)
+    }
+
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-llm-client--src-clients-anthropic-api-client-rs.html#method-new-with-options-82">new_with_options</a>(
+        base_url: &amp;str,
+        auth: <a class="symbol-link rs-type" href="eos-llm-client.html#item-enum-Auth-38">Auth</a>,
+        retry: <span class="rs-type">Arc</span>&lt;<span class="rs-type">RetryConfig</span>&gt;,
+        extra_headers: <span class="rs-type">HeaderMap</span>,
+        prepend_claude_code_system_prompt: bool,
+    ) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-self">Self</span>, <a class="symbol-link rs-type" href="eos-llm-client--src-error-rs.html#item-struct-ProviderError-29">ProviderError</a>&gt; {
+        <span class="rs-type">Ok</span>(<span class="rs-self">Self</span> {
+            http: reqwest::<span class="rs-type">Client</span>::<a class="symbol-link rs-fn" href="eos-llm-client--src-client-rs.html#method-new-56">new</a>(),
+            endpoint: <a class="symbol-link rs-fn" href="eos-llm-client--src-client-rs.html#item-fn-build-endpoint-147">build_endpoint</a>(base_url, <span class="rs-type">MESSAGES_PATH</span>)?,
+            auth: <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-llm-client--src-client-rs.html#method-new-56">new</a>(auth),
+            retry,
+            extra_headers,
+            prepend_claude_code_system_prompt,
+        })
+    }
+
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-llm-client--src-clients-anthropic-api-client-rs.html#method-build-headers-99">build_headers</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">HeaderMap</span>, <a class="symbol-link rs-type" href="eos-llm-client--src-error-rs.html#item-struct-ProviderError-29">ProviderError</a>&gt; {
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> headers = <span class="rs-type">HeaderMap</span>::<a class="symbol-link rs-fn" href="eos-llm-client--src-client-rs.html#method-new-56">new</a>();
+        headers.insert(<span class="rs-type">CONTENT_TYPE</span>, <span class="rs-type">HeaderValue</span>::from_static(&quot;application/json&quot;));
+        headers.insert(<span class="rs-type">ACCEPT</span>, <span class="rs-type">HeaderValue</span>::from_static(&quot;text/event-stream&quot;));
+        headers.insert(
+            <span class="rs-type">HeaderName</span>::from_static(&quot;anthropic-version&quot;),
+            <span class="rs-type">HeaderValue</span>::from_static(<span class="rs-type">ANTHROPIC_VERSION</span>),
+        );
+        <span class="rs-kw">for</span> (name, value) <span class="rs-kw">in</span> &amp;<span class="rs-self">self</span>.extra_headers {
+            headers.insert(name, value.clone());
+        }
+        <span class="rs-self">self</span>.auth.<a class="symbol-link rs-fn" href="eos-llm-client.html#method-apply-105">apply</a>(&amp;<span class="rs-kw">mut</span> headers)?;
+        <span class="rs-type">Ok</span>(headers)
+    }
+}
+
+#[async_trait::async_trait]
+<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-llm-client--src-client-rs.html#item-trait-LlmClient-28">LlmClient</a> <span class="rs-kw">for</span> <a class="symbol-link rs-type" href="eos-llm-client--src-clients-anthropic-api-client-rs.html#item-struct-AnthropicApiClient-41">AnthropicApiClient</a> {
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-llm-client--src-client-rs.html#method-stream-message-36">stream_message</a>(&amp;<span class="rs-self">self</span>, request: <a class="symbol-link rs-type" href="eos-llm-client--src-types-rs.html#item-struct-LlmRequest-113">LlmRequest</a>) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-llm-client--src-client-rs.html#item-type-LlmStream-22">LlmStream</a>, <a class="symbol-link rs-type" href="eos-llm-client--src-error-rs.html#item-struct-ProviderError-29">ProviderError</a>&gt; {
+        <span class="rs-comment">// Synchronous build — the only outer-`Err` path (§5).</span>
+        <span class="rs-kw">let</span> body_value = <span class="rs-kw">if</span> <span class="rs-self">self</span>.prepend_claude_code_system_prompt {
+            <a class="symbol-link rs-fn" href="eos-llm-client--src-clients-anthropic-api-client-rs.html#item-fn-encode-anthropic-body-with-options-323">encode_anthropic_body_with_options</a>(&amp;request, <span class="rs-kw">true</span>)
+        } <span class="rs-kw">else</span> {
+            <a class="symbol-link rs-fn" href="eos-llm-client--src-clients-anthropic-api-client-rs.html#item-fn-encode-anthropic-body-318">encode_anthropic_body</a>(&amp;request)
+        };
+        <span class="rs-kw">let</span> body = serde_json::to_vec(&amp;body_value).map_err(|e| {
+            <a class="symbol-link rs-type" href="eos-llm-client--src-error-rs.html#item-struct-ProviderError-29">ProviderError</a>::<a class="symbol-link rs-fn" href="eos-llm-client--src-error-rs.html#method-request-96">request</a>(format!(&quot;request body serialization failed: {e}&quot;))
+        })?;
+        <span class="rs-kw">let</span> body = <span class="rs-type">Bytes</span>::from(body);
+        <span class="rs-kw">let</span> headers = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-llm-client--src-clients-anthropic-api-client-rs.html#method-build-headers-99">build_headers</a>()?;
+        <span class="rs-kw">let</span> http = <span class="rs-self">self</span>.http.clone();
+        <span class="rs-kw">let</span> url = <span class="rs-self">self</span>.endpoint.clone();
+
+        <span class="rs-comment">// Each attempt replays the owned bytes; connect/status/decode errors</span>
+        <span class="rs-comment">// surface as stream items, not the outer `Err`. The shared transport</span>
+        <span class="rs-comment">// plumbing lives in `client::open_stream`; only the decode differs.</span>
+        <span class="rs-kw">let</span> factory = <span class="rs-kw">move</span> || {
+            <span class="rs-kw">let</span> http = http.clone();
+            <span class="rs-kw">let</span> url = url.clone();
+            <span class="rs-kw">let</span> headers = headers.clone();
+            <span class="rs-kw">let</span> body = body.clone();
+            <span class="rs-type">Box</span>::pin(<a class="symbol-link rs-fn" href="eos-llm-client--src-client-rs.html#item-fn-open-stream-177">open_stream</a>(http, url, headers, body, |frames, rid| {
+                <a class="symbol-link rs-fn" href="eos-llm-client--src-clients-anthropic-api-client-rs.html#item-fn-decode-anthropic-168">decode_anthropic</a>(frames, rid)
+            })) <span class="rs-kw">as</span> <span class="rs-type">BoxFuture</span>&lt;&#x27;<span class="rs-kw">static</span>, <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-llm-client--src-client-rs.html#item-type-LlmStream-22">LlmStream</a>, <a class="symbol-link rs-type" href="eos-llm-client--src-error-rs.html#item-struct-ProviderError-29">ProviderError</a>&gt;&gt;
+        };
+        <span class="rs-type">Ok</span>(<a class="symbol-link rs-fn" href="eos-llm-client--src-retry-rs.html#item-fn-retry-stream-21">retry_stream</a>((*<span class="rs-self">self</span>.retry).clone(), factory))
+    }
+}
+
+<span class="rs-comment">/// In-flight reassembly state for one content block.</span>
+#[derive(<span class="rs-type">Debug</span>)]
+<span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-llm-client--src-clients-anthropic-api-client-rs.html#item-struct-BlockAccum-148">BlockAccum</a> {
+    block_type: <span class="rs-type">String</span>,
+    id: <span class="rs-type">String</span>,
+    name: <span class="rs-type">String</span>,
+    text: <span class="rs-type">String</span>,
+    input_json: <span class="rs-type">String</span>,
+}
+
+<span class="rs-comment">/// Decoder state across the whole message stream.</span>
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Default</span>)]
+<span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-llm-client--src-clients-anthropic-api-client-rs.html#item-struct-AnthropicState-158">AnthropicState</a> {
+    blocks: <span class="rs-type">HashMap</span>&lt;usize, <a class="symbol-link rs-type" href="eos-llm-client--src-clients-anthropic-api-client-rs.html#item-struct-BlockAccum-148">BlockAccum</a>&gt;,
+    content: <span class="rs-type">Vec</span>&lt;<a class="symbol-link rs-type" href="eos-llm-client--src-message-rs.html#item-enum-ContentBlock-34">ContentBlock</a>&gt;,
+    input_tokens: u32,
+    output_tokens: u32,
+    stop_reason: <span class="rs-type">Option</span>&lt;<span class="rs-type">String</span>&gt;,
+}
+
+<span class="rs-comment">/// Decode an Anthropic Messages SSE frame stream into normalized events.</span>
+<span class="rs-comment">///</span>
+<span class="rs-comment">/// Pure: independent of `reqwest`, so fixtures replay through it. `input_tokens`</span>
+<span class="rs-comment">/// comes from `message_start`, `output_tokens` from `message_delta` (the SDK's</span>
+<span class="rs-comment">/// `get_final_message` merge). Malformed frame JSON logs (content-free) and ends</span>
+<span class="rs-comment">/// the stream with a `Decode` error stamped with `request_id` (§8.7, §8.8).</span>
+<span class="rs-kw">fn</span> decode_anthropic&lt;<span class="rs-type">S</span>&gt;(
+    frames: <span class="rs-type">S</span>,
+    request_id: <span class="rs-type">Option</span>&lt;<span class="rs-type">String</span>&gt;,
+) -&gt; <span class="rs-kw">impl</span> <span class="rs-type">Stream</span>&lt;<span class="rs-type">Item</span> = <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-llm-client--src-events-rs.html#item-enum-LlmStreamEvent-15">LlmStreamEvent</a>, <a class="symbol-link rs-type" href="eos-llm-client--src-error-rs.html#item-struct-ProviderError-29">ProviderError</a>&gt;&gt; + <span class="rs-type">Send</span>
+<span class="rs-kw">where</span>
+    <span class="rs-type">S</span>: <span class="rs-type">Stream</span>&lt;<span class="rs-type">Item</span> = <span class="rs-type">Result</span>&lt;<span class="rs-type">String</span>, <a class="symbol-link rs-type" href="eos-llm-client--src-error-rs.html#item-struct-ProviderError-29">ProviderError</a>&gt;&gt; + <span class="rs-type">Send</span>,
+{
+    async_stream::stream! {
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> state = <a class="symbol-link rs-type" href="eos-llm-client--src-clients-anthropic-api-client-rs.html#item-struct-AnthropicState-158">AnthropicState</a>::default();
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> frame_index: usize = 0;
+        futures::pin_mut!(frames);
+        <span class="rs-kw">while</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(frame) = frames.next().<span class="rs-kw">await</span> {
+            frame_index += 1;
+            <span class="rs-kw">let</span> frame = <span class="rs-kw">match</span> frame {
+                <span class="rs-type">Ok</span>(frame) =&gt; frame,
+                <span class="rs-type">Err</span>(err) =&gt; {
+                    yield <span class="rs-type">Err</span>(err);
+                    <span class="rs-kw">return</span>;
+                }
+            };
+            <span class="rs-kw">let</span> value = <span class="rs-kw">match</span> <a class="symbol-link rs-fn" href="eos-llm-client--src-sse-rs.html#item-fn-parse-sse-value-106">parse_sse_value</a>(&amp;frame, &amp;request_id, &quot;anthropic&quot;, frame_index) {
+                <span class="rs-type">Ok</span>(<span class="rs-type">Some</span>(value)) =&gt; value,
+                <span class="rs-type">Ok</span>(<span class="rs-type">None</span>) =&gt; <span class="rs-kw">continue</span>,
+                <span class="rs-type">Err</span>(err) =&gt; {
+                    yield <span class="rs-type">Err</span>(err);
+                    <span class="rs-kw">return</span>;
+                }
+            };
+
+            <span class="rs-kw">match</span> value.get(&quot;<span class="rs-kw">type</span>&quot;).and_then(<span class="rs-type">Value</span>::as_str) {
+                <span class="rs-type">Some</span>(&quot;message_start&quot;) =&gt; {
+                    state.input_tokens = <a class="symbol-link rs-fn" href="eos-llm-client--src-sse-rs.html#item-fn-json-u32-187">json_u32</a>(&amp;value, &amp;[&quot;message&quot;, &quot;usage&quot;, &quot;input_tokens&quot;]);
+                }
+                <span class="rs-type">Some</span>(&quot;content_block_start&quot;) =&gt; {
+                    <span class="rs-kw">let</span> index = <a class="symbol-link rs-fn" href="eos-llm-client--src-sse-rs.html#item-fn-json-usize-196">json_usize</a>(&amp;value, &amp;[&quot;index&quot;]);
+                    <span class="rs-kw">let</span> block = &amp;value[&quot;content_block&quot;];
+                    state.blocks.insert(
+                        index,
+                        <a class="symbol-link rs-type" href="eos-llm-client--src-clients-anthropic-api-client-rs.html#item-struct-BlockAccum-148">BlockAccum</a> {
+                            block_type: <a class="symbol-link rs-fn" href="eos-llm-client--src-sse-rs.html#item-fn-json-str-182">json_str</a>(block, &amp;[&quot;<span class="rs-kw">type</span>&quot;]),
+                            id: <a class="symbol-link rs-fn" href="eos-llm-client--src-sse-rs.html#item-fn-json-str-182">json_str</a>(block, &amp;[&quot;id&quot;]),
+                            name: <a class="symbol-link rs-fn" href="eos-llm-client--src-sse-rs.html#item-fn-json-str-182">json_str</a>(block, &amp;[&quot;name&quot;]),
+                            text: <span class="rs-type">String</span>::<a class="symbol-link rs-fn" href="eos-llm-client--src-client-rs.html#method-new-56">new</a>(),
+                            input_json: <span class="rs-type">String</span>::<a class="symbol-link rs-fn" href="eos-llm-client--src-client-rs.html#method-new-56">new</a>(),
+                        },
+                    );
+                }
+                <span class="rs-type">Some</span>(&quot;content_block_delta&quot;) =&gt; {
+                    <span class="rs-kw">let</span> index = <a class="symbol-link rs-fn" href="eos-llm-client--src-sse-rs.html#item-fn-json-usize-196">json_usize</a>(&amp;value, &amp;[&quot;index&quot;]);
+                    <span class="rs-kw">let</span> delta = &amp;value[&quot;delta&quot;];
+                    <span class="rs-kw">match</span> delta.get(&quot;<span class="rs-kw">type</span>&quot;).and_then(<span class="rs-type">Value</span>::as_str) {
+                        <span class="rs-type">Some</span>(&quot;text_delta&quot;) =&gt; {
+                            <span class="rs-kw">let</span> text = <a class="symbol-link rs-fn" href="eos-llm-client--src-sse-rs.html#item-fn-json-str-182">json_str</a>(delta, &amp;[&quot;text&quot;]);
+                            <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(block) = state.blocks.get_mut(&amp;index) {
+                                block.text.push_str(&amp;text);
+                            }
+                            yield <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-llm-client--src-events-rs.html#item-enum-LlmStreamEvent-15">LlmStreamEvent</a>::<span class="rs-type">AssistantTextDelta</span> { text });
+                        }
+                        <span class="rs-type">Some</span>(&quot;thinking_delta&quot;) =&gt; {
+                            <span class="rs-kw">let</span> text = <a class="symbol-link rs-fn" href="eos-llm-client--src-sse-rs.html#item-fn-json-str-182">json_str</a>(delta, &amp;[&quot;thinking&quot;]);
+                            <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(block) = state.blocks.get_mut(&amp;index) {
+                                block.text.push_str(&amp;text);
+                            }
+                            yield <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-llm-client--src-events-rs.html#item-enum-LlmStreamEvent-15">LlmStreamEvent</a>::<span class="rs-type">ReasoningDelta</span> { text });
+                        }
+                        <span class="rs-type">Some</span>(&quot;input_json_delta&quot;) =&gt; {
+                            <span class="rs-kw">let</span> partial = <a class="symbol-link rs-fn" href="eos-llm-client--src-sse-rs.html#item-fn-json-str-182">json_str</a>(delta, &amp;[&quot;partial_json&quot;]);
+                            <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(block) = state.blocks.get_mut(&amp;index) {
+                                block.input_json.push_str(&amp;partial);
+                            }
+                        }
+                        _ =&gt; {}
+                    }
+                }
+                <span class="rs-type">Some</span>(&quot;content_block_stop&quot;) =&gt; {
+                    <span class="rs-kw">let</span> index = <a class="symbol-link rs-fn" href="eos-llm-client--src-sse-rs.html#item-fn-json-usize-196">json_usize</a>(&amp;value, &amp;[&quot;index&quot;]);
+                    <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(block) = state.blocks.remove(&amp;index) {
+                        <span class="rs-kw">match</span> block.block_type.as_str() {
+                            &quot;tool_use&quot; =&gt; {
+                                <span class="rs-kw">let</span> input = <a class="symbol-link rs-fn" href="eos-llm-client--src-sse-rs.html#item-fn-parse-tool-args-201">parse_tool_args</a>(&amp;block.input_json);
+                                <span class="rs-comment">// An empty/missing tool-use id is a malformed</span>
+                                <span class="rs-comment">// stream here, not a tolerated default. Rust</span>
+                                <span class="rs-comment">// passed the empty id through / synthesized a</span>
+                                <span class="rs-comment">// `toolu_&lt;uuid&gt;`, but the `ToolUseId` newtype</span>
+                                <span class="rs-comment">// rejects empty and the spec states default-id</span>
+                                <span class="rs-comment">// minting "lives in eos-types/engine, not here"</span>
+                                <span class="rs-comment">// (§6) — so this fails fast rather than minting</span>
+                                <span class="rs-comment">// or propagating an empty id. Anthropic always</span>
+                                <span class="rs-comment">// sends a `toolu_` id, so this never triggers.</span>
+                                <span class="rs-kw">let</span> tool_use_id = <span class="rs-kw">match</span> <span class="rs-type">ToolUseId</span>::try_from(block.id.as_str()) {
+                                    <span class="rs-type">Ok</span>(id) =&gt; id,
+                                    <span class="rs-type">Err</span>(_) =&gt; {
+                                        yield <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-llm-client--src-error-rs.html#item-struct-ProviderError-29">ProviderError</a>::<a class="symbol-link rs-fn" href="eos-llm-client--src-error-rs.html#method-decode-85">decode</a>(
+                                            request_id.clone(),
+                                            &quot;tool_use block missing id&quot;,
+                                        ));
+                                        <span class="rs-kw">return</span>;
+                                    }
+                                };
+                                state.content.<a class="symbol-link rs-fn" href="eos-llm-client--src-sse-rs.html#method-push-36">push</a>(<a class="symbol-link rs-type" href="eos-llm-client--src-message-rs.html#item-enum-ContentBlock-34">ContentBlock</a>::<span class="rs-type">ToolUse</span> {
+                                    tool_use_id: tool_use_id.clone(),
+                                    name: block.name.clone(),
+                                    input: input.clone(),
+                                });
+                                yield <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-llm-client--src-events-rs.html#item-enum-LlmStreamEvent-15">LlmStreamEvent</a>::<span class="rs-type">ToolUseDelta</span> {
+                                    tool_use_id,
+                                    name: block.name,
+                                    input,
+                                });
+                            }
+                            &quot;text&quot; =&gt; state.content.<a class="symbol-link rs-fn" href="eos-llm-client--src-sse-rs.html#method-push-36">push</a>(<a class="symbol-link rs-type" href="eos-llm-client--src-message-rs.html#item-enum-ContentBlock-34">ContentBlock</a>::<span class="rs-type">Text</span> { text: block.text }),
+                            &quot;thinking&quot; =&gt; {
+                                state.content.<a class="symbol-link rs-fn" href="eos-llm-client--src-sse-rs.html#method-push-36">push</a>(<a class="symbol-link rs-type" href="eos-llm-client--src-message-rs.html#item-enum-ContentBlock-34">ContentBlock</a>::<span class="rs-type">Reasoning</span> { text: block.text });
+                            }
+                            _ =&gt; {}
+                        }
+                    }
+                }
+                <span class="rs-type">Some</span>(&quot;message_delta&quot;) =&gt; {
+                    <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(reason) = value[&quot;delta&quot;].get(&quot;stop_reason&quot;).and_then(<span class="rs-type">Value</span>::as_str) {
+                        state.stop_reason = <span class="rs-type">Some</span>(reason.to_owned());
+                    }
+                    state.output_tokens = <a class="symbol-link rs-fn" href="eos-llm-client--src-sse-rs.html#item-fn-json-u32-187">json_u32</a>(&amp;value, &amp;[&quot;usage&quot;, &quot;output_tokens&quot;]);
+                }
+                <span class="rs-type">Some</span>(&quot;message_stop&quot;) =&gt; {
+                    yield <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-llm-client--src-events-rs.html#item-enum-LlmStreamEvent-15">LlmStreamEvent</a>::<span class="rs-type">AssistantMessageComplete</span> {
+                        message: <a class="symbol-link rs-type" href="eos-llm-client--src-message-rs.html#item-struct-Message-88">Message</a> {
+                            role: <a class="symbol-link rs-type" href="eos-llm-client--src-message-rs.html#item-enum-MessageRole-10">MessageRole</a>::<span class="rs-type">Assistant</span>,
+                            content: std::mem::take(&amp;<span class="rs-kw">mut</span> state.content),
+                        },
+                        usage: <a class="symbol-link rs-type" href="eos-llm-client--src-types-rs.html#item-struct-UsageSnapshot-12">UsageSnapshot</a> {
+                            input_tokens: state.input_tokens,
+                            output_tokens: state.output_tokens,
+                        },
+                        stop_reason: state.stop_reason.as_deref().map(<a class="symbol-link rs-type" href="eos-llm-client--src-events-rs.html#item-enum-StopReason-53">StopReason</a>::parse),
+                    });
+                    <span class="rs-kw">return</span>;
+                }
+                _ =&gt; {}
+            }
+        }
+    }
+}
+
+<span class="rs-comment">/// Encode an [`LlmRequest`] into an Anthropic `/v1/messages` request body.</span>
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-llm-client--src-clients-anthropic-api-client-rs.html#item-fn-encode-anthropic-body-318">encode_anthropic_body</a>(request: &amp;<a class="symbol-link rs-type" href="eos-llm-client--src-types-rs.html#item-struct-LlmRequest-113">LlmRequest</a>) -&gt; <span class="rs-type">Value</span> {
+    <a class="symbol-link rs-fn" href="eos-llm-client--src-clients-anthropic-api-client-rs.html#item-fn-encode-anthropic-body-with-options-323">encode_anthropic_body_with_options</a>(request, <span class="rs-kw">false</span>)
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-llm-client--src-clients-anthropic-api-client-rs.html#item-fn-encode-anthropic-body-with-options-323">encode_anthropic_body_with_options</a>(
+    request: &amp;<a class="symbol-link rs-type" href="eos-llm-client--src-types-rs.html#item-struct-LlmRequest-113">LlmRequest</a>,
+    prepend_claude_code_system_prompt: bool,
+) -&gt; <span class="rs-type">Value</span> {
+    <span class="rs-kw">let</span> messages: <span class="rs-type">Vec</span>&lt;<span class="rs-type">Value</span>&gt; = request
+        .messages
+        .iter()
+        .map(|message| {
+            <span class="rs-kw">let</span> content: <span class="rs-type">Vec</span>&lt;<span class="rs-type">Value</span>&gt; = message
+                .content
+                .iter()
+                .filter(|block| !matches!(block, <a class="symbol-link rs-type" href="eos-llm-client--src-message-rs.html#item-enum-ContentBlock-34">ContentBlock</a>::<span class="rs-type">Reasoning</span> { .. }))
+                .map(serialize_anthropic_block)
+                .collect();
+            json!({ &quot;role&quot;: message.role.<a class="symbol-link rs-fn" href="eos-llm-client--src-message-rs.html#method-as-wire-25">as_wire</a>(), &quot;content&quot;: content })
+        })
+        .collect();
+
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> body = json!({
+        &quot;model&quot;: request.model,
+        &quot;messages&quot;: messages,
+        &quot;max_tokens&quot;: request.max_tokens,
+        &quot;stream&quot;: <span class="rs-kw">true</span>,
+    });
+    <span class="rs-kw">if</span> prepend_claude_code_system_prompt {
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> system = vec![json!({
+            &quot;<span class="rs-kw">type</span>&quot;: &quot;text&quot;,
+            &quot;text&quot;: <span class="rs-type">CLAUDE_CODE_SYSTEM_PROMPT</span>,
+        })];
+        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(prompt) = &amp;request.system_prompt {
+            system.<a class="symbol-link rs-fn" href="eos-llm-client--src-sse-rs.html#method-push-36">push</a>(json!({
+                &quot;<span class="rs-kw">type</span>&quot;: &quot;text&quot;,
+                &quot;text&quot;: prompt,
+            }));
+        }
+        body[&quot;system&quot;] = <span class="rs-type">Value</span>::<span class="rs-type">Array</span>(system);
+    } <span class="rs-kw">else</span> <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(system) = &amp;request.system_prompt {
+        body[&quot;system&quot;] = json!(system);
+    }
+    <span class="rs-kw">if</span> !request.tools.is_empty() {
+        body[&quot;tools&quot;] = <span class="rs-type">Value</span>::<span class="rs-type">Array</span>(request.tools.iter().map(serialize_anthropic_tool).collect());
+    }
+    <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(choice) = &amp;request.tool_choice {
+        body[&quot;tool_choice&quot;] = <a class="symbol-link rs-fn" href="eos-llm-client--src-clients-anthropic-api-client-rs.html#item-fn-encode-anthropic-tool-choice-411">encode_anthropic_tool_choice</a>(choice);
+    }
+    body
+}
+
+<span class="rs-comment">/// Project one neutral block to the Anthropic wire shape. `Reasoning` is</span>
+<span class="rs-comment">/// filtered before this is called; `tool_result` omits `metadata`/`is_terminal`</span>
+<span class="rs-comment">/// (§8.6).</span>
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-llm-client--src-clients-anthropic-api-client-rs.html#item-fn-serialize-anthropic-block-371">serialize_anthropic_block</a>(block: &amp;<a class="symbol-link rs-type" href="eos-llm-client--src-message-rs.html#item-enum-ContentBlock-34">ContentBlock</a>) -&gt; <span class="rs-type">Value</span> {
+    <span class="rs-kw">match</span> block {
+        <a class="symbol-link rs-type" href="eos-llm-client--src-message-rs.html#item-enum-ContentBlock-34">ContentBlock</a>::<span class="rs-type">Text</span> { text } =&gt; json!({ &quot;<span class="rs-kw">type</span>&quot;: &quot;text&quot;, &quot;text&quot;: text }),
+        <a class="symbol-link rs-type" href="eos-llm-client--src-message-rs.html#item-enum-ContentBlock-34">ContentBlock</a>::<span class="rs-type">ToolUse</span> {
+            tool_use_id,
+            name,
+            input,
+        } =&gt; json!({ &quot;<span class="rs-kw">type</span>&quot;: &quot;tool_use&quot;, &quot;id&quot;: tool_use_id, &quot;name&quot;: name, &quot;input&quot;: input }),
+        <a class="symbol-link rs-type" href="eos-llm-client--src-message-rs.html#item-enum-ContentBlock-34">ContentBlock</a>::<span class="rs-type">ToolResult</span> {
+            tool_use_id,
+            content,
+            is_error,
+            ..
+        } =&gt; json!({
+            &quot;<span class="rs-kw">type</span>&quot;: &quot;tool_result&quot;,
+            &quot;tool_use_id&quot;: tool_use_id,
+            &quot;content&quot;: content,
+            &quot;is_error&quot;: is_error,
+        }),
+        <a class="symbol-link rs-type" href="eos-llm-client--src-message-rs.html#item-enum-ContentBlock-34">ContentBlock</a>::<span class="rs-type">SystemNotification</span> { text } =&gt; json!({
+            &quot;<span class="rs-kw">type</span>&quot;: &quot;text&quot;,
+            &quot;text&quot;: format!(&quot;&lt;system-reminder&gt;\n{text}\n&lt;/system-reminder&gt;&quot;),
+        }),
+        <span class="rs-comment">// Filtered out before this call; encoded defensively for totality.</span>
+        <a class="symbol-link rs-type" href="eos-llm-client--src-message-rs.html#item-enum-ContentBlock-34">ContentBlock</a>::<span class="rs-type">Reasoning</span> { text } =&gt; json!({ &quot;<span class="rs-kw">type</span>&quot;: &quot;thinking&quot;, &quot;text&quot;: text }),
+    }
+}
+
+<span class="rs-comment">/// Project a tool spec to an Anthropic tool entry, dropping `output_schema`.</span>
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-llm-client--src-clients-anthropic-api-client-rs.html#item-fn-serialize-anthropic-tool-402">serialize_anthropic_tool</a>(spec: &amp;<a class="symbol-link rs-type" href="eos-llm-client--src-types-rs.html#item-struct-ToolSpec-30">ToolSpec</a>) -&gt; <span class="rs-type">Value</span> {
+    json!({
+        &quot;name&quot;: spec.name,
+        &quot;description&quot;: spec.description,
+        &quot;input_schema&quot;: spec.input_schema,
+    })
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-llm-client--src-clients-anthropic-api-client-rs.html#item-fn-encode-anthropic-tool-choice-411">encode_anthropic_tool_choice</a>(choice: &amp;<a class="symbol-link rs-type" href="eos-llm-client--src-types-rs.html#item-enum-ToolChoice-68">ToolChoice</a>) -&gt; <span class="rs-type">Value</span> {
+    <span class="rs-kw">match</span> choice {
+        <a class="symbol-link rs-type" href="eos-llm-client--src-types-rs.html#item-enum-ToolChoice-68">ToolChoice</a>::<span class="rs-type">Auto</span> =&gt; json!({ &quot;<span class="rs-kw">type</span>&quot;: &quot;auto&quot; }),
+        <a class="symbol-link rs-type" href="eos-llm-client--src-types-rs.html#item-enum-ToolChoice-68">ToolChoice</a>::<span class="rs-type">Any</span> =&gt; json!({ &quot;<span class="rs-kw">type</span>&quot;: &quot;any&quot; }),
+        <a class="symbol-link rs-type" href="eos-llm-client--src-types-rs.html#item-enum-ToolChoice-68">ToolChoice</a>::<span class="rs-type">Tool</span> { name } =&gt; json!({ &quot;<span class="rs-kw">type</span>&quot;: &quot;tool&quot;, &quot;name&quot;: name }),
+    }
+}
+
+<span class="rs-comment">/// Decode an Anthropic SSE frame stream to events for cross-provider</span>
+<span class="rs-comment">/// substitutability tests (AC-llm-client-10, exercised from</span>
+<span class="rs-comment">/// `openai_api_client.rs`).</span>
+#[cfg(test)]
+#[allow(clippy::unwrap_used)]
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-llm-client--src-clients-anthropic-api-client-rs.html#item-fn-decode-anthropic-for-test-419">decode_anthropic_for_test</a>(
+    frames: <span class="rs-kw">impl</span> <span class="rs-type">Stream</span>&lt;<span class="rs-type">Item</span> = <span class="rs-type">Result</span>&lt;<span class="rs-type">String</span>, <a class="symbol-link rs-type" href="eos-llm-client--src-error-rs.html#item-struct-ProviderError-29">ProviderError</a>&gt;&gt; + <span class="rs-type">Send</span>,
+) -&gt; <span class="rs-type">Vec</span>&lt;<a class="symbol-link rs-type" href="eos-llm-client--src-events-rs.html#item-enum-LlmStreamEvent-15">LlmStreamEvent</a>&gt; {
+    <a class="symbol-link rs-fn" href="eos-llm-client--src-clients-anthropic-api-client-rs.html#item-fn-decode-anthropic-168">decode_anthropic</a>(frames, <span class="rs-type">None</span>)
+        .collect::&lt;<span class="rs-type">Vec</span>&lt;_&gt;&gt;()
+        .<span class="rs-kw">await</span>
+        .into_iter()
+        .map(<span class="rs-type">Result</span>::unwrap)
+        .collect()
+}
+
+#[cfg(test)]
+<span class="rs-kw">mod</span> tests {
+    #![allow(clippy::unwrap_used)]
+    <span class="rs-kw">use</span> <span class="rs-kw">super</span>::*;
+    <span class="rs-kw">use</span> eos_types::<span class="rs-type">JsonObject</span>;
+    <span class="rs-kw">use</span> tracing_test::traced_test;
+
+    <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::sse::frame_stream;
+
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-llm-client--src-clients-anthropic-api-client-rs.html#item-fn-decode-fixture-444">decode_fixture</a>(raw: &amp;str) -&gt; <span class="rs-type">Vec</span>&lt;<span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-llm-client--src-events-rs.html#item-enum-LlmStreamEvent-15">LlmStreamEvent</a>, <a class="symbol-link rs-type" href="eos-llm-client--src-error-rs.html#item-struct-ProviderError-29">ProviderError</a>&gt;&gt; {
+        <span class="rs-kw">let</span> bytes = <span class="rs-type">Bytes</span>::from(raw.to_owned());
+        <span class="rs-kw">let</span> byte_stream = futures::stream::iter(vec![<span class="rs-type">Ok</span>::&lt;<span class="rs-type">Bytes</span>, <a class="symbol-link rs-type" href="eos-llm-client--src-error-rs.html#item-struct-ProviderError-29">ProviderError</a>&gt;(bytes)]);
+        <a class="symbol-link rs-fn" href="eos-llm-client--src-clients-anthropic-api-client-rs.html#item-fn-decode-anthropic-168">decode_anthropic</a>(<a class="symbol-link rs-fn" href="eos-llm-client--src-sse-rs.html#item-fn-frame-stream-139">frame_stream</a>(byte_stream), <span class="rs-type">Some</span>(&quot;req-test&quot;.to_owned()))
+            .collect()
+            .<span class="rs-kw">await</span>
+    }
+
+    <span class="rs-comment">// NOTE (flagged in the coverage review): `decode_anthropic`'s</span>
+    <span class="rs-comment">// `match value.get("type")` has no "error" arm, so an in-stream provider</span>
+    <span class="rs-comment">// `error` frame falls through `_ =&gt; {}` — the decoder emits no completion and</span>
+    <span class="rs-comment">// no `Err`. This is not a silent system-wide drop: `loop_.rs` turns the</span>
+    <span class="rs-comment">// missing completion into a generic `EngineError::Internal("provider stream</span>
+    <span class="rs-comment">// ended without assistant completion")`. So the real cost is DEGRADED</span>
+    <span class="rs-comment">// DIAGNOSTICS (the provider's actual error text is lost), not a swallowed</span>
+    <span class="rs-comment">// failure. This pins the decoder-level behavior; a fix that surfaces the</span>
+    <span class="rs-comment">// provider error as an `Err` should update this test.</span>
+    #[tokio::test]
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-llm-client--src-clients-anthropic-api-client-rs.html#item-fn-in-stream-error-frame-is-swallowed-at-decoder-level-461">in_stream_error_frame_is_swallowed_at_decoder_level</a>() {
+        <span class="rs-kw">let</span> sse = concat!(
+            &quot;event: content_block_start\n&quot;,
+            &quot;data: {\&quot;<span class="rs-kw">type</span>\&quot;:\&quot;content_block_start\&quot;,\&quot;index\&quot;:0,\&quot;content_block\&quot;:{\&quot;<span class="rs-kw">type</span>\&quot;:\&quot;text\&quot;,\&quot;text\&quot;:\&quot;\&quot;}}\n&quot;,
+            &quot;\n&quot;,
+            &quot;event: content_block_delta\n&quot;,
+            &quot;data: {\&quot;<span class="rs-kw">type</span>\&quot;:\&quot;content_block_delta\&quot;,\&quot;index\&quot;:0,\&quot;delta\&quot;:{\&quot;<span class="rs-kw">type</span>\&quot;:\&quot;text_delta\&quot;,\&quot;text\&quot;:\&quot;hi\&quot;}}\n&quot;,
+            &quot;\n&quot;,
+            &quot;event: error\n&quot;,
+            &quot;data: {\&quot;<span class="rs-kw">type</span>\&quot;:\&quot;error\&quot;,\&quot;error\&quot;:{\&quot;<span class="rs-kw">type</span>\&quot;:\&quot;overloaded_error\&quot;,\&quot;message\&quot;:\&quot;overloaded\&quot;}}\n&quot;,
+        );
+        <span class="rs-kw">let</span> results = <a class="symbol-link rs-fn" href="eos-llm-client--src-clients-anthropic-api-client-rs.html#item-fn-decode-fixture-444">decode_fixture</a>(sse).<span class="rs-kw">await</span>;
+        <span class="rs-comment">// The text delta before the error still decodes.</span>
+        assert!(results.iter().any(|event| matches!(
+            event,
+            <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-llm-client--src-events-rs.html#item-enum-LlmStreamEvent-15">LlmStreamEvent</a>::<span class="rs-type">AssistantTextDelta</span> { text }) <span class="rs-kw">if</span> text == &quot;hi&quot;
+        )));
+        <span class="rs-comment">// At the decoder boundary the error frame yields neither an `Err` nor a</span>
+        <span class="rs-comment">// terminal completion (the loop later maps the missing completion to a</span>
+        <span class="rs-comment">// generic stream-ended error).</span>
+        assert!(
+            results.iter().all(<span class="rs-type">Result</span>::is_ok),
+            &quot;the decoder does not surface the provider error frame <span class="rs-kw">as</span> an <span class="rs-type">Err</span>&quot;
+        );
+        assert!(
+            !results
+                .iter()
+                .any(|event| matches!(event, <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-llm-client--src-events-rs.html#item-enum-LlmStreamEvent-15">LlmStreamEvent</a>::<span class="rs-type">AssistantMessageComplete</span> { .. }))),
+            &quot;no completion is emitted <span class="rs-kw">for</span> an error-terminated stream&quot;
+        );
+    }
+
+    <span class="rs-comment">// AC-llm-client-01: full fixture decodes to reasoning/text deltas, then a</span>
+    <span class="rs-comment">// mid-stream tool_use delta with parsed args, then a complete with correct</span>
+    <span class="rs-comment">// usage (input from message_start, output from message_delta) + stop reason.</span>
+    #[tokio::test]
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-llm-client--src-clients-anthropic-api-client-rs.html#item-fn-decodes-anthropic-sse-fixture-497">decodes_anthropic_sse_fixture</a>() {
+        <span class="rs-kw">let</span> events: <span class="rs-type">Vec</span>&lt;<a class="symbol-link rs-type" href="eos-llm-client--src-events-rs.html#item-enum-LlmStreamEvent-15">LlmStreamEvent</a>&gt; =
+            <a class="symbol-link rs-fn" href="eos-llm-client--src-clients-anthropic-api-client-rs.html#item-fn-decode-fixture-444">decode_fixture</a>(include_str!(&quot;../../tests/fixtures/anthropic/full.sse&quot;))
+                .<span class="rs-kw">await</span>
+                .into_iter()
+                .map(<span class="rs-type">Result</span>::unwrap)
+                .collect();
+
+        assert_eq!(events.len(), 5);
+        assert_eq!(
+            events[0],
+            <a class="symbol-link rs-type" href="eos-llm-client--src-events-rs.html#item-enum-LlmStreamEvent-15">LlmStreamEvent</a>::<span class="rs-type">ReasoningDelta</span> {
+                text: &quot;<span class="rs-type">Let</span> me think&quot;.into()
+            }
+        );
+        assert_eq!(
+            events[1],
+            <a class="symbol-link rs-type" href="eos-llm-client--src-events-rs.html#item-enum-LlmStreamEvent-15">LlmStreamEvent</a>::<span class="rs-type">AssistantTextDelta</span> {
+                text: &quot;<span class="rs-type">Hello</span>&quot;.into()
+            }
+        );
+        assert_eq!(
+            events[2],
+            <a class="symbol-link rs-type" href="eos-llm-client--src-events-rs.html#item-enum-LlmStreamEvent-15">LlmStreamEvent</a>::<span class="rs-type">AssistantTextDelta</span> {
+                text: &quot; world&quot;.into()
+            }
+        );
+
+        <span class="rs-kw">match</span> &amp;events[3] {
+            <a class="symbol-link rs-type" href="eos-llm-client--src-events-rs.html#item-enum-LlmStreamEvent-15">LlmStreamEvent</a>::<span class="rs-type">ToolUseDelta</span> {
+                tool_use_id,
+                name,
+                input,
+            } =&gt; {
+                assert_eq!(tool_use_id.as_str(), &quot;toolu_01&quot;);
+                assert_eq!(name, &quot;read_file&quot;);
+                assert_eq!(input.get(&quot;path&quot;).and_then(<span class="rs-type">Value</span>::as_str), <span class="rs-type">Some</span>(&quot;foo.txt&quot;));
+            }
+            other =&gt; panic!(&quot;expected tool_use delta, got {other:?}&quot;),
+        }
+
+        <span class="rs-kw">match</span> &amp;events[4] {
+            <a class="symbol-link rs-type" href="eos-llm-client--src-events-rs.html#item-enum-LlmStreamEvent-15">LlmStreamEvent</a>::<span class="rs-type">AssistantMessageComplete</span> {
+                message,
+                usage,
+                stop_reason,
+            } =&gt; {
+                assert_eq!(usage.input_tokens, 10);
+                assert_eq!(usage.output_tokens, 15);
+                assert_eq!(*stop_reason, <span class="rs-type">Some</span>(<a class="symbol-link rs-type" href="eos-llm-client--src-events-rs.html#item-enum-StopReason-53">StopReason</a>::<span class="rs-type">ToolUse</span>));
+                assert_eq!(message.content.len(), 3);
+                assert_eq!(message.<a class="symbol-link rs-fn" href="eos-llm-client--src-message-rs.html#method-assistant-text-110">assistant_text</a>(), &quot;<span class="rs-type">Hello</span> world&quot;);
+                assert_eq!(message.<a class="symbol-link rs-fn" href="eos-llm-client--src-message-rs.html#method-reasoning-text-122">reasoning_text</a>(), &quot;<span class="rs-type">Let</span> me think&quot;);
+                assert_eq!(message.<a class="symbol-link rs-fn" href="eos-llm-client--src-message-rs.html#method-tool-uses-134">tool_uses</a>().count(), 1);
+            }
+            other =&gt; panic!(&quot;expected complete, got {other:?}&quot;),
+        }
+    }
+
+    <span class="rs-comment">// AC-llm-client-03 (event half): an Anthropic `thinking_delta` event decodes</span>
+    <span class="rs-comment">// to `LlmStreamEvent::ReasoningDelta` (the legacy "thinking" *block* half is</span>
+    <span class="rs-comment">// proven in message.rs::reasoning_compat_decode_maps_thinking).</span>
+    #[tokio::test]
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-llm-client--src-clients-anthropic-api-client-rs.html#item-fn-reasoning-compat-decode-maps-thinking-delta-560">reasoning_compat_decode_maps_thinking_delta</a>() {
+        <span class="rs-kw">let</span> sse = concat!(
+            &quot;event: content_block_start\n&quot;,
+            &quot;data: {\&quot;<span class="rs-kw">type</span>\&quot;:\&quot;content_block_start\&quot;,\&quot;index\&quot;:0,\&quot;content_block\&quot;:{\&quot;<span class="rs-kw">type</span>\&quot;:\&quot;thinking\&quot;,\&quot;thinking\&quot;:\&quot;\&quot;}}\n&quot;,
+            &quot;\n&quot;,
+            &quot;event: content_block_delta\n&quot;,
+            &quot;data: {\&quot;<span class="rs-kw">type</span>\&quot;:\&quot;content_block_delta\&quot;,\&quot;index\&quot;:0,\&quot;delta\&quot;:{\&quot;<span class="rs-kw">type</span>\&quot;:\&quot;thinking_delta\&quot;,\&quot;thinking\&quot;:\&quot;reasoning step\&quot;}}\n&quot;,
+        );
+        <span class="rs-kw">let</span> events: <span class="rs-type">Vec</span>&lt;<a class="symbol-link rs-type" href="eos-llm-client--src-events-rs.html#item-enum-LlmStreamEvent-15">LlmStreamEvent</a>&gt; = <a class="symbol-link rs-fn" href="eos-llm-client--src-clients-anthropic-api-client-rs.html#item-fn-decode-fixture-444">decode_fixture</a>(sse)
+            .<span class="rs-kw">await</span>
+            .into_iter()
+            .map(<span class="rs-type">Result</span>::unwrap)
+            .collect();
+        assert_eq!(
+            events,
+            vec![<a class="symbol-link rs-type" href="eos-llm-client--src-events-rs.html#item-enum-LlmStreamEvent-15">LlmStreamEvent</a>::<span class="rs-type">ReasoningDelta</span> {
+                text: &quot;reasoning step&quot;.into()
+            }]
+        );
+    }
+
+    <span class="rs-comment">// AC-llm-client-06 (anthropic side): encode drops output_schema and drops</span>
+    <span class="rs-comment">// Reasoning content blocks.</span>
+    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-llm-client--src-clients-anthropic-api-client-rs.html#item-fn-encode-projects-tools-per-provider-584">encode_projects_tools_per_provider</a>() {
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> input_schema = <span class="rs-type">JsonObject</span>::<a class="symbol-link rs-fn" href="eos-llm-client--src-client-rs.html#method-new-56">new</a>();
+        input_schema.insert(&quot;<span class="rs-kw">type</span>&quot;.into(), json!(&quot;object&quot;));
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> output_schema = <span class="rs-type">JsonObject</span>::<a class="symbol-link rs-fn" href="eos-llm-client--src-client-rs.html#method-new-56">new</a>();
+        output_schema.insert(&quot;<span class="rs-kw">type</span>&quot;.into(), json!(&quot;string&quot;));
+        <span class="rs-kw">let</span> spec = <a class="symbol-link rs-type" href="eos-llm-client--src-types-rs.html#item-struct-ToolSpec-30">ToolSpec</a>::<a class="symbol-link rs-fn" href="eos-llm-client--src-client-rs.html#method-new-56">new</a>(
+            &quot;read_file&quot;,
+            &quot;<span class="rs-type">Read</span> a file&quot;,
+            input_schema,
+            <span class="rs-type">Some</span>(output_schema),
+        );
+
+        <span class="rs-kw">let</span> message = <a class="symbol-link rs-type" href="eos-llm-client--src-message-rs.html#item-struct-Message-88">Message</a> {
+            role: <a class="symbol-link rs-type" href="eos-llm-client--src-message-rs.html#item-enum-MessageRole-10">MessageRole</a>::<span class="rs-type">Assistant</span>,
+            content: vec![
+                <a class="symbol-link rs-type" href="eos-llm-client--src-message-rs.html#item-enum-ContentBlock-34">ContentBlock</a>::<span class="rs-type">Reasoning</span> {
+                    text: &quot;private&quot;.into(),
+                },
+                <a class="symbol-link rs-type" href="eos-llm-client--src-message-rs.html#item-enum-ContentBlock-34">ContentBlock</a>::<span class="rs-type">Text</span> { text: &quot;hi&quot;.into() },
+            ],
+        };
+        <span class="rs-kw">let</span> request = <a class="symbol-link rs-type" href="eos-llm-client--src-types-rs.html#item-struct-LlmRequest-113">LlmRequest</a>::<a class="symbol-link rs-fn" href="eos-llm-client--src-types-rs.html#method-builder-140">builder</a>(&quot;claude&quot;)
+            .<a class="symbol-link rs-fn" href="eos-llm-client--src-types-rs.html#method-message-174">message</a>(message)
+            .<a class="symbol-link rs-fn" href="eos-llm-client--src-types-rs.html#method-tools-192">tools</a>(vec![spec])
+            .<a class="symbol-link rs-fn" href="eos-llm-client--src-types-rs.html#method-system-prompt-180">system_prompt</a>(&quot;sys&quot;)
+            .<a class="symbol-link rs-fn" href="eos-llm-client--src-types-rs.html#method-build-210">build</a>();
+        <span class="rs-kw">let</span> body = <a class="symbol-link rs-fn" href="eos-llm-client--src-clients-anthropic-api-client-rs.html#item-fn-encode-anthropic-body-318">encode_anthropic_body</a>(&amp;request);
+
+        <span class="rs-kw">let</span> tool = &amp;body[&quot;tools&quot;][0];
+        assert_eq!(tool[&quot;name&quot;], json!(&quot;read_file&quot;));
+        assert!(tool.get(&quot;input_schema&quot;).is_some());
+        assert!(
+            tool.get(&quot;output_schema&quot;).is_none(),
+            &quot;anthropic drops output_schema&quot;
+        );
+
+        <span class="rs-kw">let</span> content = body[&quot;messages&quot;][0][&quot;content&quot;].as_array().unwrap();
+        assert_eq!(
+            content.len(),
+            1,
+            &quot;reasoning block dropped from wire messages&quot;
+        );
+        assert_eq!(content[0][&quot;<span class="rs-kw">type</span>&quot;], json!(&quot;text&quot;));
+        assert_eq!(content[0][&quot;text&quot;], json!(&quot;hi&quot;));
+
+        assert_eq!(body[&quot;stream&quot;], json!(<span class="rs-kw">true</span>));
+        assert_eq!(body[&quot;system&quot;], json!(&quot;sys&quot;));
+    }
+
+    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-llm-client--src-clients-anthropic-api-client-rs.html#item-fn-tool-result-wire-omits-metadata-and-is-terminal-634">tool_result_wire_omits_metadata_and_is_terminal</a>() {
+        <span class="rs-kw">let</span> tuid: <span class="rs-type">ToolUseId</span> = &quot;toolu_9&quot;.<a class="symbol-link rs-fn" href="eos-llm-client--src-events-rs.html#method-parse-70">parse</a>().unwrap();
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> metadata = <span class="rs-type">JsonObject</span>::<a class="symbol-link rs-fn" href="eos-llm-client--src-client-rs.html#method-new-56">new</a>();
+        metadata.insert(&quot;secret&quot;.into(), json!(&quot;nope&quot;));
+        <span class="rs-kw">let</span> message = <a class="symbol-link rs-type" href="eos-llm-client--src-message-rs.html#item-struct-Message-88">Message</a> {
+            role: <a class="symbol-link rs-type" href="eos-llm-client--src-message-rs.html#item-enum-MessageRole-10">MessageRole</a>::<span class="rs-type">User</span>,
+            content: vec![<a class="symbol-link rs-type" href="eos-llm-client--src-message-rs.html#item-enum-ContentBlock-34">ContentBlock</a>::<span class="rs-type">ToolResult</span> {
+                tool_use_id: tuid,
+                content: &quot;ok&quot;.into(),
+                is_error: <span class="rs-kw">false</span>,
+                metadata,
+                is_terminal: <span class="rs-kw">true</span>,
+            }],
+        };
+        <span class="rs-kw">let</span> body = <a class="symbol-link rs-fn" href="eos-llm-client--src-clients-anthropic-api-client-rs.html#item-fn-encode-anthropic-body-318">encode_anthropic_body</a>(&amp;<a class="symbol-link rs-type" href="eos-llm-client--src-types-rs.html#item-struct-LlmRequest-113">LlmRequest</a>::<a class="symbol-link rs-fn" href="eos-llm-client--src-types-rs.html#method-builder-140">builder</a>(&quot;m&quot;).<a class="symbol-link rs-fn" href="eos-llm-client--src-types-rs.html#method-message-174">message</a>(message).<a class="symbol-link rs-fn" href="eos-llm-client--src-types-rs.html#method-build-210">build</a>());
+        <span class="rs-kw">let</span> block = &amp;body[&quot;messages&quot;][0][&quot;content&quot;][0];
+        assert_eq!(block[&quot;<span class="rs-kw">type</span>&quot;], json!(&quot;tool_result&quot;));
+        assert!(
+            block.get(&quot;metadata&quot;).is_none(),
+            &quot;metadata omitted from wire&quot;
+        );
+        assert!(
+            block.get(&quot;is_terminal&quot;).is_none(),
+            &quot;is_terminal omitted from wire&quot;
+        );
+        assert_eq!(block[&quot;content&quot;], json!(&quot;ok&quot;));
+    }
+
+    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-llm-client--src-clients-anthropic-api-client-rs.html#item-fn-system-notification-wraps-in-reminder-tag-663">system_notification_wraps_in_reminder_tag</a>() {
+        <span class="rs-kw">let</span> message = <a class="symbol-link rs-type" href="eos-llm-client--src-message-rs.html#item-struct-Message-88">Message</a> {
+            role: <a class="symbol-link rs-type" href="eos-llm-client--src-message-rs.html#item-enum-MessageRole-10">MessageRole</a>::<span class="rs-type">User</span>,
+            content: vec![<a class="symbol-link rs-type" href="eos-llm-client--src-message-rs.html#item-enum-ContentBlock-34">ContentBlock</a>::<span class="rs-type">SystemNotification</span> {
+                text: &quot;stay on task&quot;.into(),
+            }],
+        };
+        <span class="rs-kw">let</span> body = <a class="symbol-link rs-fn" href="eos-llm-client--src-clients-anthropic-api-client-rs.html#item-fn-encode-anthropic-body-318">encode_anthropic_body</a>(&amp;<a class="symbol-link rs-type" href="eos-llm-client--src-types-rs.html#item-struct-LlmRequest-113">LlmRequest</a>::<a class="symbol-link rs-fn" href="eos-llm-client--src-types-rs.html#method-builder-140">builder</a>(&quot;m&quot;).<a class="symbol-link rs-fn" href="eos-llm-client--src-types-rs.html#method-message-174">message</a>(message).<a class="symbol-link rs-fn" href="eos-llm-client--src-types-rs.html#method-build-210">build</a>());
+        <span class="rs-kw">let</span> block = &amp;body[&quot;messages&quot;][0][&quot;content&quot;][0];
+        assert_eq!(block[&quot;<span class="rs-kw">type</span>&quot;], json!(&quot;text&quot;));
+        assert_eq!(
+            block[&quot;text&quot;],
+            json!(&quot;&lt;system-reminder&gt;\nstay on task\n&lt;/system-reminder&gt;&quot;)
+        );
+    }
+
+    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-llm-client--src-clients-anthropic-api-client-rs.html#item-fn-claude-coding-plan-uses-oauth-transport-shape-680">claude_coding_plan_uses_oauth_transport_shape</a>() {
+        <span class="rs-kw">let</span> client = <a class="symbol-link rs-type" href="eos-llm-client--src-clients-anthropic-api-client-rs.html#item-struct-AnthropicApiClient-41">AnthropicApiClient</a>::<a class="symbol-link rs-fn" href="eos-llm-client--src-clients-anthropic-api-client-rs.html#method-new-claude-coding-plan-61">new_claude_coding_plan</a>(
+            &quot;https:<span class="rs-comment">//api.anthropic.com",</span>
+            <a class="symbol-link rs-type" href="eos-llm-client.html#item-enum-Auth-38">Auth</a>::<a class="symbol-link rs-fn" href="eos-llm-client.html#method-bearer-68">bearer</a>(&quot;oauth-token&quot;),
+            <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-llm-client--src-client-rs.html#method-new-56">new</a>(<span class="rs-type">RetryConfig</span>::default()),
+            <span class="rs-type">HeaderValue</span>::from_static(&quot;claude-code-20250219,oauth-2025-04-20&quot;),
+        )
+        .unwrap();
+
+        assert_eq!(
+            client.endpoint.as_str(),
+            &quot;https:<span class="rs-comment">//api.anthropic.com/v1/messages"</span>
+        );
+        <span class="rs-kw">let</span> headers = client.<a class="symbol-link rs-fn" href="eos-llm-client--src-clients-anthropic-api-client-rs.html#method-build-headers-99">build_headers</a>().unwrap();
+        assert_eq!(
+            headers.get(&quot;anthropic-beta&quot;).unwrap(),
+            &quot;claude-code-20250219,oauth-2025-04-20&quot;
+        );
+        assert_eq!(headers.get(&quot;x-app&quot;).unwrap(), &quot;cli&quot;);
+        assert_eq!(headers.get(&quot;user-agent&quot;).unwrap(), &quot;claude-cli/2.1.75&quot;);
+        assert_eq!(
+            headers
+                .get(&quot;anthropic-dangerous-direct-browser-access&quot;)
+                .unwrap(),
+            &quot;<span class="rs-kw">true</span>&quot;
+        );
+        assert_eq!(
+            headers.get(&quot;authorization&quot;).unwrap().to_str().unwrap(),
+            &quot;<span class="rs-type">Bearer</span> oauth-token&quot;
+        );
+        assert!(headers.get(&quot;x-api-key&quot;).is_none());
+
+        <span class="rs-kw">let</span> body = <a class="symbol-link rs-fn" href="eos-llm-client--src-clients-anthropic-api-client-rs.html#item-fn-encode-anthropic-body-with-options-323">encode_anthropic_body_with_options</a>(
+            &amp;<a class="symbol-link rs-type" href="eos-llm-client--src-types-rs.html#item-struct-LlmRequest-113">LlmRequest</a>::<a class="symbol-link rs-fn" href="eos-llm-client--src-types-rs.html#method-builder-140">builder</a>(&quot;claude&quot;)
+                .<a class="symbol-link rs-fn" href="eos-llm-client--src-types-rs.html#method-system-prompt-180">system_prompt</a>(&quot;repo prompt&quot;)
+                .<a class="symbol-link rs-fn" href="eos-llm-client--src-types-rs.html#method-message-174">message</a>(<a class="symbol-link rs-type" href="eos-llm-client--src-message-rs.html#item-struct-Message-88">Message</a>::<a class="symbol-link rs-fn" href="eos-llm-client--src-message-rs.html#method-from-user-text-101">from_user_text</a>(&quot;hi&quot;))
+                .<a class="symbol-link rs-fn" href="eos-llm-client--src-types-rs.html#method-build-210">build</a>(),
+            <span class="rs-kw">true</span>,
+        );
+        assert_eq!(
+            body[&quot;system&quot;],
+            json!([
+                {
+                    &quot;<span class="rs-kw">type</span>&quot;: &quot;text&quot;,
+                    &quot;text&quot;: &quot;<span class="rs-type">You</span> are <span class="rs-type">Claude</span> <span class="rs-type">Code</span>, <span class="rs-type">Anthropic</span>&#x27;s official <span class="rs-type">CLI</span> <span class="rs-kw">for</span> <span class="rs-type">Claude</span>.&quot;
+                },
+                {
+                    &quot;<span class="rs-kw">type</span>&quot;: &quot;text&quot;,
+                    &quot;text&quot;: &quot;repo prompt&quot;
+                }
+            ])
+        );
+    }
+
+    <span class="rs-comment">// AC-llm-client-05: a forced SSE parse failure logs without echoing frame</span>
+    <span class="rs-comment">// content (no secrets/system_prompt/tool input in the log fields).</span>
+    #[tokio::test]
+    #[traced_test]
+    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-llm-client--src-clients-anthropic-api-client-rs.html#item-fn-parse-error-log-omits-secrets-737">parse_error_log_omits_secrets</a>() {
+        <span class="rs-kw">let</span> results =
+            <a class="symbol-link rs-fn" href="eos-llm-client--src-clients-anthropic-api-client-rs.html#item-fn-decode-fixture-444">decode_fixture</a>(include_str!(&quot;../../tests/fixtures/anthropic/malformed.sse&quot;)).<span class="rs-kw">await</span>;
+        <span class="rs-comment">// The stream ends with exactly one Decode error item that preserves the</span>
+        <span class="rs-comment">// captured request-id (§8.8).</span>
+        <span class="rs-kw">let</span> last = results.last().expect(&quot;at least one item&quot;);
+        <span class="rs-kw">match</span> last {
+            <span class="rs-type">Err</span>(e) =&gt; {
+                assert_eq!(e.kind, <span class="rs-kw">crate</span>::error::<a class="symbol-link rs-type" href="eos-llm-client--src-error-rs.html#item-enum-ProviderErrorKind-6">ProviderErrorKind</a>::<span class="rs-type">Decode</span>);
+                assert_eq!(e.request_id.as_deref(), <span class="rs-type">Some</span>(&quot;req-test&quot;));
+            }
+            <span class="rs-type">Ok</span>(event) =&gt; panic!(&quot;expected a decode error, got {event:?}&quot;),
+        }
+
+        assert!(logs_contain(&quot;anthropic sse frame failed to parse&quot;));
+        assert!(!logs_contain(&quot;<span class="rs-type">SUPERSECRET</span>&quot;), &quot;log leaked frame content&quot;);
+    }
+}
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
   <script src="../assets/inventory.js"></script>
 </body>
 </html>

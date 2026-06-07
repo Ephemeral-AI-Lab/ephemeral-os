@@ -8,8 +8,16 @@
 </head>
 <body>
   <header>
-    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
-    <h1>eos-workspace-api File Inventory</h1>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>eos-workspace-api File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS/sandbox &amp;&amp; cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
   </header>
   <a class="back-link" href="../index.html">sandbox</a>
 <section class="summary">
@@ -50,6 +58,49 @@
   <div class="items"></div>
 </section></div>
 </main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/eos-workspace-api/src/lib.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-comment">//! Neutral workspace-mode contracts shared by daemon adapters and concrete</span>
+<span class="rs-comment">//! workspace-mode crates.</span>
+<span class="rs-comment">//!</span>
+<span class="rs-comment">//! This crate deliberately owns no daemon, LayerStack, or OCC dependency. It is</span>
+<span class="rs-comment">//! the common typed boundary for symmetric file and command workspace</span>
+<span class="rs-comment">//! capabilities; concrete publish, read, audit, and runtime mechanics stay</span>
+<span class="rs-comment">//! injected by the daemon or the owning workspace crate.</span>
+
+<span class="rs-kw">pub</span> <span class="rs-kw">mod</span> command_session;
+<span class="rs-kw">pub</span> <span class="rs-kw">mod</span> file_ops;
+<span class="rs-kw">pub</span> <span class="rs-kw">mod</span> lease;
+<span class="rs-kw">pub</span> <span class="rs-kw">mod</span> mode;
+<span class="rs-kw">pub</span> <span class="rs-kw">mod</span> mutation;
+<span class="rs-kw">pub</span> <span class="rs-kw">mod</span> read_view;
+<span class="rs-kw">pub</span> <span class="rs-kw">mod</span> response;
+
+<span class="rs-kw">pub</span> <span class="rs-kw">use</span> command_session::{
+    <a class="symbol-link rs-type" href="eos-workspace-api.html#item-trait-CommandWorkspacePolicy-112">CommandWorkspacePolicy</a>, <a class="symbol-link rs-type" href="eos-workspace-api.html#item-struct-FinalizeCommandRequest-31">FinalizeCommandRequest</a>, <a class="symbol-link rs-type" href="eos-workspace-api.html#item-struct-PrepareCommandRequest-9">PrepareCommandRequest</a>,
+    <a class="symbol-link rs-type" href="eos-workspace-api.html#item-struct-PreparedCommandWorkspace-20">PreparedCommandWorkspace</a>, <a class="symbol-link rs-type" href="eos-workspace-api.html#item-struct-WorkspaceCommandOutcome-57">WorkspaceCommandOutcome</a>,
+};
+<span class="rs-kw">pub</span> <span class="rs-kw">use</span> file_ops::{
+    <a class="symbol-link rs-type" href="eos-workspace-api--src-file-ops-rs.html#item-struct-EditFileOutcome-95">EditFileOutcome</a>, <a class="symbol-link rs-type" href="eos-workspace-api--src-file-ops-rs.html#item-struct-EditFileRequest-40">EditFileRequest</a>, <a class="symbol-link rs-type" href="eos-workspace-api--src-file-ops-rs.html#item-struct-ReadFileOutcome-47">ReadFileOutcome</a>, <a class="symbol-link rs-type" href="eos-workspace-api--src-file-ops-rs.html#item-struct-ReadFileRequest-15">ReadFileRequest</a>, <a class="symbol-link rs-type" href="eos-workspace-api--src-file-ops-rs.html#item-struct-SearchReplaceEdit-31">SearchReplaceEdit</a>,
+    <a class="symbol-link rs-type" href="eos-workspace-api--src-file-ops-rs.html#item-enum-SearchReplaceError-369">SearchReplaceError</a>, <a class="symbol-link rs-type" href="eos-workspace-api--src-file-ops-rs.html#item-trait-WorkspaceFileOps-135">WorkspaceFileOps</a>, <a class="symbol-link rs-type" href="eos-workspace-api--src-file-ops-rs.html#item-struct-WriteFileOutcome-58">WriteFileOutcome</a>, <a class="symbol-link rs-type" href="eos-workspace-api--src-file-ops-rs.html#item-struct-WriteFileRequest-22">WriteFileRequest</a>,
+};
+<span class="rs-kw">pub</span> <span class="rs-kw">use</span> lease::{<a class="symbol-link rs-type" href="eos-workspace-api--src-lease-rs.html#item-struct-Lifecycle-30">Lifecycle</a>, <a class="symbol-link rs-type" href="eos-workspace-api--src-lease-rs.html#item-struct-SnapshotLease-12">SnapshotLease</a>};
+<span class="rs-kw">pub</span> <span class="rs-kw">use</span> mode::<a class="symbol-link rs-type" href="eos-workspace-api--src-mode-rs.html#item-enum-WorkspaceMode-3">WorkspaceMode</a>;
+<span class="rs-kw">pub</span> <span class="rs-kw">use</span> mutation::{
+    <a class="symbol-link rs-type" href="eos-workspace-api--src-mutation-rs.html#item-enum-WorkspaceMutationKind-8">WorkspaceMutationKind</a>, <a class="symbol-link rs-type" href="eos-workspace-api--src-mutation-rs.html#item-struct-WorkspaceMutationOutcome-35">WorkspaceMutationOutcome</a>, <a class="symbol-link rs-type" href="eos-workspace-api--src-mutation-rs.html#item-struct-WorkspaceMutationRequest-26">WorkspaceMutationRequest</a>,
+    <a class="symbol-link rs-type" href="eos-workspace-api--src-mutation-rs.html#item-trait-WorkspaceMutationSink-59">WorkspaceMutationSink</a>,
+};
+<span class="rs-kw">pub</span> <span class="rs-kw">use</span> read_view::{<a class="symbol-link rs-type" href="eos-workspace-api--src-read-view-rs.html#item-struct-ResolvedWorkspacePath-5">ResolvedWorkspacePath</a>, <a class="symbol-link rs-type" href="eos-workspace-api--src-read-view-rs.html#item-struct-WorkspaceReadBytes-18">WorkspaceReadBytes</a>, <a class="symbol-link rs-type" href="eos-workspace-api--src-read-view-rs.html#item-trait-WorkspaceReadView-42">WorkspaceReadView</a>};
+<span class="rs-kw">pub</span> <span class="rs-kw">use</span> response::{
+    u64_to_f64_saturating, usize_to_f64_saturating, <a class="symbol-link rs-type" href="eos-workspace-api--src-response-rs.html#item-type-ChangedPathKinds-26">ChangedPathKinds</a>, <a class="symbol-link rs-type" href="eos-workspace-api--src-response-rs.html#item-struct-WorkspaceApiError-53">WorkspaceApiError</a>,
+    <a class="symbol-link rs-type" href="eos-workspace-api--src-response-rs.html#item-struct-WorkspaceConflict-29">WorkspaceConflict</a>, <a class="symbol-link rs-type" href="eos-workspace-api--src-response-rs.html#item-type-WorkspaceTimings-7">WorkspaceTimings</a>,
+};
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
   <script src="../assets/inventory.js"></script>
 </body>
 </html>

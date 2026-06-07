@@ -48,7 +48,8 @@ pub use timeouts::{
     EXEC_DISPATCH_GRACE_S, READ_FILE_TIMEOUT_S, WRITE_FILE_TIMEOUT_S,
 };
 pub use tool_api::{
-    cancel, cancel_command_session, collect_command_completions, command_session_count, edit_file,
+    cancel, cancel_command_session, cancel_workspace_runs_by_caller_id,
+    collect_command_completions, command_session_count, edit_file,
     ensure_plugin_package, enter_isolated_workspace, exec_command, exec_stdin,
     exit_isolated_workspace, heartbeat, inflight_count, isolated_active, plugin_dispatch,
     plugin_ensure, read_command_progress, read_file, write_file, PluginDependencyScope,

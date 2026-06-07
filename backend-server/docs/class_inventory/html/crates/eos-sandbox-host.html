@@ -1,0 +1,643 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>eos-sandbox-host · src/bootstrap_artifact.rs</title>
+  <link rel="stylesheet" href="../assets/inventory.css">
+</head>
+<body>
+  <header>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>eos-sandbox-host File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS/backend-server &amp;&amp; cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
+  </header>
+  <a class="back-link" href="../index.html">backend-server</a>
+<section class="summary">
+  <div><b>14</b><span>modules</span></div>
+  <div><b>122</b><span>items</span></div>
+  <div><b>72</b><span>fields</span></div>
+  <div><b>76</b><span>methods</span></div>
+</section>
+<section class="toolbar">
+  <input id="filter" type="search" placeholder="Filter this file by item, field, method, or signature" autofocus>
+  <select id="kind-filter">
+    <option value="">All items</option>
+    <option value="type-model">Type model</option>
+    <option value="struct">Structs</option>
+    <option value="enum">Enums</option>
+    <option value="trait">Traits</option>
+    <option value="impl">Impls</option>
+    <option value="fn">Functions</option>
+    <option value="type">Aliases</option>
+  </select>
+</section>
+<main class="crate-layout">
+  <nav class="module-nav"><ul class="file-tree"><li><span class="folder">src</span><ul class="file-tree"><li><a class="file-link active" href="eos-sandbox-host.html"><span>bootstrap_artifact.rs</span><small>0/9</small></a></li><li><span class="folder">daemon_client</span><ul class="file-tree"><li><a class="file-link" href="eos-sandbox-host--src-daemon-client-codec-rs.html"><span>codec.rs</span><small>0/18</small></a></li><li><a class="file-link" href="eos-sandbox-host--src-daemon-client-shell-rs.html"><span>shell.rs</span><small>0/6</small></a></li><li><a class="file-link" href="eos-sandbox-host--src-daemon-client-tcp-rs.html"><span>tcp.rs</span><small>1/5</small></a></li></ul></li><li><a class="file-link" href="eos-sandbox-host--src-daemon-client-rs.html"><span>daemon_client.rs</span><small>1/2</small></a></li><li><a class="file-link" href="eos-sandbox-host--src-docker-rs.html"><span>docker.rs</span><small>1/13</small></a></li><li><a class="file-link" href="eos-sandbox-host--src-error-rs.html"><span>error.rs</span><small>1/0</small></a></li><li><a class="file-link" href="eos-sandbox-host--src-lib-rs.html"><span>lib.rs</span><small>0/0</small></a></li><li><a class="file-link" href="eos-sandbox-host--src-lifecycle-rs.html"><span>lifecycle.rs</span><small>2/5</small></a></li><li><a class="file-link" href="eos-sandbox-host--src-plugin-package-rs.html"><span>plugin_package.rs</span><small>0/8</small></a></li><li><a class="file-link" href="eos-sandbox-host--src-provider-rs.html"><span>provider.rs</span><small>12/2</small></a></li><li><a class="file-link" href="eos-sandbox-host--src-provisioning-rs.html"><span>provisioning.rs</span><small>1/2</small></a></li><li><a class="file-link" href="eos-sandbox-host--src-registry-rs.html"><span>registry.rs</span><small>1/1</small></a></li><li><a class="file-link" href="eos-sandbox-host--src-sandbox-upload-rs.html"><span>sandbox_upload.rs</span><small>3/8</small></a></li></ul></li></ul></nav>
+  <div class="module-list" id="filter-root"><section class="module-section" data-filter-text="bootstrap_artifact crates/eos-sandbox-host/src/bootstrap_artifact.rs expected_sha artifact_arch sha256_hex probe_opts exec_stdout check_exec cleanup_staging_dir marker_indicates_skip ensure_daemon_bootstrap">
+  <div class="module-head">
+    <div>
+      <h2>src/bootstrap_artifact.rs</h2>
+      <p class="path">module <code>bootstrap_artifact</code></p>
+    </div>
+    <div class="module-stats">
+      <span>file owns</span>
+      <span>0 types</span>
+      <span>0 impls</span>
+      <span>9 fns</span>
+      <span>0 methods</span>
+    </div>
+  </div>
+  <div class="items"><div class="group-label">Standalone Functions</div><article id="item-fn-artifact-arch-67" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn artifact_arch pub(crate) pub(crate) fn artifact_arch (machine : &amp; str) -&gt; Result &lt; &amp; 'static str , SandboxHostError &gt; crates/eos-sandbox-host/src/bootstrap_artifact.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>artifact_arch</h3>
+    <span class="visibility">pub(crate)</span>
+  </div>
+  <code class="signature">pub(crate) fn <a class="symbol-link" href="eos-sandbox-host.html#item-fn-artifact-arch-67">artifact_arch</a> (machine : &amp; str) -&gt; Result &lt; &amp; &#x27;static str , <a class="symbol-link" href="eos-sandbox-host--src-error-rs.html#item-enum-SandboxHostError-5">SandboxHostError</a> &gt;</code>
+  <p class="docstring">Map a `uname -m` token to an `eosd` arch token, rejecting the unsupported.</p>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-comment">/// Map a `uname -m` token to an `eosd` arch token, rejecting the unsupported.</span>
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-host.html#item-fn-artifact-arch-67">artifact_arch</a>(machine: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;&amp;&#x27;<span class="rs-kw">static</span> str, <a class="symbol-link rs-type" href="eos-sandbox-host--src-error-rs.html#item-enum-SandboxHostError-5">SandboxHostError</a>&gt; {
+    <span class="rs-kw">match</span> machine.trim().to_ascii_lowercase().<a class="symbol-link rs-fn" href="eos-sandbox-host--src-provider-rs.html#method-as-str-35">as_str</a>() {
+        &quot;x86_64&quot; | &quot;amd64&quot; =&gt; <span class="rs-type">Ok</span>(&quot;amd64&quot;),
+        &quot;aarch64&quot; | &quot;arm64&quot; =&gt; <span class="rs-type">Ok</span>(&quot;arm64&quot;),
+        _ =&gt; <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-sandbox-host--src-error-rs.html#item-enum-SandboxHostError-5">SandboxHostError</a>::<span class="rs-type">UnsupportedArchitecture</span> {
+            machine: machine.to_owned(),
+        }),
+    }
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-sandbox-host/src/bootstrap_artifact.rs:67</p>
+</article><article id="item-fn-ensure-daemon-bootstrap-140" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn ensure_daemon_bootstrap pub(crate) pub(crate) async fn ensure_daemon_bootstrap (adapter : &amp; dyn ProviderAdapter , id : &amp; eos_types :: SandboxId , artifact_dir : &amp; Path ,) -&gt; Result &lt; () , SandboxHostError &gt; crates/eos-sandbox-host/src/bootstrap_artifact.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>ensure_daemon_bootstrap</h3>
+    <span class="visibility">pub(crate)</span>
+  </div>
+  <code class="signature">pub(crate) async fn <a class="symbol-link" href="eos-sandbox-host.html#item-fn-ensure-daemon-bootstrap-140">ensure_daemon_bootstrap</a> (adapter : &amp; dyn <a class="symbol-link" href="eos-sandbox-host--src-provider-rs.html#item-trait-ProviderAdapter-271">ProviderAdapter</a> , id : &amp; eos_types :: SandboxId , artifact_dir : &amp; Path ,) -&gt; Result &lt; () , <a class="symbol-link" href="eos-sandbox-host--src-error-rs.html#item-enum-SandboxHostError-5">SandboxHostError</a> &gt;</code>
+  <p class="docstring">Upload + verify the pinned `eosd` binary into the sandbox (idempotent).<br>`artifact_dir` holds the `eosd-linux-{arch}` binaries; the composition root<br>supplies it. Fail-closed: a<br>missing artifact, hash mismatch, unsupported arch, or failed `--version`<br>verify all propagate.</p>
+  <div class="tags"><span>async</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-comment">/// Upload + verify the pinned `eosd` binary into the sandbox (idempotent).</span>
+<span class="rs-comment">///</span>
+<span class="rs-comment">/// `artifact_dir` holds the `eosd-linux-{arch}` binaries; the composition root</span>
+<span class="rs-comment">/// supplies it. Fail-closed: a</span>
+<span class="rs-comment">/// missing artifact, hash mismatch, unsupported arch, or failed `--version`</span>
+<span class="rs-comment">/// verify all propagate.</span>
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-host.html#item-fn-ensure-daemon-bootstrap-140">ensure_daemon_bootstrap</a>(
+    adapter: &amp;<span class="rs-kw">dyn</span> <a class="symbol-link rs-type" href="eos-sandbox-host--src-provider-rs.html#item-trait-ProviderAdapter-271">ProviderAdapter</a>,
+    id: &amp;eos_types::<span class="rs-type">SandboxId</span>,
+    artifact_dir: &amp;<span class="rs-type">Path</span>,
+) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-sandbox-host--src-error-rs.html#item-enum-SandboxHostError-5">SandboxHostError</a>&gt; {
+    <span class="rs-comment">// 1. probe arch.</span>
+    <span class="rs-kw">let</span> machine = <a class="symbol-link rs-fn" href="eos-sandbox-host.html#item-fn-exec-stdout-91">exec_stdout</a>(adapter, id, &quot;uname -m&quot;, 15).<span class="rs-kw">await</span>?;
+    <span class="rs-kw">let</span> arch = <a class="symbol-link rs-fn" href="eos-sandbox-host.html#item-fn-artifact-arch-67">artifact_arch</a>(&amp;machine)?;
+
+    <span class="rs-comment">// 2. locate the pinned binary on the host fs.</span>
+    <span class="rs-kw">let</span> artifact_path = artifact_dir.join(format!(&quot;eosd-linux-{arch}&quot;));
+    <span class="rs-kw">if</span> !artifact_path.exists() {
+        <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-sandbox-host--src-error-rs.html#item-enum-SandboxHostError-5">SandboxHostError</a>::<span class="rs-type">ArtifactMissing</span> {
+            arch: arch.to_owned(),
+        });
+    }
+
+    <span class="rs-comment">// 3. read + hash.</span>
+    <span class="rs-kw">let</span> payload = tokio::fs::read(&amp;artifact_path).<span class="rs-kw">await</span>?;
+    <span class="rs-kw">let</span> digest = <a class="symbol-link rs-fn" href="eos-sandbox-host.html#item-fn-sha256-hex-78">sha256_hex</a>(&amp;payload);
+
+    <span class="rs-comment">// 4. verify against the pin (fail-closed).</span>
+    <span class="rs-kw">let</span> expected = <a class="symbol-link rs-fn" href="eos-sandbox-host.html#item-fn-expected-sha-60">expected_sha</a>(arch).ok_or_else(|| <a class="symbol-link rs-type" href="eos-sandbox-host--src-error-rs.html#item-enum-SandboxHostError-5">SandboxHostError</a>::<span class="rs-type">ArtifactMissing</span> {
+        arch: arch.to_owned(),
+    })?;
+    <span class="rs-kw">if</span> digest != expected {
+        <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-sandbox-host--src-error-rs.html#item-enum-SandboxHostError-5">SandboxHostError</a>::<span class="rs-type">ArtifactHashMismatch</span> {
+            arch: arch.to_owned(),
+            got: digest,
+            expected: expected.to_owned(),
+        });
+    }
+
+    <span class="rs-comment">// 5. remote-marker skip check (binary present + executable + marker matches).</span>
+    <span class="rs-kw">let</span> remote = <a class="symbol-link rs-fn" href="eos-sandbox-host--src-daemon-client-shell-rs.html#item-fn-posix-quote-9">posix_quote</a>(<span class="rs-type">EOSD_REMOTE_PATH</span>);
+    <span class="rs-kw">let</span> marker = <a class="symbol-link rs-fn" href="eos-sandbox-host--src-daemon-client-shell-rs.html#item-fn-posix-quote-9">posix_quote</a>(<span class="rs-type">EOSD_SHA_MARKER</span>);
+    <span class="rs-kw">let</span> skip_check = adapter
+        .<a class="symbol-link rs-fn" href="eos-sandbox-host--src-docker-rs.html#method-exec-334">exec</a>(
+            id,
+            &amp;format!(&quot;test -x {remote} &amp;&amp; test -f {marker} &amp;&amp; cat {marker}&quot;),
+            &amp;<a class="symbol-link rs-fn" href="eos-sandbox-host.html#item-fn-probe-opts-84">probe_opts</a>(15),
+        )
+        .<span class="rs-kw">await</span>?;
+    <span class="rs-kw">if</span> <a class="symbol-link rs-fn" href="eos-sandbox-host.html#item-fn-marker-indicates-skip-134">marker_indicates_skip</a>(&amp;skip_check, &amp;digest) {
+        <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(());
+    }
+
+    <span class="rs-comment">// 6. ensure the remote dir exists.</span>
+    <a class="symbol-link rs-fn" href="eos-sandbox-host.html#item-fn-check-exec-107">check_exec</a>(
+        adapter,
+        id,
+        &amp;format!(&quot;mkdir -p {}&quot;, <a class="symbol-link rs-fn" href="eos-sandbox-host--src-daemon-client-shell-rs.html#item-fn-posix-quote-9">posix_quote</a>(<span class="rs-type">BUNDLE_REMOTE_DIR</span>)),
+        30,
+        &quot;eosd runtime directory setup failed&quot;,
+    )
+    .<span class="rs-kw">await</span>?;
+
+    <span class="rs-comment">// 7. upload through the typed `/eos` fast path into a random staging dir.</span>
+    <span class="rs-kw">let</span> staging_dir = format!(
+        &quot;{<span class="rs-type">BUNDLE_REMOTE_DIR</span>}/.eosd-upload-{}&quot;,
+        uuid::<span class="rs-type">Uuid</span>::new_v4().simple()
+    );
+    <span class="rs-kw">let</span> staging_file = format!(&quot;{staging_dir}/eosd&quot;);
+    <a class="symbol-link rs-fn" href="eos-sandbox-host.html#item-fn-check-exec-107">check_exec</a>(
+        adapter,
+        id,
+        &amp;format!(&quot;mkdir -p {}&quot;, <a class="symbol-link rs-fn" href="eos-sandbox-host--src-daemon-client-shell-rs.html#item-fn-posix-quote-9">posix_quote</a>(&amp;staging_dir)),
+        30,
+        &quot;eosd staging directory setup failed&quot;,
+    )
+    .<span class="rs-kw">await</span>?;
+    <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Err</span>(err) = <a class="symbol-link rs-fn" href="eos-sandbox-host--src-sandbox-upload-rs.html#item-fn-upload-file-into-eos-69">upload_file_into_eos</a>(adapter, id, &amp;staging_dir, &quot;eosd&quot;, &amp;payload, 0o755).<span class="rs-kw">await</span>
+    {
+        <a class="symbol-link rs-fn" href="eos-sandbox-host.html#item-fn-cleanup-staging-dir-124">cleanup_staging_dir</a>(adapter, id, &amp;staging_dir).<span class="rs-kw">await</span>;
+        <span class="rs-kw">return</span> <span class="rs-type">Err</span>(err);
+    }
+    <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Err</span>(err) = <a class="symbol-link rs-fn" href="eos-sandbox-host.html#item-fn-check-exec-107">check_exec</a>(
+        adapter,
+        id,
+        &amp;format!(
+            &quot;mv -f {} {remote} &amp;&amp; chmod 755 {remote} &amp;&amp; rm -rf {}&quot;,
+            <a class="symbol-link rs-fn" href="eos-sandbox-host--src-daemon-client-shell-rs.html#item-fn-posix-quote-9">posix_quote</a>(&amp;staging_file),
+            <a class="symbol-link rs-fn" href="eos-sandbox-host--src-daemon-client-shell-rs.html#item-fn-posix-quote-9">posix_quote</a>(&amp;staging_dir)
+        ),
+        30,
+        &quot;eosd finalize failed&quot;,
+    )
+    .<span class="rs-kw">await</span>
+    {
+        <a class="symbol-link rs-fn" href="eos-sandbox-host.html#item-fn-cleanup-staging-dir-124">cleanup_staging_dir</a>(adapter, id, &amp;staging_dir).<span class="rs-kw">await</span>;
+        <span class="rs-kw">return</span> <span class="rs-type">Err</span>(err);
+    }
+
+    <span class="rs-comment">// 8. write marker + readiness verify (marker written before the version</span>
+    <span class="rs-comment">// check, in one `&amp;&amp;` chain — ported verbatim, not reordered).</span>
+    <a class="symbol-link rs-fn" href="eos-sandbox-host.html#item-fn-check-exec-107">check_exec</a>(
+        adapter,
+        id,
+        &amp;format!(
+            &quot;printf %s {} &gt; {marker} &amp;&amp; {remote} --version &gt;/dev/null&quot;,
+            <a class="symbol-link rs-fn" href="eos-sandbox-host--src-daemon-client-shell-rs.html#item-fn-posix-quote-9">posix_quote</a>(&amp;digest)
+        ),
+        30,
+        &quot;eosd upload verification failed&quot;,
+    )
+    .<span class="rs-kw">await</span>?;
+    <span class="rs-type">Ok</span>(())
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-sandbox-host/src/bootstrap_artifact.rs:140</p>
+</article><article id="item-fn-expected-sha-60" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn expected_sha private fn expected_sha (arch : &amp; str) -&gt; Option &lt; &amp; 'static str &gt; crates/eos-sandbox-host/src/bootstrap_artifact.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>expected_sha</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="eos-sandbox-host.html#item-fn-expected-sha-60">expected_sha</a> (arch : &amp; str) -&gt; Option &lt; &amp; &#x27;static str &gt;</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-host.html#item-fn-expected-sha-60">expected_sha</a>(arch: &amp;str) -&gt; <span class="rs-type">Option</span>&lt;&amp;&#x27;<span class="rs-kw">static</span> str&gt; {
+    <span class="rs-type">EOSD_SHA256</span>
+        .iter()
+        .find(|(key, _)| *key == arch)
+        .map(|(_, sha)| *sha)
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-sandbox-host/src/bootstrap_artifact.rs:60</p>
+</article><article id="item-fn-sha256-hex-78" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn sha256_hex private fn sha256_hex (payload : &amp; [u8]) -&gt; String crates/eos-sandbox-host/src/bootstrap_artifact.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>sha256_hex</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="eos-sandbox-host.html#item-fn-sha256-hex-78">sha256_hex</a> (payload : &amp; [u8]) -&gt; String</code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-host.html#item-fn-sha256-hex-78">sha256_hex</a>(payload: &amp;[u8]) -&gt; <span class="rs-type">String</span> {
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> hasher = <span class="rs-type">Sha256</span>::<a class="symbol-link rs-fn" href="eos-sandbox-host--src-daemon-client-rs.html#method-new-119">new</a>();
+    hasher.update(payload);
+    format!(&quot;{:x}&quot;, hasher.finalize())
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-sandbox-host/src/bootstrap_artifact.rs:78</p>
+</article><article id="item-fn-probe-opts-84" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn probe_opts private fn probe_opts (timeout_s : u32) -&gt; ExecOpts crates/eos-sandbox-host/src/bootstrap_artifact.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>probe_opts</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="eos-sandbox-host.html#item-fn-probe-opts-84">probe_opts</a> (timeout_s : u32) -&gt; <a class="symbol-link" href="eos-sandbox-host--src-provider-rs.html#item-struct-ExecOpts-161">ExecOpts</a></code>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-host.html#item-fn-probe-opts-84">probe_opts</a>(timeout_s: u32) -&gt; <a class="symbol-link rs-type" href="eos-sandbox-host--src-provider-rs.html#item-struct-ExecOpts-161">ExecOpts</a> {
+    <a class="symbol-link rs-type" href="eos-sandbox-host--src-provider-rs.html#item-struct-ExecOpts-161">ExecOpts</a> {
+        cwd: <span class="rs-type">None</span>,
+        timeout: <span class="rs-type">Some</span>(std::time::<span class="rs-type">Duration</span>::from_secs(u64::from(timeout_s))),
+    }
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-sandbox-host/src/bootstrap_artifact.rs:84</p>
+</article><article id="item-fn-exec-stdout-91" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn exec_stdout private async fn exec_stdout (adapter : &amp; dyn ProviderAdapter , id : &amp; eos_types :: SandboxId , command : &amp; str , timeout_s : u32 ,) -&gt; Result &lt; String , SandboxHostError &gt; crates/eos-sandbox-host/src/bootstrap_artifact.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>exec_stdout</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">async fn <a class="symbol-link" href="eos-sandbox-host.html#item-fn-exec-stdout-91">exec_stdout</a> (adapter : &amp; dyn <a class="symbol-link" href="eos-sandbox-host--src-provider-rs.html#item-trait-ProviderAdapter-271">ProviderAdapter</a> , id : &amp; eos_types :: SandboxId , command : &amp; str , timeout_s : u32 ,) -&gt; Result &lt; String , <a class="symbol-link" href="eos-sandbox-host--src-error-rs.html#item-enum-SandboxHostError-5">SandboxHostError</a> &gt;</code>
+  <div class="tags"><span>async</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-host.html#item-fn-exec-stdout-91">exec_stdout</a>(
+    adapter: &amp;<span class="rs-kw">dyn</span> <a class="symbol-link rs-type" href="eos-sandbox-host--src-provider-rs.html#item-trait-ProviderAdapter-271">ProviderAdapter</a>,
+    id: &amp;eos_types::<span class="rs-type">SandboxId</span>,
+    command: &amp;str,
+    timeout_s: u32,
+) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">String</span>, <a class="symbol-link rs-type" href="eos-sandbox-host--src-error-rs.html#item-enum-SandboxHostError-5">SandboxHostError</a>&gt; {
+    <span class="rs-kw">let</span> result = adapter.<a class="symbol-link rs-fn" href="eos-sandbox-host--src-docker-rs.html#method-exec-334">exec</a>(id, command, &amp;<a class="symbol-link rs-fn" href="eos-sandbox-host.html#item-fn-probe-opts-84">probe_opts</a>(timeout_s)).<span class="rs-kw">await</span>?;
+    <span class="rs-kw">if</span> result.exit_code != 0 {
+        <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-sandbox-host--src-error-rs.html#item-enum-SandboxHostError-5">SandboxHostError</a>::<span class="rs-type">ExecFailed</span> {
+            exit_code: result.exit_code,
+            message: format!(&quot;runtime probe failed: {}&quot;, result.stdout),
+        });
+    }
+    <span class="rs-type">Ok</span>(result.stdout.trim().to_owned())
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-sandbox-host/src/bootstrap_artifact.rs:91</p>
+</article><article id="item-fn-check-exec-107" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn check_exec private async fn check_exec (adapter : &amp; dyn ProviderAdapter , id : &amp; eos_types :: SandboxId , command : &amp; str , timeout_s : u32 , message : &amp; str ,) -&gt; Result &lt; () , SandboxHostError &gt; crates/eos-sandbox-host/src/bootstrap_artifact.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>check_exec</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">async fn <a class="symbol-link" href="eos-sandbox-host.html#item-fn-check-exec-107">check_exec</a> (adapter : &amp; dyn <a class="symbol-link" href="eos-sandbox-host--src-provider-rs.html#item-trait-ProviderAdapter-271">ProviderAdapter</a> , id : &amp; eos_types :: SandboxId , command : &amp; str , timeout_s : u32 , message : &amp; str ,) -&gt; Result &lt; () , <a class="symbol-link" href="eos-sandbox-host--src-error-rs.html#item-enum-SandboxHostError-5">SandboxHostError</a> &gt;</code>
+  <div class="tags"><span>async</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-host.html#item-fn-check-exec-107">check_exec</a>(
+    adapter: &amp;<span class="rs-kw">dyn</span> <a class="symbol-link rs-type" href="eos-sandbox-host--src-provider-rs.html#item-trait-ProviderAdapter-271">ProviderAdapter</a>,
+    id: &amp;eos_types::<span class="rs-type">SandboxId</span>,
+    command: &amp;str,
+    timeout_s: u32,
+    message: &amp;str,
+) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-sandbox-host--src-error-rs.html#item-enum-SandboxHostError-5">SandboxHostError</a>&gt; {
+    <span class="rs-kw">let</span> result = adapter.<a class="symbol-link rs-fn" href="eos-sandbox-host--src-docker-rs.html#method-exec-334">exec</a>(id, command, &amp;<a class="symbol-link rs-fn" href="eos-sandbox-host.html#item-fn-probe-opts-84">probe_opts</a>(timeout_s)).<span class="rs-kw">await</span>?;
+    <span class="rs-kw">if</span> result.exit_code != 0 {
+        <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-sandbox-host--src-error-rs.html#item-enum-SandboxHostError-5">SandboxHostError</a>::<span class="rs-type">ExecFailed</span> {
+            exit_code: result.exit_code,
+            message: format!(&quot;{message} (sandbox={id}): {}&quot;, result.stdout),
+        });
+    }
+    <span class="rs-type">Ok</span>(())
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-sandbox-host/src/bootstrap_artifact.rs:107</p>
+</article><article id="item-fn-cleanup-staging-dir-124" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn cleanup_staging_dir private async fn cleanup_staging_dir (adapter : &amp; dyn ProviderAdapter , id : &amp; eos_types :: SandboxId , path : &amp; str) crates/eos-sandbox-host/src/bootstrap_artifact.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>cleanup_staging_dir</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">async fn <a class="symbol-link" href="eos-sandbox-host.html#item-fn-cleanup-staging-dir-124">cleanup_staging_dir</a> (adapter : &amp; dyn <a class="symbol-link" href="eos-sandbox-host--src-provider-rs.html#item-trait-ProviderAdapter-271">ProviderAdapter</a> , id : &amp; eos_types :: SandboxId , path : &amp; str)</code>
+  <div class="tags"><span>async</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-host.html#item-fn-cleanup-staging-dir-124">cleanup_staging_dir</a>(adapter: &amp;<span class="rs-kw">dyn</span> <a class="symbol-link rs-type" href="eos-sandbox-host--src-provider-rs.html#item-trait-ProviderAdapter-271">ProviderAdapter</a>, id: &amp;eos_types::<span class="rs-type">SandboxId</span>, path: &amp;str) {
+    <span class="rs-kw">let</span> _ = adapter
+        .<a class="symbol-link rs-fn" href="eos-sandbox-host--src-docker-rs.html#method-exec-334">exec</a>(
+            id,
+            &amp;format!(&quot;rm -rf {}&quot;, <a class="symbol-link rs-fn" href="eos-sandbox-host--src-daemon-client-shell-rs.html#item-fn-posix-quote-9">posix_quote</a>(path)),
+            &amp;<a class="symbol-link rs-fn" href="eos-sandbox-host.html#item-fn-probe-opts-84">probe_opts</a>(15),
+        )
+        .<span class="rs-kw">await</span>;
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-sandbox-host/src/bootstrap_artifact.rs:124</p>
+</article><article id="item-fn-marker-indicates-skip-134" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn marker_indicates_skip private fn marker_indicates_skip (check : &amp; crate :: provider :: RawExecResult , digest : &amp; str) -&gt; bool crates/eos-sandbox-host/src/bootstrap_artifact.rs  ">
+  <div class="item-head">
+    <span class="kind">fn</span>
+    <h3>marker_indicates_skip</h3>
+    <span class="visibility">private</span>
+  </div>
+  <code class="signature">fn <a class="symbol-link" href="eos-sandbox-host.html#item-fn-marker-indicates-skip-134">marker_indicates_skip</a> (check : &amp; crate :: provider :: <a class="symbol-link" href="eos-sandbox-host--src-provider-rs.html#item-struct-RawExecResult-130">RawExecResult</a> , digest : &amp; str) -&gt; bool</code>
+  <p class="docstring">Whether the remote marker-check result indicates the pinned binary is already<br>present with a matching digest (idempotent skip).</p>
+  <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-comment">/// Whether the remote marker-check result indicates the pinned binary is already</span>
+<span class="rs-comment">/// present with a matching digest (idempotent skip).</span>
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-host.html#item-fn-marker-indicates-skip-134">marker_indicates_skip</a>(check: &amp;<span class="rs-kw">crate</span>::provider::<a class="symbol-link rs-type" href="eos-sandbox-host--src-provider-rs.html#item-struct-RawExecResult-130">RawExecResult</a>, digest: &amp;str) -&gt; bool {
+    check.exit_code == 0 &amp;&amp; check.stdout.trim() == digest
+}
+</code></pre>
+</details>
+
+  <p class="source">crates/eos-sandbox-host/src/bootstrap_artifact.rs:134</p>
+</article></div>
+</section></div>
+</main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/eos-sandbox-host/src/bootstrap_artifact.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-comment">//! Pinned daemon bootstrap upload: arch probe, sha256 verify against the `eosd`</span>
+<span class="rs-comment">//! pin, idempotent remote-marker skip, Docker `put_archive` fast paths, and</span>
+<span class="rs-comment">//! readiness checks.</span>
+<span class="rs-comment">//!</span>
+<span class="rs-comment">//! GC-01: there is no module-tarball builder (LayerStack/OCC/overlay/plugin/audit</span>
+<span class="rs-comment">//! vendoring) — the daemon is a single static `eosd` binary, so only the</span>
+<span class="rs-comment">//! pinned-binary upload exists. There is no base64-chunk upload fallback (Docker</span>
+<span class="rs-comment">//! always has `put_archive`) and no migration-bundle tarball.</span>
+
+<span class="rs-kw">use</span> std::path::<span class="rs-type">Path</span>;
+
+<span class="rs-kw">use</span> sha2::{<span class="rs-type">Digest</span>, <span class="rs-type">Sha256</span>};
+
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::daemon_client::{posix_quote, <span class="rs-type">BUNDLE_REMOTE_DIR</span>, <span class="rs-type">EOSD_REMOTE_PATH</span>, <span class="rs-type">EOSD_SHA_MARKER</span>};
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::error::<a class="symbol-link rs-type" href="eos-sandbox-host--src-error-rs.html#item-enum-SandboxHostError-5">SandboxHostError</a>;
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::provider::{<a class="symbol-link rs-type" href="eos-sandbox-host--src-provider-rs.html#item-struct-ExecOpts-161">ExecOpts</a>, <a class="symbol-link rs-type" href="eos-sandbox-host--src-provider-rs.html#item-trait-ProviderAdapter-271">ProviderAdapter</a>};
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::sandbox_upload::upload_file_into_eos;
+
+<span class="rs-comment">/// The `eosd` artifact this host is pinned to (bumped on a coordinated release).</span>
+<span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-type">EOSD_VERSION</span>: &amp;str = &quot;0.1.0-local.20260602&quot;;
+
+<span class="rs-comment">// Minisign trust-anchor public-key verification is deferred; the spec §6 mandates</span>
+<span class="rs-comment">// omitting a `MINISIGN_PUBLIC_KEY` const until it carries a value, so none is</span>
+<span class="rs-comment">// declared here.</span>
+
+<span class="rs-comment">/// The wire protocol version the pinned `eosd` speaks (from `eos_protocol`, the</span>
+<span class="rs-comment">/// crate the artifact itself is built from). Lockstep with</span>
+<span class="rs-comment">/// [`crate::daemon_client::DAEMON_PROTOCOL_VERSION`].</span>
+<span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-type">PROTOCOL_VERSION</span>: u32 = eos_protocol::<span class="rs-type">DAEMON_PROTOCOL_VERSION</span> <span class="rs-kw">as</span> u32;
+
+<span class="rs-comment">// AC-eos-sandbox-host-08: the host and the pinned artifact must agree on the wire</span>
+<span class="rs-comment">// protocol version. A drift fails the build.</span>
+<span class="rs-kw">const</span> _: () = assert!(<span class="rs-kw">crate</span>::daemon_client::<span class="rs-type">DAEMON_PROTOCOL_VERSION</span> == <span class="rs-type">PROTOCOL_VERSION</span>);
+
+<span class="rs-comment">/// Per-arch SHA256 of the `eosd-linux-{arch}` binary, keyed by the container arch</span>
+<span class="rs-comment">/// token. Keep these pins in lockstep with the actual</span>
+<span class="rs-comment">/// `sandbox/dist/eosd-linux-{arch}` digests.</span>
+<span class="rs-comment">///</span>
+<span class="rs-comment">/// VOLATILE: the amd64 `eosd` binary is rebuilt repeatedly during development</span>
+<span class="rs-comment">/// (observed churn this session: `bb066eb…`→`0bf55d43…`→`033ed149…`→`5589fff8…`→</span>
+<span class="rs-comment">/// `4c306b4e…`), so any hardcoded amd64 value is a best-effort snapshot that</span>
+<span class="rs-comment">/// races the rebuild and is intentionally NOT unit-test-pinned (a value-coupled</span>
+<span class="rs-comment">/// test would be permanently flaky). This crate is not yet wired into a running</span>
+<span class="rs-comment">/// runtime (`eos-runtime` is Phase 6), so a lagging pin has no runtime impact</span>
+<span class="rs-comment">/// today; Phase-7 cutover reconciles the final release pin against the stabilized</span>
+<span class="rs-comment">/// binary. The upload/verify LOGIC (arch map, sha-mismatch, marker-skip decision)</span>
+<span class="rs-comment">/// is what this crate owns and is fully unit-tested; the pin VALUE is a cutover</span>
+<span class="rs-comment">/// concern. arm64 is stable.</span>
+<span class="rs-kw">static</span> <span class="rs-type">EOSD_SHA256</span>: &amp;[(&amp;str, &amp;str)] = &amp;[
+    (
+        &quot;amd64&quot;,
+        &quot;af19704510087edfc6dde9218ab2baded18659d946c068897fce3d9655d66e30&quot;,
+    ),
+    (
+        &quot;arm64&quot;,
+        &quot;e07a59546cecf931922386a91bf08a8ee5e1fa08747cbc45ee56462eeac4417b&quot;,
+    ),
+];
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-host.html#item-fn-expected-sha-60">expected_sha</a>(arch: &amp;str) -&gt; <span class="rs-type">Option</span>&lt;&amp;&#x27;<span class="rs-kw">static</span> str&gt; {
+    <span class="rs-type">EOSD_SHA256</span>
+        .iter()
+        .find(|(key, _)| *key == arch)
+        .map(|(_, sha)| *sha)
+}
+
+<span class="rs-comment">/// Map a `uname -m` token to an `eosd` arch token, rejecting the unsupported.</span>
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-host.html#item-fn-artifact-arch-67">artifact_arch</a>(machine: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;&amp;&#x27;<span class="rs-kw">static</span> str, <a class="symbol-link rs-type" href="eos-sandbox-host--src-error-rs.html#item-enum-SandboxHostError-5">SandboxHostError</a>&gt; {
+    <span class="rs-kw">match</span> machine.trim().to_ascii_lowercase().<a class="symbol-link rs-fn" href="eos-sandbox-host--src-provider-rs.html#method-as-str-35">as_str</a>() {
+        &quot;x86_64&quot; | &quot;amd64&quot; =&gt; <span class="rs-type">Ok</span>(&quot;amd64&quot;),
+        &quot;aarch64&quot; | &quot;arm64&quot; =&gt; <span class="rs-type">Ok</span>(&quot;arm64&quot;),
+        _ =&gt; <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-sandbox-host--src-error-rs.html#item-enum-SandboxHostError-5">SandboxHostError</a>::<span class="rs-type">UnsupportedArchitecture</span> {
+            machine: machine.to_owned(),
+        }),
+    }
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-host.html#item-fn-sha256-hex-78">sha256_hex</a>(payload: &amp;[u8]) -&gt; <span class="rs-type">String</span> {
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> hasher = <span class="rs-type">Sha256</span>::<a class="symbol-link rs-fn" href="eos-sandbox-host--src-daemon-client-rs.html#method-new-119">new</a>();
+    hasher.update(payload);
+    format!(&quot;{:x}&quot;, hasher.finalize())
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-host.html#item-fn-probe-opts-84">probe_opts</a>(timeout_s: u32) -&gt; <a class="symbol-link rs-type" href="eos-sandbox-host--src-provider-rs.html#item-struct-ExecOpts-161">ExecOpts</a> {
+    <a class="symbol-link rs-type" href="eos-sandbox-host--src-provider-rs.html#item-struct-ExecOpts-161">ExecOpts</a> {
+        cwd: <span class="rs-type">None</span>,
+        timeout: <span class="rs-type">Some</span>(std::time::<span class="rs-type">Duration</span>::from_secs(u64::from(timeout_s))),
+    }
+}
+
+<span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-host.html#item-fn-exec-stdout-91">exec_stdout</a>(
+    adapter: &amp;<span class="rs-kw">dyn</span> <a class="symbol-link rs-type" href="eos-sandbox-host--src-provider-rs.html#item-trait-ProviderAdapter-271">ProviderAdapter</a>,
+    id: &amp;eos_types::<span class="rs-type">SandboxId</span>,
+    command: &amp;str,
+    timeout_s: u32,
+) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">String</span>, <a class="symbol-link rs-type" href="eos-sandbox-host--src-error-rs.html#item-enum-SandboxHostError-5">SandboxHostError</a>&gt; {
+    <span class="rs-kw">let</span> result = adapter.<a class="symbol-link rs-fn" href="eos-sandbox-host--src-docker-rs.html#method-exec-334">exec</a>(id, command, &amp;<a class="symbol-link rs-fn" href="eos-sandbox-host.html#item-fn-probe-opts-84">probe_opts</a>(timeout_s)).<span class="rs-kw">await</span>?;
+    <span class="rs-kw">if</span> result.exit_code != 0 {
+        <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-sandbox-host--src-error-rs.html#item-enum-SandboxHostError-5">SandboxHostError</a>::<span class="rs-type">ExecFailed</span> {
+            exit_code: result.exit_code,
+            message: format!(&quot;runtime probe failed: {}&quot;, result.stdout),
+        });
+    }
+    <span class="rs-type">Ok</span>(result.stdout.trim().to_owned())
+}
+
+<span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-host.html#item-fn-check-exec-107">check_exec</a>(
+    adapter: &amp;<span class="rs-kw">dyn</span> <a class="symbol-link rs-type" href="eos-sandbox-host--src-provider-rs.html#item-trait-ProviderAdapter-271">ProviderAdapter</a>,
+    id: &amp;eos_types::<span class="rs-type">SandboxId</span>,
+    command: &amp;str,
+    timeout_s: u32,
+    message: &amp;str,
+) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-sandbox-host--src-error-rs.html#item-enum-SandboxHostError-5">SandboxHostError</a>&gt; {
+    <span class="rs-kw">let</span> result = adapter.<a class="symbol-link rs-fn" href="eos-sandbox-host--src-docker-rs.html#method-exec-334">exec</a>(id, command, &amp;<a class="symbol-link rs-fn" href="eos-sandbox-host.html#item-fn-probe-opts-84">probe_opts</a>(timeout_s)).<span class="rs-kw">await</span>?;
+    <span class="rs-kw">if</span> result.exit_code != 0 {
+        <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-sandbox-host--src-error-rs.html#item-enum-SandboxHostError-5">SandboxHostError</a>::<span class="rs-type">ExecFailed</span> {
+            exit_code: result.exit_code,
+            message: format!(&quot;{message} (sandbox={id}): {}&quot;, result.stdout),
+        });
+    }
+    <span class="rs-type">Ok</span>(())
+}
+
+<span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-host.html#item-fn-cleanup-staging-dir-124">cleanup_staging_dir</a>(adapter: &amp;<span class="rs-kw">dyn</span> <a class="symbol-link rs-type" href="eos-sandbox-host--src-provider-rs.html#item-trait-ProviderAdapter-271">ProviderAdapter</a>, id: &amp;eos_types::<span class="rs-type">SandboxId</span>, path: &amp;str) {
+    <span class="rs-kw">let</span> _ = adapter
+        .<a class="symbol-link rs-fn" href="eos-sandbox-host--src-docker-rs.html#method-exec-334">exec</a>(
+            id,
+            &amp;format!(&quot;rm -rf {}&quot;, <a class="symbol-link rs-fn" href="eos-sandbox-host--src-daemon-client-shell-rs.html#item-fn-posix-quote-9">posix_quote</a>(path)),
+            &amp;<a class="symbol-link rs-fn" href="eos-sandbox-host.html#item-fn-probe-opts-84">probe_opts</a>(15),
+        )
+        .<span class="rs-kw">await</span>;
+}
+
+<span class="rs-comment">/// Whether the remote marker-check result indicates the pinned binary is already</span>
+<span class="rs-comment">/// present with a matching digest (idempotent skip).</span>
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-host.html#item-fn-marker-indicates-skip-134">marker_indicates_skip</a>(check: &amp;<span class="rs-kw">crate</span>::provider::<a class="symbol-link rs-type" href="eos-sandbox-host--src-provider-rs.html#item-struct-RawExecResult-130">RawExecResult</a>, digest: &amp;str) -&gt; bool {
+    check.exit_code == 0 &amp;&amp; check.stdout.trim() == digest
+}
+
+<span class="rs-comment">/// Upload + verify the pinned `eosd` binary into the sandbox (idempotent).</span>
+<span class="rs-comment">///</span>
+<span class="rs-comment">/// `artifact_dir` holds the `eosd-linux-{arch}` binaries; the composition root</span>
+<span class="rs-comment">/// supplies it. Fail-closed: a</span>
+<span class="rs-comment">/// missing artifact, hash mismatch, unsupported arch, or failed `--version`</span>
+<span class="rs-comment">/// verify all propagate.</span>
+<span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-sandbox-host.html#item-fn-ensure-daemon-bootstrap-140">ensure_daemon_bootstrap</a>(
+    adapter: &amp;<span class="rs-kw">dyn</span> <a class="symbol-link rs-type" href="eos-sandbox-host--src-provider-rs.html#item-trait-ProviderAdapter-271">ProviderAdapter</a>,
+    id: &amp;eos_types::<span class="rs-type">SandboxId</span>,
+    artifact_dir: &amp;<span class="rs-type">Path</span>,
+) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-sandbox-host--src-error-rs.html#item-enum-SandboxHostError-5">SandboxHostError</a>&gt; {
+    <span class="rs-comment">// 1. probe arch.</span>
+    <span class="rs-kw">let</span> machine = <a class="symbol-link rs-fn" href="eos-sandbox-host.html#item-fn-exec-stdout-91">exec_stdout</a>(adapter, id, &quot;uname -m&quot;, 15).<span class="rs-kw">await</span>?;
+    <span class="rs-kw">let</span> arch = <a class="symbol-link rs-fn" href="eos-sandbox-host.html#item-fn-artifact-arch-67">artifact_arch</a>(&amp;machine)?;
+
+    <span class="rs-comment">// 2. locate the pinned binary on the host fs.</span>
+    <span class="rs-kw">let</span> artifact_path = artifact_dir.join(format!(&quot;eosd-linux-{arch}&quot;));
+    <span class="rs-kw">if</span> !artifact_path.exists() {
+        <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-sandbox-host--src-error-rs.html#item-enum-SandboxHostError-5">SandboxHostError</a>::<span class="rs-type">ArtifactMissing</span> {
+            arch: arch.to_owned(),
+        });
+    }
+
+    <span class="rs-comment">// 3. read + hash.</span>
+    <span class="rs-kw">let</span> payload = tokio::fs::read(&amp;artifact_path).<span class="rs-kw">await</span>?;
+    <span class="rs-kw">let</span> digest = <a class="symbol-link rs-fn" href="eos-sandbox-host.html#item-fn-sha256-hex-78">sha256_hex</a>(&amp;payload);
+
+    <span class="rs-comment">// 4. verify against the pin (fail-closed).</span>
+    <span class="rs-kw">let</span> expected = <a class="symbol-link rs-fn" href="eos-sandbox-host.html#item-fn-expected-sha-60">expected_sha</a>(arch).ok_or_else(|| <a class="symbol-link rs-type" href="eos-sandbox-host--src-error-rs.html#item-enum-SandboxHostError-5">SandboxHostError</a>::<span class="rs-type">ArtifactMissing</span> {
+        arch: arch.to_owned(),
+    })?;
+    <span class="rs-kw">if</span> digest != expected {
+        <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-sandbox-host--src-error-rs.html#item-enum-SandboxHostError-5">SandboxHostError</a>::<span class="rs-type">ArtifactHashMismatch</span> {
+            arch: arch.to_owned(),
+            got: digest,
+            expected: expected.to_owned(),
+        });
+    }
+
+    <span class="rs-comment">// 5. remote-marker skip check (binary present + executable + marker matches).</span>
+    <span class="rs-kw">let</span> remote = <a class="symbol-link rs-fn" href="eos-sandbox-host--src-daemon-client-shell-rs.html#item-fn-posix-quote-9">posix_quote</a>(<span class="rs-type">EOSD_REMOTE_PATH</span>);
+    <span class="rs-kw">let</span> marker = <a class="symbol-link rs-fn" href="eos-sandbox-host--src-daemon-client-shell-rs.html#item-fn-posix-quote-9">posix_quote</a>(<span class="rs-type">EOSD_SHA_MARKER</span>);
+    <span class="rs-kw">let</span> skip_check = adapter
+        .<a class="symbol-link rs-fn" href="eos-sandbox-host--src-docker-rs.html#method-exec-334">exec</a>(
+            id,
+            &amp;format!(&quot;test -x {remote} &amp;&amp; test -f {marker} &amp;&amp; cat {marker}&quot;),
+            &amp;<a class="symbol-link rs-fn" href="eos-sandbox-host.html#item-fn-probe-opts-84">probe_opts</a>(15),
+        )
+        .<span class="rs-kw">await</span>?;
+    <span class="rs-kw">if</span> <a class="symbol-link rs-fn" href="eos-sandbox-host.html#item-fn-marker-indicates-skip-134">marker_indicates_skip</a>(&amp;skip_check, &amp;digest) {
+        <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(());
+    }
+
+    <span class="rs-comment">// 6. ensure the remote dir exists.</span>
+    <a class="symbol-link rs-fn" href="eos-sandbox-host.html#item-fn-check-exec-107">check_exec</a>(
+        adapter,
+        id,
+        &amp;format!(&quot;mkdir -p {}&quot;, <a class="symbol-link rs-fn" href="eos-sandbox-host--src-daemon-client-shell-rs.html#item-fn-posix-quote-9">posix_quote</a>(<span class="rs-type">BUNDLE_REMOTE_DIR</span>)),
+        30,
+        &quot;eosd runtime directory setup failed&quot;,
+    )
+    .<span class="rs-kw">await</span>?;
+
+    <span class="rs-comment">// 7. upload through the typed `/eos` fast path into a random staging dir.</span>
+    <span class="rs-kw">let</span> staging_dir = format!(
+        &quot;{<span class="rs-type">BUNDLE_REMOTE_DIR</span>}/.eosd-upload-{}&quot;,
+        uuid::<span class="rs-type">Uuid</span>::new_v4().simple()
+    );
+    <span class="rs-kw">let</span> staging_file = format!(&quot;{staging_dir}/eosd&quot;);
+    <a class="symbol-link rs-fn" href="eos-sandbox-host.html#item-fn-check-exec-107">check_exec</a>(
+        adapter,
+        id,
+        &amp;format!(&quot;mkdir -p {}&quot;, <a class="symbol-link rs-fn" href="eos-sandbox-host--src-daemon-client-shell-rs.html#item-fn-posix-quote-9">posix_quote</a>(&amp;staging_dir)),
+        30,
+        &quot;eosd staging directory setup failed&quot;,
+    )
+    .<span class="rs-kw">await</span>?;
+    <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Err</span>(err) = <a class="symbol-link rs-fn" href="eos-sandbox-host--src-sandbox-upload-rs.html#item-fn-upload-file-into-eos-69">upload_file_into_eos</a>(adapter, id, &amp;staging_dir, &quot;eosd&quot;, &amp;payload, 0o755).<span class="rs-kw">await</span>
+    {
+        <a class="symbol-link rs-fn" href="eos-sandbox-host.html#item-fn-cleanup-staging-dir-124">cleanup_staging_dir</a>(adapter, id, &amp;staging_dir).<span class="rs-kw">await</span>;
+        <span class="rs-kw">return</span> <span class="rs-type">Err</span>(err);
+    }
+    <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Err</span>(err) = <a class="symbol-link rs-fn" href="eos-sandbox-host.html#item-fn-check-exec-107">check_exec</a>(
+        adapter,
+        id,
+        &amp;format!(
+            &quot;mv -f {} {remote} &amp;&amp; chmod 755 {remote} &amp;&amp; rm -rf {}&quot;,
+            <a class="symbol-link rs-fn" href="eos-sandbox-host--src-daemon-client-shell-rs.html#item-fn-posix-quote-9">posix_quote</a>(&amp;staging_file),
+            <a class="symbol-link rs-fn" href="eos-sandbox-host--src-daemon-client-shell-rs.html#item-fn-posix-quote-9">posix_quote</a>(&amp;staging_dir)
+        ),
+        30,
+        &quot;eosd finalize failed&quot;,
+    )
+    .<span class="rs-kw">await</span>
+    {
+        <a class="symbol-link rs-fn" href="eos-sandbox-host.html#item-fn-cleanup-staging-dir-124">cleanup_staging_dir</a>(adapter, id, &amp;staging_dir).<span class="rs-kw">await</span>;
+        <span class="rs-kw">return</span> <span class="rs-type">Err</span>(err);
+    }
+
+    <span class="rs-comment">// 8. write marker + readiness verify (marker written before the version</span>
+    <span class="rs-comment">// check, in one `&amp;&amp;` chain — ported verbatim, not reordered).</span>
+    <a class="symbol-link rs-fn" href="eos-sandbox-host.html#item-fn-check-exec-107">check_exec</a>(
+        adapter,
+        id,
+        &amp;format!(
+            &quot;printf %s {} &gt; {marker} &amp;&amp; {remote} --version &gt;/dev/null&quot;,
+            <a class="symbol-link rs-fn" href="eos-sandbox-host--src-daemon-client-shell-rs.html#item-fn-posix-quote-9">posix_quote</a>(&amp;digest)
+        ),
+        30,
+        &quot;eosd upload verification failed&quot;,
+    )
+    .<span class="rs-kw">await</span>?;
+    <span class="rs-type">Ok</span>(())
+}
+
+#[cfg(test)]
+#[path = &quot;../tests/bootstrap_artifact/<span class="rs-kw">mod</span>.rs&quot;]
+<span class="rs-kw">mod</span> tests;
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
+  <script src="../assets/inventory.js"></script>
+</body>
+</html>

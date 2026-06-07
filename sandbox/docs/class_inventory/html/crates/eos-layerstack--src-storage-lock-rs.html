@@ -8,8 +8,16 @@
 </head>
 <body>
   <header>
-    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
-    <h1>eos-layerstack File Inventory</h1>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>eos-layerstack File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS/sandbox &amp;&amp; cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
   </header>
   <a class="back-link" href="../index.html">sandbox</a>
 <section class="summary">
@@ -47,139 +55,925 @@
       <span>13 methods</span>
     </div>
   </div>
-  <div class="items"><div class="group-label">File-Owned Types</div><article class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct StorageWriterLockLease pub pub struct StorageWriterLockLease crates/eos-layerstack/src/storage_lock.rs key String ">
+  <div class="items"><div class="group-label">File-Owned Types</div><article id="item-struct-StorageWriterLockLease-44" class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct StorageWriterLockLease pub pub struct StorageWriterLockLease crates/eos-layerstack/src/storage_lock.rs key String ">
   <div class="item-head">
     <span class="kind">struct</span>
     <h3>StorageWriterLockLease</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub struct StorageWriterLockLease</code>
-  <div class="tags"></div>
-  <h4>Fields</h4><table><tbody><tr><td>private</td><td>key</td><td><code>String</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr><td>method</td><td>shared</td><td><code>pub fn shared (&amp; self) -&gt; Result &lt; SharedGuard &lt; '_ &gt; , LayerStackError &gt;</code></td></tr><tr><td>method</td><td>exclusive</td><td><code>pub fn exclusive (&amp; self) -&gt; Result &lt; ExclusiveGuard &lt; '_ &gt; , LayerStackError &gt;</code></td></tr><tr><td>method</td><td>lock</td><td><code>fn lock (&amp; self) -&gt; Result &lt; Arc &lt; ReentrantRwLock &gt; , LayerStackError &gt;</code></td></tr><tr><td>associated-fn</td><td>acquire</td><td><code>pub fn acquire (storage_root : &amp; Path) -&gt; Result &lt; Self , LayerStackError &gt;</code></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl Drop for StorageWriterLockLease</code></summary><table><tbody><tr><td>method</td><td>drop</td><td><code>fn drop (&amp; mut self)</code></td></tr></tbody></table></details></div>
+  <code class="signature">pub struct <a class="symbol-link" href="eos-layerstack--src-storage-lock-rs.html#item-struct-StorageWriterLockLease-44">StorageWriterLockLease</a></code>
+  <p class="docstring">A held cross-process + in-process writer lease for one storage root.<br>RAII: dropping the last lease for a root releases the `flock` and closes the<br>fd (refcount-gated). `shared()` returns the in-process read guard;<br>`exclusive()` returns the reentrant in-process write guard.</p>
+  <div class="tags"><span>derive: Debug</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>key</td><td><code>String</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-shared-106"><td>method</td><td>shared</td><td><code>pub fn <a class="symbol-link" href="eos-layerstack--src-storage-lock-rs.html#method-shared-106">shared</a> (&amp; self) -&gt; Result &lt; <a class="symbol-link" href="eos-layerstack--src-storage-lock-rs.html#item-struct-SharedGuard-175">SharedGuard</a> &lt; &#x27;_ &gt; , <a class="symbol-link" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a> &gt;</code><p class="docstring">Enter the in-process shared read guard for this root.<br>Multiple shared guards can coexist. An active writer excludes new readers,<br>and pending writers block new readers so write-side maintenance is not<br>starved by a stream of snapshots.<br># Errors<br>Returns [`LayerStackError`] when the registry or lock state is poisoned, or<br>when this lease has already been closed.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Enter the in-process shared read guard for this root.</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// Multiple shared guards can coexist. An active writer excludes new readers,</span>
+    <span class="rs-comment">/// and pending writers block new readers so write-side maintenance is not</span>
+    <span class="rs-comment">/// starved by a stream of snapshots.</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// # Errors</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// Returns [`LayerStackError`] when the registry or lock state is poisoned, or</span>
+    <span class="rs-comment">/// when this lease has already been closed.</span>
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-storage-lock-rs.html#method-shared-106">shared</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-layerstack--src-storage-lock-rs.html#item-struct-SharedGuard-175">SharedGuard</a>&lt;&#x27;_&gt;, <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>&gt; {
+        <span class="rs-kw">let</span> lock = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-layerstack--src-storage-lock-rs.html#method-lock-148">lock</a>()?;
+        lock.<a class="symbol-link rs-fn" href="eos-layerstack--src-storage-lock-rs.html#method-read-223">read</a>()?;
+        <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-layerstack--src-storage-lock-rs.html#item-struct-SharedGuard-175">SharedGuard</a> {
+            lock,
+            _lease: <span class="rs-type">PhantomData</span>,
+        })
+    }
+</code></pre>
+</details></td></tr><tr id="method-exclusive-125"><td>method</td><td>exclusive</td><td><code>pub fn <a class="symbol-link" href="eos-layerstack--src-storage-lock-rs.html#method-exclusive-125">exclusive</a> (&amp; self) -&gt; Result &lt; <a class="symbol-link" href="eos-layerstack--src-storage-lock-rs.html#item-struct-ExclusiveGuard-188">ExclusiveGuard</a> &lt; &#x27;_ &gt; , <a class="symbol-link" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a> &gt;</code><p class="docstring">Enter the in-process exclusive (reentrant) write guard for this root.<br>See the module-level DEADLOCK TRAP: the returned guard must tolerate<br>same-thread re-entry (a reentrant write lock).<br>CAUTION: re-entry is write-over-write only. Calling `exclusive()` while<br>the same thread still holds a [`SharedGuard`] for this root self-deadlocks<br>(the writer waits for `readers == 0`, which includes its own read). Drop<br>the shared guard before acquiring the exclusive one.<br># Errors<br>Returns [`LayerStackError`] when the registry or reentrant lock state is<br>poisoned, or when this lease has already been closed.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Enter the in-process exclusive (reentrant) write guard for this root.</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// See the module-level DEADLOCK TRAP: the returned guard must tolerate</span>
+    <span class="rs-comment">/// same-thread re-entry (a reentrant write lock).</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// CAUTION: re-entry is write-over-write only. Calling `exclusive()` while</span>
+    <span class="rs-comment">/// the same thread still holds a [`SharedGuard`] for this root self-deadlocks</span>
+    <span class="rs-comment">/// (the writer waits for `readers == 0`, which includes its own read). Drop</span>
+    <span class="rs-comment">/// the shared guard before acquiring the exclusive one.</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// # Errors</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// Returns [`LayerStackError`] when the registry or reentrant lock state is</span>
+    <span class="rs-comment">/// poisoned, or when this lease has already been closed.</span>
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-storage-lock-rs.html#method-exclusive-125">exclusive</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-layerstack--src-storage-lock-rs.html#item-struct-ExclusiveGuard-188">ExclusiveGuard</a>&lt;&#x27;_&gt;, <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>&gt; {
+        <span class="rs-kw">let</span> lock = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-layerstack--src-storage-lock-rs.html#method-lock-148">lock</a>()?;
+        lock.<a class="symbol-link rs-fn" href="eos-layerstack--src-storage-lock-rs.html#method-write-254">write</a>()?;
+        <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-layerstack--src-storage-lock-rs.html#item-struct-ExclusiveGuard-188">ExclusiveGuard</a> {
+            lock,
+            _lease: <span class="rs-type">PhantomData</span>,
+        })
+    }
+</code></pre>
+</details></td></tr><tr id="method-lock-148"><td>method</td><td>lock</td><td><code>fn <a class="symbol-link" href="eos-layerstack--src-storage-lock-rs.html#method-lock-148">lock</a> (&amp; self) -&gt; Result &lt; Arc &lt; <a class="symbol-link" href="eos-layerstack--src-storage-lock-rs.html#item-struct-ReentrantRwLock-208">ReentrantRwLock</a> &gt; , <a class="symbol-link" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a> &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-storage-lock-rs.html#method-lock-148">lock</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Arc</span>&lt;<a class="symbol-link rs-type" href="eos-layerstack--src-storage-lock-rs.html#item-struct-ReentrantRwLock-208">ReentrantRwLock</a>&gt;, <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>&gt; {
+        <span class="rs-kw">let</span> registry = <a class="symbol-link rs-fn" href="eos-layerstack--src-storage-lock-rs.html#item-fn-lock-registry-306">lock_registry</a>()?;
+        registry
+            .get(&amp;<span class="rs-self">self</span>.key)
+            .map(|record| record.lock.clone())
+            .ok_or(<a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>::<span class="rs-type">StorageWriterLockClosed</span>)
+    }
+</code></pre>
+</details></td></tr><tr id="method-acquire-55"><td>associated-fn</td><td>acquire</td><td><code>pub fn <a class="symbol-link" href="eos-layerstack--src-lease-rs.html#method-acquire-85">acquire</a> (storage_root : &amp; Path) -&gt; Result &lt; Self , <a class="symbol-link" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a> &gt;</code><p class="docstring">Acquire (or refcount-bump) the dual-layer writer lease for `storage_root`.<br>Fails with [`LayerStackError::StorageRootOwned`] if another process holds<br>the `flock`. The registry key is the canonicalized absolute path.<br># Errors<br>Returns [`LayerStackError`] when the storage root cannot be created,<br>canonicalized/locked, or when the process-local registry is poisoned.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Acquire (or refcount-bump) the dual-layer writer lease for `storage_root`.</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// Fails with [`LayerStackError::StorageRootOwned`] if another process holds</span>
+    <span class="rs-comment">/// the `flock`. The registry key is the canonicalized absolute path.</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// # Errors</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// Returns [`LayerStackError`] when the storage root cannot be created,</span>
+    <span class="rs-comment">/// canonicalized/locked, or when the process-local registry is poisoned.</span>
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-acquire-85">acquire</a>(storage_root: &amp;<span class="rs-type">Path</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-self">Self</span>, <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>&gt; {
+        std::fs::create_dir_all(storage_root)?;
+        <span class="rs-kw">let</span> key = storage_root
+            .canonicalize()
+            .unwrap_or_else(|_| storage_root.to_path_buf())
+            .to_string_lossy()
+            .into_owned();
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> registry = <a class="symbol-link rs-fn" href="eos-layerstack--src-storage-lock-rs.html#item-fn-lock-registry-306">lock_registry</a>()?;
+        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(record) = registry.get_mut(&amp;key) {
+            record.refcount += 1;
+            <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<span class="rs-self">Self</span> { key });
+        }
+
+        <span class="rs-kw">let</span> lock_path = storage_root.join(<span class="rs-type">STORAGE_WRITER_LOCK_FILE</span>);
+        <span class="rs-kw">let</span> file = <span class="rs-type">OpenOptions</span>::<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-new-79">new</a>()
+            .<a class="symbol-link rs-fn" href="eos-layerstack--src-storage-lock-rs.html#method-read-223">read</a>(<span class="rs-kw">true</span>)
+            .<a class="symbol-link rs-fn" href="eos-layerstack--src-storage-lock-rs.html#method-write-254">write</a>(<span class="rs-kw">true</span>)
+            .create(<span class="rs-kw">true</span>)
+            .truncate(<span class="rs-kw">false</span>)
+            .<a class="symbol-link rs-fn" href="eos-layerstack--src-stack-rs.html#method-open-202">open</a>(&amp;lock_path)?;
+        <span class="rs-kw">match</span> flock(&amp;file, <span class="rs-type">FlockOperation</span>::<span class="rs-type">NonBlockingLockExclusive</span>) {
+            <span class="rs-type">Ok</span>(()) =&gt; {}
+            <span class="rs-type">Err</span>(err) <span class="rs-kw">if</span> err.<a class="symbol-link rs-fn" href="eos-layerstack--src-workspace-base-rs.html#method-kind-52">kind</a>() == std::io::<span class="rs-type">ErrorKind</span>::<span class="rs-type">WouldBlock</span> =&gt; {
+                <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>::<span class="rs-type">StorageRootOwned</span>(
+                    storage_root.display().to_string(),
+                ));
+            }
+            <span class="rs-type">Err</span>(err) =&gt; <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>::<span class="rs-type">Io</span>(err.into())),
+        }
+
+        registry.insert(
+            key.clone(),
+            <a class="symbol-link rs-type" href="eos-layerstack--src-storage-lock-rs.html#item-struct-LockRecord-201">LockRecord</a> {
+                file,
+                refcount: 1,
+                lock: <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-new-79">new</a>(<a class="symbol-link rs-type" href="eos-layerstack--src-storage-lock-rs.html#item-struct-ReentrantRwLock-208">ReentrantRwLock</a>::default()),
+            },
+        );
+        <a class="symbol-link rs-fn" href="eos-layerstack--src-storage-lock-rs.html#method-drop-158">drop</a>(registry);
+        <span class="rs-type">Ok</span>(<span class="rs-self">Self</span> { key })
+    }
+</code></pre>
+</details></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl Drop for <a class="symbol-link" href="eos-layerstack--src-storage-lock-rs.html#item-struct-StorageWriterLockLease-44">StorageWriterLockLease</a></code></summary><table><tbody><tr id="method-drop-158"><td>method</td><td>drop</td><td><code>fn <a class="symbol-link" href="eos-layerstack--src-storage-lock-rs.html#method-drop-158">drop</a> (&amp; mut self)</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-storage-lock-rs.html#method-drop-158">drop</a>(&amp;<span class="rs-kw">mut</span> <span class="rs-self">self</span>) {
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> registry = <a class="symbol-link rs-fn" href="eos-layerstack--src-storage-lock-rs.html#item-fn-registry-301">registry</a>()
+            .<a class="symbol-link rs-fn" href="eos-layerstack--src-storage-lock-rs.html#method-lock-148">lock</a>()
+            .unwrap_or_else(std::sync::<span class="rs-type">PoisonError</span>::into_inner);
+        <span class="rs-kw">let</span> <span class="rs-type">Some</span>(record) = registry.get_mut(&amp;<span class="rs-self">self</span>.key) <span class="rs-kw">else</span> {
+            <span class="rs-kw">return</span>;
+        };
+        record.refcount = record.refcount.saturating_sub(1);
+        <span class="rs-kw">if</span> record.refcount &gt; 0 {
+            <span class="rs-kw">return</span>;
+        }
+        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(record) = registry.remove(&amp;<span class="rs-self">self</span>.key) {
+            <span class="rs-kw">let</span> _ = flock(&amp;record.file, <span class="rs-type">FlockOperation</span>::<span class="rs-type">Unlock</span>);
+        }
+    }
+</code></pre>
+</details></td></tr></tbody></table></details></div>
+
   <p class="source">crates/eos-layerstack/src/storage_lock.rs:44</p>
-</article><article class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct SharedGuard pub pub struct SharedGuard&lt; 'lease &gt; crates/eos-layerstack/src/storage_lock.rs lock Arc &lt; ReentrantRwLock &gt; _lease PhantomData &lt; &amp; 'lease StorageWriterLockLease &gt; ">
+</article><article id="item-struct-SharedGuard-175" class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct SharedGuard pub pub struct SharedGuard&lt; 'lease &gt; crates/eos-layerstack/src/storage_lock.rs lock Arc &lt; ReentrantRwLock &gt; _lease PhantomData &lt; &amp; 'lease StorageWriterLockLease &gt; ">
   <div class="item-head">
     <span class="kind">struct</span>
     <h3>SharedGuard</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub struct SharedGuard&lt; 'lease &gt;</code>
-  <div class="tags"></div>
-  <h4>Fields</h4><table><tbody><tr><td>private</td><td>lock</td><td><code>Arc &lt; ReentrantRwLock &gt;</code></td></tr><tr><td>private</td><td>_lease</td><td><code>PhantomData &lt; &amp; 'lease StorageWriterLockLease &gt;</code></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl Drop for SharedGuard &lt; '_ &gt;</code></summary><table><tbody><tr><td>method</td><td>drop</td><td><code>fn drop (&amp; mut self)</code></td></tr></tbody></table></details></div>
+  <code class="signature">pub struct <a class="symbol-link" href="eos-layerstack--src-storage-lock-rs.html#item-struct-SharedGuard-175">SharedGuard</a>&lt; &#x27;lease &gt;</code>
+  <p class="docstring">In-process shared read guard.</p>
+  <div class="tags"><span>derive: Debug</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>lock</td><td><code>Arc &lt; <a class="symbol-link" href="eos-layerstack--src-storage-lock-rs.html#item-struct-ReentrantRwLock-208">ReentrantRwLock</a> &gt;</code></td></tr><tr><td>private</td><td>_lease</td><td><code>PhantomData &lt; &amp; &#x27;lease <a class="symbol-link" href="eos-layerstack--src-storage-lock-rs.html#item-struct-StorageWriterLockLease-44">StorageWriterLockLease</a> &gt;</code></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl Drop for <a class="symbol-link" href="eos-layerstack--src-storage-lock-rs.html#item-struct-SharedGuard-175">SharedGuard</a> &lt; &#x27;_ &gt;</code></summary><table><tbody><tr id="method-drop-183"><td>method</td><td>drop</td><td><code>fn <a class="symbol-link" href="eos-layerstack--src-storage-lock-rs.html#method-drop-158">drop</a> (&amp; mut self)</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-storage-lock-rs.html#method-drop-158">drop</a>(&amp;<span class="rs-kw">mut</span> <span class="rs-self">self</span>) {
+        <span class="rs-self">self</span>.lock.<a class="symbol-link rs-fn" href="eos-layerstack--src-storage-lock-rs.html#method-read-unlock-242">read_unlock</a>();
+    }
+</code></pre>
+</details></td></tr></tbody></table></details></div>
+
   <p class="source">crates/eos-layerstack/src/storage_lock.rs:175</p>
-</article><article class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct ExclusiveGuard pub pub struct ExclusiveGuard&lt; 'lease &gt; crates/eos-layerstack/src/storage_lock.rs lock Arc &lt; ReentrantRwLock &gt; _lease PhantomData &lt; &amp; 'lease StorageWriterLockLease &gt; ">
+</article><article id="item-struct-ExclusiveGuard-188" class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct ExclusiveGuard pub pub struct ExclusiveGuard&lt; 'lease &gt; crates/eos-layerstack/src/storage_lock.rs lock Arc &lt; ReentrantRwLock &gt; _lease PhantomData &lt; &amp; 'lease StorageWriterLockLease &gt; ">
   <div class="item-head">
     <span class="kind">struct</span>
     <h3>ExclusiveGuard</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub struct ExclusiveGuard&lt; 'lease &gt;</code>
-  <div class="tags"></div>
-  <h4>Fields</h4><table><tbody><tr><td>private</td><td>lock</td><td><code>Arc &lt; ReentrantRwLock &gt;</code></td></tr><tr><td>private</td><td>_lease</td><td><code>PhantomData &lt; &amp; 'lease StorageWriterLockLease &gt;</code></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl Drop for ExclusiveGuard &lt; '_ &gt;</code></summary><table><tbody><tr><td>method</td><td>drop</td><td><code>fn drop (&amp; mut self)</code></td></tr></tbody></table></details></div>
+  <code class="signature">pub struct <a class="symbol-link" href="eos-layerstack--src-storage-lock-rs.html#item-struct-ExclusiveGuard-188">ExclusiveGuard</a>&lt; &#x27;lease &gt;</code>
+  <p class="docstring">In-process exclusive write guard. Reentrant on the same thread (see TRAP).</p>
+  <div class="tags"><span>derive: Debug</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>lock</td><td><code>Arc &lt; <a class="symbol-link" href="eos-layerstack--src-storage-lock-rs.html#item-struct-ReentrantRwLock-208">ReentrantRwLock</a> &gt;</code></td></tr><tr><td>private</td><td>_lease</td><td><code>PhantomData &lt; &amp; &#x27;lease <a class="symbol-link" href="eos-layerstack--src-storage-lock-rs.html#item-struct-StorageWriterLockLease-44">StorageWriterLockLease</a> &gt;</code></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl Drop for <a class="symbol-link" href="eos-layerstack--src-storage-lock-rs.html#item-struct-ExclusiveGuard-188">ExclusiveGuard</a> &lt; &#x27;_ &gt;</code></summary><table><tbody><tr id="method-drop-196"><td>method</td><td>drop</td><td><code>fn <a class="symbol-link" href="eos-layerstack--src-storage-lock-rs.html#method-drop-158">drop</a> (&amp; mut self)</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-storage-lock-rs.html#method-drop-158">drop</a>(&amp;<span class="rs-kw">mut</span> <span class="rs-self">self</span>) {
+        <span class="rs-self">self</span>.lock.<a class="symbol-link rs-fn" href="eos-layerstack--src-storage-lock-rs.html#method-write-unlock-283">write_unlock</a>();
+    }
+</code></pre>
+</details></td></tr></tbody></table></details></div>
+
   <p class="source">crates/eos-layerstack/src/storage_lock.rs:188</p>
-</article><article class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct LockRecord private struct LockRecord crates/eos-layerstack/src/storage_lock.rs file File refcount usize lock Arc &lt; ReentrantRwLock &gt; ">
+</article><article id="item-struct-LockRecord-201" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct LockRecord private struct LockRecord crates/eos-layerstack/src/storage_lock.rs file File refcount usize lock Arc &lt; ReentrantRwLock &gt; ">
   <div class="item-head">
     <span class="kind">struct</span>
     <h3>LockRecord</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">struct LockRecord</code>
-  <div class="tags"></div>
-  <h4>Fields</h4><table><tbody><tr><td>private</td><td>file</td><td><code>File</code></td></tr><tr><td>private</td><td>refcount</td><td><code>usize</code></td></tr><tr><td>private</td><td>lock</td><td><code>Arc &lt; ReentrantRwLock &gt;</code></td></tr></tbody></table>
+  <code class="signature">struct <a class="symbol-link" href="eos-layerstack--src-storage-lock-rs.html#item-struct-LockRecord-201">LockRecord</a></code>
+  <div class="tags"><span>derive: Debug</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>file</td><td><code>File</code></td></tr><tr><td>private</td><td>refcount</td><td><code>usize</code></td></tr><tr><td>private</td><td>lock</td><td><code>Arc &lt; <a class="symbol-link" href="eos-layerstack--src-storage-lock-rs.html#item-struct-ReentrantRwLock-208">ReentrantRwLock</a> &gt;</code></td></tr></tbody></table>
+
   <p class="source">crates/eos-layerstack/src/storage_lock.rs:201</p>
-</article><article class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct ReentrantRwLock private struct ReentrantRwLock crates/eos-layerstack/src/storage_lock.rs state Mutex &lt; ReentrantRwState &gt; waiters Condvar ">
+</article><article id="item-struct-ReentrantRwLock-208" class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct ReentrantRwLock private struct ReentrantRwLock crates/eos-layerstack/src/storage_lock.rs state Mutex &lt; ReentrantRwState &gt; waiters Condvar ">
   <div class="item-head">
     <span class="kind">struct</span>
     <h3>ReentrantRwLock</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">struct ReentrantRwLock</code>
-  <div class="tags"></div>
-  <h4>Fields</h4><table><tbody><tr><td>private</td><td>state</td><td><code>Mutex &lt; ReentrantRwState &gt;</code></td></tr><tr><td>private</td><td>waiters</td><td><code>Condvar</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr><td>method</td><td>read</td><td><code>fn read (&amp; self) -&gt; Result &lt; () , LayerStackError &gt;</code></td></tr><tr><td>method</td><td>read_unlock</td><td><code>fn read_unlock (&amp; self)</code></td></tr><tr><td>method</td><td>write</td><td><code>fn write (&amp; self) -&gt; Result &lt; () , LayerStackError &gt;</code></td></tr><tr><td>method</td><td>write_unlock</td><td><code>fn write_unlock (&amp; self)</code></td></tr></tbody></table>
+  <code class="signature">struct <a class="symbol-link" href="eos-layerstack--src-storage-lock-rs.html#item-struct-ReentrantRwLock-208">ReentrantRwLock</a></code>
+  <div class="tags"><span>derive: Debug</span><span>derive: Default</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>state</td><td><code>Mutex &lt; <a class="symbol-link" href="eos-layerstack--src-storage-lock-rs.html#item-struct-ReentrantRwState-214">ReentrantRwState</a> &gt;</code></td></tr><tr><td>private</td><td>waiters</td><td><code>Condvar</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-read-223"><td>method</td><td>read</td><td><code>fn <a class="symbol-link" href="eos-layerstack--src-storage-lock-rs.html#method-read-223">read</a> (&amp; self) -&gt; Result &lt; () , <a class="symbol-link" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a> &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-storage-lock-rs.html#method-read-223">read</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>&gt; {
+        <span class="rs-kw">let</span> current = std::thread::current().id();
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> state = <span class="rs-self">self</span>
+            .state
+            .<a class="symbol-link rs-fn" href="eos-layerstack--src-storage-lock-rs.html#method-lock-148">lock</a>()
+            .map_err(|_| <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>::<span class="rs-type">LockPoisoned</span>(&quot;storage root lock&quot;))?;
+        loop {
+            <span class="rs-kw">let</span> writer_is_self = state.writer == <span class="rs-type">Some</span>(current);
+            <span class="rs-kw">if</span> writer_is_self || (state.writer.is_none() &amp;&amp; state.waiting_writers == 0) {
+                state.readers += 1;
+                <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(());
+            }
+            state = <span class="rs-self">self</span>
+                .waiters
+                .wait(state)
+                .map_err(|_| <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>::<span class="rs-type">LockPoisoned</span>(&quot;storage root read wait&quot;))?;
+        }
+    }
+</code></pre>
+</details></td></tr><tr id="method-read-unlock-242"><td>method</td><td>read_unlock</td><td><code>fn <a class="symbol-link" href="eos-layerstack--src-storage-lock-rs.html#method-read-unlock-242">read_unlock</a> (&amp; self)</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-storage-lock-rs.html#method-read-unlock-242">read_unlock</a>(&amp;<span class="rs-self">self</span>) {
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> state = <span class="rs-self">self</span>
+            .state
+            .<a class="symbol-link rs-fn" href="eos-layerstack--src-storage-lock-rs.html#method-lock-148">lock</a>()
+            .unwrap_or_else(std::sync::<span class="rs-type">PoisonError</span>::into_inner);
+        state.readers = state.readers.saturating_sub(1);
+        <span class="rs-kw">if</span> state.readers == 0 {
+            <a class="symbol-link rs-fn" href="eos-layerstack--src-storage-lock-rs.html#method-drop-158">drop</a>(state);
+            <span class="rs-self">self</span>.waiters.notify_all();
+        }
+    }
+</code></pre>
+</details></td></tr><tr id="method-write-254"><td>method</td><td>write</td><td><code>fn <a class="symbol-link" href="eos-layerstack--src-storage-lock-rs.html#method-write-254">write</a> (&amp; self) -&gt; Result &lt; () , <a class="symbol-link" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a> &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-storage-lock-rs.html#method-write-254">write</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>&gt; {
+        <span class="rs-kw">let</span> current = std::thread::current().id();
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> state = <span class="rs-self">self</span>
+            .state
+            .<a class="symbol-link rs-fn" href="eos-layerstack--src-storage-lock-rs.html#method-lock-148">lock</a>()
+            .map_err(|_| <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>::<span class="rs-type">LockPoisoned</span>(&quot;storage root lock&quot;))?;
+        <span class="rs-kw">if</span> state.writer == <span class="rs-type">Some</span>(current) {
+            state.write_depth += 1;
+            <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(());
+        }
+        state.waiting_writers += 1;
+        loop {
+            <span class="rs-kw">if</span> state.writer.is_none() &amp;&amp; state.readers == 0 {
+                state.waiting_writers = state.waiting_writers.saturating_sub(1);
+                state.writer = <span class="rs-type">Some</span>(current);
+                state.write_depth = 1;
+                <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(());
+            }
+            state = <span class="rs-kw">match</span> <span class="rs-self">self</span>.waiters.wait(state) {
+                <span class="rs-type">Ok</span>(state) =&gt; state,
+                <span class="rs-type">Err</span>(err) =&gt; {
+                    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> state = err.into_inner();
+                    state.waiting_writers = state.waiting_writers.saturating_sub(1);
+                    <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>::<span class="rs-type">LockPoisoned</span>(&quot;storage root write wait&quot;));
+                }
+            };
+        }
+    }
+</code></pre>
+</details></td></tr><tr id="method-write-unlock-283"><td>method</td><td>write_unlock</td><td><code>fn <a class="symbol-link" href="eos-layerstack--src-storage-lock-rs.html#method-write-unlock-283">write_unlock</a> (&amp; self)</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-storage-lock-rs.html#method-write-unlock-283">write_unlock</a>(&amp;<span class="rs-self">self</span>) {
+        <span class="rs-kw">let</span> current = std::thread::current().id();
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> state = <span class="rs-self">self</span>
+            .state
+            .<a class="symbol-link rs-fn" href="eos-layerstack--src-storage-lock-rs.html#method-lock-148">lock</a>()
+            .unwrap_or_else(std::sync::<span class="rs-type">PoisonError</span>::into_inner);
+        <span class="rs-kw">if</span> state.writer != <span class="rs-type">Some</span>(current) {
+            <span class="rs-kw">return</span>;
+        }
+        state.write_depth = state.write_depth.saturating_sub(1);
+        <span class="rs-kw">if</span> state.write_depth == 0 {
+            state.writer = <span class="rs-type">None</span>;
+            <a class="symbol-link rs-fn" href="eos-layerstack--src-storage-lock-rs.html#method-drop-158">drop</a>(state);
+            <span class="rs-self">self</span>.waiters.notify_all();
+        }
+    }
+</code></pre>
+</details></td></tr></tbody></table>
+
   <p class="source">crates/eos-layerstack/src/storage_lock.rs:208</p>
-</article><article class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct ReentrantRwState private struct ReentrantRwState crates/eos-layerstack/src/storage_lock.rs writer Option &lt; ThreadId &gt; write_depth usize readers usize waiting_writers usize ">
+</article><article id="item-struct-ReentrantRwState-214" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct ReentrantRwState private struct ReentrantRwState crates/eos-layerstack/src/storage_lock.rs writer Option &lt; ThreadId &gt; write_depth usize readers usize waiting_writers usize ">
   <div class="item-head">
     <span class="kind">struct</span>
     <h3>ReentrantRwState</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">struct ReentrantRwState</code>
-  <div class="tags"></div>
+  <code class="signature">struct <a class="symbol-link" href="eos-layerstack--src-storage-lock-rs.html#item-struct-ReentrantRwState-214">ReentrantRwState</a></code>
+  <div class="tags"><span>derive: Debug</span><span>derive: Default</span></div>
   <h4>Fields</h4><table><tbody><tr><td>private</td><td>writer</td><td><code>Option &lt; ThreadId &gt;</code></td></tr><tr><td>private</td><td>write_depth</td><td><code>usize</code></td></tr><tr><td>private</td><td>readers</td><td><code>usize</code></td></tr><tr><td>private</td><td>waiting_writers</td><td><code>usize</code></td></tr></tbody></table>
+
   <p class="source">crates/eos-layerstack/src/storage_lock.rs:214</p>
-</article><article class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct Fixture private struct Fixture crates/eos-layerstack/src/storage_lock.rs root PathBuf ">
+</article><article id="item-struct-Fixture-401" class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct Fixture private struct Fixture crates/eos-layerstack/src/storage_lock.rs root PathBuf ">
   <div class="item-head">
     <span class="kind">struct</span>
     <h3>Fixture</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">struct Fixture</code>
+  <code class="signature">struct <a class="symbol-link" href="eos-layerstack--src-storage-lock-rs.html#item-struct-Fixture-401">Fixture</a></code>
   <div class="tags"></div>
-  <h4>Fields</h4><table><tbody><tr><td>private</td><td>root</td><td><code>PathBuf</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr><td>constructor</td><td>new</td><td><code>fn new (label : &amp; str) -&gt; TestResult &lt; Self &gt;</code></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl Drop for Fixture</code></summary><table><tbody><tr><td>method</td><td>drop</td><td><code>fn drop (&amp; mut self)</code></td></tr></tbody></table></details></div>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>root</td><td><code>PathBuf</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-406"><td>constructor</td><td>new</td><td><code>fn <a class="symbol-link" href="eos-layerstack--src-lease-rs.html#method-new-79">new</a> (label : &amp; str) -&gt; <a class="symbol-link" href="eos-layerstack--src-lease-rs.html#item-type-TestResult-199">TestResult</a> &lt; Self &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>        <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-new-79">new</a>(label: &amp;str) -&gt; <a class="symbol-link rs-type" href="eos-layerstack--src-lease-rs.html#item-type-TestResult-199">TestResult</a>&lt;<span class="rs-self">Self</span>&gt; {
+            <span class="rs-kw">let</span> root = std::env::temp_dir().join(format!(
+                &quot;eos-layerstack-storage-lock-{label}-{}-{}&quot;,
+                std::process::id(),
+                <span class="rs-type">NEXT_TMP</span>.fetch_add(1, <span class="rs-type">Ordering</span>::<span class="rs-type">Relaxed</span>)
+            ));
+            <span class="rs-kw">let</span> _ = std::fs::remove_dir_all(&amp;root);
+            std::fs::create_dir_all(&amp;root)?;
+            <span class="rs-type">Ok</span>(<span class="rs-self">Self</span> { root })
+        }
+</code></pre>
+</details></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl Drop for <a class="symbol-link" href="eos-layerstack--src-storage-lock-rs.html#item-struct-Fixture-401">Fixture</a></code></summary><table><tbody><tr id="method-drop-419"><td>method</td><td>drop</td><td><code>fn <a class="symbol-link" href="eos-layerstack--src-storage-lock-rs.html#method-drop-158">drop</a> (&amp; mut self)</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>        <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-storage-lock-rs.html#method-drop-158">drop</a>(&amp;<span class="rs-kw">mut</span> <span class="rs-self">self</span>) {
+            <span class="rs-kw">let</span> _ = std::fs::remove_dir_all(&amp;<span class="rs-self">self</span>.root);
+        }
+</code></pre>
+</details></td></tr></tbody></table></details></div>
+
   <p class="source">crates/eos-layerstack/src/storage_lock.rs:401</p>
-</article><div class="group-label">Aliases</div><article class="item-card" data-kind="type" data-kind-list="type" data-filter-text="type TestResult private type TestResult&lt; T = () &gt; = Result &lt; T , Box &lt; dyn std :: error :: Error + Send + Sync &gt; &gt; crates/eos-layerstack/src/storage_lock.rs  ">
+</article><div class="group-label">Aliases</div><article id="item-type-TestResult-321" class="item-card" data-kind="type" data-kind-list="type" data-filter-text="type TestResult private type TestResult&lt; T = () &gt; = Result &lt; T , Box &lt; dyn std :: error :: Error + Send + Sync &gt; &gt; crates/eos-layerstack/src/storage_lock.rs  ">
   <div class="item-head">
     <span class="kind">type</span>
     <h3>TestResult</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">type TestResult&lt; T = () &gt; = Result &lt; T , Box &lt; dyn std :: error :: Error + Send + Sync &gt; &gt;</code>
+  <code class="signature">type <a class="symbol-link" href="eos-layerstack--src-lease-rs.html#item-type-TestResult-199">TestResult</a>&lt; T = () &gt; = Result &lt; T , Box &lt; dyn std :: error :: Error + Send + Sync &gt; &gt;</code>
   <div class="tags"></div>
 
   <p class="source">crates/eos-layerstack/src/storage_lock.rs:321</p>
-</article><div class="group-label">Standalone Functions</div><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn registry private fn registry () -&gt; &amp; 'static Mutex &lt; HashMap &lt; String , LockRecord &gt; &gt; crates/eos-layerstack/src/storage_lock.rs  ">
+</article><div class="group-label">Standalone Functions</div><article id="item-fn-registry-301" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn registry private fn registry () -&gt; &amp; 'static Mutex &lt; HashMap &lt; String , LockRecord &gt; &gt; crates/eos-layerstack/src/storage_lock.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>registry</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn registry () -&gt; &amp; 'static Mutex &lt; HashMap &lt; String , LockRecord &gt; &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-layerstack--src-storage-lock-rs.html#item-fn-registry-301">registry</a> () -&gt; &amp; &#x27;static Mutex &lt; HashMap &lt; String , <a class="symbol-link" href="eos-layerstack--src-storage-lock-rs.html#item-struct-LockRecord-201">LockRecord</a> &gt; &gt;</code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-storage-lock-rs.html#item-fn-registry-301">registry</a>() -&gt; &amp;&#x27;<span class="rs-kw">static</span> <span class="rs-type">Mutex</span>&lt;<span class="rs-type">HashMap</span>&lt;<span class="rs-type">String</span>, <a class="symbol-link rs-type" href="eos-layerstack--src-storage-lock-rs.html#item-struct-LockRecord-201">LockRecord</a>&gt;&gt; {
+    <span class="rs-kw">static</span> <span class="rs-type">REGISTRY</span>: <span class="rs-type">OnceLock</span>&lt;<span class="rs-type">Mutex</span>&lt;<span class="rs-type">HashMap</span>&lt;<span class="rs-type">String</span>, <a class="symbol-link rs-type" href="eos-layerstack--src-storage-lock-rs.html#item-struct-LockRecord-201">LockRecord</a>&gt;&gt;&gt; = <span class="rs-type">OnceLock</span>::<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-new-79">new</a>();
+    <span class="rs-type">REGISTRY</span>.get_or_init(|| <span class="rs-type">Mutex</span>::<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-new-79">new</a>(<span class="rs-type">HashMap</span>::<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-new-79">new</a>()))
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-layerstack/src/storage_lock.rs:301</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn lock_registry private fn lock_registry () -&gt; Result &lt; MutexGuard &lt; 'static , HashMap &lt; String , LockRecord &gt; &gt; , LayerStackError &gt; crates/eos-layerstack/src/storage_lock.rs  ">
+</article><article id="item-fn-lock-registry-306" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn lock_registry private fn lock_registry () -&gt; Result &lt; MutexGuard &lt; 'static , HashMap &lt; String , LockRecord &gt; &gt; , LayerStackError &gt; crates/eos-layerstack/src/storage_lock.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>lock_registry</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn lock_registry () -&gt; Result &lt; MutexGuard &lt; 'static , HashMap &lt; String , LockRecord &gt; &gt; , LayerStackError &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-layerstack--src-storage-lock-rs.html#item-fn-lock-registry-306">lock_registry</a> () -&gt; Result &lt; MutexGuard &lt; &#x27;static , HashMap &lt; String , <a class="symbol-link" href="eos-layerstack--src-storage-lock-rs.html#item-struct-LockRecord-201">LockRecord</a> &gt; &gt; , <a class="symbol-link" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a> &gt;</code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-storage-lock-rs.html#item-fn-lock-registry-306">lock_registry</a>() -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">MutexGuard</span>&lt;&#x27;<span class="rs-kw">static</span>, <span class="rs-type">HashMap</span>&lt;<span class="rs-type">String</span>, <a class="symbol-link rs-type" href="eos-layerstack--src-storage-lock-rs.html#item-struct-LockRecord-201">LockRecord</a>&gt;&gt;, <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>&gt; {
+    <a class="symbol-link rs-fn" href="eos-layerstack--src-storage-lock-rs.html#item-fn-registry-301">registry</a>()
+        .<a class="symbol-link rs-fn" href="eos-layerstack--src-storage-lock-rs.html#method-lock-148">lock</a>()
+        .map_err(|_| <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>::<span class="rs-type">LockPoisoned</span>(&quot;storage lock registry&quot;))
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-layerstack/src/storage_lock.rs:306</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn shared_guards_overlap_and_block_exclusive private fn shared_guards_overlap_and_block_exclusive () -&gt; TestResult crates/eos-layerstack/src/storage_lock.rs  ">
+</article><article id="item-fn-shared-guards-overlap-and-block-exclusive-325" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn shared_guards_overlap_and_block_exclusive private fn shared_guards_overlap_and_block_exclusive () -&gt; TestResult crates/eos-layerstack/src/storage_lock.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>shared_guards_overlap_and_block_exclusive</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn shared_guards_overlap_and_block_exclusive () -&gt; TestResult</code>
-  <div class="tags"></div>
+  <code class="signature">fn <a class="symbol-link" href="eos-layerstack--src-storage-lock-rs.html#item-fn-shared-guards-overlap-and-block-exclusive-325">shared_guards_overlap_and_block_exclusive</a> () -&gt; <a class="symbol-link" href="eos-layerstack--src-lease-rs.html#item-type-TestResult-199">TestResult</a></code>
+  <div class="tags"><span>test</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-storage-lock-rs.html#item-fn-shared-guards-overlap-and-block-exclusive-325">shared_guards_overlap_and_block_exclusive</a>() -&gt; <a class="symbol-link rs-type" href="eos-layerstack--src-lease-rs.html#item-type-TestResult-199">TestResult</a> {
+        <span class="rs-kw">let</span> fixture = <a class="symbol-link rs-type" href="eos-layerstack--src-storage-lock-rs.html#item-struct-Fixture-401">Fixture</a>::<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-new-79">new</a>(&quot;shared-overlap&quot;)?;
+        <span class="rs-kw">let</span> lease = <a class="symbol-link rs-type" href="eos-layerstack--src-storage-lock-rs.html#item-struct-StorageWriterLockLease-44">StorageWriterLockLease</a>::<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-acquire-85">acquire</a>(&amp;fixture.root)?;
+        <span class="rs-kw">let</span> shared = lease.<a class="symbol-link rs-fn" href="eos-layerstack--src-storage-lock-rs.html#method-shared-106">shared</a>()?;
+
+        <span class="rs-kw">let</span> (shared_tx, shared_rx) = mpsc::channel();
+        <span class="rs-kw">let</span> (release_tx, release_rx) = mpsc::channel();
+        <span class="rs-kw">let</span> root = fixture.root.clone();
+        <span class="rs-kw">let</span> shared_thread = std::thread::spawn(<span class="rs-kw">move</span> || -&gt; <a class="symbol-link rs-type" href="eos-layerstack--src-lease-rs.html#item-type-TestResult-199">TestResult</a> {
+            <span class="rs-kw">let</span> lease = <a class="symbol-link rs-type" href="eos-layerstack--src-storage-lock-rs.html#item-struct-StorageWriterLockLease-44">StorageWriterLockLease</a>::<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-acquire-85">acquire</a>(&amp;root)?;
+            <span class="rs-kw">let</span> _shared = lease.<a class="symbol-link rs-fn" href="eos-layerstack--src-storage-lock-rs.html#method-shared-106">shared</a>()?;
+            shared_tx.send(())?;
+            release_rx.recv()?;
+            <span class="rs-type">Ok</span>(())
+        });
+        shared_rx.recv_timeout(<span class="rs-type">Duration</span>::from_secs(1))?;
+        release_tx.send(())?;
+        <a class="symbol-link rs-fn" href="eos-layerstack--src-storage-lock-rs.html#item-fn-join-test-thread-395">join_test_thread</a>(shared_thread)?;
+
+        <span class="rs-kw">let</span> (exclusive_tx, exclusive_rx) = mpsc::channel();
+        <span class="rs-kw">let</span> root = fixture.root.clone();
+        <span class="rs-kw">let</span> exclusive_thread = std::thread::spawn(<span class="rs-kw">move</span> || -&gt; <a class="symbol-link rs-type" href="eos-layerstack--src-lease-rs.html#item-type-TestResult-199">TestResult</a> {
+            <span class="rs-kw">let</span> lease = <a class="symbol-link rs-type" href="eos-layerstack--src-storage-lock-rs.html#item-struct-StorageWriterLockLease-44">StorageWriterLockLease</a>::<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-acquire-85">acquire</a>(&amp;root)?;
+            <span class="rs-kw">let</span> _exclusive = lease.<a class="symbol-link rs-fn" href="eos-layerstack--src-storage-lock-rs.html#method-exclusive-125">exclusive</a>()?;
+            exclusive_tx.send(())?;
+            <span class="rs-type">Ok</span>(())
+        });
+        assert!(
+            exclusive_rx
+                .recv_timeout(<span class="rs-type">Duration</span>::from_millis(50))
+                .is_err(),
+            &quot;exclusive guard acquired <span class="rs-kw">while</span> a shared guard was still held&quot;
+        );
+        <a class="symbol-link rs-fn" href="eos-layerstack--src-storage-lock-rs.html#method-drop-158">drop</a>(shared);
+        exclusive_rx.recv_timeout(<span class="rs-type">Duration</span>::from_secs(1))?;
+        <a class="symbol-link rs-fn" href="eos-layerstack--src-storage-lock-rs.html#item-fn-join-test-thread-395">join_test_thread</a>(exclusive_thread)?;
+        <span class="rs-type">Ok</span>(())
+    }
+</code></pre>
+</details>
 
   <p class="source">crates/eos-layerstack/src/storage_lock.rs:325</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn exclusive_guard_is_reentrant_and_blocks_shared private fn exclusive_guard_is_reentrant_and_blocks_shared () -&gt; TestResult crates/eos-layerstack/src/storage_lock.rs  ">
+</article><article id="item-fn-exclusive-guard-is-reentrant-and-blocks-shared-365" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn exclusive_guard_is_reentrant_and_blocks_shared private fn exclusive_guard_is_reentrant_and_blocks_shared () -&gt; TestResult crates/eos-layerstack/src/storage_lock.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>exclusive_guard_is_reentrant_and_blocks_shared</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn exclusive_guard_is_reentrant_and_blocks_shared () -&gt; TestResult</code>
-  <div class="tags"></div>
+  <code class="signature">fn <a class="symbol-link" href="eos-layerstack--src-storage-lock-rs.html#item-fn-exclusive-guard-is-reentrant-and-blocks-shared-365">exclusive_guard_is_reentrant_and_blocks_shared</a> () -&gt; <a class="symbol-link" href="eos-layerstack--src-lease-rs.html#item-type-TestResult-199">TestResult</a></code>
+  <div class="tags"><span>test</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-storage-lock-rs.html#item-fn-exclusive-guard-is-reentrant-and-blocks-shared-365">exclusive_guard_is_reentrant_and_blocks_shared</a>() -&gt; <a class="symbol-link rs-type" href="eos-layerstack--src-lease-rs.html#item-type-TestResult-199">TestResult</a> {
+        <span class="rs-kw">let</span> fixture = <a class="symbol-link rs-type" href="eos-layerstack--src-storage-lock-rs.html#item-struct-Fixture-401">Fixture</a>::<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-new-79">new</a>(&quot;exclusive-reentrant&quot;)?;
+        <span class="rs-kw">let</span> lease = <a class="symbol-link rs-type" href="eos-layerstack--src-storage-lock-rs.html#item-struct-StorageWriterLockLease-44">StorageWriterLockLease</a>::<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-acquire-85">acquire</a>(&amp;fixture.root)?;
+        <span class="rs-kw">let</span> exclusive = lease.<a class="symbol-link rs-fn" href="eos-layerstack--src-storage-lock-rs.html#method-exclusive-125">exclusive</a>()?;
+        <span class="rs-kw">let</span> nested = lease.<a class="symbol-link rs-fn" href="eos-layerstack--src-storage-lock-rs.html#method-exclusive-125">exclusive</a>()?;
+
+        <span class="rs-kw">let</span> (shared_tx, shared_rx) = mpsc::channel();
+        <span class="rs-kw">let</span> root = fixture.root.clone();
+        <span class="rs-kw">let</span> shared_thread = std::thread::spawn(<span class="rs-kw">move</span> || -&gt; <a class="symbol-link rs-type" href="eos-layerstack--src-lease-rs.html#item-type-TestResult-199">TestResult</a> {
+            <span class="rs-kw">let</span> lease = <a class="symbol-link rs-type" href="eos-layerstack--src-storage-lock-rs.html#item-struct-StorageWriterLockLease-44">StorageWriterLockLease</a>::<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-acquire-85">acquire</a>(&amp;root)?;
+            <span class="rs-kw">let</span> _shared = lease.<a class="symbol-link rs-fn" href="eos-layerstack--src-storage-lock-rs.html#method-shared-106">shared</a>()?;
+            shared_tx.send(())?;
+            <span class="rs-type">Ok</span>(())
+        });
+        assert!(
+            shared_rx.recv_timeout(<span class="rs-type">Duration</span>::from_millis(50)).is_err(),
+            &quot;shared guard acquired <span class="rs-kw">while</span> the outer exclusive guard was held&quot;
+        );
+        <a class="symbol-link rs-fn" href="eos-layerstack--src-storage-lock-rs.html#method-drop-158">drop</a>(nested);
+        assert!(
+            shared_rx.recv_timeout(<span class="rs-type">Duration</span>::from_millis(50)).is_err(),
+            &quot;shared guard acquired <span class="rs-kw">while</span> the reentrant exclusive guard was still held&quot;
+        );
+        <a class="symbol-link rs-fn" href="eos-layerstack--src-storage-lock-rs.html#method-drop-158">drop</a>(exclusive);
+        shared_rx.recv_timeout(<span class="rs-type">Duration</span>::from_secs(1))?;
+        <a class="symbol-link rs-fn" href="eos-layerstack--src-storage-lock-rs.html#item-fn-join-test-thread-395">join_test_thread</a>(shared_thread)?;
+        <span class="rs-type">Ok</span>(())
+    }
+</code></pre>
+</details>
 
   <p class="source">crates/eos-layerstack/src/storage_lock.rs:365</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn join_test_thread private fn join_test_thread (handle : std :: thread :: JoinHandle &lt; TestResult &gt;) -&gt; TestResult crates/eos-layerstack/src/storage_lock.rs  ">
+</article><article id="item-fn-join-test-thread-395" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn join_test_thread private fn join_test_thread (handle : std :: thread :: JoinHandle &lt; TestResult &gt;) -&gt; TestResult crates/eos-layerstack/src/storage_lock.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>join_test_thread</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn join_test_thread (handle : std :: thread :: JoinHandle &lt; TestResult &gt;) -&gt; TestResult</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-layerstack--src-storage-lock-rs.html#item-fn-join-test-thread-395">join_test_thread</a> (handle : std :: thread :: JoinHandle &lt; <a class="symbol-link" href="eos-layerstack--src-lease-rs.html#item-type-TestResult-199">TestResult</a> &gt;) -&gt; <a class="symbol-link" href="eos-layerstack--src-lease-rs.html#item-type-TestResult-199">TestResult</a></code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-storage-lock-rs.html#item-fn-join-test-thread-395">join_test_thread</a>(handle: std::thread::<span class="rs-type">JoinHandle</span>&lt;<a class="symbol-link rs-type" href="eos-layerstack--src-lease-rs.html#item-type-TestResult-199">TestResult</a>&gt;) -&gt; <a class="symbol-link rs-type" href="eos-layerstack--src-lease-rs.html#item-type-TestResult-199">TestResult</a> {
+        handle
+            .join()
+            .map_err(|_| std::io::<span class="rs-type">Error</span>::other(&quot;test thread panicked&quot;))?
+    }
+</code></pre>
+</details>
 
   <p class="source">crates/eos-layerstack/src/storage_lock.rs:395</p>
 </article></div>
 </section></div>
 </main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/eos-layerstack/src/storage_lock.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-comment">//! Process-local advisory writer lock for a layer-stack storage root.</span>
+<span class="rs-comment">//!</span>
+<span class="rs-comment">//! # The DUAL-LAYER lease (both layers MUST be reproduced)</span>
+<span class="rs-comment">//!</span>
+<span class="rs-comment">//! 1. **Cross-process advisory lease** — `flock(fd, LOCK_EX | LOCK_NB)` on the</span>
+<span class="rs-comment">//!    `.storage-writer.lock` file (`O_RDWR | O_CREAT, 0o644`). Prevents a second</span>
+<span class="rs-comment">//!    daemon *process* from owning the same root; a contended acquire returns</span>
+<span class="rs-comment">//!    [`crate::LayerStackError::StorageRootOwned`] rather than blocking. Released</span>
+<span class="rs-comment">//!    with `LOCK_UN` + `close` once the in-process refcount hits zero.</span>
+<span class="rs-comment">//! 2. **In-process shared/exclusive lock + refcount** — a per-root registry keyed</span>
+<span class="rs-comment">//!    by the canonical absolute path coordinates multiple in-process</span>
+<span class="rs-comment">//!    `LayerStack` managers that may coexist after cache drops / overlay resets.</span>
+<span class="rs-comment">//!    Snapshot reads can share the lock; storage mutations take the reentrant</span>
+<span class="rs-comment">//!    exclusive side. Rust used a process-local `threading.RLock` for</span>
+<span class="rs-comment">//!    snapshots and a separate storage-writer guard for mutations.</span>
+<span class="rs-comment">//!</span>
+<span class="rs-comment">//! # ⚠ THE REENTRANT-RLock → non-reentrant-Mutex DEADLOCK TRAP</span>
+<span class="rs-comment">//!</span>
+<span class="rs-comment">//! Rust holds a `threading.RLock` (REENTRANT). The same thread re-acquires it</span>
+<span class="rs-comment">//! via `.exclusive()` while it already holds it — e.g. `LayerStack.squash`</span>
+<span class="rs-comment">//! takes `_storage_write_guard()` (the `RLock`) and then `self._lock` (a SECOND</span>
+<span class="rs-comment">//! `RLock`), and `release_lease` is called *inside* `squash`'s `finally` while the</span>
+<span class="rs-comment">//! write guard is still held. A naive 1:1 port to `std::sync::Mutex`</span>
+<span class="rs-comment">//! (NON-reentrant) **DEADLOCKS** on the second same-thread acquire.</span>
+<span class="rs-comment">//!</span>
+<span class="rs-comment">//! Do NOT 1:1-port. This module uses a small reentrant read/write guard type that</span>
+<span class="rs-comment">//! preserves the Rust same-thread write re-entry semantics without holding an</span>
+<span class="rs-comment">//! async lock across awaits.</span>
+
+<span class="rs-kw">use</span> std::collections::<span class="rs-type">HashMap</span>;
+<span class="rs-kw">use</span> std::fs::{<span class="rs-type">File</span>, <span class="rs-type">OpenOptions</span>};
+<span class="rs-kw">use</span> std::marker::<span class="rs-type">PhantomData</span>;
+<span class="rs-kw">use</span> std::path::<span class="rs-type">Path</span>;
+<span class="rs-kw">use</span> std::sync::{<span class="rs-type">Arc</span>, <span class="rs-type">Condvar</span>, <span class="rs-type">Mutex</span>, <span class="rs-type">MutexGuard</span>, <span class="rs-type">OnceLock</span>};
+<span class="rs-kw">use</span> std::thread::<span class="rs-type">ThreadId</span>;
+
+<span class="rs-kw">use</span> rustix::fs::{flock, <span class="rs-type">FlockOperation</span>};
+
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::error::<a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>;
+
+<span class="rs-comment">/// Lock-file name placed at the root of every storage root.</span>
+<span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-type">STORAGE_WRITER_LOCK_FILE</span>: &amp;str = &quot;.storage-writer.lock&quot;;
+
+<span class="rs-comment">/// A held cross-process + in-process writer lease for one storage root.</span>
+<span class="rs-comment">///</span>
+<span class="rs-comment">/// RAII: dropping the last lease for a root releases the `flock` and closes the</span>
+<span class="rs-comment">/// fd (refcount-gated). `shared()` returns the in-process read guard;</span>
+<span class="rs-comment">/// `exclusive()` returns the reentrant in-process write guard.</span>
+#[derive(<span class="rs-type">Debug</span>)]
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-layerstack--src-storage-lock-rs.html#item-struct-StorageWriterLockLease-44">StorageWriterLockLease</a> {
+    key: <span class="rs-type">String</span>,
+}
+
+<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-layerstack--src-storage-lock-rs.html#item-struct-StorageWriterLockLease-44">StorageWriterLockLease</a> {
+    <span class="rs-comment">/// Acquire (or refcount-bump) the dual-layer writer lease for `storage_root`.</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// Fails with [`LayerStackError::StorageRootOwned`] if another process holds</span>
+    <span class="rs-comment">/// the `flock`. The registry key is the canonicalized absolute path.</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// # Errors</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// Returns [`LayerStackError`] when the storage root cannot be created,</span>
+    <span class="rs-comment">/// canonicalized/locked, or when the process-local registry is poisoned.</span>
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-acquire-85">acquire</a>(storage_root: &amp;<span class="rs-type">Path</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-self">Self</span>, <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>&gt; {
+        std::fs::create_dir_all(storage_root)?;
+        <span class="rs-kw">let</span> key = storage_root
+            .canonicalize()
+            .unwrap_or_else(|_| storage_root.to_path_buf())
+            .to_string_lossy()
+            .into_owned();
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> registry = <a class="symbol-link rs-fn" href="eos-layerstack--src-storage-lock-rs.html#item-fn-lock-registry-306">lock_registry</a>()?;
+        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(record) = registry.get_mut(&amp;key) {
+            record.refcount += 1;
+            <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<span class="rs-self">Self</span> { key });
+        }
+
+        <span class="rs-kw">let</span> lock_path = storage_root.join(<span class="rs-type">STORAGE_WRITER_LOCK_FILE</span>);
+        <span class="rs-kw">let</span> file = <span class="rs-type">OpenOptions</span>::<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-new-79">new</a>()
+            .<a class="symbol-link rs-fn" href="eos-layerstack--src-storage-lock-rs.html#method-read-223">read</a>(<span class="rs-kw">true</span>)
+            .<a class="symbol-link rs-fn" href="eos-layerstack--src-storage-lock-rs.html#method-write-254">write</a>(<span class="rs-kw">true</span>)
+            .create(<span class="rs-kw">true</span>)
+            .truncate(<span class="rs-kw">false</span>)
+            .<a class="symbol-link rs-fn" href="eos-layerstack--src-stack-rs.html#method-open-202">open</a>(&amp;lock_path)?;
+        <span class="rs-kw">match</span> flock(&amp;file, <span class="rs-type">FlockOperation</span>::<span class="rs-type">NonBlockingLockExclusive</span>) {
+            <span class="rs-type">Ok</span>(()) =&gt; {}
+            <span class="rs-type">Err</span>(err) <span class="rs-kw">if</span> err.<a class="symbol-link rs-fn" href="eos-layerstack--src-workspace-base-rs.html#method-kind-52">kind</a>() == std::io::<span class="rs-type">ErrorKind</span>::<span class="rs-type">WouldBlock</span> =&gt; {
+                <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>::<span class="rs-type">StorageRootOwned</span>(
+                    storage_root.display().to_string(),
+                ));
+            }
+            <span class="rs-type">Err</span>(err) =&gt; <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>::<span class="rs-type">Io</span>(err.into())),
+        }
+
+        registry.insert(
+            key.clone(),
+            <a class="symbol-link rs-type" href="eos-layerstack--src-storage-lock-rs.html#item-struct-LockRecord-201">LockRecord</a> {
+                file,
+                refcount: 1,
+                lock: <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-new-79">new</a>(<a class="symbol-link rs-type" href="eos-layerstack--src-storage-lock-rs.html#item-struct-ReentrantRwLock-208">ReentrantRwLock</a>::default()),
+            },
+        );
+        <a class="symbol-link rs-fn" href="eos-layerstack--src-storage-lock-rs.html#method-drop-158">drop</a>(registry);
+        <span class="rs-type">Ok</span>(<span class="rs-self">Self</span> { key })
+    }
+
+    <span class="rs-comment">/// Enter the in-process shared read guard for this root.</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// Multiple shared guards can coexist. An active writer excludes new readers,</span>
+    <span class="rs-comment">/// and pending writers block new readers so write-side maintenance is not</span>
+    <span class="rs-comment">/// starved by a stream of snapshots.</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// # Errors</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// Returns [`LayerStackError`] when the registry or lock state is poisoned, or</span>
+    <span class="rs-comment">/// when this lease has already been closed.</span>
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-storage-lock-rs.html#method-shared-106">shared</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-layerstack--src-storage-lock-rs.html#item-struct-SharedGuard-175">SharedGuard</a>&lt;&#x27;_&gt;, <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>&gt; {
+        <span class="rs-kw">let</span> lock = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-layerstack--src-storage-lock-rs.html#method-lock-148">lock</a>()?;
+        lock.<a class="symbol-link rs-fn" href="eos-layerstack--src-storage-lock-rs.html#method-read-223">read</a>()?;
+        <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-layerstack--src-storage-lock-rs.html#item-struct-SharedGuard-175">SharedGuard</a> {
+            lock,
+            _lease: <span class="rs-type">PhantomData</span>,
+        })
+    }
+
+    <span class="rs-comment">/// Enter the in-process exclusive (reentrant) write guard for this root.</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// See the module-level DEADLOCK TRAP: the returned guard must tolerate</span>
+    <span class="rs-comment">/// same-thread re-entry (a reentrant write lock).</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// CAUTION: re-entry is write-over-write only. Calling `exclusive()` while</span>
+    <span class="rs-comment">/// the same thread still holds a [`SharedGuard`] for this root self-deadlocks</span>
+    <span class="rs-comment">/// (the writer waits for `readers == 0`, which includes its own read). Drop</span>
+    <span class="rs-comment">/// the shared guard before acquiring the exclusive one.</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// # Errors</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// Returns [`LayerStackError`] when the registry or reentrant lock state is</span>
+    <span class="rs-comment">/// poisoned, or when this lease has already been closed.</span>
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-storage-lock-rs.html#method-exclusive-125">exclusive</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-layerstack--src-storage-lock-rs.html#item-struct-ExclusiveGuard-188">ExclusiveGuard</a>&lt;&#x27;_&gt;, <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>&gt; {
+        <span class="rs-kw">let</span> lock = <span class="rs-self">self</span>.<a class="symbol-link rs-fn" href="eos-layerstack--src-storage-lock-rs.html#method-lock-148">lock</a>()?;
+        lock.<a class="symbol-link rs-fn" href="eos-layerstack--src-storage-lock-rs.html#method-write-254">write</a>()?;
+        <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-layerstack--src-storage-lock-rs.html#item-struct-ExclusiveGuard-188">ExclusiveGuard</a> {
+            lock,
+            _lease: <span class="rs-type">PhantomData</span>,
+        })
+    }
+
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-storage-lock-rs.html#method-lock-148">lock</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">Arc</span>&lt;<a class="symbol-link rs-type" href="eos-layerstack--src-storage-lock-rs.html#item-struct-ReentrantRwLock-208">ReentrantRwLock</a>&gt;, <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>&gt; {
+        <span class="rs-kw">let</span> registry = <a class="symbol-link rs-fn" href="eos-layerstack--src-storage-lock-rs.html#item-fn-lock-registry-306">lock_registry</a>()?;
+        registry
+            .get(&amp;<span class="rs-self">self</span>.key)
+            .map(|record| record.lock.clone())
+            .ok_or(<a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>::<span class="rs-type">StorageWriterLockClosed</span>)
+    }
+}
+
+<span class="rs-kw">impl</span> <span class="rs-type">Drop</span> <span class="rs-kw">for</span> <a class="symbol-link rs-type" href="eos-layerstack--src-storage-lock-rs.html#item-struct-StorageWriterLockLease-44">StorageWriterLockLease</a> {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-storage-lock-rs.html#method-drop-158">drop</a>(&amp;<span class="rs-kw">mut</span> <span class="rs-self">self</span>) {
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> registry = <a class="symbol-link rs-fn" href="eos-layerstack--src-storage-lock-rs.html#item-fn-registry-301">registry</a>()
+            .<a class="symbol-link rs-fn" href="eos-layerstack--src-storage-lock-rs.html#method-lock-148">lock</a>()
+            .unwrap_or_else(std::sync::<span class="rs-type">PoisonError</span>::into_inner);
+        <span class="rs-kw">let</span> <span class="rs-type">Some</span>(record) = registry.get_mut(&amp;<span class="rs-self">self</span>.key) <span class="rs-kw">else</span> {
+            <span class="rs-kw">return</span>;
+        };
+        record.refcount = record.refcount.saturating_sub(1);
+        <span class="rs-kw">if</span> record.refcount &gt; 0 {
+            <span class="rs-kw">return</span>;
+        }
+        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(record) = registry.remove(&amp;<span class="rs-self">self</span>.key) {
+            <span class="rs-kw">let</span> _ = flock(&amp;record.file, <span class="rs-type">FlockOperation</span>::<span class="rs-type">Unlock</span>);
+        }
+    }
+}
+
+<span class="rs-comment">/// In-process shared read guard.</span>
+#[derive(<span class="rs-type">Debug</span>)]
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-layerstack--src-storage-lock-rs.html#item-struct-SharedGuard-175">SharedGuard</a>&lt;&#x27;lease&gt; {
+    lock: <span class="rs-type">Arc</span>&lt;<a class="symbol-link rs-type" href="eos-layerstack--src-storage-lock-rs.html#item-struct-ReentrantRwLock-208">ReentrantRwLock</a>&gt;,
+    _lease: <span class="rs-type">PhantomData</span>&lt;&amp;&#x27;lease <a class="symbol-link rs-type" href="eos-layerstack--src-storage-lock-rs.html#item-struct-StorageWriterLockLease-44">StorageWriterLockLease</a>&gt;,
+}
+
+<span class="rs-kw">impl</span> <span class="rs-type">Drop</span> <span class="rs-kw">for</span> <a class="symbol-link rs-type" href="eos-layerstack--src-storage-lock-rs.html#item-struct-SharedGuard-175">SharedGuard</a>&lt;&#x27;_&gt; {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-storage-lock-rs.html#method-drop-158">drop</a>(&amp;<span class="rs-kw">mut</span> <span class="rs-self">self</span>) {
+        <span class="rs-self">self</span>.lock.<a class="symbol-link rs-fn" href="eos-layerstack--src-storage-lock-rs.html#method-read-unlock-242">read_unlock</a>();
+    }
+}
+
+<span class="rs-comment">/// In-process exclusive write guard. Reentrant on the same thread (see TRAP).</span>
+#[derive(<span class="rs-type">Debug</span>)]
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-layerstack--src-storage-lock-rs.html#item-struct-ExclusiveGuard-188">ExclusiveGuard</a>&lt;&#x27;lease&gt; {
+    lock: <span class="rs-type">Arc</span>&lt;<a class="symbol-link rs-type" href="eos-layerstack--src-storage-lock-rs.html#item-struct-ReentrantRwLock-208">ReentrantRwLock</a>&gt;,
+    _lease: <span class="rs-type">PhantomData</span>&lt;&amp;&#x27;lease <a class="symbol-link rs-type" href="eos-layerstack--src-storage-lock-rs.html#item-struct-StorageWriterLockLease-44">StorageWriterLockLease</a>&gt;,
+}
+
+<span class="rs-kw">impl</span> <span class="rs-type">Drop</span> <span class="rs-kw">for</span> <a class="symbol-link rs-type" href="eos-layerstack--src-storage-lock-rs.html#item-struct-ExclusiveGuard-188">ExclusiveGuard</a>&lt;&#x27;_&gt; {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-storage-lock-rs.html#method-drop-158">drop</a>(&amp;<span class="rs-kw">mut</span> <span class="rs-self">self</span>) {
+        <span class="rs-self">self</span>.lock.<a class="symbol-link rs-fn" href="eos-layerstack--src-storage-lock-rs.html#method-write-unlock-283">write_unlock</a>();
+    }
+}
+
+#[derive(<span class="rs-type">Debug</span>)]
+<span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-layerstack--src-storage-lock-rs.html#item-struct-LockRecord-201">LockRecord</a> {
+    file: <span class="rs-type">File</span>,
+    refcount: usize,
+    lock: <span class="rs-type">Arc</span>&lt;<a class="symbol-link rs-type" href="eos-layerstack--src-storage-lock-rs.html#item-struct-ReentrantRwLock-208">ReentrantRwLock</a>&gt;,
+}
+
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Default</span>)]
+<span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-layerstack--src-storage-lock-rs.html#item-struct-ReentrantRwLock-208">ReentrantRwLock</a> {
+    state: <span class="rs-type">Mutex</span>&lt;<a class="symbol-link rs-type" href="eos-layerstack--src-storage-lock-rs.html#item-struct-ReentrantRwState-214">ReentrantRwState</a>&gt;,
+    waiters: <span class="rs-type">Condvar</span>,
+}
+
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Default</span>)]
+<span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-layerstack--src-storage-lock-rs.html#item-struct-ReentrantRwState-214">ReentrantRwState</a> {
+    writer: <span class="rs-type">Option</span>&lt;<span class="rs-type">ThreadId</span>&gt;,
+    write_depth: usize,
+    readers: usize,
+    waiting_writers: usize,
+}
+
+<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-layerstack--src-storage-lock-rs.html#item-struct-ReentrantRwLock-208">ReentrantRwLock</a> {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-storage-lock-rs.html#method-read-223">read</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>&gt; {
+        <span class="rs-kw">let</span> current = std::thread::current().id();
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> state = <span class="rs-self">self</span>
+            .state
+            .<a class="symbol-link rs-fn" href="eos-layerstack--src-storage-lock-rs.html#method-lock-148">lock</a>()
+            .map_err(|_| <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>::<span class="rs-type">LockPoisoned</span>(&quot;storage root lock&quot;))?;
+        loop {
+            <span class="rs-kw">let</span> writer_is_self = state.writer == <span class="rs-type">Some</span>(current);
+            <span class="rs-kw">if</span> writer_is_self || (state.writer.is_none() &amp;&amp; state.waiting_writers == 0) {
+                state.readers += 1;
+                <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(());
+            }
+            state = <span class="rs-self">self</span>
+                .waiters
+                .wait(state)
+                .map_err(|_| <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>::<span class="rs-type">LockPoisoned</span>(&quot;storage root read wait&quot;))?;
+        }
+    }
+
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-storage-lock-rs.html#method-read-unlock-242">read_unlock</a>(&amp;<span class="rs-self">self</span>) {
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> state = <span class="rs-self">self</span>
+            .state
+            .<a class="symbol-link rs-fn" href="eos-layerstack--src-storage-lock-rs.html#method-lock-148">lock</a>()
+            .unwrap_or_else(std::sync::<span class="rs-type">PoisonError</span>::into_inner);
+        state.readers = state.readers.saturating_sub(1);
+        <span class="rs-kw">if</span> state.readers == 0 {
+            <a class="symbol-link rs-fn" href="eos-layerstack--src-storage-lock-rs.html#method-drop-158">drop</a>(state);
+            <span class="rs-self">self</span>.waiters.notify_all();
+        }
+    }
+
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-storage-lock-rs.html#method-write-254">write</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Result</span>&lt;(), <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>&gt; {
+        <span class="rs-kw">let</span> current = std::thread::current().id();
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> state = <span class="rs-self">self</span>
+            .state
+            .<a class="symbol-link rs-fn" href="eos-layerstack--src-storage-lock-rs.html#method-lock-148">lock</a>()
+            .map_err(|_| <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>::<span class="rs-type">LockPoisoned</span>(&quot;storage root lock&quot;))?;
+        <span class="rs-kw">if</span> state.writer == <span class="rs-type">Some</span>(current) {
+            state.write_depth += 1;
+            <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(());
+        }
+        state.waiting_writers += 1;
+        loop {
+            <span class="rs-kw">if</span> state.writer.is_none() &amp;&amp; state.readers == 0 {
+                state.waiting_writers = state.waiting_writers.saturating_sub(1);
+                state.writer = <span class="rs-type">Some</span>(current);
+                state.write_depth = 1;
+                <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(());
+            }
+            state = <span class="rs-kw">match</span> <span class="rs-self">self</span>.waiters.wait(state) {
+                <span class="rs-type">Ok</span>(state) =&gt; state,
+                <span class="rs-type">Err</span>(err) =&gt; {
+                    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> state = err.into_inner();
+                    state.waiting_writers = state.waiting_writers.saturating_sub(1);
+                    <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>::<span class="rs-type">LockPoisoned</span>(&quot;storage root write wait&quot;));
+                }
+            };
+        }
+    }
+
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-storage-lock-rs.html#method-write-unlock-283">write_unlock</a>(&amp;<span class="rs-self">self</span>) {
+        <span class="rs-kw">let</span> current = std::thread::current().id();
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> state = <span class="rs-self">self</span>
+            .state
+            .<a class="symbol-link rs-fn" href="eos-layerstack--src-storage-lock-rs.html#method-lock-148">lock</a>()
+            .unwrap_or_else(std::sync::<span class="rs-type">PoisonError</span>::into_inner);
+        <span class="rs-kw">if</span> state.writer != <span class="rs-type">Some</span>(current) {
+            <span class="rs-kw">return</span>;
+        }
+        state.write_depth = state.write_depth.saturating_sub(1);
+        <span class="rs-kw">if</span> state.write_depth == 0 {
+            state.writer = <span class="rs-type">None</span>;
+            <a class="symbol-link rs-fn" href="eos-layerstack--src-storage-lock-rs.html#method-drop-158">drop</a>(state);
+            <span class="rs-self">self</span>.waiters.notify_all();
+        }
+    }
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-storage-lock-rs.html#item-fn-registry-301">registry</a>() -&gt; &amp;&#x27;<span class="rs-kw">static</span> <span class="rs-type">Mutex</span>&lt;<span class="rs-type">HashMap</span>&lt;<span class="rs-type">String</span>, <a class="symbol-link rs-type" href="eos-layerstack--src-storage-lock-rs.html#item-struct-LockRecord-201">LockRecord</a>&gt;&gt; {
+    <span class="rs-kw">static</span> <span class="rs-type">REGISTRY</span>: <span class="rs-type">OnceLock</span>&lt;<span class="rs-type">Mutex</span>&lt;<span class="rs-type">HashMap</span>&lt;<span class="rs-type">String</span>, <a class="symbol-link rs-type" href="eos-layerstack--src-storage-lock-rs.html#item-struct-LockRecord-201">LockRecord</a>&gt;&gt;&gt; = <span class="rs-type">OnceLock</span>::<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-new-79">new</a>();
+    <span class="rs-type">REGISTRY</span>.get_or_init(|| <span class="rs-type">Mutex</span>::<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-new-79">new</a>(<span class="rs-type">HashMap</span>::<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-new-79">new</a>()))
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-storage-lock-rs.html#item-fn-lock-registry-306">lock_registry</a>() -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">MutexGuard</span>&lt;&#x27;<span class="rs-kw">static</span>, <span class="rs-type">HashMap</span>&lt;<span class="rs-type">String</span>, <a class="symbol-link rs-type" href="eos-layerstack--src-storage-lock-rs.html#item-struct-LockRecord-201">LockRecord</a>&gt;&gt;, <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>&gt; {
+    <a class="symbol-link rs-fn" href="eos-layerstack--src-storage-lock-rs.html#item-fn-registry-301">registry</a>()
+        .<a class="symbol-link rs-fn" href="eos-layerstack--src-storage-lock-rs.html#method-lock-148">lock</a>()
+        .map_err(|_| <a class="symbol-link rs-type" href="eos-layerstack.html#item-enum-LayerStackError-7">LayerStackError</a>::<span class="rs-type">LockPoisoned</span>(&quot;storage lock registry&quot;))
+}
+
+#[cfg(test)]
+<span class="rs-kw">mod</span> tests {
+    <span class="rs-kw">use</span> std::path::<span class="rs-type">PathBuf</span>;
+    <span class="rs-kw">use</span> std::sync::atomic::{<span class="rs-type">AtomicU64</span>, <span class="rs-type">Ordering</span>};
+    <span class="rs-kw">use</span> std::sync::mpsc;
+    <span class="rs-kw">use</span> std::time::<span class="rs-type">Duration</span>;
+
+    <span class="rs-kw">use</span> <span class="rs-kw">super</span>::<a class="symbol-link rs-type" href="eos-layerstack--src-storage-lock-rs.html#item-struct-StorageWriterLockLease-44">StorageWriterLockLease</a>;
+
+    <span class="rs-kw">type</span> <a class="symbol-link rs-type" href="eos-layerstack--src-lease-rs.html#item-type-TestResult-199">TestResult</a>&lt;<span class="rs-type">T</span> = ()&gt; = <span class="rs-type">Result</span>&lt;<span class="rs-type">T</span>, <span class="rs-type">Box</span>&lt;<span class="rs-kw">dyn</span> std::error::<span class="rs-type">Error</span> + <span class="rs-type">Send</span> + <span class="rs-type">Sync</span>&gt;&gt;;
+
+    <span class="rs-kw">static</span> <span class="rs-type">NEXT_TMP</span>: <span class="rs-type">AtomicU64</span> = <span class="rs-type">AtomicU64</span>::<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-new-79">new</a>(0);
+
+    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-storage-lock-rs.html#item-fn-shared-guards-overlap-and-block-exclusive-325">shared_guards_overlap_and_block_exclusive</a>() -&gt; <a class="symbol-link rs-type" href="eos-layerstack--src-lease-rs.html#item-type-TestResult-199">TestResult</a> {
+        <span class="rs-kw">let</span> fixture = <a class="symbol-link rs-type" href="eos-layerstack--src-storage-lock-rs.html#item-struct-Fixture-401">Fixture</a>::<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-new-79">new</a>(&quot;shared-overlap&quot;)?;
+        <span class="rs-kw">let</span> lease = <a class="symbol-link rs-type" href="eos-layerstack--src-storage-lock-rs.html#item-struct-StorageWriterLockLease-44">StorageWriterLockLease</a>::<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-acquire-85">acquire</a>(&amp;fixture.root)?;
+        <span class="rs-kw">let</span> shared = lease.<a class="symbol-link rs-fn" href="eos-layerstack--src-storage-lock-rs.html#method-shared-106">shared</a>()?;
+
+        <span class="rs-kw">let</span> (shared_tx, shared_rx) = mpsc::channel();
+        <span class="rs-kw">let</span> (release_tx, release_rx) = mpsc::channel();
+        <span class="rs-kw">let</span> root = fixture.root.clone();
+        <span class="rs-kw">let</span> shared_thread = std::thread::spawn(<span class="rs-kw">move</span> || -&gt; <a class="symbol-link rs-type" href="eos-layerstack--src-lease-rs.html#item-type-TestResult-199">TestResult</a> {
+            <span class="rs-kw">let</span> lease = <a class="symbol-link rs-type" href="eos-layerstack--src-storage-lock-rs.html#item-struct-StorageWriterLockLease-44">StorageWriterLockLease</a>::<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-acquire-85">acquire</a>(&amp;root)?;
+            <span class="rs-kw">let</span> _shared = lease.<a class="symbol-link rs-fn" href="eos-layerstack--src-storage-lock-rs.html#method-shared-106">shared</a>()?;
+            shared_tx.send(())?;
+            release_rx.recv()?;
+            <span class="rs-type">Ok</span>(())
+        });
+        shared_rx.recv_timeout(<span class="rs-type">Duration</span>::from_secs(1))?;
+        release_tx.send(())?;
+        <a class="symbol-link rs-fn" href="eos-layerstack--src-storage-lock-rs.html#item-fn-join-test-thread-395">join_test_thread</a>(shared_thread)?;
+
+        <span class="rs-kw">let</span> (exclusive_tx, exclusive_rx) = mpsc::channel();
+        <span class="rs-kw">let</span> root = fixture.root.clone();
+        <span class="rs-kw">let</span> exclusive_thread = std::thread::spawn(<span class="rs-kw">move</span> || -&gt; <a class="symbol-link rs-type" href="eos-layerstack--src-lease-rs.html#item-type-TestResult-199">TestResult</a> {
+            <span class="rs-kw">let</span> lease = <a class="symbol-link rs-type" href="eos-layerstack--src-storage-lock-rs.html#item-struct-StorageWriterLockLease-44">StorageWriterLockLease</a>::<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-acquire-85">acquire</a>(&amp;root)?;
+            <span class="rs-kw">let</span> _exclusive = lease.<a class="symbol-link rs-fn" href="eos-layerstack--src-storage-lock-rs.html#method-exclusive-125">exclusive</a>()?;
+            exclusive_tx.send(())?;
+            <span class="rs-type">Ok</span>(())
+        });
+        assert!(
+            exclusive_rx
+                .recv_timeout(<span class="rs-type">Duration</span>::from_millis(50))
+                .is_err(),
+            &quot;exclusive guard acquired <span class="rs-kw">while</span> a shared guard was still held&quot;
+        );
+        <a class="symbol-link rs-fn" href="eos-layerstack--src-storage-lock-rs.html#method-drop-158">drop</a>(shared);
+        exclusive_rx.recv_timeout(<span class="rs-type">Duration</span>::from_secs(1))?;
+        <a class="symbol-link rs-fn" href="eos-layerstack--src-storage-lock-rs.html#item-fn-join-test-thread-395">join_test_thread</a>(exclusive_thread)?;
+        <span class="rs-type">Ok</span>(())
+    }
+
+    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-storage-lock-rs.html#item-fn-exclusive-guard-is-reentrant-and-blocks-shared-365">exclusive_guard_is_reentrant_and_blocks_shared</a>() -&gt; <a class="symbol-link rs-type" href="eos-layerstack--src-lease-rs.html#item-type-TestResult-199">TestResult</a> {
+        <span class="rs-kw">let</span> fixture = <a class="symbol-link rs-type" href="eos-layerstack--src-storage-lock-rs.html#item-struct-Fixture-401">Fixture</a>::<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-new-79">new</a>(&quot;exclusive-reentrant&quot;)?;
+        <span class="rs-kw">let</span> lease = <a class="symbol-link rs-type" href="eos-layerstack--src-storage-lock-rs.html#item-struct-StorageWriterLockLease-44">StorageWriterLockLease</a>::<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-acquire-85">acquire</a>(&amp;fixture.root)?;
+        <span class="rs-kw">let</span> exclusive = lease.<a class="symbol-link rs-fn" href="eos-layerstack--src-storage-lock-rs.html#method-exclusive-125">exclusive</a>()?;
+        <span class="rs-kw">let</span> nested = lease.<a class="symbol-link rs-fn" href="eos-layerstack--src-storage-lock-rs.html#method-exclusive-125">exclusive</a>()?;
+
+        <span class="rs-kw">let</span> (shared_tx, shared_rx) = mpsc::channel();
+        <span class="rs-kw">let</span> root = fixture.root.clone();
+        <span class="rs-kw">let</span> shared_thread = std::thread::spawn(<span class="rs-kw">move</span> || -&gt; <a class="symbol-link rs-type" href="eos-layerstack--src-lease-rs.html#item-type-TestResult-199">TestResult</a> {
+            <span class="rs-kw">let</span> lease = <a class="symbol-link rs-type" href="eos-layerstack--src-storage-lock-rs.html#item-struct-StorageWriterLockLease-44">StorageWriterLockLease</a>::<a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-acquire-85">acquire</a>(&amp;root)?;
+            <span class="rs-kw">let</span> _shared = lease.<a class="symbol-link rs-fn" href="eos-layerstack--src-storage-lock-rs.html#method-shared-106">shared</a>()?;
+            shared_tx.send(())?;
+            <span class="rs-type">Ok</span>(())
+        });
+        assert!(
+            shared_rx.recv_timeout(<span class="rs-type">Duration</span>::from_millis(50)).is_err(),
+            &quot;shared guard acquired <span class="rs-kw">while</span> the outer exclusive guard was held&quot;
+        );
+        <a class="symbol-link rs-fn" href="eos-layerstack--src-storage-lock-rs.html#method-drop-158">drop</a>(nested);
+        assert!(
+            shared_rx.recv_timeout(<span class="rs-type">Duration</span>::from_millis(50)).is_err(),
+            &quot;shared guard acquired <span class="rs-kw">while</span> the reentrant exclusive guard was still held&quot;
+        );
+        <a class="symbol-link rs-fn" href="eos-layerstack--src-storage-lock-rs.html#method-drop-158">drop</a>(exclusive);
+        shared_rx.recv_timeout(<span class="rs-type">Duration</span>::from_secs(1))?;
+        <a class="symbol-link rs-fn" href="eos-layerstack--src-storage-lock-rs.html#item-fn-join-test-thread-395">join_test_thread</a>(shared_thread)?;
+        <span class="rs-type">Ok</span>(())
+    }
+
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-storage-lock-rs.html#item-fn-join-test-thread-395">join_test_thread</a>(handle: std::thread::<span class="rs-type">JoinHandle</span>&lt;<a class="symbol-link rs-type" href="eos-layerstack--src-lease-rs.html#item-type-TestResult-199">TestResult</a>&gt;) -&gt; <a class="symbol-link rs-type" href="eos-layerstack--src-lease-rs.html#item-type-TestResult-199">TestResult</a> {
+        handle
+            .join()
+            .map_err(|_| std::io::<span class="rs-type">Error</span>::other(&quot;test thread panicked&quot;))?
+    }
+
+    <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-layerstack--src-storage-lock-rs.html#item-struct-Fixture-401">Fixture</a> {
+        root: <span class="rs-type">PathBuf</span>,
+    }
+
+    <span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-layerstack--src-storage-lock-rs.html#item-struct-Fixture-401">Fixture</a> {
+        <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-lease-rs.html#method-new-79">new</a>(label: &amp;str) -&gt; <a class="symbol-link rs-type" href="eos-layerstack--src-lease-rs.html#item-type-TestResult-199">TestResult</a>&lt;<span class="rs-self">Self</span>&gt; {
+            <span class="rs-kw">let</span> root = std::env::temp_dir().join(format!(
+                &quot;eos-layerstack-storage-lock-{label}-{}-{}&quot;,
+                std::process::id(),
+                <span class="rs-type">NEXT_TMP</span>.fetch_add(1, <span class="rs-type">Ordering</span>::<span class="rs-type">Relaxed</span>)
+            ));
+            <span class="rs-kw">let</span> _ = std::fs::remove_dir_all(&amp;root);
+            std::fs::create_dir_all(&amp;root)?;
+            <span class="rs-type">Ok</span>(<span class="rs-self">Self</span> { root })
+        }
+    }
+
+    <span class="rs-kw">impl</span> <span class="rs-type">Drop</span> <span class="rs-kw">for</span> <a class="symbol-link rs-type" href="eos-layerstack--src-storage-lock-rs.html#item-struct-Fixture-401">Fixture</a> {
+        <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-layerstack--src-storage-lock-rs.html#method-drop-158">drop</a>(&amp;<span class="rs-kw">mut</span> <span class="rs-self">self</span>) {
+            <span class="rs-kw">let</span> _ = std::fs::remove_dir_all(&amp;<span class="rs-self">self</span>.root);
+        }
+    }
+}
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
   <script src="../assets/inventory.js"></script>
 </body>
 </html>

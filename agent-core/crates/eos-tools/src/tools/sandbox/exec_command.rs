@@ -80,21 +80,15 @@ impl ToolExecutor for ExecCommand {
                 Ok(result) => result,
                 Err(err) => return Ok(ToolResult::error(err.to_string())),
             };
-        // Register a backgrounded session with the same agent-run identity used
-        // to build the sandbox request, otherwise the heartbeat completion
-        // filter would never match.
+        // Register a backgrounded session on this run's command-session lane (the
+        // lane is bound to the owner agent run, so the daemon completion poll uses
+        // `owner_agent_run_id` as the caller id — no per-call agent-run arg).
         if let (Some(port), Some(session_id)) = (
             &self.service.command_session_supervisor,
             &result.command_session_id,
         ) {
             if result.is_running() {
-                port.register(
-                    session_id,
-                    sandbox_id,
-                    ctx.require_agent_run_id()?,
-                    &command,
-                )
-                .await;
+                port.register(session_id, sandbox_id, &command).await;
             }
         }
         Ok(command_tool_result(&result))

@@ -8,8 +8,16 @@
 </head>
 <body>
   <header>
-    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
-    <h1>eos-testkit File Inventory</h1>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>eos-testkit File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS/agent-core &amp;&amp; cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
   </header>
   <a class="back-link" href="../index.html">agent-core</a>
 <section class="summary">
@@ -47,19 +55,84 @@
       <span>0 methods</span>
     </div>
   </div>
-  <div class="items"><div class="group-label">Standalone Functions</div><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn run_until pub pub async fn run_until &lt; F &gt; (stream : &amp; mut QueryStream &lt; '_ &gt; , mut stop : F) -&gt; Vec &lt; StreamEvent &gt; where F : FnMut (&amp; StreamEvent) -&gt; bool , crates/eos-testkit/src/engine.rs  ">
+  <div class="items"><div class="group-label">Standalone Functions</div><article id="item-fn-run-until-9" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn run_until pub pub async fn run_until &lt; F &gt; (stream : &amp; mut QueryStream &lt; '_ &gt; , mut stop : F) -&gt; Vec &lt; StreamEvent &gt; where F : FnMut (&amp; StreamEvent) -&gt; bool , crates/eos-testkit/src/engine.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>run_until</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub async fn run_until &lt; F &gt; (stream : &amp; mut QueryStream &lt; '_ &gt; , mut stop : F) -&gt; Vec &lt; StreamEvent &gt; where F : FnMut (&amp; StreamEvent) -&gt; bool ,</code>
+  <code class="signature">pub async fn <a class="symbol-link" href="eos-testkit--src-engine-rs.html#item-fn-run-until-9">run_until</a> &lt; F &gt; (stream : &amp; mut QueryStream &lt; &#x27;_ &gt; , mut stop : F) -&gt; Vec &lt; StreamEvent &gt; where F : FnMut (&amp; StreamEvent) -&gt; bool ,</code>
+  <p class="docstring">Pull `stream` forward, collecting each streamed [`StreamEvent`] until `stop`<br>returns `true` for one (inclusive) or the stream ends, then return the<br>collected events. The caller drops the stream and inspects the<br>`QueryContext` at the checkpoint.<br># Panics<br>Panics if the stream yields an `EngineError` item (a test-harness assertion).</p>
   <div class="tags"><span>async</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-comment">/// Pull `stream` forward, collecting each streamed [`StreamEvent`] until `stop`</span>
+<span class="rs-comment">/// returns `true` for one (inclusive) or the stream ends, then return the</span>
+<span class="rs-comment">/// collected events. The caller drops the stream and inspects the</span>
+<span class="rs-comment">/// `QueryContext` at the checkpoint.</span>
+<span class="rs-comment">///</span>
+<span class="rs-comment">/// # Panics</span>
+<span class="rs-comment">/// Panics if the stream yields an `EngineError` item (a test-harness assertion).</span>
+<span class="rs-kw">pub</span> <span class="rs-kw">async</span> <span class="rs-kw">fn</span> run_until&lt;<span class="rs-type">F</span>&gt;(stream: &amp;<span class="rs-kw">mut</span> <span class="rs-type">QueryStream</span>&lt;&#x27;_&gt;, <span class="rs-kw">mut</span> stop: <span class="rs-type">F</span>) -&gt; <span class="rs-type">Vec</span>&lt;<span class="rs-type">StreamEvent</span>&gt;
+<span class="rs-kw">where</span>
+    <span class="rs-type">F</span>: <span class="rs-type">FnMut</span>(&amp;<span class="rs-type">StreamEvent</span>) -&gt; bool,
+{
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> events = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-testkit--src-llm-rs.html#method-new-30">new</a>();
+    <span class="rs-kw">while</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(item) = stream.next().<span class="rs-kw">await</span> {
+        <span class="rs-kw">let</span> (event, _usage) = item.expect(&quot;query stream item&quot;);
+        <span class="rs-kw">let</span> reached = stop(&amp;event);
+        events.push(event);
+        <span class="rs-kw">if</span> reached {
+            <span class="rs-kw">break</span>;
+        }
+    }
+    events
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-testkit/src/engine.rs:9</p>
 </article></div>
 </section></div>
 </main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/eos-testkit/src/engine.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-comment">//! Layer-A stepping: pull a live [`QueryStream`] to a chosen checkpoint, then</span>
+<span class="rs-comment">//! return so the caller can `drop` the stream (releasing the `&amp;mut QueryContext`</span>
+<span class="rs-comment">//! borrow) and inspect the context — no final closure required (`TESTING_SPEC` §4,</span>
+<span class="rs-comment">//! the `hard_ceiling_exit_*` seam).</span>
+
+<span class="rs-kw">use</span> eos_engine::{<span class="rs-type">QueryStream</span>, <span class="rs-type">StreamEvent</span>};
+<span class="rs-kw">use</span> futures::<span class="rs-type">StreamExt</span>;
+
+<span class="rs-comment">/// Pull `stream` forward, collecting each streamed [`StreamEvent`] until `stop`</span>
+<span class="rs-comment">/// returns `true` for one (inclusive) or the stream ends, then return the</span>
+<span class="rs-comment">/// collected events. The caller drops the stream and inspects the</span>
+<span class="rs-comment">/// `QueryContext` at the checkpoint.</span>
+<span class="rs-comment">///</span>
+<span class="rs-comment">/// # Panics</span>
+<span class="rs-comment">/// Panics if the stream yields an `EngineError` item (a test-harness assertion).</span>
+<span class="rs-kw">pub</span> <span class="rs-kw">async</span> <span class="rs-kw">fn</span> run_until&lt;<span class="rs-type">F</span>&gt;(stream: &amp;<span class="rs-kw">mut</span> <span class="rs-type">QueryStream</span>&lt;&#x27;_&gt;, <span class="rs-kw">mut</span> stop: <span class="rs-type">F</span>) -&gt; <span class="rs-type">Vec</span>&lt;<span class="rs-type">StreamEvent</span>&gt;
+<span class="rs-kw">where</span>
+    <span class="rs-type">F</span>: <span class="rs-type">FnMut</span>(&amp;<span class="rs-type">StreamEvent</span>) -&gt; bool,
+{
+    <span class="rs-kw">let</span> <span class="rs-kw">mut</span> events = <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-testkit--src-llm-rs.html#method-new-30">new</a>();
+    <span class="rs-kw">while</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(item) = stream.next().<span class="rs-kw">await</span> {
+        <span class="rs-kw">let</span> (event, _usage) = item.expect(&quot;query stream item&quot;);
+        <span class="rs-kw">let</span> reached = stop(&amp;event);
+        events.push(event);
+        <span class="rs-kw">if</span> reached {
+            <span class="rs-kw">break</span>;
+        }
+    }
+    events
+}
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
   <script src="../assets/inventory.js"></script>
 </body>
 </html>

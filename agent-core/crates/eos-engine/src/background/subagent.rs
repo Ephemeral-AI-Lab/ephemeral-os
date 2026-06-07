@@ -1,9 +1,7 @@
-//! Subagent orchestration: the `BackgroundSupervisorPort` impl on
+//! Subagent orchestration: the [`BackgroundSupervisorPort`] impl on
 //! [`BackgroundSupervisorHandle`] — validate, build the child run, drive
-//! `run_agent` on a detached task, and settle the record when it
-//! finishes. Ports `tools/subagent/run_subagent/run_subagent.py` (driver +
-//! validation + terminal forwarding) and `tools/subagent/control.py`
-//! (status/result taxonomy + JSON payload).
+//! `run_agent` on a detached task, and settle the [`SubagentRecord`] when it
+//! finishes.
 //!
 //! D3 classification keys on terminal **presence**, not `is_error`: a subagent
 //! that called its terminal (even with `is_error=true`) settles `Completed` and
@@ -16,7 +14,7 @@ use eos_agent_def::{AgentName, AgentType};
 use eos_agent_message_records::AgentRunRecordKind;
 use eos_llm_client::Message;
 use eos_tools::ports::{
-    BackgroundInflightReport, BackgroundSupervisorPort, CommandSessionSupervisorPort,
+    BackgroundSupervisorPort, CommandSessionSupervisorPort, RunningBackgroundTasks,
     SpawnedSubagent, StartedSubagent, StartedWorkflowHandle,
 };
 use eos_tools::{ExecutionMetadata, ToolError, ToolResult, WorkflowControlPort};
@@ -24,7 +22,8 @@ use eos_types::{AgentRunId, JsonObject, SubagentSessionId, WorkflowSessionId};
 use serde_json::{json, Value};
 
 use super::handle::BackgroundSupervisorHandle;
-use super::supervisor::{BackgroundTaskStatus, SubagentRecord};
+use super::lanes::{BackgroundTaskStatus, SubagentHandle};
+use super::notifications::BackgroundCompletion;
 use crate::{run_agent, AgentRunInput, AgentRunResult};
 
 const RECURSION_MESSAGE: &str = "run_subagent: subagents may not spawn further subagents. \
@@ -134,20 +133,22 @@ fn classify_run(run: AgentRunResult) -> (BackgroundTaskStatus, ToolResult, i64) 
     }
 }
 
-/// Whether a settled record carries `subagent_terminal_called:true`.
-fn terminal_called(record: &SubagentRecord) -> bool {
-    record
-        .result
-        .as_ref()
+/// Whether a settled result carries `subagent_terminal_called:true`.
+fn terminal_called(result: Option<&ToolResult>) -> bool {
+    result
         .and_then(|result| result.metadata.get("subagent_terminal_called"))
         .and_then(Value::as_bool)
         .unwrap_or(false)
 }
 
 /// Port of `control.py::_subagent_status_and_result` (live-peek cut, so the
-/// running/failed message tail is empty).
-fn subagent_status_and_result(record: &SubagentRecord) -> (&'static str, String) {
-    let metadata = record.result.as_ref().map(|result| &result.metadata);
+/// running/failed message tail is empty). Operates on the record parts so the
+/// taxonomy is testable without a live driver abort handle.
+fn subagent_status_and_result(
+    status: BackgroundTaskStatus,
+    result: Option<&ToolResult>,
+) -> (&'static str, String) {
+    let metadata = result.map(|result| &result.metadata);
     if let Some(reason) = metadata
         .and_then(|m| m.get("subagent_termination_reason"))
         .and_then(Value::as_str)
@@ -161,17 +162,11 @@ fn subagent_status_and_result(record: &SubagentRecord) -> (&'static str, String)
     {
         return ("cancelled", "[cancelled] ".to_owned());
     }
-    let output = || {
-        record
-            .result
-            .as_ref()
-            .map(|result| result.output.clone())
-            .unwrap_or_default()
-    };
-    match record.status {
+    let output = || result.map(|result| result.output.clone()).unwrap_or_default();
+    match status {
         BackgroundTaskStatus::Running => ("running", String::new()),
         BackgroundTaskStatus::Completed | BackgroundTaskStatus::Delivered
-            if terminal_called(record) =>
+            if terminal_called(result) =>
         {
             ("finished", output())
         }
@@ -188,7 +183,7 @@ impl BackgroundSupervisorPort for BackgroundSupervisorHandle {
         agent_name: &str,
         prompt: &str,
     ) -> Result<SpawnedSubagent, ToolError> {
-        let registry = &self.handles.agent_registry;
+        let registry = &self.handles().agent_registry;
 
         // D2 validation (run_subagent.py:125-150), before any record is minted.
         // 1. Recursion: a subagent may not spawn a subagent.
@@ -222,6 +217,7 @@ impl BackgroundSupervisorPort for BackgroundSupervisorHandle {
         tool_input.insert("prompt".to_owned(), json!(prompt));
 
         let child_run_id = AgentRunId::new_v4();
+        let sub_agent_run_id = child_run_id.clone();
         // §11.3: the subagent owns its OWN ephemeral `AgentRunControl` — its own
         // notifier, foreground executor, background supervisor, and
         // command-completion heartbeat. Because that heartbeat drains to the
@@ -256,9 +252,9 @@ impl BackgroundSupervisorPort for BackgroundSupervisorHandle {
             notifier: subagent_control.notifications(),
             cancellation: subagent_control.cancellation(),
             foreground: subagent_control.foreground(),
-            // The subagent run is not (yet) inserted in the registry, so it
-            // finalizes naturally; the parent observes its completion via the
-            // SubagentRecord settle path.
+            // The subagent run is not inserted in the registry, so it finalizes
+            // naturally; the parent observes its completion via the SubagentRecord
+            // settle path.
             agent_run_registry: None,
             persist_agent_run: false,
             record_kind: AgentRunRecordKind::Subagent {
@@ -267,20 +263,20 @@ impl BackgroundSupervisorPort for BackgroundSupervisorHandle {
         };
 
         let inner = self.inner();
-        let handles = self.handles.clone();
+        let handles = self.handles().clone();
         let driver_inner = inner.clone();
         let driver_agent_run_id = caller_agent_run_id.clone();
+        // The PARENT run's emitter: the subagent's completion surfaces to the
+        // parent's notifier (spec §9.1/§13.1), not the subagent's own.
+        let parent_emitter = self.notifications().clone();
 
-        // Register, spawn the driver, and store its abort handle under one lock so
-        // concurrent cancellation can never miss a not-yet-stored handle.
+        // Mint the id, spawn the driver, and insert the record under one lock so
+        // concurrent cancellation can never miss a not-yet-inserted record, and
+        // `started` strictly precedes any terminal emit (the driver blocks on the
+        // same lock until this block releases).
         let task_id = {
             let mut supervisor = inner.lock().await;
-            let task_id = supervisor.register_subagent(tool_input, caller_agent_run_id.clone());
-            // Emit `started` while still holding the lock, before the driver can
-            // run: the driver cannot acquire the lock to settle + emit its terminal
-            // event until this block releases, so `started` strictly precedes any
-            // terminal emit and the supervisor stays the single, ordered emitter
-            // (D8). Mirrors Rust emitting `started` synchronously inside launch().
+            let task_id = supervisor.subagents.mint_id();
             trace_background_tool(
                 "background_tool.started",
                 &task_id,
@@ -296,10 +292,25 @@ impl BackgroundSupervisorPort for BackgroundSupervisorHandle {
                 let _subagent_control = subagent_control;
                 let run = run_agent(&handles, run_input, None).await;
                 let (status, result, exit_code) = classify_run(run);
-                {
+                // Settle under the lock, then clone the terminal data out for the
+                // emit (no notification send holds the supervisor lock across
+                // `.await`, spec §13.1).
+                let settled = {
                     let mut supervisor = driver_inner.lock().await;
-                    supervisor.settle_subagent(&driver_task_id, status, result);
-                    supervisor.forget_handle(&driver_task_id);
+                    supervisor.subagents.settle(&driver_task_id, status, result);
+                    supervisor
+                        .subagents
+                        .get(&driver_task_id)
+                        .map(|record| (record.status, record.result.clone()))
+                };
+                if let Some((settled_status, Some(settled_result))) = settled {
+                    let _ = parent_emitter
+                        .emit(BackgroundCompletion::Subagent {
+                            subagent_session_id: driver_task_id.clone(),
+                            status: settled_status,
+                            result: settled_result,
+                        })
+                        .await;
                 }
                 trace_background_tool(
                     terminal_event_type(status),
@@ -309,7 +320,14 @@ impl BackgroundSupervisorPort for BackgroundSupervisorHandle {
                     Some(exit_code),
                 );
             });
-            supervisor.store_handle(task_id.clone(), join.abort_handle());
+            supervisor.subagents.insert(
+                SubagentHandle {
+                    subagent_session_id: task_id.clone(),
+                    sub_agent_run_id,
+                    driver_abort: join.abort_handle(),
+                },
+                tool_input,
+            );
             task_id
         };
 
@@ -325,14 +343,15 @@ impl BackgroundSupervisorPort for BackgroundSupervisorHandle {
     ) -> Result<ToolResult, ToolError> {
         let supervisor = self.inner();
         let guard = supervisor.lock().await;
-        let Some(record) = guard.get_subagent(subagent_session_id) else {
+        let Some(record) = guard.subagents.get(subagent_session_id) else {
             // E5: a missing session is an in-band error (control.py:116-123).
             return Ok(ToolResult::error(format!(
                 "No subagent session found with ID: {}",
                 subagent_session_id.as_str()
             )));
         };
-        let (status, result_text) = subagent_status_and_result(record);
+        let (status, result_text) =
+            subagent_status_and_result(record.status, record.result.as_ref());
         let agent_name = record
             .tool_input
             .get("agent_name")
@@ -360,18 +379,12 @@ impl BackgroundSupervisorPort for BackgroundSupervisorHandle {
         subagent_session_id: &SubagentSessionId,
         reason: &str,
     ) -> Result<ToolResult, ToolError> {
-        let (cancelled, agent_run_id) = {
-            let supervisor = self.inner();
-            let mut guard = supervisor.lock().await;
-            let agent_run_id = guard
-                .get_subagent(subagent_session_id)
-                .map(|record| record.agent_run_id.clone());
-            let cancelled = guard.cancel_subagent(subagent_session_id, reason);
-            if cancelled {
-                guard.take_and_abort_handle(subagent_session_id);
-            }
-            (cancelled, agent_run_id)
-        };
+        let cancelled = self
+            .inner()
+            .lock()
+            .await
+            .subagents
+            .cancel(subagent_session_id, reason);
         if !cancelled {
             // E6: unknown / already-settled cancel is an in-band error
             // (control.py:116-123).
@@ -381,17 +394,10 @@ impl BackgroundSupervisorPort for BackgroundSupervisorHandle {
                 subagent_session_id.as_str()
             )));
         }
-        let Some(agent_run_id) = agent_run_id else {
-            return Ok(ToolResult::error(format!(
-                "Could not cancel subagent session {}. It may have already completed \
-                 or does not exist.",
-                subagent_session_id.as_str()
-            )));
-        };
         trace_background_tool(
             "background_tool.cancelled",
             subagent_session_id,
-            &agent_run_id,
+            self.owner_agent_run_id(),
             BackgroundTaskStatus::Cancelled,
             None,
         );
@@ -406,51 +412,36 @@ impl BackgroundSupervisorPort for BackgroundSupervisorHandle {
         )))
     }
 
-    async fn inflight_report(&self, agent_run_id: Option<&AgentRunId>) -> BackgroundInflightReport {
-        self.inner().lock().await.inflight_report(agent_run_id)
+    async fn running_background_tasks(&self) -> RunningBackgroundTasks {
+        BackgroundSupervisorHandle::running_background_tasks(self).await
     }
 
-    async fn cancel_subagents_for_agent_run(
-        &self,
-        agent_run_id: &AgentRunId,
-    ) -> BackgroundInflightReport {
-        self.inner()
-            .lock()
-            .await
-            .cancel_subagents_for_agent_run(agent_run_id)
+    async fn cancel_subagents(&self) -> RunningBackgroundTasks {
+        BackgroundSupervisorHandle::cancel_subagents(self, "parent submitted its terminal").await
     }
 
-    async fn register_workflow(&self, agent_run_id: &AgentRunId, workflow: &StartedWorkflowHandle) {
-        self.inner()
-            .lock()
-            .await
-            .register_workflow(agent_run_id, workflow);
+    async fn register_workflow(&self, workflow: &StartedWorkflowHandle) {
+        self.inner().lock().await.workflows.register(workflow);
     }
 
     async fn cancel_workflow_record(
         &self,
         workflow_task_id: &WorkflowSessionId,
-        reason: &str,
+        _reason: &str,
     ) -> bool {
         self.inner()
             .lock()
             .await
-            .cancel_workflow_record(workflow_task_id, reason)
+            .workflows
+            .cancel_record(workflow_task_id)
     }
 
-    async fn cancel_for_parent_exit(
+    async fn teardown(
         &self,
-        agent_run_id: Option<&AgentRunId>,
         workflow_control: Option<Arc<dyn WorkflowControlPort>>,
         reason: &str,
-    ) -> BackgroundInflightReport {
-        BackgroundSupervisorHandle::cancel_for_parent_exit(
-            self,
-            agent_run_id,
-            workflow_control,
-            reason,
-        )
-        .await
+    ) -> RunningBackgroundTasks {
+        BackgroundSupervisorHandle::teardown(self, workflow_control, reason).await
     }
 }
 
@@ -469,7 +460,7 @@ mod tests {
 
     use crate::{
         AgentRunControlFactory, BackgroundSupervisorFactory, EngineRunHandles,
-        ForegroundExecutorFactory,
+        ForegroundExecutorFactory, NotificationService,
     };
 
     use super::*;
@@ -576,7 +567,14 @@ mod tests {
 
     fn handle_with_agents(agents: Vec<AgentDefinition>) -> BackgroundSupervisorHandle {
         let control_factory = test_control_factory(agents.clone());
-        BackgroundSupervisorHandle::new(handles(agents), Arc::new(FakeTransport), control_factory)
+        BackgroundSupervisorHandle::new(
+            "run-root".parse().expect("agent run id"),
+            handles(agents),
+            Arc::new(FakeTransport),
+            std::time::Duration::from_secs(3600),
+            NotificationService::new(),
+            control_factory,
+        )
     }
 
     fn metadata_for(agent_name: &str, agent_run_id: &str) -> ExecutionMetadata {
@@ -584,18 +582,6 @@ mod tests {
         metadata.agent_name = agent_name.to_owned();
         metadata.agent_run_id = Some(agent_run_id.parse().expect("agent run id"));
         metadata
-    }
-
-    fn record_with(status: BackgroundTaskStatus, result: Option<ToolResult>) -> SubagentRecord {
-        let mut tool_input = JsonObject::new();
-        tool_input.insert("agent_name".to_owned(), json!("explorer"));
-        SubagentRecord {
-            subagent_session_id: "subagent_1".parse().expect("subagent id"),
-            tool_input,
-            status,
-            agent_run_id: "root".parse().expect("agent run id"),
-            result,
-        }
     }
 
     fn terminal_called_flag(result: &ToolResult) -> Option<bool> {
@@ -620,8 +606,10 @@ mod tests {
         );
         assert_eq!(exit_code, 1);
         assert_eq!(terminal_called_flag(&result), Some(true));
-        let record = record_with(BackgroundTaskStatus::Completed, Some(result));
-        assert_eq!(subagent_status_and_result(&record).0, "finished");
+        assert_eq!(
+            subagent_status_and_result(BackgroundTaskStatus::Completed, Some(&result)).0,
+            "finished"
+        );
     }
 
     #[test]
@@ -634,8 +622,8 @@ mod tests {
         assert!(!result.is_error);
         assert_eq!(exit_code, 0);
         assert_eq!(terminal_called_flag(&result), Some(true));
-        let record = record_with(BackgroundTaskStatus::Completed, Some(result));
-        let (kind, text) = subagent_status_and_result(&record);
+        let (kind, text) =
+            subagent_status_and_result(BackgroundTaskStatus::Completed, Some(&result));
         assert_eq!(kind, "finished");
         assert_eq!(text, "findings");
     }
@@ -654,7 +642,7 @@ mod tests {
             .contains("subagent crashed: provider exploded"));
         assert_eq!(terminal_called_flag(&result), Some(false));
         assert_eq!(
-            subagent_status_and_result(&record_with(BackgroundTaskStatus::Failed, Some(result))).0,
+            subagent_status_and_result(BackgroundTaskStatus::Failed, Some(&result)).0,
             "failed"
         );
     }
@@ -675,22 +663,25 @@ mod tests {
     #[test]
     fn taxonomy_running_and_cancelled() {
         assert_eq!(
-            subagent_status_and_result(&record_with(BackgroundTaskStatus::Running, None)),
+            subagent_status_and_result(BackgroundTaskStatus::Running, None),
             ("running", String::new())
         );
-        let cancelled = record_with(
-            BackgroundTaskStatus::Cancelled,
-            Some(ToolResult::error("x").meta("subagent_cancelled", json!(true))),
+        let cancelled = ToolResult::error("x").meta("subagent_cancelled", json!(true));
+        assert_eq!(
+            subagent_status_and_result(BackgroundTaskStatus::Cancelled, Some(&cancelled)).0,
+            "cancelled"
         );
-        assert_eq!(subagent_status_and_result(&cancelled).0, "cancelled");
     }
 
     // A Completed record WITHOUT subagent_terminal_called falls through to failed
     // (matches control.py's `COMPLETED && terminal_called` guard).
     #[test]
     fn completed_without_terminal_called_is_failed() {
-        let record = record_with(BackgroundTaskStatus::Completed, Some(ToolResult::ok("x")));
-        assert_eq!(subagent_status_and_result(&record).0, "failed");
+        let result = ToolResult::ok("x");
+        assert_eq!(
+            subagent_status_and_result(BackgroundTaskStatus::Completed, Some(&result)).0,
+            "failed"
+        );
     }
 
     #[test]
@@ -743,54 +734,62 @@ mod tests {
 
     #[tokio::test]
     async fn progress_and_cancel_return_model_facing_results() {
-        let handle = handle_with_agents(Vec::new());
-        let agent_run_id: AgentRunId = "run-root".parse().expect("agent run id");
-        let session_id = {
-            let inner = handle.inner();
-            let mut guard = inner.lock().await;
-            let mut tool_input = JsonObject::new();
-            tool_input.insert("agent_name".to_owned(), json!("explorer"));
-            guard.register_subagent(tool_input, agent_run_id)
+        let explorer = subagent_def("explorer");
+        let handle = handle_with_agents(vec![
+            agent_def("root", AgentRole::Root, &[], &["submit_root_outcome"]),
+            explorer,
+        ]);
+        // Spawn a real subagent so a record exists, then cancel before it settles.
+        let started = handle
+            .spawn(&metadata_for("root", "run-root"), "explorer", "inspect")
+            .await
+            .expect("spawn");
+        let SpawnedSubagent::Launched(StartedSubagent {
+            subagent_session_id,
+        }) = started
+        else {
+            panic!("expected a launched subagent");
         };
 
-        let running = handle.progress(&session_id, 10).await.expect("progress");
+        let running = handle
+            .progress(&subagent_session_id, 10)
+            .await
+            .expect("progress");
         assert!(!running.is_error);
         let snapshot = running.metadata.get("subagent_snapshot").expect("snapshot");
-        assert_eq!(snapshot["status"], json!("running"));
         assert_eq!(snapshot["agent_name"], json!("explorer"));
 
         let cancelled = handle
-            .cancel(&session_id, "no longer needed")
+            .cancel(&subagent_session_id, "no longer needed")
             .await
             .expect("cancel");
         assert!(!cancelled.is_error);
         assert!(cancelled.output.contains("no longer needed"));
 
-        let after_cancel = handle.progress(&session_id, 10).await.expect("progress");
+        let after_cancel = handle
+            .progress(&subagent_session_id, 10)
+            .await
+            .expect("progress");
         assert_eq!(
             after_cancel.metadata["subagent_snapshot"]["status"],
             json!("cancelled")
         );
 
         let unknown: SubagentSessionId = "subagent_missing".parse().expect("subagent id");
-        assert!(
-            handle
-                .progress(&unknown, 10)
-                .await
-                .expect("progress")
-                .is_error
-        );
-        assert!(
-            handle
-                .cancel(&unknown, "cleanup")
-                .await
-                .expect("cancel")
-                .is_error
-        );
+        assert!(handle
+            .progress(&unknown, 10)
+            .await
+            .expect("progress")
+            .is_error);
+        assert!(handle
+            .cancel(&unknown, "cleanup")
+            .await
+            .expect("cancel")
+            .is_error);
 
         assert!(
             handle
-                .cancel(&session_id, "again")
+                .cancel(&subagent_session_id, "again")
                 .await
                 .expect("cancel")
                 .is_error,

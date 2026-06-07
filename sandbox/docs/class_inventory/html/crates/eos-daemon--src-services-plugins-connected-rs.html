@@ -8,8 +8,16 @@
 </head>
 <body>
   <header>
-    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
-    <h1>eos-daemon File Inventory</h1>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>eos-daemon File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS/sandbox &amp;&amp; cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
   </header>
   <a class="back-link" href="../index.html">sandbox</a>
 <section class="summary">
@@ -47,49 +55,255 @@
       <span>0 methods</span>
     </div>
   </div>
-  <div class="items"><div class="group-label">Standalone Functions</div><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn dispatch_connected_read_only_route pub(super) pub(super) fn dispatch_connected_read_only_route (route : &amp; PluginOperationRoute , invocation_id : &amp; str , args : &amp; Value ,) -&gt; Result &lt; Option &lt; Value &gt; , DaemonError &gt; crates/eos-daemon/src/services/plugins/connected.rs  ">
+  <div class="items"><div class="group-label">Standalone Functions</div><article id="item-fn-dispatch-connected-read-only-route-16" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn dispatch_connected_read_only_route pub(super) pub(super) fn dispatch_connected_read_only_route (route : &amp; PluginOperationRoute , invocation_id : &amp; str , args : &amp; Value ,) -&gt; Result &lt; Option &lt; Value &gt; , DaemonError &gt; crates/eos-daemon/src/services/plugins/connected.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>dispatch_connected_read_only_route</h3>
     <span class="visibility">pub(super)</span>
   </div>
-  <code class="signature">pub(super) fn dispatch_connected_read_only_route (route : &amp; PluginOperationRoute , invocation_id : &amp; str , args : &amp; Value ,) -&gt; Result &lt; Option &lt; Value &gt; , DaemonError &gt;</code>
+  <code class="signature">pub(super) fn <a class="symbol-link" href="eos-daemon--src-services-plugins-connected-rs.html#item-fn-dispatch-connected-read-only-route-16">dispatch_connected_read_only_route</a> (route : &amp; <a class="symbol-link" href="eos-daemon--src-services-plugins-state-rs.html#item-struct-PluginOperationRoute-28">PluginOperationRoute</a> , invocation_id : &amp; str , args : &amp; Value ,) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a> &lt; Option &lt; Value &gt; , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-connected-rs.html#item-fn-dispatch-connected-read-only-route-16">dispatch_connected_read_only_route</a>(
+    route: &amp;<a class="symbol-link rs-type" href="eos-daemon--src-services-plugins-state-rs.html#item-struct-PluginOperationRoute-28">PluginOperationRoute</a>,
+    invocation_id: &amp;str,
+    args: &amp;<span class="rs-type">Value</span>,
+) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a>&lt;<span class="rs-type">Option</span>&lt;<span class="rs-type">Value</span>&gt;, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+    <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-connected-rs.html#item-fn-round-trip-connected-route-40">round_trip_connected_route</a>(route, invocation_id, args, <span class="rs-type">None</span>)
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-daemon/src/services/plugins/connected.rs:16</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn dispatch_connected_self_managed_route pub(super) pub(super) fn dispatch_connected_self_managed_route (route : &amp; PluginOperationRoute , invocation_id : &amp; str , args : &amp; Value ,) -&gt; Result &lt; Option &lt; Value &gt; , DaemonError &gt; crates/eos-daemon/src/services/plugins/connected.rs  ">
+</article><article id="item-fn-dispatch-connected-self-managed-route-24" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn dispatch_connected_self_managed_route pub(super) pub(super) fn dispatch_connected_self_managed_route (route : &amp; PluginOperationRoute , invocation_id : &amp; str , args : &amp; Value ,) -&gt; Result &lt; Option &lt; Value &gt; , DaemonError &gt; crates/eos-daemon/src/services/plugins/connected.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>dispatch_connected_self_managed_route</h3>
     <span class="visibility">pub(super)</span>
   </div>
-  <code class="signature">pub(super) fn dispatch_connected_self_managed_route (route : &amp; PluginOperationRoute , invocation_id : &amp; str , args : &amp; Value ,) -&gt; Result &lt; Option &lt; Value &gt; , DaemonError &gt;</code>
+  <code class="signature">pub(super) fn <a class="symbol-link" href="eos-daemon--src-services-plugins-connected-rs.html#item-fn-dispatch-connected-self-managed-route-24">dispatch_connected_self_managed_route</a> (route : &amp; <a class="symbol-link" href="eos-daemon--src-services-plugins-state-rs.html#item-struct-PluginOperationRoute-28">PluginOperationRoute</a> , invocation_id : &amp; str , args : &amp; Value ,) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a> &lt; Option &lt; Value &gt; , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-connected-rs.html#item-fn-dispatch-connected-self-managed-route-24">dispatch_connected_self_managed_route</a>(
+    route: &amp;<a class="symbol-link rs-type" href="eos-daemon--src-services-plugins-state-rs.html#item-struct-PluginOperationRoute-28">PluginOperationRoute</a>,
+    invocation_id: &amp;str,
+    args: &amp;<span class="rs-type">Value</span>,
+) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a>&lt;<span class="rs-type">Option</span>&lt;<span class="rs-type">Value</span>&gt;, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+    <span class="rs-kw">let</span> <span class="rs-type">Some</span>(layer_stack_root) = route.layer_stack_root.clone() <span class="rs-kw">else</span> {
+        <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<span class="rs-type">None</span>);
+    };
+    <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-connected-rs.html#item-fn-round-trip-connected-route-40">round_trip_connected_route</a>(
+        route,
+        invocation_id,
+        args,
+        <span class="rs-type">Some</span>(<span class="rs-type">PathBuf</span>::from(layer_stack_root)),
+    )
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-daemon/src/services/plugins/connected.rs:24</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn response_payload_from_reply pub(super) pub(super) fn response_payload_from_reply (reply : &amp; PpcEnvelope ,) -&gt; Result &lt; Option &lt; Value &gt; , DaemonError &gt; crates/eos-daemon/src/services/plugins/connected.rs  ">
+</article><article id="item-fn-response-payload-from-reply-81" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn response_payload_from_reply pub(super) pub(super) fn response_payload_from_reply (reply : &amp; PpcEnvelope ,) -&gt; Result &lt; Option &lt; Value &gt; , DaemonError &gt; crates/eos-daemon/src/services/plugins/connected.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>response_payload_from_reply</h3>
     <span class="visibility">pub(super)</span>
   </div>
-  <code class="signature">pub(super) fn response_payload_from_reply (reply : &amp; PpcEnvelope ,) -&gt; Result &lt; Option &lt; Value &gt; , DaemonError &gt;</code>
+  <code class="signature">pub(super) fn <a class="symbol-link" href="eos-daemon--src-services-plugins-connected-rs.html#item-fn-response-payload-from-reply-81">response_payload_from_reply</a> (reply : &amp; PpcEnvelope ,) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a> &lt; Option &lt; Value &gt; , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-connected-rs.html#item-fn-response-payload-from-reply-81">response_payload_from_reply</a>(
+    reply: &amp;<span class="rs-type">PpcEnvelope</span>,
+) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a>&lt;<span class="rs-type">Option</span>&lt;<span class="rs-type">Value</span>&gt;, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+    <span class="rs-kw">let</span> max_response_bytes = <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-mod-rs.html#item-fn-plugin-runtime-config-71">plugin_runtime_config</a>().max_response_bytes;
+    <span class="rs-kw">if</span> reply.body.len() &gt; max_response_bytes {
+        <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>::<span class="rs-type">Plugin</span>(<span class="rs-type">PluginError</span>::<span class="rs-type">Ppc</span>(format!(
+            &quot;plugin response exceeds {max_response_bytes} byte limit&quot;
+        ))));
+    }
+    <span class="rs-kw">let</span> payload: <span class="rs-type">Value</span> =
+        serde_json::from_str(&amp;reply.body).map_err(|err| <span class="rs-type">PluginError</span>::<span class="rs-type">Ppc</span>(err.to_string()))?;
+    <span class="rs-kw">if</span> payload.is_object() {
+        <span class="rs-type">Ok</span>(<span class="rs-type">Some</span>(payload))
+    } <span class="rs-kw">else</span> {
+        <span class="rs-type">Ok</span>(<span class="rs-type">Some</span>(json!({
+            &quot;success&quot;: <span class="rs-kw">true</span>,
+            &quot;result&quot;: payload,
+        })))
+    }
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-daemon/src/services/plugins/connected.rs:81</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn round_trip_connected_route private fn round_trip_connected_route (route : &amp; PluginOperationRoute , invocation_id : &amp; str , args : &amp; Value , layer_stack_root : Option &lt; PathBuf &gt; ,) -&gt; Result &lt; Option &lt; Value &gt; , DaemonError &gt; crates/eos-daemon/src/services/plugins/connected.rs  ">
+</article><article id="item-fn-round-trip-connected-route-40" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn round_trip_connected_route private fn round_trip_connected_route (route : &amp; PluginOperationRoute , invocation_id : &amp; str , args : &amp; Value , layer_stack_root : Option &lt; PathBuf &gt; ,) -&gt; Result &lt; Option &lt; Value &gt; , DaemonError &gt; crates/eos-daemon/src/services/plugins/connected.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>round_trip_connected_route</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn round_trip_connected_route (route : &amp; PluginOperationRoute , invocation_id : &amp; str , args : &amp; Value , layer_stack_root : Option &lt; PathBuf &gt; ,) -&gt; Result &lt; Option &lt; Value &gt; , DaemonError &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-daemon--src-services-plugins-connected-rs.html#item-fn-round-trip-connected-route-40">round_trip_connected_route</a> (route : &amp; <a class="symbol-link" href="eos-daemon--src-services-plugins-state-rs.html#item-struct-PluginOperationRoute-28">PluginOperationRoute</a> , invocation_id : &amp; str , args : &amp; Value , layer_stack_root : Option &lt; PathBuf &gt; ,) -&gt; <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a> &lt; Option &lt; Value &gt; , <a class="symbol-link" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a> &gt;</code>
   <div class="tags"></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-connected-rs.html#item-fn-round-trip-connected-route-40">round_trip_connected_route</a>(
+    route: &amp;<a class="symbol-link rs-type" href="eos-daemon--src-services-plugins-state-rs.html#item-struct-PluginOperationRoute-28">PluginOperationRoute</a>,
+    invocation_id: &amp;str,
+    args: &amp;<span class="rs-type">Value</span>,
+    layer_stack_root: <span class="rs-type">Option</span>&lt;<span class="rs-type">PathBuf</span>&gt;,
+) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a>&lt;<span class="rs-type">Option</span>&lt;<span class="rs-type">Value</span>&gt;, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+    <span class="rs-kw">let</span> <span class="rs-type">Some</span>(service_instance_id) = route.service_instance_id.clone() <span class="rs-kw">else</span> {
+        <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<span class="rs-type">None</span>);
+    };
+    <span class="rs-kw">let</span> <span class="rs-type">Some</span>(client) = <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-refresh-rs.html#item-fn-ensure-connected-service-current-118">ensure_connected_service_current</a>(route, invocation_id)? <span class="rs-kw">else</span> {
+        <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<span class="rs-type">None</span>);
+    };
+    <span class="rs-kw">let</span> timeout = <span class="rs-type">Duration</span>::from_millis(
+        route
+            .timeout_ms
+            .unwrap_or_else(|| <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-mod-rs.html#item-fn-plugin-runtime-config-71">plugin_runtime_config</a>().ppc_timeout_ms),
+    );
+    <span class="rs-kw">let</span> request = <span class="rs-type">PpcEnvelope</span> {
+        message_id: invocation_id.to_owned(),
+        direction: <span class="rs-type">PpcDirection</span>::<span class="rs-type">Request</span>,
+        op: route.public_op.clone(),
+        body: serde_json::to_string(args).map_err(|err| <span class="rs-type">PluginError</span>::<span class="rs-type">Ppc</span>(err.to_string()))?,
+    };
+    <span class="rs-kw">let</span> reply = <span class="rs-kw">match</span> layer_stack_root {
+        <span class="rs-type">Some</span>(expected_root) =&gt; {
+            client.<a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-ppc-router-rs.html#method-round-trip-with-callbacks-62">round_trip_with_callbacks</a>(&amp;request, timeout, <span class="rs-kw">move</span> |callback| {
+                occ_callbacks::<a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-occ-callbacks-rs.html#item-fn-handle-callback-for-root-21">handle_callback_for_root</a>(&amp;expected_root, callback)
+            })
+        }
+        <span class="rs-type">None</span> =&gt; client.<a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-ppc-router-rs.html#method-round-trip-54">round_trip</a>(&amp;request, timeout),
+    };
+    <span class="rs-kw">let</span> reply = <span class="rs-kw">match</span> reply {
+        <span class="rs-type">Ok</span>(reply) =&gt; reply,
+        <span class="rs-type">Err</span>(err) =&gt; {
+            <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-refresh-rs.html#item-fn-teardown-failed-connected-service-418">teardown_failed_connected_service</a>(&amp;service_instance_id, &amp;err.to_string())?;
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(err);
+        }
+    };
+    <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-connected-rs.html#item-fn-response-payload-from-reply-81">response_payload_from_reply</a>(&amp;reply)
+}
+</code></pre>
+</details>
 
   <p class="source">crates/eos-daemon/src/services/plugins/connected.rs:40</p>
 </article></div>
 </section></div>
 </main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/eos-daemon/src/services/plugins/connected.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-comment">//! Connected plugin operation dispatch.</span>
+
+<span class="rs-kw">use</span> std::path::<span class="rs-type">PathBuf</span>;
+<span class="rs-kw">use</span> std::time::<span class="rs-type">Duration</span>;
+
+<span class="rs-kw">use</span> eos_plugin::{<span class="rs-type">PluginError</span>, <span class="rs-type">PpcDirection</span>, <span class="rs-type">PpcEnvelope</span>};
+<span class="rs-kw">use</span> serde_json::{json, <span class="rs-type">Value</span>};
+
+<span class="rs-kw">use</span> <span class="rs-kw">super</span>::{
+    occ_callbacks, plugin_runtime_config,
+    refresh::{ensure_connected_service_current, teardown_failed_connected_service},
+    state::<a class="symbol-link rs-type" href="eos-daemon--src-services-plugins-state-rs.html#item-struct-PluginOperationRoute-28">PluginOperationRoute</a>,
+};
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::error::<a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>;
+
+<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-connected-rs.html#item-fn-dispatch-connected-read-only-route-16">dispatch_connected_read_only_route</a>(
+    route: &amp;<a class="symbol-link rs-type" href="eos-daemon--src-services-plugins-state-rs.html#item-struct-PluginOperationRoute-28">PluginOperationRoute</a>,
+    invocation_id: &amp;str,
+    args: &amp;<span class="rs-type">Value</span>,
+) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a>&lt;<span class="rs-type">Option</span>&lt;<span class="rs-type">Value</span>&gt;, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+    <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-connected-rs.html#item-fn-round-trip-connected-route-40">round_trip_connected_route</a>(route, invocation_id, args, <span class="rs-type">None</span>)
+}
+
+<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-connected-rs.html#item-fn-dispatch-connected-self-managed-route-24">dispatch_connected_self_managed_route</a>(
+    route: &amp;<a class="symbol-link rs-type" href="eos-daemon--src-services-plugins-state-rs.html#item-struct-PluginOperationRoute-28">PluginOperationRoute</a>,
+    invocation_id: &amp;str,
+    args: &amp;<span class="rs-type">Value</span>,
+) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a>&lt;<span class="rs-type">Option</span>&lt;<span class="rs-type">Value</span>&gt;, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+    <span class="rs-kw">let</span> <span class="rs-type">Some</span>(layer_stack_root) = route.layer_stack_root.clone() <span class="rs-kw">else</span> {
+        <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<span class="rs-type">None</span>);
+    };
+    <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-connected-rs.html#item-fn-round-trip-connected-route-40">round_trip_connected_route</a>(
+        route,
+        invocation_id,
+        args,
+        <span class="rs-type">Some</span>(<span class="rs-type">PathBuf</span>::from(layer_stack_root)),
+    )
+}
+
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-connected-rs.html#item-fn-round-trip-connected-route-40">round_trip_connected_route</a>(
+    route: &amp;<a class="symbol-link rs-type" href="eos-daemon--src-services-plugins-state-rs.html#item-struct-PluginOperationRoute-28">PluginOperationRoute</a>,
+    invocation_id: &amp;str,
+    args: &amp;<span class="rs-type">Value</span>,
+    layer_stack_root: <span class="rs-type">Option</span>&lt;<span class="rs-type">PathBuf</span>&gt;,
+) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a>&lt;<span class="rs-type">Option</span>&lt;<span class="rs-type">Value</span>&gt;, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+    <span class="rs-kw">let</span> <span class="rs-type">Some</span>(service_instance_id) = route.service_instance_id.clone() <span class="rs-kw">else</span> {
+        <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<span class="rs-type">None</span>);
+    };
+    <span class="rs-kw">let</span> <span class="rs-type">Some</span>(client) = <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-refresh-rs.html#item-fn-ensure-connected-service-current-118">ensure_connected_service_current</a>(route, invocation_id)? <span class="rs-kw">else</span> {
+        <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<span class="rs-type">None</span>);
+    };
+    <span class="rs-kw">let</span> timeout = <span class="rs-type">Duration</span>::from_millis(
+        route
+            .timeout_ms
+            .unwrap_or_else(|| <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-mod-rs.html#item-fn-plugin-runtime-config-71">plugin_runtime_config</a>().ppc_timeout_ms),
+    );
+    <span class="rs-kw">let</span> request = <span class="rs-type">PpcEnvelope</span> {
+        message_id: invocation_id.to_owned(),
+        direction: <span class="rs-type">PpcDirection</span>::<span class="rs-type">Request</span>,
+        op: route.public_op.clone(),
+        body: serde_json::to_string(args).map_err(|err| <span class="rs-type">PluginError</span>::<span class="rs-type">Ppc</span>(err.to_string()))?,
+    };
+    <span class="rs-kw">let</span> reply = <span class="rs-kw">match</span> layer_stack_root {
+        <span class="rs-type">Some</span>(expected_root) =&gt; {
+            client.<a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-ppc-router-rs.html#method-round-trip-with-callbacks-62">round_trip_with_callbacks</a>(&amp;request, timeout, <span class="rs-kw">move</span> |callback| {
+                occ_callbacks::<a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-occ-callbacks-rs.html#item-fn-handle-callback-for-root-21">handle_callback_for_root</a>(&amp;expected_root, callback)
+            })
+        }
+        <span class="rs-type">None</span> =&gt; client.<a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-ppc-router-rs.html#method-round-trip-54">round_trip</a>(&amp;request, timeout),
+    };
+    <span class="rs-kw">let</span> reply = <span class="rs-kw">match</span> reply {
+        <span class="rs-type">Ok</span>(reply) =&gt; reply,
+        <span class="rs-type">Err</span>(err) =&gt; {
+            <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-refresh-rs.html#item-fn-teardown-failed-connected-service-418">teardown_failed_connected_service</a>(&amp;service_instance_id, &amp;err.to_string())?;
+            <span class="rs-kw">return</span> <span class="rs-type">Err</span>(err);
+        }
+    };
+    <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-connected-rs.html#item-fn-response-payload-from-reply-81">response_payload_from_reply</a>(&amp;reply)
+}
+
+<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-connected-rs.html#item-fn-response-payload-from-reply-81">response_payload_from_reply</a>(
+    reply: &amp;<span class="rs-type">PpcEnvelope</span>,
+) -&gt; <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-type-Result-96">Result</a>&lt;<span class="rs-type">Option</span>&lt;<span class="rs-type">Value</span>&gt;, <a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>&gt; {
+    <span class="rs-kw">let</span> max_response_bytes = <a class="symbol-link rs-fn" href="eos-daemon--src-services-plugins-mod-rs.html#item-fn-plugin-runtime-config-71">plugin_runtime_config</a>().max_response_bytes;
+    <span class="rs-kw">if</span> reply.body.len() &gt; max_response_bytes {
+        <span class="rs-kw">return</span> <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-daemon--src-runtime-error-rs.html#item-enum-DaemonError-11">DaemonError</a>::<span class="rs-type">Plugin</span>(<span class="rs-type">PluginError</span>::<span class="rs-type">Ppc</span>(format!(
+            &quot;plugin response exceeds {max_response_bytes} byte limit&quot;
+        ))));
+    }
+    <span class="rs-kw">let</span> payload: <span class="rs-type">Value</span> =
+        serde_json::from_str(&amp;reply.body).map_err(|err| <span class="rs-type">PluginError</span>::<span class="rs-type">Ppc</span>(err.to_string()))?;
+    <span class="rs-kw">if</span> payload.is_object() {
+        <span class="rs-type">Ok</span>(<span class="rs-type">Some</span>(payload))
+    } <span class="rs-kw">else</span> {
+        <span class="rs-type">Ok</span>(<span class="rs-type">Some</span>(json!({
+            &quot;success&quot;: <span class="rs-kw">true</span>,
+            &quot;result&quot;: payload,
+        })))
+    }
+}
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
   <script src="../assets/inventory.js"></script>
 </body>
 </html>

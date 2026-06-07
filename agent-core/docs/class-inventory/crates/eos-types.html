@@ -8,8 +8,16 @@
 </head>
 <body>
   <header>
-    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
-    <h1>eos-types File Inventory</h1>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>eos-types File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS/agent-core &amp;&amp; cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
   </header>
   <a class="back-link" href="../index.html">agent-core</a>
 <section class="summary">
@@ -47,39 +55,172 @@
       <span>0 methods</span>
     </div>
   </div>
-  <div class="items"><div class="group-label">File-Owned Types</div><article class="type-card" data-kind="enum" data-kind-list="enum field type-model" data-filter-text="enum CoreError pub pub enum CoreError crates/eos-types/src/error.rs  ">
+  <div class="items"><div class="group-label">File-Owned Types</div><article id="item-enum-CoreError-9" class="type-card" data-kind="enum" data-kind-list="enum field type-model" data-filter-text="enum CoreError pub pub enum CoreError crates/eos-types/src/error.rs  ">
   <div class="item-head">
     <span class="kind">enum</span>
     <h3>CoreError</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub enum CoreError</code>
-  <div class="tags"><span>error</span></div>
-  <h4>Variants</h4><table><tbody><tr><td>EmptyId</td><td><code>kind: &amp; 'static str</code></td></tr><tr><td>Timestamp</td><td><code>0: time :: error :: Parse</code></td></tr><tr><td>Store</td><td><code>0: String</code></td></tr></tbody></table>
+  <code class="signature">pub enum <a class="symbol-link" href="eos-types.html#item-enum-CoreError-9">CoreError</a></code>
+  <p class="docstring">Errors raised by the shared `eos-types` primitives.</p>
+  <div class="tags"><span>derive: Debug</span><span>derive: thiserror::Error</span><span>error</span><span>non_exhaustive</span></div>
+  <h4>Variants</h4><table><tbody><tr><td>EmptyId</td><td><code>kind: &amp; &#x27;static str</code></td></tr><tr><td>Timestamp</td><td><code>0: time :: error :: Parse</code></td></tr><tr><td>Store</td><td><code>0: String</code></td></tr></tbody></table>
+
   <p class="source">crates/eos-types/src/error.rs:9</p>
-</article><div class="group-label">Standalone Functions</div><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn core_error_from_and_display private fn core_error_from_and_display () crates/eos-types/src/error.rs  ">
+</article><div class="group-label">Standalone Functions</div><article id="item-fn-core-error-from-and-display-38" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn core_error_from_and_display private fn core_error_from_and_display () crates/eos-types/src/error.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>core_error_from_and_display</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn core_error_from_and_display ()</code>
-  <div class="tags"></div>
+  <code class="signature">fn <a class="symbol-link" href="eos-types.html#item-fn-core-error-from-and-display-38">core_error_from_and_display</a> ()</code>
+  <div class="tags"><span>test</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-types.html#item-fn-core-error-from-and-display-38">core_error_from_and_display</a>() {
+        <span class="rs-kw">fn</span> is_std_error&lt;<span class="rs-type">E</span>: std::error::<span class="rs-type">Error</span>&gt;() {}
+        is_std_error::&lt;<a class="symbol-link rs-type" href="eos-types.html#item-enum-CoreError-9">CoreError</a>&gt;();
+
+        <span class="rs-comment">// The static template fragments are lowercase with no trailing</span>
+        <span class="rs-comment">// punctuation; the interpolated `kind` is a deliberate type name.</span>
+        <span class="rs-kw">let</span> empty = <a class="symbol-link rs-type" href="eos-types.html#item-enum-CoreError-9">CoreError</a>::<span class="rs-type">EmptyId</span> { kind: &quot;<span class="rs-type">TaskId</span>&quot; };
+        <span class="rs-kw">let</span> msg = empty.to_string();
+        assert_eq!(msg, &quot;empty <span class="rs-type">TaskId</span> identifier&quot;);
+        assert!(!msg.ends_with(&#x27;.&#x27;));
+
+        <span class="rs-comment">// A variant with no interpolation must be fully lowercase, no period.</span>
+        <span class="rs-kw">let</span> ts = <a class="symbol-link rs-type" href="eos-types.html#item-enum-CoreError-9">CoreError</a>::<span class="rs-type">Timestamp</span>(
+            time::<span class="rs-type">OffsetDateTime</span>::parse(&quot;nope&quot;, &amp;time::format_description::well_known::<span class="rs-type">Rfc3339</span>)
+                .unwrap_err(),
+        );
+        <span class="rs-kw">let</span> ts_msg = ts.to_string();
+        assert_eq!(ts_msg, &quot;invalid utc timestamp&quot;);
+        assert_eq!(ts_msg, ts_msg.to_lowercase());
+        assert!(!ts_msg.ends_with(&#x27;.&#x27;));
+
+        <span class="rs-comment">// `?` conversion from time::error::Parse via #[from].</span>
+        <span class="rs-kw">fn</span> parse(s: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;time::<span class="rs-type">OffsetDateTime</span>, <a class="symbol-link rs-type" href="eos-types.html#item-enum-CoreError-9">CoreError</a>&gt; {
+            <span class="rs-kw">let</span> dt =
+                time::<span class="rs-type">OffsetDateTime</span>::parse(s, &amp;time::format_description::well_known::<span class="rs-type">Rfc3339</span>)?;
+            <span class="rs-type">Ok</span>(dt)
+        }
+        <span class="rs-kw">let</span> err = parse(&quot;not-a-timestamp&quot;).unwrap_err();
+        assert!(matches!(err, <a class="symbol-link rs-type" href="eos-types.html#item-enum-CoreError-9">CoreError</a>::<span class="rs-type">Timestamp</span>(_)));
+        assert!(std::error::<span class="rs-type">Error</span>::source(&amp;err).is_some());
+    }
+</code></pre>
+</details>
 
   <p class="source">crates/eos-types/src/error.rs:38</p>
-</article><article class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn store_variant_displays_payload_verbatim private fn store_variant_displays_payload_verbatim () crates/eos-types/src/error.rs  ">
+</article><article id="item-fn-store-variant-displays-payload-verbatim-73" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn store_variant_displays_payload_verbatim private fn store_variant_displays_payload_verbatim () crates/eos-types/src/error.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>store_variant_displays_payload_verbatim</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn store_variant_displays_payload_verbatim ()</code>
-  <div class="tags"></div>
+  <code class="signature">fn <a class="symbol-link" href="eos-types.html#item-fn-store-variant-displays-payload-verbatim-73">store_variant_displays_payload_verbatim</a> ()</code>
+  <div class="tags"><span>test</span></div>
+  <details class="function-source">
+  <summary>code</summary>
+  <pre><code>    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-types.html#item-fn-store-variant-displays-payload-verbatim-73">store_variant_displays_payload_verbatim</a>() {
+        <span class="rs-kw">let</span> err = <a class="symbol-link rs-type" href="eos-types.html#item-enum-CoreError-9">CoreError</a>::<span class="rs-type">Store</span>(&quot;row not found <span class="rs-kw">in</span> workflows&quot;.to_owned());
+        assert_eq!(err.to_string(), &quot;row not found <span class="rs-kw">in</span> workflows&quot;);
+    }
+</code></pre>
+</details>
 
   <p class="source">crates/eos-types/src/error.rs:73</p>
 </article></div>
 </section></div>
 </main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/eos-types/src/error.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-comment">//! The single cross-crate error enum for the value primitives in this crate.</span>
+<span class="rs-comment">//!</span>
+<span class="rs-comment">//! Per spec-conventions §8 each crate owns exactly one `thiserror` enum.</span>
+<span class="rs-comment">//! `CoreError` is deliberately tiny: it covers only the two failures these</span>
+<span class="rs-comment">//! primitives can raise (an empty id string and a malformed RFC 3339</span>
+<span class="rs-comment">//! timestamp). Richer errors belong to the crate that owns the failing</span>
+<span class="rs-comment">//! operation.</span>
+
+<span class="rs-comment">/// Errors raised by the shared `eos-types` primitives.</span>
+#[derive(<span class="rs-type">Debug</span>, thiserror::<span class="rs-type">Error</span>)]
+#[non_exhaustive]
+<span class="rs-kw">pub</span> <span class="rs-kw">enum</span> <a class="symbol-link rs-type" href="eos-types.html#item-enum-CoreError-9">CoreError</a> {
+    <span class="rs-comment">/// An identifier `FromStr` rejected an empty string. `kind` is the newtype</span>
+    <span class="rs-comment">/// name (e.g. `"TaskId"`) so callers can report which id failed.</span>
+    #[error(&quot;empty {kind} identifier&quot;)]
+    <span class="rs-type">EmptyId</span> {
+        <span class="rs-comment">/// The newtype kind whose `FromStr` received the empty string.</span>
+        kind: &amp;&#x27;<span class="rs-kw">static</span> str,
+    },
+    <span class="rs-comment">/// An RFC 3339 timestamp string failed to parse into a `UtcDateTime`.</span>
+    #[error(&quot;invalid utc timestamp&quot;)]
+    <span class="rs-type">Timestamp</span>(#[from] time::error::<span class="rs-type">Parse</span>),
+    <span class="rs-comment">/// A persistence/store operation failed. The per-entity `Store` traits in</span>
+    <span class="rs-comment">/// `eos-state` return this `CoreError`, but the concrete richer error lives</span>
+    <span class="rs-comment">/// downstream (e.g. `eos-db::DbError`), which this leaf crate cannot name —</span>
+    <span class="rs-comment">/// so the downstream error is flattened to its `Display` string here.</span>
+    #[error(&quot;{0}&quot;)]
+    <span class="rs-type">Store</span>(<span class="rs-type">String</span>),
+}
+
+#[cfg(test)]
+<span class="rs-kw">mod</span> tests {
+    #![allow(clippy::unwrap_used)] <span class="rs-comment">// unwrap is permitted in tests (err-no-unwrap-prod)</span>
+    <span class="rs-kw">use</span> <span class="rs-kw">super</span>::*;
+
+    <span class="rs-comment">// AC-types-05: CoreError is std::error::Error, converts time::error::Parse</span>
+    <span class="rs-comment">// via `?`/#[from], and Display is lowercase with no trailing punctuation.</span>
+    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-types.html#item-fn-core-error-from-and-display-38">core_error_from_and_display</a>() {
+        <span class="rs-kw">fn</span> is_std_error&lt;<span class="rs-type">E</span>: std::error::<span class="rs-type">Error</span>&gt;() {}
+        is_std_error::&lt;<a class="symbol-link rs-type" href="eos-types.html#item-enum-CoreError-9">CoreError</a>&gt;();
+
+        <span class="rs-comment">// The static template fragments are lowercase with no trailing</span>
+        <span class="rs-comment">// punctuation; the interpolated `kind` is a deliberate type name.</span>
+        <span class="rs-kw">let</span> empty = <a class="symbol-link rs-type" href="eos-types.html#item-enum-CoreError-9">CoreError</a>::<span class="rs-type">EmptyId</span> { kind: &quot;<span class="rs-type">TaskId</span>&quot; };
+        <span class="rs-kw">let</span> msg = empty.to_string();
+        assert_eq!(msg, &quot;empty <span class="rs-type">TaskId</span> identifier&quot;);
+        assert!(!msg.ends_with(&#x27;.&#x27;));
+
+        <span class="rs-comment">// A variant with no interpolation must be fully lowercase, no period.</span>
+        <span class="rs-kw">let</span> ts = <a class="symbol-link rs-type" href="eos-types.html#item-enum-CoreError-9">CoreError</a>::<span class="rs-type">Timestamp</span>(
+            time::<span class="rs-type">OffsetDateTime</span>::parse(&quot;nope&quot;, &amp;time::format_description::well_known::<span class="rs-type">Rfc3339</span>)
+                .unwrap_err(),
+        );
+        <span class="rs-kw">let</span> ts_msg = ts.to_string();
+        assert_eq!(ts_msg, &quot;invalid utc timestamp&quot;);
+        assert_eq!(ts_msg, ts_msg.to_lowercase());
+        assert!(!ts_msg.ends_with(&#x27;.&#x27;));
+
+        <span class="rs-comment">// `?` conversion from time::error::Parse via #[from].</span>
+        <span class="rs-kw">fn</span> parse(s: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;time::<span class="rs-type">OffsetDateTime</span>, <a class="symbol-link rs-type" href="eos-types.html#item-enum-CoreError-9">CoreError</a>&gt; {
+            <span class="rs-kw">let</span> dt =
+                time::<span class="rs-type">OffsetDateTime</span>::parse(s, &amp;time::format_description::well_known::<span class="rs-type">Rfc3339</span>)?;
+            <span class="rs-type">Ok</span>(dt)
+        }
+        <span class="rs-kw">let</span> err = parse(&quot;not-a-timestamp&quot;).unwrap_err();
+        assert!(matches!(err, <a class="symbol-link rs-type" href="eos-types.html#item-enum-CoreError-9">CoreError</a>::<span class="rs-type">Timestamp</span>(_)));
+        assert!(std::error::<span class="rs-type">Error</span>::source(&amp;err).is_some());
+    }
+
+    <span class="rs-comment">// The `Store` variant carries a downstream error's flattened message and</span>
+    <span class="rs-comment">// displays it verbatim (used by eos-db's `From&lt;DbError&gt;` at the trait seam).</span>
+    #[test]
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-types.html#item-fn-store-variant-displays-payload-verbatim-73">store_variant_displays_payload_verbatim</a>() {
+        <span class="rs-kw">let</span> err = <a class="symbol-link rs-type" href="eos-types.html#item-enum-CoreError-9">CoreError</a>::<span class="rs-type">Store</span>(&quot;row not found <span class="rs-kw">in</span> workflows&quot;.to_owned());
+        assert_eq!(err.to_string(), &quot;row not found <span class="rs-kw">in</span> workflows&quot;);
+    }
+}
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
   <script src="../assets/inventory.js"></script>
 </body>
 </html>

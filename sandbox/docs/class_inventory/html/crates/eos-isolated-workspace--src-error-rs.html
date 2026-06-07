@@ -8,8 +8,16 @@
 </head>
 <body>
   <header>
-    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
-    <h1>eos-isolated-workspace File Inventory</h1>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>eos-isolated-workspace File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS/sandbox &amp;&amp; cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
   </header>
   <a class="back-link" href="../index.html">sandbox</a>
 <section class="summary">
@@ -47,19 +55,144 @@
       <span>1 methods</span>
     </div>
   </div>
-  <div class="items"><div class="group-label">File-Owned Types</div><article class="type-card" data-kind="enum" data-kind-list="enum field impl method type-model" data-filter-text="enum IsolatedError pub pub enum IsolatedError crates/eos-isolated-workspace/src/error.rs  ">
+  <div class="items"><div class="group-label">File-Owned Types</div><article id="item-enum-IsolatedError-8" class="type-card" data-kind="enum" data-kind-list="enum field impl method type-model" data-filter-text="enum IsolatedError pub pub enum IsolatedError crates/eos-isolated-workspace/src/error.rs  ">
   <div class="item-head">
     <span class="kind">enum</span>
     <h3>IsolatedError</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub enum IsolatedError</code>
-  <div class="tags"><span>error</span></div>
-  <h4>Variants</h4><table><tbody><tr><td>FeatureDisabled</td><td><code></code></td></tr><tr><td>InvalidArgument</td><td><code>0: String</code></td></tr><tr><td>AlreadyOpen</td><td><code>created_at: f64, last_activity: f64</code></td></tr><tr><td>NotOpen</td><td><code></code></td></tr><tr><td>QuotaExceeded</td><td><code>total_cap: u32</code></td></tr><tr><td>HostRamPressure</td><td><code>required_bytes: u64, budget_bytes: u64</code></td></tr><tr><td>SetupTimeout</td><td><code>step: String</code></td></tr><tr><td>SetupFailed</td><td><code>step: String</code></td></tr><tr><td>NetworkUnavailable</td><td><code>0: String</code></td></tr><tr><td>AuditWrite</td><td><code>path: PathBuf, source: std :: io :: Error</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr><td>method</td><td>kind</td><td><code>pub const fn kind (&amp; self) -&gt; &amp; 'static str</code></td></tr></tbody></table>
+  <code class="signature">pub enum <a class="symbol-link" href="eos-isolated-workspace--src-error-rs.html#item-enum-IsolatedError-8">IsolatedError</a></code>
+  <p class="docstring">Lifecycle error for the enter/exit isolated-workspace flow.<br>Each variant's `kind()` reproduces the Rust `kind` string fed onto the<br>daemon RPC response envelope.</p>
+  <div class="tags"><span>derive: Debug</span><span>derive: thiserror::Error</span><span>error</span><span>non_exhaustive</span></div>
+  <h4>Variants</h4><table><tbody><tr><td>FeatureDisabled</td><td><code></code></td></tr><tr><td>InvalidArgument</td><td><code>0: String</code></td></tr><tr><td>AlreadyOpen</td><td><code>created_at: f64, last_activity: f64</code></td></tr><tr><td>NotOpen</td><td><code></code></td></tr><tr><td>QuotaExceeded</td><td><code>total_cap: u32</code></td></tr><tr><td>HostRamPressure</td><td><code>required_bytes: u64, budget_bytes: u64</code></td></tr><tr><td>SetupTimeout</td><td><code>step: String</code></td></tr><tr><td>SetupFailed</td><td><code>step: String</code></td></tr><tr><td>NetworkUnavailable</td><td><code>0: String</code></td></tr><tr><td>AuditWrite</td><td><code>path: PathBuf, source: std :: io :: Error</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-kind-82"><td>method</td><td>kind</td><td><code>pub const fn <a class="symbol-link" href="eos-isolated-workspace--src-error-rs.html#method-kind-82">kind</a> (&amp; self) -&gt; &amp; &#x27;static str</code><p class="docstring">The wire error `kind` string this error maps to.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// The wire error `kind` string this error maps to.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-isolated-workspace--src-error-rs.html#method-kind-82">kind</a>(&amp;<span class="rs-self">self</span>) -&gt; &amp;&#x27;<span class="rs-kw">static</span> str {
+        <span class="rs-kw">match</span> <span class="rs-self">self</span> {
+            <span class="rs-self">Self</span>::<span class="rs-type">FeatureDisabled</span> =&gt; &quot;feature_disabled&quot;,
+            <span class="rs-self">Self</span>::<span class="rs-type">InvalidArgument</span>(_) =&gt; &quot;invalid_argument&quot;,
+            <span class="rs-self">Self</span>::<span class="rs-type">AlreadyOpen</span> { .. } =&gt; &quot;already_open&quot;,
+            <span class="rs-self">Self</span>::<span class="rs-type">NotOpen</span> =&gt; &quot;not_open&quot;,
+            <span class="rs-self">Self</span>::<span class="rs-type">QuotaExceeded</span> { .. } =&gt; &quot;quota_exceeded&quot;,
+            <span class="rs-self">Self</span>::<span class="rs-type">HostRamPressure</span> { .. } =&gt; &quot;host_ram_pressure&quot;,
+            <span class="rs-self">Self</span>::<span class="rs-type">SetupTimeout</span> { .. } =&gt; &quot;setup_timeout&quot;,
+            <span class="rs-self">Self</span>::<span class="rs-type">SetupFailed</span> { .. } | <span class="rs-self">Self</span>::<span class="rs-type">NetworkUnavailable</span>(_) =&gt; &quot;setup_failed&quot;,
+            <span class="rs-self">Self</span>::<span class="rs-type">AuditWrite</span> { .. } =&gt; &quot;internal_error&quot;,
+        }
+    }
+</code></pre>
+</details></td></tr></tbody></table>
+
   <p class="source">crates/eos-isolated-workspace/src/error.rs:8</p>
 </article></div>
 </section></div>
 </main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/eos-isolated-workspace/src/error.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-comment">//! Isolated-workspace lifecycle error type.</span>
+<span class="rs-comment">//!</span>
+<span class="rs-comment">//! `kind()` maps each variant onto the stable daemon RPC wire error-kind string</span>
+<span class="rs-comment">//! placed on the control-plane response envelope.</span>
+
+<span class="rs-kw">use</span> std::path::<span class="rs-type">PathBuf</span>;
+
+<span class="rs-comment">/// Lifecycle error for the enter/exit isolated-workspace flow.</span>
+<span class="rs-comment">///</span>
+<span class="rs-comment">/// Each variant's `kind()` reproduces the Rust `kind` string fed onto the</span>
+<span class="rs-comment">/// daemon RPC response envelope.</span>
+#[derive(<span class="rs-type">Debug</span>, thiserror::<span class="rs-type">Error</span>)]
+#[non_exhaustive]
+<span class="rs-kw">pub</span> <span class="rs-kw">enum</span> <a class="symbol-link rs-type" href="eos-isolated-workspace--src-error-rs.html#item-enum-IsolatedError-8">IsolatedError</a> {
+    <span class="rs-comment">/// `feature_disabled` — pipeline not initialized / feature flag off.</span>
+    #[error(&quot;isolated workspaces are disabled&quot;)]
+    <span class="rs-type">FeatureDisabled</span>,
+
+    <span class="rs-comment">/// `invalid_argument` — a required argument was empty or malformed.</span>
+    #[error(&quot;invalid argument: {0}&quot;)]
+    <span class="rs-type">InvalidArgument</span>(<span class="rs-type">String</span>),
+
+    <span class="rs-comment">/// `already_open` — the agent already holds an open isolated workspace.</span>
+    #[error(&quot;agent already has an open isolated workspace&quot;)]
+    <span class="rs-type">AlreadyOpen</span> {
+        <span class="rs-comment">/// Existing handle creation timestamp.</span>
+        created_at: f64,
+        <span class="rs-comment">/// Existing handle last-activity timestamp.</span>
+        last_activity: f64,
+    },
+
+    <span class="rs-comment">/// `not_open` — the agent has no open isolated workspace.</span>
+    #[error(&quot;agent has no open isolated workspace&quot;)]
+    <span class="rs-type">NotOpen</span>,
+
+    <span class="rs-comment">/// `quota_exceeded` — the global concurrent-workspace cap is reached.</span>
+    #[error(&quot;global isolated workspace cap reached&quot;)]
+    <span class="rs-type">QuotaExceeded</span> {
+        <span class="rs-comment">/// Configured global isolated-workspace cap.</span>
+        total_cap: u32,
+    },
+
+    <span class="rs-comment">/// `host_ram_pressure` — projected upperdir reservation exceeds host RAM budget.</span>
+    #[error(&quot;host <span class="rs-type">RAM</span> gate refuses new isolated workspace&quot;)]
+    <span class="rs-type">HostRamPressure</span> {
+        <span class="rs-comment">/// Bytes required for the next workspace admission.</span>
+        required_bytes: u64,
+        <span class="rs-comment">/// Bytes admitted by the current host-memory budget.</span>
+        budget_bytes: u64,
+    },
+
+    <span class="rs-comment">/// `setup_timeout` — a setup phase exceeded its deadline (rollback runs).</span>
+    #[error(&quot;setup timed out at step {step}&quot;)]
+    <span class="rs-type">SetupTimeout</span> {
+        <span class="rs-comment">/// The pipeline phase that timed out.</span>
+        step: <span class="rs-type">String</span>,
+    },
+
+    <span class="rs-comment">/// `setup_failed` — a setup phase failed (rollback runs).</span>
+    #[error(&quot;setup failed at step {step}&quot;)]
+    <span class="rs-type">SetupFailed</span> {
+        <span class="rs-comment">/// The pipeline phase that failed.</span>
+        step: <span class="rs-type">String</span>,
+    },
+
+    <span class="rs-comment">/// Linux network primitives (`ip`/`nft`/`CAP_NET_ADMIN`) unavailable.</span>
+    #[error(&quot;isolated network unavailable: {0}&quot;)]
+    <span class="rs-type">NetworkUnavailable</span>(<span class="rs-type">String</span>),
+
+    <span class="rs-comment">/// An audit-sink write to the JSONL path failed.</span>
+    #[error(&quot;audit sink write failed at {path}&quot;)]
+    <span class="rs-type">AuditWrite</span> {
+        <span class="rs-comment">/// The configured JSONL audit path.</span>
+        path: <span class="rs-type">PathBuf</span>,
+        <span class="rs-comment">/// Underlying I/O error.</span>
+        #[source]
+        source: std::io::<span class="rs-type">Error</span>,
+    },
+}
+
+<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-isolated-workspace--src-error-rs.html#item-enum-IsolatedError-8">IsolatedError</a> {
+    <span class="rs-comment">/// The wire error `kind` string this error maps to.</span>
+    #[must_use]
+    <span class="rs-kw">pub</span> <span class="rs-kw">const</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-isolated-workspace--src-error-rs.html#method-kind-82">kind</a>(&amp;<span class="rs-self">self</span>) -&gt; &amp;&#x27;<span class="rs-kw">static</span> str {
+        <span class="rs-kw">match</span> <span class="rs-self">self</span> {
+            <span class="rs-self">Self</span>::<span class="rs-type">FeatureDisabled</span> =&gt; &quot;feature_disabled&quot;,
+            <span class="rs-self">Self</span>::<span class="rs-type">InvalidArgument</span>(_) =&gt; &quot;invalid_argument&quot;,
+            <span class="rs-self">Self</span>::<span class="rs-type">AlreadyOpen</span> { .. } =&gt; &quot;already_open&quot;,
+            <span class="rs-self">Self</span>::<span class="rs-type">NotOpen</span> =&gt; &quot;not_open&quot;,
+            <span class="rs-self">Self</span>::<span class="rs-type">QuotaExceeded</span> { .. } =&gt; &quot;quota_exceeded&quot;,
+            <span class="rs-self">Self</span>::<span class="rs-type">HostRamPressure</span> { .. } =&gt; &quot;host_ram_pressure&quot;,
+            <span class="rs-self">Self</span>::<span class="rs-type">SetupTimeout</span> { .. } =&gt; &quot;setup_timeout&quot;,
+            <span class="rs-self">Self</span>::<span class="rs-type">SetupFailed</span> { .. } | <span class="rs-self">Self</span>::<span class="rs-type">NetworkUnavailable</span>(_) =&gt; &quot;setup_failed&quot;,
+            <span class="rs-self">Self</span>::<span class="rs-type">AuditWrite</span> { .. } =&gt; &quot;internal_error&quot;,
+        }
+    }
+}
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
   <script src="../assets/inventory.js"></script>
 </body>
 </html>

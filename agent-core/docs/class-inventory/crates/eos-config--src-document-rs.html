@@ -8,8 +8,16 @@
 </head>
 <body>
   <header>
-    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
-    <h1>eos-config File Inventory</h1>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>eos-config File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS/agent-core &amp;&amp; cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
   </header>
   <a class="back-link" href="../index.html">agent-core</a>
 <section class="summary">
@@ -47,19 +55,125 @@
       <span>3 methods</span>
     </div>
   </div>
-  <div class="items"><div class="group-label">File-Owned Types</div><article class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct ConfigDocument pub pub struct ConfigDocument crates/eos-config/src/document.rs value Value ">
+  <div class="items"><div class="group-label">File-Owned Types</div><article id="item-struct-ConfigDocument-11" class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct ConfigDocument pub pub struct ConfigDocument crates/eos-config/src/document.rs value Value ">
   <div class="item-head">
     <span class="kind">struct</span>
     <h3>ConfigDocument</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub struct ConfigDocument</code>
-  <div class="tags"><span>config</span></div>
-  <h4>Fields</h4><table><tbody><tr><td>private</td><td>value</td><td><code>Value</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr><td>constructor</td><td>from_value</td><td><code>pub(crate) fn from_value (value : Value) -&gt; Self</code></td></tr><tr><td>method</td><td>section</td><td><code>pub fn section &lt; T &gt; (&amp; self , name : &amp; str) -&gt; Result &lt; T , ConfigError &gt; where T : DeserializeOwned ,</code></td></tr><tr><td>method</td><td>root_mapping</td><td><code>fn root_mapping (&amp; self) -&gt; Result &lt; &amp; Mapping , ConfigError &gt;</code></td></tr></tbody></table>
+  <code class="signature">pub struct <a class="symbol-link" href="eos-config--src-document-rs.html#item-struct-ConfigDocument-11">ConfigDocument</a></code>
+  <p class="docstring">A loaded, merged configuration document (`prd.yml` overlaid by `local.yml`).<br>Sections are deserialized into their owning typed schema on demand.</p>
+  <div class="tags"><span>config</span><span>derive: Clone</span><span>derive: Debug</span><span>derive: PartialEq</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>value</td><td><code>Value</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-from-value-19"><td>constructor</td><td>from_value</td><td><code>pub(crate) fn <a class="symbol-link" href="eos-config--src-document-rs.html#method-from-value-19">from_value</a> (value : Value) -&gt; Self</code><p class="docstring">Wrap a merged YAML value.</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Wrap a merged YAML value.</span>
+    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-config--src-document-rs.html#method-from-value-19">from_value</a>(value: <span class="rs-type">Value</span>) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">Self</span> { value }
+    }
+</code></pre>
+</details></td></tr><tr id="method-section-24"><td>method</td><td>section</td><td><code>pub fn <a class="symbol-link" href="eos-config--src-document-rs.html#method-section-24">section</a> &lt; T &gt; (&amp; self , name : &amp; str) -&gt; Result &lt; T , <a class="symbol-link" href="eos-config--src-error-rs.html#item-enum-ConfigError-3">ConfigError</a> &gt; where T : DeserializeOwned ,</code><p class="docstring">Deserialize a top-level section into its owning crate's typed schema.<br>Range/contradiction checks are the section type's own `validate()`<br>responsibility; this only deserializes (where `deny_unknown_fields` and<br>the [`DatabaseUrl`] parse surface).<br># Errors<br>Returns [`ConfigError::MissingSection`] when the section is absent, or<br>[`ConfigError::ParseYaml`] when typed deserialization fails.<br>[`DatabaseUrl`]: crate::DatabaseUrl</p><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-comment">/// Deserialize a top-level section into its owning crate's typed schema.</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// Range/contradiction checks are the section type's own `validate()`</span>
+    <span class="rs-comment">/// responsibility; this only deserializes (where `deny_unknown_fields` and</span>
+    <span class="rs-comment">/// the [`DatabaseUrl`] parse surface).</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// # Errors</span>
+    <span class="rs-comment">/// Returns [`ConfigError::MissingSection`] when the section is absent, or</span>
+    <span class="rs-comment">/// [`ConfigError::ParseYaml`] when typed deserialization fails.</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// [`DatabaseUrl`]: crate::DatabaseUrl</span>
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> section&lt;<span class="rs-type">T</span>&gt;(&amp;<span class="rs-self">self</span>, name: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">T</span>, <a class="symbol-link rs-type" href="eos-config--src-error-rs.html#item-enum-ConfigError-3">ConfigError</a>&gt;
+    <span class="rs-kw">where</span>
+        <span class="rs-type">T</span>: <span class="rs-type">DeserializeOwned</span>,
+    {
+        <span class="rs-kw">let</span> section = <span class="rs-self">self</span>
+            .<a class="symbol-link rs-fn" href="eos-config--src-document-rs.html#method-root-mapping-48">root_mapping</a>()?
+            .get(<span class="rs-type">Value</span>::<span class="rs-type">String</span>(name.to_owned()))
+            .ok_or_else(|| <a class="symbol-link rs-type" href="eos-config--src-error-rs.html#item-enum-ConfigError-3">ConfigError</a>::<span class="rs-type">MissingSection</span> {
+                section: name.to_owned(),
+            })?;
+        serde_yaml::<a class="symbol-link rs-fn" href="eos-config--src-document-rs.html#method-from-value-19">from_value</a>(section.clone()).map_err(<a class="symbol-link rs-type" href="eos-config--src-error-rs.html#item-enum-ConfigError-3">ConfigError</a>::<span class="rs-type">ParseYaml</span>)
+    }
+</code></pre>
+</details></td></tr><tr id="method-root-mapping-48"><td>method</td><td>root_mapping</td><td><code>fn <a class="symbol-link" href="eos-config--src-document-rs.html#method-root-mapping-48">root_mapping</a> (&amp; self) -&gt; Result &lt; &amp; Mapping , <a class="symbol-link" href="eos-config--src-error-rs.html#item-enum-ConfigError-3">ConfigError</a> &gt;</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-config--src-document-rs.html#method-root-mapping-48">root_mapping</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Result</span>&lt;&amp;<span class="rs-type">Mapping</span>, <a class="symbol-link rs-type" href="eos-config--src-error-rs.html#item-enum-ConfigError-3">ConfigError</a>&gt; {
+        <span class="rs-kw">match</span> &amp;<span class="rs-self">self</span>.value {
+            <span class="rs-type">Value</span>::<span class="rs-type">Mapping</span>(mapping) =&gt; <span class="rs-type">Ok</span>(mapping),
+            _ =&gt; <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-config--src-error-rs.html#item-enum-ConfigError-3">ConfigError</a>::<span class="rs-type">InvalidDocumentRoot</span>),
+        }
+    }
+</code></pre>
+</details></td></tr></tbody></table>
+
   <p class="source">crates/eos-config/src/document.rs:11</p>
 </article></div>
 </section></div>
 </main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/eos-config/src/document.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-comment">//! The loaded, merged config document. `eos-config` owns loading and merge only;</span>
+<span class="rs-comment">//! each runtime crate owns its typed section schema and deserializes it on demand</span>
+<span class="rs-comment">//! via [`ConfigDocument::section`]. This is the seam that replaces the former</span>
+<span class="rs-comment">//! `CentralConfig` aggregate: there is no central composition-root struct.</span>
+
+<span class="rs-kw">use</span> serde::de::<span class="rs-type">DeserializeOwned</span>;
+<span class="rs-kw">use</span> serde_yaml::{<span class="rs-type">Mapping</span>, <span class="rs-type">Value</span>};
+
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::error::<a class="symbol-link rs-type" href="eos-config--src-error-rs.html#item-enum-ConfigError-3">ConfigError</a>;
+
+<span class="rs-comment">/// A loaded, merged configuration document (`prd.yml` overlaid by `local.yml`).</span>
+<span class="rs-comment">/// Sections are deserialized into their owning typed schema on demand.</span>
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">PartialEq</span>)]
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-config--src-document-rs.html#item-struct-ConfigDocument-11">ConfigDocument</a> {
+    value: <span class="rs-type">Value</span>,
+}
+
+<span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-config--src-document-rs.html#item-struct-ConfigDocument-11">ConfigDocument</a> {
+    <span class="rs-comment">/// Wrap a merged YAML value.</span>
+    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-config--src-document-rs.html#method-from-value-19">from_value</a>(value: <span class="rs-type">Value</span>) -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">Self</span> { value }
+    }
+
+    <span class="rs-comment">/// Deserialize a top-level section into its owning crate's typed schema.</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// Range/contradiction checks are the section type's own `validate()`</span>
+    <span class="rs-comment">/// responsibility; this only deserializes (where `deny_unknown_fields` and</span>
+    <span class="rs-comment">/// the [`DatabaseUrl`] parse surface).</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// # Errors</span>
+    <span class="rs-comment">/// Returns [`ConfigError::MissingSection`] when the section is absent, or</span>
+    <span class="rs-comment">/// [`ConfigError::ParseYaml`] when typed deserialization fails.</span>
+    <span class="rs-comment">///</span>
+    <span class="rs-comment">/// [`DatabaseUrl`]: crate::DatabaseUrl</span>
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> section&lt;<span class="rs-type">T</span>&gt;(&amp;<span class="rs-self">self</span>, name: &amp;str) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">T</span>, <a class="symbol-link rs-type" href="eos-config--src-error-rs.html#item-enum-ConfigError-3">ConfigError</a>&gt;
+    <span class="rs-kw">where</span>
+        <span class="rs-type">T</span>: <span class="rs-type">DeserializeOwned</span>,
+    {
+        <span class="rs-kw">let</span> section = <span class="rs-self">self</span>
+            .<a class="symbol-link rs-fn" href="eos-config--src-document-rs.html#method-root-mapping-48">root_mapping</a>()?
+            .get(<span class="rs-type">Value</span>::<span class="rs-type">String</span>(name.to_owned()))
+            .ok_or_else(|| <a class="symbol-link rs-type" href="eos-config--src-error-rs.html#item-enum-ConfigError-3">ConfigError</a>::<span class="rs-type">MissingSection</span> {
+                section: name.to_owned(),
+            })?;
+        serde_yaml::<a class="symbol-link rs-fn" href="eos-config--src-document-rs.html#method-from-value-19">from_value</a>(section.clone()).map_err(<a class="symbol-link rs-type" href="eos-config--src-error-rs.html#item-enum-ConfigError-3">ConfigError</a>::<span class="rs-type">ParseYaml</span>)
+    }
+
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-config--src-document-rs.html#method-root-mapping-48">root_mapping</a>(&amp;<span class="rs-self">self</span>) -&gt; <span class="rs-type">Result</span>&lt;&amp;<span class="rs-type">Mapping</span>, <a class="symbol-link rs-type" href="eos-config--src-error-rs.html#item-enum-ConfigError-3">ConfigError</a>&gt; {
+        <span class="rs-kw">match</span> &amp;<span class="rs-self">self</span>.value {
+            <span class="rs-type">Value</span>::<span class="rs-type">Mapping</span>(mapping) =&gt; <span class="rs-type">Ok</span>(mapping),
+            _ =&gt; <span class="rs-type">Err</span>(<a class="symbol-link rs-type" href="eos-config--src-error-rs.html#item-enum-ConfigError-3">ConfigError</a>::<span class="rs-type">InvalidDocumentRoot</span>),
+        }
+    }
+}
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
   <script src="../assets/inventory.js"></script>
 </body>
 </html>

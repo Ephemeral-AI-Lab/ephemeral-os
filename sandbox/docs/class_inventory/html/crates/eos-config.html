@@ -8,8 +8,16 @@
 </head>
 <body>
   <header>
-    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
-    <h1>eos-config File Inventory</h1>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>eos-config File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS/sandbox &amp;&amp; cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
   </header>
   <a class="back-link" href="../index.html">sandbox</a>
 <section class="summary">
@@ -47,19 +55,74 @@
       <span>1 methods</span>
     </div>
   </div>
-  <div class="items"><div class="group-label">File-Owned Types</div><article class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct CommandSessionConfig pub pub struct CommandSessionConfig crates/eos-config/src/configs/command-session.rs scratch_root PathBuf default_yield_time_ms u64 default_timeout_s u64 quiet_ms u64 cancel_wait_ms u64 output_drain_grace_ms u64 max_session_s u64 transcript_timestamp_timezone String ">
+  <div class="items"><div class="group-label">File-Owned Types</div><article id="item-struct-CommandSessionConfig-5" class="type-card" data-kind="struct" data-kind-list="field impl method struct type-model" data-filter-text="struct CommandSessionConfig pub pub struct CommandSessionConfig crates/eos-config/src/configs/command-session.rs scratch_root PathBuf default_yield_time_ms u64 default_timeout_s u64 quiet_ms u64 cancel_wait_ms u64 output_drain_grace_ms u64 max_session_s u64 transcript_timestamp_timezone String ">
   <div class="item-head">
     <span class="kind">struct</span>
     <h3>CommandSessionConfig</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub struct CommandSessionConfig</code>
-  <div class="tags"><span>config</span><span>serde</span></div>
-  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>scratch_root</td><td><code>PathBuf</code></td></tr><tr><td>pub</td><td>default_yield_time_ms</td><td><code>u64</code></td></tr><tr><td>pub</td><td>default_timeout_s</td><td><code>u64</code></td></tr><tr><td>pub</td><td>quiet_ms</td><td><code>u64</code></td></tr><tr><td>pub</td><td>cancel_wait_ms</td><td><code>u64</code></td></tr><tr><td>pub</td><td>output_drain_grace_ms</td><td><code>u64</code></td></tr><tr><td>pub</td><td>max_session_s</td><td><code>u64</code></td></tr><tr><td>pub</td><td>transcript_timestamp_timezone</td><td><code>String</code></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl Default for CommandSessionConfig</code></summary><table><tbody><tr><td>constructor</td><td>default</td><td><code>fn default () -&gt; Self</code></td></tr></tbody></table></details></div>
+  <code class="signature">pub struct <a class="symbol-link" href="eos-config.html#item-struct-CommandSessionConfig-5">CommandSessionConfig</a></code>
+  <div class="tags"><span>config</span><span>derive: Clone</span><span>derive: Debug</span><span>derive: Deserialize</span><span>derive: Eq</span><span>derive: PartialEq</span><span>serde</span><span>serde: deny_unknown_fields</span></div>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>scratch_root</td><td><code>PathBuf</code></td></tr><tr><td>pub</td><td>default_yield_time_ms</td><td><code>u64</code></td></tr><tr><td>pub</td><td>default_timeout_s</td><td><code>u64</code></td></tr><tr><td>pub</td><td>quiet_ms</td><td><code>u64</code></td></tr><tr><td>pub</td><td>cancel_wait_ms</td><td><code>u64</code></td></tr><tr><td>pub</td><td>output_drain_grace_ms</td><td><code>u64</code></td></tr><tr><td>pub</td><td>max_session_s</td><td><code>u64</code></td></tr><tr><td>pub</td><td>transcript_timestamp_timezone</td><td><code>String</code></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl Default for <a class="symbol-link" href="eos-config.html#item-struct-CommandSessionConfig-5">CommandSessionConfig</a></code></summary><table><tbody><tr id="method-default-19"><td>constructor</td><td>default</td><td><code>fn <a class="symbol-link" href="eos-config.html#method-default-19">default</a> () -&gt; Self</code><details class="function-source">
+  <summary>code</summary>
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-config.html#method-default-19">default</a>() -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">Self</span> {
+            scratch_root: <span class="rs-type">PathBuf</span>::from(&quot;/eos/scratch/command-sessions&quot;),
+            default_yield_time_ms: 1000,
+            default_timeout_s: 600,
+            quiet_ms: 50,
+            cancel_wait_ms: 500,
+            output_drain_grace_ms: 500,
+            max_session_s: 6 * 60 * 60,
+            transcript_timestamp_timezone: &quot;<span class="rs-type">UTC</span>&quot;.to_owned(),
+        }
+    }
+</code></pre>
+</details></td></tr></tbody></table></details></div>
+
   <p class="source">crates/eos-config/src/configs/command-session.rs:5</p>
 </article></div>
 </section></div>
 </main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/eos-config/src/configs/command-session.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-kw">use</span> std::path::<span class="rs-type">PathBuf</span>;
+
+<span class="rs-kw">use</span> serde::<span class="rs-type">Deserialize</span>;
+
+#[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, <span class="rs-type">PartialEq</span>, <span class="rs-type">Eq</span>, <span class="rs-type">Deserialize</span>)]
+#[serde(deny_unknown_fields)]
+<span class="rs-kw">pub</span> <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-config.html#item-struct-CommandSessionConfig-5">CommandSessionConfig</a> {
+    <span class="rs-kw">pub</span> scratch_root: <span class="rs-type">PathBuf</span>,
+    <span class="rs-kw">pub</span> default_yield_time_ms: u64,
+    <span class="rs-kw">pub</span> default_timeout_s: u64,
+    <span class="rs-kw">pub</span> quiet_ms: u64,
+    <span class="rs-kw">pub</span> cancel_wait_ms: u64,
+    <span class="rs-kw">pub</span> output_drain_grace_ms: u64,
+    <span class="rs-kw">pub</span> max_session_s: u64,
+    <span class="rs-kw">pub</span> transcript_timestamp_timezone: <span class="rs-type">String</span>,
+}
+
+<span class="rs-kw">impl</span> <span class="rs-type">Default</span> <span class="rs-kw">for</span> <a class="symbol-link rs-type" href="eos-config.html#item-struct-CommandSessionConfig-5">CommandSessionConfig</a> {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-config.html#method-default-19">default</a>() -&gt; <span class="rs-self">Self</span> {
+        <span class="rs-self">Self</span> {
+            scratch_root: <span class="rs-type">PathBuf</span>::from(&quot;/eos/scratch/command-sessions&quot;),
+            default_yield_time_ms: 1000,
+            default_timeout_s: 600,
+            quiet_ms: 50,
+            cancel_wait_ms: 500,
+            output_drain_grace_ms: 500,
+            max_session_s: 6 * 60 * 60,
+            transcript_timestamp_timezone: &quot;<span class="rs-type">UTC</span>&quot;.to_owned(),
+        }
+    }
+}
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
   <script src="../assets/inventory.js"></script>
 </body>
 </html>

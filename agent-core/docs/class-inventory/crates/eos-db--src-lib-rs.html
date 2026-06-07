@@ -8,8 +8,16 @@
 </head>
 <body>
   <header>
-    <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
-    <h1>eos-db File Inventory</h1>
+    <div class="header-row">
+      <div>
+        <p class="eyebrow">Generated Rust source inventory · file-owned OOP map</p>
+        <h1>eos-db File Inventory</h1>
+      </div>
+      <div class="refresh-control">
+        <button id="refresh-inventory" type="button" title="Regenerate this inventory from the local Rust sources" data-refresh-command="cd /Users/yifanxu/machine_learning/LoVC/EphemeralOS/agent-core &amp;&amp; cargo run --manifest-path scripts/class-inventory/Cargo.toml">Refresh</button>
+        <span id="refresh-status" role="status"></span>
+      </div>
+    </div>
   </header>
   <a class="back-link" href="../index.html">agent-core</a>
 <section class="summary">
@@ -50,6 +58,35 @@
   <div class="items"></div>
 </section></div>
 </main>
+<section class="file-source-section">
+  <div class="source-head">
+    <h2>Source File</h2>
+    <p class="path">crates/eos-db/src/lib.rs</p>
+  </div>
+  <pre class="file-source"><code><span class="rs-comment">//! eos-db — the single `SQLite`-backed persistence implementation for agent-core.</span>
+<span class="rs-comment">//!</span>
+<span class="rs-comment">//! Turns the abstract per-entity `Store` traits (owned by `eos-state`) into</span>
+<span class="rs-comment">//! concrete `sqlx` repositories over one local `SQLite` file: it owns the</span>
+<span class="rs-comment">//! `SqlitePool` (PRAGMA discipline), the versioned `migrations/`, the typed row</span>
+<span class="rs-comment">//! structs and their explicit row↔domain mapping (the naming gap, anchor §4),</span>
+<span class="rs-comment">//! the model registry, and the single composition-root constructor [`Database`].</span>
+#![forbid(unsafe_code)]
+#![warn(missing_docs)]
+
+<span class="rs-kw">mod</span> composition;
+<span class="rs-kw">mod</span> error;
+<span class="rs-kw">mod</span> json_col;
+<span class="rs-kw">mod</span> model_registry;
+<span class="rs-kw">mod</span> pool;
+<span class="rs-kw">mod</span> repositories;
+<span class="rs-kw">mod</span> rows;
+
+<span class="rs-kw">pub</span> <span class="rs-kw">use</span> composition::<a class="symbol-link rs-type" href="eos-db.html#item-struct-Database-20">Database</a>;
+<span class="rs-kw">pub</span> <span class="rs-kw">use</span> error::<a class="symbol-link rs-type" href="eos-db--src-error-rs.html#item-enum-DbError-5">DbError</a>;
+<span class="rs-kw">pub</span> <span class="rs-kw">use</span> model_registry::{<a class="symbol-link rs-type" href="eos-db--src-model-registry-rs.html#item-struct-ModelRegistry-55">ModelRegistry</a>, <a class="symbol-link rs-type" href="eos-db--src-model-registry-rs.html#item-struct-ResolvedModel-27">ResolvedModel</a>};
+</code></pre>
+</section>
+  <script src="../assets/inventory-data.js"></script>
   <script src="../assets/inventory.js"></script>
 </body>
 </html>
