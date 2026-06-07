@@ -3,13 +3,15 @@ use std::sync::{Arc, Mutex, MutexGuard};
 
 use eos_command_session::{
     CollectCompleted, CommandResponse, CommandSessionCompletion, CommandSessionConfig,
-    CommandSessionManager, ReadCommandProgress, StartCommandSession, WorkspaceRunKind, WriteStdin,
+    ReadCommandProgress, StartCommandSession, WriteStdin,
 };
 use eos_workspace_api::{
     CommandWorkspacePolicy, FinalizeCommandRequest, PrepareCommandRequest,
     PreparedCommandWorkspace, WorkspaceApiError, WorkspaceCommandOutcome, WorkspaceMode,
 };
 use serde_json::{json, Value};
+
+use super::{WorkspaceRunKind, WorkspaceRunManager};
 
 #[derive(Clone)]
 struct FakePolicy {
@@ -105,7 +107,7 @@ impl CommandWorkspacePolicy for FakePolicy {
 
 #[test]
 fn manager_starts_boxed_policy_and_counts_by_caller() -> Result<(), Box<dyn std::error::Error>> {
-    let manager = CommandSessionManager::new(CommandSessionConfig::default());
+    let manager = WorkspaceRunManager::new(CommandSessionConfig::default());
     let policy = FakePolicy::new();
 
     let response = manager.start_boxed(
@@ -127,7 +129,7 @@ fn manager_starts_boxed_policy_and_counts_by_caller() -> Result<(), Box<dyn std:
 #[test]
 fn ctrl_c_discards_through_policy_and_parks_completion() -> Result<(), Box<dyn std::error::Error>> {
     let policy = FakePolicy::new();
-    let manager = CommandSessionManager::new(CommandSessionConfig::default());
+    let manager = WorkspaceRunManager::new(CommandSessionConfig::default());
     let started = manager.start(
         start_request("caller-1", "cat"),
         policy.clone(),
@@ -168,7 +170,7 @@ fn ctrl_c_discards_through_policy_and_parks_completion() -> Result<(), Box<dyn s
 #[test]
 fn read_progress_reads_parked_completion_without_consuming(
 ) -> Result<(), Box<dyn std::error::Error>> {
-    let manager = CommandSessionManager::new(CommandSessionConfig::default());
+    let manager = WorkspaceRunManager::new(CommandSessionConfig::default());
     manager.push_completed(test_completion("cmd_done", "caller-1", "a\nb\nc\n"));
 
     let first = manager.read_progress(ReadCommandProgress {

@@ -25,7 +25,7 @@ use serde_json::{json, Value};
 
 use crate::dispatcher::DispatchContext;
 use crate::error::DaemonError;
-use crate::services::command_session;
+use crate::services::workspace_run;
 #[cfg(target_os = "linux")]
 use runtime::command_handle_from;
 #[cfg(target_os = "linux")]
@@ -64,7 +64,7 @@ pub fn op_enter(args: &Value, _context: DispatchContext<'_>) -> Result<Value, Da
         Ok(root) => PathBuf::from(root),
         Err(error) => return Ok(error),
     };
-    let active_command_sessions = command_session::active_command_sessions_for_caller(&caller_id);
+    let active_command_sessions = workspace_run::active_command_sessions_for_caller(&caller_id);
     if active_command_sessions > 0 {
         return Ok(error_json(
             "active_background_work",
@@ -244,7 +244,7 @@ pub fn ttl_sweep() -> usize {
         .session
         .list_open_callers()
         .into_iter()
-        .filter(|caller| command_session::active_command_sessions_for_caller(caller) > 0)
+        .filter(|caller| workspace_run::active_command_sessions_for_caller(caller) > 0)
         .collect::<HashSet<_>>();
     state.session.ttl_sweep(&active_callers)
 }
@@ -478,5 +478,5 @@ fn reset_test_manager_file() {
 }
 
 #[cfg(test)]
-#[path = "../../../tests/isolated_workspace/service.rs"]
+#[path = "../../../../tests/isolated_workspace/service.rs"]
 mod tests;

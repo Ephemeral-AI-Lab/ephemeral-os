@@ -1,43 +1,53 @@
+// The workspace-run manager is the Linux PTY/overlay orchestration. On non-Linux
+// the daemon serves command-session ops as stubs, so the manager is dead there —
+// it stays compiled for the scaffold unit tests and a uniform module tree.
+#![cfg_attr(not(target_os = "linux"), allow(dead_code))]
+
 use std::sync::Arc;
 #[cfg(target_os = "linux")]
 use std::time::Duration;
 use std::time::Instant;
 
-use eos_workspace_api::{CommandWorkspacePolicy, FinalizeCommandRequest};
-
 #[cfg(target_os = "linux")]
-use crate::process::spawn_current_exe_ns_runner;
-use crate::registry::{CommandSessionCompletion, CommandSessionRegistry, RunSession, WorkspaceRunKind};
+use eos_command_session::process::spawn_current_exe_ns_runner;
 #[cfg(target_os = "linux")]
-use crate::session::ReapedCommand;
+use eos_command_session::ReapedCommand;
 #[cfg(target_os = "linux")]
-use crate::session::RunningCommandSessionParts;
-use crate::session::{CommandSession, CommandSessionSpec};
+use eos_command_session::RunningCommandSessionParts;
 #[cfg(target_os = "linux")]
-use crate::wait::{wait_for_yield, WaitOutcome};
-use crate::{
+use eos_command_session::{wait_for_yield, WaitOutcome};
+use eos_command_session::{
     CancelCommandSession, CollectCompleted, CollectCompletedResponse, CommandResponse,
-    CommandSessionConfig, CommandSessionError, DynCommandWorkspacePolicy, ReadCommandProgress,
-    StartCommandSession, WriteStdin,
+    CommandSession, CommandSessionCompletion, CommandSessionConfig, CommandSessionError,
+    CommandSessionSpec, DynCommandWorkspacePolicy, ReadCommandProgress, StartCommandSession,
+    WriteStdin,
 };
+#[cfg(not(target_os = "linux"))]
+use eos_workspace_api::CommandWorkspacePolicy;
+use eos_workspace_api::FinalizeCommandRequest;
 
-pub struct CommandSessionManager {
+use super::registry::{RunSession, WorkspaceRunKind, WorkspaceRunRegistry};
+
+pub struct WorkspaceRunManager {
     // `config` drives only the Linux PTY/overlay paths (spawn, yield/cancel
     // waits, sweep deadlines); the non-Linux scaffold needs no config.
     #[cfg_attr(not(target_os = "linux"), allow(dead_code))]
     config: CommandSessionConfig,
-    registry: Arc<CommandSessionRegistry>,
+    registry: Arc<WorkspaceRunRegistry>,
 }
 
-impl CommandSessionManager {
+impl WorkspaceRunManager {
     #[must_use]
     pub fn new(config: CommandSessionConfig) -> Self {
         Self {
             config,
-            registry: Arc::new(CommandSessionRegistry::new()),
+            registry: Arc::new(WorkspaceRunRegistry::new()),
         }
     }
 
+    // Generic convenience wrapper used only by the scaffold unit tests; the
+    // daemon's Linux op path calls `start_boxed` directly.
+    #[cfg(not(target_os = "linux"))]
     pub fn start<P>(
         &self,
         request: StartCommandSession,
@@ -523,7 +533,7 @@ fn contains_teardown_control(chars: &str) -> bool {
     chars.contains('\u{3}') || chars.contains('\u{4}')
 }
 
-impl Default for CommandSessionManager {
+impl Default for WorkspaceRunManager {
     fn default() -> Self {
         Self::new(CommandSessionConfig::default())
     }
@@ -535,7 +545,13 @@ pub struct SweepReport {
     pub live: usize,
 }
 
-#[cfg(test)]
+// The manager unit tests drive the non-Linux scaffold (no real PTY); on Linux
+// the same behavior is proven by the daemon E2E suite.
+#[cfg(all(test, not(target_os = "linux")))]
+#[path = "../../../tests/workspace_run/manager_fake_policy.rs"]
+mod manager_fake_policy;
+
+#[cfg(all(test, not(target_os = "linux")))]
 mod tests {
     use std::path::PathBuf;
     use std::sync::Arc;
@@ -548,7 +564,6 @@ mod tests {
     use serde_json::{json, Value};
 
     use super::*;
-    use crate::registry::RunSession;
 
     struct ExpiringPolicy;
 
@@ -603,7 +618,7 @@ mod tests {
 
     #[test]
     fn manager_registers_counts_and_sweeps_sessions() {
-        let manager = CommandSessionManager::default();
+        let manager = WorkspaceRunManager::default();
         let started = manager
             .start(
                 StartCommandSession {
@@ -645,7 +660,7 @@ mod tests {
         // A caller holds many ephemeral command sessions (each its own ephemeral
         // workspace); an isolated caller holds many sessions in its one workspace.
         for kind in [WorkspaceRunKind::Ephemeral, WorkspaceRunKind::Isolated] {
-            let manager = CommandSessionManager::default();
+            let manager = WorkspaceRunManager::default();
             for _ in 0..3 {
                 manager
                     .start(ephemeral_request("caller"), ExpiringPolicy, kind)
@@ -658,7 +673,7 @@ mod tests {
 
     #[test]
     fn collected_completion_preserves_finalized_stdout() {
-        let manager = CommandSessionManager::default();
+        let manager = WorkspaceRunManager::default();
         let command_session_id = "cmd_full".to_owned();
         let session = CommandSession::new(CommandSessionSpec {
             id: command_session_id.clone(),

@@ -561,6 +561,7 @@ mod tests {
                 handles(agents),
                 Arc::new(FakeTransport),
                 std::time::Duration::from_secs(3600),
+                Arc::new(std::sync::OnceLock::new()),
             ),
         )
     }
@@ -574,6 +575,7 @@ mod tests {
             std::time::Duration::from_secs(3600),
             NotificationService::new(),
             control_factory,
+            &Arc::new(std::sync::OnceLock::new()),
         )
     }
 
@@ -734,21 +736,25 @@ mod tests {
 
     #[tokio::test]
     async fn progress_and_cancel_return_model_facing_results() {
-        let explorer = subagent_def("explorer");
-        let handle = handle_with_agents(vec![
-            agent_def("root", AgentRole::Root, &[], &["submit_root_outcome"]),
-            explorer,
-        ]);
-        // Spawn a real subagent so a record exists, then cancel before it settles.
-        let started = handle
-            .spawn(&metadata_for("root", "run-root"), "explorer", "inspect")
-            .await
-            .expect("spawn");
-        let SpawnedSubagent::Launched(StartedSubagent {
-            subagent_session_id,
-        }) = started
-        else {
-            panic!("expected a launched subagent");
+        let handle = handle_with_agents(Vec::new());
+        // Insert a deterministically-`Running` record (a pending-future abort handle
+        // that never settles) so the cancel path is not racing a live driver.
+        let subagent_session_id = {
+            let mut tool_input = JsonObject::new();
+            tool_input.insert("agent_name".to_owned(), json!("explorer"));
+            let driver_abort = tokio::spawn(std::future::pending::<()>()).abort_handle();
+            let inner = handle.inner();
+            let mut guard = inner.lock().await;
+            let id = guard.subagents.mint_id();
+            guard.subagents.insert(
+                SubagentHandle {
+                    subagent_session_id: id.clone(),
+                    sub_agent_run_id: "run-sub".parse().expect("agent run id"),
+                    driver_abort,
+                },
+                tool_input,
+            );
+            id
         };
 
         let running = handle

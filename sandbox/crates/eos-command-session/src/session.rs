@@ -27,19 +27,19 @@ use crate::CommandSessionError;
 /// cancelled command never reaches the OCC merge.
 #[cfg(target_os = "linux")]
 #[derive(Debug, Clone)]
-pub(crate) struct ReapedCommand {
-    pub(crate) status: String,
-    pub(crate) exit_code: i64,
-    pub(crate) runner_result: Option<Value>,
-    pub(crate) stdout: String,
-    pub(crate) elapsed_s: f64,
-    pub(crate) cancelled: bool,
+pub struct ReapedCommand {
+    pub status: String,
+    pub exit_code: i64,
+    pub runner_result: Option<Value>,
+    pub stdout: String,
+    pub elapsed_s: f64,
+    pub cancelled: bool,
 }
 
 /// PTY/process substrate for one command session. It owns the child process,
 /// the transcript, and the cancel flag — but **no** workspace policy: the run
 /// that owns this session decides publish-vs-discard.
-pub(crate) struct CommandSession {
+pub struct CommandSession {
     id: String,
     caller_id: String,
     command: String,
@@ -62,7 +62,7 @@ pub(crate) struct CommandSession {
     timeout: Option<Duration>,
 }
 
-pub(crate) struct CommandSessionSpec {
+pub struct CommandSessionSpec {
     pub id: String,
     pub caller_id: String,
     pub command: String,
@@ -70,7 +70,7 @@ pub(crate) struct CommandSessionSpec {
 }
 
 #[cfg(target_os = "linux")]
-pub(crate) struct RunningCommandSessionParts {
+pub struct RunningCommandSessionParts {
     pub process: CommandSessionProcess,
     pub output_path: PathBuf,
     pub final_path: PathBuf,
@@ -81,13 +81,13 @@ pub(crate) struct RunningCommandSessionParts {
 impl CommandSession {
     #[must_use]
     #[cfg(any(not(target_os = "linux"), test))]
-    pub(crate) fn new(spec: CommandSessionSpec) -> Self {
+    pub fn new(spec: CommandSessionSpec) -> Self {
         Self::new_scaffold(spec)
     }
 
     #[cfg(target_os = "linux")]
     #[must_use]
-    pub(crate) fn new_running(spec: CommandSessionSpec, parts: RunningCommandSessionParts) -> Self {
+    pub fn new_running(spec: CommandSessionSpec, parts: RunningCommandSessionParts) -> Self {
         Self::new_with_process(spec, parts)
     }
 
@@ -137,17 +137,17 @@ impl CommandSession {
     }
 
     #[must_use]
-    pub(crate) fn id(&self) -> &str {
+    pub fn id(&self) -> &str {
         &self.id
     }
 
     #[must_use]
-    pub(crate) fn caller_id(&self) -> &str {
+    pub fn caller_id(&self) -> &str {
         &self.caller_id
     }
 
     #[must_use]
-    pub(crate) fn command(&self) -> &str {
+    pub fn command(&self) -> &str {
         &self.command
     }
 
@@ -156,24 +156,24 @@ impl CommandSession {
     /// carries its own elapsed time.)
     #[cfg(not(target_os = "linux"))]
     #[must_use]
-    pub(crate) fn elapsed_s(&self) -> f64 {
+    pub fn elapsed_s(&self) -> f64 {
         self.started_at.elapsed().as_secs_f64()
     }
 
     #[cfg(target_os = "linux")]
-    pub(crate) fn write_process_stdin(&self, chars: &str) -> Result<(), CommandSessionError> {
+    pub fn write_process_stdin(&self, chars: &str) -> Result<(), CommandSessionError> {
         self.process.write_stdin(chars.as_bytes())?;
         Ok(())
     }
 
     #[cfg(target_os = "linux")]
-    pub(crate) fn cancel_process(&self) {
+    pub fn cancel_process(&self) {
         *lock(&self.cancelled) = true;
         self.process.terminate();
     }
 
     #[must_use]
-    pub(crate) fn read_recent_output(&self, last_n_lines: usize) -> String {
+    pub fn read_recent_output(&self, last_n_lines: usize) -> String {
         #[cfg(target_os = "linux")]
         {
             read_transcript_tail(&self.transcript_path, last_n_lines)
@@ -187,32 +187,32 @@ impl CommandSession {
 
     #[must_use]
     #[cfg(target_os = "linux")]
-    pub(crate) fn read_output_since(&self, start_offset: u64) -> String {
+    pub fn read_output_since(&self, start_offset: u64) -> String {
         read_transcript_since(&self.transcript_path, start_offset)
     }
 
     #[must_use]
     #[cfg(target_os = "linux")]
-    pub(crate) fn transcript_len(&self) -> u64 {
+    pub fn transcript_len(&self) -> u64 {
         transcript_len(&self.transcript_path)
     }
 
     #[cfg(test)]
     #[must_use]
-    pub(crate) const fn started_at(&self) -> Instant {
+    pub const fn started_at(&self) -> Instant {
         self.started_at
     }
 
     #[cfg(any(not(target_os = "linux"), test))]
     #[must_use]
-    pub(crate) fn is_expired(&self, now: Instant) -> bool {
+    pub fn is_expired(&self, now: Instant) -> bool {
         self.timeout
             .is_some_and(|timeout| now.duration_since(self.started_at) >= timeout)
     }
 
     #[cfg(target_os = "linux")]
     #[must_use]
-    pub(crate) fn is_past_deadline(&self, now: Instant, max_session_s: u64) -> bool {
+    pub fn is_past_deadline(&self, now: Instant, max_session_s: u64) -> bool {
         let timeout = self
             .timeout
             .unwrap_or_else(|| Duration::from_secs(max_session_s));
@@ -224,7 +224,7 @@ impl CommandSession {
     /// only reaps the substrate — it does not publish or discard; the owning run
     /// decides that from `ReapedCommand::cancelled`.
     #[cfg(target_os = "linux")]
-    pub(crate) fn reap(&self) -> Option<ReapedCommand> {
+    pub fn reap(&self) -> Option<ReapedCommand> {
         let mut reaped = lock(&self.reaped);
         if *reaped {
             return None;
@@ -260,7 +260,7 @@ impl CommandSession {
     /// convenience, so a write failure does not undo the already-decided
     /// publish/discard or fail the operation.
     #[cfg(target_os = "linux")]
-    pub(crate) fn persist_final(&self, response: &CommandResponse) {
+    pub fn persist_final(&self, response: &CommandResponse) {
         let _ = write_final_response(&self.final_path, response);
         self.remove_transcript_file();
     }

@@ -70,6 +70,35 @@ impl WorkflowLane {
             .is_some_and(WorkflowBackgroundRecord::cancel)
     }
 
+    /// Settle one running workflow to a terminal status (the completion-poll path).
+    /// Only a still-`Running` record transitions, so a cancelled or already-settled
+    /// record is never re-opened. Returns the handle on the fresh transition so the
+    /// poll can emit exactly one completion.
+    pub(crate) fn settle_running(
+        &mut self,
+        workflow_task_id: &WorkflowSessionId,
+        status: BackgroundTaskStatus,
+    ) -> Option<WorkflowHandle> {
+        let record = self.records.get_mut(workflow_task_id)?;
+        if matches!(record.status, BackgroundTaskStatus::Running) {
+            record.status = status;
+            Some(record.handle.clone())
+        } else {
+            None
+        }
+    }
+
+    /// Running workflow handles (both ids), used by the completion poll to query
+    /// status through [`WorkflowControlPort`](eos_tools::WorkflowControlPort).
+    #[must_use]
+    pub(crate) fn running_handles(&self) -> Vec<WorkflowHandle> {
+        self.records
+            .values()
+            .filter(|record| matches!(record.status, BackgroundTaskStatus::Running))
+            .map(|record| record.handle.clone())
+            .collect()
+    }
+
     /// Running workflow handle ids, used by parent-exit cleanup.
     #[must_use]
     pub(crate) fn running_ids(&self) -> Vec<WorkflowSessionId> {

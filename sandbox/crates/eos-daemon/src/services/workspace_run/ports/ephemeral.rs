@@ -16,14 +16,14 @@ use super::workspace_api_error;
 use crate::response_timings::{resource_timings, timing_map};
 use crate::services::overlay::{ephemeral_dir_allocator, DaemonPublisherPort};
 
-pub(in crate::services::command_session) struct DaemonEphemeralCommandPort {
+pub(in crate::services::workspace_run) struct DaemonEphemeralCommandPort {
     root: PathBuf,
     workspace_root: PathBuf,
     scratch_root: PathBuf,
 }
 
 impl DaemonEphemeralCommandPort {
-    pub(in crate::services::command_session) fn new(
+    pub(in crate::services::workspace_run) fn new(
         root: PathBuf,
         workspace_root: PathBuf,
         scratch_root: PathBuf,

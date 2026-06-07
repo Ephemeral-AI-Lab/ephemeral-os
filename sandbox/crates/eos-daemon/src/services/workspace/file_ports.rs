@@ -172,13 +172,13 @@ fn changeset_outcome(
 #[cfg(target_os = "linux")]
 #[derive(Debug, Clone)]
 pub(crate) struct IsolatedFilePorts {
-    handle: crate::services::isolated_workspace::CommandHandle,
+    handle: crate::services::workspace_run::isolated::CommandHandle,
     started_at: Instant,
 }
 
 #[cfg(target_os = "linux")]
 impl IsolatedFilePorts {
-    pub(crate) fn new(handle: crate::services::isolated_workspace::CommandHandle) -> Self {
+    pub(crate) fn new(handle: crate::services::workspace_run::isolated::CommandHandle) -> Self {
         Self {
             handle,
             started_at: Instant::now(),
@@ -269,7 +269,7 @@ impl WorkspaceMutationSink for IsolatedFilePorts {
 
 #[cfg(target_os = "linux")]
 fn isolated_upper_path(
-    handle: &crate::services::isolated_workspace::CommandHandle,
+    handle: &crate::services::workspace_run::isolated::CommandHandle,
     layer_path: &LayerPath,
 ) -> PathBuf {
     handle.upperdir.join(layer_path.as_str())
@@ -277,7 +277,7 @@ fn isolated_upper_path(
 
 #[cfg(target_os = "linux")]
 fn read_isolated_current(
-    handle: &crate::services::isolated_workspace::CommandHandle,
+    handle: &crate::services::workspace_run::isolated::CommandHandle,
     layer_path: &LayerPath,
 ) -> Result<(Option<Vec<u8>>, bool), WorkspaceApiError> {
     let upper_path = isolated_upper_path(handle, layer_path);
@@ -308,7 +308,7 @@ fn read_isolated_current(
 
 #[cfg(target_os = "linux")]
 fn write_isolated_upper(
-    handle: &crate::services::isolated_workspace::CommandHandle,
+    handle: &crate::services::workspace_run::isolated::CommandHandle,
     layer_path: &LayerPath,
     content: &[u8],
 ) -> Result<(), WorkspaceApiError> {
@@ -320,7 +320,7 @@ fn write_isolated_upper(
 }
 
 #[cfg(target_os = "linux")]
-fn isolated_manifest(handle: &crate::services::isolated_workspace::CommandHandle) -> Manifest {
+fn isolated_manifest(handle: &crate::services::workspace_run::isolated::CommandHandle) -> Manifest {
     Manifest {
         version: handle.manifest_version,
         schema_version: 1,
@@ -338,7 +338,7 @@ fn isolated_manifest(handle: &crate::services::isolated_workspace::CommandHandle
 
 #[cfg(target_os = "linux")]
 fn isolated_manifest_layer_path(
-    handle: &crate::services::isolated_workspace::CommandHandle,
+    handle: &crate::services::workspace_run::isolated::CommandHandle,
     path: &Path,
 ) -> String {
     path.strip_prefix(&handle.layer_stack_root)
@@ -357,14 +357,14 @@ fn isolated_timings(changed_path_count: usize) -> WorkspaceTimings {
 
 #[cfg(target_os = "linux")]
 fn record_isolated_tool_call(
-    handle: &crate::services::isolated_workspace::CommandHandle,
+    handle: &crate::services::workspace_run::isolated::CommandHandle,
     tool_name: &str,
     status: &str,
     changed_paths: &[String],
     total_start: Instant,
 ) {
     let duration_s = total_start.elapsed().as_secs_f64();
-    crate::services::isolated_workspace::record_tool_call(
+    crate::services::workspace_run::isolated::record_tool_call(
         &handle.caller_id,
         json!({
             "tool_name": tool_name,

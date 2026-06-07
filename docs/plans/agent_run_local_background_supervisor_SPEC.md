@@ -1424,13 +1424,13 @@ Status values: `Not started`, `In progress`, `Blocked`, `Done`.
 | 0. Contract alignment | Done | tracks daemon registry work | agent-core scope and sandbox assumptions are explicit |
 | 1. State variants | Done | none | cancelled state compiles and persists |
 | 2. Run control and registry | Done | none | each run can own cancellation, foreground, notifications, and finalization |
-| 3. Local supervisor composition | Done (BackgroundNotificationEmitter + subagent completion push; command/workflow emitter routing folds into Phase 4) | none | factories create per-run background handles and notifiers |
-| 4. Lane handles and heartbeat | Not started (structural reorg: split BackgroundTaskSupervisor into the three lanes, move heartbeat into CommandSessionLane with the Weak cycle, drop record-level agent_run_id) | completion collection interface only | lanes own records, handles, and heartbeat wiring |
-| 5. Sandbox registry integration | Blocked on sandbox work | requires daemon registry implementation | one per-caller cancel RPC is wired and tested |
-| 6. Agent-core cancellation ports | Done (interim per-session command cancel until Phase 5) | Phase 5 for command-session teardown proof | `cancel_task` and `cancel_agent_run` are awaited and idempotent |
+| 3. Local supervisor composition | Done | none | factories create per-run background handles and notifiers |
+| 4. Lane handles and heartbeat | Done (BackgroundTaskSupervisor split into SubagentLane + WorkflowLane; CommandSessionLane is a handle sibling owning its records + heartbeat via a Weak cycle; record-level agent_run_id removed; ports lost the agent_run_id filters; report renamed to RunningBackgroundTasks/running_background_tasks) | completion collection interface only | lanes own records, handles, and heartbeat wiring |
+| 5. Sandbox registry integration | Done (CommandSessionLane::cancel_all_command_sessions issues one cancel_workspace_runs_by_caller_id per caller per sandbox; completion poll still keys on owner_agent_run_id) | daemon registry implemented | one per-caller cancel RPC is wired and tested |
+| 6. Agent-core cancellation ports | Done (command teardown now the per-caller daemon RPC, no per-session cancel) | Phase 5 for command-session teardown proof | `cancel_task` and `cancel_agent_run` are awaited and idempotent |
 | 7. Workflow cancellation decomposition | Done | none | workflow cancellation decomposes through task state |
 | 8. Request cancellation entry | Done | Phase 6 | backend-facing request cancellation entry exists |
-| 9. Tests and documentation | In progress (per-phase tests landed; architecture stale-claims refreshed; full doc sweep pending) | all prior phases | docs, tests, and architecture pages match the final design |
+| 9. Tests and documentation | Done (per-phase + lane/heartbeat/cancel/workflow-push tests landed; background-operations.html + rust-migration.html refreshed) | all prior phases | docs, tests, and architecture pages match the final design |
 
 ### Implementation Progress Note (current state)
 
@@ -1447,25 +1447,63 @@ The subagent §11.3 fix (subagent owns an ephemeral control + its command
 sessions) is done. The `BackgroundNotificationEmitter` exists and the subagent
 `[BACKGROUND COMPLETED]` push routes through it.
 
-**Spec target code-shape NOT fully met (deferred, behavior-equivalent):**
-- The background ledger is **not** split into the three lane structs (records
-  still live on `BackgroundTaskSupervisor`); records still carry `agent_run_id`.
-  Per §5 the lane file-split is **explicitly optional**.
-- The heartbeat is owned by `AgentRunControl` (its `JoinHandle` outside the
-  supervisor), **not** by a `CommandSessionLane`. This is deliberate: it avoids
-  the §8.3 reference cycle entirely, so the `Weak`-records dance is unnecessary.
-  Moving it into the lane would re-introduce that cycle for zero behavior change.
-  Dropping record-level `agent_run_id` is coupled to this (the heartbeat reads it
-  as the `collect_completed` caller_id), so both are deferred as one unit.
+**Spec target code-shape met (Phase 4/5 complete):**
+- The background ledger is split into the three lane structs:
+  `SubagentLane` + `WorkflowLane` live behind the `BackgroundTaskSupervisor`
+  mutex, and `CommandSessionLane` is a **sibling on the handle runtime** (its own
+  interior `Arc<Mutex<records>>` + heartbeat) so the heartbeat never takes the
+  supervisor lock. Every lane record carries a first-class handle
+  (`SubagentHandle` / `WorkflowHandle` / `CommandSessionHandle`); no record stores
+  `agent_run_id` — the owner is `BackgroundSupervisorRuntime::owner_agent_run_id`.
+- The `CommandCompletionHeartbeat` is owned by `CommandSessionLane`, captures a
+  **`Weak<Mutex<CommandSessionRecords>>`** (no supervisor/runtime strong ref, no
+  cycle), and emits completions through `BackgroundNotificationEmitter`. The old
+  duplicate render/drain path was removed (one render path, §8.4). The lane drop
+  aborts the heartbeat (RAII).
+- `BackgroundSupervisorPort` / `CommandSessionSupervisorPort` lost their
+  `agent_run_id` filter args; the in-flight report is `RunningBackgroundTasks`
+  (`subagents` / `workflows` / `command_sessions`) returned by
+  `running_background_tasks()`.
+- **Phase 5:** `CommandSessionLane::cancel_all_command_sessions` issues one
+  `cancel_workspace_runs_by_caller_id(owner_agent_run_id)` daemon RPC per sandbox
+  (not per-session). `teardown` (renamed from `cancel_for_parent_exit`) uses it.
+  Note: that daemon op tears down the caller's whole workspace run — it discards
+  the caller's command session(s) **and** exits its isolated workspace if open
+  (`sandbox/crates/eos-daemon/src/services/workspace_run.rs`). Because `teardown`
+  runs on the **normal-exit** finalizer too (not just hard cancel), a normal exit
+  that still holds running command sessions also closes that caller's isolated
+  workspace. This is intended per §9.3 ("the whole workspace run"); the RPC only
+  fires when running command sessions exist for the caller, so an exit with none
+  in flight makes no daemon call and leaves any isolated workspace untouched.
+- **Workflow completion push (§9.2/§13.1/§19):** each run owns a
+  `WorkflowCompletionPoller` (`eos-engine/src/background/workflow_poll.rs`) — the
+  workflow counterpart of the command heartbeat. It polls `WorkflowLane`
+  running handles through the late-bound `WorkflowControlPort` and, on a terminal
+  status, settles the record and emits one `BackgroundCompletion::Workflow` into
+  the parent run's notifier. Like the heartbeat it holds only `Weak`s (to the
+  ledger and to the `OnceLock` control cell), so there is no reference cycle, and
+  it is aborted when the run's supervisor runtime drops. Terminal detection parses
+  `WorkflowControlAdapter::status`'s rendered `WorkflowStatus`; `check_workflow_status`
+  remains the authoritative pull path, so a missed parse only delays the push.
 
-**Open behavior items (not yet implemented):**
-- **Workflow completion push (§9.2/§19):** subagent completions push to the
-  parent notifier; delegated-workflow terminal transitions do **not** yet — the
-  parent still learns via `check_workflow_status` polling. Needs a design choice
-  (a `WorkflowLane` status poll vs. a workflow lifecycle callback) before wiring.
-- **Phase 5 (blocked):** command-session cancel is interim per-session today;
-  the one per-caller `cancel_all_workspace_runs_by_caller_id` RPC lands when the
-  sandbox daemon workspace-run registry is implemented (under construction).
+**Deviations from the literal spec (documented, behavior-preserving):**
+- `cancel_subagents()` and `teardown()` are kept on `BackgroundSupervisorPort`
+  (no-arg / no `agent_run_id`) rather than being fully removed per §10's
+  "concrete-only" ideal, because the terminal prehook and the normal-exit
+  finalizer call them through the `dyn` port. Both honor the "no `agent_run_id`
+  filter" goal.
+- Subagent parent-exit teardown still settles + aborts the driver (it does not
+  recurse through `cancel_agent_run` per subagent / insert subagents in the
+  registry); this preserves the existing ephemeral-subagent finalization. Hard
+  `cancel_agent_run` of a subagent's own run still tears down its command sessions
+  via that run's own per-caller RPC.
+
+**Open behavior items:** none. The workflow-completion push (previously the one
+remaining §19 gap) is now implemented via the per-run `WorkflowCompletionPoller`
+(see the "met" list above). All §19 acceptance criteria are satisfied; the only
+non-literal items are the two documented, behavior-preserving deviations above
+(`cancel_subagents`/`teardown` kept on the port; subagent parent-exit teardown
+stays settle+abort).
 
 **Verification caveat (Phase 7):** nested (2-level) delegated-workflow
 cancellation is verified by **composition** of unit tests (handle-level

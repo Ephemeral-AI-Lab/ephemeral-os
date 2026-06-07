@@ -1,21 +1,17 @@
+// The caller-keyed registry is the Linux PTY/overlay orchestration. On non-Linux
+// the daemon serves command-session ops as stubs, so the registry is dead there —
+// it stays compiled for the scaffold unit tests and a uniform module tree.
+#![cfg_attr(not(target_os = "linux"), allow(dead_code))]
+
 use std::collections::{HashMap, HashSet};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex, MutexGuard};
 
+use eos_command_session::{
+    CollectCompleted, CollectCompletedResponse, CommandResponse, CommandSession,
+    CommandSessionCompletion,
+};
 use eos_workspace_api::CommandWorkspacePolicy;
-use serde::{Deserialize, Serialize};
-
-use crate::session::CommandSession;
-use crate::{CollectCompleted, CollectCompletedResponse, CommandResponse};
-
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct CommandSessionCompletion {
-    pub command_session_id: String,
-    pub caller_id: String,
-    pub command: String,
-    pub result: CommandResponse,
-    pub notification_result: CommandResponse,
-}
 
 /// The workspace policy owned by a run — overlay/namespace state (lease + dirs)
 /// plus the finalize/discard logic. The run, not the session, owns this so the
@@ -113,13 +109,13 @@ impl CallerRun {
 /// Session-targeted ops resolve by scanning runs for the session id (caller count
 /// is small).
 #[derive(Default)]
-pub(crate) struct CommandSessionRegistry {
+pub(crate) struct WorkspaceRunRegistry {
     runs: Mutex<HashMap<String, CallerRun>>,
     completed: Mutex<HashMap<String, CommandSessionCompletion>>,
     counter: AtomicU64,
 }
 
-impl CommandSessionRegistry {
+impl WorkspaceRunRegistry {
     #[must_use]
     pub(crate) fn new() -> Self {
         Self {

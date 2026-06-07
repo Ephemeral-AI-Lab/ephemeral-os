@@ -9,7 +9,7 @@
 //! [`CommandSessionSupervisorPort`](eos_tools::ports::CommandSessionSupervisorPort)
 //! (impl in `command_session.rs`).
 
-use std::sync::Arc;
+use std::sync::{Arc, OnceLock};
 use std::time::Duration;
 
 use eos_sandbox_port::SandboxTransport;
@@ -21,6 +21,7 @@ use tokio::sync::Mutex;
 use super::lanes::CommandSessionLane;
 use super::notifications::BackgroundNotificationEmitter;
 use super::supervisor::BackgroundTaskSupervisor;
+use super::workflow_poll::WorkflowCompletionPoller;
 use crate::notifications::NotificationService;
 use crate::runtime::AgentRunControlFactory;
 use crate::EngineRunHandles;
@@ -44,6 +45,9 @@ pub(super) struct BackgroundSupervisorRuntime {
     pub(super) control_factory: AgentRunControlFactory,
     /// This run's background-completion emitter (its own notifier).
     pub(super) notifications: BackgroundNotificationEmitter,
+    /// Per-run delegated-workflow completion poller (spec §9.2). Held for RAII —
+    /// `Drop` aborts the poll task when the runtime drops.
+    _workflow_poll: WorkflowCompletionPoller,
 }
 
 /// The per-agent-run background supervisor handle.
@@ -72,22 +76,33 @@ impl BackgroundSupervisorHandle {
         completion_poll_interval: Duration,
         notifications: NotificationService,
         control_factory: AgentRunControlFactory,
+        workflow_control: &Arc<OnceLock<Arc<dyn WorkflowControlPort>>>,
     ) -> Self {
         let emitter = BackgroundNotificationEmitter::new(notifications);
+        let inner = Arc::new(Mutex::new(BackgroundTaskSupervisor::new()));
         let commands = CommandSessionLane::new(
             owner_agent_run_id.clone(),
             emitter.clone(),
             transport,
             completion_poll_interval,
         );
+        // The poll holds only `Weak`s (cycle rule, §9.2): a `Weak` to the ledger
+        // it settles, and a `Weak` to the late-bound workflow-control cell.
+        let workflow_poll = WorkflowCompletionPoller::spawn(
+            Arc::downgrade(&inner),
+            Arc::downgrade(workflow_control),
+            emitter.clone(),
+            completion_poll_interval,
+        );
         Self {
             runtime: Arc::new(BackgroundSupervisorRuntime {
                 owner_agent_run_id,
-                inner: Arc::new(Mutex::new(BackgroundTaskSupervisor::new())),
+                inner,
                 commands,
                 handles,
                 control_factory,
                 notifications: emitter,
+                _workflow_poll: workflow_poll,
             }),
         }
     }
@@ -223,6 +238,7 @@ mod tests {
                 handles(transport.clone()),
                 transport,
                 std::time::Duration::from_secs(3600),
+                Arc::new(OnceLock::new()),
             ),
         )
     }
@@ -238,6 +254,7 @@ mod tests {
             std::time::Duration::from_secs(3600),
             NotificationService::new(),
             test_control_factory(transport),
+            &Arc::new(OnceLock::new()),
         )
     }
 

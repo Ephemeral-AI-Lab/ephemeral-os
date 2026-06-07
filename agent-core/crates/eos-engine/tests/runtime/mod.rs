@@ -733,6 +733,7 @@ fn control_factory_for(handles: EngineRunHandles) -> AgentRunControlFactory {
             handles,
             Arc::new(FakeTransport),
             std::time::Duration::from_secs(3600),
+            Arc::new(std::sync::OnceLock::new()),
         ),
     )
 }

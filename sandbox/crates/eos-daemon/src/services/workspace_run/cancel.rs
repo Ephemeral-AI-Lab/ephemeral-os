@@ -18,7 +18,9 @@ use serde_json::{json, Value};
 
 use crate::dispatcher::DispatchContext;
 use crate::error::DaemonError;
-use crate::services::{command_session, isolated_workspace};
+use super::isolated;
+
+use super::commands;
 
 /// Outcome of tearing down one caller's workspace runs.
 pub struct CallerCancel {
@@ -35,8 +37,8 @@ pub struct CallerCancel {
 /// sessions are cancelled before the isolated namespace/lease teardown.
 pub fn cancel_workspace_runs_by_caller_id(caller_id: &str, grace_s: Option<f64>) -> CallerCancel {
     let cancelled_sessions =
-        command_session::cleanup_command_sessions_for_caller(caller_id, grace_s);
-    let isolated = isolated_workspace::exit_isolated(caller_id, grace_s);
+        commands::cleanup_command_sessions_for_caller(caller_id, grace_s);
+    let isolated = isolated::exit_isolated(caller_id, grace_s);
     CallerCancel {
         cancelled_sessions,
         isolated,
@@ -47,8 +49,8 @@ pub fn cancel_workspace_runs_by_caller_id(caller_id: &str, grace_s: Option<f64>)
 /// exit every isolated caller, then reap orphaned namespace/cgroup/scratch
 /// resources. Returns the per-substrate counts.
 pub fn cancel_all_workspace_runs(grace_s: Option<f64>) -> (usize, usize) {
-    let cancelled_sessions = command_session::cancel_all_command_sessions(grace_s);
-    let isolated_exited = isolated_workspace::exit_all_and_reap(grace_s);
+    let cancelled_sessions = commands::cancel_all_command_sessions(grace_s);
+    let isolated_exited = isolated::exit_all_and_reap(grace_s);
     (cancelled_sessions, isolated_exited)
 }
 

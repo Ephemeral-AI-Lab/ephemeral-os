@@ -280,8 +280,8 @@ impl Drop for CommandCompletionHeartbeat {
 
 impl CommandCompletionHeartbeat {
     /// Spawn the heartbeat. `records` is a `Weak` to the lane's shared records — a
-    /// strong capture would form a cycle (task → records-owner → JoinHandle) so the
-    /// `JoinHandle` would never drop and never abort the task.
+    /// strong capture would form a cycle (task -> records-owner -> `JoinHandle`) so
+    /// the `JoinHandle` would never drop and never abort the task.
     fn spawn(
         owner_agent_run_id: AgentRunId,
         records: Weak<Mutex<CommandSessionRecords>>,
@@ -345,4 +345,220 @@ fn running_by_sandbox(records: &CommandSessionRecords) -> Vec<(SandboxId, Vec<St
         }
     }
     groups.into_iter().collect()
+}
+
+#[cfg(test)]
+mod tests {
+    #![allow(clippy::expect_used)]
+
+    use std::collections::VecDeque;
+    use std::sync::Mutex as StdMutex;
+
+    use async_trait::async_trait;
+    use eos_sandbox_port::{DaemonOp, SandboxPortError};
+    use eos_types::JsonObject;
+    use serde_json::json;
+    use tokio::time::{sleep, timeout, Duration};
+
+    use crate::NotificationService;
+
+    use super::*;
+
+    #[derive(Debug, Default)]
+    struct RecordingTransport {
+        calls: StdMutex<Vec<(DaemonOp, JsonObject)>>,
+        collect_responses: StdMutex<VecDeque<JsonObject>>,
+    }
+
+    impl RecordingTransport {
+        fn with_collect(responses: impl IntoIterator<Item = JsonObject>) -> Self {
+            Self {
+                calls: StdMutex::new(Vec::new()),
+                collect_responses: StdMutex::new(responses.into_iter().collect()),
+            }
+        }
+
+        fn ops(&self) -> Vec<DaemonOp> {
+            self.calls
+                .lock()
+                .expect("calls")
+                .iter()
+                .map(|(op, _)| *op)
+                .collect()
+        }
+
+        fn payloads(&self, op: DaemonOp) -> Vec<JsonObject> {
+            self.calls
+                .lock()
+                .expect("calls")
+                .iter()
+                .filter(|(call_op, _)| *call_op == op)
+                .map(|(_, payload)| payload.clone())
+                .collect()
+        }
+    }
+
+    #[async_trait]
+    impl SandboxTransport for RecordingTransport {
+        async fn call(
+            &self,
+            _sandbox_id: &SandboxId,
+            op: DaemonOp,
+            payload: JsonObject,
+            _timeout_s: u32,
+        ) -> Result<JsonObject, SandboxPortError> {
+            self.calls.lock().expect("calls").push((op, payload));
+            let response = match op {
+                DaemonOp::CommandCollectCompleted => self
+                    .collect_responses
+                    .lock()
+                    .expect("responses")
+                    .pop_front()
+                    .unwrap_or_default(),
+                _ => json!({"success": true}).as_object().expect("object").clone(),
+            };
+            Ok(response)
+        }
+    }
+
+    fn completion(id: &str, status: &str, stdout: &str) -> JsonObject {
+        json!({
+            "completions": [{
+                "command_session_id": id,
+                "result": {
+                    "status": status,
+                    "exit_code": if status == "ok" { 0 } else { 1 },
+                    "output": {"stdout": stdout, "stderr": ""},
+                },
+            }]
+        })
+        .as_object()
+        .expect("object")
+        .clone()
+    }
+
+    fn lane(
+        owner: &str,
+        notifier: &NotificationService,
+        transport: Arc<dyn SandboxTransport>,
+        interval: Duration,
+    ) -> CommandSessionLane {
+        CommandSessionLane::new(
+            owner.parse().expect("agent run id"),
+            BackgroundNotificationEmitter::new(notifier.clone()),
+            transport,
+            interval,
+        )
+    }
+
+    // §17: a heartbeat with no running sessions makes no sandbox RPC.
+    #[tokio::test]
+    async fn heartbeat_with_no_sessions_makes_no_rpc() {
+        let transport = Arc::new(RecordingTransport::default());
+        let notifier = NotificationService::new();
+        let _lane = lane("agent-a", &notifier, transport.clone(), Duration::from_millis(1));
+        sleep(Duration::from_millis(30)).await;
+        assert!(
+            transport.ops().is_empty(),
+            "idle heartbeat issued: {:?}",
+            transport.ops()
+        );
+    }
+
+    // §17: a running session is polled with collect_completed (caller_id == owner)
+    // and its completion is enqueued exactly once into this run's own notifier.
+    #[tokio::test]
+    async fn heartbeat_polls_and_emits_into_own_notifier() {
+        let transport = Arc::new(RecordingTransport::with_collect([completion(
+            "cmd_1", "ok", "3 passed",
+        )]));
+        let notifier = NotificationService::new();
+        let lane = lane("agent-a", &notifier, transport.clone(), Duration::from_millis(1));
+        lane.register(
+            &"cmd_1".parse().expect("command id"),
+            &"sandbox-a".parse().expect("sandbox id"),
+            "cargo test",
+        )
+        .await;
+
+        let notifications = timeout(Duration::from_millis(200), async {
+            loop {
+                let drained = notifier.drain().await;
+                if !drained.is_empty() {
+                    break drained;
+                }
+                sleep(Duration::from_millis(2)).await;
+            }
+        })
+        .await
+        .expect("notification");
+
+        assert_eq!(notifications.len(), 1);
+        assert!(notifications[0].message.contains("[BACKGROUND COMPLETED]"));
+        assert!(notifications[0].message.contains("cmd_1"));
+        assert!(notifications[0].message.contains("3 passed"));
+        let collect = transport.payloads(DaemonOp::CommandCollectCompleted);
+        assert!(!collect.is_empty());
+        assert_eq!(collect[0]["caller_id"], json!("agent-a"));
+        // Exactly-once: the session is latched Delivered, so it is not re-polled.
+        assert!(lane
+            .command_session_already_reported(&"cmd_1".parse().expect("command id"))
+            .await);
+    }
+
+    // §17: dropping the lane aborts the heartbeat — the task holds only a `Weak` to
+    // the records, so after the lane drops, polling stops (no further RPCs).
+    #[tokio::test]
+    async fn dropping_lane_aborts_heartbeat() {
+        let transport = Arc::new(RecordingTransport::default());
+        let notifier = NotificationService::new();
+        let lane = lane("agent-a", &notifier, transport.clone(), Duration::from_millis(1));
+        lane.register(
+            &"cmd_1".parse().expect("command id"),
+            &"sandbox-a".parse().expect("sandbox id"),
+            "sleep 1",
+        )
+        .await;
+        // Let it poll at least once.
+        timeout(Duration::from_millis(200), async {
+            loop {
+                if !transport.ops().is_empty() {
+                    break;
+                }
+                sleep(Duration::from_millis(2)).await;
+            }
+        })
+        .await
+        .expect("polled at least once");
+        drop(lane);
+        let after_drop = transport.ops().len();
+        sleep(Duration::from_millis(30)).await;
+        assert_eq!(
+            transport.ops().len(),
+            after_drop,
+            "heartbeat kept polling after the lane dropped"
+        );
+    }
+
+    // §9.3/§17: cancel_all issues ONE per-caller daemon RPC (not per-session) and
+    // settles the records cancelled.
+    #[tokio::test]
+    async fn cancel_all_issues_one_per_caller_rpc() {
+        let transport = Arc::new(RecordingTransport::default());
+        let notifier = NotificationService::new();
+        let lane = lane("agent-a", &notifier, transport.clone(), Duration::from_secs(3600));
+        for id in ["cmd_1", "cmd_2"] {
+            lane.register(
+                &id.parse().expect("command id"),
+                &"sandbox-a".parse().expect("sandbox id"),
+                "cargo test",
+            )
+            .await;
+        }
+        lane.cancel_all_command_sessions("parent exited").await;
+        let cancels = transport.payloads(DaemonOp::CancelWorkspaceRunsByCaller);
+        assert_eq!(cancels.len(), 1, "one per-caller cancel for two sessions");
+        assert_eq!(cancels[0]["caller_id"], json!("agent-a"));
+        assert_eq!(lane.count_running().await, 0);
+    }
 }

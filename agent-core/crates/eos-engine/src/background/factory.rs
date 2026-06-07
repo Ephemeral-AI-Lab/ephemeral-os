@@ -8,13 +8,15 @@
 //! [`CommandSessionLane`](super::lanes::CommandSessionLane) spawns this run's
 //! command-completion heartbeat against the run's own notification service.
 
-use std::sync::Arc;
+use std::sync::{Arc, OnceLock};
 use std::time::Duration;
 
 use eos_sandbox_port::SandboxTransport;
+use eos_tools::WorkflowControlPort;
 use eos_types::AgentRunId;
 
 use super::handle::BackgroundSupervisorHandle;
+use super::workflow_poll::WorkflowControlCell;
 use crate::notifications::NotificationService;
 use crate::runtime::AgentRunControlFactory;
 use crate::EngineRunHandles;
@@ -25,6 +27,10 @@ pub struct BackgroundSupervisorFactory {
     handles: EngineRunHandles,
     transport: Arc<dyn SandboxTransport>,
     completion_poll_interval: Duration,
+    /// Late-bound workflow-control cell (built downstream of this factory in
+    /// `eos-runtime`), shared into each run's workflow-completion poller so it can
+    /// observe terminal delegated-workflow state once control is wired.
+    workflow_control: WorkflowControlCell,
 }
 
 impl std::fmt::Debug for BackgroundSupervisorFactory {
@@ -37,16 +43,20 @@ impl std::fmt::Debug for BackgroundSupervisorFactory {
 
 impl BackgroundSupervisorFactory {
     /// Build the factory from the immutable per-request construction inputs.
+    /// `workflow_control` is the request's late-bound control cell (it may be
+    /// unset at construction; each run's poller reads it once it is wired).
     #[must_use]
     pub fn new(
         handles: EngineRunHandles,
         transport: Arc<dyn SandboxTransport>,
         completion_poll_interval: Duration,
+        workflow_control: Arc<OnceLock<Arc<dyn WorkflowControlPort>>>,
     ) -> Self {
         Self {
             handles,
             transport,
             completion_poll_interval,
+            workflow_control,
         }
     }
 
@@ -71,6 +81,7 @@ impl BackgroundSupervisorFactory {
             self.completion_poll_interval,
             notifications,
             control_factory,
+            &self.workflow_control,
         )
     }
 

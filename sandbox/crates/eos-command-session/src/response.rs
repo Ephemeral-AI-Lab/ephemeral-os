@@ -154,8 +154,20 @@ impl CommandResponse {
     }
 }
 
+/// A settled command session parked for the agent-core heartbeat to drain. The
+/// daemon's workspace-run registry owns the completion queue; this is the shared
+/// DTO it stores and the wire layer serializes.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct CommandSessionCompletion {
+    pub command_session_id: String,
+    pub caller_id: String,
+    pub command: String,
+    pub result: CommandResponse,
+    pub notification_result: CommandResponse,
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct CollectCompletedResponse {
     pub success: bool,
-    pub completions: Vec<crate::CommandSessionCompletion>,
+    pub completions: Vec<CommandSessionCompletion>,
 }

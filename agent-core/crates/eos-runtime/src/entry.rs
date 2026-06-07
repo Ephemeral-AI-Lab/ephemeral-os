@@ -103,18 +103,26 @@ pub async fn run_request(
         .await
         .context("creating the request row")?;
 
+    // GUARDRAIL: `workflow_control` is built downstream of the runner (starter →
+    // attempt_deps → runner), so it is late-bound through this cell and read at
+    // run() time — irreducible given the construction cycle. The cell is created
+    // up front so the background factory can hand each run's workflow-completion
+    // poller a `Weak` to it (the poller reads it once control is wired).
+    let workflow_control_cell: Arc<OnceLock<Arc<dyn WorkflowControlPort>>> =
+        Arc::new(OnceLock::new());
     // Per-agent-run runtime. The request owns only the shared, immutable factory
     // and the live-run registry — never per-agent mutable state. Each
     // root/workflow/subagent run mints one fresh `AgentRunControl` (its own
     // notifier, foreground executor, background supervisor, command-completion
-    // heartbeat, and cancellation token); the registry makes live runs
-    // addressable for recursive cancellation.
+    // heartbeat, workflow-completion poller, and cancellation token); the registry
+    // makes live runs addressable for recursive cancellation.
     let control_factory = Arc::new(AgentRunControlFactory::new(
         ForegroundExecutorFactory,
         BackgroundSupervisorFactory::new(
             services.engine_run_handles(&workspace_root),
             services.sandbox.transport.clone(),
             services.engine.command_session_completion_poll_interval(),
+            workflow_control_cell.clone(),
         ),
     ));
     let agent_run_registry = AgentRunRegistry::new();
@@ -135,11 +143,6 @@ pub async fn run_request(
     // (Path A-recording). Stateless and shared across all runs.
     let attempt_submission: Arc<dyn AttemptSubmissionPort> =
         Arc::new(AttemptSubmissionAdapter::new(orchestrator_registry.clone()));
-    // GUARDRAIL: `workflow_control` is built downstream of the runner (starter →
-    // attempt_deps → runner), so it is late-bound through this cell and read at
-    // run() time — irreducible given the construction cycle.
-    let workflow_control_cell: Arc<OnceLock<Arc<dyn WorkflowControlPort>>> =
-        Arc::new(OnceLock::new());
     let runner: Arc<dyn AgentRunner> = Arc::new(RuntimeAgentRunner::new(
         services.clone(),
         workspace_root.clone(),

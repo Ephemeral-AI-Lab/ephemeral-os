@@ -1,9 +1,5 @@
-//! Command-session operations for the daemon dispatcher.
-
-mod config;
-#[cfg(target_os = "linux")]
-mod ports;
-mod wire;
+//! Command-session lifecycle operations for the daemon dispatcher, driving the
+//! caller-keyed workspace-run registry.
 
 #[cfg(target_os = "linux")]
 use std::path::PathBuf;
@@ -15,8 +11,7 @@ use std::time::Instant;
 #[cfg(target_os = "linux")]
 use eos_command_session::{
     CancelCommandSession, CommandResponse, CommandSessionCompletion, CommandSessionError,
-    CommandSessionManager, DynCommandWorkspacePolicy, ReadCommandProgress, StartCommandSession,
-    WorkspaceRunKind, WriteStdin,
+    DynCommandWorkspacePolicy, ReadCommandProgress, StartCommandSession, WriteStdin,
 };
 #[cfg(target_os = "linux")]
 use eos_ephemeral_workspace::command_session::EphemeralCommandPolicy;
@@ -30,32 +25,35 @@ use crate::dispatcher::DispatchContext;
 use crate::error::DaemonError;
 use crate::response_timings::u64_to_f64_saturating;
 
-pub(crate) use config::configure_command_sessions;
 #[cfg(target_os = "linux")]
-use config::{
+use super::config::{
     command_session_config, command_session_scratch_root, runtime_command_session_config,
 };
 #[cfg(target_os = "linux")]
-use ports::ephemeral::DaemonEphemeralCommandPort;
+use super::manager::WorkspaceRunManager;
 #[cfg(target_os = "linux")]
-use ports::isolated::DaemonIsolatedCommandPort;
+use super::ports::ephemeral::DaemonEphemeralCommandPort;
+#[cfg(target_os = "linux")]
+use super::ports::isolated::DaemonIsolatedCommandPort;
+#[cfg(target_os = "linux")]
+use super::registry::WorkspaceRunKind;
 #[cfg(not(target_os = "linux"))]
-use wire::command_result;
+use super::wire::command_result;
 #[cfg(target_os = "linux")]
-use wire::require_nonempty_string;
+use super::wire::require_nonempty_string;
 #[cfg(test)]
-use wire::should_publish_command_session_completion;
-use wire::{caller_id_arg, command_session_not_found, optional_u64, require_command_string};
+use super::wire::should_publish_command_session_completion;
+use super::wire::{caller_id_arg, command_session_not_found, optional_u64, require_command_string};
 #[cfg(target_os = "linux")]
-use wire::{
+use super::wire::{
     collect_completed_request, command_response_to_wire, command_session_completion_to_wire,
     command_session_error, strip_session_id,
 };
 
 #[cfg(target_os = "linux")]
-fn command_session_manager() -> &'static CommandSessionManager {
-    static MANAGER: OnceLock<CommandSessionManager> = OnceLock::new();
-    MANAGER.get_or_init(|| CommandSessionManager::new(runtime_command_session_config()))
+fn workspace_run_manager() -> &'static WorkspaceRunManager {
+    static MANAGER: OnceLock<WorkspaceRunManager> = OnceLock::new();
+    MANAGER.get_or_init(|| WorkspaceRunManager::new(runtime_command_session_config()))
 }
 
 /// `api.v1.exec_command` — command-session start contract.
@@ -72,7 +70,7 @@ pub fn op_exec_command(args: &Value, _context: DispatchContext<'_>) -> Result<Va
         .or_else(|| optional_u64(args, "timeout_seconds"))
         .map(u64_to_f64_saturating);
     #[cfg(not(target_os = "linux"))]
-    if crate::services::isolated_workspace::caller_has_active_handle(caller_id_arg(args)) {
+    if crate::services::workspace_run::isolated::caller_has_active_handle(caller_id_arg(args)) {
         return Ok(command_result(
             "error",
             None,
@@ -82,7 +80,7 @@ pub fn op_exec_command(args: &Value, _context: DispatchContext<'_>) -> Result<Va
         ));
     }
     #[cfg(target_os = "linux")]
-    if let Some(handle) = crate::services::isolated_workspace::command_handle_for_args(args) {
+    if let Some(handle) = crate::services::workspace_run::isolated::command_handle_for_args(args) {
         let yield_time_ms =
             optional_u64(args, "yield_time_ms").unwrap_or(command_config.default_yield_time_ms);
         return start_manager_command_session(
@@ -221,7 +219,7 @@ pub fn op_command_collect_completed(
     #[cfg(target_os = "linux")]
     {
         let response =
-            command_session_manager().collect_completed(&collect_completed_request(args));
+            workspace_run_manager().collect_completed(&collect_completed_request(args));
         let completions = response
             .completions
             .into_iter()
@@ -252,7 +250,7 @@ pub fn op_command_session_count(
         .to_owned();
     #[cfg(target_os = "linux")]
     {
-        let count = command_session_manager()
+        let count = workspace_run_manager()
             .count_by_caller((!caller_id.is_empty()).then_some(&caller_id));
         Ok(json!({"success": true, "caller_id": caller_id, "count": count}))
     }
@@ -283,7 +281,7 @@ fn start_manager_command_session(
         timeout_seconds,
         yield_time_ms,
     };
-    let response = command_session_manager()
+    let response = workspace_run_manager()
         .start_boxed(request, policy, kind)
         .map_err(command_session_error)?;
     let wire = command_response_to_wire(response);
@@ -306,7 +304,7 @@ pub(crate) fn command_session_write_stdin(args: &Value) -> Result<Value, DaemonE
         yield_time_ms: optional_u64(args, "yield_time_ms")
             .unwrap_or(command_session_config().default_yield_time_ms),
     };
-    command_session_response_to_wire(command_session_manager().write_stdin(request))
+    command_session_response_to_wire(workspace_run_manager().write_stdin(request))
 }
 
 #[cfg(target_os = "linux")]
@@ -318,7 +316,7 @@ pub(crate) fn command_session_read_progress(args: &Value) -> Result<Value, Daemo
             .try_into()
             .map_err(|_| DaemonError::InvalidEnvelope("last_n_lines is too large".to_owned()))?,
     };
-    command_session_response_to_wire(command_session_manager().read_progress(request))
+    command_session_response_to_wire(workspace_run_manager().read_progress(request))
 }
 
 #[cfg(target_os = "linux")]
@@ -328,7 +326,7 @@ pub fn active_command_sessions_for_caller(caller_id: &str) -> usize {
     if caller_id.is_empty() {
         return 0;
     }
-    command_session_manager().count_by_caller(Some(caller_id))
+    workspace_run_manager().count_by_caller(Some(caller_id))
 }
 
 #[cfg(not(target_os = "linux"))]
@@ -341,7 +339,7 @@ pub(crate) fn command_session_cancel(args: &Value) -> Result<Value, DaemonError>
     let request = CancelCommandSession {
         command_session_id: require_command_string(args, "command_session_id")?,
     };
-    command_session_response_to_wire(command_session_manager().cancel(request))
+    command_session_response_to_wire(workspace_run_manager().cancel(request))
 }
 
 #[cfg(target_os = "linux")]
@@ -359,7 +357,7 @@ fn command_session_response_to_wire(
 /// Best-effort lifecycle backstop for callers that bypass the model-facing
 /// `RequireNoBackgroundSessions` hook.
 pub fn cleanup_command_sessions_for_caller(caller_id: &str, grace_s: Option<f64>) -> usize {
-    command_session_manager().cleanup_caller(caller_id, grace_s)
+    workspace_run_manager().cleanup_caller(caller_id, grace_s)
 }
 
 #[cfg(not(target_os = "linux"))]
@@ -371,7 +369,7 @@ pub const fn cleanup_command_sessions_for_caller(_caller_id: &str, _grace_s: Opt
 /// whole-sandbox cancel sweep). Returns the number cancelled.
 #[cfg(target_os = "linux")]
 pub fn cancel_all_command_sessions(grace_s: Option<f64>) -> usize {
-    command_session_manager().cancel_all(grace_s)
+    workspace_run_manager().cancel_all(grace_s)
 }
 
 #[cfg(not(target_os = "linux"))]
@@ -388,7 +386,7 @@ pub const fn cancel_all_command_sessions(_grace_s: Option<f64>) -> usize {
 /// wall-clock cap so it can never run forever.
 #[cfg(target_os = "linux")]
 pub fn command_session_reaper_sweep() {
-    let _ = command_session_manager().sweep_expired(Instant::now());
+    let _ = workspace_run_manager().sweep_expired(Instant::now());
 }
 
 /// Startup recovery (sense-2 §2.4): a previous daemon may have left ephemeral
@@ -433,7 +431,7 @@ pub fn recover_orphaned_command_sessions() {
                         workspace_mode: None,
                         metadata: Value::Null,
                     };
-                    command_session_manager().push_completed(CommandSessionCompletion {
+                    workspace_run_manager().push_completed(CommandSessionCompletion {
                         command_session_id: id.to_owned(),
                         caller_id: caller_id.to_owned(),
                         command: command.to_owned(),

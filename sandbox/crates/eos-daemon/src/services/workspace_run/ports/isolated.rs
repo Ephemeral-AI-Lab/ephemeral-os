@@ -8,14 +8,14 @@ use super::workspace_api_error;
 use serde_json::Value;
 
 use crate::response_timings::{resource_timings, timing_map};
-use crate::services::isolated_workspace::CommandHandle;
+use crate::services::workspace_run::isolated::CommandHandle;
 
-pub(in crate::services::command_session) struct DaemonIsolatedCommandPort {
+pub(in crate::services::workspace_run) struct DaemonIsolatedCommandPort {
     handle: CommandHandle,
 }
 
 impl DaemonIsolatedCommandPort {
-    pub(in crate::services::command_session) fn new(handle: CommandHandle) -> Self {
+    pub(in crate::services::workspace_run) fn new(handle: CommandHandle) -> Self {
         Self { handle }
     }
 }
@@ -55,6 +55,6 @@ impl IsolatedCommandSessionPort for DaemonIsolatedCommandPort {
     }
 
     fn record_command_audit(&self, payload: Value) {
-        crate::services::isolated_workspace::record_tool_call(&self.handle.caller_id, payload);
+        crate::services::workspace_run::isolated::record_tool_call(&self.handle.caller_id, payload);
     }
 }

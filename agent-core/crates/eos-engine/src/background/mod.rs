@@ -10,6 +10,7 @@ mod notifications;
 mod parent_exit;
 mod subagent;
 mod supervisor;
+mod workflow_poll;
 
 pub use factory::BackgroundSupervisorFactory;
 pub use handle::BackgroundSupervisorHandle;

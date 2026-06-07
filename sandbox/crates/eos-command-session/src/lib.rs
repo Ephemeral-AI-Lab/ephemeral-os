@@ -1,9 +1,14 @@
-//! Workspace-mode-agnostic command-session runtime.
+//! Command-session PTY substrate.
+//!
+//! This crate owns the per-session process/PTY/transcript machinery: spawning
+//! the runner, reaping the child into a policy-free [`ReapedCommand`], cancelling
+//! the process group, and persisting the final response. The caller-keyed
+//! workspace-run registry, the publish-vs-discard policy decision, and the
+//! completion queue live in the daemon (`eos-daemon`'s `workspace_run` service),
+//! which composes this substrate with the overlay/namespace workspace crates.
 
 mod error;
-mod manager;
 pub mod output;
-mod registry;
 mod request;
 mod response;
 mod session;
@@ -21,13 +26,17 @@ pub mod config {
 
 pub use config::CommandSessionConfig;
 pub use error::CommandSessionError;
-pub use manager::{CommandSessionManager, SweepReport};
 pub use output::tail_lines;
-pub use registry::{CommandSessionCompletion, WorkspaceRunKind};
 pub use request::{
     CancelCommandSession, CollectCompleted, ReadCommandProgress, StartCommandSession, WriteStdin,
 };
-pub use response::{CollectCompletedResponse, CommandResponse};
+pub use response::{CollectCompletedResponse, CommandResponse, CommandSessionCompletion};
+pub use session::{CommandSession, CommandSessionSpec};
+
+#[cfg(target_os = "linux")]
+pub use session::{ReapedCommand, RunningCommandSessionParts};
+#[cfg(target_os = "linux")]
+pub use wait::{wait_for_yield, CommandSessionWaitTarget, WaitOutcome};
 
 pub type DynCommandWorkspacePolicy =
     Box<dyn eos_workspace_api::CommandWorkspacePolicy + Send + Sync + 'static>;

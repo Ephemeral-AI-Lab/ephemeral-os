@@ -112,10 +112,10 @@ impl DaemonServer {
         daemon_config: &DaemonConfig,
         isolated_config: &IsolatedWorkspaceConfig,
     ) -> Self {
-        crate::services::command_session::configure_command_sessions(
+        crate::services::workspace_run::configure_command_sessions(
             &daemon_config.command_sessions,
         );
-        crate::services::isolated_workspace::configure_isolated_workspace(isolated_config);
+        crate::services::workspace_run::isolated::configure_isolated_workspace(isolated_config);
         crate::services::plugins::configure_plugin_runtime(&daemon_config.plugin);
         crate::services::occ::configure_layer_stack(&daemon_config.layer_stack);
         Self {
@@ -172,7 +172,7 @@ impl DaemonServer {
                     tokio::select! {
                         () = shutdown.cancelled() => break,
                         () = tokio::time::sleep(Duration::from_millis(sweep_interval_ms)) => {
-                            let _ = tokio::task::spawn_blocking(crate::services::isolated_workspace::ttl_sweep).await;
+                            let _ = tokio::task::spawn_blocking(crate::services::workspace_run::isolated::ttl_sweep).await;
                         }
                     }
                 }
@@ -188,7 +188,7 @@ impl DaemonServer {
                         () = shutdown.cancelled() => break,
                         () = tokio::time::sleep(Duration::from_millis(50)) => {
                             let _ = tokio::task::spawn_blocking(
-                                crate::services::command_session::command_session_reaper_sweep,
+                                crate::services::workspace_run::command_session_reaper_sweep,
                             )
                             .await;
                         }
@@ -197,7 +197,7 @@ impl DaemonServer {
             })
         };
         // Reap stale command sessions left by a prior daemon, before accepting.
-        crate::services::command_session::recover_orphaned_command_sessions();
+        crate::services::workspace_run::recover_orphaned_command_sessions();
 
         if let Some(parent) = server.config.socket_path.parent() {
             tokio::fs::create_dir_all(parent).await?;
