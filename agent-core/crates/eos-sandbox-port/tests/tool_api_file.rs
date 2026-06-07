@@ -5,9 +5,9 @@ use std::sync::Mutex;
 
 use async_trait::async_trait;
 use eos_sandbox_port::{
-    edit_file, read_file, write_file, DaemonOp, EditFileRequest, ReadFileRequest,
-    SandboxPortError, SandboxRequestBase, SandboxTransport, SearchReplaceEdit, WriteFileRequest,
-    EDIT_FILE_TIMEOUT_S, READ_FILE_TIMEOUT_S, WRITE_FILE_TIMEOUT_S,
+    edit_file, read_file, write_file, DaemonOp, EditFileRequest, ReadFileRequest, SandboxPortError,
+    SandboxRequestBase, SandboxTransport, SearchReplaceEdit, WriteFileRequest, EDIT_FILE_TIMEOUT_S,
+    READ_FILE_TIMEOUT_S, WRITE_FILE_TIMEOUT_S,
 };
 use eos_types::{JsonObject, SandboxId};
 use serde_json::{json, Value};
@@ -177,7 +177,10 @@ async fn edit_file_builds_payload_and_maps_conflict_to_ok_result() {
     assert!(!result.base.success);
     assert_eq!(result.status, "aborted_overlap");
     assert_eq!(result.base.changed_paths, vec!["a.txt"]);
-    assert_eq!(result.base.conflict_reason.as_deref(), Some("anchor not found"));
+    assert_eq!(
+        result.base.conflict_reason.as_deref(),
+        Some("anchor not found")
+    );
     let conflict = result.base.conflict.expect("conflict");
     assert_eq!(conflict.conflict_file.as_deref(), Some("a.txt"));
     let calls = transport.calls();

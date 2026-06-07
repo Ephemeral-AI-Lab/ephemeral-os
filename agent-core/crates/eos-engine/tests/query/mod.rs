@@ -9,8 +9,8 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use eos_engine::{
-    run_query, EngineError, EngineStream, EventSource, NotificationService,
-    PromptReportRecorder, QueryContext, QueryExitReason, QueryStream, StreamEvent,
+    run_query, EngineError, EngineStream, EventSource, NotificationService, PromptReportRecorder,
+    QueryContext, QueryExitReason, QueryStream, StreamEvent,
 };
 use eos_llm_client::{ContentBlock, LlmRequest, Message, ToolSpec};
 use eos_testkit::{metadata, run_until, tool_use_turn, ScriptedSource};
@@ -199,7 +199,11 @@ async fn run_query_dispatches_non_terminal_tool_and_appends_result_message() {
         canned_tool(ToolName::SubmitRootOutcome, true, ToolResult::ok("done"));
     let source = Arc::new(ScriptedSource::new(vec![
         tool_use_turn("toolu_read", "read_file", json!({"path": "README.md"})),
-        tool_use_turn("toolu_stop", "submit_root_outcome", json!({"summary": "done"})),
+        tool_use_turn(
+            "toolu_stop",
+            "submit_root_outcome",
+            json!({"summary": "done"}),
+        ),
     ]));
     let mut ctx = ctx(
         source,
@@ -250,12 +254,7 @@ async fn run_query_sets_tool_stop_after_terminal_success() {
         .terminal_result
         .as_ref()
         .is_some_and(|result| result.is_terminal));
-    assert!(saw_completed(
-        &events,
-        "submit_root_outcome",
-        "done",
-        true
-    ));
+    assert!(saw_completed(&events, "submit_root_outcome", "done", true));
     assert!(transcript_has_tool_result(
         &messages,
         "toolu_stop",
@@ -266,8 +265,11 @@ async fn run_query_sets_tool_stop_after_terminal_success() {
 
 #[tokio::test]
 async fn run_query_terminal_tool_error_does_not_set_tool_stop() {
-    let (submit_root, calls) =
-        canned_tool(ToolName::SubmitRootOutcome, true, ToolResult::error("validation failed"));
+    let (submit_root, calls) = canned_tool(
+        ToolName::SubmitRootOutcome,
+        true,
+        ToolResult::error("validation failed"),
+    );
     let source = Arc::new(ScriptedSource::new(vec![tool_use_turn(
         "toolu_stop",
         "submit_root_outcome",
@@ -351,7 +353,9 @@ async fn run_query_records_prompt_report_for_request_assistant_and_tool_results(
         .await
         .expect("query drains");
 
-    let raw = tokio::fs::read_to_string(path).await.expect("read prompt report");
+    let raw = tokio::fs::read_to_string(path)
+        .await
+        .expect("read prompt report");
     let lines: Vec<Value> = raw
         .lines()
         .map(|line| serde_json::from_str(line).expect("valid json"))

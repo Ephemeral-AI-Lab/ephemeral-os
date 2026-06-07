@@ -711,3 +711,202 @@ async fn read_side_list_apis() {
         .expect("none")
         .is_none());
 }
+
+// Store mutators on a missing row: the contract distinguishes a "row absent"
+// NotFound error from the conditional-update no-op (`Ok(None)`). Every prior
+// assertion ran against rows that exist, so these arms were unguarded.
+#[tokio::test]
+async fn store_mutators_distinguish_missing_and_mismatch() {
+    let (_dir, db) = open_temp().await;
+    let requests = db.requests();
+    let tasks = db.tasks();
+    let workflows = db.workflows();
+    let iterations = db.iterations();
+    let attempts = db.attempts();
+    let agent_runs = db.agent_runs();
+
+    // finish_request on a nonexistent request is a benign Ok(None), not an error.
+    assert!(requests
+        .finish_request(&rid("ghost-req"), RequestStatus::Done)
+        .await
+        .expect("finish missing request is Ok(None)")
+        .is_none());
+    // set_root_task_id requires the request to exist.
+    let err = requests
+        .set_root_task_id(&rid("ghost-req"), &tid("root"))
+        .await
+        .expect_err("missing request is rejected");
+    assert!(err.to_string().contains("not found in requests"), "{err}");
+
+    // The set_task_status_if_current missing-vs-mismatch split: a wrong expected
+    // status on an existing row is Ok(None) (a no-op); an absent row is NotFound.
+    let req = rid("req-nf");
+    requests
+        .create_request(&req, "/w", None, "p")
+        .await
+        .expect("request");
+    tasks
+        .insert_task(&sample_task("t-nf", &req, "do"))
+        .await
+        .expect("task");
+    assert!(
+        tasks
+            .set_task_status_if_current(
+                &tid("t-nf"),
+                TaskStatus::Running, // wrong expected (row is Pending)
+                TaskStatus::Done,
+                None,
+                None,
+            )
+            .await
+            .expect("status mismatch is Ok(None)")
+            .is_none(),
+        "an existing row with a mismatched expected status is a no-op"
+    );
+    let err = tasks
+        .set_task_status_if_current(
+            &tid("ghost-task"),
+            TaskStatus::Pending,
+            TaskStatus::Running,
+            None,
+            None,
+        )
+        .await
+        .expect_err("missing task is rejected");
+    assert!(err.to_string().contains("not found in tasks"), "{err}");
+
+    // Workflow / iteration / attempt mutators on an absent row are NotFound.
+    let wf_missing: eos_state::WorkflowId = "ghost-wf".parse().expect("wf id");
+    assert!(workflows
+        .set_status(&wf_missing, WorkflowStatus::Succeeded, None, None)
+        .await
+        .expect_err("missing workflow")
+        .to_string()
+        .contains("not found in workflows"));
+    assert!(workflows
+        .append_iteration_id(&wf_missing, &"i".parse::<eos_state::IterationId>().expect("it id"))
+        .await
+        .is_err());
+
+    let it_missing: eos_state::IterationId = "ghost-it".parse().expect("it id");
+    assert!(iterations
+        .close_succeeded(&it_missing, "[]", None)
+        .await
+        .expect_err("missing iteration")
+        .to_string()
+        .contains("not found in iterations"));
+    assert!(iterations
+        .set_deferred_goal_for_next_iteration(&it_missing, None)
+        .await
+        .is_err());
+
+    let att_missing: eos_state::AttemptId = "ghost-att".parse().expect("att id");
+    assert!(attempts
+        .close(
+            &att_missing,
+            AttemptClosure::Passed {
+                outcomes: Vec::new(),
+                closed_at: UtcDateTime::now(),
+            },
+        )
+        .await
+        .expect_err("missing attempt")
+        .to_string()
+        .contains("not found in attempts"));
+    assert!(attempts
+        .record_planner_task(&att_missing, &tid("p"))
+        .await
+        .is_err());
+
+    // finish_run on a missing run is Ok(None) (mirrors finish_request).
+    assert!(agent_runs
+        .finish_run(
+            &"ghost-run".parse::<eos_state::AgentRunId>().expect("run id"),
+            None,
+            None,
+            0,
+            None,
+        )
+        .await
+        .expect("finish missing run is Ok(None)")
+        .is_none());
+}
+
+// A passed attempt round-trips through the store: close as Passed, then a fresh
+// SELECT reconstructs the Passed closure via row_to_attempt. Prior tests only
+// ever closed Failed, leaving the success-path reconstruction unexercised.
+#[tokio::test]
+async fn attempt_passed_closure_roundtrips_through_store() {
+    let (_dir, db) = open_temp().await;
+    let requests = db.requests();
+    let workflows = db.workflows();
+    let iterations = db.iterations();
+    let attempts = db.attempts();
+    let id = rid("req-pass");
+    requests
+        .create_request(&id, "/w", None, "p")
+        .await
+        .expect("create");
+    let wf = workflows
+        .insert(&id, &tid("p-pass"), "goal")
+        .await
+        .expect("wf");
+    let it = iterations
+        .insert(
+            &wf.id,
+            0,
+            IterationCreationReason::Initial,
+            "g",
+            AttemptBudget::try_from_u32(3).expect("budget"),
+        )
+        .await
+        .expect("it");
+    let att = attempts.insert(&it.id, &wf.id, 0).await.expect("insert");
+    attempts
+        .record_planner_task(&att.id, &tid("planner-p"))
+        .await
+        .expect("planner");
+    attempts
+        .record_plan(
+            &att.id,
+            &MaterializedPlan {
+                planner_task_id: tid("planner-p"),
+                disposition: PlanDisposition::Complete,
+                generator_task_ids: vec![tid("g1")],
+                reducer_task_ids: vec![tid("r1")],
+            },
+        )
+        .await
+        .expect("plan");
+
+    let outcomes = vec![ExecutionTaskOutcome {
+        status: eos_state::TaskOutcomeStatus::Success,
+        role: ExecutionRole::Reducer,
+        task_id: tid("r1"),
+        outcome: "shipped".to_owned(),
+    }];
+    let closed = attempts
+        .close(
+            &att.id,
+            AttemptClosure::Passed {
+                outcomes: outcomes.clone(),
+                closed_at: UtcDateTime::now(),
+            },
+        )
+        .await
+        .expect("close passed");
+    assert_eq!(closed.stage(), AttemptStage::Closed);
+    assert_eq!(closed.status(), AttemptStatus::Passed);
+    assert_eq!(closed.fail_reason(), None); // Passed carries no fail_reason
+    assert_eq!(closed.outcomes(), outcomes);
+
+    // Fresh SELECT -> row_to_attempt reconstructs the Passed closure end-to-end.
+    let reloaded = attempts
+        .get(&att.id)
+        .await
+        .expect("get")
+        .expect("present");
+    assert_eq!(reloaded.status(), AttemptStatus::Passed);
+    assert_eq!(reloaded.fail_reason(), None);
+    assert_eq!(reloaded.outcomes(), outcomes);
+}

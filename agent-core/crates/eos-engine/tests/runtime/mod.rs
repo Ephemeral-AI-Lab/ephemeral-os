@@ -15,12 +15,14 @@ use eos_engine::{
 use eos_llm_client::{LlmClient, LlmRequest, LlmStream, ProviderError, ToolSpec};
 use eos_skills::SkillRegistry;
 use eos_state::{AgentRun, AgentRunStore, CoreError, Sealed, TaskId, UtcDateTime};
-use eos_testkit::{agent_def, factory_from, metadata, test_tools_root, tool_use_turn, FakeTransport};
+use eos_testkit::{
+    agent_def, factory_from, metadata, test_tools_root, tool_use_turn, FakeTransport,
+};
 use eos_tools::{
     BackgroundInflightReport, BackgroundSupervisorPort, ExecutionMetadata, OutputShape,
-    RegisteredTool, SandboxToolService, SkillToolService, StartedSubagent, StartedWorkflowHandle,
-    SpawnedSubagent, ToolConfigSet, ToolError, ToolExecutor, ToolIntent, ToolName, ToolRegistry,
-    ToolResult, WorkflowControlPort,
+    RegisteredTool, SandboxToolService, SkillToolService, SpawnedSubagent, StartedSubagent,
+    StartedWorkflowHandle, ToolConfigSet, ToolError, ToolExecutor, ToolIntent, ToolName,
+    ToolRegistry, ToolResult, WorkflowControlPort,
 };
 use eos_types::{AgentRunId, JsonObject, SubagentSessionId, WorkflowSessionId};
 use serde_json::json;
@@ -278,12 +280,7 @@ impl BackgroundSupervisorPort for RecordingBackgroundSupervisor {
 }
 
 fn root_agent() -> AgentDefinition {
-    agent_def(
-        "root",
-        AgentRole::Root,
-        &[],
-        &["submit_root_outcome"],
-    )
+    agent_def("root", AgentRole::Root, &[], &["submit_root_outcome"])
 }
 
 fn unknown_tool_agent() -> AgentDefinition {
@@ -362,7 +359,11 @@ fn input(
     }
 }
 
-async fn run_root_success(harness: &Harness, agent_run_id: AgentRunId, task_id: TaskId) -> AgentRunResult {
+async fn run_root_success(
+    harness: &Harness,
+    agent_run_id: AgentRunId,
+    task_id: TaskId,
+) -> AgentRunResult {
     run_agent(
         &harness.handles,
         input(root_agent(), agent_run_id, task_id, "req_runtime", None),
@@ -390,16 +391,17 @@ async fn run_agent_finishes_agent_run_on_setup_error() {
     let agent = unknown_tool_agent();
     let agent_run_id: AgentRunId = "run_setup_error".parse().expect("run id");
     let task_id: TaskId = "task_setup_error".parse().expect("task id");
-    let harness = handles(
-        vec![agent.clone()],
-        factory_from(Vec::new()),
-        None,
-        None,
-    );
+    let harness = handles(vec![agent.clone()], factory_from(Vec::new()), None, None);
 
     let result = run_agent(
         &harness.handles,
-        input(agent, agent_run_id.clone(), task_id.clone(), "req_setup_error", None),
+        input(
+            agent,
+            agent_run_id.clone(),
+            task_id.clone(),
+            "req_setup_error",
+            None,
+        ),
         None,
     )
     .await;
@@ -450,11 +452,7 @@ async fn run_agent_finishes_message_record_completed_on_success() {
         .as_ref()
         .is_some_and(|result| result.is_terminal));
     assert_eq!(
-        node_finish_status(
-            harness.records.as_ref().expect("records"),
-            &agent_run_id
-        )
-        .await,
+        node_finish_status(harness.records.as_ref().expect("records"), &agent_run_id).await,
         "completed"
     );
 }
@@ -474,7 +472,13 @@ async fn run_agent_finishes_message_record_failed_on_stream_error() {
 
     let result = run_agent(
         &harness.handles,
-        input(root_agent(), agent_run_id.clone(), task_id, "req_record_failed", None),
+        input(
+            root_agent(),
+            agent_run_id.clone(),
+            task_id,
+            "req_record_failed",
+            None,
+        ),
         None,
     )
     .await;
@@ -484,11 +488,7 @@ async fn run_agent_finishes_message_record_failed_on_stream_error() {
         .as_deref()
         .is_some_and(|error| error.contains("provider stream ended without assistant completion")));
     assert_eq!(
-        node_finish_status(
-            harness.records.as_ref().expect("records"),
-            &agent_run_id
-        )
-        .await,
+        node_finish_status(harness.records.as_ref().expect("records"), &agent_run_id).await,
         "failed"
     );
 }
