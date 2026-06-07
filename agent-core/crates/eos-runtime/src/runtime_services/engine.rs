@@ -1,7 +1,9 @@
 //! Engine/provider service group.
 
 use std::sync::Arc;
+use std::time::Duration;
 
+use eos_config::RuntimeConfig;
 use eos_llm_client::LlmClient;
 
 use super::EventSourceFactory;
@@ -11,6 +13,16 @@ use super::EventSourceFactory;
 pub(crate) struct EngineService {
     pub(crate) llm_client: Arc<dyn LlmClient>,
     pub(crate) event_source_factory: Option<EventSourceFactory>,
+    pub(crate) runtime_config: RuntimeConfig,
+}
+
+impl EngineService {
+    pub(crate) fn command_session_completion_poll_interval(&self) -> Duration {
+        Duration::from_millis(
+            self.runtime_config
+                .command_session_completion_poll_interval_ms,
+        )
+    }
 }
 
 impl std::fmt::Debug for EngineService {
@@ -19,6 +31,12 @@ impl std::fmt::Debug for EngineService {
             .field(
                 "has_event_source_factory",
                 &self.event_source_factory.is_some(),
+            )
+            .field(
+                "command_session_completion_poll_interval_ms",
+                &self
+                    .runtime_config
+                    .command_session_completion_poll_interval_ms,
             )
             .finish_non_exhaustive()
     }

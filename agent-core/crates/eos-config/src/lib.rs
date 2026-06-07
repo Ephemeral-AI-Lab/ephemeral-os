@@ -30,7 +30,7 @@ mod markdown;
 pub use configs::{
     AnthropicApiConfig, AttemptConfig, ClaudeCodingPlanConfig, CodexCodingPlanConfig,
     DatabaseConfig, DatabaseUrl, ModelRegistrationConfig, ModelsConfig, OpenAiApiConfig,
-    ProviderKind, ProvidersConfig, RetryConfig, SecretConfigValue, WorkflowConfig,
+    ProviderKind, ProvidersConfig, RetryConfig, RuntimeConfig, SecretConfigValue, WorkflowConfig,
     DEFAULT_SQLITE_DATABASE_URL, DEFAULT_WORKFLOW_MAX_DEPTH,
 };
 pub use document::ConfigDocument;

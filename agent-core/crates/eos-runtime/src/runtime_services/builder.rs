@@ -13,7 +13,7 @@ use eos_agent_message_records::AgentMessageRecords;
 use eos_audit::{AuditSink, BufferedAuditShutdown, BufferedJsonlSink, NoopAuditSink};
 use eos_config::{
     DatabaseConfig, DatabaseUrl, ModelRegistrationConfig, ModelsConfig, ProviderKind,
-    ProvidersConfig, SecretConfigValue, WorkflowConfig,
+    ProvidersConfig, RuntimeConfig, SecretConfigValue, WorkflowConfig,
 };
 use eos_db::Database;
 use eos_llm_client::{
@@ -102,6 +102,7 @@ pub struct RuntimeServicesBuilder {
     llm_client: Option<Arc<dyn LlmClient>>,
     providers_config: Option<ProvidersConfig>,
     workflow_config: Option<WorkflowConfig>,
+    runtime_config: Option<RuntimeConfig>,
     event_source_factory: Option<EventSourceFactory>,
     audit: Option<Arc<dyn AuditSink>>,
     audit_path: Option<PathBuf>,
@@ -146,6 +147,12 @@ impl RuntimeServicesBuilder {
     /// tunables.
     pub fn workflow_config(mut self, config: WorkflowConfig) -> Self {
         self.workflow_config = Some(config);
+        self
+    }
+
+    /// Inject runtime config used to wire runtime-local background tunables.
+    pub fn runtime_config(mut self, config: RuntimeConfig) -> Self {
+        self.runtime_config = Some(config);
         self
     }
 
@@ -253,6 +260,16 @@ impl RuntimeServicesBuilder {
             .validate()
             .context("validating workflow config")?;
 
+        let runtime_config = match self.runtime_config {
+            Some(config) => config,
+            None => config_doc
+                .section::<RuntimeConfig>("runtime")
+                .context("loading runtime config")?,
+        };
+        runtime_config
+            .validate()
+            .context("validating runtime config")?;
+
         let providers_config = match self.providers_config {
             Some(config) => config,
             None => config_doc
@@ -345,6 +362,7 @@ impl RuntimeServicesBuilder {
             engine: EngineService {
                 llm_client,
                 event_source_factory: self.event_source_factory,
+                runtime_config,
             },
             sandbox: SandboxService {
                 transport,

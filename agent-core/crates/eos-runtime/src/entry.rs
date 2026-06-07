@@ -125,6 +125,7 @@ pub async fn run_request(
         supervisor.inner(),
         notification_sink,
         services.sandbox.transport.clone(),
+        services.engine.command_session_completion_poll_interval(),
     );
     let iteration_coordinators = Arc::new(OpenIterationCoordinatorRegistry::new());
     let orchestrator_registry = Arc::new(AttemptOrchestratorRegistry::new());

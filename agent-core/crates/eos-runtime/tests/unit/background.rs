@@ -15,6 +15,7 @@ mod command_session_delivery {
 
     use async_trait::async_trait;
     use eos_agent_def::{AgentRegistry, AgentRole};
+    use eos_config::RuntimeConfig;
     use eos_engine::{EngineError, EngineStream, EventSource, StreamEvent};
     use eos_llm_client::{ContentBlock, LlmRequest};
     use eos_sandbox_port::{DaemonOp, SandboxPortError, SandboxTransport};
@@ -129,9 +130,6 @@ mod command_session_delivery {
 
     #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
     async fn backgrounded_completion_lands_as_system_notification() {
-        // A fast heartbeat keeps the test sub-second instead of waiting ~1 s.
-        std::env::set_var("EOS_COMMAND_HEARTBEAT_MS", "20");
-
         let mut root = agent_def(
             "root",
             AgentRole::Root,
@@ -184,6 +182,7 @@ mod command_session_delivery {
             )))
             .agent_registry(Arc::new(registry))
             .event_source_factory(factory)
+            .runtime_config(RuntimeConfig::new(20))
             .build()
             .await
             .expect("build state");

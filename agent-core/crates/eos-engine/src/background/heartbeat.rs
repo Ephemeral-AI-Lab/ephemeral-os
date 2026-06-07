@@ -22,16 +22,6 @@ use tokio::time::sleep;
 
 use super::supervisor::BackgroundTaskSupervisor;
 
-/// Heartbeat poll interval; `EOS_COMMAND_HEARTBEAT_MS` overrides the ~1 s default.
-fn heartbeat_interval() -> Duration {
-    let ms = std::env::var("EOS_COMMAND_HEARTBEAT_MS")
-        .ok()
-        .and_then(|value| value.parse::<u64>().ok())
-        .filter(|value| *value > 0)
-        .unwrap_or(1000);
-    Duration::from_millis(ms)
-}
-
 /// Spawn the per-request command-completion heartbeat. The returned handle is
 /// owned by the request entry and aborted at request teardown.
 #[must_use]
@@ -39,13 +29,9 @@ pub fn spawn_command_completion_heartbeat(
     supervisor: Arc<Mutex<BackgroundTaskSupervisor>>,
     sink: Arc<dyn NotificationSink>,
     transport: Arc<dyn SandboxTransport>,
+    interval: Duration,
 ) -> JoinHandle<()> {
-    spawn_command_completion_heartbeat_with_interval(
-        supervisor,
-        sink,
-        transport,
-        heartbeat_interval(),
-    )
+    spawn_command_completion_heartbeat_with_interval(supervisor, sink, transport, interval)
 }
 
 fn spawn_command_completion_heartbeat_with_interval(
