@@ -16,7 +16,7 @@ use eos_types::{AgentRunId, TaskId};
 use crate::background::BackgroundSessionFactory;
 use crate::notifications::NotificationService;
 
-use super::control::{AgentRunControl, AgentRunControlParts, AgentRunPersistence};
+use super::control::{AgentRunControl, AgentRunControlParts};
 use super::foreground::ForegroundExecutorFactory;
 
 /// Request-scoped, cloneable factory for per-agent-run [`AgentRunControl`]s.
@@ -47,32 +47,24 @@ impl AgentRunControlFactory {
         }
     }
 
-    /// Build a control for a task-backed root or workflow-agent run. The run owns
-    /// a durable `agent_run` completion obligation.
+    /// Build a control for a durable agent run. Root and workflow runs carry a
+    /// task id; subagent runs are persisted with no owning task.
     #[must_use]
-    pub fn persisted(&self, agent_run_id: AgentRunId, task_id: TaskId) -> Arc<AgentRunControl> {
-        self.build(agent_run_id, AgentRunPersistence::Persisted { task_id })
-    }
-
-    /// Build a control for a live-only subagent / helper run that still needs
-    /// local cancellation, background cleanup, and message-record finalization,
-    /// but must not create or finish an `agent_run` row.
-    #[must_use]
-    pub fn ephemeral(&self, agent_run_id: AgentRunId) -> Arc<AgentRunControl> {
-        self.build(agent_run_id, AgentRunPersistence::Ephemeral)
+    pub fn persisted(
+        &self,
+        agent_run_id: AgentRunId,
+        task_id: Option<TaskId>,
+    ) -> Arc<AgentRunControl> {
+        self.build(agent_run_id, task_id)
     }
 
     /// Must be called within a Tokio runtime: it spawns the run's
     /// completion monitors.
-    fn build(
-        &self,
-        agent_run_id: AgentRunId,
-        persistence: AgentRunPersistence,
-    ) -> Arc<AgentRunControl> {
+    fn build(&self, agent_run_id: AgentRunId, task_id: Option<TaskId>) -> Arc<AgentRunControl> {
         let notifications = NotificationService::new();
         let foreground = Arc::new(self.foreground.create(agent_run_id.clone()));
         // The background service carries a clone of this factory so its `spawn` can mint each
-        // subagent its own ephemeral control (spec §8.1/§11.3). This is value
+        // subagent its own run control (spec §8.1/§11.3). This is value
         // capability only — the factory holds no `AgentRunControl`, so there is
         // no reference cycle. The command manager's monitor emits completions
         // against `notifications` internally.
@@ -81,7 +73,7 @@ impl AgentRunControlFactory {
                 .create(agent_run_id.clone(), notifications.clone(), self.clone());
         Arc::new(AgentRunControl::assemble(AgentRunControlParts {
             agent_run_id,
-            persistence,
+            task_id,
             agent_run_store: self.background.agent_run_store(),
             foreground,
             notifications,

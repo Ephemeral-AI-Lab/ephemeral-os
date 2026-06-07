@@ -64,7 +64,7 @@
   <code class="signature">pub struct <a class="symbol-link" href="eos-tools--src-runtime-executor-rs.html#item-struct-RegisteredTool-36">RegisteredTool</a></code>
   <p class="docstring">An executor bundled with its static metadata. Built once at composition;<br>stored in the immutable [`ToolRegistry`](crate::ToolRegistry).</p>
   <div class="tags"><span>derive: Clone</span></div>
-  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>name</td><td><code><a class="symbol-link" href="eos-tools--src-core-name-rs.html#item-struct-ToolKey-139">ToolKey</a></code></td></tr><tr><td>pub</td><td>intent</td><td><code><a class="symbol-link" href="eos-tools--src-core-intent-rs.html#item-enum-ToolIntent-14">ToolIntent</a></code></td></tr><tr><td>pub</td><td>is_terminal</td><td><code>bool</code></td></tr><tr><td>pub</td><td>spec</td><td><code>ToolSpec</code></td></tr><tr><td>pub</td><td>hooks</td><td><code>Vec &lt; <a class="symbol-link" href="eos-tools--src-hooks-mod-rs.html#item-enum-Hook-31">Hook</a> &gt;</code></td></tr><tr><td>pub(crate)</td><td>hook_services</td><td><code>Arc &lt; <a class="symbol-link" href="eos-tools--src-tools-services-rs.html#item-struct-HookServices-143">HookServices</a> &gt;</code></td></tr><tr><td>pub(crate)</td><td>output</td><td><code><a class="symbol-link" href="eos-tools--src-core-result-rs.html#item-enum-OutputShape-68">OutputShape</a></code></td></tr><tr><td>pub(crate)</td><td>executor</td><td><code>Arc &lt; dyn <a class="symbol-link" href="eos-tools--src-runtime-executor-rs.html#item-trait-ToolExecutor-18">ToolExecutor</a> &gt;</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-71"><td>constructor</td><td>new</td><td><code>pub fn <a class="symbol-link" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a> (name : impl Into &lt; <a class="symbol-link" href="eos-tools--src-core-name-rs.html#item-struct-ToolKey-139">ToolKey</a> &gt; , intent : <a class="symbol-link" href="eos-tools--src-core-intent-rs.html#item-enum-ToolIntent-14">ToolIntent</a> , is_terminal : bool , spec : ToolSpec , output : <a class="symbol-link" href="eos-tools--src-core-result-rs.html#item-enum-OutputShape-68">OutputShape</a> , executor : Arc &lt; dyn <a class="symbol-link" href="eos-tools--src-runtime-executor-rs.html#item-trait-ToolExecutor-18">ToolExecutor</a> &gt; ,) -&gt; Self</code><p class="docstring">Build a registered tool with no hooks.</p><details class="function-source">
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>name</td><td><code><a class="symbol-link" href="eos-tools--src-core-name-rs.html#item-struct-ToolKey-139">ToolKey</a></code></td></tr><tr><td>pub</td><td>intent</td><td><code><a class="symbol-link" href="eos-tools--src-core-intent-rs.html#item-enum-ToolIntent-14">ToolIntent</a></code></td></tr><tr><td>pub</td><td>is_terminal</td><td><code>bool</code></td></tr><tr><td>pub</td><td>spec</td><td><code>ToolSpec</code></td></tr><tr><td>pub</td><td>hooks</td><td><code>Vec &lt; <a class="symbol-link" href="eos-tools--src-hooks-mod-rs.html#item-enum-Hook-31">Hook</a> &gt;</code></td></tr><tr><td>pub(crate)</td><td>hook_services</td><td><code>Arc &lt; <a class="symbol-link" href="eos-tools--src-tools-services-rs.html#item-struct-HookServices-142">HookServices</a> &gt;</code></td></tr><tr><td>pub(crate)</td><td>output</td><td><code><a class="symbol-link" href="eos-tools--src-core-result-rs.html#item-enum-OutputShape-68">OutputShape</a></code></td></tr><tr><td>pub(crate)</td><td>executor</td><td><code>Arc &lt; dyn <a class="symbol-link" href="eos-tools--src-runtime-executor-rs.html#item-trait-ToolExecutor-18">ToolExecutor</a> &gt;</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-71"><td>constructor</td><td>new</td><td><code>pub fn <a class="symbol-link" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a> (name : impl Into &lt; <a class="symbol-link" href="eos-tools--src-core-name-rs.html#item-struct-ToolKey-139">ToolKey</a> &gt; , intent : <a class="symbol-link" href="eos-tools--src-core-intent-rs.html#item-enum-ToolIntent-14">ToolIntent</a> , is_terminal : bool , spec : ToolSpec , output : <a class="symbol-link" href="eos-tools--src-core-result-rs.html#item-enum-OutputShape-68">OutputShape</a> , executor : Arc &lt; dyn <a class="symbol-link" href="eos-tools--src-runtime-executor-rs.html#item-trait-ToolExecutor-18">ToolExecutor</a> &gt; ,) -&gt; Self</code><p class="docstring">Build a registered tool with no hooks.</p><details class="function-source">
   <summary>code</summary>
   <pre><code>    <span class="rs-comment">/// Build a registered tool with no hooks.</span>
     #[must_use]
@@ -82,7 +82,7 @@
             is_terminal,
             spec,
             hooks: <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(),
-            hook_services: <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(<a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-HookServices-143">HookServices</a>::default()),
+            hook_services: <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(<a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-HookServices-142">HookServices</a>::default()),
             output,
             executor,
         }
@@ -97,11 +97,11 @@
         <span class="rs-self">self</span>
     }
 </code></pre>
-</details></td></tr><tr id="method-with-hook-services-100"><td>method</td><td>with_hook_services</td><td><code>pub fn <a class="symbol-link" href="eos-tools--src-runtime-executor-rs.html#method-with-hook-services-100">with_hook_services</a> (mut self , services : Arc &lt; <a class="symbol-link" href="eos-tools--src-tools-services-rs.html#item-struct-HookServices-143">HookServices</a> &gt;) -&gt; Self</code><p class="docstring">Attach stateful hook dependencies.</p><details class="function-source">
+</details></td></tr><tr id="method-with-hook-services-100"><td>method</td><td>with_hook_services</td><td><code>pub fn <a class="symbol-link" href="eos-tools--src-runtime-executor-rs.html#method-with-hook-services-100">with_hook_services</a> (mut self , services : Arc &lt; <a class="symbol-link" href="eos-tools--src-tools-services-rs.html#item-struct-HookServices-142">HookServices</a> &gt;) -&gt; Self</code><p class="docstring">Attach stateful hook dependencies.</p><details class="function-source">
   <summary>code</summary>
   <pre><code>    <span class="rs-comment">/// Attach stateful hook dependencies.</span>
     #[must_use]
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-runtime-executor-rs.html#method-with-hook-services-100">with_hook_services</a>(<span class="rs-kw">mut</span> <span class="rs-self">self</span>, services: <span class="rs-type">Arc</span>&lt;<a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-HookServices-143">HookServices</a>&gt;) -&gt; <span class="rs-self">Self</span> {
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-runtime-executor-rs.html#method-with-hook-services-100">with_hook_services</a>(<span class="rs-kw">mut</span> <span class="rs-self">self</span>, services: <span class="rs-type">Arc</span>&lt;<a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-HookServices-142">HookServices</a>&gt;) -&gt; <span class="rs-self">Self</span> {
         <span class="rs-self">self</span>.hook_services = services;
         <span class="rs-self">self</span>
     }
@@ -179,7 +179,7 @@
 <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::core::name::<a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-struct-ToolKey-139">ToolKey</a>;
 <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::core::result::{<a class="symbol-link rs-type" href="eos-tools--src-core-result-rs.html#item-enum-OutputShape-68">OutputShape</a>, <a class="symbol-link rs-type" href="eos-tools--src-core-result-rs.html#item-struct-ToolResult-12">ToolResult</a>};
 <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::hooks::<a class="symbol-link rs-type" href="eos-tools--src-hooks-mod-rs.html#item-enum-Hook-31">Hook</a>;
-<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::tools::<a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-HookServices-143">HookServices</a>;
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::tools::<a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-HookServices-142">HookServices</a>;
 
 <span class="rs-comment">/// Execute against already-parsed, hook-validated input.</span>
 <span class="rs-comment">///</span>
@@ -214,7 +214,7 @@
     <span class="rs-comment">/// The pre-hooks run before the body, in order.</span>
     <span class="rs-kw">pub</span> hooks: <span class="rs-type">Vec</span>&lt;<a class="symbol-link rs-type" href="eos-tools--src-hooks-mod-rs.html#item-enum-Hook-31">Hook</a>&gt;,
     <span class="rs-comment">/// Dependencies available to stateful pre-hooks.</span>
-    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) hook_services: <span class="rs-type">Arc</span>&lt;<a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-HookServices-143">HookServices</a>&gt;,
+    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) hook_services: <span class="rs-type">Arc</span>&lt;<a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-HookServices-142">HookServices</a>&gt;,
     <span class="rs-comment">/// The declared output shape the pipeline validates against.</span>
     <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) output: <a class="symbol-link rs-type" href="eos-tools--src-core-result-rs.html#item-enum-OutputShape-68">OutputShape</a>,
     <span class="rs-comment">/// The executor implementation.</span>
@@ -250,7 +250,7 @@
             is_terminal,
             spec,
             hooks: <span class="rs-type">Vec</span>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(),
-            hook_services: <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(<a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-HookServices-143">HookServices</a>::default()),
+            hook_services: <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(<a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-HookServices-142">HookServices</a>::default()),
             output,
             executor,
         }
@@ -265,7 +265,7 @@
 
     <span class="rs-comment">/// Attach stateful hook dependencies.</span>
     #[must_use]
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-runtime-executor-rs.html#method-with-hook-services-100">with_hook_services</a>(<span class="rs-kw">mut</span> <span class="rs-self">self</span>, services: <span class="rs-type">Arc</span>&lt;<a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-HookServices-143">HookServices</a>&gt;) -&gt; <span class="rs-self">Self</span> {
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-runtime-executor-rs.html#method-with-hook-services-100">with_hook_services</a>(<span class="rs-kw">mut</span> <span class="rs-self">self</span>, services: <span class="rs-type">Arc</span>&lt;<a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-HookServices-142">HookServices</a>&gt;) -&gt; <span class="rs-self">Self</span> {
         <span class="rs-self">self</span>.hook_services = services;
         <span class="rs-self">self</span>
     }

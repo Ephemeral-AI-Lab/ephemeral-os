@@ -72,11 +72,11 @@
         <span class="rs-self">Self</span>::default()
     }
 </code></pre>
-</details></td></tr><tr id="method-register-32"><td>method</td><td>register</td><td><code>pub fn <a class="symbol-link" href="eos-tools--src-ports-mod-rs.html#method-register-408">register</a> (&amp; mut self , tool : <a class="symbol-link" href="eos-tools--src-runtime-executor-rs.html#item-struct-RegisteredTool-36">RegisteredTool</a>)</code><p class="docstring">Register a tool. Re-registering a name replaces it **in place** (keeping<br>its position), mirroring the Rust dict assignment.</p><details class="function-source">
+</details></td></tr><tr id="method-register-32"><td>method</td><td>register</td><td><code>pub fn <a class="symbol-link" href="eos-tools--src-ports-mod-rs.html#method-register-407">register</a> (&amp; mut self , tool : <a class="symbol-link" href="eos-tools--src-runtime-executor-rs.html#item-struct-RegisteredTool-36">RegisteredTool</a>)</code><p class="docstring">Register a tool. Re-registering a name replaces it **in place** (keeping<br>its position), mirroring the Rust dict assignment.</p><details class="function-source">
   <summary>code</summary>
   <pre><code>    <span class="rs-comment">/// Register a tool. Re-registering a name replaces it **in place** (keeping</span>
     <span class="rs-comment">/// its position), mirroring the Rust dict assignment.</span>
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-ports-mod-rs.html#method-register-408">register</a>(&amp;<span class="rs-kw">mut</span> <span class="rs-self">self</span>, tool: <a class="symbol-link rs-type" href="eos-tools--src-runtime-executor-rs.html#item-struct-RegisteredTool-36">RegisteredTool</a>) {
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-ports-mod-rs.html#method-register-407">register</a>(&amp;<span class="rs-kw">mut</span> <span class="rs-self">self</span>, tool: <a class="symbol-link rs-type" href="eos-tools--src-runtime-executor-rs.html#item-struct-RegisteredTool-36">RegisteredTool</a>) {
         <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(&amp;idx) = <span class="rs-self">self</span>.index.<a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#method-get-89">get</a>(&amp;tool.name) {
             <span class="rs-self">self</span>.tools[idx] = tool;
         } <span class="rs-kw">else</span> {
@@ -86,10 +86,10 @@
         }
     }
 </code></pre>
-</details></td></tr><tr id="method-apply-hook-services-44"><td>method</td><td>apply_hook_services</td><td><code>pub(crate) fn <a class="symbol-link" href="eos-tools--src-registry-tool-registry-rs.html#method-apply-hook-services-44">apply_hook_services</a> (&amp; mut self , services : <a class="symbol-link" href="eos-tools--src-tools-services-rs.html#item-struct-HookServices-143">HookServices</a>)</code><p class="docstring">Attach one hook-service set to every registered tool.</p><details class="function-source">
+</details></td></tr><tr id="method-apply-hook-services-44"><td>method</td><td>apply_hook_services</td><td><code>pub(crate) fn <a class="symbol-link" href="eos-tools--src-registry-tool-registry-rs.html#method-apply-hook-services-44">apply_hook_services</a> (&amp; mut self , services : <a class="symbol-link" href="eos-tools--src-tools-services-rs.html#item-struct-HookServices-142">HookServices</a>)</code><p class="docstring">Attach one hook-service set to every registered tool.</p><details class="function-source">
   <summary>code</summary>
   <pre><code>    <span class="rs-comment">/// Attach one hook-service set to every registered tool.</span>
-    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-registry-tool-registry-rs.html#method-apply-hook-services-44">apply_hook_services</a>(&amp;<span class="rs-kw">mut</span> <span class="rs-self">self</span>, services: <a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-HookServices-143">HookServices</a>) {
+    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-registry-tool-registry-rs.html#method-apply-hook-services-44">apply_hook_services</a>(&amp;<span class="rs-kw">mut</span> <span class="rs-self">self</span>, services: <a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-HookServices-142">HookServices</a>) {
         <span class="rs-kw">let</span> services = std::sync::<span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(services);
         <span class="rs-kw">for</span> tool <span class="rs-kw">in</span> &amp;<span class="rs-kw">mut</span> <span class="rs-self">self</span>.tools {
             tool.hook_services = services.clone();
@@ -197,7 +197,7 @@
 
 <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::core::name::<a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-struct-ToolKey-139">ToolKey</a>;
 <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::runtime::executor::<a class="symbol-link rs-type" href="eos-tools--src-runtime-executor-rs.html#item-struct-RegisteredTool-36">RegisteredTool</a>;
-<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::tools::<a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-HookServices-143">HookServices</a>;
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::tools::<a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-HookServices-142">HookServices</a>;
 
 <span class="rs-comment">/// An insertion-ordered registry of [`RegisteredTool`]s.</span>
 #[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Default</span>)]
@@ -215,7 +215,7 @@
 
     <span class="rs-comment">/// Register a tool. Re-registering a name replaces it **in place** (keeping</span>
     <span class="rs-comment">/// its position), mirroring the Rust dict assignment.</span>
-    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-ports-mod-rs.html#method-register-408">register</a>(&amp;<span class="rs-kw">mut</span> <span class="rs-self">self</span>, tool: <a class="symbol-link rs-type" href="eos-tools--src-runtime-executor-rs.html#item-struct-RegisteredTool-36">RegisteredTool</a>) {
+    <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-ports-mod-rs.html#method-register-407">register</a>(&amp;<span class="rs-kw">mut</span> <span class="rs-self">self</span>, tool: <a class="symbol-link rs-type" href="eos-tools--src-runtime-executor-rs.html#item-struct-RegisteredTool-36">RegisteredTool</a>) {
         <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(&amp;idx) = <span class="rs-self">self</span>.index.<a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#method-get-89">get</a>(&amp;tool.name) {
             <span class="rs-self">self</span>.tools[idx] = tool;
         } <span class="rs-kw">else</span> {
@@ -226,7 +226,7 @@
     }
 
     <span class="rs-comment">/// Attach one hook-service set to every registered tool.</span>
-    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-registry-tool-registry-rs.html#method-apply-hook-services-44">apply_hook_services</a>(&amp;<span class="rs-kw">mut</span> <span class="rs-self">self</span>, services: <a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-HookServices-143">HookServices</a>) {
+    <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-registry-tool-registry-rs.html#method-apply-hook-services-44">apply_hook_services</a>(&amp;<span class="rs-kw">mut</span> <span class="rs-self">self</span>, services: <a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-HookServices-142">HookServices</a>) {
         <span class="rs-kw">let</span> services = std::sync::<span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(services);
         <span class="rs-kw">for</span> tool <span class="rs-kw">in</span> &amp;<span class="rs-kw">mut</span> <span class="rs-self">self</span>.tools {
             tool.hook_services = services.clone();

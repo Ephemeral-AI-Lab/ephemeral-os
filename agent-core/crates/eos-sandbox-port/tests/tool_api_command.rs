@@ -22,12 +22,12 @@ struct RecordedCall {
 }
 
 #[derive(Debug)]
-struct RecordingTransport {
+struct CommandToolApiTestTransport {
     response: Result<JsonObject, SandboxPortError>,
     calls: Mutex<Vec<RecordedCall>>,
 }
 
-impl RecordingTransport {
+impl CommandToolApiTestTransport {
     fn ok(response: Value) -> Self {
         Self {
             response: Ok(obj(response)),
@@ -41,7 +41,7 @@ impl RecordingTransport {
 }
 
 #[async_trait]
-impl SandboxTransport for RecordingTransport {
+impl SandboxTransport for CommandToolApiTestTransport {
     async fn call(
         &self,
         sandbox_id: &SandboxId,
@@ -89,7 +89,7 @@ fn command_response() -> Value {
 
 #[tokio::test]
 async fn exec_command_builds_payload_and_uses_exec_timeout() {
-    let transport = RecordingTransport::ok(command_response());
+    let transport = CommandToolApiTestTransport::ok(command_response());
     let request = ExecCommandRequest {
         base: base(),
         cmd: "printf ok".to_owned(),
@@ -120,7 +120,7 @@ async fn exec_command_builds_payload_and_uses_exec_timeout() {
 
 #[tokio::test]
 async fn exec_stdin_builds_input_only_payload() {
-    let transport = RecordingTransport::ok(command_response());
+    let transport = CommandToolApiTestTransport::ok(command_response());
     let request = ExecStdinRequest {
         base: base(),
         command_session_id: "cmd-1".parse().expect("command session id"),
@@ -143,7 +143,7 @@ async fn exec_stdin_builds_input_only_payload() {
 
 #[tokio::test]
 async fn read_command_progress_uses_command_read_progress_op() {
-    let transport = RecordingTransport::ok(command_response());
+    let transport = CommandToolApiTestTransport::ok(command_response());
     let request = ReadCommandProgressRequest {
         base: base(),
         command_session_id: "cmd-1".parse().expect("command session id"),
@@ -163,7 +163,7 @@ async fn read_command_progress_uses_command_read_progress_op() {
 
 #[tokio::test]
 async fn cancel_command_session_uses_command_cancel_op() {
-    let transport = RecordingTransport::ok(command_response());
+    let transport = CommandToolApiTestTransport::ok(command_response());
     let request = CommandSessionCancelRequest {
         base: base(),
         command_session_id: "cmd-1".parse().expect("command session id"),
@@ -182,7 +182,7 @@ async fn cancel_command_session_uses_command_cancel_op() {
 
 #[tokio::test]
 async fn collect_command_completions_drops_non_object_entries() {
-    let transport = RecordingTransport::ok(json!({
+    let transport = CommandToolApiTestTransport::ok(json!({
         "completions": [
             {"command_session_id": "cmd-1", "status": "completed"},
             "not-an-object",

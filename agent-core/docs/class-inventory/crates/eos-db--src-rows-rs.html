@@ -110,7 +110,7 @@
   <h4>Fields</h4><table><tbody><tr><td>pub</td><td>id</td><td><code>String</code></td></tr><tr><td>pub</td><td>iteration_id</td><td><code>String</code></td></tr><tr><td>pub</td><td>workflow_id</td><td><code>String</code></td></tr><tr><td>pub</td><td>attempt_sequence_no</td><td><code>i64</code></td></tr><tr><td>pub</td><td>stage</td><td><code>String</code></td></tr><tr><td>pub</td><td>status</td><td><code>String</code></td></tr><tr><td>pub</td><td>planner_task_id</td><td><code>Option &lt; String &gt;</code></td></tr><tr><td>pub</td><td>generator_task_ids</td><td><code>String</code></td></tr><tr><td>pub</td><td>reducer_task_ids</td><td><code>String</code></td></tr><tr><td>pub</td><td>outcomes</td><td><code>String</code></td></tr><tr><td>pub</td><td>deferred_goal</td><td><code>Option &lt; String &gt;</code></td></tr><tr><td>pub</td><td>fail_reason</td><td><code>Option &lt; String &gt;</code></td></tr><tr><td>pub</td><td>created_at</td><td><code>OffsetDateTime</code></td></tr><tr><td>pub</td><td>updated_at</td><td><code>OffsetDateTime</code></td></tr><tr><td>pub</td><td>closed_at</td><td><code>Option &lt; OffsetDateTime &gt;</code></td></tr></tbody></table>
 
   <p class="source">crates/eos-db/src/rows.rs:86</p>
-</article><article id="item-struct-AgentRunRow-105" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct AgentRunRow pub(crate) pub(crate) struct AgentRunRow crates/eos-db/src/rows.rs id String task_id String initial_messages Option &lt; String &gt; agent_name String message_history Option &lt; String &gt; terminal_tool_result Option &lt; String &gt; token_count i64 error Option &lt; String &gt; created_at OffsetDateTime finished_at Option &lt; OffsetDateTime &gt; ">
+</article><article id="item-struct-AgentRunRow-105" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct AgentRunRow pub(crate) pub(crate) struct AgentRunRow crates/eos-db/src/rows.rs id String task_id Option &lt; String &gt; initial_messages Option &lt; String &gt; agent_name String message_history Option &lt; String &gt; terminal_tool_result Option &lt; String &gt; token_count i64 error Option &lt; String &gt; created_at OffsetDateTime finished_at Option &lt; OffsetDateTime &gt; ">
   <div class="item-head">
     <span class="kind">struct</span>
     <h3>AgentRunRow</h3>
@@ -118,7 +118,7 @@
   </div>
   <code class="signature">pub(crate) struct <a class="symbol-link" href="eos-db--src-rows-rs.html#item-struct-AgentRunRow-105">AgentRunRow</a></code>
   <div class="tags"><span>derive: Clone</span><span>derive: Debug</span><span>derive: sqlx::FromRow</span></div>
-  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>id</td><td><code>String</code></td></tr><tr><td>pub</td><td>task_id</td><td><code>String</code></td></tr><tr><td>pub</td><td>initial_messages</td><td><code>Option &lt; String &gt;</code></td></tr><tr><td>pub</td><td>agent_name</td><td><code>String</code></td></tr><tr><td>pub</td><td>message_history</td><td><code>Option &lt; String &gt;</code></td></tr><tr><td>pub</td><td>terminal_tool_result</td><td><code>Option &lt; String &gt;</code></td></tr><tr><td>pub</td><td>token_count</td><td><code>i64</code></td></tr><tr><td>pub</td><td>error</td><td><code>Option &lt; String &gt;</code></td></tr><tr><td>pub</td><td>created_at</td><td><code>OffsetDateTime</code></td></tr><tr><td>pub</td><td>finished_at</td><td><code>Option &lt; OffsetDateTime &gt;</code></td></tr></tbody></table>
+  <h4>Fields</h4><table><tbody><tr><td>pub</td><td>id</td><td><code>String</code></td></tr><tr><td>pub</td><td>task_id</td><td><code>Option &lt; String &gt;</code></td></tr><tr><td>pub</td><td>initial_messages</td><td><code>Option &lt; String &gt;</code></td></tr><tr><td>pub</td><td>agent_name</td><td><code>String</code></td></tr><tr><td>pub</td><td>message_history</td><td><code>Option &lt; String &gt;</code></td></tr><tr><td>pub</td><td>terminal_tool_result</td><td><code>Option &lt; String &gt;</code></td></tr><tr><td>pub</td><td>token_count</td><td><code>i64</code></td></tr><tr><td>pub</td><td>error</td><td><code>Option &lt; String &gt;</code></td></tr><tr><td>pub</td><td>created_at</td><td><code>OffsetDateTime</code></td></tr><tr><td>pub</td><td>finished_at</td><td><code>Option &lt; OffsetDateTime &gt;</code></td></tr></tbody></table>
 
   <p class="source">crates/eos-db/src/rows.rs:105</p>
 </article><article id="item-struct-AttemptLifecycleColumns-375" class="type-card" data-kind="struct" data-kind-list="field struct type-model" data-filter-text="struct AttemptLifecycleColumns private struct AttemptLifecycleColumns&lt; 'a &gt; crates/eos-db/src/rows.rs stage AttemptStage status AttemptStatus planner_task_id Option &lt; eos_state :: TaskId &gt; generator_task_ids Vec &lt; eos_state :: TaskId &gt; reducer_task_ids Vec &lt; eos_state :: TaskId &gt; deferred_goal Option &lt; &amp; 'a DeferredGoal &gt; fail_reason Option &lt; AttemptFailReason &gt; closed_at Option &lt; UtcDateTime &gt; outcomes Vec &lt; ExecutionTaskOutcome &gt; ">
@@ -447,7 +447,11 @@
   <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-row-to-agent-run-482">row_to_agent_run</a>(r: <a class="symbol-link rs-type" href="eos-db--src-rows-rs.html#item-struct-AgentRunRow-105">AgentRunRow</a>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">AgentRun</span>, <a class="symbol-link rs-type" href="eos-db--src-error-rs.html#item-enum-DbError-5">DbError</a>&gt; {
     <span class="rs-type">Ok</span>(<span class="rs-type">AgentRun</span> {
         id: <a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-parse-id-121">parse_id</a>(&quot;agent_runs.id&quot;, &amp;r.id)?,
-        task_id: <a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-parse-id-121">parse_id</a>(&quot;agent_runs.task_id&quot;, &amp;r.task_id)?,
+        task_id: r
+            .task_id
+            .as_deref()
+            .map(|task_id| <a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-parse-id-121">parse_id</a>(&quot;agent_runs.task_id&quot;, task_id))
+            .transpose()?,
         initial_messages: json_col::<a class="symbol-link rs-fn" href="eos-db--src-json-col-rs.html#item-fn-decode-opt-35">decode_opt</a>(r.initial_messages.as_deref())?,
         agent_name: r.agent_name,
         message_history: json_col::<a class="symbol-link rs-fn" href="eos-db--src-json-col-rs.html#item-fn-decode-opt-35">decode_opt</a>(r.message_history.as_deref())?,
@@ -718,17 +722,17 @@
 </details>
 
   <p class="source">crates/eos-db/src/rows.rs:387</p>
-</article><article id="item-fn-ids-504" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn ids private fn ids (o : &amp; ExecutionTaskOutcome) -&gt; (TaskOutcomeStatus , ExecutionRole , String , String) crates/eos-db/src/rows.rs  ">
+</article><article id="item-fn-ids-508" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn ids private fn ids (o : &amp; ExecutionTaskOutcome) -&gt; (TaskOutcomeStatus , ExecutionRole , String , String) crates/eos-db/src/rows.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>ids</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-db--src-rows-rs.html#item-fn-ids-504">ids</a> (o : &amp; ExecutionTaskOutcome) -&gt; (TaskOutcomeStatus , ExecutionRole , String , String)</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-db--src-rows-rs.html#item-fn-ids-508">ids</a> (o : &amp; ExecutionTaskOutcome) -&gt; (TaskOutcomeStatus , ExecutionRole , String , String)</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-ids-504">ids</a>(o: &amp;<span class="rs-type">ExecutionTaskOutcome</span>) -&gt; (<span class="rs-type">TaskOutcomeStatus</span>, <span class="rs-type">ExecutionRole</span>, <span class="rs-type">String</span>, <span class="rs-type">String</span>) {
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-ids-508">ids</a>(o: &amp;<span class="rs-type">ExecutionTaskOutcome</span>) -&gt; (<span class="rs-type">TaskOutcomeStatus</span>, <span class="rs-type">ExecutionRole</span>, <span class="rs-type">String</span>, <span class="rs-type">String</span>) {
         (
             o.status,
             o.role,
@@ -739,19 +743,19 @@
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-db/src/rows.rs:504</p>
-</article><article id="item-fn-task-outcomes-parity-516" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn task_outcomes_parity private fn task_outcomes_parity () crates/eos-db/src/rows.rs  ">
+  <p class="source">crates/eos-db/src/rows.rs:508</p>
+</article><article id="item-fn-task-outcomes-parity-520" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn task_outcomes_parity private fn task_outcomes_parity () crates/eos-db/src/rows.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>task_outcomes_parity</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-db--src-rows-rs.html#item-fn-task-outcomes-parity-516">task_outcomes_parity</a> ()</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-db--src-rows-rs.html#item-fn-task-outcomes-parity-520">task_outcomes_parity</a> ()</code>
   <div class="tags"><span>test</span></div>
   <details class="function-source">
   <summary>code</summary>
   <pre><code>    #[test]
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-task-outcomes-parity-516">task_outcomes_parity</a>() {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-task-outcomes-parity-520">task_outcomes_parity</a>() {
         <span class="rs-kw">let</span> records = json!([
             <span class="rs-comment">// present status "done" -&gt; _normalize_status -&gt; FAILED (not success!)</span>
             { &quot;status&quot;: &quot;done&quot;, &quot;role&quot;: &quot;generator&quot;, &quot;task_id&quot;: &quot;g1&quot;, &quot;outcome&quot;: &quot;x&quot; },
@@ -798,19 +802,19 @@
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-db/src/rows.rs:516</p>
-</article><article id="item-fn-attempt-outcomes-parity-564" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn attempt_outcomes_parity private fn attempt_outcomes_parity () crates/eos-db/src/rows.rs  ">
+  <p class="source">crates/eos-db/src/rows.rs:520</p>
+</article><article id="item-fn-attempt-outcomes-parity-568" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn attempt_outcomes_parity private fn attempt_outcomes_parity () crates/eos-db/src/rows.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>attempt_outcomes_parity</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-db--src-rows-rs.html#item-fn-attempt-outcomes-parity-564">attempt_outcomes_parity</a> ()</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-db--src-rows-rs.html#item-fn-attempt-outcomes-parity-568">attempt_outcomes_parity</a> ()</code>
   <div class="tags"><span>test</span></div>
   <details class="function-source">
   <summary>code</summary>
   <pre><code>    #[test]
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-attempt-outcomes-parity-564">attempt_outcomes_parity</a>() {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-attempt-outcomes-parity-568">attempt_outcomes_parity</a>() {
         <span class="rs-kw">let</span> records = json!([
             { &quot;status&quot;: &quot;success&quot;, &quot;role&quot;: &quot;reducer&quot;, &quot;task_id&quot;: &quot;r1&quot;, &quot;outcome&quot;: &quot;ok&quot; },
             <span class="rs-comment">// missing status -&gt; FAILED; invalid role -&gt; generator; missing outcome -&gt; default</span>
@@ -842,19 +846,19 @@
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-db/src/rows.rs:564</p>
-</article><article id="item-fn-attempt-outcomes-roundtrip-typed-596" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn attempt_outcomes_roundtrip_typed private fn attempt_outcomes_roundtrip_typed () crates/eos-db/src/rows.rs  ">
+  <p class="source">crates/eos-db/src/rows.rs:568</p>
+</article><article id="item-fn-attempt-outcomes-roundtrip-typed-600" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn attempt_outcomes_roundtrip_typed private fn attempt_outcomes_roundtrip_typed () crates/eos-db/src/rows.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>attempt_outcomes_roundtrip_typed</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-db--src-rows-rs.html#item-fn-attempt-outcomes-roundtrip-typed-596">attempt_outcomes_roundtrip_typed</a> ()</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-db--src-rows-rs.html#item-fn-attempt-outcomes-roundtrip-typed-600">attempt_outcomes_roundtrip_typed</a> ()</code>
   <div class="tags"><span>test</span></div>
   <details class="function-source">
   <summary>code</summary>
   <pre><code>    #[test]
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-attempt-outcomes-roundtrip-typed-596">attempt_outcomes_roundtrip_typed</a>() {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-attempt-outcomes-roundtrip-typed-600">attempt_outcomes_roundtrip_typed</a>() {
         <span class="rs-kw">let</span> typed = vec![
             <span class="rs-type">ExecutionTaskOutcome</span> {
                 status: <span class="rs-type">TaskOutcomeStatus</span>::<span class="rs-type">Success</span>,
@@ -876,52 +880,52 @@
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-db/src/rows.rs:596</p>
-</article><article id="item-fn-tid-627" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn tid private fn tid (raw : &amp; str) -&gt; eos_state :: TaskId crates/eos-db/src/rows.rs  ">
+  <p class="source">crates/eos-db/src/rows.rs:600</p>
+</article><article id="item-fn-tid-631" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn tid private fn tid (raw : &amp; str) -&gt; eos_state :: TaskId crates/eos-db/src/rows.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>tid</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-db--src-rows-rs.html#item-fn-tid-627">tid</a> (raw : &amp; str) -&gt; eos_state :: TaskId</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-db--src-rows-rs.html#item-fn-tid-631">tid</a> (raw : &amp; str) -&gt; eos_state :: TaskId</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-tid-627">tid</a>(raw: &amp;str) -&gt; eos_state::<span class="rs-type">TaskId</span> {
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-tid-631">tid</a>(raw: &amp;str) -&gt; eos_state::<span class="rs-type">TaskId</span> {
         raw.parse().expect(&quot;task id&quot;)
     }
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-db/src/rows.rs:627</p>
-</article><article id="item-fn-epoch-631" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn epoch private fn epoch () -&gt; UtcDateTime crates/eos-db/src/rows.rs  ">
+  <p class="source">crates/eos-db/src/rows.rs:631</p>
+</article><article id="item-fn-epoch-635" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn epoch private fn epoch () -&gt; UtcDateTime crates/eos-db/src/rows.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>epoch</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-db--src-rows-rs.html#item-fn-epoch-631">epoch</a> () -&gt; UtcDateTime</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-db--src-rows-rs.html#item-fn-epoch-635">epoch</a> () -&gt; UtcDateTime</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-epoch-631">epoch</a>() -&gt; <span class="rs-type">UtcDateTime</span> {
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-epoch-635">epoch</a>() -&gt; <span class="rs-type">UtcDateTime</span> {
         <span class="rs-type">UtcDateTime</span>::from_offset(<span class="rs-type">OffsetDateTime</span>::<span class="rs-type">UNIX_EPOCH</span>)
     }
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-db/src/rows.rs:631</p>
-</article><article id="item-fn-base-cols-635" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn base_cols private fn base_cols (stage : AttemptStage , status : AttemptStatus) -&gt; AttemptLifecycleColumns &lt; 'static &gt; crates/eos-db/src/rows.rs  ">
+  <p class="source">crates/eos-db/src/rows.rs:635</p>
+</article><article id="item-fn-base-cols-639" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn base_cols private fn base_cols (stage : AttemptStage , status : AttemptStatus) -&gt; AttemptLifecycleColumns &lt; 'static &gt; crates/eos-db/src/rows.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>base_cols</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-db--src-rows-rs.html#item-fn-base-cols-635">base_cols</a> (stage : AttemptStage , status : AttemptStatus) -&gt; <a class="symbol-link" href="eos-db--src-rows-rs.html#item-struct-AttemptLifecycleColumns-375">AttemptLifecycleColumns</a> &lt; &#x27;static &gt;</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-db--src-rows-rs.html#item-fn-base-cols-639">base_cols</a> (stage : AttemptStage , status : AttemptStatus) -&gt; <a class="symbol-link" href="eos-db--src-rows-rs.html#item-struct-AttemptLifecycleColumns-375">AttemptLifecycleColumns</a> &lt; &#x27;static &gt;</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-base-cols-635">base_cols</a>(stage: <span class="rs-type">AttemptStage</span>, status: <span class="rs-type">AttemptStatus</span>) -&gt; <a class="symbol-link rs-type" href="eos-db--src-rows-rs.html#item-struct-AttemptLifecycleColumns-375">AttemptLifecycleColumns</a>&lt;&#x27;<span class="rs-kw">static</span>&gt; {
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-base-cols-639">base_cols</a>(stage: <span class="rs-type">AttemptStage</span>, status: <span class="rs-type">AttemptStatus</span>) -&gt; <a class="symbol-link rs-type" href="eos-db--src-rows-rs.html#item-struct-AttemptLifecycleColumns-375">AttemptLifecycleColumns</a>&lt;&#x27;<span class="rs-kw">static</span>&gt; {
         <a class="symbol-link rs-type" href="eos-db--src-rows-rs.html#item-struct-AttemptLifecycleColumns-375">AttemptLifecycleColumns</a> {
             stage,
             status,
@@ -937,29 +941,29 @@
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-db/src/rows.rs:635</p>
-</article><article id="item-fn-attempt-state-plan-reconstructs-and-rejects-incoherent-columns-649" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn attempt_state_plan_reconstructs_and_rejects_incoherent_columns private fn attempt_state_plan_reconstructs_and_rejects_incoherent_columns () crates/eos-db/src/rows.rs  ">
+  <p class="source">crates/eos-db/src/rows.rs:639</p>
+</article><article id="item-fn-attempt-state-plan-reconstructs-and-rejects-incoherent-columns-653" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn attempt_state_plan_reconstructs_and_rejects_incoherent_columns private fn attempt_state_plan_reconstructs_and_rejects_incoherent_columns () crates/eos-db/src/rows.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>attempt_state_plan_reconstructs_and_rejects_incoherent_columns</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-db--src-rows-rs.html#item-fn-attempt-state-plan-reconstructs-and-rejects-incoherent-columns-649">attempt_state_plan_reconstructs_and_rejects_incoherent_columns</a> ()</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-db--src-rows-rs.html#item-fn-attempt-state-plan-reconstructs-and-rejects-incoherent-columns-653">attempt_state_plan_reconstructs_and_rejects_incoherent_columns</a> ()</code>
   <div class="tags"><span>test</span></div>
   <details class="function-source">
   <summary>code</summary>
   <pre><code>    #[test]
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-attempt-state-plan-reconstructs-and-rejects-incoherent-columns-649">attempt_state_plan_reconstructs_and_rejects_incoherent_columns</a>() {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-attempt-state-plan-reconstructs-and-rejects-incoherent-columns-653">attempt_state_plan_reconstructs_and_rejects_incoherent_columns</a>() {
         <span class="rs-comment">// Valid: PLAN/Running, no materialized plan, no terminal/deferred fields.</span>
         assert!(matches!(
-            <a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-attempt-state-from-columns-387">attempt_state_from_columns</a>(<a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-base-cols-635">base_cols</a>(<span class="rs-type">AttemptStage</span>::<span class="rs-type">Plan</span>, <span class="rs-type">AttemptStatus</span>::<span class="rs-type">Running</span>))
+            <a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-attempt-state-from-columns-387">attempt_state_from_columns</a>(<a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-base-cols-639">base_cols</a>(<span class="rs-type">AttemptStage</span>::<span class="rs-type">Plan</span>, <span class="rs-type">AttemptStatus</span>::<span class="rs-type">Running</span>))
                 .expect(&quot;bare plan reconstructs&quot;),
             <span class="rs-type">AttemptState</span>::<span class="rs-type">Planning</span> {
                 planner_task_id: <span class="rs-type">None</span>
             }
         ));
-        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> with_planner = <a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-base-cols-635">base_cols</a>(<span class="rs-type">AttemptStage</span>::<span class="rs-type">Plan</span>, <span class="rs-type">AttemptStatus</span>::<span class="rs-type">Running</span>);
-        with_planner.planner_task_id = <span class="rs-type">Some</span>(<a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-tid-627">tid</a>(&quot;p1&quot;));
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> with_planner = <a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-base-cols-639">base_cols</a>(<span class="rs-type">AttemptStage</span>::<span class="rs-type">Plan</span>, <span class="rs-type">AttemptStatus</span>::<span class="rs-type">Running</span>);
+        with_planner.planner_task_id = <span class="rs-type">Some</span>(<a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-tid-631">tid</a>(&quot;p1&quot;));
         assert!(matches!(
             <a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-attempt-state-from-columns-387">attempt_state_from_columns</a>(with_planner).expect(&quot;plan with planner task&quot;),
             <span class="rs-type">AttemptState</span>::<span class="rs-type">Planning</span> {
@@ -969,30 +973,30 @@
 
         <span class="rs-comment">// Each single deviation is incoherent for PLAN.</span>
         assert!(
-            <a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-attempt-state-from-columns-387">attempt_state_from_columns</a>(<a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-base-cols-635">base_cols</a>(<span class="rs-type">AttemptStage</span>::<span class="rs-type">Plan</span>, <span class="rs-type">AttemptStatus</span>::<span class="rs-type">Passed</span>))
+            <a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-attempt-state-from-columns-387">attempt_state_from_columns</a>(<a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-base-cols-639">base_cols</a>(<span class="rs-type">AttemptStage</span>::<span class="rs-type">Plan</span>, <span class="rs-type">AttemptStatus</span>::<span class="rs-type">Passed</span>))
                 .is_err(),
             &quot;<span class="rs-type">PLAN</span> may only be <span class="rs-type">Running</span>&quot;
         );
-        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> failed = <a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-base-cols-635">base_cols</a>(<span class="rs-type">AttemptStage</span>::<span class="rs-type">Plan</span>, <span class="rs-type">AttemptStatus</span>::<span class="rs-type">Running</span>);
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> failed = <a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-base-cols-639">base_cols</a>(<span class="rs-type">AttemptStage</span>::<span class="rs-type">Plan</span>, <span class="rs-type">AttemptStatus</span>::<span class="rs-type">Running</span>);
         failed.fail_reason = <span class="rs-type">Some</span>(<span class="rs-type">AttemptFailReason</span>::<span class="rs-type">TaskFailed</span>);
         assert!(
             <a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-attempt-state-from-columns-387">attempt_state_from_columns</a>(failed).is_err(),
             &quot;<span class="rs-type">PLAN</span> carries no fail_reason&quot;
         );
-        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> closed = <a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-base-cols-635">base_cols</a>(<span class="rs-type">AttemptStage</span>::<span class="rs-type">Plan</span>, <span class="rs-type">AttemptStatus</span>::<span class="rs-type">Running</span>);
-        closed.closed_at = <span class="rs-type">Some</span>(<a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-epoch-631">epoch</a>());
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> closed = <a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-base-cols-639">base_cols</a>(<span class="rs-type">AttemptStage</span>::<span class="rs-type">Plan</span>, <span class="rs-type">AttemptStatus</span>::<span class="rs-type">Running</span>);
+        closed.closed_at = <span class="rs-type">Some</span>(<a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-epoch-635">epoch</a>());
         assert!(
             <a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-attempt-state-from-columns-387">attempt_state_from_columns</a>(closed).is_err(),
             &quot;<span class="rs-type">PLAN</span> is never closed_at&quot;
         );
-        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> with_tasks = <a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-base-cols-635">base_cols</a>(<span class="rs-type">AttemptStage</span>::<span class="rs-type">Plan</span>, <span class="rs-type">AttemptStatus</span>::<span class="rs-type">Running</span>);
-        with_tasks.generator_task_ids = vec![<a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-tid-627">tid</a>(&quot;g1&quot;)];
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> with_tasks = <a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-base-cols-639">base_cols</a>(<span class="rs-type">AttemptStage</span>::<span class="rs-type">Plan</span>, <span class="rs-type">AttemptStatus</span>::<span class="rs-type">Running</span>);
+        with_tasks.generator_task_ids = vec![<a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-tid-631">tid</a>(&quot;g1&quot;)];
         assert!(
             <a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-attempt-state-from-columns-387">attempt_state_from_columns</a>(with_tasks).is_err(),
             &quot;<span class="rs-type">PLAN</span> has no materialized plan tasks&quot;
         );
         <span class="rs-kw">let</span> deferred = <span class="rs-type">DeferredGoal</span>::<a class="symbol-link rs-fn" href="eos-db--src-model-registry-rs.html#method-new-64">new</a>(&quot;later&quot;).expect(&quot;deferred goal&quot;);
-        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> with_deferred = <a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-base-cols-635">base_cols</a>(<span class="rs-type">AttemptStage</span>::<span class="rs-type">Plan</span>, <span class="rs-type">AttemptStatus</span>::<span class="rs-type">Running</span>);
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> with_deferred = <a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-base-cols-639">base_cols</a>(<span class="rs-type">AttemptStage</span>::<span class="rs-type">Plan</span>, <span class="rs-type">AttemptStatus</span>::<span class="rs-type">Running</span>);
         with_deferred.deferred_goal = <span class="rs-type">Some</span>(&amp;deferred);
         assert!(
             <a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-attempt-state-from-columns-387">attempt_state_from_columns</a>(with_deferred).is_err(),
@@ -1002,24 +1006,24 @@
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-db/src/rows.rs:649</p>
-</article><article id="item-fn-attempt-state-run-requires-materialized-plan-and-running-status-701" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn attempt_state_run_requires_materialized_plan_and_running_status private fn attempt_state_run_requires_materialized_plan_and_running_status () crates/eos-db/src/rows.rs  ">
+  <p class="source">crates/eos-db/src/rows.rs:653</p>
+</article><article id="item-fn-attempt-state-run-requires-materialized-plan-and-running-status-705" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn attempt_state_run_requires_materialized_plan_and_running_status private fn attempt_state_run_requires_materialized_plan_and_running_status () crates/eos-db/src/rows.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>attempt_state_run_requires_materialized_plan_and_running_status</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-db--src-rows-rs.html#item-fn-attempt-state-run-requires-materialized-plan-and-running-status-701">attempt_state_run_requires_materialized_plan_and_running_status</a> ()</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-db--src-rows-rs.html#item-fn-attempt-state-run-requires-materialized-plan-and-running-status-705">attempt_state_run_requires_materialized_plan_and_running_status</a> ()</code>
   <div class="tags"><span>test</span></div>
   <details class="function-source">
   <summary>code</summary>
   <pre><code>    #[test]
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-attempt-state-run-requires-materialized-plan-and-running-status-701">attempt_state_run_requires_materialized_plan_and_running_status</a>() {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-attempt-state-run-requires-materialized-plan-and-running-status-705">attempt_state_run_requires_materialized_plan_and_running_status</a>() {
         <span class="rs-kw">let</span> valid = || {
-            <span class="rs-kw">let</span> <span class="rs-kw">mut</span> cols = <a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-base-cols-635">base_cols</a>(<span class="rs-type">AttemptStage</span>::<span class="rs-type">Run</span>, <span class="rs-type">AttemptStatus</span>::<span class="rs-type">Running</span>);
-            cols.planner_task_id = <span class="rs-type">Some</span>(<a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-tid-627">tid</a>(&quot;p1&quot;));
-            cols.generator_task_ids = vec![<a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-tid-627">tid</a>(&quot;g1&quot;)];
-            cols.reducer_task_ids = vec![<a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-tid-627">tid</a>(&quot;r1&quot;)];
+            <span class="rs-kw">let</span> <span class="rs-kw">mut</span> cols = <a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-base-cols-639">base_cols</a>(<span class="rs-type">AttemptStage</span>::<span class="rs-type">Run</span>, <span class="rs-type">AttemptStatus</span>::<span class="rs-type">Running</span>);
+            cols.planner_task_id = <span class="rs-type">Some</span>(<a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-tid-631">tid</a>(&quot;p1&quot;));
+            cols.generator_task_ids = vec![<a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-tid-631">tid</a>(&quot;g1&quot;)];
+            cols.reducer_task_ids = vec![<a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-tid-631">tid</a>(&quot;r1&quot;)];
             cols
         };
         assert!(matches!(
@@ -1056,7 +1060,7 @@
             &quot;open <span class="rs-type">RUN</span> carries no fail_reason&quot;
         );
         <span class="rs-kw">let</span> <span class="rs-kw">mut</span> closed = valid();
-        closed.closed_at = <span class="rs-type">Some</span>(<a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-epoch-631">epoch</a>());
+        closed.closed_at = <span class="rs-type">Some</span>(<a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-epoch-635">epoch</a>());
         assert!(
             <a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-attempt-state-from-columns-387">attempt_state_from_columns</a>(closed).is_err(),
             &quot;open <span class="rs-type">RUN</span> is not closed_at&quot;
@@ -1065,23 +1069,23 @@
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-db/src/rows.rs:701</p>
-</article><article id="item-fn-attempt-state-closed-passed-and-failed-reconstruct-with-required-fields-751" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn attempt_state_closed_passed_and_failed_reconstruct_with_required_fields private fn attempt_state_closed_passed_and_failed_reconstruct_with_required_fields () crates/eos-db/src/rows.rs  ">
+  <p class="source">crates/eos-db/src/rows.rs:705</p>
+</article><article id="item-fn-attempt-state-closed-passed-and-failed-reconstruct-with-required-fields-755" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn attempt_state_closed_passed_and_failed_reconstruct_with_required_fields private fn attempt_state_closed_passed_and_failed_reconstruct_with_required_fields () crates/eos-db/src/rows.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>attempt_state_closed_passed_and_failed_reconstruct_with_required_fields</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-db--src-rows-rs.html#item-fn-attempt-state-closed-passed-and-failed-reconstruct-with-required-fields-751">attempt_state_closed_passed_and_failed_reconstruct_with_required_fields</a> ()</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-db--src-rows-rs.html#item-fn-attempt-state-closed-passed-and-failed-reconstruct-with-required-fields-755">attempt_state_closed_passed_and_failed_reconstruct_with_required_fields</a> ()</code>
   <div class="tags"><span>test</span></div>
   <details class="function-source">
   <summary>code</summary>
   <pre><code>    #[test]
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-attempt-state-closed-passed-and-failed-reconstruct-with-required-fields-751">attempt_state_closed_passed_and_failed_reconstruct_with_required_fields</a>() {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-attempt-state-closed-passed-and-failed-reconstruct-with-required-fields-755">attempt_state_closed_passed_and_failed_reconstruct_with_required_fields</a>() {
         <span class="rs-comment">// Passed closure (the success branch the store path never exercised):</span>
         <span class="rs-comment">// closed_at present, no fail_reason.</span>
-        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> passed = <a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-base-cols-635">base_cols</a>(<span class="rs-type">AttemptStage</span>::<span class="rs-type">Closed</span>, <span class="rs-type">AttemptStatus</span>::<span class="rs-type">Passed</span>);
-        passed.closed_at = <span class="rs-type">Some</span>(<a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-epoch-631">epoch</a>());
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> passed = <a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-base-cols-639">base_cols</a>(<span class="rs-type">AttemptStage</span>::<span class="rs-type">Closed</span>, <span class="rs-type">AttemptStatus</span>::<span class="rs-type">Passed</span>);
+        passed.closed_at = <span class="rs-type">Some</span>(<a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-epoch-635">epoch</a>());
         assert!(matches!(
             <a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-attempt-state-from-columns-387">attempt_state_from_columns</a>(passed).expect(&quot;passed closure reconstructs&quot;),
             <span class="rs-type">AttemptState</span>::<span class="rs-type">Closed</span> {
@@ -1091,8 +1095,8 @@
         ));
 
         <span class="rs-comment">// Failed closure: closed_at + fail_reason both present.</span>
-        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> failed = <a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-base-cols-635">base_cols</a>(<span class="rs-type">AttemptStage</span>::<span class="rs-type">Closed</span>, <span class="rs-type">AttemptStatus</span>::<span class="rs-type">Failed</span>);
-        failed.closed_at = <span class="rs-type">Some</span>(<a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-epoch-631">epoch</a>());
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> failed = <a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-base-cols-639">base_cols</a>(<span class="rs-type">AttemptStage</span>::<span class="rs-type">Closed</span>, <span class="rs-type">AttemptStatus</span>::<span class="rs-type">Failed</span>);
+        failed.closed_at = <span class="rs-type">Some</span>(<a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-epoch-635">epoch</a>());
         failed.fail_reason = <span class="rs-type">Some</span>(<span class="rs-type">AttemptFailReason</span>::<span class="rs-type">TaskFailed</span>);
         assert!(matches!(
             <a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-attempt-state-from-columns-387">attempt_state_from_columns</a>(failed).expect(&quot;failed closure reconstructs&quot;),
@@ -1107,28 +1111,28 @@
 
         <span class="rs-comment">// A Closed attempt without closed_at is incoherent.</span>
         assert!(
-            <a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-attempt-state-from-columns-387">attempt_state_from_columns</a>(<a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-base-cols-635">base_cols</a>(<span class="rs-type">AttemptStage</span>::<span class="rs-type">Closed</span>, <span class="rs-type">AttemptStatus</span>::<span class="rs-type">Passed</span>))
+            <a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-attempt-state-from-columns-387">attempt_state_from_columns</a>(<a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-base-cols-639">base_cols</a>(<span class="rs-type">AttemptStage</span>::<span class="rs-type">Closed</span>, <span class="rs-type">AttemptStatus</span>::<span class="rs-type">Passed</span>))
                 .is_err(),
             &quot;<span class="rs-type">CLOSED</span> requires closed_at&quot;
         );
         <span class="rs-comment">// Closed stage with a still-Running status is incoherent.</span>
-        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> running = <a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-base-cols-635">base_cols</a>(<span class="rs-type">AttemptStage</span>::<span class="rs-type">Closed</span>, <span class="rs-type">AttemptStatus</span>::<span class="rs-type">Running</span>);
-        running.closed_at = <span class="rs-type">Some</span>(<a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-epoch-631">epoch</a>());
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> running = <a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-base-cols-639">base_cols</a>(<span class="rs-type">AttemptStage</span>::<span class="rs-type">Closed</span>, <span class="rs-type">AttemptStatus</span>::<span class="rs-type">Running</span>);
+        running.closed_at = <span class="rs-type">Some</span>(<a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-epoch-635">epoch</a>());
         assert!(
             <a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-attempt-state-from-columns-387">attempt_state_from_columns</a>(running).is_err(),
             &quot;<span class="rs-type">CLOSED</span> is never <span class="rs-type">Running</span>&quot;
         );
         <span class="rs-comment">// Passed must not carry a fail_reason.</span>
-        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> passed_with_reason = <a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-base-cols-635">base_cols</a>(<span class="rs-type">AttemptStage</span>::<span class="rs-type">Closed</span>, <span class="rs-type">AttemptStatus</span>::<span class="rs-type">Passed</span>);
-        passed_with_reason.closed_at = <span class="rs-type">Some</span>(<a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-epoch-631">epoch</a>());
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> passed_with_reason = <a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-base-cols-639">base_cols</a>(<span class="rs-type">AttemptStage</span>::<span class="rs-type">Closed</span>, <span class="rs-type">AttemptStatus</span>::<span class="rs-type">Passed</span>);
+        passed_with_reason.closed_at = <span class="rs-type">Some</span>(<a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-epoch-635">epoch</a>());
         passed_with_reason.fail_reason = <span class="rs-type">Some</span>(<span class="rs-type">AttemptFailReason</span>::<span class="rs-type">TaskFailed</span>);
         assert!(
             <a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-attempt-state-from-columns-387">attempt_state_from_columns</a>(passed_with_reason).is_err(),
             &quot;<span class="rs-type">Passed</span> closure carries no fail_reason&quot;
         );
         <span class="rs-comment">// Failed must carry a fail_reason.</span>
-        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> failed_no_reason = <a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-base-cols-635">base_cols</a>(<span class="rs-type">AttemptStage</span>::<span class="rs-type">Closed</span>, <span class="rs-type">AttemptStatus</span>::<span class="rs-type">Failed</span>);
-        failed_no_reason.closed_at = <span class="rs-type">Some</span>(<a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-epoch-631">epoch</a>());
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> failed_no_reason = <a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-base-cols-639">base_cols</a>(<span class="rs-type">AttemptStage</span>::<span class="rs-type">Closed</span>, <span class="rs-type">AttemptStatus</span>::<span class="rs-type">Failed</span>);
+        failed_no_reason.closed_at = <span class="rs-type">Some</span>(<a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-epoch-635">epoch</a>());
         assert!(
             <a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-attempt-state-from-columns-387">attempt_state_from_columns</a>(failed_no_reason).is_err(),
             &quot;<span class="rs-type">Failed</span> closure requires a fail_reason&quot;
@@ -1137,23 +1141,23 @@
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-db/src/rows.rs:751</p>
-</article><article id="item-fn-attempt-state-closed-cancelled-reconstructs-without-fail-reason-810" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn attempt_state_closed_cancelled_reconstructs_without_fail_reason private fn attempt_state_closed_cancelled_reconstructs_without_fail_reason () crates/eos-db/src/rows.rs  ">
+  <p class="source">crates/eos-db/src/rows.rs:755</p>
+</article><article id="item-fn-attempt-state-closed-cancelled-reconstructs-without-fail-reason-814" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn attempt_state_closed_cancelled_reconstructs_without_fail_reason private fn attempt_state_closed_cancelled_reconstructs_without_fail_reason () crates/eos-db/src/rows.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>attempt_state_closed_cancelled_reconstructs_without_fail_reason</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-db--src-rows-rs.html#item-fn-attempt-state-closed-cancelled-reconstructs-without-fail-reason-810">attempt_state_closed_cancelled_reconstructs_without_fail_reason</a> ()</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-db--src-rows-rs.html#item-fn-attempt-state-closed-cancelled-reconstructs-without-fail-reason-814">attempt_state_closed_cancelled_reconstructs_without_fail_reason</a> ()</code>
   <div class="tags"><span>test</span></div>
   <details class="function-source">
   <summary>code</summary>
   <pre><code>    #[test]
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-attempt-state-closed-cancelled-reconstructs-without-fail-reason-810">attempt_state_closed_cancelled_reconstructs_without_fail_reason</a>() {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-attempt-state-closed-cancelled-reconstructs-without-fail-reason-814">attempt_state_closed_cancelled_reconstructs_without_fail_reason</a>() {
         <span class="rs-comment">// Cancelled closure: closed_at present, no fail_reason (the reason text is</span>
         <span class="rs-comment">// carried in the cancellation outcomes, not a column).</span>
-        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> cancelled = <a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-base-cols-635">base_cols</a>(<span class="rs-type">AttemptStage</span>::<span class="rs-type">Closed</span>, <span class="rs-type">AttemptStatus</span>::<span class="rs-type">Cancelled</span>);
-        cancelled.closed_at = <span class="rs-type">Some</span>(<a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-epoch-631">epoch</a>());
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> cancelled = <a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-base-cols-639">base_cols</a>(<span class="rs-type">AttemptStage</span>::<span class="rs-type">Closed</span>, <span class="rs-type">AttemptStatus</span>::<span class="rs-type">Cancelled</span>);
+        cancelled.closed_at = <span class="rs-type">Some</span>(<a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-epoch-635">epoch</a>());
         assert!(matches!(
             <a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-attempt-state-from-columns-387">attempt_state_from_columns</a>(cancelled).expect(&quot;cancelled closure reconstructs&quot;),
             <span class="rs-type">AttemptState</span>::<span class="rs-type">Closed</span> {
@@ -1162,8 +1166,8 @@
             }
         ));
         <span class="rs-comment">// A Cancelled closure must not carry a fail_reason.</span>
-        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> cancelled_with_reason = <a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-base-cols-635">base_cols</a>(<span class="rs-type">AttemptStage</span>::<span class="rs-type">Closed</span>, <span class="rs-type">AttemptStatus</span>::<span class="rs-type">Cancelled</span>);
-        cancelled_with_reason.closed_at = <span class="rs-type">Some</span>(<a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-epoch-631">epoch</a>());
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> cancelled_with_reason = <a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-base-cols-639">base_cols</a>(<span class="rs-type">AttemptStage</span>::<span class="rs-type">Closed</span>, <span class="rs-type">AttemptStatus</span>::<span class="rs-type">Cancelled</span>);
+        cancelled_with_reason.closed_at = <span class="rs-type">Some</span>(<a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-epoch-635">epoch</a>());
         cancelled_with_reason.fail_reason = <span class="rs-type">Some</span>(<span class="rs-type">AttemptFailReason</span>::<span class="rs-type">TaskFailed</span>);
         assert!(
             <a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-attempt-state-from-columns-387">attempt_state_from_columns</a>(cancelled_with_reason).is_err(),
@@ -1173,7 +1177,7 @@
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-db/src/rows.rs:810</p>
+  <p class="source">crates/eos-db/src/rows.rs:814</p>
 </article></div>
 </section></div>
 </main>
@@ -1289,7 +1293,7 @@
 #[derive(<span class="rs-type">Debug</span>, <span class="rs-type">Clone</span>, sqlx::<span class="rs-type">FromRow</span>)]
 <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-db--src-rows-rs.html#item-struct-AgentRunRow-105">AgentRunRow</a> {
     <span class="rs-kw">pub</span> id: <span class="rs-type">String</span>,
-    <span class="rs-kw">pub</span> task_id: <span class="rs-type">String</span>,
+    <span class="rs-kw">pub</span> task_id: <span class="rs-type">Option</span>&lt;<span class="rs-type">String</span>&gt;,
     <span class="rs-kw">pub</span> initial_messages: <span class="rs-type">Option</span>&lt;<span class="rs-type">String</span>&gt;,
     <span class="rs-kw">pub</span> agent_name: <span class="rs-type">String</span>,
     <span class="rs-kw">pub</span> message_history: <span class="rs-type">Option</span>&lt;<span class="rs-type">String</span>&gt;,
@@ -1666,7 +1670,11 @@
 <span class="rs-kw">pub</span>(<span class="rs-kw">crate</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-row-to-agent-run-482">row_to_agent_run</a>(r: <a class="symbol-link rs-type" href="eos-db--src-rows-rs.html#item-struct-AgentRunRow-105">AgentRunRow</a>) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">AgentRun</span>, <a class="symbol-link rs-type" href="eos-db--src-error-rs.html#item-enum-DbError-5">DbError</a>&gt; {
     <span class="rs-type">Ok</span>(<span class="rs-type">AgentRun</span> {
         id: <a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-parse-id-121">parse_id</a>(&quot;agent_runs.id&quot;, &amp;r.id)?,
-        task_id: <a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-parse-id-121">parse_id</a>(&quot;agent_runs.task_id&quot;, &amp;r.task_id)?,
+        task_id: r
+            .task_id
+            .as_deref()
+            .map(|task_id| <a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-parse-id-121">parse_id</a>(&quot;agent_runs.task_id&quot;, task_id))
+            .transpose()?,
         initial_messages: json_col::<a class="symbol-link rs-fn" href="eos-db--src-json-col-rs.html#item-fn-decode-opt-35">decode_opt</a>(r.initial_messages.as_deref())?,
         agent_name: r.agent_name,
         message_history: json_col::<a class="symbol-link rs-fn" href="eos-db--src-json-col-rs.html#item-fn-decode-opt-35">decode_opt</a>(r.message_history.as_deref())?,
@@ -1685,7 +1693,7 @@
     <span class="rs-kw">use</span> <span class="rs-kw">super</span>::*;
     <span class="rs-kw">use</span> serde_json::json;
 
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-ids-504">ids</a>(o: &amp;<span class="rs-type">ExecutionTaskOutcome</span>) -&gt; (<span class="rs-type">TaskOutcomeStatus</span>, <span class="rs-type">ExecutionRole</span>, <span class="rs-type">String</span>, <span class="rs-type">String</span>) {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-ids-508">ids</a>(o: &amp;<span class="rs-type">ExecutionTaskOutcome</span>) -&gt; (<span class="rs-type">TaskOutcomeStatus</span>, <span class="rs-type">ExecutionRole</span>, <span class="rs-type">String</span>, <span class="rs-type">String</span>) {
         (
             o.status,
             o.role,
@@ -1698,7 +1706,7 @@
     <span class="rs-comment">// `_normalize_status` (`done` → failed); missing status is filled from the</span>
     <span class="rs-comment">// task via `present_status` (`done` → success); role falls back to task role.</span>
     #[test]
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-task-outcomes-parity-516">task_outcomes_parity</a>() {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-task-outcomes-parity-520">task_outcomes_parity</a>() {
         <span class="rs-kw">let</span> records = json!([
             <span class="rs-comment">// present status "done" -&gt; _normalize_status -&gt; FAILED (not success!)</span>
             { &quot;status&quot;: &quot;done&quot;, &quot;role&quot;: &quot;generator&quot;, &quot;task_id&quot;: &quot;g1&quot;, &quot;outcome&quot;: &quot;x&quot; },
@@ -1746,7 +1754,7 @@
     <span class="rs-comment">// The attempt-column normalizer (`parse_outcomes_record`): no status fill</span>
     <span class="rs-comment">// (missing -&gt; failed), no role fallback (missing/invalid -&gt; generator).</span>
     #[test]
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-attempt-outcomes-parity-564">attempt_outcomes_parity</a>() {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-attempt-outcomes-parity-568">attempt_outcomes_parity</a>() {
         <span class="rs-kw">let</span> records = json!([
             { &quot;status&quot;: &quot;success&quot;, &quot;role&quot;: &quot;reducer&quot;, &quot;task_id&quot;: &quot;r1&quot;, &quot;outcome&quot;: &quot;ok&quot; },
             <span class="rs-comment">// missing status -&gt; FAILED; invalid role -&gt; generator; missing outcome -&gt; default</span>
@@ -1778,7 +1786,7 @@
 
     <span class="rs-comment">// Round-trip: a typed outcome serialized then re-normalized is identity.</span>
     #[test]
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-attempt-outcomes-roundtrip-typed-596">attempt_outcomes_roundtrip_typed</a>() {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-attempt-outcomes-roundtrip-typed-600">attempt_outcomes_roundtrip_typed</a>() {
         <span class="rs-kw">let</span> typed = vec![
             <span class="rs-type">ExecutionTaskOutcome</span> {
                 status: <span class="rs-type">TaskOutcomeStatus</span>::<span class="rs-type">Success</span>,
@@ -1808,15 +1816,15 @@
     <span class="rs-comment">// if a guard were weakened (deviation → Ok) and if reconstruction broke</span>
     <span class="rs-comment">// (valid → Err).</span>
 
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-tid-627">tid</a>(raw: &amp;str) -&gt; eos_state::<span class="rs-type">TaskId</span> {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-tid-631">tid</a>(raw: &amp;str) -&gt; eos_state::<span class="rs-type">TaskId</span> {
         raw.parse().expect(&quot;task id&quot;)
     }
 
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-epoch-631">epoch</a>() -&gt; <span class="rs-type">UtcDateTime</span> {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-epoch-635">epoch</a>() -&gt; <span class="rs-type">UtcDateTime</span> {
         <span class="rs-type">UtcDateTime</span>::from_offset(<span class="rs-type">OffsetDateTime</span>::<span class="rs-type">UNIX_EPOCH</span>)
     }
 
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-base-cols-635">base_cols</a>(stage: <span class="rs-type">AttemptStage</span>, status: <span class="rs-type">AttemptStatus</span>) -&gt; <a class="symbol-link rs-type" href="eos-db--src-rows-rs.html#item-struct-AttemptLifecycleColumns-375">AttemptLifecycleColumns</a>&lt;&#x27;<span class="rs-kw">static</span>&gt; {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-base-cols-639">base_cols</a>(stage: <span class="rs-type">AttemptStage</span>, status: <span class="rs-type">AttemptStatus</span>) -&gt; <a class="symbol-link rs-type" href="eos-db--src-rows-rs.html#item-struct-AttemptLifecycleColumns-375">AttemptLifecycleColumns</a>&lt;&#x27;<span class="rs-kw">static</span>&gt; {
         <a class="symbol-link rs-type" href="eos-db--src-rows-rs.html#item-struct-AttemptLifecycleColumns-375">AttemptLifecycleColumns</a> {
             stage,
             status,
@@ -1831,17 +1839,17 @@
     }
 
     #[test]
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-attempt-state-plan-reconstructs-and-rejects-incoherent-columns-649">attempt_state_plan_reconstructs_and_rejects_incoherent_columns</a>() {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-attempt-state-plan-reconstructs-and-rejects-incoherent-columns-653">attempt_state_plan_reconstructs_and_rejects_incoherent_columns</a>() {
         <span class="rs-comment">// Valid: PLAN/Running, no materialized plan, no terminal/deferred fields.</span>
         assert!(matches!(
-            <a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-attempt-state-from-columns-387">attempt_state_from_columns</a>(<a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-base-cols-635">base_cols</a>(<span class="rs-type">AttemptStage</span>::<span class="rs-type">Plan</span>, <span class="rs-type">AttemptStatus</span>::<span class="rs-type">Running</span>))
+            <a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-attempt-state-from-columns-387">attempt_state_from_columns</a>(<a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-base-cols-639">base_cols</a>(<span class="rs-type">AttemptStage</span>::<span class="rs-type">Plan</span>, <span class="rs-type">AttemptStatus</span>::<span class="rs-type">Running</span>))
                 .expect(&quot;bare plan reconstructs&quot;),
             <span class="rs-type">AttemptState</span>::<span class="rs-type">Planning</span> {
                 planner_task_id: <span class="rs-type">None</span>
             }
         ));
-        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> with_planner = <a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-base-cols-635">base_cols</a>(<span class="rs-type">AttemptStage</span>::<span class="rs-type">Plan</span>, <span class="rs-type">AttemptStatus</span>::<span class="rs-type">Running</span>);
-        with_planner.planner_task_id = <span class="rs-type">Some</span>(<a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-tid-627">tid</a>(&quot;p1&quot;));
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> with_planner = <a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-base-cols-639">base_cols</a>(<span class="rs-type">AttemptStage</span>::<span class="rs-type">Plan</span>, <span class="rs-type">AttemptStatus</span>::<span class="rs-type">Running</span>);
+        with_planner.planner_task_id = <span class="rs-type">Some</span>(<a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-tid-631">tid</a>(&quot;p1&quot;));
         assert!(matches!(
             <a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-attempt-state-from-columns-387">attempt_state_from_columns</a>(with_planner).expect(&quot;plan with planner task&quot;),
             <span class="rs-type">AttemptState</span>::<span class="rs-type">Planning</span> {
@@ -1851,30 +1859,30 @@
 
         <span class="rs-comment">// Each single deviation is incoherent for PLAN.</span>
         assert!(
-            <a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-attempt-state-from-columns-387">attempt_state_from_columns</a>(<a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-base-cols-635">base_cols</a>(<span class="rs-type">AttemptStage</span>::<span class="rs-type">Plan</span>, <span class="rs-type">AttemptStatus</span>::<span class="rs-type">Passed</span>))
+            <a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-attempt-state-from-columns-387">attempt_state_from_columns</a>(<a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-base-cols-639">base_cols</a>(<span class="rs-type">AttemptStage</span>::<span class="rs-type">Plan</span>, <span class="rs-type">AttemptStatus</span>::<span class="rs-type">Passed</span>))
                 .is_err(),
             &quot;<span class="rs-type">PLAN</span> may only be <span class="rs-type">Running</span>&quot;
         );
-        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> failed = <a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-base-cols-635">base_cols</a>(<span class="rs-type">AttemptStage</span>::<span class="rs-type">Plan</span>, <span class="rs-type">AttemptStatus</span>::<span class="rs-type">Running</span>);
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> failed = <a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-base-cols-639">base_cols</a>(<span class="rs-type">AttemptStage</span>::<span class="rs-type">Plan</span>, <span class="rs-type">AttemptStatus</span>::<span class="rs-type">Running</span>);
         failed.fail_reason = <span class="rs-type">Some</span>(<span class="rs-type">AttemptFailReason</span>::<span class="rs-type">TaskFailed</span>);
         assert!(
             <a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-attempt-state-from-columns-387">attempt_state_from_columns</a>(failed).is_err(),
             &quot;<span class="rs-type">PLAN</span> carries no fail_reason&quot;
         );
-        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> closed = <a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-base-cols-635">base_cols</a>(<span class="rs-type">AttemptStage</span>::<span class="rs-type">Plan</span>, <span class="rs-type">AttemptStatus</span>::<span class="rs-type">Running</span>);
-        closed.closed_at = <span class="rs-type">Some</span>(<a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-epoch-631">epoch</a>());
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> closed = <a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-base-cols-639">base_cols</a>(<span class="rs-type">AttemptStage</span>::<span class="rs-type">Plan</span>, <span class="rs-type">AttemptStatus</span>::<span class="rs-type">Running</span>);
+        closed.closed_at = <span class="rs-type">Some</span>(<a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-epoch-635">epoch</a>());
         assert!(
             <a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-attempt-state-from-columns-387">attempt_state_from_columns</a>(closed).is_err(),
             &quot;<span class="rs-type">PLAN</span> is never closed_at&quot;
         );
-        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> with_tasks = <a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-base-cols-635">base_cols</a>(<span class="rs-type">AttemptStage</span>::<span class="rs-type">Plan</span>, <span class="rs-type">AttemptStatus</span>::<span class="rs-type">Running</span>);
-        with_tasks.generator_task_ids = vec![<a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-tid-627">tid</a>(&quot;g1&quot;)];
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> with_tasks = <a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-base-cols-639">base_cols</a>(<span class="rs-type">AttemptStage</span>::<span class="rs-type">Plan</span>, <span class="rs-type">AttemptStatus</span>::<span class="rs-type">Running</span>);
+        with_tasks.generator_task_ids = vec![<a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-tid-631">tid</a>(&quot;g1&quot;)];
         assert!(
             <a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-attempt-state-from-columns-387">attempt_state_from_columns</a>(with_tasks).is_err(),
             &quot;<span class="rs-type">PLAN</span> has no materialized plan tasks&quot;
         );
         <span class="rs-kw">let</span> deferred = <span class="rs-type">DeferredGoal</span>::<a class="symbol-link rs-fn" href="eos-db--src-model-registry-rs.html#method-new-64">new</a>(&quot;later&quot;).expect(&quot;deferred goal&quot;);
-        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> with_deferred = <a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-base-cols-635">base_cols</a>(<span class="rs-type">AttemptStage</span>::<span class="rs-type">Plan</span>, <span class="rs-type">AttemptStatus</span>::<span class="rs-type">Running</span>);
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> with_deferred = <a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-base-cols-639">base_cols</a>(<span class="rs-type">AttemptStage</span>::<span class="rs-type">Plan</span>, <span class="rs-type">AttemptStatus</span>::<span class="rs-type">Running</span>);
         with_deferred.deferred_goal = <span class="rs-type">Some</span>(&amp;deferred);
         assert!(
             <a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-attempt-state-from-columns-387">attempt_state_from_columns</a>(with_deferred).is_err(),
@@ -1883,12 +1891,12 @@
     }
 
     #[test]
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-attempt-state-run-requires-materialized-plan-and-running-status-701">attempt_state_run_requires_materialized_plan_and_running_status</a>() {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-attempt-state-run-requires-materialized-plan-and-running-status-705">attempt_state_run_requires_materialized_plan_and_running_status</a>() {
         <span class="rs-kw">let</span> valid = || {
-            <span class="rs-kw">let</span> <span class="rs-kw">mut</span> cols = <a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-base-cols-635">base_cols</a>(<span class="rs-type">AttemptStage</span>::<span class="rs-type">Run</span>, <span class="rs-type">AttemptStatus</span>::<span class="rs-type">Running</span>);
-            cols.planner_task_id = <span class="rs-type">Some</span>(<a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-tid-627">tid</a>(&quot;p1&quot;));
-            cols.generator_task_ids = vec![<a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-tid-627">tid</a>(&quot;g1&quot;)];
-            cols.reducer_task_ids = vec![<a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-tid-627">tid</a>(&quot;r1&quot;)];
+            <span class="rs-kw">let</span> <span class="rs-kw">mut</span> cols = <a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-base-cols-639">base_cols</a>(<span class="rs-type">AttemptStage</span>::<span class="rs-type">Run</span>, <span class="rs-type">AttemptStatus</span>::<span class="rs-type">Running</span>);
+            cols.planner_task_id = <span class="rs-type">Some</span>(<a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-tid-631">tid</a>(&quot;p1&quot;));
+            cols.generator_task_ids = vec![<a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-tid-631">tid</a>(&quot;g1&quot;)];
+            cols.reducer_task_ids = vec![<a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-tid-631">tid</a>(&quot;r1&quot;)];
             cols
         };
         assert!(matches!(
@@ -1925,7 +1933,7 @@
             &quot;open <span class="rs-type">RUN</span> carries no fail_reason&quot;
         );
         <span class="rs-kw">let</span> <span class="rs-kw">mut</span> closed = valid();
-        closed.closed_at = <span class="rs-type">Some</span>(<a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-epoch-631">epoch</a>());
+        closed.closed_at = <span class="rs-type">Some</span>(<a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-epoch-635">epoch</a>());
         assert!(
             <a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-attempt-state-from-columns-387">attempt_state_from_columns</a>(closed).is_err(),
             &quot;open <span class="rs-type">RUN</span> is not closed_at&quot;
@@ -1933,11 +1941,11 @@
     }
 
     #[test]
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-attempt-state-closed-passed-and-failed-reconstruct-with-required-fields-751">attempt_state_closed_passed_and_failed_reconstruct_with_required_fields</a>() {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-attempt-state-closed-passed-and-failed-reconstruct-with-required-fields-755">attempt_state_closed_passed_and_failed_reconstruct_with_required_fields</a>() {
         <span class="rs-comment">// Passed closure (the success branch the store path never exercised):</span>
         <span class="rs-comment">// closed_at present, no fail_reason.</span>
-        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> passed = <a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-base-cols-635">base_cols</a>(<span class="rs-type">AttemptStage</span>::<span class="rs-type">Closed</span>, <span class="rs-type">AttemptStatus</span>::<span class="rs-type">Passed</span>);
-        passed.closed_at = <span class="rs-type">Some</span>(<a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-epoch-631">epoch</a>());
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> passed = <a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-base-cols-639">base_cols</a>(<span class="rs-type">AttemptStage</span>::<span class="rs-type">Closed</span>, <span class="rs-type">AttemptStatus</span>::<span class="rs-type">Passed</span>);
+        passed.closed_at = <span class="rs-type">Some</span>(<a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-epoch-635">epoch</a>());
         assert!(matches!(
             <a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-attempt-state-from-columns-387">attempt_state_from_columns</a>(passed).expect(&quot;passed closure reconstructs&quot;),
             <span class="rs-type">AttemptState</span>::<span class="rs-type">Closed</span> {
@@ -1947,8 +1955,8 @@
         ));
 
         <span class="rs-comment">// Failed closure: closed_at + fail_reason both present.</span>
-        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> failed = <a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-base-cols-635">base_cols</a>(<span class="rs-type">AttemptStage</span>::<span class="rs-type">Closed</span>, <span class="rs-type">AttemptStatus</span>::<span class="rs-type">Failed</span>);
-        failed.closed_at = <span class="rs-type">Some</span>(<a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-epoch-631">epoch</a>());
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> failed = <a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-base-cols-639">base_cols</a>(<span class="rs-type">AttemptStage</span>::<span class="rs-type">Closed</span>, <span class="rs-type">AttemptStatus</span>::<span class="rs-type">Failed</span>);
+        failed.closed_at = <span class="rs-type">Some</span>(<a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-epoch-635">epoch</a>());
         failed.fail_reason = <span class="rs-type">Some</span>(<span class="rs-type">AttemptFailReason</span>::<span class="rs-type">TaskFailed</span>);
         assert!(matches!(
             <a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-attempt-state-from-columns-387">attempt_state_from_columns</a>(failed).expect(&quot;failed closure reconstructs&quot;),
@@ -1963,28 +1971,28 @@
 
         <span class="rs-comment">// A Closed attempt without closed_at is incoherent.</span>
         assert!(
-            <a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-attempt-state-from-columns-387">attempt_state_from_columns</a>(<a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-base-cols-635">base_cols</a>(<span class="rs-type">AttemptStage</span>::<span class="rs-type">Closed</span>, <span class="rs-type">AttemptStatus</span>::<span class="rs-type">Passed</span>))
+            <a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-attempt-state-from-columns-387">attempt_state_from_columns</a>(<a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-base-cols-639">base_cols</a>(<span class="rs-type">AttemptStage</span>::<span class="rs-type">Closed</span>, <span class="rs-type">AttemptStatus</span>::<span class="rs-type">Passed</span>))
                 .is_err(),
             &quot;<span class="rs-type">CLOSED</span> requires closed_at&quot;
         );
         <span class="rs-comment">// Closed stage with a still-Running status is incoherent.</span>
-        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> running = <a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-base-cols-635">base_cols</a>(<span class="rs-type">AttemptStage</span>::<span class="rs-type">Closed</span>, <span class="rs-type">AttemptStatus</span>::<span class="rs-type">Running</span>);
-        running.closed_at = <span class="rs-type">Some</span>(<a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-epoch-631">epoch</a>());
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> running = <a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-base-cols-639">base_cols</a>(<span class="rs-type">AttemptStage</span>::<span class="rs-type">Closed</span>, <span class="rs-type">AttemptStatus</span>::<span class="rs-type">Running</span>);
+        running.closed_at = <span class="rs-type">Some</span>(<a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-epoch-635">epoch</a>());
         assert!(
             <a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-attempt-state-from-columns-387">attempt_state_from_columns</a>(running).is_err(),
             &quot;<span class="rs-type">CLOSED</span> is never <span class="rs-type">Running</span>&quot;
         );
         <span class="rs-comment">// Passed must not carry a fail_reason.</span>
-        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> passed_with_reason = <a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-base-cols-635">base_cols</a>(<span class="rs-type">AttemptStage</span>::<span class="rs-type">Closed</span>, <span class="rs-type">AttemptStatus</span>::<span class="rs-type">Passed</span>);
-        passed_with_reason.closed_at = <span class="rs-type">Some</span>(<a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-epoch-631">epoch</a>());
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> passed_with_reason = <a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-base-cols-639">base_cols</a>(<span class="rs-type">AttemptStage</span>::<span class="rs-type">Closed</span>, <span class="rs-type">AttemptStatus</span>::<span class="rs-type">Passed</span>);
+        passed_with_reason.closed_at = <span class="rs-type">Some</span>(<a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-epoch-635">epoch</a>());
         passed_with_reason.fail_reason = <span class="rs-type">Some</span>(<span class="rs-type">AttemptFailReason</span>::<span class="rs-type">TaskFailed</span>);
         assert!(
             <a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-attempt-state-from-columns-387">attempt_state_from_columns</a>(passed_with_reason).is_err(),
             &quot;<span class="rs-type">Passed</span> closure carries no fail_reason&quot;
         );
         <span class="rs-comment">// Failed must carry a fail_reason.</span>
-        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> failed_no_reason = <a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-base-cols-635">base_cols</a>(<span class="rs-type">AttemptStage</span>::<span class="rs-type">Closed</span>, <span class="rs-type">AttemptStatus</span>::<span class="rs-type">Failed</span>);
-        failed_no_reason.closed_at = <span class="rs-type">Some</span>(<a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-epoch-631">epoch</a>());
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> failed_no_reason = <a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-base-cols-639">base_cols</a>(<span class="rs-type">AttemptStage</span>::<span class="rs-type">Closed</span>, <span class="rs-type">AttemptStatus</span>::<span class="rs-type">Failed</span>);
+        failed_no_reason.closed_at = <span class="rs-type">Some</span>(<a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-epoch-635">epoch</a>());
         assert!(
             <a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-attempt-state-from-columns-387">attempt_state_from_columns</a>(failed_no_reason).is_err(),
             &quot;<span class="rs-type">Failed</span> closure requires a fail_reason&quot;
@@ -1992,11 +2000,11 @@
     }
 
     #[test]
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-attempt-state-closed-cancelled-reconstructs-without-fail-reason-810">attempt_state_closed_cancelled_reconstructs_without_fail_reason</a>() {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-attempt-state-closed-cancelled-reconstructs-without-fail-reason-814">attempt_state_closed_cancelled_reconstructs_without_fail_reason</a>() {
         <span class="rs-comment">// Cancelled closure: closed_at present, no fail_reason (the reason text is</span>
         <span class="rs-comment">// carried in the cancellation outcomes, not a column).</span>
-        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> cancelled = <a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-base-cols-635">base_cols</a>(<span class="rs-type">AttemptStage</span>::<span class="rs-type">Closed</span>, <span class="rs-type">AttemptStatus</span>::<span class="rs-type">Cancelled</span>);
-        cancelled.closed_at = <span class="rs-type">Some</span>(<a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-epoch-631">epoch</a>());
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> cancelled = <a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-base-cols-639">base_cols</a>(<span class="rs-type">AttemptStage</span>::<span class="rs-type">Closed</span>, <span class="rs-type">AttemptStatus</span>::<span class="rs-type">Cancelled</span>);
+        cancelled.closed_at = <span class="rs-type">Some</span>(<a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-epoch-635">epoch</a>());
         assert!(matches!(
             <a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-attempt-state-from-columns-387">attempt_state_from_columns</a>(cancelled).expect(&quot;cancelled closure reconstructs&quot;),
             <span class="rs-type">AttemptState</span>::<span class="rs-type">Closed</span> {
@@ -2005,8 +2013,8 @@
             }
         ));
         <span class="rs-comment">// A Cancelled closure must not carry a fail_reason.</span>
-        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> cancelled_with_reason = <a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-base-cols-635">base_cols</a>(<span class="rs-type">AttemptStage</span>::<span class="rs-type">Closed</span>, <span class="rs-type">AttemptStatus</span>::<span class="rs-type">Cancelled</span>);
-        cancelled_with_reason.closed_at = <span class="rs-type">Some</span>(<a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-epoch-631">epoch</a>());
+        <span class="rs-kw">let</span> <span class="rs-kw">mut</span> cancelled_with_reason = <a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-base-cols-639">base_cols</a>(<span class="rs-type">AttemptStage</span>::<span class="rs-type">Closed</span>, <span class="rs-type">AttemptStatus</span>::<span class="rs-type">Cancelled</span>);
+        cancelled_with_reason.closed_at = <span class="rs-type">Some</span>(<a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-epoch-635">epoch</a>());
         cancelled_with_reason.fail_reason = <span class="rs-type">Some</span>(<span class="rs-type">AttemptFailReason</span>::<span class="rs-type">TaskFailed</span>);
         assert!(
             <a class="symbol-link rs-fn" href="eos-db--src-rows-rs.html#item-fn-attempt-state-from-columns-387">attempt_state_from_columns</a>(cancelled_with_reason).is_err(),

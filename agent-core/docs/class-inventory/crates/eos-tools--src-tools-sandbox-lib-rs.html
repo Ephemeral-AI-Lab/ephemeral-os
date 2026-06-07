@@ -61,17 +61,17 @@
     <h3>register</h3>
     <span class="visibility">pub(super)</span>
   </div>
-  <code class="signature">pub(super) fn <a class="symbol-link" href="eos-tools--src-ports-mod-rs.html#method-register-408">register</a> (registry : &amp; mut crate :: registry :: <a class="symbol-link" href="eos-tools--src-registry-tool-registry-rs.html#item-struct-ToolRegistry-18">ToolRegistry</a> , config : &amp; crate :: registry :: config :: <a class="symbol-link" href="eos-tools--src-registry-config-rs.html#item-struct-ToolConfigSet-45">ToolConfigSet</a> , sandbox_service : super :: super :: <a class="symbol-link" href="eos-tools--src-tools-services-rs.html#item-struct-SandboxToolService-65">SandboxToolService</a> , command_service : super :: super :: <a class="symbol-link" href="eos-tools--src-tools-services-rs.html#item-struct-CommandToolService-91">CommandToolService</a> ,)</code>
+  <code class="signature">pub(super) fn <a class="symbol-link" href="eos-tools--src-ports-mod-rs.html#method-register-407">register</a> (registry : &amp; mut crate :: registry :: <a class="symbol-link" href="eos-tools--src-registry-tool-registry-rs.html#item-struct-ToolRegistry-18">ToolRegistry</a> , config : &amp; crate :: registry :: config :: <a class="symbol-link" href="eos-tools--src-registry-config-rs.html#item-struct-ToolConfigSet-45">ToolConfigSet</a> , sandbox_service : super :: super :: <a class="symbol-link" href="eos-tools--src-tools-services-rs.html#item-struct-SandboxToolService-64">SandboxToolService</a> , command_service : super :: super :: <a class="symbol-link" href="eos-tools--src-tools-services-rs.html#item-struct-CommandToolService-90">CommandToolService</a> ,)</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-ports-mod-rs.html#method-register-408">register</a>(
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-ports-mod-rs.html#method-register-407">register</a>(
     registry: &amp;<span class="rs-kw">mut</span> <span class="rs-kw">crate</span>::registry::<a class="symbol-link rs-type" href="eos-tools--src-registry-tool-registry-rs.html#item-struct-ToolRegistry-18">ToolRegistry</a>,
     config: &amp;<span class="rs-kw">crate</span>::registry::config::<a class="symbol-link rs-type" href="eos-tools--src-registry-config-rs.html#item-struct-ToolConfigSet-45">ToolConfigSet</a>,
-    sandbox_service: <span class="rs-kw">super</span>::<span class="rs-kw">super</span>::<a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-SandboxToolService-65">SandboxToolService</a>,
-    command_service: <span class="rs-kw">super</span>::<span class="rs-kw">super</span>::<a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-CommandToolService-91">CommandToolService</a>,
+    sandbox_service: <span class="rs-kw">super</span>::<span class="rs-kw">super</span>::<a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-SandboxToolService-64">SandboxToolService</a>,
+    command_service: <span class="rs-kw">super</span>::<span class="rs-kw">super</span>::<a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-CommandToolService-90">CommandToolService</a>,
 ) {
-    registration::<a class="symbol-link rs-fn" href="eos-tools--src-ports-mod-rs.html#method-register-408">register</a>(registry, config, sandbox_service, command_service);
+    registration::<a class="symbol-link rs-fn" href="eos-tools--src-ports-mod-rs.html#method-register-407">register</a>(registry, config, sandbox_service, command_service);
 }
 </code></pre>
 </details>
@@ -383,11 +383,11 @@
     <span class="visibility">pub(super)</span>
   </div>
   <code class="signature">pub(super) fn <a class="symbol-link" href="eos-tools--src-tools-sandbox-lib-rs.html#item-fn-is-command-session-not-found-163">is_command_session_not_found</a> (result : &amp; ExecCommandResult) -&gt; bool</code>
-  <p class="docstring">Whether the daemon says the live session is gone, so the supervisor's stored<br>terminal result can be recovered.</p>
+  <p class="docstring">Whether the daemon says the live session is gone, so the background's stored<br>terminal result can be recovered.</p>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-comment">/// Whether the daemon says the live session is gone, so the supervisor's stored</span>
+  <pre><code><span class="rs-comment">/// Whether the daemon says the live session is gone, so the background's stored</span>
 <span class="rs-comment">/// terminal result can be recovered.</span>
 <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-tools-sandbox-lib-rs.html#item-fn-is-command-session-not-found-163">is_command_session_not_found</a>(result: &amp;<span class="rs-type">ExecCommandResult</span>) -&gt; bool {
     result.is_session_not_found()
@@ -403,11 +403,11 @@
     <span class="visibility">pub(super)</span>
   </div>
   <code class="signature">pub(super) fn <a class="symbol-link" href="eos-tools--src-tools-sandbox-lib-rs.html#item-fn-command-result-value-169">command_result_value</a> (result : &amp; ExecCommandResult) -&gt; Value</code>
-  <p class="docstring">Project an [`ExecCommandResult`] into the completion payload the supervisor<br>stores.</p>
+  <p class="docstring">Project an [`ExecCommandResult`] into the completion payload the background<br>stores.</p>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-comment">/// Project an [`ExecCommandResult`] into the completion payload the supervisor</span>
+  <pre><code><span class="rs-comment">/// Project an [`ExecCommandResult`] into the completion payload the background</span>
 <span class="rs-comment">/// stores.</span>
 <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-tools-sandbox-lib-rs.html#item-fn-command-result-value-169">command_result_value</a>(result: &amp;<span class="rs-type">ExecCommandResult</span>) -&gt; <span class="rs-type">Value</span> {
     json!({
@@ -430,11 +430,11 @@
     <span class="visibility">pub(super)</span>
   </div>
   <code class="signature">pub(super) fn <a class="symbol-link" href="eos-tools--src-tools-sandbox-lib-rs.html#item-fn-command-tool-result-from-value-182">command_tool_result_from_value</a> (result : &amp; Value) -&gt; <a class="symbol-link" href="eos-tools--src-core-result-rs.html#item-struct-ToolResult-12">ToolResult</a></code>
-  <p class="docstring">Render a supervisor-stored terminal `result` value into the tool output DTO<br>(the recover-race return path).</p>
+  <p class="docstring">Render a background-stored terminal `result` value into the tool output DTO<br>(the recover-race return path).</p>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-comment">/// Render a supervisor-stored terminal `result` value into the tool output DTO</span>
+  <pre><code><span class="rs-comment">/// Render a background-stored terminal `result` value into the tool output DTO</span>
 <span class="rs-comment">/// (the recover-race return path).</span>
 <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-tools-sandbox-lib-rs.html#item-fn-command-tool-result-from-value-182">command_tool_result_from_value</a>(result: &amp;<span class="rs-type">Value</span>) -&gt; <a class="symbol-link rs-type" href="eos-tools--src-core-result-rs.html#item-struct-ToolResult-12">ToolResult</a> {
     <span class="rs-kw">let</span> status = result
@@ -571,13 +571,13 @@
 <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">const</span> <span class="rs-type">MAX_READ_FILE_LINES</span>: u32 = 200;
 <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">const</span> <span class="rs-type">MAX_YIELD_TIME_MS</span>: u32 = 30_000;
 
-<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-ports-mod-rs.html#method-register-408">register</a>(
+<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-ports-mod-rs.html#method-register-407">register</a>(
     registry: &amp;<span class="rs-kw">mut</span> <span class="rs-kw">crate</span>::registry::<a class="symbol-link rs-type" href="eos-tools--src-registry-tool-registry-rs.html#item-struct-ToolRegistry-18">ToolRegistry</a>,
     config: &amp;<span class="rs-kw">crate</span>::registry::config::<a class="symbol-link rs-type" href="eos-tools--src-registry-config-rs.html#item-struct-ToolConfigSet-45">ToolConfigSet</a>,
-    sandbox_service: <span class="rs-kw">super</span>::<span class="rs-kw">super</span>::<a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-SandboxToolService-65">SandboxToolService</a>,
-    command_service: <span class="rs-kw">super</span>::<span class="rs-kw">super</span>::<a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-CommandToolService-91">CommandToolService</a>,
+    sandbox_service: <span class="rs-kw">super</span>::<span class="rs-kw">super</span>::<a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-SandboxToolService-64">SandboxToolService</a>,
+    command_service: <span class="rs-kw">super</span>::<span class="rs-kw">super</span>::<a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-CommandToolService-90">CommandToolService</a>,
 ) {
-    registration::<a class="symbol-link rs-fn" href="eos-tools--src-ports-mod-rs.html#method-register-408">register</a>(registry, config, sandbox_service, command_service);
+    registration::<a class="symbol-link rs-fn" href="eos-tools--src-ports-mod-rs.html#method-register-407">register</a>(registry, config, sandbox_service, command_service);
 }
 
 <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-tools-sandbox-lib-rs.html#item-fn-request-base-34">request_base</a>(
@@ -709,13 +709,13 @@
     <span class="rs-type">None</span>
 }
 
-<span class="rs-comment">/// Whether the daemon says the live session is gone, so the supervisor's stored</span>
+<span class="rs-comment">/// Whether the daemon says the live session is gone, so the background's stored</span>
 <span class="rs-comment">/// terminal result can be recovered.</span>
 <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-tools-sandbox-lib-rs.html#item-fn-is-command-session-not-found-163">is_command_session_not_found</a>(result: &amp;<span class="rs-type">ExecCommandResult</span>) -&gt; bool {
     result.is_session_not_found()
 }
 
-<span class="rs-comment">/// Project an [`ExecCommandResult`] into the completion payload the supervisor</span>
+<span class="rs-comment">/// Project an [`ExecCommandResult`] into the completion payload the background</span>
 <span class="rs-comment">/// stores.</span>
 <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-tools-sandbox-lib-rs.html#item-fn-command-result-value-169">command_result_value</a>(result: &amp;<span class="rs-type">ExecCommandResult</span>) -&gt; <span class="rs-type">Value</span> {
     json!({
@@ -728,7 +728,7 @@
     })
 }
 
-<span class="rs-comment">/// Render a supervisor-stored terminal `result` value into the tool output DTO</span>
+<span class="rs-comment">/// Render a background-stored terminal `result` value into the tool output DTO</span>
 <span class="rs-comment">/// (the recover-race return path).</span>
 <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-tools-sandbox-lib-rs.html#item-fn-command-tool-result-from-value-182">command_tool_result_from_value</a>(result: &amp;<span class="rs-type">Value</span>) -&gt; <a class="symbol-link rs-type" href="eos-tools--src-core-result-rs.html#item-struct-ToolResult-12">ToolResult</a> {
     <span class="rs-kw">let</span> status = result

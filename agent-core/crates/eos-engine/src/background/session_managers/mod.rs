@@ -1,11 +1,8 @@
 //! Private background-session manager contracts and concrete families.
 
 use std::hash::Hash;
-use std::marker::PhantomData;
-use std::time::Duration;
 
 use async_trait::async_trait;
-use tokio::task::JoinHandle;
 
 pub(super) mod command;
 pub(super) mod subagent;
@@ -27,7 +24,7 @@ pub enum BackgroundSessionStatus {
 }
 
 impl BackgroundSessionStatus {
-    /// Terminal precedence; higher status wins when cancel/finish events race.
+    /// Terminal precedence; higher status wins when cancel/completion events race.
     #[must_use]
     pub const fn precedence(self) -> u8 {
         match self {
@@ -53,54 +50,6 @@ pub(super) trait BackgroundSessionManager {
 
     async fn insert(&self, session: Self::Session);
     async fn count(&self) -> usize;
-    async fn poll(&self) -> Vec<Self::Completion>;
-    async fn finish(&self, completion: Self::Completion);
+    async fn push_notification_on_completion(&self, completion: Self::Completion);
     async fn cancel(&self, reason: &str);
-}
-
-pub(super) trait BackgroundSessionMonitor {
-    type Manager: BackgroundSessionManager + Clone + Send + Sync + 'static;
-
-    fn spawn(manager: Self::Manager, interval: Duration) -> Self;
-}
-
-pub(in crate::background) struct BackgroundSessionMonitorHandle<M> {
-    join: JoinHandle<()>,
-    _manager: PhantomData<fn() -> M>,
-}
-
-impl<M> Drop for BackgroundSessionMonitorHandle<M> {
-    fn drop(&mut self) {
-        self.join.abort();
-    }
-}
-
-impl<M> BackgroundSessionMonitor for BackgroundSessionMonitorHandle<M>
-where
-    M: BackgroundSessionManager + Clone + Send + Sync + 'static,
-    M::Completion: Send + 'static,
-{
-    type Manager = M;
-
-    fn spawn(manager: Self::Manager, interval: Duration) -> Self {
-        Self {
-            join: spawn_monitor_loop(manager, interval),
-            _manager: PhantomData,
-        }
-    }
-}
-
-pub(super) fn spawn_monitor_loop<M>(manager: M, interval: Duration) -> JoinHandle<()>
-where
-    M: BackgroundSessionManager + Clone + Send + Sync + 'static,
-    M::Completion: Send + 'static,
-{
-    tokio::spawn(async move {
-        loop {
-            for completion in manager.poll().await {
-                manager.finish(completion).await;
-            }
-            tokio::time::sleep(interval).await;
-        }
-    })
 }

@@ -105,7 +105,7 @@ pub(crate) struct AttemptRow {
 #[derive(Debug, Clone, sqlx::FromRow)]
 pub(crate) struct AgentRunRow {
     pub id: String,
-    pub task_id: String,
+    pub task_id: Option<String>,
     pub initial_messages: Option<String>,
     pub agent_name: String,
     pub message_history: Option<String>,
@@ -482,7 +482,11 @@ fn attempt_state_from_columns(
 pub(crate) fn row_to_agent_run(r: AgentRunRow) -> Result<AgentRun, DbError> {
     Ok(AgentRun {
         id: parse_id("agent_runs.id", &r.id)?,
-        task_id: parse_id("agent_runs.task_id", &r.task_id)?,
+        task_id: r
+            .task_id
+            .as_deref()
+            .map(|task_id| parse_id("agent_runs.task_id", task_id))
+            .transpose()?,
         initial_messages: json_col::decode_opt(r.initial_messages.as_deref())?,
         agent_name: r.agent_name,
         message_history: json_col::decode_opt(r.message_history.as_deref())?,

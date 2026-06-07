@@ -70,12 +70,12 @@
         <span class="rs-self">Self</span> { pool }
     }
 </code></pre>
-</details></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl Sealed for <a class="symbol-link" href="eos-db--src-repositories-agent-run-rs.html#item-struct-SqlAgentRunStore-16">SqlAgentRunStore</a></code></summary><table><tbody></tbody></table></details><details><summary><code>impl AgentRunStore for <a class="symbol-link" href="eos-db--src-repositories-agent-run-rs.html#item-struct-SqlAgentRunStore-16">SqlAgentRunStore</a></code></summary><table><tbody><tr id="method-create-run-32"><td>method</td><td>create_run</td><td><code>async fn <a class="symbol-link" href="eos-db--src-repositories-agent-run-rs.html#method-create-run-32">create_run</a> (&amp; self , agent_run_id : &amp; AgentRunId , task_id : &amp; TaskId , agent_name : &amp; str , initial_messages : Option &lt; &amp; [JsonObject] &gt; ,) -&gt; Result &lt; AgentRun , CoreError &gt;</code><details class="function-source">
+</details></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl Sealed for <a class="symbol-link" href="eos-db--src-repositories-agent-run-rs.html#item-struct-SqlAgentRunStore-16">SqlAgentRunStore</a></code></summary><table><tbody></tbody></table></details><details><summary><code>impl AgentRunStore for <a class="symbol-link" href="eos-db--src-repositories-agent-run-rs.html#item-struct-SqlAgentRunStore-16">SqlAgentRunStore</a></code></summary><table><tbody><tr id="method-create-run-32"><td>method</td><td>create_run</td><td><code>async fn <a class="symbol-link" href="eos-db--src-repositories-agent-run-rs.html#method-create-run-32">create_run</a> (&amp; self , agent_run_id : &amp; AgentRunId , task_id : Option &lt; &amp; TaskId &gt; , agent_name : &amp; str , initial_messages : Option &lt; &amp; [JsonObject] &gt; ,) -&gt; Result &lt; AgentRun , CoreError &gt;</code><details class="function-source">
   <summary>code</summary>
   <pre><code>    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-db--src-repositories-agent-run-rs.html#method-create-run-32">create_run</a>(
         &amp;<span class="rs-self">self</span>,
         agent_run_id: &amp;<span class="rs-type">AgentRunId</span>,
-        task_id: &amp;<span class="rs-type">TaskId</span>,
+        task_id: <span class="rs-type">Option</span>&lt;&amp;<span class="rs-type">TaskId</span>&gt;,
         agent_name: &amp;str,
         initial_messages: <span class="rs-type">Option</span>&lt;&amp;[<span class="rs-type">JsonObject</span>]&gt;,
     ) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">AgentRun</span>, <span class="rs-type">CoreError</span>&gt; {
@@ -88,7 +88,7 @@
              <span class="rs-type">VALUES</span> (?, ?, ?, ?, <span class="rs-type">NULL</span>, <span class="rs-type">NULL</span>, 0, <span class="rs-type">NULL</span>, ?, <span class="rs-type">NULL</span>) <span class="rs-type">RETURNING</span> *&quot;,
         )
         .bind(agent_run_id.as_str())
-        .bind(task_id.as_str())
+        .bind(task_id.map(<span class="rs-type">TaskId</span>::as_str))
         .bind(initial)
         .bind(agent_name)
         .bind(now)
@@ -196,7 +196,7 @@
     <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-db--src-repositories-agent-run-rs.html#method-create-run-32">create_run</a>(
         &amp;<span class="rs-self">self</span>,
         agent_run_id: &amp;<span class="rs-type">AgentRunId</span>,
-        task_id: &amp;<span class="rs-type">TaskId</span>,
+        task_id: <span class="rs-type">Option</span>&lt;&amp;<span class="rs-type">TaskId</span>&gt;,
         agent_name: &amp;str,
         initial_messages: <span class="rs-type">Option</span>&lt;&amp;[<span class="rs-type">JsonObject</span>]&gt;,
     ) -&gt; <span class="rs-type">Result</span>&lt;<span class="rs-type">AgentRun</span>, <span class="rs-type">CoreError</span>&gt; {
@@ -209,7 +209,7 @@
              <span class="rs-type">VALUES</span> (?, ?, ?, ?, <span class="rs-type">NULL</span>, <span class="rs-type">NULL</span>, 0, <span class="rs-type">NULL</span>, ?, <span class="rs-type">NULL</span>) <span class="rs-type">RETURNING</span> *&quot;,
         )
         .bind(agent_run_id.as_str())
-        .bind(task_id.as_str())
+        .bind(task_id.map(<span class="rs-type">TaskId</span>::as_str))
         .bind(initial)
         .bind(agent_name)
         .bind(now)

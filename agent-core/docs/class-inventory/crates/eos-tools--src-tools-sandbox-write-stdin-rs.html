@@ -74,9 +74,9 @@
   </div>
   <code class="signature">pub(super) struct <a class="symbol-link" href="eos-tools--src-tools-sandbox-write-stdin-rs.html#item-struct-WriteStdin-29">WriteStdin</a></code>
   <div class="tags"></div>
-  <h4>Fields</h4><table><tbody><tr><td>private</td><td>service</td><td><code><a class="symbol-link" href="eos-tools--src-tools-services-rs.html#item-struct-CommandToolService-91">CommandToolService</a></code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-34"><td>constructor</td><td>new</td><td><code>pub(super) fn <a class="symbol-link" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a> (service : <a class="symbol-link" href="eos-tools--src-tools-services-rs.html#item-struct-CommandToolService-91">CommandToolService</a>) -&gt; Self</code><details class="function-source">
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>service</td><td><code><a class="symbol-link" href="eos-tools--src-tools-services-rs.html#item-struct-CommandToolService-90">CommandToolService</a></code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-34"><td>constructor</td><td>new</td><td><code>pub(super) fn <a class="symbol-link" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a> (service : <a class="symbol-link" href="eos-tools--src-tools-services-rs.html#item-struct-CommandToolService-90">CommandToolService</a>) -&gt; Self</code><details class="function-source">
   <summary>code</summary>
-  <pre><code>    <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(service: <a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-CommandToolService-91">CommandToolService</a>) -&gt; <span class="rs-self">Self</span> {
+  <pre><code>    <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(service: <a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-CommandToolService-90">CommandToolService</a>) -&gt; <span class="rs-self">Self</span> {
         <span class="rs-self">Self</span> { service }
     }
 </code></pre>
@@ -135,13 +135,13 @@
             <span class="rs-type">Ok</span>(result) =&gt; result,
             <span class="rs-type">Err</span>(err) =&gt; <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-tools--src-core-result-rs.html#item-struct-ToolResult-12">ToolResult</a>::<a class="symbol-link rs-fn" href="eos-tools--src-core-result-rs.html#method-error-42">error</a>(err.to_string())),
         };
-        <span class="rs-comment">// If the daemon already lost the live session, surface the supervisor's</span>
+        <span class="rs-comment">// If the daemon already lost the live session, surface the background's</span>
         <span class="rs-comment">// stored terminal; otherwise, once a terminal status is observed inline,</span>
         <span class="rs-comment">// latch it as delivered so the heartbeat never re-notifies the same result.</span>
-        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(port) = &amp;<span class="rs-self">self</span>.service.command_session_supervisor {
+        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(port) = &amp;<span class="rs-self">self</span>.service.command_session_port {
             <span class="rs-kw">if</span> <a class="symbol-link rs-fn" href="eos-tools--src-tools-sandbox-lib-rs.html#item-fn-is-command-session-not-found-163">is_command_session_not_found</a>(&amp;result) {
                 <span class="rs-kw">if</span> port
-                    .<a class="symbol-link rs-fn" href="eos-tools--src-ports-mod-rs.html#method-command-session-already-reported-431">command_session_already_reported</a>(command_session_id)
+                    .<a class="symbol-link rs-fn" href="eos-tools--src-ports-mod-rs.html#method-command-session-already-reported-429">command_session_already_reported</a>(command_session_id)
                     .<span class="rs-kw">await</span>
                 {
                     <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-tools--src-core-result-rs.html#item-struct-ToolResult-12">ToolResult</a>::<a class="symbol-link rs-fn" href="eos-tools--src-core-result-rs.html#method-ok-31">ok</a>(format!(
@@ -149,13 +149,13 @@
                          its result was already reported.&quot;
                     )));
                 }
-                <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(stored) = port.<a class="symbol-link rs-fn" href="eos-tools--src-ports-mod-rs.html#method-command-session-result-418">command_session_result</a>(command_session_id).<span class="rs-kw">await</span> {
-                    port.<a class="symbol-link rs-fn" href="eos-tools--src-ports-mod-rs.html#method-mark-command-session-reported-423">mark_command_session_reported</a>(command_session_id, stored.clone())
+                <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(stored) = port.<a class="symbol-link rs-fn" href="eos-tools--src-ports-mod-rs.html#method-command-session-result-416">command_session_result</a>(command_session_id).<span class="rs-kw">await</span> {
+                    port.<a class="symbol-link rs-fn" href="eos-tools--src-ports-mod-rs.html#method-mark-command-session-reported-421">mark_command_session_reported</a>(command_session_id, stored.clone())
                         .<span class="rs-kw">await</span>;
                     <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<a class="symbol-link rs-fn" href="eos-tools--src-tools-sandbox-lib-rs.html#item-fn-command-tool-result-from-value-182">command_tool_result_from_value</a>(&amp;stored));
                 }
             } <span class="rs-kw">else</span> <span class="rs-kw">if</span> !result.is_running() {
-                port.<a class="symbol-link rs-fn" href="eos-tools--src-ports-mod-rs.html#method-mark-command-session-reported-423">mark_command_session_reported</a>(
+                port.<a class="symbol-link rs-fn" href="eos-tools--src-ports-mod-rs.html#method-mark-command-session-reported-421">mark_command_session_reported</a>(
                     command_session_id,
                     <a class="symbol-link rs-fn" href="eos-tools--src-tools-sandbox-lib-rs.html#item-fn-command-result-value-169">command_result_value</a>(&amp;result),
                 )
@@ -223,7 +223,7 @@
 <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::runtime::execution::parse_input;
 <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::runtime::executor::<a class="symbol-link rs-type" href="eos-tools--src-runtime-executor-rs.html#item-trait-ToolExecutor-18">ToolExecutor</a>;
 
-<span class="rs-kw">use</span> <span class="rs-kw">super</span>::<span class="rs-kw">super</span>::<a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-CommandToolService-91">CommandToolService</a>;
+<span class="rs-kw">use</span> <span class="rs-kw">super</span>::<span class="rs-kw">super</span>::<a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-CommandToolService-90">CommandToolService</a>;
 <span class="rs-kw">use</span> <span class="rs-kw">super</span>::lib::{
     command_result_value, command_tool_result, command_tool_result_from_value, default_yield_ms,
     invalid_input, is_command_session_not_found, request_base, validate_command_timing,
@@ -239,11 +239,11 @@
 }
 
 <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-write-stdin-rs.html#item-struct-WriteStdin-29">WriteStdin</a> {
-    service: <a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-CommandToolService-91">CommandToolService</a>,
+    service: <a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-CommandToolService-90">CommandToolService</a>,
 }
 
 <span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-write-stdin-rs.html#item-struct-WriteStdin-29">WriteStdin</a> {
-    <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(service: <a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-CommandToolService-91">CommandToolService</a>) -&gt; <span class="rs-self">Self</span> {
+    <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(service: <a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-CommandToolService-90">CommandToolService</a>) -&gt; <span class="rs-self">Self</span> {
         <span class="rs-self">Self</span> { service }
     }
 }
@@ -303,13 +303,13 @@
             <span class="rs-type">Ok</span>(result) =&gt; result,
             <span class="rs-type">Err</span>(err) =&gt; <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-tools--src-core-result-rs.html#item-struct-ToolResult-12">ToolResult</a>::<a class="symbol-link rs-fn" href="eos-tools--src-core-result-rs.html#method-error-42">error</a>(err.to_string())),
         };
-        <span class="rs-comment">// If the daemon already lost the live session, surface the supervisor's</span>
+        <span class="rs-comment">// If the daemon already lost the live session, surface the background's</span>
         <span class="rs-comment">// stored terminal; otherwise, once a terminal status is observed inline,</span>
         <span class="rs-comment">// latch it as delivered so the heartbeat never re-notifies the same result.</span>
-        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(port) = &amp;<span class="rs-self">self</span>.service.command_session_supervisor {
+        <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(port) = &amp;<span class="rs-self">self</span>.service.command_session_port {
             <span class="rs-kw">if</span> <a class="symbol-link rs-fn" href="eos-tools--src-tools-sandbox-lib-rs.html#item-fn-is-command-session-not-found-163">is_command_session_not_found</a>(&amp;result) {
                 <span class="rs-kw">if</span> port
-                    .<a class="symbol-link rs-fn" href="eos-tools--src-ports-mod-rs.html#method-command-session-already-reported-431">command_session_already_reported</a>(command_session_id)
+                    .<a class="symbol-link rs-fn" href="eos-tools--src-ports-mod-rs.html#method-command-session-already-reported-429">command_session_already_reported</a>(command_session_id)
                     .<span class="rs-kw">await</span>
                 {
                     <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-tools--src-core-result-rs.html#item-struct-ToolResult-12">ToolResult</a>::<a class="symbol-link rs-fn" href="eos-tools--src-core-result-rs.html#method-ok-31">ok</a>(format!(
@@ -317,13 +317,13 @@
                          its result was already reported.&quot;
                     )));
                 }
-                <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(stored) = port.<a class="symbol-link rs-fn" href="eos-tools--src-ports-mod-rs.html#method-command-session-result-418">command_session_result</a>(command_session_id).<span class="rs-kw">await</span> {
-                    port.<a class="symbol-link rs-fn" href="eos-tools--src-ports-mod-rs.html#method-mark-command-session-reported-423">mark_command_session_reported</a>(command_session_id, stored.clone())
+                <span class="rs-kw">if</span> <span class="rs-kw">let</span> <span class="rs-type">Some</span>(stored) = port.<a class="symbol-link rs-fn" href="eos-tools--src-ports-mod-rs.html#method-command-session-result-416">command_session_result</a>(command_session_id).<span class="rs-kw">await</span> {
+                    port.<a class="symbol-link rs-fn" href="eos-tools--src-ports-mod-rs.html#method-mark-command-session-reported-421">mark_command_session_reported</a>(command_session_id, stored.clone())
                         .<span class="rs-kw">await</span>;
                     <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<a class="symbol-link rs-fn" href="eos-tools--src-tools-sandbox-lib-rs.html#item-fn-command-tool-result-from-value-182">command_tool_result_from_value</a>(&amp;stored));
                 }
             } <span class="rs-kw">else</span> <span class="rs-kw">if</span> !result.is_running() {
-                port.<a class="symbol-link rs-fn" href="eos-tools--src-ports-mod-rs.html#method-mark-command-session-reported-423">mark_command_session_reported</a>(
+                port.<a class="symbol-link rs-fn" href="eos-tools--src-ports-mod-rs.html#method-mark-command-session-reported-421">mark_command_session_reported</a>(
                     command_session_id,
                     <a class="symbol-link rs-fn" href="eos-tools--src-tools-sandbox-lib-rs.html#item-fn-command-result-value-169">command_result_value</a>(&amp;result),
                 )

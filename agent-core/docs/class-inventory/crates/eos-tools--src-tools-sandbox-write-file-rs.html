@@ -74,9 +74,9 @@
   </div>
   <code class="signature">pub(super) struct <a class="symbol-link" href="eos-tools--src-tools-sandbox-write-file-rs.html#item-struct-WriteFile-27">WriteFile</a></code>
   <div class="tags"></div>
-  <h4>Fields</h4><table><tbody><tr><td>private</td><td>service</td><td><code><a class="symbol-link" href="eos-tools--src-tools-services-rs.html#item-struct-SandboxToolService-65">SandboxToolService</a></code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-32"><td>constructor</td><td>new</td><td><code>pub(super) fn <a class="symbol-link" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a> (service : <a class="symbol-link" href="eos-tools--src-tools-services-rs.html#item-struct-SandboxToolService-65">SandboxToolService</a>) -&gt; Self</code><details class="function-source">
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>service</td><td><code><a class="symbol-link" href="eos-tools--src-tools-services-rs.html#item-struct-SandboxToolService-64">SandboxToolService</a></code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-32"><td>constructor</td><td>new</td><td><code>pub(super) fn <a class="symbol-link" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a> (service : <a class="symbol-link" href="eos-tools--src-tools-services-rs.html#item-struct-SandboxToolService-64">SandboxToolService</a>) -&gt; Self</code><details class="function-source">
   <summary>code</summary>
-  <pre><code>    <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(service: <a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-SandboxToolService-65">SandboxToolService</a>) -&gt; <span class="rs-self">Self</span> {
+  <pre><code>    <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(service: <a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-SandboxToolService-64">SandboxToolService</a>) -&gt; <span class="rs-self">Self</span> {
         <span class="rs-self">Self</span> { service }
     }
 </code></pre>
@@ -156,7 +156,7 @@
 <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::runtime::execution::parse_input;
 <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::runtime::executor::<a class="symbol-link rs-type" href="eos-tools--src-runtime-executor-rs.html#item-trait-ToolExecutor-18">ToolExecutor</a>;
 
-<span class="rs-kw">use</span> <span class="rs-kw">super</span>::<span class="rs-kw">super</span>::<a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-SandboxToolService-65">SandboxToolService</a>;
+<span class="rs-kw">use</span> <span class="rs-kw">super</span>::<span class="rs-kw">super</span>::<a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-SandboxToolService-64">SandboxToolService</a>;
 <span class="rs-kw">use</span> <span class="rs-kw">super</span>::lib::outputs::<a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-lib-outputs-rs.html#item-struct-MutationOutput-18">MutationOutput</a>;
 <span class="rs-kw">use</span> <span class="rs-kw">super</span>::lib::{cwd, failure_status, mutation_result, request_base, resolve_path};
 
@@ -167,11 +167,11 @@
 }
 
 <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-write-file-rs.html#item-struct-WriteFile-27">WriteFile</a> {
-    service: <a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-SandboxToolService-65">SandboxToolService</a>,
+    service: <a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-SandboxToolService-64">SandboxToolService</a>,
 }
 
 <span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-write-file-rs.html#item-struct-WriteFile-27">WriteFile</a> {
-    <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(service: <a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-SandboxToolService-65">SandboxToolService</a>) -&gt; <span class="rs-self">Self</span> {
+    <span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(service: <a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-SandboxToolService-64">SandboxToolService</a>) -&gt; <span class="rs-self">Self</span> {
         <span class="rs-self">Self</span> { service }
     }
 }

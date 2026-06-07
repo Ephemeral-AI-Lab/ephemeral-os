@@ -135,7 +135,7 @@
   <div>Planner dispatch gate</div><div><code>_is_generator_capable_agent()</code> requires <code>role == AgentRole.GENERATOR</code> (only the executor profile). Reducers carry no <code>agent_name</code> and always run the <code>reducer</code> profile.</div>
   <div>Terminal descriptors</div><div><code>tools/_terminals/registry.py</code> owns selection guidance and advisor-review focus for every terminal. Row 3, row 4, and advisor prompts render from the same catalog.</div>
   <div>Nested planner policy</div><div><code>submit_planner_outcome</code> remains visible everywhere, but <code>DisallowNestedPlannerDeferral</code> rejects nonblank <code>deferred_goal_for_next_iteration</code> inside delegated workflows.</div>
-  <div>Delegated workflow policy</div><div><code>delegate_workflow</code>, <code>check_workflow_status</code>, and <code>cancel_workflow</code> are ordinary non-terminal tools. The background supervisor rejects a second outstanding delegated workflow for the same parent Task until the caller checks or cancels the existing one.</div>
+  <div>Delegated workflow policy</div><div><code>delegate_workflow</code>, <code>check_workflow_status</code>, and <code>cancel_workflow</code> are ordinary non-terminal tools. <code>BackgroundSessionPort</code> rejects a second outstanding delegated workflow for the same parent Task until the caller checks or cancels the existing one.</div>
 </div>
 <pre class="diagram" aria-label="Terminal policy workflow diagram">
 [profile submission tools]

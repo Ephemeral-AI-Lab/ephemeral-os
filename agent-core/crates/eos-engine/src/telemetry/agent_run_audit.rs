@@ -164,13 +164,13 @@ mod tests {
         async fn create_run(
             &self,
             agent_run_id: &AgentRunId,
-            task_id: &TaskId,
+            task_id: Option<&TaskId>,
             agent_name: &str,
             initial_messages: Option<&[JsonObject]>,
         ) -> Result<AgentRun, CoreError> {
             Ok(AgentRun {
                 id: agent_run_id.clone(),
-                task_id: task_id.clone(),
+                task_id: task_id.cloned(),
                 initial_messages: initial_messages.map(<[_]>::to_vec),
                 agent_name: agent_name.to_owned(),
                 message_history: None,
@@ -251,8 +251,7 @@ mod tests {
             notifier: NotificationService::new(),
             cancellation: crate::AgentRunCancellation::new(),
             foreground: Arc::new(
-                crate::ForegroundExecutorFactory
-                    .create("run-audit".parse().expect("agent run id")),
+                crate::ForegroundExecutorFactory.create("run-audit".parse().expect("agent run id")),
             ),
             audit: None,
             run_handles: None,

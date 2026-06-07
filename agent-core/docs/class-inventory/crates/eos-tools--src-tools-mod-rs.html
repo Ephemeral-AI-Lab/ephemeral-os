@@ -86,26 +86,26 @@
     <a class="symbol-link rs-fn" href="eos-tools--src-tools-mod-rs.html#item-fn-build-default-registry-with-services-82">build_default_registry_with_services</a>(
         config,
         caller,
-        <a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-SandboxToolService-65">SandboxToolService</a>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(<span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(<a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-InertSandboxTransport-180">InertSandboxTransport</a>)),
+        <a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-SandboxToolService-64">SandboxToolService</a>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(<span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(<a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-InertSandboxTransport-176">InertSandboxTransport</a>)),
         <span class="rs-type">None</span>,
         <span class="rs-type">None</span>,
         <span class="rs-type">None</span>,
         <span class="rs-type">None</span>,
         <span class="rs-type">None</span>,
-        <a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-SkillToolService-123">SkillToolService</a>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(<span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(eos_skills::<span class="rs-type">SkillRegistry</span>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>())),
+        <a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-SkillToolService-122">SkillToolService</a>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(<span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(eos_skills::<span class="rs-type">SkillRegistry</span>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>())),
     )
 }
 </code></pre>
 </details>
 
   <p class="source">crates/eos-tools/src/tools/mod.rs:64</p>
-</article><article id="item-fn-build-default-registry-with-services-82" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn build_default_registry_with_services pub pub fn build_default_registry_with_services (config : &amp; ToolConfigSet , caller : &amp; CallerScope , sandbox_service : SandboxToolService , root_submission : Option &lt; RootSubmissionService &gt; , attempt_submission : Option &lt; AttemptSubmissionService &gt; , workflow_control : Option &lt; Arc &lt; dyn crate :: ports :: WorkflowControlPort &gt; &gt; , background_supervisor : Option &lt; Arc &lt; dyn crate :: ports :: BackgroundSupervisorPort &gt; &gt; , command_session_supervisor : Option &lt; Arc &lt; dyn crate :: ports :: CommandSessionSupervisorPort &gt; &gt; , skill_service : SkillToolService ,) -&gt; ToolRegistry crates/eos-tools/src/tools/mod.rs  ">
+</article><article id="item-fn-build-default-registry-with-services-82" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn build_default_registry_with_services pub pub fn build_default_registry_with_services (config : &amp; ToolConfigSet , caller : &amp; CallerScope , sandbox_service : SandboxToolService , root_submission : Option &lt; RootSubmissionService &gt; , attempt_submission : Option &lt; AttemptSubmissionService &gt; , workflow_control : Option &lt; Arc &lt; dyn crate :: ports :: WorkflowControlPort &gt; &gt; , background_session : Option &lt; Arc &lt; dyn crate :: ports :: BackgroundSessionPort &gt; &gt; , command_session_port : Option &lt; Arc &lt; dyn crate :: ports :: CommandSessionPort &gt; &gt; , skill_service : SkillToolService ,) -&gt; ToolRegistry crates/eos-tools/src/tools/mod.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>build_default_registry_with_services</h3>
     <span class="visibility">pub</span>
   </div>
-  <code class="signature">pub fn <a class="symbol-link" href="eos-tools--src-tools-mod-rs.html#item-fn-build-default-registry-with-services-82">build_default_registry_with_services</a> (config : &amp; <a class="symbol-link" href="eos-tools--src-registry-config-rs.html#item-struct-ToolConfigSet-45">ToolConfigSet</a> , caller : &amp; <a class="symbol-link" href="eos-tools--src-tools-mod-rs.html#item-struct-CallerScope-34">CallerScope</a> , sandbox_service : <a class="symbol-link" href="eos-tools--src-tools-services-rs.html#item-struct-SandboxToolService-65">SandboxToolService</a> , root_submission : Option &lt; <a class="symbol-link" href="eos-tools--src-tools-services-rs.html#item-struct-RootSubmissionService-19">RootSubmissionService</a> &gt; , attempt_submission : Option &lt; <a class="symbol-link" href="eos-tools--src-tools-services-rs.html#item-struct-AttemptSubmissionService-44">AttemptSubmissionService</a> &gt; , workflow_control : Option &lt; Arc &lt; dyn crate :: ports :: <a class="symbol-link" href="eos-tools--src-ports-mod-rs.html#item-trait-WorkflowControlPort-66">WorkflowControlPort</a> &gt; &gt; , background_supervisor : Option &lt; Arc &lt; dyn crate :: ports :: <a class="symbol-link" href="eos-tools--src-ports-mod-rs.html#item-trait-BackgroundSupervisorPort-324">BackgroundSupervisorPort</a> &gt; &gt; , command_session_supervisor : Option &lt; Arc &lt; dyn crate :: ports :: <a class="symbol-link" href="eos-tools--src-ports-mod-rs.html#item-trait-CommandSessionSupervisorPort-397">CommandSessionSupervisorPort</a> &gt; &gt; , skill_service : <a class="symbol-link" href="eos-tools--src-tools-services-rs.html#item-struct-SkillToolService-123">SkillToolService</a> ,) -&gt; <a class="symbol-link" href="eos-tools--src-registry-tool-registry-rs.html#item-struct-ToolRegistry-18">ToolRegistry</a></code>
+  <code class="signature">pub fn <a class="symbol-link" href="eos-tools--src-tools-mod-rs.html#item-fn-build-default-registry-with-services-82">build_default_registry_with_services</a> (config : &amp; <a class="symbol-link" href="eos-tools--src-registry-config-rs.html#item-struct-ToolConfigSet-45">ToolConfigSet</a> , caller : &amp; <a class="symbol-link" href="eos-tools--src-tools-mod-rs.html#item-struct-CallerScope-34">CallerScope</a> , sandbox_service : <a class="symbol-link" href="eos-tools--src-tools-services-rs.html#item-struct-SandboxToolService-64">SandboxToolService</a> , root_submission : Option &lt; <a class="symbol-link" href="eos-tools--src-tools-services-rs.html#item-struct-RootSubmissionService-18">RootSubmissionService</a> &gt; , attempt_submission : Option &lt; <a class="symbol-link" href="eos-tools--src-tools-services-rs.html#item-struct-AttemptSubmissionService-43">AttemptSubmissionService</a> &gt; , workflow_control : Option &lt; Arc &lt; dyn crate :: ports :: <a class="symbol-link" href="eos-tools--src-ports-mod-rs.html#item-trait-WorkflowControlPort-66">WorkflowControlPort</a> &gt; &gt; , background_session : Option &lt; Arc &lt; dyn crate :: ports :: <a class="symbol-link" href="eos-tools--src-ports-mod-rs.html#item-trait-BackgroundSessionPort-324">BackgroundSessionPort</a> &gt; &gt; , command_session_port : Option &lt; Arc &lt; dyn crate :: ports :: <a class="symbol-link" href="eos-tools--src-ports-mod-rs.html#item-trait-CommandSessionPort-396">CommandSessionPort</a> &gt; &gt; , skill_service : <a class="symbol-link" href="eos-tools--src-tools-services-rs.html#item-struct-SkillToolService-122">SkillToolService</a> ,) -&gt; <a class="symbol-link" href="eos-tools--src-registry-tool-registry-rs.html#item-struct-ToolRegistry-18">ToolRegistry</a></code>
   <p class="docstring">Build the default tool registry for one caller scope with locally wired<br>services. Runtime uses this entry point; tests that only need static registry<br>policy can use [`build_default_registry`].</p>
   <div class="tags"><span>allow: clippy::too_many_arguments</span><span>must_use</span></div>
   <details class="function-source">
@@ -118,39 +118,39 @@
 <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-tools-mod-rs.html#item-fn-build-default-registry-with-services-82">build_default_registry_with_services</a>(
     config: &amp;<a class="symbol-link rs-type" href="eos-tools--src-registry-config-rs.html#item-struct-ToolConfigSet-45">ToolConfigSet</a>,
     caller: &amp;<a class="symbol-link rs-type" href="eos-tools--src-tools-mod-rs.html#item-struct-CallerScope-34">CallerScope</a>,
-    sandbox_service: <a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-SandboxToolService-65">SandboxToolService</a>,
-    root_submission: <span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-RootSubmissionService-19">RootSubmissionService</a>&gt;,
-    attempt_submission: <span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-AttemptSubmissionService-44">AttemptSubmissionService</a>&gt;,
+    sandbox_service: <a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-SandboxToolService-64">SandboxToolService</a>,
+    root_submission: <span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-RootSubmissionService-18">RootSubmissionService</a>&gt;,
+    attempt_submission: <span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-AttemptSubmissionService-43">AttemptSubmissionService</a>&gt;,
     workflow_control: <span class="rs-type">Option</span>&lt;<span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <span class="rs-kw">crate</span>::ports::<a class="symbol-link rs-type" href="eos-tools--src-ports-mod-rs.html#item-trait-WorkflowControlPort-66">WorkflowControlPort</a>&gt;&gt;,
-    background_supervisor: <span class="rs-type">Option</span>&lt;<span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <span class="rs-kw">crate</span>::ports::<a class="symbol-link rs-type" href="eos-tools--src-ports-mod-rs.html#item-trait-BackgroundSupervisorPort-324">BackgroundSupervisorPort</a>&gt;&gt;,
-    command_session_supervisor: <span class="rs-type">Option</span>&lt;<span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <span class="rs-kw">crate</span>::ports::<a class="symbol-link rs-type" href="eos-tools--src-ports-mod-rs.html#item-trait-CommandSessionSupervisorPort-397">CommandSessionSupervisorPort</a>&gt;&gt;,
-    skill_service: <a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-SkillToolService-123">SkillToolService</a>,
+    background_session: <span class="rs-type">Option</span>&lt;<span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <span class="rs-kw">crate</span>::ports::<a class="symbol-link rs-type" href="eos-tools--src-ports-mod-rs.html#item-trait-BackgroundSessionPort-324">BackgroundSessionPort</a>&gt;&gt;,
+    command_session_port: <span class="rs-type">Option</span>&lt;<span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <span class="rs-kw">crate</span>::ports::<a class="symbol-link rs-type" href="eos-tools--src-ports-mod-rs.html#item-trait-CommandSessionPort-396">CommandSessionPort</a>&gt;&gt;,
+    skill_service: <a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-SkillToolService-122">SkillToolService</a>,
 ) -&gt; <a class="symbol-link rs-type" href="eos-tools--src-registry-tool-registry-rs.html#item-struct-ToolRegistry-18">ToolRegistry</a> {
     <span class="rs-kw">let</span> <span class="rs-kw">mut</span> registry = <a class="symbol-link rs-type" href="eos-tools--src-registry-tool-registry-rs.html#item-struct-ToolRegistry-18">ToolRegistry</a>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>();
-    <span class="rs-kw">let</span> hook_services = <a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-HookServices-143">HookServices</a>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(
-        <span class="rs-type">Some</span>(sandbox_service.<a class="symbol-link rs-fn" href="eos-tools--src-tools-services-rs.html#method-transport-78">transport</a>()),
+    <span class="rs-kw">let</span> hook_services = <a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-HookServices-142">HookServices</a>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(
+        <span class="rs-type">Some</span>(sandbox_service.<a class="symbol-link rs-fn" href="eos-tools--src-tools-services-rs.html#method-transport-77">transport</a>()),
         workflow_control.clone(),
-        background_supervisor.clone(),
+        background_session.clone(),
     );
     <span class="rs-kw">let</span> command_service =
-        <a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-CommandToolService-91">CommandToolService</a>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(sandbox_service.<a class="symbol-link rs-fn" href="eos-tools--src-tools-services-rs.html#method-transport-78">transport</a>(), command_session_supervisor);
-    sandbox::<a class="symbol-link rs-fn" href="eos-tools--src-ports-mod-rs.html#method-register-408">register</a>(
+        <a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-CommandToolService-90">CommandToolService</a>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(sandbox_service.<a class="symbol-link rs-fn" href="eos-tools--src-tools-services-rs.html#method-transport-77">transport</a>(), command_session_port);
+    sandbox::<a class="symbol-link rs-fn" href="eos-tools--src-ports-mod-rs.html#method-register-407">register</a>(
         &amp;<span class="rs-kw">mut</span> registry,
         config,
         sandbox_service.clone(),
         command_service,
     );
-    isolated_workspace::<a class="symbol-link rs-fn" href="eos-tools--src-ports-mod-rs.html#method-register-408">register</a>(&amp;<span class="rs-kw">mut</span> registry, config, sandbox_service);
-    submission::<a class="symbol-link rs-fn" href="eos-tools--src-ports-mod-rs.html#method-register-408">register</a>(&amp;<span class="rs-kw">mut</span> registry, config, root_submission, attempt_submission);
-    ask_helper::<a class="symbol-link rs-fn" href="eos-tools--src-ports-mod-rs.html#method-register-408">register</a>(&amp;<span class="rs-kw">mut</span> registry, config);
-    workflow::<a class="symbol-link rs-fn" href="eos-tools--src-ports-mod-rs.html#method-register-408">register</a>(
+    isolated_workspace::<a class="symbol-link rs-fn" href="eos-tools--src-ports-mod-rs.html#method-register-407">register</a>(&amp;<span class="rs-kw">mut</span> registry, config, sandbox_service);
+    submission::<a class="symbol-link rs-fn" href="eos-tools--src-ports-mod-rs.html#method-register-407">register</a>(&amp;<span class="rs-kw">mut</span> registry, config, root_submission, attempt_submission);
+    ask_helper::<a class="symbol-link rs-fn" href="eos-tools--src-ports-mod-rs.html#method-register-407">register</a>(&amp;<span class="rs-kw">mut</span> registry, config);
+    workflow::<a class="symbol-link rs-fn" href="eos-tools--src-ports-mod-rs.html#method-register-407">register</a>(
         &amp;<span class="rs-kw">mut</span> registry,
         config,
         workflow_control,
-        background_supervisor.clone(),
+        background_session.clone(),
     );
-    subagent::<a class="symbol-link rs-fn" href="eos-tools--src-ports-mod-rs.html#method-register-408">register</a>(&amp;<span class="rs-kw">mut</span> registry, config, caller, background_supervisor);
-    skills::<a class="symbol-link rs-fn" href="eos-tools--src-ports-mod-rs.html#method-register-408">register</a>(&amp;<span class="rs-kw">mut</span> registry, config, caller, skill_service);
+    subagent::<a class="symbol-link rs-fn" href="eos-tools--src-ports-mod-rs.html#method-register-407">register</a>(&amp;<span class="rs-kw">mut</span> registry, config, caller, background_session);
+    skills::<a class="symbol-link rs-fn" href="eos-tools--src-ports-mod-rs.html#method-register-407">register</a>(&amp;<span class="rs-kw">mut</span> registry, config, caller, skill_service);
     registry.<a class="symbol-link rs-fn" href="eos-tools--src-registry-tool-registry-rs.html#method-apply-hook-services-44">apply_hook_services</a>(hook_services);
     registry
 }
@@ -179,7 +179,7 @@
     output: <a class="symbol-link rs-type" href="eos-tools--src-core-result-rs.html#item-enum-OutputShape-68">OutputShape</a>,
     executor: <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <a class="symbol-link rs-type" href="eos-tools--src-runtime-executor-rs.html#item-trait-ToolExecutor-18">ToolExecutor</a>&gt;,
 ) {
-    registry.<a class="symbol-link rs-fn" href="eos-tools--src-ports-mod-rs.html#method-register-408">register</a>(
+    registry.<a class="symbol-link rs-fn" href="eos-tools--src-ports-mod-rs.html#method-register-407">register</a>(
         <a class="symbol-link rs-type" href="eos-tools--src-runtime-executor-rs.html#item-struct-RegisteredTool-36">RegisteredTool</a>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(name, config.intent, config.terminal, spec, output, executor)
             .<a class="symbol-link rs-fn" href="eos-tools--src-runtime-executor-rs.html#method-with-hooks-93">with_hooks</a>(config.hooks.clone()),
     );
@@ -242,10 +242,10 @@
 <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::registry::<a class="symbol-link rs-type" href="eos-tools--src-registry-tool-registry-rs.html#item-struct-ToolRegistry-18">ToolRegistry</a>;
 <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::runtime::executor::{<a class="symbol-link rs-type" href="eos-tools--src-runtime-executor-rs.html#item-struct-RegisteredTool-36">RegisteredTool</a>, <a class="symbol-link rs-type" href="eos-tools--src-runtime-executor-rs.html#item-trait-ToolExecutor-18">ToolExecutor</a>};
 
-<span class="rs-kw">use</span> services::<a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-InertSandboxTransport-180">InertSandboxTransport</a>;
+<span class="rs-kw">use</span> services::<a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-InertSandboxTransport-176">InertSandboxTransport</a>;
 <span class="rs-kw">pub</span> <span class="rs-kw">use</span> services::{
-    <a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-AttemptSubmissionService-44">AttemptSubmissionService</a>, <a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-CommandToolService-91">CommandToolService</a>, <a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-HookServices-143">HookServices</a>, <a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-RootSubmissionService-19">RootSubmissionService</a>,
-    <a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-SandboxToolService-65">SandboxToolService</a>, <a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-SkillToolService-123">SkillToolService</a>,
+    <a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-AttemptSubmissionService-43">AttemptSubmissionService</a>, <a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-CommandToolService-90">CommandToolService</a>, <a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-HookServices-142">HookServices</a>, <a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-RootSubmissionService-18">RootSubmissionService</a>,
+    <a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-SandboxToolService-64">SandboxToolService</a>, <a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-SkillToolService-122">SkillToolService</a>,
 };
 
 <span class="rs-comment">/// The per-caller scope a tool registry is built for: the caller's</span>
@@ -272,7 +272,7 @@
     output: <a class="symbol-link rs-type" href="eos-tools--src-core-result-rs.html#item-enum-OutputShape-68">OutputShape</a>,
     executor: <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <a class="symbol-link rs-type" href="eos-tools--src-runtime-executor-rs.html#item-trait-ToolExecutor-18">ToolExecutor</a>&gt;,
 ) {
-    registry.<a class="symbol-link rs-fn" href="eos-tools--src-ports-mod-rs.html#method-register-408">register</a>(
+    registry.<a class="symbol-link rs-fn" href="eos-tools--src-ports-mod-rs.html#method-register-407">register</a>(
         <a class="symbol-link rs-type" href="eos-tools--src-runtime-executor-rs.html#item-struct-RegisteredTool-36">RegisteredTool</a>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(name, config.intent, config.terminal, spec, output, executor)
             .<a class="symbol-link rs-fn" href="eos-tools--src-runtime-executor-rs.html#method-with-hooks-93">with_hooks</a>(config.hooks.clone()),
     );
@@ -286,13 +286,13 @@
     <a class="symbol-link rs-fn" href="eos-tools--src-tools-mod-rs.html#item-fn-build-default-registry-with-services-82">build_default_registry_with_services</a>(
         config,
         caller,
-        <a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-SandboxToolService-65">SandboxToolService</a>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(<span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(<a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-InertSandboxTransport-180">InertSandboxTransport</a>)),
+        <a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-SandboxToolService-64">SandboxToolService</a>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(<span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(<a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-InertSandboxTransport-176">InertSandboxTransport</a>)),
         <span class="rs-type">None</span>,
         <span class="rs-type">None</span>,
         <span class="rs-type">None</span>,
         <span class="rs-type">None</span>,
         <span class="rs-type">None</span>,
-        <a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-SkillToolService-123">SkillToolService</a>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(<span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(eos_skills::<span class="rs-type">SkillRegistry</span>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>())),
+        <a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-SkillToolService-122">SkillToolService</a>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(<span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(eos_skills::<span class="rs-type">SkillRegistry</span>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>())),
     )
 }
 
@@ -304,39 +304,39 @@
 <span class="rs-kw">pub</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-tools-mod-rs.html#item-fn-build-default-registry-with-services-82">build_default_registry_with_services</a>(
     config: &amp;<a class="symbol-link rs-type" href="eos-tools--src-registry-config-rs.html#item-struct-ToolConfigSet-45">ToolConfigSet</a>,
     caller: &amp;<a class="symbol-link rs-type" href="eos-tools--src-tools-mod-rs.html#item-struct-CallerScope-34">CallerScope</a>,
-    sandbox_service: <a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-SandboxToolService-65">SandboxToolService</a>,
-    root_submission: <span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-RootSubmissionService-19">RootSubmissionService</a>&gt;,
-    attempt_submission: <span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-AttemptSubmissionService-44">AttemptSubmissionService</a>&gt;,
+    sandbox_service: <a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-SandboxToolService-64">SandboxToolService</a>,
+    root_submission: <span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-RootSubmissionService-18">RootSubmissionService</a>&gt;,
+    attempt_submission: <span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-AttemptSubmissionService-43">AttemptSubmissionService</a>&gt;,
     workflow_control: <span class="rs-type">Option</span>&lt;<span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <span class="rs-kw">crate</span>::ports::<a class="symbol-link rs-type" href="eos-tools--src-ports-mod-rs.html#item-trait-WorkflowControlPort-66">WorkflowControlPort</a>&gt;&gt;,
-    background_supervisor: <span class="rs-type">Option</span>&lt;<span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <span class="rs-kw">crate</span>::ports::<a class="symbol-link rs-type" href="eos-tools--src-ports-mod-rs.html#item-trait-BackgroundSupervisorPort-324">BackgroundSupervisorPort</a>&gt;&gt;,
-    command_session_supervisor: <span class="rs-type">Option</span>&lt;<span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <span class="rs-kw">crate</span>::ports::<a class="symbol-link rs-type" href="eos-tools--src-ports-mod-rs.html#item-trait-CommandSessionSupervisorPort-397">CommandSessionSupervisorPort</a>&gt;&gt;,
-    skill_service: <a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-SkillToolService-123">SkillToolService</a>,
+    background_session: <span class="rs-type">Option</span>&lt;<span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <span class="rs-kw">crate</span>::ports::<a class="symbol-link rs-type" href="eos-tools--src-ports-mod-rs.html#item-trait-BackgroundSessionPort-324">BackgroundSessionPort</a>&gt;&gt;,
+    command_session_port: <span class="rs-type">Option</span>&lt;<span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <span class="rs-kw">crate</span>::ports::<a class="symbol-link rs-type" href="eos-tools--src-ports-mod-rs.html#item-trait-CommandSessionPort-396">CommandSessionPort</a>&gt;&gt;,
+    skill_service: <a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-SkillToolService-122">SkillToolService</a>,
 ) -&gt; <a class="symbol-link rs-type" href="eos-tools--src-registry-tool-registry-rs.html#item-struct-ToolRegistry-18">ToolRegistry</a> {
     <span class="rs-kw">let</span> <span class="rs-kw">mut</span> registry = <a class="symbol-link rs-type" href="eos-tools--src-registry-tool-registry-rs.html#item-struct-ToolRegistry-18">ToolRegistry</a>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>();
-    <span class="rs-kw">let</span> hook_services = <a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-HookServices-143">HookServices</a>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(
-        <span class="rs-type">Some</span>(sandbox_service.<a class="symbol-link rs-fn" href="eos-tools--src-tools-services-rs.html#method-transport-78">transport</a>()),
+    <span class="rs-kw">let</span> hook_services = <a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-HookServices-142">HookServices</a>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(
+        <span class="rs-type">Some</span>(sandbox_service.<a class="symbol-link rs-fn" href="eos-tools--src-tools-services-rs.html#method-transport-77">transport</a>()),
         workflow_control.clone(),
-        background_supervisor.clone(),
+        background_session.clone(),
     );
     <span class="rs-kw">let</span> command_service =
-        <a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-CommandToolService-91">CommandToolService</a>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(sandbox_service.<a class="symbol-link rs-fn" href="eos-tools--src-tools-services-rs.html#method-transport-78">transport</a>(), command_session_supervisor);
-    sandbox::<a class="symbol-link rs-fn" href="eos-tools--src-ports-mod-rs.html#method-register-408">register</a>(
+        <a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-CommandToolService-90">CommandToolService</a>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(sandbox_service.<a class="symbol-link rs-fn" href="eos-tools--src-tools-services-rs.html#method-transport-77">transport</a>(), command_session_port);
+    sandbox::<a class="symbol-link rs-fn" href="eos-tools--src-ports-mod-rs.html#method-register-407">register</a>(
         &amp;<span class="rs-kw">mut</span> registry,
         config,
         sandbox_service.clone(),
         command_service,
     );
-    isolated_workspace::<a class="symbol-link rs-fn" href="eos-tools--src-ports-mod-rs.html#method-register-408">register</a>(&amp;<span class="rs-kw">mut</span> registry, config, sandbox_service);
-    submission::<a class="symbol-link rs-fn" href="eos-tools--src-ports-mod-rs.html#method-register-408">register</a>(&amp;<span class="rs-kw">mut</span> registry, config, root_submission, attempt_submission);
-    ask_helper::<a class="symbol-link rs-fn" href="eos-tools--src-ports-mod-rs.html#method-register-408">register</a>(&amp;<span class="rs-kw">mut</span> registry, config);
-    workflow::<a class="symbol-link rs-fn" href="eos-tools--src-ports-mod-rs.html#method-register-408">register</a>(
+    isolated_workspace::<a class="symbol-link rs-fn" href="eos-tools--src-ports-mod-rs.html#method-register-407">register</a>(&amp;<span class="rs-kw">mut</span> registry, config, sandbox_service);
+    submission::<a class="symbol-link rs-fn" href="eos-tools--src-ports-mod-rs.html#method-register-407">register</a>(&amp;<span class="rs-kw">mut</span> registry, config, root_submission, attempt_submission);
+    ask_helper::<a class="symbol-link rs-fn" href="eos-tools--src-ports-mod-rs.html#method-register-407">register</a>(&amp;<span class="rs-kw">mut</span> registry, config);
+    workflow::<a class="symbol-link rs-fn" href="eos-tools--src-ports-mod-rs.html#method-register-407">register</a>(
         &amp;<span class="rs-kw">mut</span> registry,
         config,
         workflow_control,
-        background_supervisor.clone(),
+        background_session.clone(),
     );
-    subagent::<a class="symbol-link rs-fn" href="eos-tools--src-ports-mod-rs.html#method-register-408">register</a>(&amp;<span class="rs-kw">mut</span> registry, config, caller, background_supervisor);
-    skills::<a class="symbol-link rs-fn" href="eos-tools--src-ports-mod-rs.html#method-register-408">register</a>(&amp;<span class="rs-kw">mut</span> registry, config, caller, skill_service);
+    subagent::<a class="symbol-link rs-fn" href="eos-tools--src-ports-mod-rs.html#method-register-407">register</a>(&amp;<span class="rs-kw">mut</span> registry, config, caller, background_session);
+    skills::<a class="symbol-link rs-fn" href="eos-tools--src-ports-mod-rs.html#method-register-407">register</a>(&amp;<span class="rs-kw">mut</span> registry, config, caller, skill_service);
     registry.<a class="symbol-link rs-fn" href="eos-tools--src-registry-tool-registry-rs.html#method-apply-hook-services-44">apply_hook_services</a>(hook_services);
     registry
 }

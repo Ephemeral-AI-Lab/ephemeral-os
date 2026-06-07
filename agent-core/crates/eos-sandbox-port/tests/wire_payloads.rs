@@ -3,7 +3,7 @@
 //! `parse.rs` (response decoding) is well-covered; the **request** side — the
 //! hand-built JSON payload each helper sends, the op it targets, and the timeout
 //! — was only asserted for the isolated-workspace verbs. These tests record the
-//! outbound call via a [`RecordingTransport`] and pin the payload for the
+//! outbound call via a [`WirePayloadTestTransport`] and pin the payload for the
 //! file/command/control/plugin helpers, so a dropped or renamed field (the kind
 //! of drift that silently breaks the daemon wire) fails a test.
 #![allow(clippy::expect_used)]
@@ -41,12 +41,12 @@ enum Recorded {
 }
 
 /// Records every outbound call and returns one canned response.
-struct RecordingTransport {
+struct WirePayloadTestTransport {
     calls: Mutex<Vec<Recorded>>,
     response: JsonObject,
 }
 
-impl RecordingTransport {
+impl WirePayloadTestTransport {
     fn new(response: Value) -> Self {
         Self {
             calls: Mutex::new(Vec::new()),
@@ -90,7 +90,7 @@ impl RecordingTransport {
 }
 
 #[async_trait]
-impl SandboxTransport for RecordingTransport {
+impl SandboxTransport for WirePayloadTestTransport {
     async fn call(
         &self,
         _sandbox_id: &SandboxId,
@@ -151,7 +151,7 @@ fn base() -> SandboxRequestBase {
 
 #[tokio::test]
 async fn read_file_payload_has_path_and_caller_but_omits_description() {
-    let transport = RecordingTransport::new(json!({
+    let transport = WirePayloadTestTransport::new(json!({
         "success": true, "content": "hi", "exists": true, "encoding": "utf-8"
     }));
     read_file(
@@ -183,7 +183,7 @@ async fn read_file_payload_has_path_and_caller_but_omits_description() {
 
 #[tokio::test]
 async fn write_file_payload_includes_content_description_and_overwrite() {
-    let transport = RecordingTransport::new(json!({"success": true, "status": "ok"}));
+    let transport = WirePayloadTestTransport::new(json!({"success": true, "status": "ok"}));
     write_file(
         &transport,
         &sandbox(),
@@ -210,7 +210,7 @@ async fn write_file_payload_includes_content_description_and_overwrite() {
 
 #[tokio::test]
 async fn exec_command_payload_includes_set_options_and_omits_unset() {
-    let transport = RecordingTransport::new(json!({
+    let transport = WirePayloadTestTransport::new(json!({
         "status": "ok", "output": {"stdout": "", "stderr": ""}
     }));
     exec_command(
@@ -238,7 +238,7 @@ async fn exec_command_payload_includes_set_options_and_omits_unset() {
 #[tokio::test]
 async fn exec_stdin_payload_is_input_only_and_keeps_invocation() {
     let session: CommandSessionId = "cs-1".parse().expect("cs id");
-    let transport = RecordingTransport::new(json!({"status": "ok", "output": {}}));
+    let transport = WirePayloadTestTransport::new(json!({"status": "ok", "output": {}}));
     exec_stdin(
         &transport,
         &sandbox(),
@@ -267,7 +267,7 @@ async fn exec_stdin_payload_is_input_only_and_keeps_invocation() {
 #[tokio::test]
 async fn read_command_progress_payload_targets_tail_snapshot_op() {
     let session: CommandSessionId = "cs-1".parse().expect("cs id");
-    let transport = RecordingTransport::new(json!({"status": "running", "output": {}}));
+    let transport = WirePayloadTestTransport::new(json!({"status": "running", "output": {}}));
     read_command_progress(
         &transport,
         &sandbox(),
@@ -287,7 +287,7 @@ async fn read_command_progress_payload_targets_tail_snapshot_op() {
 
 #[tokio::test]
 async fn cancel_command_session_payload_targets_the_session() {
-    let transport = RecordingTransport::new(json!({"status": "ok", "output": {}}));
+    let transport = WirePayloadTestTransport::new(json!({"status": "ok", "output": {}}));
     cancel_command_session(
         &transport,
         &sandbox(),
@@ -305,7 +305,7 @@ async fn cancel_command_session_payload_targets_the_session() {
 
 #[tokio::test]
 async fn collect_command_completions_builds_payload_and_filters_non_objects() {
-    let transport = RecordingTransport::new(json!({
+    let transport = WirePayloadTestTransport::new(json!({
         "completions": [{"command_session_id": "c1"}, "ignore", 7]
     }));
     let got = collect_command_completions(
@@ -330,7 +330,7 @@ async fn collect_command_completions_builds_payload_and_filters_non_objects() {
 
 #[tokio::test]
 async fn control_cancel_and_heartbeat_build_payloads() {
-    let transport = RecordingTransport::new(json!({}));
+    let transport = WirePayloadTestTransport::new(json!({}));
     cancel(
         &transport,
         &sandbox(),
@@ -343,7 +343,7 @@ async fn control_cancel_and_heartbeat_build_payloads() {
     assert_eq!(payload["invocation_id"], json!("inv-1"));
     assert_eq!(timeout_s, CONTROL_TIMEOUT_S);
 
-    let transport = RecordingTransport::new(json!({}));
+    let transport = WirePayloadTestTransport::new(json!({}));
     heartbeat(
         &transport,
         &sandbox(),
@@ -358,7 +358,7 @@ async fn control_cancel_and_heartbeat_build_payloads() {
 
 #[tokio::test]
 async fn control_counts_read_count_and_default_to_zero() {
-    let transport = RecordingTransport::new(json!({"count": 3}));
+    let transport = WirePayloadTestTransport::new(json!({"count": 3}));
     assert_eq!(
         inflight_count(&transport, &sandbox(), "agent-1")
             .await
@@ -371,7 +371,7 @@ async fn control_counts_read_count_and_default_to_zero() {
     assert_eq!(timeout_s, CONTROL_TIMEOUT_S);
 
     // A response without a `count` defaults to 0.
-    let transport = RecordingTransport::new(json!({}));
+    let transport = WirePayloadTestTransport::new(json!({}));
     assert_eq!(
         command_session_count(&transport, &sandbox(), "agent-1")
             .await
@@ -383,14 +383,14 @@ async fn control_counts_read_count_and_default_to_zero() {
 
 #[tokio::test]
 async fn isolated_active_defaults_false_when_open_key_absent() {
-    let transport = RecordingTransport::new(json!({"open": true}));
+    let transport = WirePayloadTestTransport::new(json!({"open": true}));
     assert!(isolated_active(&transport, &sandbox(), "agent-1")
         .await
         .expect("active"));
     assert_eq!(transport.typed().0, DaemonOp::IsolatedWorkspaceStatus);
 
     // No `open` key (e.g. the no-pipeline error payload) -> false (fail-safe).
-    let transport = RecordingTransport::new(json!({"error": "no pipeline"}));
+    let transport = WirePayloadTestTransport::new(json!({"error": "no pipeline"}));
     assert!(!isolated_active(&transport, &sandbox(), "agent-1")
         .await
         .expect("inactive"));
@@ -400,7 +400,7 @@ async fn isolated_active_defaults_false_when_open_key_absent() {
 
 #[tokio::test]
 async fn plugin_dispatch_uses_dynamic_op_name_and_merges_args() {
-    let transport = RecordingTransport::new(json!({}));
+    let transport = WirePayloadTestTransport::new(json!({}));
     let mut args = JsonObject::new();
     args.insert("symbol".to_owned(), json!("foo"));
     plugin_dispatch(
@@ -430,7 +430,7 @@ async fn plugin_dispatch_uses_dynamic_op_name_and_merges_args() {
 
 #[tokio::test]
 async fn plugin_ensure_builds_manifest_payload() {
-    let transport = RecordingTransport::new(json!({}));
+    let transport = WirePayloadTestTransport::new(json!({}));
     plugin_ensure(
         &transport,
         &sandbox(),

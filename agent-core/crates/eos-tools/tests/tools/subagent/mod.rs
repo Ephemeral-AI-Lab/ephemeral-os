@@ -15,7 +15,7 @@ use crate::core::metadata::ExecutionMetadata;
 use crate::ports::{
     BackgroundSessionCounts, BackgroundSessionPort, CancelledSubagent, Sealed, SpawnedSubagent,
     StartedSubagent, StartedWorkflowSession, SubagentLaunch, SubagentProgress,
-    SubagentProgressSnapshot, SubagentSessionStatus, WorkflowControlPort,
+    SubagentSessionStatus, WorkflowControlPort,
 };
 use crate::runtime::executor::ToolExecutor;
 use crate::support::metadata;
@@ -48,12 +48,12 @@ impl BackgroundSessionPort for FakeBackgroundSession {
         subagent_session_id: &SubagentSessionId,
         _last_n_messages: u8,
     ) -> Result<SubagentProgress, ToolError> {
-        Ok(SubagentProgress::Found(SubagentProgressSnapshot {
+        Ok(SubagentProgress::Found {
             subagent_session_id: subagent_session_id.clone(),
             status: SubagentSessionStatus::Running,
             agent_name: "explorer".to_owned(),
             result: None,
-        }))
+        })
     }
 
     async fn cancel(

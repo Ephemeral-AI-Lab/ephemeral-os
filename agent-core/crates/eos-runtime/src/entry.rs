@@ -19,7 +19,7 @@ use eos_engine::{
 use eos_llm_client::Message;
 use eos_state::{RequestStatus, Task, TaskRole, TaskStatus};
 use eos_tools::{
-    AttemptSubmissionPort, BackgroundSupervisorPort, CancelPort, CommandSessionSupervisorPort,
+    AttemptSubmissionPort, BackgroundSessionPort, CancelPort, CommandSessionPort,
     WorkflowControlPort,
 };
 use eos_types::{AgentRunId, JsonObject, RequestId, TaskId};
@@ -232,7 +232,8 @@ pub async fn run_request(
             let agent_run_id = AgentRunId::new_v4();
             // Mint the root's own AgentRunControl and register it as the live run
             // for the root task before the provider loop starts.
-            let control = control_factory.persisted(agent_run_id.clone(), root_task_id.clone());
+            let control =
+                control_factory.persisted(agent_run_id.clone(), Some(root_task_id.clone()));
             agent_run_registry.insert(control.clone());
             let metadata = build_metadata(
                 &workspace_root,
@@ -248,10 +249,8 @@ pub async fn run_request(
                 },
             );
             let background = control.background();
-            let background_supervisor: Arc<dyn BackgroundSupervisorPort> =
-                Arc::new(background.clone());
-            let command_session_supervisor: Arc<dyn CommandSessionSupervisorPort> =
-                Arc::new(background);
+            let background_session: Arc<dyn BackgroundSessionPort> = Arc::new(background.clone());
+            let command_session_port: Arc<dyn CommandSessionPort> = Arc::new(background);
             let run = run_agent(
                 &services.engine_run_handles(&workspace_root),
                 AgentRunInput {
@@ -262,8 +261,8 @@ pub async fn run_request(
                     tool_metadata: metadata,
                     attempt_submission: None,
                     workflow_control: Some(workflow_control.clone()),
-                    background_supervisor: Some(background_supervisor),
-                    command_session_supervisor: Some(command_session_supervisor),
+                    background_session: Some(background_session),
+                    command_session_port: Some(command_session_port),
                     notifier: control.notifications(),
                     cancellation: control.cancellation(),
                     foreground: control.foreground(),

@@ -93,7 +93,7 @@ CREATE INDEX ix_attempts_workflow_id ON attempts(workflow_id);
 
 CREATE TABLE agent_runs (
     id                   TEXT PRIMARY KEY,
-    task_id              TEXT NOT NULL UNIQUE REFERENCES tasks(id) ON DELETE CASCADE,
+    task_id              TEXT UNIQUE REFERENCES tasks(id) ON DELETE CASCADE,
     initial_messages     TEXT,
     agent_name           TEXT NOT NULL,
     message_history      TEXT,

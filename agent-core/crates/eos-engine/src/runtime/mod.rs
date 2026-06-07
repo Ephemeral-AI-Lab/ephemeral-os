@@ -12,9 +12,7 @@ mod types;
 pub(crate) use advisor::run_advisor;
 pub use agent_loop::run_agent;
 pub use cancel::EngineCancelPort;
-pub use control::{
-    AgentRunCancellation, AgentRunControl, AgentRunFinalization, AgentRunPersistence,
-};
+pub use control::{AgentRunCancellation, AgentRunControl, AgentRunFinalization};
 pub use factory::AgentRunControlFactory;
 pub use foreground::{ForegroundExecutor, ForegroundExecutorFactory, ForegroundResourceId};
 pub use registry::AgentRunRegistry;

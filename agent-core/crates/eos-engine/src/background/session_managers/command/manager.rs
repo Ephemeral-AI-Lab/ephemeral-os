@@ -9,10 +9,7 @@ use eos_types::{AgentRunId, CommandSessionId, SandboxId};
 use serde_json::Value;
 use tokio::sync::Mutex;
 
-use super::super::{
-    BackgroundSession, BackgroundSessionManager, BackgroundSessionMonitorHandle,
-    BackgroundSessionStatus,
-};
+use super::super::{BackgroundSession, BackgroundSessionManager, BackgroundSessionStatus};
 use super::session::CommandSession;
 use crate::background::notification::{BackgroundCompletion, BackgroundNotificationEmitter};
 
@@ -34,9 +31,6 @@ pub(in crate::background) struct CommandSessionManager {
     command_port: Arc<dyn SandboxTransport>,
     notification: BackgroundNotificationEmitter,
 }
-
-pub(in crate::background) type CommandSessionMonitor =
-    BackgroundSessionMonitorHandle<CommandSessionManager>;
 
 impl std::fmt::Debug for CommandSessionManager {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -160,30 +154,8 @@ impl CommandSessionManager {
         }
         out
     }
-}
 
-#[async_trait]
-impl BackgroundSessionManager for CommandSessionManager {
-    type Session = CommandSession;
-    type Completion = CommandCompletion;
-
-    async fn insert(&self, session: Self::Session) {
-        self.sessions
-            .lock()
-            .await
-            .insert(session.id().clone(), session);
-    }
-
-    async fn count(&self) -> usize {
-        self.sessions
-            .lock()
-            .await
-            .values()
-            .filter(|session| matches!(session.status(), BackgroundSessionStatus::Running))
-            .count()
-    }
-
-    async fn poll(&self) -> Vec<Self::Completion> {
+    pub(in crate::background) async fn poll_completions(&self) -> Vec<CommandCompletion> {
         let groups = {
             let guard = self.sessions.lock().await;
             Self::running_by_sandbox(&guard)
@@ -208,8 +180,30 @@ impl BackgroundSessionManager for CommandSessionManager {
         }
         out
     }
+}
 
-    async fn finish(&self, completion: Self::Completion) {
+#[async_trait]
+impl BackgroundSessionManager for CommandSessionManager {
+    type Session = CommandSession;
+    type Completion = CommandCompletion;
+
+    async fn insert(&self, session: Self::Session) {
+        self.sessions
+            .lock()
+            .await
+            .insert(session.id().clone(), session);
+    }
+
+    async fn count(&self) -> usize {
+        self.sessions
+            .lock()
+            .await
+            .values()
+            .filter(|session| matches!(session.status(), BackgroundSessionStatus::Running))
+            .count()
+    }
+
+    async fn push_notification_on_completion(&self, completion: Self::Completion) {
         let _ = self
             .notification
             .emit(BackgroundCompletion::CommandSession {
@@ -264,16 +258,16 @@ mod tests {
 
     use super::super::CommandSessionMonitor;
     use super::*;
-    use crate::background::session_managers::{BackgroundSessionManager, BackgroundSessionMonitor};
+    use crate::background::session_managers::BackgroundSessionManager;
     use crate::notifications::NotificationService;
 
     #[derive(Debug, Default)]
-    struct RecordingTransport {
+    struct CommandSessionTestTransport {
         calls: StdMutex<Vec<(DaemonOp, JsonObject)>>,
         collect_responses: StdMutex<VecDeque<JsonObject>>,
     }
 
-    impl RecordingTransport {
+    impl CommandSessionTestTransport {
         fn with_collect(responses: impl IntoIterator<Item = JsonObject>) -> Self {
             Self {
                 calls: StdMutex::new(Vec::new()),
@@ -293,7 +287,7 @@ mod tests {
     }
 
     #[async_trait]
-    impl SandboxTransport for RecordingTransport {
+    impl SandboxTransport for CommandSessionTestTransport {
         async fn call(
             &self,
             _sandbox_id: &SandboxId,
@@ -348,7 +342,7 @@ mod tests {
 
     #[tokio::test]
     async fn monitor_polls_and_emits_into_own_notifier() {
-        let transport = Arc::new(RecordingTransport::with_collect([completion(
+        let transport = Arc::new(CommandSessionTestTransport::with_collect([completion(
             "cmd_1", "ok", "3 passed",
         )]));
         let notifier = NotificationService::new();
@@ -390,7 +384,7 @@ mod tests {
 
     #[tokio::test]
     async fn cancel_issues_one_per_caller_rpc() {
-        let transport = Arc::new(RecordingTransport::default());
+        let transport = Arc::new(CommandSessionTestTransport::default());
         let notifier = NotificationService::new();
         let manager = manager("agent-a", &notifier, transport.clone());
         for id in ["cmd_1", "cmd_2"] {

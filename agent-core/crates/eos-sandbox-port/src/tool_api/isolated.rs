@@ -174,12 +174,12 @@ mod tests {
     use crate::SandboxRequestBase;
 
     #[derive(Default)]
-    struct RecordingTransport {
+    struct IsolatedToolApiTestTransport {
         calls: Mutex<Vec<(DaemonOp, JsonObject, u32)>>,
     }
 
     #[async_trait]
-    impl SandboxTransport for RecordingTransport {
+    impl SandboxTransport for IsolatedToolApiTestTransport {
         async fn call(
             &self,
             _sandbox_id: &SandboxId,
@@ -210,7 +210,7 @@ mod tests {
 
     #[tokio::test]
     async fn enter_builds_daemon_payload_and_parses_result() {
-        let transport = RecordingTransport::default();
+        let transport = IsolatedToolApiTestTransport::default();
         let sandbox_id: SandboxId = "sb-1".parse().expect("sandbox id");
         let result = enter_isolated_workspace(
             &transport,
@@ -234,7 +234,7 @@ mod tests {
 
     #[tokio::test]
     async fn exit_builds_daemon_payload_and_parses_result() {
-        let transport = RecordingTransport::default();
+        let transport = IsolatedToolApiTestTransport::default();
         let sandbox_id: SandboxId = "sb-1".parse().expect("sandbox id");
         let result = exit_isolated_workspace(
             &transport,

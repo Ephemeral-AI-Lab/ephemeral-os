@@ -373,7 +373,7 @@
 </details></td></tr></tbody></table>
 
   <p class="source">crates/eos-state/src/store.rs:213</p>
-</article><article id="item-trait-AgentRunStore-256" class="type-card" data-kind="trait" data-kind-list="method trait type-model" data-filter-text="trait AgentRunStore pub pub trait AgentRunStore crates/eos-state/src/store.rs  create_run async fn create_run (&amp; self , agent_run_id : &amp; AgentRunId , task_id : &amp; TaskId , agent_name : &amp; str , initial_messages : Option &lt; &amp; [JsonObject] &gt; ,) -&gt; Result &lt; AgentRun , CoreError &gt; finish_run async fn finish_run (&amp; self , agent_run_id : &amp; AgentRunId , message_history : Option &lt; &amp; [JsonObject] &gt; , terminal_tool_result : Option &lt; &amp; JsonObject &gt; , token_count : i64 , error : Option &lt; &amp; str &gt; ,) -&gt; Result &lt; Option &lt; AgentRun &gt; , CoreError &gt; get async fn get (&amp; self , agent_run_id : &amp; AgentRunId) -&gt; Result &lt; Option &lt; AgentRun &gt; , CoreError &gt; get_for_task async fn get_for_task (&amp; self , task_id : &amp; TaskId) -&gt; Result &lt; Option &lt; AgentRun &gt; , CoreError &gt;">
+</article><article id="item-trait-AgentRunStore-256" class="type-card" data-kind="trait" data-kind-list="method trait type-model" data-filter-text="trait AgentRunStore pub pub trait AgentRunStore crates/eos-state/src/store.rs  create_run async fn create_run (&amp; self , agent_run_id : &amp; AgentRunId , task_id : Option &lt; &amp; TaskId &gt; , agent_name : &amp; str , initial_messages : Option &lt; &amp; [JsonObject] &gt; ,) -&gt; Result &lt; AgentRun , CoreError &gt; finish_run async fn finish_run (&amp; self , agent_run_id : &amp; AgentRunId , message_history : Option &lt; &amp; [JsonObject] &gt; , terminal_tool_result : Option &lt; &amp; JsonObject &gt; , token_count : i64 , error : Option &lt; &amp; str &gt; ,) -&gt; Result &lt; Option &lt; AgentRun &gt; , CoreError &gt; get async fn get (&amp; self , agent_run_id : &amp; AgentRunId) -&gt; Result &lt; Option &lt; AgentRun &gt; , CoreError &gt; get_for_task async fn get_for_task (&amp; self , task_id : &amp; TaskId) -&gt; Result &lt; Option &lt; AgentRun &gt; , CoreError &gt;">
   <div class="item-head">
     <span class="kind">trait</span>
     <h3>AgentRunStore</h3>
@@ -382,13 +382,13 @@
   <code class="signature">pub trait <a class="symbol-link" href="eos-state--src-store-rs.html#item-trait-AgentRunStore-256">AgentRunStore</a></code>
   <p class="docstring">Persistence surface for [`AgentRun`] (Rust `AgentRunStore`).</p>
   <div class="tags"><span>async_trait</span></div>
-  <h4>Methods</h4><table><tbody><tr id="method-create-run-259"><td>required</td><td>create_run</td><td><code>async fn <a class="symbol-link" href="eos-state--src-store-rs.html#method-create-run-259">create_run</a> (&amp; self , agent_run_id : &amp; AgentRunId , task_id : &amp; TaskId , agent_name : &amp; str , initial_messages : Option &lt; &amp; [JsonObject] &gt; ,) -&gt; Result &lt; <a class="symbol-link" href="eos-state.html#item-struct-AgentRun-8">AgentRun</a> , CoreError &gt;</code><p class="docstring">Create a run row with only the create-time fields set.</p><details class="function-source">
+  <h4>Methods</h4><table><tbody><tr id="method-create-run-259"><td>required</td><td>create_run</td><td><code>async fn <a class="symbol-link" href="eos-state--src-store-rs.html#method-create-run-259">create_run</a> (&amp; self , agent_run_id : &amp; AgentRunId , task_id : Option &lt; &amp; TaskId &gt; , agent_name : &amp; str , initial_messages : Option &lt; &amp; [JsonObject] &gt; ,) -&gt; Result &lt; <a class="symbol-link" href="eos-state.html#item-struct-AgentRun-8">AgentRun</a> , CoreError &gt;</code><p class="docstring">Create a run row with only the create-time fields set.</p><details class="function-source">
   <summary>code</summary>
   <pre><code>    <span class="rs-comment">/// Create a run row with only the create-time fields set.</span>
     <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-store-rs.html#method-create-run-259">create_run</a>(
         &amp;<span class="rs-self">self</span>,
         agent_run_id: &amp;<span class="rs-type">AgentRunId</span>,
-        task_id: &amp;<span class="rs-type">TaskId</span>,
+        task_id: <span class="rs-type">Option</span>&lt;&amp;<span class="rs-type">TaskId</span>&gt;,
         agent_name: &amp;str,
         initial_messages: <span class="rs-type">Option</span>&lt;&amp;[<span class="rs-type">JsonObject</span>]&gt;,
     ) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-state.html#item-struct-AgentRun-8">AgentRun</a>, <span class="rs-type">CoreError</span>&gt;;
@@ -843,7 +843,7 @@
     <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-state--src-store-rs.html#method-create-run-259">create_run</a>(
         &amp;<span class="rs-self">self</span>,
         agent_run_id: &amp;<span class="rs-type">AgentRunId</span>,
-        task_id: &amp;<span class="rs-type">TaskId</span>,
+        task_id: <span class="rs-type">Option</span>&lt;&amp;<span class="rs-type">TaskId</span>&gt;,
         agent_name: &amp;str,
         initial_messages: <span class="rs-type">Option</span>&lt;&amp;[<span class="rs-type">JsonObject</span>]&gt;,
     ) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-state.html#item-struct-AgentRun-8">AgentRun</a>, <span class="rs-type">CoreError</span>&gt;;

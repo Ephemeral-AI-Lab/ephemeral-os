@@ -32,7 +32,7 @@ impl AgentRunStore for SqlAgentRunStore {
     async fn create_run(
         &self,
         agent_run_id: &AgentRunId,
-        task_id: &TaskId,
+        task_id: Option<&TaskId>,
         agent_name: &str,
         initial_messages: Option<&[JsonObject]>,
     ) -> Result<AgentRun, CoreError> {
@@ -45,7 +45,7 @@ impl AgentRunStore for SqlAgentRunStore {
              VALUES (?, ?, ?, ?, NULL, NULL, 0, NULL, ?, NULL) RETURNING *",
         )
         .bind(agent_run_id.as_str())
-        .bind(task_id.as_str())
+        .bind(task_id.map(TaskId::as_str))
         .bind(initial)
         .bind(agent_name)
         .bind(now)

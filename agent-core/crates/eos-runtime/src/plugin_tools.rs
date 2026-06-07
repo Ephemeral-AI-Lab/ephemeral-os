@@ -176,7 +176,7 @@ mod tests {
         let mut registry = ToolRegistry::new();
         register_plugin_tools(
             &mut registry,
-            &SandboxToolService::new(Arc::new(RecordingTransport::default())),
+            &SandboxToolService::new(Arc::new(PluginToolTestTransport::default())),
         );
         let hover = registry.get_wire("lsp.hover").expect("hover registered");
         assert_eq!(hover.name.as_str(), "lsp.hover");
@@ -187,7 +187,7 @@ mod tests {
 
     #[tokio::test]
     async fn lsp_executor_ensures_package_before_dispatch() {
-        let transport = Arc::new(RecordingTransport::default());
+        let transport = Arc::new(PluginToolTestTransport::default());
         let ctx = metadata_with(transport.clone());
         let package = plugin_package_descriptor("lsp").expect("lsp package");
         let executor = PluginToolExecutor {
@@ -275,12 +275,12 @@ mod tests {
     }
 
     #[derive(Debug, Default)]
-    struct RecordingTransport {
+    struct PluginToolTestTransport {
         calls: Mutex<Vec<RecordedCall>>,
     }
 
     #[async_trait]
-    impl SandboxTransport for RecordingTransport {
+    impl SandboxTransport for PluginToolTestTransport {
         async fn call(
             &self,
             _sandbox_id: &SandboxId,

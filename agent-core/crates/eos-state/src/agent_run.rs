@@ -15,7 +15,7 @@ pub struct AgentRun {
     /// Agent-run identifier.
     pub id: AgentRunId,
     /// The task this run executes (1:1, unique).
-    pub task_id: TaskId,
+    pub task_id: Option<TaskId>,
     /// Transcript seed set at `create_run`; null-preserving.
     pub initial_messages: Option<Vec<JsonObject>>,
     /// Bound agent profile name.

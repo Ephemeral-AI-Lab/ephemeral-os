@@ -22,8 +22,8 @@ use eos_agent_message_records::{AgentRunRecordKind, WorkflowTaskRole};
 use eos_engine::{run_agent, AgentRunControlFactory, AgentRunInput, AgentRunRegistry};
 use eos_llm_client::Message;
 use eos_tools::{
-    AttemptSubmissionPort, AttemptSubmissionService, BackgroundSupervisorPort,
-    CommandSessionSupervisorPort, WorkflowControlPort,
+    AttemptSubmissionPort, AttemptSubmissionService, BackgroundSessionPort, CommandSessionPort,
+    WorkflowControlPort,
 };
 use eos_types::AgentRunId;
 use eos_workflow::{AgentLaunch, AgentRunReport, AgentRunner, Result as WorkflowResult};
@@ -86,12 +86,11 @@ impl AgentRunner for RuntimeAgentRunner {
         // supervisor, command-completion heartbeat, and cancellation token.
         let control = self
             .control_factory
-            .persisted(agent_run_id.clone(), launch.task_id().clone());
+            .persisted(agent_run_id.clone(), Some(launch.task_id().clone()));
         self.agent_run_registry.insert(control.clone());
         let background = control.background();
-        let background_supervisor: Arc<dyn BackgroundSupervisorPort> = Arc::new(background.clone());
-        let command_session_supervisor: Arc<dyn CommandSessionSupervisorPort> =
-            Arc::new(background);
+        let background_session: Arc<dyn BackgroundSessionPort> = Arc::new(background.clone());
+        let command_session_port: Arc<dyn CommandSessionPort> = Arc::new(background);
         let metadata = build_metadata(
             &self.workspace_root,
             MetadataParams {
@@ -128,8 +127,8 @@ impl AgentRunner for RuntimeAgentRunner {
                     self.attempt_submission.clone(),
                 )),
                 workflow_control: self.workflow_control.get().cloned(),
-                background_supervisor: Some(background_supervisor),
-                command_session_supervisor: Some(command_session_supervisor),
+                background_session: Some(background_session),
+                command_session_port: Some(command_session_port),
                 notifier: control.notifications(),
                 cancellation: control.cancellation(),
                 foreground: control.foreground(),

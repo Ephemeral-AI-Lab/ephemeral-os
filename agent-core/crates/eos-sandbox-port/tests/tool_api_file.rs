@@ -21,12 +21,12 @@ struct RecordedCall {
 }
 
 #[derive(Debug)]
-struct RecordingTransport {
+struct FileToolApiTestTransport {
     response: Result<JsonObject, SandboxPortError>,
     calls: Mutex<Vec<RecordedCall>>,
 }
 
-impl RecordingTransport {
+impl FileToolApiTestTransport {
     fn ok(response: Value) -> Self {
         Self {
             response: Ok(obj(response)),
@@ -47,7 +47,7 @@ impl RecordingTransport {
 }
 
 #[async_trait]
-impl SandboxTransport for RecordingTransport {
+impl SandboxTransport for FileToolApiTestTransport {
     async fn call(
         &self,
         sandbox_id: &SandboxId,
@@ -86,7 +86,7 @@ fn sandbox_id() -> SandboxId {
 
 #[tokio::test]
 async fn read_file_builds_identity_and_line_range_payload() {
-    let transport = RecordingTransport::ok(json!({
+    let transport = FileToolApiTestTransport::ok(json!({
         "success": true,
         "exists": true,
         "content": "hello",
@@ -119,7 +119,7 @@ async fn read_file_builds_identity_and_line_range_payload() {
 
 #[tokio::test]
 async fn write_file_builds_payload_and_parses_guarded_result() {
-    let transport = RecordingTransport::ok(json!({
+    let transport = FileToolApiTestTransport::ok(json!({
         "success": true,
         "changed_paths": ["a.txt", ""],
         "changed_path_kinds": {"a.txt": "modified", "": "ignored"},
@@ -156,7 +156,7 @@ async fn write_file_builds_payload_and_parses_guarded_result() {
 
 #[tokio::test]
 async fn edit_file_builds_payload_and_maps_conflict_to_ok_result() {
-    let transport = RecordingTransport::err(SandboxPortError::transport(
+    let transport = FileToolApiTestTransport::err(SandboxPortError::transport(
         Some("aborted_overlap".to_owned()),
         "internal_error: anchor not found",
     ));

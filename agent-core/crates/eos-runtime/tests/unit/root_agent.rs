@@ -48,7 +48,7 @@ async fn state_reader_exposes_live_request_task_and_run_stores() {
     let run_id: AgentRunId = "run-reader".parse().unwrap();
     reader
         .agent_runs()
-        .create_run(&run_id, &task.id, "root", None)
+        .create_run(&run_id, Some(&task.id), "root", None)
         .await
         .unwrap();
 

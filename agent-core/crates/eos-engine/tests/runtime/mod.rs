@@ -43,7 +43,7 @@ impl LlmClient for NoopLlmClient {
 #[derive(Debug, Clone)]
 struct CreateRecord {
     agent_run_id: AgentRunId,
-    task_id: TaskId,
+    task_id: Option<TaskId>,
     agent_name: String,
 }
 
@@ -77,13 +77,13 @@ impl AgentRunStore for RecordingAgentRunStore {
     async fn create_run(
         &self,
         agent_run_id: &AgentRunId,
-        task_id: &TaskId,
+        task_id: Option<&TaskId>,
         agent_name: &str,
         initial_messages: Option<&[JsonObject]>,
     ) -> Result<AgentRun, CoreError> {
         let run = AgentRun {
             id: agent_run_id.clone(),
-            task_id: task_id.clone(),
+            task_id: task_id.cloned(),
             initial_messages: initial_messages.map(<[_]>::to_vec),
             agent_name: agent_name.to_owned(),
             message_history: None,
@@ -95,7 +95,7 @@ impl AgentRunStore for RecordingAgentRunStore {
         };
         self.creates.lock().unwrap().push(CreateRecord {
             agent_run_id: agent_run_id.clone(),
-            task_id: task_id.clone(),
+            task_id: task_id.cloned(),
             agent_name: agent_name.to_owned(),
         });
         self.runs
@@ -139,7 +139,7 @@ impl AgentRunStore for RecordingAgentRunStore {
             .lock()
             .unwrap()
             .values()
-            .find(|run| run.task_id == *task_id)
+            .find(|run| run.task_id.as_ref() == Some(task_id))
             .cloned())
     }
 }
@@ -430,7 +430,7 @@ async fn run_agent_finishes_agent_run_on_setup_error() {
     let creates = harness.store.creates();
     assert_eq!(creates.len(), 1);
     assert_eq!(creates[0].agent_run_id, agent_run_id);
-    assert_eq!(creates[0].task_id, task_id);
+    assert_eq!(creates[0].task_id.as_ref(), Some(&task_id));
     assert_eq!(creates[0].agent_name, "root");
     let finishes = harness.store.finishes();
     assert_eq!(finishes.len(), 1);
@@ -800,7 +800,7 @@ async fn concurrent_cancel_and_run_finalize_exactly_once() {
     let run_id: AgentRunId = "run-cancel".parse().expect("run id");
     let task_id: TaskId = "task-cancel".parse().expect("task id");
 
-    let control = factory.persisted(run_id.clone(), task_id.clone());
+    let control = factory.persisted(run_id.clone(), Some(task_id.clone()));
     registry.insert(control.clone());
 
     let cancel_port = eos_engine::EngineCancelPort::new(
@@ -865,8 +865,8 @@ async fn per_run_controls_own_independent_notifiers() {
     let factory = control_factory();
     let run_a: AgentRunId = "run-a".parse().expect("run a");
     let run_b: AgentRunId = "run-b".parse().expect("run b");
-    let a = factory.persisted(run_a, "task-a".parse().expect("task a"));
-    let b = factory.persisted(run_b, "task-b".parse().expect("task b"));
+    let a = factory.persisted(run_a, Some("task-a".parse().expect("task a")));
+    let b = factory.persisted(run_b, Some("task-b".parse().expect("task b")));
 
     a.notifications()
         .notify_system(SystemNotification {
@@ -895,7 +895,7 @@ async fn registry_claim_is_one_shot_and_resolves_by_task() {
     let factory = control_factory();
     let run_a: AgentRunId = "run-a".parse().expect("run a");
     let task_a: TaskId = "task-a".parse().expect("task a");
-    let control = factory.persisted(run_a.clone(), task_a.clone());
+    let control = factory.persisted(run_a.clone(), Some(task_a.clone()));
 
     let registry = AgentRunRegistry::new();
     registry.insert(control);

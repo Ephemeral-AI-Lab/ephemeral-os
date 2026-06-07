@@ -260,21 +260,21 @@
             .finish_non_exhaustive()
     }
 </code></pre>
-</details></td></tr></tbody></table></details><details><summary><code>impl eos_tools :: ports :: Sealed for <a class="symbol-link" href="eos-workflow--src-ports-rs.html#item-struct-WorkflowControlAdapter-100">WorkflowControlAdapter</a></code></summary><table><tbody></tbody></table></details><details><summary><code>impl WorkflowControlPort for <a class="symbol-link" href="eos-workflow--src-ports-rs.html#item-struct-WorkflowControlAdapter-100">WorkflowControlAdapter</a></code></summary><table><tbody><tr id="method-start-148"><td>method</td><td>start</td><td><code>async fn <a class="symbol-link" href="eos-workflow--src-attempt-orchestrator-rs.html#method-start-69">start</a> (&amp; self , parent_task_id : &amp; eos_state :: TaskId , _agent_run_id : &amp; AgentRunId , workflow_goal : &amp; str ,) -&gt; <a class="symbol-link" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a> &lt; eos_tools :: StartedWorkflowHandle , ToolError &gt;</code><details class="function-source">
+</details></td></tr></tbody></table></details><details><summary><code>impl eos_tools :: ports :: Sealed for <a class="symbol-link" href="eos-workflow--src-ports-rs.html#item-struct-WorkflowControlAdapter-100">WorkflowControlAdapter</a></code></summary><table><tbody></tbody></table></details><details><summary><code>impl WorkflowControlPort for <a class="symbol-link" href="eos-workflow--src-ports-rs.html#item-struct-WorkflowControlAdapter-100">WorkflowControlAdapter</a></code></summary><table><tbody><tr id="method-start-148"><td>method</td><td>start</td><td><code>async fn <a class="symbol-link" href="eos-workflow--src-attempt-orchestrator-rs.html#method-start-69">start</a> (&amp; self , parent_task_id : &amp; eos_state :: TaskId , _agent_run_id : &amp; AgentRunId , workflow_goal : &amp; str ,) -&gt; <a class="symbol-link" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a> &lt; eos_tools :: StartedWorkflowSession , ToolError &gt;</code><details class="function-source">
   <summary>code</summary>
   <pre><code>    <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-rs.html#method-start-69">start</a>(
         &amp;<span class="rs-self">self</span>,
         parent_task_id: &amp;eos_state::<span class="rs-type">TaskId</span>,
         _agent_run_id: &amp;<span class="rs-type">AgentRunId</span>,
         workflow_goal: &amp;str,
-    ) -&gt; <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a>&lt;eos_tools::<span class="rs-type">StartedWorkflowHandle</span>, <span class="rs-type">ToolError</span>&gt; {
+    ) -&gt; <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a>&lt;eos_tools::<span class="rs-type">StartedWorkflowSession</span>, <span class="rs-type">ToolError</span>&gt; {
         <span class="rs-kw">let</span> started = <span class="rs-self">self</span>
             .starter
             .<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-rs.html#method-start-69">start</a>(workflow_goal, parent_task_id)
             .<span class="rs-kw">await</span>
             .map_err(workflow_control_error)?;
         <span class="rs-kw">let</span> workflow_task_id = <span class="rs-self">self</span>.handles.<a class="symbol-link rs-fn" href="eos-workflow--src-ports-rs.html#method-handle-for-workflow-379">handle_for_workflow</a>(&amp;started.workflow_id)?;
-        <span class="rs-type">Ok</span>(eos_tools::<span class="rs-type">StartedWorkflowHandle</span> {
+        <span class="rs-type">Ok</span>(eos_tools::<span class="rs-type">StartedWorkflowSession</span> {
             workflow_task_id,
             workflow_id: started.workflow_id,
         })
@@ -763,14 +763,14 @@
         parent_task_id: &amp;eos_state::<span class="rs-type">TaskId</span>,
         _agent_run_id: &amp;<span class="rs-type">AgentRunId</span>,
         workflow_goal: &amp;str,
-    ) -&gt; <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a>&lt;eos_tools::<span class="rs-type">StartedWorkflowHandle</span>, <span class="rs-type">ToolError</span>&gt; {
+    ) -&gt; <a class="symbol-link rs-type" href="eos-workflow--src-error-rs.html#item-type-Result-3">Result</a>&lt;eos_tools::<span class="rs-type">StartedWorkflowSession</span>, <span class="rs-type">ToolError</span>&gt; {
         <span class="rs-kw">let</span> started = <span class="rs-self">self</span>
             .starter
             .<a class="symbol-link rs-fn" href="eos-workflow--src-attempt-orchestrator-rs.html#method-start-69">start</a>(workflow_goal, parent_task_id)
             .<span class="rs-kw">await</span>
             .map_err(workflow_control_error)?;
         <span class="rs-kw">let</span> workflow_task_id = <span class="rs-self">self</span>.handles.<a class="symbol-link rs-fn" href="eos-workflow--src-ports-rs.html#method-handle-for-workflow-379">handle_for_workflow</a>(&amp;started.workflow_id)?;
-        <span class="rs-type">Ok</span>(eos_tools::<span class="rs-type">StartedWorkflowHandle</span> {
+        <span class="rs-type">Ok</span>(eos_tools::<span class="rs-type">StartedWorkflowSession</span> {
             workflow_task_id,
             workflow_id: started.workflow_id,
         })

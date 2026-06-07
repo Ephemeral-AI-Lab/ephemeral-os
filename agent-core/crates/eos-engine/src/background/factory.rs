@@ -64,9 +64,9 @@ impl BackgroundSessionFactory {
     /// `agent_run_id` is the run that owns the service (`== caller_id` for
     /// daemon calls); `notifications` is this run's queue (the service wraps it so
     /// background completions surface to the owning run, spec §8.4); and
-    /// `control_factory` lets `spawn` give each subagent its own ephemeral control
-    /// (spec §8.1/§11.3). Must be called within a Tokio runtime — the command
-    /// manager spawns this run's completion monitor.
+    /// `control_factory` lets `spawn` give each subagent its own persisted
+    /// optional-task run control (spec §8.1/§11.3). Must be called within a
+    /// Tokio runtime — the command manager spawns this run's completion monitor.
     #[must_use]
     pub fn create(
         &self,

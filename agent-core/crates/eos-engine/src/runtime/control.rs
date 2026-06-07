@@ -94,19 +94,6 @@ impl AgentRunCancellation {
     }
 }
 
-/// Whether an agent run persists a durable `agent_run` row.
-#[derive(Debug, Clone)]
-pub enum AgentRunPersistence {
-    /// Task-backed root / workflow-agent run: owns a durable `AgentRunStore`
-    /// completion obligation.
-    Persisted {
-        /// The owning task.
-        task_id: TaskId,
-    },
-    /// Live-only subagent / helper run: no `AgentRunStore` row to create/finish.
-    Ephemeral,
-}
-
 /// Finalization data and the cancelled-finish path for one agent run (spec §6.3).
 ///
 /// Finalization owns only the **durable `agent_run` row** completion. The
@@ -119,7 +106,7 @@ pub enum AgentRunPersistence {
 /// cancel-aware either way).
 pub struct AgentRunFinalization {
     agent_run_id: AgentRunId,
-    persistence: AgentRunPersistence,
+    task_id: Option<TaskId>,
     agent_run_store: Arc<dyn AgentRunStore>,
 }
 
@@ -127,7 +114,7 @@ impl std::fmt::Debug for AgentRunFinalization {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("AgentRunFinalization")
             .field("agent_run_id", &self.agent_run_id)
-            .field("persistence", &self.persistence)
+            .field("task_id", &self.task_id)
             .finish_non_exhaustive()
     }
 }
@@ -135,12 +122,12 @@ impl std::fmt::Debug for AgentRunFinalization {
 impl AgentRunFinalization {
     fn new(
         agent_run_id: AgentRunId,
-        persistence: AgentRunPersistence,
+        task_id: Option<TaskId>,
         agent_run_store: Arc<dyn AgentRunStore>,
     ) -> Self {
         Self {
             agent_run_id,
-            persistence,
+            task_id,
             agent_run_store,
         }
     }
@@ -148,24 +135,18 @@ impl AgentRunFinalization {
     /// The owning task id, for persisted runs.
     #[must_use]
     pub fn task_id(&self) -> Option<&TaskId> {
-        match &self.persistence {
-            AgentRunPersistence::Persisted { task_id } => Some(task_id),
-            AgentRunPersistence::Ephemeral => None,
-        }
+        self.task_id.as_ref()
     }
 
-    /// Finish the run's durable `agent_run` row as cancelled. Ephemeral runs own
-    /// no row, so this is a no-op for them. The message-record handle is finished
-    /// by `run_agent`, not here.
+    /// Finish the run's durable `agent_run` row as cancelled. The message-record
+    /// handle is finished by `run_agent`, not here.
     pub async fn finish_cancelled(&self, reason: &str) -> Result<(), EngineError> {
-        if matches!(self.persistence, AgentRunPersistence::Persisted { .. }) {
-            let mut terminal = JsonObject::new();
-            terminal.insert("fail_reason".to_owned(), "cancelled".into());
-            terminal.insert("reason".to_owned(), reason.into());
-            self.agent_run_store
-                .finish_run(&self.agent_run_id, None, Some(&terminal), 0, Some(reason))
-                .await?;
-        }
+        let mut terminal = JsonObject::new();
+        terminal.insert("fail_reason".to_owned(), "cancelled".into());
+        terminal.insert("reason".to_owned(), reason.into());
+        self.agent_run_store
+            .finish_run(&self.agent_run_id, None, Some(&terminal), 0, Some(reason))
+            .await?;
         Ok(())
     }
 }
@@ -199,7 +180,7 @@ impl AgentRunControl {
     pub(super) fn assemble(parts: AgentRunControlParts) -> Self {
         let AgentRunControlParts {
             agent_run_id,
-            persistence,
+            task_id,
             agent_run_store,
             foreground,
             notifications,
@@ -210,11 +191,7 @@ impl AgentRunControl {
             foreground,
             notifications,
             background,
-            finalization: AgentRunFinalization::new(
-                agent_run_id.clone(),
-                persistence,
-                agent_run_store,
-            ),
+            finalization: AgentRunFinalization::new(agent_run_id.clone(), task_id, agent_run_store),
             agent_run_id,
         }
     }
@@ -267,7 +244,7 @@ impl AgentRunControl {
 /// The already-built parts an [`AgentRunControl`] is assembled from.
 pub(super) struct AgentRunControlParts {
     pub(super) agent_run_id: AgentRunId,
-    pub(super) persistence: AgentRunPersistence,
+    pub(super) task_id: Option<TaskId>,
     pub(super) agent_run_store: Arc<dyn AgentRunStore>,
     pub(super) foreground: Arc<ForegroundExecutor>,
     pub(super) notifications: NotificationService,

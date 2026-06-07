@@ -375,7 +375,7 @@ async fn agent_run_roundtrip() {
     let run_id: eos_state::AgentRunId = "run-1".parse().expect("run id");
     let initial = vec![json_obj(&[("role", serde_json::json!("user"))])];
     let created = agent_runs
-        .create_run(&run_id, &tid("t-5"), "coder", Some(&initial))
+        .create_run(&run_id, Some(&tid("t-5")), "coder", Some(&initial))
         .await
         .expect("create run");
     assert_eq!(created.agent_name, "coder");
@@ -401,7 +401,7 @@ async fn agent_run_roundtrip() {
     assert!(agent_runs
         .create_run(
             &"run-2".parse::<eos_state::AgentRunId>().expect("id"),
-            &tid("t-5"),
+            Some(&tid("t-5")),
             "coder",
             None
         )
@@ -696,7 +696,7 @@ async fn read_side_list_apis() {
     // get_for_task returns the bound run, and None when a task has no run.
     let run_id: eos_state::AgentRunId = "run-a1".parse().expect("run id");
     agent_runs
-        .create_run(&run_id, &tid("t-a1"), "coder", None)
+        .create_run(&run_id, Some(&tid("t-a1")), "coder", None)
         .await
         .expect("run");
     let got = agent_runs

@@ -260,7 +260,7 @@ pub trait AgentRunStore: Sealed + Send + Sync {
     async fn create_run(
         &self,
         agent_run_id: &AgentRunId,
-        task_id: &TaskId,
+        task_id: Option<&TaskId>,
         agent_name: &str,
         initial_messages: Option<&[JsonObject]>,
     ) -> Result<AgentRun, CoreError>;

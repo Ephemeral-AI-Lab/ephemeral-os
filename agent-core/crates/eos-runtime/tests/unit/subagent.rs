@@ -73,7 +73,7 @@ mod subagent_lifecycle {
     }
 
     // D9: a *live* subagent (its run blocks forever) must NOT wedge the root
-    // terminal. The `submit_root_outcome` prehook cancels it (settle + abort), so
+    // terminal. The `submit_root_outcome` prehook cancels and finalizes it, so
     // the root completes; the old deny-if-count>0 path would have failed the root.
     #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
     async fn submit_root_outcome_cancels_live_subagent() {
@@ -94,7 +94,7 @@ mod subagent_lifecycle {
         let advisor_turns = vec![approve_turn()];
         let factory: EventSourceFactory = Arc::new(move |def: &AgentDefinition| {
             match def.name.as_str() {
-                // The explorer never finishes → its record stays Running.
+                // The explorer never finishes without cancellation.
                 "explorer" => {
                     Arc::new(ScriptedSource::new_blocking(Vec::new())) as Arc<dyn EventSource>
                 }
@@ -116,13 +116,12 @@ mod subagent_lifecycle {
             .await
             .unwrap();
 
-        // `run_request` returns only after the `submit_root_outcome` prehook's
-        // settle+abort AND the post-run request-scoped `cancel_for_parent_exit(None,
-        // …)` sweep have both run, so the root reaching Done in the store is the
-        // observable proof the live subagent was cancelled rather than wedging the
-        // terminal (D9). The per-request supervisor is now a `run_request` local and
-        // is intentionally not re-exposed, so the cancellation is observed through
-        // the persisted task/request rows.
+        // `run_request` returns only after the `submit_root_outcome` prehook and
+        // the post-run background sweep have both run, so the root reaching Done
+        // in the store is the observable proof the live subagent was cancelled
+        // rather than wedging the terminal (D9). The per-request session runtime
+        // is intentionally not re-exposed, so cancellation is observed through
+        // persisted task/request rows.
         let task = state
             .db
             .task_store

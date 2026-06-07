@@ -260,24 +260,20 @@ pub enum SubagentSessionStatus {
     Delivered,
 }
 
-/// A subagent progress snapshot for `check_subagent_progress`.
-#[derive(Debug, Clone)]
-pub struct SubagentProgressSnapshot {
-    /// Agent-facing subagent session id.
-    pub subagent_session_id: SubagentSessionId,
-    /// Current tracked status.
-    pub status: SubagentSessionStatus,
-    /// Registered subagent name.
-    pub agent_name: String,
-    /// Terminal result, when available.
-    pub result: Option<ToolResult>,
-}
-
 /// Result of looking up a tracked subagent session.
 #[derive(Debug, Clone)]
 pub enum SubagentProgress {
     /// The session exists.
-    Found(SubagentProgressSnapshot),
+    Found {
+        /// Agent-facing subagent session id.
+        subagent_session_id: SubagentSessionId,
+        /// Current tracked status.
+        status: SubagentSessionStatus,
+        /// Registered subagent name.
+        agent_name: String,
+        /// Terminal result, when available.
+        result: Option<ToolResult>,
+    },
     /// The session id is unknown to the owning run.
     Missing {
         /// Agent-facing subagent session id that was requested.

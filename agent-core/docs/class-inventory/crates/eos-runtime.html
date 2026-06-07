@@ -99,12 +99,11 @@
         <span class="rs-comment">// supervisor, command-completion heartbeat, and cancellation token.</span>
         <span class="rs-kw">let</span> control = <span class="rs-self">self</span>
             .control_factory
-            .persisted(agent_run_id.clone(), launch.task_id().clone());
+            .persisted(agent_run_id.clone(), <span class="rs-type">Some</span>(launch.task_id().clone()));
         <span class="rs-self">self</span>.agent_run_registry.insert(control.clone());
         <span class="rs-kw">let</span> background = control.background();
-        <span class="rs-kw">let</span> background_supervisor: <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <span class="rs-type">BackgroundSupervisorPort</span>&gt; = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-61">new</a>(background.clone());
-        <span class="rs-kw">let</span> command_session_supervisor: <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <span class="rs-type">CommandSessionSupervisorPort</span>&gt; =
-            <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-61">new</a>(background);
+        <span class="rs-kw">let</span> background_session: <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <span class="rs-type">BackgroundSessionPort</span>&gt; = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-61">new</a>(background.clone());
+        <span class="rs-kw">let</span> command_session_port: <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <span class="rs-type">CommandSessionPort</span>&gt; = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-61">new</a>(background);
         <span class="rs-kw">let</span> metadata = <a class="symbol-link rs-fn" href="eos-runtime--src-tool-context-rs.html#item-fn-build-metadata-21">build_metadata</a>(
             &amp;<span class="rs-self">self</span>.workspace_root,
             <a class="symbol-link rs-type" href="eos-runtime--src-tool-context-rs.html#item-struct-MetadataParams-9">MetadataParams</a> {
@@ -141,8 +140,8 @@
                     <span class="rs-self">self</span>.attempt_submission.clone(),
                 )),
                 workflow_control: <span class="rs-self">self</span>.workflow_control.<a class="symbol-link rs-fn" href="eos-runtime--src-runtime-services-cancel-registry-rs.html#method-get-55">get</a>().cloned(),
-                background_supervisor: <span class="rs-type">Some</span>(background_supervisor),
-                command_session_supervisor: <span class="rs-type">Some</span>(command_session_supervisor),
+                background_session: <span class="rs-type">Some</span>(background_session),
+                command_session_port: <span class="rs-type">Some</span>(command_session_port),
                 notifier: control.notifications(),
                 cancellation: control.cancellation(),
                 foreground: control.foreground(),
@@ -152,7 +151,7 @@
                     workflow_id: launch.workflow_id().clone(),
                     iteration_id: launch.iteration_id().clone(),
                     attempt_id: launch.attempt_id().clone(),
-                    role: <a class="symbol-link rs-fn" href="eos-runtime.html#item-fn-workflow-message-record-role-163">workflow_message_record_role</a>(launch.role()),
+                    role: <a class="symbol-link rs-fn" href="eos-runtime.html#item-fn-workflow-message-record-role-162">workflow_message_record_role</a>(launch.role()),
                 },
             },
             <span class="rs-type">None</span>,
@@ -175,17 +174,17 @@
 </details></td></tr></tbody></table></details></div>
 
   <p class="source">crates/eos-runtime/src/agent_runner.rs:34</p>
-</article><div class="group-label">Standalone Functions</div><article id="item-fn-workflow-message-record-role-163" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn workflow_message_record_role private fn workflow_message_record_role (role : AgentRole) -&gt; WorkflowTaskRole crates/eos-runtime/src/agent_runner.rs  ">
+</article><div class="group-label">Standalone Functions</div><article id="item-fn-workflow-message-record-role-162" class="item-card" data-kind="fn" data-kind-list="fn" data-filter-text="fn workflow_message_record_role private fn workflow_message_record_role (role : AgentRole) -&gt; WorkflowTaskRole crates/eos-runtime/src/agent_runner.rs  ">
   <div class="item-head">
     <span class="kind">fn</span>
     <h3>workflow_message_record_role</h3>
     <span class="visibility">private</span>
   </div>
-  <code class="signature">fn <a class="symbol-link" href="eos-runtime.html#item-fn-workflow-message-record-role-163">workflow_message_record_role</a> (role : AgentRole) -&gt; WorkflowTaskRole</code>
+  <code class="signature">fn <a class="symbol-link" href="eos-runtime.html#item-fn-workflow-message-record-role-162">workflow_message_record_role</a> (role : AgentRole) -&gt; WorkflowTaskRole</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runtime.html#item-fn-workflow-message-record-role-163">workflow_message_record_role</a>(role: <span class="rs-type">AgentRole</span>) -&gt; <span class="rs-type">WorkflowTaskRole</span> {
+  <pre><code><span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runtime.html#item-fn-workflow-message-record-role-162">workflow_message_record_role</a>(role: <span class="rs-type">AgentRole</span>) -&gt; <span class="rs-type">WorkflowTaskRole</span> {
     <span class="rs-kw">match</span> role {
         <span class="rs-type">AgentRole</span>::<span class="rs-type">Planner</span> =&gt; <span class="rs-type">WorkflowTaskRole</span>::<span class="rs-type">Planner</span>,
         <span class="rs-type">AgentRole</span>::<span class="rs-type">Generator</span> =&gt; <span class="rs-type">WorkflowTaskRole</span>::<span class="rs-type">Generator</span>,
@@ -196,7 +195,7 @@
 </code></pre>
 </details>
 
-  <p class="source">crates/eos-runtime/src/agent_runner.rs:163</p>
+  <p class="source">crates/eos-runtime/src/agent_runner.rs:162</p>
 </article></div>
 </section></div>
 </main>
@@ -229,8 +228,8 @@
 <span class="rs-kw">use</span> eos_engine::{run_agent, <span class="rs-type">AgentRunControlFactory</span>, <span class="rs-type">AgentRunInput</span>, <span class="rs-type">AgentRunRegistry</span>};
 <span class="rs-kw">use</span> eos_llm_client::<span class="rs-type">Message</span>;
 <span class="rs-kw">use</span> eos_tools::{
-    <span class="rs-type">AttemptSubmissionPort</span>, <span class="rs-type">AttemptSubmissionService</span>, <span class="rs-type">BackgroundSupervisorPort</span>,
-    <span class="rs-type">CommandSessionSupervisorPort</span>, <span class="rs-type">WorkflowControlPort</span>,
+    <span class="rs-type">AttemptSubmissionPort</span>, <span class="rs-type">AttemptSubmissionService</span>, <span class="rs-type">BackgroundSessionPort</span>, <span class="rs-type">CommandSessionPort</span>,
+    <span class="rs-type">WorkflowControlPort</span>,
 };
 <span class="rs-kw">use</span> eos_types::<span class="rs-type">AgentRunId</span>;
 <span class="rs-kw">use</span> eos_workflow::{<span class="rs-type">AgentLaunch</span>, <span class="rs-type">AgentRunReport</span>, <span class="rs-type">AgentRunner</span>, <span class="rs-type">Result</span> <span class="rs-kw">as</span> <span class="rs-type">WorkflowResult</span>};
@@ -293,12 +292,11 @@
         <span class="rs-comment">// supervisor, command-completion heartbeat, and cancellation token.</span>
         <span class="rs-kw">let</span> control = <span class="rs-self">self</span>
             .control_factory
-            .persisted(agent_run_id.clone(), launch.task_id().clone());
+            .persisted(agent_run_id.clone(), <span class="rs-type">Some</span>(launch.task_id().clone()));
         <span class="rs-self">self</span>.agent_run_registry.insert(control.clone());
         <span class="rs-kw">let</span> background = control.background();
-        <span class="rs-kw">let</span> background_supervisor: <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <span class="rs-type">BackgroundSupervisorPort</span>&gt; = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-61">new</a>(background.clone());
-        <span class="rs-kw">let</span> command_session_supervisor: <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <span class="rs-type">CommandSessionSupervisorPort</span>&gt; =
-            <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-61">new</a>(background);
+        <span class="rs-kw">let</span> background_session: <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <span class="rs-type">BackgroundSessionPort</span>&gt; = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-61">new</a>(background.clone());
+        <span class="rs-kw">let</span> command_session_port: <span class="rs-type">Arc</span>&lt;<span class="rs-kw">dyn</span> <span class="rs-type">CommandSessionPort</span>&gt; = <span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-runtime.html#method-new-61">new</a>(background);
         <span class="rs-kw">let</span> metadata = <a class="symbol-link rs-fn" href="eos-runtime--src-tool-context-rs.html#item-fn-build-metadata-21">build_metadata</a>(
             &amp;<span class="rs-self">self</span>.workspace_root,
             <a class="symbol-link rs-type" href="eos-runtime--src-tool-context-rs.html#item-struct-MetadataParams-9">MetadataParams</a> {
@@ -335,8 +333,8 @@
                     <span class="rs-self">self</span>.attempt_submission.clone(),
                 )),
                 workflow_control: <span class="rs-self">self</span>.workflow_control.<a class="symbol-link rs-fn" href="eos-runtime--src-runtime-services-cancel-registry-rs.html#method-get-55">get</a>().cloned(),
-                background_supervisor: <span class="rs-type">Some</span>(background_supervisor),
-                command_session_supervisor: <span class="rs-type">Some</span>(command_session_supervisor),
+                background_session: <span class="rs-type">Some</span>(background_session),
+                command_session_port: <span class="rs-type">Some</span>(command_session_port),
                 notifier: control.notifications(),
                 cancellation: control.cancellation(),
                 foreground: control.foreground(),
@@ -346,7 +344,7 @@
                     workflow_id: launch.workflow_id().clone(),
                     iteration_id: launch.iteration_id().clone(),
                     attempt_id: launch.attempt_id().clone(),
-                    role: <a class="symbol-link rs-fn" href="eos-runtime.html#item-fn-workflow-message-record-role-163">workflow_message_record_role</a>(launch.role()),
+                    role: <a class="symbol-link rs-fn" href="eos-runtime.html#item-fn-workflow-message-record-role-162">workflow_message_record_role</a>(launch.role()),
                 },
             },
             <span class="rs-type">None</span>,
@@ -367,7 +365,7 @@
     }
 }
 
-<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runtime.html#item-fn-workflow-message-record-role-163">workflow_message_record_role</a>(role: <span class="rs-type">AgentRole</span>) -&gt; <span class="rs-type">WorkflowTaskRole</span> {
+<span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-runtime.html#item-fn-workflow-message-record-role-162">workflow_message_record_role</a>(role: <span class="rs-type">AgentRole</span>) -&gt; <span class="rs-type">WorkflowTaskRole</span> {
     <span class="rs-kw">match</span> role {
         <span class="rs-type">AgentRole</span>::<span class="rs-type">Planner</span> =&gt; <span class="rs-type">WorkflowTaskRole</span>::<span class="rs-type">Planner</span>,
         <span class="rs-type">AgentRole</span>::<span class="rs-type">Generator</span> =&gt; <span class="rs-type">WorkflowTaskRole</span>::<span class="rs-type">Generator</span>,

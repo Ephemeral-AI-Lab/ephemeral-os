@@ -18,13 +18,13 @@ struct Call {
 }
 
 #[derive(Debug)]
-struct RecordingTransport {
+struct IsolatedWorkspaceTestTransport {
     calls: Mutex<Vec<Call>>,
     response: JsonObject,
     error: Option<SandboxPortError>,
 }
 
-impl RecordingTransport {
+impl IsolatedWorkspaceTestTransport {
     fn ok(response: Value) -> Arc<Self> {
         Arc::new(Self {
             calls: Mutex::new(Vec::new()),
@@ -47,7 +47,7 @@ impl RecordingTransport {
 }
 
 #[async_trait]
-impl SandboxTransport for RecordingTransport {
+impl SandboxTransport for IsolatedWorkspaceTestTransport {
     async fn call(
         &self,
         _sandbox_id: &SandboxId,
@@ -109,7 +109,7 @@ async fn execute(registry: &ToolRegistry, name: ToolName, input: JsonObject) -> 
 
 #[tokio::test]
 async fn enter_isolated_workspace_uses_default_layer_stack_root() {
-    let transport = RecordingTransport::ok(json!({"success": true}));
+    let transport = IsolatedWorkspaceTestTransport::ok(json!({"success": true}));
     let registry = registry(transport.clone());
 
     let res = execute(
@@ -130,7 +130,7 @@ async fn enter_isolated_workspace_uses_default_layer_stack_root() {
 
 #[tokio::test]
 async fn enter_isolated_workspace_forwards_explicit_layer_stack_root() {
-    let transport = RecordingTransport::ok(json!({"success": true}));
+    let transport = IsolatedWorkspaceTestTransport::ok(json!({"success": true}));
     let registry = registry(transport.clone());
 
     let res = execute(
@@ -151,7 +151,7 @@ async fn enter_isolated_workspace_forwards_explicit_layer_stack_root() {
 
 #[tokio::test]
 async fn enter_isolated_workspace_renders_success_payload() {
-    let transport = RecordingTransport::ok(json!({
+    let transport = IsolatedWorkspaceTestTransport::ok(json!({
         "success": true,
         "manifest_version": "v2",
         "manifest_root_hash": "hash-123",
@@ -175,7 +175,7 @@ async fn enter_isolated_workspace_renders_success_payload() {
 
 #[tokio::test]
 async fn enter_isolated_workspace_renders_api_failure_as_tool_error() {
-    let transport = RecordingTransport::err(SandboxPortError::transport(
+    let transport = IsolatedWorkspaceTestTransport::err(SandboxPortError::transport(
         Some("already_active".to_owned()),
         "isolated workspace already active",
     ));
@@ -200,7 +200,7 @@ async fn enter_isolated_workspace_renders_api_failure_as_tool_error() {
 
 #[tokio::test]
 async fn exit_isolated_workspace_uses_default_grace() {
-    let transport = RecordingTransport::ok(json!({"success": true}));
+    let transport = IsolatedWorkspaceTestTransport::ok(json!({"success": true}));
     let registry = registry(transport.clone());
 
     let res = execute(
@@ -218,7 +218,7 @@ async fn exit_isolated_workspace_uses_default_grace() {
 
 #[tokio::test]
 async fn exit_isolated_workspace_forwards_explicit_grace() {
-    let transport = RecordingTransport::ok(json!({"success": true}));
+    let transport = IsolatedWorkspaceTestTransport::ok(json!({"success": true}));
     let registry = registry(transport.clone());
 
     let res = execute(
@@ -236,7 +236,7 @@ async fn exit_isolated_workspace_forwards_explicit_grace() {
 
 #[tokio::test]
 async fn exit_isolated_workspace_renders_success_payload() {
-    let transport = RecordingTransport::ok(json!({
+    let transport = IsolatedWorkspaceTestTransport::ok(json!({
         "success": true,
         "evicted_upperdir_bytes": 4096,
         "lifetime_s": 12.5,
@@ -262,7 +262,8 @@ async fn exit_isolated_workspace_renders_success_payload() {
 
 #[tokio::test]
 async fn exit_isolated_workspace_renders_api_failure_as_tool_error() {
-    let transport = RecordingTransport::err(SandboxPortError::decode("bad lifecycle payload"));
+    let transport =
+        IsolatedWorkspaceTestTransport::err(SandboxPortError::decode("bad lifecycle payload"));
     let registry = registry(transport);
 
     let res = execute(

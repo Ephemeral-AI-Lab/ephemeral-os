@@ -6,7 +6,7 @@ use eos_sandbox_port::SandboxTransport;
 use eos_tools::ports::{
     BackgroundSessionCounts, BackgroundSessionPort, CancelledSubagent, CommandSessionPort,
     SpawnedSubagent, StartedWorkflowSession, SubagentLaunch, SubagentProgress,
-    SubagentProgressSnapshot as ToolSubagentProgressSnapshot, SubagentSessionStatus,
+    SubagentSessionStatus,
 };
 use eos_tools::{ExecutionMetadata, ToolError, WorkflowControlPort};
 use eos_types::{AgentRunId, CommandSessionId, SandboxId, SubagentSessionId, WorkflowSessionId};
@@ -18,7 +18,7 @@ use super::session_managers::subagent::{SubagentSessionManager, SubagentSessionM
 use super::session_managers::workflow::{
     WorkflowControlCell, WorkflowSessionManager, WorkflowSessionMonitor,
 };
-use super::session_managers::{BackgroundSessionManager, BackgroundSessionMonitor};
+use super::session_managers::BackgroundSessionManager;
 use crate::notifications::NotificationService;
 use crate::query::{QueryContext, QueryExitReason};
 use crate::runtime::AgentRunControlFactory;
@@ -204,22 +204,22 @@ impl BackgroundSessionPort for BackgroundSessionService {
         subagent_session_id: &SubagentSessionId,
         _last_n_messages: u8,
     ) -> Result<SubagentProgress, ToolError> {
-        let Some(snapshot) = self
+        let Some((status, result, agent_name)) = self
             .runtime
             .subagent_session_manager()
-            .progress_snapshot(subagent_session_id)
+            .progress(subagent_session_id)
             .await
         else {
             return Ok(SubagentProgress::Missing {
                 subagent_session_id: subagent_session_id.clone(),
             });
         };
-        Ok(SubagentProgress::Found(ToolSubagentProgressSnapshot {
+        Ok(SubagentProgress::Found {
             subagent_session_id: subagent_session_id.clone(),
-            status: subagent_status(snapshot.status),
-            agent_name: snapshot.agent_name,
-            result: snapshot.result,
-        }))
+            status: subagent_status(status),
+            agent_name,
+            result,
+        })
     }
 
     async fn cancel(

@@ -63,14 +63,14 @@
   </div>
   <code class="signature">struct <a class="symbol-link" href="eos-tools--src-hooks-disallow-nested-planner-deferral-rs.html#item-struct-FixedDepth-60">FixedDepth</a></code>
   <div class="tags"></div>
-  <h4>Fields</h4><table><tbody><tr><td>private</td><td>0</td><td><code>u32</code></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl <a class="symbol-link" href="eos-tools--src-ports-mod-rs.html#item-trait-Sealed-32">Sealed</a> for <a class="symbol-link" href="eos-tools--src-hooks-disallow-nested-planner-deferral-rs.html#item-struct-FixedDepth-60">FixedDepth</a></code></summary><table><tbody></tbody></table></details><details><summary><code>impl <a class="symbol-link" href="eos-tools--src-ports-mod-rs.html#item-trait-WorkflowControlPort-66">WorkflowControlPort</a> for <a class="symbol-link" href="eos-tools--src-hooks-disallow-nested-planner-deferral-rs.html#item-struct-FixedDepth-60">FixedDepth</a></code></summary><table><tbody><tr id="method-start-65"><td>method</td><td>start</td><td><code>async fn <a class="symbol-link" href="eos-tools--src-hooks-disallow-nested-planner-deferral-rs.html#method-start-65">start</a> (&amp; self , _ : &amp; TaskId , _ : &amp; AgentRunId , _ : &amp; str ,) -&gt; Result &lt; <a class="symbol-link" href="eos-tools--src-ports-mod-rs.html#item-struct-StartedWorkflowHandle-46">StartedWorkflowHandle</a> , <a class="symbol-link" href="eos-tools.html#item-enum-ToolError-16">ToolError</a> &gt;</code><details class="function-source">
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>0</td><td><code>u32</code></td></tr></tbody></table><h4>Trait Implementations For This Type</h4><div class="impl-list"><details><summary><code>impl <a class="symbol-link" href="eos-tools--src-ports-mod-rs.html#item-trait-Sealed-32">Sealed</a> for <a class="symbol-link" href="eos-tools--src-hooks-disallow-nested-planner-deferral-rs.html#item-struct-FixedDepth-60">FixedDepth</a></code></summary><table><tbody></tbody></table></details><details><summary><code>impl <a class="symbol-link" href="eos-tools--src-ports-mod-rs.html#item-trait-WorkflowControlPort-66">WorkflowControlPort</a> for <a class="symbol-link" href="eos-tools--src-hooks-disallow-nested-planner-deferral-rs.html#item-struct-FixedDepth-60">FixedDepth</a></code></summary><table><tbody><tr id="method-start-65"><td>method</td><td>start</td><td><code>async fn <a class="symbol-link" href="eos-tools--src-hooks-disallow-nested-planner-deferral-rs.html#method-start-65">start</a> (&amp; self , _ : &amp; TaskId , _ : &amp; AgentRunId , _ : &amp; str ,) -&gt; Result &lt; <a class="symbol-link" href="eos-tools--src-ports-mod-rs.html#item-struct-StartedWorkflowSession-46">StartedWorkflowSession</a> , <a class="symbol-link" href="eos-tools.html#item-enum-ToolError-16">ToolError</a> &gt;</code><details class="function-source">
   <summary>code</summary>
   <pre><code>        <span class="rs-kw">async</span> <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-hooks-disallow-nested-planner-deferral-rs.html#method-start-65">start</a>(
             &amp;<span class="rs-self">self</span>,
             _: &amp;<span class="rs-type">TaskId</span>,
             _: &amp;<span class="rs-type">AgentRunId</span>,
             _: &amp;str,
-        ) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-tools--src-ports-mod-rs.html#item-struct-StartedWorkflowHandle-46">StartedWorkflowHandle</a>, <a class="symbol-link rs-type" href="eos-tools.html#item-enum-ToolError-16">ToolError</a>&gt; {
+        ) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-tools--src-ports-mod-rs.html#item-struct-StartedWorkflowSession-46">StartedWorkflowSession</a>, <a class="symbol-link rs-type" href="eos-tools.html#item-enum-ToolError-16">ToolError</a>&gt; {
             unreachable!(&quot;depth hook never starts workflows&quot;)
         }
 </code></pre>
@@ -115,7 +115,7 @@
     <h3>run_disallow_nested_planner_deferral</h3>
     <span class="visibility">pub(crate)</span>
   </div>
-  <code class="signature">pub(crate) async fn <a class="symbol-link" href="eos-tools--src-hooks-disallow-nested-planner-deferral-rs.html#item-fn-run-disallow-nested-planner-deferral-22">run_disallow_nested_planner_deferral</a> (max_depth : u32 , raw_input : &amp; JsonObject , ctx : &amp; <a class="symbol-link" href="eos-tools--src-core-metadata-rs.html#item-struct-ExecutionMetadata-17">ExecutionMetadata</a> , services : &amp; <a class="symbol-link" href="eos-tools--src-tools-services-rs.html#item-struct-HookServices-143">HookServices</a> ,) -&gt; Result &lt; <a class="symbol-link" href="eos-tools--src-hooks-mod-rs.html#item-enum-HookOutcome-77">HookOutcome</a> , <a class="symbol-link" href="eos-tools.html#item-enum-ToolError-16">ToolError</a> &gt;</code>
+  <code class="signature">pub(crate) async fn <a class="symbol-link" href="eos-tools--src-hooks-disallow-nested-planner-deferral-rs.html#item-fn-run-disallow-nested-planner-deferral-22">run_disallow_nested_planner_deferral</a> (max_depth : u32 , raw_input : &amp; JsonObject , ctx : &amp; <a class="symbol-link" href="eos-tools--src-core-metadata-rs.html#item-struct-ExecutionMetadata-17">ExecutionMetadata</a> , services : &amp; <a class="symbol-link" href="eos-tools--src-tools-services-rs.html#item-struct-HookServices-142">HookServices</a> ,) -&gt; Result &lt; <a class="symbol-link" href="eos-tools--src-hooks-mod-rs.html#item-enum-HookOutcome-77">HookOutcome</a> , <a class="symbol-link" href="eos-tools.html#item-enum-ToolError-16">ToolError</a> &gt;</code>
   <p class="docstring">`DisallowNestedPlannerDeferral.run`: deny when a nonblank deferred goal is set<br>and the submitting workflow's depth exceeds `max_depth`. Passes when no<br>deferred goal is set, or when the workflow context (`workflow_id` +<br>`workflow_control`) is unavailable to infer depth.</p>
   <div class="tags"><span>async</span></div>
   <details class="function-source">
@@ -128,7 +128,7 @@
     max_depth: u32,
     raw_input: &amp;<span class="rs-type">JsonObject</span>,
     ctx: &amp;<a class="symbol-link rs-type" href="eos-tools--src-core-metadata-rs.html#item-struct-ExecutionMetadata-17">ExecutionMetadata</a>,
-    services: &amp;<a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-HookServices-143">HookServices</a>,
+    services: &amp;<a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-HookServices-142">HookServices</a>,
 ) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-tools--src-hooks-mod-rs.html#item-enum-HookOutcome-77">HookOutcome</a>, <a class="symbol-link rs-type" href="eos-tools.html#item-enum-ToolError-16">ToolError</a>&gt; {
     <span class="rs-kw">if</span> <a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#item-fn-deferred-goal-365">deferred_goal</a>(raw_input).is_none() {
         <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-tools--src-hooks-mod-rs.html#item-enum-HookOutcome-77">HookOutcome</a>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-pass-89">pass</a>());
@@ -169,7 +169,7 @@
 
         <span class="rs-kw">let</span> <span class="rs-kw">mut</span> ctx = metadata();
         ctx.workflow_id = <span class="rs-type">Some</span>(<span class="rs-type">WorkflowId</span>::new_v4());
-        <span class="rs-kw">let</span> services = <span class="rs-kw">crate</span>::tools::<a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-HookServices-143">HookServices</a>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(<span class="rs-type">None</span>, <span class="rs-type">Some</span>(<span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(<a class="symbol-link rs-type" href="eos-tools--src-hooks-disallow-nested-planner-deferral-rs.html#item-struct-FixedDepth-60">FixedDepth</a>(2))), <span class="rs-type">None</span>);
+        <span class="rs-kw">let</span> services = <span class="rs-kw">crate</span>::tools::<a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-HookServices-142">HookServices</a>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(<span class="rs-type">None</span>, <span class="rs-type">Some</span>(<span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(<a class="symbol-link rs-type" href="eos-tools--src-hooks-disallow-nested-planner-deferral-rs.html#item-struct-FixedDepth-60">FixedDepth</a>(2))), <span class="rs-type">None</span>);
 
         <span class="rs-kw">let</span> outcome = <a class="symbol-link rs-fn" href="eos-tools--src-hooks-disallow-nested-planner-deferral-rs.html#item-fn-run-disallow-nested-planner-deferral-22">run_disallow_nested_planner_deferral</a>(1, &amp;input, &amp;ctx, &amp;services)
             .<span class="rs-kw">await</span>
@@ -208,7 +208,7 @@
 
         <span class="rs-kw">let</span> <span class="rs-kw">mut</span> ctx = metadata();
         ctx.workflow_id = <span class="rs-type">Some</span>(<span class="rs-type">WorkflowId</span>::new_v4());
-        <span class="rs-kw">let</span> services = <span class="rs-kw">crate</span>::tools::<a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-HookServices-143">HookServices</a>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(<span class="rs-type">None</span>, <span class="rs-type">Some</span>(<span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(<a class="symbol-link rs-type" href="eos-tools--src-hooks-disallow-nested-planner-deferral-rs.html#item-struct-FixedDepth-60">FixedDepth</a>(1))), <span class="rs-type">None</span>);
+        <span class="rs-kw">let</span> services = <span class="rs-kw">crate</span>::tools::<a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-HookServices-142">HookServices</a>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(<span class="rs-type">None</span>, <span class="rs-type">Some</span>(<span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(<a class="symbol-link rs-type" href="eos-tools--src-hooks-disallow-nested-planner-deferral-rs.html#item-struct-FixedDepth-60">FixedDepth</a>(1))), <span class="rs-type">None</span>);
 
         <span class="rs-kw">let</span> outcome = <a class="symbol-link rs-fn" href="eos-tools--src-hooks-disallow-nested-planner-deferral-rs.html#item-fn-run-disallow-nested-planner-deferral-22">run_disallow_nested_planner_deferral</a>(1, &amp;input, &amp;ctx, &amp;services)
             .<span class="rs-kw">await</span>
@@ -243,7 +243,7 @@
 
 <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::core::error::<a class="symbol-link rs-type" href="eos-tools.html#item-enum-ToolError-16">ToolError</a>;
 <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::core::metadata::<a class="symbol-link rs-type" href="eos-tools--src-core-metadata-rs.html#item-struct-ExecutionMetadata-17">ExecutionMetadata</a>;
-<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::tools::<a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-HookServices-143">HookServices</a>;
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::tools::<a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-HookServices-142">HookServices</a>;
 
 <span class="rs-kw">use</span> <span class="rs-kw">super</span>::{deferred_goal, <a class="symbol-link rs-type" href="eos-tools--src-hooks-mod-rs.html#item-struct-HookDenial-95">HookDenial</a>, <a class="symbol-link rs-type" href="eos-tools--src-hooks-mod-rs.html#item-enum-HookOutcome-77">HookOutcome</a>};
 
@@ -257,7 +257,7 @@
     max_depth: u32,
     raw_input: &amp;<span class="rs-type">JsonObject</span>,
     ctx: &amp;<a class="symbol-link rs-type" href="eos-tools--src-core-metadata-rs.html#item-struct-ExecutionMetadata-17">ExecutionMetadata</a>,
-    services: &amp;<a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-HookServices-143">HookServices</a>,
+    services: &amp;<a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-HookServices-142">HookServices</a>,
 ) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-tools--src-hooks-mod-rs.html#item-enum-HookOutcome-77">HookOutcome</a>, <a class="symbol-link rs-type" href="eos-tools.html#item-enum-ToolError-16">ToolError</a>&gt; {
     <span class="rs-kw">if</span> <a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#item-fn-deferred-goal-365">deferred_goal</a>(raw_input).is_none() {
         <span class="rs-kw">return</span> <span class="rs-type">Ok</span>(<a class="symbol-link rs-type" href="eos-tools--src-hooks-mod-rs.html#item-enum-HookOutcome-77">HookOutcome</a>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-pass-89">pass</a>());
@@ -283,7 +283,7 @@
     <span class="rs-kw">use</span> serde_json::json;
 
     <span class="rs-kw">use</span> <span class="rs-kw">super</span>::*;
-    <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::ports::{<a class="symbol-link rs-type" href="eos-tools--src-ports-mod-rs.html#item-struct-OutstandingWorkflow-55">OutstandingWorkflow</a>, <a class="symbol-link rs-type" href="eos-tools--src-ports-mod-rs.html#item-trait-Sealed-32">Sealed</a>, <a class="symbol-link rs-type" href="eos-tools--src-ports-mod-rs.html#item-struct-StartedWorkflowHandle-46">StartedWorkflowHandle</a>, <a class="symbol-link rs-type" href="eos-tools--src-ports-mod-rs.html#item-trait-WorkflowControlPort-66">WorkflowControlPort</a>};
+    <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::ports::{<a class="symbol-link rs-type" href="eos-tools--src-ports-mod-rs.html#item-struct-OutstandingWorkflow-55">OutstandingWorkflow</a>, <a class="symbol-link rs-type" href="eos-tools--src-ports-mod-rs.html#item-trait-Sealed-32">Sealed</a>, <a class="symbol-link rs-type" href="eos-tools--src-ports-mod-rs.html#item-struct-StartedWorkflowSession-46">StartedWorkflowSession</a>, <a class="symbol-link rs-type" href="eos-tools--src-ports-mod-rs.html#item-trait-WorkflowControlPort-66">WorkflowControlPort</a>};
     <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::support::metadata;
     <span class="rs-kw">use</span> eos_types::{<span class="rs-type">AgentRunId</span>, <span class="rs-type">TaskId</span>, <span class="rs-type">WorkflowId</span>, <span class="rs-type">WorkflowSessionId</span>};
 
@@ -297,7 +297,7 @@
             _: &amp;<span class="rs-type">TaskId</span>,
             _: &amp;<span class="rs-type">AgentRunId</span>,
             _: &amp;str,
-        ) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-tools--src-ports-mod-rs.html#item-struct-StartedWorkflowHandle-46">StartedWorkflowHandle</a>, <a class="symbol-link rs-type" href="eos-tools.html#item-enum-ToolError-16">ToolError</a>&gt; {
+        ) -&gt; <span class="rs-type">Result</span>&lt;<a class="symbol-link rs-type" href="eos-tools--src-ports-mod-rs.html#item-struct-StartedWorkflowSession-46">StartedWorkflowSession</a>, <a class="symbol-link rs-type" href="eos-tools.html#item-enum-ToolError-16">ToolError</a>&gt; {
             unreachable!(&quot;depth hook never starts workflows&quot;)
         }
 
@@ -336,7 +336,7 @@
 
         <span class="rs-kw">let</span> <span class="rs-kw">mut</span> ctx = metadata();
         ctx.workflow_id = <span class="rs-type">Some</span>(<span class="rs-type">WorkflowId</span>::new_v4());
-        <span class="rs-kw">let</span> services = <span class="rs-kw">crate</span>::tools::<a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-HookServices-143">HookServices</a>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(<span class="rs-type">None</span>, <span class="rs-type">Some</span>(<span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(<a class="symbol-link rs-type" href="eos-tools--src-hooks-disallow-nested-planner-deferral-rs.html#item-struct-FixedDepth-60">FixedDepth</a>(2))), <span class="rs-type">None</span>);
+        <span class="rs-kw">let</span> services = <span class="rs-kw">crate</span>::tools::<a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-HookServices-142">HookServices</a>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(<span class="rs-type">None</span>, <span class="rs-type">Some</span>(<span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(<a class="symbol-link rs-type" href="eos-tools--src-hooks-disallow-nested-planner-deferral-rs.html#item-struct-FixedDepth-60">FixedDepth</a>(2))), <span class="rs-type">None</span>);
 
         <span class="rs-kw">let</span> outcome = <a class="symbol-link rs-fn" href="eos-tools--src-hooks-disallow-nested-planner-deferral-rs.html#item-fn-run-disallow-nested-planner-deferral-22">run_disallow_nested_planner_deferral</a>(1, &amp;input, &amp;ctx, &amp;services)
             .<span class="rs-kw">await</span>
@@ -362,7 +362,7 @@
 
         <span class="rs-kw">let</span> <span class="rs-kw">mut</span> ctx = metadata();
         ctx.workflow_id = <span class="rs-type">Some</span>(<span class="rs-type">WorkflowId</span>::new_v4());
-        <span class="rs-kw">let</span> services = <span class="rs-kw">crate</span>::tools::<a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-HookServices-143">HookServices</a>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(<span class="rs-type">None</span>, <span class="rs-type">Some</span>(<span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(<a class="symbol-link rs-type" href="eos-tools--src-hooks-disallow-nested-planner-deferral-rs.html#item-struct-FixedDepth-60">FixedDepth</a>(1))), <span class="rs-type">None</span>);
+        <span class="rs-kw">let</span> services = <span class="rs-kw">crate</span>::tools::<a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-HookServices-142">HookServices</a>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(<span class="rs-type">None</span>, <span class="rs-type">Some</span>(<span class="rs-type">Arc</span>::<a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(<a class="symbol-link rs-type" href="eos-tools--src-hooks-disallow-nested-planner-deferral-rs.html#item-struct-FixedDepth-60">FixedDepth</a>(1))), <span class="rs-type">None</span>);
 
         <span class="rs-kw">let</span> outcome = <a class="symbol-link rs-fn" href="eos-tools--src-hooks-disallow-nested-planner-deferral-rs.html#item-fn-run-disallow-nested-planner-deferral-22">run_disallow_nested_planner_deferral</a>(1, &amp;input, &amp;ctx, &amp;services)
             .<span class="rs-kw">await</span>

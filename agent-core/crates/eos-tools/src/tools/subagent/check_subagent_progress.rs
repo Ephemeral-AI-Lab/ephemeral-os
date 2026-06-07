@@ -72,7 +72,17 @@ impl ToolExecutor for CheckSubagentProgress {
             .progress(&parsed.subagent_session_id, parsed.last_n_messages)
             .await?
         {
-            SubagentProgress::Found(snapshot) => Ok(render_progress(&snapshot)),
+            SubagentProgress::Found {
+                subagent_session_id,
+                status,
+                agent_name,
+                result,
+            } => Ok(render_progress(
+                &subagent_session_id,
+                status,
+                agent_name.as_str(),
+                result.as_ref(),
+            )),
             SubagentProgress::Missing {
                 subagent_session_id,
             } => Ok(ToolResult::error(format!(
@@ -83,13 +93,17 @@ impl ToolExecutor for CheckSubagentProgress {
     }
 }
 
-fn render_progress(snapshot: &crate::ports::SubagentProgressSnapshot) -> ToolResult {
-    let (status, result_text) =
-        subagent_status_and_result(snapshot.status, snapshot.result.as_ref());
+fn render_progress(
+    subagent_session_id: &SubagentSessionId,
+    status: crate::ports::SubagentSessionStatus,
+    agent_name: &str,
+    result: Option<&ToolResult>,
+) -> ToolResult {
+    let (status, result_text) = subagent_status_and_result(status, result);
     let payload = json!({
-        "subagent_session_id": snapshot.subagent_session_id.as_str(),
+        "subagent_session_id": subagent_session_id.as_str(),
         "status": status,
-        "agent_name": snapshot.agent_name.as_str(),
+        "agent_name": agent_name,
         "result": result_text,
     });
     let output = serde_json::to_string_pretty(&payload).unwrap_or_else(|_| payload.to_string());

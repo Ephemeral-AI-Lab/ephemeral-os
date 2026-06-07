@@ -63,9 +63,9 @@
   </div>
   <code class="signature">struct <a class="symbol-link" href="eos-tools--src-tools-submission-reducer-submit-reducer-outcome-rs.html#item-struct-SubmitReducerOutcome-24">SubmitReducerOutcome</a></code>
   <div class="tags"></div>
-  <h4>Fields</h4><table><tbody><tr><td>private</td><td>service</td><td><code>Option &lt; <a class="symbol-link" href="eos-tools--src-tools-services-rs.html#item-struct-AttemptSubmissionService-44">AttemptSubmissionService</a> &gt;</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-29"><td>constructor</td><td>new</td><td><code>fn <a class="symbol-link" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a> (service : Option &lt; <a class="symbol-link" href="eos-tools--src-tools-services-rs.html#item-struct-AttemptSubmissionService-44">AttemptSubmissionService</a> &gt;) -&gt; Self</code><details class="function-source">
+  <h4>Fields</h4><table><tbody><tr><td>private</td><td>service</td><td><code>Option &lt; <a class="symbol-link" href="eos-tools--src-tools-services-rs.html#item-struct-AttemptSubmissionService-43">AttemptSubmissionService</a> &gt;</code></td></tr></tbody></table><h4>Methods Implemented For This Type</h4><table><tbody><tr id="method-new-29"><td>constructor</td><td>new</td><td><code>fn <a class="symbol-link" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a> (service : Option &lt; <a class="symbol-link" href="eos-tools--src-tools-services-rs.html#item-struct-AttemptSubmissionService-43">AttemptSubmissionService</a> &gt;) -&gt; Self</code><details class="function-source">
   <summary>code</summary>
-  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(service: <span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-AttemptSubmissionService-44">AttemptSubmissionService</a>&gt;) -&gt; <span class="rs-self">Self</span> {
+  <pre><code>    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(service: <span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-AttemptSubmissionService-43">AttemptSubmissionService</a>&gt;) -&gt; <span class="rs-self">Self</span> {
         <span class="rs-self">Self</span> { service }
     }
 </code></pre>
@@ -129,14 +129,14 @@
     <h3>register</h3>
     <span class="visibility">pub(super)</span>
   </div>
-  <code class="signature">pub(super) fn <a class="symbol-link" href="eos-tools--src-ports-mod-rs.html#method-register-408">register</a> (registry : &amp; mut <a class="symbol-link" href="eos-tools--src-registry-tool-registry-rs.html#item-struct-ToolRegistry-18">ToolRegistry</a> , config : &amp; <a class="symbol-link" href="eos-tools--src-registry-config-rs.html#item-struct-ToolConfigSet-45">ToolConfigSet</a> , attempt_submission : Option &lt; <a class="symbol-link" href="eos-tools--src-tools-services-rs.html#item-struct-AttemptSubmissionService-44">AttemptSubmissionService</a> &gt; ,)</code>
+  <code class="signature">pub(super) fn <a class="symbol-link" href="eos-tools--src-ports-mod-rs.html#method-register-407">register</a> (registry : &amp; mut <a class="symbol-link" href="eos-tools--src-registry-tool-registry-rs.html#item-struct-ToolRegistry-18">ToolRegistry</a> , config : &amp; <a class="symbol-link" href="eos-tools--src-registry-config-rs.html#item-struct-ToolConfigSet-45">ToolConfigSet</a> , attempt_submission : Option &lt; <a class="symbol-link" href="eos-tools--src-tools-services-rs.html#item-struct-AttemptSubmissionService-43">AttemptSubmissionService</a> &gt; ,)</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-ports-mod-rs.html#method-register-408">register</a>(
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-ports-mod-rs.html#method-register-407">register</a>(
     registry: &amp;<span class="rs-kw">mut</span> <a class="symbol-link rs-type" href="eos-tools--src-registry-tool-registry-rs.html#item-struct-ToolRegistry-18">ToolRegistry</a>,
     config: &amp;<a class="symbol-link rs-type" href="eos-tools--src-registry-config-rs.html#item-struct-ToolConfigSet-45">ToolConfigSet</a>,
-    attempt_submission: <span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-AttemptSubmissionService-44">AttemptSubmissionService</a>&gt;,
+    attempt_submission: <span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-AttemptSubmissionService-43">AttemptSubmissionService</a>&gt;,
 ) {
     <span class="rs-kw">let</span> reducer = config.<a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#method-get-89">get</a>(<a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-submission-reducer-submit-reducer-outcome-rs.html#item-struct-SubmitReducerOutcome-24">SubmitReducerOutcome</a>);
     <span class="rs-kw">super</span>::<span class="rs-kw">super</span>::<span class="rs-kw">super</span>::<a class="symbol-link rs-fn" href="eos-tools--src-tools-mod-rs.html#item-fn-register-tool-48">register_tool</a>(
@@ -181,18 +181,18 @@
 <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::registry::<a class="symbol-link rs-type" href="eos-tools--src-registry-tool-registry-rs.html#item-struct-ToolRegistry-18">ToolRegistry</a>;
 <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::runtime::execution::parse_input;
 <span class="rs-kw">use</span> <span class="rs-kw">crate</span>::runtime::executor::<a class="symbol-link rs-type" href="eos-tools--src-runtime-executor-rs.html#item-trait-ToolExecutor-18">ToolExecutor</a>;
-<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::tools::<a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-AttemptSubmissionService-44">AttemptSubmissionService</a>;
+<span class="rs-kw">use</span> <span class="rs-kw">crate</span>::tools::<a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-AttemptSubmissionService-43">AttemptSubmissionService</a>;
 
 <span class="rs-kw">use</span> <span class="rs-kw">super</span>::<span class="rs-kw">super</span>::lib::{
     is_blank, meta_obj, submission_ack_result, <a class="symbol-link rs-type" href="eos-tools--src-tools-submission-lib-rs.html#item-struct-OutcomeInput-34">OutcomeInput</a>, <a class="symbol-link rs-type" href="eos-tools--src-tools-submission-lib-rs.html#item-enum-SubmissionStatus-10">SubmissionStatus</a>,
 };
 
 <span class="rs-kw">struct</span> <a class="symbol-link rs-type" href="eos-tools--src-tools-submission-reducer-submit-reducer-outcome-rs.html#item-struct-SubmitReducerOutcome-24">SubmitReducerOutcome</a> {
-    service: <span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-AttemptSubmissionService-44">AttemptSubmissionService</a>&gt;,
+    service: <span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-AttemptSubmissionService-43">AttemptSubmissionService</a>&gt;,
 }
 
 <span class="rs-kw">impl</span> <a class="symbol-link rs-type" href="eos-tools--src-tools-submission-reducer-submit-reducer-outcome-rs.html#item-struct-SubmitReducerOutcome-24">SubmitReducerOutcome</a> {
-    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(service: <span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-AttemptSubmissionService-44">AttemptSubmissionService</a>&gt;) -&gt; <span class="rs-self">Self</span> {
+    <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-hooks-mod-rs.html#method-new-110">new</a>(service: <span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-AttemptSubmissionService-43">AttemptSubmissionService</a>&gt;) -&gt; <span class="rs-self">Self</span> {
         <span class="rs-self">Self</span> { service }
     }
 }
@@ -249,10 +249,10 @@
     }
 }
 
-<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-ports-mod-rs.html#method-register-408">register</a>(
+<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-ports-mod-rs.html#method-register-407">register</a>(
     registry: &amp;<span class="rs-kw">mut</span> <a class="symbol-link rs-type" href="eos-tools--src-registry-tool-registry-rs.html#item-struct-ToolRegistry-18">ToolRegistry</a>,
     config: &amp;<a class="symbol-link rs-type" href="eos-tools--src-registry-config-rs.html#item-struct-ToolConfigSet-45">ToolConfigSet</a>,
-    attempt_submission: <span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-AttemptSubmissionService-44">AttemptSubmissionService</a>&gt;,
+    attempt_submission: <span class="rs-type">Option</span>&lt;<a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-AttemptSubmissionService-43">AttemptSubmissionService</a>&gt;,
 ) {
     <span class="rs-kw">let</span> reducer = config.<a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#method-get-89">get</a>(<a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-submission-reducer-submit-reducer-outcome-rs.html#item-struct-SubmitReducerOutcome-24">SubmitReducerOutcome</a>);
     <span class="rs-kw">super</span>::<span class="rs-kw">super</span>::<span class="rs-kw">super</span>::<a class="symbol-link rs-fn" href="eos-tools--src-tools-mod-rs.html#item-fn-register-tool-48">register_tool</a>(

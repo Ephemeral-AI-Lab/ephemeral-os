@@ -70,6 +70,7 @@ pub async fn run_agent(
                 handles,
                 persistence_requested,
                 &agent_run_id,
+                None,
                 Some(&summary),
             )
             .await;
@@ -102,6 +103,7 @@ pub async fn run_agent(
                         handles,
                         persistence_requested,
                         &agent_run_id,
+                        None,
                         Some(&summary),
                     )
                     .await;
@@ -178,6 +180,7 @@ pub async fn run_agent(
             handles,
             persistence_requested,
             &agent_run_id,
+            terminal_result.as_ref(),
             error.as_deref(),
         )
         .await;

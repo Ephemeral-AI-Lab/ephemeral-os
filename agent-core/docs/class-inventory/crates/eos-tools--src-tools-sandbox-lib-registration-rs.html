@@ -61,15 +61,15 @@
     <h3>register</h3>
     <span class="visibility">pub(super)</span>
   </div>
-  <code class="signature">pub(super) fn <a class="symbol-link" href="eos-tools--src-ports-mod-rs.html#method-register-408">register</a> (registry : &amp; mut <a class="symbol-link" href="eos-tools--src-registry-tool-registry-rs.html#item-struct-ToolRegistry-18">ToolRegistry</a> , config : &amp; <a class="symbol-link" href="eos-tools--src-registry-config-rs.html#item-struct-ToolConfigSet-45">ToolConfigSet</a> , sandbox_service : super :: super :: super :: <a class="symbol-link" href="eos-tools--src-tools-services-rs.html#item-struct-SandboxToolService-65">SandboxToolService</a> , command_service : super :: super :: super :: <a class="symbol-link" href="eos-tools--src-tools-services-rs.html#item-struct-CommandToolService-91">CommandToolService</a> ,)</code>
+  <code class="signature">pub(super) fn <a class="symbol-link" href="eos-tools--src-ports-mod-rs.html#method-register-407">register</a> (registry : &amp; mut <a class="symbol-link" href="eos-tools--src-registry-tool-registry-rs.html#item-struct-ToolRegistry-18">ToolRegistry</a> , config : &amp; <a class="symbol-link" href="eos-tools--src-registry-config-rs.html#item-struct-ToolConfigSet-45">ToolConfigSet</a> , sandbox_service : super :: super :: super :: <a class="symbol-link" href="eos-tools--src-tools-services-rs.html#item-struct-SandboxToolService-64">SandboxToolService</a> , command_service : super :: super :: super :: <a class="symbol-link" href="eos-tools--src-tools-services-rs.html#item-struct-CommandToolService-90">CommandToolService</a> ,)</code>
   <div class="tags"></div>
   <details class="function-source">
   <summary>code</summary>
-  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-ports-mod-rs.html#method-register-408">register</a>(
+  <pre><code><span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-ports-mod-rs.html#method-register-407">register</a>(
     registry: &amp;<span class="rs-kw">mut</span> <a class="symbol-link rs-type" href="eos-tools--src-registry-tool-registry-rs.html#item-struct-ToolRegistry-18">ToolRegistry</a>,
     config: &amp;<a class="symbol-link rs-type" href="eos-tools--src-registry-config-rs.html#item-struct-ToolConfigSet-45">ToolConfigSet</a>,
-    sandbox_service: <span class="rs-kw">super</span>::<span class="rs-kw">super</span>::<span class="rs-kw">super</span>::<a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-SandboxToolService-65">SandboxToolService</a>,
-    command_service: <span class="rs-kw">super</span>::<span class="rs-kw">super</span>::<span class="rs-kw">super</span>::<a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-CommandToolService-91">CommandToolService</a>,
+    sandbox_service: <span class="rs-kw">super</span>::<span class="rs-kw">super</span>::<span class="rs-kw">super</span>::<a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-SandboxToolService-64">SandboxToolService</a>,
+    command_service: <span class="rs-kw">super</span>::<span class="rs-kw">super</span>::<span class="rs-kw">super</span>::<a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-CommandToolService-90">CommandToolService</a>,
 ) {
     <span class="rs-kw">let</span> read_file = config.<a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#method-get-89">get</a>(<a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-read-file-rs.html#item-struct-ReadFile-36">ReadFile</a>);
     <a class="symbol-link rs-fn" href="eos-tools--src-tools-mod-rs.html#item-fn-register-tool-48">register_tool</a>(
@@ -204,11 +204,11 @@
 };
 <span class="rs-kw">use</span> <span class="rs-kw">super</span>::outputs::{<a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-lib-outputs-rs.html#item-struct-CommandToolOutput-33">CommandToolOutput</a>, <a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-lib-outputs-rs.html#item-struct-MutationOutput-18">MutationOutput</a>, <a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-lib-outputs-rs.html#item-struct-ReadFileOutput-8">ReadFileOutput</a>};
 
-<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-ports-mod-rs.html#method-register-408">register</a>(
+<span class="rs-kw">pub</span>(<span class="rs-kw">super</span>) <span class="rs-kw">fn</span> <a class="symbol-link rs-fn" href="eos-tools--src-ports-mod-rs.html#method-register-407">register</a>(
     registry: &amp;<span class="rs-kw">mut</span> <a class="symbol-link rs-type" href="eos-tools--src-registry-tool-registry-rs.html#item-struct-ToolRegistry-18">ToolRegistry</a>,
     config: &amp;<a class="symbol-link rs-type" href="eos-tools--src-registry-config-rs.html#item-struct-ToolConfigSet-45">ToolConfigSet</a>,
-    sandbox_service: <span class="rs-kw">super</span>::<span class="rs-kw">super</span>::<span class="rs-kw">super</span>::<a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-SandboxToolService-65">SandboxToolService</a>,
-    command_service: <span class="rs-kw">super</span>::<span class="rs-kw">super</span>::<span class="rs-kw">super</span>::<a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-CommandToolService-91">CommandToolService</a>,
+    sandbox_service: <span class="rs-kw">super</span>::<span class="rs-kw">super</span>::<span class="rs-kw">super</span>::<a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-SandboxToolService-64">SandboxToolService</a>,
+    command_service: <span class="rs-kw">super</span>::<span class="rs-kw">super</span>::<span class="rs-kw">super</span>::<a class="symbol-link rs-type" href="eos-tools--src-tools-services-rs.html#item-struct-CommandToolService-90">CommandToolService</a>,
 ) {
     <span class="rs-kw">let</span> read_file = config.<a class="symbol-link rs-fn" href="eos-tools--src-registry-config-rs.html#method-get-89">get</a>(<a class="symbol-link rs-type" href="eos-tools--src-core-name-rs.html#item-enum-ToolName-17">ToolName</a>::<a class="symbol-link rs-type" href="eos-tools--src-tools-sandbox-read-file-rs.html#item-struct-ReadFile-36">ReadFile</a>);
     <a class="symbol-link rs-fn" href="eos-tools--src-tools-mod-rs.html#item-fn-register-tool-48">register_tool</a>(

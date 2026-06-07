@@ -6,10 +6,7 @@ use eos_tools::{StartedWorkflowSession, WorkflowControlPort};
 use eos_types::{WorkflowId, WorkflowSessionId};
 use tokio::sync::Mutex;
 
-use super::super::{
-    BackgroundSession, BackgroundSessionManager, BackgroundSessionMonitorHandle,
-    BackgroundSessionStatus,
-};
+use super::super::{BackgroundSession, BackgroundSessionManager, BackgroundSessionStatus};
 use super::session::WorkflowSession;
 use crate::background::notification::{BackgroundCompletion, BackgroundNotificationEmitter};
 
@@ -29,9 +26,6 @@ pub(in crate::background) struct WorkflowSessionManager {
     workflow_port: WorkflowControlCell,
     notification: BackgroundNotificationEmitter,
 }
-
-pub(in crate::background) type WorkflowSessionMonitor =
-    BackgroundSessionMonitorHandle<WorkflowSessionManager>;
 
 impl std::fmt::Debug for WorkflowSessionManager {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -128,6 +122,29 @@ impl WorkflowSessionManager {
             status,
         })
     }
+
+    pub(in crate::background) async fn poll_completions(&self) -> Vec<WorkflowCompletion> {
+        let Some(workflow_port) = self.workflow_port.get().cloned() else {
+            return Vec::new();
+        };
+        let mut completions = Vec::new();
+        for session in self.running_sessions().await {
+            let status_text = match workflow_port
+                .status(session.workflow_id(), Some(session.id()))
+                .await
+            {
+                Ok(text) => text,
+                Err(_) => continue,
+            };
+            let Some(status) = terminal_status(&status_text) else {
+                continue;
+            };
+            if let Some(completion) = self.settle_running(session.id(), status).await {
+                completions.push(completion);
+            }
+        }
+        completions
+    }
 }
 
 #[async_trait]
@@ -151,30 +168,7 @@ impl BackgroundSessionManager for WorkflowSessionManager {
             .count()
     }
 
-    async fn poll(&self) -> Vec<Self::Completion> {
-        let Some(workflow_port) = self.workflow_port.get().cloned() else {
-            return Vec::new();
-        };
-        let mut completions = Vec::new();
-        for session in self.running_sessions().await {
-            let status_text = match workflow_port
-                .status(session.workflow_id(), Some(session.id()))
-                .await
-            {
-                Ok(text) => text,
-                Err(_) => continue,
-            };
-            let Some(status) = terminal_status(&status_text) else {
-                continue;
-            };
-            if let Some(completion) = self.settle_running(session.id(), status).await {
-                completions.push(completion);
-            }
-        }
-        completions
-    }
-
-    async fn finish(&self, completion: Self::Completion) {
+    async fn push_notification_on_completion(&self, completion: Self::Completion) {
         let _ = self
             .notification
             .emit(BackgroundCompletion::Workflow {
@@ -292,7 +286,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn poll_finish_and_cancel_are_manager_owned() {
+    async fn poll_push_notification_and_cancel_are_manager_owned() {
         let notifier = NotificationService::new();
         let manager = manager(&notifier);
         manager
@@ -303,10 +297,10 @@ mod tests {
             .await;
         assert_eq!(manager.count().await, 1);
 
-        let completions = manager.poll().await;
+        let completions = manager.poll_completions().await;
         assert_eq!(completions.len(), 1);
         for completion in completions {
-            manager.finish(completion).await;
+            manager.push_notification_on_completion(completion).await;
         }
         assert_eq!(manager.count().await, 0);
         let notifications = notifier.drain().await;
