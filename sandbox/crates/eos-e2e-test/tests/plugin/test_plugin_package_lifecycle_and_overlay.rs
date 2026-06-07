@@ -1,3 +1,4 @@
+use std::sync::{Arc, Barrier};
 use std::thread;
 use std::time::{Duration, Instant};
 
@@ -515,6 +516,140 @@ fn oneshot_overlay_plugin_write_publishes_through_occ() -> Result<()> {
         audit.any("occ.publish"),
         "plugin overlay write should publish through daemon OCC: {:?}",
         audit.events()
+    );
+    Ok(())
+}
+
+/// `package_reload_reaps_old_service_and_routes` and
+/// `concurrent_plugin_refresh_singleflight` cover reload and concurrent refresh
+/// SEPARATELY. This races them: N `plugin.generic.query` dispatches run while a
+/// package reload (`api.plugin.ensure` with a new staged package) swaps the
+/// worker underneath them. Whatever the swap window does, the invariants must
+/// hold — the reload succeeds, every concurrent dispatch returns a structured
+/// payload (a success, or a structured error during the reap window; never a
+/// transport crash), and the post-reload steady state routes to the new package
+/// with a single worker.
+#[test]
+fn concurrent_dispatch_during_reload_stays_structured() -> Result<()> {
+    let Some(pool) = live_pool_or_skip()? else {
+        return Ok(());
+    };
+    let lease = pool.acquire()?;
+    let first_digest = format!("digest-{}", unique_suffix().replace('-', "_"));
+    let first_setup_digest = format!("setup-{first_digest}");
+    ensure_generic_service_package(&lease, &first_digest, &first_setup_digest)?;
+    lease.call_ok(
+        ops::API_V1_WRITE_FILE,
+        json!({"path": "reload-race/probe.txt", "content": "probe\n", "overwrite": true}),
+    )?;
+
+    let second_digest = format!("digest-{}", unique_suffix().replace('-', "_"));
+    let second_setup_digest = format!("setup-{second_digest}");
+    let staged = stage_generic_service_package(&lease, &second_digest)?;
+
+    let dispatchers = 6;
+    let queries_each = 4;
+    let barrier = Arc::new(Barrier::new(dispatchers + 1));
+
+    let reloader = {
+        let client = lease.client().clone();
+        let root = lease.root().to_owned();
+        let caller_id = lease.caller_id().to_owned();
+        let workspace_root = lease.workspace_root().to_owned();
+        let manifest = service_manifest(&second_digest, &second_setup_digest);
+        let staged = staged.clone();
+        let barrier = Arc::clone(&barrier);
+        thread::spawn(move || {
+            barrier.wait();
+            client.request(
+                ops::API_PLUGIN_ENSURE,
+                &format!("reload-race-ensure-{}", unique_suffix()),
+                &json!({
+                    "layer_stack_root": root,
+                    "caller_id": caller_id,
+                    "workspace_root": workspace_root,
+                    "manifest": manifest,
+                    "staged_package_root": staged,
+                    "start_services": true
+                }),
+            )
+        })
+    };
+
+    let dispatch_handles: Vec<_> = (0..dispatchers)
+        .map(|index| {
+            let client = lease.client().clone();
+            let root = lease.root().to_owned();
+            let caller_id = lease.caller_id().to_owned();
+            let barrier = Arc::clone(&barrier);
+            thread::spawn(move || -> Result<Vec<Value>> {
+                barrier.wait();
+                let mut out = Vec::with_capacity(queries_each);
+                for query in 0..queries_each {
+                    out.push(client.request(
+                        "plugin.generic.query",
+                        &format!("reload-race-d{index}-q{query}-{}", unique_suffix()),
+                        &json!({
+                            "layer_stack_root": root,
+                            "caller_id": caller_id,
+                            "path": "reload-race/probe.txt",
+                            "request": format!("dispatch-{index}-{query}")
+                        }),
+                    )?);
+                }
+                Ok(out)
+            })
+        })
+        .collect();
+
+    let mut dispatches = Vec::new();
+    for handle in dispatch_handles {
+        dispatches.extend(
+            handle
+                .join()
+                .map_err(|_| anyhow::anyhow!("reload-race dispatcher panicked"))??,
+        );
+    }
+    let reloaded = reloader
+        .join()
+        .map_err(|_| anyhow::anyhow!("reload-race reloader panicked"))??;
+
+    assert_eq!(reloaded["success"], true, "reload must succeed: {reloaded}");
+    assert_eq!(
+        reloaded["connected_ppc_routes"],
+        json!(["plugin.generic.query"]),
+        "reload must reconnect the route: {reloaded}"
+    );
+
+    for dispatch in &dispatches {
+        assert!(
+            dispatch.is_object()
+                && (dispatch.get("success").is_some()
+                    || dispatch.get("error").is_some()
+                    || dispatch.get("status").is_some()),
+            "every dispatch during reload must return a structured payload: {dispatch}"
+        );
+    }
+
+    // Post-reload steady state routes to the new package via a single worker.
+    let routed = lease.call_ok(
+        "plugin.generic.query",
+        json!({"path": "reload-race/probe.txt", "request": "after-reload"}),
+    )?;
+    assert_eq!(routed["success"], true, "{routed}");
+    assert_eq!(routed["content"], "probe\n", "{routed}");
+    let status = lease.call_ok(ops::API_PLUGIN_STATUS, json!({}))?;
+    assert_eq!(
+        status["loaded_plugins"][0]["digest"], second_digest,
+        "steady state must run the reloaded digest: {status}"
+    );
+    assert!(
+        status
+            .get("running_service_processes")
+            .and_then(Value::as_array)
+            .map_or(0, Vec::len)
+            <= 1,
+        "reload must not strand extra worker processes: {status}"
     );
     Ok(())
 }

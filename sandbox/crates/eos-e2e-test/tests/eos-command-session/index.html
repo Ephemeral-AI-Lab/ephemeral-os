@@ -87,6 +87,30 @@
       "tags": [
         "eos-command-session"
       ]
+    },
+    {
+      "id": "eos-command-session-command-matrix",
+      "title": "Command Matrix",
+      "description": "At least ten shell command families run through `exec_command` with multiple variants, foreground completion, changed-path assertions, and bounded timing/resource telemetry.",
+      "tags": [
+        "eos-command-session"
+      ]
+    },
+    {
+      "id": "eos-command-session-prompt-read-cancel",
+      "title": "Prompt Read Cancel",
+      "description": "Prompt-style stdin input, empty cursor polling, collect-completed reads, and cancellation behave coherently without replaying consumed output.",
+      "tags": [
+        "eos-command-session"
+      ]
+    },
+    {
+      "id": "eos-command-session-parallel-load",
+      "title": "Parallel Load",
+      "description": "Command sessions execute under the configured `1/3/6/12` parallel ladder without leaked sessions, leaked leases, unbounded upperdir/run-dir growth, or lost publishes.",
+      "tags": [
+        "eos-command-session"
+      ]
     }
   ],
   "test": [
@@ -137,6 +161,19 @@
       "command": "cargo test -p eos-e2e-test --features e2e --test eos-command-session iws_same_port_discard -- --nocapture",
       "checklist": [
         "eos-command-session-isolated-cleanup"
+      ]
+    },
+    {
+      "id": "eos-command-session-command-matrix-and-load",
+      "name": "eos-command-session-command-matrix-and-load",
+      "description": "Groups twelve runner-visible `command_matrix_*_variants` tests, `command_matrix_inventory_covers_ten_shell_families`, `stdin_prompt_cursor_collect_and_cancel_variants`, and `parallel_command_matrix_load_stays_bounded`: each command family has multiple variants, prompt/stdin cursor polling, collect-completed reads, cancellation, and the configured `1/3/6/12` parallel load ladder with resource bounds.",
+      "command": "cargo test -p eos-e2e-test --features e2e --test eos-command-session command_matrix -- --nocapture",
+      "checklist": [
+        "eos-command-session-command-matrix",
+        "eos-command-session-prompt-read-cancel",
+        "eos-command-session-parallel-load",
+        "eos-command-session-cursors",
+        "eos-command-session-lifecycle"
       ]
     }
   ]
