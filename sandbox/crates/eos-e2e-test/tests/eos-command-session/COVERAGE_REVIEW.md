@@ -4,8 +4,8 @@ Scope: `sandbox/crates/eos-e2e-test/tests/eos-command-session`. This is a review
 `exec_command` / `write_stdin` coverage plus the four behaviors asked about
 (natural return, cancelled via `write_stdin`/cancel, killed-by-other-process, long-lived
 output-emitting-but-running). The §4 drafts below were turned into real tests;
-the generated `readme.md` / `readme.json` / `index.html` bundle is left untouched
-(regenerate it from the test files separately).
+the generated `readme.md` / `readme.json` / `index.html` bundle is maintained
+from the module readme data.
 
 ---
 
@@ -50,34 +50,33 @@ case wedges the daemon).
 
 | Question | Verdict | Evidence (existing tests) | Gap |
 |---|---|---|---|
-| Good coverage of `exec_command`? | **Mostly yes** | `exec_simple`, `exec_returns_session_id`, `exec_timeout`, `output_transcript_timestamp`, `nonzero_exit_and_stderr_are_structured`, `missing_command_*`, 12 `command_matrix_*` families | No external-kill/signal family; matrix is all clean-exit foreground |
-| Good coverage of `write_stdin`? | **Mostly yes** | `write_stdin_echo`, `command_session_transcript_progress_no_replay`, `command_sessions_accept_stdin_and_release_on_cancel`, Ctrl-C/Ctrl-D cancel tests, prompt/backpressure reads | No write to a completed session; no large-stdin backpressure |
+| Good coverage of `exec_command`? | **Mostly yes** | `exec_simple`, `exec_returns_session_id`, `exec_timeout`, `exec_command_outputs_timestamped_transcript_lines`, `nonzero_exit_and_stderr_are_structured`, `missing_command_*`, external signal tests, 12 `command_matrix_*` families | Matrix remains clean-exit foreground by design |
+| Good coverage of `write_stdin`? | **Mostly yes** | `write_stdin_echo`, `read_command_progress_returns_stateless_tail_snapshot`, `write_stdin_to_completed_session_is_structured`, `command_sessions_accept_stdin_and_release_on_cancel`, Ctrl-C/Ctrl-D cancel tests, prompt/backpressure reads | Full over-buffer stdin backpressure remains a product gap |
 | Natural return of a session? | **Covered** | `exec_simple` (exit 0), `collect_completed_drains`, `session_completes_only_after_all_subprocesses_exit` | — |
 | Cancelled through `write_stdin` controls or cancel API? | **Covered** | `write_stdin_ctrl_d_reaps_marker_process`, `ctrl_c_char_cancels_command_session`, `cancel_kills_whole_session`, `command_sessions_cancel_cleans_descendant_processes` | — |
-| Killed by **other** process (external signal)? | **NOT covered** | none — only the API-driven cancel path is tested | **Headline gap A** |
-| Long-lived, **emits output but stays running** (nohup / invisible bg)? | **Partial** | `lingering_child_keeps_session_running`, `nohup_child_keeps_session_running`, `setsid_nohup_contract` (all use **silent** sleepers; setsid uses a bounded `sleep 4`) | **Headline gaps B & C** |
+| Killed by **other** process (external signal)? | **Covered** | `external_signal_kill_is_structured`, `self_kill_reports_signal_exit`, `external_sigterm_child_finalizes_via_collect_completed`, `external_sigkill_process_group_is_observed_by_write_stdin` | — |
+| Long-lived, **emits output but stays running** (nohup / invisible bg)? | **Covered** | `live_background_emitter_keeps_session_running`, `running_stderr_only_emitter_is_visible`, `silent_redirected_subprocess_keeps_session_running`, `setsid_nohup_contract` | Escaped descendant policy is explicit rather than accidental |
 
-Bottom line: the happy paths and the two API-driven kill paths are solid. The
-three things missing are exactly the three the question circles: (A) death by an
-**external** signal, (B) a background child that **keeps emitting** (incl.
-stderr) while running, and (C) the **escaped/invisible** descendant contract,
-which today is only exercised with a self-healing bounded sleep that hides the
-real leak.
+Bottom line: the happy paths, API-driven cancel paths, external signal paths,
+long-running output emitters, and escaped-descendant contract are all covered.
+The remaining issue called out by this review is product behavior rather than
+test coverage: truly over-buffer stdin writes are still blocking.
 
 ---
 
-## 2. Implementation grounding (why the gaps matter)
+## 2. Implementation grounding (why the covered edges matter)
 
 - **Running vs completed is pgid scope-wait, not single-process.**
   `eos-runner/src/fresh_ns/child.rs:79` returns only when the root exited **and**
   `process_group_has_other_live_members(pgid)` is false (`child.rs:94`). A
   same-pgid background child therefore keeps the session `running` — this is the
   whole "invisible background process" mechanism.
-- **Signal death is encoded, but never asserted E2E.**
+- **Signal death is encoded and asserted E2E.**
   `eos-command-session/src/process/runner.rs:39`:
   `status.signal().map(|signal| -i64::from(signal))` → an externally-killed
-  process yields a **negative** `exit_code` (e.g. `-9`, `-15`, `-11`). No test
-  reads this path; API-driven teardown goes through cancel.
+  process yields a **negative** `exit_code` (e.g. `-9`, `-15`, `-11`).
+  External/self signal tests now read this path; API-driven teardown still goes
+  through cancel.
 - **Reaping is asymmetric between modes** (the key to gap C):
   - *Ephemeral / fresh-ns (default):* `unshare(NEWUSER | NEWNS)` only — **no
     `NEWPID`** (`fresh_ns.rs:124`). Teardown =
@@ -93,58 +92,56 @@ real leak.
     and GC does `kill_cgroup_pids` + `reap_named_cgroup_orphans`
     (`isolated-workspace/src/session/gc.rs:91-156`). → escapees **are** reaped at
     exit/GC.
-  This contained-vs-leaky asymmetry is real and currently untested.
+  This contained-vs-leaky asymmetry is real and now explicitly tested.
 - **stderr is merged into the single PTY stream**; the `output.stderr` field is
-  always empty (asserted today only for *foreground-completing* commands in
-  `nonzero_exit_and_stderr_are_structured`). Whether a **still-running**
-  stderr-only emitter surfaces its stderr is unverified.
-- **Ctrl-C/Ctrl-D teardown controls are API cancel shortcuts.** There is no
-  separate SIGINT tool path; both control chars route to command-session cancel.
+  always empty. `nonzero_exit_and_stderr_are_structured` covers foreground
+  completion, and `running_stderr_only_emitter_is_visible` covers a still-running
+  stderr-only emitter.
+- **Ctrl-C/Ctrl-D teardown controls are API cancel shortcuts.** Both control
+  chars route to command-session cancel instead of a separate interrupt path.
 
 ---
 
-## 3. Headline gaps
+## 3. Covered Headline Cases
 
 ### A — Killed by another process (external signal)
-No test drives a session to termination by a signal that did **not** come from
-`cancel`. The negative-`exit_code` mapping (`runner.rs:39`), the
-status reported for signal death, lease release, and one-shot completion under
-external kill are all unverified. Includes self-kill (`kill -9 $$`), a second
-`exec_command` doing `pkill -f <marker>`, and a crash (`SIGSEGV`).
+Covered by `external_signal_kill_is_structured`,
+`self_kill_reports_signal_exit`,
+`external_sigterm_child_finalizes_via_collect_completed`, and
+`external_sigkill_process_group_is_observed_by_write_stdin`. These tests exercise
+signal-derived exit codes, lease release, transcript recycling, and one-shot
+completion after out-of-band process death.
 
 ### B — Long-lived background **emitter** (incl. stderr-only)
-Every "stays running" test uses a **silent** sleeper. Missing: a foreground that
-exits after backgrounding a same-pgid child that **keeps printing**, proving
-(1) the session stays `running`, (2) later empty-`write_stdin` read_progress reads
-surface the *new* output without replay, (3) the final completion carries the
-late output. And the literal phrasing "returns a stderr but remains running":
-a never-exiting stderr-only emitter should show its stderr in the merged
-`output.stdout` while `status == running`.
+Covered by `live_background_emitter_keeps_session_running`,
+`running_stderr_only_emitter_is_visible`, and
+`silent_redirected_subprocess_keeps_session_running`. These tests prove
+same-pgid background work can keep the session `running`, that read_progress
+surfaces new transcript output without replay, and that stderr-only output
+appears in merged `output.stdout` while `status == running`.
 
 ### C — Escaped / invisible descendant contract (the critical one)
-`setsid_nohup_contract` uses a bounded `sleep 4`, so it asserts only that the
-session completes and the marker self-heals — it **cannot observe the leak**.
-Per §2 the ephemeral path has no PID-ns and no cgroup backstop, so an *unbounded*
-`setsid`/double-fork descendant is a true cross-lease ghost. The contract should
-be pinned explicitly, in both modes (ephemeral = leaks, isolated = cgroup-reaped),
-and across the common detach idioms (`disown`, `( cmd & )`, bare `setsid`,
-`&`-then-`exit`) — not left as an accidental outcome of one bounded test.
+Covered by `setsid_descendant_escapes_and_leaks_in_ephemeral`,
+`nonsetsid_detach_vectors_stay_tracked`, `setsid_descendant_reaped_on_isolated_exit`,
+and `setsid_nohup_contract`. The contract is pinned explicitly in both modes:
+ephemeral mode can leak an escaped descendant after lease release, while isolated
+mode reaps the same class of escape through its cgroup cleanup.
 
 > **Structural follow-up (not a test):** if tracking invisible background
 > processes is a goal, the fix is a teardown backstop for the ephemeral path —
 > a cgroup (as isolated already has) or a PID namespace — so lease release reaps
-> escapees. The drafted tests below will fail/﻿flip the moment that lands, which
+> escapees. The tests below will fail/﻿flip the moment that lands, which
 > is the point.
 
 ---
 
-## 4. Drafted tests & checklist items, per module
+## 4. Implemented tests & checklist items, per module
 
 Checklist items use the repo's `eos-command-session-<slug>: <description>` style
 so they drop into the module checklist. **H** = headline, **S** = secondary.
 
 ### `test_eos_command_session_lifecycle.rs` (core exec/write_stdin + nohup/setsid)
-Drafted tests:
+Implemented tests:
 - **[H-A] `external_signal_kill_is_structured`** — start a sleeper; from a
   *second* `exec_command` run `pkill -f <marker>` (or `kill -SEGV <pid>`). Assert
   the victim session finalizes with a non-`ok` status and a signal-derived
@@ -184,7 +181,7 @@ Checklist:
   behavior.
 
 ### `test_eos_command_session_ephemeral_workspace.rs` (process-group semantics)
-Drafted tests:
+Implemented tests:
 - **[H-B] `live_background_emitter_keeps_session_running`** — `sh -c 'echo up;
   (for i in $(seq 1 20); do echo tick-$i; sleep 0.3; done) & echo done'`.
   Foreground prints `done` and exits; assert `status == running`, then empty
@@ -222,7 +219,7 @@ Checklist:
   `setsid`, and `&`-then-`exit` each have a pinned tracked-vs-escaped contract.
 
 ### `test_eos_command_session_isolated_workspace.rs` (isolated mode)
-Drafted tests:
+Implemented tests:
 - **[H-C] `unbounded_setsid_descendant_reaped_on_isolated_exit`** — same unbounded
   `setsid` descendant, but inside `enter_isolated_workspace`; assert
   `exit_isolated_workspace` reaps it via the isolated cgroup
@@ -236,37 +233,34 @@ Checklist:
   the ephemeral path.
 
 ### `test_eos_command_session_error_and_backpressure.rs` (errors / backpressure)
-Drafted tests:
-- **[S] `large_stdin_payload_stays_bounded`** — push a large `chars` payload to a
-  slow/non-reading consumer; assert the call stays bounded, the session remains
-  cancellable, and no lease leaks (stdin-side backpressure, mirroring the
-  existing stdout backpressure test).
-- **[S] `uncollected_completion_is_swept`** — let a session complete, never
-  collect it, and assert the reaper/TTL backstop (`command_session_reaper_sweep`,
-  `mod.rs:337`) eventually drops it so completions don't accumulate unbounded.
+Implemented / deferred items:
+- **[S] `stdin_to_non_reading_consumer_stays_bounded_and_cancellable`** —
+  exercises the safe bounded stdin path; the call returns promptly, the session
+  remains cancellable, and no lease leaks.
+- **[S] completed-result retention** — completed command sessions remain parked
+  until the internal background collector pulls them by session id.
 
 Checklist:
 - [ ] `eos-command-session-stdin-backpressure`: A large stdin payload to a slow
   consumer is bounded and cancellable without leaked sessions or leases.
-- [ ] `eos-command-session-uncollected-completion-gc`: A completed-but-never-
-  collected session is eventually swept by the timeout/TTL backstop.
+- [ ] `eos-command-session-completed-retention`: Completed-but-not-yet-collected
+  sessions remain available until the internal collector drains them.
 
 ### `test_eos_command_session_command_matrix.rs` (family matrix + parallel load)
 Observation: all 12 families (`builtin`/`pipeline`/`grep`/`sed`/`awk`/`python`/
 `stderr`/`json-and-bytes`/…) are **clean-exit foreground** commands. The matrix
 has no signal/kill family and no background/detach family.
-Drafted additions:
-- **[H-A] add a `signal` family** — variants that exit via SIGTERM/SIGKILL/SIGSEGV
-  and assert the signal-coded `exit_code` contract uniformly.
-- **[H-C] add a `background` family** — variants for `&`, `nohup &`, `( & )`,
-  `setsid &`, asserting the tracked-vs-escaped pgid contract as first-class matrix
-  rows rather than one-off lifecycle tests.
+Intentionally not added:
+- **`signal` family** — signal-death coverage now lives in lifecycle and
+  external-process-death tests, where non-`ok` assertions fit naturally.
+- **`background` family** — background/detach coverage now lives in lifecycle,
+  ephemeral, and isolated tests, where running/escaped/reaped outcomes fit
+  naturally.
 
 Checklist:
-- [ ] `eos-command-session-command-matrix-signal-family`: The matrix includes a
-  signal-death family asserting the negative/`128+n` `exit_code` contract.
-- [ ] `eos-command-session-command-matrix-background-family`: The matrix includes
-  a backgrounding/detach family asserting tracked-vs-escaped per the pgid rule.
+- [ ] `eos-command-session-command-matrix-clean-exit-family`: The matrix remains
+  a clean-exit foreground breadth harness; non-`ok` signal and background
+  contracts stay in dedicated lifecycle/process tests.
 
 ### `test_eos_command_session_protocol_smoke.rs` (raw protocol smoke)
 No new tests required; smoke coverage is adequate. Optional: a single raw-protocol
@@ -274,42 +268,23 @@ external-kill smoke if gap-A coverage should also be visible at the wire layer.
 
 ---
 
-## 5. Priority
+## 5. Current Follow-ups
 
-1. **C** — escaped/invisible descendant contract (ephemeral leak + isolated reap +
-   detach-vector matrix). Directly answers the "critically important" tracking
-   concern and is currently masked by a bounded sleep.
-2. **A** — external/signal kill, incl. the discriminating
-   `external_kill_of_foreground_keeps_group_running`. Exercises the untested
-   `runner.rs:39` signal path.
-3. **B** — live background emitter + running stderr visibility.
-4. **D/E/F** (secondary) — write-stdin-to-completed, teardown-control cancel, stdin
-   backpressure, uncollected-completion GC.
+1. **Shipped coverage** — escaped/invisible descendants, external/signal kill,
+   live background emitters, running stderr visibility, write-stdin-to-completed,
+   Ctrl-C/Ctrl-D cancellation, and completed-result retention are covered.
+2. **Remaining product follow-up** — true over-buffer stdin backpressure still
+   needs a nonblocking/time-sliced writer before it can have a safe live test.
 
 ---
 
 ## 6. Findings — deferred items that are product gaps, not tests
 
-Investigating the last secondary items surfaced two behaviors that **do not exist
-to be asserted as passing**. They are recorded here as findings (with code
-evidence) instead of being forced into green tests.
+Investigating the last secondary items surfaced one behavior that **does not
+exist to be asserted as passing**. It is recorded here as a finding (with code
+evidence) instead of being forced into a green test.
 
-### F1 — uncollected completions are unbounded (no TTL, no cap)
-`registry.rs:22` holds `completed: Mutex<HashMap<String, CommandSessionCompletion>>`.
-`push_completed` (`registry.rs:67`) only inserts; entries leave only via
-`take_completed_result` / `collect_completed` (`registry.rs:71`, `:78`). The
-`sweep_expired` / `is_expired` machinery operates on the **live** `sessions` map,
-never on `completed`. So a caller that starts fire-and-forget sessions and never
-calls `collect_completed` accumulates completion records — each carrying captured
-stdout/stderr — for the daemon's lifetime.
-- **Why no test:** a passing test would have to assert the *absence* of GC, which
-  enshrines the gap. The honest artifact is this finding.
-- **Recommendation:** bound the map — a TTL sweep inside
-  `command_session_reaper_sweep` (`services/command_session/mod.rs:337`) or a
-  max-entries eviction — then add `eos-command-session-uncollected-completion-gc`
-  as a real test once the behavior exists.
-
-### F2 — stdin write is an unbounded blocking `write_all`
+### F1 — stdin write is an unbounded blocking `write_all`
 `runner.rs:158` is `lock(&self.writer).write_all(bytes)`, and the PTY master is
 opened without `O_NONBLOCK` (`pty.rs:7`). A payload exceeding the kernel PTY input
 buffer, sent to a consumer that never reads stdin, blocks the writer thread while

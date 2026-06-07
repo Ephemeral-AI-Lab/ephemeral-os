@@ -92,8 +92,8 @@ fn command_session_completion_result_can_be_read_by_progress_tool() -> TestResul
     });
     assert_eq!(remaining.completions.len(), 1);
 
-    // Remove-on-deliver: a second collect finds nothing — the map is bounded,
-    // not accumulating delivered entries forever.
+    // Remove-on-deliver: a second collect finds nothing, so delivered entries do
+    // not accumulate forever.
     let redelivered = manager.collect_completed(&CollectCompleted {
         command_session_ids: Some(vec!["cmd_keep".to_owned()]),
         caller_id: None,
