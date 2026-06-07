@@ -16,6 +16,7 @@ use async_trait::async_trait;
 use axum::routing::{get, post};
 use axum::Router;
 
+use eos_agent_message_records::AgentMessageRecords;
 use eos_backend_audit::StatsReader;
 use eos_backend_runtime::{
     CancelOutcome, EventBus, LaunchError, RunLauncher, SandboxManager, SandboxManagerError,
@@ -116,6 +117,7 @@ pub struct AppState {
     pub(crate) event_log: EventLogRepo,
     pub(crate) stats: StatsReader,
     pub(crate) reads: AgentCoreReads,
+    pub(crate) artifacts: AgentMessageRecords,
 }
 
 impl std::fmt::Debug for AppState {
@@ -137,6 +139,7 @@ impl AppState {
         event_log: EventLogRepo,
         stats: StatsReader,
         reads: AgentCoreReads,
+        artifacts: AgentMessageRecords,
     ) -> Self {
         Self {
             runs,
@@ -146,6 +149,7 @@ impl AppState {
             event_log,
             stats,
             reads,
+            artifacts,
         }
     }
 }
@@ -179,6 +183,18 @@ pub fn build_router(state: AppState) -> Router {
         .route(
             "/api/tasks/{task_id}/transcript",
             get(handlers::tasks::transcript),
+        )
+        .route(
+            "/api/agent-runs/{agent_run_id}/messages",
+            get(handlers::agent_runs::messages),
+        )
+        .route(
+            "/api/agent-runs/{agent_run_id}/events",
+            get(handlers::agent_runs::events),
+        )
+        .route(
+            "/api/agent-runs/{agent_run_id}/stream",
+            get(handlers::agent_runs::stream),
         )
         .route("/api/stats/performance", get(handlers::stats::performance))
         .route("/api/stats/correctness", get(handlers::stats::correctness))

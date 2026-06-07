@@ -70,6 +70,7 @@ mod tests {
             terminal_result: None,
             event_source: None,
             prompt_report: None,
+            artifact: None,
             notification_rules: Vec::new(),
             notification_fired: BTreeSet::new(),
             notifier: NotificationService::new(),

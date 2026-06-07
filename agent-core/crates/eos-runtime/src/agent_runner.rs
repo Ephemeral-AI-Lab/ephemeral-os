@@ -17,6 +17,8 @@
 use std::sync::{Arc, OnceLock};
 
 use async_trait::async_trait;
+use eos_agent_def::AgentRole;
+use eos_agent_message_records::{AgentRunRecordKind, WorkflowTaskRole};
 use eos_engine::{run_agent, AgentRunInput, NotificationService};
 use eos_llm_client::Message;
 use eos_tools::{
@@ -118,6 +120,12 @@ impl AgentRunner for RuntimeAgentRunner {
                 command_session_supervisor: Some(self.command_session_supervisor.clone()),
                 notifier: self.notifier.clone(),
                 persist_agent_run: true,
+                artifact_kind: AgentRunRecordKind::WorkflowTask {
+                    workflow_id: launch.workflow_id().clone(),
+                    iteration_id: launch.iteration_id().clone(),
+                    attempt_id: launch.attempt_id().clone(),
+                    role: workflow_artifact_role(launch.role()),
+                },
             },
             None,
         )
@@ -129,5 +137,14 @@ impl AgentRunner for RuntimeAgentRunner {
         Ok(AgentRunReport {
             failure_summary: run.error,
         })
+    }
+}
+
+fn workflow_artifact_role(role: AgentRole) -> WorkflowTaskRole {
+    match role {
+        AgentRole::Planner => WorkflowTaskRole::Planner,
+        AgentRole::Generator => WorkflowTaskRole::Generator,
+        AgentRole::Reducer => WorkflowTaskRole::Reducer,
+        AgentRole::Root | AgentRole::Helper | AgentRole::Subagent => WorkflowTaskRole::Generator,
     }
 }

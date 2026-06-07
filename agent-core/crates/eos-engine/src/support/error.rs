@@ -20,6 +20,10 @@ pub enum EngineError {
     #[error("core error: {0}")]
     Core(#[from] CoreError),
 
+    /// Agent-node artifact error.
+    #[error("artifact error: {0}")]
+    Artifact(#[from] eos_agent_message_records::MessageRecordError),
+
     /// Prompt-report file I/O error.
     #[error("prompt report io error: {0}")]
     Io(#[from] std::io::Error),

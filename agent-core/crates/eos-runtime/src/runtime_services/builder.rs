@@ -9,6 +9,7 @@ use std::sync::{Arc, Mutex as StdMutex};
 use anyhow::{Context, Result};
 use async_trait::async_trait;
 use eos_agent_def::{load_agents_tree, AgentRegistry, AgentRegistryBuilder};
+use eos_agent_message_records::AgentMessageRecords;
 use eos_audit::{AuditSink, BufferedAuditShutdown, BufferedJsonlSink, NoopAuditSink};
 use eos_config::{
     DatabaseConfig, DatabaseUrl, ModelRegistrationConfig, ModelsConfig, ProviderKind,
@@ -30,7 +31,7 @@ use eos_types::{JsonObject, RequestId, SandboxId};
 
 use super::{
     AgentCoreRegistryService, AuditService, DbStoreService, EngineService, EventSourceFactory,
-    RuntimeServices, SandboxService,
+    ArtifactService, RuntimeServices, SandboxService,
 };
 use crate::plugin_tools::register_plugin_tools;
 
@@ -104,6 +105,7 @@ pub struct RuntimeServicesBuilder {
     event_source_factory: Option<EventSourceFactory>,
     audit: Option<Arc<dyn AuditSink>>,
     audit_path: Option<PathBuf>,
+    artifact_root: Option<PathBuf>,
     agent_registry: Option<Arc<AgentRegistry>>,
     agents_dir: Option<PathBuf>,
     tool_config: Option<Arc<ToolConfigSet>>,
@@ -162,6 +164,13 @@ impl RuntimeServicesBuilder {
     /// Write audit events to a buffered JSONL file at `path`.
     pub fn audit_path(mut self, path: impl Into<PathBuf>) -> Self {
         self.audit_path = Some(path.into());
+        self
+    }
+
+    /// Write and serve agent-node `messages.jsonl` / `events.jsonl` under this
+    /// artifact root.
+    pub fn artifact_root(mut self, path: impl Into<PathBuf>) -> Self {
+        self.artifact_root = Some(path.into());
         self
     }
 
@@ -344,6 +353,9 @@ impl RuntimeServicesBuilder {
             audit: AuditService {
                 sink: audit,
                 shutdown: Arc::new(StdMutex::new(audit_shutdown)),
+            },
+            artifacts: ArtifactService {
+                artifacts: self.artifact_root.map(AgentMessageRecords::new),
             },
         })
     }

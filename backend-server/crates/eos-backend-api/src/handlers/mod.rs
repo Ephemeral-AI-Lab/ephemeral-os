@@ -1,5 +1,6 @@
 //! Route handlers plus the small extractors/helpers they share.
 
+pub mod agent_runs;
 pub mod sandboxes;
 pub mod stats;
 pub mod stream;

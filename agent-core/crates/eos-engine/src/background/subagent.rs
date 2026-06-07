@@ -13,6 +13,7 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use eos_agent_def::{AgentName, AgentType};
+use eos_agent_message_records::AgentRunRecordKind;
 use eos_llm_client::Message;
 use eos_tools::ports::{
     BackgroundInflightReport, BackgroundSupervisorPort, SpawnedSubagent, StartedSubagent,
@@ -249,6 +250,9 @@ impl BackgroundSupervisorPort for BackgroundSupervisorHandle {
             command_session_supervisor: None,
             notifier: child_notifier,
             persist_agent_run: false,
+            artifact_kind: AgentRunRecordKind::Subagent {
+                parent_agent_run_id: caller_agent_run_id.clone(),
+            },
         };
 
         let inner = self.inner();

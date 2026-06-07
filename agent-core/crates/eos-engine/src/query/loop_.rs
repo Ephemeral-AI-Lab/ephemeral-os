@@ -60,11 +60,11 @@ fn tool_uses_from_message(message: &Message) -> Vec<ToolUseRequest> {
         .collect()
 }
 
-fn append_notifications(messages: &mut Vec<Message>, notifications: &[SystemNotification]) {
+fn notification_message(notifications: &[SystemNotification]) -> Option<Message> {
     if notifications.is_empty() {
-        return;
+        return None;
     }
-    messages.push(Message {
+    Some(Message {
         role: MessageRole::User,
         content: notifications
             .iter()
@@ -72,7 +72,7 @@ fn append_notifications(messages: &mut Vec<Message>, notifications: &[SystemNoti
                 text: notification.message.clone(),
             })
             .collect(),
-    });
+    })
 }
 
 async fn collect_notifications(
@@ -99,6 +99,29 @@ fn tool_result_message(tool_results: Vec<ContentBlock>) -> Message {
     }
 }
 
+async fn append_transcript_message(
+    ctx: &QueryContext,
+    messages: &mut Vec<Message>,
+    message: Message,
+) -> Result<(), EngineError> {
+    if let Some(artifact) = &ctx.artifact {
+        artifact.append_messages(std::slice::from_ref(&message)).await?;
+    }
+    messages.push(message);
+    Ok(())
+}
+
+async fn append_notifications(
+    ctx: &QueryContext,
+    messages: &mut Vec<Message>,
+    notifications: &[SystemNotification],
+) -> Result<(), EngineError> {
+    if let Some(message) = notification_message(notifications) {
+        append_transcript_message(ctx, messages, message).await?;
+    }
+    Ok(())
+}
+
 fn terminal_not_submitted_event(ctx: &mut QueryContext) -> Result<StreamEvent, EngineError> {
     ctx.set_exit_reason(QueryExitReason::TerminalNotSubmitted);
     Ok(StreamEvent::ToolExecutionCompleted {
@@ -123,7 +146,7 @@ pub fn run_query<'a>(ctx: &'a mut QueryContext, messages: &'a mut Vec<Message>) 
                 for notification in &notifications {
                     yield (notification_event(ctx, notification), None);
                 }
-                append_notifications(messages, &notifications);
+                append_notifications(ctx, messages, &notifications).await?;
                 yield (terminal_not_submitted_event(ctx)?, None);
                 break;
             }
@@ -132,7 +155,7 @@ pub fn run_query<'a>(ctx: &'a mut QueryContext, messages: &'a mut Vec<Message>) 
             for notification in &notifications {
                 yield (notification_event(ctx, notification), None);
             }
-            append_notifications(messages, &notifications);
+            append_notifications(ctx, messages, &notifications).await?;
 
             let run_request = build_query_run_request(ctx, messages).await;
             if let Some(recorder) = &ctx.prompt_report {
@@ -191,7 +214,7 @@ pub fn run_query<'a>(ctx: &'a mut QueryContext, messages: &'a mut Vec<Message>) 
                 }
             }
 
-            messages.push(message.clone());
+            append_transcript_message(ctx, messages, message.clone()).await?;
             if tool_uses.is_empty() {
                 ctx.record_text_only_turn();
                 if terminal_submission_failed(ctx) {
@@ -199,7 +222,7 @@ pub fn run_query<'a>(ctx: &'a mut QueryContext, messages: &'a mut Vec<Message>) 
                     for notification in &notifications {
                         yield (notification_event(ctx, notification), None);
                     }
-                    append_notifications(messages, &notifications);
+                    append_notifications(ctx, messages, &notifications).await?;
                     yield (terminal_not_submitted_event(ctx)?, None);
                     break;
                 }
@@ -216,7 +239,8 @@ pub fn run_query<'a>(ctx: &'a mut QueryContext, messages: &'a mut Vec<Message>) 
                     .record_tool_results(run_request.prompt_report_seq, &outcome.tool_results)
                     .await?;
             }
-            messages.push(tool_result_message(outcome.tool_results));
+            let result_message = tool_result_message(outcome.tool_results);
+            append_transcript_message(ctx, messages, result_message).await?;
 
             if outcome
                 .terminal_result
@@ -228,7 +252,7 @@ pub fn run_query<'a>(ctx: &'a mut QueryContext, messages: &'a mut Vec<Message>) 
                 for notification in &notifications {
                     yield (notification_event(ctx, notification), None);
                 }
-                append_notifications(messages, &notifications);
+                append_notifications(ctx, messages, &notifications).await?;
                 break;
             }
         }

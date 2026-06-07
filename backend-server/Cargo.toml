@@ -72,6 +72,7 @@ eos-protocol       = { path = "../sandbox/crates/eos-protocol" }
 eos-runtime        = { path = "../agent-core/crates/eos-runtime" }
 eos-state          = { path = "../agent-core/crates/eos-state" }
 eos-config         = { path = "../agent-core/crates/eos-config" }
+eos-agent-message-records      = { path = "../agent-core/crates/eos-agent-message-records" }
 
 # internal backend crates — these path edges are the backend dependency DAG.
 eos-sandbox-host   = { path = "crates/eos-sandbox-host" }

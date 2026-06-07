@@ -156,6 +156,15 @@ impl AgentLaunch {
         }
     }
 
+    /// Iteration id.
+    #[must_use]
+    pub fn iteration_id(&self) -> &eos_state::IterationId {
+        match self {
+            Self::Planner(launch) => &launch.iteration_id,
+            Self::Generator(launch) | Self::Reducer(launch) => &launch.iteration_id,
+        }
+    }
+
     /// Workflow id.
     #[must_use]
     pub fn workflow_id(&self) -> &WorkflowId {

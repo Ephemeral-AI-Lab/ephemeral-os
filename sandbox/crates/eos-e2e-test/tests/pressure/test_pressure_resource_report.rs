@@ -7,7 +7,8 @@ use serde_json::{json, Value};
 
 use crate::helpers::{pressure_levels, workload_timeout_s};
 use crate::support::{
-    as_bool, as_i64, as_str, live_pool_or_skip, wait_for_active_leases, wait_for_session_count,
+    as_bool, as_i64, as_str, live_pool_or_skip, seed_base_files, wait_for_active_leases,
+    wait_for_session_count,
 };
 
 #[test]
@@ -54,8 +55,21 @@ fn resource_report_smoke() -> Result<()> {
         assert_eq!(as_i64(&exec, "exit_code")?, 0, "{exec}");
         ensure_timing(&exec, "runtime.dispatch_s")?;
         ensure_timing(&exec, "resource.command_exec.upperdir_tree_bytes")?;
+        ensure_timing(&exec, "resource.command_exec.run_dir_tree_bytes")?;
         ensure_timing(&write, "runtime.dispatch_s")?;
         ensure_timing(&read, "runtime.dispatch_s")?;
+
+        // Memory gauges are collected per op via the cgroup/process collector.
+        // Assert presence and a generous absolute ceiling — these are gauges
+        // inflated by page cache on lowerdir reads, not delta-proportional, so a
+        // tight O(1) bound would flake. The peak gauge is kernel-dependent
+        // (cgroup v2 `memory.peak`, Linux 5.19+) and stays optional.
+        ensure_timing(&write, "resource.cgroup.memory_current_bytes")?;
+        let memory_current = read_timing(&write, "resource.cgroup.memory_current_bytes")?;
+        ensure!(
+            memory_current > 0.0 && memory_current < 64e9,
+            "cgroup memory.current gauge should be present and sane: {memory_current}"
+        );
 
         let session = lease.call_ok(
             ops::API_V1_EXEC_COMMAND,
@@ -67,7 +81,11 @@ fn resource_report_smoke() -> Result<()> {
             }),
         )?;
         assert_eq!(as_str(&session, "status")?, "running", "{session}");
-        let cancel = lease.call_ok(
+        // COMMAND_CANCEL returns the cancelled command's own outcome, whose
+        // envelope `success` is false for a killed command — use `call` (the
+        // command-cancel convention, as in the isolated-workspace tests) rather
+        // than `call_ok`, then assert the structured status below.
+        let cancel = lease.call(
             ops::API_V1_COMMAND_CANCEL,
             json!({"command_session_id": as_str(&session, "command_session_id")?}),
         )?;
@@ -84,6 +102,7 @@ fn resource_report_smoke() -> Result<()> {
             "write_timing_keys": timing_keys(&write),
             "read_timing_keys": timing_keys(&read),
             "exec_timing_keys": timing_keys(&exec),
+            "memory_current_bytes": memory_current,
             "command_status": as_str(&session, "status")?,
             "cancel_status": as_str(&cancel, "status")?,
             "metrics": metrics,
@@ -146,6 +165,56 @@ fn resource_report_smoke() -> Result<()> {
     )?;
     assert_eq!(parsed["scenario"], "resource_report_smoke");
     Ok(())
+}
+
+#[test]
+fn large_base_overlay_keeps_memory_bounded() -> Result<()> {
+    let Some(pool) = live_pool_or_skip()? else {
+        return Ok(());
+    };
+    let lease = pool.acquire()?;
+    // A large lowerdir base plus a tiny overlay delta must not balloon daemon
+    // memory: the base is shared via mount(2), never made resident per op. This
+    // is a loose regression gauge (page cache inflates the gauge), not a tight
+    // O(1) bound. The ~20MB base is built from sub-cap files (2 MiB write cap).
+    seed_base_files(&lease, "pressure/mem/base", 20, 1_000_000)?;
+    let exec = lease.call_ok(
+        ops::API_V1_EXEC_COMMAND,
+        json!({
+            "cmd": "printf TINY > pressure/mem/delta.txt",
+            "yield_time_ms": 1000,
+            "timeout_seconds": 30,
+            "max_output_tokens": 1000
+        }),
+    )?;
+    assert_eq!(as_str(&exec, "status")?, "ok", "{exec}");
+    // Memory gauges land on the fast-path file response; sample one after the op.
+    let probe = lease.call_ok(
+        ops::API_V1_WRITE_FILE,
+        json!({"path": "pressure/mem/probe.txt", "content": "probe\n", "overwrite": true}),
+    )?;
+    let memory_current = read_timing(&probe, "resource.cgroup.memory_current_bytes")?;
+    ensure!(
+        memory_current < 8e9,
+        "daemon cgroup memory.current after a 20MB-base overlay op should stay well under 8GB (got {memory_current}): {probe}"
+    );
+    if let Ok(rss) = read_timing(&probe, "resource.process.rss_bytes") {
+        ensure!(
+            rss > 0.0 && rss < 8e9,
+            "daemon process RSS gauge should be present and sane: {rss}"
+        );
+    }
+    wait_for_active_leases(&lease, 0)?;
+    Ok(())
+}
+
+fn read_timing(response: &Value, key: &str) -> Result<f64> {
+    response
+        .get("timings")
+        .and_then(Value::as_object)
+        .and_then(|timings| timings.get(key))
+        .and_then(Value::as_f64)
+        .with_context(|| format!("response timings should include numeric {key}: {response}"))
 }
 
 fn ensure_timing(response: &Value, key: &str) -> Result<()> {

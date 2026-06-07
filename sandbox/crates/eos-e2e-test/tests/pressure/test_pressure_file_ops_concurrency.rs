@@ -7,7 +7,9 @@ use eos_protocol::ops;
 use serde_json::json;
 
 use crate::helpers::{pressure_levels, request_with_identity};
-use crate::support::{as_bool, as_i64, as_str, live_pool_or_skip, wait_for_active_leases};
+use crate::support::{
+    as_bool, as_i64, as_str, live_pool_or_skip, seed_base_files, wait_for_active_leases,
+};
 
 #[test]
 fn n_concurrent_mixed_ops() -> Result<()> {
@@ -182,6 +184,82 @@ fn write_storm_squash_under_load() -> Result<()> {
     assert!(
         as_i64(&metrics, "manifest_depth")? <= 100,
         "write storm should remain within auto-squash depth target: {metrics}"
+    );
+    Ok(())
+}
+
+fn timing_f64(value: &serde_json::Value, key: &str) -> Option<f64> {
+    value
+        .get("timings")
+        .and_then(|timings| timings.get(key))
+        .and_then(serde_json::Value::as_f64)
+}
+
+#[test]
+fn concurrent_overlay_execs_share_lowerdir_storage_is_o1() -> Result<()> {
+    let Some(pool) = live_pool_or_skip()? else {
+        return Ok(());
+    };
+    let lease = pool.acquire()?;
+    // Seed a large shared base into the lowerdir layer stack (4 sub-cap files;
+    // the daemon caps one write at 2 MiB).
+    let base_bytes = seed_base_files(&lease, "pressure/o1/base", 4, 1_000_000)? as i64;
+    let before = wait_for_active_leases(&lease, 0)?;
+    let storage_before = as_i64(&before, "storage_bytes")?;
+
+    // N concurrent overlay execs each touch a tiny disjoint delta over the same
+    // shared base. The mount(2) lowerdir is shared, not duplicated per lease.
+    let level = 6;
+    let barrier = Arc::new(Barrier::new(level));
+    let handles: Vec<_> = (0..level)
+        .map(|index| {
+            let client = lease.client().clone();
+            let root = lease.root().to_owned();
+            let caller_id = lease.caller_id().to_owned();
+            let barrier = Arc::clone(&barrier);
+            thread::spawn(move || {
+                barrier.wait();
+                request_with_identity(
+                    &client,
+                    ops::API_V1_EXEC_COMMAND,
+                    &root,
+                    &caller_id,
+                    json!({
+                        "cmd": format!("mkdir -p pressure/o1 && printf d{index} > pressure/o1/delta-{index}.txt"),
+                        "yield_time_ms": 1000,
+                        "timeout_seconds": 30,
+                        "max_output_tokens": 1000
+                    }),
+                )
+            })
+        })
+        .collect();
+
+    let mut max_upperdir = 0.0_f64;
+    for handle in handles {
+        let response = handle.join().expect("overlay exec thread panicked")?;
+        assert_eq!(
+            as_str(&response, "status")?,
+            "ok",
+            "concurrent overlay exec should succeed: {response}"
+        );
+        if let Some(upperdir) = timing_f64(&response, "resource.command_exec.upperdir_tree_bytes") {
+            max_upperdir = max_upperdir.max(upperdir);
+        }
+    }
+    // No per-op copy-up under concurrency: each upperdir stays delta-sized.
+    assert!(
+        max_upperdir < 100_000.0,
+        "concurrent overlay upperdir must stay delta-sized, not copy the {base_bytes}-byte base (got {max_upperdir})"
+    );
+
+    let after = wait_for_active_leases(&lease, 0)?;
+    let storage_after = as_i64(&after, "storage_bytes")?;
+    // Shared lowerdir is not duplicated per lease: storage grows by the small
+    // deltas, not by N * base (which would be ~24MB for level=6, base=4MB).
+    assert!(
+        storage_after - storage_before < base_bytes,
+        "concurrent execs over a shared base must not multiply lowerdir storage: before={storage_before} after={storage_after} base={base_bytes}"
     );
     Ok(())
 }

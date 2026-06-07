@@ -23,9 +23,9 @@ use crate::services::workspace::IsolatedFilePorts;
 /// `api.v1.read_file` — shared public read op, routed by active workspace mode.
 pub(crate) fn op_read_file(
     args: &Value,
-    _context: DispatchContext<'_>,
+    context: DispatchContext<'_>,
 ) -> Result<Value, DaemonError> {
-    let request = read_request(args)?;
+    let request = read_request(args, context)?;
     #[cfg(target_os = "linux")]
     if let Some(handle) = crate::services::isolated_workspace::command_handle_for_args(args) {
         let ports = IsolatedFilePorts::new(handle);
@@ -45,9 +45,9 @@ pub(crate) fn op_read_file(
 /// `api.v1.write_file` — shared public write op, routed by active workspace mode.
 pub(crate) fn op_write_file(
     args: &Value,
-    _context: DispatchContext<'_>,
+    context: DispatchContext<'_>,
 ) -> Result<Value, DaemonError> {
-    let request = write_request(args)?;
+    let request = write_request(args, context)?;
     #[cfg(target_os = "linux")]
     if let Some(handle) = crate::services::isolated_workspace::command_handle_for_args(args) {
         let outcome = IsolatedWorkspaceOps::new(IsolatedFilePorts::new(handle))
@@ -82,14 +82,19 @@ pub(crate) fn op_edit_file(
     Ok(edit_response(outcome))
 }
 
-fn read_request(args: &Value) -> Result<ReadFileRequest, DaemonError> {
+fn read_request(args: &Value, context: DispatchContext<'_>) -> Result<ReadFileRequest, DaemonError> {
     Ok(ReadFileRequest {
         path: require_string(args, "path")?,
-        max_read_bytes: MAX_READ_BYTES,
+        max_read_bytes: context
+            .file_limits()
+            .map_or(MAX_READ_BYTES, |limits| limits.max_read_bytes),
     })
 }
 
-fn write_request(args: &Value) -> Result<WriteFileRequest, DaemonError> {
+fn write_request(
+    args: &Value,
+    context: DispatchContext<'_>,
+) -> Result<WriteFileRequest, DaemonError> {
     Ok(WriteFileRequest {
         path: require_string(args, "path")?,
         content: require_raw_string(args, "content")?.into_bytes(),
@@ -97,7 +102,9 @@ fn write_request(args: &Value) -> Result<WriteFileRequest, DaemonError> {
             .get("overwrite")
             .and_then(Value::as_bool)
             .unwrap_or(true),
-        max_file_bytes: MAX_FILE_BYTES,
+        max_file_bytes: context
+            .file_limits()
+            .map_or(MAX_FILE_BYTES, |limits| limits.max_write_bytes),
     })
 }
 

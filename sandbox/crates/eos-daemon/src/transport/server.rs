@@ -32,7 +32,7 @@ use tokio::time::timeout;
 use tokio_util::sync::CancellationToken;
 
 use eos_config::configs::{
-    daemon::{AuditConfig, DaemonConfig},
+    daemon::{AuditConfig, DaemonConfig, FileLimitsConfig},
     isolated_workspace::IsolatedWorkspaceConfig,
 };
 use eos_protocol::{
@@ -79,6 +79,7 @@ pub struct DaemonServer {
     config: ServerConfig,
     op_table: Arc<OpTable>,
     audit_config: AuditConfig,
+    file_limits: FileLimitsConfig,
     invocation_registry: Arc<InFlightRegistry>,
     isolated_sweeper_interval_ms: u64,
     shutdown: CancellationToken,
@@ -93,6 +94,7 @@ impl DaemonServer {
             config,
             op_table: Arc::new(OpTable::with_builtins()),
             audit_config: default_audit_config(),
+            file_limits: default_file_limits(),
             invocation_registry: Arc::new(InFlightRegistry::new(
                 crate::DEFAULT_TTL_S,
                 crate::DEFAULT_REAPER_INTERVAL_S,
@@ -120,6 +122,7 @@ impl DaemonServer {
             config,
             op_table: Arc::new(OpTable::with_builtins()),
             audit_config: daemon_config.audit.clone(),
+            file_limits: daemon_config.files,
             invocation_registry: Arc::new(InFlightRegistry::new(
                 daemon_config.inflight.ttl_s,
                 daemon_config.inflight.reaper_interval_s,
@@ -373,12 +376,18 @@ impl DaemonServer {
         let registry = Arc::clone(&self.invocation_registry);
         let task_registry = Arc::clone(&registry);
         let audit_config = self.audit_config.clone();
+        let file_limits = self.file_limits;
         let (start_tx, start_rx) = std_mpsc::channel::<()>();
         let task = tokio::task::spawn_blocking(move || {
             let _ = start_rx.recv();
             table.dispatch_with_context(
                 &request,
-                DispatchContext::with_runtime_config(&task_registry, &audit_config, read_request_s),
+                DispatchContext::with_runtime_config(
+                    &task_registry,
+                    &audit_config,
+                    file_limits,
+                    read_request_s,
+                ),
             )
         });
         registry.register(
@@ -430,6 +439,13 @@ impl DaemonServer {
             return Err(DaemonError::Unauthorized);
         }
         Ok(value)
+    }
+}
+
+fn default_file_limits() -> FileLimitsConfig {
+    FileLimitsConfig {
+        max_read_bytes: eos_protocol::models::MAX_READ_BYTES,
+        max_write_bytes: eos_protocol::models::MAX_FILE_BYTES,
     }
 }
 

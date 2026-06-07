@@ -12,6 +12,7 @@ use axum::response::{IntoResponse, Response};
 use axum::Json;
 use serde::Serialize;
 
+use eos_agent_message_records::MessageRecordError;
 use eos_backend_runtime::{DeleteRejection, SandboxManagerError};
 use eos_backend_store::StoreError;
 use eos_types::CoreError;
@@ -79,6 +80,23 @@ impl From<CoreError> for ApiError {
     fn from(err: CoreError) -> Self {
         tracing::error!(error = %err, "agent-core state read error");
         Self::Internal
+    }
+}
+
+/// Artifact read failures are sanitized like store failures, except the
+/// client-controllable lookup/range cases stay specific.
+impl From<MessageRecordError> for ApiError {
+    fn from(err: MessageRecordError) -> Self {
+        match err {
+            MessageRecordError::NotFound(_) => Self::NotFound("agent run artifact"),
+            MessageRecordError::OffsetOutOfRange { .. } | MessageRecordError::UnsafeSegment { .. } => {
+                Self::BadRequest(err.to_string())
+            }
+            other => {
+                tracing::error!(error = %other, "agent artifact error");
+                Self::Internal
+            }
+        }
     }
 }
 

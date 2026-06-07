@@ -144,7 +144,9 @@ fn write_stdin_terminate_kills_whole_session() -> Result<()> {
     assert_eq!(as_str(&exec, "status")?, "running", "{exec}");
     let id = as_str(&exec, "command_session_id")?.to_owned();
 
-    let terminated = lease.call_ok(
+    // Terminate kills the whole session, so its hardened outcome is
+    // success:false; use `call` to read the terminal envelope, not `call_ok`.
+    let terminated = lease.call(
         ops::API_V1_WRITE_STDIN,
         json!({
             "command_session_id": id,
@@ -192,7 +194,7 @@ fn cancel_reaps_lingering_descendant() -> Result<()> {
 }
 
 fn cancel(lease: &NodeLease<'_>, id: &str) -> Result<()> {
-    lease.call_ok(
+    lease.call(
         ops::API_V1_COMMAND_CANCEL,
         json!({"command_session_id": id, "max_output_tokens": 1000}),
     )?;

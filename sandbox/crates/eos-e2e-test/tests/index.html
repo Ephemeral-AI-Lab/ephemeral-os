@@ -159,7 +159,7 @@
         {
           "id": "core-file-error-catalog",
           "title": "File Error Catalog",
-          "description": "Missing reads, edit anchor failures, ambiguous edit counts, create-only conflicts, and file size limits return deterministic no-publish error payloads.",
+          "description": "Missing reads, edit anchor failures, ambiguous edit counts, create-only conflicts, and config-driven per-file size caps (`daemon.files`: 16 MiB read, 8 MiB write) return deterministic no-publish error payloads, while a write between the legacy 2 MiB and the configured 8 MiB cap publishes.",
           "tags": [
             "core"
           ]
@@ -179,7 +179,7 @@
         {
           "id": "core-envelope-and-error-catalog",
           "name": "core-envelope-and-error-catalog",
-          "description": "Groups the protocol guard and deterministic error catalog: `unknown_op_rejected`, `bad_json_rejected`, `oversized_request_rejected`, `unauthorized_tcp_rejected`, `forbidden_in_isolated_workspace_rejected`, `read_nonexistent`, `read_nonexistent_reports_absent`, `edit_anchor_not_found`, `edit_count_mismatch`, `edit_error_catalog_anchor_not_found_and_count_mismatch`, `write_create_only_conflict`, `read_max_bytes_guard`, and `write_max_file_bytes_guard`.",
+          "description": "Groups the protocol guard and deterministic error catalog: `unknown_op_rejected`, `bad_json_rejected`, `oversized_request_rejected`, `unauthorized_tcp_rejected`, `forbidden_in_isolated_workspace_rejected`, `read_nonexistent`, `read_nonexistent_reports_absent`, `edit_anchor_not_found`, `edit_count_mismatch`, `edit_error_catalog_anchor_not_found_and_count_mismatch`, `write_create_only_conflict`, `read_max_bytes_guard`, `write_max_file_bytes_guard`, and `write_above_legacy_two_mib_cap_succeeds` (config-driven `daemon.files` caps: a 3 MiB write above the legacy 2 MiB cap publishes while over-cap read/write payloads are rejected).",
           "command": "cargo test -p eos-e2e-test --features e2e --test core -- --nocapture",
           "checklist": [
             "core-envelope-guards",
@@ -476,6 +476,14 @@
           "tags": [
             "ephemeral_workspace"
           ]
+        },
+        {
+          "id": "ephemeral_workspace-overlay-disk-o1",
+          "title": "Overlay Disk O1",
+          "description": "Overlay upperdir accounting stays flat as the lowerdir workspace grows, and overlay run-dir scratch stays bounded and untruncated, proving O(1) overlay disk with respect to workspace size.",
+          "tags": [
+            "ephemeral_workspace"
+          ]
         }
       ],
       "test": [
@@ -527,6 +535,16 @@
           "command": "cargo test -p eos-e2e-test --features e2e --test ephemeral_workspace -- --nocapture",
           "checklist": [
             "ephemeral_workspace-stale-exec-conflict"
+          ]
+        },
+        {
+          "id": "ephemeral_workspace_overlay_disk_o1",
+          "name": "ephemeral_workspace_overlay_disk_o1",
+          "description": "Groups `exec_upperdir_is_flat_across_base_sizes` and `exec_run_dir_scratch_stays_bounded`: a tiny overlay delta over a 15x-growing multi-file lowerdir base keeps `resource.command_exec.upperdir_tree_bytes` flat and delta-sized, while `resource.command_exec.run_dir_tree_bytes` stays bounded and untruncated, proving O(1) overlay disk with respect to workspace size.",
+          "command": "cargo test -p eos-e2e-test --features e2e --test ephemeral_workspace -- --nocapture",
+          "checklist": [
+            "ephemeral_workspace-overlay-disk-o1",
+            "ephemeral_workspace-upperdir-delta"
           ]
         }
       ]
@@ -1382,6 +1400,22 @@
           "tags": [
             "pressure"
           ]
+        },
+        {
+          "id": "pressure-overlay-disk-o1",
+          "title": "Overlay Disk O1",
+          "description": "Concurrent overlay execs over a shared lowerdir base keep each per-op upperdir delta-sized and do not multiply LayerStack storage, proving O(1) overlay disk with respect to the number of parallel readers/writers.",
+          "tags": [
+            "pressure"
+          ]
+        },
+        {
+          "id": "pressure-resource-memory",
+          "title": "Resource Memory",
+          "description": "Resource samples carry cgroup memory.current/peak and process RSS gauges, and a large-base overlay op keeps daemon memory within a bounded ceiling (a loose regression gauge inflated by page cache, not a tight O(1) bound).",
+          "tags": [
+            "pressure"
+          ]
         }
       ],
       "test": [
@@ -1446,10 +1480,11 @@
         {
           "id": "pressure-resource-report-and-leak-oracles",
           "name": "pressure-resource-report-and-leak-oracles",
-          "description": "`resource_report_smoke` emits one JSON artifact covering timing keys, resource counters, runtime readiness, plugin status, isolated-open state, and leak counters after file, exec, command-session, and OCC-backed write samples.",
+          "description": "`resource_report_smoke` emits one JSON artifact covering timing keys, resource counters, cgroup memory.current gauges, runtime readiness, plugin status, isolated-open state, and leak counters after file, exec, command-session, and OCC-backed write samples.",
           "command": "cargo test -p eos-e2e-test --features e2e --test pressure resource_report_smoke -- --nocapture",
           "checklist": [
             "pressure-resource-report",
+            "pressure-resource-memory",
             "pressure-ladder-file",
             "pressure-ladder-exec",
             "pressure-ladder-command",
@@ -1458,6 +1493,16 @@
             "pressure-isolated-cap",
             "pressure-squash-bound",
             "pressure-recovery-cleanup"
+          ]
+        },
+        {
+          "id": "pressure-overlay-disk-and-memory-o1",
+          "name": "pressure-overlay-disk-and-memory-o1",
+          "description": "Groups `concurrent_overlay_execs_share_lowerdir_storage_is_o1` and `large_base_overlay_keeps_memory_bounded`: N concurrent overlay execs over a shared lowerdir base keep each upperdir delta-sized and grow `storage_bytes` by less than one base, and a 20MB-base overlay op keeps cgroup memory.current within a generous ceiling.",
+          "command": "cargo test -p eos-e2e-test --features e2e --test pressure -- --nocapture",
+          "checklist": [
+            "pressure-overlay-disk-o1",
+            "pressure-resource-memory"
           ]
         }
       ]

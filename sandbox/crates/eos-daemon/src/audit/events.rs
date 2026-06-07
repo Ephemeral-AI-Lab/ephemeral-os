@@ -448,7 +448,10 @@ fn emit_os_resource_audit(request: &Request, response: &Value) {
         tool_use_id: Some(invocation_id),
         caller_id: string_arg(request, "caller_id"),
         sampled_at_monotonic_s: audit_monotonic_s(),
-        rss_bytes: None,
+        rss_bytes: timing_i64(response, "resource.process.rss_bytes"),
+        max_rss_bytes: timing_i64(response, "resource.process.max_rss_bytes"),
+        memory_current_bytes: timing_i64(response, "resource.cgroup.memory_current_bytes"),
+        memory_peak_bytes: timing_i64(response, "resource.cgroup.memory_peak_bytes"),
         cpu_user_s: timing_f64(response, "resource.cgroup.cpu_user_usec").map(usec_to_seconds),
         cpu_system_s: timing_f64(response, "resource.cgroup.cpu_system_usec").map(usec_to_seconds),
         cpu_throttled_us: timing_i64(response, "resource.cgroup.cpu_throttled_usec"),
@@ -465,6 +468,9 @@ fn emit_os_resource_audit(request: &Request, response: &Value) {
 
 fn has_os_resource_values(section: &OsResourceSection) -> bool {
     section.rss_bytes.is_some()
+        || section.max_rss_bytes.is_some()
+        || section.memory_current_bytes.is_some()
+        || section.memory_peak_bytes.is_some()
         || section.cpu_user_s.is_some()
         || section.cpu_system_s.is_some()
         || section.cpu_throttled_us.is_some()

@@ -162,6 +162,7 @@ pub fn build_query_context(input: BuildQueryContextInput) -> Result<QueryContext
         terminal_result: None,
         event_source,
         prompt_report: None,
+        artifact: None,
         notification_rules: make_default_notification_rules(),
         notification_fired: BTreeSet::new(),
         notifier,

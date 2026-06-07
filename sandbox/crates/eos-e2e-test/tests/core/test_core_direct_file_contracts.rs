@@ -432,3 +432,30 @@ fn write_max_file_bytes_guard() -> Result<()> {
     );
     Ok(())
 }
+
+#[test]
+fn write_above_legacy_two_mib_cap_succeeds() -> Result<()> {
+    let Some(pool) = live_pool_or_skip()? else {
+        return Ok(());
+    };
+    let lease = pool.acquire()?;
+    // 3 MiB sits above the legacy 2 MiB write cap and below the configured
+    // 8 MiB cap (`daemon.files.max_write_bytes`). Proves the raised, config
+    // driven write limit is honored end to end, not just the old hardcoded 2 MiB.
+    let size = 3 * 1024 * 1024;
+    let write = lease.call_ok(
+        ops::API_V1_WRITE_FILE,
+        json!({"path": "tool/three-mib.txt", "content": "x".repeat(size), "overwrite": true}),
+    )?;
+    assert!(
+        as_bool(&write, "success")?,
+        "3 MiB write should publish under the raised cap: {write}"
+    );
+    let read = lease.call_ok(ops::API_V1_READ_FILE, json!({"path": "tool/three-mib.txt"}))?;
+    assert_eq!(
+        as_str(&read, "content")?.len(),
+        size,
+        "3 MiB readback should match the written length"
+    );
+    Ok(())
+}

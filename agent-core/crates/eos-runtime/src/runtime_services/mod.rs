@@ -1,6 +1,7 @@
 //! Runtime service composition surface.
 
 mod agent_core_registry;
+mod artifacts;
 mod audit;
 mod builder;
 mod db_store;
@@ -10,11 +11,13 @@ mod state_reader;
 
 use std::sync::Arc;
 
+use eos_agent_message_records::AgentMessageRecords;
 use eos_tools::{RootSubmissionService, SandboxToolService, SkillToolService};
 
 use crate::plugin_tools::register_plugin_tools;
 
 pub(crate) use agent_core_registry::AgentCoreRegistryService;
+pub(crate) use artifacts::ArtifactService;
 pub(crate) use audit::AuditService;
 pub use builder::RuntimeServicesBuilder;
 pub(crate) use db_store::DbStoreService;
@@ -38,6 +41,7 @@ pub struct RuntimeServices {
     pub(crate) engine: EngineService,
     pub(crate) sandbox: SandboxService,
     pub(crate) audit: AuditService,
+    pub(crate) artifacts: ArtifactService,
 }
 
 impl RuntimeServices {
@@ -56,6 +60,12 @@ impl RuntimeServices {
             self.db.task_store.clone(),
             self.db.agent_run_store.clone(),
         )
+    }
+
+    /// File-backed agent-node artifact reader/writer, when configured.
+    #[must_use]
+    pub fn artifacts(&self) -> Option<AgentMessageRecords> {
+        self.artifacts.artifacts.clone()
     }
 
     /// Bundle the explicit run handles `eos_engine::run_agent` needs.
@@ -78,6 +88,7 @@ impl RuntimeServices {
                 register_plugin_tools(registry, &plugin_sandbox_service);
             })),
             audit: self.audit.sink.clone(),
+            artifacts: self.artifacts.artifacts.clone(),
             workspace_root: workspace_root.to_owned(),
         }
     }

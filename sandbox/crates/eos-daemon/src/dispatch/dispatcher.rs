@@ -26,7 +26,7 @@ use eos_protocol::{LayerChange, LayerPath};
 use crate::audit::events::emit_dispatch_audit;
 #[cfg(test)]
 use crate::audit::events::{background_event_kind, emit_auto_squash_audit, uses_overlay_or_lease};
-use crate::config::AuditConfig;
+use crate::config::{AuditConfig, FileLimitsConfig};
 use crate::error::DaemonError;
 use crate::invocation_registry::InFlightRegistry;
 #[cfg(test)]
@@ -58,6 +58,7 @@ pub(crate) type Handler = for<'ctx> fn(&Value, DispatchContext<'ctx>) -> Result<
 pub struct DispatchContext<'ctx> {
     invocation_registry: Option<&'ctx InFlightRegistry>,
     audit_config: Option<&'ctx AuditConfig>,
+    file_limits: Option<FileLimitsConfig>,
     read_request_s: Option<f64>,
 }
 
@@ -68,6 +69,7 @@ impl<'ctx> DispatchContext<'ctx> {
         Self {
             invocation_registry: None,
             audit_config: None,
+            file_limits: None,
             read_request_s: None,
         }
     }
@@ -78,21 +80,24 @@ impl<'ctx> DispatchContext<'ctx> {
         Self {
             invocation_registry: Some(invocation_registry),
             audit_config: None,
+            file_limits: None,
             read_request_s: None,
         }
     }
 
-    /// Context carrying the server's invocation registry, audit config, and
-    /// measured request read duration.
+    /// Context carrying the server's invocation registry, audit config, file
+    /// byte limits, and measured request read duration.
     #[must_use]
     pub const fn with_runtime_config(
         invocation_registry: &'ctx InFlightRegistry,
         audit_config: &'ctx AuditConfig,
+        file_limits: FileLimitsConfig,
         read_request_s: f64,
     ) -> Self {
         Self {
             invocation_registry: Some(invocation_registry),
             audit_config: Some(audit_config),
+            file_limits: Some(file_limits),
             read_request_s: Some(read_request_s),
         }
     }
@@ -103,6 +108,12 @@ impl<'ctx> DispatchContext<'ctx> {
 
     pub(crate) const fn audit_config(&self) -> Option<&'ctx AuditConfig> {
         self.audit_config
+    }
+
+    /// Per-file read/write byte caps, when runtime config was threaded. File ops
+    /// fall back to the `eos_protocol::models` defaults when this is `None`.
+    pub(crate) const fn file_limits(&self) -> Option<FileLimitsConfig> {
+        self.file_limits
     }
 }
 

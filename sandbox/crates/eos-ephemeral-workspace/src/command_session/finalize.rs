@@ -20,6 +20,7 @@ where
     P: EphemeralCommandSessionPort,
 {
     let publisher = CommandPublisher { port };
+    let run_dir = context.workspace.dirs.run_dir.clone();
     let finalize = finalize_publishable_workspace(
         &publisher,
         FinalizeRequest {
@@ -39,7 +40,16 @@ where
         "resource.command_exec.changed_path_count".to_owned(),
         json!(usize_to_f64_saturating(changed_path_kinds.len())),
     );
-    insert_upperdir_resource_timings(&mut timings, &finalize.capture.stats);
+    insert_tree_resource_timings(
+        &mut timings,
+        "resource.command_exec.upperdir",
+        &finalize.capture.stats,
+    );
+    insert_tree_resource_timings(
+        &mut timings,
+        "resource.command_exec.run_dir",
+        &TreeResourceStats::collect(&run_dir),
+    );
     for (key, value) in &finalize.publish.timings {
         timings.insert(key.clone(), value.clone());
     }
@@ -213,35 +223,23 @@ fn timing_as_f64(timings: &WorkspaceTimings, key: &str) -> Option<f64> {
     timings.get(key).and_then(Value::as_f64)
 }
 
-fn insert_upperdir_resource_timings(timings: &mut WorkspaceTimings, stats: &TreeResourceStats) {
+/// Emit `<prefix>_tree_*` resource counters for a captured scratch tree. Used
+/// for both the overlay upperdir (the published delta) and the run dir (scratch
+/// metadata); both stay proportional to per-operation writes, never to the
+/// shared lowerdir workspace size.
+fn insert_tree_resource_timings(
+    timings: &mut WorkspaceTimings,
+    prefix: &str,
+    stats: &TreeResourceStats,
+) {
     let file_entries = stats.files.saturating_add(stats.symlinks);
     let entry_count = file_entries.saturating_add(stats.dirs);
-    insert_resource_timing(
-        timings,
-        "resource.command_exec.upperdir_tree_exists",
-        if entry_count > 0 { 1 } else { 0 },
-    );
-    insert_resource_timing(
-        timings,
-        "resource.command_exec.upperdir_tree_bytes",
-        stats.bytes,
-    );
-    insert_resource_timing(
-        timings,
-        "resource.command_exec.upperdir_tree_file_count",
-        file_entries,
-    );
-    insert_resource_timing(
-        timings,
-        "resource.command_exec.upperdir_tree_dir_count",
-        stats.dirs,
-    );
-    insert_resource_timing(
-        timings,
-        "resource.command_exec.upperdir_tree_entry_count",
-        entry_count,
-    );
-    insert_resource_timing(timings, "resource.command_exec.upperdir_tree_truncated", 0);
+    insert_resource_timing(timings, &format!("{prefix}_tree_exists"), entry_count.min(1));
+    insert_resource_timing(timings, &format!("{prefix}_tree_bytes"), stats.bytes);
+    insert_resource_timing(timings, &format!("{prefix}_tree_file_count"), file_entries);
+    insert_resource_timing(timings, &format!("{prefix}_tree_dir_count"), stats.dirs);
+    insert_resource_timing(timings, &format!("{prefix}_tree_entry_count"), entry_count);
+    insert_resource_timing(timings, &format!("{prefix}_tree_truncated"), 0);
 }
 
 fn insert_resource_timing(timings: &mut WorkspaceTimings, key: &str, value: u64) {

@@ -130,6 +130,7 @@ fn dispatch_attaches_real_runtime_timings() {
         DispatchContext {
             invocation_registry: None,
             audit_config: None,
+            file_limits: None,
             read_request_s: Some(0.125),
         },
     );

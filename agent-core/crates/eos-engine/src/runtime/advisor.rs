@@ -21,6 +21,7 @@
 use std::sync::Arc;
 
 use eos_agent_def::{AgentDefinition, AgentName};
+use eos_agent_message_records::AgentRunRecordKind;
 use eos_llm_client::{ContentBlock, Message, MessageRole};
 use eos_tools::{
     render_tool_instruction, ExecutionMetadata, ToolInstructions, ToolName, ToolResult,
@@ -121,6 +122,7 @@ pub(crate) async fn run_advisor(
     let user_msg_2 = build_advisor_user_msg_2(parent_def.as_ref(), tool_name, tool_payload);
 
     let agent_run_id = AgentRunId::new_v4();
+    let parent_agent_run_id = ctx.agent_run_id.clone();
     let advisor_meta = advisor_metadata(ctx, &agent_run_id);
 
     let run = run_agent(
@@ -140,6 +142,11 @@ pub(crate) async fn run_advisor(
             command_session_supervisor: None,
             notifier: NotificationService::new(),
             persist_agent_run: false,
+            artifact_kind: parent_agent_run_id
+                .map(|parent_agent_run_id| AgentRunRecordKind::Advisor {
+                    parent_agent_run_id,
+                })
+                .unwrap_or(AgentRunRecordKind::Agent),
         },
         None,
     )

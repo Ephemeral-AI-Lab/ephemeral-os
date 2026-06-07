@@ -2,6 +2,7 @@
 
 use std::time::Instant;
 
+use eos_agent_message_records::{AgentRunRecordStart, NodeFinishStatus};
 use futures::StreamExt;
 
 use crate::query::run_query;
@@ -30,6 +31,7 @@ pub async fn run_agent(
         command_session_supervisor,
         notifier,
         persist_agent_run,
+        artifact_kind,
     } = input;
 
     let persistence_requested = create_agent_run_if_requested(
@@ -72,6 +74,46 @@ pub async fn run_agent(
             };
         }
     };
+    if let Some(artifacts) = &handles.artifacts {
+        match prepared.ctx.tool_metadata.request_id.as_ref() {
+            Some(request_id) => match artifacts
+                .start_agent_run(AgentRunRecordStart {
+                    request_id,
+                    task_id: prepared.ctx.task_id.as_ref(),
+                    agent_run_id: &agent_run_id,
+                    agent_name: &prepared.ctx.agent_name,
+                    kind: &artifact_kind,
+                    system_prompt: &prepared.ctx.system_prompt,
+                    initial_messages: &initial_messages,
+                })
+                .await
+            {
+                Ok(handle) => {
+                    prepared.ctx.artifact = Some(handle);
+                }
+                Err(err) => {
+                    let summary = err.to_string();
+                    finish_agent_run_if_requested(
+                        handles,
+                        persistence_requested,
+                        &agent_run_id,
+                        Some(&summary),
+                    )
+                    .await;
+                    return AgentRunResult {
+                        terminal_result: None,
+                        error: Some(summary),
+                    };
+                }
+            },
+            None => {
+                tracing::warn!(
+                    agent_run_id = agent_run_id.as_str(),
+                    "artifact writer skipped run without request_id"
+                );
+            }
+        }
+    }
 
     let mut error: Option<String> = None;
     {
@@ -103,6 +145,18 @@ pub async fn run_agent(
         error.as_deref(),
     );
     publish_os_resource_sampled(handles, &prepared.ctx);
+    if let Some(artifact) = &prepared.ctx.artifact {
+        if let Err(err) = artifact
+            .finish(if error.is_some() {
+                NodeFinishStatus::Failed
+            } else {
+                NodeFinishStatus::Completed
+            })
+            .await
+        {
+            tracing::warn!(error = %err, "agent-run artifact finish failed");
+        }
+    }
     finish_agent_run_if_requested(
         handles,
         persistence_requested,

@@ -35,6 +35,7 @@ fn loads_committed_baseline() {
     assert!(!config.obs.include_sandbox_audit);
     assert!(config.obs.event_queue_capacity >= 1);
     assert!(!config.agent_core.database_url.is_empty());
+    assert!(!config.agent_core.artifact_root.as_os_str().is_empty());
 }
 
 #[test]
@@ -84,6 +85,19 @@ fn rejects_empty_agent_core_database_url() {
         result,
         Err(ConfigError::Empty {
             field: "agent_core.database_url"
+        })
+    ));
+}
+
+#[test]
+fn rejects_empty_agent_core_artifact_root() {
+    let over = temp_yaml("empty_artifacts", "agent_core:\n  artifact_root: \"\"\n");
+    let result = load_from_paths(&[baseline(), over.clone()]);
+    let _ = std::fs::remove_file(&over);
+    assert!(matches!(
+        result,
+        Err(ConfigError::Empty {
+            field: "agent_core.artifact_root"
         })
     ));
 }

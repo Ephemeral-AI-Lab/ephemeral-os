@@ -8,10 +8,15 @@
 
 use serde::{Deserialize, Serialize};
 
-/// Read cap shared by `read_file` (over it raises `ValueError`).
+/// Default `read_file` cap (over it raises `ValueError`). The daemon may
+/// override this via `daemon.files.max_read_bytes`; this constant is the
+/// fallback used when no runtime config is threaded.
 pub const MAX_READ_BYTES: usize = 16 * 1024 * 1024;
-/// Per-file write/edit cap.
-pub const MAX_FILE_BYTES: usize = 2 * 1024 * 1024;
+/// Default per-file `write_file` / `edit_file` cap. The daemon may override this
+/// via `daemon.files.max_write_bytes`; this constant is the fallback used when
+/// no runtime config is threaded. Kept below the 16 MiB request frame so a
+/// single file payload fits one envelope.
+pub const MAX_FILE_BYTES: usize = 8 * 1024 * 1024;
 
 /// The single enum in the verb model; serialized as its `.value` string.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]

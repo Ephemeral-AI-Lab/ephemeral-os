@@ -130,7 +130,7 @@ fn enter_rejects_active_command_session_and_repeated_enter_reports_already_open(
             "rejection should report active session count: {rejected}"
         );
 
-        lease.call_ok(
+        lease.call(
             ops::API_V1_COMMAND_CANCEL,
             json!({"command_session_id": session_id, "max_output_tokens": 1000}),
         )?;

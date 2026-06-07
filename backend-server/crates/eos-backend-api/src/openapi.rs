@@ -125,6 +125,24 @@ fn paths() -> Value {
                 "responses": { "200": { "description": "transcript" } },
             },
         },
+        "/api/agent-runs/{agent_run_id}/messages": {
+            "get": {
+                "summary": "Raw node-local messages.jsonl bytes for an agent run",
+                "responses": { "200": { "description": "application/x-ndjson messages" } },
+            },
+        },
+        "/api/agent-runs/{agent_run_id}/events": {
+            "get": {
+                "summary": "Replay node-local events.jsonl rows for an agent run",
+                "responses": { "200": { "description": "agent-run node events" } },
+            },
+        },
+        "/api/agent-runs/{agent_run_id}/stream": {
+            "get": {
+                "summary": "SSE-only node-local event stream with replay from last_seq",
+                "responses": { "200": { "description": "server-sent event stream" } },
+            },
+        },
         "/api/stats/performance": {
             "get": {
                 "summary": "Timing and resource summaries",

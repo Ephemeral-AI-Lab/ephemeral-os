@@ -86,6 +86,29 @@ pub(crate) fn wait_for_session_count(lease: &NodeLease<'_>, expected: i64) -> Re
     }
 }
 
+/// Seed a multi-file base into the lowerdir layer stack and return the total
+/// bytes written. The daemon caps one `write_file` payload at 2 MiB, so a large
+/// workspace is built from many sub-cap files. Used by O(1)-disk tests that
+/// grow workspace size while asserting the overlay upperdir stays delta-sized.
+pub(crate) fn seed_base_files(
+    lease: &NodeLease<'_>,
+    dir: &str,
+    file_count: usize,
+    bytes_each: usize,
+) -> Result<usize> {
+    for index in 0..file_count {
+        lease.call_ok(
+            ops::API_V1_WRITE_FILE,
+            json!({
+                "path": format!("{dir}/base-{index}.txt"),
+                "content": "x".repeat(bytes_each),
+                "overwrite": true
+            }),
+        )?;
+    }
+    Ok(file_count * bytes_each)
+}
+
 pub(crate) fn as_bool(value: &Value, key: &str) -> Result<bool> {
     value
         .get(key)

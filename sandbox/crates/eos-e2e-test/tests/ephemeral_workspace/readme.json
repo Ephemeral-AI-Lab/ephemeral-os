@@ -104,6 +104,14 @@
       "tags": [
         "ephemeral_workspace"
       ]
+    },
+    {
+      "id": "ephemeral_workspace-overlay-disk-o1",
+      "title": "Overlay Disk O1",
+      "description": "Overlay upperdir accounting stays flat as the lowerdir workspace grows, and overlay run-dir scratch stays bounded and untruncated, proving O(1) overlay disk with respect to workspace size.",
+      "tags": [
+        "ephemeral_workspace"
+      ]
     }
   ],
   "test": [
@@ -155,6 +163,16 @@
       "command": "cargo test -p eos-e2e-test --features e2e --test ephemeral_workspace -- --nocapture",
       "checklist": [
         "ephemeral_workspace-stale-exec-conflict"
+      ]
+    },
+    {
+      "id": "ephemeral_workspace_overlay_disk_o1",
+      "name": "ephemeral_workspace_overlay_disk_o1",
+      "description": "Groups `exec_upperdir_is_flat_across_base_sizes` and `exec_run_dir_scratch_stays_bounded`: a tiny overlay delta over a 15x-growing multi-file lowerdir base keeps `resource.command_exec.upperdir_tree_bytes` flat and delta-sized, while `resource.command_exec.run_dir_tree_bytes` stays bounded and untruncated, proving O(1) overlay disk with respect to workspace size.",
+      "command": "cargo test -p eos-e2e-test --features e2e --test ephemeral_workspace -- --nocapture",
+      "checklist": [
+        "ephemeral_workspace-overlay-disk-o1",
+        "ephemeral_workspace-upperdir-delta"
       ]
     }
   ]

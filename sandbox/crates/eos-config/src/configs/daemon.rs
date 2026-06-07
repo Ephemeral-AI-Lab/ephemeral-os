@@ -24,6 +24,7 @@ pub struct DaemonConfig {
     pub isolated_sweeper: IsolatedSweeperConfig,
     pub plugin: PluginRuntimeConfig,
     pub layer_stack: LayerStackConfig,
+    pub files: FileLimitsConfig,
 }
 
 #[derive(Debug, Clone, PartialEq, Deserialize)]
@@ -70,6 +71,19 @@ pub struct PluginRuntimeConfig {
 #[serde(deny_unknown_fields)]
 pub struct LayerStackConfig {
     pub auto_squash_max_depth: usize,
+}
+
+/// Per-file read/write byte caps for `read_file` / `write_file` / `edit_file`.
+///
+/// Each bounds a single file payload. Both must stay below the transport frame
+/// limit (`eos_protocol::MAX_REQUEST_BYTES`, 16 MiB): file content travels
+/// inside one request/response frame next to the JSON envelope, so values near
+/// 16 MiB risk frame overflow once content is JSON-escaped.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct FileLimitsConfig {
+    pub max_read_bytes: usize,
+    pub max_write_bytes: usize,
 }
 
 impl DaemonConfig {
@@ -171,6 +185,12 @@ impl DaemonConfig {
             1,
             "daemon.layer_stack.auto_squash_max_depth",
         )?;
+        require_usize_at_least(self.files.max_read_bytes, 1, "daemon.files.max_read_bytes")?;
+        require_usize_at_least(
+            self.files.max_write_bytes,
+            1,
+            "daemon.files.max_write_bytes",
+        )?;
         Ok(())
     }
 }
@@ -211,6 +231,10 @@ mod tests {
         let mut cfg = prd_config();
         cfg.layer_stack.auto_squash_max_depth = 0;
         assert_invalid(cfg, "daemon.layer_stack.auto_squash_max_depth");
+
+        let mut cfg = prd_config();
+        cfg.files.max_write_bytes = 0;
+        assert_invalid(cfg, "daemon.files.max_write_bytes");
     }
 
     #[test]

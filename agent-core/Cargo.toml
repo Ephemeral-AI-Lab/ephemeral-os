@@ -2,6 +2,7 @@
 resolver = "2"
 members = [
   "crates/eos-types", "crates/eos-config", "crates/eos-state",
+  "crates/eos-agent-message-records",
   "crates/eos-db", "crates/eos-audit", "crates/eos-llm-client",
   "crates/eos-agent-def", "crates/eos-sandbox-port", "crates/eos-skills",
   "crates/eos-tools", "crates/eos-engine", "crates/eos-workflow",
@@ -65,6 +66,7 @@ tempfile          = "3"
 eos-types          = { path = "crates/eos-types" }
 eos-config         = { path = "crates/eos-config" }
 eos-state          = { path = "crates/eos-state" }
+eos-agent-message-records      = { path = "crates/eos-agent-message-records" }
 eos-db             = { path = "crates/eos-db" }
 eos-audit          = { path = "crates/eos-audit" }
 eos-llm-client     = { path = "crates/eos-llm-client" }

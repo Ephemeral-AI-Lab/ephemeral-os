@@ -39,6 +39,12 @@ daemon:
   layer_stack:
     auto_squash_max_depth: 100
 
+  files:
+    # Per-file read/write caps. Keep below the 16 MiB transport frame so file
+    # content fits one request/response envelope.
+    max_read_bytes: 16777216
+    max_write_bytes: 8388608
+
 isolated_workspace:
   enabled: false
   scratch_root: /eos/scratch/isolated

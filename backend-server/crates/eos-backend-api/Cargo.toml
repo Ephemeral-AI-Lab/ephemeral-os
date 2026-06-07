@@ -15,9 +15,11 @@ schemars.workspace = true
 futures.workspace = true
 async-trait.workspace = true
 tracing.workspace = true
+tokio.workspace = true
 
 eos-types.workspace = true
 eos-state.workspace = true
+eos-agent-message-records.workspace = true
 eos-backend-types.workspace = true
 eos-backend-store.workspace = true
 eos-backend-runtime.workspace = true

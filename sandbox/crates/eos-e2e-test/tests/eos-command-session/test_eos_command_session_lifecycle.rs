@@ -30,7 +30,7 @@ fn start_sleeping_session(lease: &eos_e2e_test::NodeLease<'_>, marker: &str) -> 
 }
 
 fn cancel_session(lease: &eos_e2e_test::NodeLease<'_>, id: &str) -> Result<Value> {
-    lease.call_ok(
+    lease.call(
         ops::API_V1_COMMAND_CANCEL,
         json!({"command_session_id": id, "max_output_tokens": 1000}),
     )
@@ -239,7 +239,9 @@ fn exec_timeout() -> Result<()> {
         return Ok(());
     };
     let lease = pool.acquire()?;
-    let exec = lease.call_ok(
+    // A timed-out command is killed, so its hardened outcome is success:false;
+    // use `call` to read the structured terminal envelope rather than `call_ok`.
+    let exec = lease.call(
         ops::API_V1_EXEC_COMMAND,
         json!({"cmd": "sleep 2", "yield_time_ms": 2500, "timeout_seconds": 1}),
     )?;
@@ -272,7 +274,7 @@ fn output_token_cap() -> Result<()> {
         stdout(&exec).len()
     );
     let id = as_str(&exec, "command_session_id")?;
-    lease.call_ok(
+    lease.call(
         ops::API_V1_COMMAND_CANCEL,
         json!({"command_session_id": id}),
     )?;
@@ -320,7 +322,9 @@ fn write_stdin_terminate_reaps_marker_process() -> Result<()> {
     let id = as_str(&started, "command_session_id")?.to_owned();
     wait_for_marker_at_least(&lease, &marker, 1)?;
 
-    let terminated = lease.call_ok(
+    // Terminate kills the session, so its hardened outcome is success:false;
+    // use `call` to read the structured terminal envelope rather than `call_ok`.
+    let terminated = lease.call(
         ops::API_V1_WRITE_STDIN,
         json!({
             "command_session_id": id,

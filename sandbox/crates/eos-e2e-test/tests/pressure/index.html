@@ -128,6 +128,22 @@
       "tags": [
         "pressure"
       ]
+    },
+    {
+      "id": "pressure-overlay-disk-o1",
+      "title": "Overlay Disk O1",
+      "description": "Concurrent overlay execs over a shared lowerdir base keep each per-op upperdir delta-sized and do not multiply LayerStack storage, proving O(1) overlay disk with respect to the number of parallel readers/writers.",
+      "tags": [
+        "pressure"
+      ]
+    },
+    {
+      "id": "pressure-resource-memory",
+      "title": "Resource Memory",
+      "description": "Resource samples carry cgroup memory.current/peak and process RSS gauges, and a large-base overlay op keeps daemon memory within a bounded ceiling (a loose regression gauge inflated by page cache, not a tight O(1) bound).",
+      "tags": [
+        "pressure"
+      ]
     }
   ],
   "test": [
@@ -192,10 +208,11 @@
     {
       "id": "pressure-resource-report-and-leak-oracles",
       "name": "pressure-resource-report-and-leak-oracles",
-      "description": "`resource_report_smoke` emits one JSON artifact covering timing keys, resource counters, runtime readiness, plugin status, isolated-open state, and leak counters after file, exec, command-session, and OCC-backed write samples.",
+      "description": "`resource_report_smoke` emits one JSON artifact covering timing keys, resource counters, cgroup memory.current gauges, runtime readiness, plugin status, isolated-open state, and leak counters after file, exec, command-session, and OCC-backed write samples.",
       "command": "cargo test -p eos-e2e-test --features e2e --test pressure resource_report_smoke -- --nocapture",
       "checklist": [
         "pressure-resource-report",
+        "pressure-resource-memory",
         "pressure-ladder-file",
         "pressure-ladder-exec",
         "pressure-ladder-command",
@@ -204,6 +221,16 @@
         "pressure-isolated-cap",
         "pressure-squash-bound",
         "pressure-recovery-cleanup"
+      ]
+    },
+    {
+      "id": "pressure-overlay-disk-and-memory-o1",
+      "name": "pressure-overlay-disk-and-memory-o1",
+      "description": "Groups `concurrent_overlay_execs_share_lowerdir_storage_is_o1` and `large_base_overlay_keeps_memory_bounded`: N concurrent overlay execs over a shared lowerdir base keep each upperdir delta-sized and grow `storage_bytes` by less than one base, and a 20MB-base overlay op keeps cgroup memory.current within a generous ceiling.",
+      "command": "cargo test -p eos-e2e-test --features e2e --test pressure -- --nocapture",
+      "checklist": [
+        "pressure-overlay-disk-o1",
+        "pressure-resource-memory"
       ]
     }
   ]

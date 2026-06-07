@@ -168,6 +168,7 @@ pub(crate) fn resource_timings(
         timings.insert(key.to_owned(), json!(0.0));
     }
     insert_cgroup_resource_timings(&mut timings);
+    insert_process_resource_timings(&mut timings);
     timings
 }
 
@@ -201,6 +202,23 @@ fn insert_cgroup_resource_timings(timings: &mut serde_json::Map<String, Value>) 
         }
     }
 
+    for (path, key) in [
+        (
+            "/sys/fs/cgroup/memory.current",
+            "resource.cgroup.memory_current_bytes",
+        ),
+        (
+            "/sys/fs/cgroup/memory.peak",
+            "resource.cgroup.memory_peak_bytes",
+        ),
+    ] {
+        if let Ok(raw) = std::fs::read_to_string(path) {
+            if let Ok(value) = raw.trim().parse::<f64>() {
+                timings.insert(key.to_owned(), json!(value));
+            }
+        }
+    }
+
     let Ok(raw) = std::fs::read_to_string("/sys/fs/cgroup/io.stat") else {
         return;
     };
@@ -227,6 +245,30 @@ fn insert_cgroup_resource_timings(timings: &mut serde_json::Map<String, Value>) 
     }
     for (name, value) in totals {
         timings.insert(format!("resource.cgroup.io_{name}"), json!(value));
+    }
+}
+
+/// Emit daemon process memory from `/proc/self/status`: `VmRSS` (current
+/// resident set) and `VmHWM` (peak resident set), reported in bytes. These are
+/// gauges, not run deltas, and are absent on non-Linux dev hosts where the file
+/// does not exist.
+fn insert_process_resource_timings(timings: &mut serde_json::Map<String, Value>) {
+    let Ok(status) = std::fs::read_to_string("/proc/self/status") else {
+        return;
+    };
+    for line in status.lines() {
+        let key = match line.split(':').next() {
+            Some("VmRSS") => "resource.process.rss_bytes",
+            Some("VmHWM") => "resource.process.max_rss_bytes",
+            _ => continue,
+        };
+        if let Some(kib) = line
+            .split_whitespace()
+            .nth(1)
+            .and_then(|value| value.parse::<f64>().ok())
+        {
+            timings.insert(key.to_owned(), json!(kib * 1024.0));
+        }
     }
 }
 

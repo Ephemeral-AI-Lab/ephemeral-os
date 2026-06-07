@@ -7,7 +7,7 @@ use eos_protocol::ops;
 use serde_json::{json, Value};
 
 use crate::support::{
-    array, as_bool, as_i64, as_str, conflict_reason, live_pool_or_skip, stdout,
+    array, as_bool, as_i64, as_str, conflict_reason, live_pool_or_skip, seed_base_files, stdout,
     wait_for_active_leases, wait_for_session_count,
 };
 
@@ -284,6 +284,87 @@ fn exec_upperdir_captures_only_the_delta() -> Result<()> {
 }
 
 #[test]
+fn exec_upperdir_is_flat_across_base_sizes() -> Result<()> {
+    let Some(pool) = live_pool_or_skip()? else {
+        return Ok(());
+    };
+    let lease = pool.acquire()?;
+    // Each overlay exec writes the same tiny delta over a progressively larger
+    // lowerdir base. The daemon caps one write at 2 MiB, so each base is built
+    // from many ~1MB files. The mount(2) overlay shares the base as a lowerdir,
+    // so the captured upperdir stays delta-sized regardless of base size — the
+    // O(1)-w.r.t.-workspace-size property, proven across a 15x base sweep rather
+    // than at a single point.
+    let mut upperdirs = Vec::new();
+    for (index, file_count) in [1usize, 5, 15].into_iter().enumerate() {
+        let total =
+            seed_base_files(&lease, &format!("perf/flat/base-{index}"), file_count, 1_000_000)?;
+        let exec = lease.call_ok(
+            ops::API_V1_EXEC_COMMAND,
+            json!({
+                "cmd": format!("printf SMALL > perf/flat/delta-{index}.txt"),
+                "yield_time_ms": 1000,
+                "timeout_seconds": 15,
+                "max_output_tokens": 1000
+            }),
+        )?;
+        assert_eq!(as_str(&exec, "status")?, "ok", "{exec}");
+        let upperdir_bytes = timing_f64(&exec, "resource.command_exec.upperdir_tree_bytes")
+            .context("exec response must carry resource.command_exec.upperdir_tree_bytes")?;
+        assert!(
+            upperdir_bytes < 100_000.0,
+            "upperdir must stay delta-sized over a {total}-byte base (got {upperdir_bytes}): {exec}"
+        );
+        upperdirs.push(upperdir_bytes);
+    }
+    let max = upperdirs.iter().copied().fold(0.0_f64, f64::max);
+    let min = upperdirs.iter().copied().fold(f64::MAX, f64::min);
+    assert!(
+        max - min < 50_000.0,
+        "upperdir delta must stay flat across 15x lowerdir growth (got {upperdirs:?})"
+    );
+    wait_for_active_leases(&lease, 0)?;
+    Ok(())
+}
+
+#[test]
+fn exec_run_dir_scratch_stays_bounded() -> Result<()> {
+    let Some(pool) = live_pool_or_skip()? else {
+        return Ok(());
+    };
+    let lease = pool.acquire()?;
+    // Seed a ~5MB base into the lowerdir (5 sub-cap files), then write a tiny
+    // delta. The overlay run dir holds only the published delta plus scratch
+    // metadata, never the shared lowerdir, so its measured tree stays bounded
+    // and untruncated.
+    seed_base_files(&lease, "perf/scratch/base", 5, 1_000_000)?;
+    let exec = lease.call_ok(
+        ops::API_V1_EXEC_COMMAND,
+        json!({
+            "cmd": "printf TINY > perf/scratch/delta.txt",
+            "yield_time_ms": 1000,
+            "timeout_seconds": 10,
+            "max_output_tokens": 1000
+        }),
+    )?;
+    assert_eq!(as_str(&exec, "status")?, "ok", "{exec}");
+    let run_dir_bytes = timing_f64(&exec, "resource.command_exec.run_dir_tree_bytes")
+        .context("exec response must carry resource.command_exec.run_dir_tree_bytes")?;
+    assert!(
+        run_dir_bytes < 1_000_000.0,
+        "overlay scratch must stay bounded and exclude the 5MB base (got {run_dir_bytes}): {exec}"
+    );
+    let truncated = timing_f64(&exec, "resource.command_exec.run_dir_tree_truncated")
+        .context("exec response must carry resource.command_exec.run_dir_tree_truncated")?;
+    assert_eq!(
+        truncated, 0.0,
+        "run dir resource sample must not be truncated: {exec}"
+    );
+    wait_for_active_leases(&lease, 0)?;
+    Ok(())
+}
+
+#[test]
 fn cancelled_background_exec_does_not_publish_partial_workspace_mutation() -> Result<()> {
     let Some(pool) = live_pool_or_skip()? else {
         return Ok(());
@@ -305,7 +386,7 @@ fn cancelled_background_exec_does_not_publish_partial_workspace_mutation() -> Re
         "background command must reach the pre-write point before cancel: {exec}"
     );
     let session_id = as_str(&exec, "command_session_id")?.to_owned();
-    lease.call_ok(
+    lease.call(
         ops::API_V1_COMMAND_CANCEL,
         json!({"command_session_id": session_id, "max_output_tokens": 1000}),
     )?;

@@ -11,6 +11,7 @@ use async_trait::async_trait;
 use axum::Router;
 use tempfile::TempDir;
 
+use eos_agent_message_records::AgentMessageRecords;
 use eos_backend_api::{AgentCoreReads, AppState, RunControl, SandboxRegistry};
 use eos_backend_audit::StatsReader;
 use eos_backend_runtime::{CancelOutcome, EventBus, LaunchError, SandboxManagerError};
@@ -40,6 +41,26 @@ pub fn router(
     sandboxes: Arc<dyn SandboxRegistry>,
     reads: AgentCoreReads,
 ) -> Router {
+    router_with_artifacts(
+        store,
+        runs,
+        sandboxes,
+        reads,
+        AgentMessageRecords::new(std::env::temp_dir().join(format!(
+            "eos_backend_api_artifacts_{}",
+            std::process::id()
+        ))),
+    )
+}
+
+/// Build a router using an explicit artifact root service.
+pub fn router_with_artifacts(
+    store: &BackendStore,
+    runs: Arc<dyn RunControl>,
+    sandboxes: Arc<dyn SandboxRegistry>,
+    reads: AgentCoreReads,
+    artifacts: AgentMessageRecords,
+) -> Router {
     let event_bus = Arc::new(EventBus::new(store.event_log().clone()));
     let stats = StatsReader::new(store.obs_events().clone(), store.audit_cursors().clone());
     let state = AppState::new(
@@ -50,6 +71,7 @@ pub fn router(
         store.event_log().clone(),
         stats,
         reads,
+        artifacts,
     );
     eos_backend_api::build_router(state)
 }
@@ -300,7 +322,7 @@ impl eos_state::TaskStore for FakeTaskStore {
     }
 }
 
-/// `AgentRunStore` whose `get_for_task` returns the configured run.
+/// `AgentRunStore` whose `get` and `get_for_task` return the configured run.
 #[derive(Debug)]
 pub struct FakeAgentRunStore {
     pub run: Option<AgentRun>,
@@ -331,8 +353,12 @@ impl eos_state::AgentRunStore for FakeAgentRunStore {
         unimplemented!("not used by api tests")
     }
 
-    async fn get(&self, _agent_run_id: &AgentRunId) -> Result<Option<AgentRun>, eos_types::CoreError> {
-        unimplemented!("not used by api tests")
+    async fn get(&self, agent_run_id: &AgentRunId) -> Result<Option<AgentRun>, eos_types::CoreError> {
+        Ok(self
+            .run
+            .as_ref()
+            .filter(|run| &run.id == agent_run_id)
+            .cloned())
     }
 
     async fn get_for_task(&self, _task_id: &TaskId) -> Result<Option<AgentRun>, eos_types::CoreError> {

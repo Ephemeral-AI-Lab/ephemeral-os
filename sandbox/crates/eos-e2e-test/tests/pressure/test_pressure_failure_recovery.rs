@@ -31,7 +31,7 @@ fn daemon_recovers_after_midflight_cancel() -> Result<()> {
     };
     let lease = pool.acquire()?;
     let id = start_sleep(&lease, "midflight")?;
-    lease.call_ok(
+    lease.call(
         ops::API_V1_COMMAND_CANCEL,
         json!({"command_session_id": id}),
     )?;
@@ -69,7 +69,7 @@ fn cancel_burst_returns_sessions_and_leases_to_zero() -> Result<()> {
     );
 
     for id in ids {
-        lease.call_ok(
+        lease.call(
             ops::API_V1_COMMAND_CANCEL,
             json!({"command_session_id": id}),
         )?;
@@ -141,7 +141,7 @@ fn command_sessions_ladder_1_3_6_12() -> Result<()> {
         );
 
         for id in ids {
-            let cancel = lease.call_ok(
+            let cancel = lease.call(
                 ops::API_V1_COMMAND_CANCEL,
                 json!({"command_session_id": id}),
             )?;
@@ -171,7 +171,7 @@ fn cancel_storm() -> Result<()> {
         .map(|index| start_sleep(&lease, &format!("storm-{index}")))
         .collect::<Result<_>>()?;
     for id in ids {
-        let cancel = lease.call_ok(
+        let cancel = lease.call(
             ops::API_V1_COMMAND_CANCEL,
             json!({"command_session_id": id}),
         )?;

@@ -106,7 +106,7 @@ fn command_sessions_accept_stdin_and_release_on_cancel() -> Result<()> {
         "expected stdin echo in stdout: {stdin}"
     );
 
-    let cancel = lease.call_ok(
+    let cancel = lease.call(
         ops::API_V1_COMMAND_CANCEL,
         json!({"command_session_id": session_id, "max_output_tokens": 2000}),
     )?;
@@ -157,7 +157,7 @@ fn command_sessions_cancel_cleans_descendant_processes() -> Result<()> {
         "expected at least one live descendant marker process before cancel"
     );
 
-    let cancel = lease.call_ok(
+    let cancel = lease.call(
         ops::API_V1_COMMAND_CANCEL,
         json!({"command_session_id": session_id, "max_output_tokens": 1000}),
     )?;

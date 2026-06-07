@@ -12,15 +12,16 @@ use axum::http::{Request, StatusCode};
 use serde_json::{json, Value};
 use tower::ServiceExt;
 
+use eos_agent_message_records::AgentMessageRecords;
 use eos_backend_runtime::{CancelOutcome, DeleteRejection, SandboxManagerError};
 use eos_backend_store::BackendStore;
 use eos_backend_types::{BackendRunStatus, EventRecord, RunMeta, SandboxState};
 use eos_state::RequestStatus;
-use eos_types::{RequestId, SandboxId, TaskId, UtcDateTime};
+use eos_types::{AgentRunId, RequestId, SandboxId, TaskId, UtcDateTime};
 
 use support::{
-    fake_reads, make_agent_run, make_sandbox_view, make_task, router, test_store, FakeRunControl,
-    FakeSandboxRegistry,
+    fake_reads, make_agent_run, make_sandbox_view, make_task, router, router_with_artifacts,
+    test_store, FakeRunControl, FakeSandboxRegistry,
 };
 
 /// Send a request through the router and return `(status, body bytes)`.
@@ -80,6 +81,31 @@ async fn seed_run(store: &BackendStore, id: &RequestId, status: BackendRunStatus
         })
         .await
         .expect("seed run_meta");
+}
+
+fn seed_agent_artifact(root: &std::path::Path, agent_run_id: &AgentRunId) -> std::path::PathBuf {
+    let node = root
+        .join("requests/req-1/root-task-task-1")
+        .join(format!("agent-run-{}", agent_run_id.as_str()));
+    std::fs::create_dir_all(&node).expect("artifact dir");
+    std::fs::write(
+        node.join("messages.jsonl"),
+        concat!(
+            "{\"type\":\"initial_message\",\"role\":\"system\",\"content\":[{\"type\":\"text\",\"text\":\"system\"}]}\n",
+            "{\"type\":\"message\",\"role\":\"user\",\"content\":[{\"type\":\"text\",\"text\":\"hello\"}]}\n",
+        ),
+    )
+    .expect("messages");
+    std::fs::write(
+        node.join("events.jsonl"),
+        concat!(
+            "{\"seq\":1,\"kind\":\"node_started\",\"payload\":{\"type\":\"root_agent\"},\"created_at\":\"2026-06-07T04:00:00Z\"}\n",
+            "{\"seq\":2,\"kind\":\"messages_initialized\",\"payload\":{\"count\":1,\"messages_start_byte\":0,\"messages_end_byte\":90},\"created_at\":\"2026-06-07T04:00:01Z\"}\n",
+            "{\"seq\":3,\"kind\":\"node_finished\",\"payload\":{\"status\":\"completed\"},\"created_at\":\"2026-06-07T04:00:02Z\"}\n",
+        ),
+    )
+    .expect("events");
+    node
 }
 
 // --- create / cancel -------------------------------------------------------
@@ -349,6 +375,125 @@ async fn events_route_replays_persisted_milestones() {
     assert_eq!(status, StatusCode::NOT_FOUND);
 }
 
+#[tokio::test]
+async fn agent_run_messages_route_returns_raw_jsonl_with_next_offset() {
+    let (store, _dir) = test_store().await;
+    let artifact_dir = tempfile::tempdir().expect("artifact tempdir");
+    let agent_run_id: AgentRunId = "run-1".parse().expect("run id");
+    let node = seed_agent_artifact(artifact_dir.path(), &agent_run_id);
+    let full_len = std::fs::metadata(node.join("messages.jsonl"))
+        .expect("messages metadata")
+        .len();
+    let app = router_with_artifacts(
+        &store,
+        Arc::new(FakeRunControl::new(CancelOutcome::Requested)),
+        Arc::new(FakeSandboxRegistry::new(vec![])),
+        fake_reads(None, vec![], None),
+        AgentMessageRecords::new(artifact_dir.path()),
+    );
+
+    let (status, body) = send(
+        &app,
+        get(&format!(
+            "/api/agent-runs/{}/messages?after_byte=0",
+            agent_run_id.as_str()
+        )),
+    )
+    .await;
+
+    assert_eq!(status, StatusCode::OK);
+    let text = String::from_utf8(body).expect("utf8");
+    assert!(text.contains("\"role\":\"system\""));
+    assert!(text.contains("\"role\":\"user\""));
+
+    let response = app
+        .clone()
+        .oneshot(get(&format!(
+            "/api/agent-runs/{}/messages?after_byte={}",
+            agent_run_id.as_str(),
+            full_len
+        )))
+        .await
+        .expect("response");
+    assert_eq!(response.status(), StatusCode::OK);
+    assert_eq!(
+        response
+            .headers()
+            .get("x-next-byte-offset")
+            .expect("offset")
+            .to_str()
+            .expect("offset str"),
+        full_len.to_string()
+    );
+    let bytes = axum::body::to_bytes(response.into_body(), usize::MAX)
+        .await
+        .expect("body");
+    assert!(bytes.is_empty());
+}
+
+#[tokio::test]
+async fn agent_run_events_route_replays_node_local_events() {
+    let (store, _dir) = test_store().await;
+    let artifact_dir = tempfile::tempdir().expect("artifact tempdir");
+    let agent_run_id: AgentRunId = "run-1".parse().expect("run id");
+    seed_agent_artifact(artifact_dir.path(), &agent_run_id);
+    let app = router_with_artifacts(
+        &store,
+        Arc::new(FakeRunControl::new(CancelOutcome::Requested)),
+        Arc::new(FakeSandboxRegistry::new(vec![])),
+        fake_reads(None, vec![], None),
+        AgentMessageRecords::new(artifact_dir.path()),
+    );
+
+    let (status, body) = send(
+        &app,
+        get(&format!(
+            "/api/agent-runs/{}/events?after_seq=1",
+            agent_run_id.as_str()
+        )),
+    )
+    .await;
+
+    assert_eq!(status, StatusCode::OK);
+    let events = json_of(&body);
+    let events = events.as_array().expect("events array");
+    assert_eq!(events.len(), 2);
+    assert_eq!(events[0]["seq"], json!(2));
+    assert_eq!(events[1]["kind"], json!("node_finished"));
+}
+
+#[tokio::test]
+async fn agent_run_sse_replays_from_last_event_id_without_websocket() {
+    let (store, _dir) = test_store().await;
+    let artifact_dir = tempfile::tempdir().expect("artifact tempdir");
+    let agent_run_id: AgentRunId = "run-1".parse().expect("run id");
+    seed_agent_artifact(artifact_dir.path(), &agent_run_id);
+    let app = router_with_artifacts(
+        &store,
+        Arc::new(FakeRunControl::new(CancelOutcome::Requested)),
+        Arc::new(FakeSandboxRegistry::new(vec![])),
+        fake_reads(None, vec![], None),
+        AgentMessageRecords::new(artifact_dir.path()),
+    );
+
+    let request = Request::builder()
+        .method("GET")
+        .uri(format!("/api/agent-runs/{}/stream", agent_run_id.as_str()))
+        .header("last-event-id", "2")
+        .body(Body::empty())
+        .expect("request");
+    let response = app.oneshot(request).await.expect("response");
+    assert_eq!(response.status(), StatusCode::OK);
+    let bytes = axum::body::to_bytes(response.into_body(), usize::MAX)
+        .await
+        .expect("body");
+    let text = String::from_utf8(bytes.to_vec()).expect("utf8");
+
+    assert!(!text.contains("messages_initialized"), "replayed last event: {text}");
+    assert!(text.contains("node_finished"), "missed terminal event: {text}");
+    assert!(text.contains("id: 3"), "missing node-local SSE id: {text}");
+}
+
 // --- sandboxes -------------------------------------------------------------
 
 #[tokio::test]
@@ -572,6 +717,40 @@ async fn transcript_returns_messages() {
     assert_eq!(body["messages"][0]["role"], json!("assistant"));
 }
 
+#[tokio::test]
+async fn transcript_prefers_agent_run_messages_jsonl() {
+    let (store, _dir) = test_store().await;
+    let artifact_dir = tempfile::tempdir().expect("artifact tempdir");
+    let task_id: TaskId = "task-1".parse().expect("task id");
+    let task = make_task(&task_id, &RequestId::new_v4());
+    let agent_run_id: AgentRunId = "run-1".parse().expect("run id");
+    seed_agent_artifact(artifact_dir.path(), &agent_run_id);
+    let mut stale = serde_json::Map::new();
+    stale.insert("role".to_owned(), json!("assistant"));
+    let mut run = make_agent_run(&task_id, vec![stale]);
+    run.id = agent_run_id;
+    let app = router_with_artifacts(
+        &store,
+        Arc::new(FakeRunControl::new(CancelOutcome::Requested)),
+        Arc::new(FakeSandboxRegistry::new(vec![])),
+        fake_reads(None, vec![task], Some(run)),
+        AgentMessageRecords::new(artifact_dir.path()),
+    );
+
+    let (status, body) = send(
+        &app,
+        get(&format!("/api/tasks/{}/transcript", task_id.as_str())),
+    )
+    .await;
+
+    assert_eq!(status, StatusCode::OK);
+    let body = json_of(&body);
+    let messages = body["messages"].as_array().expect("messages");
+    assert_eq!(messages.len(), 2);
+    assert_eq!(messages[0]["role"], json!("system"));
+    assert_eq!(messages[1]["role"], json!("user"));
+}
+
 // --- conventions / openapi -------------------------------------------------
 
 #[tokio::test]
@@ -611,6 +790,9 @@ async fn openapi_pins_paths_and_schemas() {
         "/api/user-requests/{request_id}/tasks",
         "/api/tasks/{task_id}",
         "/api/tasks/{task_id}/transcript",
+        "/api/agent-runs/{agent_run_id}/messages",
+        "/api/agent-runs/{agent_run_id}/events",
+        "/api/agent-runs/{agent_run_id}/stream",
         "/api/stats/performance",
         "/api/stats/correctness",
         "/api/stats/agent-runs",

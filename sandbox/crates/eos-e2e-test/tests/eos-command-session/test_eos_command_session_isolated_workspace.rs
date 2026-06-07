@@ -28,7 +28,7 @@ fn iws_same_port_discard() -> Result<()> {
         "isolated command should start: {first}"
     );
     let first_id = as_str(&first, "command_session_id")?.to_owned();
-    lease.call_ok(
+    lease.call(
         ops::API_V1_COMMAND_CANCEL,
         json!({"command_session_id": first_id}),
     )?;
@@ -53,7 +53,7 @@ fn iws_same_port_discard() -> Result<()> {
         .get("command_session_id")
         .and_then(serde_json::Value::as_str)
     {
-        lease.call_ok(
+        lease.call(
             ops::API_V1_COMMAND_CANCEL,
             json!({"command_session_id": id}),
         )?;

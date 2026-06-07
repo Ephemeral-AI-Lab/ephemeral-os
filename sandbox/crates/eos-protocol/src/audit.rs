@@ -232,6 +232,12 @@ pub struct OsResourceSection {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub rss_bytes: Option<i64>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    pub max_rss_bytes: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub memory_current_bytes: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub memory_peak_bytes: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub cpu_user_s: Option<f64>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub cpu_system_s: Option<f64>,

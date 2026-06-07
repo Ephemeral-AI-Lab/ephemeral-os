@@ -11,6 +11,7 @@ use std::sync::{Arc, OnceLock};
 
 use anyhow::{Context, Result};
 use eos_agent_def::{AgentDefinition, AgentName};
+use eos_agent_message_records::AgentRunRecordKind;
 use eos_engine::{
     run_agent, spawn_command_completion_heartbeat, AgentRunInput, BackgroundSupervisorHandle,
     NotificationService,
@@ -245,6 +246,7 @@ pub async fn run_request(
                     command_session_supervisor: Some(command_session_port),
                     notifier: notifier.clone(),
                     persist_agent_run: true,
+                    artifact_kind: AgentRunRecordKind::Root,
                 },
                 on_event.as_ref(),
             )
