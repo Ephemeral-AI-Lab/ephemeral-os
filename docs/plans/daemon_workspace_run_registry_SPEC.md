@@ -1,6 +1,6 @@
 # Daemon Workspace-Run Registry — Migration SPEC
 
-Status: proposed / discussion
+Status: in progress — Phases 1–4 + 6 landed (see Progress tracker below)
 Owner: sandbox (daemon substrate)
 Scope: `sandbox/crates/eos-daemon`, `eos-command-session`,
 `eos-ephemeral-workspace`, `eos-isolated-workspace`, `eos-workspace-api`
@@ -9,6 +9,69 @@ Related:
   agent-run cancellation.
 - `docs/plans/backend_server_cancellation_wiring_SPEC.md` for backend-server
   cancellation orchestration.
+
+## 0. Status, rules, and how to verify
+
+### Workspace & command-session rules (the model)
+
+These are the load-bearing rules the registry encodes. An earlier draft of this
+spec inverted rule 1 (it claimed "one ephemeral session per caller"); that was
+wrong and is corrected throughout.
+
+1. **A caller (== agent run, `caller_id == agent_run_id`) holds *many* ephemeral
+   workspaces *or* *one* isolated workspace** — never both. The XOR is enforced by
+   the isolated enter/exit gate (enter is rejected while the caller has any live
+   command session), not by a per-session cap. There is **no** cap on concurrent
+   ephemeral command sessions per caller.
+2. **Each ephemeral workspace owns exactly *one* command session** (1:1,
+   co-terminal — the workspace is created at `exec_command` and discarded/published
+   when that session settles). **The isolated workspace owns *many* command
+   sessions** (1:N — they share its one namespace + snapshot).
+
+In types: `runs: HashMap<CallerId, CallerRun>`, where
+`CallerRun = Ephemeral(HashMap<CommandSessionId, EphemeralWorkspaceRun>) | Isolated(IsolatedWorkspaceRun)`,
+`EphemeralWorkspaceRun { session }` (singular), `IsolatedWorkspaceRun { sessions }` (map).
+
+### Test environment (REQUIRED)
+
+All **behavioral** verification runs the real `eosd` daemon **inside the Docker
+`sweevo-dask__dask-10042:latest` (`linux/amd64`) container** via
+`sandbox/crates/eos-e2e-test` (`--features e2e`); the host process is only a TCP
+client that uploads `eosd` and drives it. macOS-local `cargo test`/`clippy` only
+*compile* the Linux paths (`--target x86_64-unknown-linux-musl`) or exercise the
+non-Linux unit scaffold — **never** real daemon/PTY/overlay behavior, so they are
+not behavioral proof. **Rebuild `eosd` before every E2E run** so the container runs
+your changes:
+`cargo run -p xtask -- package --target x86_64-unknown-linux-musl` (writes
+`sandbox/dist/eosd-linux-amd64`). The suite is flaky under x86-on-arm64 emulation
+(~14–19 of 60 fail, varying run-to-run, all in the process/signal/PTY/setsid +
+transcript-format set); the bar is *no new registry-correctness failures*, not a
+clean run.
+
+### Progress tracker
+
+| Phase | Status |
+|---|---|
+| 0 — `caller_id` granularity (`== agent_run_id`) | ✅ done |
+| 1 — shared value objects (`SnapshotLease`, `Lifecycle`) | ✅ done + committed |
+| 2 — reap/publish split (cancel → discard, never publish) | ✅ done + committed |
+| 3 — introduce caller-keyed registry | ✅ done + committed (`107eec33b`) |
+| 4 — re-home ephemeral (N runs/caller, no cap) | ✅ done + committed (`107eec33b`) |
+| 5 — re-home isolated | 🟡 partial — registry owns the isolated run's sessions, but the `active_command_sessions` side-map and folding namespace teardown into the run are deferred |
+| 6 — re-point completion/sweep onto runs | ✅ done (`107eec33b`) |
+| 7 — cancel surface (`cancel_all_workspace_runs_by_caller_id` / `_runs`) | ⬜ not started — the headline §7 prerequisite for the cancellation spec |
+| 8 — remove flat manager / merge services | ⬜ not started |
+
+**Implementation divergences from the §3.2/§5.3 sketch (deliberate, advisor-vetted):**
+the caller-keyed registry currently lives **in `eos-command-session`** (the
+re-keyed `CommandSessionRegistry`/`CommandSessionManager`), not a new
+`eos-daemon/services/workspace_run/` — this avoids `CommandSession→pub` + relocating
+the reaper/completion plumbing, adds no cross-crate edges, and keeps the daemon
+calling in as before. Isolated namespace teardown stays delegated to
+`IsolatedSession` (via `op_exit`), not folded into the run. The ephemeral overlay
+lease/dirs still live in the session's policy (the §3.3 policy-ectomy was not
+needed — Phase 2 already makes cancel→discard structural). These can be revisited in
+Phases 5/7/8 if a later need (e.g. namespace re-homing) justifies it.
 
 ## 1. Why this migration
 
@@ -438,7 +501,8 @@ LAYER 2 — sandbox stage, per request       (backend_server_cancellation_wiring
 
 - **`caller_id` granularity — RESOLVED.** Verified `caller_id == agent_run_id`
   (`eos-tools/src/tools/sandbox/lib.rs:34-44`; isolated enter/exit pass `agent_run_id`),
-  so the §7 one-RPC integration and the one-per-caller constraint are sound.
+  so the §7 one-RPC-per-caller integration is sound (cancelling one agent run tears
+  down exactly its own workspace runs, never a sibling's).
 - **Finalize split (OCC merge).** Removing `policy`/`finalize` from `CommandSession`
   is the highest-churn change (its tests assume the session finalizes). Risk: a
   missed branch silently merges a cancelled command's writes. Cover with the
