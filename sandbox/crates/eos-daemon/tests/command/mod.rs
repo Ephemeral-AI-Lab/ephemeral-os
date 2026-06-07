@@ -2,7 +2,8 @@ use serde_json::json;
 
 #[cfg(target_os = "linux")]
 use eos_command_session::{
-    CollectCompleted, CommandResponse, CommandSessionCompletion, CommandSessionManager, WriteStdin,
+    CollectCompleted, CommandResponse, CommandSessionCompletion, CommandSessionManager,
+    ReadCommandProgress,
 };
 
 use super::*;
@@ -48,28 +49,23 @@ fn command_session_cancel_suppresses_background_completion_publication() {
 
 #[test]
 #[cfg(target_os = "linux")]
-fn command_session_completion_result_can_be_claimed_by_control_tool() -> TestResult {
+fn command_session_completion_result_can_be_read_by_progress_tool() -> TestResult {
     let manager = CommandSessionManager::default();
     manager.push_completed(test_completion("cmd_keep", "caller", "keep\n"));
-    manager.push_completed(test_completion("cmd_done", "caller", "done\n"));
+    manager.push_completed(test_completion("cmd_done", "caller", "a\ndone\n"));
 
-    let result = manager.write_stdin(WriteStdin {
+    let result = manager.read_progress(ReadCommandProgress {
         command_session_id: "cmd_done".to_owned(),
-        chars: String::new(),
-        terminate: false,
-        yield_time_ms: 1,
-        max_output_tokens: None,
+        last_n_lines: 1,
     })?;
     assert_eq!(result.status, "ok");
+    assert_eq!(result.stdout, "done\n");
 
-    let redelivered = manager.write_stdin(WriteStdin {
+    let redelivered = manager.read_progress(ReadCommandProgress {
         command_session_id: "cmd_done".to_owned(),
-        chars: String::new(),
-        terminate: false,
-        yield_time_ms: 1,
-        max_output_tokens: None,
-    });
-    assert!(redelivered.is_err());
+        last_n_lines: 2,
+    })?;
+    assert_eq!(redelivered.stdout, "a\ndone\n");
 
     let remaining = manager.collect_completed(&CollectCompleted {
         command_session_ids: Some(vec!["cmd_keep".to_owned()]),
@@ -103,12 +99,13 @@ fn command_session_count_uses_runtime_manager() -> TestResult {
 
 #[test]
 #[cfg(target_os = "linux")]
-fn command_session_write_stdin_returns_completed_result_when_live_session_is_gone() -> TestResult {
-    let id = "cmd_stdin_done_unit";
+fn command_session_read_progress_returns_completed_result_when_live_session_is_gone() -> TestResult
+{
+    let id = "cmd_progress_done_unit";
     command_session_manager().push_completed(test_completion(id, "caller", "written\n"));
 
     let response =
-        command_session_write_stdin(&json!({"command_session_id": id, "chars": "ignored"}))?;
+        command_session_read_progress(&json!({"command_session_id": id, "last_n_lines": 1}))?;
 
     assert_eq!(response["status"], "ok");
     assert_eq!(response["output"]["stdout"], "written\n");
@@ -116,7 +113,21 @@ fn command_session_write_stdin_returns_completed_result_when_live_session_is_gon
         command_session_ids: Some(vec![id.to_owned()]),
         caller_id: None,
     });
-    assert_eq!(remaining.completions.len(), 0);
+    assert_eq!(remaining.completions.len(), 1);
+    Ok(())
+}
+
+#[test]
+#[cfg(target_os = "linux")]
+fn command_session_write_stdin_does_not_claim_parked_completion() -> TestResult {
+    let id = "cmd_stdin_done_unit";
+    command_session_manager().push_completed(test_completion(id, "caller", "written\n"));
+
+    let response =
+        command_session_write_stdin(&json!({"command_session_id": id, "chars": "ignored"}))?;
+
+    assert_eq!(response["status"], "error");
+    assert_eq!(response["output"]["stderr"], "command_session_not_found");
     Ok(())
 }
 

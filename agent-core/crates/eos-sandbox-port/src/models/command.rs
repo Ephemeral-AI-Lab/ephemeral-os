@@ -171,16 +171,18 @@ pub struct ExecStdinRequest {
     pub command_session_id: CommandSessionId,
     /// Characters (stdin) to write.
     pub chars: String,
-    /// Yield window in milliseconds before returning partial output.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub yield_time_ms: Option<u32>,
-    /// Cap on output tokens returned.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub max_output_tokens: Option<u32>,
-    /// Tear the session down (SIGTERM→SIGKILL) after writing — the explicit
-    /// teardown channel, decoupled from `\x03`/SIGINT (sense-2 D7).
-    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
-    pub terminate: bool,
+}
+
+/// Read a stateless tail snapshot from an open command session.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
+pub struct ReadCommandProgressRequest {
+    /// Caller identity / description / invocation id.
+    #[serde(flatten)]
+    pub base: SandboxRequestBase,
+    /// Target command-session id.
+    pub command_session_id: CommandSessionId,
+    /// Number of trailing lines to return.
+    pub last_n_lines: u32,
 }
 
 /// Cancel an open command session.

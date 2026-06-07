@@ -11,7 +11,7 @@ the generated `readme.md` / `readme.json` / `index.html` bundle is left untouche
 
 ## 0. Status — headline gaps implemented & validated
 
-Nine tests were added across three modules. All compile, pass `clippy`, and
+Eleven tests were added across four modules. All compile, pass `clippy`, and
 **pass live** against the Docker `linux/amd64` `sweevo-dask__dask-10042` image.
 
 | Gap | New test | Module | Live |
@@ -25,18 +25,24 @@ Nine tests were added across three modules. All compile, pass `clippy`, and
 | C | `setsid_descendant_escapes_and_leaks_in_ephemeral` | ephemeral | ✅ |
 | C | `nonsetsid_detach_vectors_stay_tracked` | ephemeral | ✅ |
 | C | `setsid_descendant_reaped_on_isolated_exit` | isolated | ✅ |
+| #1 SIGINT | `sigint_char_interrupts_foreground` | lifecycle | ✅ |
+| #2 stdin (bounded) | `stdin_to_non_reading_consumer_stays_bounded_and_cancellable` | error_and_backpressure | ✅ |
 
 Empirically confirmed by the live run: (1) external/self signal kill surfaces a
 signal-coded `exit_code` and finalizes cleanly; (2) killing only the foreground
 while a same-pgid peer survives keeps the session `running`; (3) the
 **ephemeral path leaks** an escaped `setsid` descendant past lease release while
 the **isolated path reaps** it via its cgroup — and cgroup delegation *is*
-available in the live container (the flagged risk did not materialize).
+available in the live container (the flagged risk did not materialize);
+(4) a `\x03` char through `write_stdin` finalizes the session as cancelled with
+`exit_code == 130` via the explicit SIGINT path, distinct from terminate.
 
-Still drafted-only (not yet implemented), all secondary: `eos-command-session-sigint-interrupt`
-(needs PTY-raw confirmation first), `eos-command-session-stdin-backpressure`,
-`eos-command-session-uncollected-completion-gc`, and the matrix
-`signal` / `background` families.
+Two of the originally-deferred secondary items turned out to be **product gaps,
+not testable behaviors** — see §6. `eos-command-session-uncollected-completion-gc`
+(no GC exists) and the matrix `signal` / `background` families (harness mismatch +
+redundant) were intentionally **not** shipped as passing tests; the stdin item
+shipped only in its safe bounded form for the same reason (the real backpressure
+case wedges the daemon).
 
 ---
 
@@ -279,3 +285,49 @@ external-kill smoke if gap-A coverage should also be visible at the wire layer.
 3. **B** — live background emitter + running stderr visibility.
 4. **D/E/F** (secondary) — write-stdin-to-completed, SIGINT char, stdin
    backpressure, uncollected-completion GC.
+
+---
+
+## 6. Findings — deferred items that are product gaps, not tests
+
+Investigating the last secondary items surfaced two behaviors that **do not exist
+to be asserted as passing**. They are recorded here as findings (with code
+evidence) instead of being forced into green tests.
+
+### F1 — uncollected completions are unbounded (no TTL, no cap)
+`registry.rs:22` holds `completed: Mutex<HashMap<String, CommandSessionCompletion>>`.
+`push_completed` (`registry.rs:67`) only inserts; entries leave only via
+`take_completed_result` / `collect_completed` (`registry.rs:71`, `:78`). The
+`sweep_expired` / `is_expired` machinery operates on the **live** `sessions` map,
+never on `completed`. So a caller that starts fire-and-forget sessions and never
+calls `collect_completed` accumulates completion records — each carrying captured
+stdout/stderr — for the daemon's lifetime.
+- **Why no test:** a passing test would have to assert the *absence* of GC, which
+  enshrines the gap. The honest artifact is this finding.
+- **Recommendation:** bound the map — a TTL sweep inside
+  `command_session_reaper_sweep` (`services/command_session/mod.rs:337`) or a
+  max-entries eviction — then add `eos-command-session-uncollected-completion-gc`
+  as a real test once the behavior exists.
+
+### F2 — stdin write is an unbounded blocking `write_all`
+`runner.rs:158` is `lock(&self.writer).write_all(bytes)`, and the PTY master is
+opened without `O_NONBLOCK` (`pty.rs:7`). A payload exceeding the kernel PTY input
+buffer, sent to a consumer that never reads stdin, blocks the writer thread while
+holding the writer mutex — a per-session wedge.
+- **Shipped instead:** `stdin_to_non_reading_consumer_stays_bounded_and_cancellable`
+  exercises the *safe* path (1 KiB, one line, under the buffer bound) and asserts
+  the write returns promptly and the session stays cancellable. The full
+  >buffer backpressure case is deliberately not a test because it would hang CI.
+- **Recommendation:** bound / time-slice / non-block the stdin write, then a true
+  `eos-command-session-stdin-backpressure` test becomes safe to add.
+
+### D1 — matrix `signal` / `background` families intentionally not added
+`run_command_family` asserts `assert_command_ok` (status == `ok`,
+`command_matrix.rs:768`), which is structurally incompatible with signal-death
+(non-`ok`) and backgrounding (`running` / escaped) commands. Forcing them in would
+need a separate assertion path and would duplicate the eight first-class
+signal/background/detach tests already shipped (`external_signal_kill_*`,
+`self_kill_*`, `external_kill_of_foreground_*`, `live_background_emitter_*`,
+`setsid_descendant_*`, `nonsetsid_detach_vectors_*`). The lifecycle / ephemeral /
+isolated modules are the right home for these behaviors; the matrix stays a
+clean-exit-foreground breadth harness.

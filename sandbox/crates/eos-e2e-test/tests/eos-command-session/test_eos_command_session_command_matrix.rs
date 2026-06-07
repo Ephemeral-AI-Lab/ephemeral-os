@@ -168,7 +168,7 @@ fn stdin_prompt_cursor_collect_and_cancel_variants() -> Result<()> {
         let first = lease.call_ok(
             ops::API_V1_WRITE_STDIN,
             json!({
-                "command_session_id": session_id,
+                "command_session_id": &session_id,
                 "chars": "alpha payload\n",
                 "yield_time_ms": 1500,
                 "max_output_tokens": 2000
@@ -189,7 +189,7 @@ fn stdin_prompt_cursor_collect_and_cancel_variants() -> Result<()> {
         let quiet_poll = lease.call_ok(
             ops::API_V1_WRITE_STDIN,
             json!({
-                "command_session_id": session_id,
+                "command_session_id": &session_id,
                 "chars": "",
                 "yield_time_ms": 250,
                 "max_output_tokens": 2000
@@ -204,7 +204,7 @@ fn stdin_prompt_cursor_collect_and_cancel_variants() -> Result<()> {
         let second = lease.call_ok(
             ops::API_V1_WRITE_STDIN,
             json!({
-                "command_session_id": session_id,
+                "command_session_id": &session_id,
                 "chars": "beta payload\n",
                 "yield_time_ms": 1500,
                 "max_output_tokens": 2000
@@ -242,7 +242,7 @@ fn stdin_prompt_cursor_collect_and_cancel_variants() -> Result<()> {
     if body.is_err() {
         let _ = lease.call(
             ops::API_V1_COMMAND_CANCEL,
-            json!({"command_session_id": session_id, "max_output_tokens": 2000}),
+            json!({"command_session_id": &session_id, "max_output_tokens": 2000}),
         );
         let _ = wait_for_session_count(&lease, 0);
     }

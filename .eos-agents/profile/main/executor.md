@@ -11,6 +11,7 @@ allowed_tools:
   - edit_file
   - exec_command
   - write_stdin
+  - read_command_progress
   - lsp.hover
   - lsp.find_definitions
   - lsp.find_references

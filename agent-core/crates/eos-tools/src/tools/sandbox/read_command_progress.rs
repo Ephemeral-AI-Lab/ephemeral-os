@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use eos_sandbox_port::{CommandSessionCancelRequest, ExecStdinRequest};
+use eos_sandbox_port::ReadCommandProgressRequest;
 use eos_types::{CommandSessionId, JsonObject};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -17,72 +17,71 @@ use super::lib::{
     is_command_session_not_found, request_base,
 };
 
-#[derive(Debug, Deserialize, Serialize, JsonSchema)]
-pub(super) struct WriteStdinInput {
-    command_session_id: CommandSessionId,
-    chars: String,
+const MAX_LAST_N_LINES: u32 = 200;
+
+fn default_last_n_lines() -> u32 {
+    50
 }
 
-pub(super) struct WriteStdin {
+#[derive(Debug, Deserialize, Serialize, JsonSchema)]
+pub(super) struct ReadCommandProgressInput {
+    command_session_id: CommandSessionId,
+    #[serde(default = "default_last_n_lines")]
+    #[schemars(default = "default_last_n_lines", range(min = 1, max = 200))]
+    last_n_lines: u32,
+}
+
+pub(super) struct ReadCommandProgress {
     service: CommandToolService,
 }
 
-impl WriteStdin {
+impl ReadCommandProgress {
     pub(super) fn new(service: CommandToolService) -> Self {
         Self { service }
     }
 }
 
 #[async_trait]
-impl ToolExecutor for WriteStdin {
+impl ToolExecutor for ReadCommandProgress {
     async fn execute(
         &self,
         input: &JsonObject,
         ctx: &ExecutionMetadata,
     ) -> Result<ToolResult, ToolError> {
-        let parsed: WriteStdinInput = match parse_input(ToolName::WriteStdin, input) {
-            Ok(v) => v,
-            Err(err) => return Ok(err),
-        };
+        let parsed: ReadCommandProgressInput =
+            match parse_input(ToolName::ReadCommandProgress, input) {
+                Ok(v) => v,
+                Err(err) => return Ok(err),
+            };
         if parsed.command_session_id.as_str().is_empty() {
             return Ok(invalid_input(
-                ToolName::WriteStdin,
+                ToolName::ReadCommandProgress,
                 "command_session_id must be non-empty",
             ));
         }
-        if parsed.chars.is_empty() {
-            return Ok(invalid_input(ToolName::WriteStdin, "chars must be non-empty"));
+        if parsed.last_n_lines == 0 || parsed.last_n_lines > MAX_LAST_N_LINES {
+            return Ok(invalid_input(
+                ToolName::ReadCommandProgress,
+                format!("last_n_lines must be between 1 and {MAX_LAST_N_LINES}"),
+            ));
         }
         let command_session_id = &parsed.command_session_id;
         let sandbox_id = ctx.require_sandbox_id()?;
-
-        let result = if is_teardown_control(&parsed.chars) {
-            let request = CommandSessionCancelRequest {
-                base: request_base(ctx, "write_stdin")?,
-                command_session_id: command_session_id.clone(),
-            };
-            eos_sandbox_port::cancel_command_session(&*self.service.transport, sandbox_id, &request)
-                .await
-        } else if contains_teardown_control(&parsed.chars) {
-            return Ok(invalid_input(
-                ToolName::WriteStdin,
-                "Ctrl-C/Ctrl-D must be sent alone to cancel command session",
-            ));
-        } else {
-            let request = ExecStdinRequest {
-                base: request_base(ctx, "write_stdin")?,
-                command_session_id: command_session_id.clone(),
-                chars: parsed.chars.clone(),
-            };
-            eos_sandbox_port::exec_stdin(&*self.service.transport, sandbox_id, &request).await
+        let request = ReadCommandProgressRequest {
+            base: request_base(ctx, "read_command_progress")?,
+            command_session_id: command_session_id.clone(),
+            last_n_lines: parsed.last_n_lines,
         };
-        let result = match result {
+        let result = match eos_sandbox_port::read_command_progress(
+            &*self.service.transport,
+            sandbox_id,
+            &request,
+        )
+        .await
+        {
             Ok(result) => result,
             Err(err) => return Ok(ToolResult::error(err.to_string())),
         };
-        // If the daemon already lost the live session, surface the supervisor's
-        // stored terminal; otherwise, once a terminal status is observed inline,
-        // latch it as delivered so the heartbeat never re-notifies the same result.
         if let Some(port) = &self.service.command_session_supervisor {
             if is_command_session_not_found(&result) {
                 if port
@@ -109,12 +108,4 @@ impl ToolExecutor for WriteStdin {
         }
         Ok(command_tool_result(&result))
     }
-}
-
-fn is_teardown_control(chars: &str) -> bool {
-    matches!(chars, "\u{3}" | "\u{4}")
-}
-
-fn contains_teardown_control(chars: &str) -> bool {
-    chars.contains('\u{3}') || chars.contains('\u{4}')
 }

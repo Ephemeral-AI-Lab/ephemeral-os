@@ -14,10 +14,11 @@ use async_trait::async_trait;
 use eos_sandbox_port::{
     cancel, cancel_command_session, collect_command_completions, command_session_count,
     exec_command, exec_dispatch_timeout, exec_stdin, heartbeat, inflight_count, isolated_active,
-    plugin_dispatch, plugin_ensure, read_file, write_file, CommandSessionCancelRequest, DaemonOp,
-    ExecCommandRequest, ExecStdinRequest, Intent, PluginDependencyScope, PluginDispatchRequest,
-    PluginEnsureRequest, PluginManifestDescriptor, PluginOperationDescriptor, PluginPackageContract,
-    PluginRefreshStrategy, PluginServiceDescriptor, PluginServiceMode, ReadFileRequest,
+    plugin_dispatch, plugin_ensure, read_command_progress, read_file, write_file,
+    CommandSessionCancelRequest, DaemonOp, ExecCommandRequest, ExecStdinRequest, Intent,
+    PluginDependencyScope, PluginDispatchRequest, PluginEnsureRequest, PluginManifestDescriptor,
+    PluginOperationDescriptor, PluginPackageContract, PluginRefreshStrategy,
+    PluginServiceDescriptor, PluginServiceMode, ReadCommandProgressRequest, ReadFileRequest,
     SandboxPortError, SandboxRequestBase, SandboxTransport, WriteFileRequest, READ_FILE_TIMEOUT_S,
 };
 use eos_types::{CommandSessionId, InvocationId, JsonObject, SandboxId};
@@ -224,9 +225,8 @@ async fn exec_command_payload_includes_set_options_and_omits_unset() {
 }
 
 #[tokio::test]
-async fn exec_stdin_payload_includes_terminate_and_invocation_only_when_set() {
+async fn exec_stdin_payload_is_input_only_and_keeps_invocation() {
     let session: CommandSessionId = "cs-1".parse().expect("cs id");
-    // terminate=true + an invocation id -> both present.
     let transport = RecordingTransport::new(json!({"status": "ok", "output": {}}));
     exec_stdin(
         &transport,
@@ -239,9 +239,6 @@ async fn exec_stdin_payload_includes_terminate_and_invocation_only_when_set() {
             },
             command_session_id: session.clone(),
             chars: "y\n".to_owned(),
-            yield_time_ms: None,
-            max_output_tokens: None,
-            terminate: true,
         },
     )
     .await
@@ -250,34 +247,31 @@ async fn exec_stdin_payload_includes_terminate_and_invocation_only_when_set() {
     assert_eq!(op, DaemonOp::ExecStdin);
     assert_eq!(payload["command_session_id"], json!("cs-1"));
     assert_eq!(payload["chars"], json!("y\n"));
-    assert_eq!(payload["terminate"], json!(true));
     assert_eq!(payload["invocation_id"], json!("inv-9"));
+    assert!(!payload.contains_key("terminate"));
+    assert!(!payload.contains_key("yield_time_ms"));
+    assert!(!payload.contains_key("max_output_tokens"));
+}
 
-    // terminate=false + no invocation id -> both omitted.
-    let transport = RecordingTransport::new(json!({"status": "ok", "output": {}}));
-    exec_stdin(
+#[tokio::test]
+async fn read_command_progress_payload_targets_tail_snapshot_op() {
+    let session: CommandSessionId = "cs-1".parse().expect("cs id");
+    let transport = RecordingTransport::new(json!({"status": "running", "output": {}}));
+    read_command_progress(
         &transport,
         &sandbox(),
-        &ExecStdinRequest {
+        &ReadCommandProgressRequest {
             base: base(),
             command_session_id: session,
-            chars: "x".to_owned(),
-            yield_time_ms: None,
-            max_output_tokens: None,
-            terminate: false,
+            last_n_lines: 25,
         },
     )
     .await
-    .expect("stdin");
-    let (_, payload, _) = transport.typed();
-    assert!(
-        !payload.contains_key("terminate"),
-        "terminate is omitted when false"
-    );
-    assert!(
-        !payload.contains_key("invocation_id"),
-        "no invocation id is sent when None"
-    );
+    .expect("read progress");
+    let (op, payload, _) = transport.typed();
+    assert_eq!(op, DaemonOp::CommandReadProgress);
+    assert_eq!(payload["command_session_id"], json!("cs-1"));
+    assert_eq!(payload["last_n_lines"], json!(25));
 }
 
 #[tokio::test]

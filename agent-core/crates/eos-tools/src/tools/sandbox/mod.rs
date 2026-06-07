@@ -1,5 +1,5 @@
 //! Sandbox tools: `read_file`, `write_file`, `edit_file`, `multi_edit`,
-//! `exec_command`, `write_stdin`. Each builds a typed `eos-sandbox-port`
+//! `exec_command`, `write_stdin`, `read_command_progress`. Each builds a typed `eos-sandbox-port`
 //! request and projects the daemon result into the model-facing output DTO.
 //! Command-session tools additionally coordinate running-session registration and
 //! exactly-once terminal recovery through the command-session supervisor port.
@@ -9,6 +9,7 @@ mod exec_command;
 mod lib;
 mod multi_edit;
 mod read_file;
+mod read_command_progress;
 mod write_file;
 mod write_stdin;
 

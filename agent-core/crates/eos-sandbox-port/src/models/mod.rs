@@ -20,7 +20,7 @@ mod tool_call;
 
 pub use command::{
     CommandOutput, CommandSessionCancelRequest, CommandStatusView, ExecCommandRequest,
-    ExecCommandResult, ExecStdinRequest, KnownCommandStatus,
+    ExecCommandResult, ExecStdinRequest, KnownCommandStatus, ReadCommandProgressRequest,
 };
 pub use common::{ConflictInfo, Intent, SandboxRequestBase, SandboxResultBase, Workspace};
 pub use file::{

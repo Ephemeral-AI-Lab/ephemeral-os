@@ -178,7 +178,7 @@ time.sleep(60)'"
 
         let cancelled = lease.call(
             ops::API_V1_COMMAND_CANCEL,
-            json!({"command_session_id": session_id, "max_output_tokens": 1000}),
+            json!({"command_session_id": &session_id, "max_output_tokens": 1000}),
         )?;
         ensure!(
             matches!(as_str(&cancelled, "status")?, "cancelled" | "ok" | "error"),
@@ -192,7 +192,7 @@ time.sleep(60)'"
     if body.is_err() {
         let _ = lease.call(
             ops::API_V1_COMMAND_CANCEL,
-            json!({"command_session_id": session_id, "max_output_tokens": 1000}),
+            json!({"command_session_id": &session_id, "max_output_tokens": 1000}),
         );
     }
     let exit = lease.call_ok(ops::API_ISOLATED_WORKSPACE_EXIT, json!({"grace_s": 0.1}));

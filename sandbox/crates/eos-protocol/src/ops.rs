@@ -53,6 +53,8 @@ pub const API_ISOLATED_WORKSPACE_TEST_RESET: &str = "api.isolated_workspace.test
 pub const API_V1_EXEC_COMMAND: &str = "api.v1.exec_command";
 /// Write stdin to a command session.
 pub const API_V1_WRITE_STDIN: &str = "api.v1.write_stdin";
+/// Read command-session progress without writing stdin.
+pub const API_V1_COMMAND_READ_PROGRESS: &str = "api.v1.command.read_progress";
 /// Cancel a command session.
 pub const API_V1_COMMAND_CANCEL: &str = "api.v1.command.cancel";
 /// Collect completed command-session notifications.
@@ -87,6 +89,7 @@ pub const BUILTIN_DAEMON_OPS: &[&str] = &[
     API_ISOLATED_WORKSPACE_TEST_RESET,
     API_V1_EXEC_COMMAND,
     API_V1_WRITE_STDIN,
+    API_V1_COMMAND_READ_PROGRESS,
     API_V1_COMMAND_CANCEL,
     API_V1_COMMAND_COLLECT_COMPLETED,
     API_V1_COMMAND_SESSION_COUNT,

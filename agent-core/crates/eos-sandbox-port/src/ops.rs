@@ -30,6 +30,9 @@ pub enum DaemonOp {
     /// `api.v1.write_stdin`
     #[serde(rename = "api.v1.write_stdin")]
     ExecStdin,
+    /// `api.v1.command.read_progress`
+    #[serde(rename = "api.v1.command.read_progress")]
+    CommandReadProgress,
     /// `api.v1.command.cancel`
     #[serde(rename = "api.v1.command.cancel")]
     CommandCancel,
@@ -83,6 +86,7 @@ impl DaemonOp {
             Self::EditFile => "api.v1.edit_file",
             Self::ExecCommand => "api.v1.exec_command",
             Self::ExecStdin => "api.v1.write_stdin",
+            Self::CommandReadProgress => "api.v1.command.read_progress",
             Self::CommandCancel => "api.v1.command.cancel",
             Self::CommandCollectCompleted => "api.v1.command.collect_completed",
             Self::CommandSessionCount => "api.v1.command_session_count",
@@ -114,6 +118,10 @@ mod tests {
             (DaemonOp::EditFile, "api.v1.edit_file"),
             (DaemonOp::ExecCommand, "api.v1.exec_command"),
             (DaemonOp::ExecStdin, "api.v1.write_stdin"),
+            (
+                DaemonOp::CommandReadProgress,
+                "api.v1.command.read_progress",
+            ),
             (DaemonOp::CommandCancel, "api.v1.command.cancel"),
             (
                 DaemonOp::CommandCollectCompleted,

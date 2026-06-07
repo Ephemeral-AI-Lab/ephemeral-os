@@ -39,8 +39,6 @@ pub(crate) struct CommandSession {
     #[cfg(target_os = "linux")]
     cancelled: Mutex<bool>,
     #[cfg(target_os = "linux")]
-    interrupted: Mutex<bool>,
-    #[cfg(target_os = "linux")]
     output_drain_grace_ms: u64,
     finalized: Mutex<Option<CommandResponse>>,
     started_at: Instant,
@@ -119,8 +117,6 @@ impl CommandSession {
             #[cfg(target_os = "linux")]
             cancelled: Mutex::new(false),
             #[cfg(target_os = "linux")]
-            interrupted: Mutex::new(false),
-            #[cfg(target_os = "linux")]
             output_drain_grace_ms: inactive.output_drain_grace_ms,
             finalized: Mutex::new(None),
             started_at: Instant::now(),
@@ -148,7 +144,6 @@ impl CommandSession {
             final_path: running.final_path,
             transcript_path: running.transcript_path,
             cancelled: Mutex::new(false),
-            interrupted: Mutex::new(false),
             output_drain_grace_ms: running.output_drain_grace_ms,
             finalized: Mutex::new(None),
             started_at: Instant::now(),
@@ -185,10 +180,6 @@ impl CommandSession {
     #[cfg(target_os = "linux")]
     pub(crate) fn write_process_stdin(&self, chars: &str) -> Result<(), CommandSessionError> {
         self.process.write_stdin(chars.as_bytes())?;
-        if chars.contains('\u{3}') {
-            *lock(&self.interrupted) = true;
-            self.process.interrupt();
-        }
         Ok(())
     }
 
@@ -208,6 +199,11 @@ impl CommandSession {
     pub(crate) fn read_notification_output(&self, max_tokens: Option<u64>) -> String {
         let mut cursor = lock(&self.notification_cursor);
         self.output.read_since(&mut cursor, max_tokens)
+    }
+
+    #[must_use]
+    pub(crate) fn read_recent_output(&self, last_n_lines: usize) -> String {
+        self.output.last_lines(last_n_lines)
     }
 
     #[cfg(test)]
@@ -299,12 +295,11 @@ impl CommandSession {
             .wait_for_reader_done(Duration::from_millis(self.output_drain_grace_ms));
         let runner = CommandRunnerResult::read_from_path(&self.output_path);
         let cancelled = *lock(&self.cancelled);
-        let interrupted = *lock(&self.interrupted);
         let completion = CommandCompletionStatus::from_process_and_runner(
             process_exit,
             runner.as_ref(),
             cancelled,
-            interrupted,
+            false,
         );
         let response = self.finalize_with_output(
             completion.status(),

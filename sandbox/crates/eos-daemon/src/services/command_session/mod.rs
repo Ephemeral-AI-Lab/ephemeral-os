@@ -15,7 +15,8 @@ use std::time::Instant;
 #[cfg(target_os = "linux")]
 use eos_command_session::{
     CancelCommandSession, CommandResponse, CommandSessionCompletion, CommandSessionError,
-    CommandSessionManager, DynCommandWorkspacePolicy, StartCommandSession, WriteStdin,
+    CommandSessionManager, DynCommandWorkspacePolicy, ReadCommandProgress, StartCommandSession,
+    WriteStdin,
 };
 #[cfg(target_os = "linux")]
 use eos_ephemeral_workspace::command_session::EphemeralCommandPolicy;
@@ -42,7 +43,10 @@ use ports::isolated::DaemonIsolatedCommandPort;
 use wire::command_result;
 #[cfg(test)]
 use wire::should_publish_command_session_completion;
-use wire::{caller_id_arg, command_session_not_found, optional_u64, require_command_string};
+use wire::{
+    caller_id_arg, command_session_not_found, optional_u64, require_command_string,
+    require_nonempty_string,
+};
 #[cfg(target_os = "linux")]
 use wire::{
     collect_completed_request, command_response_to_wire, command_session_completion_to_wire,
@@ -141,6 +145,28 @@ pub fn op_command_write_stdin(
     #[cfg(target_os = "linux")]
     {
         command_session_write_stdin(args)
+    }
+    #[cfg(not(target_os = "linux"))]
+    {
+        let _ = args;
+        Ok(command_session_not_found())
+    }
+}
+
+#[cfg_attr(
+    not(target_os = "linux"),
+    expect(
+        clippy::unnecessary_wraps,
+        reason = "dispatcher handlers share a fallible ABI"
+    )
+)]
+pub fn op_command_read_progress(
+    args: &Value,
+    _context: DispatchContext<'_>,
+) -> Result<Value, DaemonError> {
+    #[cfg(target_os = "linux")]
+    {
+        command_session_read_progress(args)
     }
     #[cfg(not(target_os = "linux"))]
     {
@@ -263,20 +289,21 @@ fn start_manager_command_session(
 pub(crate) fn command_session_write_stdin(args: &Value) -> Result<Value, DaemonError> {
     let request = WriteStdin {
         command_session_id: require_command_string(args, "command_session_id")?,
-        chars: args
-            .get("chars")
-            .and_then(Value::as_str)
-            .unwrap_or_default()
-            .to_owned(),
-        terminate: args
-            .get("terminate")
-            .and_then(Value::as_bool)
-            .unwrap_or(false),
-        yield_time_ms: optional_u64(args, "yield_time_ms")
-            .unwrap_or(command_session_config().default_yield_time_ms),
-        max_output_tokens: optional_u64(args, "max_output_tokens"),
+        chars: require_nonempty_string(args, "chars")?,
     };
     command_session_response_to_wire(command_session_manager().write_stdin(request))
+}
+
+#[cfg(target_os = "linux")]
+pub(crate) fn command_session_read_progress(args: &Value) -> Result<Value, DaemonError> {
+    let last_n_lines = optional_u64(args, "last_n_lines").unwrap_or(50);
+    let request = ReadCommandProgress {
+        command_session_id: require_command_string(args, "command_session_id")?,
+        last_n_lines: last_n_lines.try_into().map_err(|_| {
+            DaemonError::InvalidEnvelope("last_n_lines is too large".to_owned())
+        })?,
+    };
+    command_session_response_to_wire(command_session_manager().read_progress(request))
 }
 
 #[cfg(target_os = "linux")]

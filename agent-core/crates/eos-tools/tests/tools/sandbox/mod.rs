@@ -7,6 +7,7 @@ use serde_json::{json, Value};
 
 use super::super::exec_command::ExecCommand;
 use super::super::read_file::ReadFile;
+use super::super::read_command_progress::ReadCommandProgress;
 use super::super::write_stdin::WriteStdin;
 use crate::core::metadata::ExecutionMetadata;
 use crate::runtime::executor::ToolExecutor;
@@ -84,50 +85,13 @@ async fn exec_command_rejects_invalid_numeric_bounds() {
     }
 }
 
-// sense-2 D7: `\x03` is SIGINT-only and rides through as ordinary stdin — the
-// tool no longer escalates to a cancel RPC (the daemon raises SIGINT itself).
 #[tokio::test]
-async fn write_stdin_ctrl_c_does_not_escalate_to_cancel() {
+async fn write_stdin_ctrl_c_uses_command_cancel() {
     let cancels = Arc::new(AtomicUsize::new(0));
     let cancels_seen = cancels.clone();
     let transport = Arc::new(FakeTransport::new(move |op, _| match op {
-        DaemonOp::ExecStdin => Ok(obj(&[
-            ("status", json!("running")),
-            ("output", json!({"stdout": "", "stderr": ""})),
-        ])),
         DaemonOp::CommandCancel => {
             cancels_seen.fetch_add(1, Ordering::SeqCst);
-            Ok(obj(&[("status", json!("cancelled"))]))
-        }
-        other => Err(SandboxPortError::decode(format!("unexpected op {other:?}"))),
-    }));
-    let tool = WriteStdin::new(command_service(transport));
-    let ctx = metadata();
-    let input = obj(&[
-        ("command_session_id", json!("cs-7")),
-        ("chars", json!("\u{3}")),
-    ]);
-    let res = tool.execute(&input, &ctx).await.expect("ok");
-    assert_eq!(
-        cancels.load(Ordering::SeqCst),
-        0,
-        "ctrl-c must NOT issue a cancel RPC (D7: SIGINT only)"
-    );
-    let payload: serde_json::Value = serde_json::from_str(&res.output).expect("json");
-    assert_eq!(payload["status"], json!("running"));
-}
-
-// sense-2 D7: `terminate: true` is forwarded on the write RPC so the daemon
-// tears the session down; no separate cancel RPC is issued by the tool.
-#[tokio::test]
-async fn write_stdin_terminate_forwards_flag() {
-    let terminate_seen = Arc::new(AtomicUsize::new(0));
-    let seen = terminate_seen.clone();
-    let transport = Arc::new(FakeTransport::new(move |op, payload| match op {
-        DaemonOp::ExecStdin => {
-            if payload.get("terminate").and_then(Value::as_bool) == Some(true) {
-                seen.fetch_add(1, Ordering::SeqCst);
-            }
             Ok(obj(&[
                 ("status", json!("cancelled")),
                 ("exit_code", json!(130)),
@@ -140,13 +104,45 @@ async fn write_stdin_terminate_forwards_flag() {
     let ctx = metadata();
     let input = obj(&[
         ("command_session_id", json!("cs-7")),
-        ("terminate", json!(true)),
+        ("chars", json!("\u{3}")),
     ]);
     let res = tool.execute(&input, &ctx).await.expect("ok");
     assert_eq!(
-        terminate_seen.load(Ordering::SeqCst),
+        cancels.load(Ordering::SeqCst),
         1,
-        "the terminate flag must be forwarded on the write RPC"
+        "ctrl-c must issue a command-session cancel RPC"
+    );
+    let payload: serde_json::Value = serde_json::from_str(&res.output).expect("json");
+    assert_eq!(payload["status"], json!("cancelled"));
+}
+
+#[tokio::test]
+async fn write_stdin_ctrl_d_uses_command_cancel() {
+    let cancels = Arc::new(AtomicUsize::new(0));
+    let cancels_seen = cancels.clone();
+    let transport = Arc::new(FakeTransport::new(move |op, payload| match op {
+        DaemonOp::CommandCancel => {
+            assert_eq!(payload["command_session_id"], json!("cs-7"));
+            cancels_seen.fetch_add(1, Ordering::SeqCst);
+            Ok(obj(&[
+                ("status", json!("cancelled")),
+                ("exit_code", json!(130)),
+                ("output", json!({"stdout": "", "stderr": ""})),
+            ]))
+        }
+        other => Err(SandboxPortError::decode(format!("unexpected op {other:?}"))),
+    }));
+    let tool = WriteStdin::new(command_service(transport));
+    let ctx = metadata();
+    let input = obj(&[
+        ("command_session_id", json!("cs-7")),
+        ("chars", json!("\u{4}")),
+    ]);
+    let res = tool.execute(&input, &ctx).await.expect("ok");
+    assert_eq!(
+        cancels.load(Ordering::SeqCst),
+        1,
+        "ctrl-d must issue a command-session cancel RPC"
     );
     let payload: serde_json::Value = serde_json::from_str(&res.output).expect("json");
     assert_eq!(payload["status"], json!("cancelled"));
@@ -158,7 +154,7 @@ async fn write_stdin_plain_does_not_cancel() {
     let transport = Arc::new(FakeTransport::new(|op, _| match op {
         DaemonOp::ExecStdin => Ok(obj(&[
             ("status", json!("running")),
-            ("output", json!({"stdout": "ok", "stderr": ""})),
+            ("output", json!({"stdout": "", "stderr": ""})),
         ])),
         other => Err(SandboxPortError::decode(format!("unexpected op {other:?}"))),
     }));
@@ -174,24 +170,66 @@ async fn write_stdin_plain_does_not_cancel() {
 }
 
 #[tokio::test]
-async fn write_stdin_rejects_invalid_numeric_bounds() {
+async fn write_stdin_rejects_invalid_inputs() {
     let transport = Arc::new(FakeTransport::inert());
     let tool = WriteStdin::new(command_service(transport));
     let ctx = metadata();
     for input in [
         obj(&[
             ("command_session_id", json!("cs-7")),
-            ("yield_time_ms", json!(30_001)),
+            ("chars", json!("")),
         ]),
         obj(&[
             ("command_session_id", json!("cs-7")),
-            ("max_output_tokens", json!(0)),
+            ("chars", json!("a\u{3}")),
         ]),
-        obj(&[("command_session_id", json!(""))]),
+        obj(&[("command_session_id", json!("")), ("chars", json!("x"))]),
     ] {
         let res = tool.execute(&input, &ctx).await.expect("ok");
         assert!(res.is_error, "{}", res.output);
         assert!(res.output.contains("Invalid input for write_stdin"));
+    }
+}
+
+#[tokio::test]
+async fn read_command_progress_uses_tail_snapshot_op() {
+    let transport = Arc::new(FakeTransport::new(|op, payload| match op {
+        DaemonOp::CommandReadProgress => {
+            assert_eq!(payload["command_session_id"], json!("cs-7"));
+            assert_eq!(payload["last_n_lines"], json!(25));
+            Ok(obj(&[
+                ("status", json!("running")),
+                ("command_session_id", json!("cs-7")),
+                ("output", json!({"stdout": "tail\n", "stderr": ""})),
+            ]))
+        }
+        other => Err(SandboxPortError::decode(format!("unexpected op {other:?}"))),
+    }));
+    let tool = ReadCommandProgress::new(command_service(transport));
+    let ctx = metadata();
+    let input = obj(&[
+        ("command_session_id", json!("cs-7")),
+        ("last_n_lines", json!(25)),
+    ]);
+    let res = tool.execute(&input, &ctx).await.expect("ok");
+    let payload: serde_json::Value = serde_json::from_str(&res.output).expect("json");
+    assert_eq!(payload["status"], json!("running"));
+    assert_eq!(payload["stdout"], json!("tail\n"));
+}
+
+#[tokio::test]
+async fn read_command_progress_rejects_invalid_bounds() {
+    let transport = Arc::new(FakeTransport::inert());
+    let tool = ReadCommandProgress::new(command_service(transport));
+    let ctx = metadata();
+    for input in [
+        obj(&[("command_session_id", json!("cs-7")), ("last_n_lines", json!(0))]),
+        obj(&[("command_session_id", json!("cs-7")), ("last_n_lines", json!(201))]),
+        obj(&[("command_session_id", json!("")), ("last_n_lines", json!(1))]),
+    ] {
+        let res = tool.execute(&input, &ctx).await.expect("ok");
+        assert!(res.is_error, "{}", res.output);
+        assert!(res.output.contains("Invalid input for read_command_progress"));
     }
 }
 

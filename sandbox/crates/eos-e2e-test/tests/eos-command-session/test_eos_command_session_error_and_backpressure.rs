@@ -135,7 +135,7 @@ fn stderr_and_stdin_output_keep_long_lived_session_running() -> Result<()> {
     if body.is_err() {
         let _ = lease.call(
             ops::API_V1_COMMAND_CANCEL,
-            json!({"command_session_id": session_id, "max_output_tokens": 2000}),
+            json!({"command_session_id": &session_id, "max_output_tokens": 2000}),
         );
         let _ = wait_for_session_count(&lease, 0);
     }
@@ -249,7 +249,7 @@ fn output_backpressure_preserves_utf8_and_drains_on_cancel() -> Result<()> {
             let poll = lease.call_ok(
                 ops::API_V1_WRITE_STDIN,
                 json!({
-                    "command_session_id": session_id,
+                    "command_session_id": &session_id,
                     "chars": "",
                     "yield_time_ms": 150,
                     "max_output_tokens": 24
@@ -278,7 +278,7 @@ fn output_backpressure_preserves_utf8_and_drains_on_cancel() -> Result<()> {
     if body.is_err() {
         let _ = lease.call(
             ops::API_V1_COMMAND_CANCEL,
-            json!({"command_session_id": session_id, "max_output_tokens": 200}),
+            json!({"command_session_id": &session_id, "max_output_tokens": 200}),
         );
         let _ = wait_for_session_count(&lease, 0);
     }
@@ -333,4 +333,65 @@ fn stderr(value: &Value) -> &str {
         .and_then(Value::as_str)
         .or_else(|| value.get("stderr").and_then(Value::as_str))
         .unwrap_or_default()
+}
+
+#[test]
+fn stdin_to_non_reading_consumer_stays_bounded_and_cancellable() -> Result<()> {
+    let Some(pool) = live_pool_or_skip()? else {
+        return Ok(());
+    };
+    let lease = pool.acquire()?;
+    // A consumer that never reads stdin. A bounded stdin write must still return
+    // promptly and leave the session cancellable. NOTE: the daemon's stdin write is
+    // a blocking `write_all` on the PTY master, so a payload larger than the kernel
+    // PTY buffer to a non-reading consumer would block the writer; this test stays
+    // deliberately under that bound (1 KiB, one line) to exercise the safe path.
+    let started = lease.call_ok(
+        ops::API_V1_EXEC_COMMAND,
+        json!({
+            "cmd": "sh -c 'echo no-read-ready; sleep 60'",
+            "yield_time_ms": 800,
+            "timeout_seconds": 120,
+            "max_output_tokens": 1000
+        }),
+    )?;
+    ensure!(
+        as_str(&started, "status")? == "running",
+        "non-reading consumer should start: {started}"
+    );
+    let id = as_str(&started, "command_session_id")?.to_owned();
+
+    let payload = format!("{}\n", "x".repeat(1024));
+    let write_started = Instant::now();
+    let wrote = lease.call_ok(
+        ops::API_V1_WRITE_STDIN,
+        json!({
+            "command_session_id": &id,
+            "chars": payload,
+            "yield_time_ms": 300,
+            "max_output_tokens": 1000
+        }),
+    )?;
+    ensure!(
+        as_str(&wrote, "status")? == "running",
+        "session should stay running after stdin to a non-reading consumer: {wrote}"
+    );
+    ensure!(
+        write_started.elapsed() < Duration::from_secs(10),
+        "a bounded stdin write must return promptly, not wedge: took {:?}",
+        write_started.elapsed()
+    );
+
+    let cancelled = lease.call(
+        ops::API_V1_COMMAND_CANCEL,
+        json!({"command_session_id": &id, "max_output_tokens": 200}),
+    )?;
+    ensure!(
+        matches!(as_str(&cancelled, "status")?, "cancelled" | "ok" | "error"),
+        "session must stay cancellable after stdin pressure: {cancelled}"
+    );
+    wait_for_session_count(&lease, 0)?;
+    wait_for_command_session_transcript_recycled(&lease, &id)?;
+    wait_for_active_leases(&lease, 0)?;
+    Ok(())
 }

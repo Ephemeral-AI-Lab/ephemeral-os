@@ -1,8 +1,8 @@
 //! [`ToolName`] / [`ToolKey`] — typed names for model-facing tools.
 //!
-//! Ports `_names.py` **plus** the four names that module omits (`write_stdin`,
-//! `enter_isolated_workspace`, `exit_isolated_workspace`, `load_skill_reference`)
-//! and the two subagent control tools (`check_subagent_progress`,
+//! Ports `_names.py` **plus** the five names that module omits (`write_stdin`,
+//! `read_command_progress`, `enter_isolated_workspace`, `exit_isolated_workspace`,
+//! `load_skill_reference`) and the two subagent control tools (`check_subagent_progress`,
 //! `cancel_subagent`) — GC-tools-04. The authoritative set is the union of the
 //! six registration sites, not `_names.py`. Each variant maps to its wire string
 //! (the exact `snake_case` of the variant), so `serde` `rename_all` and the
@@ -34,6 +34,8 @@ pub enum ToolName {
     ExecCommand,
     /// `write_stdin` (sandbox command session; omitted from `_names.py`).
     WriteStdin,
+    /// `read_command_progress` (sandbox command session).
+    ReadCommandProgress,
     /// `enter_isolated_workspace` (omitted from `_names.py`).
     EnterIsolatedWorkspace,
     /// `exit_isolated_workspace` (omitted from `_names.py`).
@@ -71,13 +73,14 @@ pub enum ToolName {
 impl ToolName {
     /// Every tool name, in a stable order. Used by registry-totality tests and
     /// as the canonical iteration order for default-set construction.
-    pub const ALL: [ToolName; 22] = [
+    pub const ALL: [ToolName; 23] = [
         ToolName::ReadFile,
         ToolName::WriteFile,
         ToolName::EditFile,
         ToolName::MultiEdit,
         ToolName::ExecCommand,
         ToolName::WriteStdin,
+        ToolName::ReadCommandProgress,
         ToolName::EnterIsolatedWorkspace,
         ToolName::ExitIsolatedWorkspace,
         ToolName::RunSubagent,
@@ -106,6 +109,7 @@ impl ToolName {
             ToolName::MultiEdit => "multi_edit",
             ToolName::ExecCommand => "exec_command",
             ToolName::WriteStdin => "write_stdin",
+            ToolName::ReadCommandProgress => "read_command_progress",
             ToolName::EnterIsolatedWorkspace => "enter_isolated_workspace",
             ToolName::ExitIsolatedWorkspace => "exit_isolated_workspace",
             ToolName::RunSubagent => "run_subagent",

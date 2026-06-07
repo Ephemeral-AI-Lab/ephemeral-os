@@ -14,6 +14,7 @@ use super::super::{
     exec_command::{ExecCommand, ExecCommandInput},
     multi_edit::{MultiEdit, MultiEditInput},
     read_file::{ReadFile, ReadFileInput},
+    read_command_progress::{ReadCommandProgress, ReadCommandProgressInput},
     write_file::{WriteFile, WriteFileInput},
     write_stdin::{WriteStdin, WriteStdinInput},
 };
@@ -107,6 +108,20 @@ pub(super) fn register(
             schema_for!(CommandToolOutput),
         ),
         OutputShape::json::<CommandToolOutput>("CommandToolOutput"),
-        Arc::new(WriteStdin::new(command_service)),
+        Arc::new(WriteStdin::new(command_service.clone())),
+    );
+    let read_command_progress = config.get(ToolName::ReadCommandProgress);
+    register_tool(
+        registry,
+        ToolName::ReadCommandProgress,
+        read_command_progress,
+        json_spec(
+            ToolName::ReadCommandProgress,
+            &read_command_progress.description,
+            schema_for!(ReadCommandProgressInput),
+            schema_for!(CommandToolOutput),
+        ),
+        OutputShape::json::<CommandToolOutput>("CommandToolOutput"),
+        Arc::new(ReadCommandProgress::new(command_service)),
     );
 }

@@ -13,7 +13,10 @@ mod plugin;
 mod read;
 mod write;
 
-pub use command::{cancel_command_session, collect_command_completions, exec_command, exec_stdin};
+pub use command::{
+    cancel_command_session, collect_command_completions, exec_command, exec_stdin,
+    read_command_progress,
+};
 pub use control::{cancel, command_session_count, heartbeat, inflight_count, isolated_active};
 pub use edit::edit_file;
 pub use isolated::{enter_isolated_workspace, exit_isolated_workspace};

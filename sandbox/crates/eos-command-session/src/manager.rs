@@ -15,8 +15,8 @@ use crate::wait::{wait_for_yield, WaitOutcome};
 use crate::{process::spawn_current_exe_ns_runner, CommandSessionOutput};
 use crate::{
     CancelCommandSession, CollectCompleted, CollectCompletedResponse, CommandResponse,
-    CommandSessionConfig, CommandSessionError, DynCommandWorkspacePolicy, StartCommandSession,
-    WriteStdin,
+    CommandSessionConfig, CommandSessionError, DynCommandWorkspacePolicy, ReadCommandProgress,
+    StartCommandSession, WriteStdin,
 };
 
 pub struct CommandSessionManager {
@@ -164,22 +164,27 @@ impl CommandSessionManager {
         &self,
         request: WriteStdin,
     ) -> Result<CommandResponse, CommandSessionError> {
+        if is_teardown_control(&request.chars) {
+            return self.cancel(CancelCommandSession {
+                command_session_id: request.command_session_id,
+                max_output_tokens: None,
+            });
+        }
+        if contains_teardown_control(&request.chars) {
+            return Err(CommandSessionError::InvalidRequest(
+                "Ctrl-C/Ctrl-D must be sent alone to cancel command session".to_owned(),
+            ));
+        }
         let Some(session) = self.registry.get(&request.command_session_id) else {
-            return self
-                .registry
-                .take_completed_result(&request.command_session_id)
-                .ok_or(CommandSessionError::NotFound(request.command_session_id));
+            return Err(CommandSessionError::NotFound(request.command_session_id));
         };
-        if !request.chars.is_empty() {
-            session.append_output(request.chars);
+        if request.chars.is_empty() {
+            return Err(CommandSessionError::InvalidRequest(
+                "chars must be non-empty".to_owned(),
+            ));
         }
-        if request.terminate {
-            return self.finish_session(session, "cancelled", Some(130), true);
-        }
-        Ok(CommandResponse::running(
-            request.command_session_id,
-            session.read_model_output(request.max_output_tokens),
-        ))
+        session.append_output(request.chars);
+        Ok(CommandResponse::running(request.command_session_id, String::new()))
     }
 
     #[cfg(target_os = "linux")]
@@ -187,30 +192,57 @@ impl CommandSessionManager {
         &self,
         request: WriteStdin,
     ) -> Result<CommandResponse, CommandSessionError> {
+        if is_teardown_control(&request.chars) {
+            return self.cancel(CancelCommandSession {
+                command_session_id: request.command_session_id,
+                max_output_tokens: None,
+            });
+        }
+        if contains_teardown_control(&request.chars) {
+            return Err(CommandSessionError::InvalidRequest(
+                "Ctrl-C/Ctrl-D must be sent alone to cancel command session".to_owned(),
+            ));
+        }
+        let Some(session) = self.registry.get(&request.command_session_id) else {
+            return Err(CommandSessionError::NotFound(request.command_session_id));
+        };
+        if request.chars.is_empty() {
+            return Err(CommandSessionError::InvalidRequest(
+                "chars must be non-empty".to_owned(),
+            ));
+        }
+        session.write_process_stdin(&request.chars)?;
+        Ok(CommandResponse::running(request.command_session_id, String::new()))
+    }
+
+    pub fn read_progress(
+        &self,
+        request: ReadCommandProgress,
+    ) -> Result<CommandResponse, CommandSessionError> {
+        if request.last_n_lines == 0 {
+            return Err(CommandSessionError::InvalidRequest(
+                "last_n_lines must be >= 1".to_owned(),
+            ));
+        }
         let Some(session) = self.registry.get(&request.command_session_id) else {
             return self
                 .registry
-                .take_completed_result(&request.command_session_id)
+                .completed_result(&request.command_session_id)
+                .map(|result| result.with_last_lines(request.last_n_lines))
                 .ok_or(CommandSessionError::NotFound(request.command_session_id));
         };
-        session.write_process_stdin(&request.chars)?;
-        if request.terminate {
-            session.cancel_process();
+        #[cfg(target_os = "linux")]
+        if let Some(result) = session.try_finalize_process() {
+            let stdout = session.read_recent_output(request.last_n_lines);
+            let response = result?;
+            let mut response = self.finish_completed(session, response, false);
+            response.stdout = stdout;
+            return Ok(response);
         }
-        match wait_for_yield(
-            session.as_ref(),
-            &self.config,
-            request.yield_time_ms,
-            request.max_output_tokens,
-        ) {
-            WaitOutcome::Completed(result) => {
-                let response = result?;
-                Ok(self.finish_completed(session, response, false))
-            }
-            WaitOutcome::Running(stdout) => {
-                Ok(CommandResponse::running(request.command_session_id, stdout))
-            }
-        }
+        Ok(CommandResponse::running(
+            request.command_session_id,
+            session.read_recent_output(request.last_n_lines),
+        ))
     }
 
     pub fn cancel(
@@ -435,6 +467,14 @@ impl CommandSessionManager {
         }
         result
     }
+}
+
+fn is_teardown_control(chars: &str) -> bool {
+    matches!(chars, "\u{3}" | "\u{4}")
+}
+
+fn contains_teardown_control(chars: &str) -> bool {
+    chars.contains('\u{3}') || chars.contains('\u{4}')
 }
 
 impl Default for CommandSessionManager {

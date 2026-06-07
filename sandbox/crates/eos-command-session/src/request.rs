@@ -27,9 +27,12 @@ impl StartCommandSession {
 pub struct WriteStdin {
     pub command_session_id: String,
     pub chars: String,
-    pub terminate: bool,
-    pub yield_time_ms: u64,
-    pub max_output_tokens: Option<u64>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ReadCommandProgress {
+    pub command_session_id: String,
+    pub last_n_lines: usize,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

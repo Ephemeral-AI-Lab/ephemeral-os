@@ -412,6 +412,32 @@ mod tests {
             .collect()
     }
 
+    // NOTE (flagged in the coverage review): like the Anthropic decoder,
+    // `decode_openai`'s `match value.get("type")` has no "error" arm, so an
+    // in-stream provider error event is silently swallowed (no completion, no
+    // Err — `decode_fixture`'s unwrap would panic here if an Err were produced).
+    // Pins current behavior; a fix that surfaces provider errors should update it.
+    #[tokio::test]
+    async fn in_stream_error_event_is_currently_swallowed() {
+        let sse = concat!(
+            "data: {\"type\": \"response.output_text.delta\", \"delta\": \"Hi\"}\n",
+            "\n",
+            "data: {\"type\": \"error\", \"error\": {\"message\": \"boom\"}}\n",
+        );
+        let events = decode_fixture(sse).await;
+        assert!(events.iter().any(|event| matches!(
+            event,
+            LlmStreamEvent::AssistantTextDelta { text } if text == "Hi"
+        )));
+        assert!(
+            !events.iter().any(|event| matches!(
+                event,
+                LlmStreamEvent::AssistantMessageComplete { .. }
+            )),
+            "no completion is emitted for an error-terminated stream"
+        );
+    }
+
     // AC-llm-client-10: an `OpenAI` fixture (text delta + function-call argument
     // deltas + response.completed) decodes into the same variant sequence as the
     // Anthropic path (LSP substitutability).

@@ -9,6 +9,7 @@ use serde_json::Value;
 use crate::error::SandboxPortError;
 use crate::models::{
     CommandSessionCancelRequest, ExecCommandRequest, ExecCommandResult, ExecStdinRequest,
+    ReadCommandProgressRequest,
 };
 use crate::ops::DaemonOp;
 use crate::timeouts::exec_dispatch_timeout;
@@ -58,22 +59,36 @@ pub async fn exec_stdin(
         Value::String(request.command_session_id.to_string()),
     );
     payload.insert("chars".to_owned(), Value::String(request.chars.clone()));
-    if let Some(yield_time_ms) = request.yield_time_ms {
-        payload.insert("yield_time_ms".to_owned(), Value::from(yield_time_ms));
-    }
-    if let Some(max_output_tokens) = request.max_output_tokens {
-        payload.insert(
-            "max_output_tokens".to_owned(),
-            Value::from(max_output_tokens),
-        );
-    }
-    if request.terminate {
-        payload.insert("terminate".to_owned(), Value::Bool(true));
-    }
     let response = transport
         .call(
             sandbox_id,
             DaemonOp::ExecStdin,
+            payload,
+            exec_dispatch_timeout(None),
+        )
+        .await?;
+    parse_exec_command_result(&response)
+}
+
+/// Read a stateless tail snapshot from an open command session.
+pub async fn read_command_progress(
+    transport: &dyn SandboxTransport,
+    sandbox_id: &SandboxId,
+    request: &ReadCommandProgressRequest,
+) -> Result<ExecCommandResult, SandboxPortError> {
+    let mut payload = daemon_request_identity_fields(&request.base);
+    payload.insert(
+        "command_session_id".to_owned(),
+        Value::String(request.command_session_id.to_string()),
+    );
+    payload.insert(
+        "last_n_lines".to_owned(),
+        Value::from(request.last_n_lines),
+    );
+    let response = transport
+        .call(
+            sandbox_id,
+            DaemonOp::CommandReadProgress,
             payload,
             exec_dispatch_timeout(None),
         )

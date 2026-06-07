@@ -449,6 +449,44 @@ mod tests {
             .await
     }
 
+    // NOTE (flagged in the coverage review): an in-stream provider `error` frame
+    // is currently SILENTLY SWALLOWED — `decode_anthropic`'s `match
+    // value.get("type")` has no "error" arm, so an error frame falls through
+    // `_ => {}` and the stream ends with neither an `AssistantMessageComplete`
+    // nor an `Err`. This pins that (likely-buggy) behavior so a future fix that
+    // surfaces provider errors trips this test and is made deliberately.
+    #[tokio::test]
+    async fn in_stream_error_frame_is_currently_swallowed() {
+        let sse = concat!(
+            "event: content_block_start\n",
+            "data: {\"type\":\"content_block_start\",\"index\":0,\"content_block\":{\"type\":\"text\",\"text\":\"\"}}\n",
+            "\n",
+            "event: content_block_delta\n",
+            "data: {\"type\":\"content_block_delta\",\"index\":0,\"delta\":{\"type\":\"text_delta\",\"text\":\"hi\"}}\n",
+            "\n",
+            "event: error\n",
+            "data: {\"type\":\"error\",\"error\":{\"type\":\"overloaded_error\",\"message\":\"overloaded\"}}\n",
+        );
+        let results = decode_fixture(sse).await;
+        // The text delta before the error still decodes.
+        assert!(results.iter().any(|event| matches!(
+            event,
+            Ok(LlmStreamEvent::AssistantTextDelta { text }) if text == "hi"
+        )));
+        // The error frame surfaces neither an Err nor a terminal completion.
+        assert!(
+            results.iter().all(Result::is_ok),
+            "an in-stream error frame is currently swallowed, not surfaced as Err"
+        );
+        assert!(
+            !results.iter().any(|event| matches!(
+                event,
+                Ok(LlmStreamEvent::AssistantMessageComplete { .. })
+            )),
+            "no completion is emitted for an error-terminated stream"
+        );
+    }
+
     // AC-llm-client-01: full fixture decodes to reasoning/text deltas, then a
     // mid-stream tool_use delta with parsed args, then a complete with correct
     // usage (input from message_start, output from message_delta) + stop reason.

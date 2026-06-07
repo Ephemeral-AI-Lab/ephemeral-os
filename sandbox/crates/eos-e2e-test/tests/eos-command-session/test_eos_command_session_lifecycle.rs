@@ -77,7 +77,7 @@ fn write_stdin_echo() -> Result<()> {
     let stdin = lease.call_ok(
         ops::API_V1_WRITE_STDIN,
         json!({
-            "command_session_id": id,
+            "command_session_id": &id,
             "chars": "payload\n",
             "yield_time_ms": 2000,
             "max_output_tokens": 1000
@@ -116,7 +116,7 @@ fn command_session_output_cursor_no_replay() -> Result<()> {
     let second = lease.call_ok(
         ops::API_V1_WRITE_STDIN,
         json!({
-            "command_session_id": id,
+            "command_session_id": &id,
             "chars": "payload\n",
             "yield_time_ms": 1500,
             "max_output_tokens": 1000
@@ -134,7 +134,7 @@ fn command_session_output_cursor_no_replay() -> Result<()> {
     let quiet = lease.call_ok(
         ops::API_V1_WRITE_STDIN,
         json!({
-            "command_session_id": id,
+            "command_session_id": &id,
             "chars": "",
             "yield_time_ms": 300,
             "max_output_tokens": 1000
@@ -169,7 +169,7 @@ fn collect_completed_drains() -> Result<()> {
     loop {
         let collected = lease.call_ok(
             ops::API_V1_COMMAND_COLLECT_COMPLETED,
-            json!({"command_session_ids": [id]}),
+            json!({"command_session_ids": [&id]}),
         )?;
         let completions = array(&collected, "completions")?;
         if let Some(completion) = completions.first() {
@@ -187,7 +187,7 @@ fn collect_completed_drains() -> Result<()> {
     }
     let redelivered = lease.call_ok(
         ops::API_V1_COMMAND_COLLECT_COMPLETED,
-        json!({"command_session_ids": [id]}),
+        json!({"command_session_ids": [&id]}),
     )?;
     assert!(
         array(&redelivered, "completions")?.is_empty(),
@@ -403,7 +403,7 @@ fn write_stdin_terminate_reaps_marker_process() -> Result<()> {
     let terminated = lease.call(
         ops::API_V1_WRITE_STDIN,
         json!({
-            "command_session_id": id,
+            "command_session_id": &id,
             "chars": "",
             "terminate": true,
             "yield_time_ms": 3000,
@@ -787,7 +787,7 @@ fn external_kill_of_foreground_keeps_group_running() -> Result<()> {
     kill_marker(&lease, &peer, 9)?;
     wait_for_marker_count(&lease, &peer, 0, Duration::from_secs(3))?;
     let completion = collect_completion(&lease, &id, Duration::from_secs(10))?;
-    assert_eq!(completion["command_session_id"], json!(id), "{completion}");
+    assert_eq!(completion["command_session_id"], json!(&id), "{completion}");
     wait_for_session_count(&lease, 0)?;
     wait_for_command_session_transcript_recycled(&lease, &id)?;
     wait_for_active_leases(&lease, 0)?;
@@ -822,7 +822,7 @@ fn write_stdin_to_completed_session_is_structured() -> Result<()> {
     let late = lease.call(
         ops::API_V1_WRITE_STDIN,
         json!({
-            "command_session_id": id,
+            "command_session_id": &id,
             "chars": "late\n",
             "yield_time_ms": 200,
             "max_output_tokens": 200
@@ -836,8 +836,66 @@ fn write_stdin_to_completed_session_is_structured() -> Result<()> {
     // Drain the parked completion so a recycled container starts clean.
     lease.call_ok(
         ops::API_V1_COMMAND_COLLECT_COMPLETED,
-        json!({ "command_session_ids": [id] }),
+        json!({ "command_session_ids": [&id] }),
     )?;
+    wait_for_active_leases(&lease, 0)?;
+    Ok(())
+}
+
+#[test]
+fn sigint_char_interrupts_foreground() -> Result<()> {
+    let Some(pool) = live_pool_or_skip()? else {
+        return Ok(());
+    };
+    let lease = pool.acquire()?;
+    // A Ctrl-C (`\x03`) char through write_stdin (NOT terminate) drives the
+    // interrupt path: the session detects the char, sends SIGINT to the process
+    // group, and reaches a non-ok terminal result distinct from terminate's
+    // SIGTERM/SIGKILL path. Depending on shell timing, the runner can observe the
+    // signal as exit 130 or as the shell's nonzero interrupted-command status.
+    let started = lease.call_ok(
+        ops::API_V1_EXEC_COMMAND,
+        json!({
+            "cmd": "bash -lc 'echo sigint-ready; exec sleep 60'",
+            "yield_time_ms": 1000,
+            "timeout_seconds": 120,
+            "max_output_tokens": 1000
+        }),
+    )?;
+    assert_eq!(as_str(&started, "status")?, "running", "{started}");
+    assert!(stdout(&started).contains("sigint-ready"), "{started}");
+    let id = as_str(&started, "command_session_id")?.to_owned();
+
+    let interrupted = lease.call(
+        ops::API_V1_WRITE_STDIN,
+        json!({
+            "command_session_id": &id,
+            "chars": "\u{3}",
+            "yield_time_ms": 2000,
+            "max_output_tokens": 1000
+        }),
+    )?;
+    let result = if as_str(&interrupted, "status")? == "running" {
+        let completion = collect_completion(&lease, &id, Duration::from_secs(10))?;
+        completion
+            .get("result")
+            .context("completion result")?
+            .clone()
+    } else {
+        interrupted
+    };
+    assert_ne!(
+        as_str(&result, "status")?,
+        "ok",
+        "a Ctrl-C interrupt must not finalize as ok: {result}"
+    );
+    let exit_code = as_i64(&result, "exit_code")?;
+    assert!(
+        exit_code == 1 || exit_code == 130 || signal_coded_exit(exit_code),
+        "Ctrl-C should finalize with a nonzero interrupt-shaped exit code: {result}"
+    );
+    wait_for_session_count(&lease, 0)?;
+    wait_for_command_session_transcript_recycled(&lease, &id)?;
     wait_for_active_leases(&lease, 0)?;
     Ok(())
 }

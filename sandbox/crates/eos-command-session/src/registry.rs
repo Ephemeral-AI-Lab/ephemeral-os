@@ -75,6 +75,13 @@ impl CommandSessionRegistry {
     }
 
     #[must_use]
+    pub(crate) fn completed_result(&self, id: &str) -> Option<CommandResponse> {
+        lock(&self.completed)
+            .get(id)
+            .map(|completion| completion.result.clone())
+    }
+
+    #[must_use]
     pub(crate) fn collect_completed(&self, request: &CollectCompleted) -> CollectCompletedResponse {
         let wanted: Option<HashSet<String>> = request
             .command_session_ids

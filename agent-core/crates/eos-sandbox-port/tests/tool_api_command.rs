@@ -6,8 +6,9 @@ use std::sync::Mutex;
 use async_trait::async_trait;
 use eos_sandbox_port::{
     cancel_command_session, collect_command_completions, exec_command, exec_dispatch_timeout,
-    exec_stdin, CommandSessionCancelRequest, DaemonOp, ExecCommandRequest, ExecStdinRequest,
-    SandboxPortError, SandboxRequestBase, SandboxTransport,
+    exec_stdin, read_command_progress, CommandSessionCancelRequest, DaemonOp, ExecCommandRequest,
+    ExecStdinRequest, ReadCommandProgressRequest, SandboxPortError, SandboxRequestBase,
+    SandboxTransport,
 };
 use eos_types::{JsonObject, SandboxId};
 use serde_json::{json, Value};
@@ -120,32 +121,46 @@ async fn exec_command_builds_payload_and_uses_exec_timeout() {
 }
 
 #[tokio::test]
-async fn exec_stdin_forwards_terminate_only_when_true() {
+async fn exec_stdin_builds_input_only_payload() {
     let transport = RecordingTransport::ok(command_response());
-    let mut request = ExecStdinRequest {
+    let request = ExecStdinRequest {
         base: base(),
         command_session_id: "cmd-1".parse().expect("command session id"),
         chars: "input".to_owned(),
-        yield_time_ms: Some(10),
-        max_output_tokens: Some(64),
-        terminate: false,
     };
 
     exec_stdin(&transport, &sandbox_id(), &request)
         .await
-        .expect("stdin without terminate");
-    request.terminate = true;
-    exec_stdin(&transport, &sandbox_id(), &request)
-        .await
-        .expect("stdin with terminate");
+        .expect("stdin write");
 
     let calls = transport.calls();
-    assert_eq!(calls.len(), 2);
+    assert_eq!(calls.len(), 1);
     assert_eq!(calls[0].op, DaemonOp::ExecStdin);
     assert_eq!(calls[0].payload["command_session_id"], json!("cmd-1"));
     assert_eq!(calls[0].payload["chars"], json!("input"));
     assert!(!calls[0].payload.contains_key("terminate"));
-    assert_eq!(calls[1].payload["terminate"], json!(true));
+    assert!(!calls[0].payload.contains_key("yield_time_ms"));
+    assert!(!calls[0].payload.contains_key("max_output_tokens"));
+}
+
+#[tokio::test]
+async fn read_command_progress_uses_command_read_progress_op() {
+    let transport = RecordingTransport::ok(command_response());
+    let request = ReadCommandProgressRequest {
+        base: base(),
+        command_session_id: "cmd-1".parse().expect("command session id"),
+        last_n_lines: 25,
+    };
+
+    read_command_progress(&transport, &sandbox_id(), &request)
+        .await
+        .expect("read progress");
+
+    let calls = transport.calls();
+    assert_eq!(calls.len(), 1);
+    assert_eq!(calls[0].op, DaemonOp::CommandReadProgress);
+    assert_eq!(calls[0].payload["command_session_id"], json!("cmd-1"));
+    assert_eq!(calls[0].payload["last_n_lines"], json!(25));
 }
 
 #[tokio::test]

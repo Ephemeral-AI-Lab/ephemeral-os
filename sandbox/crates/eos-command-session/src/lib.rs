@@ -20,9 +20,13 @@ pub mod config {
 pub use config::CommandSessionConfig;
 pub use error::CommandSessionError;
 pub use manager::{CommandSessionManager, SweepReport};
-pub use output::{utf8_consumable_prefix_len, CommandSessionOutput, CommandSessionOutputCursor};
+pub use output::{
+    tail_lines, utf8_consumable_prefix_len, CommandSessionOutput, CommandSessionOutputCursor,
+};
 pub use registry::CommandSessionCompletion;
-pub use request::{CancelCommandSession, CollectCompleted, StartCommandSession, WriteStdin};
+pub use request::{
+    CancelCommandSession, CollectCompleted, ReadCommandProgress, StartCommandSession, WriteStdin,
+};
 pub use response::{CollectCompletedResponse, CommandResponse};
 
 pub type DynCommandWorkspacePolicy =

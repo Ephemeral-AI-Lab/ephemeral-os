@@ -19,6 +19,19 @@ pub(super) fn require_command_string(args: &Value, key: &str) -> Result<String, 
     Ok(value.to_owned())
 }
 
+pub(super) fn require_nonempty_string(args: &Value, key: &str) -> Result<String, DaemonError> {
+    let value = args
+        .get(key)
+        .and_then(Value::as_str)
+        .ok_or_else(|| DaemonError::InvalidEnvelope(format!("{key} is required")))?;
+    if value.is_empty() {
+        return Err(DaemonError::InvalidEnvelope(format!(
+            "{key} must be non-empty"
+        )));
+    }
+    Ok(value.to_owned())
+}
+
 pub(super) fn caller_id_arg(args: &Value) -> &str {
     args.get("caller_id")
         .and_then(Value::as_str)

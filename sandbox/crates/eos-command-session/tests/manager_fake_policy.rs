@@ -2,8 +2,8 @@ use std::path::PathBuf;
 use std::sync::{Arc, Mutex, MutexGuard};
 
 use eos_command_session::{
-    CancelCommandSession, CollectCompleted, CommandSessionConfig, CommandSessionManager,
-    StartCommandSession, WriteStdin,
+    CollectCompleted, CommandResponse, CommandSessionCompletion, CommandSessionConfig,
+    CommandSessionManager, ReadCommandProgress, StartCommandSession, WriteStdin,
 };
 use eos_workspace_api::{
     CommandWorkspacePolicy, FinalizeCommandRequest, PrepareCommandRequest,
@@ -108,7 +108,7 @@ fn manager_starts_boxed_policy_and_counts_by_caller() -> Result<(), Box<dyn std:
 }
 
 #[test]
-fn terminate_finalizes_through_policy_and_parks_completion(
+fn ctrl_c_finalizes_through_policy_and_parks_completion(
 ) -> Result<(), Box<dyn std::error::Error>> {
     let policy = FakePolicy::new();
     let manager = CommandSessionManager::new(CommandSessionConfig::default());
@@ -119,15 +119,12 @@ fn terminate_finalizes_through_policy_and_parks_completion(
 
     let response = manager.write_stdin(WriteStdin {
         command_session_id: command_session_id.clone(),
-        chars: "hello".to_owned(),
-        terminate: true,
-        yield_time_ms: 1,
-        max_output_tokens: None,
+        chars: "\u{3}".to_owned(),
     })?;
 
     assert_eq!(response.status, "cancelled");
     assert_eq!(response.exit_code, Some(130));
-    assert_eq!(response.stdout, "hello");
+    assert_eq!(response.stdout, "");
     assert_eq!(response.workspace_mode, Some(WorkspaceMode::default()));
     assert_eq!(manager.count_by_caller(Some("caller-1")), 0);
     assert_eq!(lock(&policy.finalize_calls)?.len(), 1);
@@ -145,36 +142,30 @@ fn terminate_finalizes_through_policy_and_parks_completion(
 }
 
 #[test]
-fn cancel_can_claim_late_completion_once() -> Result<(), Box<dyn std::error::Error>> {
+fn read_progress_reads_parked_completion_without_consuming(
+) -> Result<(), Box<dyn std::error::Error>> {
     let manager = CommandSessionManager::new(CommandSessionConfig::default());
-    let started = manager.start(start_request("caller-1", "sleep 10"), FakePolicy::new())?;
-    let command_session_id = started.command_session_id.ok_or_else(|| {
-        std::io::Error::other("running response should include command_session_id")
-    })?;
+    manager.push_completed(test_completion("cmd_done", "caller-1", "a\nb\nc\n"));
 
-    let first = manager.cancel(CancelCommandSession {
-        command_session_id: command_session_id.clone(),
-        max_output_tokens: None,
+    let first = manager.read_progress(ReadCommandProgress {
+        command_session_id: "cmd_done".to_owned(),
+        last_n_lines: 2,
     })?;
-    assert_eq!(first.status, "cancelled");
+    assert_eq!(first.status, "ok");
+    assert_eq!(first.stdout, "b\nc\n");
 
-    let claimed = manager.write_stdin(WriteStdin {
-        command_session_id: command_session_id.clone(),
-        chars: String::new(),
-        terminate: false,
-        yield_time_ms: 1,
-        max_output_tokens: None,
+    let second = manager.read_progress(ReadCommandProgress {
+        command_session_id: "cmd_done".to_owned(),
+        last_n_lines: 1,
     })?;
-    assert_eq!(claimed.status, "cancelled");
+    assert_eq!(second.status, "ok");
+    assert_eq!(second.stdout, "c\n");
 
-    let second = manager.write_stdin(WriteStdin {
-        command_session_id,
-        chars: String::new(),
-        terminate: false,
-        yield_time_ms: 1,
-        max_output_tokens: None,
+    let remaining = manager.collect_completed(&CollectCompleted {
+        command_session_ids: Some(vec!["cmd_done".to_owned()]),
+        caller_id: Some("caller-1".to_owned()),
     });
-    assert!(second.is_err());
+    assert_eq!(remaining.completions.len(), 1);
     Ok(())
 }
 
@@ -193,4 +184,23 @@ fn lock<T>(mutex: &Mutex<T>) -> Result<MutexGuard<'_, T>, Box<dyn std::error::Er
     mutex
         .lock()
         .map_err(|error| format!("mutex poisoned: {error}").into())
+}
+
+fn test_completion(id: &str, caller_id: &str, stdout: &str) -> CommandSessionCompletion {
+    let result = CommandResponse {
+        status: "ok".to_owned(),
+        exit_code: Some(0),
+        stdout: stdout.to_owned(),
+        stderr: String::new(),
+        command_session_id: Some(id.to_owned()),
+        workspace_mode: None,
+        metadata: Value::Null,
+    };
+    CommandSessionCompletion {
+        command_session_id: id.to_owned(),
+        caller_id: caller_id.to_owned(),
+        command: "test".to_owned(),
+        result: result.clone(),
+        notification_result: result,
+    }
 }

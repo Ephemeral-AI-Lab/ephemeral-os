@@ -19,6 +19,13 @@ pub(crate) fn op_command_write_stdin(
     crate::services::command_session::op_command_write_stdin(args, context)
 }
 
+pub(crate) fn op_command_read_progress(
+    args: &Value,
+    context: DispatchContext<'_>,
+) -> Result<Value, DaemonError> {
+    crate::services::command_session::op_command_read_progress(args, context)
+}
+
 pub(crate) fn op_command_cancel(
     args: &Value,
     context: DispatchContext<'_>,

@@ -114,6 +114,10 @@ pub(crate) const BUILTIN_OPS: &[BuiltinOp] = &[
         handler: command_sessions::op_command_write_stdin,
     },
     BuiltinOp {
+        wire: protocol_ops::API_V1_COMMAND_READ_PROGRESS,
+        handler: command_sessions::op_command_read_progress,
+    },
+    BuiltinOp {
         wire: protocol_ops::API_V1_COMMAND_CANCEL,
         handler: command_sessions::op_command_cancel,
     },
