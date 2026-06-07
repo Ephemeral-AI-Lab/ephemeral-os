@@ -82,7 +82,10 @@ pub(crate) fn op_edit_file(
     Ok(edit_response(outcome))
 }
 
-fn read_request(args: &Value, context: DispatchContext<'_>) -> Result<ReadFileRequest, DaemonError> {
+fn read_request(
+    args: &Value,
+    context: DispatchContext<'_>,
+) -> Result<ReadFileRequest, DaemonError> {
     Ok(ReadFileRequest {
         path: require_string(args, "path")?,
         max_read_bytes: context

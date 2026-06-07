@@ -6,8 +6,8 @@ use eos_types::JsonObject;
 use serde_json::{json, Value};
 
 use super::super::exec_command::ExecCommand;
-use super::super::read_file::ReadFile;
 use super::super::read_command_progress::ReadCommandProgress;
+use super::super::read_file::ReadFile;
 use super::super::write_stdin::WriteStdin;
 use crate::core::metadata::ExecutionMetadata;
 use crate::runtime::executor::ToolExecutor;
@@ -77,7 +77,6 @@ async fn exec_command_rejects_invalid_numeric_bounds() {
     for input in [
         obj(&[("cmd", json!("true")), ("yield_time_ms", json!(30_001))]),
         obj(&[("cmd", json!("true")), ("timeout", json!(0))]),
-        obj(&[("cmd", json!("true")), ("max_output_tokens", json!(0))]),
     ] {
         let res = tool.execute(&input, &ctx).await.expect("ok");
         assert!(res.is_error, "{}", res.output);
@@ -175,13 +174,15 @@ async fn write_stdin_rejects_invalid_inputs() {
     let tool = WriteStdin::new(command_service(transport));
     let ctx = metadata();
     for input in [
-        obj(&[
-            ("command_session_id", json!("cs-7")),
-            ("chars", json!("")),
-        ]),
+        obj(&[("command_session_id", json!("cs-7")), ("chars", json!(""))]),
         obj(&[
             ("command_session_id", json!("cs-7")),
             ("chars", json!("a\u{3}")),
+        ]),
+        obj(&[
+            ("command_session_id", json!("cs-7")),
+            ("chars", json!("x")),
+            ("yield_time_ms", json!(30_001)),
         ]),
         obj(&[("command_session_id", json!("")), ("chars", json!("x"))]),
     ] {
@@ -223,13 +224,24 @@ async fn read_command_progress_rejects_invalid_bounds() {
     let tool = ReadCommandProgress::new(command_service(transport));
     let ctx = metadata();
     for input in [
-        obj(&[("command_session_id", json!("cs-7")), ("last_n_lines", json!(0))]),
-        obj(&[("command_session_id", json!("cs-7")), ("last_n_lines", json!(201))]),
-        obj(&[("command_session_id", json!("")), ("last_n_lines", json!(1))]),
+        obj(&[
+            ("command_session_id", json!("cs-7")),
+            ("last_n_lines", json!(0)),
+        ]),
+        obj(&[
+            ("command_session_id", json!("cs-7")),
+            ("last_n_lines", json!(201)),
+        ]),
+        obj(&[
+            ("command_session_id", json!("")),
+            ("last_n_lines", json!(1)),
+        ]),
     ] {
         let res = tool.execute(&input, &ctx).await.expect("ok");
         assert!(res.is_error, "{}", res.output);
-        assert!(res.output.contains("Invalid input for read_command_progress"));
+        assert!(res
+            .output
+            .contains("Invalid input for read_command_progress"));
     }
 }
 

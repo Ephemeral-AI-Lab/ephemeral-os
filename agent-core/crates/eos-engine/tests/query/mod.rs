@@ -5,20 +5,21 @@
 use std::collections::BTreeSet;
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicUsize, Ordering};
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
 use async_trait::async_trait;
 use eos_engine::{
-    run_query, EngineError, EngineStream, EventSource, NotificationService, PromptReportRecorder,
-    QueryContext, QueryExitReason, QueryStream, StreamEvent,
+    run_query, AssistantMessageComplete, EngineError, EngineStream, EventSource,
+    NotificationService, PromptReportRecorder, QueryContext, QueryExitReason, QueryStream,
+    StreamEvent,
 };
-use eos_llm_client::{ContentBlock, LlmRequest, Message, ToolSpec};
+use eos_llm_client::{ContentBlock, LlmRequest, Message, MessageRole, ToolSpec, UsageSnapshot};
 use eos_testkit::{metadata, run_until, tool_use_turn, ScriptedSource};
 use eos_tools::{
     ExecutionMetadata, NotificationSink, OutputShape, RegisteredTool, SystemNotification,
     ToolError, ToolExecutor, ToolIntent, ToolName, ToolRegistry, ToolResult,
 };
-use eos_types::{AgentRunId, JsonObject};
+use eos_types::{AgentRunId, JsonObject, ToolUseId};
 use futures::StreamExt;
 use serde_json::{json, Value};
 
@@ -36,6 +37,31 @@ impl ToolExecutor for CannedExecutor {
     ) -> Result<ToolResult, ToolError> {
         self.calls.fetch_add(1, Ordering::SeqCst);
         Ok(self.result.clone())
+    }
+}
+
+struct SequenceExecutor {
+    results: Mutex<Vec<ToolResult>>,
+    calls: Arc<AtomicUsize>,
+}
+
+#[async_trait]
+impl ToolExecutor for SequenceExecutor {
+    async fn execute(
+        &self,
+        _input: &JsonObject,
+        _ctx: &ExecutionMetadata,
+    ) -> Result<ToolResult, ToolError> {
+        self.calls.fetch_add(1, Ordering::SeqCst);
+        let mut results = self.results.lock().expect("result lock");
+        if results.len() > 1 {
+            Ok(results.remove(0))
+        } else {
+            Ok(results
+                .first()
+                .cloned()
+                .unwrap_or_else(|| ToolResult::error("missing scripted result")))
+        }
     }
 }
 
@@ -91,6 +117,29 @@ fn canned_tool(
     let calls = Arc::new(AtomicUsize::new(0));
     let executor = CannedExecutor {
         result,
+        calls: calls.clone(),
+    };
+    (
+        RegisteredTool::new(
+            name,
+            ToolIntent::ReadOnly,
+            is_terminal,
+            spec(name),
+            OutputShape::Text,
+            Arc::new(executor),
+        ),
+        calls,
+    )
+}
+
+fn sequence_tool(
+    name: ToolName,
+    is_terminal: bool,
+    results: Vec<ToolResult>,
+) -> (RegisteredTool, Arc<AtomicUsize>) {
+    let calls = Arc::new(AtomicUsize::new(0));
+    let executor = SequenceExecutor {
+        results: Mutex::new(results),
         calls: calls.clone(),
     };
     (
@@ -169,6 +218,36 @@ fn saw_completed(events: &[StreamEvent], tool_name: &str, output: &str, terminal
     })
 }
 
+fn streamed_tool_turn(tool_use_id: &str, tool_name: &str, input: &Value) -> Vec<StreamEvent> {
+    let input = input.as_object().cloned().unwrap_or_default();
+    let tool_use_id: ToolUseId = tool_use_id.parse().expect("tool use id");
+    vec![
+        StreamEvent::ToolUseDelta {
+            agent_name: String::new(),
+            agent_run_id: None,
+            tool_use_id: tool_use_id.clone(),
+            name: tool_name.to_owned(),
+            input: input.clone(),
+        },
+        StreamEvent::AssistantMessageComplete {
+            agent_name: String::new(),
+            agent_run_id: None,
+            payload: Box::new(AssistantMessageComplete {
+                message: Message {
+                    role: MessageRole::Assistant,
+                    content: vec![ContentBlock::ToolUse {
+                        tool_use_id,
+                        name: tool_name.to_owned(),
+                        input,
+                    }],
+                },
+                usage: UsageSnapshot::default(),
+                stop_reason: None,
+            }),
+        },
+    ]
+}
+
 fn transcript_has_tool_result(
     messages: &[Message],
     tool_use_id: &str,
@@ -226,6 +305,63 @@ async fn run_query_dispatches_non_terminal_tool_and_appends_result_message() {
         false
     ));
     assert_eq!(ctx.exit_reason, Some(QueryExitReason::ToolStop));
+}
+
+#[tokio::test]
+async fn run_query_counts_streamed_tool_use_once() {
+    let (read_file, read_calls) = canned_tool(ToolName::ReadFile, false, ToolResult::ok("read ok"));
+    let source = Arc::new(ScriptedSource::new(vec![streamed_tool_turn(
+        "toolu_read",
+        "read_file",
+        &json!({"path": "README.md"}),
+    )]));
+    let mut ctx = ctx(source, registry(vec![read_file]), BTreeSet::new());
+    let mut messages = vec![Message::from_user_text("start")];
+
+    let mut stream = run_query(&mut ctx, &mut messages);
+    let events = run_until(&mut stream, |event| {
+        matches!(
+            event,
+            StreamEvent::ToolExecutionCompleted { tool_name, .. } if tool_name == "read_file"
+        )
+    })
+    .await;
+    drop(stream);
+
+    assert_eq!(read_calls.load(Ordering::SeqCst), 1);
+    assert_eq!(
+        ctx.tool_calls_used, 1,
+        "streamed ToolUseDelta and final assistant ToolUse share one id"
+    );
+    assert!(saw_completed(&events, "read_file", "read ok", false));
+}
+
+#[tokio::test]
+async fn run_query_counts_completion_only_tool_use_once() {
+    let (read_file, read_calls) = canned_tool(ToolName::ReadFile, false, ToolResult::ok("read ok"));
+    let source = Arc::new(ScriptedSource::new(vec![tool_use_turn(
+        "toolu_read",
+        "read_file",
+        json!({"path": "README.md"}),
+    )]));
+    let mut ctx = ctx(source, registry(vec![read_file]), BTreeSet::new());
+    let mut messages = vec![Message::from_user_text("start")];
+
+    let mut stream = run_query(&mut ctx, &mut messages);
+    let _events = run_until(&mut stream, |event| {
+        matches!(
+            event,
+            StreamEvent::ToolExecutionCompleted { tool_name, .. } if tool_name == "read_file"
+        )
+    })
+    .await;
+    drop(stream);
+
+    assert_eq!(read_calls.load(Ordering::SeqCst), 1);
+    assert_eq!(
+        ctx.tool_calls_used, 1,
+        "assistant-complete tool calls count even without ToolUseDelta"
+    );
 }
 
 #[tokio::test]
@@ -302,6 +438,42 @@ async fn run_query_terminal_tool_error_does_not_set_tool_stop() {
     ));
     assert_eq!(ctx.exit_reason, None);
     assert!(ctx.terminal_result.is_none());
+}
+
+#[tokio::test]
+async fn run_query_terminal_tool_error_can_retry_to_tool_stop() {
+    let (submit_root, calls) = sequence_tool(
+        ToolName::SubmitRootOutcome,
+        true,
+        vec![
+            ToolResult::error("validation failed"),
+            ToolResult::ok("done"),
+        ],
+    );
+    let source = Arc::new(ScriptedSource::new(vec![
+        tool_use_turn("toolu_bad", "submit_root_outcome", json!({})),
+        tool_use_turn("toolu_stop", "submit_root_outcome", json!({})),
+    ]));
+    let mut ctx = ctx(
+        source,
+        registry(vec![submit_root]),
+        BTreeSet::from([ToolName::SubmitRootOutcome]),
+    );
+    let mut messages = vec![Message::from_user_text("start")];
+
+    let events = collect_stream(run_query(&mut ctx, &mut messages))
+        .await
+        .expect("query drains");
+
+    assert_eq!(calls.load(Ordering::SeqCst), 2);
+    assert_eq!(ctx.exit_reason, Some(QueryExitReason::ToolStop));
+    assert!(saw_completed(
+        &events,
+        "submit_root_outcome",
+        "validation failed",
+        false
+    ));
+    assert!(saw_completed(&events, "submit_root_outcome", "done", true));
 }
 
 #[tokio::test]

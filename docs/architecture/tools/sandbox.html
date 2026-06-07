@@ -57,7 +57,7 @@
   </ol>
 </nav>
 
-<p><code>agent-core/crates/eos-tools/src/tools/sandbox</code> is the current Rust agent-facing tool folder for file, command, and isolated-workspace work inside a sandboxed workspace. Its registry returns <code>read_file</code>, <code>write_file</code>, <code>edit_file</code>, <code>multi_edit</code>, <code>exec_command</code>, and <code>write_stdin</code>, and it also includes the isolated workspace lifecycle tools in the same sandbox context so the engine can register one coherent sandbox tool surface. Legacy Python exposed <code>glob</code> and <code>grep</code>; Rust intentionally deletes them from both the model-facing tool registry and the raw daemon/protocol/runner surface.</p>
+<p><code>agent-core/crates/eos-tools/src/tools/sandbox</code> is the current Rust agent-facing tool folder for file, command, and isolated-workspace work inside a sandboxed workspace. Its registry returns <code>read_file</code>, <code>write_file</code>, <code>edit_file</code>, <code>multi_edit</code>, <code>exec_command</code>, <code>write_stdin</code>, and <code>read_command_progress</code>, and it also includes the isolated workspace lifecycle tools in the same sandbox context so the engine can register one coherent sandbox tool surface. Legacy Python exposed <code>glob</code> and <code>grep</code>; Rust intentionally deletes them from both the model-facing tool registry and the raw daemon/protocol/runner surface.</p>
 <div class="summary">
   <ul>
     <li>Read/write/edit wrappers normalize tool input and call the public <code>sandbox.api</code> facade.</li>
@@ -68,7 +68,7 @@
 </div>
 <div class="diagram" aria-label="Sandbox tool routing workflow">
   <div class="flow-row">
-    <div class="node info"><strong>Tool wrapper</strong><small><code>read_file</code>, <code>write_file</code>, <code>edit_file</code>, <code>exec_command</code>, <code>write_stdin</code></small></div>
+    <div class="node info"><strong>Tool wrapper</strong><small><code>read_file</code>, <code>write_file</code>, <code>edit_file</code>, <code>exec_command</code>, <code>write_stdin</code>, <code>read_command_progress</code></small></div>
     <div class="node"><strong><code>sandbox.api.tool</code></strong><small>typed request, audit wrapper, daemon op</small></div>
     <div class="node"><strong>Daemon envelope</strong><small>in-flight registration and plugin/isolation gates</small></div>
     <div class="node good"><strong>Workspace dispatcher</strong><small>isolated, direct LayerStack/OCC, or overlay</small></div>
@@ -93,7 +93,8 @@
     <tr><td><code>write_file</code></td><td>Write allowed</td><td>Create or overwrite one file. Mutation results are normalized through the sandbox tool mutation result helper.</td><td><code>sandbox_api.write_file</code></td></tr>
     <tr><td><code>edit_file</code></td><td>Write allowed</td><td>Apply search/replace edits and preserve conflict/status fields in the tool result.</td><td><code>sandbox_api.edit_file</code></td></tr>
     <tr><td><code>exec_command</code></td><td>Write allowed</td><td>Run a finite command or start a command session, return stdout/stderr/exit code, and surface changed paths/conflict metadata.</td><td><code>sandbox_api.exec_command</code></td></tr>
-    <tr><td><code>write_stdin</code></td><td>Write allowed</td><td>Send input to an active command session, or poll by passing empty <code>chars</code>.</td><td><code>sandbox_api.write_stdin</code></td></tr>
+    <tr><td><code>write_stdin</code></td><td>Write allowed</td><td>Send non-empty input to an active command session, then wait up to <code>yield_time_ms</code> for output or completion. Exact Ctrl-C/Ctrl-D cancels the session.</td><td><code>sandbox_api.write_stdin</code></td></tr>
+    <tr><td><code>read_command_progress</code></td><td>Read-only</td><td>Read a stateless tail snapshot from an active or parked command session without writing stdin.</td><td><code>sandbox_api.read_command_progress</code></td></tr>
   </tbody>
 </table>
 <p>The read/write/edit wrappers construct typed request models and delegate to the API facade rather than touching provider or filesystem code directly. Write and edit route through a shared mutation normalization layer so status, conflicts, changed paths, mutation source, and timing fields stay stable for the engine and Workflow context consumers.</p>
@@ -127,7 +128,7 @@
   <ol>
     <li><span>The engine dispatches a tool call through the tool framework with <code>SANDBOX_CONTEXT</code>.</span></li>
     <li><span>The tool wrapper builds a typed request and calls <code>sandbox.api</code>.</span></li>
-    <li><span>The facade calls daemon op names such as <code>api.v1.read_file</code>, <code>api.v1.write_file</code>, <code>api.v1.edit_file</code>, <code>api.v1.shell</code>, <code>api.v1.exec_command</code>, <code>api.v1.write_stdin</code>, <code>api.v1.command.cancel</code>, and <code>api.v1.command.collect_completed</code>. Rust does not register raw daemon search ops.</span></li>
+    <li><span>The facade calls daemon op names such as <code>api.v1.read_file</code>, <code>api.v1.write_file</code>, <code>api.v1.edit_file</code>, <code>api.v1.shell</code>, <code>api.v1.exec_command</code>, <code>api.v1.write_stdin</code>, <code>api.v1.command.read_progress</code>, <code>api.v1.command.cancel</code>, and <code>api.v1.command.collect_completed</code>. Rust does not register raw daemon search ops.</span></li>
     <li><span><code>daemon.rpc.dispatcher</code> validates the envelope, registers in-flight state, blocks plugin ops when this agent has an active isolated workspace, and invokes the registered handler.</span></li>
     <li><span><code>daemon.builtin_operations</code> maps workspace ops to <code>dispatch_workspace_tool_call</code> with the static verb and intent.</span></li>
   </ol>
@@ -154,7 +155,7 @@
   data-last-reviewed-commit="HEAD-plus-worktree"
   data-evidence-paths="sandbox/crates/eos-daemon/src/services/command_session/mod.rs sandbox/crates/eos-command-session/src/manager.rs">
 <h2>Command Sessions and Policy</h2>
-<p><code>exec_command</code> is declared <code>WRITE_ALLOWED</code> and is the model-facing replacement for the deleted public <code>shell</code> tool package. There is no public <code>mode switch</code> switch: completed commands return directly, while still-running commands return <code>command_session_id</code> and are controlled with <code>write_stdin</code>. Generic <code>background=true</code> and generic background check/wait/cancel tools are not exposed.</p>
+<p><code>exec_command</code> is declared <code>WRITE_ALLOWED</code> and is the model-facing replacement for the deleted public <code>shell</code> tool package. There is no public <code>mode switch</code> switch: completed commands return directly, while still-running commands return <code>command_session_id</code> and are controlled with <code>write_stdin</code> for non-empty stdin or exact Ctrl-C/Ctrl-D teardown and <code>read_command_progress</code> for stdin-free progress reads. Generic <code>background=true</code> and generic background check/wait/cancel tools are not exposed.</p>
 <p>Before daemon dispatch, <code>exec_command</code> runs destructive git and destructive shell pre-hooks through the <a class="wiki-link" href="hooks.html">Tool Hooks</a> pipeline. These hooks block command forms that would bypass the sandbox write/audit path or destructively mutate workspace/system state. That policy keeps commands useful for builds and tests while steering file edits toward <code>edit_file</code> and <code>write_file</code>.</p>
 <div class="callout">
   <span class="label">Session connection</span>

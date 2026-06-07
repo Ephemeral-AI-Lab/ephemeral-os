@@ -4,20 +4,21 @@ expression: schema
 ---
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "ExecCommandRequest",
-  "description": "Run or start a managed command session.",
+  "title": "ReadCommandProgressRequest",
+  "description": "Read a stateless tail snapshot from an open command session.",
   "type": "object",
   "required": [
     "caller_id",
-    "cmd"
+    "command_session_id",
+    "last_n_lines"
   ],
   "properties": {
     "caller_id": {
       "description": "Opaque sandbox caller identity for audit and routing.",
       "type": "string"
     },
-    "cmd": {
-      "description": "Command line to run.",
+    "command_session_id": {
+      "description": "Target command-session id.",
       "type": "string"
     },
     "description": {
@@ -32,21 +33,9 @@ expression: schema
         "null"
       ]
     },
-    "timeout": {
-      "description": "Command timeout in seconds.",
-      "type": [
-        "integer",
-        "null"
-      ],
-      "format": "uint32",
-      "minimum": 0.0
-    },
-    "yield_time_ms": {
-      "description": "Yield window in milliseconds before returning partial output.",
-      "type": [
-        "integer",
-        "null"
-      ],
+    "last_n_lines": {
+      "description": "Number of trailing lines to return.",
+      "type": "integer",
       "format": "uint32",
       "minimum": 0.0
     }

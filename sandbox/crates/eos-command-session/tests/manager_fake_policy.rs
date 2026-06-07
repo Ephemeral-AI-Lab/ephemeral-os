@@ -108,8 +108,8 @@ fn manager_starts_boxed_policy_and_counts_by_caller() -> Result<(), Box<dyn std:
 }
 
 #[test]
-fn ctrl_c_finalizes_through_policy_and_parks_completion(
-) -> Result<(), Box<dyn std::error::Error>> {
+fn ctrl_c_finalizes_through_policy_and_parks_completion() -> Result<(), Box<dyn std::error::Error>>
+{
     let policy = FakePolicy::new();
     let manager = CommandSessionManager::new(CommandSessionConfig::default());
     let started = manager.start(start_request("caller-1", "cat"), policy.clone())?;
@@ -120,6 +120,7 @@ fn ctrl_c_finalizes_through_policy_and_parks_completion(
     let response = manager.write_stdin(WriteStdin {
         command_session_id: command_session_id.clone(),
         chars: "\u{3}".to_owned(),
+        yield_time_ms: 1,
     })?;
 
     assert_eq!(response.status, "cancelled");
@@ -176,7 +177,6 @@ fn start_request(caller_id: &str, cmd: &str) -> StartCommandSession {
         cmd: cmd.to_owned(),
         timeout_seconds: None,
         yield_time_ms: 1,
-        max_output_tokens: None,
     }
 }
 

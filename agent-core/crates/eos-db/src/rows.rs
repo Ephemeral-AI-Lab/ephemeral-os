@@ -618,10 +618,7 @@ mod tests {
         UtcDateTime::from_offset(OffsetDateTime::UNIX_EPOCH)
     }
 
-    fn base_cols(
-        stage: AttemptStage,
-        status: AttemptStatus,
-    ) -> AttemptLifecycleColumns<'static> {
+    fn base_cols(stage: AttemptStage, status: AttemptStatus) -> AttemptLifecycleColumns<'static> {
         AttemptLifecycleColumns {
             stage,
             status,

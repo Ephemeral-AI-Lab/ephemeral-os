@@ -97,11 +97,7 @@ fn ctx() -> crate::ExecutionMetadata {
     ctx
 }
 
-async fn execute(
-    registry: &ToolRegistry,
-    name: ToolName,
-    input: JsonObject,
-) -> crate::ToolResult {
+async fn execute(registry: &ToolRegistry, name: ToolName, input: JsonObject) -> crate::ToolResult {
     registry
         .get(name)
         .expect("registered")
@@ -147,7 +143,10 @@ async fn enter_isolated_workspace_forwards_explicit_layer_stack_root() {
     assert!(!res.is_error, "{res:?}");
     let calls = transport.calls();
     assert_eq!(calls[0].op, DaemonOp::IsolatedWorkspaceEnter);
-    assert_eq!(calls[0].payload["layer_stack_root"], json!("/custom/layers"));
+    assert_eq!(
+        calls[0].payload["layer_stack_root"],
+        json!("/custom/layers")
+    );
 }
 
 #[tokio::test]
@@ -204,7 +203,12 @@ async fn exit_isolated_workspace_uses_default_grace() {
     let transport = RecordingTransport::ok(json!({"success": true}));
     let registry = registry(transport.clone());
 
-    let res = execute(&registry, ToolName::ExitIsolatedWorkspace, JsonObject::new()).await;
+    let res = execute(
+        &registry,
+        ToolName::ExitIsolatedWorkspace,
+        JsonObject::new(),
+    )
+    .await;
 
     assert!(!res.is_error, "{res:?}");
     let calls = transport.calls();
@@ -240,7 +244,12 @@ async fn exit_isolated_workspace_renders_success_payload() {
     }));
     let registry = registry(transport);
 
-    let res = execute(&registry, ToolName::ExitIsolatedWorkspace, JsonObject::new()).await;
+    let res = execute(
+        &registry,
+        ToolName::ExitIsolatedWorkspace,
+        JsonObject::new(),
+    )
+    .await;
 
     assert!(!res.is_error, "{res:?}");
     let payload: Value = serde_json::from_str(&res.output).unwrap();
@@ -256,7 +265,12 @@ async fn exit_isolated_workspace_renders_api_failure_as_tool_error() {
     let transport = RecordingTransport::err(SandboxPortError::decode("bad lifecycle payload"));
     let registry = registry(transport);
 
-    let res = execute(&registry, ToolName::ExitIsolatedWorkspace, JsonObject::new()).await;
+    let res = execute(
+        &registry,
+        ToolName::ExitIsolatedWorkspace,
+        JsonObject::new(),
+    )
+    .await;
 
     assert!(res.is_error);
     let payload: Value = serde_json::from_str(&res.output).unwrap();

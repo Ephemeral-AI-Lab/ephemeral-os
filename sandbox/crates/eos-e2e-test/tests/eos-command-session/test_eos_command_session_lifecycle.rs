@@ -18,8 +18,7 @@ fn start_sleeping_session(lease: &eos_e2e_test::NodeLease<'_>, marker: &str) -> 
         json!({
             "cmd": format!("sh -c 'echo {marker}; sleep 60'"),
             "yield_time_ms": 500,
-            "timeout_seconds": 120,
-            "max_output_tokens": 1000
+            "timeout_seconds": 120
         }),
     )?;
     assert_eq!(as_str(&started, "status")?, "running");
@@ -33,7 +32,7 @@ fn start_sleeping_session(lease: &eos_e2e_test::NodeLease<'_>, marker: &str) -> 
 fn cancel_session(lease: &eos_e2e_test::NodeLease<'_>, id: &str) -> Result<Value> {
     let cancelled = lease.call(
         ops::API_V1_COMMAND_CANCEL,
-        json!({"command_session_id": id, "max_output_tokens": 1000}),
+        json!({"command_session_id": id}),
     )?;
     wait_for_command_session_transcript_recycled(lease, id)?;
     Ok(cancelled)
@@ -69,8 +68,7 @@ fn write_stdin_echo() -> Result<()> {
         json!({
             "cmd": "python3 -u -c 'import sys,time; print(\"ready\", flush=True); line=sys.stdin.readline().strip(); print(\"got:\" + line, flush=True); time.sleep(60)'",
             "yield_time_ms": 500,
-            "timeout_seconds": 120,
-            "max_output_tokens": 1000
+            "timeout_seconds": 120
         }),
     )?;
     let id = as_str(&started, "command_session_id")?.to_owned();
@@ -79,8 +77,7 @@ fn write_stdin_echo() -> Result<()> {
         json!({
             "command_session_id": &id,
             "chars": "payload\n",
-            "yield_time_ms": 2000,
-            "max_output_tokens": 1000
+            "yield_time_ms": 2000
         }),
     )?;
     assert!(
@@ -92,7 +89,7 @@ fn write_stdin_echo() -> Result<()> {
 }
 
 #[test]
-fn command_session_output_cursor_no_replay() -> Result<()> {
+fn read_command_progress_returns_stateless_tail_snapshot() -> Result<()> {
     let Some(pool) = live_pool_or_skip()? else {
         return Ok(());
     };
@@ -102,8 +99,7 @@ fn command_session_output_cursor_no_replay() -> Result<()> {
         json!({
             "cmd": "python3 -u -c 'import sys,time; print(\"cursor-first\", flush=True); line=sys.stdin.readline().strip(); print(\"cursor-second:\" + line, flush=True); time.sleep(60)'",
             "yield_time_ms": 500,
-            "timeout_seconds": 120,
-            "max_output_tokens": 1000
+            "timeout_seconds": 120
         }),
     )?;
     assert_eq!(as_str(&started, "status")?, "running");
@@ -118,32 +114,29 @@ fn command_session_output_cursor_no_replay() -> Result<()> {
         json!({
             "command_session_id": &id,
             "chars": "payload\n",
-            "yield_time_ms": 1500,
-            "max_output_tokens": 1000
+            "yield_time_ms": 1500
         }),
     )?;
     assert!(
         stdout(&second).contains("cursor-second:payload"),
-        "stdin poll should return newly produced output: {second}"
+        "stdin write should return newly produced output: {second}"
     );
     assert!(
         !stdout(&second).contains("cursor-first"),
-        "stdin poll must not replay already consumed output: {second}"
+        "stdin write must not replay already consumed output: {second}"
     );
 
-    let quiet = lease.call_ok(
-        ops::API_V1_WRITE_STDIN,
+    let progress = lease.call_ok(
+        ops::API_V1_COMMAND_READ_PROGRESS,
         json!({
             "command_session_id": &id,
-            "chars": "",
-            "yield_time_ms": 300,
-            "max_output_tokens": 1000
+            "last_n_lines": 10
         }),
     )?;
     assert!(
-        !stdout(&quiet).contains("cursor-first")
-            && !stdout(&quiet).contains("cursor-second:payload"),
-        "empty follow-up poll must not replay consumed output: {quiet}"
+        stdout(&progress).contains("cursor-first")
+            && stdout(&progress).contains("cursor-second:payload"),
+        "progress reads are stateless tail snapshots, not cursor polls: {progress}"
     );
     cancel_session(&lease, &id)?;
     Ok(())
@@ -160,8 +153,7 @@ fn collect_completed_drains() -> Result<()> {
         json!({
             "cmd": "sh -c 'echo queued; sleep 1; echo done'",
             "yield_time_ms": 100,
-            "timeout_seconds": 10,
-            "max_output_tokens": 1000
+            "timeout_seconds": 10
         }),
     )?;
     let id = as_str(&started, "command_session_id")?.to_owned();
@@ -213,8 +205,7 @@ fn finite_exec_before_yield_recycles_transient_transcript_file() -> Result<()> {
         json!({
             "cmd": format!("printf '{marker}\\n'"),
             "yield_time_ms": 3000,
-            "timeout_seconds": 30,
-            "max_output_tokens": 1000
+            "timeout_seconds": 30
         }),
     )?;
     assert_eq!(
@@ -251,8 +242,7 @@ fn completed_session_removes_transcript_file() -> Result<()> {
         json!({
             "cmd": "sh -c 'echo transcript-start; sleep 1; echo transcript-end'",
             "yield_time_ms": 100,
-            "timeout_seconds": 30,
-            "max_output_tokens": 1000
+            "timeout_seconds": 30
         }),
     )?;
     assert_eq!(as_str(&started, "status")?, "running", "{started}");
@@ -332,7 +322,7 @@ fn exec_timeout() -> Result<()> {
 }
 
 #[test]
-fn output_token_cap() -> Result<()> {
+fn output_burst_returns_default_window_without_token_cap() -> Result<()> {
     let Some(pool) = live_pool_or_skip()? else {
         return Ok(());
     };
@@ -342,14 +332,13 @@ fn output_token_cap() -> Result<()> {
         json!({
             "cmd": "python3 - <<'PY'\nimport sys, time\nsys.stdout.write('x' * 20000)\nsys.stdout.flush()\ntime.sleep(60)\nPY",
             "yield_time_ms": 500,
-            "timeout_seconds": 120,
-            "max_output_tokens": 20
+            "timeout_seconds": 120
         }),
     )?;
     assert_eq!(as_str(&exec, "status")?, "running");
     assert!(
-        stdout(&exec).len() < 20_000,
-        "max_output_tokens should cap returned stdout: {} bytes",
+        stdout(&exec).len() >= 20_000,
+        "exec_command should no longer expose a token cap; returned {} bytes",
         stdout(&exec).len()
     );
     let id = as_str(&exec, "command_session_id")?;
@@ -373,7 +362,7 @@ fn cancel_by_invocation_id_reports_already_done_for_idle_id() -> Result<()> {
 }
 
 #[test]
-fn write_stdin_terminate_reaps_marker_process() -> Result<()> {
+fn write_stdin_ctrl_d_reaps_marker_process() -> Result<()> {
     let Some(pool) = live_pool_or_skip()? else {
         return Ok(());
     };
@@ -383,36 +372,32 @@ fn write_stdin_terminate_reaps_marker_process() -> Result<()> {
         ops::API_V1_EXEC_COMMAND,
         json!({
             "cmd": format!(
-                "bash -lc 'bash -c \"exec -a {marker} sleep 60\" & python3 -u -c \"import sys,time; print(\\\"terminate-ready\\\", flush=True); sys.stdin.readline(); time.sleep(60)\"'"
+                "bash -lc 'bash -c \"exec -a {marker} sleep 60\" & python3 -u -c \"import sys,time; print(\\\"ctrl-d-ready\\\", flush=True); sys.stdin.readline(); time.sleep(60)\"'"
             ),
             "yield_time_ms": 1500,
-            "timeout_seconds": 120,
-            "max_output_tokens": 1000
+            "timeout_seconds": 120
         }),
     )?;
     assert_eq!(as_str(&started, "status")?, "running", "{started}");
     assert!(
-        stdout(&started).contains("terminate-ready"),
-        "stdin reader should be ready before terminate: {started}"
+        stdout(&started).contains("ctrl-d-ready"),
+        "stdin reader should be ready before Ctrl-D teardown: {started}"
     );
     let id = as_str(&started, "command_session_id")?.to_owned();
     wait_for_marker_at_least(&lease, &marker, 1)?;
 
-    // Terminate kills the session, so its hardened outcome is success:false;
-    // use `call` to read the structured terminal envelope rather than `call_ok`.
+    // Exact Ctrl-D is the public teardown path through write_stdin.
     let terminated = lease.call(
         ops::API_V1_WRITE_STDIN,
         json!({
             "command_session_id": &id,
-            "chars": "",
-            "terminate": true,
-            "yield_time_ms": 3000,
-            "max_output_tokens": 1000
+            "chars": "\u{4}",
+            "yield_time_ms": 3000
         }),
     )?;
     assert!(
         matches!(as_str(&terminated, "status")?, "cancelled" | "ok" | "error"),
-        "terminate should return a terminal status: {terminated}"
+        "Ctrl-D should return a terminal status: {terminated}"
     );
     wait_for_session_count(&lease, 0)?;
     wait_for_command_session_transcript_recycled(&lease, &id)?;
@@ -435,8 +420,7 @@ fn nohup_child_keeps_session_running() -> Result<()> {
                 "bash -lc 'nohup bash -c \"exec -a {marker} sleep 60\" >/dev/null 2>&1 & echo nohup-ready'"
             ),
             "yield_time_ms": 1000,
-            "timeout_seconds": 120,
-            "max_output_tokens": 1000
+            "timeout_seconds": 120
         }),
     )?;
     assert_eq!(
@@ -476,8 +460,7 @@ fn setsid_nohup_contract() -> Result<()> {
                 "bash -lc 'setsid nohup bash -c \"exec -a {marker} sleep 4\" >/dev/null 2>&1 & echo setsid-ready'"
             ),
             "yield_time_ms": 2000,
-            "timeout_seconds": 20,
-            "max_output_tokens": 1000
+            "timeout_seconds": 20
         }),
     )?;
     assert_eq!(
@@ -516,12 +499,10 @@ fn wait_for_session_stdout(
             bail!("session output never contained {marker}: {last}");
         }
         let poll = lease.call_ok(
-            ops::API_V1_WRITE_STDIN,
+            ops::API_V1_COMMAND_READ_PROGRESS,
             json!({
                 "command_session_id": session_id,
-                "chars": "",
-                "yield_time_ms": 250,
-                "max_output_tokens": 1000
+                "last_n_lines": 20
             }),
         )?;
         if stdout(&poll).contains(marker) {
@@ -592,7 +573,7 @@ fn wait_for_marker_count(
 /// Send `signal` to every container process whose argv carries `marker`, from a
 /// process fully outside the command session (a container `python3` exec). This
 /// is the "killed by another process" path: termination that did NOT come from
-/// the `cancel`/`write_stdin terminate` API. The scanner excludes its own pid so
+/// the `cancel` / Ctrl-C/Ctrl-D write_stdin API. The scanner excludes its own pid so
 /// it never signals itself (its argv carries `marker` too).
 fn kill_marker(lease: &NodeLease<'_>, marker: &str, signal: i32) -> Result<()> {
     let script = format!(
@@ -660,8 +641,7 @@ fn external_signal_kill_is_structured() -> Result<()> {
         json!({
             "cmd": format!("bash -lc 'echo kill-ready; exec -a {marker} sleep 60'"),
             "yield_time_ms": 1000,
-            "timeout_seconds": 120,
-            "max_output_tokens": 1000
+            "timeout_seconds": 120
         }),
     )?;
     assert_eq!(as_str(&started, "status")?, "running", "{started}");
@@ -704,8 +684,7 @@ fn self_kill_reports_signal_exit() -> Result<()> {
         json!({
             "cmd": "sh -c 'echo bye; kill -9 $$'",
             "yield_time_ms": 2000,
-            "timeout_seconds": 30,
-            "max_output_tokens": 1000
+            "timeout_seconds": 30
         }),
     )?;
     if as_str(&exec, "status")? == "running" {
@@ -753,8 +732,7 @@ fn external_kill_of_foreground_keeps_group_running() -> Result<()> {
                 "bash -lc 'bash -c \"exec -a {peer} sleep 60\" & echo group-ready; exec -a {fg} sleep 60'"
             ),
             "yield_time_ms": 1000,
-            "timeout_seconds": 120,
-            "max_output_tokens": 1000
+            "timeout_seconds": 120
         }),
     )?;
     assert_eq!(as_str(&started, "status")?, "running", "{started}");
@@ -809,8 +787,7 @@ fn write_stdin_to_completed_session_is_structured() -> Result<()> {
         json!({
             "cmd": "sh -c 'echo quick; sleep 1'",
             "yield_time_ms": 100,
-            "timeout_seconds": 30,
-            "max_output_tokens": 1000
+            "timeout_seconds": 30
         }),
     )?;
     let id = as_str(&started, "command_session_id")?.to_owned();
@@ -824,8 +801,7 @@ fn write_stdin_to_completed_session_is_structured() -> Result<()> {
         json!({
             "command_session_id": &id,
             "chars": "late\n",
-            "yield_time_ms": 200,
-            "max_output_tokens": 200
+            "yield_time_ms": 200
         }),
     )?;
     assert!(
@@ -843,23 +819,20 @@ fn write_stdin_to_completed_session_is_structured() -> Result<()> {
 }
 
 #[test]
-fn sigint_char_interrupts_foreground() -> Result<()> {
+fn ctrl_c_char_cancels_command_session() -> Result<()> {
     let Some(pool) = live_pool_or_skip()? else {
         return Ok(());
     };
     let lease = pool.acquire()?;
-    // A Ctrl-C (`\x03`) char through write_stdin (NOT terminate) drives the
-    // interrupt path: the session detects the char, sends SIGINT to the process
-    // group, and reaches a non-ok terminal result distinct from terminate's
-    // SIGTERM/SIGKILL path. Depending on shell timing, the runner can observe the
-    // signal as exit 130 or as the shell's nonzero interrupted-command status.
+    // A Ctrl-C (`\x03`) char through write_stdin is the public teardown channel:
+    // it routes through command-session cancel and does not get forwarded as PTY
+    // input.
     let started = lease.call_ok(
         ops::API_V1_EXEC_COMMAND,
         json!({
             "cmd": "bash -lc 'echo sigint-ready; exec sleep 60'",
             "yield_time_ms": 1000,
-            "timeout_seconds": 120,
-            "max_output_tokens": 1000
+            "timeout_seconds": 120
         }),
     )?;
     assert_eq!(as_str(&started, "status")?, "running", "{started}");
@@ -871,29 +844,15 @@ fn sigint_char_interrupts_foreground() -> Result<()> {
         json!({
             "command_session_id": &id,
             "chars": "\u{3}",
-            "yield_time_ms": 2000,
-            "max_output_tokens": 1000
+            "yield_time_ms": 2000
         }),
     )?;
-    let result = if as_str(&interrupted, "status")? == "running" {
-        let completion = collect_completion(&lease, &id, Duration::from_secs(10))?;
-        completion
-            .get("result")
-            .context("completion result")?
-            .clone()
-    } else {
-        interrupted
-    };
-    assert_ne!(
-        as_str(&result, "status")?,
-        "ok",
-        "a Ctrl-C interrupt must not finalize as ok: {result}"
+    assert_eq!(
+        as_str(&interrupted, "status")?,
+        "cancelled",
+        "{interrupted}"
     );
-    let exit_code = as_i64(&result, "exit_code")?;
-    assert!(
-        exit_code == 1 || exit_code == 130 || signal_coded_exit(exit_code),
-        "Ctrl-C should finalize with a nonzero interrupt-shaped exit code: {result}"
-    );
+    assert_eq!(as_i64(&interrupted, "exit_code")?, 130, "{interrupted}");
     wait_for_session_count(&lease, 0)?;
     wait_for_command_session_transcript_recycled(&lease, &id)?;
     wait_for_active_leases(&lease, 0)?;

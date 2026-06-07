@@ -52,9 +52,9 @@ pub use tool_api::{
     ensure_plugin_package, enter_isolated_workspace, exec_command, exec_stdin,
     exit_isolated_workspace, heartbeat, inflight_count, isolated_active, plugin_dispatch,
     plugin_ensure, read_command_progress, read_file, write_file, PluginDependencyScope,
-    PluginDispatchRequest, PluginEnsureRequest, PluginManifestDescriptor, PluginOperationDescriptor,
-    PluginPackageContract, PluginPackageDescriptor, PluginPackageEnsureRequest, PluginPackageFile,
-    PluginPackageTree, PluginRefreshStrategy, PluginServiceDescriptor, PluginServiceMode,
-    PluginSetupDescriptor,
+    PluginDispatchRequest, PluginEnsureRequest, PluginManifestDescriptor,
+    PluginOperationDescriptor, PluginPackageContract, PluginPackageDescriptor,
+    PluginPackageEnsureRequest, PluginPackageFile, PluginPackageTree, PluginRefreshStrategy,
+    PluginServiceDescriptor, PluginServiceMode, PluginSetupDescriptor,
 };
 pub use transport::SandboxTransport;

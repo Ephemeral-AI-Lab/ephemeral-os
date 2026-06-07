@@ -25,9 +25,6 @@ pub(super) struct ExecCommandInput {
     #[serde(default)]
     #[schemars(range(min = 1))]
     timeout: Option<u32>,
-    #[serde(default)]
-    #[schemars(range(min = 1))]
-    max_output_tokens: Option<u32>,
 }
 
 pub(super) struct ExecCommand {
@@ -51,12 +48,9 @@ impl ToolExecutor for ExecCommand {
             Ok(v) => v,
             Err(err) => return Ok(err),
         };
-        if let Some(err) = validate_command_timing(
-            ToolName::ExecCommand,
-            parsed.yield_time_ms,
-            parsed.timeout,
-            parsed.max_output_tokens,
-        ) {
+        if let Some(err) =
+            validate_command_timing(ToolName::ExecCommand, parsed.yield_time_ms, parsed.timeout)
+        {
             return Ok(err);
         }
         if parsed.cmd.is_empty() {
@@ -78,7 +72,6 @@ impl ToolExecutor for ExecCommand {
             cmd: parsed.cmd,
             yield_time_ms: Some(parsed.yield_time_ms),
             timeout: parsed.timeout,
-            max_output_tokens: parsed.max_output_tokens,
         };
         let result =
             match eos_sandbox_port::exec_command(&*self.service.transport, sandbox_id, &request)

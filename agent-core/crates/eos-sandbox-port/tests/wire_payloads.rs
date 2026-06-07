@@ -55,7 +55,13 @@ impl RecordingTransport {
     }
 
     fn typed(&self) -> (DaemonOp, JsonObject, u32) {
-        match self.calls.lock().expect("calls lock").first().expect("a call") {
+        match self
+            .calls
+            .lock()
+            .expect("calls lock")
+            .first()
+            .expect("a call")
+        {
             Recorded::Typed {
                 op,
                 payload,
@@ -66,7 +72,13 @@ impl RecordingTransport {
     }
 
     fn dynamic(&self) -> (String, JsonObject, u32) {
-        match self.calls.lock().expect("calls lock").first().expect("a call") {
+        match self
+            .calls
+            .lock()
+            .expect("calls lock")
+            .first()
+            .expect("a call")
+        {
             Recorded::Dynamic {
                 op,
                 payload,
@@ -86,11 +98,14 @@ impl SandboxTransport for RecordingTransport {
         payload: JsonObject,
         timeout_s: u32,
     ) -> Result<JsonObject, SandboxPortError> {
-        self.calls.lock().expect("calls lock").push(Recorded::Typed {
-            op,
-            payload,
-            timeout_s,
-        });
+        self.calls
+            .lock()
+            .expect("calls lock")
+            .push(Recorded::Typed {
+                op,
+                payload,
+                timeout_s,
+            });
         Ok(self.response.clone())
     }
 
@@ -205,7 +220,6 @@ async fn exec_command_payload_includes_set_options_and_omits_unset() {
             cmd: "ls".to_owned(),
             yield_time_ms: Some(500),
             timeout: Some(30),
-            max_output_tokens: None,
         },
     )
     .await
@@ -239,6 +253,7 @@ async fn exec_stdin_payload_is_input_only_and_keeps_invocation() {
             },
             command_session_id: session.clone(),
             chars: "y\n".to_owned(),
+            yield_time_ms: Some(250),
         },
     )
     .await
@@ -247,9 +262,9 @@ async fn exec_stdin_payload_is_input_only_and_keeps_invocation() {
     assert_eq!(op, DaemonOp::ExecStdin);
     assert_eq!(payload["command_session_id"], json!("cs-1"));
     assert_eq!(payload["chars"], json!("y\n"));
+    assert_eq!(payload["yield_time_ms"], json!(250));
     assert_eq!(payload["invocation_id"], json!("inv-9"));
     assert!(!payload.contains_key("terminate"));
-    assert!(!payload.contains_key("yield_time_ms"));
     assert!(!payload.contains_key("max_output_tokens"));
 }
 
@@ -336,10 +351,7 @@ async fn control_cancel_and_heartbeat_build_payloads() {
     heartbeat(
         &transport,
         &sandbox(),
-        &[
-            "inv-1".parse().expect("a"),
-            "inv-2".parse().expect("b"),
-        ],
+        &["inv-1".parse().expect("a"), "inv-2".parse().expect("b")],
     )
     .await
     .expect("heartbeat");
@@ -445,7 +457,10 @@ async fn plugin_ensure_builds_manifest_payload() {
     assert_eq!(payload["staged_package_root"], json!("/staged"));
     assert_eq!(payload["start_services"], json!(true));
     assert_eq!(payload["manifest"]["plugin_id"], json!("lsp"));
-    assert_eq!(payload["manifest"]["operations"][0]["op_name"], json!("hover"));
+    assert_eq!(
+        payload["manifest"]["operations"][0]["op_name"],
+        json!("hover")
+    );
 }
 
 #[test]
@@ -459,7 +474,10 @@ fn plugin_descriptor_serializes_with_snake_case_enums() {
         value["services"][0]["refresh_strategy"],
         json!("remount_workspace_and_notify")
     );
-    assert_eq!(value["package"]["dependency_scope"], json!("package_digest"));
+    assert_eq!(
+        value["package"]["dependency_scope"],
+        json!("package_digest")
+    );
 }
 
 fn sample_manifest() -> PluginManifestDescriptor {

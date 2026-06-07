@@ -158,7 +158,10 @@ async fn submit_planner_outcome_accepts_complete_plan() {
     assert!(!res.is_error, "{}", res.output);
     assert_eq!(res.output, "Accepted planner submission.");
     assert_eq!(res.metadata["submission_kind"], json!("planner_completes"));
-    assert_eq!(res.metadata["task_id"], json!(ctx.task_id.as_ref().unwrap().as_str()));
+    assert_eq!(
+        res.metadata["task_id"],
+        json!(ctx.task_id.as_ref().unwrap().as_str())
+    );
     assert_eq!(
         res.metadata["attempt_id"],
         json!(ctx.attempt_id.as_ref().map(AttemptId::as_str))
@@ -204,46 +207,85 @@ async fn submit_planner_outcome_rejects_blank_ids_specs_and_deferred_goal() {
 
     for input in [
         obj(&[
-            ("tasks", json!([{"id": " ", "agent_name": "coder", "needs": []}])),
+            (
+                "tasks",
+                json!([{"id": " ", "agent_name": "coder", "needs": []}]),
+            ),
             ("task_specs", json!({"g1": "do it"})),
-            ("reducers", json!([{"id": "r1", "needs": ["g1"], "prompt": "reduce"}])),
+            (
+                "reducers",
+                json!([{"id": "r1", "needs": ["g1"], "prompt": "reduce"}]),
+            ),
         ]),
         obj(&[
-            ("tasks", json!([{"id": "g1", "agent_name": " ", "needs": []}])),
+            (
+                "tasks",
+                json!([{"id": "g1", "agent_name": " ", "needs": []}]),
+            ),
             ("task_specs", json!({"g1": "do it"})),
-            ("reducers", json!([{"id": "r1", "needs": ["g1"], "prompt": "reduce"}])),
+            (
+                "reducers",
+                json!([{"id": "r1", "needs": ["g1"], "prompt": "reduce"}]),
+            ),
         ]),
         obj(&[
-            ("tasks", json!([{"id": "g1", "agent_name": "coder", "needs": [" "]}])),
+            (
+                "tasks",
+                json!([{"id": "g1", "agent_name": "coder", "needs": [" "]}]),
+            ),
             ("task_specs", json!({"g1": "do it"})),
-            ("reducers", json!([{"id": "r1", "needs": ["g1"], "prompt": "reduce"}])),
+            (
+                "reducers",
+                json!([{"id": "r1", "needs": ["g1"], "prompt": "reduce"}]),
+            ),
         ]),
         obj(&[
-            ("tasks", json!([{"id": "g1", "agent_name": "coder", "needs": []}])),
+            (
+                "tasks",
+                json!([{"id": "g1", "agent_name": "coder", "needs": []}]),
+            ),
             ("task_specs", json!({"g1": " "})),
-            ("reducers", json!([{"id": "r1", "needs": ["g1"], "prompt": "reduce"}])),
+            (
+                "reducers",
+                json!([{"id": "r1", "needs": ["g1"], "prompt": "reduce"}]),
+            ),
         ]),
         obj(&[
-            ("tasks", json!([{"id": "g1", "agent_name": "coder", "needs": []}])),
+            (
+                "tasks",
+                json!([{"id": "g1", "agent_name": "coder", "needs": []}]),
+            ),
             ("task_specs", json!({"g1": "do it"})),
-            ("reducers", json!([{"id": " ", "needs": ["g1"], "prompt": "reduce"}])),
+            (
+                "reducers",
+                json!([{"id": " ", "needs": ["g1"], "prompt": "reduce"}]),
+            ),
         ]),
         obj(&[
-            ("tasks", json!([{"id": "g1", "agent_name": "coder", "needs": []}])),
+            (
+                "tasks",
+                json!([{"id": "g1", "agent_name": "coder", "needs": []}]),
+            ),
             ("task_specs", json!({"g1": "do it"})),
-            ("reducers", json!([{"id": "r1", "needs": [" "], "prompt": "reduce"}])),
+            (
+                "reducers",
+                json!([{"id": "r1", "needs": [" "], "prompt": "reduce"}]),
+            ),
         ]),
         obj(&[
-            ("tasks", json!([{"id": "g1", "agent_name": "coder", "needs": []}])),
+            (
+                "tasks",
+                json!([{"id": "g1", "agent_name": "coder", "needs": []}]),
+            ),
             ("task_specs", json!({"g1": "do it"})),
-            ("reducers", json!([{"id": "r1", "needs": ["g1"], "prompt": " "} ])),
+            (
+                "reducers",
+                json!([{"id": "r1", "needs": ["g1"], "prompt": " "} ]),
+            ),
         ]),
         {
             let mut input = complete_plan_input();
-            input.insert(
-                "deferred_goal_for_next_iteration".to_owned(),
-                json!("   "),
-            );
+            input.insert("deferred_goal_for_next_iteration".to_owned(), json!("   "));
             input
         },
     ] {
@@ -262,14 +304,26 @@ async fn submit_planner_outcome_rejects_missing_or_extra_task_specs() {
 
     for input in [
         obj(&[
-            ("tasks", json!([{"id": "g1", "agent_name": "coder", "needs": []}])),
+            (
+                "tasks",
+                json!([{"id": "g1", "agent_name": "coder", "needs": []}]),
+            ),
             ("task_specs", json!({})),
-            ("reducers", json!([{"id": "r1", "needs": ["g1"], "prompt": "reduce"}])),
+            (
+                "reducers",
+                json!([{"id": "r1", "needs": ["g1"], "prompt": "reduce"}]),
+            ),
         ]),
         obj(&[
-            ("tasks", json!([{"id": "g1", "agent_name": "coder", "needs": []}])),
+            (
+                "tasks",
+                json!([{"id": "g1", "agent_name": "coder", "needs": []}]),
+            ),
             ("task_specs", json!({"g1": "do it", "g2": "extra"})),
-            ("reducers", json!([{"id": "r1", "needs": ["g1"], "prompt": "reduce"}])),
+            (
+                "reducers",
+                json!([{"id": "r1", "needs": ["g1"], "prompt": "reduce"}]),
+            ),
         ]),
     ] {
         let res = execute(&registry, ToolName::SubmitPlannerOutcome, input, &ctx)
@@ -295,7 +349,10 @@ async fn submit_planner_outcome_returns_rejected_ack_without_recording_success()
 
     assert!(res.is_error);
     assert_eq!(res.output, "plan rejected");
-    assert!(res.metadata.is_empty(), "rejected ack must not carry success metadata");
+    assert!(
+        res.metadata.is_empty(),
+        "rejected ack must not carry success metadata"
+    );
 }
 
 #[tokio::test]
@@ -305,11 +362,7 @@ async fn submit_generator_outcome_records_success_and_failure_metadata() {
     let ctx = attempt_ctx();
 
     for (status, expected_kind, expected_status) in [
-        (
-            "success",
-            "generator_success",
-            TaskOutcomeStatus::Success,
-        ),
+        ("success", "generator_success", TaskOutcomeStatus::Success),
         ("failed", "generator_failure", TaskOutcomeStatus::Failed),
     ] {
         let res = execute(
@@ -322,7 +375,10 @@ async fn submit_generator_outcome_records_success_and_failure_metadata() {
         .unwrap();
         assert!(!res.is_error, "{}", res.output);
         assert_eq!(res.metadata["submission_kind"], json!(expected_kind));
-        assert_eq!(res.metadata["task_id"], json!(ctx.task_id.as_ref().unwrap().as_str()));
+        assert_eq!(
+            res.metadata["task_id"],
+            json!(ctx.task_id.as_ref().unwrap().as_str())
+        );
         assert_eq!(
             port.generators.lock().unwrap().last().unwrap().status,
             expected_status
@@ -370,7 +426,10 @@ async fn submit_reducer_outcome_records_success_and_failure_metadata() {
         .unwrap();
         assert!(!res.is_error, "{}", res.output);
         assert_eq!(res.metadata["submission_kind"], json!(expected_kind));
-        assert_eq!(res.metadata["task_id"], json!(ctx.task_id.as_ref().unwrap().as_str()));
+        assert_eq!(
+            res.metadata["task_id"],
+            json!(ctx.task_id.as_ref().unwrap().as_str())
+        );
         assert_eq!(
             port.reducers.lock().unwrap().last().unwrap().status,
             expected_status

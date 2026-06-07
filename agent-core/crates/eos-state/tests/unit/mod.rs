@@ -219,7 +219,10 @@ fn model_registration_no_class_path_dispatch() {
 #[test]
 fn plan_value_validators_reject_blank_and_out_of_range() {
     // PlanNodeId: nonblank accepted; blank/whitespace rejected (incl. TryFrom).
-    assert_eq!(PlanNodeId::new("n1").expect("nonblank node id").as_str(), "n1");
+    assert_eq!(
+        PlanNodeId::new("n1").expect("nonblank node id").as_str(),
+        "n1"
+    );
     assert!(PlanNodeId::new("").is_err());
     assert!(PlanNodeId::new("   ").is_err());
     assert!(PlanNodeId::try_from("  ").is_err());

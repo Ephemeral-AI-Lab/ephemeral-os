@@ -147,7 +147,6 @@ pub(super) fn validate_command_timing(
     tool: ToolName,
     yield_time_ms: u32,
     timeout: Option<u32>,
-    max_output_tokens: Option<u32>,
 ) -> Option<ToolResult> {
     if yield_time_ms > MAX_YIELD_TIME_MS {
         return Some(invalid_input(
@@ -157,9 +156,6 @@ pub(super) fn validate_command_timing(
     }
     if timeout == Some(0) {
         return Some(invalid_input(tool, "timeout must be >= 1"));
-    }
-    if max_output_tokens == Some(0) {
-        return Some(invalid_input(tool, "max_output_tokens must be >= 1"));
     }
     None
 }

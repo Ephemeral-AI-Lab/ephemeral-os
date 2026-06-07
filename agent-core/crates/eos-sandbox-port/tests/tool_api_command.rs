@@ -95,7 +95,6 @@ async fn exec_command_builds_payload_and_uses_exec_timeout() {
         cmd: "printf ok".to_owned(),
         yield_time_ms: Some(25),
         timeout: Some(7),
-        max_output_tokens: Some(128),
     };
 
     let result = exec_command(&transport, &sandbox_id(), &request)
@@ -117,7 +116,7 @@ async fn exec_command_builds_payload_and_uses_exec_timeout() {
     assert_eq!(calls[0].payload["cmd"], json!("printf ok"));
     assert_eq!(calls[0].payload["yield_time_ms"], json!(25));
     assert_eq!(calls[0].payload["timeout"], json!(7));
-    assert_eq!(calls[0].payload["max_output_tokens"], json!(128));
+    assert!(!calls[0].payload.contains_key("max_output_tokens"));
 }
 
 #[tokio::test]
@@ -127,6 +126,7 @@ async fn exec_stdin_builds_input_only_payload() {
         base: base(),
         command_session_id: "cmd-1".parse().expect("command session id"),
         chars: "input".to_owned(),
+        yield_time_ms: Some(10),
     };
 
     exec_stdin(&transport, &sandbox_id(), &request)
@@ -138,8 +138,8 @@ async fn exec_stdin_builds_input_only_payload() {
     assert_eq!(calls[0].op, DaemonOp::ExecStdin);
     assert_eq!(calls[0].payload["command_session_id"], json!("cmd-1"));
     assert_eq!(calls[0].payload["chars"], json!("input"));
+    assert_eq!(calls[0].payload["yield_time_ms"], json!(10));
     assert!(!calls[0].payload.contains_key("terminate"));
-    assert!(!calls[0].payload.contains_key("yield_time_ms"));
     assert!(!calls[0].payload.contains_key("max_output_tokens"));
 }
 

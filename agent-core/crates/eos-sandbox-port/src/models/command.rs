@@ -31,9 +31,6 @@ pub struct ExecCommandRequest {
     /// Command timeout in seconds.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub timeout: Option<u32>,
-    /// Cap on output tokens returned.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub max_output_tokens: Option<u32>,
 }
 
 /// Result of [`ExecCommandRequest`] / command-session writes.
@@ -171,6 +168,9 @@ pub struct ExecStdinRequest {
     pub command_session_id: CommandSessionId,
     /// Characters (stdin) to write.
     pub chars: String,
+    /// Yield window in milliseconds before returning partial output.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub yield_time_ms: Option<u32>,
 }
 
 /// Read a stateless tail snapshot from an open command session.

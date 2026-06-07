@@ -84,3 +84,125 @@ fn finalize_reason(exit_reason: Option<QueryExitReason>, error: Option<&str>) ->
         (None, None) => "parent agent exited".to_owned(),
     }
 }
+
+#[cfg(test)]
+mod tests {
+    #![allow(clippy::expect_used)]
+
+    use async_trait::async_trait;
+    use eos_tools::{
+        BackgroundInflightReport, SpawnedSubagent, StartedSubagent, StartedWorkflowHandle,
+        ToolError, ToolResult,
+    };
+    use eos_types::{SubagentSessionId, WorkflowSessionId};
+    use tokio::sync::mpsc;
+    use tokio::time::{timeout, Duration};
+
+    use super::*;
+
+    #[derive(Debug)]
+    struct RecordingSupervisor {
+        tx: mpsc::UnboundedSender<(Option<AgentRunId>, String)>,
+    }
+
+    impl eos_tools::ports::Sealed for RecordingSupervisor {}
+
+    fn empty_report() -> BackgroundInflightReport {
+        BackgroundInflightReport {
+            total: 0,
+            subagent: 0,
+            workflow: 0,
+            command_session: 0,
+        }
+    }
+
+    #[async_trait]
+    impl BackgroundSupervisorPort for RecordingSupervisor {
+        async fn spawn(
+            &self,
+            _ctx: &eos_tools::ExecutionMetadata,
+            _agent_name: &str,
+            _prompt: &str,
+        ) -> Result<SpawnedSubagent, ToolError> {
+            Ok(SpawnedSubagent::Launched(StartedSubagent {
+                subagent_session_id: "subagent_1".parse().expect("subagent id"),
+            }))
+        }
+
+        async fn progress(
+            &self,
+            _subagent_session_id: &SubagentSessionId,
+            _last_n_messages: u8,
+        ) -> Result<ToolResult, ToolError> {
+            Ok(ToolResult::ok("running"))
+        }
+
+        async fn cancel(
+            &self,
+            _subagent_session_id: &SubagentSessionId,
+            _reason: &str,
+        ) -> Result<ToolResult, ToolError> {
+            Ok(ToolResult::ok("cancelled"))
+        }
+
+        async fn inflight_report(
+            &self,
+            _agent_run_id: Option<&AgentRunId>,
+        ) -> BackgroundInflightReport {
+            empty_report()
+        }
+
+        async fn cancel_subagents_for_agent_run(
+            &self,
+            _agent_run_id: &AgentRunId,
+        ) -> BackgroundInflightReport {
+            empty_report()
+        }
+
+        async fn register_workflow(
+            &self,
+            _agent_run_id: &AgentRunId,
+            _workflow: &StartedWorkflowHandle,
+        ) {
+        }
+
+        async fn cancel_workflow_record(
+            &self,
+            _workflow_task_id: &WorkflowSessionId,
+            _reason: &str,
+        ) -> bool {
+            false
+        }
+
+        async fn cancel_for_parent_exit(
+            &self,
+            agent_run_id: Option<&AgentRunId>,
+            _workflow_control: Option<Arc<dyn WorkflowControlPort>>,
+            reason: &str,
+        ) -> BackgroundInflightReport {
+            self.tx
+                .send((agent_run_id.cloned(), reason.to_owned()))
+                .expect("send cleanup");
+            empty_report()
+        }
+    }
+
+    #[tokio::test]
+    async fn drop_spawns_background_cleanup_when_still_armed() {
+        let (tx, mut rx) = mpsc::unbounded_channel();
+        let supervisor = Arc::new(RecordingSupervisor { tx });
+        let agent_run_id: AgentRunId = "run-drop".parse().expect("agent run id");
+
+        {
+            let _finalizer =
+                BackgroundRunFinalizer::new(Some(supervisor), None, vec![agent_run_id.clone()]);
+        }
+
+        let (reported_run_id, reason) = timeout(Duration::from_millis(100), rx.recv())
+            .await
+            .expect("cleanup spawned")
+            .expect("cleanup message");
+        assert_eq!(reported_run_id.as_ref(), Some(&agent_run_id));
+        assert_eq!(reason, "engine run dropped before background finalization");
+    }
+}

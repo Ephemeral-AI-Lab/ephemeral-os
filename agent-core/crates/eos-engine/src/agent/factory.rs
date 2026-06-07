@@ -178,7 +178,7 @@ mod tests {
     use std::num::NonZeroU32;
 
     use eos_agent_def::{AgentName, AgentRole, AgentType};
-    use eos_llm_client::ToolSpec;
+    use eos_llm_client::{LlmClient, LlmRequest, LlmStream, ProviderError, ToolSpec};
     use eos_tools::{OutputShape, RegisteredTool, ToolExecutor, ToolIntent, ToolResult};
     use eos_types::JsonObject;
     use serde_json::json;
@@ -197,6 +197,16 @@ mod tests {
             _ctx: &ExecutionMetadata,
         ) -> Result<ToolResult, eos_tools::ToolError> {
             Ok(ToolResult::ok("ok"))
+        }
+    }
+
+    #[derive(Debug)]
+    struct NoopClient;
+
+    #[async_trait::async_trait]
+    impl LlmClient for NoopClient {
+        async fn stream_message(&self, _request: LlmRequest) -> Result<LlmStream, ProviderError> {
+            Ok(Box::pin(futures::stream::empty()))
         }
     }
 
@@ -275,5 +285,54 @@ mod tests {
         assert!(ctx.system_prompt.contains("submit_root_outcome"));
         assert_eq!(ctx.notification_rules.len(), 4);
         assert_eq!(ctx.tool_registry.len(), 2);
+    }
+
+    #[test]
+    fn factory_rejects_terminal_name_registered_as_non_terminal() {
+        let mut agent = agent();
+        agent.terminals = vec!["read_file".to_owned()];
+
+        let err = build_query_context(BuildQueryContextInput {
+            agent,
+            model: "model".to_owned(),
+            client: None,
+            event_source: None,
+            registry: registry(),
+            base_system_prompt: String::new(),
+            max_tokens: 32,
+            cwd: PathBuf::new(),
+            agent_run_id: AgentRunId::new_v4(),
+            task_id: None,
+            tool_metadata: metadata(),
+            notifier: NotificationService::new(),
+            audit: None,
+            run_handles: None,
+        })
+        .expect_err("non-terminal registry entry must fail");
+
+        assert!(err.to_string().contains("listed as terminal"));
+    }
+
+    #[test]
+    fn factory_uses_provider_event_source_when_no_override_is_supplied() {
+        let ctx = build_query_context(BuildQueryContextInput {
+            agent: agent(),
+            model: "model".to_owned(),
+            client: Some(Arc::new(NoopClient)),
+            event_source: None,
+            registry: registry(),
+            base_system_prompt: String::new(),
+            max_tokens: 32,
+            cwd: PathBuf::new(),
+            agent_run_id: AgentRunId::new_v4(),
+            task_id: None,
+            tool_metadata: metadata(),
+            notifier: NotificationService::new(),
+            audit: None,
+            run_handles: None,
+        })
+        .expect("context");
+
+        assert!(ctx.event_source.is_some());
     }
 }

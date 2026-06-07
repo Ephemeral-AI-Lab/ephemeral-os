@@ -13,14 +13,17 @@ use crate::runtime::executor::ToolExecutor;
 
 use super::super::CommandToolService;
 use super::lib::{
-    command_result_value, command_tool_result, command_tool_result_from_value, invalid_input,
-    is_command_session_not_found, request_base,
+    command_result_value, command_tool_result, command_tool_result_from_value, default_yield_ms,
+    invalid_input, is_command_session_not_found, request_base, validate_command_timing,
 };
 
 #[derive(Debug, Deserialize, Serialize, JsonSchema)]
 pub(super) struct WriteStdinInput {
     command_session_id: CommandSessionId,
     chars: String,
+    #[serde(default = "default_yield_ms")]
+    #[schemars(default = "default_yield_ms", range(max = 30000))]
+    yield_time_ms: u32,
 }
 
 pub(super) struct WriteStdin {
@@ -50,8 +53,15 @@ impl ToolExecutor for WriteStdin {
                 "command_session_id must be non-empty",
             ));
         }
+        if let Some(err) = validate_command_timing(ToolName::WriteStdin, parsed.yield_time_ms, None)
+        {
+            return Ok(err);
+        }
         if parsed.chars.is_empty() {
-            return Ok(invalid_input(ToolName::WriteStdin, "chars must be non-empty"));
+            return Ok(invalid_input(
+                ToolName::WriteStdin,
+                "chars must be non-empty",
+            ));
         }
         let command_session_id = &parsed.command_session_id;
         let sandbox_id = ctx.require_sandbox_id()?;
@@ -73,6 +83,7 @@ impl ToolExecutor for WriteStdin {
                 base: request_base(ctx, "write_stdin")?,
                 command_session_id: command_session_id.clone(),
                 chars: parsed.chars.clone(),
+                yield_time_ms: Some(parsed.yield_time_ms),
             };
             eos_sandbox_port::exec_stdin(&*self.service.transport, sandbox_id, &request).await
         };

@@ -444,6 +444,7 @@ fn sort_value(value: &Value) -> Value {
 #[cfg(test)]
 mod tests {
     use eos_llm_client::{ContentBlock, Message, MessageRole};
+    use serde_json::json;
 
     use super::*;
 
@@ -490,5 +491,63 @@ mod tests {
             "parent user_msg_1 shown verbatim"
         );
         assert!(msg.contains("delivered as a system prompt"));
+    }
+
+    #[test]
+    fn transcript_renders_system_notifications_as_evidence() {
+        let msgs = [
+            Message::from_user_text("seed prompt"),
+            Message {
+                role: MessageRole::User,
+                content: vec![ContentBlock::SystemNotification {
+                    text: "[BACKGROUND COMPLETED] cmd_1".to_owned(),
+                }],
+            },
+        ];
+
+        let transcript = build_parent_transcript(&msgs).expect("transcript");
+
+        assert!(transcript.contains("system notification"));
+        assert!(transcript.contains("[BACKGROUND COMPLETED] cmd_1"));
+    }
+
+    #[test]
+    fn transcript_elides_claude_code_write_inputs_but_keeps_eos_write_inputs() {
+        let mut input = JsonObject::new();
+        input.insert("content".to_owned(), json!("secret edit"));
+
+        let claude = render_tool_use("Edit", &input);
+        assert!(claude.contains("input elided"));
+        assert!(!claude.contains("secret edit"));
+
+        let eos = render_tool_use("write_file", &input);
+        assert!(eos.contains("secret edit"));
+    }
+
+    #[test]
+    fn transcript_truncates_long_bash_commands() {
+        let mut input = JsonObject::new();
+        input.insert(
+            "command".to_owned(),
+            json!("x".repeat(MAX_BASH_COMMAND_CHARS + 10)),
+        );
+
+        let rendered = render_tool_use("Bash", &input);
+
+        assert!(rendered.contains("… (truncated)"));
+        assert!(rendered.len() < MAX_BASH_COMMAND_CHARS + 100);
+    }
+
+    #[test]
+    fn transcript_byte_cap_elides_oldest_messages() {
+        let rendered = (0..30)
+            .map(|idx| format!("message {idx}: {}", "x".repeat(2_000)))
+            .collect::<Vec<_>>();
+
+        let capped = apply_byte_cap(&rendered);
+
+        assert!(capped.contains("earlier messages elided"));
+        assert!(capped.len() <= MAX_TRANSCRIPT_BYTES);
+        assert!(capped.contains("message 29"));
     }
 }

@@ -1,11 +1,11 @@
 use std::os::fd::RawFd;
 
+use crate::namespace::HeldNamespaces;
 use crate::namespace::{rbind_proc, unshare_namespace_stack};
 use crate::network::{
     bring_loopback_up, configure_namespace_veth, disable_ipv6_ra, flush_ipv6_default_route,
     parse_network_config, NetworkConfig,
 };
-use crate::namespace::HeldNamespaces;
 use crate::{NsHolderError, NET_READY, NS_UP, READY, TEST_HOLDER_CRASH_ENV};
 
 /// Where the handshake driver currently is.

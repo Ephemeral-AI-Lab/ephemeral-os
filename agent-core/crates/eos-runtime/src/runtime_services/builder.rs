@@ -521,3 +521,60 @@ fn validate_agent_tools(agents: &AgentRegistry, registry: &ToolRegistry) -> Resu
     }
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // Build a `ProvidersConfig` (it is `#[non_exhaustive]`, so no struct literal)
+    // by deserializing. `active` is serialized from the enum so the test never
+    // hardcodes the snake_case wire string.
+    fn providers_with(active: ProviderKind, extra: serde_json::Value) -> ProvidersConfig {
+        let mut obj = serde_json::Map::new();
+        obj.insert(
+            "active".to_owned(),
+            serde_json::to_value(active).expect("active wire value"),
+        );
+        if let serde_json::Value::Object(extra) = extra {
+            obj.extend(extra);
+        }
+        serde_json::from_value(serde_json::Value::Object(obj)).expect("providers config")
+    }
+
+    // The config layer validates `providers`; this is the runtime's *consumption*
+    // of it to build a client — only reached in production, since every runtime
+    // test injects a fake LLM client. The provider-secret and active-model gates
+    // were untested.
+    //
+    // `Arc<dyn LlmClient>` is not `Debug`, so `expect_err` is unavailable; match.
+    fn client_error(providers: &ProvidersConfig) -> ProviderError {
+        match default_llm_client(providers) {
+            Err(err) => err,
+            Ok(_) => panic!("expected default_llm_client to error"),
+        }
+    }
+
+    #[test]
+    fn default_llm_client_requires_active_provider_secret() {
+        let providers = providers_with(ProviderKind::OpenAiApi, serde_json::json!({}));
+        let err = client_error(&providers);
+        assert!(err.to_string().contains("is required"), "{err}");
+    }
+
+    #[test]
+    fn default_llm_client_requires_active_model() {
+        let providers = providers_with(
+            ProviderKind::OpenAiApi,
+            serde_json::json!({ "openai_api": { "api_key": "sk-test" } }),
+        );
+        let err = client_error(&providers);
+        assert!(err.to_string().contains("models.active"), "{err}");
+    }
+
+    #[test]
+    fn default_llm_client_unconfigured_provider_builds_placeholder() {
+        let providers = ProvidersConfig::default();
+        assert!(matches!(providers.active, ProviderKind::Unconfigured));
+        assert!(default_llm_client(&providers).is_ok());
+    }
+}

@@ -8,8 +8,8 @@ mod edit_file;
 mod exec_command;
 mod lib;
 mod multi_edit;
-mod read_file;
 mod read_command_progress;
+mod read_file;
 mod write_file;
 mod write_stdin;
 

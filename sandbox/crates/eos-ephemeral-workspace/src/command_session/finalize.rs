@@ -234,7 +234,11 @@ fn insert_tree_resource_timings(
 ) {
     let file_entries = stats.files.saturating_add(stats.symlinks);
     let entry_count = file_entries.saturating_add(stats.dirs);
-    insert_resource_timing(timings, &format!("{prefix}_tree_exists"), entry_count.min(1));
+    insert_resource_timing(
+        timings,
+        &format!("{prefix}_tree_exists"),
+        entry_count.min(1),
+    );
     insert_resource_timing(timings, &format!("{prefix}_tree_bytes"), stats.bytes);
     insert_resource_timing(timings, &format!("{prefix}_tree_file_count"), file_entries);
     insert_resource_timing(timings, &format!("{prefix}_tree_dir_count"), stats.dirs);

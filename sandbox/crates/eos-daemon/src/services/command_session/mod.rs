@@ -41,12 +41,11 @@ use ports::ephemeral::DaemonEphemeralCommandPort;
 use ports::isolated::DaemonIsolatedCommandPort;
 #[cfg(not(target_os = "linux"))]
 use wire::command_result;
+#[cfg(target_os = "linux")]
+use wire::require_nonempty_string;
 #[cfg(test)]
 use wire::should_publish_command_session_completion;
-use wire::{
-    caller_id_arg, command_session_not_found, optional_u64, require_command_string,
-    require_nonempty_string,
-};
+use wire::{caller_id_arg, command_session_not_found, optional_u64, require_command_string};
 #[cfg(target_os = "linux")]
 use wire::{
     collect_completed_request, command_response_to_wire, command_session_completion_to_wire,
@@ -268,7 +267,6 @@ fn start_manager_command_session(
         cmd: cmd.to_owned(),
         timeout_seconds,
         yield_time_ms,
-        max_output_tokens: optional_u64(args, "max_output_tokens"),
     };
     let response = command_session_manager()
         .start_boxed(request, policy)
@@ -290,6 +288,8 @@ pub(crate) fn command_session_write_stdin(args: &Value) -> Result<Value, DaemonE
     let request = WriteStdin {
         command_session_id: require_command_string(args, "command_session_id")?,
         chars: require_nonempty_string(args, "chars")?,
+        yield_time_ms: optional_u64(args, "yield_time_ms")
+            .unwrap_or(command_session_config().default_yield_time_ms),
     };
     command_session_response_to_wire(command_session_manager().write_stdin(request))
 }
@@ -299,9 +299,9 @@ pub(crate) fn command_session_read_progress(args: &Value) -> Result<Value, Daemo
     let last_n_lines = optional_u64(args, "last_n_lines").unwrap_or(50);
     let request = ReadCommandProgress {
         command_session_id: require_command_string(args, "command_session_id")?,
-        last_n_lines: last_n_lines.try_into().map_err(|_| {
-            DaemonError::InvalidEnvelope("last_n_lines is too large".to_owned())
-        })?,
+        last_n_lines: last_n_lines
+            .try_into()
+            .map_err(|_| DaemonError::InvalidEnvelope("last_n_lines is too large".to_owned()))?,
     };
     command_session_response_to_wire(command_session_manager().read_progress(request))
 }

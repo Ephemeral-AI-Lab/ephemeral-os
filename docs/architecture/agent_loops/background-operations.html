@@ -118,7 +118,7 @@
   <div><b>Retired generic tools</b><span><code>check_background_task_result</code>, <code>wait_background_tasks</code>, and <code>cancel_background_task</code> are no longer synthesized for agents or catalog output.</span></div>
   <div><b><code>check_subagent_progress</code></b><span>Requires <code>subagent_session_id</code> and returns the latest child-agent message snapshot while running, or the terminal tool output once <code>run_subagent</code> has received a terminal result.</span></div>
   <div><b><code>cancel_subagent</code></b><span>Requires <code>subagent_session_id</code> and requests the subagent early-stop path.</span></div>
-  <div><b>Command-session controls</b><span><code>write_stdin</code> operates on <code>command_session_id</code> for both input and polling; daemon cancel/collect/count ops stay internal.</span></div>
+  <div><b>Command-session controls</b><span><code>write_stdin</code> writes non-empty input and waits briefly for output; <code>read_command_progress</code> reads progress without stdin; daemon cancel/collect/count ops stay internal.</span></div>
   <div><b>Workflow controls</b><span><code>check_workflow_status</code> and <code>cancel_workflow</code> operate on the delegated workflow handle returned by <code>delegate_workflow</code>.</span></div>
 </div>
 </section>
@@ -133,7 +133,7 @@
     <div class="node"><strong>Daemon registry</strong><small>tracks command session id, agent id, command, status</small></div>
   </div>
   <div class="flow-row">
-    <div class="node"><strong>Poll</strong><small><code>write_stdin</code> collects output</small></div>
+    <div class="node"><strong>Progress</strong><small><code>read_command_progress</code> tails output</small></div>
     <div class="node"><strong>Cancel</strong><small><code>api.v1.command.cancel</code> targets the command session</small></div>
     <div class="node"><strong>Exit gate</strong><small>isolated workspace drains active command sessions</small></div>
   </div>

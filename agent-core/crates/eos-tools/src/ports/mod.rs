@@ -344,8 +344,8 @@ pub trait CommandSessionSupervisorPort: Sealed + Send + Sync {
     );
 
     /// Whether a session's completion was already delivered to the model (via the
-    /// heartbeat). A late `write_stdin` poll uses this to return a terse
-    /// already-reported note instead of re-dumping the completion (anchor §8/D8).
+    /// heartbeat). A late command-session control tool uses this to return a
+    /// terse already-reported note instead of re-dumping the completion.
     async fn command_session_already_reported(&self, command_session_id: &CommandSessionId)
         -> bool;
 }

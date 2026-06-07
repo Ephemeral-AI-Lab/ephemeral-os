@@ -100,7 +100,7 @@
 <p>The generic background management tools are retired from model-facing runtime and catalog exposure. The internal supervisor remains, while command-session command tools and subagent controls expose typed ids. Subagent controls live in <code>agent-core/crates/eos-tools/src/tools/subagent</code>: <code>check_subagent_progress</code> and <code>cancel_subagent</code>.</p>
 <div class="edge-list">
   <div><b>Retired generic tools</b><span><code>check_background_task_result</code>, <code>wait_background_tasks</code>, and <code>cancel_background_task</code> are no longer synthesized for agents or catalog output.</span></div>
-  <div><b>Command-session controls</b><span><code>write_stdin</code> operates on <code>command_session_id</code> for both input and polling; daemon cancel/collect/count ops stay internal.</span></div>
+  <div><b>Command-session controls</b><span><code>write_stdin</code> writes non-empty input and waits briefly for output; <code>read_command_progress</code> reads progress without stdin; daemon cancel/collect/count ops stay internal.</span></div>
   <div><b>Subagent controls</b><span><code>check_subagent_progress</code> and <code>cancel_subagent</code> operate on <code>subagent_session_id</code>.</span></div>
   <div><b>Workflow controls</b><span><code>delegate_workflow</code> returns a typed workflow handle inspected by <code>check_workflow_status</code> and stopped with <code>cancel_workflow</code>.</span></div>
 </div>
@@ -110,7 +110,7 @@
 <section id="sandbox-bridge" data-last-reviewed-commit="569f12c3f39471dbaa643906856a8daf81a21a2d" data-evidence-paths="">
 <h2>Sandbox Dispatch <a class="anchor" href="#sandbox-bridge">#</a></h2>
 <p>The engine background launcher is now subagent-only. Command sessions are created by <code>exec_command</code>; the tool registers the returned <code>command_session_id</code> with the supervisor for lifecycle gates, cancellation, completion notifications, and isolated-workspace blocking.</p>
-<p>Daemon command-session controls call typed sandbox APIs: <code>write_stdin</code> sends input or polls with empty <code>chars</code>, and internal <code>api.v1.command.cancel</code> stops a daemon-owned session. These controls do not pass through generic background check/wait/cancel tools.</p>
+<p>Daemon command-session controls call typed sandbox APIs: <code>write_stdin</code> sends non-empty input and waits up to <code>yield_time_ms</code>, <code>read_command_progress</code> returns a stateless tail snapshot, and internal <code>api.v1.command.cancel</code> stops a daemon-owned session. Empty stdin polling is not exposed through <code>write_stdin</code>. These controls do not pass through generic background check/wait/cancel tools.</p>
 <p>This is separate from the workspace execution mode itself. <code>exec_command</code> still routes through the sandbox command execution path and may publish captured changes through OCC; command-session state only changes how the long-running command is supervised and controlled.</p>
 </section>
 

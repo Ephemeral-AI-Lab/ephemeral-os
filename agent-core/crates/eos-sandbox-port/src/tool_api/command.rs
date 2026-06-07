@@ -30,12 +30,6 @@ pub async fn exec_command(
     if let Some(timeout) = request.timeout {
         payload.insert("timeout".to_owned(), Value::from(timeout));
     }
-    if let Some(max_output_tokens) = request.max_output_tokens {
-        payload.insert(
-            "max_output_tokens".to_owned(),
-            Value::from(max_output_tokens),
-        );
-    }
     let response = transport
         .call(
             sandbox_id,
@@ -59,6 +53,9 @@ pub async fn exec_stdin(
         Value::String(request.command_session_id.to_string()),
     );
     payload.insert("chars".to_owned(), Value::String(request.chars.clone()));
+    if let Some(yield_time_ms) = request.yield_time_ms {
+        payload.insert("yield_time_ms".to_owned(), Value::from(yield_time_ms));
+    }
     let response = transport
         .call(
             sandbox_id,
@@ -81,10 +78,7 @@ pub async fn read_command_progress(
         "command_session_id".to_owned(),
         Value::String(request.command_session_id.to_string()),
     );
-    payload.insert(
-        "last_n_lines".to_owned(),
-        Value::from(request.last_n_lines),
-    );
+    payload.insert("last_n_lines".to_owned(), Value::from(request.last_n_lines));
     let response = transport
         .call(
             sandbox_id,

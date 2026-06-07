@@ -19,6 +19,7 @@ pub(super) fn require_command_string(args: &Value, key: &str) -> Result<String, 
     Ok(value.to_owned())
 }
 
+#[cfg(target_os = "linux")]
 pub(super) fn require_nonempty_string(args: &Value, key: &str) -> Result<String, DaemonError> {
     let value = args
         .get(key)

@@ -784,7 +784,10 @@ async fn store_mutators_distinguish_missing_and_mismatch() {
         .to_string()
         .contains("not found in workflows"));
     assert!(workflows
-        .append_iteration_id(&wf_missing, &"i".parse::<eos_state::IterationId>().expect("it id"))
+        .append_iteration_id(
+            &wf_missing,
+            &"i".parse::<eos_state::IterationId>().expect("it id")
+        )
         .await
         .is_err());
 
@@ -821,7 +824,9 @@ async fn store_mutators_distinguish_missing_and_mismatch() {
     // finish_run on a missing run is Ok(None) (mirrors finish_request).
     assert!(agent_runs
         .finish_run(
-            &"ghost-run".parse::<eos_state::AgentRunId>().expect("run id"),
+            &"ghost-run"
+                .parse::<eos_state::AgentRunId>()
+                .expect("run id"),
             None,
             None,
             0,
@@ -901,11 +906,7 @@ async fn attempt_passed_closure_roundtrips_through_store() {
     assert_eq!(closed.outcomes(), outcomes);
 
     // Fresh SELECT -> row_to_attempt reconstructs the Passed closure end-to-end.
-    let reloaded = attempts
-        .get(&att.id)
-        .await
-        .expect("get")
-        .expect("present");
+    let reloaded = attempts.get(&att.id).await.expect("get").expect("present");
     assert_eq!(reloaded.status(), AttemptStatus::Passed);
     assert_eq!(reloaded.fail_reason(), None);
     assert_eq!(reloaded.outcomes(), outcomes);

@@ -9,14 +9,15 @@ use eos_agent_def::{AgentDefinition, AgentRegistry, AgentRole};
 use eos_agent_message_records::{AgentMessageRecords, AgentRunRecordKind};
 use eos_audit::NoopAuditSink;
 use eos_engine::{
-    run_agent, AgentRunInput, AgentRunResult, EngineRunHandles, EventSourceFactory,
-    ToolRegistryExtender,
+    run_agent, AgentRunInput, AgentRunResult, EngineRunHandles, EventCallback, EventSourceFactory,
+    StreamEvent, ToolRegistryExtender,
 };
 use eos_llm_client::{LlmClient, LlmRequest, LlmStream, ProviderError, ToolSpec};
 use eos_skills::SkillRegistry;
 use eos_state::{AgentRun, AgentRunStore, CoreError, Sealed, TaskId, UtcDateTime};
 use eos_testkit::{
-    agent_def, factory_from, metadata, test_tools_root, tool_use_turn, FakeTransport,
+    agent_def, factory_by_agent, factory_from, metadata, test_tools_root, tool_use_turn,
+    FakeTransport,
 };
 use eos_tools::{
     BackgroundInflightReport, BackgroundSupervisorPort, ExecutionMetadata, OutputShape,
@@ -283,6 +284,24 @@ fn root_agent() -> AgentDefinition {
     agent_def("root", AgentRole::Root, &[], &["submit_root_outcome"])
 }
 
+fn advisor_root_agent() -> AgentDefinition {
+    agent_def(
+        "root",
+        AgentRole::Root,
+        &["ask_advisor"],
+        &["submit_root_outcome"],
+    )
+}
+
+fn advisor_agent() -> AgentDefinition {
+    agent_def(
+        "advisor",
+        AgentRole::Helper,
+        &[],
+        &["submit_advisor_feedback"],
+    )
+}
+
 fn unknown_tool_agent() -> AgentDefinition {
     agent_def(
         "root",
@@ -526,4 +545,164 @@ async fn run_agent_finalizes_background_handles_after_query_error() {
     assert!(cancels[0]
         .reason
         .contains("provider stream ended without assistant completion"));
+}
+
+#[tokio::test]
+async fn run_agent_finalizes_background_handles_after_tool_stop() {
+    let background = Arc::new(RecordingBackgroundSupervisor::default());
+    let harness = handles(
+        vec![root_agent()],
+        factory_from(vec![tool_use_turn(
+            "toolu_stop",
+            "submit_root_outcome",
+            json!({"summary": "done"}),
+        )]),
+        Some(terminal_extender(ToolResult::ok("done"))),
+        None,
+    );
+    let agent_run_id: AgentRunId = "run_background_tool_stop".parse().expect("run id");
+    let task_id: TaskId = "task_background_tool_stop".parse().expect("task id");
+
+    let result = run_agent(
+        &harness.handles,
+        input(
+            root_agent(),
+            agent_run_id.clone(),
+            task_id,
+            "req_background_tool_stop",
+            Some(background.clone()),
+        ),
+        None,
+    )
+    .await;
+
+    assert!(result.error.is_none(), "{result:?}");
+    let cancels = background.cancels();
+    assert_eq!(cancels.len(), 1);
+    assert_eq!(cancels[0].agent_run_id.as_ref(), Some(&agent_run_id));
+    assert_eq!(cancels[0].reason, "parent agent submitted its terminal");
+}
+
+#[tokio::test]
+async fn run_agent_finalizes_background_handles_after_terminal_not_submitted() {
+    let background = Arc::new(RecordingBackgroundSupervisor::default());
+    let turns = std::iter::repeat_with(|| eos_testkit::text_turn("still thinking"))
+        .take(12)
+        .collect();
+    let harness = handles(
+        vec![root_agent()],
+        factory_from(turns),
+        Some(terminal_extender(ToolResult::ok("done"))),
+        None,
+    );
+    let agent_run_id: AgentRunId = "run_background_no_terminal".parse().expect("run id");
+    let task_id: TaskId = "task_background_no_terminal".parse().expect("task id");
+
+    let result = run_agent(
+        &harness.handles,
+        input(
+            root_agent(),
+            agent_run_id.clone(),
+            task_id,
+            "req_background_no_terminal",
+            Some(background.clone()),
+        ),
+        None,
+    )
+    .await;
+
+    assert!(result.error.is_none(), "{result:?}");
+    assert!(result.terminal_result.is_none());
+    let cancels = background.cancels();
+    assert_eq!(cancels.len(), 1);
+    assert_eq!(cancels[0].agent_run_id.as_ref(), Some(&agent_run_id));
+    assert_eq!(
+        cancels[0].reason,
+        "parent agent exited without submitting a terminal tool"
+    );
+}
+
+#[tokio::test]
+async fn run_agent_routes_ask_advisor_through_child_advisor_run() {
+    let advisor_summary =
+        "Tool selection correct. Quality of synthesis is supported. Residual risks: None.";
+    let harness = handles(
+        vec![advisor_root_agent(), advisor_agent()],
+        factory_by_agent(vec![
+            (
+                "root",
+                vec![
+                    tool_use_turn(
+                        "toolu_advisor",
+                        "ask_advisor",
+                        json!({
+                            "tool_name": "submit_root_outcome",
+                            "tool_payload": {"summary": "done"}
+                        }),
+                    ),
+                    tool_use_turn(
+                        "toolu_stop",
+                        "submit_root_outcome",
+                        json!({"summary": "done"}),
+                    ),
+                ],
+            ),
+            (
+                "advisor",
+                vec![tool_use_turn(
+                    "toolu_feedback",
+                    "submit_advisor_feedback",
+                    json!({
+                        "verdict": "approve",
+                        "summary": advisor_summary
+                    }),
+                )],
+            ),
+        ]),
+        Some(terminal_extender(ToolResult::ok("done"))),
+        None,
+    );
+    let seen = Arc::new(Mutex::new(Vec::new()));
+    let seen_events = seen.clone();
+    let callback: EventCallback = Arc::new(move |event| {
+        seen_events.lock().expect("event lock").push(event.clone());
+    });
+    let agent_run_id: AgentRunId = "run_advisor".parse().expect("run id");
+    let task_id: TaskId = "task_advisor".parse().expect("task id");
+
+    let result = run_agent(
+        &harness.handles,
+        input(
+            advisor_root_agent(),
+            agent_run_id,
+            task_id,
+            "req_advisor",
+            None,
+        ),
+        Some(&callback),
+    )
+    .await;
+
+    assert!(result.error.is_none(), "{result:?}");
+    assert!(result
+        .terminal_result
+        .as_ref()
+        .is_some_and(|result| result.is_terminal));
+    let events = seen.lock().expect("event lock");
+    assert!(events.iter().any(|event| {
+        matches!(
+            event,
+            StreamEvent::ToolExecutionCompleted {
+                tool_name,
+                output,
+                is_error: false,
+                is_terminal: false,
+                metadata,
+                ..
+            } if tool_name == "ask_advisor"
+                && output == advisor_summary
+                && metadata["helper_role"] == json!("advisor")
+                && metadata["verdict"] == json!("approve")
+        )
+    }));
 }

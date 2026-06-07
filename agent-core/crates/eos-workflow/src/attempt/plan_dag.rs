@@ -425,7 +425,10 @@ mod tests {
         }
     }
 
-    fn shape_plan(tasks: Vec<eos_tools::PlanTask>, reducers: Vec<eos_tools::PlanReducer>) -> PlannerPlan {
+    fn shape_plan(
+        tasks: Vec<eos_tools::PlanTask>,
+        reducers: Vec<eos_tools::PlanReducer>,
+    ) -> PlannerPlan {
         let task_specs = tasks
             .iter()
             .map(|task| (task.id.clone(), "spec".to_owned()))
@@ -467,7 +470,9 @@ mod tests {
         ))
         .is_err());
         // A reducer with no needs.
-        assert!(validate_plan_shape(&shape_plan(vec![gen("g1", &[])], vec![red("r1", &[])])).is_err());
+        assert!(
+            validate_plan_shape(&shape_plan(vec![gen("g1", &[])], vec![red("r1", &[])])).is_err()
+        );
         // A reducer that depends on another reducer.
         assert!(validate_plan_shape(&shape_plan(
             vec![gen("g1", &[])],

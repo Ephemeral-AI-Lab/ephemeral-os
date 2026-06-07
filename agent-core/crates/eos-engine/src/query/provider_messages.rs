@@ -131,6 +131,20 @@ mod tests {
         }
     }
 
+    fn assistant_tool_uses(values: &[&str]) -> Message {
+        Message {
+            role: MessageRole::Assistant,
+            content: values
+                .iter()
+                .map(|value| ContentBlock::ToolUse {
+                    tool_use_id: id(value),
+                    name: "read_file".to_owned(),
+                    input: JsonObject::new(),
+                })
+                .collect(),
+        }
+    }
+
     fn user_tool_results(values: &[&str]) -> Message {
         Message {
             role: MessageRole::User,
@@ -204,5 +218,54 @@ mod tests {
         let sanitized = build_provider_messages(&messages);
 
         assert!(sanitized.is_empty());
+    }
+
+    #[test]
+    fn keeps_multi_tool_pair_when_all_results_are_present() {
+        let messages = vec![
+            assistant_tool_uses(&["toolu_a", "toolu_b"]),
+            user_tool_results(&["toolu_b", "toolu_a"]),
+        ];
+
+        let sanitized = build_provider_messages(&messages);
+
+        assert_eq!(sanitized, messages);
+    }
+
+    #[test]
+    fn drops_partial_multi_tool_pair() {
+        let messages = vec![
+            assistant_tool_uses(&["toolu_a", "toolu_b"]),
+            user_tool_results(&["toolu_a"]),
+        ];
+
+        let sanitized = build_provider_messages(&messages);
+
+        assert!(sanitized.is_empty());
+    }
+
+    #[test]
+    fn keeps_assistant_text_when_dropping_unmatched_tool_use() {
+        let messages = vec![Message {
+            role: MessageRole::Assistant,
+            content: vec![
+                ContentBlock::Text {
+                    text: "partial answer".to_owned(),
+                },
+                ContentBlock::ToolUse {
+                    tool_use_id: id("toolu_a"),
+                    name: "read_file".to_owned(),
+                    input: JsonObject::new(),
+                },
+            ],
+        }];
+
+        let sanitized = build_provider_messages(&messages);
+
+        assert_eq!(sanitized.len(), 1);
+        assert!(matches!(
+            sanitized[0].content.as_slice(),
+            [ContentBlock::Text { text }] if text == "partial answer"
+        ));
     }
 }

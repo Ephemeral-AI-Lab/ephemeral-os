@@ -430,10 +430,9 @@ mod tests {
             LlmStreamEvent::AssistantTextDelta { text } if text == "Hi"
         )));
         assert!(
-            !events.iter().any(|event| matches!(
-                event,
-                LlmStreamEvent::AssistantMessageComplete { .. }
-            )),
+            !events
+                .iter()
+                .any(|event| matches!(event, LlmStreamEvent::AssistantMessageComplete { .. })),
             "no completion is emitted for an error-terminated stream"
         );
     }

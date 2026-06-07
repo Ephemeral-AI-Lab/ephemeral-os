@@ -13,8 +13,8 @@ use super::super::{
     edit_file::{EditFile, EditFileInput},
     exec_command::{ExecCommand, ExecCommandInput},
     multi_edit::{MultiEdit, MultiEditInput},
-    read_file::{ReadFile, ReadFileInput},
     read_command_progress::{ReadCommandProgress, ReadCommandProgressInput},
+    read_file::{ReadFile, ReadFileInput},
     write_file::{WriteFile, WriteFileInput},
     write_stdin::{WriteStdin, WriteStdinInput},
 };

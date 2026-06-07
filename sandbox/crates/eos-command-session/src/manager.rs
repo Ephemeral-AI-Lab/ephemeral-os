@@ -88,7 +88,7 @@ impl CommandSessionManager {
         self.registry.insert(Arc::clone(&session));
         Ok(CommandResponse::running(
             id,
-            session.read_model_output(request.max_output_tokens),
+            session.read_model_output(None),
         ))
     }
 
@@ -134,12 +134,7 @@ impl CommandSessionManager {
             },
         ));
         self.registry.insert(Arc::clone(&session));
-        match wait_for_yield(
-            session.as_ref(),
-            &self.config,
-            request.yield_time_ms,
-            request.max_output_tokens,
-        ) {
+        match wait_for_yield(session.as_ref(), &self.config, request.yield_time_ms, None) {
             WaitOutcome::Completed(result) => {
                 let response = result?;
                 Ok(self.finish_completed(session, response, false))
@@ -183,8 +178,13 @@ impl CommandSessionManager {
                 "chars must be non-empty".to_owned(),
             ));
         }
+        let yield_time_ms = request.yield_time_ms;
         session.append_output(request.chars);
-        Ok(CommandResponse::running(request.command_session_id, String::new()))
+        let _ = yield_time_ms;
+        Ok(CommandResponse::running(
+            request.command_session_id,
+            session.read_model_output(None),
+        ))
     }
 
     #[cfg(target_os = "linux")]
@@ -211,8 +211,17 @@ impl CommandSessionManager {
                 "chars must be non-empty".to_owned(),
             ));
         }
+        let command_session_id = request.command_session_id.clone();
         session.write_process_stdin(&request.chars)?;
-        Ok(CommandResponse::running(request.command_session_id, String::new()))
+        match wait_for_yield(session.as_ref(), &self.config, request.yield_time_ms, None) {
+            WaitOutcome::Completed(result) => {
+                let response = result?;
+                Ok(self.finish_completed(session, response, false))
+            }
+            WaitOutcome::Running(stdout) => {
+                Ok(CommandResponse::running(command_session_id, stdout))
+            }
+        }
     }
 
     pub fn read_progress(
@@ -554,7 +563,6 @@ mod tests {
                     cmd: "sleep 1".to_owned(),
                     timeout_seconds: Some(0.001),
                     yield_time_ms: 1000,
-                    max_output_tokens: None,
                 },
                 ExpiringPolicy,
             )

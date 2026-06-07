@@ -83,3 +83,112 @@ impl crate::query::EventSource for ProviderEventSource {
         })))
     }
 }
+
+#[cfg(test)]
+mod tests {
+    #![allow(clippy::expect_used)]
+
+    use async_trait::async_trait;
+    use eos_llm_client::{
+        ContentBlock, LlmClient, LlmRequest, LlmStream, LlmStreamEvent, Message, MessageRole,
+        ProviderError, StopReason, UsageSnapshot,
+    };
+    use futures::StreamExt;
+    use serde_json::json;
+
+    use crate::query::EventSource;
+
+    use super::*;
+
+    #[derive(Debug, Clone)]
+    struct ScriptedClient {
+        stream: Vec<Result<LlmStreamEvent, ProviderError>>,
+    }
+
+    #[async_trait]
+    impl LlmClient for ScriptedClient {
+        async fn stream_message(&self, _request: LlmRequest) -> Result<LlmStream, ProviderError> {
+            Ok(Box::pin(futures::stream::iter(self.stream.clone())))
+        }
+    }
+
+    fn request() -> LlmRequest {
+        LlmRequest::builder("test-model").build()
+    }
+
+    #[tokio::test]
+    async fn provider_event_source_maps_model_stream_events() {
+        let final_message = Message {
+            role: MessageRole::Assistant,
+            content: vec![ContentBlock::Text {
+                text: "done".to_owned(),
+            }],
+        };
+        let source = ProviderEventSource::new(Arc::new(ScriptedClient {
+            stream: vec![
+                Ok(LlmStreamEvent::AssistantTextDelta {
+                    text: "hello".to_owned(),
+                }),
+                Ok(LlmStreamEvent::ReasoningDelta {
+                    text: "thinking".to_owned(),
+                }),
+                Ok(LlmStreamEvent::ToolUseDelta {
+                    tool_use_id: "toolu-1".parse().expect("tool id"),
+                    name: "read_file".to_owned(),
+                    input: json!({"path": "README.md"})
+                        .as_object()
+                        .expect("object")
+                        .clone(),
+                }),
+                Ok(LlmStreamEvent::AssistantMessageComplete {
+                    message: final_message.clone(),
+                    usage: UsageSnapshot {
+                        input_tokens: 7,
+                        output_tokens: 3,
+                    },
+                    stop_reason: Some(StopReason::EndTurn),
+                }),
+            ],
+        }));
+
+        let mut stream = source.stream(&request()).await.expect("stream");
+        assert!(matches!(
+            stream.next().await.expect("text").expect("ok"),
+            StreamEvent::AssistantTextDelta { text, .. } if text == "hello"
+        ));
+        assert!(matches!(
+            stream.next().await.expect("reasoning").expect("ok"),
+            StreamEvent::ReasoningDelta { text, .. } if text == "thinking"
+        ));
+        assert!(matches!(
+            stream.next().await.expect("tool").expect("ok"),
+            StreamEvent::ToolUseDelta { name, input, .. }
+                if name == "read_file" && input["path"] == json!("README.md")
+        ));
+        assert!(matches!(
+            stream.next().await.expect("complete").expect("ok"),
+            StreamEvent::AssistantMessageComplete { payload, .. }
+                if payload.message == final_message
+                    && payload.usage.input_tokens == 7
+                    && payload.stop_reason == Some(StopReason::EndTurn)
+        ));
+        assert!(stream.next().await.is_none());
+    }
+
+    #[tokio::test]
+    async fn provider_event_source_propagates_provider_stream_errors() {
+        let source = ProviderEventSource::new(Arc::new(ScriptedClient {
+            stream: vec![Err(ProviderError::transport("connection reset"))],
+        }));
+
+        let mut stream = source.stream(&request()).await.expect("stream");
+        let err = stream
+            .next()
+            .await
+            .expect("error item")
+            .expect_err("provider error");
+
+        assert!(matches!(err, EngineError::Provider(_)));
+        assert!(err.to_string().contains("connection reset"));
+    }
+}

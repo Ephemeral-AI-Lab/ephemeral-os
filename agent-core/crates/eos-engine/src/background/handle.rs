@@ -130,3 +130,264 @@ impl BackgroundSupervisorHandle {
 }
 
 impl Sealed for BackgroundSupervisorHandle {}
+
+#[cfg(test)]
+mod tests {
+    #![allow(clippy::expect_used)]
+
+    use std::sync::Mutex as StdMutex;
+
+    use async_trait::async_trait;
+    use eos_agent_def::AgentRegistry;
+    use eos_audit::NoopAuditSink;
+    use eos_llm_client::{LlmClient, LlmRequest, LlmStream, ProviderError};
+    use eos_sandbox_port::{DaemonOp, SandboxPortError};
+    use eos_skills::SkillRegistry;
+    use eos_state::{
+        AgentRun, AgentRunStore, CoreError, Sealed as StateSealed, TaskId, UtcDateTime,
+    };
+    use eos_tools::{
+        OutstandingWorkflow, SandboxToolService, SkillToolService, StartedWorkflowHandle,
+        ToolConfigSet, ToolError,
+    };
+    use eos_types::{JsonObject, SandboxId, WorkflowId, WorkflowSessionId};
+    use serde_json::json;
+
+    use super::*;
+
+    #[derive(Debug)]
+    struct NoopLlmClient;
+
+    #[async_trait]
+    impl LlmClient for NoopLlmClient {
+        async fn stream_message(&self, _request: LlmRequest) -> Result<LlmStream, ProviderError> {
+            Ok(Box::pin(futures::stream::empty()))
+        }
+    }
+
+    #[derive(Debug, Default)]
+    struct NoopAgentRunStore;
+
+    impl StateSealed for NoopAgentRunStore {}
+
+    #[async_trait]
+    impl AgentRunStore for NoopAgentRunStore {
+        async fn create_run(
+            &self,
+            agent_run_id: &AgentRunId,
+            task_id: &TaskId,
+            agent_name: &str,
+            initial_messages: Option<&[JsonObject]>,
+        ) -> Result<AgentRun, CoreError> {
+            Ok(AgentRun {
+                id: agent_run_id.clone(),
+                task_id: task_id.clone(),
+                initial_messages: initial_messages.map(<[_]>::to_vec),
+                agent_name: agent_name.to_owned(),
+                message_history: None,
+                terminal_tool_result: None,
+                token_count: 0,
+                error: None,
+                created_at: UtcDateTime::now(),
+                finished_at: None,
+            })
+        }
+
+        async fn finish_run(
+            &self,
+            _agent_run_id: &AgentRunId,
+            _message_history: Option<&[JsonObject]>,
+            _terminal_tool_result: Option<&JsonObject>,
+            _token_count: i64,
+            _error: Option<&str>,
+        ) -> Result<Option<AgentRun>, CoreError> {
+            Ok(None)
+        }
+
+        async fn get(&self, _agent_run_id: &AgentRunId) -> Result<Option<AgentRun>, CoreError> {
+            Ok(None)
+        }
+
+        async fn get_for_task(&self, _task_id: &TaskId) -> Result<Option<AgentRun>, CoreError> {
+            Ok(None)
+        }
+    }
+
+    #[derive(Debug, Default)]
+    struct RecordingTransport {
+        calls: StdMutex<Vec<(SandboxId, DaemonOp, JsonObject)>>,
+    }
+
+    impl RecordingTransport {
+        fn calls(&self) -> Vec<(SandboxId, DaemonOp, JsonObject)> {
+            self.calls.lock().expect("calls lock").clone()
+        }
+    }
+
+    #[async_trait]
+    impl SandboxTransport for RecordingTransport {
+        async fn call(
+            &self,
+            sandbox_id: &SandboxId,
+            op: DaemonOp,
+            payload: JsonObject,
+            _timeout_s: u32,
+        ) -> Result<JsonObject, SandboxPortError> {
+            self.calls
+                .lock()
+                .expect("calls lock")
+                .push((sandbox_id.clone(), op, payload));
+            Ok(json!({
+                "success": true,
+                "status": "cancelled",
+                "exit_code": null,
+                "output": {"stdout": "", "stderr": ""}
+            })
+            .as_object()
+            .expect("object")
+            .clone())
+        }
+    }
+
+    #[derive(Debug, Default)]
+    struct RecordingWorkflowControl {
+        cancels: StdMutex<Vec<(WorkflowSessionId, String)>>,
+    }
+
+    impl RecordingWorkflowControl {
+        fn cancels(&self) -> Vec<(WorkflowSessionId, String)> {
+            self.cancels.lock().expect("workflow lock").clone()
+        }
+    }
+
+    impl eos_tools::ports::Sealed for RecordingWorkflowControl {}
+
+    #[async_trait]
+    impl WorkflowControlPort for RecordingWorkflowControl {
+        async fn start(
+            &self,
+            _parent_task_id: &TaskId,
+            _agent_run_id: &AgentRunId,
+            _workflow_goal: &str,
+        ) -> Result<StartedWorkflowHandle, ToolError> {
+            Ok(StartedWorkflowHandle {
+                workflow_id: WorkflowId::new_v4(),
+                workflow_task_id: "wf_started".parse().expect("workflow handle"),
+            })
+        }
+
+        async fn status(
+            &self,
+            _workflow_id: &WorkflowId,
+            _workflow_task_id: Option<&WorkflowSessionId>,
+        ) -> Result<String, ToolError> {
+            Ok("running".to_owned())
+        }
+
+        async fn cancel(
+            &self,
+            workflow_task_id: &WorkflowSessionId,
+            reason: &str,
+        ) -> Result<String, ToolError> {
+            self.cancels
+                .lock()
+                .expect("workflow lock")
+                .push((workflow_task_id.clone(), reason.to_owned()));
+            Ok("cancelled".to_owned())
+        }
+
+        async fn find_outstanding(
+            &self,
+            _parent_task_id: &TaskId,
+            _agent_run_id: &AgentRunId,
+        ) -> Result<Vec<OutstandingWorkflow>, ToolError> {
+            Ok(Vec::new())
+        }
+
+        async fn workflow_depth(&self, _workflow_id: &WorkflowId) -> Result<u32, ToolError> {
+            Ok(1)
+        }
+    }
+
+    fn handles(transport: Arc<dyn SandboxTransport>) -> EngineRunHandles {
+        EngineRunHandles {
+            agent_run_store: Arc::new(NoopAgentRunStore),
+            llm_client: Arc::new(NoopLlmClient),
+            event_source_factory: None,
+            agent_registry: Arc::new(Vec::new().into_iter().collect::<AgentRegistry>()),
+            tool_config: Arc::new(
+                ToolConfigSet::load_from_dir(&eos_testkit::test_tools_root()).expect("tool config"),
+            ),
+            sandbox_service: SandboxToolService::new(transport),
+            root_submission: None,
+            skill_service: SkillToolService::new(Arc::new(SkillRegistry::new())),
+            tool_registry_extender: None,
+            audit: Arc::new(NoopAuditSink),
+            message_records: None,
+            workspace_root: "/tmp".to_owned(),
+        }
+    }
+
+    #[tokio::test]
+    async fn parent_exit_cancels_workflows_and_command_sessions() {
+        let transport = Arc::new(RecordingTransport::default());
+        let handle = BackgroundSupervisorHandle::new(handles(transport.clone()), transport.clone());
+        let agent_run_id: AgentRunId = "agent-a".parse().expect("agent run id");
+        let workflow = StartedWorkflowHandle {
+            workflow_id: WorkflowId::new_v4(),
+            workflow_task_id: "wf_1".parse().expect("workflow handle"),
+        };
+        {
+            let inner = handle.inner();
+            let mut guard = inner.lock().await;
+            guard.register_workflow(&agent_run_id, &workflow);
+            guard.register_command_session(
+                &"cmd_1".parse().expect("command id"),
+                &"sandbox-a".parse().expect("sandbox id"),
+                &agent_run_id,
+                "cargo test",
+            );
+        }
+        let workflow_control = Arc::new(RecordingWorkflowControl::default());
+
+        let report = handle
+            .cancel_for_parent_exit(
+                Some(&agent_run_id),
+                Some(workflow_control.clone()),
+                "parent submitted its terminal",
+            )
+            .await;
+
+        assert_eq!(report.total, 0);
+        assert_eq!(workflow_control.cancels().len(), 1);
+        assert_eq!(workflow_control.cancels()[0].0, workflow.workflow_task_id);
+        let calls = transport.calls();
+        assert_eq!(calls.len(), 1);
+        assert_eq!(calls[0].1, DaemonOp::CommandCancel);
+        assert_eq!(calls[0].2["command_session_id"], json!("cmd_1"));
+        assert_eq!(calls[0].2["caller_id"], json!("agent-a"));
+    }
+
+    #[tokio::test]
+    async fn parent_exit_settles_workflow_without_workflow_control() {
+        let transport = Arc::new(RecordingTransport::default());
+        let handle = BackgroundSupervisorHandle::new(handles(transport.clone()), transport);
+        let agent_run_id: AgentRunId = "agent-a".parse().expect("agent run id");
+        let workflow = StartedWorkflowHandle {
+            workflow_id: WorkflowId::new_v4(),
+            workflow_task_id: "wf_2".parse().expect("workflow handle"),
+        };
+        handle
+            .inner()
+            .lock()
+            .await
+            .register_workflow(&agent_run_id, &workflow);
+
+        let report = handle
+            .cancel_for_parent_exit(Some(&agent_run_id), None, "parent exited")
+            .await;
+
+        assert_eq!(report.workflow, 0);
+        assert_eq!(report.total, 0);
+    }
+}

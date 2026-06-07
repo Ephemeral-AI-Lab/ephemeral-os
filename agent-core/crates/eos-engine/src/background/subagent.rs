@@ -441,7 +441,120 @@ impl BackgroundSupervisorPort for BackgroundSupervisorHandle {
 
 #[cfg(test)]
 mod tests {
+    use eos_agent_def::{AgentDefinition, AgentRegistry, AgentRole};
+    use eos_audit::NoopAuditSink;
+    use eos_llm_client::{LlmClient, LlmRequest, LlmStream, ProviderError};
+    use eos_sandbox_port::SandboxTransport;
+    use eos_skills::SkillRegistry;
+    use eos_state::{
+        AgentRun, AgentRunStore, CoreError, Sealed as StateSealed, TaskId, UtcDateTime,
+    };
+    use eos_testkit::{agent_def, test_tools_root, FakeTransport};
+    use eos_tools::{SandboxToolService, SkillToolService, ToolConfigSet};
+
+    use crate::EngineRunHandles;
+
     use super::*;
+
+    #[derive(Debug)]
+    struct NoopLlmClient;
+
+    #[async_trait]
+    impl LlmClient for NoopLlmClient {
+        async fn stream_message(&self, _request: LlmRequest) -> Result<LlmStream, ProviderError> {
+            Ok(Box::pin(futures::stream::empty()))
+        }
+    }
+
+    #[derive(Debug, Default)]
+    struct NoopAgentRunStore;
+
+    impl StateSealed for NoopAgentRunStore {}
+
+    #[async_trait]
+    impl AgentRunStore for NoopAgentRunStore {
+        async fn create_run(
+            &self,
+            agent_run_id: &AgentRunId,
+            task_id: &TaskId,
+            agent_name: &str,
+            initial_messages: Option<&[JsonObject]>,
+        ) -> Result<AgentRun, CoreError> {
+            Ok(AgentRun {
+                id: agent_run_id.clone(),
+                task_id: task_id.clone(),
+                initial_messages: initial_messages.map(<[_]>::to_vec),
+                agent_name: agent_name.to_owned(),
+                message_history: None,
+                terminal_tool_result: None,
+                token_count: 0,
+                error: None,
+                created_at: UtcDateTime::now(),
+                finished_at: None,
+            })
+        }
+
+        async fn finish_run(
+            &self,
+            _agent_run_id: &AgentRunId,
+            _message_history: Option<&[JsonObject]>,
+            _terminal_tool_result: Option<&JsonObject>,
+            _token_count: i64,
+            _error: Option<&str>,
+        ) -> Result<Option<AgentRun>, CoreError> {
+            Ok(None)
+        }
+
+        async fn get(&self, _agent_run_id: &AgentRunId) -> Result<Option<AgentRun>, CoreError> {
+            Ok(None)
+        }
+
+        async fn get_for_task(&self, _task_id: &TaskId) -> Result<Option<AgentRun>, CoreError> {
+            Ok(None)
+        }
+    }
+
+    fn subagent_def(name: &str) -> AgentDefinition {
+        let mut def = agent_def(
+            name,
+            AgentRole::Subagent,
+            &[],
+            &["submit_exploration_result"],
+        );
+        def.agent_type = AgentType::Subagent;
+        def
+    }
+
+    fn handles(agents: Vec<AgentDefinition>) -> EngineRunHandles {
+        let transport: Arc<dyn SandboxTransport> = Arc::new(FakeTransport);
+        EngineRunHandles {
+            agent_run_store: Arc::new(NoopAgentRunStore),
+            llm_client: Arc::new(NoopLlmClient),
+            event_source_factory: None,
+            agent_registry: Arc::new(agents.into_iter().collect::<AgentRegistry>()),
+            tool_config: Arc::new(
+                ToolConfigSet::load_from_dir(&test_tools_root()).expect("tool config"),
+            ),
+            sandbox_service: SandboxToolService::new(transport),
+            root_submission: None,
+            skill_service: SkillToolService::new(Arc::new(SkillRegistry::new())),
+            tool_registry_extender: None,
+            audit: Arc::new(NoopAuditSink),
+            message_records: None,
+            workspace_root: "/tmp".to_owned(),
+        }
+    }
+
+    fn handle_with_agents(agents: Vec<AgentDefinition>) -> BackgroundSupervisorHandle {
+        BackgroundSupervisorHandle::new(handles(agents), Arc::new(FakeTransport))
+    }
+
+    fn metadata_for(agent_name: &str, agent_run_id: &str) -> ExecutionMetadata {
+        let mut metadata = eos_testkit::metadata();
+        metadata.agent_name = agent_name.to_owned();
+        metadata.agent_run_id = Some(agent_run_id.parse().expect("agent run id"));
+        metadata
+    }
 
     fn record_with(status: BackgroundTaskStatus, result: Option<ToolResult>) -> SubagentRecord {
         let mut tool_input = JsonObject::new();
@@ -556,5 +669,102 @@ mod tests {
         assert!(prompt.starts_with("# What's in context\n- Parent's user message above"));
         assert!(prompt.ends_with("## Submit\nCall `submit_exploration_result`."));
         assert!(prompt.contains("Investigate the parent's question and return concrete findings."));
+    }
+
+    #[tokio::test]
+    async fn spawn_rejects_recursion_unknown_and_non_subagent_targets() {
+        let root = agent_def("root", AgentRole::Root, &[], &["submit_root_outcome"]);
+        let worker = agent_def(
+            "worker",
+            AgentRole::Generator,
+            &[],
+            &["submit_generator_outcome"],
+        );
+        let explorer = subagent_def("explorer");
+        let handle = handle_with_agents(vec![root, worker, explorer]);
+
+        let recursive = handle
+            .spawn(&metadata_for("explorer", "run-sub"), "explorer", "inspect")
+            .await
+            .expect("spawn");
+        assert!(matches!(
+            recursive,
+            SpawnedSubagent::Rejected(message) if message.contains("may not spawn further subagents")
+        ));
+
+        let missing = handle
+            .spawn(&metadata_for("root", "run-root"), "missing", "inspect")
+            .await
+            .expect("spawn");
+        assert!(matches!(
+            missing,
+            SpawnedSubagent::Rejected(message) if message.contains("is not registered")
+        ));
+
+        let non_subagent = handle
+            .spawn(&metadata_for("root", "run-root"), "worker", "inspect")
+            .await
+            .expect("spawn");
+        assert!(matches!(
+            non_subagent,
+            SpawnedSubagent::Rejected(message) if message.contains("is not a subagent")
+        ));
+    }
+
+    #[tokio::test]
+    async fn progress_and_cancel_return_model_facing_results() {
+        let handle = handle_with_agents(Vec::new());
+        let agent_run_id: AgentRunId = "run-root".parse().expect("agent run id");
+        let session_id = {
+            let inner = handle.inner();
+            let mut guard = inner.lock().await;
+            let mut tool_input = JsonObject::new();
+            tool_input.insert("agent_name".to_owned(), json!("explorer"));
+            guard.register_subagent(tool_input, agent_run_id)
+        };
+
+        let running = handle.progress(&session_id, 10).await.expect("progress");
+        assert!(!running.is_error);
+        let snapshot = running.metadata.get("subagent_snapshot").expect("snapshot");
+        assert_eq!(snapshot["status"], json!("running"));
+        assert_eq!(snapshot["agent_name"], json!("explorer"));
+
+        let cancelled = handle
+            .cancel(&session_id, "no longer needed")
+            .await
+            .expect("cancel");
+        assert!(!cancelled.is_error);
+        assert!(cancelled.output.contains("no longer needed"));
+
+        let after_cancel = handle.progress(&session_id, 10).await.expect("progress");
+        assert_eq!(
+            after_cancel.metadata["subagent_snapshot"]["status"],
+            json!("cancelled")
+        );
+
+        let unknown: SubagentSessionId = "subagent_missing".parse().expect("subagent id");
+        assert!(
+            handle
+                .progress(&unknown, 10)
+                .await
+                .expect("progress")
+                .is_error
+        );
+        assert!(
+            handle
+                .cancel(&unknown, "cleanup")
+                .await
+                .expect("cancel")
+                .is_error
+        );
+
+        assert!(
+            handle
+                .cancel(&session_id, "again")
+                .await
+                .expect("cancel")
+                .is_error,
+            "already-settled sessions reject cancellation"
+        );
     }
 }

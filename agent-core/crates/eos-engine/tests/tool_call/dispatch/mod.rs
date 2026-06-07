@@ -333,3 +333,48 @@ async fn terminal_tool_error_does_not_project_terminal_result() {
         })
     ));
 }
+
+#[tokio::test]
+async fn ask_advisor_without_run_handles_returns_in_band_error() {
+    let ask_count = Arc::new(AtomicUsize::new(0));
+    let mut registry = ToolRegistry::new();
+    registry.register(tool_with_result(
+        ToolName::AskAdvisor,
+        false,
+        ask_count.clone(),
+        ToolResult::ok("unreachable"),
+    ));
+    let mut ctx = ctx(registry);
+    ctx.run_handles = None;
+
+    let calls = [ToolUseRequest {
+        tool_use_id: "toolu-advisor".parse().expect("valid id"),
+        name: "ask_advisor".to_owned(),
+        input: json!({
+            "tool_name": "submit_root_outcome",
+            "tool_payload": {"summary": "done"}
+        })
+        .as_object()
+        .expect("object")
+        .clone(),
+    }];
+    let outcome = dispatch_assistant_tools(&mut ctx, &calls, &[])
+        .await
+        .expect("dispatch");
+
+    assert_eq!(
+        ask_count.load(Ordering::SeqCst),
+        0,
+        "ask_advisor is engine-dispatched, not executed as a normal tool"
+    );
+    assert!(matches!(
+        outcome.tool_results.first(),
+        Some(ContentBlock::ToolResult {
+            content,
+            is_error: true,
+            is_terminal: false,
+            ..
+        }) if content.contains("run handles are not wired")
+    ));
+    assert!(outcome.terminal_result.is_none());
+}

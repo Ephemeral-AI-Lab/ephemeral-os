@@ -30,7 +30,7 @@ pub(in crate::tools::sandbox) struct MutationOutput {
     pub(in crate::tools::sandbox) extra: BTreeMap<String, Value>,
 }
 
-/// Shared output shape for `exec_command` and `write_stdin`.
+/// Shared output shape for command-session tools.
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub(in crate::tools::sandbox) struct CommandToolOutput {
     pub(in crate::tools::sandbox) status: String,

@@ -479,10 +479,9 @@ mod tests {
             "an in-stream error frame is currently swallowed, not surfaced as Err"
         );
         assert!(
-            !results.iter().any(|event| matches!(
-                event,
-                Ok(LlmStreamEvent::AssistantMessageComplete { .. })
-            )),
+            !results
+                .iter()
+                .any(|event| matches!(event, Ok(LlmStreamEvent::AssistantMessageComplete { .. }))),
             "no completion is emitted for an error-terminated stream"
         );
     }
