@@ -9,7 +9,7 @@ pub(crate) async fn resolve_agent_run(root: &Path, agent_run_id: &AgentRunId) ->
     safe_segment("agent_run_id", agent_run_id.as_str())?;
     let root = root.to_path_buf();
     let id = agent_run_id.clone();
-    let found = tokio::task::spawn_blocking(move || find_agent_run_dir(&root, &id)).await??;
+    let found = tokio::task::spawn_blocking(move || find_agent_run_dir_in(&root, &id)).await??;
     found.ok_or_else(|| MessageRecordError::NotFound(agent_run_id.as_str().to_owned()))
 }
 
@@ -144,10 +144,6 @@ fn find_root_agent_dir(request_root: &Path) -> Result<Option<PathBuf>> {
         }
     }
     Ok(None)
-}
-
-fn find_agent_run_dir(root: &Path, agent_run_id: &AgentRunId) -> Result<Option<PathBuf>> {
-    find_agent_run_dir_in(root, agent_run_id)
 }
 
 fn find_agent_run_dir_in(root: &Path, agent_run_id: &AgentRunId) -> Result<Option<PathBuf>> {

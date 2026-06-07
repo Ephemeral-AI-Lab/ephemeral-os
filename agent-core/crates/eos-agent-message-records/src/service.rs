@@ -1,4 +1,4 @@
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 use eos_types::{AgentRunId, JsonObject};
 use serde_json::json;
@@ -21,12 +21,6 @@ impl AgentMessageRecords {
     #[must_use]
     pub fn new(root: impl Into<PathBuf>) -> Self {
         Self { root: root.into() }
-    }
-
-    /// Message-record root path.
-    #[must_use]
-    pub fn root(&self) -> &Path {
-        &self.root
     }
 
     /// Create one agent-run node, write its initial messages, and append the

@@ -3,7 +3,7 @@
 //!
 //! agent-core emits stream events through a borrowing, synchronous callback
 //! (`Arc<dyn Fn(&StreamEvent)>`). The backend must persist milestones to
-//! `event_log` and fan them out to SSE/WebSocket subscribers **without** doing any
+//! `event_log` and fan them out to SSE subscribers **without** doing any
 //! async I/O or holding an async lock inside that callback (AC5). The flow:
 //!
 //! 1. The sync callback serializes the event, classifies it (milestones only —

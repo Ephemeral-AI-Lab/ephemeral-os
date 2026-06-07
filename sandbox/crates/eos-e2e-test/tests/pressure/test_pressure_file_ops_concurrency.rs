@@ -263,3 +263,125 @@ fn concurrent_overlay_execs_share_lowerdir_storage_is_o1() -> Result<()> {
     );
     Ok(())
 }
+
+/// `write_storm_squash_under_load` crosses the auto-squash threshold with
+/// SEQUENTIAL writes. This variant keeps that guaranteed trigger — a driver
+/// thread overwrites one path past the depth target — while a concurrent pool
+/// hammers disjoint paths, so auto-squash runs *while* concurrent publishes
+/// land. Squash must keep the manifest depth bounded, strand no superseded
+/// layers, lose no data, and leak no leases under that race.
+#[test]
+fn concurrent_writes_during_squash_keep_manifest_bounded_and_coherent() -> Result<()> {
+    let Some(pool) = live_pool_or_skip()? else {
+        return Ok(());
+    };
+    let lease = pool.acquire()?;
+    // > the default auto_squash_max_depth (100) so the driver guarantees squash.
+    let driver_writes = 105;
+    let fanout = 3;
+    let rounds_each = 20;
+    let barrier = Arc::new(Barrier::new(fanout + 1));
+
+    let driver = {
+        let client = lease.client().clone();
+        let root = lease.root().to_owned();
+        let caller_id = lease.caller_id().to_owned();
+        let barrier = Arc::clone(&barrier);
+        thread::spawn(move || -> Result<()> {
+            barrier.wait();
+            for version in 0..driver_writes {
+                let response = request_with_identity(
+                    &client,
+                    ops::API_V1_WRITE_FILE,
+                    &root,
+                    &caller_id,
+                    json!({
+                        "path": "pressure/squash-race/driver.txt",
+                        "content": format!("driver-{version}\n"),
+                        "overwrite": true
+                    }),
+                )?;
+                // Concurrent disjoint publishes can move the manifest version
+                // under a same-path overwrite; with the retry budget it commits,
+                // but a structured conflict is also acceptable mid-race.
+                assert!(
+                    response.get("status").is_some() || response.get("error").is_some(),
+                    "driver overwrite should return a structured payload: {response}"
+                );
+            }
+            Ok(())
+        })
+    };
+
+    let fanout_handles: Vec<_> = (0..fanout)
+        .map(|writer| {
+            let client = lease.client().clone();
+            let root = lease.root().to_owned();
+            let caller_id = lease.caller_id().to_owned();
+            let barrier = Arc::clone(&barrier);
+            thread::spawn(move || -> Result<()> {
+                barrier.wait();
+                for round in 0..rounds_each {
+                    let response = request_with_identity(
+                        &client,
+                        ops::API_V1_WRITE_FILE,
+                        &root,
+                        &caller_id,
+                        json!({
+                            "path": format!("pressure/squash-race/w-{writer}/r-{round}.txt"),
+                            "content": format!("w-{writer}-r-{round}\n"),
+                            "overwrite": true
+                        }),
+                    )?;
+                    assert!(
+                        as_bool(&response, "success")?,
+                        "disjoint fanout write should commit during squash: {response}"
+                    );
+                }
+                Ok(())
+            })
+        })
+        .collect();
+
+    driver.join().expect("squash-race driver panicked")?;
+    for handle in fanout_handles {
+        handle.join().expect("squash-race fanout panicked")?;
+    }
+
+    // The stack stays writable and coherent after the concurrent squash storm.
+    lease.call_ok(
+        ops::API_V1_WRITE_FILE,
+        json!({"path": "pressure/squash-race/driver.txt", "content": "final\n", "overwrite": true}),
+    )?;
+    let driver_read = lease.call_ok(
+        ops::API_V1_READ_FILE,
+        json!({"path": "pressure/squash-race/driver.txt"}),
+    )?;
+    assert_eq!(as_str(&driver_read, "content")?, "final\n", "{driver_read}");
+
+    // No fanout data was lost to the squash race.
+    for writer in 0..fanout {
+        let read = lease.call_ok(
+            ops::API_V1_READ_FILE,
+            json!({"path": format!("pressure/squash-race/w-{writer}/r-{}.txt", rounds_each - 1)}),
+        )?;
+        assert_eq!(
+            as_str(&read, "content")?,
+            format!("w-{writer}-r-{}\n", rounds_each - 1),
+            "fanout readback should survive concurrent squash: {read}"
+        );
+    }
+
+    let metrics = wait_for_active_leases(&lease, 0)?;
+    assert!(
+        as_i64(&metrics, "manifest_depth")? <= 100,
+        "auto-squash must keep depth bounded under concurrent publish pressure: {metrics}"
+    );
+    assert_eq!(
+        as_i64(&metrics, "orphan_layer_count")?,
+        0,
+        "concurrent squash must not strand superseded layer dirs: {metrics}"
+    );
+    assert_eq!(as_i64(&metrics, "active_leases")?, 0, "{metrics}");
+    Ok(())
+}

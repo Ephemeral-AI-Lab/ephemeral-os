@@ -1,11 +1,11 @@
 use std::path::Path;
 
 use eos_llm_client::{ContentBlock, Message, MessageRole};
-use eos_types::JsonObject;
+use eos_types::{JsonObject, UtcDateTime};
 use serde::Serialize;
 use tokio::io::{AsyncReadExt, AsyncSeekExt, AsyncWriteExt};
 
-use crate::error::{now, MessageRecordError, Result};
+use crate::error::{MessageRecordError, Result};
 use crate::record::{MessageAppendRange, NodeEvent, RecordBytes};
 
 #[derive(Serialize)]
@@ -101,7 +101,7 @@ pub(crate) async fn append_event(path: &Path, kind: String, payload: JsonObject)
         seq,
         kind,
         payload,
-        created_at: now(),
+        created_at: UtcDateTime::now(),
     };
     let mut file = tokio::fs::OpenOptions::new()
         .create(true)

@@ -2,7 +2,7 @@
 
 ## Overview
 
-OCC tests cover the workspace publish gate in front of LayerStack through `api.v1.write_file`, `api.v1.edit_file`, `api.v1.read_file`, and audit pull helpers against a live `eosd`. The module config is `crates/eos-e2e-test/tests/eos-occ/config/default.test.yml`. This module is one unified E2E contract for route correctness, conflict semantics, audit accounting, and concurrent publish behavior.
+OCC tests cover the workspace publish gate in front of LayerStack through `api.v1.write_file`, `api.v1.edit_file`, `api.v1.read_file`, `api.v1.exec_command`, `api.layer_metrics`, and audit pull helpers against a live `eosd`. The module config is `crates/eos-e2e-test/tests/eos-occ/config/default.test.yml`. This module is one unified E2E contract for route correctness, conflict semantics, audit accounting, publish batching, and concurrent publish behavior.
 
 ## Checklist
 
@@ -15,6 +15,8 @@ OCC tests cover the workspace publish gate in front of LayerStack through `api.v
 - [ ] occ-audit-accounting: successful publish and conflict/rejection paths emit coherent audit or route accounting signals.
 - [ ] occ-result-catalog: committed, rejected, dropped, and edit-conflict FileResult statuses keep stable wire names and reasons.
 - [ ] occ-atomic-changeset-audit: Multi-path publishes are all-or-nothing on conflict, causal audit identifiers link prepare/apply, and conflict versus publish outcomes are mutually exclusive for one commit.
+- [ ] occ-multi-write-batch: A single overlay operation that writes M disjoint files publishes one batched layer, so manifest depth grows by fewer than M while every captured path is published and readable (the reliably observable form of the CommitQueue batching invariant).
+- [ ] occ-concurrent-edit: Concurrent `edit_file` operations on disjoint anchors in one file stay atomic and coherent with no torn, duplicated, or lost lines, and concurrent same-anchor edits resolve to exactly one winner with structured conflicts for the rest.
 
 ## Test Case
 
@@ -25,3 +27,4 @@ OCC tests cover the workspace publish gate in front of LayerStack through `api.v
 | `occ-atomic-changeset-audit` | Uses `atomic_overlay_changeset_drops_all_paths_on_stale_conflict`: a stale multi-path overlay completion conflicts on one path, publishes no paths from the same atomic changeset, preserves newer direct content, and leaves the sibling path absent. | `cargo test -p eos-e2e-test --features e2e --test eos-occ atomic_overlay_changeset_drops_all_paths_on_stale_conflict -- --nocapture` | `occ-atomic-changeset-audit`, `occ-conflict-report`, `occ-audit-accounting` |
 | `occ-edit-conflict-and-result-catalog` | Covers `edit_overlap_conflict`, `edit_anchor_errors_do_not_publish_or_advance_manifest`, and `route_fileresult_catalog`: ambiguous and missing edit anchors, create-only rejection, missing edit conflicts, committed writes, rejected writes, no changed paths, unchanged content, unchanged manifest depth, and stable conflict reasons. | `cargo test -p eos-e2e-test --features e2e --test eos-occ merge -- --nocapture` | `occ-edit-anchor-errors`, `occ-audit-accounting`, `occ-result-catalog` |
 | `occ-publish-audit-accounting` | Covers `publish_accounting` plus the route counters from `gitignored_writes_bypass_the_occ_gate`: successful tracked publishes emit nonempty `changed_paths`, `occ.publish` audit events, and direct/gated timing counters. | `cargo test -p eos-e2e-test --features e2e --test eos-occ -- --nocapture` | `occ-tracked-gated`, `occ-audit-accounting` |
+| `occ-concurrent-edit-and-batch` | Covers `single_overlay_exec_batches_multi_file_writes_into_one_layer`, `concurrent_disjoint_anchor_edits_stay_atomic_and_coherent`, and `concurrent_same_anchor_edits_resolve_to_one_winner`: one overlay capture batches M disjoint writes into fewer than M layers; concurrent disjoint-anchor edits leave a coherent single-version file; concurrent same-anchor edits leave exactly one winner with structured losers. | `cargo test -p eos-e2e-test --features e2e --test eos-occ test_eos_occ_concurrent_contention -- --nocapture` | `occ-multi-write-batch`, `occ-concurrent-edit`, `occ-disjoint-merge`, `occ-conflict-report`, `occ-result-catalog` |

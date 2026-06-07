@@ -1,5 +1,3 @@
-use eos_types::UtcDateTime;
-
 /// Result alias for message-record operations.
 pub type Result<T> = std::result::Result<T, MessageRecordError>;
 
@@ -48,8 +46,4 @@ impl MessageRecordError {
             value: value.into(),
         }
     }
-}
-
-pub(crate) fn now() -> UtcDateTime {
-    UtcDateTime::now()
 }

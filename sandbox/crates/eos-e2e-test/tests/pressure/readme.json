@@ -133,6 +133,22 @@
       "tags": [
         "pressure"
       ]
+    },
+    {
+      "id": "pressure-multi-caller",
+      "title": "Multi Caller",
+      "description": "N distinct agents (distinct `caller_id`s) concurrently write disjoint and same-path files on one shared LayerStack; every disjoint write commits and is readable across callers, same-path races resolve to one whole winner, and per-caller leases drain to zero.",
+      "tags": [
+        "pressure"
+      ]
+    },
+    {
+      "id": "pressure-concurrent-squash",
+      "title": "Concurrent Squash",
+      "description": "A driver thread crosses the auto-squash depth target while a concurrent pool writes disjoint paths, so auto-squash runs during live publishes; manifest depth stays bounded, no superseded layer dirs are stranded, no data is lost, and no leases leak.",
+      "tags": [
+        "pressure"
+      ]
     }
   ],
   "test": [
@@ -220,6 +236,30 @@
       "checklist": [
         "pressure-overlay-disk-o1",
         "pressure-resource-memory"
+      ]
+    },
+    {
+      "id": "pressure-distinct-caller-concurrency",
+      "name": "pressure-distinct-caller-concurrency",
+      "description": "Groups `distinct_callers_disjoint_writes_ladder_1_3_6_12` and `distinct_callers_same_path_conflict_resolves_to_one_winner`: the documented N-agent shape (distinct `caller_id`s on one shared stack) commits disjoint writes coherently at `1/3/6/12` with peers reading each other's published content, resolves same-path races to one whole winner, and drains per-caller leases to zero.",
+      "command": "cargo test -p eos-e2e-test --features e2e --test pressure distinct_callers -- --nocapture",
+      "checklist": [
+        "pressure-multi-caller",
+        "pressure-ladder-file",
+        "pressure-ladder-occ",
+        "pressure-recovery-cleanup"
+      ]
+    },
+    {
+      "id": "pressure-concurrent-squash-race",
+      "name": "pressure-concurrent-squash-race",
+      "description": "Uses `concurrent_writes_during_squash_keep_manifest_bounded_and_coherent`: a driver overwrites one path past the depth target while a concurrent pool writes disjoint paths, so auto-squash runs during live concurrent publishes; manifest depth stays at or below the target, no orphan layer dirs accumulate, all driver and fanout data survives, and leases drain.",
+      "command": "cargo test -p eos-e2e-test --features e2e --test pressure concurrent_writes_during_squash -- --nocapture",
+      "checklist": [
+        "pressure-concurrent-squash",
+        "pressure-squash-bound",
+        "pressure-ladder-file",
+        "pressure-recovery-cleanup"
       ]
     }
   ]

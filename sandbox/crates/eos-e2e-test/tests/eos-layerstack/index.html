@@ -21,7 +21,7 @@
     "markdown": "readme.md"
   },
   "overview": {
-    "summary": "LayerStack tests cover daemon-owned workspace base rebuild, active lease pinning, auto-squash, storage cleanup, commit-to-workspace, and commit-to-git behavior through `api.layer_metrics`, `api.v1.write_file`, `api.v1.read_file`, `api.isolated_workspace.enter`, `api.isolated_workspace.status`, `api.isolated_workspace.exit`, `api.build_workspace_base`, `api.commit_to_workspace`, and `api.commit_to_git` against a live `eosd`. The module config is `crates/eos-e2e-test/tests/eos-layerstack/config/default.test.yml`, including `daemon.layer_stack.auto_squash_max_depth: 8`. This module is one unified E2E contract for lease lifecycle, squash integrity, resource cleanup, workspace commits, and Git overlay commits.",
+    "summary": "LayerStack tests cover daemon-owned workspace base rebuild, active lease pinning, auto-squash, storage cleanup, commit-to-workspace, and commit-to-git behavior through `api.layer_metrics`, `api.v1.write_file`, `api.v1.read_file`, `api.isolated_workspace.enter`, `api.isolated_workspace.status`, `api.isolated_workspace.exit`, `api.build_workspace_base`, `api.commit_to_workspace`, `api.commit_to_git`, and `api.runtime.ready` against a live `eosd`. The module config is `crates/eos-e2e-test/tests/eos-layerstack/config/default.test.yml`, including `daemon.layer_stack.auto_squash_max_depth: 8`. This module is one unified E2E contract for lease lifecycle, squash integrity, resource cleanup, workspace commits, and Git overlay commits.",
     "moduleConfig": "crates/eos-e2e-test/tests/eos-layerstack/config/default.test.yml",
     "ops": [
       "api.layer_metrics",
@@ -32,7 +32,8 @@
       "api.isolated_workspace.exit",
       "api.build_workspace_base",
       "api.commit_to_workspace",
-      "api.commit_to_git"
+      "api.commit_to_git",
+      "api.runtime.ready"
     ],
     "tags": [
       "eos-layerstack",
@@ -152,6 +153,14 @@
       "tags": [
         "eos-layerstack"
       ]
+    },
+    {
+      "id": "layerstack-commit-race",
+      "title": "Layerstack Commit Race",
+      "description": "Commit-to-workspace fired concurrently with a disjoint write storm returns a structured outcome (clean success or the active-lease guard), keeps every committed write durable across a base rebuild, and a retried commit after drain succeeds with the daemon ready and leases at zero.",
+      "tags": [
+        "eos-layerstack"
+      ]
     }
   ],
   "test": [
@@ -232,6 +241,18 @@
         "layerstack-git-commit-overlay",
         "layerstack-squash-depth",
         "layerstack-storage-cleanup"
+      ]
+    },
+    {
+      "id": "layerstack-commit-race",
+      "name": "layerstack-commit-race",
+      "description": "Uses `commit_races_inflight_writes_stays_structured_and_coherent`: commit-to-workspace races a concurrent disjoint write storm and returns a structured success-or-active-lease-guard, preserves the base and every committed write across commit + base rebuild, and a clean retried commit after drain succeeds with the daemon ready and active leases at zero.",
+      "command": "cargo test -p eos-e2e-test --features e2e --test eos-layerstack commit_races_inflight_writes_stays_structured_and_coherent -- --nocapture",
+      "checklist": [
+        "layerstack-commit-race",
+        "layerstack-lease-commit-guard",
+        "layerstack-workspace-commit-collapse",
+        "layerstack-base-rebuild"
       ]
     }
   ]

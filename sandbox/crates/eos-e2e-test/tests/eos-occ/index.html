@@ -21,12 +21,14 @@
     "markdown": "readme.md"
   },
   "overview": {
-    "summary": "OCC tests cover the workspace publish gate in front of LayerStack through `api.v1.write_file`, `api.v1.edit_file`, `api.v1.read_file`, and audit pull helpers against a live `eosd`. The module config is `crates/eos-e2e-test/tests/eos-occ/config/default.test.yml`. This module is one unified E2E contract for route correctness, conflict semantics, audit accounting, and concurrent publish behavior.",
+    "summary": "OCC tests cover the workspace publish gate in front of LayerStack through `api.v1.write_file`, `api.v1.edit_file`, `api.v1.read_file`, `api.v1.exec_command`, `api.layer_metrics`, and audit pull helpers against a live `eosd`. The module config is `crates/eos-e2e-test/tests/eos-occ/config/default.test.yml`. This module is one unified E2E contract for route correctness, conflict semantics, audit accounting, publish batching, and concurrent publish behavior.",
     "moduleConfig": "crates/eos-e2e-test/tests/eos-occ/config/default.test.yml",
     "ops": [
       "api.v1.write_file",
       "api.v1.edit_file",
-      "api.v1.read_file"
+      "api.v1.read_file",
+      "api.v1.exec_command",
+      "api.layer_metrics"
     ],
     "tags": [
       "eos-occ",
@@ -106,6 +108,22 @@
       "tags": [
         "eos-occ"
       ]
+    },
+    {
+      "id": "occ-multi-write-batch",
+      "title": "Occ Multi Write Batch",
+      "description": "A single overlay operation that writes M disjoint files publishes one batched layer, so manifest depth grows by fewer than M while every captured path is published and readable (the reliably observable form of the CommitQueue batching invariant).",
+      "tags": [
+        "eos-occ"
+      ]
+    },
+    {
+      "id": "occ-concurrent-edit",
+      "title": "Occ Concurrent Edit",
+      "description": "Concurrent `edit_file` operations on disjoint anchors in one file stay atomic and coherent with no torn, duplicated, or lost lines, and concurrent same-anchor edits resolve to exactly one winner with structured conflicts for the rest.",
+      "tags": [
+        "eos-occ"
+      ]
     }
   ],
   "test": [
@@ -163,6 +181,19 @@
       "checklist": [
         "occ-tracked-gated",
         "occ-audit-accounting"
+      ]
+    },
+    {
+      "id": "occ-concurrent-edit-and-batch",
+      "name": "occ-concurrent-edit-and-batch",
+      "description": "Covers `single_overlay_exec_batches_multi_file_writes_into_one_layer`, `concurrent_disjoint_anchor_edits_stay_atomic_and_coherent`, and `concurrent_same_anchor_edits_resolve_to_one_winner`: one overlay capture batches M disjoint writes into fewer than M layers; concurrent disjoint-anchor edits leave a coherent single-version file; concurrent same-anchor edits leave exactly one winner with structured losers.",
+      "command": "cargo test -p eos-e2e-test --features e2e --test eos-occ test_eos_occ_concurrent_contention -- --nocapture",
+      "checklist": [
+        "occ-multi-write-batch",
+        "occ-concurrent-edit",
+        "occ-disjoint-merge",
+        "occ-conflict-report",
+        "occ-result-catalog"
       ]
     }
   ]
