@@ -27,8 +27,8 @@ pub async fn run_agent(
         tool_metadata,
         attempt_submission,
         workflow_control,
-        background_supervisor,
-        command_session_supervisor,
+        background_session,
+        command_session_port,
         notifier,
         cancellation,
         foreground,
@@ -54,8 +54,8 @@ pub async fn run_agent(
             tool_metadata,
             attempt_submission,
             workflow_control,
-            background_supervisor,
-            command_session_supervisor,
+            background_session,
+            command_session_port,
             notifier,
             cancellation,
             foreground,
@@ -171,7 +171,7 @@ pub async fn run_agent(
         .is_none_or(|registry| registry.begin_cancel(&agent_run_id).is_some());
     if won {
         prepared
-            .background_finalizer
+            .background_session_finalizer
             .finalize(&prepared.ctx, error.as_deref())
             .await;
         finish_agent_run_if_requested(
@@ -187,7 +187,7 @@ pub async fn run_agent(
     } else {
         // A concurrent `cancel_agent_run` claimed the entry and owns the row +
         // child teardown; disarm our finalizer so it does not run a second one.
-        prepared.background_finalizer.disarm();
+        prepared.background_session_finalizer.disarm();
     }
 
     AgentRunResult {

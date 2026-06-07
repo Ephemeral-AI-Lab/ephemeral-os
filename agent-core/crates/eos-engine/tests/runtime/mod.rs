@@ -21,11 +21,11 @@ use eos_testkit::{
     FakeTransport,
 };
 use eos_tools::{
-    BackgroundSupervisorPort, CancelPort, CancelledSubagent, ExecutionMetadata, NotificationSink,
-    OutputShape, RegisteredTool, RunningBackgroundTasks, SandboxToolService, SkillToolService,
-    SpawnedSubagent, StartedSubagent, StartedWorkflowHandle, SubagentLaunch, SubagentProgress,
-    SystemNotification, ToolConfigSet, ToolError, ToolExecutor, ToolIntent, ToolName, ToolRegistry,
-    ToolResult, WorkflowControlPort,
+    BackgroundSessionCounts, BackgroundSessionPort, CancelPort, CancelledSubagent,
+    ExecutionMetadata, NotificationSink, OutputShape, RegisteredTool, SandboxToolService,
+    SkillToolService, SpawnedSubagent, StartedSubagent, StartedWorkflowSession, SubagentLaunch,
+    SubagentProgress, SystemNotification, ToolConfigSet, ToolError, ToolExecutor, ToolIntent,
+    ToolName, ToolRegistry, ToolResult, WorkflowControlPort,
 };
 use eos_types::{AgentRunId, JsonObject, SubagentSessionId, WorkflowSessionId};
 use serde_json::json;
@@ -188,20 +188,20 @@ struct CancelRecord {
 }
 
 #[derive(Debug, Default)]
-struct RecordingBackgroundSupervisor {
+struct RecordingBackgroundSession {
     cancels: Mutex<Vec<CancelRecord>>,
 }
 
-impl RecordingBackgroundSupervisor {
+impl RecordingBackgroundSession {
     fn cancels(&self) -> Vec<CancelRecord> {
         self.cancels.lock().unwrap().clone()
     }
 }
 
-impl eos_tools::ports::Sealed for RecordingBackgroundSupervisor {}
+impl eos_tools::ports::Sealed for RecordingBackgroundSession {}
 
-fn empty_report() -> RunningBackgroundTasks {
-    RunningBackgroundTasks {
+fn empty_report() -> BackgroundSessionCounts {
+    BackgroundSessionCounts {
         total: 0,
         subagents: 0,
         workflows: 0,
@@ -210,7 +210,7 @@ fn empty_report() -> RunningBackgroundTasks {
 }
 
 #[async_trait]
-impl BackgroundSupervisorPort for RecordingBackgroundSupervisor {
+impl BackgroundSessionPort for RecordingBackgroundSession {
     async fn spawn(
         &self,
         _ctx: &ExecutionMetadata,
@@ -241,17 +241,17 @@ impl BackgroundSupervisorPort for RecordingBackgroundSupervisor {
         })
     }
 
-    async fn running_background_tasks(&self) -> RunningBackgroundTasks {
+    async fn running_background_tasks(&self) -> BackgroundSessionCounts {
         empty_report()
     }
 
-    async fn cancel_subagents(&self) -> RunningBackgroundTasks {
+    async fn cancel_subagents(&self) -> BackgroundSessionCounts {
         empty_report()
     }
 
-    async fn register_workflow(&self, _workflow: &StartedWorkflowHandle) {}
+    async fn register_workflow(&self, _workflow: &StartedWorkflowSession) {}
 
-    async fn cancel_workflow_record(
+    async fn mark_workflow_cancelled(
         &self,
         _workflow_task_id: &WorkflowSessionId,
         _reason: &str,
@@ -263,7 +263,7 @@ impl BackgroundSupervisorPort for RecordingBackgroundSupervisor {
         &self,
         _workflow_control: Option<Arc<dyn WorkflowControlPort>>,
         reason: &str,
-    ) -> RunningBackgroundTasks {
+    ) -> BackgroundSessionCounts {
         self.cancels.lock().unwrap().push(CancelRecord {
             reason: reason.to_owned(),
         });
@@ -344,7 +344,7 @@ fn input(
     agent_run_id: AgentRunId,
     task_id: TaskId,
     request_id: &str,
-    background_supervisor: Option<Arc<dyn BackgroundSupervisorPort>>,
+    background_session: Option<Arc<dyn BackgroundSessionPort>>,
 ) -> AgentRunInput {
     let mut tool_metadata = metadata();
     tool_metadata.agent_name = agent.name.as_str().to_owned();
@@ -362,8 +362,8 @@ fn input(
         tool_metadata,
         attempt_submission: None,
         workflow_control: None,
-        background_supervisor,
-        command_session_supervisor: None,
+        background_session,
+        command_session_port: None,
         notifier: eos_engine::NotificationService::new(),
         cancellation: eos_engine::AgentRunCancellation::new(),
         foreground,
@@ -508,8 +508,8 @@ async fn run_agent_finishes_message_record_failed_on_stream_error() {
 }
 
 #[tokio::test]
-async fn run_agent_finalizes_background_handles_after_query_error() {
-    let background = Arc::new(RecordingBackgroundSupervisor::default());
+async fn run_agent_finalizes_background_sessions_after_query_error() {
+    let background = Arc::new(RecordingBackgroundSession::default());
     let harness = handles(
         vec![root_agent()],
         factory_from(vec![Vec::new()]),
@@ -542,8 +542,8 @@ async fn run_agent_finalizes_background_handles_after_query_error() {
 }
 
 #[tokio::test]
-async fn run_agent_finalizes_background_handles_after_tool_stop() {
-    let background = Arc::new(RecordingBackgroundSupervisor::default());
+async fn run_agent_finalizes_background_sessions_after_tool_stop() {
+    let background = Arc::new(RecordingBackgroundSession::default());
     let harness = handles(
         vec![root_agent()],
         factory_from(vec![tool_use_turn(
@@ -577,8 +577,8 @@ async fn run_agent_finalizes_background_handles_after_tool_stop() {
 }
 
 #[tokio::test]
-async fn run_agent_finalizes_background_handles_after_terminal_not_submitted() {
-    let background = Arc::new(RecordingBackgroundSupervisor::default());
+async fn run_agent_finalizes_background_sessions_after_terminal_not_submitted() {
+    let background = Arc::new(RecordingBackgroundSession::default());
     let turns = std::iter::repeat_with(|| eos_testkit::text_turn("still thinking"))
         .take(12)
         .collect();
@@ -817,8 +817,8 @@ async fn concurrent_cancel_and_run_finalize_exactly_once() {
         tool_metadata: metadata(),
         attempt_submission: None,
         workflow_control: None,
-        background_supervisor: None,
-        command_session_supervisor: None,
+        background_session: None,
+        command_session_port: None,
         notifier: control.notifications(),
         cancellation: control.cancellation(),
         foreground: control.foreground(),

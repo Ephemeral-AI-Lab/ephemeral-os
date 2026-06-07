@@ -80,11 +80,11 @@ impl ToolExecutor for ExecCommand {
                 Ok(result) => result,
                 Err(err) => return Ok(ToolResult::error(err.to_string())),
             };
-        // Register a backgrounded session on this run's command-session lane (the
-        // lane is bound to the owner agent run, so the daemon completion poll uses
-        // `owner_agent_run_id` as the caller id — no per-call agent-run arg).
+        // Register a backgrounded session on this run's command-session manager.
+        // The manager is bound to the owning agent run, so no per-call agent-run
+        // argument is threaded through the tool request.
         if let (Some(port), Some(session_id)) = (
-            &self.service.command_session_supervisor,
+            &self.service.command_session_port,
             &result.command_session_id,
         ) {
             if result.is_running() {

@@ -12,7 +12,7 @@ use crate::core::error::ToolError;
 use crate::core::metadata::ExecutionMetadata;
 use crate::core::name::ToolName;
 use crate::core::result::{OutputShape, ToolResult};
-use crate::ports::{BackgroundSupervisorPort, SubagentProgress};
+use crate::ports::{BackgroundSessionPort, SubagentProgress};
 use crate::registry::config::ToolConfigSet;
 use crate::registry::spec::text_spec;
 use crate::registry::ToolRegistry;
@@ -31,16 +31,14 @@ struct CheckSubagentProgressInput {
 }
 
 pub(in crate::tools::subagent) struct CheckSubagentProgress {
-    background_supervisor: Option<Arc<dyn BackgroundSupervisorPort>>,
+    background_session: Option<Arc<dyn BackgroundSessionPort>>,
 }
 
 impl CheckSubagentProgress {
     pub(in crate::tools::subagent) fn new(
-        background_supervisor: Option<Arc<dyn BackgroundSupervisorPort>>,
+        background_session: Option<Arc<dyn BackgroundSessionPort>>,
     ) -> Self {
-        Self {
-            background_supervisor,
-        }
+        Self { background_session }
     }
 }
 
@@ -68,9 +66,9 @@ impl ToolExecutor for CheckSubagentProgress {
             ));
         }
         match self
-            .background_supervisor
+            .background_session
             .as_deref()
-            .ok_or(ToolError::MissingPort("background_supervisor"))?
+            .ok_or(ToolError::MissingPort("background_session"))?
             .progress(&parsed.subagent_session_id, parsed.last_n_messages)
             .await?
         {
@@ -108,7 +106,7 @@ fn render_progress(snapshot: &crate::ports::SubagentProgressSnapshot) -> ToolRes
 pub(super) fn register(
     registry: &mut ToolRegistry,
     config: &ToolConfigSet,
-    background_supervisor: Option<Arc<dyn BackgroundSupervisorPort>>,
+    background_session: Option<Arc<dyn BackgroundSessionPort>>,
 ) {
     let check = config.get(ToolName::CheckSubagentProgress);
     super::super::register_tool(
@@ -121,6 +119,6 @@ pub(super) fn register(
             schema_for!(CheckSubagentProgressInput),
         ),
         OutputShape::Text,
-        Arc::new(CheckSubagentProgress::new(background_supervisor)),
+        Arc::new(CheckSubagentProgress::new(background_session)),
     );
 }

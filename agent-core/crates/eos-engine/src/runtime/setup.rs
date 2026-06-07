@@ -6,13 +6,13 @@ use std::sync::Arc;
 use eos_agent_def::AgentDefinition;
 use eos_llm_client::DEFAULT_MAX_TOKENS;
 use eos_tools::{
-    build_default_registry_with_services, AttemptSubmissionService, BackgroundSupervisorPort,
-    CallerScope, CommandSessionSupervisorPort, ExecutionMetadata, WorkflowControlPort,
+    build_default_registry_with_services, AttemptSubmissionService, BackgroundSessionPort,
+    CallerScope, CommandSessionPort, ExecutionMetadata, WorkflowControlPort,
 };
 use eos_types::{AgentRunId, TaskId};
 
 use crate::agent::{build_query_context, BuildQueryContextInput};
-use crate::background::BackgroundRunFinalizer;
+use crate::background::BackgroundSessionFinalizer;
 use crate::notifications::NotificationService;
 use crate::query::QueryContext;
 use crate::EngineError;
@@ -28,8 +28,8 @@ pub(super) struct AgentRunSetupInput {
     pub(super) tool_metadata: ExecutionMetadata,
     pub(super) attempt_submission: Option<AttemptSubmissionService>,
     pub(super) workflow_control: Option<Arc<dyn WorkflowControlPort>>,
-    pub(super) background_supervisor: Option<Arc<dyn BackgroundSupervisorPort>>,
-    pub(super) command_session_supervisor: Option<Arc<dyn CommandSessionSupervisorPort>>,
+    pub(super) background_session: Option<Arc<dyn BackgroundSessionPort>>,
+    pub(super) command_session_port: Option<Arc<dyn CommandSessionPort>>,
     pub(super) notifier: NotificationService,
     pub(super) cancellation: AgentRunCancellation,
     pub(super) foreground: Arc<ForegroundExecutor>,
@@ -37,7 +37,7 @@ pub(super) struct AgentRunSetupInput {
 
 pub(super) struct PreparedAgentRun {
     pub(super) ctx: QueryContext,
-    pub(super) background_finalizer: BackgroundRunFinalizer,
+    pub(super) background_session_finalizer: BackgroundSessionFinalizer,
 }
 
 pub(super) fn prepare_agent_run_context(
@@ -51,8 +51,8 @@ pub(super) fn prepare_agent_run_context(
         tool_metadata,
         attempt_submission,
         workflow_control,
-        background_supervisor,
-        command_session_supervisor,
+        background_session,
+        command_session_port,
         notifier,
         cancellation,
         foreground,
@@ -71,16 +71,16 @@ pub(super) fn prepare_agent_run_context(
         handles.root_submission.clone(),
         attempt_submission,
         workflow_control.clone(),
-        background_supervisor.clone(),
-        command_session_supervisor,
+        background_session.clone(),
+        command_session_port,
         handles.skill_service.clone(),
     );
     if let Some(extender) = &handles.tool_registry_extender {
         extender(&mut registry);
     }
 
-    let background_finalizer =
-        BackgroundRunFinalizer::new(background_supervisor, workflow_control);
+    let background_session_finalizer =
+        BackgroundSessionFinalizer::new(background_session, workflow_control);
     let ctx = build_query_context(BuildQueryContextInput {
         agent,
         model,
@@ -102,7 +102,7 @@ pub(super) fn prepare_agent_run_context(
 
     Ok(PreparedAgentRun {
         ctx,
-        background_finalizer,
+        background_session_finalizer,
     })
 }
 

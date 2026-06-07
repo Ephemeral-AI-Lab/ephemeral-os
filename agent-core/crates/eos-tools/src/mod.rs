@@ -8,7 +8,7 @@
 //! ([`reject_terminal_batch`], [`lifecycle_batch_decision`]).
 //!
 //! It owns the *decisions*; `eos-engine` owns the async query/dispatch *loop*,
-//! the background supervisor, stream events, and `ToolResultBlock`. Tools that
+//! background-session runtime, stream events, and `ToolResultBlock`. Tools that
 //! need downstream state depend on a **narrow [port trait](ports)** defined here
 //! and implemented downstream.
 #![forbid(unsafe_code)]
@@ -38,10 +38,10 @@ pub use core::name::{ToolKey, ToolName};
 pub use core::result::{OutputShape, ToolResult};
 pub use hooks::{Hook, HookDenial, HookOutcome};
 pub use ports::{
-    AttemptSubmissionPort, BackgroundSupervisorPort, CancelPort, CancelableResource,
-    CancelledSubagent, CommandSessionSupervisorPort, NotificationSink, OutstandingWorkflow,
-    PlanReducer, PlanTask, PlannerPlan, RunningBackgroundTasks, SpawnedSubagent, StartedSubagent,
-    StartedWorkflowHandle, SubagentLaunch, SubagentLaunchRejection, SubagentProgress,
+    AttemptSubmissionPort, BackgroundSessionCounts, BackgroundSessionPort, CancelPort,
+    CancelableResource, CancelledSubagent, CommandSessionPort, NotificationSink,
+    OutstandingWorkflow, PlanReducer, PlanTask, PlannerPlan, SpawnedSubagent, StartedSubagent,
+    StartedWorkflowSession, SubagentLaunch, SubagentLaunchRejection, SubagentProgress,
     SubagentProgressSnapshot, SubagentSessionStatus, SubmissionAck, SystemNotification,
     WorkflowControlPort,
 };

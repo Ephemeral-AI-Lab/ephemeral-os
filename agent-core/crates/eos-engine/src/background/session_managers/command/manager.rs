@@ -9,7 +9,10 @@ use eos_types::{AgentRunId, CommandSessionId, SandboxId};
 use serde_json::Value;
 use tokio::sync::Mutex;
 
-use super::super::{BackgroundSession, BackgroundSessionManager, BackgroundSessionStatus};
+use super::super::{
+    BackgroundSession, BackgroundSessionManager, BackgroundSessionMonitorHandle,
+    BackgroundSessionStatus,
+};
 use super::session::CommandSession;
 use crate::background::notification::{BackgroundCompletion, BackgroundNotificationEmitter};
 
@@ -31,6 +34,9 @@ pub(in crate::background) struct CommandSessionManager {
     command_port: Arc<dyn SandboxTransport>,
     notification: BackgroundNotificationEmitter,
 }
+
+pub(in crate::background) type CommandSessionMonitor =
+    BackgroundSessionMonitorHandle<CommandSessionManager>;
 
 impl std::fmt::Debug for CommandSessionManager {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {

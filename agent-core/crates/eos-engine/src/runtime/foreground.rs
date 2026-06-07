@@ -4,7 +4,7 @@
 //! Foreground work is awaited inline by the query loop, so it needs no records,
 //! heartbeat, progress delivery, or notification latches — only
 //! cancel-reachability. The existing foreground `JoinSet` remains the execution
-//! substrate; this type is **not** a mirror supervisor. It exists so that, on
+//! substrate; this type is **not** a mirror background. It exists so that, on
 //! cancellation, the run can reach the effects its tools spawned (inline advisor
 //! runs and any registered [`CancelableResource`]) and tear them down.
 //!

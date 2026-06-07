@@ -82,7 +82,7 @@ impl ToolExecutor for ReadCommandProgress {
             Ok(result) => result,
             Err(err) => return Ok(ToolResult::error(err.to_string())),
         };
-        if let Some(port) = &self.service.command_session_supervisor {
+        if let Some(port) = &self.service.command_session_port {
             if is_command_session_not_found(&result) {
                 if port
                     .command_session_already_reported(command_session_id)

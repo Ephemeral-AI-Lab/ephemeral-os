@@ -3,7 +3,7 @@
 //! Each root, workflow-agent, and subagent run owns exactly one
 //! `AgentRunControl`. It is the object-oriented owner of the run-local
 //! cancellation state, foreground executor, notification service, background
-//! supervisor, and finalization handles. It replaces `BackgroundRunFinalizer`'s
+//! session service, and finalization handles. It replaces `BackgroundSessionFinalizer`'s
 //! `Drop`-based cleanup as the cleanup owner; teardown is awaited.
 
 use std::sync::{Arc, Mutex};

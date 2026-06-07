@@ -8,5 +8,5 @@ mod session_runtime;
 pub use factory::BackgroundSessionFactory;
 pub use notification::{BackgroundCompletion, BackgroundNotificationEmitter};
 pub use session_managers::BackgroundSessionStatus;
-pub(crate) use session_runtime::BackgroundRunFinalizer;
+pub(crate) use session_runtime::BackgroundSessionFinalizer;
 pub use session_runtime::BackgroundSessionService;

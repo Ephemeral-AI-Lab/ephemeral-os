@@ -187,7 +187,7 @@
 </pre>
 <div class="edge-list" aria-label="Delegated workflow transitions">
   <div><b>delegate</b><span>The root agent or a generator calls <code>delegate_workflow</code> while its own task is running.</span></div>
-  <div><b>start</b><span><code>WorkflowStarter</code> validates the parent and inserts the delegated workflow state chain; the background supervisor records the agent-facing handle.</span></div>
+  <div><b>start</b><span><code>WorkflowStarter</code> validates the parent and inserts the delegated workflow state chain; <code>WorkflowSessionManager</code> records the agent-facing handle.</span></div>
   <div><b>parent gate</b><span>The no-inflight terminal hook counts outstanding workflow handles. The parent cannot submit its terminal outcome until the handle is reported or cancelled.</span></div>
   <div><b>workflow-local policy</b><span>Retry stays inside the delegated iteration; deferral creates another delegated iteration and still leaves parent synthesis to the launching agent.</span></div>
   <div><b>outcome delivery</b><span><code>check_workflow_status</code> renders final workflow outcomes and marks the handle delivered. The parent agent decides how those outcomes affect its own terminal submission.</span></div>

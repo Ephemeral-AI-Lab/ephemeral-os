@@ -159,7 +159,7 @@
 <p>Before daemon dispatch, <code>exec_command</code> runs destructive git and destructive shell pre-hooks through the <a class="wiki-link" href="hooks.html">Tool Hooks</a> pipeline. These hooks block command forms that would bypass the sandbox write/audit path or destructively mutate workspace/system state. That policy keeps commands useful for builds and tests while steering file edits toward <code>edit_file</code> and <code>write_file</code>.</p>
 <div class="callout">
   <span class="label">Session connection</span>
-  The engine supervisor tracks long-running command sessions for completion notifications and isolated-workspace lifecycle gates, while <code>eos-command-session</code> owns runtime session state behind the daemon adapter. Generic background management tools are no longer exposed to the model.
+  <code>CommandSessionManager</code> tracks long-running command sessions for completion notifications and isolated-workspace lifecycle gates, while <code>eos-command-session</code> owns runtime session state behind the daemon adapter. Generic background management tools are no longer exposed to the model.
 </div>
 </section>
 

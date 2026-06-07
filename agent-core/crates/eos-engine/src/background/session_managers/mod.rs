@@ -1,6 +1,7 @@
 //! Private background-session manager contracts and concrete families.
 
 use std::hash::Hash;
+use std::marker::PhantomData;
 use std::time::Duration;
 
 use async_trait::async_trait;
@@ -61,6 +62,32 @@ pub(super) trait BackgroundSessionMonitor {
     type Manager: BackgroundSessionManager + Clone + Send + Sync + 'static;
 
     fn spawn(manager: Self::Manager, interval: Duration) -> Self;
+}
+
+pub(in crate::background) struct BackgroundSessionMonitorHandle<M> {
+    join: JoinHandle<()>,
+    _manager: PhantomData<fn() -> M>,
+}
+
+impl<M> Drop for BackgroundSessionMonitorHandle<M> {
+    fn drop(&mut self) {
+        self.join.abort();
+    }
+}
+
+impl<M> BackgroundSessionMonitor for BackgroundSessionMonitorHandle<M>
+where
+    M: BackgroundSessionManager + Clone + Send + Sync + 'static,
+    M::Completion: Send + 'static,
+{
+    type Manager = M;
+
+    fn spawn(manager: Self::Manager, interval: Duration) -> Self {
+        Self {
+            join: spawn_monitor_loop(manager, interval),
+            _manager: PhantomData,
+        }
+    }
 }
 
 pub(super) fn spawn_monitor_loop<M>(manager: M, interval: Duration) -> JoinHandle<()>

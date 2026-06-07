@@ -11,7 +11,7 @@ use crate::core::error::ToolError;
 use crate::core::metadata::ExecutionMetadata;
 use crate::core::name::ToolName;
 use crate::core::result::{OutputShape, ToolResult};
-use crate::ports::{BackgroundSupervisorPort, CancelledSubagent};
+use crate::ports::{BackgroundSessionPort, CancelledSubagent};
 use crate::registry::config::ToolConfigSet;
 use crate::registry::spec::text_spec;
 use crate::registry::ToolRegistry;
@@ -28,16 +28,14 @@ struct CancelSubagentInput {
 }
 
 pub(in crate::tools::subagent) struct CancelSubagent {
-    background_supervisor: Option<Arc<dyn BackgroundSupervisorPort>>,
+    background_session: Option<Arc<dyn BackgroundSessionPort>>,
 }
 
 impl CancelSubagent {
     pub(in crate::tools::subagent) fn new(
-        background_supervisor: Option<Arc<dyn BackgroundSupervisorPort>>,
+        background_session: Option<Arc<dyn BackgroundSessionPort>>,
     ) -> Self {
-        Self {
-            background_supervisor,
-        }
+        Self { background_session }
     }
 }
 
@@ -56,9 +54,9 @@ impl ToolExecutor for CancelSubagent {
             return Ok(empty_subagent_session_error(ToolName::CancelSubagent));
         }
         match self
-            .background_supervisor
+            .background_session
             .as_deref()
-            .ok_or(ToolError::MissingPort("background_supervisor"))?
+            .ok_or(ToolError::MissingPort("background_session"))?
             .cancel(&parsed.subagent_session_id, &parsed.reason)
             .await?
         {
@@ -92,7 +90,7 @@ fn render_cancelled(subagent_session_id: &SubagentSessionId, reason: &str) -> To
 pub(super) fn register(
     registry: &mut ToolRegistry,
     config: &ToolConfigSet,
-    background_supervisor: Option<Arc<dyn BackgroundSupervisorPort>>,
+    background_session: Option<Arc<dyn BackgroundSessionPort>>,
 ) {
     let cancel = config.get(ToolName::CancelSubagent);
     super::super::register_tool(
@@ -105,6 +103,6 @@ pub(super) fn register(
             schema_for!(CancelSubagentInput),
         ),
         OutputShape::Text,
-        Arc::new(CancelSubagent::new(background_supervisor)),
+        Arc::new(CancelSubagent::new(background_session)),
     );
 }

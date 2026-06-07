@@ -43,12 +43,12 @@ pub trait Sealed {}
 // WorkflowControlPort — delegate / check / cancel workflow.
 // ---------------------------------------------------------------------------
 
-/// A started delegated workflow handle (returned by [`WorkflowControlPort::start`]).
+/// A started delegated workflow session (returned by [`WorkflowControlPort::start`]).
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct StartedWorkflowHandle {
+pub struct StartedWorkflowSession {
     /// The persisted workflow id.
     pub workflow_id: WorkflowId,
-    /// The agent-facing background handle (`wf_<n>`, Rust `workflow_task_id`).
+    /// The agent-facing background session id (`wf_<n>`, Rust `workflow_task_id`).
     pub workflow_task_id: WorkflowSessionId,
 }
 
@@ -57,14 +57,14 @@ pub struct StartedWorkflowHandle {
 pub struct OutstandingWorkflow {
     /// The persisted workflow id.
     pub workflow_id: WorkflowId,
-    /// The agent-facing background handle.
+    /// The agent-facing background session id.
     pub workflow_task_id: WorkflowSessionId,
     /// The workflow goal.
     pub workflow_goal: String,
 }
 
 /// Per-Attempt workflow control for the `delegate`/`check`/`cancel_workflow`
-/// tools. Implemented by the `eos-workflow` + `eos-engine` workflow-handle
+/// tools. Implemented by the `eos-workflow` + `eos-engine` workflow-session
 /// adapter. The live workflow/outcome state lives downstream, so `status`/
 /// `cancel` return already-rendered, model-facing text.
 #[async_trait]
@@ -76,7 +76,7 @@ pub trait WorkflowControlPort: Sealed + Send + Sync {
         parent_task_id: &TaskId,
         agent_run_id: &AgentRunId,
         workflow_goal: &str,
-    ) -> Result<StartedWorkflowHandle, ToolError>;
+    ) -> Result<StartedWorkflowSession, ToolError>;
 
     /// Render delegated-workflow progress (and terminal outcomes when available).
     async fn status(
@@ -85,7 +85,7 @@ pub trait WorkflowControlPort: Sealed + Send + Sync {
         workflow_task_id: Option<&WorkflowSessionId>,
     ) -> Result<String, ToolError>;
 
-    /// Cancel an outstanding delegated workflow by its background handle.
+    /// Cancel an outstanding delegated workflow by its background session id.
     async fn cancel(
         &self,
         workflow_task_id: &WorkflowSessionId,
@@ -192,13 +192,13 @@ pub trait AttemptSubmissionPort: Sealed + Send + Sync {
 }
 
 // ---------------------------------------------------------------------------
-// BackgroundSupervisorPort — subagents, delegated workflow handles, run-finalization cleanup.
+// BackgroundSessionPort — subagents, delegated workflow sessions, run-finalization cleanup.
 // ---------------------------------------------------------------------------
 
-/// A started subagent handle (returned on the `Launched` arm of [`SpawnedSubagent`]).
+/// A started subagent session (returned on the `Launched` arm of [`SpawnedSubagent`]).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct StartedSubagent {
-    /// The agent-facing background handle (`subagent_<n>`).
+    /// The agent-facing background session id (`subagent_<n>`).
     pub subagent_session_id: SubagentSessionId,
 }
 
@@ -232,7 +232,7 @@ pub enum SubagentLaunchRejection {
     },
 }
 
-/// The outcome of [`BackgroundSupervisorPort::spawn`]: a tracked launch, or a
+/// The outcome of [`BackgroundSessionPort::spawn`]: a tracked launch, or a
 /// typed in-band validation rejection. Mirrors [`SubmissionAck`]: validation
 /// failures (recursion / unknown / non-subagent) are model-facing `Ok(Rejected)`
 /// outcomes, not `Err(ToolError)` framework faults.
@@ -302,30 +302,30 @@ pub enum CancelledSubagent {
     },
 }
 
-/// Per-kind in-flight background-task count (Running records only) for one agent
-/// run, serialized to JSON for the terminal-cleanup audit assertion. The owning
-/// run is the supervisor handle's `owner_agent_run_id`, so there is no
-/// `agent_run_id` field or filter (spec §8.5).
+/// Per-kind in-flight background-session count for one agent run, serialized to
+/// JSON for terminal-cleanup audit assertions. The owning agent run is captured
+/// by the concrete background session service, so there is no `agent_run_id`
+/// field or filter.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
-pub struct RunningBackgroundTasks {
+pub struct BackgroundSessionCounts {
     /// `subagents + workflows + command_sessions`.
     pub total: usize,
     /// In-flight subagent runs for this agent run.
     pub subagents: usize,
-    /// Outstanding delegated workflows for this agent run. The supervisor owns the
-    /// background handle bookkeeping; [`WorkflowControlPort`] remains the source
-    /// of truth for persisted workflow lifecycle.
+    /// Outstanding delegated workflows for this agent run. The background
+    /// session service owns session bookkeeping; [`WorkflowControlPort`] remains
+    /// the source of truth for persisted workflow lifecycle.
     pub workflows: usize,
-    /// In-flight, supervisor-tracked command sessions for this agent run
+    /// In-flight, background-tracked command sessions for this agent run
     /// (diagnostic; the authoritative live-session gate is the daemon RPC).
     pub command_sessions: usize,
 }
 
-/// The engine background supervisor surface used by subagent tools, workflow
-/// delegation handle bookkeeping, and run-finalization cleanup. Implemented by
+/// The engine background-session surface used by subagent tools, workflow
+/// delegation session bookkeeping, and run-finalization cleanup. Implemented by
 /// `eos-engine`.
 #[async_trait]
-pub trait BackgroundSupervisorPort: Sealed + Send + Sync {
+pub trait BackgroundSessionPort: Sealed + Send + Sync {
     /// Validate, launch, and track a dispatchable subagent run. `ctx` is the
     /// caller's execution metadata: the implementor reads the caller identity
     /// from it (for recursion + the agent-run-scoped count) and clones it to build
@@ -353,25 +353,24 @@ pub trait BackgroundSupervisorPort: Sealed + Send + Sync {
         reason: &str,
     ) -> Result<CancelledSubagent, ToolError>;
 
-    /// This agent run's in-flight background report (Running-only), without mutating
-    /// state — the reject-mode read for `enter_isolated_workspace`. The handle
-    /// scopes the count to its `owner_agent_run_id` (no filter argument, spec §10).
-    async fn running_background_tasks(&self) -> RunningBackgroundTasks;
+    /// This agent run's in-flight background session counts, without mutating
+    /// state. This is the reject-mode read for `enter_isolated_workspace`.
+    async fn running_background_tasks(&self) -> BackgroundSessionCounts;
 
     /// Settle this agent run's in-flight subagent runs (`Cancelled` + abort) and
     /// return the post-cancel report. The terminal / exit prehook uses this
-    /// lane-specific cleanup so a live or phantom subagent never wedges the
+    /// subagent-session cleanup so a live or phantom subagent never wedges the
     /// terminal, while delegated workflows remain gated by persisted workflow
     /// state.
-    async fn cancel_subagents(&self) -> RunningBackgroundTasks;
+    async fn cancel_subagents(&self) -> BackgroundSessionCounts;
 
     /// Track a workflow that was just delegated by this agent run. The workflow
-    /// control port owns persisted workflow state; the background supervisor owns
-    /// the handle for in-flight accounting and run-finalization cancellation.
-    async fn register_workflow(&self, workflow: &StartedWorkflowHandle);
+    /// control port owns persisted workflow state; the background session service
+    /// owns in-flight accounting and run-finalization cancellation.
+    async fn register_workflow(&self, workflow: &StartedWorkflowSession);
 
-    /// Mark a tracked workflow handle cancelled in the supervisor ledger.
-    async fn cancel_workflow_record(
+    /// Mark a tracked workflow session cancelled in the background session map.
+    async fn mark_workflow_cancelled(
         &self,
         workflow_task_id: &WorkflowSessionId,
         reason: &str,
@@ -380,34 +379,33 @@ pub trait BackgroundSupervisorPort: Sealed + Send + Sync {
     /// Tear down all background work owned by this agent run (spec §8.2): settle +
     /// abort subagents, cancel delegated workflows through the optional
     /// authoritative workflow-control port (a missing port still settles the
-    /// in-memory record), and cancel all command sessions in one per-caller daemon
-    /// RPC. The common run-finalization / cancellation finalizer.
+    /// in-memory session), and cancel all command sessions in one per-caller
+    /// daemon RPC. The common run-finalization / cancellation path.
     async fn teardown(
         &self,
         workflow_control: Option<Arc<dyn WorkflowControlPort>>,
         reason: &str,
-    ) -> RunningBackgroundTasks;
+    ) -> BackgroundSessionCounts;
 }
 
 // ---------------------------------------------------------------------------
-// CommandSessionSupervisorPort — register / recover / mark / count background
+// CommandSessionPort — register / recover / mark / count background
 // PTY command sessions.
 // ---------------------------------------------------------------------------
 
-/// The engine background supervisor's command-session surface, used by the
+/// The engine background-session command surface, used by the
 /// `exec_command`/`write_stdin` tools to track sandbox-bound background command
-/// sessions and to recover a terminal result across the heartbeat race
-/// (anchor §5, §8). Implemented by `eos-engine` on the same supervisor instance
-/// as [`BackgroundSupervisorPort`].
+/// sessions and to recover a terminal result across the completion race
+/// (anchor §5, §8). Implemented by `eos-engine` on the same session service
+/// as [`BackgroundSessionPort`].
 ///
 /// The `result` payloads are the daemon completion's `result` map (status,
-/// `exit_code`, `output.stdout`, …); they are opaque JSON to the supervisor and
-/// rendered by the engine when delivered.
+/// `exit_code`, `output.stdout`, ...); they are opaque JSON to the background
+/// session service and rendered by the tool when delivered.
 #[async_trait]
-pub trait CommandSessionSupervisorPort: Sealed + Send + Sync {
+pub trait CommandSessionPort: Sealed + Send + Sync {
     /// Register a freshly-started background command session as running. The
-    /// `command_session_id` is the daemon-minted `cmd_<n>` correlation key; the
-    /// owning run is the handle's `owner_agent_run_id` (no `agent_run_id` arg).
+    /// `command_session_id` is the daemon-minted `cmd_<n>` correlation key.
     async fn register(
         &self,
         command_session_id: &CommandSessionId,
@@ -462,7 +460,7 @@ pub trait NotificationSink: Sealed + Send + Sync {
 /// A non-leaf effect a tool creates that must be torn down on cancellation.
 ///
 /// Implemented by the engine's foreground/background resource handles
-/// (workflow handle, subagent handle, inline advisor run). Command sessions are
+/// (workflow session, subagent session, inline advisor run). Command sessions are
 /// **not** per-resource `CancelableResource`s — they are daemon-owned and torn
 /// down by one per-caller daemon RPC, not a per-session teardown.
 #[async_trait]

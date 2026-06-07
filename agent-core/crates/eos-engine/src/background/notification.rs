@@ -23,7 +23,7 @@ use crate::notifications::NotificationService;
 pub enum BackgroundCompletion {
     /// A subagent run settled (the parent run is the notification target).
     Subagent {
-        /// Agent-facing subagent handle id.
+        /// Agent-facing subagent session id.
         subagent_session_id: SubagentSessionId,
         /// Terminal status.
         status: BackgroundSessionStatus,
@@ -32,7 +32,7 @@ pub enum BackgroundCompletion {
     },
     /// A delegated workflow reached a terminal state.
     Workflow {
-        /// Agent-facing workflow handle id.
+        /// Agent-facing workflow session id.
         workflow_task_id: WorkflowSessionId,
         /// The persisted workflow id.
         workflow_id: WorkflowId,
@@ -53,7 +53,7 @@ pub enum BackgroundCompletion {
 }
 
 impl BackgroundCompletion {
-    /// The notification dedup/event key (the typed handle id).
+    /// The notification dedup/event key (the typed session id).
     fn event_key(&self) -> String {
         match self {
             Self::Subagent {
@@ -70,7 +70,7 @@ impl BackgroundCompletion {
     }
 
     /// Render the model-visible `[BACKGROUND COMPLETED]` body. The payload names
-    /// the background kind and its typed handle id so the model can call the
+    /// the background kind and its typed session id so the model can call the
     /// matching progress/check tool for details.
     fn render(&self) -> String {
         match self {
@@ -168,7 +168,7 @@ mod tests {
     use super::*;
 
     /// Spec §8.4/§9.1: a subagent completion renders the `[BACKGROUND COMPLETED]`
-    /// body with the typed handle id and lands in the wrapped notifier; a second
+    /// body with the typed session id and lands in the wrapped notifier; a second
     /// notifier never sees it (instance isolation, §13.1).
     #[tokio::test]
     async fn emits_subagent_completion_into_its_own_notifier() {

@@ -2,11 +2,14 @@ use std::collections::HashMap;
 use std::sync::{Arc, OnceLock};
 
 use async_trait::async_trait;
-use eos_tools::{StartedWorkflowHandle, WorkflowControlPort};
+use eos_tools::{StartedWorkflowSession, WorkflowControlPort};
 use eos_types::{WorkflowId, WorkflowSessionId};
 use tokio::sync::Mutex;
 
-use super::super::{BackgroundSession, BackgroundSessionManager, BackgroundSessionStatus};
+use super::super::{
+    BackgroundSession, BackgroundSessionManager, BackgroundSessionMonitorHandle,
+    BackgroundSessionStatus,
+};
 use super::session::WorkflowSession;
 use crate::background::notification::{BackgroundCompletion, BackgroundNotificationEmitter};
 
@@ -27,6 +30,9 @@ pub(in crate::background) struct WorkflowSessionManager {
     notification: BackgroundNotificationEmitter,
 }
 
+pub(in crate::background) type WorkflowSessionMonitor =
+    BackgroundSessionMonitorHandle<WorkflowSessionManager>;
+
 impl std::fmt::Debug for WorkflowSessionManager {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("WorkflowSessionManager")
@@ -46,7 +52,7 @@ impl WorkflowSessionManager {
         }
     }
 
-    pub(in crate::background) async fn register(&self, workflow: &StartedWorkflowHandle) {
+    pub(in crate::background) async fn register(&self, workflow: &StartedWorkflowSession) {
         self.insert(WorkflowSession::running(
             workflow.workflow_task_id.clone(),
             workflow.workflow_id.clone(),
@@ -54,7 +60,7 @@ impl WorkflowSessionManager {
         .await;
     }
 
-    pub(in crate::background) async fn cancel_record(
+    pub(in crate::background) async fn cancel_session(
         &self,
         workflow_task_id: &WorkflowSessionId,
     ) -> bool {
@@ -82,7 +88,7 @@ impl WorkflowSessionManager {
                     );
                 }
             }
-            let _ = self.cancel_record(workflow_task_id).await;
+            let _ = self.cancel_session(workflow_task_id).await;
         }
     }
 
@@ -204,7 +210,7 @@ mod tests {
 
     use async_trait::async_trait;
     use eos_state::TaskId;
-    use eos_tools::{OutstandingWorkflow, StartedWorkflowHandle, ToolError};
+    use eos_tools::{OutstandingWorkflow, StartedWorkflowSession, ToolError};
     use eos_types::AgentRunId;
 
     use crate::background::notification::BackgroundNotificationEmitter;
@@ -225,7 +231,7 @@ mod tests {
             _parent_task_id: &TaskId,
             _agent_run_id: &AgentRunId,
             _workflow_goal: &str,
-        ) -> Result<StartedWorkflowHandle, ToolError> {
+        ) -> Result<StartedWorkflowSession, ToolError> {
             unreachable!("not used")
         }
 
@@ -290,9 +296,9 @@ mod tests {
         let notifier = NotificationService::new();
         let manager = manager(&notifier);
         manager
-            .register(&StartedWorkflowHandle {
+            .register(&StartedWorkflowSession {
                 workflow_id: WorkflowId::new_v4(),
-                workflow_task_id: "wf_1".parse().expect("workflow handle"),
+                workflow_task_id: "wf_1".parse().expect("workflow session"),
             })
             .await;
         assert_eq!(manager.count().await, 1);
@@ -310,9 +316,9 @@ mod tests {
             .contains("[BACKGROUND COMPLETED] workflow_task_id=wf_1"));
 
         manager
-            .register(&StartedWorkflowHandle {
+            .register(&StartedWorkflowSession {
                 workflow_id: WorkflowId::new_v4(),
-                workflow_task_id: "wf_2".parse().expect("workflow handle"),
+                workflow_task_id: "wf_2".parse().expect("workflow session"),
             })
             .await;
         assert_eq!(manager.count().await, 1);

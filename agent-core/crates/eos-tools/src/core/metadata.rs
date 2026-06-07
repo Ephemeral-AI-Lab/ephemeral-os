@@ -1,7 +1,7 @@
 //! [`ExecutionMetadata`] — the immutable facts threaded through one tool call.
 //!
 //! Service dependencies are intentionally absent. Stores, transports, registries,
-//! workflow/background ports, and command-session supervisors are captured by the
+//! workflow/background ports, and command-session ports are captured by the
 //! registered tool executor or hook wiring that needs them. `conversation` stays
 //! here because it is an immutable per-dispatch input fact read by advisor gates.
 

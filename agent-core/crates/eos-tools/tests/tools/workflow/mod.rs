@@ -13,9 +13,8 @@ use super::super::{
 use crate::core::error::ToolError;
 use crate::core::metadata::ExecutionMetadata;
 use crate::ports::{
-    BackgroundSupervisorPort, CancelledSubagent, OutstandingWorkflow, RunningBackgroundTasks,
-    Sealed, SpawnedSubagent, StartedWorkflowHandle, SubagentLaunch, SubagentProgress,
-    WorkflowControlPort,
+    BackgroundSessionCounts, BackgroundSessionPort, CancelledSubagent, OutstandingWorkflow, Sealed,
+    SpawnedSubagent, StartedWorkflowSession, SubagentLaunch, SubagentProgress, WorkflowControlPort,
 };
 use crate::runtime::executor::ToolExecutor;
 use crate::support::metadata;
@@ -28,15 +27,15 @@ fn obj(pairs: &[(&str, serde_json::Value)]) -> JsonObject {
 }
 
 #[derive(Default)]
-struct RecordingSupervisor {
+struct RecordingBackgroundSession {
     workflows: Mutex<Vec<String>>,
     cancelled_workflows: Mutex<Vec<String>>,
 }
 
-impl Sealed for RecordingSupervisor {}
+impl Sealed for RecordingBackgroundSession {}
 
 #[async_trait]
-impl BackgroundSupervisorPort for RecordingSupervisor {
+impl BackgroundSessionPort for RecordingBackgroundSession {
     async fn spawn(
         &self,
         _ctx: &ExecutionMetadata,
@@ -61,8 +60,8 @@ impl BackgroundSupervisorPort for RecordingSupervisor {
         unreachable!()
     }
 
-    async fn running_background_tasks(&self) -> RunningBackgroundTasks {
-        RunningBackgroundTasks {
+    async fn running_background_tasks(&self) -> BackgroundSessionCounts {
+        BackgroundSessionCounts {
             total: 0,
             subagents: 0,
             workflows: 0,
@@ -70,18 +69,18 @@ impl BackgroundSupervisorPort for RecordingSupervisor {
         }
     }
 
-    async fn cancel_subagents(&self) -> RunningBackgroundTasks {
+    async fn cancel_subagents(&self) -> BackgroundSessionCounts {
         self.running_background_tasks().await
     }
 
-    async fn register_workflow(&self, workflow: &StartedWorkflowHandle) {
+    async fn register_workflow(&self, workflow: &StartedWorkflowSession) {
         self.workflows
             .lock()
             .unwrap()
             .push(workflow.workflow_task_id.as_str().to_owned());
     }
 
-    async fn cancel_workflow_record(
+    async fn mark_workflow_cancelled(
         &self,
         workflow_task_id: &WorkflowSessionId,
         _reason: &str,
@@ -97,7 +96,7 @@ impl BackgroundSupervisorPort for RecordingSupervisor {
         &self,
         _workflow_control: Option<Arc<dyn WorkflowControlPort>>,
         _reason: &str,
-    ) -> RunningBackgroundTasks {
+    ) -> BackgroundSessionCounts {
         self.running_background_tasks().await
     }
 }
@@ -113,7 +112,7 @@ impl WorkflowControlPort for OutstandingControl {
         _parent_task_id: &TaskId,
         _agent_run_id: &AgentRunId,
         _workflow_goal: &str,
-    ) -> Result<StartedWorkflowHandle, ToolError> {
+    ) -> Result<StartedWorkflowSession, ToolError> {
         unreachable!("outstanding short-circuit returns before start")
     }
 
@@ -157,7 +156,7 @@ async fn delegate_workflow_outstanding_is_error() {
 
     let res = DelegateWorkflow::new(
         Some(Arc::new(OutstandingControl)),
-        Some(Arc::new(RecordingSupervisor::default())),
+        Some(Arc::new(RecordingBackgroundSession::default())),
     )
     .execute(&obj(&[("goal", json!("do something"))]), &ctx)
     .await
@@ -178,8 +177,8 @@ impl WorkflowControlPort for StartingControl {
         _parent_task_id: &TaskId,
         _agent_run_id: &AgentRunId,
         _workflow_goal: &str,
-    ) -> Result<StartedWorkflowHandle, ToolError> {
-        Ok(StartedWorkflowHandle {
+    ) -> Result<StartedWorkflowSession, ToolError> {
+        Ok(StartedWorkflowSession {
             workflow_id: WorkflowId::new_v4(),
             workflow_task_id: "wf_1".parse()?,
         })
@@ -215,19 +214,19 @@ impl WorkflowControlPort for StartingControl {
 }
 
 #[tokio::test]
-async fn delegate_workflow_registers_background_record() {
-    let supervisor = Arc::new(RecordingSupervisor::default());
+async fn delegate_workflow_registers_background_session() {
+    let background = Arc::new(RecordingBackgroundSession::default());
     let mut ctx = metadata();
     ctx.task_id = Some("parent".parse().unwrap());
 
-    let res = DelegateWorkflow::new(Some(Arc::new(StartingControl)), Some(supervisor.clone()))
+    let res = DelegateWorkflow::new(Some(Arc::new(StartingControl)), Some(background.clone()))
         .execute(&obj(&[("goal", json!("do something"))]), &ctx)
         .await
         .expect("ok");
 
     assert!(!res.is_error, "{res:?}");
     assert_eq!(
-        supervisor.workflows.lock().unwrap().as_slice(),
+        background.workflows.lock().unwrap().as_slice(),
         ["wf_1"],
         "delegate_workflow must register the workflow as background work"
     );

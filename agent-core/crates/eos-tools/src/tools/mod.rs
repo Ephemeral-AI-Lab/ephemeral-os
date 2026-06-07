@@ -91,18 +91,18 @@ pub fn build_default_registry_with_services(
     root_submission: Option<RootSubmissionService>,
     attempt_submission: Option<AttemptSubmissionService>,
     workflow_control: Option<Arc<dyn crate::ports::WorkflowControlPort>>,
-    background_supervisor: Option<Arc<dyn crate::ports::BackgroundSupervisorPort>>,
-    command_session_supervisor: Option<Arc<dyn crate::ports::CommandSessionSupervisorPort>>,
+    background_session: Option<Arc<dyn crate::ports::BackgroundSessionPort>>,
+    command_session_port: Option<Arc<dyn crate::ports::CommandSessionPort>>,
     skill_service: SkillToolService,
 ) -> ToolRegistry {
     let mut registry = ToolRegistry::new();
     let hook_services = HookServices::new(
         Some(sandbox_service.transport()),
         workflow_control.clone(),
-        background_supervisor.clone(),
+        background_session.clone(),
     );
     let command_service =
-        CommandToolService::new(sandbox_service.transport(), command_session_supervisor);
+        CommandToolService::new(sandbox_service.transport(), command_session_port);
     sandbox::register(
         &mut registry,
         config,
@@ -116,9 +116,9 @@ pub fn build_default_registry_with_services(
         &mut registry,
         config,
         workflow_control,
-        background_supervisor.clone(),
+        background_session.clone(),
     );
-    subagent::register(&mut registry, config, caller, background_supervisor);
+    subagent::register(&mut registry, config, caller, background_session);
     skills::register(&mut registry, config, caller, skill_service);
     registry.apply_hook_services(hook_services);
     registry

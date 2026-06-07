@@ -199,7 +199,7 @@
 
 <section id="background-control" data-last-reviewed-commit="HEAD-plus-worktree" data-evidence-paths="sandbox/crates/eos-daemon/src/services/command_session/mod.rs sandbox/crates/eos-command-session/src/manager.rs">
 <h2>Background Control <a class="anchor" href="#background-control">#</a></h2>
-<p>Background sandbox control is split by typed surface. <code>launch_background_tool()</code> is subagent-only. <code>exec_command</code> creates an <code>eos-command-session</code> runtime session through the daemon adapter, registers its <code>command_session_id</code> with the engine supervisor, and exposes typed command-session progress, stdin, cancel, and completion delivery.</p>
+<p>Background sandbox control is split by typed surface. <code>launch_background_tool()</code> is subagent-only. <code>exec_command</code> creates an <code>eos-command-session</code> runtime session through the daemon adapter, registers its <code>command_session_id</code> with <code>CommandSessionManager</code>, and exposes typed command-session progress, stdin, cancel, and completion delivery.</p>
 <div class="edge-list">
   <div><b>tracks</b><span><code>BackgroundSessionRuntime</code> stores subagent, workflow, and command-session records through concrete managers keyed by their typed ids.</span></div>
   <div><b>registers</b><span><code>dispatch_envelope_async()</code> registers the current daemon asyncio task by invocation id, agent id, op, and background flag before invoking the handler.</span></div>

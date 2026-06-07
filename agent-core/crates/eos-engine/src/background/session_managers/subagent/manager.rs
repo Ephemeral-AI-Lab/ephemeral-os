@@ -6,15 +6,18 @@ use eos_agent_def::{AgentName, AgentType};
 use eos_agent_message_records::AgentRunRecordKind;
 use eos_llm_client::Message;
 use eos_tools::ports::{
-    BackgroundSupervisorPort, CommandSessionSupervisorPort, SpawnedSubagent, StartedSubagent,
-    SubagentLaunch, SubagentLaunchRejection,
+    BackgroundSessionPort, CommandSessionPort, SpawnedSubagent, StartedSubagent, SubagentLaunch,
+    SubagentLaunchRejection,
 };
 use eos_tools::{ExecutionMetadata, ToolError, ToolResult};
 use eos_types::{AgentRunId, JsonObject, SubagentSessionId};
 use serde_json::{json, Value};
 use tokio::sync::Mutex;
 
-use super::super::{BackgroundSession, BackgroundSessionManager, BackgroundSessionStatus};
+use super::super::{
+    BackgroundSession, BackgroundSessionManager, BackgroundSessionMonitorHandle,
+    BackgroundSessionStatus,
+};
 use super::session::SubagentSession;
 use crate::background::notification::{BackgroundCompletion, BackgroundNotificationEmitter};
 use crate::runtime::AgentRunControlFactory;
@@ -48,6 +51,9 @@ pub(in crate::background) struct SubagentSessionManager {
     control_factory: AgentRunControlFactory,
     notification: BackgroundNotificationEmitter,
 }
+
+pub(in crate::background) type SubagentSessionMonitor =
+    BackgroundSessionMonitorHandle<SubagentSessionManager>;
 
 impl std::fmt::Debug for SubagentSessionManager {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -123,9 +129,9 @@ impl SubagentSessionManager {
         let child_run_id = AgentRunId::new_v4();
         let subagent_control = self.control_factory.ephemeral(child_run_id.clone());
         let child_background = subagent_control.background();
-        let child_background_port: Arc<dyn BackgroundSupervisorPort> =
+        let child_background_port: Arc<dyn BackgroundSessionPort> =
             Arc::new(child_background.clone());
-        let child_command_port: Arc<dyn CommandSessionSupervisorPort> = Arc::new(child_background);
+        let child_command_port: Arc<dyn CommandSessionPort> = Arc::new(child_background);
         let mut child_meta = ctx.clone();
         child_meta.agent_name = sub_def.name.as_str().to_owned();
         child_meta.agent_run_id = Some(child_run_id.clone());
@@ -143,8 +149,8 @@ impl SubagentSessionManager {
             tool_metadata: child_meta,
             attempt_submission: None,
             workflow_control: None,
-            background_supervisor: Some(child_background_port),
-            command_session_supervisor: Some(child_command_port),
+            background_session: Some(child_background_port),
+            command_session_port: Some(child_command_port),
             notifier: subagent_control.notifications(),
             cancellation: subagent_control.cancellation(),
             foreground: subagent_control.foreground(),

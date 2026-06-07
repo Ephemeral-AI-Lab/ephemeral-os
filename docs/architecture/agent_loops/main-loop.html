@@ -58,7 +58,7 @@
 </div>
 <div class="diagram" aria-label="Provider turn workflow">
   <div class="flow-row">
-    <div class="node"><strong>Prepare runtime</strong><small><code>ExecutionMetadata</code>, notifications, background supervisor, terminal names</small></div>
+    <div class="node"><strong>Prepare runtime</strong><small><code>ExecutionMetadata</code>, notifications, background session service, terminal names</small></div>
     <div class="node"><strong>Build request</strong><small><code>MessageRequest</code>, provider-safe messages, decorated background schemas</small></div>
     <div class="node"><strong>Consume stream</strong><small><code>StreamEvent</code>: thinking, text, tool-use deltas, final assistant</small></div>
   </div>
@@ -103,7 +103,7 @@
 <p><code>StreamingToolExecutor</code> can execute normal foreground tools as soon as tool-use deltas arrive. The executor itself does not know background or terminal policy; the query loop passes a <code>should_defer</code> predicate.</p>
 <div class="edge-list">
   <div><b>Terminal-capable run</b><span>If <code>context.terminal_tools</code> is non-empty, every streamed tool is deferred until the final assistant message is available. This lets the final batch validator reject a terminal tool batched with siblings before any sibling side effect runs.</span></div>
-  <div><b>Background-bound call</b><span><code>defer_background_dispatch()</code> returns true for engine-background policy tools such as <code>run_subagent</code>. The final dispatcher later launches them through the supervisor path.</span></div>
+  <div><b>Background-bound call</b><span><code>defer_background_dispatch()</code> returns true for engine-background policy tools such as <code>run_subagent</code>. The final dispatcher later launches them through the background-session path.</span></div>
   <div><b>Foreground call</b><span>Non-deferred tools start mid-stream, emit lifecycle/progress events, and are gathered by <code>executor.get_remaining()</code> before final dispatch decides which final-message tool ids remain unresolved.</span></div>
   <div><b>Failure mode</b><span>If the provider stream ends without an <code>AssistantMessageCompleteEvent</code>, the executor cancels in-flight streamed tools and the loop raises a provider-facing runtime error instead of dispatching a partial assistant message.</span></div>
 </div>

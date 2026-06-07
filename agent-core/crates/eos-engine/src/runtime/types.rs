@@ -8,9 +8,9 @@ use eos_audit::AuditSink;
 use eos_llm_client::{LlmClient, Message};
 use eos_state::AgentRunStore;
 use eos_tools::{
-    AttemptSubmissionService, BackgroundSupervisorPort, CommandSessionSupervisorPort,
-    ExecutionMetadata, RootSubmissionService, SandboxToolService, SkillToolService, ToolConfigSet,
-    ToolRegistry, ToolResult, WorkflowControlPort,
+    AttemptSubmissionService, BackgroundSessionPort, CommandSessionPort, ExecutionMetadata,
+    RootSubmissionService, SandboxToolService, SkillToolService, ToolConfigSet, ToolRegistry,
+    ToolResult, WorkflowControlPort,
 };
 use eos_types::{AgentRunId, TaskId};
 
@@ -102,11 +102,11 @@ pub struct AgentRunInput {
     pub attempt_submission: Option<AttemptSubmissionService>,
     /// Workflow control service for workflow tools and workflow-state hooks.
     pub workflow_control: Option<Arc<dyn WorkflowControlPort>>,
-    /// Background supervisor service for subagent/workflow tools and
+    /// Background-session service for subagent/workflow tools and
     /// run-finalization cleanup.
-    pub background_supervisor: Option<Arc<dyn BackgroundSupervisorPort>>,
-    /// Command-session supervisor service for shell tools.
-    pub command_session_supervisor: Option<Arc<dyn CommandSessionSupervisorPort>>,
+    pub background_session: Option<Arc<dyn BackgroundSessionPort>>,
+    /// Command-session lifecycle port for shell tools.
+    pub command_session_port: Option<Arc<dyn CommandSessionPort>>,
     /// The run-local notification sink owned by this run's `AgentRunControl` and
     /// shared (by clone) with tools, the heartbeat, and the query loop — the §7
     /// instance-identity invariant. Helper runs pass a fresh standalone service.
@@ -139,13 +139,10 @@ impl std::fmt::Debug for AgentRunInput {
             .field("agent_run_id", &self.agent_run_id)
             .field("has_attempt_submission", &self.attempt_submission.is_some())
             .field("has_workflow_control", &self.workflow_control.is_some())
+            .field("has_background_session", &self.background_session.is_some())
             .field(
-                "has_background_supervisor",
-                &self.background_supervisor.is_some(),
-            )
-            .field(
-                "has_command_session_supervisor",
-                &self.command_session_supervisor.is_some(),
+                "has_command_session_port",
+                &self.command_session_port.is_some(),
             )
             .field("persist_agent_run", &self.persist_agent_run)
             .field("record_kind", &self.record_kind)

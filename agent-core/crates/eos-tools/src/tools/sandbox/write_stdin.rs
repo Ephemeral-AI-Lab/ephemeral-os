@@ -91,10 +91,10 @@ impl ToolExecutor for WriteStdin {
             Ok(result) => result,
             Err(err) => return Ok(ToolResult::error(err.to_string())),
         };
-        // If the daemon already lost the live session, surface the supervisor's
+        // If the daemon already lost the live session, surface the background's
         // stored terminal; otherwise, once a terminal status is observed inline,
         // latch it as delivered so the heartbeat never re-notifies the same result.
-        if let Some(port) = &self.service.command_session_supervisor {
+        if let Some(port) = &self.service.command_session_port {
             if is_command_session_not_found(&result) {
                 if port
                     .command_session_already_reported(command_session_id)

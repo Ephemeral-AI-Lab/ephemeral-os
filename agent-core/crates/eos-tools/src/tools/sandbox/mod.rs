@@ -2,7 +2,7 @@
 //! `exec_command`, `write_stdin`, `read_command_progress`. Each builds a typed `eos-sandbox-port`
 //! request and projects the daemon result into the model-facing output DTO.
 //! Command-session tools additionally coordinate running-session registration and
-//! exactly-once terminal recovery through the command-session supervisor port.
+//! exactly-once terminal recovery through the command-session background port.
 
 mod edit_file;
 mod exec_command;

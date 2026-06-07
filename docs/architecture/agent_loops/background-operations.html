@@ -53,8 +53,8 @@
 <section id="launch-and-alias" data-last-reviewed-commit="e44ca3424f11f4cd7e9b8b2373c79f143c1e03aa" data-evidence-paths="">
 <h2>Launch and Alias</h2>
 <div class="summary">
-  <p>Background execution is a query-loop dispatch mode, not a persistent shell session or a tool metadata policy. The engine hard-codes the background-manager surfaces in <code>engine.background.policy</code>: subagent launches are supervisor tasks and command sessions expose typed sessions.</p>
-  <p>The old generic model-facing background tools are retired. The supervisor remains internal, while typed work exposes typed ids: subagents use <code>subagent_session_id</code> and command sessions use <code>command_session_id</code>.</p>
+  <p>Background execution is a query-loop dispatch mode, not a persistent shell session or a tool metadata policy. The engine hard-codes the background-manager surfaces in <code>engine.background.policy</code>: subagent launches become background sessions and command sessions expose typed sessions.</p>
+  <p>The old generic model-facing background tools are retired. <code>BackgroundSessionService</code> remains internal, while typed work exposes typed ids: subagents use <code>subagent_session_id</code> and command sessions use <code>command_session_id</code>.</p>
 </div>
 <div class="diagram" aria-label="Background launch workflow">
   <div class="flow-row">
@@ -71,13 +71,13 @@
 <div class="edge-list">
   <div><b>Subagent launch</b><span><code>run_subagent</code> is routed through <code>SubagentSessionManager</code> by engine policy. The engine session id and the model-facing control id are both <code>subagent_session_id</code>.</span></div>
   <div><b>command sessions</b><span>Interactive command sessions expose <code>command_session_id</code> and typed controls instead of generic background check/wait/cancel tools.</span></div>
-  <div><b>Validation failure</b><span>Invalid deferred input returns a normal tool-result error and no supervisor record. Unsupported tools produce a rejection completion event and no alias.</span></div>
+  <div><b>Validation failure</b><span>Invalid deferred input returns a normal tool-result error and no background-session record. Unsupported tools produce a rejection completion event and no alias.</span></div>
 </div>
 </section>
 
 <section id="status-progress-and-delivery" data-last-reviewed-commit="HEAD" data-evidence-paths="">
 <h2>Status Progress and Delivery</h2>
-<p>The per-agent-run background ledger is owned by one <code>BackgroundSessionRuntime</code> with three concrete managers: <code>SubagentSessionManager</code>, <code>WorkflowSessionManager</code>, and <code>CommandSessionManager</code>. Every session record is <code>handle + status + metadata</code>, and <strong>no record stores an <code>agent_run_id</code></strong>: the owning run is the runtime's single <code>agent_run_id</code>. The tool-facing ports (<code>BackgroundSupervisorPort</code>, <code>CommandSessionSupervisorPort</code>) carry no <code>agent_run_id</code> filter; the in-flight count is <code>RunningBackgroundTasks</code> returned by <code>running_background_tasks()</code>.</p>
+<p>The per-agent-run background ledger is owned by one <code>BackgroundSessionRuntime</code> with three concrete managers: <code>SubagentSessionManager</code>, <code>WorkflowSessionManager</code>, and <code>CommandSessionManager</code>. Every session record is <code>handle + status + metadata</code>, and <strong>no record stores an <code>agent_run_id</code></strong>: the owning run is the runtime's single <code>agent_run_id</code>. The tool-facing ports (<code>BackgroundSessionPort</code>, <code>CommandSessionPort</code>) carry no <code>agent_run_id</code> filter; the in-flight count is <code>BackgroundSessionCounts</code> returned by <code>running_background_tasks()</code>.</p>
 <p><strong>Per-agent-run ownership and cancellation.</strong> The background session service, notification service, foreground executor, and cancellation token are owned <em>per agent run</em> by an <code>AgentRunControl</code> (built by a request-scoped <code>AgentRunControlFactory</code> and registered in an <code>AgentRunRegistry</code>) — not per request. Each background manager owns its own monitor loop and emits completions through <code>BackgroundNotificationEmitter</code>. A subagent gets its <em>own</em> ephemeral control, so it may own command sessions whose <code>[BACKGROUND COMPLETED]</code> completions drain to its own notifier; the subagent's terminal record still settles on the parent run's <code>SubagentSessionManager</code> and pushes one completion to the parent run via the emitter. Cancellation is two awaited, idempotent recursive primitives — <code>cancel_task</code> (CAS <code>{Pending,Running}→Cancelled</code>, then recurse) and <code>cancel_agent_run</code> (claim the registry entry <code>Running→Claimed</code>, request cooperative cancel, tear down foreground + background via <code>teardown</code>, finish the row, unregister). Workflow cancellation decomposes <code>cancel_workflow → cancel_iteration → cancel_attempt → cancel_task</code> (latching attempt task rows before teardown); request cancellation enters through <code>cancel_agent_core_user_request</code>. Command-session PTYs are daemon-owned: <code>CommandSessionManager::cancel</code> tears them down with one per-caller <code>cancel_workspace_runs_by_caller_id(agent_run_id)</code> RPC per sandbox — not per-session. Delegated-workflow terminal completions are pushed by <code>WorkflowSessionMonitor</code>, which polls running handles through the late-bound <code>WorkflowControlPort</code> and emits one <code>BackgroundCompletion::Workflow</code> on terminal — so subagent, command-session, and workflow completions all surface through <code>BackgroundNotificationEmitter</code>.</p>
 <pre class="diagram" aria-label="Background status lifecycle">
 [background launch]
@@ -114,7 +114,7 @@
 
 <section id="check-wait-cancel-tools" data-last-reviewed-commit="HEAD" data-evidence-paths="">
 <h2>Check Wait Cancel Tools</h2>
-<p>The generic model-facing background management tools are retired. Typed surfaces operate on the supervisor stored in tool metadata for the current run.</p>
+<p>The generic model-facing background management tools are retired. Typed surfaces operate through the run-local background-session ports wired into tool services.</p>
 <div class="edge-list">
   <div><b>Retired generic tools</b><span><code>check_background_task_result</code>, <code>wait_background_tasks</code>, and <code>cancel_background_task</code> are no longer synthesized for agents or catalog output.</span></div>
   <div><b><code>check_subagent_progress</code></b><span>Requires <code>subagent_session_id</code> and returns the latest child-agent message snapshot while running, or the terminal tool output once <code>run_subagent</code> has received a terminal result.</span></div>
@@ -126,7 +126,7 @@
 
 <section id="sandbox-invocation-control" data-last-reviewed-commit="HEAD-plus-worktree" data-evidence-paths="sandbox/crates/eos-daemon/src/services/command_session/mod.rs sandbox/crates/eos-command-session/src/manager.rs">
 <h2>Sandbox Invocation Control</h2>
-<p>Sandbox control is no longer exposed through generic model-facing background tools. The engine launcher only backgrounds subagents; command sessions are created by <code>exec_command</code> through the daemon adapter, which receives a <code>command_session_id</code> from <code>eos-command-session</code> and registers it with the supervisor.</p>
+<p>Sandbox control is no longer exposed through generic model-facing background tools. The engine launcher only backgrounds subagents; command sessions are created by <code>exec_command</code> through the daemon adapter, which receives a <code>command_session_id</code> from <code>eos-command-session</code> and registers it with <code>CommandSessionManager</code>.</p>
 <div class="diagram" aria-label="Sandbox cancel and heartbeat">
   <div class="flow-row">
     <div class="node"><strong>Engine task</strong><small><code>subagent_session_id</code> or <code>command_session_id</code></small></div>
@@ -161,7 +161,7 @@
 <h2>Tests and Failure Modes</h2>
 <div class="evidence-grid">
   <div><strong>Launch and dispatch</strong><p><code>test_tool_execution.py</code> covers background launch input cleaning, hook execution, failure propagation, and conversation-message exposure to background prehooks.</p></div>
-  <div><strong>Supervisor lifecycle</strong><p><code>test_background_tasks.py</code>, <code>test_background_terminal_latch.py</code>, and <code>test_subagent_mock_loop.py</code> cover typed id generation, progress buffering, typed control output, command-session cancellation, terminal status precedence, and parent terminal abandonment of active subagents.</p></div>
+  <div><strong>Session lifecycle</strong><p>Focused Rust tests cover typed id generation, progress buffering, typed control output, command-session cancellation, terminal status precedence, and parent terminal abandonment of active subagents.</p></div>
   <div><strong>Audit visibility</strong><p><code>test_background_task_emitters.py</code> covers started, completed, failed, cancelled, delivered events and verifies the emitter does not introduce a new thread per launch.</p></div>
   <div><strong>Daemon control</strong><p>In-flight registry tests cover invocation cancel, heartbeat refresh, background-only TTL reaping, and daemon handler routing for <code>api.v1.cancel</code>, <code>api.v1.heartbeat</code>, and <code>api.v1.inflight_count</code>; command-session lifecycle tests cover <code>api.v1.command_session_count</code>.</p></div>
   <div><strong>Refresh triggers</strong><p>Refresh this page when background schema policy, typed ids, status precedence, control output JSON, sandbox invocation ids, heartbeat cadence, TTL behavior, or daemon audit payloads change.</p></div>

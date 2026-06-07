@@ -56,7 +56,7 @@
 <section id="registration" data-last-reviewed-commit="569f12c3f39471dbaa643906856a8daf81a21a2d" data-evidence-paths="">
 <h2>Registration <a class="anchor" href="#registration">#</a></h2>
 <p><code>agent-core/crates/eos-tools/src/tools/subagent</code> owns the caller-aware launch tool <code>run_subagent</code> and the typed control tools <code>check_subagent_progress</code> and <code>cancel_subagent</code>. The framework factory uses <code>make_subagent_tool_from_context()</code>, which wraps the base launch tool in <code>RestrictedRunSubagentTool</code> and narrows <code>agent_name</code> to registered dispatchable subagents.</p>
-<p>The launch tool is declared with <code>intent=Intent.WRITE_ALLOWED</code> and <code>task_type=SUBAGENT_TASK_TYPE</code>. Agent finalization and dispatch use <code>engine.background.policy</code> to route <code>run_subagent</code> to the internal supervisor and synthesize typed subagent controls instead of generic <code>check_background_task_result</code> / <code>wait_background_tasks</code> controls.</p>
+<p>The launch tool is declared with <code>intent=Intent.WRITE_ALLOWED</code> and <code>task_type=SUBAGENT_TASK_TYPE</code>. Agent finalization and dispatch use <code>engine.background.policy</code> to route <code>run_subagent</code> to <code>SubagentSessionManager</code> and synthesize typed subagent controls instead of generic <code>check_background_task_result</code> / <code>wait_background_tasks</code> controls.</p>
 </section>
 
 <section id="launch-workflow" data-last-reviewed-commit="8f5e415f6a22ad46517dd60aca89ce151028c715" data-evidence-paths="">
@@ -64,7 +64,7 @@
 <div class="diagram" aria-label="Subagent launch workflow">
   <div class="flow-row">
     <div class="node info"><strong>Parent call</strong><small><code>run_subagent(agent_name, prompt)</code></small></div>
-    <div class="node"><strong>Supervisor dispatcher</strong><small>single id <code>subagent_session_id</code></small></div>
+    <div class="node"><strong>Session manager</strong><small>single id <code>subagent_session_id</code></small></div>
     <div class="node warn"><strong>Validation gates</strong><small>known target, subagent type, no recursive spawn</small></div>
     <div class="node"><strong>Ephemeral child run</strong><small>static guidance plus caller prompt</small></div>
   </div>
@@ -75,7 +75,7 @@
   </div>
 </div>
 <ol>
-  <li>The parent calls <code>run_subagent(agent_name, prompt)</code>. Engine dispatch validates the input, assigns <code>subagent_session_id</code>, and uses that same id as the supervisor record key before starting the tool body as a supervised asyncio task.</li>
+  <li>The parent calls <code>run_subagent(agent_name, prompt)</code>. Engine dispatch validates the input, assigns <code>subagent_session_id</code>, and uses that same id as the session key before starting the child run.</li>
   <li>The tool rejects missing runtime config, blank prompts, unknown targets, targets that are not <code>agent_type=&quot;subagent&quot;</code>, and recursive calls from a caller whose metadata says <code>agent_type=&quot;subagent&quot;</code>.</li>
   <li>The tool imports <code>run_ephemeral_agent</code> through <code>engine.api</code>, builds subagent metadata with <code>agent_type=&quot;subagent&quot;</code> and role information, and forwards the active sandbox id.</li>
   <li>The child does not inherit the parent's Workflow <code>AgentContext</code>. It receives the parent's free-text prompt as its initial user message and a static subagent guidance prompt as the run prompt.</li>
@@ -85,9 +85,9 @@
 
 <section id="progress-and-results" data-last-reviewed-commit="HEAD" data-evidence-paths="">
 <h2>Progress and Results <a class="anchor" href="#progress-and-results">#</a></h2>
-<p>When the child agent is spawned, <code>run_subagent</code> registers a supervisor progress provider under the same <code>subagent_session_id</code>. The provider snapshots the child agent's latest conversation messages and renders text, thinking, tool-use, and tool-result blocks for <code>check_subagent_progress(subagent_session_id, last_n_messages)</code>.</p>
+<p>When the child agent is spawned, <code>SubagentSessionManager</code> tracks it under the same <code>subagent_session_id</code>. <code>check_subagent_progress(subagent_session_id, last_n_messages)</code> renders typed progress facts from <code>BackgroundSessionPort</code>.</p>
 <p>The child must call one of its registered terminal tools. <code>run_ephemeral_agent</code> returns an <code>EphemeralRunResult</code>; <code>run_subagent</code> forwards <code>terminal_result.output</code>, <code>is_error</code>, and terminal metadata to the parent, adding <code>subagent_terminal_called=true</code>. The initial launch response stays <code>status=running</code> with the public session id; the terminal output is later surfaced by the typed completion notification and by <code>check_subagent_progress</code>. If the child crashes or exits without a terminal result, the metadata marks <code>subagent_terminal_called=false</code>, and the typed progress tool reports the session as failed with the latest peek instead of pretending the findings were delivered.</p>
-<p>Cancellation is also subagent-aware. <code>cancel_subagent(subagent_session_id)</code> asks the supervisor to request an early stop for that session, cancel the child task, and allow the child path to salvage a partial result before it settles. If the parent run submits a terminal while a subagent is still active, the query loop terminates that subagent as <code>non_cancellation_tool_request</code> and emits one typed notification plus audit reason instead of leaving an anonymous abandoned worker.</p>
+<p>Cancellation is also subagent-aware. <code>cancel_subagent(subagent_session_id)</code> asks <code>SubagentSessionManager</code> to request an early stop for that session and cancel the child task. If the parent run submits a terminal while a subagent is still active, the run-finalization path cancels the session and emits one typed notification plus audit reason instead of leaving abandoned background work.</p>
 </section>
 
 <section id="workflow-boundary" data-last-reviewed-commit="HEAD" data-evidence-paths="">

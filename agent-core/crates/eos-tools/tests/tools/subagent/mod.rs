@@ -13,22 +13,22 @@ use super::super::{
 use crate::core::error::ToolError;
 use crate::core::metadata::ExecutionMetadata;
 use crate::ports::{
-    BackgroundSupervisorPort, CancelledSubagent, RunningBackgroundTasks, Sealed, SpawnedSubagent,
-    StartedSubagent, StartedWorkflowHandle, SubagentLaunch, SubagentProgress,
+    BackgroundSessionCounts, BackgroundSessionPort, CancelledSubagent, Sealed, SpawnedSubagent,
+    StartedSubagent, StartedWorkflowSession, SubagentLaunch, SubagentProgress,
     SubagentProgressSnapshot, SubagentSessionStatus, WorkflowControlPort,
 };
 use crate::runtime::executor::ToolExecutor;
 use crate::support::metadata;
 
 #[derive(Default)]
-struct FakeBackgroundSupervisor {
+struct FakeBackgroundSession {
     spawned: Mutex<Vec<(String, String)>>,
 }
 
-impl Sealed for FakeBackgroundSupervisor {}
+impl Sealed for FakeBackgroundSession {}
 
 #[async_trait]
-impl BackgroundSupervisorPort for FakeBackgroundSupervisor {
+impl BackgroundSessionPort for FakeBackgroundSession {
     async fn spawn(
         &self,
         _ctx: &ExecutionMetadata,
@@ -67,8 +67,8 @@ impl BackgroundSupervisorPort for FakeBackgroundSupervisor {
         })
     }
 
-    async fn running_background_tasks(&self) -> RunningBackgroundTasks {
-        RunningBackgroundTasks {
+    async fn running_background_tasks(&self) -> BackgroundSessionCounts {
+        BackgroundSessionCounts {
             total: 0,
             subagents: 0,
             workflows: 0,
@@ -76,8 +76,8 @@ impl BackgroundSupervisorPort for FakeBackgroundSupervisor {
         }
     }
 
-    async fn cancel_subagents(&self) -> RunningBackgroundTasks {
-        RunningBackgroundTasks {
+    async fn cancel_subagents(&self) -> BackgroundSessionCounts {
+        BackgroundSessionCounts {
             total: 0,
             subagents: 0,
             workflows: 0,
@@ -85,9 +85,9 @@ impl BackgroundSupervisorPort for FakeBackgroundSupervisor {
         }
     }
 
-    async fn register_workflow(&self, _workflow: &StartedWorkflowHandle) {}
+    async fn register_workflow(&self, _workflow: &StartedWorkflowSession) {}
 
-    async fn cancel_workflow_record(
+    async fn mark_workflow_cancelled(
         &self,
         _workflow_task_id: &WorkflowSessionId,
         _reason: &str,
@@ -99,8 +99,8 @@ impl BackgroundSupervisorPort for FakeBackgroundSupervisor {
         &self,
         _workflow_control: Option<Arc<dyn WorkflowControlPort>>,
         _reason: &str,
-    ) -> RunningBackgroundTasks {
-        RunningBackgroundTasks {
+    ) -> BackgroundSessionCounts {
+        BackgroundSessionCounts {
             total: 0,
             subagents: 0,
             workflows: 0,
@@ -117,11 +117,11 @@ fn obj(pairs: &[(&str, serde_json::Value)]) -> JsonObject {
 }
 
 #[tokio::test]
-async fn run_subagent_returns_session_handle() {
-    let supervisor = Arc::new(FakeBackgroundSupervisor::default());
+async fn run_subagent_returns_session_id() {
+    let background = Arc::new(FakeBackgroundSession::default());
     let ctx = metadata();
 
-    let res = RunSubagent::new(Some(supervisor.clone()))
+    let res = RunSubagent::new(Some(background.clone()))
         .execute(
             &obj(&[
                 ("agent_name", json!("explorer")),
@@ -137,18 +137,18 @@ async fn run_subagent_returns_session_handle() {
     assert_eq!(res.metadata["subagent_session_id"], json!("subagent_1"));
     assert_eq!(res.metadata["status"], json!("running"));
     assert_eq!(
-        supervisor.spawned.lock().unwrap().as_slice(),
+        background.spawned.lock().unwrap().as_slice(),
         &[("explorer".to_owned(), "inspect the plan".to_owned())]
     );
 }
 
 #[tokio::test]
 async fn check_subagent_progress_rejects_out_of_range_last_n() {
-    let supervisor = Arc::new(FakeBackgroundSupervisor::default());
+    let background = Arc::new(FakeBackgroundSession::default());
     let ctx = metadata();
 
     for last_n in [0, 11] {
-        let res = CheckSubagentProgress::new(Some(supervisor.clone()))
+        let res = CheckSubagentProgress::new(Some(background.clone()))
             .execute(
                 &obj(&[
                     ("subagent_session_id", json!("subagent_1")),

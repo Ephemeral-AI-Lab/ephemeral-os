@@ -12,8 +12,7 @@ use eos_state::{RequestStore, TaskStore};
 use eos_types::{JsonObject, SandboxId};
 
 use crate::ports::{
-    AttemptSubmissionPort, BackgroundSupervisorPort, CommandSessionSupervisorPort,
-    WorkflowControlPort,
+    AttemptSubmissionPort, BackgroundSessionPort, CommandSessionPort, WorkflowControlPort,
 };
 
 /// Store access for the root terminal.
@@ -92,7 +91,7 @@ impl fmt::Debug for SandboxToolService {
 #[derive(Clone)]
 pub struct CommandToolService {
     pub(crate) transport: Arc<dyn SandboxTransport>,
-    pub(crate) command_session_supervisor: Option<Arc<dyn CommandSessionSupervisorPort>>,
+    pub(crate) command_session_port: Option<Arc<dyn CommandSessionPort>>,
 }
 
 impl CommandToolService {
@@ -100,11 +99,11 @@ impl CommandToolService {
     #[must_use]
     pub fn new(
         transport: Arc<dyn SandboxTransport>,
-        command_session_supervisor: Option<Arc<dyn CommandSessionSupervisorPort>>,
+        command_session_port: Option<Arc<dyn CommandSessionPort>>,
     ) -> Self {
         Self {
             transport,
-            command_session_supervisor,
+            command_session_port,
         }
     }
 }
@@ -113,8 +112,8 @@ impl fmt::Debug for CommandToolService {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("CommandToolService")
             .field(
-                "has_command_session_supervisor",
-                &self.command_session_supervisor.is_some(),
+                "has_command_session_port",
+                &self.command_session_port.is_some(),
             )
             .finish_non_exhaustive()
     }
@@ -145,7 +144,7 @@ impl fmt::Debug for SkillToolService {
 pub struct HookServices {
     pub(crate) sandbox_transport: Option<Arc<dyn SandboxTransport>>,
     pub(crate) workflow_control: Option<Arc<dyn WorkflowControlPort>>,
-    pub(crate) background_supervisor: Option<Arc<dyn BackgroundSupervisorPort>>,
+    pub(crate) background_session: Option<Arc<dyn BackgroundSessionPort>>,
 }
 
 impl HookServices {
@@ -154,12 +153,12 @@ impl HookServices {
     pub fn new(
         sandbox_transport: Option<Arc<dyn SandboxTransport>>,
         workflow_control: Option<Arc<dyn WorkflowControlPort>>,
-        background_supervisor: Option<Arc<dyn BackgroundSupervisorPort>>,
+        background_session: Option<Arc<dyn BackgroundSessionPort>>,
     ) -> Self {
         Self {
             sandbox_transport,
             workflow_control,
-            background_supervisor,
+            background_session,
         }
     }
 }
@@ -169,10 +168,7 @@ impl fmt::Debug for HookServices {
         f.debug_struct("HookServices")
             .field("has_sandbox_transport", &self.sandbox_transport.is_some())
             .field("has_workflow_control", &self.workflow_control.is_some())
-            .field(
-                "has_background_supervisor",
-                &self.background_supervisor.is_some(),
-            )
+            .field("has_background_session", &self.background_session.is_some())
             .finish()
     }
 }

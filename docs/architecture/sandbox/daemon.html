@@ -456,17 +456,17 @@
 <div class="sequence" aria-label="Background task lifecycle">
   <ol>
     <li><span>The engine background policy launches only hard-coded manager surfaces such as <code>run_subagent</code>; <code>exec_command</code> registers a command session returned through the daemon adapter after the command tool returns <span class="file-ref">agent-core/crates/eos-engine/src/background</span>, <span class="file-ref">agent-core/crates/eos-tools/src/tools/sandbox/exec_command.rs</span>.</span></li>
-    <li><span><code>delegate_workflow</code> persists a workflow and registers a typed workflow handle on the parent agent's supervisor; the parent stays running and decides when to inspect or cancel the workflow.</span></li>
+    <li><span><code>delegate_workflow</code> persists a workflow and registers a typed workflow handle on the parent agent's <code>WorkflowSessionManager</code>; the parent stays running and decides when to inspect or cancel the workflow.</span></li>
     <li><span><code>BackgroundSessionRuntime</code> stores subagent, workflow, and command-session sessions through concrete managers. Running command-session sessions keep the completion monitor active so terminal command-session output can be reported once.</span></li>
     <li><span>When command execution reaches the daemon, it still runs through normal workspace routing and OCC publish semantics. command-session state changes lifecycle control, not workspace mutation rules.</span></li>
-    <li><span>Typed control tools read the matching state surface. Subagent controls read engine progress, workflow controls read durable workflow state plus the supervisor handle, and command-session controls poll or cancel daemon sessions.</span></li>
+    <li><span>Typed control tools read the matching state surface. Subagent controls read engine progress, workflow controls read durable workflow state plus the background-session handle, and command-session controls poll or cancel daemon sessions.</span></li>
   </ol>
 </div>
 
 <table>
   <thead><tr><th>Background-facing surface</th><th>Behavior</th><th>Evidence</th></tr></thead>
   <tbody>
-    <tr><td><code>run_subagent</code></td><td>Launches a child agent in the supervisor and returns <code>subagent_session_id</code>; typed controls inspect or stop it.</td><td><span class="file-ref">agent-core/crates/eos-tools/src/tools/subagent/run_subagent.rs</span>, <span class="file-ref">agent-core/crates/eos-tools/src/tools/subagent</span></td></tr>
+    <tr><td><code>run_subagent</code></td><td>Launches a child agent through <code>SubagentSessionManager</code> and returns <code>subagent_session_id</code>; typed controls inspect or stop it.</td><td><span class="file-ref">agent-core/crates/eos-tools/src/tools/subagent/run_subagent.rs</span>, <span class="file-ref">agent-core/crates/eos-tools/src/tools/subagent</span></td></tr>
     <tr><td><code>delegate_workflow</code></td><td>Launches delegated workflow state and returns a typed workflow handle; status/cancel tools operate on that handle.</td><td><span class="file-ref">agent-core/crates/eos-tools/src/tools/workflow/delegate_workflow.rs</span>, <span class="file-ref">agent-core/crates/eos-tools/src/tools/workflow/check_workflow_status.rs</span></td></tr>
     <tr><td><code>exec_command</code></td><td>Creates an <code>eos-command-session</code> runtime session through the daemon adapter and returns <code>command_session_id</code>; <code>write_stdin</code> writes non-empty stdin and waits, <code>read_command_progress</code> reads tail snapshots, and internal daemon ops cancel and collect.</td><td><span class="file-ref">agent-core/crates/eos-tools/src/tools/sandbox/exec_command.rs</span>, <span class="file-ref">agent-core/crates/eos-tools/src/tools/sandbox/write_stdin.rs</span>, <span class="file-ref">agent-core/crates/eos-tools/src/tools/sandbox/read_command_progress.rs</span>, <span class="file-ref">agent-core/crates/eos-sandbox-api/src/tool_api/command.rs</span>, <span class="file-ref">sandbox/crates/eos-command-session/src/manager.rs</span></td></tr>
   </tbody>

@@ -157,7 +157,7 @@
 <section id="ownership-edges" data-last-reviewed-commit="HEAD-plus-worktree" data-evidence-paths="agent-core/crates/eos-engine agent-core/crates/eos-tools agent-core/crates/eos-workflow agent-core/crates/eos-sandbox-api agent-core/crates/eos-sandbox-host agent-core/crates/eos-llm-client agent-core/crates/eos-audit sandbox/crates/eos-daemon">
 <h2>Ownership Edges <a class="anchor" href="#ownership-edges">#</a></h2>
 <div class="edge-list">
-  <div><b>engine owns loop state</b><span><code>eos-engine</code> owns terminal tools, terminal result, exit reason, tool budget, notification state, and background supervisors.</span></div>
+  <div><b>engine owns loop state</b><span><code>eos-engine</code> owns terminal tools, terminal result, exit reason, tool budget, notification state, and background session services.</span></div>
   <div><b>providers own model streaming</b><span><code>eos-llm-client</code> and engine request assembly own provider request/event DTOs, upstream auth, retry/error translation, and stream-to-engine event normalization.</span></div>
   <div><b>tools own execution contracts</b><span><code>eos-tools</code> owns tool metadata, intent, background policy, terminal flag, hooks, and context requirements consumed by the query loop and sandbox dispatch path.</span></div>
   <div><b>Workflow owns lifecycle</b><span>Submission tools mutate attempts, workflows, and tasks. Sandbox tools only inspect or mutate workspace state that those submissions reference.</span></div>

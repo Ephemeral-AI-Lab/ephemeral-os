@@ -73,14 +73,14 @@ pub(crate) async fn run_require_no_background_sessions(
 ) -> Result<HookOutcome, ToolError> {
     let agent_run_id = ctx.require_agent_run_id()?;
 
-    if let Some(supervisor) = &services.background_supervisor {
+    if let Some(background) = &services.background_session {
         // Terminal/exit tools settle the agent's subagents to 0; enter_isolated
         // only inspects (reject). After cancellation `report.subagent == 0`, so
         // the deny below fires only on the reject path.
         let report = if cancels_inflight_subagents(tool) {
-            supervisor.cancel_subagents().await
+            background.cancel_subagents().await
         } else {
-            supervisor.running_background_tasks().await
+            background.running_background_tasks().await
         };
         if report.subagents > 0 {
             return Ok(HookOutcome::Deny(
@@ -94,7 +94,7 @@ pub(crate) async fn run_require_no_background_sessions(
         }
     }
 
-    // Workflow dimension: the supervisor tracks workflow handles, but persisted
+    // Workflow dimension: the background tracks workflow sessions, but persisted
     // workflow lifecycle remains authoritative here. Deny while a delegated
     // workflow is still open.
     if let (Some(control), Some(task_id)) = (&services.workflow_control, &ctx.task_id) {
@@ -193,17 +193,17 @@ mod tests {
     use eos_types::{AgentRunId, SubagentSessionId, TaskId, WorkflowId, WorkflowSessionId};
 
     use crate::ports::{
-        BackgroundSupervisorPort, CancelledSubagent, OutstandingWorkflow, RunningBackgroundTasks,
-        Sealed, SpawnedSubagent, StartedWorkflowHandle, SubagentLaunch, SubagentProgress,
+        BackgroundSessionCounts, BackgroundSessionPort, CancelledSubagent, OutstandingWorkflow,
+        Sealed, SpawnedSubagent, StartedWorkflowSession, SubagentLaunch, SubagentProgress,
         WorkflowControlPort,
     };
-    struct ReportSupervisor {
-        report: RunningBackgroundTasks,
+    struct ReportBackgroundSession {
+        report: BackgroundSessionCounts,
         cancel_called: AtomicBool,
     }
 
-    impl ReportSupervisor {
-        const fn new(report: RunningBackgroundTasks) -> Self {
+    impl ReportBackgroundSession {
+        const fn new(report: BackgroundSessionCounts) -> Self {
             Self {
                 report,
                 cancel_called: AtomicBool::new(false),
@@ -211,10 +211,10 @@ mod tests {
         }
     }
 
-    impl Sealed for ReportSupervisor {}
+    impl Sealed for ReportBackgroundSession {}
 
     #[async_trait]
-    impl BackgroundSupervisorPort for ReportSupervisor {
+    impl BackgroundSessionPort for ReportBackgroundSession {
         async fn spawn(
             &self,
             _: &ExecutionMetadata,
@@ -239,22 +239,22 @@ mod tests {
             unreachable!("not used by hook tests")
         }
 
-        async fn running_background_tasks(&self) -> RunningBackgroundTasks {
+        async fn running_background_tasks(&self) -> BackgroundSessionCounts {
             self.report
         }
 
-        async fn cancel_subagents(&self) -> RunningBackgroundTasks {
+        async fn cancel_subagents(&self) -> BackgroundSessionCounts {
             self.cancel_called.store(true, Ordering::Relaxed);
-            RunningBackgroundTasks {
+            BackgroundSessionCounts {
                 subagents: 0,
                 total: self.report.workflows + self.report.command_sessions,
                 ..self.report
             }
         }
 
-        async fn register_workflow(&self, _: &StartedWorkflowHandle) {}
+        async fn register_workflow(&self, _: &StartedWorkflowSession) {}
 
-        async fn cancel_workflow_record(&self, _: &WorkflowSessionId, _: &str) -> bool {
+        async fn mark_workflow_cancelled(&self, _: &WorkflowSessionId, _: &str) -> bool {
             false
         }
 
@@ -262,7 +262,7 @@ mod tests {
             &self,
             _: Option<Arc<dyn WorkflowControlPort>>,
             _: &str,
-        ) -> RunningBackgroundTasks {
+        ) -> BackgroundSessionCounts {
             unreachable!("not used by hook tests")
         }
     }
@@ -277,7 +277,7 @@ mod tests {
             _: &TaskId,
             _: &AgentRunId,
             _: &str,
-        ) -> Result<StartedWorkflowHandle, ToolError> {
+        ) -> Result<StartedWorkflowSession, ToolError> {
             unreachable!("deny short-circuits before start")
         }
 
@@ -314,8 +314,8 @@ mod tests {
         subagents: usize,
         workflows: usize,
         command_sessions: usize,
-    ) -> RunningBackgroundTasks {
-        RunningBackgroundTasks {
+    ) -> BackgroundSessionCounts {
+        BackgroundSessionCounts {
             total: subagents + workflows + command_sessions,
             subagents,
             workflows,
@@ -382,7 +382,7 @@ mod tests {
 
     // The workflow dimension: a terminal is denied while a delegated workflow is
     // still outstanding, gated on the authoritative WorkflowControlPort rather
-    // than a supervisor handle record.
+    // than a background session entry.
     #[tokio::test]
     async fn outstanding_workflow_denies_terminal() {
         use crate::support::metadata;
@@ -417,10 +417,10 @@ mod tests {
     async fn enter_isolated_workspace_denies_inflight_subagents_without_cancelling() {
         use crate::support::metadata;
 
-        let supervisor = Arc::new(ReportSupervisor::new(report(1, 0, 0)));
+        let background = Arc::new(ReportBackgroundSession::new(report(1, 0, 0)));
         let mut ctx = metadata();
         bind_agent_run(&mut ctx);
-        let services = crate::tools::HookServices::new(None, None, Some(supervisor.clone()));
+        let services = crate::tools::HookServices::new(None, None, Some(background.clone()));
 
         let outcome = run_require_no_background_sessions(
             ToolName::EnterIsolatedWorkspace,
@@ -440,7 +440,7 @@ mod tests {
             other => panic!("expected a subagent deny, got {other:?}"),
         }
         assert!(
-            !supervisor.cancel_called.load(Ordering::Relaxed),
+            !background.cancel_called.load(Ordering::Relaxed),
             "enter must inspect, not cancel, subagents"
         );
     }
@@ -524,7 +524,7 @@ mod tests {
 
         use crate::support::{metadata, FakeTransport};
 
-        let supervisor = Arc::new(ReportSupervisor::new(report(3, 0, 0)));
+        let background = Arc::new(ReportBackgroundSession::new(report(3, 0, 0)));
         let mut ctx = metadata();
         bind_agent_run(&mut ctx);
         ctx.sandbox_id = Some("sandbox-1".parse().expect("sandbox id"));
@@ -534,7 +534,7 @@ mod tests {
                 _ => Ok(JsonObject::new()),
             }))),
             None,
-            Some(supervisor.clone()),
+            Some(background.clone()),
         );
 
         let outcome = run_require_no_background_sessions(
@@ -547,7 +547,7 @@ mod tests {
         .expect("hook ran");
 
         assert!(
-            supervisor.cancel_called.load(Ordering::Relaxed),
+            background.cancel_called.load(Ordering::Relaxed),
             "exit should settle subagent records before checking daemon sessions"
         );
         match outcome {

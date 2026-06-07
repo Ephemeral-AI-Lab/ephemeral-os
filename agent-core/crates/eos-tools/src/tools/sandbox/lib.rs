@@ -160,13 +160,13 @@ pub(super) fn validate_command_timing(
     None
 }
 
-/// Whether the daemon says the live session is gone, so the supervisor's stored
+/// Whether the daemon says the live session is gone, so the background's stored
 /// terminal result can be recovered.
 pub(super) fn is_command_session_not_found(result: &ExecCommandResult) -> bool {
     result.is_session_not_found()
 }
 
-/// Project an [`ExecCommandResult`] into the completion payload the supervisor
+/// Project an [`ExecCommandResult`] into the completion payload the background
 /// stores.
 pub(super) fn command_result_value(result: &ExecCommandResult) -> Value {
     json!({
@@ -179,7 +179,7 @@ pub(super) fn command_result_value(result: &ExecCommandResult) -> Value {
     })
 }
 
-/// Render a supervisor-stored terminal `result` value into the tool output DTO
+/// Render a background-stored terminal `result` value into the tool output DTO
 /// (the recover-race return path).
 pub(super) fn command_tool_result_from_value(result: &Value) -> ToolResult {
     let status = result

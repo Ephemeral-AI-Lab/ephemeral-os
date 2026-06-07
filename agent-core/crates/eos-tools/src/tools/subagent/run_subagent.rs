@@ -14,7 +14,7 @@ use crate::core::metadata::ExecutionMetadata;
 use crate::core::name::ToolName;
 use crate::core::result::{OutputShape, ToolResult};
 use crate::ports::{
-    BackgroundSupervisorPort, SpawnedSubagent, StartedSubagent, SubagentLaunch,
+    BackgroundSessionPort, SpawnedSubagent, StartedSubagent, SubagentLaunch,
     SubagentLaunchRejection,
 };
 use crate::registry::config::ToolConfigSet;
@@ -31,16 +31,14 @@ struct RunSubagentInput {
 }
 
 pub(in crate::tools::subagent) struct RunSubagent {
-    background_supervisor: Option<Arc<dyn BackgroundSupervisorPort>>,
+    background_session: Option<Arc<dyn BackgroundSessionPort>>,
 }
 
 impl RunSubagent {
     pub(in crate::tools::subagent) fn new(
-        background_supervisor: Option<Arc<dyn BackgroundSupervisorPort>>,
+        background_session: Option<Arc<dyn BackgroundSessionPort>>,
     ) -> Self {
-        Self {
-            background_supervisor,
-        }
+        Self { background_session }
     }
 }
 
@@ -120,9 +118,9 @@ impl ToolExecutor for RunSubagent {
             ));
         }
         match self
-            .background_supervisor
+            .background_session
             .as_deref()
-            .ok_or(ToolError::MissingPort("background_supervisor"))?
+            .ok_or(ToolError::MissingPort("background_session"))?
             .spawn(
                 ctx,
                 SubagentLaunch {
@@ -143,7 +141,7 @@ pub(super) fn register(
     registry: &mut ToolRegistry,
     config: &ToolConfigSet,
     caller: &CallerScope,
-    background_supervisor: Option<Arc<dyn BackgroundSupervisorPort>>,
+    background_session: Option<Arc<dyn BackgroundSessionPort>>,
 ) {
     let run = config.get(ToolName::RunSubagent);
     super::super::register_tool(
@@ -157,6 +155,6 @@ pub(super) fn register(
             &caller.dispatchable_subagents,
         ),
         OutputShape::Text,
-        Arc::new(RunSubagent::new(background_supervisor)),
+        Arc::new(RunSubagent::new(background_session)),
     );
 }
