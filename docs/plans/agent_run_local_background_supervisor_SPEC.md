@@ -13,6 +13,15 @@ Related:
 - `docs/plans/backend_server_cancellation_wiring_SPEC.md` for backend-server's
   API-level cancellation coordinator.
 
+Dependency status note: `docs/plans/daemon_workspace_run_registry_SPEC.md` is
+under development, and the sandbox side of the caller-keyed workspace-run
+registry is under construction. This agent-core plan should assume that the
+sandbox contract may land during the middle of implementation. Until that
+contract is implemented and verified, agent-core phases that reference
+`cancel_all_workspace_runs_by_caller_id` must stop at the trait/transport
+boundary or use focused fakes in tests; they must not invent daemon behavior in
+agent-core.
+
 ## 1. Problem
 
 The current Rust runtime wires one `BackgroundSupervisorHandle`, one
@@ -35,7 +44,7 @@ request-level sweep can cancel work that should be owned by a specific agent run
 The target design is agent-run local management:
 
 - each agent run owns its own `AgentRunControl`,
-- each agent run owns its own `StopSignal`,
+- each agent run owns its own `AgentRunCancellation`,
 - each agent run owns its own lightweight foreground executor,
 - each agent run owns its own `BackgroundSupervisorHandle`,
 - each agent run owns its own `NotificationService`; the query loop and all of
@@ -55,9 +64,33 @@ The target design is agent-run local management:
 - cancellation reduces to two recursive agent-core primitives:
   `cancel_task(task_id, reason)` and `cancel_agent_run(agent_run_id, reason)`.
 
+### Ownership and Lifetime Summary
+
+| Object | Lifetime | Owner | Owns Mutable Per-Agent State? |
+| --- | --- | --- | --- |
+| `AgentRunControlFactory` | one request/workspace composition | request runtime | no |
+| `ForegroundExecutorFactory` | one request/workspace composition | `AgentRunControlFactory` | no |
+| `BackgroundSupervisorFactory` | one request/workspace composition | `AgentRunControlFactory` | no |
+| `AgentRunControl` | one agent run | `AgentRunRegistry` plus the running driver | yes |
+| `NotificationService` | one agent run | `AgentRunControl` | yes |
+| `ForegroundExecutor` | one agent run | `AgentRunControl` | yes |
+| `BackgroundSupervisorHandle` | one agent run | `AgentRunControl` | yes |
+| `BackgroundTaskSupervisor` | one agent run | `BackgroundSupervisorHandle` | yes |
+| `SubagentLane` / `WorkflowLane` / `CommandSessionLane` | one agent run | `BackgroundTaskSupervisor` | yes |
+
+`AgentRunControlFactory` is **not** per agent run. It is request-scoped and
+reusable. Each call to `persisted(...)` or `ephemeral(...)` creates a fresh
+`AgentRunControl` with a fresh `NotificationService`, `ForegroundExecutor`, and
+`BackgroundSupervisorHandle`.
+Per-run background handles may store a clone of this factory only as immutable
+nested-run construction capability; that clone still must not own live
+per-agent state.
+
 ## 2. Goals
 
 - Move mutable background state from request scope to agent-run scope.
+- Add `AgentRunControlFactory` as the request-scoped composition helper that
+  builds one fresh `AgentRunControl` per root/workflow/subagent run.
 - Make `AgentRunControl` the object-oriented owner of the per-agent
   `NotificationService`.
 - Make `BackgroundSupervisorHandle` the object-oriented owner of the per-agent
@@ -66,8 +99,8 @@ The target design is agent-run local management:
 - Make the per-agent `CommandSessionLane` the owner of the command-completion
   heartbeat, which sends completions to that run's `NotificationService`.
 - Add `AgentRunControl` as the object-oriented owner of one live agent run:
-  `StopSignal`, foreground executor, background supervisor, notification queue,
-  and finalization handles.
+  cancellation state, foreground executor, background supervisor, notification
+  queue, and finalization handles.
 - Add `AgentRunRegistry` so live runs and task-to-run ownership are addressable
   without backend future dropping.
 - Replace request-wide cleanup with explicit, awaited cancellation.
@@ -106,7 +139,9 @@ The target design is agent-run local management:
 ```text
 Request runtime
   owns shared factories and workflow composition only
-  ├─ BackgroundSupervisorFactory
+  ├─ AgentRunControlFactory
+  │    ├─ ForegroundExecutorFactory
+  │    └─ BackgroundSupervisorFactory
   ├─ WorkflowControlPort
   ├─ AttemptSubmissionPort
   ├─ CancelPort
@@ -117,7 +152,7 @@ Agent run
   owns one AgentRunControl
     ├─ agent_run_id
     ├─ task_id                 (only for persisted runs)
-    ├─ StopSignal
+    ├─ AgentRunCancellation
     ├─ ForegroundExecutor
     ├─ NotificationService     (owned here; cloned into query loop + lanes)
     ├─ BackgroundSupervisorHandle
@@ -140,7 +175,8 @@ per-session.
 ```
 
 The request may create factories once, but it must not own mutable per-agent
-background records, foreground effects, stop signals, or notification queues.
+background records, foreground effects, cancellation state, or notification
+queues.
 
 ## 5. Target File and Folder Structure
 
@@ -149,7 +185,8 @@ agent-core/crates/eos-engine/src/
   runtime/
     agent_loop.rs
     cancel.rs              # new: CancelPort implementation
-    control.rs             # new: AgentRunControl, StopSignal
+    control.rs             # new: AgentRunControl, AgentRunCancellation
+    factory.rs             # new: request-scoped run-control factory wiring
     foreground.rs          # new: ForegroundExecutor
     registry.rs            # new: AgentRunRegistry
     setup.rs
@@ -209,17 +246,17 @@ type names and fields below still apply.
 
 ## 6. Core Runtime Classes and Fields
 
-### 6.1 StopSignal
+### 6.1 AgentRunCancellation
 
 The cooperative half of cancellation. The query loop polls it at turn
 boundaries. Provider streams are not treated as cancel-safe; do not interrupt a
-provider stream mid-token unless a later provider contract explicitly supports
-that.
+provider stream mid-response unless a later provider contract explicitly
+supports that.
 
 ```rust
 #[derive(Clone)]
-pub struct StopSignal {
-    token: CancellationToken,
+pub struct AgentRunCancellation {
+    state: Arc<AgentRunCancellationState>,
     reason: Arc<Mutex<Option<String>>>,
 }
 ```
@@ -227,30 +264,68 @@ pub struct StopSignal {
 Methods:
 
 ```rust
-impl StopSignal {
+impl AgentRunCancellation {
     pub fn new() -> Self;
-    pub fn request(&self, reason: impl Into<String>);
-    pub fn is_requested(&self) -> bool;
+    pub fn request_cancel(&self, reason: impl Into<String>);
+    pub fn is_cancel_requested(&self) -> bool;
     pub fn reason(&self) -> Option<String>;
-    pub async fn requested(&self);
-    pub fn child(&self) -> StopSignal;
+    pub async fn wait_for_cancel(&self);
 }
 ```
 
 Rules:
 
-- `StopSignal` stops future work.
+- `AgentRunCancellation` prevents future work from starting after cancellation.
 - It does not clean up already-spawned effects.
 - Cleanup of spawned effects is owned by `CancelableResource::teardown`.
 
-### 6.2 AgentRunControl
+### 6.2 AgentRunControlFactory
+
+Request-scoped composition helper. It contains no per-agent mutable state and is
+safe to clone/store on request-level runtime runners.
+
+```rust
+#[derive(Clone)]
+pub struct AgentRunControlFactory {
+    foreground: ForegroundExecutorFactory,
+    background: BackgroundSupervisorFactory,
+}
+
+impl AgentRunControlFactory {
+    pub fn new(
+        foreground: ForegroundExecutorFactory,
+        background: BackgroundSupervisorFactory,
+    ) -> Self;
+
+    pub fn persisted(
+        &self,
+        agent_run_id: AgentRunId,
+        task_id: TaskId,
+    ) -> Arc<AgentRunControl>;
+
+    pub fn ephemeral(&self, agent_run_id: AgentRunId) -> Arc<AgentRunControl>;
+}
+```
+
+Rules:
+
+- One `AgentRunControlFactory` is created per request/workspace composition.
+- The factory is reused for the root agent, workflow agents, and subagent runs.
+- Each factory call creates a fresh `NotificationService` directly with
+  `NotificationService::new()`. There is no separate notification factory.
+- Each factory call creates a fresh `ForegroundExecutor` and
+  `BackgroundSupervisorHandle`, then stores them under the new `AgentRunControl`.
+- The factory must not store `AgentRunControl`, `NotificationService`,
+  `ForegroundExecutor`, `BackgroundSupervisorHandle`, or lane records.
+
+### 6.3 AgentRunControl
 
 The live object for one agent run.
 
 ```rust
 pub struct AgentRunControl {
     agent_run_id: AgentRunId,
-    stop: StopSignal,
+    cancellation: AgentRunCancellation,
     foreground: ForegroundExecutor,
     notifications: NotificationService,
     background: BackgroundSupervisorHandle,
@@ -291,11 +366,11 @@ Methods:
 impl AgentRunControl {
     pub fn agent_run_id(&self) -> &AgentRunId;
     pub fn task_id(&self) -> Option<&TaskId>;
-    pub fn stop(&self) -> StopSignal;
+    pub fn cancellation(&self) -> AgentRunCancellation;
     pub fn background(&self) -> BackgroundSupervisorHandle;
     pub fn notifications(&self) -> NotificationService;
 
-    pub async fn teardown(&self, reason: &str) -> Result<BackgroundInflightReport, EngineError>;
+    pub async fn teardown(&self, reason: &str) -> Result<RunningBackgroundTasks, EngineError>;
     pub async fn finish_cancelled(&self, reason: &str) -> Result<(), EngineError>;
 }
 ```
@@ -309,7 +384,7 @@ Rules:
 - Cleanup is awaited; `Drop` may log if armed but must not be the normal cleanup
   mechanism.
 
-### 6.3 AgentRunRegistry
+### 6.4 AgentRunRegistry
 
 Live address book for recursive cancellation.
 
@@ -354,13 +429,20 @@ Rules:
 - Persisted `AgentRunStore::get_for_task` may be used as a fallback for reporting,
   but live teardown uses this registry.
 
-### 6.4 ForegroundExecutor
+### 6.5 ForegroundExecutor
 
 Foreground work is awaited inline by the query loop. It does not need records,
 heartbeat, progress delivery, or notification latches. It only needs
 cancel-reachability.
 
 ```rust
+#[derive(Clone, Default)]
+pub struct ForegroundExecutorFactory;
+
+impl ForegroundExecutorFactory {
+    pub fn create(&self, agent_run_id: AgentRunId) -> ForegroundExecutor;
+}
+
 pub struct ForegroundExecutor {
     resources: Mutex<HashMap<ForegroundResourceId, Arc<dyn CancelableResource>>>,
     inline_agent_runs: Mutex<HashMap<AgentRunId, InlineAgentRunHandle>>,
@@ -398,13 +480,16 @@ impl ForegroundExecutor {
 Rules:
 
 - The existing foreground `JoinSet` remains the execution substrate.
+- `ForegroundExecutorFactory` is request-scoped and contains no per-agent mutable
+  state. It exists only to keep foreground/background construction symmetric
+  under `AgentRunControlFactory`.
 - `ForegroundExecutor` is not a mirror supervisor.
-- `ask_advisor` registers an inline child agent run; teardown calls
-  `cancel_agent_run(child)`.
-- `exec_command` is NOT a foreground `CancelableResource`. Its in-flight future is
-  dropped by the foreground `JoinSet` abort on cancel; if the daemon returns a running
-  `command_session_id`, the session is recorded in the `CommandSessionLane` and the
-  PTY is torn down by the lane's one per-caller daemon RPC
+- `ask_advisor` registers an inline advisor run; teardown calls
+  `cancel_agent_run(agent_run_id)`.
+- `exec_command` is NOT a foreground `CancelableResource`. Its active future is
+  dropped by the foreground `JoinSet` abort on cancel; if the daemon returns a
+  running `command_session_id`, the session is recorded in the `CommandSessionLane`
+  and the PTY is torn down by the lane's one per-caller daemon RPC
   (`cancel_all_workspace_runs_by_caller_id`), not by a per-invocation resource.
 
 ## 7. Shared Cancellation Ports
@@ -463,8 +548,9 @@ recursive cancellation graph.
 
 ### 8.1 BackgroundSupervisorFactory
 
-Owned by request/workspace composition. It is immutable and cheap to clone. It
-creates per-agent supervisor handles.
+Owned by the request-scoped `AgentRunControlFactory`. It is immutable and cheap
+to clone. It creates one `BackgroundSupervisorHandle` per agent run, but never
+stores per-agent mutable state itself.
 
 ```rust
 pub struct BackgroundSupervisorFactory {
@@ -488,6 +574,7 @@ impl BackgroundSupervisorFactory {
         &self,
         owner_agent_run_id: AgentRunId,
         notifications: NotificationService,
+        control_factory: AgentRunControlFactory,
     ) -> BackgroundSupervisorHandle;
 }
 ```
@@ -495,9 +582,13 @@ impl BackgroundSupervisorFactory {
 Rules:
 
 - The factory contains no mutable per-agent ledger.
-- `RuntimeAgentRunner` may store `Arc<BackgroundSupervisorFactory>`.
-- The root path in `entry.rs` uses the same factory to create the root agent's
-  local supervisor.
+- `AgentRunControlFactory` is the normal caller. Runtime entry points should not
+  create `BackgroundSupervisorHandle` directly except in focused tests.
+- The root, workflow-agent, and subagent paths use the same request-scoped
+  `AgentRunControlFactory`, which delegates background construction here.
+- The `control_factory` clone passed into `create` is immutable construction
+  capability for nested subagent runs. It must not own or retain
+  `AgentRunControl` values.
 
 ### 8.2 BackgroundSupervisorHandle
 
@@ -516,6 +607,7 @@ struct BackgroundSupervisorRuntime {
     transport: Arc<dyn SandboxTransport>,
     completion_poll_interval: Duration,
     notifications: BackgroundNotificationEmitter,
+    control_factory: AgentRunControlFactory,
     // NOTE: the command-completion heartbeat is NOT here — it is owned by the
     // CommandSessionLane (§9.3). At construction the runtime threads
     // owner_agent_run_id + transport + a BackgroundNotificationEmitter clone +
@@ -533,6 +625,7 @@ impl BackgroundSupervisorHandle {
         transport: Arc<dyn SandboxTransport>,
         completion_poll_interval: Duration,
         notifications: NotificationService,
+        control_factory: AgentRunControlFactory,
     ) -> Self;
 
     pub fn owner_agent_run_id(&self) -> &AgentRunId;
@@ -544,7 +637,7 @@ impl BackgroundSupervisorHandle {
         cancel_port: &dyn CancelPort,
         workflow_control: Option<Arc<dyn WorkflowControlPort>>,
         reason: &str,
-    ) -> BackgroundInflightReport;
+    ) -> RunningBackgroundTasks;
 }
 ```
 
@@ -679,6 +772,14 @@ pub struct BackgroundTaskSupervisor {
     workflows: WorkflowLane,
     commands: CommandSessionLane,   // owns its own heartbeat → not Default
 }
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+pub struct RunningBackgroundTasks {
+    pub total: usize,
+    pub subagents: usize,
+    pub workflows: usize,
+    pub command_sessions: usize,
+}
 ```
 
 Methods:
@@ -694,7 +795,7 @@ impl BackgroundTaskSupervisor {
         interval: Duration,
     ) -> Self;
 
-    pub fn inflight_report(&self) -> BackgroundInflightReport;
+    pub fn running_background_tasks(&self) -> RunningBackgroundTasks;
 }
 ```
 
@@ -745,7 +846,7 @@ Rules:
 
 - `next_session_seq` exists only here because agent-core mints
   `subagent_session_id`.
-- The child agent run itself gets its own `AgentRunControl` and
+- The subagent run itself gets its own `AgentRunControl` and
   `BackgroundSupervisorHandle`.
 - When the subagent driver settles a terminal `SubagentRecord`, it emits one
   subagent completion notification into the parent agent run's
@@ -782,7 +883,7 @@ Rules:
 
 - Cancellation dispatches through `cancel_workflow`.
 - The workflow's durable lifecycle remains owned by `eos-workflow`.
-- The supervisor record owns in-flight accounting and parent-exit cleanup state.
+- The supervisor record owns running-work accounting and parent-exit cleanup state.
 - Workflow completion/cancellation observation emits one workflow completion
   notification into the parent agent run's `NotificationService` through
   `BackgroundNotificationEmitter`.
@@ -859,7 +960,7 @@ Rules:
   tears down the caller's whole workspace run (all its PTYs + overlay). There is no
   per-session `api.v1.command.cancel` from agent-core on the cancel path.
 - A foreground `exec_command` still mid-`yield_time_ms` is handled by the
-  `ForegroundExecutor` aborting its in-flight future; the daemon PTY is killed by the
+  `ForegroundExecutor` aborting its active future; the daemon PTY is killed by the
   same lane-level RPC. No separate `CommandInvocationHandle` resource is needed.
 - The lane keeps `records` for **completion delivery** and **owns the
   `CommandCompletionHeartbeat`** (§8.3). The heartbeat polls
@@ -898,7 +999,7 @@ pub trait BackgroundSupervisorPort: Sealed + Send + Sync {
         reason: &str,
     ) -> Result<ToolResult, ToolError>;
 
-    async fn inflight_report(&self) -> BackgroundInflightReport;
+    async fn running_background_tasks(&self) -> RunningBackgroundTasks;
 
     async fn register_workflow(&self, workflow: &StartedWorkflowHandle);
 
@@ -913,7 +1014,7 @@ pub trait BackgroundSupervisorPort: Sealed + Send + Sync {
 Removed from the final port:
 
 ```rust
-async fn inflight_report(&self, agent_run_id: Option<&AgentRunId>);
+async fn running_background_tasks(&self, agent_run_id: Option<&AgentRunId>);
 async fn cancel_subagents_for_agent_run(&self, agent_run_id: &AgentRunId);
 async fn cancel_for_parent_exit(
     &self,
@@ -963,28 +1064,26 @@ Migration note:
 
 ### 11.1 Root Agent
 
-`eos-runtime/src/entry.rs` creates request-level immutable factories after
+`eos-runtime/src/entry.rs` creates one request-scoped run-control factory after
 sandbox provisioning and before root/workflow composition:
 
 ```rust
-let background_factory = Arc::new(BackgroundSupervisorFactory::new(
+let foreground_factory = ForegroundExecutorFactory::default();
+let background_factory = BackgroundSupervisorFactory::new(
     services.engine_run_handles(&workspace_root),
     services.sandbox.transport.clone(),
     services.engine.command_session_completion_poll_interval(),
+);
+let control_factory = Arc::new(AgentRunControlFactory::new(
+    foreground_factory,
+    background_factory,
 ));
 ```
 
 When the root `AgentRunId` is minted:
 
 ```rust
-let notifications = NotificationService::new();
-let background = background_factory.create(agent_run_id.clone(), notifications.clone());
-let control = AgentRunControl::new(
-    agent_run_id.clone(),
-    notifications,
-    background,
-    AgentRunFinalization::persisted(root_task_id.clone()),
-);
+let control = control_factory.persisted(agent_run_id.clone(), root_task_id.clone());
 agent_run_registry.insert(control.clone());
 
 run_agent(
@@ -994,7 +1093,7 @@ run_agent(
         background_supervisor: Some(control.background()),
         command_session_supervisor: Some(control.background()),
         notifier: control.notifications(),
-        stop: control.stop(),
+        cancellation: control.cancellation(),
         foreground: control.foreground(),
         // other fields unchanged
     },
@@ -1022,7 +1121,7 @@ pub(crate) struct RuntimeAgentRunner {
     workspace_root: String,
     attempt_submission: Arc<dyn AttemptSubmissionPort>,
     workflow_control: Arc<OnceLock<Arc<dyn WorkflowControlPort>>>,
-    background_factory: Arc<BackgroundSupervisorFactory>,
+    control_factory: Arc<AgentRunControlFactory>,
     agent_run_registry: AgentRunRegistry,
 }
 ```
@@ -1039,16 +1138,9 @@ Inside each `run()`:
 
 ```rust
 let agent_run_id = AgentRunId::new_v4();
-let notifications = NotificationService::new();
-let background = self
-    .background_factory
-    .create(agent_run_id.clone(), notifications.clone());
-let control = AgentRunControl::new(
-    agent_run_id.clone(),
-    notifications,
-    background,
-    AgentRunFinalization::persisted(launch.task_id().clone()),
-);
+let control = self
+    .control_factory
+    .persisted(agent_run_id.clone(), launch.task_id().clone());
 self.agent_run_registry.insert(control.clone());
 
 let run = run_agent(
@@ -1058,7 +1150,7 @@ let run = run_agent(
         background_supervisor: Some(control.background()),
         command_session_supervisor: Some(control.background()),
         notifier: control.notifications(),
-        stop: control.stop(),
+        cancellation: control.cancellation(),
         foreground: control.foreground(),
         // other fields unchanged
     },
@@ -1076,33 +1168,20 @@ Rules:
 
 Subagents follow the same per-agent runtime rule.
 
-When `BackgroundSupervisorPort::spawn` launches a child run:
+When `BackgroundSupervisorPort::spawn` launches a subagent run:
 
 ```rust
 let sub_agent_run_id = AgentRunId::new_v4();
-let child_notifications = NotificationService::new();
-let child_background = BackgroundSupervisorHandle::new(
-    sub_agent_run_id.clone(),
-    self.runtime.handles.clone(),
-    self.runtime.transport.clone(),
-    self.runtime.completion_poll_interval,
-    child_notifications.clone(),
-);
-let child_control = AgentRunControl::new(
-    sub_agent_run_id.clone(),
-    child_notifications,
-    child_background,
-    AgentRunFinalization::ephemeral(),
-);
-agent_run_registry.insert(child_control.clone());
+let subagent_control = self.runtime.control_factory.ephemeral(sub_agent_run_id.clone());
+agent_run_registry.insert(subagent_control.clone());
 
 let run_input = AgentRunInput {
     agent_run_id: sub_agent_run_id.clone(),
-    background_supervisor: Some(child_control.background()),
-    command_session_supervisor: Some(child_control.background()),
-    notifier: child_control.notifications(),
-    stop: child_control.stop(),
-    foreground: child_control.foreground(),
+    background_supervisor: Some(subagent_control.background()),
+    command_session_supervisor: Some(subagent_control.background()),
+    notifier: subagent_control.notifications(),
+    cancellation: subagent_control.cancellation(),
+    foreground: subagent_control.foreground(),
     // subagent-specific fields unchanged
 };
 ```
@@ -1165,7 +1244,7 @@ Rules:
 ```text
 cancel_agent_run(agent_run_id, reason)
   ├─ control = AgentRunRegistry::begin_cancel(agent_run_id)
-  ├─ control.stop.request(reason)
+  ├─ control.cancellation().request_cancel(reason)
   ├─ control.foreground.teardown(cancel_port, reason)
   ├─ control.background.teardown(cancel_port, workflow_control, reason)
   ├─ control.finalization.finish_cancelled(reason)
@@ -1321,12 +1400,13 @@ Cancelled task terminal payload:
 
 | Current Item | Target |
 | --- | --- |
+| manual per-run construction in `entry.rs`, `agent_runner.rs`, and subagent spawn | request-scoped `AgentRunControlFactory::{persisted, ephemeral}` |
 | request-scoped `BackgroundSupervisorHandle` in `entry.rs` | per-agent `AgentRunControl.background` |
 | request-scoped `NotificationService` | per-agent `AgentRunControl.notifications` cloned into query loop and background lanes |
 | request-scoped heartbeat | per-agent `CommandCompletionHeartbeat` owned by the `CommandSessionLane`, sending through `BackgroundNotificationEmitter` |
 | `BackgroundRunFinalizer` normal cleanup | explicit awaited `AgentRunControl::teardown` |
 | `BackgroundSupervisorPort::cancel_for_parent_exit` | internal concrete `BackgroundSupervisorHandle::teardown` |
-| `inflight_report(Option<&AgentRunId>)` | per-agent no-arg `inflight_report()` |
+| agent-run-filtered running-task summary | per-agent no-arg `running_background_tasks()` |
 | record-level `agent_run_id` fields | `owner_agent_run_id` on `BackgroundSupervisorRuntime` only |
 | `SubagentRecord` side-map abort handle | `SubagentRecord { handle: SubagentHandle, ... }` |
 | `WorkflowBackgroundRecord { workflow_task_id, agent_run_id }` | `WorkflowBackgroundRecord { handle: WorkflowHandle, status }` |
@@ -1335,13 +1415,62 @@ Cancelled task terminal payload:
 | workflow-specific shallow cancel helpers | `cancel_workflow -> cancel_iteration -> cancel_attempt -> cancel_task` |
 | per-session command-session cancel from agent-core | one `CommandSessionLane::cancel_all_command_sessions()` (delegates to daemon `cancel_all_workspace_runs_by_caller_id`); the lane keeps records for completion only |
 
-## 16. Implementation Phases
+## 16. Implementation Phases and Progress Tracker
+
+Status values: `Not started`, `In progress`, `Blocked`, `Done`.
+
+| Phase | Status | Sandbox dependency | Exit gate |
+| --- | --- | --- | --- |
+| 0. Contract alignment | Done | tracks daemon registry work | agent-core scope and sandbox assumptions are explicit |
+| 1. State variants | Done | none | cancelled state compiles and persists |
+| 2. Run control and registry | In progress | none | each run can own cancellation, foreground, notifications, and finalization |
+| 3. Local supervisor composition | Not started | none | factories create per-run background handles and notifiers |
+| 4. Lane handles and heartbeat | Not started | completion collection interface only | lanes own records, handles, and heartbeat wiring |
+| 5. Sandbox registry integration | Blocked on sandbox work | requires daemon registry implementation | one per-caller cancel RPC is wired and tested |
+| 6. Agent-core cancellation ports | Not started | Phase 5 for command-session teardown proof | `cancel_task` and `cancel_agent_run` are awaited and idempotent |
+| 7. Workflow cancellation decomposition | Not started | none | workflow cancellation decomposes through task state |
+| 8. Request cancellation entry | Not started | Phase 6 | backend-facing request cancellation entry exists |
+| 9. Tests and documentation | Not started | all prior phases | docs, tests, and architecture pages match the final design |
+
+### Phase 0: Contract Alignment
+
+Work:
+
+- Keep this spec aligned with `docs/plans/daemon_workspace_run_registry_SPEC.md`.
+- Treat the sandbox caller-keyed workspace-run registry as under construction.
+- Keep agent-core implementation behind existing transport/port boundaries until
+  the sandbox RPC is implemented.
+- Avoid request-global mutable state while waiting for the sandbox side.
+
+Acceptance:
+
+- This spec has an explicit dependency note naming the daemon registry plan as
+  under development.
+- Agent-core code added before sandbox readiness compiles against ports or test
+  fakes, not direct daemon internals.
+- No agent-core phase requires the sandbox implementation to be complete before
+  Phase 5.
+
+Verification:
+
+```sh
+rg -n "daemon_workspace_run_registry_SPEC|cancel_all_workspace_runs_by_caller_id" docs/plans/agent_run_local_background_supervisor_SPEC.md
+```
 
 ### Phase 1: State Variants
+
+Work:
 
 - Add `Cancelled` variants and exhaustive-match updates.
 - Add cancelled task terminal payload.
 - Add bulk task latch for attempt cancellation.
+
+Acceptance:
+
+- `RequestStatus`, `TaskStatus`, and `AttemptStatus` all model cancellation as
+  terminal state.
+- Store conversions and exhaustive matches compile without fallback string states.
+- Attempt cancellation can latch generator/reducer task rows before teardown.
 
 Verification:
 
@@ -1349,14 +1478,28 @@ Verification:
 (cd agent-core && cargo check -p eos-state -p eos-db --all-targets)
 ```
 
-### Phase 2: AgentRunControl and Registry
+### Phase 2: Run Control and Registry
 
-- Add `StopSignal`.
+Work:
+
+- Add `AgentRunCancellation`.
+- Add `ForegroundExecutorFactory`.
 - Add `ForegroundExecutor`.
+- Add `AgentRunControlFactory`.
 - Add `AgentRunControl`.
 - Add `AgentRunRegistry`.
-- Thread `stop` and `foreground` through `AgentRunInput` / `QueryContext`.
-- Poll `StopSignal` at query-loop turn boundaries.
+- Thread `cancellation` and `foreground` through `AgentRunInput` / `QueryContext`.
+- Poll `AgentRunCancellation` at query-loop turn boundaries.
+
+Acceptance:
+
+- `AgentRunControlFactory` is request-scoped and stores no live per-run controls,
+  notifiers, executors, background handles, or lane records.
+- Each root/workflow/subagent run receives a fresh `AgentRunControl`.
+- `AgentRunRegistry::begin_cancel` changes a running entry to cancelling before
+  awaited teardown.
+- `RuntimeAgentRunner` stores the factory and registry, not per-run mutable
+  runtime objects.
 
 Verification:
 
@@ -1364,18 +1507,27 @@ Verification:
 (cd agent-core && cargo test -p eos-engine --all-targets)
 ```
 
-### Phase 3: Local Background Supervisor
+### Phase 3: Local Supervisor Composition
 
-- Add `BackgroundSupervisorFactory`.
+Work:
+
+- Add `BackgroundSupervisorFactory` under `AgentRunControlFactory`.
 - Change `BackgroundSupervisorHandle` to wrap `BackgroundSupervisorRuntime`.
 - Move `NotificationService` into `AgentRunControl`; pass clones into
   `AgentRunInput`, `BackgroundSupervisorHandle`, and the background lanes.
 - Add `BackgroundNotificationEmitter` so subagent, workflow, and command-session
   completion messages all render and enqueue through one path.
-- Move `CommandCompletionHeartbeat` into the `CommandSessionLane` (it sends
-  completions to that run's `NotificationService` through the emitter).
 - Make root/workflow/subagent runs create local handles.
-- Remove request-level supervisor/notifier/heartbeat.
+- Remove request-level supervisor/notifier wiring.
+
+Acceptance:
+
+- `BackgroundSupervisorFactory` owns only immutable construction dependencies.
+- Every `BackgroundSupervisorHandle` is owned by exactly one `AgentRunControl`.
+- `BackgroundSupervisorHandle::notifications()` returns the same
+  `NotificationService` passed to the agent loop.
+- Root, workflow-agent, and subagent construction paths all use
+  `AgentRunControlFactory`.
 
 Verification:
 
@@ -1383,43 +1535,159 @@ Verification:
 (cd agent-core && cargo test -p eos-runtime --all-targets)
 ```
 
-### Phase 4: Lane Handles
+### Phase 4: Lane Handles and Heartbeat
+
+Work:
 
 - Introduce `SubagentLane`, `WorkflowLane`, and `CommandSessionLane`.
 - Move every record to `handle + status + metadata`.
 - Remove record-level `agent_run_id`.
 - Remove optional `agent_run_id` filters from per-agent supervisor methods.
-- `CommandSessionLane` owns the `CommandCompletionHeartbeat` (Weak-records cycle rule)
-  and exposes `cancel_all_command_sessions()` (loads `owner_agent_run_id` from `self`)
-  for cancellation.
+- Move `CommandCompletionHeartbeat` into `CommandSessionLane`.
+- Make heartbeat completion delivery use `BackgroundNotificationEmitter`.
 
-### Phase 5: CancelableResource and CancelPort
+Acceptance:
 
-- Add `CancelableResource` (workflow / subagent / inline-agent-run only — command
-  sessions are not per-resource).
+- `SubagentLane`, `WorkflowLane`, and `CommandSessionLane` are the three
+  background lanes.
+- Every lane record contains a first-class handle object.
+- No background record stores `agent_run_id`.
+- The heartbeat captures weak access to lane records and exits when the lane is
+  dropped.
+- Completion notifications for subagents, workflows, and command sessions all go
+  through `BackgroundNotificationEmitter`.
+
+Verification:
+
+```sh
+(cd agent-core && cargo test -p eos-engine --all-targets)
+```
+
+### Phase 5: Sandbox Registry Integration
+
+This is the expected mid-run integration point. It starts only after the
+sandbox-side caller-keyed workspace-run registry has enough implementation to
+support the daemon RPCs named by this spec.
+
+Work:
+
+- Wire `CommandSessionLane::cancel_all_command_sessions()` to
+  `cancel_all_workspace_runs_by_caller_id(owner_agent_run_id)`.
+- Keep command-session PTY/process ownership in the sandbox daemon.
+- Keep agent-core records as completion-delivery mirrors only.
+- Replace any temporary test fake coverage with transport-level tests once the
+  sandbox operation exists.
+
+Acceptance:
+
+- Agent-core issues one per-caller daemon cancellation call per command-session
+  lane teardown.
+- Agent-core does not iterate per-session daemon cancel calls.
+- Cancelled command-session work is discarded by the sandbox path and is not
+  published through OCC.
+- Completion collection still uses `owner_agent_run_id` as caller identity.
+
+Verification:
+
+```sh
+(cd sandbox && cargo test -p eos-daemon --all-targets)
+(cd agent-core && cargo test -p eos-engine --all-targets)
+```
+
+### Phase 6: Agent-Core Cancellation Ports
+
+Work:
+
+- Add `CancelableResource` for workflow, subagent, and inline advisor resources.
 - Add `CancelPort`.
 - Implement `cancel_task`.
-- Implement `cancel_agent_run` (command sessions cancelled via the lane's one
-  per-caller daemon RPC).
+- Implement `cancel_agent_run`.
 - Replace `BackgroundRunFinalizer` normal cleanup with explicit awaited teardown.
 
-### Phase 6: Workflow Cancellation Decomposition
+Acceptance:
 
-- Implement `cancel_workflow`, `cancel_iteration`, `cancel_attempt`.
+- `cancel_agent_run` requests run cancellation, tears down foreground resources,
+  tears down background lanes, finalizes records, and unregisters the run.
+- Repeated cancellation calls become no-ops after the first call enters
+  cancelling state.
+- Command sessions are cancelled only through the lane-level per-caller daemon
+  operation.
+- Normal cleanup does not rely on `Drop`.
+
+Verification:
+
+```sh
+(cd agent-core && cargo test -p eos-engine --all-targets)
+```
+
+### Phase 7: Workflow Cancellation Decomposition
+
+Work:
+
+- Implement `cancel_workflow`, `cancel_iteration`, and `cancel_attempt`.
 - Latch attempt tasks before teardown.
 - Drop shallow workflow-cancel helpers that do not decompose through tasks.
 
-### Phase 7: Request Cancellation Entry
+Acceptance:
+
+- Workflow cancellation walks workflow -> iteration -> attempt -> task.
+- Planner/generator/reducer task rows are latched before runtime teardown.
+- Terminal tasks remain terminal and are not rewritten by cancellation.
+- Attempt closure records cancellation reason and outcomes.
+
+Verification:
+
+```sh
+(cd agent-core && cargo test -p eos-workflow --all-targets)
+```
+
+### Phase 8: Request Cancellation Entry
+
+Work:
 
 - Add `cancel_agent_core_user_request`.
-- Backend-server will call this through its cancellation coordinator.
-- No sandbox cleanup is performed here.
+- Wire request cancellation through `cancel_task` / `cancel_agent_run`.
+- Keep backend-server as the API-level caller through its cancellation
+  coordinator.
+- Keep sandbox cleanup behind the agent-core and sandbox ports described above.
 
-### Phase 8: Tests and Documentation
+Acceptance:
+
+- A top-level request cancellation reaches the root task and every live run owned
+  by the request.
+- Backend-server does not own agent-core recursion.
+- Request cancellation returns only after agent-core teardown has completed or
+  reported a concrete error.
+
+Verification:
+
+```sh
+(cd agent-core && cargo test -p eos-runtime --all-targets)
+```
+
+### Phase 9: Tests and Documentation
+
+Work:
 
 - Update architecture docs and tests.
 - Refresh stale references to per-request supervisor/notifier/heartbeat.
 - Mark `uniform_recursive_cancellation_SPEC.md` as split/superseded.
+- Update this progress tracker as phases move from `Not started` to
+  `In progress`, `Blocked`, or `Done`.
+
+Acceptance:
+
+- Required tests in §17 exist and pass at the appropriate crate scope.
+- Architecture pages describe per-agent notification and background ownership.
+- Stale request-scoped supervisor/notifier/heartbeat wording is removed.
+- The progress tracker reflects the real implementation state.
+
+Verification:
+
+```sh
+git diff --check -- docs/plans/agent_run_local_background_supervisor_SPEC.md
+(cd agent-core && cargo test --workspace --all-targets)
+```
 
 ## 17. Required Tests
 
@@ -1461,7 +1729,7 @@ Verification:
 - `cancel_attempt` latches planner/generator/reducer task rows before teardown.
 - Nested `delegate_workflow` cancellation reaches every open generator/reducer
   task.
-- `ask_advisor` cancellation cancels the inline child run.
+- `ask_advisor` cancellation cancels the inline advisor run.
 - `exec_command` mid-`yield_time_ms` is cancelable: the foreground future is aborted
   and the PTY is killed by the lane's `cancel_all_command_sessions()`.
 - command-session cancellation issues ONE `cancel_all_command_sessions()` (which
@@ -1518,6 +1786,11 @@ Replace stale wording:
 ## 19. Acceptance Criteria
 
 - Every root/workflow/subagent run receives a fresh `AgentRunControl`.
+- One request-scoped `AgentRunControlFactory` creates root, workflow-agent, and
+  subagent controls; there is no per-agent-run control factory.
+- `AgentRunControlFactory` owns only immutable construction dependencies and
+  must not retain live controls, notifiers, foreground executors, background
+  handles, or lane records.
 - Every `AgentRunControl` owns a fresh `BackgroundSupervisorHandle`.
 - Every `AgentRunControl` owns the run-local `NotificationService`; its query
   loop, background handle, and lanes share clones of that same queue.

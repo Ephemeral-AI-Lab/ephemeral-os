@@ -369,3 +369,40 @@ pub trait NotificationSink: Sealed + Send + Sync {
     /// Surface one system notification.
     async fn notify_system(&self, notification: SystemNotification) -> Result<(), ToolError>;
 }
+
+// ---------------------------------------------------------------------------
+// CancelableResource / CancelPort — recursive agent-core cancellation (spec §7).
+// ---------------------------------------------------------------------------
+
+/// A non-leaf effect a tool creates that must be torn down on cancellation.
+///
+/// Implemented by the engine's foreground/background resource handles
+/// (workflow handle, subagent handle, inline advisor run). Command sessions are
+/// **not** per-resource `CancelableResource`s — they are daemon-owned and torn
+/// down by one per-caller daemon RPC, not a per-session teardown.
+#[async_trait]
+pub trait CancelableResource: Send + Sync {
+    /// Tear down the spawned effect. `reason` is propagated for audit.
+    async fn teardown(&self, reason: &str) -> Result<(), ToolError>;
+}
+
+/// The two recursive agent-core cancellation primitives.
+///
+/// The trait is owned here to avoid an `eos-engine` <-> `eos-workflow` crate
+/// cycle; the implementation lives in `eos-engine` and the recursive workflow
+/// decomposition (`cancel_workflow -> cancel_iteration -> cancel_attempt`) calls
+/// back through this port. Both methods are awaited end-to-end and idempotent.
+#[async_trait]
+pub trait CancelPort: Send + Sync {
+    /// Cancel a persisted task: flip `{Pending,Running} -> Cancelled` and, if a
+    /// live run owns the task, recurse into [`CancelPort::cancel_agent_run`].
+    async fn cancel_task(&self, task_id: &TaskId, reason: &str) -> Result<(), ToolError>;
+
+    /// Cancel a live agent run: request cooperative cancellation, tear down its
+    /// foreground and background resources, and finalize its records.
+    async fn cancel_agent_run(
+        &self,
+        agent_run_id: &AgentRunId,
+        reason: &str,
+    ) -> Result<(), ToolError>;
+}

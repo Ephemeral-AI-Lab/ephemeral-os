@@ -18,6 +18,9 @@ use crate::notifications::NotificationService;
 use crate::query::EventSource;
 use crate::telemetry::StreamEvent;
 
+use super::control::AgentRunCancellation;
+use super::foreground::ForegroundExecutor;
+
 /// Per-agent event-source factory seam.
 ///
 /// `None` selects the live provider stream; the mock harness sets it so each
@@ -103,10 +106,16 @@ pub struct AgentRunInput {
     pub background_supervisor: Option<Arc<dyn BackgroundSupervisorPort>>,
     /// Command-session supervisor service for shell tools.
     pub command_session_supervisor: Option<Arc<dyn CommandSessionSupervisorPort>>,
-    /// The per-request notification sink shared with tools and heartbeat
-    /// producers. Helper runs, such as the advisor, pass a fresh standalone
-    /// service.
+    /// The run-local notification sink owned by this run's `AgentRunControl` and
+    /// shared (by clone) with tools, the heartbeat, and the query loop — the §7
+    /// instance-identity invariant. Helper runs pass a fresh standalone service.
     pub notifier: NotificationService,
+    /// The run's cooperative cancellation token (a clone of the one owned by
+    /// `AgentRunControl`). The query loop polls it at turn boundaries.
+    pub cancellation: AgentRunCancellation,
+    /// The run's foreground cancelable-effect registry (shared from
+    /// `AgentRunControl`), threaded onto the `QueryContext` for cancellation.
+    pub foreground: Arc<ForegroundExecutor>,
     /// Whether to record an `agent_run` row (create + finish).
     pub persist_agent_run: bool,
     /// Message-record node kind and parent/location facts for this run.

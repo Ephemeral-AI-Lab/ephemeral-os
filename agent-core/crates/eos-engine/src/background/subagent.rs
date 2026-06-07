@@ -26,7 +26,9 @@ use serde_json::{json, Value};
 use super::handle::BackgroundSupervisorHandle;
 use super::supervisor::{BackgroundTaskStatus, SubagentRecord};
 use crate::notifications::NotificationService;
-use crate::{run_agent, AgentRunInput, AgentRunResult};
+use crate::{
+    run_agent, AgentRunCancellation, AgentRunInput, AgentRunResult, ForegroundExecutorFactory,
+};
 
 const RECURSION_MESSAGE: &str = "run_subagent: subagents may not spawn further subagents. \
      This is a hard contract — handle the work directly or submit your findings via the terminal tool.";
@@ -224,6 +226,8 @@ impl BackgroundSupervisorPort for BackgroundSupervisorHandle {
 
         let child_run_id = AgentRunId::new_v4();
         let child_notifier = NotificationService::new();
+        let child_foreground =
+            Arc::new(ForegroundExecutorFactory::default().create(child_run_id.clone()));
         let mut child_meta = ctx.clone();
         child_meta.agent_name = sub_def.name.as_str().to_owned();
         child_meta.agent_run_id = Some(child_run_id.clone());
@@ -249,6 +253,8 @@ impl BackgroundSupervisorPort for BackgroundSupervisorHandle {
             background_supervisor: Some(Arc::new(self.clone())),
             command_session_supervisor: None,
             notifier: child_notifier,
+            cancellation: AgentRunCancellation::new(),
+            foreground: child_foreground,
             persist_agent_run: false,
             record_kind: AgentRunRecordKind::Subagent {
                 parent_agent_run_id: caller_agent_run_id.clone(),

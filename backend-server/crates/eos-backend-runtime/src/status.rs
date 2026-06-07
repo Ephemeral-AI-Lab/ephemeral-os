@@ -44,6 +44,7 @@ pub fn resolve_api_status(backend: BackendRunStatus, agent: Option<RequestStatus
         BackendRunStatus::Running | BackendRunStatus::Accepted => match agent {
             Some(RequestStatus::Failed) => ApiRunStatus::Failed,
             Some(RequestStatus::Done) => ApiRunStatus::Done,
+            Some(RequestStatus::Cancelled) => ApiRunStatus::Cancelled,
             Some(RequestStatus::Running) => ApiRunStatus::Running,
             None => match backend {
                 BackendRunStatus::Accepted => ApiRunStatus::Accepted,

@@ -39,9 +39,13 @@ pub struct BuildQueryContextInput {
     pub task_id: Option<TaskId>,
     /// Tool execution metadata.
     pub tool_metadata: ExecutionMetadata,
-    /// The per-request notification sink shared with the tools/heartbeat. The
+    /// The run-local notification sink shared with the tools/heartbeat. The
     /// loop drains this concrete handle each turn (anchor §7 instance identity).
     pub notifier: NotificationService,
+    /// The run's cooperative cancellation token, polled at loop turn boundaries.
+    pub cancellation: crate::AgentRunCancellation,
+    /// The run's foreground cancelable-effect registry.
+    pub foreground: Arc<crate::ForegroundExecutor>,
     /// Optional agent-core observability sink.
     pub audit: Option<Arc<dyn AuditSink>>,
     /// The explicit run handles carried onto the [`QueryContext`] so the
@@ -101,6 +105,8 @@ pub fn build_query_context(input: BuildQueryContextInput) -> Result<QueryContext
         task_id,
         tool_metadata,
         notifier,
+        cancellation,
+        foreground,
         audit,
         run_handles,
     } = input;
@@ -166,6 +172,8 @@ pub fn build_query_context(input: BuildQueryContextInput) -> Result<QueryContext
         notification_rules: make_default_notification_rules(),
         notification_fired: BTreeSet::new(),
         notifier,
+        cancellation,
+        foreground,
         audit,
         run_handles,
     })
@@ -275,6 +283,8 @@ mod tests {
             task_id: None,
             tool_metadata: metadata(),
             notifier: NotificationService::new(),
+            cancellation: crate::AgentRunCancellation::new(),
+            foreground: Arc::new(crate::ForegroundExecutorFactory::default().create(AgentRunId::new_v4())),
             audit: None,
             run_handles: None,
         })
@@ -305,6 +315,8 @@ mod tests {
             task_id: None,
             tool_metadata: metadata(),
             notifier: NotificationService::new(),
+            cancellation: crate::AgentRunCancellation::new(),
+            foreground: Arc::new(crate::ForegroundExecutorFactory::default().create(AgentRunId::new_v4())),
             audit: None,
             run_handles: None,
         })
@@ -328,6 +340,8 @@ mod tests {
             task_id: None,
             tool_metadata: metadata(),
             notifier: NotificationService::new(),
+            cancellation: crate::AgentRunCancellation::new(),
+            foreground: Arc::new(crate::ForegroundExecutorFactory::default().create(AgentRunId::new_v4())),
             audit: None,
             run_handles: None,
         })

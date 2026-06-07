@@ -31,6 +31,8 @@ use serde_json::Value;
 
 use crate::notifications::NotificationService;
 
+use super::control::AgentRunCancellation;
+use super::foreground::ForegroundExecutorFactory;
 use super::{run_agent, AgentRunInput, EngineRunHandles};
 
 const MAX_TRANSCRIPT_MESSAGES: usize = 40;
@@ -124,6 +126,9 @@ pub(crate) async fn run_advisor(
     let agent_run_id = AgentRunId::new_v4();
     let parent_agent_run_id = ctx.agent_run_id.clone();
     let advisor_meta = advisor_metadata(ctx, &agent_run_id);
+    // The advisor is a standalone helper run: a fresh standalone notifier,
+    // cancellation token, and foreground executor (it owns no background lanes).
+    let foreground = Arc::new(ForegroundExecutorFactory::default().create(agent_run_id.clone()));
 
     let run = run_agent(
         handles,
@@ -141,6 +146,8 @@ pub(crate) async fn run_advisor(
             background_supervisor: None,
             command_session_supervisor: None,
             notifier: NotificationService::new(),
+            cancellation: AgentRunCancellation::new(),
+            foreground,
             persist_agent_run: false,
             record_kind: parent_agent_run_id
                 .map(|parent_agent_run_id| AgentRunRecordKind::Advisor {

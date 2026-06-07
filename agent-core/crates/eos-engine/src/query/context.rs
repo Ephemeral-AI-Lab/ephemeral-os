@@ -15,8 +15,8 @@ use futures::Stream;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    EngineError, EngineRunHandles, NotificationRule, NotificationService, PromptReportRecorder,
-    StreamEvent,
+    AgentRunCancellation, EngineError, EngineRunHandles, ForegroundExecutor, NotificationRule,
+    NotificationService, PromptReportRecorder, StreamEvent,
 };
 
 /// The engine stream returned by one model turn.
@@ -86,11 +86,18 @@ pub struct QueryContext {
     pub notification_rules: Vec<Arc<dyn NotificationRule>>,
     /// Fire-once notification names already emitted.
     pub notification_fired: BTreeSet<String>,
-    /// The per-request notification sink the loop drains at the top of every
-    /// turn (anchor §6). Shares its queue with the tool/heartbeat sink — the
+    /// The run-local notification sink the loop drains at the top of every turn
+    /// (anchor §6). Shares its queue with the tool/heartbeat sink — the
     /// instance-identity invariant (anchor §7): if these diverge it compiles and
     /// silently delivers nothing.
     pub notifier: NotificationService,
+    /// The run's cooperative cancellation token. The loop polls
+    /// [`AgentRunCancellation::is_cancel_requested`] at each turn boundary and
+    /// stops starting new work once a cancel has been requested.
+    pub cancellation: AgentRunCancellation,
+    /// The run's foreground cancelable-effect registry (inline child runs and
+    /// registered resources), reached by the cancellation path.
+    pub foreground: Arc<ForegroundExecutor>,
     /// Optional agent-core observability sink.
     pub audit: Option<Arc<dyn AuditSink>>,
     /// The explicit run handles the engine-driven advisor dispatch needs to

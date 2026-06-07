@@ -13,7 +13,9 @@ use eos_state::{
     ExecutionTaskOutcome, Page, PageResult, Request, RequestListFilter, RequestStatus,
     RequestStore, Sealed, Task, TaskStatus, TaskStore,
 };
-use eos_types::{AgentRunId, CoreError, JsonObject, RequestId, SandboxId, TaskId, UtcDateTime};
+use eos_types::{
+    AgentRunId, AttemptId, CoreError, JsonObject, RequestId, SandboxId, TaskId, UtcDateTime,
+};
 
 use crate::core::error::ToolError;
 use crate::core::metadata::ExecutionMetadata;
@@ -122,6 +124,27 @@ impl TaskStore for FakeTaskStore {
             task.terminal_tool_result = Some(t.clone());
         }
         Ok(Some(task.clone()))
+    }
+
+    async fn latch_attempt_tasks_cancelled(
+        &self,
+        attempt_id: &AttemptId,
+        ids: &[TaskId],
+    ) -> Result<(), CoreError> {
+        let mut tasks = self.tasks.lock().unwrap();
+        let mut terminal = JsonObject::new();
+        terminal.insert("fail_reason".to_owned(), "cancelled".into());
+        for id in ids {
+            if let Some(task) = tasks.get_mut(id.as_str()) {
+                if task.attempt_id.as_ref() == Some(attempt_id)
+                    && matches!(task.status, TaskStatus::Pending | TaskStatus::Running)
+                {
+                    task.status = TaskStatus::Cancelled;
+                    task.terminal_tool_result = Some(terminal.clone());
+                }
+            }
+        }
+        Ok(())
     }
 
     async fn list_for_request(&self, request_id: &RequestId) -> Result<Vec<Task>, CoreError> {

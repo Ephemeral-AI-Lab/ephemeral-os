@@ -450,6 +450,20 @@ fn attempt_state_from_columns(
                     outcomes,
                     closed_at,
                 },
+                // The cancellation reason is carried in the cancellation outcomes
+                // (and audit), not a dedicated column — mirroring how Workflow /
+                // Iteration cancelled state persists its reason in the outcome
+                // projection rather than the status row.
+                AttemptStatus::Cancelled => {
+                    if fail_reason.is_some() {
+                        return Err(invalid_lifecycle());
+                    }
+                    AttemptClosure::Cancelled {
+                        reason: String::new(),
+                        outcomes,
+                        closed_at,
+                    }
+                }
             };
             let planner_task_id = if plan.is_some() {
                 None
@@ -790,6 +804,29 @@ mod tests {
         assert!(
             attempt_state_from_columns(failed_no_reason).is_err(),
             "Failed closure requires a fail_reason"
+        );
+    }
+
+    #[test]
+    fn attempt_state_closed_cancelled_reconstructs_without_fail_reason() {
+        // Cancelled closure: closed_at present, no fail_reason (the reason text is
+        // carried in the cancellation outcomes, not a column).
+        let mut cancelled = base_cols(AttemptStage::Closed, AttemptStatus::Cancelled);
+        cancelled.closed_at = Some(epoch());
+        assert!(matches!(
+            attempt_state_from_columns(cancelled).expect("cancelled closure reconstructs"),
+            AttemptState::Closed {
+                closure: AttemptClosure::Cancelled { .. },
+                ..
+            }
+        ));
+        // A Cancelled closure must not carry a fail_reason.
+        let mut cancelled_with_reason = base_cols(AttemptStage::Closed, AttemptStatus::Cancelled);
+        cancelled_with_reason.closed_at = Some(epoch());
+        cancelled_with_reason.fail_reason = Some(AttemptFailReason::TaskFailed);
+        assert!(
+            attempt_state_from_columns(cancelled_with_reason).is_err(),
+            "Cancelled closure carries no fail_reason"
         );
     }
 }

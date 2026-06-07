@@ -25,6 +25,9 @@ pub enum TaskStatus {
     Failed,
     /// Could not proceed (blocked on an unmet dependency).
     Blocked,
+    /// Cancelled before reaching a natural terminal. Blocks DAG descendants the
+    /// same way `Failed` does.
+    Cancelled,
 }
 
 impl TaskStatus {
@@ -32,7 +35,7 @@ impl TaskStatus {
     /// (Rust `TERMINAL_GENERATOR_STATUSES`).
     #[must_use]
     pub const fn is_terminal_generator(self) -> bool {
-        matches!(self, Self::Done | Self::Failed | Self::Blocked)
+        matches!(self, Self::Done | Self::Failed | Self::Blocked | Self::Cancelled)
     }
 }
 

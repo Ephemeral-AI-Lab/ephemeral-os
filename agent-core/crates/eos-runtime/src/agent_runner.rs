@@ -19,7 +19,7 @@ use std::sync::{Arc, OnceLock};
 use async_trait::async_trait;
 use eos_agent_def::AgentRole;
 use eos_agent_message_records::{AgentRunRecordKind, WorkflowTaskRole};
-use eos_engine::{run_agent, AgentRunInput, NotificationService};
+use eos_engine::{run_agent, AgentRunControlFactory, AgentRunInput, AgentRunRegistry};
 use eos_llm_client::Message;
 use eos_tools::{
     AttemptSubmissionPort, AttemptSubmissionService, BackgroundSupervisorPort,
@@ -43,9 +43,12 @@ pub(crate) struct RuntimeAgentRunner {
     /// `get()` is `Some` by the time any run starts, so workflow agents' hooks
     /// can read `workflow_depth` (deferral) and `find_outstanding` (no-inflight).
     workflow_control: Arc<OnceLock<Arc<dyn WorkflowControlPort>>>,
-    background_supervisor: Arc<dyn BackgroundSupervisorPort>,
-    command_session_supervisor: Arc<dyn CommandSessionSupervisorPort>,
-    notifier: NotificationService,
+    /// Request-scoped factory that mints one fresh `AgentRunControl` (notifier,
+    /// foreground, background supervisor, heartbeat, cancellation) per run — the
+    /// runner stores no per-agent mutable supervisor or notifier.
+    control_factory: Arc<AgentRunControlFactory>,
+    /// Live-run registry for recursive cancellation.
+    agent_run_registry: AgentRunRegistry,
 }
 
 impl std::fmt::Debug for RuntimeAgentRunner {
@@ -60,18 +63,16 @@ impl RuntimeAgentRunner {
         workspace_root: impl Into<String>,
         attempt_submission: Arc<dyn AttemptSubmissionPort>,
         workflow_control: Arc<OnceLock<Arc<dyn WorkflowControlPort>>>,
-        background_supervisor: Arc<dyn BackgroundSupervisorPort>,
-        command_session_supervisor: Arc<dyn CommandSessionSupervisorPort>,
-        notifier: NotificationService,
+        control_factory: Arc<AgentRunControlFactory>,
+        agent_run_registry: AgentRunRegistry,
     ) -> Self {
         Self {
             services,
             workspace_root: workspace_root.into(),
             attempt_submission,
             workflow_control,
-            background_supervisor,
-            command_session_supervisor,
-            notifier,
+            control_factory,
+            agent_run_registry,
         }
     }
 }
@@ -80,6 +81,17 @@ impl RuntimeAgentRunner {
 impl AgentRunner for RuntimeAgentRunner {
     async fn run(&self, launch: AgentLaunch) -> WorkflowResult<AgentRunReport> {
         let agent_run_id = AgentRunId::new_v4();
+        // Each delegated planner/generator/reducer run owns its own
+        // AgentRunControl — a fresh notifier, foreground executor, background
+        // supervisor, command-completion heartbeat, and cancellation token.
+        let control = self
+            .control_factory
+            .persisted(agent_run_id.clone(), launch.task_id().clone());
+        self.agent_run_registry.insert(control.clone());
+        let background = control.background();
+        let background_supervisor: Arc<dyn BackgroundSupervisorPort> = Arc::new(background.clone());
+        let command_session_supervisor: Arc<dyn CommandSessionSupervisorPort> =
+            Arc::new(background);
         let metadata = build_metadata(
             &self.workspace_root,
             MetadataParams {
@@ -116,9 +128,11 @@ impl AgentRunner for RuntimeAgentRunner {
                     self.attempt_submission.clone(),
                 )),
                 workflow_control: self.workflow_control.get().cloned(),
-                background_supervisor: Some(self.background_supervisor.clone()),
-                command_session_supervisor: Some(self.command_session_supervisor.clone()),
-                notifier: self.notifier.clone(),
+                background_supervisor: Some(background_supervisor),
+                command_session_supervisor: Some(command_session_supervisor),
+                notifier: control.notifications(),
+                cancellation: control.cancellation(),
+                foreground: control.foreground(),
                 persist_agent_run: true,
                 record_kind: AgentRunRecordKind::WorkflowTask {
                     workflow_id: launch.workflow_id().clone(),
@@ -130,6 +144,10 @@ impl AgentRunner for RuntimeAgentRunner {
             None,
         )
         .await;
+
+        // The run's own per-run finalizer already tore down its background work;
+        // drop the live-run entry (the control + heartbeat release at scope end).
+        self.agent_run_registry.finish_cancel(control.agent_run_id());
 
         // The submit tool already recorded the agent's submission during the run
         // (Path A-recording); the runner reports only a framework fault, which

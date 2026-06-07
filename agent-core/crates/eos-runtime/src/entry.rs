@@ -13,14 +13,14 @@ use anyhow::{Context, Result};
 use eos_agent_def::{AgentDefinition, AgentName};
 use eos_agent_message_records::AgentRunRecordKind;
 use eos_engine::{
-    run_agent, spawn_command_completion_heartbeat, AgentRunInput, BackgroundSupervisorHandle,
-    NotificationService,
+    run_agent, AgentRunControlFactory, AgentRunInput, AgentRunRegistry, BackgroundSupervisorFactory,
+    ForegroundExecutorFactory,
 };
 use eos_llm_client::Message;
 use eos_state::{RequestStatus, Task, TaskRole, TaskStatus};
 use eos_tools::{
     AttemptSubmissionPort, BackgroundSupervisorPort, CommandSessionSupervisorPort,
-    NotificationSink, WorkflowControlPort,
+    WorkflowControlPort,
 };
 use eos_types::{AgentRunId, JsonObject, RequestId, TaskId};
 use eos_workflow::{
@@ -103,30 +103,21 @@ pub async fn run_request(
         .await
         .context("creating the request row")?;
 
-    // Per-request delegated-workflow runtime. The single supervisor carries the
-    // engine run handles the subagent driver needs (it calls `run_agent`
-    // directly).
-    let supervisor = Arc::new(BackgroundSupervisorHandle::new(
-        services.engine_run_handles(&workspace_root),
-        services.sandbox.transport.clone(),
+    // Per-agent-run runtime. The request owns only the shared, immutable factory
+    // and the live-run registry — never per-agent mutable state. Each
+    // root/workflow/subagent run mints one fresh `AgentRunControl` (its own
+    // notifier, foreground executor, background supervisor, command-completion
+    // heartbeat, and cancellation token); the registry makes live runs
+    // addressable for recursive cancellation.
+    let control_factory = Arc::new(AgentRunControlFactory::new(
+        ForegroundExecutorFactory::default(),
+        BackgroundSupervisorFactory::new(
+            services.engine_run_handles(&workspace_root),
+            services.sandbox.transport.clone(),
+            services.engine.command_session_completion_poll_interval(),
+        ),
     ));
-    let background_supervisor_port: Arc<dyn BackgroundSupervisorPort> = supervisor.clone();
-    // One NotificationService per request: its queue is shared by the tool sink,
-    // the heartbeat, and (via the loop's `notifier`) the query loop — the §7
-    // instance-identity invariant. The command-session port is the SAME
-    // supervisor instance the heartbeat pulls into.
-    let notifier = NotificationService::new();
-    let notification_sink: Arc<dyn NotificationSink> = Arc::new(notifier.clone());
-    let command_session_port: Arc<dyn CommandSessionSupervisorPort> = supervisor.clone();
-    // GUARDRAIL: the heartbeat is a separate concurrent spawn — a producer into the
-    // shared NotificationService the loop drains mid-run. Inlining it would break
-    // background-completion delivery.
-    let heartbeat = spawn_command_completion_heartbeat(
-        supervisor.inner(),
-        notification_sink,
-        services.sandbox.transport.clone(),
-        services.engine.command_session_completion_poll_interval(),
-    );
+    let agent_run_registry = AgentRunRegistry::new();
     let iteration_coordinators = Arc::new(OpenIterationCoordinatorRegistry::new());
     let orchestrator_registry = Arc::new(AttemptOrchestratorRegistry::new());
     let context_engine = ContextEngine::new(ContextEngineDeps {
@@ -154,9 +145,8 @@ pub async fn run_request(
         workspace_root.clone(),
         attempt_submission,
         workflow_control_cell.clone(),
-        background_supervisor_port.clone(),
-        command_session_port.clone(),
-        notifier.clone(),
+        control_factory.clone(),
+        agent_run_registry.clone(),
     ));
     // `attempt_deps` is a local moved into the starter (no clone, never returned).
     let attempt_deps = AttemptDeps::new(
@@ -220,6 +210,10 @@ pub async fn run_request(
     let summary = match resolve_root_def(services) {
         Some(root_def) => {
             let agent_run_id = AgentRunId::new_v4();
+            // Mint the root's own AgentRunControl and register it as the live run
+            // for the root task before the provider loop starts.
+            let control = control_factory.persisted(agent_run_id.clone(), root_task_id.clone());
+            agent_run_registry.insert(control.clone());
             let metadata = build_metadata(
                 &workspace_root,
                 MetadataParams {
@@ -233,6 +227,11 @@ pub async fn run_request(
                     is_isolated_workspace_mode: false,
                 },
             );
+            let background = control.background();
+            let background_supervisor: Arc<dyn BackgroundSupervisorPort> =
+                Arc::new(background.clone());
+            let command_session_supervisor: Arc<dyn CommandSessionSupervisorPort> =
+                Arc::new(background);
             let run = run_agent(
                 &services.engine_run_handles(&workspace_root),
                 AgentRunInput {
@@ -243,15 +242,21 @@ pub async fn run_request(
                     tool_metadata: metadata,
                     attempt_submission: None,
                     workflow_control: Some(workflow_control.clone()),
-                    background_supervisor: Some(background_supervisor_port),
-                    command_session_supervisor: Some(command_session_port),
-                    notifier: notifier.clone(),
+                    background_supervisor: Some(background_supervisor),
+                    command_session_supervisor: Some(command_session_supervisor),
+                    notifier: control.notifications(),
+                    cancellation: control.cancellation(),
+                    foreground: control.foreground(),
                     persist_agent_run: true,
                     record_kind: AgentRunRecordKind::Root,
                 },
                 on_event.as_ref(),
             )
             .await;
+            // The root's own per-run finalizer (inside `run_agent`) already cancelled
+            // its subagents/workflows/command sessions. Drop the live-run entry; the
+            // control (and its heartbeat) is released at end of scope.
+            agent_run_registry.finish_cancel(control.agent_run_id());
             // Success leaves the engine-stamped terminal as the persisted outcome.
             let has_terminal = run.terminal_result.is_some();
             run.error.unwrap_or_else(|| {
@@ -265,13 +270,10 @@ pub async fn run_request(
         None => "root agent definition 'root' is not registered".to_owned(),
     };
 
-    // [6] FINALIZE / CLEANUP.
-    heartbeat.abort();
-    // GUARDRAIL: `None` sweeps ALL still-running background records (request-scoped),
-    // not just the root's own agent_run.
-    supervisor
-        .cancel_for_parent_exit(None, Some(workflow_control), "request root task finished")
-        .await;
+    // [6] FINALIZE / CLEANUP. Per-agent-run background teardown (heartbeat abort +
+    // subagent/workflow/command cancellation) already ran inside each run's own
+    // `run_agent` finalizer — there is no request-level supervisor sweep or
+    // heartbeat to abort here.
     // The single framework-side closure guard, called unconditionally: a no-op once
     // submit_root_outcome has closed the task; otherwise marks the root Failed +
     // finish_request(Failed).

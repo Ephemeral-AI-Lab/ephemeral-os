@@ -249,6 +249,11 @@ mod tests {
             notification_rules: Vec::new(),
             notification_fired: BTreeSet::new(),
             notifier: NotificationService::new(),
+            cancellation: crate::AgentRunCancellation::new(),
+            foreground: Arc::new(
+                crate::ForegroundExecutorFactory::default()
+                    .create("run-audit".parse().expect("agent run id")),
+            ),
             audit: None,
             run_handles: None,
         }

@@ -534,6 +534,13 @@ impl AttemptOrchestrator {
                 outcomes,
                 closed_at,
             },
+            AttemptClosure::Cancelled {
+                reason, closed_at, ..
+            } => AttemptClosure::Cancelled {
+                reason,
+                outcomes,
+                closed_at,
+            },
         };
         let closed = self.deps.attempt_store.close(&attempt.id, closure).await?;
         self.deps.orchestrator_registry.deregister(&attempt.id);

@@ -99,6 +99,18 @@ pub trait TaskStore: Sealed + Send + Sync {
         terminal_tool_result: Option<&JsonObject>,
     ) -> Result<Option<Task>, CoreError>;
 
+    /// Bulk-latch attempt task rows to [`TaskStatus::Cancelled`] before runtime
+    /// teardown, stamping the cancelled terminal payload. Only rows owned by
+    /// `attempt_id` that are still `Pending`/`Running` flip; terminal rows are
+    /// left untouched, so the call is idempotent. This closes the scheduler gap
+    /// (`cancel_attempt`, spec §12.4) so no generator/reducer launches into the
+    /// cancellation window.
+    async fn latch_attempt_tasks_cancelled(
+        &self,
+        attempt_id: &AttemptId,
+        ids: &[TaskId],
+    ) -> Result<(), CoreError>;
+
     /// All tasks owned by one request, ordered by creation — the request task
     /// tree (`needs` edges live on each [`Task`]). Read-side API for the backend
     /// composition root (spec §State Reader).

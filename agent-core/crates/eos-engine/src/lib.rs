@@ -14,8 +14,8 @@ pub mod tool_call;
 
 pub use agent::{build_query_context, BuildQueryContextInput};
 pub use background::{
-    spawn_command_completion_heartbeat, BackgroundSupervisorHandle, BackgroundTaskStatus,
-    BackgroundTaskSupervisor, CommandSessionRecord,
+    spawn_command_completion_heartbeat, BackgroundSupervisorFactory, BackgroundSupervisorHandle,
+    BackgroundTaskStatus, BackgroundTaskSupervisor, CommandSessionRecord,
 };
 pub use notifications::{make_default_notification_rules, NotificationRule, NotificationService};
 pub use query::{
@@ -23,8 +23,10 @@ pub use query::{
     ProviderEventSource, QueryContext, QueryExitReason, QueryRunRequest, QueryStream,
 };
 pub use runtime::{
-    run_agent, AgentRunInput, AgentRunResult, EngineRunHandles, EventCallback, EventSourceFactory,
-    ToolRegistryExtender,
+    run_agent, AgentRunCancellation, AgentRunControl, AgentRunControlFactory, AgentRunFinalization,
+    AgentRunInput, AgentRunPersistence, AgentRunRegistry, AgentRunResult, EngineRunHandles,
+    EventCallback, EventSourceFactory, ForegroundExecutor, ForegroundExecutorFactory,
+    ForegroundResourceId, ToolRegistryExtender,
 };
 pub use support::EngineError;
 pub use telemetry::{stamp_identity, AssistantMessageComplete, PromptReportRecorder, StreamEvent};

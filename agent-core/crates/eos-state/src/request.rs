@@ -15,13 +15,15 @@ pub enum RequestStatus {
     Done,
     /// Root task failed or exhausted.
     Failed,
+    /// Root task was cancelled.
+    Cancelled,
 }
 
 impl RequestStatus {
     /// Whether this request status is terminal.
     #[must_use]
     pub const fn is_terminal(self) -> bool {
-        matches!(self, Self::Done | Self::Failed)
+        matches!(self, Self::Done | Self::Failed | Self::Cancelled)
     }
 }
 

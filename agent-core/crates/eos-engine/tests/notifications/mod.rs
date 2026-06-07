@@ -34,6 +34,10 @@ fn ctx() -> QueryContext {
         notification_rules: make_default_notification_rules(),
         notification_fired: BTreeSet::new(),
         notifier: NotificationService::new(),
+        cancellation: crate::AgentRunCancellation::new(),
+        foreground: Arc::new(
+            crate::ForegroundExecutorFactory::default().create(AgentRunId::new_v4()),
+        ),
         audit: None,
         run_handles: None,
     }

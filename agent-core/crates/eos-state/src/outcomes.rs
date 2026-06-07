@@ -257,6 +257,11 @@ mod tests {
                         outcomes,
                         closed_at: now,
                     },
+                    AttemptStatus::Cancelled => AttemptClosure::Cancelled {
+                        reason: String::new(),
+                        outcomes,
+                        closed_at: now,
+                    },
                     AttemptStatus::Running => {
                         unreachable!("test helper only builds closed attempts")
                     }

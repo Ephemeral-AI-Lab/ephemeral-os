@@ -34,6 +34,8 @@ pub enum AttemptStatus {
     Passed,
     /// Failed.
     Failed,
+    /// Cancelled before reaching a natural terminal.
+    Cancelled,
 }
 
 impl AttemptStatus {
@@ -44,6 +46,7 @@ impl AttemptStatus {
             Self::Running => "running",
             Self::Passed => "passed",
             Self::Failed => "failed",
+            Self::Cancelled => "cancelled",
         }
     }
 }
@@ -79,6 +82,15 @@ pub enum AttemptClosure {
         /// Close timestamp.
         closed_at: UtcDateTime,
     },
+    /// Attempt was cancelled.
+    Cancelled {
+        /// Cancellation reason.
+        reason: String,
+        /// Recorded execution outcomes.
+        outcomes: Vec<ExecutionTaskOutcome>,
+        /// Close timestamp.
+        closed_at: UtcDateTime,
+    },
 }
 
 impl AttemptClosure {
@@ -88,6 +100,7 @@ impl AttemptClosure {
         match self {
             Self::Passed { .. } => AttemptStatus::Passed,
             Self::Failed { .. } => AttemptStatus::Failed,
+            Self::Cancelled { .. } => AttemptStatus::Cancelled,
         }
     }
 
@@ -95,7 +108,7 @@ impl AttemptClosure {
     #[must_use]
     pub const fn fail_reason(&self) -> Option<AttemptFailReason> {
         match self {
-            Self::Passed { .. } => None,
+            Self::Passed { .. } | Self::Cancelled { .. } => None,
             Self::Failed { reason, .. } => Some(*reason),
         }
     }
@@ -104,7 +117,9 @@ impl AttemptClosure {
     #[must_use]
     pub fn outcomes(&self) -> &[ExecutionTaskOutcome] {
         match self {
-            Self::Passed { outcomes, .. } | Self::Failed { outcomes, .. } => outcomes,
+            Self::Passed { outcomes, .. }
+            | Self::Failed { outcomes, .. }
+            | Self::Cancelled { outcomes, .. } => outcomes,
         }
     }
 
@@ -112,7 +127,9 @@ impl AttemptClosure {
     #[must_use]
     pub const fn closed_at(&self) -> UtcDateTime {
         match self {
-            Self::Passed { closed_at, .. } | Self::Failed { closed_at, .. } => *closed_at,
+            Self::Passed { closed_at, .. }
+            | Self::Failed { closed_at, .. }
+            | Self::Cancelled { closed_at, .. } => *closed_at,
         }
     }
 }

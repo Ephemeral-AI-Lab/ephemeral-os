@@ -362,6 +362,9 @@ fn input(
     tool_metadata.task_id = Some(task_id.clone());
     tool_metadata.workspace_root = "/tmp".to_owned();
 
+    let foreground = Arc::new(
+        eos_engine::ForegroundExecutorFactory::default().create(agent_run_id.clone()),
+    );
     AgentRunInput {
         agent,
         initial_messages: vec![eos_llm_client::Message::from_user_text("start")],
@@ -373,6 +376,8 @@ fn input(
         background_supervisor,
         command_session_supervisor: None,
         notifier: eos_engine::NotificationService::new(),
+        cancellation: eos_engine::AgentRunCancellation::new(),
+        foreground,
         persist_agent_run: true,
         record_kind: AgentRunRecordKind::Root,
     }

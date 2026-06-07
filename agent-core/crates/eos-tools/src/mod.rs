@@ -38,10 +38,10 @@ pub use core::name::{ToolKey, ToolName};
 pub use core::result::{OutputShape, ToolResult};
 pub use hooks::{Hook, HookDenial, HookOutcome};
 pub use ports::{
-    AttemptSubmissionPort, BackgroundInflightReport, BackgroundSupervisorPort,
-    CommandSessionSupervisorPort, NotificationSink, OutstandingWorkflow, PlanReducer, PlanTask,
-    PlannerPlan, SpawnedSubagent, StartedSubagent, StartedWorkflowHandle, SubmissionAck,
-    SystemNotification, WorkflowControlPort,
+    AttemptSubmissionPort, BackgroundInflightReport, BackgroundSupervisorPort, CancelPort,
+    CancelableResource, CommandSessionSupervisorPort, NotificationSink, OutstandingWorkflow,
+    PlanReducer, PlanTask, PlannerPlan, SpawnedSubagent, StartedSubagent, StartedWorkflowHandle,
+    SubmissionAck, SystemNotification, WorkflowControlPort,
 };
 pub use registry::config::{ToolConfig, ToolConfigError, ToolConfigSet};
 pub use registry::tool_registry::ToolRegistry;

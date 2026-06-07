@@ -158,6 +158,10 @@ fn ctx(registry: ToolRegistry) -> QueryContext {
         notification_rules: Vec::new(),
         notification_fired: BTreeSet::new(),
         notifier: crate::NotificationService::new(),
+        cancellation: crate::AgentRunCancellation::new(),
+        foreground: Arc::new(
+            crate::ForegroundExecutorFactory::default().create(AgentRunId::new_v4()),
+        ),
         audit: None,
         run_handles: None,
     }

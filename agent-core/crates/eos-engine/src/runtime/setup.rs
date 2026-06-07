@@ -17,6 +17,8 @@ use crate::notifications::NotificationService;
 use crate::query::QueryContext;
 use crate::EngineError;
 
+use super::control::AgentRunCancellation;
+use super::foreground::ForegroundExecutor;
 use super::types::EngineRunHandles;
 
 pub(super) struct AgentRunSetupInput {
@@ -29,6 +31,8 @@ pub(super) struct AgentRunSetupInput {
     pub(super) background_supervisor: Option<Arc<dyn BackgroundSupervisorPort>>,
     pub(super) command_session_supervisor: Option<Arc<dyn CommandSessionSupervisorPort>>,
     pub(super) notifier: NotificationService,
+    pub(super) cancellation: AgentRunCancellation,
+    pub(super) foreground: Arc<ForegroundExecutor>,
 }
 
 pub(super) struct PreparedAgentRun {
@@ -50,6 +54,8 @@ pub(super) fn prepare_agent_run_context(
         background_supervisor,
         command_session_supervisor,
         notifier,
+        cancellation,
+        foreground,
     } = input;
 
     let model = agent.model.clone().unwrap_or_default();
@@ -89,6 +95,8 @@ pub(super) fn prepare_agent_run_context(
         task_id,
         tool_metadata,
         notifier,
+        cancellation,
+        foreground,
         audit: Some(handles.audit.clone()),
         run_handles: Some(handles.clone()),
     })?;

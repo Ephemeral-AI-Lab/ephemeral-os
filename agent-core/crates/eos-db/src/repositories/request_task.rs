@@ -247,6 +247,39 @@ impl TaskStore for SqlRequestTaskStore {
         Ok(Some(row_to_task(updated)?))
     }
 
+    async fn latch_attempt_tasks_cancelled(
+        &self,
+        attempt_id: &AttemptId,
+        ids: &[TaskId],
+    ) -> Result<(), CoreError> {
+        if ids.is_empty() {
+            return Ok(());
+        }
+        let now = OffsetDateTime::now_utc();
+        let cancelled = enum_to_db(&TaskStatus::Cancelled);
+        let terminal = json_col::encode(&serde_json::json!({ "fail_reason": "cancelled" }))?;
+        let placeholders = std::iter::repeat_n("?", ids.len())
+            .collect::<Vec<_>>()
+            .join(", ");
+        let sql = format!(
+            "UPDATE tasks SET status = ?, \
+               terminal_tool_result = COALESCE(terminal_tool_result, ?), \
+               updated_at = ? \
+             WHERE attempt_id = ? AND status IN ('pending', 'running') \
+               AND id IN ({placeholders})"
+        );
+        let mut query = sqlx::query(&sql)
+            .bind(cancelled)
+            .bind(terminal)
+            .bind(now)
+            .bind(attempt_id.as_str());
+        for id in ids {
+            query = query.bind(id.as_str());
+        }
+        query.execute(&self.pool).await.map_err(DbError::from)?;
+        Ok(())
+    }
+
     async fn list_for_request(&self, request_id: &RequestId) -> Result<Vec<Task>, CoreError> {
         let rows = sqlx::query_as::<Sqlite, TaskRow>(
             "SELECT * FROM tasks WHERE request_id = ? ORDER BY created_at ASC, id ASC",

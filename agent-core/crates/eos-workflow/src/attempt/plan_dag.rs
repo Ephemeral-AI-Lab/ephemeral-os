@@ -47,7 +47,7 @@ pub(crate) fn dag_resolution(tasks: &[Task]) -> Result<DagResolution> {
     });
     let any_failed_or_blocked = statuses
         .values()
-        .any(|s| matches!(s, TaskStatus::Failed | TaskStatus::Blocked));
+        .any(|s| matches!(s, TaskStatus::Failed | TaskStatus::Blocked | TaskStatus::Cancelled));
     if all_quiescent && any_failed_or_blocked {
         Ok(DagResolution::FailedOrBlocked)
     } else {
@@ -131,9 +131,11 @@ fn is_unreachable(
             .get(dep)
             .copied()
             .ok_or_else(|| WorkflowError::not_found("task", dep.as_str()))?;
-        if matches!(dep_status, TaskStatus::Failed | TaskStatus::Blocked)
-            || (dep_status == TaskStatus::Pending
-                && is_unreachable(dep, statuses, by_id, visiting, memo)?)
+        if matches!(
+            dep_status,
+            TaskStatus::Failed | TaskStatus::Blocked | TaskStatus::Cancelled
+        ) || (dep_status == TaskStatus::Pending
+            && is_unreachable(dep, statuses, by_id, visiting, memo)?)
         {
             visiting.remove(task_id);
             memo.insert(task_id.clone(), true);

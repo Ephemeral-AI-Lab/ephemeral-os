@@ -456,6 +456,27 @@ impl eos_state::TaskStore for MemoryStores {
         Ok(Some(task.clone()))
     }
 
+    async fn latch_attempt_tasks_cancelled(
+        &self,
+        attempt_id: &AttemptId,
+        ids: &[TaskId],
+    ) -> std::result::Result<(), CoreError> {
+        let mut guard = self.tasks.lock();
+        let mut terminal = JsonObject::new();
+        terminal.insert("fail_reason".to_owned(), "cancelled".into());
+        for id in ids {
+            if let Some(task) = guard.get_mut(id) {
+                if task.attempt_id.as_ref() == Some(attempt_id)
+                    && matches!(task.status, TaskStatus::Pending | TaskStatus::Running)
+                {
+                    self.task_writes.fetch_add(1, Ordering::Relaxed);
+                    update_task(task, TaskStatus::Cancelled, None, Some(&terminal));
+                }
+            }
+        }
+        Ok(())
+    }
+
     async fn list_for_request(
         &self,
         request_id: &RequestId,

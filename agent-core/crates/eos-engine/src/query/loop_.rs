@@ -143,6 +143,12 @@ fn terminal_not_submitted_event(ctx: &mut QueryContext) -> Result<StreamEvent, E
 pub fn run_query<'a>(ctx: &'a mut QueryContext, messages: &'a mut Vec<Message>) -> QueryStream<'a> {
     Box::pin(try_stream! {
         loop {
+            // Cooperative cancellation (spec §6.1): once a cancel is requested,
+            // stop starting new turns. Already-spawned effects are torn down by
+            // the foreground/background teardown paths, not here.
+            if ctx.cancellation.is_cancel_requested() {
+                break;
+            }
             if terminal_submission_failed(ctx) {
                 let notifications = collect_notifications(ctx, messages).await;
                 for notification in &notifications {

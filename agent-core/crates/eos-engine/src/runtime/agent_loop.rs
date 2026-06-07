@@ -30,6 +30,8 @@ pub async fn run_agent(
         background_supervisor,
         command_session_supervisor,
         notifier,
+        cancellation,
+        foreground,
         persist_agent_run,
         record_kind,
     } = input;
@@ -54,6 +56,8 @@ pub async fn run_agent(
             background_supervisor,
             command_session_supervisor,
             notifier,
+            cancellation,
+            foreground,
         },
     );
 

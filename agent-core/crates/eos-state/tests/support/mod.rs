@@ -11,7 +11,7 @@ use std::sync::Mutex;
 
 use async_trait::async_trait;
 
-use eos_types::{CoreError, JsonObject, RequestId, TaskId};
+use eos_types::{AttemptId, CoreError, JsonObject, RequestId, TaskId};
 
 use crate::outcomes::ExecutionTaskOutcome;
 use crate::store::{Sealed, TaskStore};
@@ -89,6 +89,26 @@ impl TaskStore for FakeTaskStore {
         }
         apply_task_updates(task, status, outcomes, terminal_tool_result);
         Ok(Some(task.clone()))
+    }
+
+    async fn latch_attempt_tasks_cancelled(
+        &self,
+        attempt_id: &AttemptId,
+        ids: &[TaskId],
+    ) -> Result<(), CoreError> {
+        let mut guard = self.tasks.lock().expect("lock");
+        let mut terminal = JsonObject::new();
+        terminal.insert("fail_reason".to_owned(), "cancelled".into());
+        for id in ids {
+            if let Some(task) = guard.get_mut(id) {
+                if task.attempt_id.as_ref() == Some(attempt_id)
+                    && matches!(task.status, TaskStatus::Pending | TaskStatus::Running)
+                {
+                    apply_task_updates(task, TaskStatus::Cancelled, None, Some(&terminal));
+                }
+            }
+        }
+        Ok(())
     }
 
     async fn list_for_request(&self, request_id: &RequestId) -> Result<Vec<Task>, CoreError> {
