@@ -599,4 +599,200 @@ mod tests {
         let recs = json_col::decode_default::<Vec<JsonValue>>(Some(&encoded)).expect("decode");
         assert_eq!(normalize_attempt_outcomes(&recs), typed);
     }
+
+    // ---- attempt lifecycle reconstruction (`attempt_state_from_columns`) -----
+    //
+    // This is the home of the persisted Attempt-lifecycle invariant: it rejects
+    // incoherent (stage, status, plan, closed_at, fail_reason, deferred_goal)
+    // column combinations a corrupt or migration-skewed row could carry. Each
+    // test pairs the *valid* combo (must reconstruct to the right state) with the
+    // single-field deviations that must be rejected — so the suite would fail both
+    // if a guard were weakened (deviation → Ok) and if reconstruction broke
+    // (valid → Err).
+
+    fn tid(raw: &str) -> eos_state::TaskId {
+        raw.parse().expect("task id")
+    }
+
+    fn epoch() -> UtcDateTime {
+        UtcDateTime::from_offset(OffsetDateTime::UNIX_EPOCH)
+    }
+
+    fn base_cols(
+        stage: AttemptStage,
+        status: AttemptStatus,
+    ) -> AttemptLifecycleColumns<'static> {
+        AttemptLifecycleColumns {
+            stage,
+            status,
+            planner_task_id: None,
+            generator_task_ids: Vec::new(),
+            reducer_task_ids: Vec::new(),
+            deferred_goal: None,
+            fail_reason: None,
+            closed_at: None,
+            outcomes: Vec::new(),
+        }
+    }
+
+    #[test]
+    fn attempt_state_plan_reconstructs_and_rejects_incoherent_columns() {
+        // Valid: PLAN/Running, no materialized plan, no terminal/deferred fields.
+        assert!(matches!(
+            attempt_state_from_columns(base_cols(AttemptStage::Plan, AttemptStatus::Running))
+                .expect("bare plan reconstructs"),
+            AttemptState::Planning {
+                planner_task_id: None
+            }
+        ));
+        let mut with_planner = base_cols(AttemptStage::Plan, AttemptStatus::Running);
+        with_planner.planner_task_id = Some(tid("p1"));
+        assert!(matches!(
+            attempt_state_from_columns(with_planner).expect("plan with planner task"),
+            AttemptState::Planning {
+                planner_task_id: Some(_)
+            }
+        ));
+
+        // Each single deviation is incoherent for PLAN.
+        assert!(
+            attempt_state_from_columns(base_cols(AttemptStage::Plan, AttemptStatus::Passed))
+                .is_err(),
+            "PLAN may only be Running"
+        );
+        let mut failed = base_cols(AttemptStage::Plan, AttemptStatus::Running);
+        failed.fail_reason = Some(AttemptFailReason::TaskFailed);
+        assert!(
+            attempt_state_from_columns(failed).is_err(),
+            "PLAN carries no fail_reason"
+        );
+        let mut closed = base_cols(AttemptStage::Plan, AttemptStatus::Running);
+        closed.closed_at = Some(epoch());
+        assert!(
+            attempt_state_from_columns(closed).is_err(),
+            "PLAN is never closed_at"
+        );
+        let mut with_tasks = base_cols(AttemptStage::Plan, AttemptStatus::Running);
+        with_tasks.generator_task_ids = vec![tid("g1")];
+        assert!(
+            attempt_state_from_columns(with_tasks).is_err(),
+            "PLAN has no materialized plan tasks"
+        );
+        let deferred = DeferredGoal::new("later").expect("deferred goal");
+        let mut with_deferred = base_cols(AttemptStage::Plan, AttemptStatus::Running);
+        with_deferred.deferred_goal = Some(&deferred);
+        assert!(
+            attempt_state_from_columns(with_deferred).is_err(),
+            "PLAN carries no deferred goal"
+        );
+    }
+
+    #[test]
+    fn attempt_state_run_requires_materialized_plan_and_running_status() {
+        let valid = || {
+            let mut cols = base_cols(AttemptStage::Run, AttemptStatus::Running);
+            cols.planner_task_id = Some(tid("p1"));
+            cols.generator_task_ids = vec![tid("g1")];
+            cols.reducer_task_ids = vec![tid("r1")];
+            cols
+        };
+        assert!(matches!(
+            attempt_state_from_columns(valid()).expect("run with plan reconstructs"),
+            AttemptState::Running { .. }
+        ));
+
+        // No planner task -> no materialized plan -> reject.
+        let mut no_planner = valid();
+        no_planner.planner_task_id = None;
+        assert!(
+            attempt_state_from_columns(no_planner).is_err(),
+            "RUN needs a planner task"
+        );
+        // No generator/reducer tasks -> no materialized plan -> reject.
+        let mut no_tasks = valid();
+        no_tasks.generator_task_ids = Vec::new();
+        no_tasks.reducer_task_ids = Vec::new();
+        assert!(
+            attempt_state_from_columns(no_tasks).is_err(),
+            "RUN needs materialized plan tasks"
+        );
+        // Terminal status / fields are incoherent for an open RUN.
+        let mut passed = valid();
+        passed.status = AttemptStatus::Passed;
+        assert!(
+            attempt_state_from_columns(passed).is_err(),
+            "RUN may only be Running"
+        );
+        let mut failed = valid();
+        failed.fail_reason = Some(AttemptFailReason::TaskFailed);
+        assert!(
+            attempt_state_from_columns(failed).is_err(),
+            "open RUN carries no fail_reason"
+        );
+        let mut closed = valid();
+        closed.closed_at = Some(epoch());
+        assert!(
+            attempt_state_from_columns(closed).is_err(),
+            "open RUN is not closed_at"
+        );
+    }
+
+    #[test]
+    fn attempt_state_closed_passed_and_failed_reconstruct_with_required_fields() {
+        // Passed closure (the success branch the store path never exercised):
+        // closed_at present, no fail_reason.
+        let mut passed = base_cols(AttemptStage::Closed, AttemptStatus::Passed);
+        passed.closed_at = Some(epoch());
+        assert!(matches!(
+            attempt_state_from_columns(passed).expect("passed closure reconstructs"),
+            AttemptState::Closed {
+                closure: AttemptClosure::Passed { .. },
+                ..
+            }
+        ));
+
+        // Failed closure: closed_at + fail_reason both present.
+        let mut failed = base_cols(AttemptStage::Closed, AttemptStatus::Failed);
+        failed.closed_at = Some(epoch());
+        failed.fail_reason = Some(AttemptFailReason::TaskFailed);
+        assert!(matches!(
+            attempt_state_from_columns(failed).expect("failed closure reconstructs"),
+            AttemptState::Closed {
+                closure: AttemptClosure::Failed {
+                    reason: AttemptFailReason::TaskFailed,
+                    ..
+                },
+                ..
+            }
+        ));
+
+        // A Closed attempt without closed_at is incoherent.
+        assert!(
+            attempt_state_from_columns(base_cols(AttemptStage::Closed, AttemptStatus::Passed))
+                .is_err(),
+            "CLOSED requires closed_at"
+        );
+        // Closed stage with a still-Running status is incoherent.
+        let mut running = base_cols(AttemptStage::Closed, AttemptStatus::Running);
+        running.closed_at = Some(epoch());
+        assert!(
+            attempt_state_from_columns(running).is_err(),
+            "CLOSED is never Running"
+        );
+        // Passed must not carry a fail_reason.
+        let mut passed_with_reason = base_cols(AttemptStage::Closed, AttemptStatus::Passed);
+        passed_with_reason.closed_at = Some(epoch());
+        passed_with_reason.fail_reason = Some(AttemptFailReason::TaskFailed);
+        assert!(
+            attempt_state_from_columns(passed_with_reason).is_err(),
+            "Passed closure carries no fail_reason"
+        );
+        // Failed must carry a fail_reason.
+        let mut failed_no_reason = base_cols(AttemptStage::Closed, AttemptStatus::Failed);
+        failed_no_reason.closed_at = Some(epoch());
+        assert!(
+            attempt_state_from_columns(failed_no_reason).is_err(),
+            "Failed closure requires a fail_reason"
+        );
+    }
 }

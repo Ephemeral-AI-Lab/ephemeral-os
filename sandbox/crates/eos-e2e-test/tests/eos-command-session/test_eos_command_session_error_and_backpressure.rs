@@ -1,4 +1,6 @@
-use anyhow::{ensure, Result};
+use std::time::{Duration, Instant};
+
+use anyhow::{bail, ensure, Result};
 use eos_protocol::ops;
 use serde_json::{json, Value};
 
@@ -42,6 +44,101 @@ fn nonzero_exit_and_stderr_are_structured() -> Result<()> {
     wait_for_session_count(&lease, 0)?;
     wait_for_active_leases(&lease, 0)?;
     Ok(())
+}
+
+#[test]
+fn stderr_and_stdin_output_keep_long_lived_session_running() -> Result<()> {
+    let Some(pool) = live_pool_or_skip()? else {
+        return Ok(());
+    };
+    let lease = pool.acquire()?;
+    let started = lease.call_ok(
+        ops::API_V1_EXEC_COMMAND,
+        json!({
+            "cmd": "python3 -u -c 'import sys,time; print(\"stderr-ready\", file=sys.stderr, flush=True); payload=sys.stdin.readline().strip(); print(\"stderr-reply:\" + payload, file=sys.stderr, flush=True); time.sleep(60)'",
+            "yield_time_ms": 500,
+            "timeout_seconds": 120,
+            "max_output_tokens": 2000
+        }),
+    )?;
+    ensure!(
+        as_str(&started, "status")? == "running",
+        "stderr prompt command should keep running after first stderr output: {started}"
+    );
+    ensure!(
+        stdout(&started).contains("stderr-ready"),
+        "PTY stdout stream should expose initial stderr output: {started}"
+    );
+    ensure!(
+        stderr(&started).is_empty(),
+        "stderr field should stay empty for merged PTY output: {started}"
+    );
+    let session_id = as_str(&started, "command_session_id")?.to_owned();
+
+    let body = (|| -> Result<()> {
+        let answered = lease.call_ok(
+            ops::API_V1_WRITE_STDIN,
+            json!({
+                "command_session_id": &session_id,
+                "chars": "payload\n",
+                "yield_time_ms": 1500,
+                "max_output_tokens": 2000
+            }),
+        )?;
+        ensure!(
+            as_str(&answered, "status")? == "running",
+            "stdin reply on a long-lived stderr command should remain running: {answered}"
+        );
+        ensure!(
+            !stdout(&answered).contains("stderr-ready"),
+            "stdin output cursor must not replay initial stderr output: {answered}"
+        );
+        let reply = if stdout(&answered).contains("stderr-reply:payload") {
+            answered
+        } else {
+            poll_stdin_cursor_until_stdout_contains(
+                &lease,
+                &session_id,
+                "stderr-reply:payload",
+                "stderr-ready",
+                Instant::now() + Duration::from_secs(10),
+            )?
+        };
+        ensure!(
+            stdout(&reply).contains("stderr-reply:payload"),
+            "PTY stdout stream should expose stderr produced after stdin: {reply}"
+        );
+
+        let not_done = lease.call_ok(
+            ops::API_V1_COMMAND_COLLECT_COMPLETED,
+            json!({"command_session_ids": [session_id.clone()]}),
+        )?;
+        ensure!(
+            array(&not_done, "completions")?.is_empty(),
+            "sleeping stderr/stdin command must not collect before cancellation: {not_done}"
+        );
+
+        let cancelled = lease.call(
+            ops::API_V1_COMMAND_CANCEL,
+            json!({"command_session_id": &session_id, "max_output_tokens": 2000}),
+        )?;
+        ensure!(
+            matches!(as_str(&cancelled, "status")?, "cancelled" | "ok" | "error"),
+            "cancel should return terminal-ish status after long-lived stderr/stdin output: {cancelled}"
+        );
+        wait_for_session_count(&lease, 0)?;
+        wait_for_active_leases(&lease, 0)?;
+        Ok(())
+    })();
+
+    if body.is_err() {
+        let _ = lease.call(
+            ops::API_V1_COMMAND_CANCEL,
+            json!({"command_session_id": session_id, "max_output_tokens": 2000}),
+        );
+        let _ = wait_for_session_count(&lease, 0);
+    }
+    body
 }
 
 #[test]
@@ -195,6 +292,36 @@ fn ensure_valid_utf8_prefix(response: &Value) -> Result<()> {
         "capped output should preserve UTF-8 codepoint boundaries: {response}"
     );
     Ok(())
+}
+
+fn poll_stdin_cursor_until_stdout_contains(
+    lease: &eos_e2e_test::NodeLease<'_>,
+    session_id: &str,
+    needle: &str,
+    forbidden_replay: &str,
+    deadline: Instant,
+) -> Result<Value> {
+    let mut last = None;
+    while Instant::now() < deadline {
+        let poll = lease.call_ok(
+            ops::API_V1_WRITE_STDIN,
+            json!({
+                "command_session_id": session_id,
+                "chars": "",
+                "yield_time_ms": 250,
+                "max_output_tokens": 2000
+            }),
+        )?;
+        ensure!(
+            !stdout(&poll).contains(forbidden_replay),
+            "stdin cursor poll must not replay initial stderr output: {poll}"
+        );
+        if stdout(&poll).contains(needle) {
+            return Ok(poll);
+        }
+        last = Some(poll);
+    }
+    bail!("stdin cursor did not surface {needle:?} before deadline; last poll: {last:?}");
 }
 
 fn stderr(value: &Value) -> &str {

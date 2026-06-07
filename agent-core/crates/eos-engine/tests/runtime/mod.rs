@@ -1,0 +1,529 @@
+//! `run_agent` runtime-boundary tests.
+#![allow(clippy::expect_used, clippy::unwrap_used)]
+
+use std::collections::HashMap;
+use std::sync::{Arc, Mutex};
+
+use async_trait::async_trait;
+use eos_agent_def::{AgentDefinition, AgentRegistry, AgentRole};
+use eos_agent_message_records::{AgentMessageRecords, AgentRunRecordKind};
+use eos_audit::NoopAuditSink;
+use eos_engine::{
+    run_agent, AgentRunInput, AgentRunResult, EngineRunHandles, EventSourceFactory,
+    ToolRegistryExtender,
+};
+use eos_llm_client::{LlmClient, LlmRequest, LlmStream, ProviderError, ToolSpec};
+use eos_skills::SkillRegistry;
+use eos_state::{AgentRun, AgentRunStore, CoreError, Sealed, TaskId, UtcDateTime};
+use eos_testkit::{agent_def, factory_from, metadata, test_tools_root, tool_use_turn, FakeTransport};
+use eos_tools::{
+    BackgroundInflightReport, BackgroundSupervisorPort, ExecutionMetadata, OutputShape,
+    RegisteredTool, SandboxToolService, SkillToolService, StartedSubagent, StartedWorkflowHandle,
+    SpawnedSubagent, ToolConfigSet, ToolError, ToolExecutor, ToolIntent, ToolName, ToolRegistry,
+    ToolResult, WorkflowControlPort,
+};
+use eos_types::{AgentRunId, JsonObject, SubagentSessionId, WorkflowSessionId};
+use serde_json::json;
+
+#[derive(Debug)]
+struct NoopLlmClient;
+
+#[async_trait]
+impl LlmClient for NoopLlmClient {
+    async fn stream_message(&self, _request: LlmRequest) -> Result<LlmStream, ProviderError> {
+        Ok(Box::pin(futures::stream::empty()))
+    }
+}
+
+#[derive(Debug, Clone)]
+struct CreateRecord {
+    agent_run_id: AgentRunId,
+    task_id: TaskId,
+    agent_name: String,
+}
+
+#[derive(Debug, Clone)]
+struct FinishRecord {
+    agent_run_id: AgentRunId,
+    error: Option<String>,
+}
+
+#[derive(Debug, Default)]
+struct RecordingAgentRunStore {
+    creates: Mutex<Vec<CreateRecord>>,
+    finishes: Mutex<Vec<FinishRecord>>,
+    runs: Mutex<HashMap<AgentRunId, AgentRun>>,
+}
+
+impl RecordingAgentRunStore {
+    fn creates(&self) -> Vec<CreateRecord> {
+        self.creates.lock().unwrap().clone()
+    }
+
+    fn finishes(&self) -> Vec<FinishRecord> {
+        self.finishes.lock().unwrap().clone()
+    }
+}
+
+impl Sealed for RecordingAgentRunStore {}
+
+#[async_trait]
+impl AgentRunStore for RecordingAgentRunStore {
+    async fn create_run(
+        &self,
+        agent_run_id: &AgentRunId,
+        task_id: &TaskId,
+        agent_name: &str,
+        initial_messages: Option<&[JsonObject]>,
+    ) -> Result<AgentRun, CoreError> {
+        let run = AgentRun {
+            id: agent_run_id.clone(),
+            task_id: task_id.clone(),
+            initial_messages: initial_messages.map(<[_]>::to_vec),
+            agent_name: agent_name.to_owned(),
+            message_history: None,
+            terminal_tool_result: None,
+            token_count: 0,
+            error: None,
+            created_at: UtcDateTime::now(),
+            finished_at: None,
+        };
+        self.creates.lock().unwrap().push(CreateRecord {
+            agent_run_id: agent_run_id.clone(),
+            task_id: task_id.clone(),
+            agent_name: agent_name.to_owned(),
+        });
+        self.runs
+            .lock()
+            .unwrap()
+            .insert(agent_run_id.clone(), run.clone());
+        Ok(run)
+    }
+
+    async fn finish_run(
+        &self,
+        agent_run_id: &AgentRunId,
+        message_history: Option<&[JsonObject]>,
+        terminal_tool_result: Option<&JsonObject>,
+        token_count: i64,
+        error: Option<&str>,
+    ) -> Result<Option<AgentRun>, CoreError> {
+        self.finishes.lock().unwrap().push(FinishRecord {
+            agent_run_id: agent_run_id.clone(),
+            error: error.map(str::to_owned),
+        });
+        let mut runs = self.runs.lock().unwrap();
+        let Some(run) = runs.get_mut(agent_run_id) else {
+            return Ok(None);
+        };
+        run.message_history = message_history.map(<[_]>::to_vec);
+        run.terminal_tool_result = terminal_tool_result.cloned();
+        run.token_count = token_count;
+        run.error = error.map(str::to_owned);
+        run.finished_at = Some(UtcDateTime::now());
+        Ok(Some(run.clone()))
+    }
+
+    async fn get(&self, agent_run_id: &AgentRunId) -> Result<Option<AgentRun>, CoreError> {
+        Ok(self.runs.lock().unwrap().get(agent_run_id).cloned())
+    }
+
+    async fn get_for_task(&self, task_id: &TaskId) -> Result<Option<AgentRun>, CoreError> {
+        Ok(self
+            .runs
+            .lock()
+            .unwrap()
+            .values()
+            .find(|run| run.task_id == *task_id)
+            .cloned())
+    }
+}
+
+struct CannedExecutor(ToolResult);
+
+#[async_trait]
+impl ToolExecutor for CannedExecutor {
+    async fn execute(
+        &self,
+        _input: &JsonObject,
+        _ctx: &ExecutionMetadata,
+    ) -> Result<ToolResult, ToolError> {
+        Ok(self.0.clone())
+    }
+}
+
+fn submit_root_tool(result: ToolResult) -> RegisteredTool {
+    RegisteredTool::new(
+        ToolName::SubmitRootOutcome,
+        ToolIntent::ReadOnly,
+        true,
+        ToolSpec::new(
+            "submit_root_outcome",
+            "test terminal",
+            json!({"type": "object"})
+                .as_object()
+                .expect("schema object")
+                .clone(),
+            None,
+        ),
+        OutputShape::Text,
+        Arc::new(CannedExecutor(result)),
+    )
+}
+
+fn terminal_extender(result: ToolResult) -> ToolRegistryExtender {
+    Arc::new(move |registry: &mut ToolRegistry| {
+        registry.register(submit_root_tool(result.clone()));
+    })
+}
+
+#[derive(Debug, Clone)]
+struct CancelRecord {
+    agent_run_id: Option<AgentRunId>,
+    reason: String,
+}
+
+#[derive(Debug, Default)]
+struct RecordingBackgroundSupervisor {
+    cancels: Mutex<Vec<CancelRecord>>,
+}
+
+impl RecordingBackgroundSupervisor {
+    fn cancels(&self) -> Vec<CancelRecord> {
+        self.cancels.lock().unwrap().clone()
+    }
+}
+
+impl eos_tools::ports::Sealed for RecordingBackgroundSupervisor {}
+
+fn empty_report() -> BackgroundInflightReport {
+    BackgroundInflightReport {
+        total: 0,
+        subagent: 0,
+        workflow: 0,
+        command_session: 0,
+    }
+}
+
+#[async_trait]
+impl BackgroundSupervisorPort for RecordingBackgroundSupervisor {
+    async fn spawn(
+        &self,
+        _ctx: &ExecutionMetadata,
+        _agent_name: &str,
+        _prompt: &str,
+    ) -> Result<SpawnedSubagent, ToolError> {
+        Ok(SpawnedSubagent::Launched(StartedSubagent {
+            subagent_session_id: "subagent_1".parse().expect("subagent id"),
+        }))
+    }
+
+    async fn progress(
+        &self,
+        _subagent_session_id: &SubagentSessionId,
+        _last_n_messages: u8,
+    ) -> Result<ToolResult, ToolError> {
+        Ok(ToolResult::ok("idle"))
+    }
+
+    async fn cancel(
+        &self,
+        _subagent_session_id: &SubagentSessionId,
+        _reason: &str,
+    ) -> Result<ToolResult, ToolError> {
+        Ok(ToolResult::ok("cancelled"))
+    }
+
+    async fn inflight_report(
+        &self,
+        _agent_run_id: Option<&AgentRunId>,
+    ) -> BackgroundInflightReport {
+        empty_report()
+    }
+
+    async fn cancel_subagents_for_agent_run(
+        &self,
+        _agent_run_id: &AgentRunId,
+    ) -> BackgroundInflightReport {
+        empty_report()
+    }
+
+    async fn register_workflow(
+        &self,
+        _agent_run_id: &AgentRunId,
+        _workflow: &StartedWorkflowHandle,
+    ) {
+    }
+
+    async fn cancel_workflow_record(
+        &self,
+        _workflow_task_id: &WorkflowSessionId,
+        _reason: &str,
+    ) -> bool {
+        false
+    }
+
+    async fn cancel_for_parent_exit(
+        &self,
+        agent_run_id: Option<&AgentRunId>,
+        _workflow_control: Option<Arc<dyn WorkflowControlPort>>,
+        reason: &str,
+    ) -> BackgroundInflightReport {
+        self.cancels.lock().unwrap().push(CancelRecord {
+            agent_run_id: agent_run_id.cloned(),
+            reason: reason.to_owned(),
+        });
+        empty_report()
+    }
+}
+
+fn root_agent() -> AgentDefinition {
+    agent_def(
+        "root",
+        AgentRole::Root,
+        &[],
+        &["submit_root_outcome"],
+    )
+}
+
+fn unknown_tool_agent() -> AgentDefinition {
+    agent_def(
+        "root",
+        AgentRole::Root,
+        &["not_a_tool"],
+        &["submit_root_outcome"],
+    )
+}
+
+struct Harness {
+    store: Arc<RecordingAgentRunStore>,
+    records: Option<AgentMessageRecords>,
+    handles: EngineRunHandles,
+}
+
+fn handles(
+    agents: Vec<AgentDefinition>,
+    source_factory: EventSourceFactory,
+    extender: Option<ToolRegistryExtender>,
+    records: Option<AgentMessageRecords>,
+) -> Harness {
+    let store = Arc::new(RecordingAgentRunStore::default());
+    let registry: AgentRegistry = agents.into_iter().collect();
+    let handles = EngineRunHandles {
+        agent_run_store: store.clone(),
+        llm_client: Arc::new(NoopLlmClient),
+        event_source_factory: Some(source_factory),
+        agent_registry: Arc::new(registry),
+        tool_config: Arc::new(
+            ToolConfigSet::load_from_dir(&test_tools_root()).expect("tool config loads"),
+        ),
+        sandbox_service: SandboxToolService::new(Arc::new(FakeTransport)),
+        root_submission: None,
+        skill_service: SkillToolService::new(Arc::new(SkillRegistry::new())),
+        tool_registry_extender: extender,
+        audit: Arc::new(NoopAuditSink),
+        message_records: records.clone(),
+        workspace_root: "/tmp".to_owned(),
+    };
+    Harness {
+        store,
+        records,
+        handles,
+    }
+}
+
+fn input(
+    agent: AgentDefinition,
+    agent_run_id: AgentRunId,
+    task_id: TaskId,
+    request_id: &str,
+    background_supervisor: Option<Arc<dyn BackgroundSupervisorPort>>,
+) -> AgentRunInput {
+    let mut tool_metadata = metadata();
+    tool_metadata.agent_name = agent.name.as_str().to_owned();
+    tool_metadata.agent_run_id = Some(agent_run_id.clone());
+    tool_metadata.request_id = Some(request_id.parse().expect("request id"));
+    tool_metadata.task_id = Some(task_id.clone());
+    tool_metadata.workspace_root = "/tmp".to_owned();
+
+    AgentRunInput {
+        agent,
+        initial_messages: vec![eos_llm_client::Message::from_user_text("start")],
+        task_id: Some(task_id),
+        agent_run_id,
+        tool_metadata,
+        attempt_submission: None,
+        workflow_control: None,
+        background_supervisor,
+        command_session_supervisor: None,
+        notifier: eos_engine::NotificationService::new(),
+        persist_agent_run: true,
+        record_kind: AgentRunRecordKind::Root,
+    }
+}
+
+async fn run_root_success(harness: &Harness, agent_run_id: AgentRunId, task_id: TaskId) -> AgentRunResult {
+    run_agent(
+        &harness.handles,
+        input(root_agent(), agent_run_id, task_id, "req_runtime", None),
+        None,
+    )
+    .await
+}
+
+async fn node_finish_status(records: &AgentMessageRecords, agent_run_id: &AgentRunId) -> String {
+    let events = records
+        .read_events(agent_run_id, 0)
+        .await
+        .expect("read message-record events");
+    events
+        .iter()
+        .find(|event| event.kind == "node_finished")
+        .and_then(|event| event.payload.get("status"))
+        .and_then(serde_json::Value::as_str)
+        .expect("node_finished status")
+        .to_owned()
+}
+
+#[tokio::test]
+async fn run_agent_finishes_agent_run_on_setup_error() {
+    let agent = unknown_tool_agent();
+    let agent_run_id: AgentRunId = "run_setup_error".parse().expect("run id");
+    let task_id: TaskId = "task_setup_error".parse().expect("task id");
+    let harness = handles(
+        vec![agent.clone()],
+        factory_from(Vec::new()),
+        None,
+        None,
+    );
+
+    let result = run_agent(
+        &harness.handles,
+        input(agent, agent_run_id.clone(), task_id.clone(), "req_setup_error", None),
+        None,
+    )
+    .await;
+
+    assert!(
+        result
+            .error
+            .as_deref()
+            .is_some_and(|error| error.contains("unknown tool: not_a_tool")),
+        "{result:?}"
+    );
+    let creates = harness.store.creates();
+    assert_eq!(creates.len(), 1);
+    assert_eq!(creates[0].agent_run_id, agent_run_id);
+    assert_eq!(creates[0].task_id, task_id);
+    assert_eq!(creates[0].agent_name, "root");
+    let finishes = harness.store.finishes();
+    assert_eq!(finishes.len(), 1);
+    assert_eq!(finishes[0].agent_run_id, agent_run_id);
+    assert!(finishes[0]
+        .error
+        .as_deref()
+        .is_some_and(|error| error.contains("unknown tool: not_a_tool")));
+}
+
+#[tokio::test]
+async fn run_agent_finishes_message_record_completed_on_success() {
+    let records_root = tempfile::tempdir().expect("records dir");
+    let records = AgentMessageRecords::new(records_root.path());
+    let harness = handles(
+        vec![root_agent()],
+        factory_from(vec![tool_use_turn(
+            "toolu_stop",
+            "submit_root_outcome",
+            json!({"summary": "done"}),
+        )]),
+        Some(terminal_extender(ToolResult::ok("done"))),
+        Some(records.clone()),
+    );
+    let agent_run_id: AgentRunId = "run_record_completed".parse().expect("run id");
+    let task_id: TaskId = "task_record_completed".parse().expect("task id");
+
+    let result = run_root_success(&harness, agent_run_id.clone(), task_id).await;
+
+    assert!(result.error.is_none(), "{result:?}");
+    assert!(result
+        .terminal_result
+        .as_ref()
+        .is_some_and(|result| result.is_terminal));
+    assert_eq!(
+        node_finish_status(
+            harness.records.as_ref().expect("records"),
+            &agent_run_id
+        )
+        .await,
+        "completed"
+    );
+}
+
+#[tokio::test]
+async fn run_agent_finishes_message_record_failed_on_stream_error() {
+    let records_root = tempfile::tempdir().expect("records dir");
+    let records = AgentMessageRecords::new(records_root.path());
+    let harness = handles(
+        vec![root_agent()],
+        factory_from(vec![Vec::new()]),
+        Some(terminal_extender(ToolResult::ok("done"))),
+        Some(records.clone()),
+    );
+    let agent_run_id: AgentRunId = "run_record_failed".parse().expect("run id");
+    let task_id: TaskId = "task_record_failed".parse().expect("task id");
+
+    let result = run_agent(
+        &harness.handles,
+        input(root_agent(), agent_run_id.clone(), task_id, "req_record_failed", None),
+        None,
+    )
+    .await;
+
+    assert!(result
+        .error
+        .as_deref()
+        .is_some_and(|error| error.contains("provider stream ended without assistant completion")));
+    assert_eq!(
+        node_finish_status(
+            harness.records.as_ref().expect("records"),
+            &agent_run_id
+        )
+        .await,
+        "failed"
+    );
+}
+
+#[tokio::test]
+async fn run_agent_finalizes_background_handles_after_query_error() {
+    let background = Arc::new(RecordingBackgroundSupervisor::default());
+    let harness = handles(
+        vec![root_agent()],
+        factory_from(vec![Vec::new()]),
+        Some(terminal_extender(ToolResult::ok("done"))),
+        None,
+    );
+    let agent_run_id: AgentRunId = "run_background_finalize".parse().expect("run id");
+    let task_id: TaskId = "task_background_finalize".parse().expect("task id");
+
+    let result = run_agent(
+        &harness.handles,
+        input(
+            root_agent(),
+            agent_run_id.clone(),
+            task_id,
+            "req_background_finalize",
+            Some(background.clone()),
+        ),
+        None,
+    )
+    .await;
+
+    assert!(result.error.is_some());
+    let cancels = background.cancels();
+    assert_eq!(cancels.len(), 1);
+    assert_eq!(cancels[0].agent_run_id.as_ref(), Some(&agent_run_id));
+    assert!(cancels[0].reason.contains("engine run failed"));
+    assert!(cancels[0]
+        .reason
+        .contains("provider stream ended without assistant completion"));
+}

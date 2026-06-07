@@ -45,5 +45,9 @@ path = "tests/terminal/mod.rs"
 name = "query"
 path = "tests/query/mod.rs"
 
+[[test]]
+name = "runtime"
+path = "tests/runtime/mod.rs"
+
 [lints]
 workspace = true

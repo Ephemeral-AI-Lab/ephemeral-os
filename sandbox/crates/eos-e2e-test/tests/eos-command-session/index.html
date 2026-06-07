@@ -21,7 +21,7 @@
     "markdown": "readme.md"
   },
   "overview": {
-    "summary": "`eos-command-session` owns explicit live E2E coverage for the command-session daemon contract across protocol smoke, core lifecycle, ephemeral workspace process-group behavior, and isolated workspace command cleanup. It exercises `api.v1.exec_command`, `api.v1.write_stdin`, `api.v1.command.collect_completed`, `api.v1.command.cancel`, `api.v1.command_session_count`, `api.v1.cancel`, and `api.layer_metrics`. Module config lives at `crates/eos-e2e-test/tests/eos-command-session/config/default.test.yml`.",
+    "summary": "`eos-command-session` owns explicit live E2E coverage for the command-session daemon contract across protocol smoke, core lifecycle, ephemeral workspace process-group behavior, externally killed process groups, invisible background subprocesses, and isolated workspace command cleanup. It exercises `api.v1.exec_command`, `api.v1.write_stdin`, `api.v1.command.collect_completed`, `api.v1.command.cancel`, `api.v1.command_session_count`, `api.v1.cancel`, and `api.layer_metrics`. Module config lives at `crates/eos-e2e-test/tests/eos-command-session/config/default.test.yml`.",
     "moduleConfig": null,
     "ops": [
       "api.v1.exec_command",
@@ -100,6 +100,30 @@
       "id": "eos-command-session-prompt-read-cancel",
       "title": "Prompt Read Cancel",
       "description": "Prompt-style stdin input, empty cursor polling, collect-completed reads, and cancellation behave coherently without replaying consumed output.",
+      "tags": [
+        "eos-command-session"
+      ]
+    },
+    {
+      "id": "eos-command-session-long-running-stderr-stdin",
+      "title": "Long Running Stderr Stdin",
+      "description": "Long-lived command sessions that emit stderr, consume stdin, and then keep sleeping remain running and uncollectable until terminal action.",
+      "tags": [
+        "eos-command-session"
+      ]
+    },
+    {
+      "id": "eos-command-session-external-process-death",
+      "title": "External Process Death",
+      "description": "Externally signaled children and process groups finalize or become observable through `write_stdin` without leaking sessions, leases, or marker processes.",
+      "tags": [
+        "eos-command-session"
+      ]
+    },
+    {
+      "id": "eos-command-session-invisible-background-process",
+      "title": "Invisible Background Process",
+      "description": "Silent redirected same-pgid subprocesses keep command sessions running even after the foreground command exits, preventing invisible background work from being missed.",
       "tags": [
         "eos-command-session"
       ]
@@ -196,6 +220,18 @@
       ]
     },
     {
+      "id": "eos-command-session-external-death-and-invisible-background",
+      "name": "eos-command-session-external-death-and-invisible-background",
+      "description": "Groups `external_sigterm_child_finalizes_via_collect_completed`, `external_sigkill_process_group_is_observed_by_write_stdin`, and `silent_redirected_subprocess_keeps_session_running`: externally killed workloads finalize cleanly, killed process groups are visible through stdin polling, and silent redirected same-pgid subprocesses keep sessions running until explicit cancellation.",
+      "command": "cargo test -p eos-e2e-test --features e2e --test eos-command-session external_process_death -- --nocapture",
+      "checklist": [
+        "eos-command-session-external-process-death",
+        "eos-command-session-invisible-background-process",
+        "eos-command-session-lifecycle",
+        "eos-command-session-terminate-kills-group"
+      ]
+    },
+    {
       "id": "eos-command-session-command-matrix-and-load",
       "name": "eos-command-session-command-matrix-and-load",
       "description": "Groups twelve runner-visible `command_matrix_*_variants` tests, `command_matrix_inventory_covers_ten_shell_families`, `stdin_prompt_cursor_collect_and_cancel_variants`, and `parallel_command_matrix_load_stays_bounded`: each command family has multiple variants, prompt/stdin cursor polling, collect-completed reads, cancellation, and the configured `1/3/6/12` parallel load ladder with resource bounds.",
@@ -223,10 +259,11 @@
     {
       "id": "eos-command-session-negative-invalid-and-backpressure",
       "name": "eos-command-session-negative-invalid-and-backpressure",
-      "description": "Groups `nonzero_exit_and_stderr_are_structured`, `missing_command_and_invalid_session_ids_are_structured`, and `output_backpressure_preserves_utf8_and_drains_on_cancel`: nonzero shell exits, missing commands, unknown session ids, empty collect-completed reads, capped large output, UTF-8-safe cursor chunks, and post-pressure cancellation all return coherent protocol payloads and drain resources.",
+      "description": "Groups `nonzero_exit_and_stderr_are_structured`, `stderr_and_stdin_output_keep_long_lived_session_running`, `missing_command_and_invalid_session_ids_are_structured`, and `output_backpressure_preserves_utf8_and_drains_on_cancel`: nonzero shell exits, long-lived stderr/stdin sessions, missing commands, unknown session ids, empty collect-completed reads, capped large output, UTF-8-safe cursor chunks, and post-pressure cancellation all return coherent protocol payloads and drain resources.",
       "command": "cargo test -p eos-e2e-test --features e2e --test eos-command-session error_and_backpressure -- --nocapture",
       "checklist": [
         "eos-command-session-negative-invalid",
+        "eos-command-session-long-running-stderr-stdin",
         "eos-command-session-output-backpressure",
         "eos-command-session-lifecycle",
         "eos-command-session-cursors"
