@@ -1511,6 +1511,20 @@ parent-exit teardown + single-attempt `cancel_attempt` decomposition + structura
 recursion guards), **not** an end-to-end nested-cancel test. An E2E nested test
 needs the full runtime harness with real `delegate_workflow` runs.
 
+**Verification caveat (§17 `exec_command` cancel):** the required test
+"`exec_command` mid-`yield_time_ms` is cancelable" has two halves. The **PTY-kill
+half** is unit-tested (`cancel_all_issues_one_per_caller_rpc`: one per-caller
+`cancel_workspace_runs_by_caller_id`). The **foreground-future-abort half** is the
+cooperative-cancel + run-end behavior: `cancel_agent_run` sets the cooperative flag
+(the loop exits at its next turn boundary) and the foreground tool fan-out runs on
+the `JoinSet` in `tool_call/dispatch.rs` (which `abort_all`s siblings on fan-in
+error); there is no separate mid-`yield_time_ms` abort path to unit-test in
+isolation, so this half is covered by the cooperative-cancel design + the
+`JoinSet` substrate rather than a dedicated mid-flight test. The inline-advisor
+half of §17 cancellation ("`ask_advisor` cancellation cancels the inline advisor
+run") **is** directly unit-tested
+(`runtime::foreground::tests::teardown_cancels_inline_advisor_run_and_resources`).
+
 ### Phase 0: Contract Alignment
 
 Work:
@@ -1839,7 +1853,8 @@ git diff --check -- docs/plans/agent_run_local_background_supervisor_SPEC.md
 Refresh at least these sources after implementation:
 
 ```text
-agent-core/crates/eos-engine/src/background/heartbeat.rs
+agent-core/crates/eos-engine/src/background/lanes/command_session.rs
+agent-core/crates/eos-engine/src/background/workflow_poll.rs
 agent-core/crates/eos-engine/src/runtime/types.rs
 agent-core/crates/eos-engine/src/query/context.rs
 agent-core/crates/eos-engine/src/agent/factory.rs

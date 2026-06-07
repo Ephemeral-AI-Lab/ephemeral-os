@@ -129,3 +129,94 @@ impl ForegroundExecutor {
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    #![allow(clippy::expect_used)]
+
+    use std::sync::{Arc, Mutex as StdMutex};
+
+    use async_trait::async_trait;
+    use eos_types::TaskId;
+
+    use super::*;
+
+    #[derive(Debug, Default)]
+    struct RecordingCancelPort {
+        cancelled_runs: StdMutex<Vec<String>>,
+    }
+
+    impl RecordingCancelPort {
+        fn cancelled_runs(&self) -> Vec<String> {
+            self.cancelled_runs.lock().expect("lock").clone()
+        }
+    }
+
+    #[async_trait]
+    impl CancelPort for RecordingCancelPort {
+        async fn cancel_task(&self, _task_id: &TaskId, _reason: &str) -> Result<(), ToolError> {
+            Ok(())
+        }
+
+        async fn cancel_agent_run(
+            &self,
+            agent_run_id: &AgentRunId,
+            _reason: &str,
+        ) -> Result<(), ToolError> {
+            self.cancelled_runs
+                .lock()
+                .expect("lock")
+                .push(agent_run_id.as_str().to_owned());
+            Ok(())
+        }
+    }
+
+    #[derive(Debug, Default)]
+    struct RecordingResource {
+        torn_down: StdMutex<bool>,
+    }
+
+    #[async_trait]
+    impl CancelableResource for RecordingResource {
+        async fn teardown(&self, _reason: &str) -> Result<(), ToolError> {
+            *self.torn_down.lock().expect("lock") = true;
+            Ok(())
+        }
+    }
+
+    // §7.1/§17: `ask_advisor` registers an inline advisor run; cancellation reaches
+    // it through `CancelPort::cancel_agent_run`. Registered `CancelableResource`s
+    // are also torn down. After teardown the maps are drained (a second teardown is
+    // a no-op), so cancellation cannot double-fire.
+    #[tokio::test]
+    async fn teardown_cancels_inline_advisor_run_and_resources() {
+        let executor = ForegroundExecutorFactory.create("owner-run".parse().expect("agent run id"));
+        let advisor_run: AgentRunId = "advisor-run".parse().expect("agent run id");
+        executor.register_inline_agent_run(advisor_run.clone());
+        let resource = Arc::new(RecordingResource::default());
+        executor.register_resource(ForegroundResourceId("advisor".to_owned()), resource.clone());
+
+        let cancel_port = RecordingCancelPort::default();
+        executor
+            .teardown(&cancel_port, "parent cancelled")
+            .await
+            .expect("teardown");
+
+        assert_eq!(
+            cancel_port.cancelled_runs(),
+            vec!["advisor-run".to_owned()],
+            "the inline advisor run is cancelled via cancel_agent_run"
+        );
+        assert!(
+            *resource.torn_down.lock().expect("lock"),
+            "registered foreground resources are torn down"
+        );
+
+        // A second teardown finds the drained maps and issues no further cancels.
+        executor
+            .teardown(&cancel_port, "again")
+            .await
+            .expect("teardown");
+        assert_eq!(cancel_port.cancelled_runs().len(), 1, "teardown is one-shot");
+    }
+}
