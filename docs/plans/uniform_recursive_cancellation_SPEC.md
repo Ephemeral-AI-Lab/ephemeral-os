@@ -1,10 +1,20 @@
-# Uniform Recursive Cancellation — SPEC
+# Uniform Recursive Cancellation — ARCHIVED SPLIT SPEC
 
-Status: proposed
+Status: superseded / split
 Owner: agent-core (cancellation)
 Scope: `eos-runtime`, `eos-engine`, `eos-workflow`, `eos-state`, `eos-db`,
 `eos-tools` (ports), `eos-sandbox-port`, `backend-server` (launcher/api),
 `sandbox/*` (daemon checkpoint/isolated/command-session ops)
+
+This document is retained as the original monolithic cancellation proposal.
+Current ownership is split into three narrower specs:
+
+- Agent-core runtime/background/cancellation:
+  `docs/plans/agent_run_local_background_supervisor_SPEC.md`
+- Sandbox workspace-run cancellation substrate:
+  `docs/plans/daemon_workspace_run_registry_SPEC.md`
+- Backend-server API/runtime wiring:
+  `docs/plans/backend_server_cancellation_wiring_SPEC.md`
 
 ## 1. Goal & motivation
 
