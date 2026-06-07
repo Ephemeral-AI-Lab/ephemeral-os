@@ -457,9 +457,7 @@ impl CommandSessionManager {
         } else {
             result.clone()
         };
-        let notification_result = result
-            .clone()
-            .with_stdout(session.read_notification_output(None));
+        let notification_result = result.clone();
         let command_session_id = session.id().to_owned();
         let caller_id = session.caller_id().to_owned();
         let command = session.command().to_owned();
@@ -501,6 +499,7 @@ pub struct SweepReport {
 #[cfg(test)]
 mod tests {
     use std::path::PathBuf;
+    use std::sync::Arc;
     use std::time::{Duration, Instant};
 
     use eos_workspace_api::{
@@ -578,5 +577,47 @@ mod tests {
 
         assert_eq!(report.expired, 1);
         assert_eq!(report.live, 0);
+    }
+
+    #[test]
+    fn collected_completion_preserves_finalized_stdout() {
+        let manager = CommandSessionManager::default();
+        let command_session_id = "cmd_full".to_owned();
+        let session = Arc::new(CommandSession::new(
+            CommandSessionSpec {
+                id: command_session_id.clone(),
+                caller_id: "caller".to_owned(),
+                command: "printf full".to_owned(),
+                timeout_seconds: None,
+            },
+            Box::new(ExpiringPolicy),
+            &CommandSessionConfig::default(),
+        ));
+        let result = CommandResponse {
+            status: "ok".to_owned(),
+            exit_code: Some(0),
+            stdout: "full transcript stdout".to_owned(),
+            stderr: String::new(),
+            command_session_id: Some(command_session_id.clone()),
+            workspace_mode: Some(WorkspaceMode::default()),
+            metadata: Value::Null,
+        };
+
+        let returned = manager.finish_completed(session, result, true);
+
+        assert_eq!(returned.stdout, "full transcript stdout");
+        let completions = manager.collect_completed(&CollectCompleted {
+            command_session_ids: Some(vec![command_session_id]),
+            caller_id: Some("caller".to_owned()),
+        });
+        assert_eq!(completions.completions.len(), 1);
+        assert_eq!(
+            completions.completions[0].result.stdout,
+            "full transcript stdout"
+        );
+        assert_eq!(
+            completions.completions[0].notification_result.stdout,
+            "full transcript stdout"
+        );
     }
 }

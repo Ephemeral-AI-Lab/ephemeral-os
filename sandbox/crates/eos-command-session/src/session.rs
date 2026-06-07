@@ -26,7 +26,6 @@ pub(crate) struct CommandSession {
     command: String,
     output: Arc<CommandSessionOutput>,
     model_cursor: Mutex<CommandSessionOutputCursor>,
-    notification_cursor: Mutex<CommandSessionOutputCursor>,
     policy: Mutex<Option<DynCommandWorkspacePolicy>>,
     #[cfg(target_os = "linux")]
     process: CommandSessionProcess,
@@ -104,7 +103,6 @@ impl CommandSession {
             command: spec.command,
             output,
             model_cursor: Mutex::new(CommandSessionOutputCursor::default()),
-            notification_cursor: Mutex::new(CommandSessionOutputCursor::default()),
             policy: Mutex::new(Some(policy)),
             #[cfg(target_os = "linux")]
             process: inactive.process,
@@ -137,7 +135,6 @@ impl CommandSession {
             command: spec.command,
             output,
             model_cursor: Mutex::new(CommandSessionOutputCursor::default()),
-            notification_cursor: Mutex::new(CommandSessionOutputCursor::default()),
             policy: Mutex::new(Some(policy)),
             process: running.process,
             output_path: running.output_path,
@@ -192,12 +189,6 @@ impl CommandSession {
     #[must_use]
     pub(crate) fn read_model_output(&self, max_tokens: Option<u64>) -> String {
         let mut cursor = lock(&self.model_cursor);
-        self.output.read_since(&mut cursor, max_tokens)
-    }
-
-    #[must_use]
-    pub(crate) fn read_notification_output(&self, max_tokens: Option<u64>) -> String {
-        let mut cursor = lock(&self.notification_cursor);
         self.output.read_since(&mut cursor, max_tokens)
     }
 
@@ -305,7 +296,7 @@ impl CommandSession {
             completion.status(),
             Some(completion.exit_code()),
             runner.map(|runner| runner.value().clone()),
-            self.output.all_recent(None),
+            self.final_stdout(),
             true,
         );
         if let Ok(response) = response.as_ref() {
@@ -325,6 +316,28 @@ impl CommandSession {
         }
         let _ = std::fs::remove_file(&self.transcript_path);
     }
+
+    #[cfg(target_os = "linux")]
+    fn final_stdout(&self) -> String {
+        let Some(stdout) =
+            read_transcript_stdout(&self.transcript_path, self.output.next_byte_offset())
+        else {
+            return self.output.all_recent(None);
+        };
+        stdout
+    }
+}
+
+#[cfg(target_os = "linux")]
+fn read_transcript_stdout(path: &Path, output_bytes: u64) -> Option<String> {
+    if path.as_os_str().is_empty() {
+        return None;
+    }
+    let bytes = std::fs::read(path).ok()?;
+    if bytes.is_empty() && output_bytes > 0 {
+        return None;
+    }
+    Some(String::from_utf8_lossy(&bytes).into_owned())
 }
 
 #[cfg(target_os = "linux")]
@@ -486,10 +499,11 @@ mod tests {
         std::fs::create_dir_all(&root)?;
         let transcript_path = root.join("transcript.log");
         let final_path = root.join("final.json");
-        std::fs::write(&transcript_path, b"captured output")?;
+        std::fs::write(&transcript_path, b"captured transcript output")?;
 
         let config = CommandSessionConfig::default();
         let output = Arc::new(CommandSessionOutput::new(&config));
+        output.append("ring output".to_owned());
         let writer = std::fs::OpenOptions::new()
             .read(true)
             .write(true)
@@ -517,7 +531,17 @@ mod tests {
             .expect("inactive process finalizes")?;
 
         assert_eq!(result.command_session_id.as_deref(), Some("cmd_1"));
+        assert_eq!(result.stdout, "captured transcript output");
         assert!(final_path.exists());
+        let final_response: serde_json::Value =
+            serde_json::from_slice(&std::fs::read(&final_path)?)?;
+        assert_eq!(
+            final_response
+                .get("output")
+                .and_then(|output| output.get("stdout"))
+                .and_then(serde_json::Value::as_str),
+            Some("captured transcript output")
+        );
         assert!(!transcript_path.exists());
 
         let _ = std::fs::remove_dir_all(root);

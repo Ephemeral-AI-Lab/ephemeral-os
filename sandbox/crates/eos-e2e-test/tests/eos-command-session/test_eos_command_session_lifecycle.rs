@@ -320,6 +320,55 @@ fn collect_completed_drains() -> Result<()> {
 }
 
 #[test]
+fn collect_completed_preserves_transcript_after_ring_eviction() -> Result<()> {
+    let Some(pool) = live_pool_or_skip()? else {
+        return Ok(());
+    };
+    let lease = pool.acquire()?;
+    let first = format!(
+        "transcript-spool-first-{}",
+        eos_e2e_test::unique_suffix().replace('-', "_")
+    );
+    let last = format!(
+        "transcript-spool-last-{}",
+        eos_e2e_test::unique_suffix().replace('-', "_")
+    );
+    let cmd = format!(
+        "sh -c 'echo {first}; sleep 1; yes filler | head -c 1200000; printf \"\\n{last}\\n\"'"
+    );
+    let started = lease.call_ok(
+        ops::API_V1_EXEC_COMMAND,
+        json!({
+            "cmd": cmd,
+            "yield_time_ms": 100,
+            "timeout_seconds": 10
+        }),
+    )?;
+    assert_eq!(as_str(&started, "status")?, "running", "{started}");
+    assert!(
+        stdout(&started).contains(&first),
+        "initial yield should consume the first marker: {started}"
+    );
+    let id = as_str(&started, "command_session_id")?.to_owned();
+
+    let completion = collect_completion(&lease, &id, Duration::from_secs(10))?;
+    let result = completion.get("result").context("completion result")?;
+    let output = stdout(result);
+    assert!(
+        output.contains(&first),
+        "completion stdout lost transcript prefix after ring eviction; bytes={}",
+        output.len()
+    );
+    assert!(
+        output.contains(&last),
+        "completion stdout lost transcript suffix after ring eviction; bytes={}",
+        output.len()
+    );
+    wait_for_command_session_transcript_recycled(&lease, &id)?;
+    Ok(())
+}
+
+#[test]
 fn finite_exec_before_yield_recycles_transient_transcript_file() -> Result<()> {
     let Some(pool) = live_pool_or_skip()? else {
         return Ok(());
